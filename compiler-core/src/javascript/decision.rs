@@ -43,7 +43,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         match decision {
             Decision::Fail => unreachable!("Invalid decision tree reached code generation"),
             Decision::Run { body } => {
-                let bindings = self.variables.bindings(&body.bindings);
+                let bindings = self.variables.bindings_doc(&body.bindings);
                 let body = self.body_expression(body.clause_index)?;
                 Ok(join_with_line(bindings, body))
             }
@@ -176,14 +176,14 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             .iter()
             .partition(|(variable, _)| guard_variables.contains(variable));
 
-        let check_bindings = self.variables.bindings_ref(&check_bindings);
+        let check_bindings = self.variables.bindings_ref_doc(&check_bindings);
         let check = self.variables.expression_generator.guard(guard)?;
         let if_true = self.inside_new_scope(|this| {
             // All the other bindings are not needed by the guard check will
             // end up directly in the body of the if clause to avoid doing any
             // extra work before making sure the condition is true and they are
             // actually needed.
-            let if_true_bindings = this.variables.bindings_ref(&if_true_bindings);
+            let if_true_bindings = this.variables.bindings_ref_doc(&if_true_bindings);
             let if_true_body = this.body_expression(if_true.clause_index)?;
             Ok(join_with_line(if_true_bindings, if_true_body))
         })?;
@@ -207,11 +207,11 @@ impl<'a> CasePrinter<'_, '_, 'a> {
     ) -> Document<'a> {
         let value = self.variables.get_value(variable);
         match runtime_check {
-            RuntimeCheck::String { value: literal } => docvec![value, " === ", string(&literal)],
+            RuntimeCheck::String { value: literal } => docvec![value, " === ", string(literal)],
             RuntimeCheck::Float { value: literal } => docvec![value, " === ", float(literal)],
             RuntimeCheck::Int { value: literal } => docvec![value, " === ", int(literal)],
             RuntimeCheck::StringPrefix { prefix, .. } => {
-                docvec![value, ".startsWith(", string(&prefix), ")"]
+                docvec![value, ".startsWith(", string(prefix), ")"]
             }
 
             RuntimeCheck::BitArray { value } => todo!(),
@@ -309,7 +309,9 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
     }
 
     fn decision(&mut self, subject: Document<'a>, decision: &'a Decision) -> Output<'a> {
-        let Some((checks, body_bindings)) = self.positive_checks_and_bindings(decision) else {
+        let Some(ChecksAndBindings { checks, bindings }) =
+            self.positive_checks_and_bindings(decision)
+        else {
             // In case we never reach a body, we know that this let assert will
             // always throw an exception!
             self.variables.expression_generator.statement_always_throws = true;
@@ -343,9 +345,9 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
             docvec!["if (", checks, ") ", break_block(exception)]
         };
 
-        let body_bindings = body_bindings
+        let body_bindings = bindings
             .iter()
-            .map(|(name, value)| self.variables.body_binding(name, value));
+            .map(|(name, value)| self.variables.body_binding_doc(name, value));
         let body_bindings = join(body_bindings, line());
         Ok(join_with_line(doc, body_bindings))
     }
@@ -371,11 +373,11 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
     ) -> Document<'a> {
         let value = self.variables.get_value(variable);
         match runtime_check {
-            RuntimeCheck::String { value: literal } => docvec![value, " !== ", string(&literal)],
+            RuntimeCheck::String { value: literal } => docvec![value, " !== ", string(literal)],
             RuntimeCheck::Float { value: literal } => docvec![value, " !== ", float(literal)],
             RuntimeCheck::Int { value: literal } => docvec![value, " !== ", int(literal)],
             RuntimeCheck::StringPrefix { prefix, .. } => {
-                docvec!["!", value, ".startsWith(", string(&prefix), ")"]
+                docvec!["!", value, ".startsWith(", string(prefix), ")"]
             }
 
             RuntimeCheck::BitArray { value } => todo!(),
@@ -434,10 +436,10 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
         }
     }
 
-    /// A let assert decision tree has a very precise structure: since it's made
-    /// of a single pattern. It will always be a very narrow tree that has a
-    /// single success node with a series of checks leading down to it. If any of
-    /// those checks fails it immediately leads to a `Fail` node that has to result
+    /// A let decision tree has a very precise structure since it's made of a
+    /// single pattern. It will always be a very narrow tree that has a singe
+    /// success node with a series of checks leading down to it. If any of those
+    /// checks fails it immediately leads to a `Fail` node that has to result
     /// in an exception. For example:
     ///
     /// ```gleam
@@ -453,18 +455,20 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
     /// used by later code generation steps without having to traverse the whole
     /// decision tree once again!
     ///
+    /// If there's no `Run` node it means that this pattern will _always_ fail
+    /// and there's no useful data we could ever return.
+    /// This could happen due to variant inference (e.g. `let assert Wibble = Wobble`).
+    ///
     fn positive_checks_and_bindings(
         &mut self,
         decision: &'a Decision,
-    ) -> Option<(
-        VecDeque<(Variable, &'a RuntimeCheck)>,
-        &'a Vec<(EcoString, BoundValue)>,
-    )> {
+    ) -> Option<ChecksAndBindings<'a>> {
         match decision {
-            Decision::Run { body, .. } => Some((VecDeque::new(), &body.bindings)),
+            Decision::Run { body, .. } => Some(ChecksAndBindings::new(&body.bindings)),
             Decision::Guard { .. } => unreachable!("guard in let assert decision tree"),
             Decision::Fail => {
-                // If the check fails at least once it means it's not a redundant let assert.
+                // If the check could fail it means that the entire let is not
+                // redundant!
                 self.is_redundant = false;
                 None
             }
@@ -476,25 +480,50 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
             } => {
                 let mut result = None;
 
+                // We go over all the decision to record all the bindings and
+                // see if we can get to a failing node. We will only keep the
+                // results coming from the positive path!
                 for (check, decision) in choices {
-                    if let Some((mut checks, bindings)) =
-                        self.positive_checks_and_bindings(decision)
-                    {
-                        checks.push_front((var.clone(), check));
-                        result = Some((checks, bindings));
+                    if let Some(mut checks) = self.positive_checks_and_bindings(decision) {
+                        checks.add_check(var.clone(), check);
+                        result = Some(checks);
                     };
                 }
 
-                if let Some((mut checks, bindings)) = self.positive_checks_and_bindings(fallback) {
+                // Important not to forget the fallback check, that's a path we
+                // might have to go down to as well!
+                if let Some(mut checks) = self.positive_checks_and_bindings(fallback) {
                     if let FallbackCheck::RuntimeCheck { check } = fallback_check {
-                        checks.push_front((var.clone(), check));
-                        result = Some((checks, bindings));
+                        checks.add_check(var.clone(), check);
+                        result = Some(checks);
                     };
                 };
 
                 result
             }
         }
+    }
+}
+
+/// The result we get from inspecting a `let`'s decision tree: it contains all
+/// the checks that lead down to the only possible successfull `Body` node and
+/// the bindings found inside it.
+///
+struct ChecksAndBindings<'a> {
+    checks: VecDeque<(Variable, &'a RuntimeCheck)>,
+    bindings: &'a Vec<(EcoString, BoundValue)>,
+}
+
+impl<'a> ChecksAndBindings<'a> {
+    fn new(bindings: &'a Vec<(EcoString, BoundValue)>) -> Self {
+        Self {
+            checks: VecDeque::new(),
+            bindings,
+        }
+    }
+
+    fn add_check(&mut self, variable: Variable, check: &'a RuntimeCheck) {
+        self.checks.push_front((variable, check));
     }
 }
 
@@ -582,6 +611,8 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             .iter()
             .zip(assignments.iter())
         {
+            // We need to record the fact that each subject corresponds to a
+            // pattern variable.
             self.set_value(variable, assignment.name());
             self.bind(assignment.name(), variable);
         }
@@ -607,27 +638,88 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         self.expression_generator.next_local_var(name)
     }
 
+    /// Records that a given pattern `variable` has been assigned a runtime
+    /// `value`. For example if we had something like this:
+    ///
+    /// ```txt
+    /// a is Wibble(1, b) -> todo
+    /// ```
+    ///
+    /// After a successful `is Wibble` check, we know we'd end up with two
+    /// additional checks that look like this:
+    ///
+    /// ```txt
+    /// a0 is 1, a1 is b -> todo
+    /// ```
+    ///
+    /// But what's the runtime value of `a0` and `a1`? To get those we'd have to
+    /// extract the two fields from `a`, so they would have a value that looks
+    /// like this: `a[0]` and `a[1]`; these values are set with this `set_value`
+    /// function as we discover them.
+    ///
     fn set_value(&mut self, variable: &Variable, value: EcoString) {
         let _ = self.variable_values.insert(variable.id, value);
     }
 
+    /// During the code generation process we might end up having to generate
+    /// code to materialese one of the pattern variables and give it a name to
+    /// be used to avoid repeating it every single time.
+    ///
+    /// For example if a pattern variable is referencing the fifth element in a
+    /// list it's runtime value would look something like this:
+    /// `list.tail.tail.tail.tail.head`; if we where to perform additional
+    /// checks on this value, it would be quite wasteful to recompute it every
+    /// single time. Imagine this piece of code:
+    ///
+    /// ```gleam
+    /// case list {
+    ///   [_, _, _, _, 1] -> todo
+    ///   [_, _, _, _, 2] -> todo
+    ///   // ...
+    ///   _ -> todo
+    /// }
+    /// ```
+    ///
+    /// The corresponding check would end up looking something like this:
+    ///
+    /// ```js
+    /// if (list.tail.tail.tail.tail.head === 1) {}
+    /// else if (list.tail.tail.tail.tail.head === 2) {}
+    /// // ...
+    /// else {}
+    /// ```
+    ///
+    /// So before a check we might want to bind a pattern variable to a name so
+    /// we can use that to reference it in the check:
+    ///
+    /// ```js
+    /// let $ = list.tail.tail.tail.tail.head;
+    /// if ($ === 1) {}
+    /// else if ($ === 2) {}
+    /// // ...
+    /// else {}
+    /// ```
+    ///
+    /// This makes for neater code! These bindings are kept track of with this
+    /// function.
+    ///
     fn bind(&mut self, name: EcoString, variable: &Variable) {
         let _ = self.scoped_variable_names.insert(variable.id, name);
     }
 
-    fn bindings(&mut self, bindings: &'a [(EcoString, BoundValue)]) -> Document<'a> {
+    fn bindings_doc(&mut self, bindings: &'a [(EcoString, BoundValue)]) -> Document<'a> {
         let bindings =
-            (bindings.iter()).map(|(variable, value)| self.body_binding(variable, value));
+            (bindings.iter()).map(|(variable, value)| self.body_binding_doc(variable, value));
         join(bindings, line())
     }
 
-    fn bindings_ref(&mut self, bindings: &[&'a (EcoString, BoundValue)]) -> Document<'a> {
+    fn bindings_ref_doc(&mut self, bindings: &[&'a (EcoString, BoundValue)]) -> Document<'a> {
         let bindings =
-            (bindings.iter()).map(|(variable, value)| self.body_binding(variable, value));
+            (bindings.iter()).map(|(variable, value)| self.body_binding_doc(variable, value));
         join(bindings, line())
     }
 
-    fn body_binding(
+    fn body_binding_doc(
         &mut self,
         variable_name: &'a EcoString,
         value: &'a BoundValue,
@@ -671,7 +763,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             RuntimeCheck::Variant { fields, labels, .. } => {
                 for (i, field) in fields.iter().enumerate() {
                     let access = match labels.get(&i) {
-                        Some(label) => eco_format!("{value}.{}", maybe_escape_property(&label)),
+                        Some(label) => eco_format!("{value}.{}", maybe_escape_property(label)),
                         None => eco_format!("{value}[{i}]"),
                     };
                     self.set_value(field, access);
@@ -700,14 +792,57 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     }
 }
 
+/// When going over the subjects of a case expression/let we might end up in two
+/// situation: the subject might be a variable or it could be a more complex
+/// expression (like a function call, math expression, ...).
+///
+/// ```gleam
+/// case a_variable { ... }
+/// case a_function_call(wobble) { ... }
+/// ```
+///
+/// When checking on a case we might end up repeating the subjects multiple times
+/// (as they need to appear in various checks), this means that if we ended up
+/// doing the simple thing of just repeating the subject as it is we might end
+/// up dramatically changin the meaning of the program when the subject is a
+/// complex expression! Imagine this example:
+///
+/// ```gleam
+/// case wibble("a") {
+///   1 -> todo
+///   2 -> todo
+///   _ -> todo
+/// }
+/// ```
+///
+/// If we just repeated the subject every time we need to check it, the decision
+/// tree would end up looking something like this:
+///
+/// ```js
+/// if (wibble("a") === 1) {}
+/// else if (wibble("a") === 2) {}
+/// else {}
+/// ```
+///
+/// It would be quite bad as we would end up running the same function multiple
+/// times instead of just once!
+///
+/// So we need to categorize each subject in two categories: if it is a simple
+/// variable already, it's no big deal and we can repeat that name as many times
+/// as we want; however if it's anything else we first need to bind that subject
+/// to a variable we can than reference multiple times.
+///
 enum SubjectAssignment<'a> {
+    /// The subject is a complex expression with a `value` that has to be
+    /// assigned to a variable with the given `name` as repeating the `value`
+    /// multiple times could possibly change the meaning of the program.
     BindToVariable {
         name: EcoString,
         value: Document<'a>,
     },
-    AlreadyAVariable {
-        name: EcoString,
-    },
+    /// The subject is already a simple variable with the given name, we will
+    /// keep using that name to reference it.
+    AlreadyAVariable { name: EcoString },
 }
 
 impl SubjectAssignment<'_> {
@@ -762,37 +897,6 @@ fn assign_subject<'a>(
 }
 
 fn assignments_to_doc(assignments: Vec<SubjectAssignment<'_>>) -> Document<'_> {
-    // Each of the subjects might end up being stored in a variable before the
-    // code of the decision tree can run. This is needed because we can't just
-    // repeat a subject code multiple times if the decision tree needs it.
-    // Imagine this example:
-    // ```gleam
-    // case wibble("a") {
-    //   1 -> todo
-    //   2 -> todo
-    //   _ -> todo
-    // }
-    // ```
-    // If the decision tree ended up looking something like this:
-    // ```js
-    // if (wibble("a") === 1) {}
-    // else if (wibble("a") === 2) {}
-    // else {}
-    // ```
-    // It would be quite bad as we would end up running the same function
-    // multiple times instead of just once!
-    //
-    // So if `setup_subjects` decided to bind a subject into a variable so that
-    // can be reused to safely refer to a subject's value, we'll have to generate
-    // the code for that binding:
-    //
-    // ```js
-    // // Now this is safe!
-    // let $ = wibble("a")
-    // if ($ === 1) {}
-    // else if ($ === 2) {}
-    // else {}
-    // ```
     let mut assignments_docs = vec![];
     for assignment in assignments.into_iter() {
         let SubjectAssignment::BindToVariable { name, value } = assignment else {
