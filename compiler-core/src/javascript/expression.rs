@@ -957,7 +957,7 @@ impl<'module, 'a> Generator<'module, 'a> {
     ) -> Output<'a> {
         let message = match message {
             Some(m) => {
-                self.not_in_tail_position(Some(Ordering::Loose), |this| this.expression(m))?
+                self.not_in_tail_position(Some(Ordering::Strict), |this| this.expression(m))?
             }
             None => string("Pattern match failed, no pattern matched the value."),
         };
