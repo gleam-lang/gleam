@@ -802,18 +802,14 @@ impl<'module, 'a> Generator<'module, 'a> {
             is_generated: _,
         } = assignment;
 
+        // In case the pattern is just a variable, we special case it to
+        // generate just a simple assignment instead of using the decision tree
+        // for the code generation step.
         if let TypedPattern::Variable { name, .. } = pattern {
             return self.simple_variable_assignment(name, value);
         }
 
-        match &kind {
-            AssignmentKind::Let => {
-                decision::let_assert(compiled_case, value, SrcSpan::default(), None, self)
-            }
-            AssignmentKind::Assert { location, message } => {
-                decision::let_assert(compiled_case, value, *location, message.as_deref(), self)
-            }
-        }
+        decision::let_(compiled_case, value, kind, self)
     }
 
     fn tuple(&mut self, elements: &'a [TypedExpr]) -> Output<'a> {
