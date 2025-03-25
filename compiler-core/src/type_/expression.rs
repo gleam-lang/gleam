@@ -1520,14 +1520,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 {
                     let mut using_unaligned_bit_array = false;
 
-                    if type_ == int() {
+                    if type_.is_int() {
                         match &(**value).as_int_literal() {
                             Some(size) if size % 8 != BigInt::ZERO => {
                                 using_unaligned_bit_array = true;
                             }
                             _ => (),
                         }
-                    } else if type_ == bit_array() {
+                    } else if type_.is_bit_array() {
                         using_unaligned_bit_array = true;
                     }
 
