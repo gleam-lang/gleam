@@ -692,33 +692,38 @@ impl<'module, 'a> Generator<'module, 'a> {
     fn block(&mut self, statements: &'a Vec1<TypedStatement>) -> Output<'a> {
         if statements.len() == 1 {
             match statements.first() {
-                Statement::Expression(expression) => self.child_expression(expression),
+                Statement::Expression(expression) => return self.child_expression(expression),
 
-                Statement::Assignment(assignment) => {
-                    self.child_expression(assignment.value.as_ref())
-                }
+                Statement::Assignment(assignment) => match &assignment.kind {
+                    AssignmentKind::Let | AssignmentKind::Generated => {
+                        return self.child_expression(assignment.value.as_ref());
+                    }
+                    // We can't just return the right-hand side of a `let assert`
+                    // assignment; we still need to check that the pattern matches.
+                    AssignmentKind::Assert { .. } => {}
+                },
 
-                Statement::Use(use_) => self.child_expression(&use_.call),
+                Statement::Use(use_) => return self.child_expression(&use_.call),
             }
-        } else {
-            match &self.scope_position {
-                Position::Tail | Position::Assign(_) => self.block_document(statements),
-                Position::NotTail(Ordering::Strict) => self
-                    .immediately_invoked_function_expression(statements, |this, statements| {
-                        this.statements(statements)
-                    }),
-                Position::NotTail(Ordering::Loose) => self.wrap_block(|this| {
-                    // Save previous scope
-                    let current_scope_vars = this.current_scope_vars.clone();
+        }
 
-                    let document = this.block_document(statements)?;
-
-                    // Restore previous state
-                    this.current_scope_vars = current_scope_vars;
-
-                    Ok(document)
+        match &self.scope_position {
+            Position::Tail | Position::Assign(_) => self.block_document(statements),
+            Position::NotTail(Ordering::Strict) => self
+                .immediately_invoked_function_expression(statements, |this, statements| {
+                    this.statements(statements)
                 }),
-            }
+            Position::NotTail(Ordering::Loose) => self.wrap_block(|this| {
+                // Save previous scope
+                let current_scope_vars = this.current_scope_vars.clone();
+
+                let document = this.block_document(statements)?;
+
+                // Restore previous state
+                this.current_scope_vars = current_scope_vars;
+
+                Ok(document)
+            }),
         }
     }
 
