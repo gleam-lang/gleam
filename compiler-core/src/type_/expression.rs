@@ -1555,7 +1555,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                                 location: pattern.location(),
                             })
                     }
-                    // A duplicate pattern warning should not happen, since there is only on pattern.
+                    // A duplicate pattern warning should not happen, since there is only one pattern.
                     Reachability::Reachable
                     | Reachability::Unreachable(UnreachableCaseClauseReason::DuplicatePattern) => {}
                 }

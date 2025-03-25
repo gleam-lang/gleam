@@ -943,7 +943,7 @@ hidden from the package's documentation.",
                 type_::Warning::AssertAssignmentOnInferredVariant { location } => Diagnostic {
                     title: "Assertion on inferred variant".into(),
                     text: wrap(
-                        "This assertion is will always crash since it matches on a variant which is never present.",
+                        "This assertion will always crash since it matches on a variant which is never present.",
                     ),
                     hint: None,
                     level: diagnostic::Level::Warning,
