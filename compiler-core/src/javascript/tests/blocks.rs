@@ -323,3 +323,24 @@ pub fn main() {
 "
     )
 }
+
+// https://github.com/gleam-lang/gleam/issues/4395
+#[test]
+fn let_assert_message_no_lifted() {
+    assert_js!(
+        r#"
+fn side_effects(x) {
+  // Some side effects
+  x
+}
+
+pub fn main() {
+  let assert Error(Nil) = side_effects(Ok(10))
+    as {
+    let message = side_effects("some message")
+    message
+  }
+}
+"#
+    )
+}

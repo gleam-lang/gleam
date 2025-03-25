@@ -1,0 +1,44 @@
+---
+source: compiler-core/src/javascript/tests/blocks.rs
+expression: "\nfn side_effects(x) {\n  // Some side effects\n  x\n}\n\npub fn main() {\n  let assert Error(Nil) = side_effects(Ok(10))\n    as {\n    let message = side_effects(\"some message\")\n    message\n  }\n}\n"
+---
+----- SOURCE CODE
+
+fn side_effects(x) {
+  // Some side effects
+  x
+}
+
+pub fn main() {
+  let assert Error(Nil) = side_effects(Ok(10))
+    as {
+    let message = side_effects("some message")
+    message
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { Ok, makeError } from "../gleam.mjs";
+
+function side_effects(x) {
+  return x;
+}
+
+export function main() {
+  let $ = side_effects(new Ok(10));
+  if ($.isOk() || $[0]) {
+    throw makeError(
+      "let_assert",
+      "my/mod",
+      8,
+      "main",
+      (() => {
+        let message = side_effects("some message");
+        return message;
+      })(),
+      { value: $ }
+    )
+  }
+  return $;
+}
