@@ -277,3 +277,17 @@ pub fn main() {
 "
     )
 }
+
+// https://github.com/gleam-lang/gleam/issues/4393
+#[test]
+fn let_assert_only_statement_in_block() {
+    assert_js!(
+        "
+pub fn main() {
+  {
+    let assert Ok(1) = Error(Nil)
+  }
+}
+"
+    )
+}

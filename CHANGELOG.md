@@ -292,6 +292,10 @@
   when it could use the cache from previous compilations.
   ([Louis Pilfold](https://github.com/lpil))
 
+- Fixed a bug where `let assert` would not assert that the given value matched
+  the pattern if it was the only expression inside a block.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.9.1 - 2025-03-10
 
 ### Formatter
