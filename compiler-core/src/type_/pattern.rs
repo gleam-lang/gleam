@@ -638,7 +638,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             },
 
             Pattern::BitArray { location, segments } => {
-                unify(type_, bits()).map_err(|e| convert_unify_error(e, location))?;
+                unify(type_, bit_array()).map_err(|e| convert_unify_error(e, location))?;
                 self.infer_pattern_bit_array(segments, location)
             }
 
