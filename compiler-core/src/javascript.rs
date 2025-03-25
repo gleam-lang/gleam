@@ -800,18 +800,18 @@ fn is_usable_js_identifier(word: &str) -> bool {
 }
 
 fn is_usable_js_property(label: &str) -> bool {
-    !matches!(
-        label,
-        // `then` to avoid a custom type that defines a `then` function being used as a `thenable`
-        // in Javascript.
+    match label {
+        // `then` to avoid a custom type that defines a `then` function being
+        // used as a `thenable` in Javascript.
         "then"
-            // `constructor` to avoid unintentional overriding of the constructor of records,
-            // leading to potential runtime crashes while using `withFields`.
-            | "constructor"
-            // `prototype` and `__proto__` to avoid unintentionally overriding the prototype chain
-            | "prototype"
-            | "__proto__"
-    )
+        // `constructor` to avoid unintentional overriding of the constructor of
+        // records, leading to potential runtime crashes while using `withFields`.
+        | "constructor"
+        // `prototype` and `__proto__` to avoid unintentionally overriding the
+        // prototype chain.
+        | "prototpye" | "__proto__" => false,
+        _ => true
+    }
 }
 
 fn maybe_escape_identifier_string(word: &str) -> EcoString {
