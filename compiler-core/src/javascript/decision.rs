@@ -1,20 +1,23 @@
 use super::{
-    Error, Output,
-    expression::{Generator, Ordering},
+    Error, INDENT, Output,
+    expression::{Generator, Ordering, float, int},
 };
 use crate::{
-    ast::{TypedClause, TypedExpr},
+    ast::{SrcSpan, TypedClause, TypedExpr},
     docvec,
     exhaustiveness::{
         Body, BoundValue, CompiledCase, Decision, FallbackCheck, RuntimeCheck, Variable,
     },
     format::break_block,
-    javascript::expression::{string, string_from_eco},
-    pretty::{Document, Documentable, join, line, nil},
+    javascript::{expression::string, maybe_escape_property},
+    pretty::{Document, Documentable, break_, join, line, nil},
     strings::convert_string_escape_chars,
 };
 use ecow::{EcoString, eco_format};
-use std::{collections::HashMap, sync::OnceLock};
+use std::{
+    collections::{HashMap, VecDeque},
+    sync::OnceLock,
+};
 
 pub static ASSIGNMENT_VAR: &str = "$";
 
@@ -216,22 +219,21 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         }
     }
 
-    fn runtime_check(&mut self, variable: &Variable, runtime_check: &RuntimeCheck) -> Document<'a> {
+    fn runtime_check(
+        &mut self,
+        variable: &Variable,
+        runtime_check: &'a RuntimeCheck,
+    ) -> Document<'a> {
         let value = self.variables.get_value(variable);
         match runtime_check {
-            RuntimeCheck::String { value } => {
-                docvec![value, " === ", string_from_eco(value.clone())]
-            }
-
-            RuntimeCheck::Int { value } | RuntimeCheck::Float { value } => {
-                docvec![value, " === ", value]
-            }
-
+            RuntimeCheck::String { value: literal } => docvec![value, " === ", string(&literal)],
+            RuntimeCheck::Float { value: literal } => docvec![value, " === ", float(literal)],
+            RuntimeCheck::Int { value: literal } => docvec![value, " === ", int(literal)],
             RuntimeCheck::StringPrefix { prefix, .. } => {
-                docvec![value, ".startsWith(", string_from_eco(prefix.clone()), ")"]
+                docvec![value, ".startsWith(", string(&prefix), ")"]
             }
 
-            RuntimeCheck::BitArray { value } => docvec!["TODO"],
+            RuntimeCheck::BitArray { value } => todo!(),
 
             // When checking on a tuple there's always going to be a single choice
             // and the code generation will always skip generating the check for it
@@ -413,7 +415,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             RuntimeCheck::Variant { fields, labels, .. } => {
                 for (i, field) in fields.iter().enumerate() {
                     let access = match labels.get(&i) {
-                        Some(label) => eco_format!("{value}.{label}"),
+                        Some(label) => eco_format!("{value}.{}", maybe_escape_property(&label)),
                         None => eco_format!("{value}[{i}]"),
                     };
                     self.set_value(field, access);
