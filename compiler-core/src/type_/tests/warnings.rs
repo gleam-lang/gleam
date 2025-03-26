@@ -2480,6 +2480,41 @@ pub fn main(a) {
 }
 
 #[test]
+fn missing_float_option_in_bit_array_segment_requires_v1_10() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub fn main() {
+  <<1.2>>
+}
+",
+    );
+}
+
+#[test]
+fn missing_float_option_in_bit_array_constant_segment_requires_v1_10() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "pub const bits = <<1.2>>"
+    );
+}
+
+#[test]
+fn missing_float_option_in_bit_array_pattern_segment_requires_v1_10() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub fn main(a) {
+  case a {
+    <<1.2>> -> Nil
+    _ -> Nil
+  }
+}
+",
+    );
+}
+
+#[test]
 fn record_update_variant_inference_requires_v1_6() {
     assert_warnings_with_gleam_version!(
         Range::higher_than(Version::new(1, 0, 0)),

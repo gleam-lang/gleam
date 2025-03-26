@@ -30,11 +30,6 @@ fn bit_arrays4() {
 }
 
 #[test]
-fn bit_array() {
-    assert_error!("case <<1>> { <<2.0, a>> -> 1 _ -> 2 }");
-}
-
-#[test]
 fn bit_array_float() {
     assert_error!("case <<1>> { <<a:float>> if a > 1 -> 1 _ -> 2 }");
 }

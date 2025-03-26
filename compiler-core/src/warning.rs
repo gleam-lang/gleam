@@ -1092,6 +1092,9 @@ See: https://tour.gleam.run/functions/pipelines/",
                         FeatureKind::UnannotatedUtf8StringSegment => {
                             "The ability to omit the `utf8` annotation for string segments was"
                         }
+                        FeatureKind::UnannotatedFloatSegment => {
+                            "The ability to omit the `float` annotation for segments was"
+                        }
                         FeatureKind::NestedTupleAccess => {
                             "The ability to access nested tuple fields was"
                         }

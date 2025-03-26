@@ -300,6 +300,39 @@ pub fn main() {
 }
 
 #[test]
+fn missing_float_option_in_bit_array_segment_requires_v1_10() {
+    let version = infer_version(
+        "
+pub fn main() {
+  <<1.2>>
+}
+",
+    );
+    assert_eq!(version, Version::new(1, 10, 0));
+}
+
+#[test]
+fn missing_float_option_in_bit_array_constant_segment_requires_v1_10() {
+    let version = infer_version("const bits = <<1.2>>");
+    assert_eq!(version, Version::new(1, 10, 0));
+}
+
+#[test]
+fn missing_float_option_in_bit_array_pattern_segment_requires_v1_10() {
+    let version = infer_version(
+        "
+pub fn main() {
+  case todo {
+    <<1.11>> -> todo
+    _ -> todo
+  }
+}
+",
+    );
+    assert_eq!(version, Version::new(1, 10, 0));
+}
+
+#[test]
 fn inference_picks_the_bigger_of_two_versions() {
     let version = infer_version(
         "

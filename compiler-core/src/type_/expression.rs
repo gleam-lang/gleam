@@ -1204,20 +1204,43 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> Result<TypedExpr, Error> {
         let segments = segments
             .into_iter()
-            .map(|s| {
-                let options = match s.value.as_ref() {
-                    UntypedExpr::String { location, .. } if s.options.is_empty() => {
-                        self.track_feature_usage(
-                            FeatureKind::UnannotatedUtf8StringSegment,
-                            *location,
-                        );
-                        vec![BitArrayOption::Utf8 {
-                            location: SrcSpan::default(),
-                        }]
+            .map(|mut segment| {
+                // If the segment doesn't have an explicit type option we add a default
+                // one ourselves if the pattern is unambiguous: literal strings are
+                // implicitly considered utf-8 encoded strings, while floats are
+                // implicitly given the float type option.
+                if !segment.has_type_option() {
+                    match segment.value.as_ref() {
+                        UntypedExpr::String { location, .. } => {
+                            self.track_feature_usage(
+                                FeatureKind::UnannotatedUtf8StringSegment,
+                                *location,
+                            );
+                            segment.options.push(BitArrayOption::Utf8 {
+                                location: SrcSpan::default(),
+                            });
+                        }
+
+                        UntypedExpr::Float { location, .. } => {
+                            self.track_feature_usage(
+                                FeatureKind::UnannotatedFloatSegment,
+                                *location,
+                            );
+                            segment.options.push(BitArrayOption::Float {
+                                location: SrcSpan::default(),
+                            })
+                        }
+
+                        _ => (),
                     }
-                    _ => s.options,
-                };
-                self.infer_bit_segment(*s.value, options, s.location, |env, expr| env.infer(expr))
+                }
+
+                self.infer_bit_segment(
+                    *segment.value,
+                    segment.options,
+                    segment.location,
+                    |env, expr| env.infer(expr),
+                )
             })
             .try_collect()?;
 
@@ -1235,22 +1258,43 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> Result<TypedConstant, Error> {
         let segments = segments
             .into_iter()
-            .map(|s| {
-                let options = match s.value.as_ref() {
-                    Constant::String { location, .. } if s.options.is_empty() => {
-                        self.track_feature_usage(
-                            FeatureKind::UnannotatedUtf8StringSegment,
-                            *location,
-                        );
-                        vec![BitArrayOption::Utf8 {
-                            location: SrcSpan::default(),
-                        }]
+            .map(|mut segment| {
+                // If the segment doesn't have an explicit type option we add a default
+                // one ourselves if the pattern is unambiguous: literal strings are
+                // implicitly considered utf-8 encoded strings, while floats are
+                // implicitly given the float type option.
+                if !segment.has_type_option() {
+                    match segment.value.as_ref() {
+                        Constant::String { location, .. } => {
+                            self.track_feature_usage(
+                                FeatureKind::UnannotatedUtf8StringSegment,
+                                *location,
+                            );
+                            segment.options.push(BitArrayOption::Utf8 {
+                                location: SrcSpan::default(),
+                            });
+                        }
+
+                        Constant::Float { location, .. } => {
+                            self.track_feature_usage(
+                                FeatureKind::UnannotatedFloatSegment,
+                                *location,
+                            );
+                            segment.options.push(BitArrayOption::Float {
+                                location: SrcSpan::default(),
+                            })
+                        }
+
+                        _ => (),
                     }
-                    _ => s.options,
-                };
-                self.infer_bit_segment(*s.value, options, s.location, |env, expr| {
-                    Ok(env.infer_const(&None, expr))
-                })
+                }
+
+                self.infer_bit_segment(
+                    *segment.value,
+                    segment.options,
+                    segment.location,
+                    |env, expr| Ok(env.infer_const(&None, expr)),
+                )
             })
             .try_collect()?;
 

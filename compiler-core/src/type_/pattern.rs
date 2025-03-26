@@ -261,27 +261,35 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
     fn infer_pattern_segment(
         &mut self,
-        segment: UntypedPatternBitArraySegment,
+        mut segment: UntypedPatternBitArraySegment,
         is_last_segment: bool,
     ) -> Result<TypedPatternBitArraySegment, Error> {
-        let UntypedPatternBitArraySegment {
-            location,
-            options,
-            value,
-            ..
-        } = segment;
+        // If the segment doesn't have an explicit type option we add a default
+        // one ourselves if the pattern is unambiguous: literal strings are
+        // implicitly considered utf-8 encoded strings, while floats are
+        // implicitly given the float type option.
+        if !segment.has_type_option() {
+            match segment.value.as_ref() {
+                Pattern::String { location, .. } => {
+                    self.track_feature_usage(FeatureKind::UnannotatedUtf8StringSegment, *location);
+                    segment.options.push(BitArrayOption::Utf8 {
+                        location: SrcSpan::default(),
+                    });
+                }
 
-        let options = match value.as_ref() {
-            Pattern::String { location, .. } if options.is_empty() => {
-                self.track_feature_usage(FeatureKind::UnannotatedUtf8StringSegment, *location);
-                vec![BitArrayOption::Utf8 {
-                    location: SrcSpan::default(),
-                }]
+                Pattern::Float { location, .. } => {
+                    self.track_feature_usage(FeatureKind::UnannotatedFloatSegment, *location);
+                    segment.options.push(BitArrayOption::Float {
+                        location: SrcSpan::default(),
+                    })
+                }
+
+                _ => (),
             }
-            _ => options,
-        };
+        }
 
-        let options: Vec<_> = options
+        let options: Vec<_> = segment
+            .options
             .into_iter()
             .map(|o| {
                 crate::analyse::infer_bit_array_option(o, |value, type_| {
@@ -334,20 +342,20 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         }
 
         let type_ = {
-            match value.deref() {
+            match segment.value.deref() {
                 Pattern::Variable { .. } if segment_type == string() => {
                     Err(Error::BitArraySegmentError {
                         error: bit_array::ErrorType::VariableUtfSegmentInPattern,
-                        location,
+                        location: segment.location,
                     })
                 }
                 _ => Ok(segment_type),
             }
         }?;
-        let typed_value = self.unify(*value, type_.clone(), None)?;
+        let typed_value = self.unify(*segment.value, type_.clone(), None)?;
 
         Ok(BitArraySegment {
-            location,
+            location: segment.location,
             value: Box::new(typed_value),
             options,
             type_,
