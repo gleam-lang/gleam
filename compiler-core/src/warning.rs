@@ -941,9 +941,12 @@ hidden from the package's documentation.",
                 },
 
                 type_::Warning::AssertAssignmentOnInferredVariant { location } => Diagnostic {
-                    title: "Assertion on inferred variant".into(),
+                    title: "Assertion that will always fail".into(),
                     text: wrap(
-                        "This assertion will always crash since it matches on a variant which is never present.",
+                        "We can tell from the code above that the value will never match \
+this pattern and that this code will always crash.
+
+Either change the pattern or use `panic` to unconditionally fail.",
                     ),
                     hint: None,
                     level: diagnostic::Level::Warning,
