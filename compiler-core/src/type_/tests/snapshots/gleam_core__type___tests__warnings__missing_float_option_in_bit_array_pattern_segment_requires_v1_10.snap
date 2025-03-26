@@ -19,10 +19,10 @@ warning: Incompatible gleam version range
 4 │     <<1.2>> -> Nil
   │       ^^^ This requires a Gleam version >= 1.10.0
 
-The ability to omit the `float` annotation for segments was introduced in
-version v1.10.0. But the Gleam version range specified in your `gleam.toml`
-would allow this code to run on an earlier version like v1.0.0, resulting
-in compilation errors!
+The ability to omit the `float` annotation for float segments was
+introduced in version v1.10.0. But the Gleam version range specified in
+your `gleam.toml` would allow this code to run on an earlier version like
+v1.0.0, resulting in compilation errors!
 Hint: Remove the version constraint from your `gleam.toml` or update it to be:
 
     gleam = ">= 1.10.0"
