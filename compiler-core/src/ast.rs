@@ -2231,6 +2231,13 @@ impl<Value> BitArraySegment<Value, Arc<Type>> {
     }
 }
 
+impl<Value, Type> BitArraySegment<Value, Type> {
+    #[must_use]
+    pub(crate) fn has_type_option(&self) -> bool {
+        self.options.iter().any(|option| option.is_type_option())
+    }
+}
+
 impl TypedExprBitArraySegment {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         self.value.find_node(byte_index)
@@ -2372,6 +2379,29 @@ impl<A> BitArrayOption<A> {
             BitArrayOption::Native { .. } => "native".into(),
             BitArrayOption::Size { .. } => "size".into(),
             BitArrayOption::Unit { .. } => "unit".into(),
+        }
+    }
+
+    fn is_type_option(&self) -> bool {
+        match self {
+            BitArrayOption::Bytes { .. }
+            | BitArrayOption::Int { .. }
+            | BitArrayOption::Float { .. }
+            | BitArrayOption::Bits { .. }
+            | BitArrayOption::Utf8 { .. }
+            | BitArrayOption::Utf16 { .. }
+            | BitArrayOption::Utf32 { .. }
+            | BitArrayOption::Utf8Codepoint { .. }
+            | BitArrayOption::Utf16Codepoint { .. }
+            | BitArrayOption::Utf32Codepoint { .. } => true,
+
+            BitArrayOption::Signed { .. }
+            | BitArrayOption::Unsigned { .. }
+            | BitArrayOption::Big { .. }
+            | BitArrayOption::Little { .. }
+            | BitArrayOption::Native { .. }
+            | BitArrayOption::Size { .. }
+            | BitArrayOption::Unit { .. } => false,
         }
     }
 }

@@ -930,6 +930,7 @@ pub enum FeatureKind {
     ConstantStringConcatenation,
     ArithmeticInGuards,
     UnannotatedUtf8StringSegment,
+    UnannotatedFloatSegment,
     NestedTupleAccess,
     InternalAnnotation,
     AtInJavascriptModules,
@@ -965,6 +966,7 @@ impl FeatureKind {
             }
 
             FeatureKind::JavaScriptUnalignedBitArray => Version::new(1, 9, 0),
+            FeatureKind::UnannotatedFloatSegment => Version::new(1, 10, 0),
         }
     }
 }
