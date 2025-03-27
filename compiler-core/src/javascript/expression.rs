@@ -861,11 +861,11 @@ impl<'module, 'a> Generator<'module, 'a> {
         } = assert;
 
         let value_document =
-            self.not_in_tail_position(Some(Ordering::Loose), |this| this.expression(value))?;
+            self.not_in_tail_position(Some(Ordering::Loose), |this| this.child_expression(value))?;
 
         let check = docvec![
             "if (",
-            docvec!["!", value_document.group()].nest(INDENT),
+            docvec!["!", value_document].nest(INDENT),
             break_("", ""),
             ") {",
             docvec![
