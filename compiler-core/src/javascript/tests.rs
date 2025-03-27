@@ -8,6 +8,7 @@ use crate::{
 };
 use camino::{Utf8Path, Utf8PathBuf};
 
+mod assert;
 mod assignments;
 mod bit_arrays;
 mod blocks;
