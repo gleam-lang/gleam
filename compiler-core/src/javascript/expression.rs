@@ -210,7 +210,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             Statement::Expression(expression) => self.expression(expression),
             Statement::Assignment(assignment) => self.assignment(assignment),
             Statement::Use(use_) => self.expression(&use_.call),
-            Statement::Assert(_) => todo!(),
+            Statement::Assert(assert) => self.assert(assert),
         }?;
         Ok(self.add_statement_level(expression_doc))
     }
@@ -711,10 +711,11 @@ impl<'module, 'a> Generator<'module, 'a> {
 
                 Statement::Use(use_) => return self.child_expression(&use_.call),
 
-                Statement::Assert(_) => todo!(),
+                // Similar to `let assert`, we can't immediately return the value
+                // that is asserted; we have to actually perform the assertion.
+                Statement::Assert(_) => {}
             }
         }
-
         match &self.scope_position {
             Position::Tail | Position::Assign(_) => self.block_document(statements),
             Position::NotTail(Ordering::Strict) => self
@@ -852,6 +853,41 @@ impl<'module, 'a> Generator<'module, 'a> {
         Ok(doc.append(afterwards).force_break())
     }
 
+    fn assert(&mut self, assert: &'a TypedAssert) -> Output<'a> {
+        let TypedAssert {
+            location,
+            value,
+            message,
+        } = assert;
+
+        let value_document =
+            self.not_in_tail_position(Some(Ordering::Loose), |this| this.expression(value))?;
+
+        let check = docvec![
+            "if (",
+            docvec!["!", value_document.group()].nest(INDENT),
+            break_("", ""),
+            ") {",
+            docvec![
+                line(),
+                self.assertion_failed(*location, value, message.as_ref())?
+            ]
+            .nest(INDENT),
+            line(),
+            "}",
+        ]
+        .group();
+
+        Ok(match &self.scope_position {
+            Position::NotTail(_) => check,
+            // Since the program will crash if the expression evaluates to false,
+            // we can always return true here.
+            Position::Tail | Position::Assign(_) => {
+                docvec![check, line(), self.wrap_return("true".to_doc())]
+            }
+        })
+    }
+
     fn case(&mut self, subject_values: &'a [TypedExpr], clauses: &'a [TypedClause]) -> Output<'a> {
         let (subjects, subject_assignments): (Vec<_>, Vec<_>) =
             pattern::assign_subjects(self, subject_values)
@@ -971,6 +1007,72 @@ impl<'module, 'a> Generator<'module, 'a> {
         };
 
         Ok(self.throw_error("let_assert", &message, location, [("value", subject)]))
+    }
+
+    fn assertion_failed(
+        &mut self,
+        location: SrcSpan,
+        value: &'a TypedExpr,
+        message: Option<&'a TypedExpr>,
+    ) -> Output<'a> {
+        let message = match message {
+            Some(m) => {
+                self.not_in_tail_position(Some(Ordering::Strict), |this| this.expression(m))?
+            }
+            None => string("Assertion failed"),
+        };
+
+        let fields = match value {
+            TypedExpr::Call { args, .. } => vec![
+                ("kind", string("function_call")),
+                (
+                    "arguments",
+                    array(
+                        args.iter()
+                            .map(|argument| self.asserted_expression(&argument.value)),
+                    )?,
+                ),
+            ],
+            TypedExpr::BinOp {
+                name, left, right, ..
+            } => vec![
+                ("kind", string("binary_operator")),
+                ("operator", string(name.name())),
+                ("left", self.asserted_expression(left)?),
+                ("right", self.asserted_expression(right)?),
+            ],
+            _ => vec![
+                ("kind", string("expression")),
+                ("expression", self.asserted_expression(value)?),
+            ],
+        };
+
+        Ok(self.throw_error("assert", &message, location, fields))
+    }
+
+    fn asserted_expression(&mut self, expression: &'a TypedExpr) -> Output<'a> {
+        let kind = if expression.is_literal() {
+            string("literal")
+        } else {
+            string("expression")
+        };
+        let value = self.not_in_tail_position(Some(Ordering::Strict), |this| {
+            this.wrap_expression(expression)
+        })?;
+        let location = expression.location();
+        let start = location.start.to_doc();
+        let end = location.end.to_doc();
+
+        Ok(wrap_object(
+            [
+                ("kind", kind),
+                ("value", value),
+                ("start", start),
+                ("end", end),
+            ]
+            .into_iter()
+            .map(|(key, value)| (key.to_doc(), Some(value))),
+        ))
     }
 
     fn tuple(&mut self, elements: &'a [TypedExpr]) -> Output<'a> {
