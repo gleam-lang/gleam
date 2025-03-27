@@ -228,8 +228,6 @@ expression: "compile(config, modules)"
 
 
 
-
-
       </nav>
 
       <main class="content">
@@ -242,8 +240,6 @@ expression: "compile(config, modules)"
 <pre><code>wibble
   |&gt; wobble
 </code></pre>
-
-
 
 
 

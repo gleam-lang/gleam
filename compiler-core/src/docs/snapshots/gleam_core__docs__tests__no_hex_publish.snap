@@ -544,9 +544,7 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
 
 
 
-
-
-<h2>Functions</h2>
+<h2>Values</h2>
 <ul>
   
   <li><a href="#one">one</a></li>
@@ -567,11 +565,9 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
 
 
 
-
-
 <section class="module-members">
-  <h1 id="module-functions" class="module-member-kind">
-    <a href="#module-functions">Functions</a>
+  <h1 id="module-values" class="module-member-kind">
+    <a href="#module-values">Values</a>
     <svg class="icon icon-gleam-chasse"><use xlink:href="#icon-gleam-chasse"></use></svg>
   </h1>
   
@@ -905,9 +901,7 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
 
 
 
-
-
-<h2>Functions</h2>
+<h2>Values</h2>
 <ul>
   
   <li><a href="#one">one</a></li>
@@ -928,11 +922,9 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
 
 
 
-
-
 <section class="module-members">
-  <h1 id="module-functions" class="module-member-kind">
-    <a href="#module-functions">Functions</a>
+  <h1 id="module-values" class="module-member-kind">
+    <a href="#module-values">Values</a>
     <svg class="icon icon-gleam-chasse"><use xlink:href="#icon-gleam-chasse"></use></svg>
   </h1>
   
