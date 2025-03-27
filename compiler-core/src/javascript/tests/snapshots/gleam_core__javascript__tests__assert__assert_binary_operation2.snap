@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/javascript/tests/assert.rs
+expression: "\npub fn eq(a, b) {\n  assert a == b\n}\n"
+---
+----- SOURCE CODE
+
+pub fn eq(a, b) {
+  assert a == b
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError, isEqual } from "../gleam.mjs";
+
+export function eq(a, b) {
+  if (!(isEqual(a, b))) {
+    throw makeError(
+      "assert",
+      "my/mod",
+      3,
+      "eq",
+      "Assertion failed",
+      {
+        kind: "binary_operator",
+        operator: "==",
+        left: { kind: "expression", value: a, start: 28, end: 29 },
+        right: { kind: "expression", value: b, start: 33, end: 34 }
+      }
+    )
+  }
+  return true;
+}

@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/javascript/tests/assert.rs
+expression: "\nfn bool() {\n  True\n}\n\npub fn main() {\n  assert bool()\n}\n"
+---
+----- SOURCE CODE
+
+fn bool() {
+  True
+}
+
+pub fn main() {
+  assert bool()
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError } from "../gleam.mjs";
+
+function bool() {
+  return true;
+}
+
+export function main() {
+  if (!bool()) {
+    throw makeError(
+      "assert",
+      "my/mod",
+      7,
+      "main",
+      "Assertion failed",
+      { kind: "function_call", arguments: [] }
+    )
+  }
+  return true;
+}

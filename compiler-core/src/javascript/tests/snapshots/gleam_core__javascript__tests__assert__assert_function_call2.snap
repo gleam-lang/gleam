@@ -1,0 +1,41 @@
+---
+source: compiler-core/src/javascript/tests/assert.rs
+expression: "\nfn and(a, b) {\n  a && b\n}\n\npub fn go(x) {\n  assert and(True, x)\n}\n"
+---
+----- SOURCE CODE
+
+fn and(a, b) {
+  a && b
+}
+
+pub fn go(x) {
+  assert and(True, x)
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError } from "../gleam.mjs";
+
+function and(a, b) {
+  return a && b;
+}
+
+export function go(x) {
+  if (!and(true, x)) {
+    throw makeError(
+      "assert",
+      "my/mod",
+      7,
+      "go",
+      "Assertion failed",
+      {
+        kind: "function_call",
+        arguments: [
+          { kind: "expression", value: true, start: 56, end: 60 },
+          { kind: "expression", value: x, start: 62, end: 63 },
+        ]
+      }
+    )
+  }
+  return true;
+}
