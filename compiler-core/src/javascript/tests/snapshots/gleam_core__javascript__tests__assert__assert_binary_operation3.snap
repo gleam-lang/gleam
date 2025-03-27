@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/javascript/tests/assert.rs
+expression: "\npub fn assert_answer(x) {\n  assert x == 42\n}\n"
+---
+----- SOURCE CODE
+
+pub fn assert_answer(x) {
+  assert x == 42
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError } from "../gleam.mjs";
+
+export function assert_answer(x) {
+  if (!(x === 42)) {
+    throw makeError(
+      "assert",
+      "my/mod",
+      3,
+      "assert_answer",
+      "Assertion failed",
+      {
+        kind: "binary_operator",
+        operator: "==",
+        left: { kind: "expression", value: x, start: 36, end: 37 },
+        right: { kind: "literal", value: 42, start: 41, end: 43 }
+      }
+    )
+  }
+  return true;
+}

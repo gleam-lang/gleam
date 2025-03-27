@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/javascript/tests/assert.rs
+expression: "\npub fn main() {\n  let x = True\n  assert x\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let x = True
+  assert x
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError } from "../gleam.mjs";
+
+export function main() {
+  let x = true;
+  if (!x) {
+    throw makeError(
+      "assert",
+      "my/mod",
+      4,
+      "main",
+      "Assertion failed",
+      {
+        kind: "expression",
+        expression: { kind: "expression", value: x, start: 41, end: 42 }
+      }
+    )
+  }
+  return true;
+}
