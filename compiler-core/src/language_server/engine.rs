@@ -39,7 +39,7 @@ use super::{
         FillInMissingLabelledArgs, FillUnusedFields, GenerateDynamicDecoder, GenerateFunction,
         GenerateJsonEncoder, InlineVariable, InterpolateString, LetAssertToCase,
         PatternMatchOnValue, RedundantTupleInCaseSubject, RemoveEchos, UseLabelShorthandSyntax,
-        WrapClauseWithBraces, code_action_add_missing_patterns,
+        WrapClauseInBlock, code_action_add_missing_patterns,
         code_action_convert_qualified_constructor_to_unqualified,
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
         code_action_inexhaustive_let_to_case,
@@ -400,7 +400,7 @@ where
                 PatternMatchOnValue::new(module, &lines, &params, &this.compiler).code_actions(),
             );
             actions.extend(InlineVariable::new(module, &lines, &params).code_actions());
-            actions.extend(WrapClauseWithBraces::new(module, &lines, &params).code_actions());
+            actions.extend(WrapClauseInBlock::new(module, &lines, &params).code_actions());
             GenerateDynamicDecoder::new(module, &lines, &params, &mut actions).code_actions();
             GenerateJsonEncoder::new(
                 module,

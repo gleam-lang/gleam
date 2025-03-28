@@ -5978,7 +5978,7 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveEchos<'ast> {
     }
 }
 
-/// Code action to wrap a case clause in braces.
+/// Code action to wrap a case clause in a block.
 ///
 /// ```gleam
 /// pub type PokemonType {
@@ -6013,14 +6013,14 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveEchos<'ast> {
 /// }
 /// ```
 ///
-pub struct WrapClauseWithBraces<'a> {
+pub struct WrapClauseInBlock<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
     selected_expression: Option<SrcSpan>,
 }
 
-impl<'a> WrapClauseWithBraces<'a> {
+impl<'a> WrapClauseInBlock<'a> {
     pub fn new(
         module: &'a Module,
         line_numbers: &'a LineNumbers,
@@ -6083,7 +6083,7 @@ impl<'a> WrapClauseWithBraces<'a> {
         );
 
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new("Wrap case clause with braces")
+        CodeActionBuilder::new("Wrap case clause in block")
             .kind(CodeActionKind::REFACTOR_EXTRACT)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
@@ -6092,7 +6092,7 @@ impl<'a> WrapClauseWithBraces<'a> {
     }
 }
 
-impl<'ast> ast::visit::Visit<'ast> for WrapClauseWithBraces<'ast> {
+impl<'ast> ast::visit::Visit<'ast> for WrapClauseInBlock<'ast> {
     fn visit_typed_clause(&mut self, clause: &'ast ast::TypedClause) {
         ast::visit::visit_typed_clause(self, clause);
 

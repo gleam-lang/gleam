@@ -82,7 +82,7 @@ const CONVERT_TO_PIPE: &str = "Convert to pipe";
 const INTERPOLATE_STRING: &str = "Interpolate string";
 const FILL_UNUSED_FIELDS: &str = "Fill unused fields";
 const REMOVE_ALL_ECHOS_FROM_THIS_MODULE: &str = "Remove all `echo`s from this module";
-const WRAP_CASE_CLAUSE_IN_BRACES: &str = "Wrap case clause with braces";
+const WRAP_CASE_CLAUSE_IN_BLOCK: &str = "Wrap case clause in block";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -7180,9 +7180,9 @@ pub fn main() {
 }
 
 #[test]
-fn wrap_case_clause_with_braces_1() {
+fn wrap_case_clause_in_block_1() {
     assert_code_action!(
-        WRAP_CASE_CLAUSE_IN_BRACES,
+        WRAP_CASE_CLAUSE_IN_BLOCK,
         "
 pub fn f(option) {
   case option {
@@ -7195,9 +7195,9 @@ pub fn f(option) {
 }
 
 #[test]
-fn wrap_case_clause_with_braces_2() {
+fn wrap_case_clause_in_block_2() {
     assert_code_action!(
-        WRAP_CASE_CLAUSE_IN_BRACES,
+        WRAP_CASE_CLAUSE_IN_BLOCK,
         "
 pub fn f(result) {
   case result {
@@ -7215,9 +7215,9 @@ pub fn f(result) {
 }
 
 #[test]
-fn do_not_wrap_case_clause_with_braces_1() {
+fn do_not_wrap_case_clause_in_block_1() {
     assert_no_code_actions!(
-        WRAP_CASE_CLAUSE_IN_BRACES,
+        WRAP_CASE_CLAUSE_IN_BLOCK,
         "
 pub fn f(option) {
   case option {
@@ -7232,9 +7232,9 @@ pub fn f(option) {
 }
 
 #[test]
-fn do_not_wrap_case_clause_with_braces_2() {
+fn do_not_wrap_case_clause_in_block_2() {
     assert_no_code_actions!(
-        WRAP_CASE_CLAUSE_IN_BRACES,
+        WRAP_CASE_CLAUSE_IN_BLOCK,
         "
 pub fn f(result) {
   case result {
