@@ -6098,7 +6098,7 @@ impl<'ast> ast::visit::Visit<'ast> for WrapClauseWithBraces<'ast> {
 
         if !within(
             self.params.range,
-            self.edits.src_span_to_lsp_range(clause.location),
+            self.edits.src_span_to_lsp_range(clause.then.location()),
         ) {
             return;
         }
