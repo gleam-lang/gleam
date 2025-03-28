@@ -2,7 +2,7 @@ use num_bigint::BigInt;
 use vec1::Vec1;
 
 use super::{
-    pattern::{Assignment, CompiledPattern},
+    pattern::{ASSIGNMENT_VAR, Assignment, CompiledPattern},
     *,
 };
 use crate::{
@@ -481,16 +481,16 @@ impl<'module, 'a> Generator<'module, 'a> {
         }
     }
 
-    pub fn not_in_tail_position<CompileFn>(
+    pub fn not_in_tail_position<CompileFn, Output>(
         &mut self,
         // If ordering is None, it is inherited from the parent scope.
         // It will be None in cases like `!x`, where `x` can be lifted
         // only if the ordering is already loose.
         ordering: Option<Ordering>,
         compile: CompileFn,
-    ) -> Output<'a>
+    ) -> Output
     where
-        CompileFn: Fn(&mut Self) -> Output<'a>,
+        CompileFn: Fn(&mut Self) -> Output,
     {
         let new_ordering = ordering.unwrap_or(self.scope_position.ordering());
 
@@ -860,17 +860,21 @@ impl<'module, 'a> Generator<'module, 'a> {
             message,
         } = assert;
 
-        let value_document =
-            self.not_in_tail_position(Some(Ordering::Loose), |this| this.child_expression(value))?;
+        let (subject, subject_document) =
+            self.not_in_tail_position(Some(Ordering::Loose), |this| {
+                let subject = this.assert_subject(value)?;
+                let subject_document = this.assert_subject_document(&subject)?;
+                Ok((subject, subject_document))
+            })?;
 
         let check = docvec![
             "if (",
-            docvec!["!", value_document].nest(INDENT),
+            docvec!["!", subject_document].nest(INDENT),
             break_("", ""),
             ") {",
             docvec![
                 line(),
-                self.assertion_failed(*location, value, message.as_ref())?
+                self.assertion_failed(*location, subject, message.as_ref())?
             ]
             .nest(INDENT),
             line(),
@@ -886,6 +890,102 @@ impl<'module, 'a> Generator<'module, 'a> {
                 docvec![check, line(), self.wrap_return("true".to_doc())]
             }
         })
+    }
+
+    fn assign_to_variable(&mut self, value: &'a TypedExpr) -> Output<'a> {
+        match value {
+            TypedExpr::Var { .. } => self.expression(value),
+            _ => {
+                let value = self.wrap_expression(value)?;
+                let variable = self.next_local_var(&ASSIGNMENT_VAR.into());
+                let assignment = docvec!["let ", variable.clone(), " = ", value, ";"];
+                self.statement_level.push(assignment);
+                Ok(variable.to_doc())
+            }
+        }
+    }
+
+    fn assert_subject(&mut self, subject: &'a TypedExpr) -> Result<AssertSubject<'a>, Error> {
+        match subject {
+            TypedExpr::Call { fun, args, .. } => {
+                let arguments = args
+                    .iter()
+                    .map(|element| {
+                        self.not_in_tail_position(Some(Ordering::Strict), |this| {
+                            this.assert_expression(&element.value)
+                        })
+                    })
+                    .try_collect()?;
+                Ok(AssertSubject::Call {
+                    function: fun,
+                    arguments,
+                })
+            }
+            TypedExpr::BinOp {
+                name, left, right, ..
+            } => {
+                let operand_type = left.type_();
+                let left = self.assert_expression(left)?;
+                let right = self.assert_expression(right)?;
+                Ok(AssertSubject::BinaryOperator {
+                    name: *name,
+                    left,
+                    right,
+                    operand_type,
+                })
+            }
+            _ => Ok(AssertSubject::Expression(self.assert_expression(subject)?)),
+        }
+    }
+
+    fn assert_expression(
+        &mut self,
+        expression: &'a TypedExpr,
+    ) -> Result<AssertExpression<'a>, Error> {
+        let kind = if expression.is_literal() {
+            ExpressionKind::Literal
+        } else {
+            ExpressionKind::Expression
+        };
+        let location = expression.location();
+        let value = self.assign_to_variable(expression)?;
+
+        Ok(AssertExpression {
+            kind,
+            location,
+            value,
+        })
+    }
+
+    fn assert_subject_document(&mut self, subject: &AssertSubject<'a>) -> Output<'a> {
+        match subject {
+            AssertSubject::Expression(expression) => Ok(expression.value.clone()),
+            AssertSubject::BinaryOperator {
+                name,
+                left,
+                right,
+                operand_type,
+            } => Ok(docvec![
+                "(",
+                self.bin_op_with_doc_operands(
+                    *name,
+                    left.value.clone(),
+                    right.value.clone(),
+                    operand_type,
+                ),
+                ")"
+            ]),
+            AssertSubject::Call {
+                function,
+                arguments,
+            } => self.call_with_doc_args(
+                function,
+                arguments
+                    .iter()
+                    .map(|expression| expression.value.clone())
+                    .collect(),
+            ),
+        }
     }
 
     fn case(&mut self, subject_values: &'a [TypedExpr], clauses: &'a [TypedClause]) -> Output<'a> {
@@ -1012,7 +1112,7 @@ impl<'module, 'a> Generator<'module, 'a> {
     fn assertion_failed(
         &mut self,
         location: SrcSpan,
-        value: &'a TypedExpr,
+        subject: AssertSubject<'a>,
         message: Option<&'a TypedExpr>,
     ) -> Output<'a> {
         let message = match message {
@@ -1022,48 +1122,68 @@ impl<'module, 'a> Generator<'module, 'a> {
             None => string("Assertion failed"),
         };
 
-        let fields = match value {
-            TypedExpr::Call { args, .. } => vec![
-                ("kind", string("function_call")),
-                (
-                    "arguments",
-                    array(
-                        args.iter()
-                            .map(|argument| self.asserted_expression(&argument.value)),
-                    )?,
-                ),
+        // TypedExpr::Call { args, .. } => vec![
+        //     ("kind", string("function_call")),
+        //     (
+        //         "arguments",
+        //         array(
+        //             args.iter()
+        //                 .map(|argument| self.asserted_expression(&argument.value)),
+        //         )?,
+        //     ),
+        // ],
+        // TypedExpr::BinOp {
+        //     name, left, right, ..
+        // } => vec![
+        //     ("kind", string("binary_operator")),
+        //     ("operator", string(name.name())),
+        //     ("left", self.asserted_expression(left)?),
+        //     ("right", self.asserted_expression(right)?),
+        // ],
+        // _ => vec![
+        //     ("kind", string("expression")),
+        //     ("expression", self.asserted_expression(subject)?),
+        // ],
+        let fields = match subject {
+            AssertSubject::Expression(expression) => vec![
+                ("kind", string("expression")),
+                ("expression", self.asserted_expression(expression)),
             ],
-            TypedExpr::BinOp {
+            AssertSubject::BinaryOperator {
                 name, left, right, ..
             } => vec![
                 ("kind", string("binary_operator")),
                 ("operator", string(name.name())),
-                ("left", self.asserted_expression(left)?),
-                ("right", self.asserted_expression(right)?),
+                ("left", self.asserted_expression(left)),
+                ("right", self.asserted_expression(right)),
             ],
-            _ => vec![
-                ("kind", string("expression")),
-                ("expression", self.asserted_expression(value)?),
+            AssertSubject::Call { arguments, .. } => vec![
+                ("kind", string("function_call")),
+                (
+                    "arguments",
+                    array(
+                        arguments
+                            .into_iter()
+                            .map(|argument| Ok(self.asserted_expression(argument))),
+                    )?,
+                ),
             ],
         };
 
         Ok(self.throw_error("assert", &message, location, fields))
     }
 
-    fn asserted_expression(&mut self, expression: &'a TypedExpr) -> Output<'a> {
-        let kind = if expression.is_literal() {
-            string("literal")
-        } else {
-            string("expression")
+    fn asserted_expression(&mut self, expression: AssertExpression<'a>) -> Document<'a> {
+        let kind = match expression.kind {
+            ExpressionKind::Literal => string("literal"),
+            ExpressionKind::Expression => string("expression"),
         };
-        let value = self.not_in_tail_position(Some(Ordering::Strict), |this| {
-            this.wrap_expression(expression)
-        })?;
-        let location = expression.location();
-        let start = location.start.to_doc();
-        let end = location.end.to_doc();
 
-        Ok(wrap_object(
+        let value = expression.value;
+        let start = expression.location.start.to_doc();
+        let end = expression.location.end.to_doc();
+
+        wrap_object(
             [
                 ("kind", kind),
                 ("value", value),
@@ -1072,7 +1192,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             ]
             .into_iter()
             .map(|(key, value)| (key.to_doc(), Some(value))),
-        ))
+        )
     }
 
     fn tuple(&mut self, elements: &'a [TypedExpr]) -> Output<'a> {
@@ -1319,6 +1439,23 @@ impl<'module, 'a> Generator<'module, 'a> {
         Ok(self.prelude_equal_call(should_be_equal, left, right))
     }
 
+    fn equal_with_doc_operands(
+        &mut self,
+        left: Document<'a>,
+        right: Document<'a>,
+        type_: Arc<Type>,
+        should_be_equal: bool,
+    ) -> Document<'a> {
+        // If it is a simple scalar type then we can use JS' reference identity
+        if is_js_scalar(type_) {
+            let operator = if should_be_equal { " === " } else { " !== " };
+            return docvec![left, operator, right];
+        }
+
+        // Other types must be compared using structural equality
+        self.prelude_equal_call(should_be_equal, left, right)
+    }
+
     pub(super) fn prelude_equal_call(
         &mut self,
         should_be_equal: bool,
@@ -1348,6 +1485,42 @@ impl<'module, 'a> Generator<'module, 'a> {
         let right =
             self.not_in_tail_position(Some(Ordering::Strict), |this| this.child_expression(right))?;
         Ok(docvec![left, " ", op, " ", right])
+    }
+
+    fn bin_op_with_doc_operands(
+        &mut self,
+        name: BinOp,
+        left: Document<'a>,
+        right: Document<'a>,
+        type_: &Arc<Type>,
+    ) -> Document<'a> {
+        match name {
+            BinOp::And => docvec![left, " && ", right],
+            BinOp::Or => docvec![left, " || ", right],
+            BinOp::LtInt | BinOp::LtFloat => docvec![left, " < ", right],
+            BinOp::LtEqInt | BinOp::LtEqFloat => docvec![left, " <= ", right],
+            BinOp::Eq => self.equal_with_doc_operands(left, right, type_.clone(), true),
+            BinOp::NotEq => self.equal_with_doc_operands(left, right, type_.clone(), false),
+            BinOp::GtInt | BinOp::GtFloat => docvec![left, " > ", right],
+            BinOp::GtEqInt | BinOp::GtEqFloat => docvec![left, " >= ", right],
+            BinOp::Concatenate | BinOp::AddInt | BinOp::AddFloat => {
+                docvec![left, " + ", right]
+            }
+            BinOp::SubInt | BinOp::SubFloat => docvec![left, " - ", right],
+            BinOp::MultInt | BinOp::MultFloat => docvec![left, " * ", right],
+            BinOp::RemainderInt => {
+                self.tracker.int_remainder_used = true;
+                docvec!["remainderInt", wrap_args([left, right])]
+            }
+            BinOp::DivInt => {
+                self.tracker.int_remainder_used = true;
+                docvec!["divideInt", wrap_args([left, right])]
+            }
+            BinOp::DivFloat => {
+                self.tracker.int_remainder_used = true;
+                docvec!["divideFloat", wrap_args([left, right])]
+            }
+        }
     }
 
     fn todo(&mut self, message: Option<&'a TypedExpr>, location: &'a SrcSpan) -> Output<'a> {
@@ -1546,6 +1719,31 @@ impl<'module, 'a> Generator<'module, 'a> {
         ])?;
         Ok(self.wrap_return(docvec!["echo", echo_argument]))
     }
+}
+
+enum AssertSubject<'a> {
+    Expression(AssertExpression<'a>),
+    BinaryOperator {
+        name: BinOp,
+        left: AssertExpression<'a>,
+        right: AssertExpression<'a>,
+        operand_type: Arc<Type>,
+    },
+    Call {
+        function: &'a TypedExpr,
+        arguments: Vec<AssertExpression<'a>>,
+    },
+}
+
+struct AssertExpression<'a> {
+    kind: ExpressionKind,
+    location: SrcSpan,
+    value: Document<'a>,
+}
+
+enum ExpressionKind {
+    Literal,
+    Expression,
 }
 
 pub fn int(value: &str) -> Document<'_> {
