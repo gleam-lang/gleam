@@ -1,0 +1,43 @@
+---
+source: compiler-core/src/javascript/tests/assert.rs
+expression: "\nfn wibble(a, b) {\n  let result = a + b\n  result == 10\n}\n\npub fn go(x) {\n  assert True && wibble(1, 4)\n}\n"
+---
+----- SOURCE CODE
+
+fn wibble(a, b) {
+  let result = a + b
+  result == 10
+}
+
+pub fn go(x) {
+  assert True && wibble(1, 4)
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError } from "../gleam.mjs";
+
+function wibble(a, b) {
+  let result = a + b;
+  return result === 10;
+}
+
+export function go(x) {
+  let $ = wibble(1, 4);
+  if (!(true && $)) {
+    throw makeError(
+      "assert",
+      "my/mod",
+      8,
+      "go",
+      "Assertion failed",
+      {
+        kind: "binary_operator",
+        operator: "&&",
+        left: { kind: "expression", value: true, start: 82, end: 86 },
+        right: { kind: "expression", value: $, start: 90, end: 102 }
+      }
+    )
+  }
+  return true;
+}
