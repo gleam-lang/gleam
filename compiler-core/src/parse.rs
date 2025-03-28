@@ -2741,18 +2741,21 @@ where
         let mut unqualified_values = vec![];
         let mut unqualified_types = vec![];
 
-        if self.maybe_one(&Token::Dot).is_some() {
-            let _ = self.expect_one(&Token::LeftBrace).map_err(|mut e| {
+        if let Some((dot_start, dot_end)) = self.maybe_one(&Token::Dot) {
+            let _ = self.expect_one(&Token::LeftBrace).map_err(|e| {
                 // Catch `import gleam.io` and provide a more helpful error...
                 if let ParseErrorType::UnexpectedToken {
                     token: Token::Name { name } | Token::UpName { name },
                     ..
                 } = &e.error
                 {
-                    e.error = ParseErrorType::PythonicImport {
-                        mod_or_namespace: module.as_str().into(),
-                        importee: name.clone(),
-                    }
+                    return ParseError {
+                        error: ParseErrorType::PythonicImport {
+                            mod_or_namespace: module.as_str().into(),
+                            importee: name.clone(),
+                        },
+                        location: SrcSpan::new(dot_start, dot_end),
+                    };
                 }
 
                 e
