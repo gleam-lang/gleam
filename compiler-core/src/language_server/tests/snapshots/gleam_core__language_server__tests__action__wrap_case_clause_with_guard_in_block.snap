@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn f(option) {\n  case option {\n    Some(integer) if integer > 0 -> integer\n    Some(integer) -> 0\n    None -> panic\n  }\n}"
+---
+----- BEFORE ACTION
+
+pub fn f(option) {
+  case option {
+    Some(integer) if integer > 0 -> integer
+                                    ↑      
+    Some(integer) -> 0
+    None -> panic
+  }
+}
+
+
+----- AFTER ACTION
+
+pub fn f(option) {
+  case option {
+    Some(integer) if integer > 0 -> {
+      integer
+    }
+    Some(integer) -> 0
+    None -> panic
+  }
+}
