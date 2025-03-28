@@ -7180,7 +7180,7 @@ pub fn main() {
 }
 
 #[test]
-fn wrap_case_clause_in_block_1() {
+fn wrap_case_clause_in_block() {
     assert_code_action!(
         WRAP_CASE_CLAUSE_IN_BLOCK,
         "
@@ -7195,7 +7195,7 @@ pub fn f(option) {
 }
 
 #[test]
-fn wrap_case_clause_in_block_2() {
+fn wrap_nested_case_clause_in_block() {
     assert_code_action!(
         WRAP_CASE_CLAUSE_IN_BLOCK,
         "
@@ -7211,6 +7211,42 @@ pub fn f(result) {
   }
 }",
         find_position_of("w").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn wrap_case_clause_with_guard_in_block() {
+    assert_code_action!(
+        WRAP_CASE_CLAUSE_IN_BLOCK,
+        "
+pub fn f(option) {
+  case option {
+    Some(integer) if integer > 0 -> integer
+    Some(integer) -> 0
+    None -> panic
+  }
+}",
+        find_position_of("integer").nth_occurrence(3).to_selection()
+    );
+}
+
+#[test]
+fn wrap_case_clause_with_multiple_patterns_in_block() {
+    assert_code_action!(
+        WRAP_CASE_CLAUSE_IN_BLOCK,
+        "pub type PokemonType {
+  Air
+  Water
+  Fire
+}
+        
+  pub fn f(pokemon_type: PokemonType) {
+    case pokemon_type {
+      Water | Air -> soak()
+      Fire -> burn()
+    }
+  }",
+        find_position_of("soak").to_selection()
     );
 }
 
