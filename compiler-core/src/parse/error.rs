@@ -338,6 +338,16 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 "This attribute cannot be used on a variant.",
                 vec!["Hint: Did you mean `@deprecated`?".into()],
             ),
+            ParseErrorType::PythonicImport { mod_or_namespace, importee } => (
+                "I was expecting either `/` or `.{` here.",
+                vec![
+                    "This syntax for an import is incorrect. Perhaps you meant:".into(),
+                    format!(" - `import {mod_or_namespace}/{importee}` to import\
+ the `{importee}` module from the `{mod_or_namespace}` namespace"),
+                    format!(" - `import {mod_or_namespace}.{{{importee}}}` to import\
+ the `{importee}` module from the `{mod_or_namespace}` module"),
+                ]
+            )
         }
     }
 }
@@ -411,6 +421,10 @@ pub enum ParseErrorType {
     TypeConstructorNoArguments,           // let a : Int()
     TypeDefinitionNoArguments,            // pub type Wibble() { ... }
     UnknownAttributeRecordVariant, // an attribute was used that is not know for a custom type variant
+    PythonicImport {
+        mod_or_namespace: EcoString,
+        importee: EcoString,
+    },
 }
 
 impl LexicalError {
