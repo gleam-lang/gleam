@@ -88,7 +88,7 @@ pub fn go(x) {
 }
 
 #[test]
-fn assert_function_call3() {
+fn assert_binary_operator_with_side_effects() {
     assert_js!(
         "
 fn wibble(a, b) {
@@ -100,5 +100,50 @@ pub fn go(x) {
   assert True && wibble(1, 4)
 }
 "
+    );
+}
+
+#[test]
+fn assert_binary_operator_with_side_effects2() {
+    assert_js!(
+        "
+fn wibble(a, b) {
+  let result = a + b
+  result == 10
+}
+
+pub fn go(x) {
+  assert wibble(5, 5) && wibble(4, 6)
+}
+"
+    );
+}
+
+#[test]
+fn assert_with_message() {
+    assert_js!(
+        r#"
+pub fn main() {
+  assert True as "This shouldn't fail"
+}
+"#
+    );
+}
+
+#[test]
+fn assert_with_block_message() {
+    assert_js!(
+        r#"
+fn identity(a) {
+  a
+}
+
+pub fn main() {
+  assert identity(True) as {
+    let message = identity("This shouldn't fail")
+    message
+  }
+}
+"#
     );
 }
