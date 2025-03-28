@@ -7251,6 +7251,28 @@ fn wrap_case_clause_with_multiple_patterns_in_block() {
 }
 
 #[test]
+fn wrap_case_clause_inside_assignment_in_block() {
+    assert_code_action!(
+        WRAP_CASE_CLAUSE_IN_BLOCK,
+        r#"pub type PokemonType {
+  Air
+  Water
+  Fire
+}
+        
+  pub fn f(pokemon_type: PokemonType) {
+    let damage = case pokemon_type {
+      Water -> soak()
+      Fire -> burn()
+    }
+
+    "Pokemon did " <> damage
+  }"#,
+        find_position_of("burn").to_selection()
+    );
+}
+
+#[test]
 fn do_not_wrap_case_clause_in_block_1() {
     assert_no_code_actions!(
         WRAP_CASE_CLAUSE_IN_BLOCK,
