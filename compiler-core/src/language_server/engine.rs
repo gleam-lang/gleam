@@ -162,9 +162,7 @@ where
 
         let result = outcome
             // Register which modules have changed
-            .map(|modules| self.modules_compiled_since_last_feedback.extend(modules))
-            // Return the error, if present
-            .into_result();
+            .map(|modules| self.modules_compiled_since_last_feedback.extend(modules));
 
         self.error = match &result {
             Ok(_) => None,

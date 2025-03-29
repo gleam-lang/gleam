@@ -3,7 +3,7 @@ use ecow::EcoString;
 use itertools::Itertools;
 
 use crate::{
-    Error, Result, Warning,
+    Result, Warning,
     analyse::TargetSupport,
     build::{self, Mode, Module, NullTelemetry, Outcome, ProjectCompiler},
     config::PackageConfig,
@@ -98,26 +98,17 @@ where
         })
     }
 
-    pub fn compile(&mut self) -> Outcome<Vec<Utf8PathBuf>, Error> {
-        // Lock the build directory to ensure to ensure we are the only one compiling
-        let _lock_guard: LockGuard = match self.locker.lock_for_build() {
-            Ok(it) => it,
-            Err(err) => return err.into(),
-        };
+    pub fn compile(&mut self) -> Result<Vec<Utf8PathBuf>> {
+        // Lock the build directory to ensure we are the only one compiling
+        let _lock_guard = self.locker.lock_for_build()?;
 
         // Verify that the build directory was created using the same version of
         // Gleam as we are running. If it is not then we discard the build
         // directory as the cache files may be in a different format.
-        if let Err(e) = self.project_compiler.check_gleam_version() {
-            return e.into();
-        }
+        self.project_compiler.check_gleam_version()?;
 
         self.project_compiler.reset_state_for_new_compile_run();
-
-        let compiled_dependencies = match self.project_compiler.compile_dependencies() {
-            Ok(it) => it,
-            Err(err) => return err.into(),
-        };
+        let compiled_dependencies = self.project_compiler.compile_dependencies()?;
 
         // Store the compiled dependency module information
         for module in &compiled_dependencies {
@@ -186,8 +177,8 @@ where
         }
 
         match error {
-            None => Outcome::Ok(compiled_modules),
-            Some(error) => Outcome::PartialFailure(compiled_modules, error),
+            None => Ok(compiled_modules),
+            Some(error) => Err(error),
         }
     }
 
