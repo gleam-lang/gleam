@@ -333,6 +333,11 @@
   variants called `Object` or `Deno` defined in the module.
   ([Louis Pilfold](https://github.com/lpil))
 
+- Fixed a bug where the language server would stop working if the build
+  directory was deleted e.g. as a result of `gleam clean`.
+  ([Sakari Bergen](https://github.com/sbergen))
+
+
 ## v1.9.1 - 2025-03-10
 
 ### Formatter

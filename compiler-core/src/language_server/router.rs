@@ -72,11 +72,16 @@ where
             path
         };
 
-        // If the gleam.toml has changed then discard the project as the target,
+        // If the gleam.toml has changed or the build directory is missing
+        // (e.g. `gleam clean`), then discard the project as the target,
         // deps, etc may have changed and we need to rebuild taking them into
         // account.
         if let Some(project) = self.engines.get(&path) {
-            if Self::gleam_toml_changed(&path, project, &self.io)? {
+            let paths = ProjectPaths::new(path.clone());
+
+            if !self.io.exists(&paths.build_directory())
+                || Self::gleam_toml_changed(&paths, project, &self.io)?
+            {
                 let _ = self.engines.remove(&path);
             }
         }
@@ -94,16 +99,15 @@ where
 
     /// Has gleam.toml changed since the last time we saw this project?
     fn gleam_toml_changed(
-        path: &Utf8PathBuf,
+        paths: &ProjectPaths,
         project: &Project<IO, Reporter>,
         io: &FileSystemProxy<IO>,
     ) -> Result<bool, Error> {
         // Get the location of gleam.toml for this project
-        let paths = ProjectPaths::new(path.clone());
         let config_path = paths.root_config();
 
         // See if the file modification time has changed.
-        if io.modification_time(path)? == project.gleam_toml_modification_time {
+        if io.modification_time(&config_path)? == project.gleam_toml_modification_time {
             return Ok(false); // Not changed
         }
 
