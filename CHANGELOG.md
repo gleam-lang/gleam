@@ -285,6 +285,12 @@
 
 ### Formatter
 
+### Container images
+
+- Container images now contain Software Bill of Materials (SBoM) and SLSA
+  Provenance information.
+  ([Jonatan Männchen](https://github.com/maennchen))
+
 ### Bug fixes
 
 - Fixed a bug where tuples with atoms in the first position could be
