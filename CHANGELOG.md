@@ -322,6 +322,11 @@
   the pattern if it was the only expression inside a block.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where the code generated for `echo` on JavaScript could have name
+  collisions if there are functions called `console` or `process`, or custom type
+  variants called `Object` or `Deno` defined in the module.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ## v1.9.1 - 2025-03-10
 
 ### Formatter
