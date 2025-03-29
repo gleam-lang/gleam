@@ -2751,8 +2751,8 @@ where
                 {
                     return ParseError {
                         error: ParseErrorType::PythonicImport {
-                            mod_or_namespace: module.as_str().into(),
-                            importee: name.clone(),
+                            module: module.as_str().into(),
+                            item: name.clone(),
                         },
                         location: SrcSpan::new(dot_start, dot_end),
                     };
