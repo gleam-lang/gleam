@@ -1,0 +1,39 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub type PokemonType {\n  Air\n  Water\n  Fire\n}\n        \n  pub fn f(pokemon_type: PokemonType) {\n    let damage = case pokemon_type {\n      Water -> soak()\n      Fire -> burn()\n    }\n\n    \"Pokemon did \" <> damage\n  }"
+---
+----- BEFORE ACTION
+pub type PokemonType {
+  Air
+  Water
+  Fire
+}
+        
+  pub fn f(pokemon_type: PokemonType) {
+    let damage = case pokemon_type {
+      Water -> soak()
+      Fire -> burn()
+              ↑     
+    }
+
+    "Pokemon did " <> damage
+  }
+
+
+----- AFTER ACTION
+pub type PokemonType {
+  Air
+  Water
+  Fire
+}
+        
+  pub fn f(pokemon_type: PokemonType) {
+    let damage = case pokemon_type {
+      Water -> soak()
+      Fire -> {
+        burn()
+      }
+    }
+
+    "Pokemon did " <> damage
+  }
