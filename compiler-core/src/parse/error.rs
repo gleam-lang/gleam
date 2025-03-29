@@ -338,14 +338,14 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 "This attribute cannot be used on a variant.",
                 vec!["Hint: Did you mean `@deprecated`?".into()],
             ),
-            ParseErrorType::PythonicImport { mod_or_namespace, importee } => (
+            ParseErrorType::PythonicImport { module, item } => (
                 "I was expecting either `/` or `.{` here.",
                 vec![
                     "This syntax for an import is incorrect. Perhaps you meant:".into(),
-                    format!(" - `import {mod_or_namespace}/{importee}` to import\
- the `{importee}` module from the `{mod_or_namespace}` namespace"),
-                    format!(" - `import {mod_or_namespace}.{{{importee}}}` to import\
- the `{importee}` module from the `{mod_or_namespace}` module"),
+                    format!(" - `import {module}/{item}` to import the `{item}`\
+ module from the `{module}` namespace"),
+                    format!(" - `import {module}.{{{item}}}` to import the\
+ `{item}` module from the `{module}` module"),
                 ]
             )
         }
@@ -422,8 +422,8 @@ pub enum ParseErrorType {
     TypeDefinitionNoArguments,            // pub type Wibble() { ... }
     UnknownAttributeRecordVariant, // an attribute was used that is not know for a custom type variant
     PythonicImport {
-        mod_or_namespace: EcoString,
-        importee: EcoString,
+        module: EcoString,
+        item: EcoString,
     },
 }
 
