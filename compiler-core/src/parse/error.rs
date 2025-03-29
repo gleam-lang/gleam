@@ -421,6 +421,7 @@ pub enum ParseErrorType {
     TypeConstructorNoArguments,           // let a : Int()
     TypeDefinitionNoArguments,            // pub type Wibble() { ... }
     UnknownAttributeRecordVariant, // an attribute was used that is not know for a custom type variant
+    // a Python-like import was written, such as `import gleam.io`, instead of `import gleam/io`
     PythonicImport {
         module: EcoString,
         item: EcoString,
