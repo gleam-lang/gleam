@@ -165,11 +165,10 @@ enum Command {
 
     /// Publish the project to the Hex package manager
     ///
-    /// This command uses this environment variables:
+    /// This command uses the environment variable:
     ///
-    /// - HEXPM_USER: (optional) The Hex username to authenticate with.
-    /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
     /// - HEXPM_API_KEY: (optional) A Hex API key to use instead of authenticating.
+    ///
     #[command(verbatim_doc_comment)]
     Publish {
         #[arg(long)]
@@ -396,11 +395,10 @@ enum Dependencies {
 enum Hex {
     /// Retire a release from Hex
     ///
-    /// This command uses this environment variables:
+    /// This command uses the environment variable:
     ///
-    /// - HEXPM_USER: (optional) The Hex username to authenticate with.
-    /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
-    /// - HEXPM_API_KEY: (optional) A Hex API key to use instead of authenticating.
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate against the Hex package manager.
+    ///
     #[command(verbatim_doc_comment)]
     Retire {
         package: String,
@@ -415,21 +413,19 @@ enum Hex {
 
     /// Un-retire a release from Hex
     ///
-    /// This command uses this environment variables:
+    /// This command uses this environment variable:
     ///
-    /// - HEXPM_USER: (optional) The Hex username to authenticate with.
-    /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
-    /// - HEXPM_API_KEY: (optional) A Hex API key to use instead of authenticating.
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate against the Hex package manager.
+    ///
     #[command(verbatim_doc_comment)]
     Unretire { package: String, version: String },
 
     /// Revert a release from Hex
     ///
-    /// This command uses this environment variables:
+    /// This command uses this environment variable:
     ///
-    /// - HEXPM_USER: (optional) The Hex username to authenticate with.
-    /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
-    /// - HEXPM_API_KEY: (optional) A Hex API key to use instead of authenticating.
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate against the Hex package manager.
+    ///
     #[command(verbatim_doc_comment)]
     Revert {
         #[arg(long)]
@@ -457,21 +453,19 @@ enum Docs {
 
     /// Publish HTML docs to HexDocs
     ///
-    /// This command uses this environment variables:
+    /// This command uses this environment variable:
     ///
-    /// - HEXPM_USER: (optional) The Hex username to authenticate with.
-    /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
-    /// - HEXPM_API_KEY: (optional) A Hex API key to use instead of authenticating.
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate against the Hex package manager.
+    ///
     #[command(verbatim_doc_comment)]
     Publish,
 
     /// Remove HTML docs from HexDocs
     ///
-    /// This command uses this environment variables:
+    /// This command uses this environment variable:
     ///
-    /// - HEXPM_USER: (optional) The Hex username to authenticate with.
-    /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
-    /// - HEXPM_API_KEY: (optional) A Hex API key to use instead of authenticating.
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate against the Hex package manager.
+    ///
     #[command(verbatim_doc_comment)]
     Remove {
         /// The name of the package
