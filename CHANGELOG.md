@@ -7,6 +7,12 @@
 - On the JavaScript target, bit arrays can now use the `unit` option to control
   the units of the `size` option.
   ([Surya Rose](https://github.com/GearsDatapacks))
+- Gleam will now warn when running a deprecated or internal module main function
+  ([Lioncat2002](https://github.com/Lioncat2002))
+
+- Generated Erlang `.app` files now include external modules written in Elixir
+  and Erlang.
+  ([LostKobrakai](https://github.com/lostkobrakai))
 
 - The compiler can now tell if string branches are unreachable. For example, the
   following code:

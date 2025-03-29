@@ -162,6 +162,12 @@ pub enum Warning {
         src: EcoString,
         warning: DeprecatedSyntaxWarning,
     },
+    InternalMain {
+        module: EcoString,
+    },
+    DeprecatedMain {
+        message: EcoString,
+    },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
@@ -220,6 +226,28 @@ pub enum DeprecatedSyntaxWarning {
 impl Warning {
     pub fn to_diagnostic(&self) -> Diagnostic {
         match self {
+            Warning::DeprecatedMain { message } => Diagnostic {
+                title: "Deprecated main function".into(),
+                text: message.into(),
+                level: diagnostic::Level::Warning,
+                location: None,
+                hint: None,
+            },
+            Warning::InternalMain { module } => {
+                let message = format!(
+                    "The module {} has been marked internal.\
+It is intended for use within the library\
+and is not recommended for public use",
+                    module
+                );
+                Diagnostic {
+                    title: "Internal main function".into(),
+                    text: wrap(message.as_str()),
+                    level: diagnostic::Level::Warning,
+                    location: None,
+                    hint: None,
+                }
+            }
             Warning::InvalidSource { path } => Diagnostic {
                 title: "Invalid module name".into(),
                 text: "\
@@ -1034,6 +1062,7 @@ Your code will crash before reaching this point."
                             "This function call is unreachable because its last argument always panics. \
 Your code will crash before reaching this point."
                         }
+
                         PanicPosition::EchoExpression => {
                             "This `echo` won't print anything because the expression it \
 should be printing always panics."
