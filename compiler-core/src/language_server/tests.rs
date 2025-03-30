@@ -6,6 +6,7 @@ mod document_symbols;
 mod hover;
 mod reference;
 mod rename;
+mod router;
 mod signature_help;
 
 use std::{
