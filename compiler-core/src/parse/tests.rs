@@ -1771,3 +1771,8 @@ fn case_expression_without_body() {
 fn special_error_for_pythonic_import() {
     assert_module_error!("import gleam.io");
 }
+
+#[test]
+fn doesnt_issue_special_error_for_pythonic_import_if_slash() {
+    assert_module_error!("import one/two.three");
+}
