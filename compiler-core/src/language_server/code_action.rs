@@ -5978,7 +5978,7 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveEchos<'ast> {
     }
 }
 
-/// Code action to wrap a case clause in a block.
+/// Code action to wrap assignment and case clause values in a block.
 ///
 /// ```gleam
 /// pub type PokemonType {
@@ -6013,14 +6013,14 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveEchos<'ast> {
 /// }
 /// ```
 ///
-pub struct WrapClauseInBlock<'a> {
+pub struct WrapInBlock<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
     selected_expression: Option<SrcSpan>,
 }
 
-impl<'a> WrapClauseInBlock<'a> {
+impl<'a> WrapInBlock<'a> {
     pub fn new(
         module: &'a Module,
         line_numbers: &'a LineNumbers,
@@ -6083,7 +6083,7 @@ impl<'a> WrapClauseInBlock<'a> {
         );
 
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new("Wrap case clause in block")
+        CodeActionBuilder::new("Wrap in block")
             .kind(CodeActionKind::REFACTOR_EXTRACT)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
@@ -6092,7 +6092,21 @@ impl<'a> WrapClauseInBlock<'a> {
     }
 }
 
-impl<'ast> ast::visit::Visit<'ast> for WrapClauseInBlock<'ast> {
+impl<'ast> ast::visit::Visit<'ast> for WrapInBlock<'ast> {
+    fn visit_typed_assignment(&mut self, assignment: &'ast TypedAssignment) {
+        ast::visit::visit_typed_expr(self, &assignment.value);
+        if !within(
+            self.params.range,
+            self.edits
+                .src_span_to_lsp_range(assignment.value.location()),
+        ) {
+            return;
+        }
+        self.selected_expression = Some(assignment.value.location());
+
+        ast::visit::visit_typed_assignment(self, assignment);
+    }
+
     fn visit_typed_clause(&mut self, clause: &'ast ast::TypedClause) {
         ast::visit::visit_typed_clause(self, clause);
 

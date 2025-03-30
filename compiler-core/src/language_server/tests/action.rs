@@ -82,7 +82,7 @@ const CONVERT_TO_PIPE: &str = "Convert to pipe";
 const INTERPOLATE_STRING: &str = "Interpolate string";
 const FILL_UNUSED_FIELDS: &str = "Fill unused fields";
 const REMOVE_ALL_ECHOS_FROM_THIS_MODULE: &str = "Remove all `echo`s from this module";
-const WRAP_CASE_CLAUSE_IN_BLOCK: &str = "Wrap case clause in block";
+const WRAP_IN_BLOCK: &str = "Wrap in block";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -7182,7 +7182,7 @@ pub fn main() {
 #[test]
 fn wrap_case_clause_in_block() {
     assert_code_action!(
-        WRAP_CASE_CLAUSE_IN_BLOCK,
+        WRAP_IN_BLOCK,
         "
 pub fn f(option) {
   case option {
@@ -7197,7 +7197,7 @@ pub fn f(option) {
 #[test]
 fn wrap_nested_case_clause_in_block() {
     assert_code_action!(
-        WRAP_CASE_CLAUSE_IN_BLOCK,
+        WRAP_IN_BLOCK,
         "
 pub fn f(result) {
   case result {
@@ -7217,7 +7217,7 @@ pub fn f(result) {
 #[test]
 fn wrap_case_clause_with_guard_in_block() {
     assert_code_action!(
-        WRAP_CASE_CLAUSE_IN_BLOCK,
+        WRAP_IN_BLOCK,
         "
 pub fn f(option) {
   case option {
@@ -7233,7 +7233,7 @@ pub fn f(option) {
 #[test]
 fn wrap_case_clause_with_multiple_patterns_in_block() {
     assert_code_action!(
-        WRAP_CASE_CLAUSE_IN_BLOCK,
+        WRAP_IN_BLOCK,
         "pub type PokemonType {
   Air
   Water
@@ -7253,7 +7253,7 @@ fn wrap_case_clause_with_multiple_patterns_in_block() {
 #[test]
 fn wrap_case_clause_inside_assignment_in_block() {
     assert_code_action!(
-        WRAP_CASE_CLAUSE_IN_BLOCK,
+        WRAP_IN_BLOCK,
         r#"pub type PokemonType {
   Air
   Water
@@ -7275,7 +7275,7 @@ fn wrap_case_clause_inside_assignment_in_block() {
 #[test]
 fn do_not_wrap_case_clause_in_block_1() {
     assert_no_code_actions!(
-        WRAP_CASE_CLAUSE_IN_BLOCK,
+        WRAP_IN_BLOCK,
         "
 pub fn f(option) {
   case option {
@@ -7292,7 +7292,7 @@ pub fn f(option) {
 #[test]
 fn do_not_wrap_case_clause_in_block_2() {
     assert_no_code_actions!(
-        WRAP_CASE_CLAUSE_IN_BLOCK,
+        WRAP_IN_BLOCK,
         "
 pub fn f(result) {
   case result {
@@ -7308,5 +7308,42 @@ pub fn f(result) {
   }
 }",
         find_position_of("w").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn do_not_wrap_case_clause_in_block_3() {
+    assert_no_code_actions!(
+        WRAP_IN_BLOCK,
+        "
+pub fn f(option) {
+  case option {
+    Some(content) -> content
+    None -> panic
+  }
+}",
+        find_position_of("Some(content)").to_selection()
+    );
+}
+
+#[test]
+fn wrap_assignment_value_in_block() {
+    assert_code_action!(
+        WRAP_IN_BLOCK,
+        r#"pub fn main() {
+  let var = "value"
+}"#,
+        find_position_of("value").select_until(find_position_of("e").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn do_not_wrap_assignment_value_in_block() {
+    assert_no_code_actions!(
+        WRAP_IN_BLOCK,
+        r#"pub fn main() {
+  let var = "value"
+}"#,
+        find_position_of("var").to_selection()
     );
 }
