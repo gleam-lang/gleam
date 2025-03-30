@@ -1560,7 +1560,7 @@ impl<'a> Compiler<'a> {
                 continue;
             };
 
-            let checked_pattern = self.pattern(pattern_check.pattern).clone();
+            let checked_pattern = self.pattern(pattern_check.pattern);
             if checked_pattern.is_matching_on_unreachable_variant(branch_mode) {
                 self.mark_as_matching_impossible_variant(&branch);
                 continue;
