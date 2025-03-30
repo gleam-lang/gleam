@@ -1766,3 +1766,8 @@ fn nested_tuple_access_after_function() {
 fn case_expression_without_body() {
     assert_parse!("case a");
 }
+
+#[test]
+fn special_error_for_pythonic_import() {
+    assert_module_error!("import gleam.io");
+}

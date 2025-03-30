@@ -342,10 +342,10 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 "I was expecting either `/` or `.{` here.",
                 vec![
                     "This syntax for an import is incorrect. Perhaps you meant:".into(),
-                    format!(" - `import {module}/{item}` to import the `{item}`\
- module from the `{module}` namespace"),
-                    format!(" - `import {module}.{{{item}}}` to import the\
- `{item}` module from the `{module}` module"),
+                    format!(" - `import {module}/{item}` to import the `{item}` \
+module from the `{module}` namespace"),
+                    format!(" - `import {module}.{{{item}}}` to import the \
+`{item}` module from the `{module}` module"),
                 ]
             )
         }
