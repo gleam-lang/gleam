@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  let var = \"value\"\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  let var = "value"
+             ▔▔▔▔↑ 
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  let var = {
+    "value"
+  }
+}
