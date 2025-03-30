@@ -1,8 +1,11 @@
-//! An implementation of the algorithm described at
-//! <https://julesjacobs.com/notes/patternmatching/patternmatching.pdf>.
+//! An implementation of the algorithm described in:
+//! - <https://julesjacobs.com/notes/patternmatching/patternmatching.pdf>
+//! - <https://user.it.uu.se/~kostis/Papers/JFP_06.pdf> for binary pattern
+//!   matching
 //!
 //! Adapted from Yorick Peterse's implementation at
-//! <https://github.com/yorickpeterse/pattern-matching-in-rust>. Thank you Yorick!
+//! <https://github.com/yorickpeterse/pattern-matching-in-rust>.
+//! Thank you Yorick!
 //!
 //! > This module comment (and all the following doc comments) are a rough
 //! > explanation. It's great to set some expectations on what to expect from
@@ -78,7 +81,7 @@ mod missing_patterns;
 pub mod printer;
 
 use crate::{
-    ast::{AssignName, TypedClause, TypedPattern},
+    ast::{self, AssignName, TypedClause, TypedPattern, TypedPatternBitArraySegment},
     type_::{
         Environment, Type, TypeValueConstructor, TypeValueConstructorField, TypeVar,
         TypeVariantConstructors, collapse_links, error::UnreachableCaseClauseReason,
@@ -87,7 +90,9 @@ use crate::{
 };
 use ecow::EcoString;
 use id_arena::{Arena, Id};
+use im::{HashMap as ImHashMap, hashmap};
 use itertools::Itertools;
+use num_bigint::BigInt;
 use radix_trie::{Trie, TrieCommon};
 use std::{
     cell::RefCell,
@@ -362,10 +367,171 @@ pub enum Pattern {
         rest: Id<Pattern>,
     },
     EmptyList,
-    // TODO: Compile the matching within the bit strings
     BitArray {
-        value: EcoString,
+        tests: Vec<BitArrayTest>,
     },
+}
+
+/// When compiling a bit array pattern each segment is turned into a series of
+/// tests that all need to match in order for the pattern to succeed.
+/// Each segment might add some requirements on the total size of a bit array
+/// and/or on the value of some of its specific parts.
+///
+/// Let's look at a simple example to get started:
+///
+/// ```txt
+/// <<0:size(12), 1, rest:bits>>
+///   ─┬────────
+///    ╰── This first segment requires that the bit array must have at least
+///        12 bits and their value must be the Int `0`. So this first
+///        segment would be turned into the following series of tests:
+///        `Size(>=, 12)` and `Match(0, ReadAction(0, 12, int))`
+/// ```
+///
+/// However, the various sizes and offsets of the different segments might not
+/// always be known at compile time and depend on previous sections of the
+/// pattern. This is no big deal: as you'll discover in more detail in the
+/// `SizeExpression`'s doc we can also represent those variable sizes:
+///
+/// ```txt
+/// <<len, payload:size(len), rest:bits>>
+///   ─┬─  ─┬───────────────
+///    │    ╰── For this segment to match the bit array must have enough bits
+///    │        for the previous segment (8 bits) and for this one (`len` bits),
+///    │        so it will turn into the following series of tests:
+///    │        `Size(>=, 8 + len)` and `Match(len, ReadAction(8, len, int))`
+///    │
+///    ╰── This first segment is 8 bits and an int (it's the default Gleam picks
+///        if no options are supplied)
+/// ```
+///
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub enum BitArrayTest {
+    Size {
+        op: SizeOp,
+        // TODO))
+        size: Offset,
+    },
+    Match {
+        matched_value: Id<Pattern>,
+        read_action: ReadAction,
+    },
+}
+
+/// When performing a size test it could require that a size is exactly some
+/// specific number of bits (for example if we're matching the last segment
+/// of a bit array) or that it has at least some number of bits. For example:
+///
+/// ```text
+/// <<0:size(12), 1:size(8)>>
+///   ─┬────────  ─┬───────
+///    │           ╰── For this segment to successfully match the bit array must
+///    │               have exactly 20 bits: because it will need to read 8 bits
+///    │               from bit 13 where the previous one ends: `Size(=, 20)`
+///    │
+///    ╰── For this segment to successfully match, the bit array must have at
+///        least 12 bits: `Size(>, 12)`
+/// ```
+///
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub enum SizeOp {
+    Greater,
+    Equal,
+}
+
+/// Represents the action of reading a certain number of bits from a bit array
+/// at a given position, returning a value with the given type represented by
+/// those.
+///
+/// Notice how the starting position and number of bits to read might not be
+/// known at compile time but also include variables! For example here
+///
+/// ```txt
+// <<len, payload:size(len), rest:bits>>
+///  ─┬─  ─┬───────────────
+///   │    ╰── Here payload has a variable size, given by the `len` variable
+///   │
+///   ╰── While this segment has a constant size of 8 bits
+/// ```
+///
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub enum ReadAction {
+    ReadAction {
+        /// The offset to start reading the bits from.
+        ///
+        from: Offset,
+        /// Number of bits to read.
+        ///
+        bits: ReadSize,
+        /// The type of the read value.
+        /// TODO)) This will probably need options and such!
+        ///
+        type_: Arc<Type>,
+    },
+}
+
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub struct Offset {
+    constant: BigInt,
+    variables: ImHashMap<EcoString, usize>,
+}
+
+impl Offset {
+    pub fn constant(value: impl Into<BigInt>) -> Self {
+        Self {
+            constant: value.into(),
+            variables: ImHashMap::new(),
+        }
+    }
+
+    pub fn variable(name: EcoString) -> Self {
+        Self {
+            constant: 0.into(),
+            variables: ImHashMap::from_iter(vec![(name, 1)]),
+        }
+    }
+
+    pub fn add(one: Self, other: Self) -> Self {
+        Self {
+            constant: one.constant + other.constant,
+            variables: one.variables.union_with(other.variables, |n, m| n + m),
+        }
+    }
+}
+
+/// The number of bits to read in a read action when reading a segment.
+///
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub enum ReadSize {
+    /// Read a constant, compile-time-known number of bits.
+    ///
+    /// ```txt
+    /// <<tag:size(8)>>
+    ///   ─┬─────────
+    ///    ╰─ Here we know that we have to read exactly 8 bits
+    /// ```
+    ///
+    ConstantBits(BigInt),
+    /// Read a variable number of bits.
+    ///
+    /// ```txt
+    /// <<len, payload:size(len)>>
+    ///        ─┬───────────────
+    ///         ╰─ Here we will know how many bits to read only at runtime since
+    ///            the length is a variable
+    /// ```
+    ///
+    VariableBits { name: EcoString, unit: u8 },
+    /// Read all the remaining bits in the bit array when using a catch all
+    /// pattern.
+    ///
+    /// ```txt
+    /// <<_, rest:bits>>
+    ///      ─┬───────
+    ///       ╰─ We take all the remaining bits from the bit array
+    /// ```
+    ///
+    Anything,
 }
 
 impl Pattern {
@@ -395,9 +561,7 @@ impl Pattern {
                 size: elements.len(),
             },
             Pattern::Variant { index, .. } => RuntimeCheckKind::Variant { index: *index },
-            Pattern::BitArray { value } => RuntimeCheckKind::BitArray {
-                value: value.clone(),
-            },
+            Pattern::BitArray { .. } => todo!(),
             Pattern::NonEmptyList { .. } => RuntimeCheckKind::NonEmptyList,
             Pattern::EmptyList => RuntimeCheckKind::EmptyList,
         };
@@ -1907,9 +2071,7 @@ impl CaseToCompile {
                 // exhaustiveness of their segment patterns.
                 // For now we use the location to give each bit string a pattern
                 // a unique value.
-                self.insert(Pattern::BitArray {
-                    value: format!("{}:{}", location.start, location.end).into(),
-                })
+                self.insert(todo!())
             }
 
             TypedPattern::StringPrefix {
@@ -1942,5 +2104,32 @@ impl CaseToCompile {
 
     fn insert(&mut self, pattern: Pattern) -> Id<Pattern> {
         self.patterns.alloc(pattern)
+    }
+}
+
+fn bit_array_to_checks(segments: &Vec<TypedPatternBitArraySegment>) -> Vec<BitArrayTest> {
+    let mut previous_end = Offset::constant(0);
+    let mut tests = Vec::with_capacity(segments.len() * 2);
+    for segment in segments {
+        let size = segment_size(segment);
+    }
+    tests
+}
+
+fn segment_size(segment: &TypedPatternBitArraySegment) -> ReadBits {
+    match segment.size() {
+        Some(ast::Pattern::Int { int_value, .. }) if segment.has_bytes_option() => {
+            ReadBits::Constant(int_value.clone())
+        }
+        Some(ast::Pattern::Int { int_value, .. }) => ReadBits::Constant(int_value.clone()),
+        Some(ast::Pattern::Variable { name, .. } | ast::Pattern::VarUsage { name, .. }) => {
+            ReadBits::Variable(name.clone())
+        }
+        Some(_) => unreachable!("invalid pattern size made it to code generation"),
+        None if segment.type_.is_bit_array() => ReadBits::Anything,
+        // And int segment has a size of 8 bits if no size option is provided.
+        None if segment.type_.is_int() => ReadBits::Constant(8.into()),
+        // Any other segment is 64 bits if no size option is provided.
+        None => ReadBits::Constant(64.into()),
     }
 }
