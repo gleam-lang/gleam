@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: import one/two.three
+---
+----- SOURCE CODE
+import one/two.three
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:1:16
+  │
+1 │ import one/two.three
+  │                ^^^^^ I was not expecting this
+
+Found a name, expected one of: 
+- `{`
