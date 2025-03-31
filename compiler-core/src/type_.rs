@@ -269,6 +269,18 @@ impl Type {
         }
     }
 
+    pub fn is_utf_codepoint(&self) -> bool {
+        match self {
+            Self::Named { module, name, .. }
+                if "UtfCodepoint" == name && is_prelude_module(module) =>
+            {
+                true
+            }
+            Self::Var { type_ } => type_.borrow().is_nil(),
+            _ => false,
+        }
+    }
+
     pub fn is_bool(&self) -> bool {
         match self {
             Self::Named { module, name, .. } if "Bool" == name && is_prelude_module(module) => true,

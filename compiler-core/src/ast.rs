@@ -2267,7 +2267,7 @@ pub struct BitArraySegment<Value, Type> {
     pub type_: Type,
 }
 
-#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Hash)]
 pub enum Endianness {
     Big,
     Little,
