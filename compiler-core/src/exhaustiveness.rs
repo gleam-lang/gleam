@@ -96,7 +96,6 @@ use num_bigint::BigInt;
 use radix_trie::{Trie, TrieCommon};
 use std::{
     cell::RefCell,
-    cmp,
     collections::{HashMap, HashSet, VecDeque},
     hash::Hash,
     sync::Arc,
@@ -2533,4 +2532,3 @@ fn superset(one: &ImHashMap<EcoString, usize>, other: &ImHashMap<EcoString, usiz
             None => false,
         })
 }
-
