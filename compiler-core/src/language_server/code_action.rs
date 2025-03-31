@@ -6099,9 +6099,7 @@ impl<'ast> ast::visit::Visit<'ast> for WrapInBlock<'ast> {
         }
         match *assignment.to_owned().value {
             // To avoid wrapping the same expression in multiple, nested blocks.
-            TypedExpr::Block { .. } => {
-                ast::visit::visit_typed_assignment(self, assignment);
-            }
+            TypedExpr::Block { .. } => {}
             TypedExpr::RecordAccess {
                 record, location, ..
             } => {
