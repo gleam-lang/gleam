@@ -269,10 +269,10 @@ impl Branch {
                     // test to perform in a bit array pattern we know it's always
                     // going to match and can be safely moved into the branch's body.
                     Pattern::BitArray { tests } => match tests.front() {
-                        Some(BitArrayTest::Match {
+                        Some(BitArrayTest::Match(MatchTest {
                             value: BitArrayMatchedValue::Variable(name),
                             read_action,
-                        }) => {
+                        })) => {
                             let bit_array = check.var.clone();
                             self.body.assign_bit_array_slice(
                                 name.clone(),
@@ -282,18 +282,18 @@ impl Branch {
                             let _ = tests.pop_front();
                             continue;
                         }
+
                         // Discards are removed directly without even binding them
                         // in the branch's body.
-                        Some(BitArrayTest::Match {
-                            value: BitArrayMatchedValue::Discard(_),
-                            ..
-                        }) => {
+                        Some(test) if test.is_discard() => {
                             let _ = tests.pop_front();
                             continue;
                         }
+
                         // Otherwise there's no unconditional test to pop, we
                         // keep the pattern without changing it.
                         Some(_) => return true,
+
                         // If a bit array pattern has no tests then it's always
                         // going to match, no matter what. We just remove it.
                         None => return false,
@@ -775,20 +775,79 @@ impl Variable {
 ///
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum BitArrayTest {
-    /// Test to make sure the bit array has a specific number of bits.
-    ///
-    Size { op: SizeOp, size: Offset },
-    /// Test to make sure the segment read by the specified `read_action` matches
-    /// a given value.
-    ///
-    Match {
-        value: BitArrayMatchedValue,
-        read_action: ReadAction,
-    },
+    Size(SizeTest),
+    Match(MatchTest),
     /// This is a special test to check that the remaining part of a bit array
     /// has a whole number of bytes when using the `:bytes` option.
     ///
-    CatchAllIsBytes { size_so_far: Offset },
+    CatchAllIsBytes {
+        size_so_far: Offset,
+    },
+}
+
+impl BitArrayTest {
+    fn is_discard(&self) -> bool {
+        match self {
+            BitArrayTest::Match(MatchTest {
+                value: BitArrayMatchedValue::Discard(_),
+                ..
+            }) => true,
+            _ => false,
+        }
+    }
+}
+
+/// Test to make sure the bit array has a specific number of bits.
+///
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub struct SizeTest {
+    pub op: SizeOp,
+    pub size: Offset,
+}
+
+impl SizeTest {
+    /// Tells us if this test is guaranteed to succeed given another test that
+    /// we know has already succeeded.
+    ///
+    fn succeeds_if_succeeding(&self, succeeding: &SizeTest) -> Confidence {
+        match (succeeding.op, self.op) {
+            (SizeOp::Equal, SizeOp::Equal) if succeeding.size == self.size => Confidence::Certain,
+            (_, SizeOp::GreaterEqual) => succeeding.size.greater_equal(&self.size),
+            _ => Confidence::Uncertain,
+        }
+    }
+
+    /// Tells us if this test is guaranteed to fail given another test that
+    /// we know has already failed.
+    ///
+    fn fails_if_failing(&self, failing: &SizeTest) -> Confidence {
+        match (failing.op, self.op) {
+            (SizeOp::GreaterEqual, _) => self.size.greater_equal(&failing.size),
+            (_, _) if self == failing => Confidence::Certain,
+            _ => Confidence::Uncertain,
+        }
+    }
+
+    /// Tells us if this test is guaranteed to fail given another test that
+    /// we know has already succeeded.
+    ///
+    fn fails_if_succeeding(&self, succeeding: &SizeTest) -> Confidence {
+        match (succeeding.op, self.op) {
+            (SizeOp::GreaterEqual, SizeOp::Equal) => succeeding.size.greater(&self.size),
+            (SizeOp::Equal, SizeOp::GreaterEqual) => self.size.greater(&succeeding.size),
+            (SizeOp::Equal, SizeOp::Equal) => succeeding.size.different(&self.size),
+            _ => Confidence::Uncertain,
+        }
+    }
+}
+
+/// Test to make sure the segment read by the specified `read_action` matches
+/// a given value.
+///
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub struct MatchTest {
+    pub value: BitArrayMatchedValue,
+    pub read_action: ReadAction,
 }
 
 /// A value that can be matched in a bit array pattern's segment. We do not use
@@ -806,100 +865,53 @@ pub enum BitArrayMatchedValue {
 }
 
 impl BitArrayTest {
-    #[must_use]
-    /// Returns `true` if we can tell for sure that this test is going to
-    /// succeeds on a bit array for which `test` succeeds.
+    /// Tells us if this test is guaranteed to succeed given another test that
+    /// we know has already succeeded.
     ///
-    fn succeeds_if_test_succeds(&self, test: &BitArrayTest) -> bool {
-        if self == test {
-            return true;
-        };
-
-        match (test, self) {
-            // This is an implementation of Table 6 (a) of the bit array pattern
-            // matching paper linked at the top of this module's documentation!
-            (
-                BitArrayTest::Size { op, size },
-                BitArrayTest::Size {
-                    op: this_op,
-                    size: this_size,
-                },
-            ) => match (op, this_op) {
-                (SizeOp::Equal, SizeOp::GreaterEqual) => size.greater_equal(this_size).is_certain(),
-                (SizeOp::GreaterEqual, SizeOp::GreaterEqual) => {
-                    size.greater_equal(this_size).is_certain()
-                }
-                _ => false,
-            },
-
+    #[must_use]
+    fn succeeds_if_succeeding(&self, succeeding: &BitArrayTest) -> Confidence {
+        match (succeeding, self) {
+            (one, other) if one == other => Confidence::Certain,
+            (BitArrayTest::Size(succeeding), BitArrayTest::Size(test)) => {
+                test.succeeds_if_succeeding(succeeding)
+            }
             // TODO)) implement interference pruning
-            (one @ BitArrayTest::Match { .. }, other @ BitArrayTest::Match { .. }) => one == other,
-
             // The tests are not comparable, we can't deduce any new information.
-            _ => false,
+            _ => Confidence::Uncertain,
         }
     }
 
-    #[must_use]
-    /// Returns `true` if we can tell for sure that this test is going to fail
-    /// on a bit array for which `test` fails.
+    /// Tells us if this test is guaranteed to fail given another test that
+    /// we know has already failed.
     ///
-    fn fails_if_test_fails(&self, test: &BitArrayTest) -> bool {
-        if self == test {
-            return true;
-        };
-
-        match (test, self) {
-            // This is an implementation of Table 6 (b) of the bit array pattern
-            // matching paper linked at the top of this module's documentation!
-            (
-                BitArrayTest::Size { op, size },
-                BitArrayTest::Size {
-                    op: this_op,
-                    size: this_size,
-                },
-            ) => match (op, this_op) {
-                (SizeOp::GreaterEqual, SizeOp::Equal) => this_size.greater_equal(size).is_certain(),
-                (SizeOp::GreaterEqual, SizeOp::GreaterEqual) => {
-                    this_size.greater_equal(size).is_certain()
-                }
-                _ => false,
-            },
-
+    #[must_use]
+    fn fails_if_failing(&self, failing: &BitArrayTest) -> Confidence {
+        match (failing, self) {
+            (one, other) if one == other => Confidence::Certain,
+            (BitArrayTest::Size(failing), BitArrayTest::Size(test)) => {
+                test.fails_if_failing(failing)
+            }
             // TODO)) implement interference pruning!
-            (one @ BitArrayTest::Match { .. }, other @ BitArrayTest::Match { .. }) => one == other,
-
             // The tests are not comparable, we can't deduce any new information.
-            _ => false,
+            _ => Confidence::Uncertain,
         }
     }
 
-    #[must_use]
-    /// Returns `true` if we can tell for sure that this test is going to fail
-    /// on a bit array for which `test` succeeds.
+    /// Tells us if this test is guaranteed to fail given another test that
+    /// we know has already succeeded.
     ///
-    fn fails_if_test_succeeds(&self, test: &BitArrayTest) -> bool {
-        match (test, self) {
+    #[must_use]
+    fn fails_if_succeeding(&self, succeeding: &BitArrayTest) -> Confidence {
+        match (succeeding, self) {
             // This is an implementation of Table 6 (a) of the bit array pattern
             // matching paper linked at the top of this module's documentation!
-            (
-                BitArrayTest::Size { op, size },
-                BitArrayTest::Size {
-                    op: this_op,
-                    size: this_size,
-                },
-            ) => match (op, this_op) {
-                (SizeOp::GreaterEqual, SizeOp::Equal) => size.greater(this_size).is_certain(),
-                (SizeOp::Equal, SizeOp::GreaterEqual) => size.greater(this_size).is_certain(),
-                (SizeOp::Equal, SizeOp::Equal) => size.different(this_size).is_certain(),
-                _ => false,
-            },
+            (BitArrayTest::Size(succeeding), BitArrayTest::Size(test)) => {
+                test.fails_if_succeeding(succeeding)
+            }
 
-            // TODO)) implement interference pruning
-            (BitArrayTest::Match { .. }, BitArrayTest::Match { .. }) => false,
-
+            // TODO)) implement interference pruning for matches
             // The tests are not comparable, we can't deduce any new information.
-            _ => false,
+            _ => Confidence::Uncertain,
         }
     }
 }
@@ -1978,11 +1990,11 @@ impl BranchSplitter {
 
         let pattern_fails_if_test_succeeds = tests
             .iter()
-            .any(|test| test.fails_if_test_succeeds(&pivot_test));
+            .any(|test| test.fails_if_succeeding(&pivot_test).is_certain());
 
         let pattern_fails_if_test_fails = tests
             .iter()
-            .any(|test| test.fails_if_test_fails(&pivot_test));
+            .any(|test| test.fails_if_failing(&pivot_test).is_certain());
 
         // We will go down the if_true path only if the test matches at runtime.
         // Down this path we only want to keep those branches with a pattern
@@ -1996,7 +2008,8 @@ impl BranchSplitter {
             // ever check that `Size(>=, 10)`: we already know it's `>= 20`!
             let tests = tests
                 .into_iter()
-                .filter(|test| !test.succeeds_if_test_succeds(&pivot_test))
+                // We are only keeping those tests we're not sure are already succeeding!
+                .filter(|test| test.succeeds_if_succeeding(&pivot_test) == Confidence::Uncertain)
                 .map(|test| test.clone())
                 .collect::<VecDeque<_>>();
 
@@ -2423,10 +2436,10 @@ impl CaseToCompile {
         // the bit array is empty.
         if segments.is_empty() {
             let mut test = VecDeque::new();
-            test.push_front(BitArrayTest::Size {
+            test.push_front(BitArrayTest::Size(SizeTest {
                 op: SizeOp::Equal,
                 size: Offset::constant(0),
-            });
+            }));
             return test;
         }
 
@@ -2447,19 +2460,19 @@ impl CaseToCompile {
                 ReadSize::AnyBytes => tests.push_back(BitArrayTest::CatchAllIsBytes {
                     size_so_far: previous_end.clone(),
                 }),
-                size => tests.push_back(BitArrayTest::Size {
+                size => tests.push_back(BitArrayTest::Size(SizeTest {
                     op: if is_last_segment {
                         SizeOp::Equal
                     } else {
                         SizeOp::GreaterEqual
                     },
                     size: previous_end.clone().add_size(&size),
-                }),
+                })),
             };
 
             // Each segment is also turned into a match test, checking the
             // selected bits match with the pattern's value.
-            tests.push_back(BitArrayTest::Match {
+            tests.push_back(BitArrayTest::Match(MatchTest {
                 value: segment_matched_value(segment),
                 read_action: ReadAction {
                     size: size.clone(),
@@ -2468,7 +2481,7 @@ impl CaseToCompile {
                     endianness: segment.endianness(),
                     signed: segment.signed(),
                 },
-            });
+            }));
 
             previous_end = previous_end.add_size(&size);
         }
