@@ -285,7 +285,7 @@
 
 - The language server will offer to wrap the body of case clauses in braces to
   easily turn them into blocks. Useful when adding more expressions to an
-  existing clause.
+  existing case clause or variable assignment.
 
   ```gleam
   pub fn f(pokemon_type: PokemonType) {
