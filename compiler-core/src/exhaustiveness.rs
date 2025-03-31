@@ -864,6 +864,13 @@ pub enum BitArrayMatchedValue {
 }
 
 impl BitArrayTest {
+    // TODO)) for these tests we could also implement a more sophisticated
+    // approach for `Match` tests. This is described in the linked paper as
+    // read action interference and can help making the tree smaller in some
+    // specific cases.
+    // This could be an interesting optimisation once we start using the tree
+    // for code generation as well.
+
     /// Tells us if this test is guaranteed to succeed given another test that
     /// we know has already succeeded.
     ///
