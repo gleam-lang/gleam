@@ -2267,7 +2267,7 @@ pub struct BitArraySegment<Value, Type> {
     pub type_: Type,
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum Endianness {
     Big,
     Little,
@@ -2299,6 +2299,12 @@ impl<Value> BitArraySegment<Value, Arc<Type>> {
         }
     }
 
+    pub(crate) fn signed(&self) -> bool {
+        self.options
+            .iter()
+            .any(|x| matches!(x, BitArrayOption::Signed { .. }))
+    }
+
     pub fn size(&self) -> Option<&Value> {
         self.options.iter().find_map(|x| match x {
             BitArrayOption::Size { value, .. } => Some(value.as_ref()),
@@ -2311,9 +2317,24 @@ impl<Value> BitArraySegment<Value, Arc<Type>> {
             .iter()
             .find_map(|option| match option {
                 BitArrayOption::Unit { value, .. } => Some(*value),
+                BitArrayOption::Bytes { .. } => Some(8),
                 _ => None,
             })
             .unwrap_or(1)
+    }
+
+    pub(crate) fn has_bits_option(&self) -> bool {
+        self.options.iter().any(|option| match option {
+            BitArrayOption::Bits { .. } => true,
+            _ => false,
+        })
+    }
+
+    pub(crate) fn has_bytes_option(&self) -> bool {
+        self.options.iter().any(|option| match option {
+            BitArrayOption::Bytes { .. } => true,
+            _ => false,
+        })
     }
 }
 
