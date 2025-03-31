@@ -79,7 +79,7 @@ impl<'a, 'env> MissingPatternsGenerator<'a, 'env> {
 
     fn print_terms(&self, mapping: HashMap<usize, usize>) -> EcoString {
         self.printer
-            .print_terms(&self.subjects, &self.terms, &mapping)
+            .print_terms(self.subjects, &self.terms, &mapping)
     }
 
     fn add_missing_patterns(&mut self, node: &Decision) {
@@ -141,7 +141,7 @@ impl<'a, 'env> MissingPatternsGenerator<'a, 'env> {
         &mut self,
         var: &Variable,
         check: &RuntimeCheck,
-        body: &Box<Decision>,
+        body: &Decision,
     ) {
         let term = self.check_to_term(var.clone(), check);
         self.terms.push(term);
