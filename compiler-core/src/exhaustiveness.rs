@@ -875,7 +875,6 @@ impl BitArrayTest {
             (BitArrayTest::Size(succeeding), BitArrayTest::Size(test)) => {
                 test.succeeds_if_succeeding(succeeding)
             }
-            // TODO)) implement interference pruning
             // The tests are not comparable, we can't deduce any new information.
             _ => Confidence::Uncertain,
         }
@@ -891,7 +890,6 @@ impl BitArrayTest {
             (BitArrayTest::Size(failing), BitArrayTest::Size(test)) => {
                 test.fails_if_failing(failing)
             }
-            // TODO)) implement interference pruning!
             // The tests are not comparable, we can't deduce any new information.
             _ => Confidence::Uncertain,
         }
@@ -908,8 +906,6 @@ impl BitArrayTest {
             (BitArrayTest::Size(succeeding), BitArrayTest::Size(test)) => {
                 test.fails_if_succeeding(succeeding)
             }
-
-            // TODO)) implement interference pruning for matches
             // The tests are not comparable, we can't deduce any new information.
             _ => Confidence::Uncertain,
         }
@@ -1965,7 +1961,6 @@ impl BranchSplitter {
     /// successful, and the other one is going to be the usual fallback to go
     /// down to if it's not successful.
     ///
-    /// TODO)) continua spiegando la strategia.
     fn add_checked_bit_array_branch(
         &mut self,
         pattern_check: PatternCheck,
@@ -1973,7 +1968,7 @@ impl BranchSplitter {
         mut branch: Branch,
         compiler: &mut Compiler<'_>,
     ) {
-        // If this we haven't found a test yet we just use the first one we find
+        // If we haven't found a test yet we just use the first one we find
         // as the pivot to split all the branches.
         let pivot_test = match self.choices.as_slice() {
             [] => {
@@ -1996,19 +1991,18 @@ impl BranchSplitter {
             .iter()
             .any(|test| test.fails_if_failing(&pivot_test).is_certain());
 
-        // We will go down the if_true path only if the test matches at runtime.
-        // Down this path we only want to keep those branches with a pattern
-        // that still has a chance to match. If the pattern is guaranteed to
-        // fail we do not bother adding it to the true path.
+        // The branch is still relevant for the if_true path if it still has a
+        // chance of matching knowing that the pivot test has matched.
+        // So if we know for certain that the pattern would fail, we don't even
+        // bother adding it to the if_true path.
         if !pattern_fails_if_test_succeeds {
-            // Now we can also prune all those tests that we can statically
-            // ensure are always going to match if the pivot test matches. For
-            // example, if we're in the decision path we go down to when this
-            // test succeeds: `Size(>=, 20)`; then we know there's no need to
-            // ever check that `Size(>=, 10)`: we already know it's `>= 20`!
+            // If the branch is relevant we can further simplify it by removing
+            // all those tests that are guaranteed to succeed. For example,
+            // if the succeeding pivot test is `size >= 20` there's no point
+            // in checking that `size >= 10`, we know that's always true in this
+            // path of the decision tree!
             let tests = tests
                 .into_iter()
-                // We are only keeping those tests we're not sure are already succeeding!
                 .filter(|test| test.succeeds_if_succeeding(&pivot_test) == Confidence::Uncertain)
                 .map(|test| test.clone())
                 .collect::<VecDeque<_>>();
@@ -2023,8 +2017,8 @@ impl BranchSplitter {
             if_true_branches.push_back(branch);
         }
 
-        // Same goes for the if_false branch: knowing the test has failed we
-        // only want to keep those branches with a pattern that still has a
+        // Same goes for the if_false branch: knowing the pivot test has failed
+        // we only want to keep those branches with a pattern that still have a
         // chance to match.
         if !pattern_fails_if_test_fails {
             // The main difference with the if true case is that we have no way
