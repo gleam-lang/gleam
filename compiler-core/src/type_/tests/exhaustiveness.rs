@@ -1483,3 +1483,116 @@ fn multiple_unreachable_prefix_patterns_1() {
 }"#
     );
 }
+
+#[test]
+fn bit_array_bits_catches_everything() {
+    assert_warning!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<_:bits>> -> 1
+    <<1>> -> 2
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_bytes_needs_catch_all() {
+    assert_module_error!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<_:bytes>> -> 1
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_overlapping_patterns_are_redundant() {
+    assert_warning!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<1, a:size(16)>> -> a
+    <<1, b:size(8)-unit(2)>> -> b
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_similar_overlapping_patterns_are_not_redundant() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<1, a:size(16)>> -> a
+    <<2, b:size(8)-unit(2)>> -> b
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_overlapping_redundant_patterns_with_variable_size() {
+    assert_warning!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  let len = 3
+  case bit_array {
+    <<a:size(len), _:size(16)>> -> a
+    <<_:size(len), b:size(8)-unit(2)>> -> b
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_overlapping_redundant_patterns_with_variable_size_2() {
+    assert_warning!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<len, _:size(len)-unit(3)>> -> 1
+    <<len, _:size(len)-unit(2), 1:size(len)>> -> 2
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_overlapping_patterns_with_variable_size_not_redundant() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<len, 1:size(len)-unit(3)>> -> 1
+    <<len, _:size(len)-unit(2), 1:size(len)>> -> 2
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_patterns_with_different_length_with_same_name_are_not_redundant() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  let len = 10
+  case bit_array {
+    <<_, _:size(len)-unit(3)>> -> 1
+    // Down here len is not the same len as above!
+    <<len, _:size(len)-unit(3)>> -> 2
+    _ -> 2
+  }
+}"#
+    );
+}
