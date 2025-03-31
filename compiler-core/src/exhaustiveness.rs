@@ -1941,7 +1941,10 @@ impl BranchSplitter {
         // the correct qualification to refer to each constructor.
         if let Pattern::Variant { name, module, .. } = pattern {
             for index in indices_of_overlapping_checks {
-                let (check, _) = self.choices.get_mut(index).unwrap();
+                let (check, _) = self
+                    .choices
+                    .get_mut(index)
+                    .expect("check to already be a choice");
                 if let RuntimeCheck::Variant { match_, .. } = check {
                     *match_ = VariantMatch::ExplicitlyMatchedOn {
                         module: module.clone(),
@@ -1971,7 +1974,7 @@ impl BranchSplitter {
         // as the pivot to split all the branches.
         let pivot_test = match self.choices.as_slice() {
             [] => {
-                let test = tests.get(0).expect("empty bit array test").clone();
+                let test = tests.front().expect("empty bit array test").clone();
                 self.choices.push((
                     RuntimeCheck::BitArray { test: test.clone() },
                     VecDeque::new(),
@@ -2003,7 +2006,6 @@ impl BranchSplitter {
             let tests = tests
                 .into_iter()
                 .filter(|test| test.succeeds_if_succeeding(&pivot_test) == Confidence::Uncertain)
-                .map(|test| test.clone())
                 .collect::<VecDeque<_>>();
 
             let mut branch = branch.clone();
@@ -2012,7 +2014,10 @@ impl BranchSplitter {
 
             // We know that there's always going to be a single choice for the
             // successful check, so we get that and add the branch to it.
-            let (_, if_true_branches) = self.choices.get_mut(0).unwrap();
+            let (_, if_true_branches) = self
+                .choices
+                .get_mut(0)
+                .expect("bit array compilation with no choice");
             if_true_branches.push_back(branch);
         }
 
@@ -2423,7 +2428,7 @@ impl CaseToCompile {
 
     fn bit_array_to_tests(
         &mut self,
-        segments: &Vec<TypedPatternBitArraySegment>,
+        segments: &[TypedPatternBitArraySegment],
     ) -> VecDeque<BitArrayTest> {
         // If there's no segments then we just add a single check to make sure
         // the bit array is empty.
@@ -2459,7 +2464,7 @@ impl CaseToCompile {
                     } else {
                         SizeOp::GreaterEqual
                     },
-                    size: previous_end.clone().add_size(&size),
+                    size: previous_end.clone().add_size(size),
                 })),
             };
 
