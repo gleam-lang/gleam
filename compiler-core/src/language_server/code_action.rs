@@ -6049,11 +6049,6 @@ impl<'a> WrapInBlock<'a> {
             return vec![];
         };
 
-        // To avoid wrapping the same expression in multiple, nested blocks.
-        if expr_string.starts_with(r#"{"#) {
-            return vec![];
-        }
-
         let range = self
             .edits
             .src_span_to_lsp_range(self.selected_expression.expect("Real range value"));
@@ -6102,8 +6097,43 @@ impl<'ast> ast::visit::Visit<'ast> for WrapInBlock<'ast> {
         ) {
             return;
         }
-        self.selected_expression = Some(assignment.value.location());
-
+        match *assignment.to_owned().value {
+            // To avoid wrapping the same expression in multiple, nested blocks.
+            TypedExpr::Block { .. } => {
+                ast::visit::visit_typed_assignment(self, assignment);
+            }
+            TypedExpr::RecordAccess {
+                record, location, ..
+            } => {
+                self.selected_expression = Some(SrcSpan {
+                    start: record.location().start,
+                    end: location.end,
+                });
+            }
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => {
+                self.selected_expression = Some(assignment.value.location());
+            }
+        };
         ast::visit::visit_typed_assignment(self, assignment);
     }
 
@@ -6117,7 +6147,10 @@ impl<'ast> ast::visit::Visit<'ast> for WrapInBlock<'ast> {
             return;
         }
 
-        self.selected_expression = Some(clause.then.location());
+        // To avoid wrapping the same expression in multiple, nested blocks.
+        if !matches!(clause.then, TypedExpr::Block { .. }) {
+            self.selected_expression = Some(clause.then.location());
+        };
 
         ast::visit::visit_typed_clause(self, clause);
     }

@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub type Record {\n  R(left: Int, right: Int)\n}\n\npub fn main() {\n  let r = R(1, 2)\n  let l = r.left\n  l\n}\n"
+---
+----- BEFORE ACTION
+
+pub type Record {
+  R(left: Int, right: Int)
+}
+
+pub fn main() {
+  let r = R(1, 2)
+  let l = r.left
+            ↑   
+  l
+}
+
+
+----- AFTER ACTION
+
+pub type Record {
+  R(left: Int, right: Int)
+}
+
+pub fn main() {
+  let r = R(1, 2)
+  let l = {
+    r.left
+  }
+  l
+}
