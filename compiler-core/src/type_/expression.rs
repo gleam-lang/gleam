@@ -12,7 +12,7 @@ use crate::{
         UntypedUseAssignment, Use, UseAssignment,
     },
     build::Target,
-    exhaustiveness::{self, CompiledCase, Reachability},
+    exhaustiveness::{self, CompileCaseResult, CompiledCase, Reachability},
     reference::ReferenceKind,
 };
 use hexpm::version::Version;
@@ -4149,7 +4149,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
         subject: Arc<Type>,
         pattern: &TypedPattern,
-    ) -> (Match, Result<(), Error>) {
+    ) -> (CompileCaseResult, Result<(), Error>) {
         let mut case = exhaustiveness::CaseToCompile::new(&[subject]);
         case.add_pattern(pattern);
         let output = case.compile(self.environment);
