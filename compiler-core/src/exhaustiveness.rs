@@ -953,7 +953,7 @@ pub enum SizeOp {
 ///   ╰── While this segment has a constant size of 8 bits
 /// ```
 ///
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub struct ReadAction {
     /// The offset to start reading the bits from.
     ///
@@ -963,13 +963,25 @@ pub struct ReadAction {
     pub size: ReadSize,
     /// The type of the read value.
     ///
-    pub type_: Arc<Type>,
+    pub type_: ReadType,
     /// Endianness of the read value.
     ///
     pub endianness: Endianness,
     /// Signedness of the read value.
     ///
     pub signed: bool,
+}
+
+/// Only a subset of all the possible Gleam types can be used for a pattern
+/// segment. We enumerate those out explicitly here.
+///
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ReadType {
+    Float,
+    Int,
+    String,
+    BitArray,
+    UtfCodepoint,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -994,10 +1006,10 @@ impl Confidence {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub struct Offset {
     pub constant: BigInt,
-    pub variables: ImHashMap<EcoString, usize>,
+    pub variables: ImHashMap<VariableUsage, usize>,
 }
 
 impl Offset {
@@ -1014,14 +1026,14 @@ impl Offset {
                 constant: self.constant + value,
                 variables: self.variables,
             },
-            ReadSize::VariableBits { name, unit } => Self {
+            ReadSize::VariableBits { variable, unit } => Self {
                 constant: self.constant,
                 variables: self.variables.alter(
                     |value| match value {
                         Some(value) => Some(value + (*unit as usize)),
                         None => Some(*unit as usize),
                     },
-                    name.clone(),
+                    variable.as_ref().clone(),
                 ),
             },
             ReadSize::AnyBits | ReadSize::AnyBytes => self,
@@ -1062,7 +1074,7 @@ impl Offset {
 
 /// The number of bits to read in a read action when reading a segment.
 ///
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub enum ReadSize {
     /// Read a constant, compile-time-known number of bits.
     ///
@@ -1083,7 +1095,7 @@ pub enum ReadSize {
     /// ```
     ///
     VariableBits {
-        name: EcoString,
+        variable: Box<VariableUsage>,
         unit: u8,
     },
     /// Read all the remaining bits in the bit array when using a catch all
@@ -1097,6 +1109,14 @@ pub enum ReadSize {
     ///
     AnyBits,
     AnyBytes,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
+pub enum VariableUsage {
+    /// A variable that was brought into scope in the bit array pattern itself.
+    PatternVariable(ReadAction),
+    /// A variable defined somewhere else
+    OutsideVariable(EcoString),
 }
 
 /// This is the decision tree that a pattern matching expression gets turned
@@ -2450,45 +2470,64 @@ impl CaseToCompile {
 
         let mut previous_end = Offset::constant(0);
         let mut tests = VecDeque::with_capacity(segments.len() * 2);
+        let mut pattern_variables = HashMap::new();
 
         let segments_count = segments.len();
         for (i, segment) in segments.iter().enumerate() {
-            let size = segment_size(segment);
+            let segment_size = segment_size(segment, &pattern_variables);
 
             // All segments but the last will require the original bit array to
             // have a minimum number of bits for the pattern to succeed. The
             // final segment is special as it could require a specific size, or
             // be a catch all that matches with any number of remaining bits.
             let is_last_segment = i + 1 == segments_count;
-            match &size {
+            match &segment_size {
                 ReadSize::AnyBits => (),
                 ReadSize::AnyBytes => tests.push_back(BitArrayTest::CatchAllIsBytes {
                     size_so_far: previous_end.clone(),
                 }),
-                size => tests.push_back(BitArrayTest::Size(SizeTest {
-                    op: if is_last_segment {
+                segment_size => {
+                    let size = previous_end.clone().add_size(segment_size);
+                    let op = if is_last_segment {
                         SizeOp::Equal
                     } else {
                         SizeOp::GreaterEqual
-                    },
-                    size: previous_end.clone().add_size(size),
-                })),
+                    };
+                    tests.push_back(BitArrayTest::Size(SizeTest { op, size }));
+                }
             };
 
             // Each segment is also turned into a match test, checking the
             // selected bits match with the pattern's value.
-            tests.push_back(BitArrayTest::Match(MatchTest {
-                value: segment_matched_value(segment),
-                read_action: ReadAction {
-                    size: size.clone(),
-                    from: previous_end.clone(),
-                    type_: segment.type_.clone(),
-                    endianness: segment.endianness(),
-                    signed: segment.signed(),
-                },
-            }));
+            let value = segment_matched_value(segment);
 
-            previous_end = previous_end.add_size(&size);
+            let type_ = match &segment.type_ {
+                type_ if type_.is_int() => ReadType::Int,
+                type_ if type_.is_float() => ReadType::Float,
+                type_ if type_.is_string() => ReadType::String,
+                type_ if type_.is_bit_array() => ReadType::BitArray,
+                type_ if type_.is_utf_codepoint() => ReadType::UtfCodepoint,
+                _ => unreachable!("invalid segment type in exhaustiveness"),
+            };
+
+            let read_action = ReadAction {
+                size: segment_size.clone(),
+                from: previous_end.clone(),
+                type_,
+                endianness: segment.endianness(),
+                signed: segment.signed(),
+            };
+
+            // Then if the matched value is a variable that is in scope for the
+            // rest of the pattern we keep track of it, so it can be used in the
+            // following read actions as a valid size.
+            if let BitArrayMatchedValue::Variable(name) = &value {
+                let _ = pattern_variables.insert(name.clone(), read_action.clone());
+            };
+
+            tests.push_back(BitArrayTest::Match(MatchTest { value, read_action }));
+
+            previous_end = previous_end.add_size(&segment_size);
         }
         tests
     }
@@ -2505,17 +2544,26 @@ fn segment_matched_value(segment: &TypedPatternBitArraySegment) -> BitArrayMatch
     }
 }
 
-fn segment_size(segment: &TypedPatternBitArraySegment) -> ReadSize {
+fn segment_size(
+    segment: &TypedPatternBitArraySegment,
+    pattern_variables: &HashMap<EcoString, ReadAction>,
+) -> ReadSize {
     match segment.size() {
         // Size could either be a constant or a variable usage. In either case
         // we need to take the segment's unit into account!
         Some(ast::Pattern::Int { int_value, .. }) => {
             ReadSize::ConstantBits(int_value * segment.unit())
         }
-        Some(ast::Pattern::VarUsage { name, .. }) => ReadSize::VariableBits {
-            name: name.clone(),
-            unit: segment.unit(),
-        },
+        Some(ast::Pattern::VarUsage { name, .. }) => {
+            let variable = match pattern_variables.get(name) {
+                Some(read_action) => VariableUsage::PatternVariable(read_action.clone()),
+                None => VariableUsage::OutsideVariable(name.clone()),
+            };
+            ReadSize::VariableBits {
+                variable: Box::new(variable),
+                unit: segment.unit(),
+            }
+        }
         Some(_) => unreachable!("invalid pattern size made it to code generation"),
 
         // If a segment has the `bits`/`bytes` option and has no size, that
@@ -2531,11 +2579,14 @@ fn segment_size(segment: &TypedPatternBitArraySegment) -> ReadSize {
     }
 }
 
-#[must_use]
 /// Returns `true` if one bag is a superset of the other: that is it contains
 /// all the keys of `other` in a quantity that's greater or equal.
 ///
-fn superset(one: &ImHashMap<EcoString, usize>, other: &ImHashMap<EcoString, usize>) -> bool {
+#[must_use]
+fn superset(
+    one: &ImHashMap<VariableUsage, usize>,
+    other: &ImHashMap<VariableUsage, usize>,
+) -> bool {
     other
         .iter()
         .all(|(key, other_occurrences)| match one.get(key) {

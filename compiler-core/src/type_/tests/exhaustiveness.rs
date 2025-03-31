@@ -1589,9 +1589,71 @@ fn bit_array_patterns_with_different_length_with_same_name_are_not_redundant() {
   let len = 10
   case bit_array {
     <<_, _:size(len)-unit(3)>> -> 1
-    // Down here len is not the same len as above!
+    // Down here len is not the same as the len above, so the branch below is
+    // not redundant!
     <<len, _:size(len)-unit(3)>> -> 2
     _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_patterns_with_different_length_with_same_name_are_not_redundant_1() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  let len = 10
+  case bit_array {
+    <<len, _:size(len)-unit(3)>> -> 1
+    // Down here len is not the same as the len above, so the branch below is
+    // not redundant!
+    <<_, _:size(len)-unit(3)>> -> 2
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_patterns_with_different_length_with_same_name_are_not_redundant_2() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<_, len, _:size(len)>> -> 1
+    // Down here len is not the same as the len above, so the branch below is
+    // not redundant!
+    <<len, _, _:size(len)>> -> 2
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn same_catch_all_bytes_are_redundant() {
+    assert_warning!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<_:bytes>> -> <<>>
+    <<a:bytes>> -> a
+    _ -> <<>>
+  }
+}"#
+    );
+}
+
+#[test]
+fn different_catch_all_bytes_are_not_redundant() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<_, _:bytes>> -> <<>>
+    <<_:bytes>> -> <<>>
+    _ -> <<>>
   }
 }"#
     );
