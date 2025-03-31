@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/type_/tests/exhaustiveness.rs
+expression: "pub fn main() {\n  let bit_array = <<>>\n  case bit_array {\n    <<_:bytes>> -> 1\n  }\n}"
+---
+----- SOURCE CODE
+pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<_:bytes>> -> 1
+  }
+}
+
+----- ERROR
+error: Inexhaustive patterns
+  ┌─ /src/one/two.gleam:3:3
+  │  
+3 │ ╭   case bit_array {
+4 │ │     <<_:bytes>> -> 1
+5 │ │   }
+  │ ╰───^
+
+This case expression does not have a pattern for all possible values. If it
+is run on one of the values without a pattern then it will crash.
+
+The missing patterns are:
+
+    _
