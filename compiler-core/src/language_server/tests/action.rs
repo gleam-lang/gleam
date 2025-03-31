@@ -7273,6 +7273,25 @@ fn wrap_case_clause_inside_assignment_in_block() {
 }
 
 #[test]
+fn wrap_case_assignment_of_record_access_in_block() {
+    assert_code_action!(
+        WRAP_IN_BLOCK,
+        r#"
+pub type Record {
+  R(left: Int, right: Int)
+}
+
+pub fn main() {
+  let r = R(1, 2)
+  let l = r.left
+  l
+}
+"#,
+        find_position_of("left").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
 fn do_not_wrap_case_clause_in_block_1() {
     assert_no_code_actions!(
         WRAP_IN_BLOCK,
