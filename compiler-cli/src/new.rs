@@ -37,7 +37,7 @@ pub enum Template {
 pub struct Creator {
     root: Utf8PathBuf,
     src: Utf8PathBuf,
-    test: Utf8PathBuf,
+    dev: Utf8PathBuf,
     github: Utf8PathBuf,
     workflows: Utf8PathBuf,
     gleam_version: &'static str,
@@ -66,7 +66,7 @@ impl FileToCreate {
                 .src
                 .join(Utf8PathBuf::from(format!("{project_name}.gleam"))),
             Self::TestModule => creator
-                .test
+                .dev
                 .join(Utf8PathBuf::from(format!("{project_name}_test.gleam"))),
             Self::GleamToml => creator.root.join(Utf8PathBuf::from("gleam.toml")),
             Self::GithubCi => creator.workflows.join(Utf8PathBuf::from("test.yml")),
@@ -206,13 +206,13 @@ impl Creator {
         let project_name = get_valid_project_name(options.name.clone(), &options.project_root)?;
         let root = get_current_directory()?.join(&options.project_root);
         let src = root.join("src");
-        let test = root.join("test");
+        let dev = root.join("dev");
         let github = root.join(".github");
         let workflows = github.join("workflows");
         let me = Self {
             root: root.clone(),
             src,
-            test,
+            dev,
             github,
             workflows,
             gleam_version,
@@ -228,7 +228,7 @@ impl Creator {
     fn run(&self) -> Result<()> {
         crate::fs::mkdir(&self.root)?;
         crate::fs::mkdir(&self.src)?;
-        crate::fs::mkdir(&self.test)?;
+        crate::fs::mkdir(&self.dev)?;
 
         if !self.options.skip_git && !self.options.skip_github {
             crate::fs::mkdir(&self.github)?;

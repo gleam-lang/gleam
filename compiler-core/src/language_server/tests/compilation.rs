@@ -69,7 +69,7 @@ fn compile_error_in_test() {
     let io = LanguageServerTestIO::new();
     let mut engine = setup_engine(&io);
 
-    _ = io.test_module("app/error", "pub type Error {");
+    _ = io.dev_module("app/error", "pub type Error {");
 
     let response = engine.compile_please();
     assert!(response.result.is_err());

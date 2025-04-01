@@ -1,4 +1,7 @@
-use crate::build::{Mode, Target};
+use crate::{
+    build::{Mode, Target},
+    io::FileSystemReader,
+};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -44,8 +47,23 @@ impl ProjectPaths {
         self.root.join("src")
     }
 
+    pub fn dev_directory(&self) -> Utf8PathBuf {
+        self.root.join("dev")
+    }
+
     pub fn test_directory(&self) -> Utf8PathBuf {
         self.root.join("test")
+    }
+
+    /// Returns the `dev` directory if it exists, otherwise falling back to
+    /// the `test` directory to maintain compatibility with old Gleam code.
+    pub fn test_or_dev_directory(&self, io: &impl FileSystemReader) -> Utf8PathBuf {
+        let dev_directory = self.dev_directory();
+        if io.is_directory(&dev_directory) {
+            dev_directory
+        } else {
+            self.test_directory()
+        }
     }
 
     pub fn build_directory(&self) -> Utf8PathBuf {

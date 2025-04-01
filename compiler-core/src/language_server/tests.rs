@@ -85,9 +85,9 @@ impl LanguageServerTestIO {
         path
     }
 
-    pub fn test_module(&self, name: &str, code: &str) -> Utf8PathBuf {
-        let test_dir = self.paths.test_directory();
-        let path = test_dir.join(name).with_extension("gleam");
+    pub fn dev_module(&self, name: &str, code: &str) -> Utf8PathBuf {
+        let dev_dir = self.paths.dev_directory();
+        let path = dev_dir.join(name).with_extension("gleam");
         self.module(&path, code);
         path
     }
@@ -525,7 +525,7 @@ impl<'a> TestProject<'a> {
 
         // Add all the test modules
         self.test_modules.iter().for_each(|(name, code)| {
-            let _ = io.test_module(name, code);
+            let _ = io.dev_module(name, code);
         });
         for package in &io.manifest.packages {
             let toml_path = engine.paths.build_packages_package_config(&package.name);

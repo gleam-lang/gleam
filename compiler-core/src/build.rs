@@ -257,7 +257,7 @@ impl Module {
     }
 
     pub fn is_test(&self) -> bool {
-        self.origin == Origin::Test
+        self.origin == Origin::Dev
     }
 
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
@@ -546,7 +546,7 @@ pub fn type_constructor_from_modules(
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Origin {
     Src,
-    Test,
+    Dev,
 }
 
 impl Origin {

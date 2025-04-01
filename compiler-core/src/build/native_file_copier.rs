@@ -9,6 +9,7 @@ use ecow::{EcoString, eco_format};
 use crate::{
     Error, Result,
     io::{DirWalker, FileSystemReader, FileSystemWriter},
+    paths::ProjectPaths,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -19,7 +20,7 @@ pub(crate) struct CopiedNativeFiles {
 
 pub(crate) struct NativeFileCopier<'a, IO> {
     io: IO,
-    root: &'a Utf8Path,
+    paths: ProjectPaths,
     destination_dir: &'a Utf8Path,
     seen_native_files: HashSet<Utf8PathBuf>,
     seen_modules: HashMap<EcoString, Utf8PathBuf>,
@@ -34,7 +35,7 @@ where
     pub(crate) fn new(io: IO, root: &'a Utf8Path, out: &'a Utf8Path) -> Self {
         Self {
             io,
-            root,
+            paths: ProjectPaths::new(root.into()),
             destination_dir: out,
             to_compile: Vec::new(),
             seen_native_files: HashSet::new(),
@@ -52,12 +53,12 @@ where
     pub fn run(mut self) -> Result<CopiedNativeFiles> {
         self.io.mkdir(&self.destination_dir)?;
 
-        let src = self.root.join("src");
+        let src = self.paths.src_directory();
         self.copy_files(&src)?;
 
-        let test = self.root.join("test");
-        if self.io.is_directory(&test) {
-            self.copy_files(&test)?;
+        let dev = self.paths.test_or_dev_directory(&self.io);
+        if self.io.is_directory(&dev) {
+            self.copy_files(&dev)?;
         }
 
         // Sort for deterministic output

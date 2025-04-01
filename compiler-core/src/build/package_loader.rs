@@ -22,7 +22,9 @@ use crate::{
     dep_tree,
     error::{FileIoAction, FileKind, ImportCycleLocationDetails},
     io::{self, CommandExecutor, FileSystemReader, FileSystemWriter, files_with_extension},
-    metadata, type_,
+    metadata,
+    paths::ProjectPaths,
+    type_,
     uid::UniqueIdGenerator,
     warning::WarningEmitter,
 };
@@ -56,7 +58,7 @@ pub struct PackageLoader<'a, IO> {
     io: IO,
     ids: UniqueIdGenerator,
     mode: Mode,
-    root: &'a Utf8Path,
+    paths: ProjectPaths,
     warnings: &'a WarningEmitter,
     codegen: CodegenRequired,
     artefact_directory: &'a Utf8Path,
@@ -91,7 +93,7 @@ where
             io,
             ids,
             mode,
-            root,
+            paths: ProjectPaths::new(root.into()),
             warnings,
             codegen,
             target,
@@ -207,7 +209,7 @@ where
 
         let mut inputs = Inputs::new(self.already_defined_modules);
 
-        let src = self.root.join("src");
+        let src = self.paths.src_directory();
         let mut loader = ModuleLoader {
             io: self.io.clone(),
             warnings: self.warnings,
@@ -233,10 +235,10 @@ where
 
         // Test
         if self.mode.includes_tests() {
-            let test = self.root.join("test");
-            loader.origin = Origin::Test;
+            let dev = self.paths.test_or_dev_directory(&self.io);
+            loader.origin = Origin::Dev;
 
-            for file in GleamFile::iterate_files_in_directory(&self.io, &test) {
+            for file in GleamFile::iterate_files_in_directory(&self.io, &dev) {
                 match file {
                     Ok(file) => {
                         let input = loader.load(file)?;
