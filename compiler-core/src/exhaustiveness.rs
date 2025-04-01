@@ -1990,6 +1990,9 @@ impl BranchSplitter {
     /// successful, and the other one is going to be the usual fallback to go
     /// down to if it's not successful.
     ///
+    /// > "And now for the tricky bit..."
+    /// > <https://youtu.be/lKXe3HUG2l4?si=i1thYB-kjfMU8NSe&t=645>
+    ///
     fn add_checked_bit_array_branch(
         &mut self,
         pattern_check: PatternCheck,
