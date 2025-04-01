@@ -114,7 +114,7 @@ jobs:
         id: release
         # https://github.com/softprops/action-gh-release/issues/445
         # uses: softprops/action-gh-release@v2
-        uses: softprops/action-gh-release@0bd7e8b279c9b5b36661d552472fbbfe671fe26e
+        uses: softprops/action-gh-release@ab50eebb6488051c6788d97fa95232267c6a4e23
         with:
           draft: false
           prerelease: true
