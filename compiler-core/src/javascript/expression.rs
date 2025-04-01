@@ -1119,31 +1119,9 @@ impl<'module, 'a> Generator<'module, 'a> {
             Some(m) => {
                 self.not_in_tail_position(Some(Ordering::Strict), |this| this.expression(m))?
             }
-            None => string("Assertion failed"),
+            None => string("Assertion failed."),
         };
 
-        // TypedExpr::Call { args, .. } => vec![
-        //     ("kind", string("function_call")),
-        //     (
-        //         "arguments",
-        //         array(
-        //             args.iter()
-        //                 .map(|argument| self.asserted_expression(&argument.value)),
-        //         )?,
-        //     ),
-        // ],
-        // TypedExpr::BinOp {
-        //     name, left, right, ..
-        // } => vec![
-        //     ("kind", string("binary_operator")),
-        //     ("operator", string(name.name())),
-        //     ("left", self.asserted_expression(left)?),
-        //     ("right", self.asserted_expression(right)?),
-        // ],
-        // _ => vec![
-        //     ("kind", string("expression")),
-        //     ("expression", self.asserted_expression(subject)?),
-        // ],
         let fields = match subject {
             AssertSubject::Expression(expression) => vec![
                 ("kind", string("expression")),

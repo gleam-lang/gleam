@@ -27,7 +27,7 @@ export function go(x) {
       "my/mod",
       7,
       "go",
-      "Assertion failed",
+      "Assertion failed.",
       {
         kind: "function_call",
         arguments: [

@@ -1,0 +1,47 @@
+---
+source: compiler-core/src/erlang/tests/assert.rs
+expression: "\nfn and(a, b) {\n  a && b\n}\n\npub fn go(x) {\n  assert and(True, x)\n}\n"
+---
+----- SOURCE CODE
+
+fn and(a, b) {
+  a && b
+}
+
+pub fn go(x) {
+  assert and(True, x)
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([go/1]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec 'and'(boolean(), boolean()) -> boolean().
+'and'(A, B) ->
+    A andalso B.
+
+-file("project/test/my/mod.gleam", 6).
+-spec go(boolean()) -> boolean().
+go(X) ->
+    case 'and'(true, X) of
+        true -> true;
+        false -> erlang:error(#{gleam_error => assert,
+                message => <<"Assertion failed."/utf8>>,
+                kind => <<"function_call"/utf8>>,
+                arguments => [#{kind => <<"expression"/utf8>>,
+                        value => true,
+                        start => 56,
+                        end => 60,
+                        }, #{kind => <<"expression"/utf8>>,
+                        value => X,
+                        start => 62,
+                        end => 63,
+                        }],
+                module => <<"my/mod"/utf8>>,
+                function => <<"go"/utf8>>,
+                line => 7})
+    end.
