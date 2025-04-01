@@ -21,7 +21,7 @@ export function main() {
       "my/mod",
       4,
       "main",
-      "Assertion failed",
+      "Assertion failed.",
       {
         kind: "binary_operator",
         operator: "||",

@@ -27,7 +27,7 @@ export function main() {
       "my/mod",
       7,
       "main",
-      "Assertion failed",
+      "Assertion failed.",
       { kind: "function_call", arguments: [] }
     )
   }

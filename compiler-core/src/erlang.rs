@@ -889,7 +889,7 @@ fn statement<'a>(statement: &'a TypedStatement, env: &mut Env<'a>) -> Document<'
         Statement::Expression(e) => expr(e, env),
         Statement::Assignment(a) => assignment(a, env),
         Statement::Use(use_) => expr(&use_.call, env),
-        Statement::Assert(_) => todo!(),
+        Statement::Assert(a) => assert(a, env),
     }
 }
 
@@ -2156,6 +2156,243 @@ fn assignment<'a>(assignment: &'a TypedAssignment, env: &mut Env<'a>) -> Documen
             message.as_deref(),
         ),
     }
+}
+
+fn assert<'a>(assert: &'a TypedAssert, env: &mut Env<'a>) -> Document<'a> {
+    let Assert {
+        value,
+        location,
+        message,
+    } = assert;
+
+    let message = match message {
+        Some(message) => expr(message, env),
+        None => string("Assertion failed."),
+    };
+
+    let mut assignments = Vec::new();
+
+    let subject = assert_subject(value, &mut assignments, env);
+    let subject_doc = assert_subject_document(&subject, env);
+
+    let fields = match subject {
+        AssertSubject::Expression(expression) => vec![
+            ("kind", string("expression")),
+            ("expression", asserted_expression(expression)),
+        ],
+        AssertSubject::BinaryOperator {
+            name, left, right, ..
+        } => vec![
+            ("kind", string("binary_operator")),
+            ("operator", string(name.name())),
+            ("left", asserted_expression(left)),
+            ("right", asserted_expression(right)),
+        ],
+        AssertSubject::Call { arguments, .. } => vec![
+            ("kind", string("function_call")),
+            (
+                "arguments",
+                list(
+                    join(
+                        arguments
+                            .into_iter()
+                            .map(|argument| asserted_expression(argument)),
+                        break_(",", ", "),
+                    ),
+                    None,
+                ),
+            ),
+        ],
+    };
+
+    let clauses = docvec![
+        line(),
+        "true -> true;",
+        line(),
+        "false -> ",
+        erlang_error("assert", &message, *location, fields, env),
+    ];
+
+    docvec![
+        assignments,
+        "case ",
+        subject_doc,
+        " of",
+        clauses.nest(INDENT),
+        line(),
+        "end"
+    ]
+}
+
+fn asserted_expression<'a>(expression: AssertExpression<'a>) -> Document<'a> {
+    let kind = match expression.kind {
+        ExpressionKind::Literal => string("literal"),
+        ExpressionKind::Expression => string("expression"),
+    };
+
+    let value = expression.value;
+    let start = expression.location.start.to_doc();
+    let end = expression.location.end.to_doc();
+
+    let fields_doc = docvec![
+        "kind => ",
+        kind,
+        ",",
+        line(),
+        "value => ",
+        value,
+        ",",
+        line(),
+        "start => ",
+        start,
+        ",",
+        line(),
+        "end => ",
+        end,
+        ",",
+        line(),
+    ];
+
+    "#{".to_doc()
+        .append(fields_doc.group().nest(INDENT))
+        .append("}")
+}
+
+fn assign_to_variable<'a>(
+    value: &'a TypedExpr,
+    assignments: &mut Vec<Document<'a>>,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    if value.is_var() {
+        expr(value, env)
+    } else {
+        let value = maybe_block_expr(value, env);
+        let variable = env.next_local_var_name(ASSERT_SUBJECT_VARIABLE);
+        let definition = docvec![variable.clone(), " = ", value, ",", line()];
+        assignments.push(definition);
+        variable
+    }
+}
+
+fn assert_subject<'a>(
+    subject: &'a TypedExpr,
+    assignments: &mut Vec<Document<'a>>,
+    env: &mut Env<'a>,
+) -> AssertSubject<'a> {
+    match subject {
+        TypedExpr::Call { fun, args, .. } => {
+            let arguments = args
+                .iter()
+                .map(|element| assert_expression(&element.value, assignments, env))
+                .collect();
+            AssertSubject::Call {
+                function: fun,
+                arguments,
+            }
+        }
+        TypedExpr::BinOp {
+            name, left, right, ..
+        } => {
+            let left = assert_expression(left, assignments, env);
+            let right = assert_expression(right, assignments, env);
+            AssertSubject::BinaryOperator {
+                name: *name,
+                left,
+                right,
+            }
+        }
+        _ => AssertSubject::Expression(assert_expression(subject, assignments, env)),
+    }
+}
+
+fn assert_expression<'a>(
+    expression: &'a TypedExpr,
+    assignments: &mut Vec<Document<'a>>,
+    env: &mut Env<'a>,
+) -> AssertExpression<'a> {
+    let kind = if expression.is_literal() {
+        ExpressionKind::Literal
+    } else {
+        ExpressionKind::Expression
+    };
+    let location = expression.location();
+    let value = assign_to_variable(expression, assignments, env);
+
+    AssertExpression {
+        kind,
+        location,
+        value,
+    }
+}
+
+fn assert_subject_document<'a>(subject: &AssertSubject<'a>, env: &mut Env<'a>) -> Document<'a> {
+    match subject {
+        AssertSubject::Expression(expression) => expression.value.clone(),
+        AssertSubject::BinaryOperator { name, left, right } => {
+            let name = assert_bin_op_name(name);
+            binop_documents(left.value.clone(), name, right.value.clone()).surround("(", ")")
+        }
+        AssertSubject::Call {
+            function,
+            arguments,
+        } => docs_args_call(
+            function,
+            arguments
+                .iter()
+                .map(|expression| expression.value.clone())
+                .collect(),
+            env,
+        ),
+    }
+}
+
+fn assert_bin_op_name(operator: &BinOp) -> &'static str {
+    match operator {
+        BinOp::And => "andalso",
+        BinOp::Or => "orelse",
+        BinOp::LtInt | BinOp::LtFloat => "<",
+        BinOp::LtEqInt | BinOp::LtEqFloat => "=<",
+        BinOp::Eq => "=:=",
+        BinOp::NotEq => "/=",
+        BinOp::GtInt | BinOp::GtFloat => ">",
+        BinOp::GtEqInt | BinOp::GtEqFloat => ">=",
+        // All other cases can't appear as asserted expressions in well-typed
+        // Gleam code, because they don't return a boolean value.
+        BinOp::AddInt
+        | BinOp::AddFloat
+        | BinOp::SubInt
+        | BinOp::SubFloat
+        | BinOp::MultInt
+        | BinOp::MultFloat
+        | BinOp::DivFloat
+        | BinOp::DivInt
+        | BinOp::RemainderInt
+        | BinOp::Concatenate => "",
+    }
+}
+
+enum AssertSubject<'a> {
+    Expression(AssertExpression<'a>),
+    BinaryOperator {
+        name: BinOp,
+        left: AssertExpression<'a>,
+        right: AssertExpression<'a>,
+    },
+    Call {
+        function: &'a TypedExpr,
+        arguments: Vec<AssertExpression<'a>>,
+    },
+}
+
+struct AssertExpression<'a> {
+    kind: ExpressionKind,
+    location: SrcSpan,
+    value: Document<'a>,
+}
+
+enum ExpressionKind {
+    Literal,
+    Expression,
 }
 
 fn negate_with<'a>(op: &'static str, value: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {

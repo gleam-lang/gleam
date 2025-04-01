@@ -20,7 +20,7 @@ export function assert_answer(x) {
       "my/mod",
       3,
       "assert_answer",
-      "Assertion failed",
+      "Assertion failed.",
       {
         kind: "binary_operator",
         operator: "==",

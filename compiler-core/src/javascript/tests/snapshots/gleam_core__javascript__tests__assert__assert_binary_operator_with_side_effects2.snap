@@ -31,7 +31,7 @@ export function go(x) {
       "my/mod",
       8,
       "go",
-      "Assertion failed",
+      "Assertion failed.",
       {
         kind: "binary_operator",
         operator: "&&",
