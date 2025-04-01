@@ -283,9 +283,9 @@
   encoder if the `gleam_json` package is installed as a dependency.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- The language server will offer to wrap the body of case clauses in braces to
-  easily turn them into blocks. Useful when adding more expressions to an
-  existing case clause or variable assignment.
+- The language server will offer to wrap assignment or case clause values in
+  blocks. Useful when adding more expressions to an existing case clause or
+  variable assignment.
 
   ```gleam
   pub fn f(pokemon_type: PokemonType) {
