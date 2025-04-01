@@ -1,0 +1,34 @@
+---
+source: compiler-core/src/erlang/tests/assert.rs
+expression: "\npub fn main() {\n  assert True as \"This shouldn't fail\"\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  assert True as "This shouldn't fail"
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec main() -> boolean().
+main() ->
+    case true of
+        true -> true;
+        false -> erlang:error(#{gleam_error => assert,
+                message => <<"This shouldn't fail"/utf8>>,
+                kind => <<"expression"/utf8>>,
+                expression => #{kind => <<"expression"/utf8>>,
+                    value => true,
+                    start => 26,
+                    end => 30,
+                    },
+                module => <<"my/mod"/utf8>>,
+                function => <<"main"/utf8>>,
+                line => 3})
+    end.

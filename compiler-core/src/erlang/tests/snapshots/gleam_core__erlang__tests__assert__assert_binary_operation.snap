@@ -1,0 +1,42 @@
+---
+source: compiler-core/src/erlang/tests/assert.rs
+expression: "\npub fn main() {\n  let x = True\n  assert x || False\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let x = True
+  assert x || False
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec main() -> boolean().
+main() ->
+    X = true,
+    case (X orelse false) of
+        true -> true;
+        false -> erlang:error(#{gleam_error => assert,
+                message => <<"Assertion failed."/utf8>>,
+                kind => <<"binary_operator"/utf8>>,
+                operator => <<"||"/utf8>>,
+                left => #{kind => <<"expression"/utf8>>,
+                    value => X,
+                    start => 41,
+                    end => 42,
+                    },
+                right => #{kind => <<"expression"/utf8>>,
+                    value => false,
+                    start => 46,
+                    end => 51,
+                    },
+                module => <<"my/mod"/utf8>>,
+                function => <<"main"/utf8>>,
+                line => 4})
+    end.

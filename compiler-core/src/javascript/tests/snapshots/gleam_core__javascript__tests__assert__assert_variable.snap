@@ -21,7 +21,7 @@ export function main() {
       "my/mod",
       4,
       "main",
-      "Assertion failed",
+      "Assertion failed.",
       {
         kind: "expression",
         expression: { kind: "expression", value: x, start: 41, end: 42 }

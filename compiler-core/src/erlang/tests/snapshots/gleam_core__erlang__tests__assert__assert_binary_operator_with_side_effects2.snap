@@ -1,0 +1,53 @@
+---
+source: compiler-core/src/erlang/tests/assert.rs
+expression: "\nfn wibble(a, b) {\n  let result = a + b\n  result == 10\n}\n\npub fn go(x) {\n  assert wibble(5, 5) && wibble(4, 6)\n}\n"
+---
+----- SOURCE CODE
+
+fn wibble(a, b) {
+  let result = a + b
+  result == 10
+}
+
+pub fn go(x) {
+  assert wibble(5, 5) && wibble(4, 6)
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([go/1]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec wibble(integer(), integer()) -> boolean().
+wibble(A, B) ->
+    Result = A + B,
+    Result =:= 10.
+
+-file("project/test/my/mod.gleam", 7).
+-spec go(any()) -> boolean().
+go(X) ->
+    _assert_subject = wibble(5, 5),
+    _assert_subject@1 = wibble(4, 6),
+    case (_assert_subject andalso _assert_subject@1) of
+        true -> true;
+        false -> erlang:error(#{gleam_error => assert,
+                message => <<"Assertion failed."/utf8>>,
+                kind => <<"binary_operator"/utf8>>,
+                operator => <<"&&"/utf8>>,
+                left => #{kind => <<"expression"/utf8>>,
+                    value => _assert_subject,
+                    start => 82,
+                    end => 94,
+                    },
+                right => #{kind => <<"expression"/utf8>>,
+                    value => _assert_subject@1,
+                    start => 98,
+                    end => 110,
+                    },
+                module => <<"my/mod"/utf8>>,
+                function => <<"go"/utf8>>,
+                line => 8})
+    end.

@@ -19,7 +19,7 @@ export function eq(a, b) {
       "my/mod",
       3,
       "eq",
-      "Assertion failed",
+      "Assertion failed.",
       {
         kind: "binary_operator",
         operator: "==",
