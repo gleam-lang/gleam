@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn main() {\n  // We only want to error on `Wibble` since it doesn't exist, we don't want\n  // an error on the label at this point!\n  Wibble(label: 1)\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  // We only want to error on `Wibble` since it doesn't exist, we don't want
+  // an error on the label at this point!
+  Wibble(label: 1)
+}
+
+
+----- ERROR
+error: Unknown variable
+  ┌─ /src/one/two.gleam:5:3
+  │
+5 │   Wibble(label: 1)
+  │   ^^^^^^
+
+The custom type variant constructor `Wibble` is not in scope here.
