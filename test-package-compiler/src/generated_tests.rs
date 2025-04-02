@@ -267,12 +267,12 @@ fn overwriting_erlang_module() {
 
 #[rustfmt::skip]
 #[test]
-fn src_importing_test() {
-    let output = crate::prepare("./cases/src_importing_test");
+fn src_importing_dev() {
+    let output = crate::prepare("./cases/src_importing_dev");
     insta::assert_snapshot!(
-        "src_importing_test",
+        "src_importing_dev",
         output,
-        "./cases/src_importing_test",
+        "./cases/src_importing_dev",
     );
 }
 
