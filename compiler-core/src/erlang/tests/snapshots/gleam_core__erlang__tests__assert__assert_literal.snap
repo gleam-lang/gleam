@@ -22,8 +22,8 @@ main() ->
         true -> true;
         false -> erlang:error(#{gleam_error => assert,
                 message => <<"Assertion failed."/utf8>>,
-                kind => <<"expression"/utf8>>,
-                expression => #{kind => <<"expression"/utf8>>,
+                kind => expression,
+                expression => #{kind => expression,
                     value => false,
                     start => 26,
                     end => 31,
