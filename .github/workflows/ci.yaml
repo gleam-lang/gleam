@@ -480,7 +480,7 @@ jobs:
         working-directory: ./test/hextarball
 
       - name: Test running modules
-        run: make test
+        run: make test-all
         working-directory: ./test/running_modules
 
       - name: test/multi_namespace
