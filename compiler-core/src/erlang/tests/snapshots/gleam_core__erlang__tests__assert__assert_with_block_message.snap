@@ -37,8 +37,8 @@ main() ->
                     Message = identity(<<"This shouldn't fail"/utf8>>),
                     Message
                 end,
-                kind => <<"function_call"/utf8>>,
-                arguments => [#{kind => <<"expression"/utf8>>,
+                kind => function_call,
+                arguments => [#{kind => expression,
                         value => true,
                         start => 59,
                         end => 63,
