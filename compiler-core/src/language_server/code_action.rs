@@ -6100,15 +6100,8 @@ impl<'ast> ast::visit::Visit<'ast> for WrapInBlock<'ast> {
         match *assignment.to_owned().value {
             // To avoid wrapping the same expression in multiple, nested blocks.
             TypedExpr::Block { .. } => {}
-            TypedExpr::RecordAccess {
-                record, location, ..
-            } => {
-                self.selected_expression = Some(SrcSpan {
-                    start: record.location().start,
-                    end: location.end,
-                });
-            }
-            TypedExpr::Int { .. }
+            TypedExpr::RecordAccess { .. }
+            | TypedExpr::Int { .. }
             | TypedExpr::Float { .. }
             | TypedExpr::String { .. }
             | TypedExpr::Pipeline { .. }
