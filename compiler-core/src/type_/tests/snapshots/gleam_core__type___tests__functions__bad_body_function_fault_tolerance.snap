@@ -41,6 +41,40 @@ Hint: Strings can be joined using the `append` or `concat` functions from the
 `gleam/string` module.
 
 error: Type mismatch
+  ┌─ /src/one/two.gleam:4:3
+  │
+4 │   "" + ""
+  │   ^^^^^^^
+
+The type of this returned value doesn't match the return type
+annotation of this function.
+
+Expected type:
+
+    Float
+
+Found type:
+
+    Int
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:4:8
+  │
+4 │   "" + ""
+  │        ^^
+
+The + operator expects arguments of this type:
+
+    Int
+
+But this argument has this type:
+
+    String
+
+Hint: Strings can be joined using the `append` or `concat` functions from the
+`gleam/string` module.
+
+error: Type mismatch
    ┌─ /src/one/two.gleam:16:7
    │
 16 │   bad(Nil)

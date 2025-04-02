@@ -34,7 +34,7 @@ Expected type:
 
 Found type:
 
-    Result(a, b)
+    Result(Int, a)
 
 error: Unknown variable
   ┌─ /src/one/two.gleam:7:11
