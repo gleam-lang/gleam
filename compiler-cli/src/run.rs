@@ -18,6 +18,7 @@ use crate::{config::PackageKind, fs::ProjectIO};
 pub enum Which {
     Src,
     Test,
+    Dev,
 }
 
 // TODO: test
@@ -93,6 +94,7 @@ pub fn setup(
     let module = module.unwrap_or(match which {
         Which::Src => root_config.name.to_string(),
         Which::Test => format!("{}_test", &root_config.name),
+        Which::Dev => format!("{}_dev", &root_config.name),
     });
 
     let target = target.unwrap_or(mod_config.target);
