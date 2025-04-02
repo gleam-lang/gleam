@@ -60,7 +60,6 @@ go(X) ->
                     end => 86,
                     },
                 right => #{kind => unevaluated,
-                    value => nil,
                     start => 90,
                     end => 102,
                     },
