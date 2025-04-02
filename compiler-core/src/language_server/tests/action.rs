@@ -6313,6 +6313,35 @@ pub fn main() {
 }
 
 #[test]
+fn generate_function_generates_argument_names_from_labels() {
+    assert_code_action!(
+        GENERATE_FUNCTION,
+        "
+pub fn main() {
+  add(1, addend: 10)
+}
+",
+        find_position_of("add").to_selection()
+    );
+}
+
+#[test]
+fn generate_function_generates_argument_names_from_variables() {
+    assert_code_action!(
+        GENERATE_FUNCTION,
+        "
+pub fn main() {
+  let wibble = 10
+  let wobble = 20
+
+  wubble(wibble, wobble, 14)
+}
+",
+        find_position_of("wubble").to_selection()
+    );
+}
+
+#[test]
 fn pattern_match_on_argument_generates_unique_names_even_with_labels() {
     assert_code_action!(
         PATTERN_MATCH_ON_ARGUMENT,

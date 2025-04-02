@@ -16,6 +16,6 @@ pub fn main() {
   wibble(2, n: 1)
 }
 
-fn wibble(int: Int, n int_2: Int) -> a {
+fn wibble(int: Int, n n: Int) -> a {
   todo
 }

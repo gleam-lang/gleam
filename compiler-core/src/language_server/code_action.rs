@@ -4716,6 +4716,7 @@ pub struct GenerateFunction<'a> {
 struct FunctionToGenerate<'a> {
     name: &'a str,
     arguments: Vec<(Option<EcoString>, Arc<Type>)>,
+    given_arguments: Option<&'a [TypedCallArg]>,
     return_type: Arc<Type>,
     previous_function_end: Option<u32>,
 }
@@ -4741,6 +4742,7 @@ impl<'a> GenerateFunction<'a> {
         let Some(FunctionToGenerate {
             name,
             arguments,
+            given_arguments,
             previous_function_end: Some(insert_at),
             return_type,
         }) = self.function_to_generate
@@ -4752,8 +4754,31 @@ impl<'a> GenerateFunction<'a> {
         let mut printer = Printer::new(&self.module.ast.names);
         let args = arguments
             .iter()
-            .map(|(arg_label, arg_type)| {
-                let arg_name = name_generator.generate_name_from_type(arg_type);
+            .enumerate()
+            .map(|(index, (arg_label, arg_type))| {
+                let arg_name = if let Some(label) = arg_label {
+                    name_generator.add_used_name(label.clone());
+                    label.clone()
+                } else {
+                    let given_argument = given_arguments
+                        .and_then(|arguments| arguments.get(index).map(|argument| &argument.value));
+
+                    match given_argument {
+                        // If the argument is a record, we can't use it as an argument name.
+                        // Similarly, we don't want to base the variable name off a
+                        // compiler-generated variable like `_pipe`.
+                        Some(TypedExpr::Var {
+                            name, constructor, ..
+                        }) if !constructor.variant.is_record()
+                            && !constructor.variant.is_generated_variable() =>
+                        {
+                            name_generator.add_used_name(name.clone());
+                            name.clone()
+                        }
+                        _ => name_generator.generate_name_from_type(arg_type),
+                    }
+                };
+
                 let pretty_type = printer.print_type(arg_type);
                 if let Some(arg_label) = arg_label {
                     format!("{arg_label} {arg_name}: {pretty_type}")
@@ -4784,6 +4809,7 @@ impl<'a> GenerateFunction<'a> {
         function_name_location: SrcSpan,
         function_type: &Arc<Type>,
         labels: HashMap<usize, EcoString>,
+        given_arguments: Option<&'a [TypedCallArg]>,
     ) {
         let name_range = function_name_location.start as usize..function_name_location.end as usize;
         let candidate_name = self.module.code.get(name_range);
@@ -4800,6 +4826,7 @@ impl<'a> GenerateFunction<'a> {
                 self.function_to_generate = Some(FunctionToGenerate {
                     name,
                     arguments,
+                    given_arguments,
                     return_type,
                     previous_function_end: self.last_visited_function_end,
                 })
@@ -4817,7 +4844,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
     fn visit_typed_expr_invalid(&mut self, location: &'ast SrcSpan, type_: &'ast Arc<Type>) {
         let invalid_range = self.edits.src_span_to_lsp_range(*location);
         if within(self.params.range, invalid_range) {
-            self.try_save_function_to_generate(*location, type_, HashMap::new());
+            self.try_save_function_to_generate(*location, type_, HashMap::new(), None);
         }
 
         ast::visit::visit_typed_expr_invalid(self, location, type_);
@@ -4842,7 +4869,12 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
                     .filter_map(|(i, arg)| arg.label.as_ref().map(|label| (i, label.clone())))
                     .collect();
 
-                self.try_save_function_to_generate(fun.location(), &fun.type_(), labels);
+                self.try_save_function_to_generate(
+                    fun.location(),
+                    &fun.type_(),
+                    labels,
+                    Some(args),
+                );
             }
         } else {
             ast::visit::visit_typed_expr_call(self, location, type_, fun, args);
