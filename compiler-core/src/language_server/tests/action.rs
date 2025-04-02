@@ -7212,6 +7212,19 @@ pub fn main() {
     );
 }
 
+#[test]
+fn convert_to_pipe_with_complex_binop_adds_braces() {
+    assert_code_action!(
+        CONVERT_TO_PIPE,
+        "
+fn bug() {
+    bool.guard(1 == 2 || 2 == 3, Nil, fn() { Nil })
+}
+",
+        find_position_of("||").to_selection()
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/4342
 #[test]
 fn inline_variable_in_record_update() {
