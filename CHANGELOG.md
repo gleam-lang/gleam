@@ -313,6 +313,26 @@
 
   ([Matias Carlander](https://github.com/matiascr))
 
+- The "Generate function" code action now uses labels or variable names to improve
+  the names of generated arguments. For example:
+
+  ```gleam
+  pub fn main() {
+    let language = English
+    greet(language, name: "Louis")
+  }
+  ```
+
+  Will generate the following function:
+
+  ```gleam
+  pub fn greet(language: String, name name: String) -> a {
+    todo
+  }
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Formatter
 
 ### Container images
