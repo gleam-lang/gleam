@@ -7239,7 +7239,7 @@ fn wrap_case_clause_with_multiple_patterns_in_block() {
   Water
   Fire
 }
-        
+
   pub fn f(pokemon_type: PokemonType) {
     case pokemon_type {
       Water | Air -> soak()
@@ -7259,7 +7259,7 @@ fn wrap_case_clause_inside_assignment_in_block() {
   Water
   Fire
 }
-        
+
   pub fn f(pokemon_type: PokemonType) {
     let damage = case pokemon_type {
       Water -> soak()
@@ -7364,5 +7364,23 @@ fn do_not_wrap_assignment_value_in_block() {
   let var = "value"
 }"#,
         find_position_of("var").to_selection()
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4427
+#[test]
+fn extract_constant_function() {
+    assert_no_code_actions!(
+        EXTRACT_CONSTANT,
+        r#"
+fn print(x) {
+  Nil
+}
+
+pub fn main() {
+  print("Hello")
+}
+"#,
+        find_position_of("print").nth_occurrence(2).to_selection()
     );
 }

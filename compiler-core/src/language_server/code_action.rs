@@ -3023,8 +3023,8 @@ fn can_be_constant(
         }
 
         // Extract record types as long as arguments can be constant
-        TypedExpr::Call { args, type_, .. } => {
-            matches!(type_.as_ref(), Type::Named { .. })
+        TypedExpr::Call { args, fun, .. } => {
+            fun.is_record_builder()
                 && args
                     .iter()
                     .all(|arg| can_be_constant(module, &arg.value, module_constants))
