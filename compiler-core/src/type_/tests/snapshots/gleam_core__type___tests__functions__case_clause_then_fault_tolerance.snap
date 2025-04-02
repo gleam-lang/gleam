@@ -36,10 +36,44 @@ Hint: the +. operator can be used with Floats
 
 
 error: Type mismatch
+  ┌─ /src/one/two.gleam:6:13
+  │
+6 │       1.0 + 1.0
+  │             ^^^
+
+The + operator expects arguments of this type:
+
+    Int
+
+But this argument has this type:
+
+    Float
+
+Hint: the +. operator can be used with Floats
+
+
+error: Type mismatch
   ┌─ /src/one/two.gleam:9:7
   │
 9 │       1.0 + 1.0
   │       ^^^
+
+The + operator expects arguments of this type:
+
+    Int
+
+But this argument has this type:
+
+    Float
+
+Hint: the +. operator can be used with Floats
+
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:9:13
+  │
+9 │       1.0 + 1.0
+  │             ^^^
 
 The + operator expects arguments of this type:
 

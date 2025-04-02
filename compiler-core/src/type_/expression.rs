@@ -385,7 +385,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 left,
                 right,
                 ..
-            } => self.infer_binop(name, *left, *right, location),
+            } => Ok(self.infer_binop(name, *left, *right, location)),
 
             UntypedExpr::FieldAccess {
                 label_location,
@@ -1377,29 +1377,45 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
+    /// Same as `self.infer` but instead of returning a `Result` with an error,
+    /// records the error and returns an invalid expression.
+    ///
+    fn infer_no_error(&mut self, expression: UntypedExpr) -> TypedExpr {
+        let location = expression.location();
+        match self.infer(expression) {
+            Ok(result) => result,
+            Err(error) => {
+                self.problems.error(error);
+                self.error_expr(location)
+            }
+        }
+    }
+
     fn infer_binop(
         &mut self,
         name: BinOp,
         left: UntypedExpr,
         right: UntypedExpr,
         location: SrcSpan,
-    ) -> Result<TypedExpr, Error> {
+    ) -> TypedExpr {
         let (input_type, output_type) = match &name {
             BinOp::Eq | BinOp::NotEq => {
-                let left = self.infer(left)?;
-                let right = self.infer(right)?;
-                unify(left.type_(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                let left = self.infer_no_error(left);
+                let right = self.infer_no_error(right);
+                if let Err(error) = unify(left.type_(), right.type_()) {
+                    self.problems
+                        .error(convert_unify_error(error, right.location()));
+                }
 
                 self.check_for_inefficient_empty_list_check(name, &left, &right, location);
 
-                return Ok(TypedExpr::BinOp {
+                return TypedExpr::BinOp {
                     location,
                     name,
                     type_: bool(),
                     left: Box::new(left),
                     right: Box::new(right),
-                });
+                };
             }
             BinOp::And => (bool(), bool()),
             BinOp::Or => (bool(), bool()),
@@ -1423,26 +1439,33 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             BinOp::Concatenate => (string(), string()),
         };
 
-        let left = self.infer(left)?;
-        unify(input_type.clone(), left.type_()).map_err(|e| {
-            e.operator_situation(name)
-                .into_error(left.type_defining_location())
-        })?;
-        let right = self.infer(right)?;
-        unify(input_type, right.type_()).map_err(|e| {
-            e.operator_situation(name)
-                .into_error(right.type_defining_location())
-        })?;
+        let left = self.infer_no_error(left);
+        if let Err(error) = unify(input_type.clone(), left.type_()) {
+            self.problems.error(
+                error
+                    .operator_situation(name)
+                    .into_error(left.type_defining_location()),
+            )
+        }
+
+        let right = self.infer_no_error(right);
+        if let Err(error) = unify(input_type.clone(), right.type_()) {
+            self.problems.error(
+                error
+                    .operator_situation(name)
+                    .into_error(right.type_defining_location()),
+            )
+        }
 
         self.check_for_inefficient_empty_list_check(name, &left, &right, location);
 
-        Ok(TypedExpr::BinOp {
+        TypedExpr::BinOp {
             location,
             name,
             type_: output_type,
             left: Box::new(left),
             right: Box::new(right),
-        })
+        }
     }
 
     /// Checks for inefficient usage of `list.length` for checking for the empty list.
