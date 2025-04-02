@@ -2965,3 +2965,16 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn function_that_does_not_exist_does_not_produce_error_for_labelled_args() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  // We only want to error on `wibble` since it doesn't exist, we don't want
+  // an error on the label at this point!
+  wibble(label: 1)
+}
+"#
+    );
+}
