@@ -6,9 +6,9 @@ expression: "\npub fn main() {\n  use a, b <- wibble(1, 2)\n  todo\n  todo\n}\n\
 
 pub fn main() {
   use a, b <- wibble(1, 2)
+              ↑           
   todo
   todo
-  ↑   
 }
 
 fn wibble(n, m, f) {

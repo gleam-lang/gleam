@@ -6,8 +6,8 @@ expression: "\npub fn main() {\n  use a <- wibble(1, 2)\n  todo\n  todo\n}\n\nfn
 
 pub fn main() {
   use a <- wibble(1, 2)
+      ↑                
   todo
-  ↑   
   todo
 }
 

@@ -3642,7 +3642,7 @@ fn wibble(f) {
     assert_code_action!(
         CONVERT_FROM_USE,
         TestProject::for_source(src),
-        find_position_of("use").select_until(find_position_of("todo")),
+        find_position_of("use").select_until(find_position_of("wibble")),
     );
 }
 
@@ -3702,7 +3702,7 @@ fn wibble(n, m, f) {
     assert_code_action!(
         CONVERT_FROM_USE,
         TestProject::for_source(src),
-        find_position_of("todo").to_selection(),
+        find_position_of("a <-").to_selection(),
     );
 }
 
@@ -3722,7 +3722,7 @@ fn wibble(n, m, f) {
     assert_code_action!(
         CONVERT_FROM_USE,
         TestProject::for_source(src),
-        find_position_of("todo").nth_occurrence(2).to_selection(),
+        find_position_of("wibble").to_selection(),
     );
 }
 
@@ -3742,7 +3742,26 @@ fn wibble(n, m, f) {
     assert_code_action!(
         CONVERT_FROM_USE,
         TestProject::for_source(src),
-        find_position_of("todo").under_last_char().to_selection(),
+        find_position_of("use").nth_occurrence(2).to_selection(),
+    );
+}
+
+#[test]
+fn convert_from_use_only_triggers_on_the_use_line() {
+    let src = r#"
+pub fn main() {
+  use a, b <- wibble(1, 2)
+  todo
+}
+
+fn wibble(n, m, f) {
+    f(1, 2)
+}
+"#;
+    assert_no_code_actions!(
+        CONVERT_FROM_USE,
+        TestProject::for_source(src),
+        find_position_of("todo").to_selection(),
     );
 }
 
@@ -3819,7 +3838,7 @@ fn wibble(one _, two _, three f) {
     assert_code_action!(
         CONVERT_FROM_USE,
         TestProject::for_source(src),
-        find_position_of("todo").to_selection(),
+        find_position_of("use").to_selection(),
     );
 }
 
@@ -3838,7 +3857,7 @@ fn wibble(one _, two _, three f) {
     assert_code_action!(
         CONVERT_FROM_USE,
         TestProject::for_source(src),
-        find_position_of("todo").to_selection(),
+        find_position_of("use").to_selection(),
     );
 }
 
@@ -3857,7 +3876,7 @@ fn wibble(one _, two f, three _) {
     assert_code_action!(
         CONVERT_FROM_USE,
         TestProject::for_source(src),
-        find_position_of("todo").to_selection(),
+        find_position_of("use").to_selection(),
     );
 }
 
@@ -3876,7 +3895,7 @@ fn wibble(one f, two _, three _) {
     assert_code_action!(
         CONVERT_FROM_USE,
         TestProject::for_source(src),
-        find_position_of("todo").to_selection(),
+        find_position_of("use").to_selection(),
     );
 }
 
