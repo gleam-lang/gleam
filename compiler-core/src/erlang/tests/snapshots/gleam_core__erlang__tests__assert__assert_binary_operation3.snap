@@ -19,7 +19,7 @@ pub fn assert_answer(x) {
 -spec assert_answer(integer()) -> boolean().
 assert_answer(X) ->
     _assert_subject = 42,
-    case (X =:= _assert_subject) of
+    case X =:= _assert_subject of
         true -> true;
         false -> erlang:error(#{gleam_error => assert,
                 message => <<"Assertion failed."/utf8>>,
