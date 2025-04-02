@@ -229,10 +229,10 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         imported_module: EcoString,
     ) -> Result<(), Error> {
         if self.origin.is_src() && !module_info.origin.is_src() {
-            return Err(Error::SrcImportingTest {
+            return Err(Error::SrcImportingDev {
                 location,
                 src_module: self.environment.current_module.clone(),
-                test_module: imported_module,
+                dev_module: imported_module,
             });
         }
         Ok(())

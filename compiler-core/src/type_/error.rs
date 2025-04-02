@@ -145,10 +145,10 @@ impl ModuleSuggestion {
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Error {
-    SrcImportingTest {
+    SrcImportingDev {
         location: SrcSpan,
         src_module: crate::error::Name,
-        test_module: crate::error::Name,
+        dev_module: crate::error::Name,
     },
 
     BitArraySegmentError {
@@ -1008,7 +1008,7 @@ impl Error {
     // Location where the error started
     pub fn start_location(&self) -> u32 {
         match self {
-            Error::SrcImportingTest { location, .. }
+            Error::SrcImportingDev { location, .. }
             | Error::BitArraySegmentError { location, .. }
             | Error::UnknownVariable { location, .. }
             | Error::UnknownType { location, .. }

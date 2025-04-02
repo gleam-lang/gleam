@@ -1541,17 +1541,17 @@ Erlang's floating point type. To avoid this error float values must be in the ra
                 },
 
 
-                TypeError::SrcImportingTest {
+                TypeError::SrcImportingDev {
                     location,
                     src_module,
-                    test_module,
+                    dev_module,
                 } => {
                     let text = wrap_format!(
                         "The application module `{src_module}` \
-is importing the test module `{test_module}`.
+is importing the dev module `{dev_module}`.
 
-Test modules are not included in production builds so application \
-modules cannot import them. Perhaps move the `{test_module}` \
+Dev modules are not included in production builds so application \
+modules cannot import them. Perhaps move the `{dev_module}` \
 module to the src directory.",
                         );
 
