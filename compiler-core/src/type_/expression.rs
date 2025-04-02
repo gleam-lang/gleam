@@ -1032,12 +1032,18 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         label_location: SrcSpan,
         usage: FieldAccessUsage,
     ) -> TypedExpr {
+        let container_location = container.location();
+
         // Computes a potential module access. This will be used if a record access can't be used.
         // Computes both the inferred access and if it shadows a variable.
         let module_access = match &container {
-            UntypedExpr::Var { location, name } => {
-                let module_access =
-                    self.infer_module_access(name, label.clone(), location, label_location);
+            UntypedExpr::Var { name, .. } => {
+                let module_access = self.infer_module_access(
+                    name,
+                    label.clone(),
+                    &container_location,
+                    label_location,
+                );
                 // Returns the result and if it shadows an existing variable in scope
                 Some((module_access, self.environment.scope.contains_key(name)))
             }
@@ -1061,6 +1067,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 record,
                 label.clone(),
                 label_location,
+                container_location.start,
                 usage,
             ),
             Err(e) => Err(e),
@@ -1139,7 +1146,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     // This allows autocomplete to know a record access is being attempted
                     // Even if the access is not valid
                     Ok(record) => TypedExpr::RecordAccess {
-                        location: label_location,
+                        location,
+                        field_start: container_location.start,
                         type_: self.new_unbound_var(),
                         label: "".into(),
                         index: u64::MAX,
@@ -2528,6 +2536,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         record: TypedExpr,
         label: EcoString,
         location: SrcSpan,
+        field_start: u32,
         usage: FieldAccessUsage,
     ) -> Result<TypedExpr, Error> {
         let record = Box::new(record);
@@ -2537,6 +2546,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         Ok(TypedExpr::RecordAccess {
             record,
             label,
+            field_start,
             index,
             location,
             type_,
@@ -2810,6 +2820,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     record.clone(),
                     label.clone(),
                     record_location,
+                    record_location.start,
                     FieldAccessUsage::RecordUpdate,
                 )?;
 
