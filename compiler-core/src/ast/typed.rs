@@ -90,6 +90,7 @@ pub enum TypedExpr {
 
     RecordAccess {
         location: SrcSpan,
+        field_start: u32,
         type_: Arc<Type>,
         label: EcoString,
         index: u64,

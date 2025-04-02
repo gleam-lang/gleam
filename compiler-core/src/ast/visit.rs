@@ -213,12 +213,13 @@ pub trait Visit<'ast> {
     fn visit_typed_expr_record_access(
         &mut self,
         location: &'ast SrcSpan,
+        field_start: &'ast u32,
         type_: &'ast Arc<Type>,
         label: &'ast EcoString,
         index: &'ast u64,
         record: &'ast TypedExpr,
     ) {
-        visit_typed_expr_record_access(self, location, type_, label, index, record);
+        visit_typed_expr_record_access(self, location, field_start, type_, label, index, record);
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -770,11 +771,12 @@ where
         } => v.visit_typed_expr_case(location, type_, subjects, clauses),
         TypedExpr::RecordAccess {
             location,
+            field_start,
             type_,
             label,
             index,
             record,
-        } => v.visit_typed_expr_record_access(location, type_, label, index, record),
+        } => v.visit_typed_expr_record_access(location, field_start, type_, label, index, record),
         TypedExpr::ModuleSelect {
             location,
             field_start,
@@ -1001,6 +1003,7 @@ pub fn visit_typed_expr_case<'a, V>(
 pub fn visit_typed_expr_record_access<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
+    _field_start: &'a u32,
     _type_: &'a Arc<Type>,
     _label: &'a EcoString,
     _index: &'a u64,
