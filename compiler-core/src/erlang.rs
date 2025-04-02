@@ -2186,7 +2186,14 @@ fn assert<'a>(assert: &'a TypedAssert, env: &mut Env<'a>) -> Document<'a> {
             expression.value.clone(),
             vec![
                 ("kind", atom("expression")),
-                ("expression", asserted_expression(expression)),
+                (
+                    "expression",
+                    asserted_expression(
+                        expression.kind,
+                        Some(expression.value),
+                        expression.location,
+                    ),
+                ),
             ],
         ),
         AssertSubject::BinaryOperator { name, left, right } => (
@@ -2194,8 +2201,14 @@ fn assert<'a>(assert: &'a TypedAssert, env: &mut Env<'a>) -> Document<'a> {
             vec![
                 ("kind", atom("binary_operator")),
                 ("operator", atom(name.name())),
-                ("left", asserted_expression(left)),
-                ("right", asserted_expression(right)),
+                (
+                    "left",
+                    asserted_expression(left.kind, Some(left.value), left.location),
+                ),
+                (
+                    "right",
+                    asserted_expression(right.kind, Some(right.value), right.location),
+                ),
             ],
         ),
         AssertSubject::Call {
@@ -2216,9 +2229,13 @@ fn assert<'a>(assert: &'a TypedAssert, env: &mut Env<'a>) -> Document<'a> {
                     "arguments",
                     list(
                         join(
-                            arguments
-                                .into_iter()
-                                .map(|argument| asserted_expression(argument)),
+                            arguments.into_iter().map(|argument| {
+                                asserted_expression(
+                                    argument.kind,
+                                    Some(argument.value),
+                                    argument.location,
+                                )
+                            }),
                             break_(",", ", "),
                         ),
                         None,
@@ -2259,19 +2276,11 @@ fn assert_and<'a>(
         ("operator", atom("&&")),
         (
             "left",
-            asserted_expression(AssertExpression {
-                kind: left.kind,
-                location: left.location,
-                value: "false".to_doc(),
-            }),
+            asserted_expression(left.kind, Some("false".to_doc()), left.location),
         ),
         (
             "right",
-            asserted_expression(AssertExpression {
-                kind: ExpressionKind::Unevaluated,
-                location: right.location,
-                value: "nil".to_doc(),
-            }),
+            asserted_expression(ExpressionKind::Unevaluated, None, right.location),
         ),
     ];
 
@@ -2280,19 +2289,11 @@ fn assert_and<'a>(
         ("operator", atom("&&")),
         (
             "left",
-            asserted_expression(AssertExpression {
-                kind: left.kind,
-                location: left.location,
-                value: "true".to_doc(),
-            }),
+            asserted_expression(left.kind, Some("true".to_doc()), left.location),
         ),
         (
             "right",
-            asserted_expression(AssertExpression {
-                kind: right.kind,
-                location: right.location,
-                value: "false".to_doc(),
-            }),
+            asserted_expression(right.kind, Some("false".to_doc()), right.location),
         ),
     ];
 
@@ -2351,19 +2352,11 @@ fn assert_or<'a>(
         // need to re-evaluate the expressions.
         (
             "left",
-            asserted_expression(AssertExpression {
-                kind: left.kind,
-                location: left.location,
-                value: "false".to_doc(),
-            }),
+            asserted_expression(left.kind, Some("false".to_doc()), left.location),
         ),
         (
             "right",
-            asserted_expression(AssertExpression {
-                kind: right.kind,
-                location: right.location,
-                value: "false".to_doc(),
-            }),
+            asserted_expression(right.kind, Some("false".to_doc()), right.location),
         ),
     ];
 
@@ -2400,26 +2393,32 @@ fn assert_or<'a>(
     ]
 }
 
-fn asserted_expression<'a>(expression: AssertExpression<'a>) -> Document<'a> {
-    let kind = match expression.kind {
+fn asserted_expression<'a>(
+    kind: ExpressionKind,
+    value: Option<Document<'a>>,
+    location: SrcSpan,
+) -> Document<'a> {
+    let kind = match kind {
         ExpressionKind::Literal => atom("literal"),
         ExpressionKind::Expression => atom("expression"),
         ExpressionKind::Unevaluated => atom("unevaluated"),
     };
 
-    let value = expression.value;
-    let start = expression.location.start.to_doc();
-    let end = expression.location.end.to_doc();
+    let start = location.start.to_doc();
+    let end = location.end.to_doc();
+
+    let value_field = if let Some(value) = value {
+        docvec!["value => ", value, ",", line()]
+    } else {
+        nil()
+    };
 
     let fields_doc = docvec![
         "kind => ",
         kind,
         ",",
         line(),
-        "value => ",
-        value,
-        ",",
-        line(),
+        value_field,
         "start => ",
         start,
         ",",
