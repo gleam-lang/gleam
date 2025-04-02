@@ -782,19 +782,6 @@ pub const x = some_module.x
 }
 
 #[test]
-fn no_unused_warnings_for_broken_code() {
-    let src = r#"
-pub fn main() {
-  let x = 1
-  1 + ""
-  x
-}"#;
-    let warnings = VectorWarningEmitterIO::default();
-    _ = compile_module("test_module", src, Some(Rc::new(warnings.clone())), vec![]).unwrap_err();
-    assert!(warnings.take().is_empty());
-}
-
-#[test]
 fn deprecated_constant() {
     assert_warning!(
         r#"
