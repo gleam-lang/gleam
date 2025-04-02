@@ -56,9 +56,15 @@ where
         let src = self.paths.src_directory();
         self.copy_files(&src)?;
 
-        let dev = self.paths.test_or_dev_directory(&self.io);
+        let dev = self.paths.dev_directory();
         if self.io.is_directory(&dev) {
             self.copy_files(&dev)?;
+        } else {
+            let test = self.paths.test_directory();
+
+            if self.io.is_directory(&test) {
+                self.copy_files(&test)?;
+            }
         }
 
         // Sort for deterministic output

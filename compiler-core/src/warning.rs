@@ -166,6 +166,10 @@ pub enum Warning {
     DeprecatedEnvironmentVariable {
         name: String,
     },
+
+    DeprecatedTestDirectory {
+        path: Utf8PathBuf,
+    },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
@@ -235,6 +239,14 @@ only lowercase alphanumeric characters or underscores."
                 hint: Some(format!(
                     "Rename `{path}` to be valid, or remove this file from the project source."
                 )),
+            },
+
+            Warning::DeprecatedTestDirectory { path } => Diagnostic {
+                title: "Deprecate `test` directory".into(),
+                text: "The `test` directory has been deprecated and renamed to `dev`.".into(),
+                level: diagnostic::Level::Warning,
+                location: None,
+                hint: Some(format!("Rename `{path}` to `dev`")),
             },
 
             Warning::DeprecatedSyntax {

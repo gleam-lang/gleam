@@ -235,17 +235,32 @@ where
 
         // Test
         if self.mode.includes_tests() {
-            let dev = self.paths.test_or_dev_directory(&self.io);
-            loader.origin = Origin::Dev;
+            let (dev_or_test, used_deprecated_test_directory) = {
+                let dev = self.paths.dev_directory();
+                if self.io.is_directory(&dev) {
+                    (dev, false)
+                } else {
+                    (self.paths.test_directory(), true)
+                }
+            };
 
-            for file in GleamFile::iterate_files_in_directory(&self.io, &dev) {
+            loader.origin = Origin::Dev;
+            let mut dev_files_found = false;
+
+            for file in GleamFile::iterate_files_in_directory(&self.io, &dev_or_test) {
                 match file {
                     Ok(file) => {
+                        dev_files_found = true;
                         let input = loader.load(file)?;
                         inputs.insert(input)?;
                     }
                     Err(warning) => self.warnings.emit(warning),
                 }
+            }
+
+            if used_deprecated_test_directory && dev_files_found {
+                self.warnings
+                    .emit(crate::Warning::DeprecatedTestDirectory { path: dev_or_test })
             }
         }
 
