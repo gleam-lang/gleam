@@ -7,4 +7,4 @@ error: Duplicate module
 The module `main` is defined multiple times.
 
 First:  src/main.gleam
-Second: test/main.gleam
+Second: dev/main.gleam
