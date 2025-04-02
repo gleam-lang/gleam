@@ -7179,6 +7179,26 @@ pub fn main() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/4430
+#[test]
+fn inline_variable_with_record_field() {
+    assert_code_action!(
+        INLINE_VARIABLE,
+        "
+type Couple {
+  Couple(l: Int, r: Int)
+}
+
+pub fn main() {
+  let c1 = Couple(l: 1, r: 1)
+  let c2 = c1.l
+  echo c2
+}
+",
+        find_position_of("c2").nth_occurrence(2).to_selection()
+    );
+}
+
 #[test]
 fn wrap_case_clause_in_block() {
     assert_code_action!(

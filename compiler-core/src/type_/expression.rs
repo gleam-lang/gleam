@@ -1066,6 +1066,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             Ok(record) => self.infer_known_record_expression_access(
                 record,
                 label.clone(),
+                location,
                 label_location,
                 container_location.start,
                 usage,
@@ -2536,13 +2537,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         record: TypedExpr,
         label: EcoString,
         location: SrcSpan,
+        label_location: SrcSpan,
         field_start: u32,
         usage: FieldAccessUsage,
     ) -> Result<TypedExpr, Error> {
         let record = Box::new(record);
         let record_type = record.type_();
-        let (index, label, type_) =
-            self.infer_known_record_access(record_type, record.location(), usage, location, label)?;
+        let (index, label, type_) = self.infer_known_record_access(
+            record_type,
+            record.location(),
+            usage,
+            label_location,
+            label,
+        )?;
         Ok(TypedExpr::RecordAccess {
             record,
             label,
@@ -2819,6 +2826,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 let record_access = self.infer_known_record_expression_access(
                     record.clone(),
                     label.clone(),
+                    record_location,
                     record_location,
                     record_location.start,
                     FieldAccessUsage::RecordUpdate,

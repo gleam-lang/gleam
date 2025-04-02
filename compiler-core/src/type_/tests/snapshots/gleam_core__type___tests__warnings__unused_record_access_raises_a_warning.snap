@@ -17,7 +17,7 @@ pub fn main() {
 
 ----- WARNING
 warning: Unused value
-  ┌─ /src/warning/wrn.gleam:8:9
+  ┌─ /src/warning/wrn.gleam:8:3
   │
 8 │   thing.value
-  │         ^^^^^ This value is never used
+  │   ^^^^^^^^^^^ This value is never used
