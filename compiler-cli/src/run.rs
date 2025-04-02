@@ -383,8 +383,8 @@ fn get_or_suggest_main_function(
         Err(error) => error,
     };
 
-    // Otherwise see if the module has been prefixed with "src/" or "test/".
-    for prefix in ["src/", "test/"] {
+    // Otherwise see if the module has been prefixed with "src/", "test/" or "dev/".
+    for prefix in ["src/", "test/", "dev/"] {
         let other = match module.strip_prefix(prefix) {
             Some(other) => other.into(),
             None => continue,

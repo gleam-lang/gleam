@@ -65,7 +65,7 @@ fn compile_error_in_src() {
 }
 
 #[test]
-fn compile_error_in_test() {
+fn compile_error_in_dev() {
     let io = LanguageServerTestIO::new();
     let mut engine = setup_engine(&io);
 

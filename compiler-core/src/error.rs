@@ -1556,7 +1556,7 @@ module to the src directory.",
                         );
 
                     Diagnostic {
-                        title: "App importing test module".into(),
+                        title: "App importing dev module".into(),
                         text,
                         hint: None,
                         level: Level::Error,

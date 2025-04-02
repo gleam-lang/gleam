@@ -1217,7 +1217,7 @@ pub fn main() {
 ";
 
     assert_completion!(
-        TestProject::for_source(code).add_test_module("my_tests", test),
+        TestProject::for_source(code).add_dev_module("my_tests", test),
         Position::new(0, 10)
     );
 }
@@ -1243,9 +1243,9 @@ pub fn test_helper() {
 ";
 
     let (mut engine, position_param) = TestProject::for_source(code)
-        .add_test_module("my_test", test)
-        .add_test_module("test_helper", test_helper)
-        .positioned_with_io_in_test(Position::new(0, 10), "my_test");
+        .add_dev_module("my_test", test)
+        .add_dev_module("test_helper", test_helper)
+        .positioned_with_io_in_dev(Position::new(0, 10), "my_test");
 
     let response = engine.completion(position_param, code.into());
 
@@ -1339,10 +1339,10 @@ pub fn main() {
     let dep = "";
 
     let (mut engine, position_param) = TestProject::for_source(code)
-        .add_test_module("my_test", test)
+        .add_dev_module("my_test", test)
         .add_hex_module("example_module", dep)
         .add_dev_hex_module("indirect_module", "")
-        .positioned_with_io_in_test(Position::new(0, 10), "my_test");
+        .positioned_with_io_in_dev(Position::new(0, 10), "my_test");
 
     let response = engine.completion(position_param, code.into());
 

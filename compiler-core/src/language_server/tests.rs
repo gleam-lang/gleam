@@ -394,7 +394,7 @@ struct TestProject<'a> {
     src: &'a str,
     root_package_modules: Vec<(&'a str, &'a str)>,
     dependency_modules: Vec<(&'a str, &'a str)>,
-    test_modules: Vec<(&'a str, &'a str)>,
+    dev_modules: Vec<(&'a str, &'a str)>,
     hex_modules: Vec<(&'a str, &'a str)>,
     dev_hex_modules: Vec<(&'a str, &'a str)>,
     indirect_hex_modules: Vec<(&'a str, &'a str)>,
@@ -407,7 +407,7 @@ impl<'a> TestProject<'a> {
             src,
             root_package_modules: vec![],
             dependency_modules: vec![],
-            test_modules: vec![],
+            dev_modules: vec![],
             hex_modules: vec![],
             dev_hex_modules: vec![],
             indirect_hex_modules: vec![],
@@ -442,7 +442,7 @@ impl<'a> TestProject<'a> {
 
         find_module(&self.root_package_modules)
             .or_else(|| find_module(&self.dependency_modules))
-            .or_else(|| find_module(&self.test_modules))
+            .or_else(|| find_module(&self.dev_modules))
             .or_else(|| find_module(&self.hex_modules))
             .or_else(|| find_module(&self.dev_hex_modules))
             .or_else(|| find_module(&self.indirect_hex_modules))
@@ -458,8 +458,8 @@ impl<'a> TestProject<'a> {
         self
     }
 
-    pub fn add_test_module(mut self, name: &'a str, src: &'a str) -> Self {
-        self.test_modules.push((name, src));
+    pub fn add_dev_module(mut self, name: &'a str, src: &'a str) -> Self {
+        self.dev_modules.push((name, src));
         self
     }
 
@@ -523,8 +523,8 @@ impl<'a> TestProject<'a> {
             let _ = io.src_module(name, code);
         });
 
-        // Add all the test modules
-        self.test_modules.iter().for_each(|(name, code)| {
+        // Add all the dev modules
+        self.dev_modules.iter().for_each(|(name, code)| {
             let _ = io.dev_module(name, code);
         });
         for package in &io.manifest.packages {
@@ -577,15 +577,11 @@ impl<'a> TestProject<'a> {
         TextDocumentPositionParams::new(TextDocumentIdentifier::new(url), position)
     }
 
-    pub fn build_test_path(
-        &self,
-        position: Position,
-        test_name: &str,
-    ) -> TextDocumentPositionParams {
+    pub fn build_dev_path(&self, position: Position, dev_name: &str) -> TextDocumentPositionParams {
         let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
-            format!(r"\\?\C:\test\{test_name}.gleam")
+            format!(r"\\?\C:\dev\{dev_name}.gleam")
         } else {
-            format!("/test/{test_name}.gleam")
+            format!("/dev/{dev_name}.gleam")
         });
 
         let url = Url::from_file_path(path).unwrap();
@@ -613,10 +609,10 @@ impl<'a> TestProject<'a> {
         (engine, param)
     }
 
-    pub fn positioned_with_io_in_test(
+    pub fn positioned_with_io_in_dev(
         &self,
         position: Position,
-        test_name: &str,
+        dev_name: &str,
     ) -> (
         LanguageServerEngine<LanguageServerTestIO, LanguageServerTestIO>,
         TextDocumentPositionParams,
@@ -630,7 +626,7 @@ impl<'a> TestProject<'a> {
         let response = engine.compile_please();
         assert!(response.result.is_ok());
 
-        let param = self.build_test_path(position, test_name);
+        let param = self.build_dev_path(position, dev_name);
 
         (engine, param)
     }

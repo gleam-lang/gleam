@@ -56,7 +56,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             return;
         };
 
-        if let Err(e) = self.check_src_does_not_import_test(module_info, location, name.clone()) {
+        if let Err(e) = self.check_src_does_not_import_dev(module_info, location, name.clone()) {
             self.problems.error(e);
             return;
         }
@@ -222,7 +222,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             .insert(used_name.clone(), location);
     }
 
-    fn check_src_does_not_import_test(
+    fn check_src_does_not_import_dev(
         &mut self,
         module_info: &ModuleInterface,
         location: SrcSpan,

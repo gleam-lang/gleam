@@ -233,8 +233,8 @@ where
             }
         }
 
-        // Test
-        if self.mode.includes_tests() {
+        // Dev
+        if self.mode.includes_dev() {
             let (dev_or_test, used_deprecated_test_directory) = {
                 let dev = self.paths.dev_directory();
                 if self.io.is_directory(&dev) {

@@ -130,12 +130,12 @@ fn one_src_module() {
 }
 
 #[test]
-fn one_test_module() {
+fn one_dev_module() {
     let fs = InMemoryFileSystem::new();
     let root = Utf8Path::new("/");
     let artefact = Utf8Path::new("/artefact");
 
-    write_src(&fs, "/test/main.gleam", 0, "const x = 1");
+    write_src(&fs, "/dev/main.gleam", 0, "const x = 1");
 
     let loaded = run_loader(fs, root, artefact);
     assert_eq!(loaded.to_compile, vec![EcoString::from("main")]);
@@ -325,13 +325,13 @@ fn invalid_nested_module_name() {
 }
 
 #[test]
-fn invalid_module_name_in_test() {
+fn invalid_module_name_in_dev() {
     let fs = InMemoryFileSystem::new();
     let root = Utf8Path::new("/");
     let artefact = Utf8Path::new("/artefact");
 
     // Cache is stale
-    write_src(&fs, "/test/One.gleam", 1, TEST_SOURCE_2);
+    write_src(&fs, "/dev/One.gleam", 1, TEST_SOURCE_2);
 
     let loaded = run_loader(fs, root, artefact);
     assert!(loaded.to_compile.is_empty());
@@ -339,19 +339,19 @@ fn invalid_module_name_in_test() {
     assert_eq!(
         loaded.warnings,
         vec![Warning::InvalidSource {
-            path: Utf8PathBuf::from("/test/One.gleam"),
+            path: Utf8PathBuf::from("/dev/One.gleam"),
         }],
     );
 }
 
 #[test]
-fn invalid_nested_module_name_in_test() {
+fn invalid_nested_module_name_in_dev() {
     let fs = InMemoryFileSystem::new();
     let root = Utf8Path::new("/");
     let artefact = Utf8Path::new("/artefact");
 
     // Cache is stale
-    write_src(&fs, "/test/1/one.gleam", 1, TEST_SOURCE_2);
+    write_src(&fs, "/dev/1/one.gleam", 1, TEST_SOURCE_2);
 
     let loaded = run_loader(fs, root, artefact);
     assert!(loaded.to_compile.is_empty());
@@ -359,7 +359,7 @@ fn invalid_nested_module_name_in_test() {
     assert_eq!(
         loaded.warnings,
         vec![Warning::InvalidSource {
-            path: Utf8PathBuf::from("/test/1/one.gleam"),
+            path: Utf8PathBuf::from("/dev/1/one.gleam"),
         }],
     );
 }

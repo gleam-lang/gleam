@@ -52,7 +52,7 @@ pub fn generate_html<IO: FileSystemReader>(
 ) -> Vec<OutputFile> {
     let modules = analysed
         .iter()
-        .filter(|module| !module.is_test())
+        .filter(|module| !module.is_dev())
         .filter(|module| !config.is_internal_module(&module.name));
 
     let rendering_timestamp = rendering_timestamp

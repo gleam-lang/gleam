@@ -355,7 +355,7 @@ where
                 is_root_or_prelude || direct_dep_packages.contains(&module.package)
             })
             //
-            // src/ cannot import test/
+            // src/ cannot import dev/
             .filter(|(_, module)| module.origin.is_src() || !self.module.origin.is_src())
             //
             // It is possible to import internal modules from other packages,

@@ -41,9 +41,9 @@ fn javascript_files_are_copied_from_src() {
 }
 
 #[test]
-fn javascript_files_are_copied_from_test() {
+fn javascript_files_are_copied_from_dev() {
     let fs = InMemoryFileSystem::new();
-    fs.write(&Utf8Path::new("/test/wibble.js"), "1").unwrap();
+    fs.write(&Utf8Path::new("/dev/wibble.js"), "1").unwrap();
 
     let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     let copied = copier.run().unwrap();
@@ -52,7 +52,7 @@ fn javascript_files_are_copied_from_test() {
     assert!(copied.to_compile.is_empty());
     assert_eq!(
         HashMap::from([
-            (Utf8PathBuf::from("/test/wibble.js"), "1".into()),
+            (Utf8PathBuf::from("/dev/wibble.js"), "1".into()),
             (Utf8PathBuf::from("/out/wibble.js"), "1".into())
         ]),
         fs.into_contents(),
@@ -79,9 +79,9 @@ fn mjavascript_files_are_copied_from_src() {
 }
 
 #[test]
-fn mjavascript_files_are_copied_from_test() {
+fn mjavascript_files_are_copied_from_dev() {
     let fs = InMemoryFileSystem::new();
-    fs.write(&Utf8Path::new("/test/wibble.mjs"), "1").unwrap();
+    fs.write(&Utf8Path::new("/dev/wibble.mjs"), "1").unwrap();
 
     let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     let copied = copier.run().unwrap();
@@ -90,7 +90,7 @@ fn mjavascript_files_are_copied_from_test() {
     assert!(copied.to_compile.is_empty());
     assert_eq!(
         HashMap::from([
-            (Utf8PathBuf::from("/test/wibble.mjs"), "1".into()),
+            (Utf8PathBuf::from("/dev/wibble.mjs"), "1".into()),
             (Utf8PathBuf::from("/out/wibble.mjs"), "1".into())
         ]),
         fs.into_contents(),
@@ -117,9 +117,9 @@ fn typescript_files_are_copied_from_src() {
 }
 
 #[test]
-fn typescript_files_are_copied_from_test() {
+fn typescript_files_are_copied_from_dev() {
     let fs = InMemoryFileSystem::new();
-    fs.write(&Utf8Path::new("/test/wibble.ts"), "1").unwrap();
+    fs.write(&Utf8Path::new("/dev/wibble.ts"), "1").unwrap();
 
     let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     let copied = copier.run().unwrap();
@@ -128,7 +128,7 @@ fn typescript_files_are_copied_from_test() {
     assert!(copied.to_compile.is_empty());
     assert_eq!(
         HashMap::from([
-            (Utf8PathBuf::from("/test/wibble.ts"), "1".into()),
+            (Utf8PathBuf::from("/dev/wibble.ts"), "1".into()),
             (Utf8PathBuf::from("/out/wibble.ts"), "1".into())
         ]),
         fs.into_contents(),
@@ -163,14 +163,13 @@ fn all_javascript_files_are_copied_from_src_subfolders() {
 }
 
 #[test]
-fn all_javascript_files_are_copied_from_test_subfolders() {
+fn all_javascript_files_are_copied_from_dev_subfolders() {
     let fs = InMemoryFileSystem::new();
-    fs.write(&Utf8Path::new("/test/abc/def/wibble.mjs"), "1")
+    fs.write(&Utf8Path::new("/dev/abc/def/wibble.mjs"), "1")
         .unwrap();
-    fs.write(&Utf8Path::new("/test/abc/ghi/wibble.js"), "2")
+    fs.write(&Utf8Path::new("/dev/abc/ghi/wibble.js"), "2")
         .unwrap();
-    fs.write(&Utf8Path::new("/test/def/wobble.ts"), "3")
-        .unwrap();
+    fs.write(&Utf8Path::new("/dev/def/wobble.ts"), "3").unwrap();
 
     let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     let copied = copier.run().unwrap();
@@ -179,11 +178,11 @@ fn all_javascript_files_are_copied_from_test_subfolders() {
     assert!(copied.to_compile.is_empty());
     assert_eq!(
         HashMap::from([
-            (Utf8PathBuf::from("/test/abc/def/wibble.mjs"), "1".into()),
+            (Utf8PathBuf::from("/dev/abc/def/wibble.mjs"), "1".into()),
             (Utf8PathBuf::from("/out/abc/def/wibble.mjs"), "1".into()),
-            (Utf8PathBuf::from("/test/abc/ghi/wibble.js"), "2".into()),
+            (Utf8PathBuf::from("/dev/abc/ghi/wibble.js"), "2".into()),
             (Utf8PathBuf::from("/out/abc/ghi/wibble.js"), "2".into()),
-            (Utf8PathBuf::from("/test/def/wobble.ts"), "3".into()),
+            (Utf8PathBuf::from("/dev/def/wobble.ts"), "3".into()),
             (Utf8PathBuf::from("/out/def/wobble.ts"), "3".into())
         ]),
         fs.into_contents(),
@@ -210,9 +209,9 @@ fn erlang_header_files_are_copied_from_src() {
 }
 
 #[test]
-fn erlang_header_files_are_copied_from_test() {
+fn erlang_header_files_are_copied_from_dev() {
     let fs = InMemoryFileSystem::new();
-    fs.write(&Utf8Path::new("/test/wibble.hrl"), "1").unwrap();
+    fs.write(&Utf8Path::new("/dev/wibble.hrl"), "1").unwrap();
 
     let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     let copied = copier.run().unwrap();
@@ -221,7 +220,7 @@ fn erlang_header_files_are_copied_from_test() {
     assert!(copied.to_compile.is_empty());
     assert_eq!(
         HashMap::from([
-            (Utf8PathBuf::from("/test/wibble.hrl"), "1".into()),
+            (Utf8PathBuf::from("/dev/wibble.hrl"), "1".into()),
             (Utf8PathBuf::from("/out/wibble.hrl"), "1".into())
         ]),
         fs.into_contents(),
@@ -248,9 +247,9 @@ fn erlang_files_are_copied_from_src() {
 }
 
 #[test]
-fn erlang_files_are_copied_from_test() {
+fn erlang_files_are_copied_from_dev() {
     let fs = InMemoryFileSystem::new();
-    fs.write(&Utf8Path::new("/test/wibble.erl"), "1").unwrap();
+    fs.write(&Utf8Path::new("/dev/wibble.erl"), "1").unwrap();
 
     let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     let copied = copier.run().unwrap();
@@ -259,7 +258,7 @@ fn erlang_files_are_copied_from_test() {
     assert_eq!(copied.to_compile, vec![Utf8PathBuf::from("wibble.erl")]);
     assert_eq!(
         HashMap::from([
-            (Utf8PathBuf::from("/test/wibble.erl"), "1".into()),
+            (Utf8PathBuf::from("/dev/wibble.erl"), "1".into()),
             (Utf8PathBuf::from("/out/wibble.erl"), "1".into())
         ]),
         fs.into_contents(),
@@ -286,9 +285,9 @@ fn elixir_files_are_copied_from_src() {
 }
 
 #[test]
-fn elixir_files_are_copied_from_test() {
+fn elixir_files_are_copied_from_dev() {
     let fs = InMemoryFileSystem::new();
-    fs.write(&Utf8Path::new("/test/wibble.ex"), "1").unwrap();
+    fs.write(&Utf8Path::new("/dev/wibble.ex"), "1").unwrap();
 
     let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     let copied = copier.run().unwrap();
@@ -297,7 +296,7 @@ fn elixir_files_are_copied_from_test() {
     assert_eq!(copied.to_compile, vec![Utf8PathBuf::from("wibble.ex")]);
     assert_eq!(
         HashMap::from([
-            (Utf8PathBuf::from("/test/wibble.ex"), "1".into()),
+            (Utf8PathBuf::from("/dev/wibble.ex"), "1".into()),
             (Utf8PathBuf::from("/out/wibble.ex"), "1".into())
         ]),
         fs.into_contents(),
@@ -344,14 +343,13 @@ fn all_erlang_files_are_copied_from_src_subfolders() {
 }
 
 #[test]
-fn all_erlang_files_are_copied_from_test_subfolders() {
+fn all_erlang_files_are_copied_from_dev_subfolders() {
     let fs = InMemoryFileSystem::new();
-    fs.write(&Utf8Path::new("/test/abc/def/wibble.erl"), "1")
+    fs.write(&Utf8Path::new("/dev/abc/def/wibble.erl"), "1")
         .unwrap();
-    fs.write(&Utf8Path::new("/test/abc/ghi/wibble_header.hrl"), "2")
+    fs.write(&Utf8Path::new("/dev/abc/ghi/wibble_header.hrl"), "2")
         .unwrap();
-    fs.write(&Utf8Path::new("/test/def/wobble.ex"), "3")
-        .unwrap();
+    fs.write(&Utf8Path::new("/dev/def/wobble.ex"), "3").unwrap();
 
     let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     let copied = copier.run().unwrap();
@@ -366,17 +364,17 @@ fn all_erlang_files_are_copied_from_test_subfolders() {
     );
     assert_eq!(
         HashMap::from([
-            (Utf8PathBuf::from("/test/abc/def/wibble.erl"), "1".into()),
+            (Utf8PathBuf::from("/dev/abc/def/wibble.erl"), "1".into()),
             (Utf8PathBuf::from("/out/abc/def/wibble.erl"), "1".into()),
             (
-                Utf8PathBuf::from("/test/abc/ghi/wibble_header.hrl"),
+                Utf8PathBuf::from("/dev/abc/ghi/wibble_header.hrl"),
                 "2".into()
             ),
             (
                 Utf8PathBuf::from("/out/abc/ghi/wibble_header.hrl"),
                 "2".into()
             ),
-            (Utf8PathBuf::from("/test/def/wobble.ex"), "3".into()),
+            (Utf8PathBuf::from("/dev/def/wobble.ex"), "3".into()),
             (Utf8PathBuf::from("/out/def/wobble.ex"), "3".into())
         ]),
         fs.into_contents(),
@@ -451,7 +449,7 @@ fn files_get_copied_if_the_previously_copied_version_is_older() {
 fn duplicate_native_files_result_in_an_error() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/src/wibble.mjs"), "1").unwrap();
-    fs.write(&Utf8Path::new("/test/wibble.mjs"), "1").unwrap();
+    fs.write(&Utf8Path::new("/dev/wibble.mjs"), "1").unwrap();
 
     let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     assert!(copier.run().is_err());
@@ -470,11 +468,11 @@ fn conflicting_erlang_modules_in_src_result_in_an_error() {
 }
 
 #[test]
-fn conflicting_erlang_modules_in_src_and_test_result_in_an_error() {
+fn conflicting_erlang_modules_in_src_and_dev_result_in_an_error() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/src/a/b/c/wibble.erl"), "1")
         .unwrap();
-    fs.write(&Utf8Path::new("/test/e/f/wibble.erl"), "1")
+    fs.write(&Utf8Path::new("/dev/e/f/wibble.erl"), "1")
         .unwrap();
 
     let copier = NativeFileCopier::new(fs.clone(), root(), root_out());

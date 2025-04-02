@@ -187,9 +187,9 @@ pub enum Mode {
 }
 
 impl Mode {
-    /// Returns `true` if the mode includes test code.
+    /// Returns `true` if the mode includes dev code.
     ///
-    pub fn includes_tests(&self) -> bool {
+    pub fn includes_dev(&self) -> bool {
         match self {
             Self::Dev | Self::Lsp => true,
             Self::Prod => false,
@@ -205,10 +205,10 @@ impl Mode {
 }
 
 #[test]
-fn mode_includes_tests() {
-    assert!(Mode::Dev.includes_tests());
-    assert!(Mode::Lsp.includes_tests());
-    assert!(!Mode::Prod.includes_tests());
+fn mode_includes_dev() {
+    assert!(Mode::Dev.includes_dev());
+    assert!(Mode::Lsp.includes_dev());
+    assert!(!Mode::Prod.includes_dev());
 }
 
 #[derive(Debug)]
@@ -256,7 +256,7 @@ impl Module {
         path
     }
 
-    pub fn is_test(&self) -> bool {
+    pub fn is_dev(&self) -> bool {
         self.origin == Origin::Dev
     }
 
