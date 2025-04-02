@@ -12,15 +12,20 @@ use crate::{
     build_lock::BuildLock,
     cli,
     dependencies::UseManifest,
-    fs::{self, ConsoleWarningEmitter},
+    fs::{self},
 };
 
 pub fn download_dependencies(paths: &ProjectPaths, telemetry: impl Telemetry) -> Result<Manifest> {
     crate::dependencies::download(paths, telemetry, None, Vec::new(), UseManifest::Yes)
 }
 
-pub fn main(paths: &ProjectPaths, options: Options, manifest: Manifest) -> Result<Built> {
-    main_with_warnings(paths, options, manifest, Rc::new(ConsoleWarningEmitter))
+pub fn main(
+    paths: &ProjectPaths,
+    options: Options,
+    manifest: Manifest,
+    warnings: Rc<dyn WarningEmitterIO>,
+) -> Result<Built> {
+    main_with_warnings(paths, options, manifest, warnings)
 }
 
 pub(crate) fn main_with_warnings(
