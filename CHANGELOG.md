@@ -90,8 +90,13 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+
 - Compilation of binary operators is now fault tolerant and won't stop at the
   first type error.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The compiler no longer shows errors for a function's labels if the called
+  function itself doesn't exist.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Build tool
