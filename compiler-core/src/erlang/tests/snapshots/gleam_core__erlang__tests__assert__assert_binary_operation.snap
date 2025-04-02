@@ -20,23 +20,26 @@ pub fn main() {
 -spec main() -> boolean().
 main() ->
     X = true,
-    case (X orelse false) of
+    case X of
         true -> true;
-        false -> erlang:error(#{gleam_error => assert,
-                message => <<"Assertion failed."/utf8>>,
-                kind => binary_operator,
-                operator => '||',
-                left => #{kind => expression,
-                    value => X,
-                    start => 41,
-                    end => 42,
-                    },
-                right => #{kind => expression,
-                    value => false,
-                    start => 46,
-                    end => 51,
-                    },
-                module => <<"my/mod"/utf8>>,
-                function => <<"main"/utf8>>,
-                line => 4})
+        false -> case false of
+            true -> true;
+            false -> erlang:error(#{gleam_error => assert,
+                    message => <<"Assertion failed."/utf8>>,
+                    kind => binary_operator,
+                    operator => '||',
+                    left => #{kind => expression,
+                        value => false,
+                        start => 41,
+                        end => 42,
+                        },
+                    right => #{kind => expression,
+                        value => false,
+                        start => 46,
+                        end => 51,
+                        },
+                    module => <<"my/mod"/utf8>>,
+                    function => <<"main"/utf8>>,
+                    line => 4})
+        end
     end.

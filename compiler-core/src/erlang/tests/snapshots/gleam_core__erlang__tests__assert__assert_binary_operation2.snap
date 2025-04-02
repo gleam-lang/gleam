@@ -18,7 +18,7 @@ pub fn eq(a, b) {
 -file("project/test/my/mod.gleam", 2).
 -spec eq(J, J) -> boolean().
 eq(A, B) ->
-    case (A =:= B) of
+    case A =:= B of
         true -> true;
         false -> erlang:error(#{gleam_error => assert,
                 message => <<"Assertion failed."/utf8>>,
