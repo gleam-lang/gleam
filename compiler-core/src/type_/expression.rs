@@ -3708,13 +3708,23 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .map_err(|e| convert_get_value_constructor_error(e, location, None))
             .and_then(|field_map| {
                 match field_map {
-                    // The fun has a field map so labelled arguments may be present and need to be reordered.
+                    // The fun has a field map so labelled arguments may be
+                    // present and need to be reordered.
                     Some(field_map) => field_map.reorder(&mut args, location),
 
-                    // The fun has no field map and so we error if arguments have been labelled
+                    // The fun has no field map and so we error if arguments
+                    // have been labelled.
+                    // There's an exception to this rule: if the function itself
+                    // doesn't exist (that is it's an `Invalid` expression), then
+                    // we don't want to error on any labels that might have been
+                    // used as it would be quite noisy. Once the function is
+                    // known to be a valid function we can make sure that there's
+                    // no labelled arguments if it doesn't actually have a field map.
+                    None if fun.is_invalid() => Ok(()),
                     None => assert_no_labelled_arguments(&args),
                 }
             });
+
         if let Err(e) = field_map {
             match e {
                 Error::IncorrectArity {
