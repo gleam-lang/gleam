@@ -2177,19 +2177,19 @@ fn assert<'a>(assert: &'a TypedAssert, env: &mut Env<'a>) -> Document<'a> {
 
     let fields = match subject {
         AssertSubject::Expression(expression) => vec![
-            ("kind", string("expression")),
+            ("kind", atom("expression")),
             ("expression", asserted_expression(expression)),
         ],
         AssertSubject::BinaryOperator {
             name, left, right, ..
         } => vec![
-            ("kind", string("binary_operator")),
-            ("operator", string(name.name())),
+            ("kind", atom("binary_operator")),
+            ("operator", atom(name.name())),
             ("left", asserted_expression(left)),
             ("right", asserted_expression(right)),
         ],
         AssertSubject::Call { arguments, .. } => vec![
-            ("kind", string("function_call")),
+            ("kind", atom("function_call")),
             (
                 "arguments",
                 list(
@@ -2226,8 +2226,8 @@ fn assert<'a>(assert: &'a TypedAssert, env: &mut Env<'a>) -> Document<'a> {
 
 fn asserted_expression<'a>(expression: AssertExpression<'a>) -> Document<'a> {
     let kind = match expression.kind {
-        ExpressionKind::Literal => string("literal"),
-        ExpressionKind::Expression => string("expression"),
+        ExpressionKind::Literal => atom("literal"),
+        ExpressionKind::Expression => atom("expression"),
     };
 
     let value = expression.value;

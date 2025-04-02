@@ -31,7 +31,7 @@ main() ->
         true -> true;
         false -> erlang:error(#{gleam_error => assert,
                 message => <<"Assertion failed."/utf8>>,
-                kind => <<"function_call"/utf8>>,
+                kind => function_call,
                 arguments => [],
                 module => <<"my/mod"/utf8>>,
                 function => <<"main"/utf8>>,
