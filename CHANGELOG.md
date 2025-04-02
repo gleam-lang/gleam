@@ -344,6 +344,10 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The "Rewrite from `use`" code action now only triggers if the cursor is on the
+  first line of the `use` expression to rewrite.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Container images
