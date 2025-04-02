@@ -1165,6 +1165,8 @@ pub enum OperatorKind {
     StringConcatenation,
 }
 
+pub const PIPE_PRECEDENCE: u8 = 6;
+
 impl BinOp {
     pub fn precedence(&self) -> u8 {
         // Ensure that this matches the other precedence function for guards
