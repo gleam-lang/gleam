@@ -4,10 +4,10 @@ use crate::{
     Error, STDLIB_PACKAGE_NAME,
     ast::{
         self, AssignName, AssignmentKind, CallArg, CustomType, FunctionLiteralKind,
-        ImplicitCallArgOrigin, Pattern, PatternUnusedArguments, PipelineAssignmentKind,
-        RecordConstructor, SrcSpan, TodoKind, TypedArg, TypedAssignment, TypedExpr,
-        TypedModuleConstant, TypedPattern, TypedPipelineAssignment, TypedRecordConstructor,
-        TypedStatement, TypedUse,
+        ImplicitCallArgOrigin, PIPE_PRECEDENCE, Pattern, PatternUnusedArguments,
+        PipelineAssignmentKind, RecordConstructor, SrcSpan, TodoKind, TypedArg, TypedAssignment,
+        TypedExpr, TypedModuleConstant, TypedPattern, TypedPipelineAssignment,
+        TypedRecordConstructor, TypedStatement, TypedUse,
         visit::{Visit as _, visit_typed_call_arg, visit_typed_pattern_call_arg},
     },
     build::{Located, Module},
@@ -5369,6 +5369,15 @@ impl<'a> ConvertToPipe<'a> {
         };
 
         let arg_text = self.module.code.get(arg_range).expect("invalid srcspan");
+        let arg_text = match arg.value {
+            // If the expression being piped is a binary operation with
+            // precedence lower than pipes then we have to wrap it in curly
+            // braces to not mess with the order of operations.
+            TypedExpr::BinOp { name, .. } if name.precedence() < PIPE_PRECEDENCE => {
+                &format!("{{ {arg_text} }}")
+            }
+            _ => arg_text,
+        };
 
         match next_arg {
             // When extracting an argument we never want to remove any explicit

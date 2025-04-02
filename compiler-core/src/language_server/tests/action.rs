@@ -7160,6 +7160,58 @@ pub fn main() {
     );
 }
 
+#[test]
+fn convert_to_pipe_with_string_concat_adds_braces() {
+    assert_code_action!(
+        CONVERT_TO_PIPE,
+        "
+pub fn main() {
+  wibble(wobble <> woo, waa)
+}
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_pipe_with_bool_operator_adds_braces() {
+    assert_code_action!(
+        CONVERT_TO_PIPE,
+        "
+pub fn main() {
+  wibble(wobble != woo, waa)
+}
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_pipe_with_sum_adds_no_braces() {
+    assert_code_action!(
+        CONVERT_TO_PIPE,
+        "
+pub fn main() {
+  wibble(1 + 1, waa)
+}
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_pipe_with_comparison_adds_braces() {
+    assert_code_action!(
+        CONVERT_TO_PIPE,
+        "
+pub fn main() {
+  wibble(1.0 >=. 0.0, waa)
+}
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/4342
 #[test]
 fn inline_variable_in_record_update() {
@@ -7239,7 +7291,7 @@ fn wrap_case_clause_with_multiple_patterns_in_block() {
   Water
   Fire
 }
-        
+
   pub fn f(pokemon_type: PokemonType) {
     case pokemon_type {
       Water | Air -> soak()
@@ -7259,7 +7311,7 @@ fn wrap_case_clause_inside_assignment_in_block() {
   Water
   Fire
 }
-        
+
   pub fn f(pokemon_type: PokemonType) {
     let damage = case pokemon_type {
       Water -> soak()
