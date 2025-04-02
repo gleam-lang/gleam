@@ -2400,15 +2400,7 @@ impl<'a> ConvertFromUse<'a> {
 
 impl<'ast> ast::visit::Visit<'ast> for ConvertFromUse<'ast> {
     fn visit_typed_use(&mut self, use_: &'ast TypedUse) {
-        // We only want to take into account the innermost use we find ourselves
-        // into, so we can't stop at the first use we find (the outermost one)
-        // and have to keep traversing it in case we're inside some nested
-        // `use`s.
-        let use_src_span = use_.location.merge(&use_.call.location());
-        let use_range = self.edits.src_span_to_lsp_range(use_src_span);
-        if !within(self.params.range, use_range) {
-            return;
-        }
+        let use_range = self.edits.src_span_to_lsp_range(use_.location);
 
         // If the use expression is using patterns that are not just variable
         // assignments then we can't automatically rewrite it as it would result
@@ -2417,16 +2409,18 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertFromUse<'ast> {
         // At the same time we can't safely add bindings inside the anonymous
         // function body by picking placeholder names as we'd risk shadowing
         // variables coming from the outer scope.
-        //
         // So we just skip those use expressions we can't safely rewrite!
-        if use_
-            .assignments
-            .iter()
-            .all(|assignment| assignment.pattern.is_variable())
+        if within(self.params.range, use_range)
+            && use_
+                .assignments
+                .iter()
+                .all(|assignment| assignment.pattern.is_variable())
         {
             self.selected_use = Some(use_);
         }
 
+        // We still want to visit the use expression so that we always end up
+        // picking the innermost, most relevant use under the cursor.
         self.visit_typed_expr(&use_.call);
     }
 }

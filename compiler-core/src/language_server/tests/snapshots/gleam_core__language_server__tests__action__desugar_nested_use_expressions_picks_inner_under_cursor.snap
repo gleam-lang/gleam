@@ -7,8 +7,8 @@ expression: "\npub fn main() {\n  use a, b <- wibble(1, 2)\n  use a, b <- wibble
 pub fn main() {
   use a, b <- wibble(1, 2)
   use a, b <- wibble(a, b)
+  ↑                       
   todo
-     ↑
 }
 
 fn wibble(n, m, f) {
