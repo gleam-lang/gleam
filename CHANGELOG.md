@@ -406,6 +406,10 @@
   code when the piped argument was a binary operation.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where prelude types and values would be suggested in autocomplete
+  when part of a module select.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.9.1 - 2025-03-10
 
 ### Formatter

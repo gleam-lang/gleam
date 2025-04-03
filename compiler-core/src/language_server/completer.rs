@@ -402,22 +402,10 @@ where
 
         let (insert_range, module_select) = surrounding_completion;
 
-        // Prelude types
-        for type_ in PreludeType::iter() {
-            let label: String = type_.name().into();
-            let sort_text = Some(sort_text(CompletionKind::Prelude, &label));
-            completions.push(CompletionItem {
-                label,
-                detail: Some("Type".into()),
-                kind: Some(CompletionItemKind::CLASS),
-                sort_text,
-                ..Default::default()
-            });
-        }
-
-        // Module types
+        // Module and prelude types
         // Do not complete direct module types if the user has already started typing a module select.
-        // e.x. when the user has typed mymodule.| we know local module types are no longer relevant
+        // e.x. when the user has typed mymodule.| we know local module types and prelude types are no
+        // longer relevant.
         if module_select.is_none() {
             for (name, type_) in &self.module.ast.type_info.types {
                 completions.push(type_completion(
@@ -428,6 +416,18 @@ where
                     TypeCompletionForm::Default,
                     CompletionKind::LocallyDefined,
                 ));
+            }
+
+            for type_ in PreludeType::iter() {
+                let label: String = type_.name().into();
+                let sort_text = Some(sort_text(CompletionKind::Prelude, &label));
+                completions.push(CompletionItem {
+                    label,
+                    detail: Some("Type".into()),
+                    kind: Some(CompletionItemKind::CLASS),
+                    sort_text,
+                    ..Default::default()
+                });
             }
         }
 
@@ -549,44 +549,10 @@ where
 
         let (insert_range, module_select) = surrounding_completion;
 
-        let mut push_prelude_completion = |label: &str, kind| {
-            let label = label.to_string();
-            let sort_text = Some(sort_text(CompletionKind::Prelude, &label));
-            completions.push(CompletionItem {
-                label,
-                detail: Some(PRELUDE_MODULE_NAME.into()),
-                kind: Some(kind),
-                sort_text,
-                ..Default::default()
-            });
-        };
-
-        // Prelude values
-        for type_ in PreludeType::iter() {
-            match type_ {
-                PreludeType::Bool => {
-                    push_prelude_completion("True", CompletionItemKind::ENUM_MEMBER);
-                    push_prelude_completion("False", CompletionItemKind::ENUM_MEMBER);
-                }
-                PreludeType::Nil => {
-                    push_prelude_completion("Nil", CompletionItemKind::ENUM_MEMBER);
-                }
-                PreludeType::Result => {
-                    push_prelude_completion("Ok", CompletionItemKind::CONSTRUCTOR);
-                    push_prelude_completion("Error", CompletionItemKind::CONSTRUCTOR);
-                }
-                PreludeType::BitArray
-                | PreludeType::Float
-                | PreludeType::Int
-                | PreludeType::List
-                | PreludeType::String
-                | PreludeType::UtfCodepoint => {}
-            }
-        }
-
-        // Module values
+        // Module and prelude values
         // Do not complete direct module values if the user has already started typing a module select.
-        // e.x. when the user has typed mymodule.| we know local module values are no longer relevant
+        // e.x. when the user has typed mymodule.| we know local module and prelude values are no longer
+        // relevant.
         if module_select.is_none() {
             let cursor = self
                 .src_line_numbers
@@ -615,6 +581,40 @@ where
                     insert_range,
                     CompletionKind::LocallyDefined,
                 ));
+            }
+
+            let mut push_prelude_completion = |label: &str, kind| {
+                let label = label.to_string();
+                let sort_text = Some(sort_text(CompletionKind::Prelude, &label));
+                completions.push(CompletionItem {
+                    label,
+                    detail: Some(PRELUDE_MODULE_NAME.into()),
+                    kind: Some(kind),
+                    sort_text,
+                    ..Default::default()
+                });
+            };
+
+            for type_ in PreludeType::iter() {
+                match type_ {
+                    PreludeType::Bool => {
+                        push_prelude_completion("True", CompletionItemKind::ENUM_MEMBER);
+                        push_prelude_completion("False", CompletionItemKind::ENUM_MEMBER);
+                    }
+                    PreludeType::Nil => {
+                        push_prelude_completion("Nil", CompletionItemKind::ENUM_MEMBER);
+                    }
+                    PreludeType::Result => {
+                        push_prelude_completion("Ok", CompletionItemKind::CONSTRUCTOR);
+                        push_prelude_completion("Error", CompletionItemKind::CONSTRUCTOR);
+                    }
+                    PreludeType::BitArray
+                    | PreludeType::Float
+                    | PreludeType::Int
+                    | PreludeType::List
+                    | PreludeType::String
+                    | PreludeType::UtfCodepoint => {}
+                }
             }
         }
 
