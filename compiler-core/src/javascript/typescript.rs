@@ -626,7 +626,7 @@ impl<'a> TypeScriptGenerator<'a> {
 
         let name = match self.aliased_module_names.get(name) {
             Some(name) => name,
-            None => name.split('/').last().expect("Non empty module path"),
+            None => name.split('/').next_back().expect("Non empty module path"),
         };
 
         eco_format!("${name}")

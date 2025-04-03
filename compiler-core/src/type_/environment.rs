@@ -702,7 +702,7 @@ impl Environment<'_> {
                     // Don't suggest importing modules if they are already imported
                     _ if self
                         .imported_modules
-                        .contains_key(importable.split('/').last().unwrap_or(importable)) =>
+                        .contains_key(importable.split('/').next_back().unwrap_or(importable)) =>
                     {
                         None
                     }

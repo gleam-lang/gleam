@@ -469,16 +469,15 @@ where
             // e.x. when the user has typed mymodule.| we know unqualified module types are no longer relevant.
             if module_select.is_none() {
                 for unqualified in &import.unqualified_types {
-                    match module.get_public_type(&unqualified.name) {
-                        Some(type_) => completions.push(type_completion(
+                    if let Some(type_) = module.get_public_type(&unqualified.name) {
+                        completions.push(type_completion(
                             None,
                             unqualified.used_name(),
                             type_,
                             insert_range,
                             TypeCompletionForm::Default,
                             CompletionKind::ImportedModule,
-                        )),
-                        None => continue,
+                        ))
                     }
                 }
             }
@@ -504,7 +503,7 @@ where
 
             let qualifier = module_full_name
                 .split('/')
-                .last()
+                .next_back()
                 .unwrap_or(module_full_name);
 
             // If the user has already started a module select then don't show irrelevant modules.
@@ -657,19 +656,16 @@ where
             // e.x. when the user has typed mymodule.| we know unqualified module values are no longer relevant.
             if module_select.is_none() {
                 for unqualified in &import.unqualified_values {
-                    match module.get_public_value(&unqualified.name) {
-                        Some(value) => {
-                            let name = unqualified.used_name();
-                            completions.push(value_completion(
-                                None,
-                                mod_name,
-                                name,
-                                value,
-                                insert_range,
-                                CompletionKind::ImportedModule,
-                            ))
-                        }
-                        None => continue,
+                    if let Some(value) = module.get_public_value(&unqualified.name) {
+                        let name = unqualified.used_name();
+                        completions.push(value_completion(
+                            None,
+                            mod_name,
+                            name,
+                            value,
+                            insert_range,
+                            CompletionKind::ImportedModule,
+                        ))
                     }
                 }
             }
@@ -693,7 +689,7 @@ where
             }
             let qualifier = module_full_name
                 .split('/')
-                .last()
+                .next_back()
                 .unwrap_or(module_full_name);
 
             // If the user has already started a module select then don't show irrelevant modules.

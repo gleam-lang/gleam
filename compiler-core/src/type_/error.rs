@@ -137,7 +137,7 @@ impl ModuleSuggestion {
     pub fn last_name_component(&self) -> &str {
         match self {
             ModuleSuggestion::Imported(name) | ModuleSuggestion::Importable(name) => {
-                name.split('/').last().unwrap_or(name)
+                name.split('/').next_back().unwrap_or(name)
             }
         }
     }

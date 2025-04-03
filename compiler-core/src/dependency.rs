@@ -72,11 +72,7 @@ fn parse_exact_version(ver: &str) -> Option<Version> {
     if version.starts_with("==") || first_byte.is_some_and(|v| v.is_ascii_digit()) {
         let version = version.replace("==", "");
         let version = version.as_str().trim();
-        if let Ok(v) = Version::parse(version) {
-            Some(v)
-        } else {
-            None
-        }
+        Version::parse(version).ok()
     } else {
         None
     }

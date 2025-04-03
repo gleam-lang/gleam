@@ -114,7 +114,7 @@ impl Notification {
                 let params = cast_notification::<DidChangeTextDocument>(notification);
                 let notification = Notification::SourceFileChangedInMemory {
                     path: super::path(&params.text_document.uri),
-                    text: params.content_changes.into_iter().last()?.text,
+                    text: params.content_changes.into_iter().next_back()?.text,
                 };
                 Some(Message::Notification(notification))
             }
@@ -137,7 +137,7 @@ impl Notification {
             "workspace/didChangeWatchedFiles" => {
                 let params = cast_notification::<DidChangeWatchedFiles>(notification);
                 let notification = Notification::ConfigFileChanged {
-                    path: super::path(&params.changes.into_iter().last()?.uri),
+                    path: super::path(&params.changes.into_iter().next_back()?.uri),
                 };
                 Some(Message::Notification(notification))
             }
