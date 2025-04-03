@@ -599,6 +599,35 @@ pub enum Error {
     EchoWithNoFollowingExpression {
         location: SrcSpan,
     },
+    /// When someone tries concatenating two string values using the `+` operator.
+    ///
+    /// ```gleam
+    /// "aaa" + "bbb"
+    /// //    ^ We wont to suggest using `<>` instead!
+    /// ```
+    StringConcatenationWithAddInt {
+        location: SrcSpan,
+    },
+    /// When someone tries using an int operator on two floats.
+    ///
+    /// ```gleam
+    /// 1 +. 3
+    /// //^ We wont to suggest using `+` instead!
+    /// ```
+    FloatOperatorOnInts {
+        operator: BinOp,
+        location: SrcSpan,
+    },
+    /// When someone tries using an int operator on two floats.
+    ///
+    /// ```gleam
+    /// 1.2 + 1.0
+    /// //  ^ We wont to suggest using `+.` instead!
+    /// ```
+    IntOperatorOnFloats {
+        operator: BinOp,
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1072,7 +1101,10 @@ impl Error {
             | Error::AllVariantsDeprecated { location }
             | Error::EchoWithNoFollowingExpression { location }
             | Error::DeprecatedVariantOnDeprecatedType { location }
-            | Error::ErlangFloatUnsafe { location } => location.start,
+            | Error::ErlangFloatUnsafe { location }
+            | Error::FloatOperatorOnInts { location, .. }
+            | Error::IntOperatorOnFloats { location, .. }
+            | Error::StringConcatenationWithAddInt { location } => location.start,
 
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)

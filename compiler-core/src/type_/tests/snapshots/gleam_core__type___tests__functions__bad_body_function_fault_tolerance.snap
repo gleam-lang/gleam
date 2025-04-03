@@ -27,23 +27,6 @@ error: Type mismatch
   ┌─ /src/one/two.gleam:4:3
   │
 4 │   "" + ""
-  │   ^^
-
-The + operator expects arguments of this type:
-
-    Int
-
-But this argument has this type:
-
-    String
-
-Hint: Strings can be joined using the `append` or `concat` functions from the
-`gleam/string` module.
-
-error: Type mismatch
-  ┌─ /src/one/two.gleam:4:3
-  │
-4 │   "" + ""
   │   ^^^^^^^
 
 The type of this returned value doesn't match the return type
@@ -58,10 +41,10 @@ Found type:
     Int
 
 error: Type mismatch
-  ┌─ /src/one/two.gleam:4:8
+  ┌─ /src/one/two.gleam:4:6
   │
 4 │   "" + ""
-  │        ^^
+  │      ^ Use the `<>` operator to concatenate two strings
 
 The + operator expects arguments of this type:
 
@@ -71,8 +54,6 @@ But this argument has this type:
 
     String
 
-Hint: Strings can be joined using the `append` or `concat` functions from the
-`gleam/string` module.
 
 error: Type mismatch
    ┌─ /src/one/two.gleam:16:7

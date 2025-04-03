@@ -3978,7 +3978,11 @@ fn do_reduce_clause_guard(op: Spanned, estack: &mut Vec<UntypedClauseGuard>) {
     }
 }
 
-fn expr_op_reduction((_, token, _): Spanned, l: UntypedExpr, r: UntypedExpr) -> UntypedExpr {
+fn expr_op_reduction(
+    (token_start, token, token_end): Spanned,
+    l: UntypedExpr,
+    r: UntypedExpr,
+) -> UntypedExpr {
     if token == Token::Pipe {
         let expressions = match l {
             UntypedExpr::PipeLine { mut expressions } => {
@@ -3998,6 +4002,10 @@ fn expr_op_reduction((_, token, _): Spanned, l: UntypedExpr, r: UntypedExpr) -> 
                     end: r.location().end,
                 },
                 name: bin_op,
+                name_location: SrcSpan {
+                    start: token_start,
+                    end: token_end,
+                },
                 left: Box::new(l),
                 right: Box::new(r),
             },
