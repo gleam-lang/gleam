@@ -44,8 +44,8 @@
   and patterns.
   ([Richard Viney](https://github.com/richard-viney))
 
-- Improve the error messages for unknown and missing target names
-  in target attributes.
+- Improve the error messages for unknown and missing target names in target
+  attributes.
   ([Alexander Keleschovsky](https://github.com/AlecGhost))
 
 - Fixed a bug where a temporarily moved or removed file does not get recompiled,
@@ -90,9 +90,54 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-
 - Compilation of binary operators is now fault tolerant and won't stop at the
   first type error.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The compiler now provides a better error message when using the wrong operator
+  to try and join two strings together. For example:
+
+  ```txt
+  error: Type mismatch
+    ┌─ /src/wibble.gleam:2:13
+    │
+  2 │   "Hello, " + "Lucy"
+    │             ^ Use <> instead
+
+  The + operator can only be used on Ints.
+  To join two strings together you can use the <> operator.
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The compiler now provides a better error message when using an Int operator on
+  Float values, suggesting the correct replacement. For example:
+
+  ```txt
+  error: Type mismatch
+    ┌─ /Users/giacomocavalieri/Desktop/prova/src/prova.gleam:2:7
+    │
+  2 │   1.0 + 2.0
+    │       ^ Use +. instead
+
+  The + operator can only be used on Ints.
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The compiler now provides a better error message when using a Float operator
+  on Int values, suggesting the correct replacement. For example:
+
+  ```txt
+  error: Type mismatch
+    ┌─ /Users/giacomocavalieri/Desktop/prova/src/prova.gleam:2:5
+    │
+  2 │   1 >. 2
+    │     ^^ Use > instead
+
+  The >. operator can only be used on Floats.
+  ```
+
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - The compiler no longer shows errors for a function's labels if the called
@@ -261,6 +306,67 @@
   ```gleam
   pub fn main() {
     1 + 2
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The language server now offers a code action to replace a Float operator used
+  on Int values with the correct operator. For example:
+
+  ```gleam
+  pub fn main() {
+    11 +. 1
+  //^^^^^^^ When hovering anywhere over here
+  }
+  ```
+
+  Triggering the code action would fix the compilation error by using the
+  correct Int operator:
+
+  ```gleam
+  pub fn main() {
+    11 + 1
+  }
+  ```
+
+  This also works the other way around:
+
+  ```gleam
+  pub fn main() {
+    1.1 + 10.0
+  //^^^^^^^^^^ If hovering anywhere over here
+  }
+  ```
+
+  Triggering the code action would replace the wrong operator with the correct
+  equivalent Float operator:
+
+  ```gleam
+  pub fn main() {
+    1.1 +. 10.0
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- If there's a compilation error because two strings are being joined with the
+  wrong `+` operator (instead of using `<>`), the language server now offers a
+  code action to fix the error automatically. For example:
+
+  ```gleam
+  pub fn main() {
+    "Hello, " + "Jak"
+  //^^^^^^^^^^^^^^^^^ When hovering anywhere over here
+  }
+  ```
+
+  Triggering the code action would fix the compilation error by using the
+  correct `<>` operator instead of `+`:
+
+  ```gleam
+  pub fn main() {
+    "Hello, " <> "Jak"
   }
   ```
 
