@@ -145,10 +145,11 @@ impl ModuleSuggestion {
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Error {
-    SrcImportingTest {
+    InvalidImport {
         location: SrcSpan,
-        src_module: crate::error::Name,
-        test_module: crate::error::Name,
+        importing_module: EcoString,
+        imported_module: EcoString,
+        kind: InvalidImportKind,
     },
 
     BitArraySegmentError {
@@ -633,6 +634,13 @@ pub enum LiteralCollectionKind {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InvalidImportKind {
+    SrcImportingTest,
+    SrcImportingDev,
+    DevImportingTest,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Named {
     Type,
     TypeAlias,
@@ -1008,7 +1016,7 @@ impl Error {
     // Location where the error started
     pub fn start_location(&self) -> u32 {
         match self {
-            Error::SrcImportingTest { location, .. }
+            Error::InvalidImport { location, .. }
             | Error::BitArraySegmentError { location, .. }
             | Error::UnknownVariable { location, .. }
             | Error::UnknownType { location, .. }

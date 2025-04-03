@@ -247,6 +247,18 @@ enum Command {
         arguments: Vec<String>,
     },
 
+    /// Run the project development entrypoint
+    #[command(trailing_var_arg = true)]
+    Dev {
+        #[arg(short, long, ignore_case = true, help = target_doc())]
+        target: Option<Target>,
+
+        #[arg(long, ignore_case = true, help = runtime_doc())]
+        runtime: Option<Runtime>,
+
+        arguments: Vec<String>,
+    },
+
     /// Compile a single Gleam package
     #[command(hide = true)]
     CompilePackage(CompilePackage),
@@ -597,6 +609,23 @@ fn parse_and_run_command() -> Result<(), Error> {
                 runtime,
                 None,
                 run::Which::Test,
+                false,
+            )
+        }
+
+        Command::Dev {
+            target,
+            arguments,
+            runtime,
+        } => {
+            let paths = find_project_paths()?;
+            run::command(
+                &paths,
+                arguments,
+                target,
+                runtime,
+                None,
+                run::Which::Dev,
                 false,
             )
         }

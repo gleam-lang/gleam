@@ -85,7 +85,7 @@ fn run_loader(fs: InMemoryFileSystem, root: &Utf8Path, artefact: &Utf8Path) -> L
         io: fs.clone(),
         ids,
         mode: Mode::Dev,
-        root: &root,
+        paths: ProjectPaths::new(root.into()),
         warnings: &emitter,
         codegen: CodegenRequired::Yes,
         artefact_directory: &artefact,
