@@ -44,16 +44,9 @@ error: Type mismatch
   ┌─ /src/one/two.gleam:4:6
   │
 4 │   "" + ""
-  │      ^ Use the `<>` operator to concatenate two strings
+  │      ^ Use <> instead
 
-The + operator expects arguments of this type:
-
-    Int
-
-But this argument has this type:
-
-    String
-
+The + operator can only be used on Ints.
 
 error: Type mismatch
    ┌─ /src/one/two.gleam:16:7
