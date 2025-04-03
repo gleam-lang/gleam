@@ -1,6 +1,7 @@
 mod auth;
 
 use crate::{cli, http::HttpClient};
+use auth::EncryptedApiKey;
 use gleam_core::{
     Error, Result,
     hex::{self, RetirementReason},
@@ -93,29 +94,32 @@ pub fn revert(
 
 pub(crate) fn authenticate() -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
-    let http = HttpClient::new();
     let config = hexpm::Config::new();
     let mut auth = HexAuthentication::new(&runtime, config.clone());
     let previous = auth.read_stored_api_key()?;
 
-    if previous.is_some() {
-        let question = "You already have a local Hex API token. Would you like to replace it
+    if let Some(EncryptedApiKey { name, .. }) = previous {
+        let question = "You already have a local Hex API key. Would you like to replace it
 with a new one?";
         if !cli::confirm(question)? {
             return Ok(());
         }
+        match auth.remove_stored_api_key() {
+            Err(e) => match e {
+                Error::Hex(_) => println!(
+                    "\nWe were unable to revoke Hex API key {name}. You should revoke it manually at https://hex.pm",
+                ),
+                e => println!(
+                    "\nWe were unable to delete your existing Hex API key due to an unexpected error: {e}"
+                ),
+            },
+            _ => println!("\nYour Hex API key {name} was deleted and revoked succesfully"),
+        }
+
+        println!("Let's create a new Hex API key.")
     }
 
-    let new_key = auth.create_and_store_api_key()?;
+    let _ = auth.create_and_store_api_key()?;
 
-    if let Some(previous) = previous {
-        println!("Deleting previous key `{}` from Hex", previous.name);
-        runtime.block_on(hex::remove_api_key(
-            &previous.name,
-            &config,
-            &new_key.unencrypted,
-            &http,
-        ))?;
-    }
     Ok(())
 }

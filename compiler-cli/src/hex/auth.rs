@@ -148,6 +148,44 @@ encrypt your Hex API key.
             encrypted: encrypted.to_string(),
         }))
     }
+
+    /// Try to remove and revoke existing Hex API key, will return:
+    ///
+    ///  - Error: operation failed
+    ///  - Ok(None): operation successfull but there was no key stored, eg. wrong file format
+    ///  - Ok(Some(String)): operation successfull, plus the name of key
+    pub fn remove_stored_api_key(&mut self) -> Result<Option<String>> {
+        let path = global_hexpm_credentials_path();
+
+        let Some(EncryptedApiKey { name, .. }) = self.read_stored_api_key()? else {
+            return Ok(None);
+        };
+
+        println!(
+            "\nWe are going to delete and revoke your existing Hex API key.
+In order to do so, we need to use your current local password."
+        );
+
+        let Some(UnencryptedApiKey { unencrypted }) = self.read_and_decrypt_stored_api_key()?
+        else {
+            return Ok(None);
+        };
+
+        println!("\nDeleting local Hex API key from disk...");
+        crate::fs::delete_file(&path)?;
+        println!("File {path} deleted successfully.");
+
+        println!("\nRevoking Hex API key from Hex...");
+        self.runtime.block_on(hex::remove_api_key(
+            &name,
+            &self.hex_config,
+            &unencrypted,
+            &self.http,
+        ))?;
+        println!("Key {name} revoked successfully.");
+
+        Ok(Some(name.to_string()))
+    }
 }
 
 impl Drop for HexAuthentication<'_> {

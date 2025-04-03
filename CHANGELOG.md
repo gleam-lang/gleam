@@ -111,6 +111,9 @@
 - Deprecate `HEXPM_USER` and `HEXPM_PASS` in favour of `HEXPM_API_KEY`.
   ([Samuel Cristobal](https://github.com/scristobal))
 
+- Improved Hex API key removal CLI process.
+  ([Samuel Cristobal](https://github.com/scristobal))
+
 ### Language server
 
 - The language server now allows renaming of functions, constants,
