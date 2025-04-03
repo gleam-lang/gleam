@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  \"hello, \" + name()\n}\n\nfn name() { \"Jak\" }\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  "hello, " + name()
+   ▔▔▔▔▔▔▔▔▔▔▔↑     
+}
+
+fn name() { "Jak" }
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  "hello, " <> name()
+}
+
+fn name() { "Jak" }
