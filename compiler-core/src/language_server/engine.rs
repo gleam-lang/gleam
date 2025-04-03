@@ -36,8 +36,8 @@ use super::{
     code_action::{
         AddAnnotations, CodeActionBuilder, ConvertFromUse, ConvertToFunctionCall, ConvertToPipe,
         ConvertToUse, ExpandFunctionCapture, ExtractConstant, ExtractVariable,
-        FillInMissingLabelledArgs, FillUnusedFields, GenerateDynamicDecoder, GenerateFunction,
-        GenerateJsonEncoder, InlineVariable, InterpolateString, LetAssertToCase,
+        FillInMissingLabelledArgs, FillUnusedFields, FixBinaryOperation, GenerateDynamicDecoder,
+        GenerateFunction, GenerateJsonEncoder, InlineVariable, InterpolateString, LetAssertToCase,
         PatternMatchOnValue, RedundantTupleInCaseSubject, RemoveEchos, UseLabelShorthandSyntax,
         WrapInBlock, code_action_add_missing_patterns,
         code_action_convert_qualified_constructor_to_unqualified,
@@ -380,6 +380,7 @@ where
                 &this.error,
                 &mut actions,
             );
+            actions.extend(FixBinaryOperation::new(module, &lines, &params).code_actions());
             actions.extend(LetAssertToCase::new(module, &lines, &params).code_actions());
             actions
                 .extend(RedundantTupleInCaseSubject::new(module, &lines, &params).code_actions());

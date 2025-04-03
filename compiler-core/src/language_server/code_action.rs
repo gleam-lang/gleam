@@ -6181,3 +6181,88 @@ impl<'ast> ast::visit::Visit<'ast> for WrapInBlock<'ast> {
         ast::visit::visit_typed_clause(self, clause);
     }
 }
+
+/// Code action to fix wrong binary operators when the compiler can easily tell
+/// what the correct alternative is.
+///
+/// ```gleam
+///
+/// ```
+///
+pub struct FixBinaryOperation<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    fix: Option<(SrcSpan, ast::BinOp)>,
+}
+
+impl<'a> FixBinaryOperation<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            fix: None,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let Some((location, replacement)) = self.fix else {
+            return vec![];
+        };
+
+        self.edits.replace(location, replacement.name().into());
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new(&format!("Use `{}`", replacement.name()))
+            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(true)
+            .push_to(&mut action);
+        action
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for FixBinaryOperation<'ast> {
+    fn visit_typed_expr_bin_op(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        name: &'ast ast::BinOp,
+        name_location: &'ast SrcSpan,
+        left: &'ast TypedExpr,
+        right: &'ast TypedExpr,
+    ) {
+        let binop_range = self.edits.src_span_to_lsp_range(*location);
+        if !within(self.params.range, binop_range) {
+            return;
+        }
+
+        if name.is_int_operator() && left.type_().is_float() && right.type_().is_float() {
+            self.fix = name.float_equivalent().map(|fix| (*name_location, fix));
+        } else if name.is_float_operator() && left.type_().is_int() && right.type_().is_int() {
+            self.fix = name.int_equivalent().map(|fix| (*name_location, fix))
+        } else if *name == ast::BinOp::AddInt
+            && left.type_().is_string()
+            && right.type_().is_string()
+        {
+            self.fix = Some((*name_location, ast::BinOp::Concatenate))
+        }
+
+        ast::visit::visit_typed_expr_bin_op(
+            self,
+            location,
+            type_,
+            name,
+            name_location,
+            left,
+            right,
+        );
+    }
+}
