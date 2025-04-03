@@ -47,6 +47,7 @@ error: Type mismatch
   │      ^ Use <> instead
 
 The + operator can only be used on Ints.
+To join two strings together you can use the <> operator.
 
 error: Type mismatch
    ┌─ /src/one/two.gleam:16:7
