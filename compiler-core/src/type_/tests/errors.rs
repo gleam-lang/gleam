@@ -2991,3 +2991,28 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn float_operator_on_ints() {
+    assert_error!("1 +. 2");
+}
+
+#[test]
+fn float_operator_on_ints_2() {
+    assert_error!("1 <. 2");
+}
+
+#[test]
+fn int_operator_on_floats() {
+    assert_error!("1.1 + 2.0");
+}
+
+#[test]
+fn int_operator_on_floats_2() {
+    assert_error!("1.1 > 2.0");
+}
+
+#[test]
+fn add_on_strings() {
+    assert_error!(r#""Hello, " + "Jak""#);
+}
