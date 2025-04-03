@@ -1422,6 +1422,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 return TypedExpr::BinOp {
                     location,
                     name,
+                    name_location,
                     type_: bool(),
                     left: Box::new(left),
                     right: Box::new(right),
@@ -1495,6 +1496,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         TypedExpr::BinOp {
             location,
             name,
+            name_location,
             type_: output_type,
             left: Box::new(left),
             right: Box::new(right),

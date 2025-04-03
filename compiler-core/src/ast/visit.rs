@@ -194,10 +194,11 @@ pub trait Visit<'ast> {
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         name: &'ast BinOp,
+        name_location: &'ast SrcSpan,
         left: &'ast TypedExpr,
         right: &'ast TypedExpr,
     ) {
-        visit_typed_expr_bin_op(self, location, type_, name, left, right);
+        visit_typed_expr_bin_op(self, location, type_, name, name_location, left, right);
     }
 
     fn visit_typed_expr_case(
@@ -760,9 +761,10 @@ where
             location,
             type_,
             name,
+            name_location,
             left,
             right,
-        } => v.visit_typed_expr_bin_op(location, type_, name, left, right),
+        } => v.visit_typed_expr_bin_op(location, type_, name, name_location, left, right),
         TypedExpr::Case {
             location,
             type_,
@@ -973,6 +975,7 @@ pub fn visit_typed_expr_bin_op<'a, V>(
     _location: &'a SrcSpan,
     _type_: &'a Arc<Type>,
     _name: &'a BinOp,
+    _name_location: &'a SrcSpan,
     left: &'a TypedExpr,
     right: &'a TypedExpr,
 ) where

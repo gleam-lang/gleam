@@ -77,6 +77,7 @@ pub enum TypedExpr {
         location: SrcSpan,
         type_: Arc<Type>,
         name: BinOp,
+        name_location: SrcSpan,
         left: Box<Self>,
         right: Box<Self>,
     },
