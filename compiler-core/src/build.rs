@@ -187,9 +187,9 @@ pub enum Mode {
 }
 
 impl Mode {
-    /// Returns `true` if the mode includes test code.
+    /// Returns `true` if the mode includes development code.
     ///
-    pub fn includes_tests(&self) -> bool {
+    pub fn includes_dev_code(&self) -> bool {
         match self {
             Self::Dev | Self::Lsp => true,
             Self::Prod => false,
@@ -205,10 +205,10 @@ impl Mode {
 }
 
 #[test]
-fn mode_includes_tests() {
-    assert!(Mode::Dev.includes_tests());
-    assert!(Mode::Lsp.includes_tests());
-    assert!(!Mode::Prod.includes_tests());
+fn mode_includes_dev_code() {
+    assert!(Mode::Dev.includes_dev_code());
+    assert!(Mode::Lsp.includes_dev_code());
+    assert!(!Mode::Prod.includes_dev_code());
 }
 
 #[derive(Debug)]
@@ -256,8 +256,12 @@ impl Module {
         path
     }
 
-    pub fn is_test(&self) -> bool {
-        self.origin == Origin::Test
+    pub fn is_dev_code(&self) -> bool {
+        match self.origin {
+            Origin::Src => false,
+            Origin::Test => true,
+            Origin::Dev => true,
+        }
     }
 
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
@@ -547,6 +551,7 @@ pub fn type_constructor_from_modules(
 pub enum Origin {
     Src,
     Test,
+    Dev,
 }
 
 impl Origin {
@@ -556,6 +561,22 @@ impl Origin {
     #[must_use]
     pub fn is_src(&self) -> bool {
         matches!(self, Self::Src)
+    }
+
+    /// Returns `true` if the origin is [`Test`].
+    ///
+    /// [`Test`]: Origin::Test
+    #[must_use]
+    pub fn is_test(&self) -> bool {
+        matches!(self, Self::Test)
+    }
+
+    /// Returns `true` if the origin is [`Dev`].
+    ///
+    /// [`Dev`]: Origin::Dev
+    #[must_use]
+    pub fn is_dev(&self) -> bool {
+        matches!(self, Self::Dev)
     }
 }
 
