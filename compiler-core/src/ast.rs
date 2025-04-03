@@ -726,7 +726,7 @@ impl<T> Import<T> {
         match self.as_name.as_ref() {
             Some((AssignName::Variable(name), _)) => Some(name.clone()),
             Some((AssignName::Discard(_), _)) => None,
-            None => self.module.split('/').last().map(EcoString::from),
+            None => self.module.split('/').next_back().map(EcoString::from),
         }
     }
 

@@ -57,7 +57,7 @@ impl<'a> Printer<'a> {
                     NameContextInformation::Qualified(m, n) => (Some(m), n),
                     NameContextInformation::Unqualified(n) => (None, n),
                     NameContextInformation::Unimported(n) => {
-                        (Some(module.split('/').last().unwrap_or(module)), n)
+                        (Some(module.split('/').next_back().unwrap_or(module)), n)
                     }
                 };
 

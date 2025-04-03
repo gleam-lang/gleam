@@ -235,7 +235,6 @@ impl Branch {
                     Pattern::Assign { name, pattern } => {
                         self.body.assign(name.clone(), check.var.clone());
                         check.pattern = *pattern;
-                        continue;
                     }
                     // There's a special case of assignments when it comes to string
                     // prefix patterns. We can give a name to a literal prefix like this:

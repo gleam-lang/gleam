@@ -412,7 +412,7 @@ impl<'comments> Formatter<'comments> {
                 };
 
                 let doc = docvec!["import ", module.as_str(), second];
-                let default_module_access_name = module.split('/').last().map(EcoString::from);
+                let default_module_access_name = module.split('/').next_back().map(EcoString::from);
                 match (default_module_access_name, as_name) {
                     // If the `as name` is the same as the module name that would be
                     // used anyways we won't render it. For example:

@@ -1014,7 +1014,7 @@ fn provide_package(
     if parents.contains(&package_name) {
         let mut last_cycle = parents
             .split(|p| p == &package_name)
-            .last()
+            .next_back()
             .unwrap_or_default()
             .to_vec();
         last_cycle.push(package_name);
