@@ -354,9 +354,10 @@ where
                     module.package == self.root_package_name() || module.package.is_empty();
                 is_root_or_prelude || direct_dep_packages.contains(&module.package)
             })
-            //
-            // src/ cannot import test/
+            // src/ cannot import test/ or dev/
             .filter(|(_, module)| module.origin.is_src() || !self.module.origin.is_src())
+            // dev/ cannot import test/
+            .filter(|(_, module)| !(self.module.origin.is_dev() && module.origin.is_test()))
             //
             // It is possible to import internal modules from other packages,
             // but it's not recommended so we don't include them in completions

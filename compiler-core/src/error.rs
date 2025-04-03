@@ -3,8 +3,8 @@ use crate::build::{Outcome, Runtime, Target};
 use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
 use crate::type_::collapse_links;
 use crate::type_::error::{
-    MissingAnnotation, ModuleValueUsageContext, Named, UnknownField, UnknownTypeHint,
-    UnsafeRecordUpdateReason,
+    InvalidImportKind, MissingAnnotation, ModuleValueUsageContext, Named, UnknownField,
+    UnknownTypeHint, UnsafeRecordUpdateReason,
 };
 use crate::type_::printer::{Names, Printer};
 use crate::type_::{FieldAccessUsage, error::PatternMatchKind};
@@ -1541,22 +1541,86 @@ Erlang's floating point type. To avoid this error float values must be in the ra
                 },
 
 
-                TypeError::SrcImportingTest {
+                TypeError::InvalidImport {
                     location,
-                    src_module,
-                    test_module,
+                    importing_module,
+                    imported_module,
+                    kind: InvalidImportKind::SrcImportingTest,
                 } => {
                     let text = wrap_format!(
-                        "The application module `{src_module}` \
-is importing the test module `{test_module}`.
+                        "The application module `{importing_module}` \
+is importing the test module `{imported_module}`.
 
 Test modules are not included in production builds so application \
-modules cannot import them. Perhaps move the `{test_module}` \
+modules cannot import them. Perhaps move the `{imported_module}` \
 module to the src directory.",
                         );
 
                     Diagnostic {
                         title: "App importing test module".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("Imported here".into()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
+
+                TypeError::InvalidImport {
+                    location,
+                    importing_module,
+                    imported_module,
+                    kind: InvalidImportKind::SrcImportingDev,
+                } => {
+                    let text = wrap_format!(
+                        "The application module `{importing_module}` \
+is importing the development module `{imported_module}`.
+
+Development modules are not included in production builds so application \
+modules cannot import them. Perhaps move the `{imported_module}` \
+module to the src directory.",
+                        );
+
+                    Diagnostic {
+                        title: "App importing dev module".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("Imported here".into()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
+
+                TypeError::InvalidImport {
+                    location,
+                    importing_module,
+                    imported_module,
+                    kind: InvalidImportKind::DevImportingTest,
+                } => {
+                    let text = wrap_format!(
+                        "The development module `{importing_module}` \
+is importing the test module `{imported_module}`.
+
+Test modules should only contain test-related code, and not general development \
+code. Perhaps move the `{imported_module}` module to the dev directory.",
+                        );
+
+                    Diagnostic {
+                        title: "Dev importing test module".into(),
                         text,
                         hint: None,
                         level: Level::Error,

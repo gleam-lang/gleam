@@ -522,7 +522,7 @@ fn generated_erlang_files(
 
     // Erlang modules
     for module in &package.modules {
-        if module.is_test() {
+        if module.is_dev_code() {
             continue;
         }
         let name = module.compiled_erlang_path();
