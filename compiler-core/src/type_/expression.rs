@@ -1451,17 +1451,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let left = self.infer_no_error(left);
         let right = self.infer_no_error(right);
-
-        let unify_left = unify(input_type.clone(), left.type_()).map_err(|error| {
-            error
-                .operator_situation(name)
-                .into_error(left.type_defining_location())
-        });
-        let unify_right = unify(input_type.clone(), right.type_()).map_err(|error| {
-            error
-                .operator_situation(name)
-                .into_error(right.type_defining_location())
-        });
+        let unify_left = unify(input_type.clone(), left.type_());
+        let unify_right = unify(input_type.clone(), right.type_());
 
         // There's some common cases in which we can provide nicer error messages:
         // - if we're using a float operator on int values
@@ -1470,23 +1461,32 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         if name.is_float_operator() && left.type_().is_int() && right.type_().is_int() {
             self.problems.error(Error::FloatOperatorOnInts {
                 operator: name,
-                location: name_location.clone(),
+                location: name_location,
             })
         } else if name.is_int_operator() && left.type_().is_float() && right.type_().is_float() {
             self.problems.error(Error::IntOperatorOnFloats {
                 operator: name,
-                location: name_location.clone(),
+                location: name_location,
             })
         } else if name == BinOp::AddInt && left.type_().is_string() && right.type_().is_string() {
             self.problems.error(Error::StringConcatenationWithAddInt {
-                location: name_location.clone(),
+                location: name_location,
             })
         } else {
-            if let Err(e) = unify_left {
-                self.problems.error(e);
+            // In all other cases we just report an error for each of the operands.
+            if let Err(error) = unify_left {
+                self.problems.error(
+                    error
+                        .operator_situation(name)
+                        .into_error(left.type_defining_location()),
+                );
             }
-            if let Err(e) = unify_right {
-                self.problems.error(e);
+            if let Err(error) = unify_right {
+                self.problems.error(
+                    error
+                        .operator_situation(name)
+                        .into_error(right.type_defining_location()),
+                );
             }
         }
 
