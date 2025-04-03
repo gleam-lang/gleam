@@ -3543,7 +3543,8 @@ Consider removing the deprecation attribute on the variant.");
 
                 TypeError::StringConcatenationWithAddInt { location } => Diagnostic {
                     title: "Type mismatch".to_string(),
-                    text: wrap("The + operator can only be used on Ints."),
+                    text: wrap("The + operator can only be used on Ints.
+To join two strings together you can use the <> operator."),
                     hint: None,
                     level: Level::Error,
                     location: Some(Location {
