@@ -58,6 +58,7 @@ pub enum UntypedExpr {
     BinOp {
         location: SrcSpan,
         name: BinOp,
+        name_location: SrcSpan,
         left: Box<Self>,
         right: Box<Self>,
     },

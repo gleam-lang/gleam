@@ -23,6 +23,10 @@ expression: "echo { 1 + 1 }"
                                     end: 12,
                                 },
                                 name: AddInt,
+                                name_location: SrcSpan {
+                                    start: 9,
+                                    end: 10,
+                                },
                                 left: Int {
                                     location: SrcSpan {
                                         start: 7,

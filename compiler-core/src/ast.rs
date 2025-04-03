@@ -1249,6 +1249,90 @@ impl BinOp {
     pub fn can_be_grouped_with(&self, other: &BinOp) -> bool {
         self.operator_kind() == other.operator_kind()
     }
+
+    pub(crate) fn is_float_operator(&self) -> bool {
+        match self {
+            BinOp::LtFloat
+            | BinOp::LtEqFloat
+            | BinOp::GtEqFloat
+            | BinOp::GtFloat
+            | BinOp::AddFloat
+            | BinOp::SubFloat
+            | BinOp::MultFloat
+            | BinOp::DivFloat => true,
+
+            BinOp::And
+            | BinOp::Or
+            | BinOp::Eq
+            | BinOp::NotEq
+            | BinOp::LtInt
+            | BinOp::LtEqInt
+            | BinOp::GtEqInt
+            | BinOp::GtInt
+            | BinOp::AddInt
+            | BinOp::SubInt
+            | BinOp::MultInt
+            | BinOp::DivInt
+            | BinOp::RemainderInt
+            | BinOp::Concatenate => false,
+        }
+    }
+
+    pub(crate) fn is_int_operator(&self) -> bool {
+        match self {
+            BinOp::LtInt
+            | BinOp::LtEqInt
+            | BinOp::GtEqInt
+            | BinOp::GtInt
+            | BinOp::AddInt
+            | BinOp::SubInt
+            | BinOp::MultInt
+            | BinOp::DivInt
+            | BinOp::RemainderInt => true,
+
+            BinOp::And
+            | BinOp::Or
+            | BinOp::Eq
+            | BinOp::NotEq
+            | BinOp::LtFloat
+            | BinOp::LtEqFloat
+            | BinOp::GtEqFloat
+            | BinOp::GtFloat
+            | BinOp::AddFloat
+            | BinOp::SubFloat
+            | BinOp::MultFloat
+            | BinOp::DivFloat
+            | BinOp::Concatenate => false,
+        }
+    }
+
+    pub fn float_equivalent(&self) -> Option<BinOp> {
+        match self {
+            BinOp::LtInt => Some(BinOp::LtFloat),
+            BinOp::LtEqInt => Some(BinOp::LtEqFloat),
+            BinOp::GtEqInt => Some(BinOp::GtEqFloat),
+            BinOp::GtInt => Some(BinOp::GtFloat),
+            BinOp::AddInt => Some(BinOp::AddFloat),
+            BinOp::SubInt => Some(BinOp::SubFloat),
+            BinOp::MultInt => Some(BinOp::MultFloat),
+            BinOp::DivInt => Some(BinOp::DivFloat),
+            _ => None,
+        }
+    }
+
+    pub fn int_equivalent(&self) -> Option<BinOp> {
+        match self {
+            BinOp::LtFloat => Some(BinOp::LtInt),
+            BinOp::LtEqFloat => Some(BinOp::LtEqInt),
+            BinOp::GtEqFloat => Some(BinOp::GtEqInt),
+            BinOp::GtFloat => Some(BinOp::GtInt),
+            BinOp::AddFloat => Some(BinOp::AddInt),
+            BinOp::SubFloat => Some(BinOp::SubInt),
+            BinOp::MultFloat => Some(BinOp::MultInt),
+            BinOp::DivFloat => Some(BinOp::DivInt),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
