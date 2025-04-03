@@ -3543,18 +3543,12 @@ Consider removing the deprecation attribute on the variant.");
 
                 TypeError::StringConcatenationWithAddInt { location } => Diagnostic {
                     title: "Type mismatch".to_string(),
-                    text: wrap("The + operator expects arguments of this type:
-
-    Int
-
-But this argument has this type:
-
-    String\n"),
+                    text: wrap("The + operator can only be used on Ints."),
                     hint: None,
                     level: Level::Error,
                     location: Some(Location {
                         label: Label {
-                            text: Some("Use the `<>` operator to concatenate two strings".into()),
+                            text: Some("Use <> instead".into()),
                             span: *location,
                         },
                         path: path.clone(),
@@ -3571,7 +3565,7 @@ But this argument has this type:
                     location: Some(Location {
                         label: Label {
                             text: operator.float_equivalent().map(|operator|
-                                format!("Use `{}` instead", operator.name())
+                                format!("Use {} instead", operator.name())
                             ),
                             span: *location,
                         },
@@ -3589,7 +3583,7 @@ But this argument has this type:
                     location: Some(Location {
                         label: Label {
                             text: operator.int_equivalent().map(|operator|
-                                format!("Use `{}` instead", operator.name())
+                                format!("Use {} instead", operator.name())
                             ),
                             span: *location,
                         },
