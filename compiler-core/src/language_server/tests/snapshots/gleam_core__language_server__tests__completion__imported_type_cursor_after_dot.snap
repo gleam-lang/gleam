@@ -12,42 +12,6 @@ pub fn wibble(
 
 
 ----- Completion content -----
-BitArray
-  kind:   Class
-  detail: Type
-  sort:   4_BitArray
-Bool
-  kind:   Class
-  detail: Type
-  sort:   4_Bool
-Float
-  kind:   Class
-  detail: Type
-  sort:   4_Float
-Int
-  kind:   Class
-  detail: Type
-  sort:   4_Int
-List
-  kind:   Class
-  detail: Type
-  sort:   4_List
-Nil
-  kind:   Class
-  detail: Type
-  sort:   4_Nil
-Result
-  kind:   Class
-  detail: Type
-  sort:   4_Result
-String
-  kind:   Class
-  detail: Type
-  sort:   4_String
-UtfCodepoint
-  kind:   Class
-  detail: Type
-  sort:   4_UtfCodepoint
 dep.Zoo
   kind:   Class
   detail: Type
