@@ -487,6 +487,10 @@ jobs:
         run: ./test.sh
         working-directory: ./test/multi_namespace
 
+      - name: Test multi namespace bug
+        run: ./test.sh
+        working-directory: ./test/multi_namespace_not_top_level
+
       - name: Test FFI in subdirectories
         run: make
         working-directory: ./test/subdir_ffi
