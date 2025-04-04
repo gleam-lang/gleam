@@ -943,7 +943,6 @@ impl TypedExpr {
         }
     }
 
-    #[must_use]
     /// If `self` is a record constructor, returns the nuber of arguments it
     /// needs to be called. Otherwise, returns `None`.
     ///

@@ -8,7 +8,7 @@ use crate::{
         PatternUnusedArguments, PipelineAssignmentKind, RecordConstructor, SrcSpan, TodoKind,
         TypedArg, TypedAssignment, TypedExpr, TypedModuleConstant, TypedPattern,
         TypedPipelineAssignment, TypedRecordConstructor, TypedStatement, TypedUse,
-        visit::{Visit as _, visit_typed_call_arg, visit_typed_pattern_call_arg},
+        visit::Visit as _,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -644,7 +644,7 @@ impl<'ast> ast::visit::Visit<'ast> for UseLabelShorthandSyntax<'_> {
             _ => (),
         }
 
-        visit_typed_call_arg(self, arg)
+        ast::visit::visit_typed_call_arg(self, arg)
     }
 
     fn visit_typed_pattern_call_arg(&mut self, arg: &'ast CallArg<TypedPattern>) {
@@ -662,7 +662,7 @@ impl<'ast> ast::visit::Visit<'ast> for UseLabelShorthandSyntax<'_> {
             _ => (),
         }
 
-        visit_typed_pattern_call_arg(self, arg)
+        ast::visit::visit_typed_pattern_call_arg(self, arg)
     }
 }
 
@@ -2741,8 +2741,34 @@ fn turn_expression_into_use(expr: &TypedExpr) -> Option<CallLocations> {
     })
 }
 
-/// Builder for code action to apply the turn into use expression.
+/// Builder for code action to extract expression into a variable.
+/// The action will wrap the expression in a block if needed in the appropriate scope.
 ///
+/// For using the code action on the following selection:
+///
+/// ```gleam
+/// fn void() {
+///   case result {
+///     Ok(value) -> 2 * value + 1
+/// //               ^^^^^^^^^
+///     Error(_) -> panic
+///   }
+/// }
+/// ```
+///
+/// Will result:
+///
+/// ```gleam
+/// fn void() {
+///   case result {
+///     Ok(value) -> {
+///       let int = 2 * value
+///       int + 1
+///     }
+///     Error(_) -> panic
+///   }
+/// }
+/// ```
 pub struct ExtractVariable<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
@@ -2751,14 +2777,21 @@ pub struct ExtractVariable<'a> {
     selected_expression: Option<(SrcSpan, Arc<Type>)>,
     statement_before_selected_expression: Option<SrcSpan>,
     latest_statement: Option<SrcSpan>,
+    to_be_wrapped: bool,
 }
 
+/// The Position of the selected code
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
 enum ExtractVariablePosition {
     InsideCaptureBody,
+    /// Full statements (i.e. assignments, `use`s, and simple expressions).
     TopLevelStatement,
-    /// This is when we're on the call on the right hand side of a pipe `|>`
+    /// The call on the right hand side of a pipe `|>`.
     PipelineCall,
+    /// The right hand side of the `->` in a case expression.
+    InsideCaseClause,
+    // A call argument. This can also be a `use` callback.
+    CallArg,
 }
 
 impl<'a> ExtractVariable<'a> {
@@ -2775,37 +2808,61 @@ impl<'a> ExtractVariable<'a> {
             selected_expression: None,
             latest_statement: None,
             statement_before_selected_expression: None,
+            to_be_wrapped: false,
         }
     }
 
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
 
-        let Some((expression_span, expression_type)) = self.selected_expression else {
+        let (Some((expression_span, expression_type)), Some(insert_location)) = (
+            self.selected_expression,
+            self.statement_before_selected_expression,
+        ) else {
             return vec![];
         };
 
         let mut name_generator = NameGenerator::new();
         let variable_name = name_generator.generate_name_from_type(&expression_type);
 
-        if let Some(container_location) = self.statement_before_selected_expression {
-            let nesting = self
-                .edits
-                .src_span_to_lsp_range(container_location)
-                .start
-                .character;
-            let nesting = " ".repeat(nesting as usize);
-            let content = self
-                .module
-                .code
-                .get(expression_span.start as usize..expression_span.end as usize)
-                .expect("selected expression");
-            self.edits.insert(
-                container_location.start,
-                format!("let {variable_name} = {content}\n{nesting}"),
-            );
+        let content = self
+            .module
+            .code
+            .get(expression_span.start as usize..expression_span.end as usize)
+            .expect("selected expression");
+
+        let range = self.edits.src_span_to_lsp_range(insert_location);
+
+        let line_starts = self.edits.line_numbers.line_starts.to_owned();
+        let line_start = line_starts
+            .get(range.start.line as usize)
+            .expect("Line number should be valid");
+
+        let chars = self.module.code.chars();
+        let mut chars = chars.skip(*line_start as usize);
+
+        // Count indentation
+        let mut indent_size = 0;
+        while chars.next() == Some(' ') {
+            indent_size += 1;
         }
 
+        let mut indent = " ".repeat(indent_size);
+
+        // We insert the variable declaration
+        // Wrap in a block if needed
+        let mut insertion = format!("let {variable_name} = {content}");
+        if self.to_be_wrapped {
+            let line_end = line_starts
+                .get((range.end.line + 1) as usize)
+                .expect("Line number should be valid");
+
+            self.edits.insert(*line_end, format!("{indent}}}\n"));
+            indent += "  ";
+            insertion = format!("{{\n{indent}{insertion}");
+        };
+        self.edits
+            .insert(insert_location.start, insertion + &format!("\n{indent}"));
         self.edits
             .replace(expression_span, String::from(variable_name));
 
@@ -2838,11 +2895,27 @@ impl<'a> ExtractVariable<'a> {
 
 impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
     fn visit_typed_statement(&mut self, stmt: &'ast TypedStatement) {
-        // A capture body is comprised of just a single expression statement
-        // that is inserted by the compiler, we don't really want to put
-        // anything before that; so in this case we avoid tracking it.
-        if self.position != Some(ExtractVariablePosition::InsideCaptureBody) {
+        let range = self.edits.src_span_to_lsp_range(stmt.location());
+        if !within(self.params.range, range) {
             self.latest_statement = Some(stmt.location());
+            ast::visit::visit_typed_statement(self, stmt);
+            return;
+        }
+
+        match self.position {
+            // A capture body is comprised of just a single expression statement
+            // that is inserted by the compiler, we don't really want to put
+            // anything before that; so in this case we avoid tracking it.
+            Some(ExtractVariablePosition::InsideCaptureBody) => {}
+            Some(ExtractVariablePosition::PipelineCall) => {
+                // Insert above the pipeline start
+                self.latest_statement = Some(stmt.location());
+            }
+            _ => {
+                // Insert below the previous statement
+                self.latest_statement = Some(stmt.location());
+                self.statement_before_selected_expression = self.latest_statement;
+            }
         }
 
         self.at_position(ExtractVariablePosition::TopLevelStatement, |this| {
@@ -2852,12 +2925,25 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
 
     fn visit_typed_expr_pipeline(
         &mut self,
-        _location: &'ast SrcSpan,
+        location: &'ast SrcSpan,
         first_value: &'ast TypedPipelineAssignment,
         assignments: &'ast [(TypedPipelineAssignment, PipelineAssignmentKind)],
         finally: &'ast TypedExpr,
-        _finally_kind: &'ast PipelineAssignmentKind,
+        finally_kind: &'ast PipelineAssignmentKind,
     ) {
+        let expr_range = self.edits.src_span_to_lsp_range(location.to_owned());
+        if !within(self.params.range, expr_range) {
+            ast::visit::visit_typed_expr_pipeline(
+                self,
+                location,
+                first_value,
+                assignments,
+                finally,
+                finally_kind,
+            );
+            return;
+        };
+
         // When visiting the assignments or the final pipeline call we want to
         // keep track of out position so that we can avoid extracting those.
         let all_assignments =
@@ -2877,6 +2963,10 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
     fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
         let expr_location = expr.location();
         let expr_range = self.edits.src_span_to_lsp_range(expr_location);
+        if !within(self.params.range, expr_range) {
+            ast::visit::visit_typed_expr(self, expr);
+            return;
+        }
 
         // If the expression is a top level statement we don't want to extract
         // it into a variable. It would mean we would turn this:
@@ -2900,26 +2990,118 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         match self.position {
             Some(
                 ExtractVariablePosition::TopLevelStatement | ExtractVariablePosition::PipelineCall,
-            ) => (),
+            ) => {
+                self.at_optional_position(None, |this| {
+                    ast::visit::visit_typed_expr(this, expr);
+                });
+                return;
+            }
+            Some(
+                ExtractVariablePosition::InsideCaptureBody
+                | ExtractVariablePosition::InsideCaseClause
+                | ExtractVariablePosition::CallArg,
+            )
+            | None => {
+                match expr {
+                    // We don't extract variables, they're already good.
+                    // And we don't extract module selects by themselves but always
+                    // want to consider those as part of a function call.
+                    TypedExpr::Var { .. } | TypedExpr::ModuleSelect { .. } => (),
+                    _ => {
+                        self.selected_expression = Some((expr_location, expr.type_()));
 
-            None | Some(ExtractVariablePosition::InsideCaptureBody) => {
-                if within(self.params.range, expr_range) {
-                    match expr {
-                        // We don't extract variables, they're already good.
-                        // And we don't extract module selects by themselves but always
-                        // want to consider those as part of a function call.
-                        TypedExpr::Var { .. } | TypedExpr::ModuleSelect { .. } => (),
-                        _ => {
-                            self.selected_expression = Some((expr_location, expr.type_()));
+                        if !matches!(self.position, Some(ExtractVariablePosition::CallArg)) {
                             self.statement_before_selected_expression = self.latest_statement;
                         }
                     }
                 }
             }
-        };
+        }
 
-        self.at_optional_position(None, |this| {
-            ast::visit::visit_typed_expr(this, expr);
+        match expr {
+            // Expressions that don't make sense to extract
+            TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Invalid { .. }
+            | TypedExpr::Var { .. } => (),
+
+            TypedExpr::Int { location, .. }
+            | TypedExpr::Float { location, .. }
+            | TypedExpr::String { location, .. }
+            | TypedExpr::Pipeline { location, .. }
+            | TypedExpr::Fn { location, .. }
+            | TypedExpr::Todo { location, .. }
+            | TypedExpr::List { location, .. }
+            | TypedExpr::Call { location, .. }
+            | TypedExpr::BinOp { location, .. }
+            | TypedExpr::Case { location, .. }
+            | TypedExpr::RecordAccess { location, .. }
+            | TypedExpr::Tuple { location, .. }
+            | TypedExpr::TupleIndex { location, .. }
+            | TypedExpr::BitArray { location, .. }
+            | TypedExpr::RecordUpdate { location, .. }
+            | TypedExpr::NegateBool { location, .. }
+            | TypedExpr::NegateInt { location, .. } => {
+                if let Some(ExtractVariablePosition::CallArg) = self.position {
+                    // Don't update latest statement, we don't want to insert the extracted
+                    // variable inside the parenthesis where the call argument is located.
+                } else {
+                    self.statement_before_selected_expression = self.latest_statement;
+                };
+                self.selected_expression = Some((location.to_owned(), expr.type_()));
+            }
+        }
+
+        ast::visit::visit_typed_expr(self, expr);
+    }
+
+    fn visit_typed_use(&mut self, use_: &'ast TypedUse) {
+        let range = self.edits.src_span_to_lsp_range(use_.call.location());
+        if !within(self.params.range, range) {
+            ast::visit::visit_typed_use(self, use_);
+            return;
+        }
+
+        // Insert code under the `use`
+        self.statement_before_selected_expression = Some(use_.call.location());
+        self.at_position(ExtractVariablePosition::TopLevelStatement, |this| {
+            ast::visit::visit_typed_use(this, use_);
+        });
+    }
+
+    fn visit_typed_clause(&mut self, clause: &'ast ast::TypedClause) {
+        let range = self.edits.src_span_to_lsp_range(clause.location());
+        if !within(self.params.range, range) {
+            ast::visit::visit_typed_clause(self, clause);
+            return;
+        }
+
+        // Insert code after the `->`
+        self.latest_statement = Some(clause.then.location());
+        self.to_be_wrapped = true;
+        self.at_position(ExtractVariablePosition::InsideCaseClause, |this| {
+            ast::visit::visit_typed_clause(this, clause);
+        });
+    }
+
+    fn visit_typed_expr_block(&mut self, location: &'ast SrcSpan, stmts: &'ast [TypedStatement]) {
+        let range = self.edits.src_span_to_lsp_range(location.to_owned());
+        if !within(self.params.range, range) {
+            ast::visit::visit_typed_expr_block(self, location, stmts);
+            return;
+        }
+
+        // Don't extract block as variable
+        let mut position = self.position;
+        if let Some(ExtractVariablePosition::InsideCaseClause) = position {
+            position = None;
+            self.to_be_wrapped = false;
+        }
+
+        self.at_optional_position(position, |this| {
+            ast::visit::visit_typed_expr_block(this, location, stmts);
         });
     }
 
@@ -2932,14 +3114,27 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         body: &'ast Vec1<TypedStatement>,
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
+        let range = self.edits.src_span_to_lsp_range(*location);
+        if !within(self.params.range, range) {
+            ast::visit::visit_typed_expr_fn(
+                self,
+                location,
+                type_,
+                kind,
+                args,
+                body,
+                return_annotation,
+            );
+            return;
+        }
+
         let position = match kind {
             // If a fn is a capture `int.wibble(1, _)` its body will consist of
             // just a single expression statement. When visiting we must record
             // we're inside a capture body.
             FunctionLiteralKind::Capture { .. } => Some(ExtractVariablePosition::InsideCaptureBody),
-            FunctionLiteralKind::Anonymous { .. } | FunctionLiteralKind::Use { .. } => {
-                self.position
-            }
+            FunctionLiteralKind::Use { .. } => Some(ExtractVariablePosition::TopLevelStatement),
+            FunctionLiteralKind::Anonymous { .. } => self.position,
         };
 
         self.at_optional_position(position, |this| {
@@ -2952,6 +3147,24 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
                 body,
                 return_annotation,
             );
+        });
+    }
+
+    fn visit_typed_call_arg(&mut self, arg: &'ast TypedCallArg) {
+        let range = self.edits.src_span_to_lsp_range(arg.location);
+        if !within(self.params.range, range) {
+            ast::visit::visit_typed_call_arg(self, arg);
+            return;
+        }
+
+        let position = if arg.is_use_implicit_callback() {
+            Some(ExtractVariablePosition::TopLevelStatement)
+        } else {
+            Some(ExtractVariablePosition::CallArg)
+        };
+
+        self.at_optional_position(position, |this| {
+            ast::visit::visit_typed_call_arg(this, arg);
         });
     }
 
@@ -5554,7 +5767,8 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToPipe<'ast> {
         if self.visiting_use_call {
             self.visiting_use_call = false;
             ast::visit::visit_typed_expr(self, fun);
-            args.iter().for_each(|arg| visit_typed_call_arg(self, arg));
+            args.iter()
+                .for_each(|arg| ast::visit::visit_typed_call_arg(self, arg));
             return;
         }
 

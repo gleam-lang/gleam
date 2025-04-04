@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  case todo {\n    Ok(value) -> 2 * value + 1\n    Error(_) -> panic\n  }\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  case todo {
+    Ok(value) -> 2 * value + 1
+                 ▔▔▔▔↑        
+    Error(_) -> panic
+  }
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  case todo {
+    Ok(value) -> {
+      let int = 2 * value
+      int + 1
+    }
+    Error(_) -> panic
+  }
+}
