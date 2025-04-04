@@ -157,7 +157,14 @@ fn check_for_multiple_top_level_modules(package: &Package, i_am_sure: bool) -> R
     let mut top_level_module_names = package
         .modules
         .iter()
-        .filter_map(|module| module.name.split('/').next())
+        .filter_map(|module| {
+            // Top-level modules are those that don't contain any path separators
+            if module.name.contains('/') {
+                None
+            } else {
+                Some(module.name.clone())
+            }
+        })
         .collect::<Vec<_>>();
 
     // Remove duplicates
