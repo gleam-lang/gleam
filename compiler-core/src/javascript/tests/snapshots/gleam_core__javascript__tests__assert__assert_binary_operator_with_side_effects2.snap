@@ -23,9 +23,23 @@ function wibble(a, b) {
 }
 
 export function go(x) {
-  let $ = wibble(5, 5);
-  let $1 = wibble(4, 6);
-  if (!($ && $1)) {
+  if (wibble(5, 5)) {
+    if (!wibble(4, 6)) {
+      throw makeError(
+        "assert",
+        "my/mod",
+        8,
+        "go",
+        "Assertion failed.",
+        {
+          kind: "binary_operator",
+          operator: "&&",
+          left: { kind: "expression", value: true, start: 82, end: 94 },
+          right: { kind: "expression", value: false, start: 98, end: 110 }
+        }
+      )
+    }
+  } else {
     throw makeError(
       "assert",
       "my/mod",
@@ -35,8 +49,8 @@ export function go(x) {
       {
         kind: "binary_operator",
         operator: "&&",
-        left: { kind: "expression", value: $, start: 82, end: 94 },
-        right: { kind: "expression", value: $1, start: 98, end: 110 }
+        left: { kind: "expression", value: false, start: 82, end: 94 },
+        right: { kind: "unevaluated", start: 98, end: 110 }
       }
     )
   }
