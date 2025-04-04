@@ -2360,7 +2360,7 @@ fn assert_or<'a>(
         ),
     ];
 
-    let right_clauses = docvec![
+    let clauses = docvec![
         line(),
         "true -> true;",
         line(),
@@ -2368,26 +2368,11 @@ fn assert_or<'a>(
         erlang_error("assert", &message, location, fields, env),
     ];
 
-    let left_clauses = docvec![
-        line(),
-        "true -> true;",
-        line(),
-        "false -> ",
-        docvec![
-            "case ",
-            right.value,
-            " of",
-            right_clauses.nest(INDENT),
-            line(),
-            "end"
-        ],
-    ];
-
     docvec![
         "case ",
-        left.value,
+        docvec![left.value, " orelse ", right.value].nest(INDENT),
         " of",
-        left_clauses.nest(INDENT),
+        clauses.nest(INDENT),
         line(),
         "end"
     ]
