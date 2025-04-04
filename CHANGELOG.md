@@ -516,6 +516,10 @@
   when part of a module select.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where the check for multiple top-level modules when publishing
+  would incorrectly print a warning.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.9.1 - 2025-03-10
 
 ### Formatter
