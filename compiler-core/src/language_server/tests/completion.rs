@@ -1256,6 +1256,39 @@ pub fn test_helper() {
 }
 
 #[test]
+fn completions_for_an_import_while_in_dev() {
+    let code = "import gleam
+
+pub fn main() {
+  0
+}";
+    let dev_helper = "
+pub fn dev_helper() {
+  0
+}
+";
+
+    let position = Position::new(0, 12);
+    let (mut engine, position_param) = TestProject::for_source(code)
+        .add_test_module("my_test", code)
+        .add_dev_module("my_dev_code", code)
+        .add_dev_module("dev_helper", dev_helper)
+        .positioned_with_io_in_dev(position, "my_dev_code");
+
+    let response = engine.completion(position_param, code.into());
+
+    let mut completions = response.result.unwrap().unwrap_or_default();
+    completions.sort_by(|a, b| a.label.cmp(&b.label));
+
+    let output = format!(
+        "{}\n\n----- Completion content -----\n{}",
+        show_complete(code, position),
+        format_completion_results(completions)
+    );
+    insta::assert_snapshot!(insta::internals::AutoName, output, code);
+}
+
+#[test]
 fn completions_for_an_import_with_docs() {
     let code = "import gleam
 
@@ -1350,6 +1383,41 @@ pub fn main() {
     completions.sort_by(|a, b| a.label.cmp(&b.label));
 
     assert_debug_snapshot!(completions,);
+}
+
+#[test]
+fn completions_for_an_import_not_from_dev_dependency_in_dev() {
+    let code = "import gleam
+
+pub fn main() {
+  0
+}";
+    let dev = "import gleam
+
+pub fn main() {
+  0
+}
+";
+    let dep = "";
+
+    let position = Position::new(0, 10);
+    let (mut engine, position_param) = TestProject::for_source(code)
+        .add_dev_module("my_dev_module", dev)
+        .add_hex_module("example_module", dep)
+        .add_dev_hex_module("indirect_module", "")
+        .positioned_with_io_in_dev(position, "my_dev_module");
+
+    let response = engine.completion(position_param, code.into());
+
+    let mut completions = response.result.unwrap().unwrap_or_default();
+    completions.sort_by(|a, b| a.label.cmp(&b.label));
+
+    let output = format!(
+        "{}\n\n----- Completion content -----\n{}",
+        show_complete(dev, position),
+        format_completion_results(completions)
+    );
+    insta::assert_snapshot!(insta::internals::AutoName, output, dev);
 }
 
 #[test]

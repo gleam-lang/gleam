@@ -259,9 +259,19 @@ mod find_gleam_project_parent_tests {
         );
     }
 
+    #[test]
+    fn dev_module() {
+        let io = InMemoryFileSystem::new();
+        io.write(Utf8Path::new("/app/gleam.toml"), "").unwrap();
+        assert_eq!(
+            find_gleam_project_parent(&io, Utf8Path::new("/app/dev/one/two/three.gleam")),
+            Some(Utf8PathBuf::from("/app"))
+        );
+    }
+
     // https://github.com/gleam-lang/gleam/issues/2121
     #[test]
-    fn module_in_project_but_not_src_or_test() {
+    fn module_in_project_but_not_src_or_test_or_dev() {
         let io = InMemoryFileSystem::new();
         io.write(Utf8Path::new("/app/gleam.toml"), "").unwrap();
         assert_eq!(

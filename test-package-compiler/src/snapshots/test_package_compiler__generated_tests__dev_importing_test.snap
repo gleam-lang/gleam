@@ -1,0 +1,14 @@
+---
+source: test-package-compiler/src/generated_tests.rs
+expression: "./cases/dev_importing_test"
+---
+error: Dev importing test module
+  ┌─ dev/one.gleam:3:1
+  │
+3 │ import two
+  │ ^ Imported here
+
+The development module `one` is importing the test module `two`.
+
+Test modules should only contain test-related code, and not general
+development code. Perhaps move the `two` module to the dev directory.
