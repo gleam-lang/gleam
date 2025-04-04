@@ -790,17 +790,23 @@ mod tests {
         .unwrap_err();
 
         match err {
-        Error::DependencyResolutionFailed{error, locked_conflicts: _} => assert_eq!(
-            error,
-            "An unrecoverable error happened while solving dependencies: gleam_stdlib is specified with the requirement `~> 0.1.0`, but it is locked to 0.2.0, which is incompatible."
-        ),
-        _ => panic!("wrong error: {err}"),
+            Error::DependencyResolutionFailed {
+                error,
+                locked_conflicts,
+            } => {
+                assert_eq!(
+                    error,
+                    "An unrecoverable error happened while solving dependencies: gleam_stdlib is specified with the requirement `~> 0.1.0`, but it is locked to 0.2.0, which is incompatible."
+                );
+                assert_eq!(locked_conflicts, Vec::<EcoString>::new());
+            }
+            _ => panic!("wrong error: {err}"),
         }
     }
 
     #[test]
     fn resolution_locked_version_doesnt_satisfy_requirements_locked() {
-        // we're creating a dependency logging v1.4.0 that requires gleam_stdlib v0.40.0
+        // We're creating a dependency logging v1.4.0 that requires gleam_stdlib v0.40.0
         let mut requirements: HashMap<String, Dependency> = HashMap::new();
         let _ = requirements.insert(
             "gleam_stdlib".to_string(),
@@ -827,7 +833,7 @@ mod tests {
             },
         );
 
-        // now try and resolve versions with gleam_stdlib v0.20.0 in lock.
+        // Now try and resolve versions with gleam_stdlib v0.20.0 in lock.
         let err = resolve_versions(
             make_remote(),
             provided_packages,
@@ -839,17 +845,15 @@ mod tests {
         )
         .unwrap_err();
 
-        // expect failure
         match err {
             Error::DependencyResolutionFailed {
                 error,
                 locked_conflicts,
             } => {
-                assert_eq!(
-                    error,
-                    format!("Unable to find compatible versions for the version constraints in your gleam.toml.\n\
-                             The conflicting packages are:\n- gleam_stdlib"),
-                );
+                assert!(error.contains("Unable to find compatible versions for the version constraints in your gleam.toml."));
+                assert!(error.contains("The conflicting packages are:"));
+                assert!(error.contains("- root_name"));
+                assert!(error.contains("- gleam_stdlib"));
                 assert_eq!(locked_conflicts, vec!["gleam_stdlib"])
             }
             _ => panic!("wrong error: {err}"),

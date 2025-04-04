@@ -421,7 +421,7 @@ impl Error {
 
                 let conflict_names: Vec<EcoString> = conflicting_packages
                     .iter()
-                    .map(|pkg| (*pkg).to_string().into())
+                    .map(|pkg| (*pkg).into())
                     .collect();
 
                 let locked_conflicts: Vec<EcoString> = conflict_names
@@ -430,27 +430,14 @@ impl Error {
                     .cloned()
                     .collect();
 
-                if locked_conflicts.is_empty() {
-                    Error::DependencyResolutionFailed {
-                            error: format!(
-                                "Unable to find compatible versions for the version constraints in your gleam.toml.\n\
-                                 The conflicting packages are:\n{}",
-                                conflicting_packages.into_iter().map(|s| format!("- {s}")).join("\n")
-                            ),
-                            locked_conflicts,
-                    }
-                } else {
-                    Error::DependencyResolutionFailed {
-                            error: format!(
-                                "Unable to find compatible versions for the version constraints in your gleam.toml.\n\
-                                 The conflicting packages are:\n{}",
-                                locked_conflicts.iter().map(|s| format!("- {s}")).join("\n")
-                            ),
-                            locked_conflicts,
-                    }
-
+                Error::DependencyResolutionFailed {
+                    error: format!(
+                        "Unable to find compatible versions for the version constraints in your gleam.toml.\n\
+                         The conflicting packages are:\n{}",
+                        conflicting_packages.into_iter().map(|s| format!("- {s}")).join("\n")
+                    ),
+                    locked_conflicts,
                 }
-
             }
 
             ResolutionError::ErrorRetrievingDependencies {
