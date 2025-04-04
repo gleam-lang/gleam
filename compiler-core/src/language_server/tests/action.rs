@@ -4421,6 +4421,130 @@ fn extract_variable_does_not_extract_a_variable() {
 }
 
 #[test]
+fn extract_variable_does_not_extract_top_level_statement() {
+    assert_no_code_actions!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+  let wibble = 1
+}"#,
+        find_position_of("1").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_does_not_extract_top_level_statement_inside_block() {
+    assert_no_code_actions!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+  let x = {
+    let y = "y"
+    let w = "w" <> y
+    w
+  }
+}"#,
+        find_position_of("y").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_does_not_extract_top_level_statement_inside_use() {
+    assert_no_code_actions!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+  use x <- result.try(Ok(1))
+  let y = 2
+  Ok(y + x)
+}"#,
+        find_position_of("2").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_does_not_extract_use() {
+    assert_no_code_actions!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+  use x <- result.try(Ok(1))
+  Ok(x)
+}"#,
+        find_position_of("use").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_does_not_extract_panic() {
+    assert_no_code_actions!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+  let x = 1
+  panic
+}"#,
+        find_position_of("panic").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_does_not_extract_echo() {
+    assert_no_code_actions!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+  let x = 1
+  echo x
+}"#,
+        find_position_of("echo").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_from_arg_in_pipelined_call() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"import gleam/int
+
+pub fn main() {
+  let add = int.add
+  let x = [4, 5, 6] |> list.map2([1, 2, 3], add)
+  x
+}"#,
+        find_position_of("[1").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_from_arg_in_pipelined_call_to_capture() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"import gleam/int
+
+pub fn main() {
+  let add = int.add
+  let x = add |> list.reduce([1, 2, 3], _)
+  x
+}"#,
+        find_position_of("[1").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_from_arg_in_nested_function_called_in_pipeline() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"import gleam/int
+import gleam/list
+
+pub fn main() {
+  let result =
+    [1, 2, 3]
+    |> list.map(int.add(_, 1))
+    |> list.map(int.subtract(_, 9))
+
+  result
+}"#,
+        find_position_of("9").to_selection()
+    );
+}
+
+#[test]
 fn extract_variable_does_not_extract_an_entire_pipeline_step() {
     assert_no_code_actions!(
         EXTRACT_VARIABLE,
@@ -4548,6 +4672,34 @@ fn extract_variable_in_multiline_case_subject_branch() {
     }
 }"#,
         find_position_of("[1").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_in_case_branch_using_var() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+  case todo {
+    Ok(value) -> 2 * value + 1
+    Error(_) -> panic
+  }
+}"#,
+        find_position_of("2").select_until(find_position_of("value").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn extract_variable_in_case_branch_from_second_arg() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+  case todo {
+    Ok(_) -> #(Ok(1), Error("s"))
+    Error(_) -> panic
+  }
+}"#,
+        find_position_of("E").to_selection()
     );
 }
 
