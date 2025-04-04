@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "import gleam/int\nimport gleam/list\n\npub fn main() {\n  let result =\n    [1, 2, 3]\n    |> list.map(int.add(_, 1))\n    |> list.map(int.subtract(_, 9))\n\n  result\n}"
+---
+----- BEFORE ACTION
+import gleam/int
+import gleam/list
+
+pub fn main() {
+  let result =
+    [1, 2, 3]
+    |> list.map(int.add(_, 1))
+    |> list.map(int.subtract(_, 9))
+                                ↑  
+
+  result
+}
+
+
+----- AFTER ACTION
+import gleam/int
+import gleam/list
+
+pub fn main() {
+  let int = 9
+  let result =
+    [1, 2, 3]
+    |> list.map(int.add(_, 1))
+    |> list.map(int.subtract(_, int))
+
+  result
+}

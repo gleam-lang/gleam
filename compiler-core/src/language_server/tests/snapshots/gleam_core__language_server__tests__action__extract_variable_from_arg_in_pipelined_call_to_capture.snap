@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "import gleam/int\n\npub fn main() {\n  let add = int.add\n  let x = add |> list.reduce([1, 2, 3], _)\n  x\n}"
+---
+----- BEFORE ACTION
+import gleam/int
+
+pub fn main() {
+  let add = int.add
+  let x = add |> list.reduce([1, 2, 3], _)
+                             ↑            
+  x
+}
+
+
+----- AFTER ACTION
+import gleam/int
+
+pub fn main() {
+  let add = int.add
+  let ints = [1, 2, 3]
+  let x = add |> list.reduce(ints, _)
+  x
+}
