@@ -14,12 +14,45 @@ fn alias_unqualified_import() {
 
 #[rustfmt::skip]
 #[test]
+fn dev_importing_test() {
+    let output = crate::prepare("./cases/dev_importing_test");
+    insta::assert_snapshot!(
+        "dev_importing_test",
+        output,
+        "./cases/dev_importing_test",
+    );
+}
+
+#[rustfmt::skip]
+#[test]
 fn duplicate_module() {
     let output = crate::prepare("./cases/duplicate_module");
     insta::assert_snapshot!(
         "duplicate_module",
         output,
         "./cases/duplicate_module",
+    );
+}
+
+#[rustfmt::skip]
+#[test]
+fn duplicate_module_dev() {
+    let output = crate::prepare("./cases/duplicate_module_dev");
+    insta::assert_snapshot!(
+        "duplicate_module_dev",
+        output,
+        "./cases/duplicate_module_dev",
+    );
+}
+
+#[rustfmt::skip]
+#[test]
+fn duplicate_module_test_dev() {
+    let output = crate::prepare("./cases/duplicate_module_test_dev");
+    insta::assert_snapshot!(
+        "duplicate_module_test_dev",
+        output,
+        "./cases/duplicate_module_test_dev",
     );
 }
 
@@ -262,6 +295,17 @@ fn overwriting_erlang_module() {
         "overwriting_erlang_module",
         output,
         "./cases/overwriting_erlang_module",
+    );
+}
+
+#[rustfmt::skip]
+#[test]
+fn src_importing_dev() {
+    let output = crate::prepare("./cases/src_importing_dev");
+    insta::assert_snapshot!(
+        "src_importing_dev",
+        output,
+        "./cases/src_importing_dev",
     );
 }
 

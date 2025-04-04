@@ -85,7 +85,7 @@ fn run_loader(fs: InMemoryFileSystem, root: &Utf8Path, artefact: &Utf8Path) -> L
         io: fs.clone(),
         ids,
         mode: Mode::Dev,
-        root: &root,
+        paths: ProjectPaths::new(root.into()),
         warnings: &emitter,
         codegen: CodegenRequired::Yes,
         artefact_directory: &artefact,
@@ -136,6 +136,19 @@ fn one_test_module() {
     let artefact = Utf8Path::new("/artefact");
 
     write_src(&fs, "/test/main.gleam", 0, "const x = 1");
+
+    let loaded = run_loader(fs, root, artefact);
+    assert_eq!(loaded.to_compile, vec![EcoString::from("main")]);
+    assert!(loaded.cached.is_empty());
+}
+
+#[test]
+fn one_dev_module() {
+    let fs = InMemoryFileSystem::new();
+    let root = Utf8Path::new("/");
+    let artefact = Utf8Path::new("/artefact");
+
+    write_src(&fs, "/dev/main.gleam", 0, "const x = 1");
 
     let loaded = run_loader(fs, root, artefact);
     assert_eq!(loaded.to_compile, vec![EcoString::from("main")]);
@@ -360,6 +373,46 @@ fn invalid_nested_module_name_in_test() {
         loaded.warnings,
         vec![Warning::InvalidSource {
             path: Utf8PathBuf::from("/test/1/one.gleam"),
+        }],
+    );
+}
+
+#[test]
+fn invalid_module_name_in_dev() {
+    let fs = InMemoryFileSystem::new();
+    let root = Utf8Path::new("/");
+    let artefact = Utf8Path::new("/artefact");
+
+    // Cache is stale
+    write_src(&fs, "/dev/One.gleam", 1, TEST_SOURCE_2);
+
+    let loaded = run_loader(fs, root, artefact);
+    assert!(loaded.to_compile.is_empty());
+    assert!(loaded.cached.is_empty());
+    assert_eq!(
+        loaded.warnings,
+        vec![Warning::InvalidSource {
+            path: Utf8PathBuf::from("/dev/One.gleam"),
+        }],
+    );
+}
+
+#[test]
+fn invalid_nested_module_name_in_dev() {
+    let fs = InMemoryFileSystem::new();
+    let root = Utf8Path::new("/");
+    let artefact = Utf8Path::new("/artefact");
+
+    // Cache is stale
+    write_src(&fs, "/dev/1/one.gleam", 1, TEST_SOURCE_2);
+
+    let loaded = run_loader(fs, root, artefact);
+    assert!(loaded.to_compile.is_empty());
+    assert!(loaded.cached.is_empty());
+    assert_eq!(
+        loaded.warnings,
+        vec![Warning::InvalidSource {
+            path: Utf8PathBuf::from("/dev/1/one.gleam"),
         }],
     );
 }

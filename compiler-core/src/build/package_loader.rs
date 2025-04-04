@@ -22,7 +22,9 @@ use crate::{
     dep_tree,
     error::{FileIoAction, FileKind, ImportCycleLocationDetails},
     io::{self, CommandExecutor, FileSystemReader, FileSystemWriter, files_with_extension},
-    metadata, type_,
+    metadata,
+    paths::ProjectPaths,
+    type_,
     uid::UniqueIdGenerator,
     warning::WarningEmitter,
 };
@@ -56,7 +58,7 @@ pub struct PackageLoader<'a, IO> {
     io: IO,
     ids: UniqueIdGenerator,
     mode: Mode,
-    root: &'a Utf8Path,
+    paths: ProjectPaths,
     warnings: &'a WarningEmitter,
     codegen: CodegenRequired,
     artefact_directory: &'a Utf8Path,
@@ -91,7 +93,7 @@ where
             io,
             ids,
             mode,
-            root,
+            paths: ProjectPaths::new(root.into()),
             warnings,
             codegen,
             target,
@@ -207,7 +209,7 @@ where
 
         let mut inputs = Inputs::new(self.already_defined_modules);
 
-        let src = self.root.join("src");
+        let src = self.paths.src_directory();
         let mut loader = ModuleLoader {
             io: self.io.clone(),
             warnings: self.warnings,
@@ -231,12 +233,25 @@ where
             }
         }
 
-        // Test
-        if self.mode.includes_tests() {
-            let test = self.root.join("test");
+        // Test and dev
+        if self.mode.includes_dev_code() {
+            let test = self.paths.test_directory();
             loader.origin = Origin::Test;
 
             for file in GleamFile::iterate_files_in_directory(&self.io, &test) {
+                match file {
+                    Ok(file) => {
+                        let input = loader.load(file)?;
+                        inputs.insert(input)?;
+                    }
+                    Err(warning) => self.warnings.emit(warning),
+                }
+            }
+
+            let dev = self.paths.dev_directory();
+            loader.origin = Origin::Dev;
+
+            for file in GleamFile::iterate_files_in_directory(&self.io, &dev) {
                 match file {
                     Ok(file) => {
                         let input = loader.load(file)?;

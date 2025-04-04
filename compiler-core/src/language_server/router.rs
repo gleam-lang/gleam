@@ -154,7 +154,7 @@ where
 /// Given a given path, find the nearest parent directory containing a
 /// `gleam.toml` file.
 ///
-/// The file must be in either the `src` or `test` directory if it is not a
+/// The file must be in either the `src`, `test` or `dev` directory if it is not a
 /// `.gleam` file.
 fn find_gleam_project_parent<IO>(io: &IO, path: &Utf8Path) -> Option<Utf8PathBuf>
 where
@@ -176,8 +176,12 @@ where
             continue;
         }
 
-        // If it is a Gleam module then it must reside in the src or test directory.
-        if is_module && !(directory.ends_with("test") || directory.ends_with("src")) {
+        // If it is a Gleam module then it must reside in the src, test dev directory.
+        if is_module
+            && !(directory.ends_with("test")
+                || directory.ends_with("src")
+                || directory.ends_with("dev"))
+        {
             _ = directory.pop();
             continue;
         }
@@ -255,9 +259,19 @@ mod find_gleam_project_parent_tests {
         );
     }
 
+    #[test]
+    fn dev_module() {
+        let io = InMemoryFileSystem::new();
+        io.write(Utf8Path::new("/app/gleam.toml"), "").unwrap();
+        assert_eq!(
+            find_gleam_project_parent(&io, Utf8Path::new("/app/dev/one/two/three.gleam")),
+            Some(Utf8PathBuf::from("/app"))
+        );
+    }
+
     // https://github.com/gleam-lang/gleam/issues/2121
     #[test]
-    fn module_in_project_but_not_src_or_test() {
+    fn module_in_project_but_not_src_or_test_or_dev() {
         let io = InMemoryFileSystem::new();
         io.write(Utf8Path::new("/app/gleam.toml"), "").unwrap();
         assert_eq!(

@@ -515,7 +515,7 @@ fn generated_erlang_files(
 
     // Erlang modules
     for module in &package.modules {
-        if module.is_test() {
+        if module.is_dev_code() {
             continue;
         }
         let name = module.compiled_erlang_path();
@@ -846,6 +846,25 @@ fn exported_project_files_test() {
         "test/nested/ignored.gleam",
         "test/nested/ignored_test_ffi.erl",
         "test/nested/ignored_test_ffi.mjs",
+        "dev/exported_test_ffi.erl",
+        "dev/exported_test_ffi.ex",
+        "dev/exported_test_ffi.hrl",
+        "dev/exported_test_ffi.js",
+        "dev/exported_test_ffi.mjs",
+        "dev/exported_test_ffi.ts",
+        "dev/ignored_test.gleam",
+        "dev/ignored_test_ffi.erl",
+        "dev/ignored_test_ffi.mjs",
+        "dev/nested/exported_test.gleam",
+        "dev/nested/exported_test_ffi.erl",
+        "dev/nested/exported_test_ffi.ex",
+        "dev/nested/exported_test_ffi.hrl",
+        "dev/nested/exported_test_ffi.js",
+        "dev/nested/exported_test_ffi.mjs",
+        "dev/nested/exported_test_ffi.ts",
+        "dev/nested/ignored.gleam",
+        "dev/nested/ignored_test_ffi.erl",
+        "dev/nested/ignored_test_ffi.mjs",
         "unrelated-file.txt",
     ];
 

@@ -120,6 +120,14 @@
 - Deprecate `HEXPM_USER` and `HEXPM_PASS` in favour of `HEXPM_API_KEY`.
   ([Samuel Cristobal](https://github.com/scristobal))
 
+- The build tool now supports placing modules in a directory called `dev`,
+  which like `test`, is only for development code.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- There is now a new CLI command, `gleam dev`, which runs the `$PACKAGE_dev`
+  module, for running development entrypoints.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Language server
 
 - The language server now allows renaming of functions, constants,
