@@ -92,6 +92,13 @@ impl LanguageServerTestIO {
         path
     }
 
+    pub fn dev_module(&self, name: &str, code: &str) -> Utf8PathBuf {
+        let dev_directory = self.paths.dev_directory();
+        let path = dev_directory.join(name).with_extension("gleam");
+        self.module(&path, code);
+        path
+    }
+
     pub fn path_dep_module(&self, dep: &str, name: &str, code: &str) -> Utf8PathBuf {
         let dep_dir = self.paths.root().join(dep).join("src");
         let path = dep_dir.join(name).with_extension("gleam");
@@ -395,6 +402,7 @@ struct TestProject<'a> {
     root_package_modules: Vec<(&'a str, &'a str)>,
     dependency_modules: Vec<(&'a str, &'a str)>,
     test_modules: Vec<(&'a str, &'a str)>,
+    dev_modules: Vec<(&'a str, &'a str)>,
     hex_modules: Vec<(&'a str, &'a str)>,
     dev_hex_modules: Vec<(&'a str, &'a str)>,
     indirect_hex_modules: Vec<(&'a str, &'a str)>,
@@ -408,6 +416,7 @@ impl<'a> TestProject<'a> {
             root_package_modules: vec![],
             dependency_modules: vec![],
             test_modules: vec![],
+            dev_modules: vec![],
             hex_modules: vec![],
             dev_hex_modules: vec![],
             indirect_hex_modules: vec![],
@@ -460,6 +469,11 @@ impl<'a> TestProject<'a> {
 
     pub fn add_test_module(mut self, name: &'a str, src: &'a str) -> Self {
         self.test_modules.push((name, src));
+        self
+    }
+
+    pub fn add_dev_module(mut self, name: &'a str, src: &'a str) -> Self {
+        self.dev_modules.push((name, src));
         self
     }
 
@@ -527,6 +541,12 @@ impl<'a> TestProject<'a> {
         self.test_modules.iter().for_each(|(name, code)| {
             let _ = io.test_module(name, code);
         });
+
+        // Add all the dev modules
+        self.dev_modules.iter().for_each(|(name, code)| {
+            let _ = io.dev_module(name, code);
+        });
+
         for package in &io.manifest.packages {
             let toml_path = engine.paths.build_packages_package_config(&package.name);
             add_package_from_manifest(&mut engine, toml_path, package.clone());
@@ -593,6 +613,22 @@ impl<'a> TestProject<'a> {
         TextDocumentPositionParams::new(TextDocumentIdentifier::new(url), position)
     }
 
+    pub fn build_dev_path(
+        &self,
+        position: Position,
+        test_name: &str,
+    ) -> TextDocumentPositionParams {
+        let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
+            format!(r"\\?\C:\dev\{test_name}.gleam")
+        } else {
+            format!("/dev/{test_name}.gleam")
+        });
+
+        let url = Url::from_file_path(path).unwrap();
+
+        TextDocumentPositionParams::new(TextDocumentIdentifier::new(url), position)
+    }
+
     pub fn positioned_with_io(
         &self,
         position: Position,
@@ -631,6 +667,28 @@ impl<'a> TestProject<'a> {
         assert!(response.result.is_ok());
 
         let param = self.build_test_path(position, test_name);
+
+        (engine, param)
+    }
+
+    pub fn positioned_with_io_in_dev(
+        &self,
+        position: Position,
+        test_name: &str,
+    ) -> (
+        LanguageServerEngine<LanguageServerTestIO, LanguageServerTestIO>,
+        TextDocumentPositionParams,
+    ) {
+        let mut io = LanguageServerTestIO::new();
+        let mut engine = self.build_engine(&mut io);
+
+        // Add the final module we're going to be positioning the cursor in.
+        _ = io.src_module("app", self.src);
+
+        let response = engine.compile_please();
+        assert!(response.result.is_ok());
+
+        let param = self.build_dev_path(position, test_name);
 
         (engine, param)
     }
