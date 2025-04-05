@@ -9,14 +9,15 @@ env:
   RUSTFLAGS: "-D warnings"
 
 permissions:
-  contents: write
-  id-token: write
-  attestations: write
+  contents: read
 
 jobs:
   build-release:
     name: build-release
     runs-on: ${{ matrix.os }}
+    permissions:
+      id-token: write
+      attestations: write
     strategy:
       matrix:
         target:
@@ -65,15 +66,37 @@ jobs:
           cargo-tool: ${{ matrix.cargo-tool }}
           expected-binary-architecture: ${{ matrix.expected-binary-architecture }}
 
-      - name: Upload release archive
-        id: release
-        # https://github.com/softprops/action-gh-release/issues/445
-        # uses: softprops/action-gh-release@v2
-        uses: softprops/action-gh-release@ab50eebb6488051c6788d97fa95232267c6a4e23
+  create-release:
+    name: create-release
+
+    needs: ['build-release']
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
         with:
-          draft: true
-          prerelease: ${{ contains(github.ref_name, '-rc.') }}
-          fail_on_unmatched_files: true
-          files: "${{ steps.build.outputs.files }}"
-          generate_release_notes: true
-          tag_name: ${{ github.ref_name }}
+          pattern: release-*
+          merge-multiple: true
+
+      - name: Create release
+        env:
+          GITHUB_TOKEN: '${{ github.token }}'
+          REPOSITORY: '${{ github.repository }}'
+          TITLE: '${{ github.ref_name }}'
+          TAG_NAME: '${{ github.ref_name }}'
+          NOTES: '${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/CHANGELOG.md'
+        run: |
+          gh release create \
+            --repo "$REPOSITORY" \
+            --title "$TITLE" \
+            --notes "$NOTES" \
+            --draft \
+            --verify-tag \
+            ${{ contains(github.ref_name, '-rc.') && '--prerelease' || '' }} \
+            "$TAG_NAME" \
+            gleam-*
