@@ -260,3 +260,6 @@
 - Fixed a bug where updating the remote URL of a Git dependency would fail to
   update the remote in the local dependency, causing a caching issue.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fix slightly wrong error message for missing main function in test module.
+  ([Samuel Cristobal](https://github.com/scristobal))

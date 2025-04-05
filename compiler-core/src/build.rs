@@ -35,7 +35,7 @@ use camino::Utf8PathBuf;
 use ecow::EcoString;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::sync::Arc;
 use std::time::SystemTime;
 use std::{collections::HashMap, ffi::OsString, fs::DirEntry, iter::Peekable, process};
@@ -588,6 +588,16 @@ impl Origin {
     #[must_use]
     pub fn is_dev(&self) -> bool {
         matches!(self, Self::Dev)
+    }
+
+    /// Name of the folder containing the origin.
+    #[must_use]
+    pub fn folder_name(&self) -> &str {
+        match self {
+            Origin::Src => "src",
+            Origin::Test => "test",
+            Origin::Dev => "dev",
+        }
     }
 }
 
