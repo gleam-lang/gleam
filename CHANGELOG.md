@@ -162,8 +162,12 @@
 - Improve error messages when encrypting and decrypting local Hex API key.
   ([Samuel Cristobal](https://github.com/scristobal))
 
-- Deprecate `HEXPM_USER` and `HEXPM_PASS` in favour of `HEXPM_API_KEY`.
+- Deprecated `HEXPM_USER` and `HEXPM_PASS` in favour of `HEXPM_API_KEY`.
   ([Samuel Cristobal](https://github.com/scristobal))
+
+- The "functions" and "constants" sections of generated HTML documentation have
+  been merged into one "values" section.
+  ([Sam Zanca ](https://github.com/metruzanca))
 
 ### Language server
 
