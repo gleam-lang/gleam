@@ -30,6 +30,9 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fix slightly wrong error message for missing main function in dev module.
+  ([Samuel Cristobal](https://github.com/scristobal))
+
 ### Build tool
 
 - The build tool now supports placing modules in a directory called `dev`,
