@@ -39,12 +39,12 @@ go(X) ->
                         left => #{kind => expression,
                             value => true,
                             start => 82,
-                            end => 86,
+                            'end' => 86
                             },
                         right => #{kind => expression,
                             value => false,
                             start => 90,
-                            end => 102,
+                            'end' => 102
                             },
                         module => <<"my/mod"/utf8>>,
                         function => <<"go"/utf8>>,
@@ -57,11 +57,11 @@ go(X) ->
                 left => #{kind => expression,
                     value => false,
                     start => 82,
-                    end => 86,
+                    'end' => 86
                     },
                 right => #{kind => unevaluated,
                     start => 90,
-                    end => 102,
+                    'end' => 102
                     },
                 module => <<"my/mod"/utf8>>,
                 function => <<"go"/utf8>>,
