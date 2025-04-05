@@ -860,9 +860,6 @@ impl<'module, 'a> Generator<'module, 'a> {
             message,
         } = assert;
 
-        let subject =
-            self.not_in_tail_position(Some(Ordering::Loose), |this| this.assert_subject(value))?;
-
         let message = match message {
             Some(m) => self.not_in_tail_position(
                 Some(Ordering::Strict),
@@ -871,7 +868,9 @@ impl<'module, 'a> Generator<'module, 'a> {
             None => string("Assertion failed."),
         };
 
-        let check = self.assert_check(subject, message, *location)?;
+        let check = self.not_in_tail_position(Some(Ordering::Loose), |this| {
+            this.assert_check(value, &message, *location)
+        })?;
 
         Ok(match &self.scope_position {
             Position::NotTail(_) => check,
@@ -885,82 +884,96 @@ impl<'module, 'a> Generator<'module, 'a> {
 
     fn assert_check(
         &mut self,
-        subject: AssertSubject<'a>,
-        message: Document<'a>,
+        subject: &'a TypedExpr,
+        message: &Document<'a>,
         location: SrcSpan,
     ) -> Output<'a> {
         let (subject, fields) = match subject {
-            AssertSubject::And { left, right } => {
-                return Ok(self.assert_and(left, right, message, location));
-            }
-            AssertSubject::Or { left, right } => {
-                return Ok(self.assert_or(left, right, message, location));
+            TypedExpr::Call { fun, args, .. } => {
+                let argument_variables: Vec<_> = args
+                    .iter()
+                    .map(|element| {
+                        self.not_in_tail_position(Some(Ordering::Strict), |this| {
+                            this.assign_to_variable(&element.value)
+                        })
+                    })
+                    .try_collect()?;
+                (
+                    self.call_with_doc_args(fun, argument_variables.clone())?,
+                    vec![
+                        ("kind", string("function_call")),
+                        (
+                            "arguments",
+                            array(argument_variables.into_iter().zip(args).map(
+                                |(variable, argument)| {
+                                    Ok(self.asserted_expression(
+                                        ExpressionKind::from_expression(&argument.value),
+                                        Some(variable),
+                                        argument.location(),
+                                    ))
+                                },
+                            ))?,
+                        ),
+                    ],
+                )
             }
 
-            AssertSubject::Expression(expression) => (
-                expression.value.clone(),
+            TypedExpr::BinOp {
+                name, left, right, ..
+            } => {
+                match name {
+                    BinOp::And => return self.assert_and(left, right, message, location),
+                    BinOp::Or => return self.assert_or(left, right, message, location),
+                    _ => {}
+                }
+
+                let left_document = self.assign_to_variable(left)?;
+                let right_document = self.not_in_tail_position(Some(Ordering::Strict), |this| {
+                    this.assign_to_variable(right)
+                })?;
+
+                (
+                    self.bin_op_with_doc_operands(
+                        *name,
+                        left_document.clone(),
+                        right_document.clone(),
+                        &left.type_(),
+                    )
+                    .surround("(", ")"),
+                    vec![
+                        ("kind", string("binary_operator")),
+                        ("operator", string(name.name())),
+                        (
+                            "left",
+                            self.asserted_expression(
+                                ExpressionKind::from_expression(left),
+                                Some(left_document),
+                                left.location(),
+                            ),
+                        ),
+                        (
+                            "right",
+                            self.asserted_expression(
+                                ExpressionKind::from_expression(right),
+                                Some(right_document),
+                                right.location(),
+                            ),
+                        ),
+                    ],
+                )
+            }
+
+            _ => (
+                self.wrap_expression(subject)?,
                 vec![
                     ("kind", string("expression")),
                     (
                         "expression",
                         self.asserted_expression(
-                            expression.kind,
-                            Some(expression.value),
-                            expression.location,
+                            ExpressionKind::from_expression(subject),
+                            Some("false".to_doc()),
+                            subject.location(),
                         ),
-                    ),
-                ],
-            ),
-            AssertSubject::BinaryOperator {
-                name,
-                left,
-                right,
-                operand_type,
-            } => (
-                self.bin_op_with_doc_operands(
-                    name,
-                    left.value.clone(),
-                    right.value.clone(),
-                    &operand_type,
-                )
-                .surround("(", ")"),
-                vec![
-                    ("kind", string("binary_operator")),
-                    ("operator", string(name.name())),
-                    (
-                        "left",
-                        self.asserted_expression(left.kind, Some(left.value), left.location),
-                    ),
-                    (
-                        "right",
-                        self.asserted_expression(right.kind, Some(right.value), right.location),
-                    ),
-                ],
-            ),
-            AssertSubject::Call {
-                function,
-                arguments,
-            } => (
-                self.not_in_tail_position(Some(Ordering::Loose), |this| {
-                    this.call_with_doc_args(
-                        function,
-                        arguments
-                            .iter()
-                            .map(|expression| expression.value.clone())
-                            .collect(),
-                    )
-                })?,
-                vec![
-                    ("kind", string("function_call")),
-                    (
-                        "arguments",
-                        array(arguments.into_iter().map(|argument| {
-                            Ok(self.asserted_expression(
-                                argument.kind,
-                                Some(argument.value),
-                                argument.location,
-                            ))
-                        }))?,
                     ),
                 ],
             ),
@@ -984,21 +997,24 @@ impl<'module, 'a> Generator<'module, 'a> {
 
     fn assert_and(
         &mut self,
-        left: AssertExpression<'a>,
-        right: AssertExpression<'a>,
-        message: Document<'a>,
+        left: &'a TypedExpr,
+        right: &'a TypedExpr,
+        message: &Document<'a>,
         location: SrcSpan,
-    ) -> Document<'a> {
+    ) -> Output<'a> {
+        let left_kind = ExpressionKind::from_expression(left);
+        let right_kind = ExpressionKind::from_expression(right);
+
         let fields_if_short_circuiting = vec![
             ("kind", string("binary_operator")),
             ("operator", string("&&")),
             (
                 "left",
-                self.asserted_expression(left.kind, Some("false".to_doc()), left.location),
+                self.asserted_expression(left_kind, Some("false".to_doc()), left.location()),
             ),
             (
                 "right",
-                self.asserted_expression(ExpressionKind::Unevaluated, None, right.location),
+                self.asserted_expression(ExpressionKind::Unevaluated, None, right.location()),
             ),
         ];
 
@@ -1007,81 +1023,98 @@ impl<'module, 'a> Generator<'module, 'a> {
             ("operator", string("&&")),
             (
                 "left",
-                self.asserted_expression(left.kind, Some("true".to_doc()), left.location),
+                self.asserted_expression(left_kind, Some("true".to_doc()), left.location()),
             ),
             (
                 "right",
-                self.asserted_expression(right.kind, Some("false".to_doc()), right.location),
+                self.asserted_expression(right_kind, Some("false".to_doc()), right.location()),
             ),
         ];
+
+        let left_value =
+            self.not_in_tail_position(Some(Ordering::Loose), |this| this.wrap_expression(left))?;
+
+        let right_value =
+            self.not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(right))?;
 
         let right_check = docvec![
             line(),
             "if (",
-            docvec!["!", right.value].nest(INDENT),
+            docvec!["!", right_value].nest(INDENT),
             ") {",
             docvec![
                 line(),
-                self.throw_error("assert", &message, location, fields)
+                self.throw_error("assert", message, location, fields)
             ]
             .nest(INDENT),
             line(),
             "}",
         ];
 
-        docvec![
+        Ok(docvec![
             "if (",
-            left.value.nest(INDENT),
+            left_value.nest(INDENT),
             ") {",
             right_check.nest(INDENT),
             line(),
             "} else {",
             docvec![
                 line(),
-                self.throw_error("assert", &message, location, fields_if_short_circuiting)
+                self.throw_error("assert", message, location, fields_if_short_circuiting)
             ]
             .nest(INDENT),
             line(),
             "}"
-        ]
+        ])
     }
 
     fn assert_or(
         &mut self,
-        left: AssertExpression<'a>,
-        right: AssertExpression<'a>,
-        message: Document<'a>,
+        left: &'a TypedExpr,
+        right: &'a TypedExpr,
+        message: &Document<'a>,
         location: SrcSpan,
-    ) -> Document<'a> {
+    ) -> Output<'a> {
         let fields = vec![
             ("kind", string("binary_operator")),
             ("operator", string("||")),
-            // We need to preserve the `kind` and `location` fields of these,
-            // but since both must be false for the assertion to fail, we don't
-            // need to re-evaluate the expressions.
             (
                 "left",
-                self.asserted_expression(left.kind, Some("false".to_doc()), left.location),
+                self.asserted_expression(
+                    ExpressionKind::from_expression(left),
+                    Some("false".to_doc()),
+                    left.location(),
+                ),
             ),
             (
                 "right",
-                self.asserted_expression(right.kind, Some("false".to_doc()), right.location),
+                self.asserted_expression(
+                    ExpressionKind::from_expression(right),
+                    Some("false".to_doc()),
+                    right.location(),
+                ),
             ),
         ];
 
-        docvec![
+        let left_value =
+            self.not_in_tail_position(Some(Ordering::Loose), |this| this.child_expression(left))?;
+
+        let right_value =
+            self.not_in_tail_position(Some(Ordering::Strict), |this| this.child_expression(right))?;
+
+        Ok(docvec![
             line(),
             "if (",
-            docvec!["!(", left.value, " || ", right.value, ")"].nest(INDENT),
+            docvec!["!(", left_value, " || ", right_value, ")"].nest(INDENT),
             ") {",
             docvec![
                 line(),
-                self.throw_error("assert", &message, location, fields)
+                self.throw_error("assert", message, location, fields)
             ]
             .nest(INDENT),
             line(),
             "}",
-        ]
+        ])
     }
 
     fn assign_to_variable(&mut self, value: &'a TypedExpr) -> Output<'a> {
@@ -1095,73 +1128,6 @@ impl<'module, 'a> Generator<'module, 'a> {
                 Ok(variable.to_doc())
             }
         }
-    }
-
-    fn assert_subject(&mut self, subject: &'a TypedExpr) -> Result<AssertSubject<'a>, Error> {
-        match subject {
-            TypedExpr::Call { fun, args, .. } => {
-                let arguments = args
-                    .iter()
-                    .map(|element| {
-                        self.not_in_tail_position(Some(Ordering::Strict), |this| {
-                            this.assert_expression(&element.value, AssertAssignment::Assign)
-                        })
-                    })
-                    .try_collect()?;
-                Ok(AssertSubject::Call {
-                    function: fun,
-                    arguments,
-                })
-            }
-            TypedExpr::BinOp {
-                name, left, right, ..
-            } => {
-                let operand_type = left.type_();
-
-                match name {
-                    BinOp::And => Ok(AssertSubject::And {
-                        left: self.assert_expression(left, AssertAssignment::DoNotAssign)?,
-                        right: self.assert_expression(right, AssertAssignment::DoNotAssign)?,
-                    }),
-                    BinOp::Or => Ok(AssertSubject::Or {
-                        left: self.assert_expression(left, AssertAssignment::DoNotAssign)?,
-                        right: self.assert_expression(right, AssertAssignment::DoNotAssign)?,
-                    }),
-                    _ => Ok(AssertSubject::BinaryOperator {
-                        name: *name,
-                        left: self.assert_expression(left, AssertAssignment::Assign)?,
-                        right: self.assert_expression(right, AssertAssignment::Assign)?,
-                        operand_type,
-                    }),
-                }
-            }
-            _ => Ok(AssertSubject::Expression(
-                self.assert_expression(subject, AssertAssignment::Assign)?,
-            )),
-        }
-    }
-
-    fn assert_expression(
-        &mut self,
-        expression: &'a TypedExpr,
-        assignment: AssertAssignment,
-    ) -> Result<AssertExpression<'a>, Error> {
-        let kind = if expression.is_literal() {
-            ExpressionKind::Literal
-        } else {
-            ExpressionKind::Expression
-        };
-        let location = expression.location();
-        let value = match assignment {
-            AssertAssignment::Assign => self.assign_to_variable(expression)?,
-            AssertAssignment::DoNotAssign => self.wrap_expression(expression)?,
-        };
-
-        Ok(AssertExpression {
-            kind,
-            location,
-            value,
-        })
     }
 
     fn asserted_expression(
@@ -1843,39 +1809,6 @@ impl<'module, 'a> Generator<'module, 'a> {
     }
 }
 
-enum AssertSubject<'a> {
-    Expression(AssertExpression<'a>),
-    BinaryOperator {
-        name: BinOp,
-        left: AssertExpression<'a>,
-        right: AssertExpression<'a>,
-        operand_type: Arc<Type>,
-    },
-
-    // The `&&` and `||` operators are both short-circuiting, meaning we cannot
-    // pre-evaluate the left and right hand sides before asserting, and need
-    // to implement some custom logic.
-    And {
-        left: AssertExpression<'a>,
-        right: AssertExpression<'a>,
-    },
-    Or {
-        left: AssertExpression<'a>,
-        right: AssertExpression<'a>,
-    },
-
-    Call {
-        function: &'a TypedExpr,
-        arguments: Vec<AssertExpression<'a>>,
-    },
-}
-
-struct AssertExpression<'a> {
-    kind: ExpressionKind,
-    location: SrcSpan,
-    value: Document<'a>,
-}
-
 #[derive(Clone, Copy)]
 enum ExpressionKind {
     Literal,
@@ -1883,9 +1816,14 @@ enum ExpressionKind {
     Unevaluated,
 }
 
-enum AssertAssignment {
-    Assign,
-    DoNotAssign,
+impl ExpressionKind {
+    fn from_expression(expression: &TypedExpr) -> Self {
+        if expression.is_literal() {
+            Self::Literal
+        } else {
+            Self::Expression
+        }
+    }
 }
 
 pub fn int(value: &str) -> Document<'_> {
