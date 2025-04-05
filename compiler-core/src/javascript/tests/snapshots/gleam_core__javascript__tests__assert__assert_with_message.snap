@@ -22,7 +22,7 @@ export function main() {
       "This shouldn't fail",
       {
         kind: "expression",
-        expression: { kind: "expression", value: true, start: 26, end: 30 }
+        expression: { kind: "expression", value: false, start: 26, end: 30 }
       }
     )
   }
