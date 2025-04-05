@@ -28,12 +28,12 @@ assert_answer(X) ->
                 left => #{kind => expression,
                     value => X,
                     start => 36,
-                    end => 37,
+                    'end' => 37
                     },
                 right => #{kind => literal,
                     value => _assert_subject,
                     start => 41,
-                    end => 43,
+                    'end' => 43
                     },
                 module => <<"my/mod"/utf8>>,
                 function => <<"assert_answer"/utf8>>,

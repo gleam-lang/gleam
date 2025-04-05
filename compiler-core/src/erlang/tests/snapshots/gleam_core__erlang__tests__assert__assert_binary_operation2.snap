@@ -27,12 +27,12 @@ eq(A, B) ->
                 left => #{kind => expression,
                     value => A,
                     start => 28,
-                    end => 29,
+                    'end' => 29
                     },
                 right => #{kind => expression,
                     value => B,
                     start => 33,
-                    end => 34,
+                    'end' => 34
                     },
                 module => <<"my/mod"/utf8>>,
                 function => <<"eq"/utf8>>,

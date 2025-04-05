@@ -35,11 +35,11 @@ go(X) ->
                 arguments => [#{kind => expression,
                         value => true,
                         start => 56,
-                        end => 60,
+                        'end' => 60
                         }, #{kind => expression,
                         value => X,
                         start => 62,
-                        end => 63,
+                        'end' => 63
                         }],
                 module => <<"my/mod"/utf8>>,
                 function => <<"go"/utf8>>,

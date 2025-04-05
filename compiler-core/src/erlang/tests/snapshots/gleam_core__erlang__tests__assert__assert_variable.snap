@@ -28,7 +28,7 @@ main() ->
                 expression => #{kind => expression,
                     value => false,
                     start => 41,
-                    end => 42,
+                    'end' => 42
                     },
                 module => <<"my/mod"/utf8>>,
                 function => <<"main"/utf8>>,
