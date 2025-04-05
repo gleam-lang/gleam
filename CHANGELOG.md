@@ -188,6 +188,9 @@
   deprecated environment variables.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Added `gleam hex deauthenticate` command.
+  ([Samuel Cristobal](https://github.com/scristobal))
+
 ### Language server
 
 - The code action to add missing labels to function now also works in patterns:

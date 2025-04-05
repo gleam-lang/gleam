@@ -1,6 +1,8 @@
 use crate::{cli, fs::ConsoleWarningEmitter, http::HttpClient};
 use gleam_core::{
-    Error, Result, Warning, encryption, hex,
+    Error, Result, Warning, encryption,
+    error::wrap,
+    hex,
     paths::global_hexpm_credentials_path,
     warning::{DeprecatedEnvironmentVariable, WarningEmitter},
 };
@@ -148,6 +150,47 @@ encrypt your Hex API key.
             name: name.to_string(),
             encrypted: encrypted.to_string(),
         }))
+    }
+
+    /// Try to remove and revoke existing Hex API key, will return:
+    ///
+    ///  - Error: operation failed
+    ///  - Ok(None): operation successfull but there was no key stored, eg. wrong file format
+    ///  - Ok(Some(String)): operation successfull, plus the name of key
+    pub fn remove_stored_api_key(&mut self) -> Result<Option<String>> {
+        let path = global_hexpm_credentials_path();
+
+        let Some(EncryptedApiKey { name, .. }) = self.read_stored_api_key()? else {
+            return Ok(None);
+        };
+
+        let text = wrap(
+            "
+We are going to delete and revoke your existing Hex API key.
+In order to do so, we need to use your current local password.",
+        );
+
+        println!("{text}");
+
+        let Some(UnencryptedApiKey { unencrypted }) = self.read_and_decrypt_stored_api_key()?
+        else {
+            return Ok(None);
+        };
+
+        println!("Deleting local Hex API key from disk...");
+        crate::fs::delete_file(&path)?;
+        println!("File {path} deleted successfully.");
+
+        println!("Revoking Hex API key from Hex...");
+        self.runtime.block_on(hex::remove_api_key(
+            &name,
+            &self.hex_config,
+            &unencrypted,
+            &self.http,
+        ))?;
+        println!("Key {name} revoked successfully.");
+
+        Ok(Some(name.to_string()))
     }
 }
 

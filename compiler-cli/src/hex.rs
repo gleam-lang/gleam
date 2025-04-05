@@ -119,3 +119,28 @@ with a new one?";
     }
     Ok(())
 }
+
+pub(crate) fn deauthenticate() -> Result<()> {
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let config = hexpm::Config::new();
+    let mut auth = HexAuthentication::new(&runtime, config.clone());
+
+    let previous = auth.read_stored_api_key()?;
+
+    if previous.is_none() {
+        println!("You must authentihate first");
+        return Ok(());
+    }
+
+    let question = "This will delelete and revoke your existing Hex API key. The operation han not be undone. Do you want to proceed?";
+
+    if !cli::confirm(question)? {
+        return Ok(());
+    };
+
+    if let Some(name) = auth.remove_stored_api_key()? {
+        println!("The Hex API key `{name}` was been removed succesfully.")
+    }
+
+    Ok(())
+}
