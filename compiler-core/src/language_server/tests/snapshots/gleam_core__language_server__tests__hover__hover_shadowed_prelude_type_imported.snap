@@ -10,6 +10,6 @@ const number = 100
 ----- Hover content -----
 Scalar(
     String(
-        "```gleam\ngleam.Int\n```\n",
+        "```gleam\nconst number: gleam.Int = 100\n```\n",
     ),
 )

@@ -11,6 +11,6 @@ const none: Maybe(Int) = option.None
 ----- Hover content -----
 Scalar(
     String(
-        "```gleam\nMaybe(Int)\n```\n",
+        "```gleam\nconst none: Maybe(Int) = option.None\n```\n",
     ),
 )
