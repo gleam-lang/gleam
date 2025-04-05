@@ -184,16 +184,14 @@ pub fn generate_html<IO: FileSystemReader>(
             .sorted()
             .collect();
 
-      let values: Vec<DocsValues<'_>> = module
-          .ast
-          .definitions
-          .iter()
-          .filter(|statement| !statement.is_internal())
-          .flat_map(|statement| {
-              value(&source_links, statement)
-          })
-          .sorted()
-          .collect();
+        let values: Vec<DocsValues<'_>> = module
+            .ast
+            .definitions
+            .iter()
+            .filter(|statement| !statement.is_internal())
+            .flat_map(|statement| value(&source_links, statement))
+            .sorted()
+            .collect();
 
         types.iter().for_each(|type_| {
             let constructors = type_
@@ -700,7 +698,7 @@ fn value<'a>(
                 .as_ref()
                 .expect("Function in a definition must be named");
 
-            return Some(DocsValues {
+            Some(DocsValues {
                 name,
                 definition: print(
                     formatter
@@ -715,7 +713,7 @@ fn value<'a>(
                     Deprecation::Deprecated { message } => message.to_string(),
                 },
             })
-        },
+        }
 
         Definition::ModuleConstant(ModuleConstant {
             publicity: Publicity::Public,
