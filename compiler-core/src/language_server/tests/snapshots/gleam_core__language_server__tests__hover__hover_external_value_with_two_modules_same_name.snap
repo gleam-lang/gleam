@@ -13,6 +13,6 @@ fn main() {
 ----- Hover content -----
 Scalar(
     String(
-        "```gleam\nInt\n```\n\nView on [HexDocs](https://hexdocs.pm/hex/b/example_module.html#my_const)",
+        "```gleam\nconst my_const: Int = 42\n```\n\nView on [HexDocs](https://hexdocs.pm/hex/b/example_module.html#my_const)",
     ),
 )

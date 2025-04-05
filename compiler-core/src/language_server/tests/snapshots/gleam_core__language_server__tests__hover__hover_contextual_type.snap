@@ -10,6 +10,6 @@ const value = wobble.Wobble
 ----- Hover content -----
 Scalar(
     String(
-        "```gleam\nwobble.Wibble\n```\n",
+        "```gleam\nconst value: wobble.Wibble = wobble.Wobble\n```\n",
     ),
 )

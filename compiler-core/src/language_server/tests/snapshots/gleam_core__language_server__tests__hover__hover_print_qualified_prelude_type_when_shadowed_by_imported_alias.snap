@@ -10,6 +10,6 @@ const value = True
 ----- Hover content -----
 Scalar(
     String(
-        "```gleam\ngleam.Bool\n```\n",
+        "```gleam\nconst value: gleam.Bool = True\n```\n",
     ),
 )

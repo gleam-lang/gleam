@@ -2,11 +2,13 @@ use crate::{
     Error, Result, Warning,
     analyse::name::correct_name_case,
     ast::{
-        self, CustomType, Definition, DefinitionLocation, ModuleConstant, PatternUnusedArguments,
-        SrcSpan, TypedArg, TypedExpr, TypedFunction, TypedModule, TypedPattern,
+        self, Constant, CustomType, Definition, DefinitionLocation, ModuleConstant,
+        PatternUnusedArguments, SrcSpan, TypedArg, TypedExpr, TypedFunction, TypedModule,
+        TypedPattern,
     },
     build::{Located, Module, UnqualifiedImport, type_constructor_from_modules},
     config::PackageConfig,
+    format::Formatter,
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
         compiler::LspProjectCompiler, files::FileSystemProxy, progress::ProgressReporter,
@@ -14,8 +16,8 @@ use crate::{
     line_numbers::LineNumbers,
     paths::ProjectPaths,
     type_::{
-        self, Deprecation, ModuleInterface, Type, TypeConstructor, ValueConstructor,
-        ValueConstructorVariant,
+        self, Deprecation, ModuleInterface, ModuleValueConstructor, Type, TypeConstructor,
+        ValueConstructor, ValueConstructorVariant,
         error::{Named, VariableOrigin},
         printer::Printer,
     },
@@ -1229,13 +1231,17 @@ fn hover_for_module_constant(
     module: &Module,
 ) -> Hover {
     let empty_str = EcoString::from("");
+    let name = &constant.name;
     let type_ = Printer::new(&module.ast.names).print_type(&constant.type_);
+    let const_hint =
+        get_constant_value(&constant.value).map(|value| format!("const {name}: {type_} = {value}"));
+    let hint = const_hint.unwrap_or(format!("const {name}: {type_}"));
     let documentation = constant
         .documentation
         .as_ref()
         .map(|(_, doc)| doc)
         .unwrap_or(&empty_str);
-    let contents = format!("```gleam\n{type_}\n```\n{documentation}");
+    let contents = format!("```gleam\n{hint}\n```\n{documentation}");
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(constant.location, &line_numbers)),
@@ -1258,9 +1264,19 @@ fn hover_for_expression(
 
     // Show the type of the hovered node to the user
     let type_ = Printer::new(&module.ast.names).print_type(expression.type_().as_ref());
+    // Show the value of the hovered node to the user if it's a constant
+    let const_hint = match expression {
+        TypedExpr::ModuleSelect {
+            label,
+            constructor: ModuleValueConstructor::Constant { literal, .. },
+            ..
+        } => get_constant_value(literal).map(|value| format!("const {label}: {type_} = {value}")),
+        _ => None,
+    };
+    let hint = const_hint.unwrap_or(type_.to_string());
     let contents = format!(
         "```gleam
-{type_}
+{hint}
 ```
 {documentation}{link_section}"
     );
@@ -1554,6 +1570,13 @@ fn get_expr_qualified_name(expression: &TypedExpr) -> Option<(&EcoString, &EcoSt
         } => Some((module_name, label)),
 
         _ => None,
+    }
+}
+
+fn get_constant_value<A, B>(constant: &Constant<A, B>) -> Option<String> {
+    match constant {
+        Constant::Invalid { .. } => None,
+        _ => Some(Formatter::new().const_expr(constant).to_pretty_string(80)),
     }
 }
 

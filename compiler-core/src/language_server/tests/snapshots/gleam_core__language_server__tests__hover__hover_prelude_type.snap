@@ -9,6 +9,6 @@ const number = 100
 ----- Hover content -----
 Scalar(
     String(
-        "```gleam\nInt\n```\n",
+        "```gleam\nconst number: Int = 100\n```\n",
     ),
 )

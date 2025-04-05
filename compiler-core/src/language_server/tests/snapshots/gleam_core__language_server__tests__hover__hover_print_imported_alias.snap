@@ -10,6 +10,6 @@ const thing: Aliased = 10
 ----- Hover content -----
 Scalar(
     String(
-        "```gleam\nAliased\n```\n",
+        "```gleam\nconst thing: Aliased = 10\n```\n",
     ),
 )
