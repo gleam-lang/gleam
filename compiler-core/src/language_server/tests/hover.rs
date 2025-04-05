@@ -1589,3 +1589,11 @@ import wibble
         find_position_of("wibble")
     );
 }
+
+#[test]
+fn hover_module_constant_invalid_expression() {
+    let code = "
+const value = undefined_var
+";
+    assert_hover!(TestProject::for_source(code), find_position_of("value"));
+}

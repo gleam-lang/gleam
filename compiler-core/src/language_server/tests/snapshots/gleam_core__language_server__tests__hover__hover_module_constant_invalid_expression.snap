@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: "\nconst value = undefined_var\n"
+---
+const value = undefined_var
+▔▔▔▔▔▔↑▔▔▔▔                
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nconst value: a\n```\n",
+    ),
+)
