@@ -1,5 +1,5 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
-use crate::build::{Outcome, Runtime, Target};
+use crate::build::{Origin, Outcome, Runtime, Target};
 use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
 use crate::type_::collapse_links;
 use crate::type_::error::{
@@ -177,7 +177,7 @@ pub enum Error {
     },
 
     #[error("{module} does not have a main function")]
-    ModuleDoesNotHaveMainFunction { module: EcoString },
+    ModuleDoesNotHaveMainFunction { module: EcoString, origin: Origin },
 
     #[error("{module}'s main function has the wrong arity so it can not be run")]
     MainFunctionHasWrongArity { module: EcoString, arity: usize },
@@ -923,7 +923,7 @@ forward slash and must not end with a slash."
                 }]
             }
 
-            Error::ModuleDoesNotHaveMainFunction { module } => vec![Diagnostic {
+            Error::ModuleDoesNotHaveMainFunction { module, origin } => vec![Diagnostic {
                 title: "Module does not have a main function".into(),
                 text: format!(
                     "`{module}` does not have a main function so the module can not be run."
@@ -932,7 +932,7 @@ forward slash and must not end with a slash."
                 location: None,
                 hint: Some(format!(
                     "Add a public `main` function to \
-to `src/{module}.gleam`."
+to `{}/{module}.gleam`.", origin.folder_name()
                 )),
             }],
 

@@ -1051,6 +1051,7 @@ impl ModuleInterface {
     pub fn get_main_function(&self, target: Target) -> Result<ModuleFunction, crate::Error> {
         let not_found = || crate::Error::ModuleDoesNotHaveMainFunction {
             module: self.name.clone(),
+            origin: self.origin,
         };
 
         // Module must have a value with the name "main"
@@ -1059,7 +1060,7 @@ impl ModuleInterface {
             .get(&EcoString::from("main"))
             .ok_or_else(not_found)?;
 
-        assert_suitable_main_function(value, &self.name, target)?;
+        assert_suitable_main_function(value, &self.name, self.origin, target)?;
 
         Ok(ModuleFunction {
             package: self.package.clone(),
@@ -1565,10 +1566,12 @@ pub enum FieldAccessUsage {
 fn assert_suitable_main_function(
     value: &ValueConstructor,
     module_name: &EcoString,
+    origin: Origin,
     target: Target,
 ) -> Result<(), crate::Error> {
     let not_found = || crate::Error::ModuleDoesNotHaveMainFunction {
         module: module_name.clone(),
+        origin,
     };
 
     // The value must be a module function

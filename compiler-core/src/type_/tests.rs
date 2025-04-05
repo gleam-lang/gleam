@@ -2678,7 +2678,10 @@ fn assert_suitable_main_function_not_module_function() {
             name: "main".into(),
         },
     };
-    assert!(assert_suitable_main_function(&value, &"module".into(), Target::Erlang).is_err(),);
+    assert!(
+        assert_suitable_main_function(&value, &"module".into(), Origin::Src, Target::Erlang)
+            .is_err(),
+    );
 }
 
 #[test]
@@ -2705,7 +2708,10 @@ fn assert_suitable_main_function_wrong_arity() {
             },
         },
     };
-    assert!(assert_suitable_main_function(&value, &"module".into(), Target::Erlang).is_err(),);
+    assert!(
+        assert_suitable_main_function(&value, &"module".into(), Origin::Src, Target::Erlang)
+            .is_err(),
+    );
 }
 
 #[test]
@@ -2732,7 +2738,10 @@ fn assert_suitable_main_function_ok() {
             },
         },
     };
-    assert!(assert_suitable_main_function(&value, &"module".into(), Target::Erlang).is_ok(),);
+    assert!(
+        assert_suitable_main_function(&value, &"module".into(), Origin::Src, Target::Erlang)
+            .is_ok(),
+    );
 }
 
 #[test]
@@ -2759,7 +2768,10 @@ fn assert_suitable_main_function_erlang_not_supported() {
             },
         },
     };
-    assert!(assert_suitable_main_function(&value, &"module".into(), Target::Erlang).is_err(),);
+    assert!(
+        assert_suitable_main_function(&value, &"module".into(), Origin::Src, Target::Erlang)
+            .is_err(),
+    );
 }
 
 #[test]
@@ -2786,7 +2798,10 @@ fn assert_suitable_main_function_javascript_not_supported() {
             },
         },
     };
-    assert!(assert_suitable_main_function(&value, &"module".into(), Target::JavaScript).is_err(),);
+    assert!(
+        assert_suitable_main_function(&value, &"module".into(), Origin::Src, Target::JavaScript)
+            .is_err(),
+    );
 }
 
 #[test]
