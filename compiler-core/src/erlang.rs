@@ -2525,9 +2525,9 @@ fn asserted_expression<'a>(
         start,
         ",",
         line(),
-        "end => ",
+        // `end` is a keyword in Erlang, so we have to quote it
+        "'end' => ",
         end,
-        ",",
         line(),
     ];
 
