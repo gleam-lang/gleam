@@ -967,7 +967,7 @@ fn bits_pattern_with_javascript_external_does_not_require_v1_9() {
         r#"
 @external(javascript, "test.mjs", "go")
 pub fn go() -> BitArray {
-  let assert <<a:bits>> = <<>>
+  let <<a:bits>> = <<>>
   a
 }
   "#,
