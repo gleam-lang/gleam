@@ -2172,73 +2172,75 @@ fn assert<'a>(assert: &'a TypedAssert, env: &mut Env<'a>) -> Document<'a> {
 
     let mut assignments = Vec::new();
 
-    let subject = assert_subject(value, &mut assignments, env);
+    let (subject, fields) = match value {
+        TypedExpr::Call { fun, args, .. } => assert_call(fun, args, &mut assignments, env),
+        TypedExpr::BinOp {
+            name, left, right, ..
+        } => {
+            let operator = match name {
+                BinOp::And => {
+                    return assert_and(left, right, message, *location, env);
+                }
+                BinOp::Or => {
+                    return assert_or(left, right, message, *location, env);
+                }
+                BinOp::Eq => "=:=",
+                BinOp::NotEq => "/=",
+                BinOp::LtInt | BinOp::LtFloat => "<",
+                BinOp::LtEqInt | BinOp::LtEqFloat => "=<",
+                BinOp::GtInt | BinOp::GtFloat => ">",
+                BinOp::GtEqInt | BinOp::GtEqFloat => ">=",
+                BinOp::AddInt
+                | BinOp::AddFloat
+                | BinOp::SubInt
+                | BinOp::SubFloat
+                | BinOp::MultInt
+                | BinOp::MultFloat
+                | BinOp::DivInt
+                | BinOp::DivFloat
+                | BinOp::RemainderInt
+                | BinOp::Concatenate => {
+                    panic!("Non-boolean operators cannot appear here in well-typed code")
+                }
+            };
 
-    let (subject, fields) = match subject {
-        AssertSubject::And { left, right } => {
-            return assert_and(left, right, message, *location, env);
-        }
-        AssertSubject::Or { left, right } => {
-            return assert_or(left, right, message, *location, env);
+            let left_document = assign_to_variable(left, &mut assignments, env);
+            let right_document = assign_to_variable(right, &mut assignments, env);
+            (
+                binop_documents(left_document.clone(), operator, right_document.clone()),
+                vec![
+                    ("kind", atom("binary_operator")),
+                    ("operator", atom(name.name())),
+                    (
+                        "left",
+                        asserted_expression(
+                            ExpressionKind::from_expression(left),
+                            Some(left_document),
+                            left.location(),
+                        ),
+                    ),
+                    (
+                        "right",
+                        asserted_expression(
+                            ExpressionKind::from_expression(right),
+                            Some(right_document),
+                            right.location(),
+                        ),
+                    ),
+                ],
+            )
         }
 
-        AssertSubject::Expression(expression) => (
-            expression.value.clone(),
+        _ => (
+            maybe_block_expr(value, env),
             vec![
                 ("kind", atom("expression")),
                 (
                     "expression",
                     asserted_expression(
-                        expression.kind,
-                        Some(expression.value),
-                        expression.location,
-                    ),
-                ),
-            ],
-        ),
-        AssertSubject::BinaryOperator { name, left, right } => (
-            binop_documents(left.value.clone(), name.to_erlang(), right.value.clone()),
-            vec![
-                ("kind", atom("binary_operator")),
-                ("operator", atom(name.name())),
-                (
-                    "left",
-                    asserted_expression(left.kind, Some(left.value), left.location),
-                ),
-                (
-                    "right",
-                    asserted_expression(right.kind, Some(right.value), right.location),
-                ),
-            ],
-        ),
-        AssertSubject::Call {
-            function,
-            arguments,
-        } => (
-            docs_args_call(
-                function,
-                arguments
-                    .iter()
-                    .map(|expression| expression.value.clone())
-                    .collect(),
-                env,
-            ),
-            vec![
-                ("kind", atom("function_call")),
-                (
-                    "arguments",
-                    list(
-                        join(
-                            arguments.into_iter().map(|argument| {
-                                asserted_expression(
-                                    argument.kind,
-                                    Some(argument.value),
-                                    argument.location,
-                                )
-                            }),
-                            break_(",", ", "),
-                        ),
-                        None,
+                        ExpressionKind::from_expression(value),
+                        Some("false".to_doc()),
+                        value.location(),
                     ),
                 ),
             ],
@@ -2264,23 +2266,84 @@ fn assert<'a>(assert: &'a TypedAssert, env: &mut Env<'a>) -> Document<'a> {
     ]
 }
 
+fn assert_call<'a>(
+    function: &'a Box<TypedExpr>,
+    arguments: &'a Vec<CallArg<TypedExpr>>,
+    assignments: &mut Vec<Document<'a>>,
+    env: &mut Env<'a>,
+) -> (Document<'a>, Vec<(&'static str, Document<'a>)>) {
+    let argument_variables = arguments
+        .iter()
+        .map(|argument| assign_to_variable(&argument.value, assignments, env))
+        .collect_vec();
+
+    let arguments = join(
+        argument_variables
+            .iter()
+            .zip(arguments)
+            .map(|(variable, argument)| {
+                asserted_expression(
+                    ExpressionKind::from_expression(&argument.value),
+                    Some(variable.clone()),
+                    argument.location(),
+                )
+            }),
+        break_(",", ", "),
+    )
+    .surround("[", "]");
+
+    (
+        docs_args_call(function, argument_variables, env),
+        vec![("kind", atom("function_call")), ("arguments", arguments)],
+    )
+}
+
+/// In Gleam, the `&&` operator is short-circuiting, meaning that we can't
+/// pre-evaluate both sides of it, and use them in the exception that is
+/// thrown.
+/// Instead, we need to implement this short-circuiting logic ourself.
+///
+/// If we short-circuit, we must leave the second expression unevaluated,
+/// and signal that using the `unevaluated` variant, as detailed in the
+/// exception format. For the first expression, we know it must be `false`,
+/// otherwise we would have continued by evaluating the second expression.
+///
+/// Similarly, if we do evaluate the second expression and fail, we know
+/// that the first expression must have evaluated to `true`, and the second
+/// to `false`. This way, we avoid needing to evaluate either expression
+/// twice.
+///
+/// The generated code then looks something like this:
+/// ```erlang
+/// case expr1 of
+///   true -> case expr2 of
+///     true -> true;
+///     false -> <throw exception>
+///   end;
+///   false -> <throw exception>
+/// end
+/// ```
+///
 fn assert_and<'a>(
-    left: AssertExpression<'a>,
-    right: AssertExpression<'a>,
+    left: &'a TypedExpr,
+    right: &'a TypedExpr,
     message: Document<'a>,
     location: SrcSpan,
     env: &mut Env<'a>,
 ) -> Document<'a> {
+    let left_kind = ExpressionKind::from_expression(left);
+    let right_kind = ExpressionKind::from_expression(right);
+
     let fields_if_short_circuiting = vec![
         ("kind", atom("binary_operator")),
         ("operator", atom("&&")),
         (
             "left",
-            asserted_expression(left.kind, Some("false".to_doc()), left.location),
+            asserted_expression(left_kind, Some("false".to_doc()), left.location()),
         ),
         (
             "right",
-            asserted_expression(ExpressionKind::Unevaluated, None, right.location),
+            asserted_expression(ExpressionKind::Unevaluated, None, right.location()),
         ),
     ];
 
@@ -2289,11 +2352,11 @@ fn assert_and<'a>(
         ("operator", atom("&&")),
         (
             "left",
-            asserted_expression(left.kind, Some("true".to_doc()), left.location),
+            asserted_expression(left_kind, Some("true".to_doc()), left.location()),
         ),
         (
             "right",
-            asserted_expression(right.kind, Some("false".to_doc()), right.location),
+            asserted_expression(right_kind, Some("false".to_doc()), right.location()),
         ),
     ];
 
@@ -2310,12 +2373,13 @@ fn assert_and<'a>(
         "true -> ",
         docvec![
             "case ",
-            right.value,
+            maybe_block_expr(right, env),
             " of",
             right_clauses.nest(INDENT),
             line(),
             "end"
         ],
+        ";",
         line(),
         "false -> ",
         erlang_error(
@@ -2329,7 +2393,7 @@ fn assert_and<'a>(
 
     docvec![
         "case ",
-        left.value,
+        maybe_block_expr(left, env),
         " of",
         left_clauses.nest(INDENT),
         line(),
@@ -2337,9 +2401,17 @@ fn assert_and<'a>(
     ]
 }
 
+/// Similar to `&&`, `||` is also short-circuiting in Gleam. However, if `||`
+/// short-circuits, that's because the first expression evaluated to `true`,
+/// meaning the whole assertion succeeds. This allows us to directly use Erlang's
+/// `orelse` operator as the subject of the `case` expression.
+///
+/// The only difference is that due to the nature of `||`, if the assertion fails,
+/// we know that both sides must have evaluated to `false`, so we don't
+/// need to store the values of them in variables beforehand.
 fn assert_or<'a>(
-    left: AssertExpression<'a>,
-    right: AssertExpression<'a>,
+    left: &'a TypedExpr,
+    right: &'a TypedExpr,
     message: Document<'a>,
     location: SrcSpan,
     env: &mut Env<'a>,
@@ -2347,16 +2419,21 @@ fn assert_or<'a>(
     let fields = vec![
         ("kind", atom("binary_operator")),
         ("operator", atom("||")),
-        // We need to preserve the `kind` and `location` fields of these,
-        // but since both must be false for the assertion to fail, we don't
-        // need to re-evaluate the expressions.
         (
             "left",
-            asserted_expression(left.kind, Some("false".to_doc()), left.location),
+            asserted_expression(
+                ExpressionKind::from_expression(left),
+                Some("false".to_doc()),
+                left.location(),
+            ),
         ),
         (
             "right",
-            asserted_expression(right.kind, Some("false".to_doc()), right.location),
+            asserted_expression(
+                ExpressionKind::from_expression(right),
+                Some("false".to_doc()),
+                right.location(),
+            ),
         ),
     ];
 
@@ -2370,12 +2447,50 @@ fn assert_or<'a>(
 
     docvec![
         "case ",
-        docvec![left.value, " orelse ", right.value].nest(INDENT),
+        docvec![
+            maybe_block_expr(left, env),
+            " orelse ",
+            maybe_block_expr(right, env)
+        ]
+        .nest(INDENT),
         " of",
         clauses.nest(INDENT),
         line(),
         "end"
     ]
+}
+
+fn assign_to_variable<'a>(
+    value: &'a TypedExpr,
+    assignments: &mut Vec<Document<'a>>,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    if value.is_var() {
+        expr(value, env)
+    } else {
+        let value = maybe_block_expr(value, env);
+        let variable = env.next_local_var_name(ASSERT_SUBJECT_VARIABLE);
+        let definition = docvec![variable.clone(), " = ", value, ",", line()];
+        assignments.push(definition);
+        variable
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum ExpressionKind {
+    Literal,
+    Expression,
+    Unevaluated,
+}
+
+impl ExpressionKind {
+    fn from_expression(expression: &TypedExpr) -> Self {
+        if expression.is_literal() {
+            Self::Literal
+        } else {
+            Self::Expression
+        }
+    }
 }
 
 fn asserted_expression<'a>(
@@ -2417,190 +2532,6 @@ fn asserted_expression<'a>(
     "#{".to_doc()
         .append(fields_doc.group().nest(INDENT))
         .append("}")
-}
-
-fn assign_to_variable<'a>(
-    value: &'a TypedExpr,
-    assignments: &mut Vec<Document<'a>>,
-    env: &mut Env<'a>,
-) -> Document<'a> {
-    if value.is_var() {
-        expr(value, env)
-    } else {
-        let value = maybe_block_expr(value, env);
-        let variable = env.next_local_var_name(ASSERT_SUBJECT_VARIABLE);
-        let definition = docvec![variable.clone(), " = ", value, ",", line()];
-        assignments.push(definition);
-        variable
-    }
-}
-
-fn assert_subject<'a>(
-    subject: &'a TypedExpr,
-    assignments: &mut Vec<Document<'a>>,
-    env: &mut Env<'a>,
-) -> AssertSubject<'a> {
-    match subject {
-        TypedExpr::Call { fun, args, .. } => {
-            let arguments = args
-                .iter()
-                .map(|element| assert_expression(&element.value, Some(assignments), env))
-                .collect();
-            AssertSubject::Call {
-                function: fun,
-                arguments,
-            }
-        }
-        TypedExpr::BinOp {
-            name, left, right, ..
-        } => {
-            let name = match name {
-                BinOp::And => {
-                    return AssertSubject::And {
-                        left: assert_expression(left, None, env),
-                        right: assert_expression(right, None, env),
-                    };
-                }
-                BinOp::Or => {
-                    return AssertSubject::Or {
-                        left: assert_expression(left, None, env),
-                        right: assert_expression(right, None, env),
-                    };
-                }
-                BinOp::Eq => AssertBinOp::Eq,
-                BinOp::NotEq => AssertBinOp::NotEq,
-                BinOp::LtInt => AssertBinOp::LtInt,
-                BinOp::LtEqInt => AssertBinOp::LtEqInt,
-                BinOp::LtFloat => AssertBinOp::LtFloat,
-                BinOp::LtEqFloat => AssertBinOp::LtEqFloat,
-                BinOp::GtEqInt => AssertBinOp::GtEqInt,
-                BinOp::GtInt => AssertBinOp::GtInt,
-                BinOp::GtEqFloat => AssertBinOp::GtEqFloat,
-                BinOp::GtFloat => AssertBinOp::GtFloat,
-                BinOp::AddInt
-                | BinOp::AddFloat
-                | BinOp::SubInt
-                | BinOp::SubFloat
-                | BinOp::MultInt
-                | BinOp::MultFloat
-                | BinOp::DivInt
-                | BinOp::DivFloat
-                | BinOp::RemainderInt
-                | BinOp::Concatenate => {
-                    panic!("Non-boolean operators cannot appear here in well-typed code")
-                }
-            };
-
-            let left = assert_expression(left, Some(assignments), env);
-            let right = assert_expression(right, Some(assignments), env);
-            AssertSubject::BinaryOperator { name, left, right }
-        }
-        _ => AssertSubject::Expression(assert_expression(subject, Some(assignments), env)),
-    }
-}
-
-fn assert_expression<'a>(
-    expression: &'a TypedExpr,
-    assignments: Option<&mut Vec<Document<'a>>>,
-    env: &mut Env<'a>,
-) -> AssertExpression<'a> {
-    let kind = if expression.is_literal() {
-        ExpressionKind::Literal
-    } else {
-        ExpressionKind::Expression
-    };
-    let location = expression.location();
-    let value = if let Some(assignments) = assignments {
-        assign_to_variable(expression, assignments, env)
-    } else {
-        maybe_block_expr(expression, env)
-    };
-
-    AssertExpression {
-        kind,
-        location,
-        value,
-    }
-}
-
-enum AssertBinOp {
-    LtInt,
-    LtFloat,
-    LtEqInt,
-    LtEqFloat,
-    Eq,
-    NotEq,
-    GtInt,
-    GtFloat,
-    GtEqInt,
-    GtEqFloat,
-}
-
-impl AssertBinOp {
-    fn name(&self) -> &'static str {
-        match self {
-            AssertBinOp::LtInt => "<",
-            AssertBinOp::LtFloat => "<.",
-            AssertBinOp::LtEqInt => "<=",
-            AssertBinOp::LtEqFloat => "<=.",
-            AssertBinOp::Eq => "==",
-            AssertBinOp::NotEq => "!=",
-            AssertBinOp::GtInt => ">",
-            AssertBinOp::GtFloat => ">.",
-            AssertBinOp::GtEqInt => ">=",
-            AssertBinOp::GtEqFloat => ">=.",
-        }
-    }
-
-    fn to_erlang(&self) -> &'static str {
-        match self {
-            AssertBinOp::LtInt | AssertBinOp::LtFloat => "<",
-            AssertBinOp::LtEqInt | AssertBinOp::LtEqFloat => "=<",
-            AssertBinOp::Eq => "=:=",
-            AssertBinOp::NotEq => "/=",
-            AssertBinOp::GtInt | AssertBinOp::GtFloat => ">",
-            AssertBinOp::GtEqInt | AssertBinOp::GtEqFloat => ">=",
-        }
-    }
-}
-
-enum AssertSubject<'a> {
-    Expression(AssertExpression<'a>),
-    BinaryOperator {
-        name: AssertBinOp,
-        left: AssertExpression<'a>,
-        right: AssertExpression<'a>,
-    },
-
-    // The `&&` and `||` operators are both short-circuiting, meaning we cannot
-    // pre-evaluate the left and right hand sides before asserting, and need
-    // to implement some custom logic.
-    And {
-        left: AssertExpression<'a>,
-        right: AssertExpression<'a>,
-    },
-    Or {
-        left: AssertExpression<'a>,
-        right: AssertExpression<'a>,
-    },
-
-    Call {
-        function: &'a TypedExpr,
-        arguments: Vec<AssertExpression<'a>>,
-    },
-}
-
-struct AssertExpression<'a> {
-    kind: ExpressionKind,
-    location: SrcSpan,
-    value: Document<'a>,
-}
-
-#[derive(Debug, Clone, Copy)]
-enum ExpressionKind {
-    Literal,
-    Expression,
-    Unevaluated,
 }
 
 fn negate_with<'a>(op: &'static str, value: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
