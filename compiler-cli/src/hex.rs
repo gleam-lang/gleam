@@ -3,6 +3,7 @@ mod auth;
 use crate::{cli, http::HttpClient};
 use gleam_core::{
     Error, Result,
+    error::wrap,
     hex::{self, RetirementReason},
     io::HttpClient as _,
     paths::ProjectPaths,
@@ -99,7 +100,7 @@ pub(crate) fn authenticate() -> Result<()> {
     let previous = auth.read_stored_api_key()?;
 
     if previous.is_some() {
-        let question = "You already have a local Hex API token. Would you like to replace it
+        let question = "You already have a local Hex API key. Would you like to replace it
 with a new one?";
         if !cli::confirm(question)? {
             return Ok(());
@@ -109,13 +110,37 @@ with a new one?";
     let new_key = auth.create_and_store_api_key()?;
 
     if let Some(previous) = previous {
+        if previous.username != new_key.username {
+            if let Some(previous_username) = previous.username {
+                let text = wrap(&format!(
+                    "
+Your previous Hex API key was created with username `{}` which is different from the username
+used to create the new Hex API key. You have to delete the key `{}` manually at https://hex.pm",
+                    previous_username, previous.name
+                ));
+
+                println!("{text}");
+                return Ok(());
+            }
+        }
+
         println!("Deleting previous key `{}` from Hex", previous.name);
-        runtime.block_on(hex::remove_api_key(
-            &previous.name,
-            &config,
-            &new_key.unencrypted,
-            &http,
-        ))?;
+        if runtime
+            .block_on(hex::remove_api_key(
+                &previous.name,
+                &config,
+                &new_key.unencrypted,
+                &http,
+            ))
+            .is_err()
+        {
+            let text = wrap(&format!(
+                "There was an error deleting key `{}` from Hex. You have to delete the key manually at https://hex.pm",
+                previous.name
+            ));
+
+            println!("{text}");
+        };
     }
     Ok(())
 }
