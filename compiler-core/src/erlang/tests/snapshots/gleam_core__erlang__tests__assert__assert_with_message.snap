@@ -24,7 +24,7 @@ main() ->
                 message => <<"This shouldn't fail"/utf8>>,
                 kind => expression,
                 expression => #{kind => expression,
-                    value => true,
+                    value => false,
                     start => 26,
                     end => 30,
                     },

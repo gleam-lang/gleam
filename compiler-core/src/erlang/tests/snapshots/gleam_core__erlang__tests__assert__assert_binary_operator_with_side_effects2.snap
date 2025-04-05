@@ -31,25 +31,25 @@ wibble(A, B) ->
 go(X) ->
     case wibble(5, 5) of
         true -> case wibble(4, 6) of
-            true -> true;
-            false -> erlang:error(#{gleam_error => assert,
-                    message => <<"Assertion failed."/utf8>>,
-                    kind => binary_operator,
-                    operator => '&&',
-                    left => #{kind => expression,
-                        value => true,
-                        start => 82,
-                        end => 94,
-                        },
-                    right => #{kind => expression,
-                        value => false,
-                        start => 98,
-                        end => 110,
-                        },
-                    module => <<"my/mod"/utf8>>,
-                    function => <<"go"/utf8>>,
-                    line => 8})
-        end
+                true -> true;
+                false -> erlang:error(#{gleam_error => assert,
+                        message => <<"Assertion failed."/utf8>>,
+                        kind => binary_operator,
+                        operator => '&&',
+                        left => #{kind => expression,
+                            value => true,
+                            start => 82,
+                            end => 94,
+                            },
+                        right => #{kind => expression,
+                            value => false,
+                            start => 98,
+                            end => 110,
+                            },
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"go"/utf8>>,
+                        line => 8})
+            end;
         false -> erlang:error(#{gleam_error => assert,
                 message => <<"Assertion failed."/utf8>>,
                 kind => binary_operator,

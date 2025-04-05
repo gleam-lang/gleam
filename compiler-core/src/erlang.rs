@@ -2290,6 +2290,7 @@ fn assert_call<'a>(
             }),
         break_(",", ", "),
     )
+    .nest(INDENT)
     .surround("[", "]");
 
     (
@@ -2378,7 +2379,8 @@ fn assert_and<'a>(
             right_clauses.nest(INDENT),
             line(),
             "end"
-        ],
+        ]
+        .nest(INDENT),
         ";",
         line(),
         "false -> ",
