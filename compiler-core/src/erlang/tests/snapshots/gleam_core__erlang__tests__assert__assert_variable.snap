@@ -26,7 +26,7 @@ main() ->
                 message => <<"Assertion failed."/utf8>>,
                 kind => expression,
                 expression => #{kind => expression,
-                    value => X,
+                    value => false,
                     start => 41,
                     end => 42,
                     },
