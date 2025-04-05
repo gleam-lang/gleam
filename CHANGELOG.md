@@ -458,6 +458,9 @@
   first line of the `use` expression to rewrite.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Hovering const values now displays their values.
+  ([David Mo](https://github.com/unknown))
+
 ### Formatter
 
 ### Container images
