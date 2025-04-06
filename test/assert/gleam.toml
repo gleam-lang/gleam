@@ -1,0 +1,6 @@
+name = "project"
+version = "1.0.0"
+description = "A Gleam project"
+
+[dependencies]
+gleam_stdlib = ">= 0.58.0 and < 2.0.0"
