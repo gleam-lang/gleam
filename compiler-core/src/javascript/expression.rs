@@ -986,7 +986,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             ") {",
             docvec![
                 line(),
-                self.throw_error("assert", &message, location, fields),
+                self.throw_error("assert", message, location, fields),
             ]
             .nest(INDENT),
             line(),

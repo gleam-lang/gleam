@@ -2267,7 +2267,7 @@ fn assert<'a>(assert: &'a TypedAssert, env: &mut Env<'a>) -> Document<'a> {
 }
 
 fn assert_call<'a>(
-    function: &'a Box<TypedExpr>,
+    function: &'a TypedExpr,
     arguments: &'a Vec<CallArg<TypedExpr>>,
     assignments: &mut Vec<Document<'a>>,
     env: &mut Env<'a>,
@@ -2495,11 +2495,11 @@ impl AssertExpression {
     }
 }
 
-fn asserted_expression<'a>(
+fn asserted_expression(
     kind: AssertExpression,
-    value: Option<Document<'a>>,
+    value: Option<Document<'_>>,
     location: SrcSpan,
-) -> Document<'a> {
+) -> Document<'_> {
     let kind = match kind {
         AssertExpression::Literal => atom("literal"),
         AssertExpression::Expression => atom("expression"),
