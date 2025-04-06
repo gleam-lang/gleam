@@ -98,6 +98,32 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- You can now use the `assert` keyword by itself to test a boolean expression.
+  If the expression evaluates to `false` at runtime, the `assert` statement
+  will cause the program to panic, with information about the expression that
+  was asserted.
+
+  For example:
+
+  ```gleam
+  pub fn ok_error_test() {
+    assert result.is_ok(Ok(10))
+    assert result.is_error(Error("Some error"))
+    assert Ok(1) != Error(1)
+    assert result.is_error(Ok(42)) // panic: Assertion failed
+  }
+  ```
+
+  A custom panic message can also be provided in order to add extra information:
+
+  ```gleam
+  pub fn identity_test() {
+    assert function.identity(True) as "Identity of True should never be False"
+  }
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - The build tool now supports placing modules in a directory called `dev`,
