@@ -907,7 +907,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                             array(argument_variables.into_iter().zip(args).map(
                                 |(variable, argument)| {
                                     Ok(self.asserted_expression(
-                                        ExpressionKind::from_expression(&argument.value),
+                                        AssertExpression::from_expression(&argument.value),
                                         Some(variable),
                                         argument.location(),
                                     ))
@@ -946,7 +946,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                         (
                             "left",
                             self.asserted_expression(
-                                ExpressionKind::from_expression(left),
+                                AssertExpression::from_expression(left),
                                 Some(left_document),
                                 left.location(),
                             ),
@@ -954,7 +954,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                         (
                             "right",
                             self.asserted_expression(
-                                ExpressionKind::from_expression(right),
+                                AssertExpression::from_expression(right),
                                 Some(right_document),
                                 right.location(),
                             ),
@@ -970,7 +970,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                     (
                         "expression",
                         self.asserted_expression(
-                            ExpressionKind::from_expression(subject),
+                            AssertExpression::from_expression(subject),
                             Some("false".to_doc()),
                             subject.location(),
                         ),
@@ -995,6 +995,32 @@ impl<'module, 'a> Generator<'module, 'a> {
         .group())
     }
 
+    /// In Gleam, the `&&` operator is short-circuiting, meaning that we can't
+    /// pre-evaluate both sides of it, and use them in the exception that is
+    /// thrown.
+    /// Instead, we need to implement this short-circuiting logic ourself.
+    ///
+    /// If we short-circuit, we must leave the second expression unevaluated,
+    /// and signal that using the `unevaluated` variant, as detailed in the
+    /// exception format. For the first expression, we know it must be `false`,
+    /// otherwise we would have continued by evaluating the second expression.
+    ///
+    /// Similarly, if we do evaluate the second expression and fail, we know
+    /// that the first expression must have evaluated to `true`, and the second
+    /// to `false`. This way, we avoid needing to evaluate either expression
+    /// twice.
+    ///
+    /// The generated code then looks something like this:
+    /// ```javascript
+    /// if (expr1) {
+    ///   if (!expr2) {
+    ///     <throw exception>
+    ///   }
+    /// } else {
+    ///   <throw exception>
+    /// }
+    /// ```
+    ///
     fn assert_and(
         &mut self,
         left: &'a TypedExpr,
@@ -1002,8 +1028,8 @@ impl<'module, 'a> Generator<'module, 'a> {
         message: &Document<'a>,
         location: SrcSpan,
     ) -> Output<'a> {
-        let left_kind = ExpressionKind::from_expression(left);
-        let right_kind = ExpressionKind::from_expression(right);
+        let left_kind = AssertExpression::from_expression(left);
+        let right_kind = AssertExpression::from_expression(right);
 
         let fields_if_short_circuiting = vec![
             ("kind", string("binary_operator")),
@@ -1014,7 +1040,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             ),
             (
                 "right",
-                self.asserted_expression(ExpressionKind::Unevaluated, None, right.location()),
+                self.asserted_expression(AssertExpression::Unevaluated, None, right.location()),
             ),
         ];
 
@@ -1068,6 +1094,14 @@ impl<'module, 'a> Generator<'module, 'a> {
         ])
     }
 
+    /// Similar to `&&`, `||` is also short-circuiting in Gleam. However, if `||`
+    /// short-circuits, that's because the first expression evaluated to `true`,
+    /// meaning the whole assertion succeeds. This allows us to directly use the
+    /// `||` operator in JavaScript.
+    ///
+    /// The only difference is that due to the nature of `||`, if the assertion fails,
+    /// we know that both sides must have evaluated to `false`, so we don't
+    /// need to store the values of them in variables beforehand.
     fn assert_or(
         &mut self,
         left: &'a TypedExpr,
@@ -1081,7 +1115,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             (
                 "left",
                 self.asserted_expression(
-                    ExpressionKind::from_expression(left),
+                    AssertExpression::from_expression(left),
                     Some("false".to_doc()),
                     left.location(),
                 ),
@@ -1089,7 +1123,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             (
                 "right",
                 self.asserted_expression(
-                    ExpressionKind::from_expression(right),
+                    AssertExpression::from_expression(right),
                     Some("false".to_doc()),
                     right.location(),
                 ),
@@ -1132,14 +1166,14 @@ impl<'module, 'a> Generator<'module, 'a> {
 
     fn asserted_expression(
         &mut self,
-        kind: ExpressionKind,
+        kind: AssertExpression,
         value: Option<Document<'a>>,
         location: SrcSpan,
     ) -> Document<'a> {
         let kind = match kind {
-            ExpressionKind::Literal => string("literal"),
-            ExpressionKind::Expression => string("expression"),
-            ExpressionKind::Unevaluated => string("unevaluated"),
+            AssertExpression::Literal => string("literal"),
+            AssertExpression::Expression => string("expression"),
+            AssertExpression::Unevaluated => string("unevaluated"),
         };
 
         let start = location.start.to_doc();
@@ -1810,13 +1844,13 @@ impl<'module, 'a> Generator<'module, 'a> {
 }
 
 #[derive(Clone, Copy)]
-enum ExpressionKind {
+enum AssertExpression {
     Literal,
     Expression,
     Unevaluated,
 }
 
-impl ExpressionKind {
+impl AssertExpression {
     fn from_expression(expression: &TypedExpr) -> Self {
         if expression.is_literal() {
             Self::Literal
