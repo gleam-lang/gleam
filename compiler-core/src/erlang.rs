@@ -2214,7 +2214,7 @@ fn assert<'a>(assert: &'a TypedAssert, env: &mut Env<'a>) -> Document<'a> {
                     (
                         "left",
                         asserted_expression(
-                            ExpressionKind::from_expression(left),
+                            AssertExpression::from_expression(left),
                             Some(left_document),
                             left.location(),
                         ),
@@ -2222,7 +2222,7 @@ fn assert<'a>(assert: &'a TypedAssert, env: &mut Env<'a>) -> Document<'a> {
                     (
                         "right",
                         asserted_expression(
-                            ExpressionKind::from_expression(right),
+                            AssertExpression::from_expression(right),
                             Some(right_document),
                             right.location(),
                         ),
@@ -2238,7 +2238,7 @@ fn assert<'a>(assert: &'a TypedAssert, env: &mut Env<'a>) -> Document<'a> {
                 (
                     "expression",
                     asserted_expression(
-                        ExpressionKind::from_expression(value),
+                        AssertExpression::from_expression(value),
                         Some("false".to_doc()),
                         value.location(),
                     ),
@@ -2283,7 +2283,7 @@ fn assert_call<'a>(
             .zip(arguments)
             .map(|(variable, argument)| {
                 asserted_expression(
-                    ExpressionKind::from_expression(&argument.value),
+                    AssertExpression::from_expression(&argument.value),
                     Some(variable.clone()),
                     argument.location(),
                 )
@@ -2332,8 +2332,8 @@ fn assert_and<'a>(
     location: SrcSpan,
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    let left_kind = ExpressionKind::from_expression(left);
-    let right_kind = ExpressionKind::from_expression(right);
+    let left_kind = AssertExpression::from_expression(left);
+    let right_kind = AssertExpression::from_expression(right);
 
     let fields_if_short_circuiting = vec![
         ("kind", atom("binary_operator")),
@@ -2344,7 +2344,7 @@ fn assert_and<'a>(
         ),
         (
             "right",
-            asserted_expression(ExpressionKind::Unevaluated, None, right.location()),
+            asserted_expression(AssertExpression::Unevaluated, None, right.location()),
         ),
     ];
 
@@ -2424,7 +2424,7 @@ fn assert_or<'a>(
         (
             "left",
             asserted_expression(
-                ExpressionKind::from_expression(left),
+                AssertExpression::from_expression(left),
                 Some("false".to_doc()),
                 left.location(),
             ),
@@ -2432,7 +2432,7 @@ fn assert_or<'a>(
         (
             "right",
             asserted_expression(
-                ExpressionKind::from_expression(right),
+                AssertExpression::from_expression(right),
                 Some("false".to_doc()),
                 right.location(),
             ),
@@ -2479,13 +2479,13 @@ fn assign_to_variable<'a>(
 }
 
 #[derive(Debug, Clone, Copy)]
-enum ExpressionKind {
+enum AssertExpression {
     Literal,
     Expression,
     Unevaluated,
 }
 
-impl ExpressionKind {
+impl AssertExpression {
     fn from_expression(expression: &TypedExpr) -> Self {
         if expression.is_literal() {
             Self::Literal
@@ -2496,14 +2496,14 @@ impl ExpressionKind {
 }
 
 fn asserted_expression<'a>(
-    kind: ExpressionKind,
+    kind: AssertExpression,
     value: Option<Document<'a>>,
     location: SrcSpan,
 ) -> Document<'a> {
     let kind = match kind {
-        ExpressionKind::Literal => atom("literal"),
-        ExpressionKind::Expression => atom("expression"),
-        ExpressionKind::Unevaluated => atom("unevaluated"),
+        AssertExpression::Literal => atom("literal"),
+        AssertExpression::Expression => atom("expression"),
+        AssertExpression::Unevaluated => atom("unevaluated"),
     };
 
     let start = location.start.to_doc();
