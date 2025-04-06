@@ -25,7 +25,10 @@ export function assert_answer(x) {
         kind: "binary_operator",
         operator: "==",
         left: { kind: "expression", value: x, start: 36, end: 37 },
-        right: { kind: "literal", value: $, start: 41, end: 43 }
+        right: { kind: "literal", value: $, start: 41, end: 43 },
+        assert_start: 29,
+        expression_start: 36,
+        expression_end: 43
       }
     )
   }

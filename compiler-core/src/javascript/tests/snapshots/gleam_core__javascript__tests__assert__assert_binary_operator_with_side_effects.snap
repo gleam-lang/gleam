@@ -35,7 +35,10 @@ export function go(x) {
           kind: "binary_operator",
           operator: "&&",
           left: { kind: "expression", value: true, start: 82, end: 86 },
-          right: { kind: "expression", value: false, start: 90, end: 102 }
+          right: { kind: "expression", value: false, start: 90, end: 102 },
+          assert_start: 75,
+          expression_start: 82,
+          expression_end: 102
         }
       )
     }
@@ -50,7 +53,10 @@ export function go(x) {
         kind: "binary_operator",
         operator: "&&",
         left: { kind: "expression", value: false, start: 82, end: 86 },
-        right: { kind: "unevaluated", start: 90, end: 102 }
+        right: { kind: "unevaluated", start: 90, end: 102 },
+        assert_start: 75,
+        expression_start: 82,
+        expression_end: 102
       }
     )
   }

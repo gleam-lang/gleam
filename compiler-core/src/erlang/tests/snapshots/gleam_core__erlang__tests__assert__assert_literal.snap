@@ -28,6 +28,9 @@ main() ->
                     start => 26,
                     'end' => 31
                     },
+                assert_start => 19,
+                expression_start => 26,
+                expression_end => 31,
                 module => <<"my/mod"/utf8>>,
                 function => <<"main"/utf8>>,
                 line => 3})
