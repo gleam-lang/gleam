@@ -13,3 +13,4 @@ error: Type mismatch
   │   ^^ Use + instead
 
 The +. operator can only be used on Floats.
+To sum two Ints you can use the + operator.

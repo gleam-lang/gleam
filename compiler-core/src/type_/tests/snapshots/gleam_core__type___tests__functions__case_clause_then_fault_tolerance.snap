@@ -25,6 +25,7 @@ error: Type mismatch
   │           ^ Use +. instead
 
 The + operator can only be used on Ints.
+To sum two Floats you can use the +. operator.
 
 error: Type mismatch
   ┌─ /src/one/two.gleam:9:11
@@ -33,3 +34,4 @@ error: Type mismatch
   │           ^ Use +. instead
 
 The + operator can only be used on Ints.
+To sum two Floats you can use the +. operator.

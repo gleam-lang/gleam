@@ -13,3 +13,4 @@ error: Type mismatch
   │     ^ Use >. instead
 
 The > operator can only be used on Ints.
+To compare two Floats you can use the >. operator.

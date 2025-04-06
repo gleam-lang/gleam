@@ -3558,40 +3558,61 @@ To join two strings together you can use the <> operator."),
                     }),
                 },
 
-                TypeError::IntOperatorOnFloats { location, operator } => Diagnostic {
-                    title: "Type mismatch".to_string(),
-                    text: wrap_format!("The {} operator can only be used on Ints.", operator.name()),
-                    hint: None,
-                    level: Level::Error,
-                    location: Some(Location {
-                        label: Label {
-                            text: operator.float_equivalent().map(|operator|
-                                format!("Use {} instead", operator.name())
-                            ),
-                            span: *location,
-                        },
-                        path: path.clone(),
-                        src: src.clone(),
-                        extra_labels: vec![],
-                    }),
-                },
+                TypeError::IntOperatorOnFloats { location, operator } => {
+                    let equivalent = operator.float_equivalent().map(|operator| operator.name());
+                    let mut text = format!("The {} operator can only be used on Ints.", operator.name());
+                    let operation = operation_kind(operator);
 
-                TypeError::FloatOperatorOnInts { location, operator } => Diagnostic {
+                    match (equivalent, operation) {
+                        (None, _) | (_, None) => (),
+                        (Some(equivalent), Some(operation)) => {
+                            text.push_str(&format!("\nTo {operation} two Floats you can use the {equivalent} operator."))
+                        },
+                    }
+
+                    Diagnostic {
                     title: "Type mismatch".to_string(),
-                    text: wrap_format!("The {} operator can only be used on Floats.", operator.name()),
+                    text,
                     hint: None,
                     level: Level::Error,
                     location: Some(Location {
                         label: Label {
-                            text: operator.int_equivalent().map(|operator|
-                                format!("Use {} instead", operator.name())
-                            ),
+                            text: equivalent.map(|operator| format!("Use {operator} instead")),
                             span: *location,
                         },
                         path: path.clone(),
                         src: src.clone(),
                         extra_labels: vec![],
                     }),
+                }},
+
+                TypeError::FloatOperatorOnInts { location, operator } => {
+                    let equivalent = operator.int_equivalent().map(|operator| operator.name());
+                    let mut text = format!("The {} operator can only be used on Floats.", operator.name());
+                    let operation = operation_kind(operator);
+
+                    match (equivalent, operation) {
+                        (None, _) | (_, None) => (),
+                        (Some(equivalent), Some(operation)) => {
+                            text.push_str(&format!("\nTo {operation} two Ints you can use the {equivalent} operator."))
+                        },
+                    }
+
+                    Diagnostic {
+                        title: "Type mismatch".to_string(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: equivalent.map(|operator| format!("Use {operator} instead")),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 },
             }
         }).collect_vec(),
@@ -4174,6 +4195,27 @@ fn hint_numeric_message(alt: &str, type_: &str) -> String {
 
 fn hint_string_message() -> String {
     wrap("Strings can be joined using the `<>` operator.")
+}
+
+fn operation_kind(operator: &BinOp) -> Option<String> {
+    match operator {
+        BinOp::LtInt
+        | BinOp::LtEqInt
+        | BinOp::LtFloat
+        | BinOp::LtEqFloat
+        | BinOp::GtEqInt
+        | BinOp::GtInt
+        | BinOp::GtEqFloat
+        | BinOp::GtFloat => Some("compare".into()),
+
+        BinOp::AddInt | BinOp::AddFloat => Some("sum".into()),
+        BinOp::SubInt | BinOp::SubFloat => Some("subtract".into()),
+        BinOp::MultInt | BinOp::MultFloat => Some("multiply".into()),
+        BinOp::DivInt | BinOp::DivFloat => Some("divide".into()),
+        BinOp::Concatenate => Some("join".into()),
+
+        BinOp::Eq | BinOp::NotEq | BinOp::And | BinOp::Or | BinOp::RemainderInt => None,
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
