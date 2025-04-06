@@ -97,6 +97,6 @@ jobs:
             --notes "$NOTES" \
             --draft \
             --verify-tag \
-            ${{ contains(github.ref_name, '-rc.') && '--prerelease' || '' }} \
+            ${{ contains(github.ref_name, '-rc') && '--prerelease' || '' }} \
             "$TAG_NAME" \
             gleam-*
