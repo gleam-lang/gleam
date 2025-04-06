@@ -44,13 +44,9 @@
   and patterns.
   ([Richard Viney](https://github.com/richard-viney))
 
-- Improve the error messages for unknown and missing target names in target
-  attributes.
+- Improved the error message for unknown and missing target names in the
+  `@target` attribute.
   ([Alexander Keleschovsky](https://github.com/AlecGhost))
-
-- Fixed a bug where a temporarily moved or removed file does not get recompiled,
-  even though its dependencies changed in the meanwhile.
-  ([Sakari Bergen](http://github.com/sbergen))
 
 - The compiler now uses a call graph for detecting unused types and values.
   This means that among other things, it can now detect unused recursive
@@ -153,21 +149,24 @@
 
   - `entrypoint.sh` for POSIX Shell
   - `entrypoint.ps1` for PowerShell
-    ([Greg Burri](https://github.com/ummon))
 
-- `gleam export` now takes a `package-information` option to export the
-  project's `gleam.toml` as a JSON file.
+  ([Greg Burri](https://github.com/ummon))
+
+- The `gleam export` command now takes a `package-information` option to
+  export the project's `gleam.toml` as a JSON file.
   ([Rodrigo Álvarez](https://github.com/Papipo))
 
-- Improve error messages when encrypting and decrypting local Hex API key.
+- Improved the error message when failing to encrypt or decrypt a local
+  Hex API key.
   ([Samuel Cristobal](https://github.com/scristobal))
 
-- Deprecated `HEXPM_USER` and `HEXPM_PASS` in favour of `HEXPM_API_KEY`.
+- The `HEXPM_USER` and `HEXPM_PASS` environment variables when running
+  `gleam publish` have been deprecated in favour of `HEXPM_API_KEY`.
   ([Samuel Cristobal](https://github.com/scristobal))
 
 - The "functions" and "constants" sections of generated HTML documentation have
   been merged into one "values" section.
-  ([Sam Zanca ](https://github.com/metruzanca))
+  ([Sam Zanca](https://github.com/metruzanca))
 
 ### Language server
 
@@ -483,6 +482,10 @@
 - Fixed a bug where using the "Convert to pipe" code action on a function or
   record capture produces invalid code.
   ([Matias Carlander](https://github.com/matiascr))
+
+- Fixed a bug where a temporarily moved or removed file does not get recompiled,
+  even though its dependencies changed in the meanwhile.
+  ([Sakari Bergen](http://github.com/sbergen))
 
 - Fixed a bug where the "Inline variable" code action would not work properly
   if used inside a record update.
