@@ -28,7 +28,13 @@ export function main() {
       7,
       "main",
       "Assertion failed.",
-      { kind: "function_call", arguments: [] }
+      {
+        kind: "function_call",
+        arguments: [],
+        assert_start: 41,
+        expression_start: 48,
+        expression_end: 54
+      }
     )
   }
   return true;

@@ -27,7 +27,10 @@ export function main() {
         kind: "binary_operator",
         operator: "||",
         left: { kind: "expression", value: false, start: 41, end: 42 },
-        right: { kind: "expression", value: false, start: 46, end: 51 }
+        right: { kind: "expression", value: false, start: 46, end: 51 },
+        assert_start: 34,
+        expression_start: 41,
+        expression_end: 51
       }
     )
   }

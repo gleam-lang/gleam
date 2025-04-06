@@ -24,7 +24,10 @@ export function main() {
       "Assertion failed.",
       {
         kind: "expression",
-        expression: { kind: "expression", value: false, start: 41, end: 42 }
+        expression: { kind: "expression", value: false, start: 41, end: 42 },
+        assert_start: 34,
+        expression_start: 41,
+        expression_end: 42
       }
     )
   }

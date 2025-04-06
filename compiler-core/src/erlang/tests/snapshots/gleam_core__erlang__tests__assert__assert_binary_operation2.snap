@@ -34,6 +34,9 @@ eq(A, B) ->
                     start => 33,
                     'end' => 34
                     },
+                assert_start => 21,
+                expression_start => 28,
+                expression_end => 34,
                 module => <<"my/mod"/utf8>>,
                 function => <<"eq"/utf8>>,
                 line => 3})

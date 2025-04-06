@@ -24,7 +24,10 @@ export function eq(a, b) {
         kind: "binary_operator",
         operator: "==",
         left: { kind: "expression", value: a, start: 28, end: 29 },
-        right: { kind: "expression", value: b, start: 33, end: 34 }
+        right: { kind: "expression", value: b, start: 33, end: 34 },
+        assert_start: 21,
+        expression_start: 28,
+        expression_end: 34
       }
     )
   }

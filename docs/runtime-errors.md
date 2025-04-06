@@ -73,11 +73,14 @@ An assertion of a boolean value.
 The error format of `assert` differs based on the expression that is asserted.
 It always has these fields:
 
-| Key         | Erlang Value                    | JavaScript Value                |
-| ---         | ------------                    | ----------------                |
-| gleam_error | `assert`                        | `"assert"`                      |
-| message     | The given message               | The given message               |
-| kind        | The kind of asserted expression | The kind of asserted expression |
+| Key              | Erlang Value                                           | JavaScript Value                                       |
+| ---              | ------------                                           | ----------------                                       |
+| gleam_error      | `assert`                                               | `"assert"`                                             |
+| message          | The given message                                      | The given message                                      |
+| kind             | The kind of asserted expression                        | The kind of asserted expression                        |
+| assert_start     | The byte-index of the start of the `assert` statement  | The byte-index of the start of the `assert` statement  |
+| expression_start | The byte-index of the start of the asserted expression | The byte-index of the start of the asserted expression |
+| expression_end   | The byte-index of the end of the asserted expression   | The byte-index of the end of the asserted expression   |
 
 But, depending on the expression that was asserted, it contains additional
 information which can be used to diagnose the error.
