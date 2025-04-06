@@ -888,7 +888,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         message: &Document<'a>,
         location: SrcSpan,
     ) -> Output<'a> {
-        let (subject, fields) = match subject {
+        let (subject_document, mut fields) = match subject {
             TypedExpr::Call { fun, args, .. } => {
                 let argument_variables: Vec<_> = args
                     .iter()
@@ -979,9 +979,13 @@ impl<'module, 'a> Generator<'module, 'a> {
             ),
         };
 
+        fields.push(("assert_start", location.start.to_doc()));
+        fields.push(("expression_start", subject.location().start.to_doc()));
+        fields.push(("expression_end", subject.location().end.to_doc()));
+
         Ok(docvec![
             "if (",
-            docvec!["!", subject].nest(INDENT),
+            docvec!["!", subject_document].nest(INDENT),
             break_("", ""),
             ") {",
             docvec![
@@ -1042,6 +1046,9 @@ impl<'module, 'a> Generator<'module, 'a> {
                 "right",
                 self.asserted_expression(AssertExpression::Unevaluated, None, right.location()),
             ),
+            ("assert_start", location.start.to_doc()),
+            ("expression_start", left.location().start.to_doc()),
+            ("expression_end", right.location().end.to_doc()),
         ];
 
         let fields = vec![
@@ -1055,6 +1062,9 @@ impl<'module, 'a> Generator<'module, 'a> {
                 "right",
                 self.asserted_expression(right_kind, Some("false".to_doc()), right.location()),
             ),
+            ("assert_start", location.start.to_doc()),
+            ("expression_start", left.location().start.to_doc()),
+            ("expression_end", right.location().end.to_doc()),
         ];
 
         let left_value =
@@ -1128,6 +1138,9 @@ impl<'module, 'a> Generator<'module, 'a> {
                     right.location(),
                 ),
             ),
+            ("assert_start", location.start.to_doc()),
+            ("expression_start", left.location().start.to_doc()),
+            ("expression_end", right.location().end.to_doc()),
         ];
 
         let left_value =

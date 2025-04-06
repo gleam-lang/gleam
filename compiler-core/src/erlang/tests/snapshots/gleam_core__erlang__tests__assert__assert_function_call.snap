@@ -33,6 +33,9 @@ main() ->
                 message => <<"Assertion failed."/utf8>>,
                 kind => function_call,
                 arguments => [],
+                assert_start => 41,
+                expression_start => 48,
+                expression_end => 54,
                 module => <<"my/mod"/utf8>>,
                 function => <<"main"/utf8>>,
                 line => 7})

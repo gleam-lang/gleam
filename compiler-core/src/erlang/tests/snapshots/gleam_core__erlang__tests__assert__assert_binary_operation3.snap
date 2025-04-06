@@ -35,6 +35,9 @@ assert_answer(X) ->
                     start => 41,
                     'end' => 43
                     },
+                assert_start => 29,
+                expression_start => 36,
+                expression_end => 43,
                 module => <<"my/mod"/utf8>>,
                 function => <<"assert_answer"/utf8>>,
                 line => 3})

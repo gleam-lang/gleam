@@ -2172,7 +2172,7 @@ fn assert<'a>(assert: &'a TypedAssert, env: &mut Env<'a>) -> Document<'a> {
 
     let mut assignments = Vec::new();
 
-    let (subject, fields) = match value {
+    let (subject, mut fields) = match value {
         TypedExpr::Call { fun, args, .. } => assert_call(fun, args, &mut assignments, env),
         TypedExpr::BinOp {
             name, left, right, ..
@@ -2246,6 +2246,10 @@ fn assert<'a>(assert: &'a TypedAssert, env: &mut Env<'a>) -> Document<'a> {
             ],
         ),
     };
+
+    fields.push(("assert_start", location.start.to_doc()));
+    fields.push(("expression_start", value.location().start.to_doc()));
+    fields.push(("expression_end", value.location().end.to_doc()));
 
     let clauses = docvec![
         line(),
@@ -2346,6 +2350,9 @@ fn assert_and<'a>(
             "right",
             asserted_expression(AssertExpression::Unevaluated, None, right.location()),
         ),
+        ("assert_start", location.start.to_doc()),
+        ("expression_start", left.location().start.to_doc()),
+        ("expression_end", right.location().end.to_doc()),
     ];
 
     let fields = vec![
@@ -2359,6 +2366,9 @@ fn assert_and<'a>(
             "right",
             asserted_expression(right_kind, Some("false".to_doc()), right.location()),
         ),
+        ("assert_start", location.start.to_doc()),
+        ("expression_start", left.location().start.to_doc()),
+        ("expression_end", right.location().end.to_doc()),
     ];
 
     let right_clauses = docvec![
@@ -2437,6 +2447,9 @@ fn assert_or<'a>(
                 right.location(),
             ),
         ),
+        ("assert_start", location.start.to_doc()),
+        ("expression_start", left.location().start.to_doc()),
+        ("expression_end", right.location().end.to_doc()),
     ];
 
     let clauses = docvec![

@@ -46,6 +46,9 @@ go(X) ->
                             start => 90,
                             'end' => 102
                             },
+                        assert_start => 75,
+                        expression_start => 82,
+                        expression_end => 102,
                         module => <<"my/mod"/utf8>>,
                         function => <<"go"/utf8>>,
                         line => 8})
@@ -63,6 +66,9 @@ go(X) ->
                     start => 90,
                     'end' => 102
                     },
+                assert_start => 75,
+                expression_start => 82,
+                expression_end => 102,
                 module => <<"my/mod"/utf8>>,
                 function => <<"go"/utf8>>,
                 line => 8})
