@@ -17,8 +17,9 @@ pub use self::project_compiler::{Built, Options, ProjectCompiler};
 pub use self::telemetry::{NullTelemetry, Telemetry};
 
 use crate::ast::{
-    self, CallArg, CustomType, DefinitionLocation, TypeAst, TypedArg, TypedDefinition, TypedExpr,
-    TypedFunction, TypedPattern, TypedRecordConstructor, TypedStatement,
+    self, CallArg, CustomType, DefinitionLocation, TypeAst, TypedArg, TypedConstant,
+    TypedDefinition, TypedExpr, TypedFunction, TypedPattern, TypedRecordConstructor,
+    TypedStatement,
 };
 use crate::type_::Type;
 use crate::{
@@ -357,6 +358,7 @@ pub enum Located<'a> {
         name: &'a EcoString,
         layer: ast::Layer,
     },
+    Constant(&'a TypedConstant),
 }
 
 impl<'a> Located<'a> {
@@ -419,6 +421,7 @@ impl<'a> Located<'a> {
                 module: Some((*name).clone()),
                 span: SrcSpan::new(0, 0),
             }),
+            Self::Constant(constant) => None,
         }
     }
 
@@ -429,6 +432,7 @@ impl<'a> Located<'a> {
             Located::Expression(typed_expr) => Some(typed_expr.type_()),
             Located::Arg(arg) => Some(arg.type_.clone()),
             Located::Label(_, type_) | Located::Annotation { type_, .. } => Some(type_.clone()),
+            Located::Constant(constant) => Some(constant.type_()),
 
             Located::PatternSpread { .. } => None,
             Located::ModuleStatement(definition) => None,

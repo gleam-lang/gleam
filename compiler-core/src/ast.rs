@@ -954,6 +954,10 @@ impl TypedDefinition {
                     }
                 }
 
+                if let Some(located) = constant.value.find_node(byte_index) {
+                    return Some(located);
+                }
+
                 if constant.location.contains(byte_index) {
                     Some(Located::ModuleStatement(self))
                 } else {
@@ -1437,6 +1441,21 @@ impl CallArg<TypedExpr> {
 }
 
 impl CallArg<TypedPattern> {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        match self.value.find_node(byte_index) {
+            Some(located) => Some(located),
+            _ => {
+                if self.location.contains(byte_index) && self.label.is_some() {
+                    Some(Located::Label(self.location, self.value.type_()))
+                } else {
+                    None
+                }
+            }
+        }
+    }
+}
+
+impl CallArg<TypedConstant> {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         match self.value.find_node(byte_index) {
             Some(located) => Some(located),
@@ -2361,6 +2380,16 @@ impl TypedPatternBitArraySegment {
     }
 }
 
+impl TypedConstantBitArraySegment {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        self.value.find_node(byte_index).or_else(|| {
+            self.options
+                .iter()
+                .find_map(|option| option.find_node(byte_index))
+        })
+    }
+}
+
 pub type TypedConstantBitArraySegmentOption = BitArrayOption<TypedConstant>;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -2514,6 +2543,30 @@ impl<A> BitArrayOption<A> {
 }
 
 impl BitArrayOption<TypedPattern> {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        match self {
+            BitArrayOption::Bytes { .. }
+            | BitArrayOption::Int { .. }
+            | BitArrayOption::Float { .. }
+            | BitArrayOption::Bits { .. }
+            | BitArrayOption::Utf8 { .. }
+            | BitArrayOption::Utf16 { .. }
+            | BitArrayOption::Utf32 { .. }
+            | BitArrayOption::Utf8Codepoint { .. }
+            | BitArrayOption::Utf16Codepoint { .. }
+            | BitArrayOption::Utf32Codepoint { .. }
+            | BitArrayOption::Signed { .. }
+            | BitArrayOption::Unsigned { .. }
+            | BitArrayOption::Big { .. }
+            | BitArrayOption::Little { .. }
+            | BitArrayOption::Native { .. }
+            | BitArrayOption::Unit { .. } => None,
+            BitArrayOption::Size { value, .. } => value.find_node(byte_index),
+        }
+    }
+}
+
+impl BitArrayOption<TypedConstant> {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         match self {
             BitArrayOption::Bytes { .. }

@@ -1973,3 +1973,68 @@ pub fn main(something: Bool) {
         Position::new(2, 9)
     );
 }
+
+#[test]
+fn constant() {
+    let code = "
+const hello = 10
+const world = he
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(2, 16));
+}
+
+#[test]
+fn constant_with_many_options() {
+    let code = "
+import wibble.{Wobble}
+
+type Wibble {
+  Wibble
+}
+
+const pi = 3.14159
+
+fn some_function() {
+  todo
+}
+
+const my_constant = a
+";
+
+    assert_completion!(
+        TestProject::for_source(code).add_hex_module("wibble", "pub type Wibble { Wobble Wubble }"),
+        Position::new(13, 21)
+    );
+}
+
+#[test]
+fn constant_with_module_select() {
+    let code = "
+import wibble
+
+type Wibble {
+  Wibble
+}
+
+const pi = 3.14159
+
+fn some_function() {
+  todo
+}
+
+const my_constant = wibble.W
+";
+
+    assert_completion!(
+        TestProject::for_source(code).add_hex_module(
+            "wibble",
+            "
+pub type Wibble { Wobble Wubble }
+pub const some_constant = 1
+pub fn some_function() { todo }
+"
+        ),
+        Position::new(13, 28)
+    );
+}
