@@ -36,11 +36,11 @@ use super::{
     code_action::{
         AddAnnotations, CodeActionBuilder, ConvertFromUse, ConvertToFunctionCall, ConvertToPipe,
         ConvertToUse, ExpandFunctionCapture, ExtractConstant, ExtractVariable,
-        FillInMissingLabelledArgs, FillUnusedFields, FixBinaryOperation, GenerateDynamicDecoder,
-        GenerateFunction, GenerateJsonEncoder, InlineVariable, InterpolateString, LetAssertToCase,
-        PatternMatchOnValue, RedundantTupleInCaseSubject, RemoveEchos, UseLabelShorthandSyntax,
-        WrapInBlock, code_action_add_missing_patterns,
-        code_action_convert_qualified_constructor_to_unqualified,
+        FillInMissingLabelledArgs, FillUnusedFields, FixBinaryOperation,
+        FixTruncatedBitArraySegment, GenerateDynamicDecoder, GenerateFunction, GenerateJsonEncoder,
+        InlineVariable, InterpolateString, LetAssertToCase, PatternMatchOnValue,
+        RedundantTupleInCaseSubject, RemoveEchos, UseLabelShorthandSyntax, WrapInBlock,
+        code_action_add_missing_patterns, code_action_convert_qualified_constructor_to_unqualified,
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
         code_action_inexhaustive_let_to_case,
     },
@@ -381,6 +381,8 @@ where
                 &mut actions,
             );
             actions.extend(FixBinaryOperation::new(module, &lines, &params).code_actions());
+            actions
+                .extend(FixTruncatedBitArraySegment::new(module, &lines, &params).code_actions());
             actions.extend(LetAssertToCase::new(module, &lines, &params).code_actions());
             actions
                 .extend(RedundantTupleInCaseSubject::new(module, &lines, &params).code_actions());

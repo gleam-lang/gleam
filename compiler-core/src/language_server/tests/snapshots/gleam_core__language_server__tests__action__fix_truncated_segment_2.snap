@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  <<1, 1024:size(10)>>\n}"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  <<1, 1024:size(10)>>
+            ↑         
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  <<1, 0:size(10)>>
+}
