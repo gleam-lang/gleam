@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: "\ntype Wibble {\n  Wibble\n  Wobble(BitArray)\n}\n\nconst value = #(1, 2, [Wibble, Wobble(<<1, 2, 3>>), Wibble])\n"
+---
+type Wibble {
+  Wibble
+  Wobble(BitArray)
+}
+
+const value = #(1, 2, [Wibble, Wobble(<<1, 2, 3>>), Wibble])
+                                              ↑             
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nInt\n```",
+    ),
+)

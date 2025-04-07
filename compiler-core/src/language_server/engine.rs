@@ -3,7 +3,7 @@ use crate::{
     analyse::name::correct_name_case,
     ast::{
         self, CustomType, Definition, DefinitionLocation, ModuleConstant, PatternUnusedArguments,
-        SrcSpan, TypedArg, TypedExpr, TypedFunction, TypedModule, TypedPattern,
+        SrcSpan, TypedArg, TypedConstant, TypedExpr, TypedFunction, TypedModule, TypedPattern,
     },
     build::{Located, Module, UnqualifiedImport, type_constructor_from_modules},
     config::PackageConfig,
@@ -266,10 +266,12 @@ where
                 .module_line_numbers
                 .byte_index(params.position.line, params.position.character);
 
+            dbg!("here1");
             // If in comment context, do not provide completions
             if module.extra.is_within_comment(byte_index) {
                 return Ok(None);
             }
+            dbg!("here2");
 
             // Check current filercontents if the user is writing an import
             // and handle separately from the rest of the completion flow
@@ -278,11 +280,15 @@ where
                 return value;
             }
 
+            dbg!("here3");
+            dbg!(&module.ast);
+            dbg!(byte_index);
             let Some(found) = module.find_node(byte_index) else {
                 return Ok(None);
             };
+            dbg!("here4");
 
-            let completions = match found {
+            let completions = match dbg!(found) {
                 Located::PatternSpread { .. } => None,
                 Located::Pattern(_pattern) => None,
                 // Do not show completions when typing inside a string.
@@ -320,7 +326,9 @@ where
                         completer.unqualified_completions_from_module(importing_module, true)
                     }),
 
-                Located::ModuleStatement(Definition::ModuleConstant(_)) => None,
+                Located::ModuleStatement(Definition::ModuleConstant(_)) | Located::Constant(_) => {
+                    Some(completer.completion_values())
+                }
 
                 Located::UnqualifiedImport(_) => None,
 
@@ -825,6 +833,7 @@ where
                 Located::ModuleStatement(Definition::ModuleConstant(constant)) => {
                     Some(hover_for_module_constant(constant, lines, module))
                 }
+                Located::Constant(constant) => Some(hover_for_constant(constant, lines, module)),
                 Located::ModuleStatement(Definition::Import(import)) => {
                     let Some(module) = this.compiler.get_module_interface(&import.module) else {
                         return Ok(None);
@@ -1239,6 +1248,19 @@ fn hover_for_module_constant(
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(constant.location, &line_numbers)),
+    }
+}
+
+fn hover_for_constant(
+    constant: &TypedConstant,
+    line_numbers: LineNumbers,
+    module: &Module,
+) -> Hover {
+    let type_ = Printer::new(&module.ast.names).print_type(&constant.type_());
+    let contents = format!("```gleam\n{type_}\n```");
+    Hover {
+        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        range: Some(src_span_to_lsp_range(constant.location(), &line_numbers)),
     }
 }
 

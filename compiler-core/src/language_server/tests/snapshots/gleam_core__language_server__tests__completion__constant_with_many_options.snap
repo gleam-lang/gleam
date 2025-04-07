@@ -1,0 +1,89 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: "\nimport wibble.{Wobble}\n\ntype Wibble {\n  Wibble\n}\n\nconst pi = 3.14159\n\nfn some_function() {\n  todo\n}\n\nconst my_constant = a\n"
+---
+import wibble.{Wobble}
+
+type Wibble {
+  Wibble
+}
+
+const pi = 3.14159
+
+fn some_function() {
+  todo
+}
+
+const my_constant = a|
+
+
+----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True
+Wibble
+  kind:   EnumMember
+  detail: Wibble
+  sort:   2_Wibble
+  desc:   app
+  edits:
+    [13:20-13:20]: "Wibble"
+Wobble
+  kind:   EnumMember
+  detail: Wibble
+  sort:   3_Wobble
+  desc:   app
+  edits:
+    [13:20-13:20]: "Wobble"
+my_constant
+  kind:   Constant
+  detail: a
+  sort:   2_my_constant
+  desc:   app
+  edits:
+    [13:20-13:20]: "my_constant"
+pi
+  kind:   Constant
+  detail: Float
+  sort:   2_pi
+  desc:   app
+  edits:
+    [13:20-13:20]: "pi"
+some_function
+  kind:   Function
+  detail: fn() -> a
+  sort:   2_some_function
+  desc:   app
+  edits:
+    [13:20-13:20]: "some_function"
+wibble.Wobble
+  kind:   EnumMember
+  detail: Wibble
+  sort:   3_wibble.Wobble
+  desc:   app
+  edits:
+    [13:20-13:20]: "wibble.Wobble"
+wibble.Wubble
+  kind:   EnumMember
+  detail: Wibble
+  sort:   3_wibble.Wubble
+  desc:   app
+  edits:
+    [13:20-13:20]: "wibble.Wubble"
