@@ -4,7 +4,7 @@ use crate::{
     ast::{
         self, Constant, CustomType, Definition, DefinitionLocation, ModuleConstant,
         PatternUnusedArguments, SrcSpan, TypedArg, TypedConstant, TypedExpr, TypedFunction,
-        TypedModule, TypedPattern,
+        TypedModule, TypedPattern, TypedRecordConstructor,
     },
     build::{
         ExpressionPosition, Located, Module, UnqualifiedImport, type_constructor_from_modules,
@@ -888,6 +888,9 @@ where
                 Located::ModuleStatement(Definition::Function(fun)) => {
                     Some(hover_for_function_head(fun, lines, module))
                 }
+                Located::ModuleStatement(Definition::CustomType(type_)) => {
+                    Some(hover_for_custom_type(type_, lines))
+                }
                 Located::ModuleStatement(Definition::ModuleConstant(constant)) => {
                     Some(hover_for_module_constant(constant, lines, module))
                 }
@@ -904,7 +907,9 @@ where
                     ))
                 }
                 Located::ModuleStatement(_) => None,
-                Located::VariantConstructorDefinition(_) => None,
+                Located::VariantConstructorDefinition(constructor) => {
+                    Some(hover_for_constructor(constructor, lines, module))
+                }
                 Located::UnqualifiedImport(UnqualifiedImport {
                     name,
                     module: module_name,
@@ -1323,6 +1328,52 @@ fn hover_for_constant(
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(constant.location(), &line_numbers)),
+    }
+}
+
+fn hover_for_custom_type(type_: &CustomType<Arc<Type>>, line_numbers: LineNumbers) -> Hover {
+    let name = &type_.name;
+    let empty_str = EcoString::from("");
+    let documentation = type_
+        .documentation
+        .as_ref()
+        .map(|(_, doc)| doc)
+        .unwrap_or(&empty_str);
+    let contents = format!("```gleam\n{name}\n```\n{documentation}");
+    Hover {
+        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        range: Some(src_span_to_lsp_range(type_.full_location(), &line_numbers)),
+    }
+}
+
+fn hover_for_constructor(
+    constructor: &TypedRecordConstructor,
+    line_numbers: LineNumbers,
+    module: &Module,
+) -> Hover {
+    let name = &constructor.name;
+    let mut arguments = Vec::with_capacity(constructor.arguments.len());
+    let mut printer = Printer::new(&module.ast.names);
+
+    for argument in &constructor.arguments {
+        let Some((_, label)) = argument.label.as_ref() else {
+            continue;
+        };
+        let type_ = printer.print_type(&argument.type_);
+        arguments.push(format!("{label}: {type_}"));
+    }
+
+    let arguments = arguments.join(", ");
+    let empty_str = EcoString::from("");
+    let documentation = constructor
+        .documentation
+        .as_ref()
+        .map(|(_, doc)| doc)
+        .unwrap_or(&empty_str);
+    let contents = format!("```gleam\n{name}({arguments})\n```\n{documentation}");
+    Hover {
+        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        range: Some(src_span_to_lsp_range(constructor.location, &line_numbers)),
     }
 }
 
