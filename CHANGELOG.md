@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+
+### Language server
+
+- The language server now provides hover, autocomplete and goto definition
+  for constant definitions.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Bug fixes
 
 - Fixed a bug where the code action to unqualify types and values would add an
