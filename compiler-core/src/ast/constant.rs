@@ -42,6 +42,7 @@ pub enum Constant<T, RecordTag> {
         tag: RecordTag,
         type_: T,
         field_map: Option<FieldMap>,
+        record_constructor: Option<Box<ValueConstructor>>,
     },
 
     BitArray {
@@ -115,6 +116,29 @@ impl TypedConstant {
                 .or_else(|| right.find_node(byte_index))
                 .unwrap_or(Located::Constant(self)),
         })
+    }
+
+    pub fn definition_location(&self) -> Option<DefinitionLocation> {
+        match self {
+            Constant::Int { .. }
+            | Constant::Float { .. }
+            | Constant::String { .. }
+            | Constant::Tuple { .. }
+            | Constant::List { .. }
+            | Constant::BitArray { .. }
+            | Constant::StringConcatenation { .. }
+            | Constant::Invalid { .. } => None,
+            Constant::Record {
+                record_constructor: value_constructor,
+                ..
+            }
+            | Constant::Var {
+                constructor: value_constructor,
+                ..
+            } => value_constructor
+                .as_ref()
+                .map(|constructor| constructor.definition_location()),
+        }
     }
 }
 
