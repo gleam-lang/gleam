@@ -1518,7 +1518,7 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
                 .any(|value| value.used_name() == constructor)
         } else {
             import
-                .unqualified_values
+                .unqualified_types
                 .iter()
                 .any(|type_| type_.used_name() == constructor)
         };

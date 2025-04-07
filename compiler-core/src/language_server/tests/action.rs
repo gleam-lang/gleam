@@ -7621,3 +7621,21 @@ fn name() { "Jak" }
         find_position_of("hello").select_until(find_position_of("name()"))
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4454
+#[test]
+fn unqualify_already_imported_type() {
+    let src = "
+import wibble.{type Wibble}
+
+pub fn main() -> wibble.Wibble {
+  todo
+}
+";
+
+    assert_code_action!(
+        "Unqualify wibble.Wibble",
+        TestProject::for_source(src).add_hex_module("wibble", "pub type Wibble"),
+        find_position_of("wibble.Wibble").to_selection(),
+    );
+}
