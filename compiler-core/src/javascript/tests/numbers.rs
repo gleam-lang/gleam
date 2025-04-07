@@ -313,3 +313,39 @@ fn main(x) {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4459
+#[test]
+fn underscore_after_hexadecimal_prefix() {
+    assert_js!(
+        "
+pub fn main() {
+  0x_12_34
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4459
+#[test]
+fn underscore_after_octal_prefix() {
+    assert_js!(
+        "
+pub fn main() {
+  0o_12_34
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4459
+#[test]
+fn underscore_after_binary_prefix() {
+    assert_js!(
+        "
+pub fn main() {
+  0b_10_01
+}
+"
+    );
+}

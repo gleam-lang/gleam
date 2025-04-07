@@ -8,6 +8,10 @@
   unqualified import even if it was already imported.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where numbers starting with `0x_`, `0o_` and `0b_` would cause
+  a syntax error when compiling to JavaScript.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.10.0-rc1 - 2025-04-05
 
 ### Compiler

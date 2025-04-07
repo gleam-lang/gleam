@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/javascript/tests/numbers.rs
+expression: "\npub fn main() {\n  0b_10_01\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  0b_10_01
+}
+
+
+----- COMPILED JAVASCRIPT
+export function main() {
+  return 0b10_01;
+}
