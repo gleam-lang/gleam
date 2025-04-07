@@ -3,11 +3,11 @@ use std::{collections::HashSet, iter, sync::Arc};
 use crate::{
     Error, STDLIB_PACKAGE_NAME,
     ast::{
-        self, AssignName, AssignmentKind, CallArg, CustomType, FunctionLiteralKind,
-        ImplicitCallArgOrigin, PIPE_PRECEDENCE, Pattern, PatternUnusedArguments,
-        PipelineAssignmentKind, RecordConstructor, SrcSpan, TodoKind, TypedArg, TypedAssignment,
-        TypedExpr, TypedModuleConstant, TypedPattern, TypedPipelineAssignment,
-        TypedRecordConstructor, TypedStatement, TypedUse,
+        self, AssignName, AssignmentKind, BitArraySegmentTruncation, CallArg, CustomType,
+        FunctionLiteralKind, ImplicitCallArgOrigin, PIPE_PRECEDENCE, Pattern,
+        PatternUnusedArguments, PipelineAssignmentKind, RecordConstructor, SrcSpan, TodoKind,
+        TypedArg, TypedAssignment, TypedExpr, TypedModuleConstant, TypedPattern,
+        TypedPipelineAssignment, TypedRecordConstructor, TypedStatement, TypedUse,
         visit::{Visit as _, visit_typed_call_arg, visit_typed_pattern_call_arg},
     },
     build::{Located, Module},
@@ -6354,5 +6354,65 @@ impl<'ast> ast::visit::Visit<'ast> for FixBinaryOperation<'ast> {
             left,
             right,
         );
+    }
+}
+
+/// Code action builder to automatically fix segments that have a value that's
+/// guaranteed to overflow.
+///
+pub struct FixTruncatedBitArraySegment<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    truncation: Option<BitArraySegmentTruncation>,
+}
+
+impl<'a> FixTruncatedBitArraySegment<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            truncation: None,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let Some(truncation) = self.truncation else {
+            return vec![];
+        };
+
+        let replacement = truncation.truncated_into.to_string();
+        self.edits
+            .replace(truncation.value_location, replacement.clone());
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new(&format!("Replace with `{}`", replacement))
+            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(true)
+            .push_to(&mut action);
+        action
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for FixTruncatedBitArraySegment<'ast> {
+    fn visit_typed_expr_bit_array_segment(&mut self, segment: &'ast ast::TypedExprBitArraySegment) {
+        let segment_range = self.edits.src_span_to_lsp_range(segment.location);
+        if !within(self.params.range, segment_range) {
+            return;
+        }
+
+        if let Some(truncation) = segment.check_for_truncated_value() {
+            self.truncation = Some(truncation);
+        }
+
+        ast::visit::visit_typed_expr_bit_array_segment(self, segment);
     }
 }

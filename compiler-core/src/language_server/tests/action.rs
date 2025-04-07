@@ -120,6 +120,32 @@ macro_rules! assert_no_code_actions {
 }
 
 #[test]
+fn fix_truncated_segment_1() {
+    let name = "Replace with `1`";
+    assert_code_action!(
+        name,
+        r#"
+pub fn main() {
+  <<1, 257, 259:size(1)>>
+}"#,
+        find_position_of("257").to_selection()
+    );
+}
+
+#[test]
+fn fix_truncated_segment_2() {
+    let name = "Replace with `0`";
+    assert_code_action!(
+        name,
+        r#"
+pub fn main() {
+  <<1, 1024:size(10)>>
+}"#,
+        find_position_of("size").to_selection()
+    );
+}
+
+#[test]
 fn fill_unused_fields_with_ignored_labelled_fields() {
     assert_code_action!(
         FILL_UNUSED_FIELDS,
