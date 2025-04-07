@@ -421,7 +421,7 @@ impl<'a> Located<'a> {
                 module: Some((*name).clone()),
                 span: SrcSpan::new(0, 0),
             }),
-            Self::Constant(constant) => None,
+            Self::Constant(constant) => constant.definition_location(),
         }
     }
 

@@ -1125,6 +1125,7 @@ fn constant_record() {
         tag: "thetag".into(),
         type_: type_::int(),
         field_map: None,
+        record_constructor: None,
     });
 
     assert_eq!(roundtrip(&module), module);

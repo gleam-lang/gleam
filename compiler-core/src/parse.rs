@@ -3098,6 +3098,7 @@ where
                     tag: (),
                     type_: (),
                     field_map: None,
+                    record_constructor: None,
                 }))
             }
             _ => Ok(Some(Constant::Record {
@@ -3108,6 +3109,7 @@ where
                 tag: (),
                 type_: (),
                 field_map: None,
+                record_constructor: None,
             })),
         }
     }

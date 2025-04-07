@@ -807,3 +807,57 @@ pub fn main() {
         find_position_of("wibble.").under_char('i')
     );
 }
+
+#[test]
+fn goto_definition_constant() {
+    assert_goto!(
+        "
+const value = 25
+
+const my_constant = value
+",
+        find_position_of("= value").under_char('a')
+    );
+}
+
+#[test]
+fn goto_definition_constant_record() {
+    assert_goto!(
+        "
+type Wibble {
+  Wibble(Int)
+}
+
+const wibble = Wibble(10)
+",
+        find_position_of("Wibble(10)").under_char('l')
+    );
+}
+
+#[test]
+fn goto_definition_imported_constant() {
+    let src = "
+import wibble
+
+const my_constant = wibble.value
+";
+
+    assert_goto!(
+        TestProject::for_source(src).add_hex_module("wibble", "pub const value = 10"),
+        find_position_of("= wibble").under_char('w')
+    );
+}
+
+#[test]
+fn goto_definition_constant_imported_record() {
+    let src = "
+import wibble
+
+const my_constant = wibble.Wibble(10)
+";
+
+    assert_goto!(
+        TestProject::for_source(src).add_hex_module("wibble", "pub type Wibble { Wibble(Int) }"),
+        find_position_of("= wibble").under_char('w')
+    );
+}
