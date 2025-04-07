@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Bug fixes
+
+- Fixed a bug where the code action to unqualify types and values would add an
+  unqualified import even if it was already imported.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.10.0-rc1 - 2025-04-05
 
 ### Compiler
