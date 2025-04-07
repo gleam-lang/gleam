@@ -3065,3 +3065,36 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn bit_array_truncated_segment() {
+    assert_warning!(
+        "
+pub fn main() {
+  <<12:size(1)>>
+}
+"
+    );
+}
+
+#[test]
+fn bit_array_truncated_segment_in_bytes() {
+    assert_warning!(
+        "
+pub fn main() {
+  <<258:size(8)>>
+}
+"
+    );
+}
+
+#[test]
+fn bit_array_truncated_segment_in_bytes_2() {
+    assert_warning!(
+        "
+pub fn main() {
+  <<65_537:size(2)-unit(8)>>
+}
+"
+    );
+}

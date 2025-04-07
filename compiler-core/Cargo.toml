@@ -45,7 +45,7 @@ unicode-segmentation = "1.12.0"
 # Bijective (bi-directional) hashmap
 bimap = "0.6.3"
 # Parsing of arbitrary width int values
-num-bigint = "0.4.6"
+num-bigint = { version = "0.4.6", features = ["serde"] }
 num-traits = "0.2.19"
 # Encryption
 age = { version = "0.11", features = ["armor"] }

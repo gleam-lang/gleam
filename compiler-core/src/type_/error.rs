@@ -3,7 +3,7 @@ use super::{
     expression::{ArgumentKind, CallKind},
 };
 use crate::{
-    ast::{BinOp, Layer, SrcSpan, TodoKind},
+    ast::{BinOp, BitArraySegmentTruncation, Layer, SrcSpan, TodoKind},
     build::Target,
     type_::Type,
 };
@@ -968,6 +968,14 @@ pub enum Warning {
     AssertLiteralValue {
         location: SrcSpan,
     },
+
+    /// When a segment has a constant value that is bigger than its size and we
+    /// know for certain is going to be truncated.
+    ///
+    BitArraySegmentTruncatedValue {
+        truncation: BitArraySegmentTruncation,
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Eq, Copy, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
@@ -1189,7 +1197,8 @@ impl Warning {
             | Warning::RedundantPipeFunctionCapture { location, .. }
             | Warning::FeatureRequiresHigherGleamVersion { location, .. }
             | Warning::JavaScriptIntUnsafe { location, .. }
-            | Warning::AssertLiteralValue { location, .. } => *location,
+            | Warning::AssertLiteralValue { location, .. }
+            | Warning::BitArraySegmentTruncatedValue { location, .. } => *location,
         }
     }
 

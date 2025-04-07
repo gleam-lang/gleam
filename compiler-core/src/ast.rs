@@ -12,19 +12,21 @@ pub use self::untyped::{FunctionLiteralKind, UntypedExpr};
 pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
 use crate::analyse::Inferred;
+use crate::bit_array;
 use crate::build::{ExpressionPosition, Located, Target, module_erlang_name};
 use crate::parse::SpannedString;
 use crate::type_::error::VariableOrigin;
 use crate::type_::expression::Implementations;
 use crate::type_::printer::Names;
 use crate::type_::{
-    self, Deprecation, ModuleValueConstructor, PatternConstructor, Type, TypedCallArg,
+    self, Deprecation, HasType, ModuleValueConstructor, PatternConstructor, Type, TypedCallArg,
     ValueConstructor, nil,
 };
 use std::sync::Arc;
 
 use ecow::EcoString;
-use num_bigint::BigInt;
+use num_bigint::{BigInt, Sign};
+use num_traits::{One, ToPrimitive};
 #[cfg(test)]
 use pretty_assertions::assert_eq;
 use vec1::Vec1;
@@ -2388,6 +2390,73 @@ impl TypedExprBitArraySegment {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         self.value.find_node(byte_index)
     }
+}
+
+impl<TypedValue> BitArraySegment<TypedValue, Arc<Type>>
+where
+    TypedValue: HasType + HasLocation + Clone + bit_array::GetLiteralValue,
+{
+    pub(crate) fn check_for_truncated_value(&self) -> Option<BitArraySegmentTruncation> {
+        // Both the size and the value must be two compile-time known constants.
+        let segment_bits = self.bits_size()?;
+        let literal_value = self.value.as_int_literal()?;
+        if literal_value.sign() != Sign::Plus || segment_bits.sign() != Sign::Plus {
+            return None;
+        }
+
+        let truncated = truncate(&literal_value, segment_bits.to_i64()?);
+        if literal_value != truncated {
+            Some(BitArraySegmentTruncation {
+                truncated_value: literal_value,
+                truncated_into: truncated,
+                value_location: self.value.location(),
+                segment_bits,
+            })
+        } else {
+            None
+        }
+    }
+
+    /// If the segment size is a compile-time known constant this returns the
+    /// segment size in bits, taking the segment's unit into consideration!
+    ///
+    fn bits_size(&self) -> Option<BigInt> {
+        let size = match self.size() {
+            None if self.type_.is_int() => 8.into(),
+            None => 64.into(),
+            Some(value) => value.as_int_literal()?,
+        };
+
+        let unit = self.unit();
+        Some(size * unit)
+    }
+}
+
+/// As Björn said, when a value is smaller than the segment's size it will be
+/// truncated, only taking the first `n` bits:
+///
+/// > It will be silently truncated. In general, when storing value an integer
+/// > `I` into a segment of size `N`, the actual value stored will be
+/// > `I band ((1 bsl N) - 1)`.
+///
+/// <https://erlangforums.com/t/what-happens-when-a-bit-array-segment-size-is-smaller-than-its-value/4650/2?u=giacomocavalieri>
+///
+/// Thank you Björn!
+///
+fn truncate(literal_value: &BigInt, segment_bits: i64) -> BigInt {
+    literal_value & ((BigInt::one() << segment_bits) - BigInt::one())
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Eq, PartialEq, Clone, Debug)]
+pub struct BitArraySegmentTruncation {
+    /// The value that would end up being truncated.
+    pub truncated_value: BigInt,
+    /// What the value would be truncated into.
+    pub truncated_into: BigInt,
+    /// The span of the segment's value being truncated.
+    pub value_location: SrcSpan,
+    /// The size of the segment.
+    pub segment_bits: BigInt,
 }
 
 impl TypedPatternBitArraySegment {

@@ -1011,13 +1011,12 @@ impl HasType for TypedExpr {
     }
 }
 
-impl crate::bit_array::GetLiteralValue for TypedExpr {
-    fn as_int_literal(&self) -> Option<i64> {
-        if let TypedExpr::Int { value: val, .. } = self {
-            if let Ok(val) = val.parse::<i64>() {
-                return Some(val);
-            }
+impl bit_array::GetLiteralValue for TypedExpr {
+    fn as_int_literal(&self) -> Option<BigInt> {
+        if let TypedExpr::Int { int_value, .. } = self {
+            Some(int_value.clone())
+        } else {
+            None
         }
-        None
     }
 }

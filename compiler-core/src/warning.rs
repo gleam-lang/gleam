@@ -1,5 +1,5 @@
 use crate::{
-    ast::{SrcSpan, TodoKind},
+    ast::{BitArraySegmentTruncation, SrcSpan, TodoKind},
     build::Target,
     diagnostic::{self, Diagnostic, Location},
     error::wrap,
@@ -15,6 +15,8 @@ use crate::{
 use camino::Utf8PathBuf;
 use debug_ignore::DebugIgnore;
 use ecow::EcoString;
+use num_bigint::BigInt;
+use num_traits::One;
 use std::{
     io::Write,
     sync::{Arc, atomic::Ordering},
@@ -1200,6 +1202,60 @@ information.",
                     }),
                 },
 
+                type_::Warning::BitArraySegmentTruncatedValue {
+                    location: _,
+                    truncation:
+                        BitArraySegmentTruncation {
+                            truncated_value,
+                            truncated_into,
+                            segment_bits,
+                            value_location,
+                        },
+                } => {
+                    let (unit, segment_size, taken) = if segment_bits % 8 == BigInt::ZERO {
+                        let bytes = segment_bits / 8;
+                        let segment_size = pluralise(format!("{bytes} byte"), &bytes);
+                        let taken = if bytes == BigInt::one() {
+                            "its first byte".into()
+                        } else {
+                            format!("its first {bytes} bytes")
+                        };
+
+                        ("bytes", segment_size, taken)
+                    } else {
+                        let segment_size = pluralise(format!("{segment_bits} bit"), segment_bits);
+                        let taken = if segment_bits == &BigInt::one() {
+                            "its first bit".into()
+                        } else {
+                            format!("its first {segment_bits} bits")
+                        };
+                        ("bits", segment_size, taken)
+                    };
+
+                    let text = format!(
+                        "This segment is {segment_size} long, but {truncated_value} \
+doesn't fit in that many {unit}. It would be truncated by taking its {taken}, resulting in the value {truncated_into}."
+                    );
+
+                    Diagnostic {
+                        title: "Truncated bit array segment".into(),
+                        text: wrap(&text),
+                        hint: None,
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            path: path.to_path_buf(),
+                            src: src.clone(),
+                            label: diagnostic::Label {
+                                text: Some(format!(
+                                    "You can safely replace this with {truncated_into}"
+                                )),
+                                span: *value_location,
+                            },
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
+
                 type_::Warning::AssertLiteralValue { location } => Diagnostic {
                     title: "Assertion of a literal value".into(),
                     text: wrap(
@@ -1250,5 +1306,13 @@ can already tell whether it will be true or false.",
         let mut nocolor = Buffer::no_color();
         self.pretty(&mut nocolor);
         String::from_utf8(nocolor.into_inner()).expect("Warning printing produced invalid utf8")
+    }
+}
+
+fn pluralise(string: String, quantity: &BigInt) -> String {
+    if quantity == &BigInt::one() {
+        string
+    } else {
+        format!("{string}s")
     }
 }
