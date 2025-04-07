@@ -1356,11 +1356,12 @@ fn hover_for_constructor(
     let mut printer = Printer::new(&module.ast.names);
 
     for argument in &constructor.arguments {
-        let Some((_, label)) = argument.label.as_ref() else {
-            continue;
-        };
         let type_ = printer.print_type(&argument.type_);
-        arguments.push(format!("{label}: {type_}"));
+        let arg = match argument.label.as_ref() {
+            Some((_, label)) => format!("{label}: {type_}"),
+            None => format!("{type_}"),
+        };
+        arguments.push(arg);
     }
 
     let arguments = arguments.join(", ");

@@ -7,15 +7,15 @@ expression: "\n/// Exciting documentation\n/// Maybe even multiple lines\ntype W
 type Wibble {
     /// Some more exciting documentation
     Wibble(arg: String)
-    ↑▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
     /// The most exciting documentation
     Wobble(Int)
+    ↑▔▔▔▔▔▔▔▔▔▔
 }
 
 
 ----- Hover content -----
 Scalar(
     String(
-        "```gleam\nWibble(arg: String)\n```\n Some more exciting documentation",
+        "```gleam\nWobble(Int)\n```\n The most exciting documentation",
     ),
 )

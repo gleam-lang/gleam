@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/hover.rs
-expression: "\n/// Exciting documentation\n/// Maybe even multiple lines\ntype Wibble {\n    /// Some more exciting documentation\n    Wibble(arg: String)\n}\n"
+expression: "\n/// Exciting documentation\n/// Maybe even multiple lines\ntype Wibble {\n    /// Some more exciting documentation\n    Wibble(String)\n    /// The most exciting documentation\n    Wobble(arg: Int)\n}\n"
 ---
 /// Exciting documentation
 /// Maybe even multiple lines
@@ -8,8 +8,12 @@ type Wibble {
 ▔▔▔▔▔↑▔▔▔▔▔▔▔
     /// Some more exciting documentation
 ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
-    Wibble(arg: String)
-▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    Wibble(String)
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    /// The most exciting documentation
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    Wobble(arg: Int)
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
 }
 ▔
 
