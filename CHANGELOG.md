@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+### Compiler
+
+- The compiler now raises a warning when it can tell that an integer segment
+  with a literal value is going to be truncated. For example, if you wrote this:
+
+  ```gleam
+  <<258>>
+  ```
+
+  The compiler will now warn you:
+
+  ```txt
+  warning: Truncated bit array segment
+    ┌─ /src/main.gleam:4:5
+    │
+  4 │   <<258>>
+    │     ^^^ You can safely replace this with 2
+
+  This segment is 1 byte long, but 258 doesn't fit in that many bytes. It
+  would be truncated by taking its its first byte, resulting in the value 2.
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Bug fixes
 
 - Fixed a bug where the code action to unqualify types and values would add an
