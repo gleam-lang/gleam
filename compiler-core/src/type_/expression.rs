@@ -1375,7 +1375,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                     if type_ == int() {
                         match &(**value).as_int_literal() {
-                            Some(size) if size % 8 != 0 => {
+                            Some(size) if size % 8 != BigInt::ZERO => {
                                 using_unaligned_bit_array = true;
                             }
                             _ => (),
@@ -1398,12 +1398,22 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         unify(type_.clone(), value.type_())
             .map_err(|e| convert_unify_error(e, value.location()))?;
 
-        Ok(BitArraySegment {
+        let segment = BitArraySegment {
             location,
             type_,
             value: Box::new(value),
             options,
-        })
+        };
+
+        if let Some(truncation) = segment.check_for_truncated_value() {
+            self.problems
+                .warning(Warning::BitArraySegmentTruncatedValue {
+                    location,
+                    truncation,
+                });
+        }
+
+        Ok(segment)
     }
 
     /// Same as `self.infer_or_error` but instead of returning a `Result` with an error,
