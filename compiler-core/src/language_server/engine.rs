@@ -266,12 +266,10 @@ where
                 .module_line_numbers
                 .byte_index(params.position.line, params.position.character);
 
-            dbg!("here1");
             // If in comment context, do not provide completions
             if module.extra.is_within_comment(byte_index) {
                 return Ok(None);
             }
-            dbg!("here2");
 
             // Check current filercontents if the user is writing an import
             // and handle separately from the rest of the completion flow
@@ -280,15 +278,11 @@ where
                 return value;
             }
 
-            dbg!("here3");
-            dbg!(&module.ast);
-            dbg!(byte_index);
             let Some(found) = module.find_node(byte_index) else {
                 return Ok(None);
             };
-            dbg!("here4");
 
-            let completions = match dbg!(found) {
+            let completions = match found {
                 Located::PatternSpread { .. } => None,
                 Located::Pattern(_pattern) => None,
                 // Do not show completions when typing inside a string.
