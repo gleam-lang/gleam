@@ -149,6 +149,11 @@
     }
   }
   ```
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- The language server now provides hover, autocomplete and goto definition
+  for constant definitions.
+  ([Surya Rose](https://github.com/GearsDatapacks))
 
 ### Formatter
 
