@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/javascript/tests/numbers.rs
+expression: "\npub fn main() {\n  0o_12_34\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  0o_12_34
+}
+
+
+----- COMPILED JAVASCRIPT
+export function main() {
+  return 0o12_34;
+}
