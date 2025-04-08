@@ -925,6 +925,7 @@ pub trait UntypedConstantFolder {
                 tag: (),
                 type_: (),
                 field_map: _,
+                record_constructor: _,
             } => self.fold_constant_record(location, module, name, args),
 
             Constant::BitArray { location, segments } => {
@@ -1008,6 +1009,7 @@ pub trait UntypedConstantFolder {
             tag: (),
             type_: (),
             field_map: None,
+            record_constructor: None,
         }
     }
 
@@ -1088,6 +1090,7 @@ pub trait UntypedConstantFolder {
                 tag,
                 type_,
                 field_map,
+                record_constructor,
             } => {
                 let args = args
                     .into_iter()
@@ -1104,6 +1107,7 @@ pub trait UntypedConstantFolder {
                     tag,
                     type_,
                     field_map,
+                    record_constructor,
                 }
             }
 

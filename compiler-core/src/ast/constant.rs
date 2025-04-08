@@ -42,6 +42,7 @@ pub enum Constant<T, RecordTag> {
         tag: RecordTag,
         type_: T,
         field_map: Option<FieldMap>,
+        record_constructor: Option<Box<ValueConstructor>>,
     },
 
     BitArray {
@@ -85,6 +86,58 @@ impl TypedConstant {
             | Constant::Record { type_, .. }
             | Constant::Var { type_, .. }
             | Constant::Invalid { type_, .. } => type_.clone(),
+        }
+    }
+
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        if !self.location().contains(byte_index) {
+            return None;
+        }
+        Some(match self {
+            Constant::Int { .. }
+            | Constant::Float { .. }
+            | Constant::String { .. }
+            | Constant::Var { .. }
+            | Constant::Invalid { .. } => Located::Constant(self),
+            Constant::Tuple { elements, .. } | Constant::List { elements, .. } => elements
+                .iter()
+                .find_map(|element| element.find_node(byte_index))
+                .unwrap_or(Located::Constant(self)),
+            Constant::Record { args, .. } => args
+                .iter()
+                .find_map(|argument| argument.find_node(byte_index))
+                .unwrap_or(Located::Constant(self)),
+            Constant::BitArray { segments, .. } => segments
+                .iter()
+                .find_map(|segment| segment.find_node(byte_index))
+                .unwrap_or(Located::Constant(self)),
+            Constant::StringConcatenation { left, right, .. } => left
+                .find_node(byte_index)
+                .or_else(|| right.find_node(byte_index))
+                .unwrap_or(Located::Constant(self)),
+        })
+    }
+
+    pub fn definition_location(&self) -> Option<DefinitionLocation> {
+        match self {
+            Constant::Int { .. }
+            | Constant::Float { .. }
+            | Constant::String { .. }
+            | Constant::Tuple { .. }
+            | Constant::List { .. }
+            | Constant::BitArray { .. }
+            | Constant::StringConcatenation { .. }
+            | Constant::Invalid { .. } => None,
+            Constant::Record {
+                record_constructor: value_constructor,
+                ..
+            }
+            | Constant::Var {
+                constructor: value_constructor,
+                ..
+            } => value_constructor
+                .as_ref()
+                .map(|constructor| constructor.definition_location()),
         }
     }
 }

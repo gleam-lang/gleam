@@ -431,6 +431,7 @@ impl ModuleDecoder {
             tag,
             type_,
             field_map: None,
+            record_constructor: None,
         })
     }
 

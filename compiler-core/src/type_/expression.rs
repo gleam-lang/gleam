@@ -3326,9 +3326,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     location,
                     name,
                     args: vec![],
-                    type_: constructor.type_,
+                    type_: constructor.type_.clone(),
                     tag,
                     field_map,
+                    record_constructor: Some(Box::new(constructor)),
                 })
             }
 
@@ -3397,7 +3398,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     }
 
                     None => TypedExpr::Var {
-                        constructor,
+                        constructor: constructor.clone(),
                         location,
                         name: name.clone(),
                     },
@@ -3459,6 +3460,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     type_: return_type,
                     tag,
                     field_map,
+                    record_constructor: Some(Box::new(constructor)),
                 })
             }
 
