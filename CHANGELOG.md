@@ -180,6 +180,14 @@
   been merged into one "values" section.
   ([Sam Zanca](https://github.com/metruzanca))
 
+- The build tool now supports placing modules in a directory called `dev`,
+  which like `test`, is only for development code.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- There is now a new CLI command, `gleam dev`, which runs the `$PACKAGE_dev`
+  module, for running development entrypoints.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Language server
 
 - The language server now allows renaming of functions, constants,
