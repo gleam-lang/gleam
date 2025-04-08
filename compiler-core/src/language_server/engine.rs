@@ -25,11 +25,14 @@ use ecow::EcoString;
 use itertools::Itertools;
 use lsp::CodeAction;
 use lsp_types::{
-    self as lsp, DocumentSymbol, Hover, HoverContents, MarkedString, Position,
+    self as lsp, DocumentSymbol, Hover, HoverContents, InlayHint, MarkedString, Position,
     PrepareRenameResponse, Range, SignatureHelp, SymbolKind, SymbolTag, TextEdit, Url,
     WorkspaceEdit,
 };
-use std::{collections::HashSet, sync::Arc};
+use std::{
+    collections::HashSet,
+    sync::{Arc, RwLock},
+};
 
 use super::{
     DownloadDependencies, MakeLocker,
@@ -45,6 +48,8 @@ use super::{
         code_action_inexhaustive_let_to_case,
     },
     completer::Completer,
+    configuration::Configuration,
+    inlay_hints,
     reference::{
         Referenced, find_module_references, find_variable_references, reference_for_ast_node,
     },
@@ -90,6 +95,9 @@ pub struct LanguageServerEngine<IO, Reporter> {
     /// Used to know if to show the "View on HexDocs" link
     /// when hovering on an imported value
     hex_deps: HashSet<EcoString>,
+
+    /// Configuration the user has set in their editor.
+    pub(crate) user_config: Arc<RwLock<Configuration>>,
 }
 
 impl<'a, IO, Reporter> LanguageServerEngine<IO, Reporter>
@@ -110,6 +118,7 @@ where
         progress_reporter: Reporter,
         io: FileSystemProxy<IO>,
         paths: ProjectPaths,
+        user_config: Arc<RwLock<Configuration>>,
     ) -> Result<Self> {
         let locker = io.inner().make_locker(&paths, config.target)?;
 
@@ -146,6 +155,7 @@ where
             paths,
             error: None,
             hex_deps,
+            user_config,
         })
     }
 
@@ -562,6 +572,26 @@ where
             }
 
             Ok(symbols)
+        })
+    }
+
+    pub fn inlay_hints(&mut self, params: lsp::InlayHintParams) -> Response<Vec<InlayHint>> {
+        self.respond(|this| {
+            let Ok(config) = this.user_config.read() else {
+                return Ok(vec![]);
+            };
+
+            let Some(module) = this.module_for_uri(&params.text_document.uri) else {
+                return Ok(vec![]);
+            };
+
+            let hints = inlay_hints::get_inlay_hints(
+                config.inlay_hints.clone(),
+                module.ast.clone(),
+                &LineNumbers::new(&module.code),
+            );
+
+            Ok(hints)
         })
     }
 
