@@ -2,6 +2,49 @@
 
 ## Unreleased
 
+### Compiler
+
+- The compiler now raises a warning when it can tell that an integer segment
+  with a literal value is going to be truncated. For example, if you wrote this:
+
+  ```gleam
+  <<258>>
+  ```
+
+  The compiler will now warn you:
+
+  ```txt
+  warning: Truncated bit array segment
+    ┌─ /src/main.gleam:4:5
+    │
+  4 │   <<258>>
+    │     ^^^ You can safely replace this with 2
+
+  This segment is 1 byte long, but 258 doesn't fit in that many bytes. It
+  would be truncated by taking its its first byte, resulting in the value 2.
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+### Language server
+
+- The language server now offers an action to automatically rewrite integer
+  segments with a literal value that is going to be truncated. For example,
+  triggering the code action on this bit array:
+
+  ```gleam
+  <<1024:size(10)>>
+  //^^^^^^^^^^^^^ If you put your cursor anywhere over here.
+  ```
+
+  Would rewrite the segment to the equivalent, non-overflowing:
+
+  ```gleam
+  <<0:size(10)>>
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Bug fixes
 
 - Fixed a bug where the code action to unqualify types and values would add an
