@@ -10,6 +10,14 @@ pub fn main() {
   
 
 ----- WARNING
+warning: Redundant assertion
+  ┌─ /src/warning/wrn.gleam:3:7
+  │
+3 │   let assert <<_:bits>> = <<0>>
+  │       ^^^^^^ You can remove this
+
+This assertion is redundant since the pattern covers all possibilities.
+
 warning: Incompatible gleam version range
   ┌─ /src/warning/wrn.gleam:3:18
   │

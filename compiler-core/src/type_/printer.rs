@@ -230,7 +230,7 @@ impl Names {
         module: &'a EcoString,
         name: &'a EcoString,
     ) -> NameContextInformation<'a> {
-        let key: (EcoString, EcoString) = (module.clone(), name.clone());
+        let key = (module.clone(), name.clone());
 
         // There is a local name for this value, use that.
         if let Some(name) = self.local_value_constructors.get_by_left(&key) {
