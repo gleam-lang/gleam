@@ -1039,6 +1039,7 @@ impl ModuleInterface {
     pub fn get_main_function(&self, target: Target) -> Result<ModuleFunction, crate::Error> {
         let not_found = || crate::Error::ModuleDoesNotHaveMainFunction {
             module: self.name.clone(),
+            origin: self.origin,
         };
 
         // Module must have a value with the name "main"
@@ -1557,6 +1558,7 @@ fn assert_suitable_main_function(
 ) -> Result<(), crate::Error> {
     let not_found = || crate::Error::ModuleDoesNotHaveMainFunction {
         module: module_name.clone(),
+        origin: Origin::Src,
     };
 
     // The value must be a module function

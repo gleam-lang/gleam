@@ -34,7 +34,7 @@ use camino::Utf8PathBuf;
 use ecow::EcoString;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::sync::Arc;
 use std::time::SystemTime;
 use std::{collections::HashMap, ffi::OsString, fs::DirEntry, iter::Peekable, process};
@@ -556,6 +556,17 @@ impl Origin {
     #[must_use]
     pub fn is_src(&self) -> bool {
         matches!(self, Self::Src)
+    }
+}
+
+impl Display for Origin {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let name = match self {
+            Origin::Src => "src",
+            Origin::Test => "test",
+        };
+
+        write!(f, "{}", name)
     }
 }
 
