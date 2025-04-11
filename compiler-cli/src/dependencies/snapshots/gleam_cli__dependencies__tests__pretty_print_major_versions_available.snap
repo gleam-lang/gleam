@@ -1,0 +1,9 @@
+---
+source: compiler-cli/src/dependencies/tests.rs
+expression: output
+---
+The following dependencies have new major versions available:
+
+gleam_stdlib           0.45.0    -> 1.0.0
+short_name             1.0.0     -> 2.0.0
+very_long_package_name 18.382.43 -> 19.0.38
