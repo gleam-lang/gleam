@@ -117,6 +117,9 @@ gleam test  # Run the tests
 *.ez
 /build
 erl_crash.dump
+
+# macOS-specific files
+.DS_Store
 "
                 .into(),
             ),
