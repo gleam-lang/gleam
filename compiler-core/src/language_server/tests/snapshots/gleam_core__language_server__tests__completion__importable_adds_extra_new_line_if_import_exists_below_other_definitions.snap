@@ -35,3 +35,8 @@ dep.wobble
   edits:
     [1:0-1:0]: "dep.wobble"
     [0:0-0:0]: "import dep\n\n"
+dep2
+  kind:   Module
+  sort:   3_dep2
+  edits:
+    [1:0-1:0]: "dep2"

@@ -26,3 +26,8 @@ True
   kind:   EnumMember
   detail: gleam
   sort:   4_True
+dep
+  kind:   Module
+  sort:   3_dep
+  edits:
+    [1:0-1:0]: "dep"

@@ -626,6 +626,45 @@ where
                 continue;
             };
 
+            // Add the imported module itself to the completion list.
+            // Only do so if user has not typed "some_module.|".
+            if module_select.is_none() {
+                // Some cases:
+                // "import lustre" -> Add "lustre".
+                // "import lustre as trix" -> Add "trix".
+                // "import lustre/element" -> Add "element".
+                let used_name = import
+                    .as_name
+                    .as_ref()
+                    .and_then(|(n, _p)| n.assigned_name())
+                    .or_else(|| module.name.split('/').next_back())
+                    .unwrap_or(&module.name);
+                if let Some(value) = module.get_public_value(used_name) {
+                    // "import lustre/element" case
+                    completions.push(value_completion(
+                        None,
+                        mod_name,
+                        used_name,
+                        value,
+                        insert_range,
+                        CompletionKind::ImportedModule,
+                    ))
+                } else {
+                    // "import lustre" case
+                    let item = CompletionItem {
+                        label: used_name.to_string(),
+                        kind: Some(CompletionItemKind::MODULE),
+                        text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                            range: insert_range,
+                            new_text: used_name.to_string(),
+                        })),
+                        sort_text: Some(sort_text(CompletionKind::ImportedModule, used_name)),
+                        ..Default::default()
+                    };
+                    completions.push(item);
+                }
+            }
+
             // Qualified values
             for (name, value) in &module.values {
                 if !self.is_suggestable_import(&value.publicity, module.package.as_str()) {

@@ -30,6 +30,11 @@ True
   kind:   EnumMember
   detail: gleam
   sort:   4_True
+dep
+  kind:   Module
+  sort:   3_dep
+  edits:
+    [4:26-4:26]: "dep"
 dep.wibble
   kind:   Function
   detail: fn(String, String) -> String
