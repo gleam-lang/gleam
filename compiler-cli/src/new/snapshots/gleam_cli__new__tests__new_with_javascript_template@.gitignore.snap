@@ -6,3 +6,6 @@ expression: "crate::fs::read(Utf8PathBuf::from_path_buf(file_path.to_path_buf())
 *.ez
 /build
 erl_crash.dump
+
+# macOS-specific files
+.DS_Store
