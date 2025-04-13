@@ -16,11 +16,11 @@ pub fn assert_answer(x) {
 -export([assert_answer/1]).
 
 -file("project/test/my/mod.gleam", 2).
--spec assert_answer(integer()) -> boolean().
+-spec assert_answer(integer()) -> nil.
 assert_answer(X) ->
     _assert_subject = 42,
     case X =:= _assert_subject of
-        true -> true;
+        true -> nil;
         false -> erlang:error(#{gleam_error => assert,
                 message => <<"Assertion failed."/utf8>>,
                 kind => binary_operator,
