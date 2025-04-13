@@ -27,11 +27,11 @@ wibble(A, B) ->
     Result =:= 10.
 
 -file("project/test/my/mod.gleam", 7).
--spec go(any()) -> boolean().
+-spec go(any()) -> nil.
 go(X) ->
     case wibble(5, 5) of
         true -> case wibble(4, 6) of
-                true -> true;
+                true -> nil;
                 false -> erlang:error(#{gleam_error => assert,
                         message => <<"Assertion failed."/utf8>>,
                         kind => binary_operator,

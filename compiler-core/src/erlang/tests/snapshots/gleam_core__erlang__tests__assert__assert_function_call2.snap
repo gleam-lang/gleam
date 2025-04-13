@@ -25,10 +25,10 @@ pub fn go(x) {
     A andalso B.
 
 -file("project/test/my/mod.gleam", 6).
--spec go(boolean()) -> boolean().
+-spec go(boolean()) -> nil.
 go(X) ->
     case 'and'(true, X) of
-        true -> true;
+        true -> nil;
         false -> erlang:error(#{gleam_error => assert,
                 message => <<"Assertion failed."/utf8>>,
                 kind => function_call,

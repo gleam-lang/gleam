@@ -43,5 +43,5 @@ export function main() {
       }
     )
   }
-  return true;
+  return undefined;
 }

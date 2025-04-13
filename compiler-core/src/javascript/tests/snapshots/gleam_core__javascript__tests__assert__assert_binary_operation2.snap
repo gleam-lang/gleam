@@ -31,5 +31,5 @@ export function eq(a, b) {
       }
     )
   }
-  return true;
+  return undefined;
 }

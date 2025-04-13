@@ -60,5 +60,5 @@ export function go(x) {
       }
     )
   }
-  return true;
+  return undefined;
 }

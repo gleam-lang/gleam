@@ -2253,7 +2253,7 @@ fn assert<'a>(assert: &'a TypedAssert, env: &mut Env<'a>) -> Document<'a> {
 
     let clauses = docvec![
         line(),
-        "true -> true;",
+        "true -> nil;",
         line(),
         "false -> ",
         erlang_error("assert", &message, *location, fields, env),
@@ -2373,7 +2373,7 @@ fn assert_and<'a>(
 
     let right_clauses = docvec![
         line(),
-        "true -> true;",
+        "true -> nil;",
         line(),
         "false -> ",
         erlang_error("assert", &message, location, fields, env),
@@ -2454,7 +2454,7 @@ fn assert_or<'a>(
 
     let clauses = docvec![
         line(),
-        "true -> true;",
+        "true -> nil;",
         line(),
         "false -> ",
         erlang_error("assert", &message, location, fields, env),

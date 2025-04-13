@@ -7,7 +7,7 @@ fn bool_value() {
 let value = True
 assert value
 ",
-        "Bool"
+        "Nil"
     );
 }
 
@@ -18,7 +18,7 @@ fn equality_check() {
 let value = 10
 assert value == 10
 ",
-        "Bool"
+        "Nil"
     );
 }
 
@@ -29,7 +29,7 @@ fn comparison() {
 let value = 4
 assert value < 5
 ",
-        "Bool"
+        "Nil"
     );
 }
 
@@ -45,7 +45,7 @@ pub fn main() {
   assert bool()
 }
 ",
-        vec![("main", "fn() -> Bool")]
+        vec![("main", "fn() -> Nil")]
     );
 }
 
@@ -95,14 +95,14 @@ pub fn main() {
 
 #[test]
 fn with_message() {
-    assert_infer!(r#"assert True as "This should never panic""#, "Bool");
+    assert_infer!(r#"assert True as "This should never panic""#, "Nil");
 }
 
 #[test]
 fn compound_message() {
     assert_infer!(
         r#"assert 1 == 2 as { "one" <> " is never equal to " <> "two" }"#,
-        "Bool"
+        "Nil"
     );
 }
 

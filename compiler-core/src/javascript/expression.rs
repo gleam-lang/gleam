@@ -874,10 +874,8 @@ impl<'module, 'a> Generator<'module, 'a> {
 
         Ok(match &self.scope_position {
             Position::NotTail(_) => check,
-            // Since the program will crash if the expression evaluates to false,
-            // we can always return true here.
             Position::Tail | Position::Assign(_) => {
-                docvec![check, line(), self.wrap_return("true".to_doc())]
+                docvec![check, line(), self.wrap_return("undefined".to_doc())]
             }
         })
     }
