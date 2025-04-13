@@ -17,11 +17,11 @@ pub fn main() {
 -export([main/0]).
 
 -file("project/test/my/mod.gleam", 2).
--spec main() -> boolean().
+-spec main() -> nil.
 main() ->
     X = true,
     case X of
-        true -> true;
+        true -> nil;
         false -> erlang:error(#{gleam_error => assert,
                 message => <<"Assertion failed."/utf8>>,
                 kind => expression,
