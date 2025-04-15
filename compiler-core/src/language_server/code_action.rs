@@ -674,7 +674,19 @@ pub struct FillInMissingLabelledArgs<'a> {
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
     use_right_hand_side_location: Option<SrcSpan>,
-    selected_call: Option<(SrcSpan, &'a FieldMap, &'a [TypedCallArg])>,
+    selected_call: Option<SelectedCall<'a>>,
+}
+
+struct SelectedCall<'a> {
+    location: SrcSpan,
+    field_map: &'a FieldMap,
+    arguments: Vec<CallArg<()>>,
+    kind: SelectedCallKind,
+}
+
+enum SelectedCallKind {
+    Value,
+    Pattern,
 }
 
 impl<'a> FillInMissingLabelledArgs<'a> {
@@ -695,9 +707,15 @@ impl<'a> FillInMissingLabelledArgs<'a> {
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
 
-        if let Some((call_location, field_map, args)) = self.selected_call {
-            let is_use_call = args.iter().any(|arg| arg.is_use_implicit_callback());
-            let missing_labels = field_map.missing_labels(args);
+        if let Some(SelectedCall {
+            location: call_location,
+            field_map,
+            arguments,
+            kind,
+        }) = self.selected_call
+        {
+            let is_use_call = arguments.iter().any(|arg| arg.is_use_implicit_callback());
+            let missing_labels = field_map.missing_labels(&arguments);
 
             // If we're applying the code action to a use call, then we know
             // that the last missing argument is going to be implicitly inserted
@@ -725,21 +743,27 @@ impl<'a> FillInMissingLabelledArgs<'a> {
             //           ^ Cursor here, no comma behind, we'll have to add one!
             //
             let label_insertion_start = call_location.end - 1;
-            let has_comma_after_last_argument =
-                if let Some(last_arg) = args.iter().filter(|arg| !arg.is_implicit()).next_back() {
-                    self.module
-                        .code
-                        .get(last_arg.location.end as usize..=label_insertion_start as usize)
-                        .is_some_and(|text| text.contains(','))
-                } else {
-                    false
-                };
+            let has_comma_after_last_argument = if let Some(last_arg) = arguments
+                .iter()
+                .filter(|arg| !arg.is_implicit())
+                .next_back()
+            {
+                self.module
+                    .code
+                    .get(last_arg.location.end as usize..=label_insertion_start as usize)
+                    .is_some_and(|text| text.contains(','))
+            } else {
+                false
+            };
 
-            let labels_list = missing_labels
-                .map(|label| format!("{label}: todo"))
-                .join(", ");
+            let format_label = match kind {
+                SelectedCallKind::Value => |label| format!("{label}: todo"),
+                SelectedCallKind::Pattern => |label| format!("{label}:"),
+            };
 
-            let has_no_explicit_arguments = args
+            let labels_list = missing_labels.map(format_label).join(", ");
+
+            let has_no_explicit_arguments = arguments
                 .iter()
                 .filter(|arg| !arg.is_implicit())
                 .peekable()
@@ -764,6 +788,15 @@ impl<'a> FillInMissingLabelledArgs<'a> {
         }
 
         vec![]
+    }
+
+    fn empty_argument<A>(argument: &CallArg<A>) -> CallArg<()> {
+        CallArg {
+            label: argument.label.clone(),
+            location: argument.location,
+            value: (),
+            implicit: argument.implicit,
+        }
     }
 }
 
@@ -792,7 +825,12 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
 
         if let Some(field_map) = fun.field_map() {
             let location = self.use_right_hand_side_location.unwrap_or(*location);
-            self.selected_call = Some((location, field_map, args))
+            self.selected_call = Some(SelectedCall {
+                location,
+                field_map,
+                arguments: args.iter().map(Self::empty_argument).collect(),
+                kind: SelectedCallKind::Value,
+            })
         }
 
         // We only want to take into account the innermost function call
@@ -803,6 +841,44 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
         self.use_right_hand_side_location = None;
         ast::visit::visit_typed_expr_call(self, location, type_, fun, args);
         self.use_right_hand_side_location = previous;
+    }
+
+    fn visit_typed_pattern_constructor(
+        &mut self,
+        location: &'ast SrcSpan,
+        name_location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        arguments: &'ast Vec<CallArg<TypedPattern>>,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        constructor: &'ast crate::analyse::Inferred<type_::PatternConstructor>,
+        spread: &'ast Option<SrcSpan>,
+        type_: &'ast Arc<Type>,
+    ) {
+        let call_range = self.edits.src_span_to_lsp_range(*location);
+        if !within(self.params.range, call_range) {
+            return;
+        }
+
+        if let Some(field_map) = constructor.field_map() {
+            self.selected_call = Some(SelectedCall {
+                location: *location,
+                field_map,
+                arguments: arguments.iter().map(Self::empty_argument).collect(),
+                kind: SelectedCallKind::Pattern,
+            })
+        }
+
+        ast::visit::visit_typed_pattern_constructor(
+            self,
+            location,
+            name_location,
+            name,
+            arguments,
+            module,
+            constructor,
+            spread,
+            type_,
+        );
     }
 }
 
