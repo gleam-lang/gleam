@@ -591,17 +591,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    // Helper to push a new error to the errors list and return an invalid pattern.
-    fn error_pattern_with_rigid_names(
-        &mut self,
-        location: SrcSpan,
-        error: Error,
-        type_: Arc<Type>,
-    ) -> TypedPattern {
-        self.problems.error(error);
-        Pattern::Invalid { location, type_ }
-    }
-
     fn infer_iter_statements<StatementsIter: Iterator<Item = UntypedStatement>>(
         &mut self,
         location: SrcSpan,
@@ -1579,7 +1568,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let kind = self.infer_assignment_kind(kind.clone());
 
         // Ensure the pattern matches the type of the value
-        let pattern_location = pattern.location();
         let mut pattern_typer = pattern::PatternTyper::new(
             self.environment,
             &self.implementations,
@@ -1592,19 +1580,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             TypedExpr::Var { ref name, .. } => Some(name.clone()),
             _ => None,
         };
-        let unify_result = pattern_typer.unify(pattern, type_.clone(), value_variable_name);
+        let pattern = pattern_typer.unify(pattern, type_.clone(), value_variable_name);
 
         let minimum_required_version = pattern_typer.minimum_required_version;
         if minimum_required_version > self.minimum_required_version {
             self.minimum_required_version = minimum_required_version;
         }
 
-        let pattern = match unify_result {
-            Ok(pattern) => pattern,
-            Err(error) => {
-                self.error_pattern_with_rigid_names(pattern_location, error, type_.clone())
-            }
-        };
+        let pattern_typechecked_successfully = !pattern_typer.error_encountered;
 
         // Check that any type annotation is accurate.
         if let Some(annotation) = &annotation {
@@ -1625,41 +1608,49 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
         }
 
-        // Do not perform exhaustiveness checking if user explicitly used `let assert ... = ...`.
-        let (output, exhaustiveness_check) =
-            self.check_let_exhaustiveness(location, value.type_(), &pattern);
-        match (&kind, exhaustiveness_check) {
-            // The pattern is exhaustive in a let assignment, there's no problem here.
-            (AssignmentKind::Let | AssignmentKind::Generated, Ok(_)) => {}
+        // The exhaustiveness checker expects patterns to be valid and to type check;
+        // if they are invalid, it will crash. Therefore, if any errors were found
+        // when type checking the pattern, we don't perform the exhaustiveness check.
+        if pattern_typechecked_successfully {
+            // Do not perform exhaustiveness checking if user explicitly used `let assert ... = ...`.
+            let (output, exhaustiveness_check) =
+                self.check_let_exhaustiveness(location, value.type_(), &pattern);
+            match (&kind, exhaustiveness_check) {
+                // The pattern is exhaustive in a let assignment, there's no problem here.
+                (AssignmentKind::Let | AssignmentKind::Generated, Ok(_)) => {}
 
-            // If the pattern is not exhaustive and we're not asserting we want to
-            // report the error!
-            (AssignmentKind::Let | AssignmentKind::Generated, Err(e)) => {
-                self.problems.error(e);
-            }
+                // If the pattern is not exhaustive and we're not asserting we want to
+                // report the error!
+                (AssignmentKind::Let | AssignmentKind::Generated, Err(e)) => {
+                    self.problems.error(e);
+                }
 
-            // If we're asserting but the pattern already covers all cases then the
-            // `assert` is redundant and can be safely removed.
-            (AssignmentKind::Assert { location, .. }, Ok(_)) => {
-                self.problems.warning(Warning::RedundantAssertAssignment {
-                    location: *location,
-                })
-            }
+                // If we're asserting but the pattern already covers all cases then the
+                // `assert` is redundant and can be safely removed.
+                (AssignmentKind::Assert { location, .. }, Ok(_)) => {
+                    self.problems.warning(Warning::RedundantAssertAssignment {
+                        location: *location,
+                    })
+                }
 
-            // Otherwise, if the pattern is never reachable (through variant inference),
-            // we can warn the user about this.
-            (AssignmentKind::Assert { .. }, Err(_)) => {
-                // There is only one pattern to match, so it is index 0
-                match output.is_reachable(0) {
-                    Reachability::Unreachable(UnreachableCaseClauseReason::ImpossibleVariant) => {
-                        self.problems
+                // Otherwise, if the pattern is never reachable (through variant inference),
+                // we can warn the user about this.
+                (AssignmentKind::Assert { .. }, Err(_)) => {
+                    // There is only one pattern to match, so it is index 0
+                    match output.is_reachable(0) {
+                        Reachability::Unreachable(
+                            UnreachableCaseClauseReason::ImpossibleVariant,
+                        ) => self
+                            .problems
                             .warning(Warning::AssertAssignmentOnInferredVariant {
                                 location: pattern.location(),
-                            })
+                            }),
+                        // A duplicate pattern warning should not happen, since there is only one pattern.
+                        Reachability::Reachable
+                        | Reachability::Unreachable(
+                            UnreachableCaseClauseReason::DuplicatePattern,
+                        ) => {}
                     }
-                    // A duplicate pattern warning should not happen, since there is only one pattern.
-                    Reachability::Reachable
-                    | Reachability::Unreachable(UnreachableCaseClauseReason::DuplicatePattern) => {}
                 }
             }
         }
@@ -1760,13 +1751,21 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let mut all_patterns_are_discards = true;
         // NOTE: if there are 0 clauses then there are 0 panics
         let mut all_clauses_panic = !clauses.is_empty();
+        let mut patterns_typechecked_successfully = true;
+
         for clause in clauses {
             has_a_guard = has_a_guard || clause.guard.is_some();
             all_patterns_are_discards =
                 all_patterns_are_discards && clause.pattern.iter().all(|p| p.is_discard());
 
             self.previous_panics = false;
-            let typed_clause = self.infer_clause(clause, &typed_subjects);
+            let typed_clause = match self.infer_clause(clause, &typed_subjects) {
+                Ok(clause) => clause,
+                Err(clause) => {
+                    patterns_typechecked_successfully = false;
+                    clause
+                }
+            };
             all_clauses_panic = all_clauses_panic && self.previous_panics;
 
             if let Err(e) = unify(return_type.clone(), typed_clause.then.type_()).map_err(|e| {
@@ -1780,8 +1779,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         self.previous_panics = all_clauses_panic || any_subject_panics;
 
-        let compiled_case =
-            self.check_case_exhaustiveness(location, &subject_types, &typed_clauses);
+        // The exhaustiveness checker expects patterns to be valid and to type check;
+        // if they are invalid, it will crash. Therefore, if any errors were found
+        // when type checking the pattern, we don't perform the exhaustiveness check.
+        let compiled_case = if patterns_typechecked_successfully {
+            self.check_case_exhaustiveness(location, &subject_types, &typed_clauses)
+        } else {
+            CompiledCase::failure()
+        };
 
         // We track if the case expression is used like an if: that is all its
         // patterns are discarded and there's at least a guard. For example:
@@ -1810,7 +1815,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn infer_clause(&mut self, clause: UntypedClause, subjects: &[TypedExpr]) -> TypedClause {
+    fn infer_clause(
+        &mut self,
+        clause: UntypedClause,
+        subjects: &[TypedExpr],
+    ) -> Result<TypedClause, TypedClause> {
         let Clause {
             pattern,
             alternative_patterns,
@@ -1822,19 +1831,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let scoped_clause_inference = self.in_new_scope(|clause_typer| {
             // Check the types
-            let (typed_pattern, typed_alternatives) = match clause_typer.infer_clause_pattern(
-                pattern,
-                alternative_patterns,
-                subjects,
-                &location,
-            ) {
-                Ok(res) => res,
-                // If an error occurs inferring patterns then assume no patterns
-                Err(error) => {
-                    clause_typer.problems.error(error);
-                    (vec![], vec![])
-                }
-            };
+            let (typed_pattern, typed_alternatives, error_encountered) = clause_typer
+                .infer_clause_pattern(pattern, alternative_patterns, subjects, &location);
             let guard = match clause_typer.infer_optional_clause_guard(guard) {
                 Ok(guard) => guard,
                 // If an error occurs inferring guard then assume no guard
@@ -1851,33 +1849,47 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }
             };
 
-            Ok((guard, then, typed_pattern, typed_alternatives))
+            Ok((
+                guard,
+                then,
+                typed_pattern,
+                typed_alternatives,
+                error_encountered,
+            ))
         });
-        let (guard, then, typed_pattern, typed_alternatives) = match scoped_clause_inference {
-            Ok(res) => res,
-            Err(error) => {
-                // NOTE: theoretically it should be impossible to get here
-                // since the individual parts have been made fault tolerant
-                // but in_new_scope requires that the return type be a result
-                self.problems.error(error);
-                (
-                    None,
-                    TypedExpr::Invalid {
-                        location: then_location,
-                        type_: self.new_unbound_var(),
-                    },
-                    vec![],
-                    vec![],
-                )
-            }
-        };
+        let (guard, then, typed_pattern, typed_alternatives, error_encountered) =
+            match scoped_clause_inference {
+                Ok(res) => res,
+                Err(error) => {
+                    // NOTE: theoretically it should be impossible to get here
+                    // since the individual parts have been made fault tolerant
+                    // but in_new_scope requires that the return type be a result
+                    self.problems.error(error);
+                    (
+                        None,
+                        TypedExpr::Invalid {
+                            location: then_location,
+                            type_: self.new_unbound_var(),
+                        },
+                        vec![],
+                        vec![],
+                        true,
+                    )
+                }
+            };
 
-        Clause {
+        let clause = Clause {
             location,
             pattern: typed_pattern,
             alternative_patterns: typed_alternatives,
             guard,
             then,
+        };
+
+        if error_encountered {
+            Err(clause)
+        } else {
+            Ok(clause)
         }
     }
 
@@ -1887,7 +1899,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         alternatives: Vec<UntypedMultiPattern>,
         subjects: &[TypedExpr],
         location: &SrcSpan,
-    ) -> Result<(TypedMultiPattern, Vec<TypedMultiPattern>), Error> {
+    ) -> (TypedMultiPattern, Vec<TypedMultiPattern>, bool) {
         let mut pattern_typer = pattern::PatternTyper::new(
             self.environment,
             &self.implementations,
@@ -1895,7 +1907,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             &self.hydrator,
             self.problems,
         );
-        let typed_pattern = pattern_typer.infer_multi_pattern(pattern, subjects, location)?;
+
+        let typed_pattern = pattern_typer.infer_multi_pattern(pattern, subjects, location);
 
         // Each case clause has one or more patterns that may match the
         // subject in order for the clause to be selected, so we must type
@@ -1903,7 +1916,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let mut typed_alternatives = Vec::with_capacity(alternatives.len());
         for m in alternatives {
             typed_alternatives
-                .push(pattern_typer.infer_alternative_multi_pattern(m, subjects, location)?);
+                .push(pattern_typer.infer_alternative_multi_pattern(m, subjects, location));
         }
 
         let minimum_required_version = pattern_typer.minimum_required_version;
@@ -1911,7 +1924,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             self.minimum_required_version = minimum_required_version;
         }
 
-        Ok((typed_pattern, typed_alternatives))
+        (
+            typed_pattern,
+            typed_alternatives,
+            pattern_typer.error_encountered,
+        )
     }
 
     fn infer_optional_clause_guard(

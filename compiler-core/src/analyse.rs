@@ -22,7 +22,7 @@ use crate::{
     parse::SpannedString,
     reference::{EntityKind, ReferenceKind},
     type_::{
-        self, AccessorsMap, Deprecation, ModuleInterface, Opaque, PatternConstructor,
+        self, AccessorsMap, Deprecation, FieldMap, ModuleInterface, Opaque, PatternConstructor,
         RecordAccessor, References, Type, TypeAliasConstructor, TypeConstructor,
         TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors, ValueConstructor,
         ValueConstructorVariant, Warning,
@@ -85,6 +85,13 @@ impl Inferred<PatternConstructor> {
     pub fn get_documentation(&self) -> Option<&str> {
         match self {
             Inferred::Known(value) => value.get_documentation(),
+            Inferred::Unknown => None,
+        }
+    }
+
+    pub fn field_map(&self) -> Option<&FieldMap> {
+        match self {
+            Inferred::Known(value) => value.field_map.as_ref(),
             Inferred::Unknown => None,
         }
     }
