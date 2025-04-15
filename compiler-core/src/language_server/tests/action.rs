@@ -7639,3 +7639,83 @@ pub fn main() -> wibble.Wibble {
         find_position_of("wibble.Wibble").to_selection(),
     );
 }
+
+#[test]
+fn fill_labels_pattern_constructor() {
+    assert_code_action!(
+        FILL_LABELS,
+        "
+pub type Wibble {
+  Wibble(a: Int, b: Float, c: String)
+  Wobble(d: Bool, e: BitArray, f: List(Result(String, Nil)))
+}
+
+pub fn main(w: Wibble) {
+  case w {
+    Wibble(..) -> todo
+    Wobble() -> todo
+  }
+}
+",
+        find_position_of("Wobble()").to_selection(),
+    );
+}
+
+#[test]
+fn fill_labels_pattern_constructor_let_assignment() {
+    assert_code_action!(
+        FILL_LABELS,
+        "
+pub type Wibble {
+  Wibble(a: Int, b: Float, c: String)
+}
+
+pub fn main() {
+  let Wibble() = todo
+}
+",
+        find_position_of("Wibble()").to_selection(),
+    );
+}
+
+#[test]
+fn fill_labels_pattern_constructor_with_some_labels() {
+    assert_code_action!(
+        FILL_LABELS,
+        "
+pub type Wibble {
+  Wibble(a: Int, b: Float, c: String)
+  Wobble(d: Bool, e: BitArray, f: List(Result(String, Nil)))
+}
+
+pub fn main(w: Wibble) {
+  case w {
+    Wobble(e: <<>>) -> todo
+    _ -> todo
+  }
+}
+",
+        find_position_of("Wobble(e").to_selection(),
+    );
+}
+
+#[test]
+fn fill_labels_nested_pattern_constructor() {
+    assert_code_action!(
+        FILL_LABELS,
+        "
+pub type Wibble {
+  Wibble(a: Int, b: Float, c: String)
+  Wobble(d: Bool, e: BitArray, f: List(Result(String, Nil)))
+}
+
+pub fn main() {
+  case todo {
+    #([Wobble()], 2, 3) -> todo
+    _ -> todo
+  }
+}
+",
+        find_position_of("Wobble()").to_selection(),
+    );
+}
