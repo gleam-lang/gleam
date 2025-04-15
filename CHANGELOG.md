@@ -34,6 +34,34 @@
 
 ### Language server
 
+- The code action to add missing labels to function now also works in patterns:
+
+  ```gleam
+  pub type Person {
+    Person(name: String, age: Int, job: String)
+  }
+
+  pub fn age(person: Person) {
+    let Person(age:) = person
+    age
+  }
+  ```
+
+  Becomes:
+
+  ```gleam
+  pub type Person {
+    Person(name: String, age: Int, job: String)
+  }
+
+  pub fn age(person: Person) {
+    let Person(age:, name:, job:) = person
+    age
+  }
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Formatter
 
 ### Bug fixes
