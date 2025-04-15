@@ -603,10 +603,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         .collect();
                     let type_ = list(type_);
 
-                    let tail = match tail {
-                        Some(tail) => Some(Box::new(self.unify(*tail, type_.clone(), None))),
-                        None => None,
-                    };
+                    let tail = tail.map(|tail| Box::new(self.unify(*tail, type_.clone(), None)));
 
                     Pattern::List {
                         location,
