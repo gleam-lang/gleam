@@ -13,6 +13,7 @@ fn go(f) {
 import { makeError } from "../gleam.mjs";
 
 function go(f) {
+  let _pipe = f;
   let _block;
   throw makeError(
     "panic",
@@ -22,6 +23,5 @@ function go(f) {
     "`panic` expression evaluated.",
     {}
   )
-  let _pipe = f;
   return _block(_pipe);
 }

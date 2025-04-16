@@ -654,9 +654,11 @@ impl<'module, 'a> Generator<'module, 'a> {
 
                 // Otherwise we assign the intermediate pipe value to a variable.
                 _ => {
-                    documents.push(self.not_in_tail_position(Some(Ordering::Strict), |this| {
-                        this.simple_variable_assignment(&assignment.name, &assignment.value)
-                    })?);
+                    let assignment_document = self
+                        .not_in_tail_position(Some(Ordering::Strict), |this| {
+                            this.simple_variable_assignment(&assignment.name, &assignment.value)
+                        })?;
+                    documents.push(self.add_statement_level(assignment_document));
                     latest_local_var = Some(self.local_var(&assignment.name));
                 }
             }
@@ -673,7 +675,10 @@ impl<'module, 'a> Generator<'module, 'a> {
                 let var = latest_local_var.expect("echo with no previous step in a pipe");
                 documents.push(self.echo(var.to_doc(), location)?);
             }
-            _ => documents.push(self.expression(finally)?),
+            _ => {
+                let finally = self.expression(finally)?;
+                documents.push(self.add_statement_level(finally))
+            }
         }
 
         Ok(documents.to_doc().force_break())

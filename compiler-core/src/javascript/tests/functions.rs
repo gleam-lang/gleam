@@ -502,3 +502,42 @@ pub fn main() {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4472
+#[test]
+fn pipe_into_block() {
+    assert_js!(
+        "
+fn side_effects(x) { x }
+
+pub fn main() {
+  1
+  |> side_effects
+  |> {
+    side_effects(2)
+    side_effects
+  }
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4472
+#[test]
+fn pipe_with_block_in_the_middle() {
+    assert_js!(
+        "
+fn side_effects(x) { x }
+
+pub fn main() {
+  1
+  |> side_effects
+  |> {
+    side_effects(2)
+    side_effects
+  }
+  |> side_effects
+}
+"
+    );
+}
