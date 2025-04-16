@@ -957,7 +957,7 @@ impl<'module, 'a> Generator<'module, 'a> {
     ) -> Output<'a> {
         let message = match message {
             Some(m) => {
-                self.not_in_tail_position(Some(Ordering::Strict), |this| this.expression(m))?
+                self.not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(m))?
             }
             None => string("Pattern match failed, no pattern matched the value."),
         };
@@ -1242,7 +1242,7 @@ impl<'module, 'a> Generator<'module, 'a> {
 
     fn todo(&mut self, message: Option<&'a TypedExpr>, location: &'a SrcSpan) -> Output<'a> {
         let message = match message {
-            Some(m) => self.not_in_tail_position(None, |this| this.expression(m))?,
+            Some(m) => self.not_in_tail_position(None, |this| this.wrap_expression(m))?,
             None => string("`todo` expression evaluated. This code has not yet been implemented."),
         };
         let doc = self.throw_error("todo", &message, *location, vec![]);
@@ -1252,7 +1252,7 @@ impl<'module, 'a> Generator<'module, 'a> {
 
     fn panic(&mut self, location: &'a SrcSpan, message: Option<&'a TypedExpr>) -> Output<'a> {
         let message = match message {
-            Some(m) => self.not_in_tail_position(None, |this| this.expression(m))?,
+            Some(m) => self.not_in_tail_position(None, |this| this.wrap_expression(m))?,
             None => string("`panic` expression evaluated."),
         };
         let doc = self.throw_error("panic", &message, *location, vec![]);
