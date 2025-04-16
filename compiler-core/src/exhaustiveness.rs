@@ -1,7 +1,11 @@
 //! An implementation of the algorithm described in:
-//! - <https://julesjacobs.com/notes/patternmatching/patternmatching.pdf>
-//! - <https://user.it.uu.se/~kostis/Papers/JFP_06.pdf> for binary pattern
-//!   matching
+//!
+//! - How to compile pattern matching, Jules Jacobs.
+//!   <https://julesjacobs.com/notes/patternmatching/patternmatching.pdf>
+//!
+//! - Efficient manipulation of binary data using pattern matching,
+//!   Per Gustafsson and Konstantinos Sagonas.
+//!   <https://user.it.uu.se/~kostis/Papers/JFP_06.pdf>
 //!
 //! Adapted from Yorick Peterse's implementation at
 //! <https://github.com/yorickpeterse/pattern-matching-in-rust>.
@@ -90,7 +94,6 @@ use crate::{
 };
 use ecow::EcoString;
 use id_arena::{Arena, Id};
-use im::HashMap as ImHashMap;
 use itertools::Itertools;
 use num_bigint::BigInt;
 use radix_trie::{Trie, TrieCommon};
@@ -279,14 +282,12 @@ impl Branch {
                                 read_action.clone(),
                             );
                             let _ = tests.pop_front();
-                            continue;
                         }
 
                         // Discards are removed directly without even binding them
                         // in the branch's body.
                         Some(test) if test.is_discard() => {
                             let _ = tests.pop_front();
-                            continue;
                         }
 
                         // Otherwise there's no unconditional test to pop, we
@@ -808,6 +809,9 @@ impl SizeTest {
     /// Tells us if this test is guaranteed to succeed given another test that
     /// we know has already succeeded.
     ///
+    /// For example, ">= 5" is certainly going to succeed if ">= 6" has already
+    /// succeeded.
+    ///
     fn succeeds_if_succeeding(&self, succeeding: &SizeTest) -> Confidence {
         match (succeeding.operator, self.operator) {
             (SizeOperator::Equal, SizeOperator::Equal) if succeeding.size == self.size => {
@@ -821,6 +825,9 @@ impl SizeTest {
     /// Tells us if this test is guaranteed to fail given another test that
     /// we know has already failed.
     ///
+    /// For example, ">= 5" is certainly going to fail if ">= 4" has already
+    /// failed.
+    ///
     fn fails_if_failing(&self, failing: &SizeTest) -> Confidence {
         match (failing.operator, self.operator) {
             (SizeOperator::GreaterEqual, _) => self.size.greater_equal(&failing.size),
@@ -831,6 +838,9 @@ impl SizeTest {
 
     /// Tells us if this test is guaranteed to fail given another test that
     /// we know has already succeeded.
+    ///
+    /// For example, "= 1" is certainly going to fail if "= 2" has already
+    /// succeeded.
     ///
     fn fails_if_succeeding(&self, succeeding: &SizeTest) -> Confidence {
         match (succeeding.operator, self.operator) {
@@ -870,7 +880,7 @@ pub enum BitArrayMatchedValue {
 }
 
 impl BitArrayTest {
-    // TODO)) for these tests we could also implement a more sophisticated
+    // TODO: for these tests we could also implement a more sophisticated
     // approach for `Match` tests. This is described in the linked paper as
     // read action interference and can help making the tree smaller in some
     // specific cases.
@@ -879,6 +889,9 @@ impl BitArrayTest {
 
     /// Tells us if this test is guaranteed to succeed given another test that
     /// we know has already succeeded.
+    ///
+    /// For example, "size >= 5" is certainly going to succeed if "size >= 6"
+    /// has already succeeded.
     ///
     #[must_use]
     fn succeeds_if_succeeding(&self, succeeding: &BitArrayTest) -> Confidence {
@@ -895,6 +908,9 @@ impl BitArrayTest {
     /// Tells us if this test is guaranteed to fail given another test that
     /// we know has already failed.
     ///
+    /// For example, "size >= 5" is certainly going to fail if "size >= 4"
+    /// has already failed.
+    ///
     #[must_use]
     fn fails_if_failing(&self, failing: &BitArrayTest) -> Confidence {
         match (failing, self) {
@@ -909,6 +925,9 @@ impl BitArrayTest {
 
     /// Tells us if this test is guaranteed to fail given another test that
     /// we know has already succeeded.
+    ///
+    /// For example, "size = 1" is certainly going to fail if "size = 2" has already
+    /// succeeded.
     ///
     #[must_use]
     fn fails_if_succeeding(&self, succeeding: &BitArrayTest) -> Confidence {
@@ -1015,14 +1034,14 @@ impl Confidence {
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub struct Offset {
     pub constant: BigInt,
-    pub variables: ImHashMap<VariableUsage, usize>,
+    pub variables: im::HashMap<VariableUsage, usize>,
 }
 
 impl Offset {
     pub fn constant(value: impl Into<BigInt>) -> Self {
         Self {
             constant: value.into(),
-            variables: ImHashMap::new(),
+            variables: im::HashMap::new(),
         }
     }
 
@@ -1215,7 +1234,7 @@ pub enum FallbackCheck {
     ///
     /// The type system will make sure that this last check will always match,
     /// no matter what, if none of the other checks matches. We still keep the
-    /// correspongin runtime check around because it's useful for code generation!
+    /// corresponding runtime check around because it's useful for code generation!
     ///
     RuntimeCheck { check: RuntimeCheck },
 
@@ -2497,12 +2516,12 @@ impl CaseToCompile {
                 }),
                 segment_size => {
                     let size = previous_end.clone().add_size(segment_size);
-                    let op = if is_last_segment {
+                    let operator = if is_last_segment {
                         SizeOperator::Equal
                     } else {
                         SizeOperator::GreaterEqual
                     };
-                    tests.push_back(BitArrayTest::Size(SizeTest { operator: op, size }));
+                    tests.push_back(BitArrayTest::Size(SizeTest { operator, size }));
                 }
             };
 
@@ -2516,7 +2535,7 @@ impl CaseToCompile {
                 type_ if type_.is_string() => ReadType::String,
                 type_ if type_.is_bit_array() => ReadType::BitArray,
                 type_ if type_.is_utf_codepoint() => ReadType::UtfCodepoint,
-                _ => unreachable!("invalid segment type in exhaustiveness"),
+                x => panic!("invalid segment type in exhaustiveness {:?}", x),
             };
 
             let read_action = ReadAction {
@@ -2549,7 +2568,7 @@ fn segment_matched_value(segment: &TypedPatternBitArraySegment) -> BitArrayMatch
         ast::Pattern::String { value, .. } => BitArrayMatchedValue::LiteralString(value.clone()),
         ast::Pattern::Variable { name, .. } => BitArrayMatchedValue::Variable(name.clone()),
         ast::Pattern::Discard { name, .. } => BitArrayMatchedValue::Discard(name.clone()),
-        _ => panic!("unexpected segment value pattern"),
+        x => panic!("unexpected segment value pattern {:?}", x),
     }
 }
 
@@ -2573,7 +2592,7 @@ fn segment_size(
                 unit: segment.unit(),
             }
         }
-        Some(_) => unreachable!("invalid pattern size made it to code generation"),
+        Some(x) => panic!("invalid pattern size made it to code generation {:?}", x),
 
         // If a segment has the `bits`/`bytes` option and has no size, that
         // means it's the final catch all segment: we'll have to read any number
@@ -2593,8 +2612,8 @@ fn segment_size(
 ///
 #[must_use]
 fn superset(
-    one: &ImHashMap<VariableUsage, usize>,
-    other: &ImHashMap<VariableUsage, usize>,
+    one: &im::HashMap<VariableUsage, usize>,
+    other: &im::HashMap<VariableUsage, usize>,
 ) -> bool {
     other
         .iter()
