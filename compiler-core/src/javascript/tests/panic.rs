@@ -81,3 +81,18 @@ fn go(x) {
 "#,
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4471
+#[test]
+fn case_message() {
+    assert_js!(
+        r#"
+pub fn crash(message) {
+  panic as case message {
+    Ok(message) -> message
+    Error(_) -> "No message provided"
+  }
+}
+"#
+    );
+}
