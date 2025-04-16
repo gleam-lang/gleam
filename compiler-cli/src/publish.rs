@@ -522,9 +522,11 @@ fn generated_erlang_files(
 
     // Erlang modules
     for module in &package.modules {
-        if module.is_dev_code() {
+        // Do not publish test/ and dev/ code
+        if !module.origin.is_src() {
             continue;
         }
+
         let name = module.compiled_erlang_path();
         files.push((tar_src.join(&name), fs::read(build.join(name))?));
     }

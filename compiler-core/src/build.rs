@@ -256,14 +256,6 @@ impl Module {
         path
     }
 
-    pub fn is_dev_code(&self) -> bool {
-        match self.origin {
-            Origin::Src => false,
-            Origin::Test => true,
-            Origin::Dev => true,
-        }
-    }
-
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         self.ast.find_node(byte_index)
     }

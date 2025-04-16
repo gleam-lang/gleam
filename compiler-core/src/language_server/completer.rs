@@ -16,7 +16,7 @@ use crate::{
         self, Arg, CallArg, Definition, Function, FunctionLiteralKind, Pattern, Publicity,
         TypedExpr,
     },
-    build::Module,
+    build::{Module, Origin},
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
     type_::{
@@ -347,17 +347,18 @@ where
             .get_importable_modules()
             .iter()
             //
-            // It is possible to import modules from dependencies of dependencies
-            // but it's not recommended so we don't include them in completions
-            .filter(|(_, module)| {
-                let is_root_or_prelude =
-                    module.package == self.root_package_name() || module.package.is_empty();
-                is_root_or_prelude || direct_dep_packages.contains(&module.package)
+            // You cannot import yourself
+            .filter(|(name, _)| *name != &self.module.name)
+            //
+            // Different origin directories will get different import completions
+            .filter(|(_, module)| match self.module.origin {
+                // src/ can import from src/
+                Origin::Src => module.origin.is_src(),
+                // dev/ can import from src/ or dev/
+                Origin::Dev => !module.origin.is_test(),
+                // Test can import from anywhere
+                Origin::Test => true,
             })
-            // src/ cannot import test/ or dev/
-            .filter(|(_, module)| module.origin.is_src() || !self.module.origin.is_src())
-            // dev/ cannot import test/
-            .filter(|(_, module)| !(self.module.origin.is_dev() && module.origin.is_test()))
             //
             // It is possible to import internal modules from other packages,
             // but it's not recommended so we don't include them in completions
@@ -366,8 +367,13 @@ where
             // You cannot import a module twice
             .filter(|(name, _)| !already_imported.contains(*name))
             //
-            // You cannot import yourself
-            .filter(|(name, _)| *name != &self.module.name)
+            // It is possible to import modules from dependencies of dependencies
+            // but it's not recommended so we don't include them in completions
+            .filter(|(_, module)| {
+                let is_root_or_prelude =
+                    module.package == self.root_package_name() || module.package.is_empty();
+                is_root_or_prelude || direct_dep_packages.contains(&module.package)
+            })
             .collect()
     }
 
