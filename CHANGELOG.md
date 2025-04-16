@@ -65,3 +65,11 @@
 ### Formatter
 
 ### Bug fixes
+
+- Fixed a bug where `case` expressions in custom panic messages would compile
+  to invalid syntax on the JavaScript target.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where `case` expressions in custom panic messages would compile
+  to invalid syntax on the JavaScript target.
+  ([Surya Rose](https://github.com/GearsDatapacks))
