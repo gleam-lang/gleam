@@ -800,7 +800,7 @@ impl BitArrayTest {
 ///
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct SizeTest {
-    pub op: SizeOp,
+    pub operator: SizeOperator,
     pub size: Offset,
 }
 
@@ -809,9 +809,11 @@ impl SizeTest {
     /// we know has already succeeded.
     ///
     fn succeeds_if_succeeding(&self, succeeding: &SizeTest) -> Confidence {
-        match (succeeding.op, self.op) {
-            (SizeOp::Equal, SizeOp::Equal) if succeeding.size == self.size => Confidence::Certain,
-            (_, SizeOp::GreaterEqual) => succeeding.size.greater_equal(&self.size),
+        match (succeeding.operator, self.operator) {
+            (SizeOperator::Equal, SizeOperator::Equal) if succeeding.size == self.size => {
+                Confidence::Certain
+            }
+            (_, SizeOperator::GreaterEqual) => succeeding.size.greater_equal(&self.size),
             _ => Confidence::Uncertain,
         }
     }
@@ -820,8 +822,8 @@ impl SizeTest {
     /// we know has already failed.
     ///
     fn fails_if_failing(&self, failing: &SizeTest) -> Confidence {
-        match (failing.op, self.op) {
-            (SizeOp::GreaterEqual, _) => self.size.greater_equal(&failing.size),
+        match (failing.operator, self.operator) {
+            (SizeOperator::GreaterEqual, _) => self.size.greater_equal(&failing.size),
             (_, _) if self == failing => Confidence::Certain,
             _ => Confidence::Uncertain,
         }
@@ -831,10 +833,14 @@ impl SizeTest {
     /// we know has already succeeded.
     ///
     fn fails_if_succeeding(&self, succeeding: &SizeTest) -> Confidence {
-        match (succeeding.op, self.op) {
-            (SizeOp::GreaterEqual, SizeOp::Equal) => succeeding.size.greater(&self.size),
-            (SizeOp::Equal, SizeOp::GreaterEqual) => self.size.greater(&succeeding.size),
-            (SizeOp::Equal, SizeOp::Equal) => succeeding.size.different(&self.size),
+        match (succeeding.operator, self.operator) {
+            (SizeOperator::GreaterEqual, SizeOperator::Equal) => {
+                succeeding.size.greater(&self.size)
+            }
+            (SizeOperator::Equal, SizeOperator::GreaterEqual) => {
+                self.size.greater(&succeeding.size)
+            }
+            (SizeOperator::Equal, SizeOperator::Equal) => succeeding.size.different(&self.size),
             _ => Confidence::Uncertain,
         }
     }
@@ -934,7 +940,7 @@ impl BitArrayTest {
 /// ```
 ///
 #[derive(Clone, Eq, PartialEq, Debug, Copy)]
-pub enum SizeOp {
+pub enum SizeOperator {
     GreaterEqual,
     Equal,
 }
@@ -2465,7 +2471,7 @@ impl CaseToCompile {
         if segments.is_empty() {
             let mut test = VecDeque::new();
             test.push_front(BitArrayTest::Size(SizeTest {
-                op: SizeOp::Equal,
+                operator: SizeOperator::Equal,
                 size: Offset::constant(0),
             }));
             return test;
@@ -2492,11 +2498,11 @@ impl CaseToCompile {
                 segment_size => {
                     let size = previous_end.clone().add_size(segment_size);
                     let op = if is_last_segment {
-                        SizeOp::Equal
+                        SizeOperator::Equal
                     } else {
-                        SizeOp::GreaterEqual
+                        SizeOperator::GreaterEqual
                     };
-                    tests.push_back(BitArrayTest::Size(SizeTest { op, size }));
+                    tests.push_back(BitArrayTest::Size(SizeTest { operator: op, size }));
                 }
             };
 
