@@ -3844,7 +3844,7 @@ impl<'a> DecoderPrinter<'a> {
     }
 }
 
-/// Builder for code action to apply the "Generate JSON encoder" action.
+/// Builder for code action to apply the "Generate to-JSON function" action.
 ///
 pub struct GenerateJsonEncoder<'a> {
     module: &'a Module,
@@ -3990,7 +3990,7 @@ impl<'a> GenerateJsonEncoder<'a> {
 
         // Otherwise we turn it into an object with a `type` tag field.
         let mut encoder_printer =
-            EncoderPrinter::new(&self.module.ast.names, type_name, self.module.name.clone());
+            JsonEncoderPrinter::new(&self.module.ast.names, type_name, self.module.name.clone());
 
         // These are the fields of the json object to encode.
         let mut fields = Vec::with_capacity(constructor.arguments.len());
@@ -4028,7 +4028,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast> {
         }
 
         let record_name = EcoString::from(custom_type.name.to_snake_case());
-        let name = eco_format!("encode_{record_name}");
+        let name = eco_format!("{record_name}_to_json");
         let Some(encoder) = self.custom_type_encoder_body(record_name.clone(), custom_type) else {
             return;
         };
@@ -4064,7 +4064,7 @@ fn {name}({record_name}: {type_}) -> {json_type} {{
         self.edits.insert(custom_type.end_position, function);
         maybe_import(&mut self.edits, self.module, JSON_MODULE);
 
-        CodeActionBuilder::new("Generate JSON encoder")
+        CodeActionBuilder::new("Generate to-JSON function")
             .kind(CodeActionKind::REFACTOR)
             .preferred(false)
             .changes(
@@ -4075,7 +4075,7 @@ fn {name}({record_name}: {type_}) -> {json_type} {{
     }
 }
 
-struct EncoderPrinter<'a> {
+struct JsonEncoderPrinter<'a> {
     printer: Printer<'a>,
     /// The name of the root type we are printing an encoder for
     type_name: EcoString,
@@ -4083,7 +4083,7 @@ struct EncoderPrinter<'a> {
     type_module: EcoString,
 }
 
-impl<'a> EncoderPrinter<'a> {
+impl<'a> JsonEncoderPrinter<'a> {
     fn new(names: &'a Names, type_name: EcoString, type_module: EcoString) -> Self {
         Self {
             type_name,
@@ -4202,7 +4202,7 @@ impl<'a> EncoderPrinter<'a> {
                         Some((module, name, _))
                             if module == self.type_module && name == self.type_name =>
                         {
-                            maybe_capture(eco_format!("encode_{}", name.to_snake_case()))
+                            maybe_capture(eco_format!("{}_to_json", name.to_snake_case()))
                         }
                         _ => eco_format!(
                             r#"todo as "Encoder for {}""#,

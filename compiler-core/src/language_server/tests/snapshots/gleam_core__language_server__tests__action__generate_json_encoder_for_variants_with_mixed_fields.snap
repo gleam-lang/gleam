@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
+assertion_line: 6592
 expression: "\npub type Wibble {\n  Wibble\n  Wobble(field: String, field1: Int)\n}\n"
+snapshot_kind: text
 ---
 ----- BEFORE ACTION
 
@@ -19,7 +21,7 @@ pub type Wibble {
   Wobble(field: String, field1: Int)
 }
 
-fn encode_wibble(wibble: Wibble) -> json.Json {
+fn wibble_to_json(wibble: Wibble) -> json.Json {
   case wibble {
     Wibble -> json.object([
       #("type", json.string("wibble")),

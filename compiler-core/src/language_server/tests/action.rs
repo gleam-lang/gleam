@@ -72,7 +72,7 @@ const EXTRACT_VARIABLE: &str = "Extract variable";
 const EXTRACT_CONSTANT: &str = "Extract constant";
 const EXPAND_FUNCTION_CAPTURE: &str = "Expand function capture";
 const GENERATE_DYNAMIC_DECODER: &str = "Generate dynamic decoder";
-const GENERATE_JSON_ENCODER: &str = "Generate JSON encoder";
+const GENERATE_TO_JSON_FUNCTION: &str = "Generate to-JSON function";
 const PATTERN_MATCH_ON_ARGUMENT: &str = "Pattern match on argument";
 const PATTERN_MATCH_ON_VARIABLE: &str = "Pattern match on variable";
 const GENERATE_FUNCTION: &str = "Generate function";
@@ -6419,7 +6419,7 @@ pub type Person {
 ";
 
     assert_code_action!(
-        GENERATE_JSON_ENCODER,
+        GENERATE_TO_JSON_FUNCTION,
         TestProject::for_source(src).add_package_module(
             "gleam_json",
             "gleam/json",
@@ -6463,7 +6463,7 @@ pub type Wibble(value) {
 ";
 
     assert_code_action!(
-        GENERATE_JSON_ENCODER,
+        GENERATE_TO_JSON_FUNCTION,
         TestProject::for_source(src)
             .add_module("gleam/option", "pub type Option(a)")
             .add_module("gleam/dict", "pub type Dict(k, v)")
@@ -6498,7 +6498,7 @@ pub type Wibble {
 ";
 
     assert_code_action!(
-        GENERATE_JSON_ENCODER,
+        GENERATE_TO_JSON_FUNCTION,
         TestProject::for_source(src).add_package_module(
             "gleam_json",
             "gleam/json",
@@ -6530,7 +6530,7 @@ pub type Wibble {
 ";
 
     assert_code_action!(
-        GENERATE_JSON_ENCODER,
+        GENERATE_TO_JSON_FUNCTION,
         TestProject::for_source(src).add_package_module(
             "gleam_json",
             "gleam/json",
@@ -6549,7 +6549,7 @@ pub type Wibble {
 ";
 
     assert_code_action!(
-        GENERATE_JSON_ENCODER,
+        GENERATE_TO_JSON_FUNCTION,
         TestProject::for_source(src).add_package_module(
             "gleam_json",
             "gleam/json",
@@ -6570,7 +6570,7 @@ pub type Wibble {
 ";
 
     assert_code_action!(
-        GENERATE_JSON_ENCODER,
+        GENERATE_TO_JSON_FUNCTION,
         TestProject::for_source(src).add_package_module(
             "gleam_json",
             "gleam/json",
@@ -6590,7 +6590,7 @@ pub type Wibble {
 ";
 
     assert_code_action!(
-        GENERATE_JSON_ENCODER,
+        GENERATE_TO_JSON_FUNCTION,
         TestProject::for_source(src).add_package_module(
             "gleam_json",
             "gleam/json",
@@ -6627,7 +6627,7 @@ pub type LinkedList {
 }
 ";
     assert_code_action!(
-        GENERATE_JSON_ENCODER,
+        GENERATE_TO_JSON_FUNCTION,
         TestProject::for_source(src)
             .add_module("gleam/option", "pub type Option(a) { Some(a) None }")
             .add_package_module("gleam_json", "gleam/json", "pub type Json"),
@@ -6660,7 +6660,7 @@ pub type Wibble {
 ";
 
     assert_code_action!(
-        GENERATE_JSON_ENCODER,
+        GENERATE_TO_JSON_FUNCTION,
         TestProject::for_source(src).add_package_module(
             "gleam_json",
             "gleam/json",
@@ -6680,7 +6680,7 @@ pub type Wibble {
 ";
 
     assert_code_action!(
-        GENERATE_JSON_ENCODER,
+        GENERATE_TO_JSON_FUNCTION,
         TestProject::for_source(src).add_package_module(
             "gleam_json",
             "gleam/json",
@@ -6701,7 +6701,7 @@ pub type Wibble {
 ";
 
     assert_code_action!(
-        GENERATE_JSON_ENCODER,
+        GENERATE_TO_JSON_FUNCTION,
         TestProject::for_source(src).add_package_module(
             "gleam_json",
             "gleam/json",
@@ -6825,7 +6825,7 @@ pub type Wibble {
     ";
 
     assert_no_code_actions!(
-        GENERATE_JSON_ENCODER,
+        GENERATE_TO_JSON_FUNCTION,
         TestProject::for_source(src).add_package_module(
             "gleam_json",
             "gleam/json",
@@ -6838,7 +6838,7 @@ pub type Wibble {
 #[test]
 fn no_code_action_to_generate_json_encoder_without_gleam_json_dependency() {
     assert_no_code_actions!(
-        GENERATE_JSON_ENCODER,
+        GENERATE_TO_JSON_FUNCTION,
         "
 pub type Wibble {
   Wibble(w: Int)

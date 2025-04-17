@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
+assertion_line: 6662
 expression: "\npub type Wibble {\n  Wibble(values: List(#(Int, String)))\n}\n"
+snapshot_kind: text
 ---
 ----- BEFORE ACTION
 
@@ -17,7 +19,7 @@ pub type Wibble {
   Wibble(values: List(#(Int, String)))
 }
 
-fn encode_wibble(wibble: Wibble) -> json.Json {
+fn wibble_to_json(wibble: Wibble) -> json.Json {
   let Wibble(values:) = wibble
   json.object([
     #("values", json.array(values, fn(value) {

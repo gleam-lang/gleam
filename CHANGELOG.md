@@ -70,6 +70,13 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The JSON encoding function that the language server code action generates is
+  now named `$TYPENAME_to_json` instead of `encode_$TYPENAME`. This is to remove
+  ambiguity with functions that encode to other formats, and to make the
+  function easier to discover by searching.
+
+  ([Louis Pilfold](https://github.com/lpil))
+
 ### Formatter
 
 ### Bug fixes

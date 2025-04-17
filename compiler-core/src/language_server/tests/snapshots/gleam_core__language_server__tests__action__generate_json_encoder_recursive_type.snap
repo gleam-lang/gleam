@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
+assertion_line: 6629
 expression: "\nimport gleam/option.{Some}\n\npub type LinkedList {\n  LinkedList(value: Int, next: option.Option(LinkedList))\n}\n"
+snapshot_kind: text
 ---
 ----- BEFORE ACTION
 
@@ -21,13 +23,13 @@ pub type LinkedList {
   LinkedList(value: Int, next: option.Option(LinkedList))
 }
 
-fn encode_linked_list(linked_list: LinkedList) -> json.Json {
+fn linked_list_to_json(linked_list: LinkedList) -> json.Json {
   let LinkedList(value:, next:) = linked_list
   json.object([
     #("value", json.int(value)),
     #("next", case next {
       option.None -> json.null()
-      Some(value) -> encode_linked_list(value)
+      Some(value) -> linked_list_to_json(value)
     }),
   ])
 }

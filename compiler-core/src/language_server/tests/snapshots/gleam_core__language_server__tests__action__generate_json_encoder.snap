@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
+assertion_line: 6421
 expression: "\npub type Person {\n  Person(name: String, age: Int, height: Float, is_cool: Bool)\n}\n"
+snapshot_kind: text
 ---
 ----- BEFORE ACTION
 
@@ -17,7 +19,7 @@ pub type Person {
   Person(name: String, age: Int, height: Float, is_cool: Bool)
 }
 
-fn encode_person(person: Person) -> json.Json {
+fn person_to_json(person: Person) -> json.Json {
   let Person(name:, age:, height:, is_cool:) = person
   json.object([
     #("name", json.string(name)),

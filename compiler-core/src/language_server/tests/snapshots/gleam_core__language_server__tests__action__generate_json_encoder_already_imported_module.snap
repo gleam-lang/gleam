@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
+assertion_line: 6500
 expression: "\nimport gleam/json as json_encoding\n\npub type Wibble {\n  Wibble(a: Int, b: Float, c: String)\n}\n"
+snapshot_kind: text
 ---
 ----- BEFORE ACTION
 
@@ -20,7 +22,7 @@ pub type Wibble {
   Wibble(a: Int, b: Float, c: String)
 }
 
-fn encode_wibble(wibble: Wibble) -> json_encoding.Json {
+fn wibble_to_json(wibble: Wibble) -> json_encoding.Json {
   let Wibble(a:, b:, c:) = wibble
   json_encoding.object([
     #("a", json_encoding.int(a)),
