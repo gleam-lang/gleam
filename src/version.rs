@@ -315,27 +315,31 @@ impl Identifier {
 }
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct Range(String);
+pub struct Range {
+    spec: String,
+    range: pubgrub::range::Range<Version>,
+}
 
 impl Range {
-    pub fn new(spec: String) -> Self {
-        Self(spec)
+    pub fn new(spec: String) -> Result<Self, parser::Error> {
+        let range = Version::parse_range(spec.as_str())?;
+        Ok(Self { spec, range })
     }
 }
 
 impl Range {
-    pub fn to_pubgrub(&self) -> Result<pubgrub::range::Range<Version>, parser::Error> {
-        Version::parse_range(&self.0)
+    pub fn to_pubgrub(&self) -> &pubgrub::range::Range<Version> {
+        &self.range
     }
 
     pub fn as_str(&self) -> &str {
-        &self.0
+        &self.spec
     }
 }
 
 impl fmt::Debug for Range {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("Range").field(&self.0.to_string()).finish()
+        f.debug_tuple("Range").field(&self.spec).finish()
     }
 }
 
@@ -345,7 +349,7 @@ impl<'de> Deserialize<'de> for Range {
         D: Deserializer<'de>,
     {
         let s: &str = Deserialize::deserialize(deserializer)?;
-        Ok(Range::new(s.to_string()))
+        Range::new(s.to_string()).map_err(serde::de::Error::custom)
     }
 }
 
@@ -360,8 +364,7 @@ impl Serialize for Range {
 
 impl fmt::Display for Range {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)?;
-        Ok(())
+        f.write_str(&self.spec)
     }
 }
 

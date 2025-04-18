@@ -1221,7 +1221,7 @@ async fn get_package_release_ok() {
                 (
                     "plug".into(),
                     Dependency {
-                        requirement: Range::new("~>0.11.0".into()),
+                        requirement: Range::new("~>0.11.0".into()).unwrap(),
                         optional: false,
                         app: Some("plug".into()),
                         repository: None
@@ -1230,7 +1230,7 @@ async fn get_package_release_ok() {
                 (
                     "cowboy".into(),
                     Dependency {
-                        requirement: Range::new("~>1.0.0".into()),
+                        requirement: Range::new("~>1.0.0".into()).unwrap(),
                         optional: false,
                         app: Some("cowboy".into()),
                         repository: None

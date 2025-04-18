@@ -1,4 +1,5 @@
 use std::cmp::Ordering::{Equal, Greater, Less};
+use std::collections::HashMap;
 
 use parser::Error;
 use pubgrub::version::Version as _;

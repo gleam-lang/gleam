@@ -790,7 +790,8 @@ fn proto_to_retirement_reason(reason: proto::package::RetirementReason) -> Retir
 fn proto_to_dep(dep: proto::package::Dependency) -> Result<(String, Dependency), ApiError> {
     let app = dep.app;
     let repository = dep.repository;
-    let requirement = Range::new(dep.requirement);
+    let requirement = Range::new(dep.requirement.clone())
+        .map_err(|_| ApiError::InvalidVersionFormat(dep.requirement))?;
     Ok((
         dep.package,
         Dependency {
