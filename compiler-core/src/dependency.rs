@@ -95,7 +95,7 @@ where
                     app: None,
                     optional: false,
                     repository: None,
-                    requirement: Range::new(version.to_string()),
+                    requirement: version.clone().into(),
                 },
             )
         })
@@ -120,10 +120,7 @@ where
             // If the version was locked we verify that the requirement is
             // compatible with the locked version.
             Some(locked_version) => {
-                let compatible = range
-                    .to_pubgrub()
-                    .map_err(|e| ResolutionError::Failure(format!("Failed to parse range {e}")))?
-                    .contains(locked_version);
+                let compatible = range.to_pubgrub().contains(locked_version);
                 if !compatible {
                     return Err(ResolutionError::Failure(format!(
                         "{name} is specified with the requirement `{range}`, \
@@ -263,8 +260,8 @@ impl pubgrub::solver::DependencyProvider<PackageName, Version> for DependencyPro
 
         let mut deps: Map<PackageName, PubgrubRange> = Default::default();
         for (name, d) in &release.requirements {
-            let mut range = d.requirement.to_pubgrub()?;
             let mut opt_deps = self.optional_dependencies.borrow_mut();
+            let mut range = d.requirement.to_pubgrub().clone();
             // if it's optional and it was not provided yet, store and skip
             if d.optional && !packages.contains_key(name.as_str()) {
                 let _ = opt_deps
@@ -357,7 +354,7 @@ mod tests {
                                 app: None,
                                 optional: false,
                                 repository: None,
-                                requirement: Range::new(">= 0.1.0".into()),
+                                requirement: Range::new(">= 0.1.0".into()).unwrap(),
                             },
                         )]
                         .into(),
@@ -373,7 +370,7 @@ mod tests {
                                 app: None,
                                 optional: false,
                                 repository: None,
-                                requirement: Range::new(">= 0.1.0".into()),
+                                requirement: Range::new(">= 0.1.0".into()).unwrap(),
                             },
                         )]
                         .into(),
@@ -389,7 +386,7 @@ mod tests {
                                 app: None,
                                 optional: false,
                                 repository: None,
-                                requirement: Range::new(">= 0.1.0".into()),
+                                requirement: Range::new(">= 0.1.0".into()).unwrap(),
                             },
                         )]
                         .into(),
@@ -405,7 +402,7 @@ mod tests {
                                 app: None,
                                 optional: false,
                                 repository: None,
-                                requirement: Range::new(">= 0.1.0".into()),
+                                requirement: Range::new(">= 0.1.0".into()).unwrap(),
                             },
                         )]
                         .into(),
@@ -456,7 +453,7 @@ mod tests {
                             app: None,
                             optional: true,
                             repository: None,
-                            requirement: Range::new(">= 0.1.0 and < 0.3.0".into()),
+                            requirement: Range::new(">= 0.1.0 and < 0.3.0".into()).unwrap(),
                         },
                     )]
                     .into(),
@@ -477,7 +474,7 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("gleam_stdlib".into(), Range::new("~> 0.1".into()))].into_iter(),
+            vec![("gleam_stdlib".into(), Range::new("~> 0.1".into()).unwrap())].into_iter(),
             &vec![locked_stdlib].into_iter().collect(),
         )
         .unwrap();
@@ -508,7 +505,7 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("gleam_stdlib".into(), Range::new("~> 0.1".into()))].into_iter(),
+            vec![("gleam_stdlib".into(), Range::new("~> 0.1".into()).unwrap())].into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap();
@@ -526,7 +523,7 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("gleam_otp".into(), Range::new("~> 0.1".into()))].into_iter(),
+            vec![("gleam_otp".into(), Range::new("~> 0.1".into()).unwrap())].into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap();
@@ -547,7 +544,11 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("package_with_optional".into(), Range::new("~> 0.1".into()))].into_iter(),
+            vec![(
+                "package_with_optional".into(),
+                Range::new("~> 0.1".into()).unwrap(),
+            )]
+            .into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap();
@@ -569,8 +570,11 @@ mod tests {
             HashMap::new(),
             "app".into(),
             vec![
-                ("package_with_optional".into(), Range::new("~> 0.1".into())),
-                ("gleam_stdlib".into(), Range::new("~> 0.1".into())),
+                (
+                    "package_with_optional".into(),
+                    Range::new("~> 0.1".into()).unwrap(),
+                ),
+                ("gleam_stdlib".into(), Range::new("~> 0.1".into()).unwrap()),
             ]
             .into_iter(),
             &vec![].into_iter().collect(),
@@ -597,8 +601,11 @@ mod tests {
             HashMap::new(),
             "app".into(),
             vec![
-                ("package_with_optional".into(), Range::new("~> 0.1".into())),
-                ("gleam_stdlib".into(), Range::new("~> 0.3".into())),
+                (
+                    "package_with_optional".into(),
+                    Range::new("~> 0.1".into()).unwrap(),
+                ),
+                ("gleam_stdlib".into(), Range::new("~> 0.3".into()).unwrap()),
             ]
             .into_iter(),
             &vec![].into_iter().collect(),
@@ -613,8 +620,11 @@ mod tests {
             HashMap::new(),
             "app".into(),
             vec![
-                ("package_with_optional".into(), Range::new("~> 0.1".into())),
-                ("gleam_otp".into(), Range::new("~> 0.1".into())),
+                (
+                    "package_with_optional".into(),
+                    Range::new("~> 0.1".into()).unwrap(),
+                ),
+                ("gleam_otp".into(), Range::new("~> 0.1".into()).unwrap()),
             ]
             .into_iter(),
             &vec![].into_iter().collect(),
@@ -644,7 +654,7 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("gleam_otp".into(), Range::new("~> 0.1.0".into()))].into_iter(),
+            vec![("gleam_otp".into(), Range::new("~> 0.1.0".into()).unwrap())].into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap();
@@ -665,7 +675,11 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("package_with_retired".into(), Range::new("> 0.0.0".into()))].into_iter(),
+            vec![(
+                "package_with_retired".into(),
+                Range::new("> 0.0.0".into()).unwrap(),
+            )]
+            .into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap();
@@ -687,7 +701,11 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("package_with_retired".into(), Range::new("> 0.0.0".into()))].into_iter(),
+            vec![(
+                "package_with_retired".into(),
+                Range::new("> 0.0.0".into()).unwrap(),
+            )]
+            .into_iter(),
             &vec![("package_with_retired".into(), Version::new(0, 2, 0))]
                 .into_iter()
                 .collect(),
@@ -711,7 +729,11 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("gleam_otp".into(), Range::new("~> 0.3.0-rc1".into()))].into_iter(),
+            vec![(
+                "gleam_otp".into(),
+                Range::new("~> 0.3.0-rc1".into()).unwrap(),
+            )]
+            .into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap();
@@ -732,7 +754,7 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("gleam_otp".into(), Range::new("0.3.0-rc1".into()))].into_iter(),
+            vec![("gleam_otp".into(), Range::new("0.3.0-rc1".into()).unwrap())].into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap();
@@ -753,7 +775,7 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("unknown".into(), Range::new("~> 0.1".into()))].into_iter(),
+            vec![("unknown".into(), Range::new("~> 0.1".into()).unwrap())].into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap_err();
@@ -765,7 +787,7 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("gleam_stdlib".into(), Range::new("~> 99.0".into()))].into_iter(),
+            vec![("gleam_stdlib".into(), Range::new("~> 99.0".into()).unwrap())].into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap_err();
@@ -777,7 +799,11 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("gleam_stdlib".into(), Range::new("~> 0.1.0".into()))].into_iter(),
+            vec![(
+                "gleam_stdlib".into(),
+                Range::new("~> 0.1.0".into()).unwrap(),
+            )]
+            .into_iter(),
             &vec![("gleam_stdlib".into(), Version::new(0, 2, 0))]
                 .into_iter()
                 .collect(),
@@ -799,7 +825,7 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("gleam_stdlib".into(), Range::new("0.1.0".into()))].into_iter(),
+            vec![("gleam_stdlib".into(), Range::new("0.1.0".into()).unwrap())].into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap();
