@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\nfn add(a: Int, b: Int) -> Int {\n  case a + b {\n    0 -> todo as \"Handle zero\"\n    x -> x\n  }\n}\n\npub fn main() {\n  add(1, 2)\n  Nil\n}\n"
+---
+----- SOURCE CODE
+
+fn add(a: Int, b: Int) -> Int {
+  case a + b {
+    0 -> todo as "Handle zero"
+    x -> x
+  }
+}
+
+pub fn main() {
+  add(1, 2)
+  Nil
+}
+
+
+----- WARNING
+warning: Todo found
+  ┌─ /src/warning/wrn.gleam:4:10
+  │
+4 │     0 -> todo as "Handle zero"
+  │          ^^^^^^^^^^^^^^^^^^^^^ This code is incomplete
+
+This code will crash if it is run. Be sure to finish it before
+running your program.
+
+Hint: I think its type is `Int`.

@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
+assertion_line: 1724
 expression: "\n        pub fn wibble(_, _) { 1 }\n        pub fn main() {\n          wibble(1, panic)\n          1\n        }"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -19,3 +21,13 @@ warning: Unreachable code
 
 This function call is unreachable because its last argument always panics.
 Your code will crash before reaching this point.
+
+warning: Unused pure function call
+  ┌─ /src/warning/wrn.gleam:4:11
+  │
+4 │           wibble(1, panic)
+  │           ^^^^^^^^^^^^^^^^ This pure function call is never used
+
+Gleam is an immutable language, meaning functions cannot mutate state
+simply by being called. This function is pure, so it must be assigned to a
+variable to have an effect on the program.
