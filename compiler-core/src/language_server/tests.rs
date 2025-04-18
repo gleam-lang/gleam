@@ -311,7 +311,7 @@ fn add_package_from_manifest<B>(
         package.name.clone(),
         match package.source {
             ManifestPackageSource::Hex { .. } => Requirement::Hex {
-                version: Range::new("1.0.0".into()),
+                version: Range::new("1.0.0".into()).unwrap(),
             },
             ManifestPackageSource::Local { ref path } => Requirement::Path { path: path.into() },
             ManifestPackageSource::Git {
@@ -336,7 +336,7 @@ fn add_dev_package_from_manifest<B>(
         package.name.clone(),
         match package.source {
             ManifestPackageSource::Hex { .. } => Requirement::Hex {
-                version: Range::new("1.0.0".into()),
+                version: Range::new("1.0.0".into()).unwrap(),
             },
             ManifestPackageSource::Local { ref path } => Requirement::Path { path: path.into() },
             ManifestPackageSource::Git {

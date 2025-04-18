@@ -1,6 +1,7 @@
 use std::fmt;
 use std::str::FromStr;
 
+use crate::Error;
 use crate::error::Result;
 use crate::io::make_relative;
 use camino::{Utf8Path, Utf8PathBuf};
@@ -29,10 +30,13 @@ pub enum Requirement {
 }
 
 impl Requirement {
-    pub fn hex(range: &str) -> Requirement {
-        Requirement::Hex {
-            version: Range::new(range.to_string()),
-        }
+    pub fn hex(range: &str) -> Result<Requirement> {
+        Ok(Requirement::Hex {
+            version: Range::new(range.to_string()).map_err(|e| Error::InvalidVersionFormat {
+                input: range.to_string(),
+                error: e.to_string(),
+            })?,
+        })
     }
 
     pub fn path(path: &str) -> Requirement {
@@ -91,17 +95,17 @@ where
     D: Deserializer<'de>,
 {
     let version = String::deserialize(deserializer)?;
-    Ok(Range::new(version))
+    Range::new(version).map_err(de::Error::custom)
 }
 
 #[derive(Debug, Copy, Clone)]
 pub struct Void;
 
 impl FromStr for Requirement {
-    type Err = Void;
+    type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Requirement::hex(s))
+        Requirement::hex(s)
     }
 }
 
@@ -153,8 +157,8 @@ mod tests {
             github = { git = "https://github.com/gleam-lang/otp.git", ref = "4d34935" }
         "#;
         let deps: HashMap<String, Requirement> = toml::from_str(toml).unwrap();
-        assert_eq!(deps["short"], Requirement::hex("~> 0.5"));
-        assert_eq!(deps["hex"], Requirement::hex("~> 1.0.0"));
+        assert_eq!(deps["short"], Requirement::hex("~> 0.5").unwrap());
+        assert_eq!(deps["hex"], Requirement::hex("~> 1.0.0").unwrap());
         assert_eq!(deps["local"], Requirement::path("/path/to/package"));
         assert_eq!(
             deps["github"],

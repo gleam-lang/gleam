@@ -95,7 +95,7 @@ mod tests {
         let requirements = HashMap::from_iter([(
             "required_package".into(),
             Requirement::Hex {
-                version: Range::new("1.0.0".into()),
+                version: Range::new("1.0.0".into()).unwrap(),
             },
         )]);
         let manifest = Manifest {
