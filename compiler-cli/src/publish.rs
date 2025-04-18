@@ -699,8 +699,8 @@ fn release_metadata_as_erlang() {
     let version = "1.2.3".try_into().unwrap();
     let homepage = "https://gleam.run".parse().unwrap();
     let github = "https://github.com/lpil/myapp".parse().unwrap();
-    let req1 = Range::new("~> 1.2.3 or >= 5.0.0".into());
-    let req2 = Range::new("~> 1.2".into());
+    let req1 = Range::new("~> 1.2.3 or >= 5.0.0".into()).unwrap();
+    let req2 = Range::new("~> 1.2".into()).unwrap();
     let meta = ReleaseMetadata {
         name: "myapp",
         version: &version,
