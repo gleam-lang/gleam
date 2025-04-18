@@ -84,8 +84,6 @@ impl<'a> Printer<'a> {
                         has_label = true;
                     }
 
-                    dbg!(mapping.get(&field.variable.id));
-
                     if let Some(&idx) = mapping.get(&field.variable.id) {
                         let term = terms.get(idx).expect("Term must exist");
 
