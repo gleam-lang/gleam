@@ -337,6 +337,19 @@ impl Range {
     }
 }
 
+impl From<pubgrub::range::Range<Version>> for Range {
+    fn from(range: pubgrub::range::Range<Version>) -> Self {
+        let spec = range.to_string();
+        Self { spec, range }
+    }
+}
+
+impl From<Version> for Range {
+    fn from(version: Version) -> Self {
+        pubgrub::range::Range::exact(version).into()
+    }
+}
+
 impl fmt::Debug for Range {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_tuple("Range").field(&self.spec).finish()
