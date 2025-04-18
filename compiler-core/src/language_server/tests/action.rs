@@ -4450,7 +4450,9 @@ fn extract_variable_does_not_extract_top_level_statement_inside_block() {
 fn extract_variable_does_not_extract_top_level_statement_inside_use() {
     assert_no_code_actions!(
         EXTRACT_VARIABLE,
-        r#"pub fn main() {
+        r#"import gleam/result
+
+pub fn main() {
   use x <- result.try(Ok(1))
   let y = 2
   Ok(y + x)
@@ -4463,7 +4465,9 @@ fn extract_variable_does_not_extract_top_level_statement_inside_use() {
 fn extract_variable_does_not_extract_use() {
     assert_no_code_actions!(
         EXTRACT_VARIABLE,
-        r#"pub fn main() {
+        r#"import gleam/result
+
+pub fn main() {
   use x <- result.try(Ok(1))
   Ok(x)
 }"#,
@@ -4500,6 +4504,7 @@ fn extract_variable_from_arg_in_pipelined_call() {
     assert_code_action!(
         EXTRACT_VARIABLE,
         r#"import gleam/int
+import gleam/list
 
 pub fn main() {
   let add = int.add
@@ -4515,6 +4520,7 @@ fn extract_variable_from_arg_in_pipelined_call_to_capture() {
     assert_code_action!(
         EXTRACT_VARIABLE,
         r#"import gleam/int
+import gleam/list
 
 pub fn main() {
   let add = int.add

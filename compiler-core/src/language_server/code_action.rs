@@ -3086,10 +3086,14 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         });
     }
 
-    fn visit_typed_expr_block(&mut self, location: &'ast SrcSpan, stmts: &'ast [TypedStatement]) {
+    fn visit_typed_expr_block(
+        &mut self,
+        location: &'ast SrcSpan,
+        statements: &'ast [TypedStatement],
+    ) {
         let range = self.edits.src_span_to_lsp_range(location.to_owned());
         if !within(self.params.range, range) {
-            ast::visit::visit_typed_expr_block(self, location, stmts);
+            ast::visit::visit_typed_expr_block(self, location, statements);
             return;
         }
 
@@ -3101,7 +3105,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         }
 
         self.at_optional_position(position, |this| {
-            ast::visit::visit_typed_expr_block(this, location, stmts);
+            ast::visit::visit_typed_expr_block(this, location, statements);
         });
     }
 
