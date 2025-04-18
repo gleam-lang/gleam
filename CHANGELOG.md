@@ -40,6 +40,11 @@
   module, for running development entrypoints.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Updated the `erlang-shipment-entrypoint.sh` to add an exec statement so the
+  erlang process replaces the shell's process and can receive signals when
+  deployed in a docker container.
+  ([Christopher De Vries](https://github.com/devries))
+
 ### Language server
 
 - The code action to add missing labels to function now also works in patterns:
