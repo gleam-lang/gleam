@@ -1344,7 +1344,7 @@ fn unused_pipeline_not_ending_with_variant_raises_no_warnings() {
     assert_no_warnings!(
         r#"
 pub type Wibble(a) { Wibble(a) }
-pub fn wibble(a) { a }
+pub fn wibble(a) { echo a }
 
 pub fn main() {
   1 |> wibble |> wibble
@@ -1417,7 +1417,7 @@ pub fn main() {
 #[test]
 fn calling_function_from_other_module_is_not_marked_unused() {
     assert_no_warnings!(
-        ("wibble", "wibble", "pub fn println(a) { Nil }"),
+        ("wibble", "wibble", "pub fn println(a) { panic }"),
         r#"
 import wibble
 
@@ -2825,7 +2825,7 @@ pub fn main() {
   Nil
 }
 
-fn wibble() { wibble() }
+fn wibble() { panic }
 "#
     );
 }
@@ -2859,7 +2859,7 @@ pub fn main() {
     Nil
 }
 
-fn wibble() { wibble() }
+fn wibble() { panic }
 "#
     );
 }
@@ -2877,7 +2877,7 @@ pub fn main() {
     Nil
 }
 
-fn wibble() { wibble() }
+fn wibble() { panic }
 "#
     );
 }
@@ -2944,7 +2944,7 @@ pub fn main() {
     Nil
 }
 
-fn wibble(n) { n }
+fn wibble(n) { echo n }
 "#
     );
 }
@@ -2978,7 +2978,7 @@ pub fn main() {
     Nil
 }
 
-fn each(list, _fun) { list }
+fn each(list, _fun) { echo list }
 "#
     );
 }
@@ -3078,11 +3078,39 @@ pub fn main() {
 }
 
 #[test]
+fn unused_pure_function() {
+    assert_warning!(
+        "
+fn add(a, b) { a + b }
+
+pub fn main() {
+  add(1, 2)
+  Nil
+"
+    );
+}
+
+#[test]
 fn bit_array_truncated_segment_in_bytes() {
     assert_warning!(
         "
 pub fn main() {
   <<258:size(8)>>
+"
+    );
+}
+#[test]
+
+fn unused_pure_function_that_calls_other_pure_function() {
+    assert_warning!(
+        "
+fn sub(a, b) { add(a, -b) }
+
+fn add(a, b) { a + b }
+
+pub fn main() {
+  sub(1, 2)
+  Nil
 }
 "
     );
@@ -3111,6 +3139,21 @@ pub fn main() {
 }
 
 #[test]
+fn function_is_impure_if_external() {
+    assert_no_warnings!(
+        r#"
+@external(erlang, "maths", "add")
+fn add(a: Int, b: Int) -> Int
+
+pub fn main() {
+  add(1, 2)
+  Nil
+}
+"#
+    );
+}
+
+#[test]
 fn bit_array_truncated_segment_in_range_2() {
     assert_no_warnings!(
         "
@@ -3118,6 +3161,22 @@ pub fn main() {
   <<0>>
 }
 "
+    );
+}
+
+#[test]
+fn function_is_impure_if_uses_echo() {
+    assert_no_warnings!(
+        r#"
+fn add(a: Int, b: Int) -> Int {
+  echo a + b
+}
+
+pub fn main() {
+  add(1, 2)
+  Nil
+}
+"#
     );
 }
 
@@ -3154,5 +3213,83 @@ pub fn main() {
   <<-128>>
 }
 "
+    );
+}
+
+#[test]
+fn function_is_impure_if_uses_panic() {
+    assert_no_warnings!(
+        r#"
+fn add(a: Int, b: Int) -> Int {
+  case a + b {
+    0 -> panic as "Cannot add to zero"
+    x -> x
+  }
+}
+
+pub fn main() {
+  add(1, 2)
+  Nil
+}
+"#
+    );
+}
+
+#[test]
+fn function_is_impure_if_uses_todo() {
+    // We have to use `assert_warning` here instead of `assert_no_warnings`, because
+    // `todo` will always emit a warning. However, that should be the only warning;
+    // there should not be an unused function warning.
+    assert_warning!(
+        r#"
+fn add(a: Int, b: Int) -> Int {
+  case a + b {
+    0 -> todo as "Handle zero"
+    x -> x
+  }
+}
+
+pub fn main() {
+  add(1, 2)
+  Nil
+}
+"#
+    );
+}
+
+#[test]
+fn function_is_impure_if_uses_let_assert() {
+    assert_no_warnings!(
+        r#"
+fn assert_ok(x: Result(a, b)) -> a {
+  let assert Ok(x) = x
+  x
+}
+
+pub fn main() {
+  assert_ok(Ok(10))
+  Nil
+}
+"#
+    );
+}
+
+#[test]
+fn function_is_impure_if_call_impure_function() {
+    assert_no_warnings!(
+        r#"
+@external(erlang, "erlang", "something")
+fn impure() -> Nil
+
+fn add(a: Int, b: Int) -> Int {
+  impure()
+  a + b
+}
+
+pub fn main() {
+  add(1, 2)
+  Nil
+}
+"#
     );
 }
