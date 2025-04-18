@@ -71,7 +71,7 @@ use crate::error::wrap;
 use crate::parse::extra::ModuleExtra;
 use crate::type_::Deprecation;
 use crate::type_::error::VariableOrigin;
-use crate::type_::expression::Implementations;
+use crate::type_::expression::{Implementations, Purity};
 use crate::warning::{DeprecatedSyntaxWarning, WarningEmitter};
 use camino::Utf8PathBuf;
 use ecow::EcoString;
@@ -2016,6 +2016,7 @@ where
                 uses_erlang_externals: false,
                 uses_javascript_externals: false,
             },
+            purity: Purity::Pure,
         })))
     }
 

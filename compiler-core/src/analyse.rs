@@ -28,7 +28,7 @@ use crate::{
         ValueConstructorVariant, Warning,
         environment::*,
         error::{Error, FeatureKind, MissingAnnotation, Named, Problems, convert_unify_error},
-        expression::{ExprTyper, FunctionDefinition, Implementations},
+        expression::{ExprTyper, FunctionDefinition, Implementations, Purity},
         fields::FieldMapBuilder,
         hydrator::Hydrator,
         prelude::*,
@@ -492,6 +492,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             external_javascript,
             return_type: (),
             implementations: _,
+            purity: _,
         } = f;
         let (name_location, name) = name.expect("Function in a definition must be named");
         let target = environment.target;
@@ -567,6 +568,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 body,
                 expr_typer.implementations,
                 expr_typer.minimum_required_version,
+                expr_typer.purity,
             ))
         });
 
@@ -574,9 +576,9 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // function then register the error and continue anaylsis using the best
         // information that we have, so we can still learn about the rest of the
         // module.
-        let (type_, body, implementations, required_version) = match result {
-            Ok((type_, body, implementations, required_version)) => {
-                (type_, body, implementations, required_version)
+        let (type_, body, implementations, required_version, purity) = match result {
+            Ok((type_, body, implementations, required_version, purity)) => {
+                (type_, body, implementations, required_version, purity)
             }
             Err(error) => {
                 self.problems.error(error);
@@ -589,7 +591,13 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     },
                 }));
                 let implementations = Implementations::supporting_all();
-                (type_, body, implementations, Version::new(1, 0, 0))
+                (
+                    type_,
+                    body,
+                    implementations,
+                    Version::new(1, 0, 0),
+                    Purity::Impure,
+                )
             }
         };
 
@@ -655,6 +663,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             arity: typed_args.len(),
             location,
             implementations,
+            purity,
         };
 
         environment.insert_variable(
@@ -689,6 +698,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             external_erlang,
             external_javascript,
             implementations,
+            purity,
         })
     }
 
@@ -1405,6 +1415,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             body: _,
             return_type: _,
             implementations,
+            purity,
         } = f;
         let (name_location, name) = name.as_ref().expect("A module's function must be named");
 
@@ -1458,6 +1469,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             arity: args.len(),
             location: *location,
             implementations: *implementations,
+            purity: *purity,
         };
         environment.insert_variable(
             name.clone(),
@@ -1727,6 +1739,7 @@ fn generalise_function(
         external_erlang,
         external_javascript,
         implementations,
+        purity,
     } = function;
 
     let (name_location, name) = name.expect("Function in a definition must be named");
@@ -1755,6 +1768,7 @@ fn generalise_function(
         arity: args.len(),
         location,
         implementations,
+        purity,
     };
     environment.insert_variable(
         name.clone(),
@@ -1787,6 +1801,7 @@ fn generalise_function(
         external_erlang,
         external_javascript,
         implementations,
+        purity,
     })
 }
 

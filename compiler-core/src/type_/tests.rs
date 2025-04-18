@@ -2703,6 +2703,7 @@ fn assert_suitable_main_function_wrong_arity() {
                 can_run_on_erlang: true,
                 can_run_on_javascript: true,
             },
+            purity: Purity::Pure,
         },
     };
     assert!(assert_suitable_main_function(&value, &"module".into(), Target::Erlang).is_err(),);
@@ -2730,6 +2731,7 @@ fn assert_suitable_main_function_ok() {
                 can_run_on_erlang: true,
                 can_run_on_javascript: true,
             },
+            purity: Purity::Pure,
         },
     };
     assert!(assert_suitable_main_function(&value, &"module".into(), Target::Erlang).is_ok(),);
@@ -2757,6 +2759,7 @@ fn assert_suitable_main_function_erlang_not_supported() {
                 can_run_on_erlang: false,
                 can_run_on_javascript: true,
             },
+            purity: Purity::Impure,
         },
     };
     assert!(assert_suitable_main_function(&value, &"module".into(), Target::Erlang).is_err(),);
@@ -2784,6 +2787,7 @@ fn assert_suitable_main_function_javascript_not_supported() {
                 can_run_on_erlang: true,
                 can_run_on_javascript: false,
             },
+            purity: Purity::Impure,
         },
     };
     assert!(assert_suitable_main_function(&value, &"module".into(), Target::JavaScript).is_err(),);
