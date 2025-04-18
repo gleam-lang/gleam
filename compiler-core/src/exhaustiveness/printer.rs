@@ -71,19 +71,45 @@ impl<'a> Printer<'a> {
                     return;
                 }
                 buffer.push('(');
-                for (i, variable) in fields.iter().enumerate() {
+                for (i, field) in fields.iter().enumerate() {
                     if i != 0 {
                         buffer.push_str(", ");
                     }
 
-                    if let Some(&idx) = mapping.get(&variable.id) {
-                        self.print(
-                            terms.get(idx).expect("Term must exist"),
-                            terms,
-                            mapping,
-                            buffer,
-                        );
-                    } else {
+                    let mut has_label = false;
+
+                    if let Some(label) = &field.label {
+                        buffer.push_str(label);
+                        buffer.push(':');
+                        has_label = true;
+                    }
+
+                    dbg!(mapping.get(&field.variable.id));
+
+                    if let Some(&idx) = mapping.get(&field.variable.id) {
+                        let term = terms.get(idx).expect("Term must exist");
+
+                        match term {
+                            // If it is an infinite term and this field is labelled, it is generally
+                            // more useful to print just the label using label shorthand syntax.
+                            // For example, printing `Person(name:, age:)` instead of
+                            // `Person(name: _, age: _)`.
+                            Term::Infinite { .. } if has_label => {}
+                            Term::Infinite { .. }
+                            | Term::Variant { .. }
+                            | Term::Tuple { .. }
+                            | Term::EmptyList { .. }
+                            | Term::List { .. } => {
+                                // If this field has a label, the current buffer looks like `label:`,
+                                // so we want to print a space before printing the pattern for it.
+                                // If there is no label, we don't need to print the space.
+                                if has_label {
+                                    buffer.push(' ');
+                                }
+                                self.print(term, terms, mapping, buffer);
+                            }
+                        }
+                    } else if !has_label {
                         buffer.push('_');
                     }
                 }
@@ -163,11 +189,16 @@ impl<'a> Printer<'a> {
 
 #[cfg(test)]
 mod tests {
+    use ecow::EcoString;
+
     use super::Printer;
     use std::{collections::HashMap, sync::Arc};
 
     use crate::{
-        exhaustiveness::{Variable, missing_patterns::Term},
+        exhaustiveness::{
+            Variable,
+            missing_patterns::{Term, VariantField},
+        },
         type_::{Type, printer::Names},
     };
 
@@ -178,6 +209,13 @@ mod tests {
             type_: Arc::new(Type::Tuple {
                 elements: Vec::new(),
             }),
+        }
+    }
+
+    fn field(variable: Variable, label: Option<&str>) -> VariantField {
+        VariantField {
+            variable,
+            label: label.map(EcoString::from),
         }
     }
 
@@ -229,7 +267,7 @@ mod tests {
             variable: subjects[0].clone(),
             name: "Wibble".into(),
             module: "module".into(),
-            fields: vec![var1.clone(), var2.clone()],
+            fields: vec![field(var1.clone(), None), field(var2.clone(), None)],
         };
 
         let terms = &[
@@ -242,6 +280,42 @@ mod tests {
         assert_eq!(
             printer.print_terms(subjects, terms, &mapping),
             "Wibble([], _)"
+        );
+    }
+
+    #[test]
+    fn test_value_in_current_module_with_labelled_arguments() {
+        let mut names = Names::new();
+
+        names.named_constructor_in_scope("module".into(), "Wibble".into(), "Wibble".into());
+
+        let printer = Printer::new(&names);
+
+        let var1 = make_variable(1);
+
+        let var2 = make_variable(2);
+
+        let subjects = &[make_variable(0)];
+        let term = Term::Variant {
+            variable: subjects[0].clone(),
+            name: "Wibble".into(),
+            module: "module".into(),
+            fields: vec![
+                field(var1.clone(), Some("list")),
+                field(var2.clone(), Some("other")),
+            ],
+        };
+
+        let terms = &[
+            term,
+            Term::EmptyList { variable: var1 },
+            Term::Infinite { variable: var2 },
+        ];
+        let mapping = get_mapping(terms);
+
+        assert_eq!(
+            printer.print_terms(subjects, terms, &mapping),
+            "Wibble(list: [], other:)"
         );
     }
 
@@ -285,7 +359,7 @@ mod tests {
             variable: subjects[0].clone(),
             name: "Regex".into(),
             module: "regex".into(),
-            fields: vec![arg.clone()],
+            fields: vec![field(arg.clone(), None)],
         };
 
         let terms = &[term, Term::Infinite { variable: arg }];
@@ -310,7 +384,7 @@ mod tests {
             variable: subjects[0].clone(),
             name: "Regex".into(),
             module: "regex".into(),
-            fields: vec![arg.clone()],
+            fields: vec![field(arg.clone(), None)],
         };
 
         let terms = &[
@@ -385,7 +459,7 @@ mod tests {
                 variable: subjects[0].clone(),
                 name: "Ok".into(),
                 module: "gleam".into(),
-                fields: vec![make_variable(3)],
+                fields: vec![field(make_variable(3), None)],
             },
             Term::Variant {
                 variable: subjects[2].clone(),

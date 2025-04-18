@@ -29,4 +29,4 @@ is run on one of the values without a pattern then it will crash.
 
 The missing patterns are:
 
-    Thing(False, _)
+    Thing(a: False, b:)
