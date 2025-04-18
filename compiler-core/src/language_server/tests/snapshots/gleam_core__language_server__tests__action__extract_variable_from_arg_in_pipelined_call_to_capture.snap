@@ -1,9 +1,10 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "import gleam/int\n\npub fn main() {\n  let add = int.add\n  let x = add |> list.reduce([1, 2, 3], _)\n  x\n}"
+expression: "import gleam/int\nimport gleam/list\n\npub fn main() {\n  let add = int.add\n  let x = add |> list.reduce([1, 2, 3], _)\n  x\n}"
 ---
 ----- BEFORE ACTION
 import gleam/int
+import gleam/list
 
 pub fn main() {
   let add = int.add
@@ -15,6 +16,7 @@ pub fn main() {
 
 ----- AFTER ACTION
 import gleam/int
+import gleam/list
 
 pub fn main() {
   let add = int.add
