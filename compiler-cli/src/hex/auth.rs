@@ -1,8 +1,10 @@
 use crate::{cli, fs::ConsoleWarningEmitter, http::HttpClient};
+use camino::Utf8Path;
 use gleam_core::{
     Error, Result, Warning, encryption, hex, paths::global_hexpm_credentials_path,
     warning::WarningEmitter,
 };
+use serde::{Deserialize, Serialize};
 use std::{rc::Rc, time::SystemTime};
 
 pub const USER_PROMPT: &str = "https://hex.pm username";
@@ -12,15 +14,17 @@ pub const LOCAL_PASS_PROMPT: &str = "Local password";
 pub const PASS_ENV_NAME: &str = "HEXPM_PASS";
 pub const API_ENV_NAME: &str = "HEXPM_API_KEY";
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct EncryptedApiKey {
     pub name: String,
     pub encrypted: String,
+    pub username: Option<String>,
 }
 
 #[derive(Debug)]
 pub struct UnencryptedApiKey {
     pub unencrypted: String,
+    pub username: Option<String>,
 }
 
 pub struct HexAuthentication<'runtime> {
@@ -74,11 +78,18 @@ encrypt your Hex API key.
                 detail: e.to_string(),
             })?;
 
-        crate::fs::write(&path, &format!("{name}\n{encrypted}"))?;
+        let encrypted = EncryptedApiKey {
+            name,
+            encrypted,
+            username: Some(username.clone()),
+        };
+
+        encrypted.save(&path)?;
         println!("Encrypted Hex API key written to {path}");
 
         Ok(UnencryptedApiKey {
             unencrypted: api_key,
+            username: Some(username),
         })
     }
 
@@ -117,7 +128,12 @@ encrypt your Hex API key.
     }
 
     fn read_and_decrypt_stored_api_key(&mut self) -> Result<Option<UnencryptedApiKey>> {
-        let Some(EncryptedApiKey { encrypted, .. }) = self.read_stored_api_key()? else {
+        let Some(EncryptedApiKey {
+            encrypted,
+            username,
+            ..
+        }) = self.read_stored_api_key()?
+        else {
             return Ok(None);
         };
 
@@ -127,7 +143,10 @@ encrypt your Hex API key.
                 detail: e.to_string(),
             })?;
 
-        Ok(Some(UnencryptedApiKey { unencrypted }))
+        Ok(Some(UnencryptedApiKey {
+            unencrypted,
+            username,
+        }))
     }
 
     pub fn read_stored_api_key(&self) -> Result<Option<EncryptedApiKey>> {
@@ -135,18 +154,32 @@ encrypt your Hex API key.
         if !path.exists() {
             return Ok(None);
         }
-        let text = crate::fs::read(&path)?;
-        let mut chunks = text.splitn(2, '\n');
-        let Some(name) = chunks.next() else {
-            return Ok(None);
-        };
-        let Some(encrypted) = chunks.next() else {
-            return Ok(None);
-        };
-        Ok(Some(EncryptedApiKey {
-            name: name.to_string(),
-            encrypted: encrypted.to_string(),
-        }))
+
+        let encrypted_key = EncryptedApiKey::load(&path);
+
+        if let Ok(encrypted_key) = encrypted_key {
+            Ok(Some(encrypted_key))
+        } else {
+            // fallback from old format
+            let text = crate::fs::read(&path)?;
+            let mut chunks = text.splitn(2, '\n');
+            let Some(name) = chunks.next() else {
+                return Ok(None);
+            };
+            let Some(encrypted) = chunks.next() else {
+                return Ok(None);
+            };
+
+            let key = EncryptedApiKey {
+                name: name.to_string(),
+                encrypted: encrypted.to_string(),
+                username: None,
+            };
+
+            key.save(&path)?;
+
+            Ok(Some(key))
+        }
     }
 }
 
@@ -155,6 +188,25 @@ impl Drop for HexAuthentication<'_> {
         while let Some(warning) = self.warnings.pop() {
             self.warning_emitter.emit(warning);
         }
+    }
+}
+
+impl EncryptedApiKey {
+    pub fn save(&self, path: &Utf8Path) -> Result<()> {
+        let text = toml::to_string(self).map_err(|_| Error::InvalidCredentialsFile {
+            path: path.to_string(),
+        })?;
+        crate::fs::write(path, &text)?;
+        Ok(())
+    }
+
+    pub fn load(path: &Utf8Path) -> Result<Self> {
+        let text = crate::fs::read(path)?;
+        let key = toml::from_str(&text).map_err(|_| Error::InvalidCredentialsFile {
+            path: path.to_string(),
+        })?;
+
+        Ok(key)
     }
 }
 
