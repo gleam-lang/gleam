@@ -232,8 +232,8 @@ mod tests {
     fn manifest_toml_format() {
         let manifest = Manifest {
             requirements: [
-                ("zzz".into(), Requirement::hex("> 0.0.0")),
-                ("aaa".into(), Requirement::hex("> 0.0.0")),
+                ("zzz".into(), Requirement::hex("> 0.0.0").unwrap()),
+                ("aaa".into(), Requirement::hex("> 0.0.0").unwrap()),
                 (
                     "awsome_local2".into(),
                     Requirement::git("https://github.com/gleam-lang/gleam.git", "bd9fe02f"),
@@ -242,8 +242,8 @@ mod tests {
                     "awsome_local1".into(),
                     Requirement::path("../path/to/package"),
                 ),
-                ("gleam_stdlib".into(), Requirement::hex("~> 0.17")),
-                ("gleeunit".into(), Requirement::hex("~> 0.1")),
+                ("gleam_stdlib".into(), Requirement::hex("~> 0.17").unwrap()),
+                ("gleeunit".into(), Requirement::hex("~> 0.1").unwrap()),
             ]
             .into(),
             packages: vec![
@@ -342,8 +342,8 @@ zzz = { version = "> 0.0.0" }
     fn manifest_toml_format_with_unc() {
         let manifest = Manifest {
             requirements: [
-                ("zzz".into(), Requirement::hex("> 0.0.0")),
-                ("aaa".into(), Requirement::hex("> 0.0.0")),
+                ("zzz".into(), Requirement::hex("> 0.0.0").unwrap()),
+                ("aaa".into(), Requirement::hex("> 0.0.0").unwrap()),
                 (
                     "awsome_local2".into(),
                     Requirement::git("https://github.com/gleam-lang/gleam.git", "main"),
@@ -352,8 +352,8 @@ zzz = { version = "> 0.0.0" }
                     "awsome_local1".into(),
                     Requirement::path("../path/to/package"),
                 ),
-                ("gleam_stdlib".into(), Requirement::hex("~> 0.17")),
-                ("gleeunit".into(), Requirement::hex("~> 0.1")),
+                ("gleam_stdlib".into(), Requirement::hex("~> 0.17").unwrap()),
+                ("gleeunit".into(), Requirement::hex("~> 0.1").unwrap()),
             ]
             .into(),
             packages: vec![

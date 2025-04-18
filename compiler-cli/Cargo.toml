@@ -36,7 +36,7 @@ same-file = "1"
 # Open generated docs in browser
 opener = "0"
 # Pubgrub dependency resolution algorithm
-pubgrub = "0"
+pubgrub = "0.3"
 
 camino = { workspace = true, features = ["serde1"] }
 async-trait.workspace = true

@@ -214,7 +214,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 .package_config
                 .gleam_version
                 .clone()
-                .map(|version| version.as_pubgrub()),
+                .map(|version| version.into()),
             current_module: self.module_name.clone(),
             target: self.target,
             importable_modules: self.importable_modules,

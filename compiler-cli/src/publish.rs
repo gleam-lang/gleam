@@ -335,8 +335,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
             // inferred lower bound could be lower.
             let minimum_required_version =
                 std::cmp::max(minimum_required_version, Version::new(1, 0, 0));
-            let inferred_version_range =
-                pubgrub::range::Range::higher_than(minimum_required_version);
+            let inferred_version_range = pubgrub::Range::higher_than(minimum_required_version);
             config.gleam_version = Some(GleamVersion::from_pubgrub(inferred_version_range));
         }
         // Otherwise we need to check that the annotated version range is
@@ -699,8 +698,8 @@ fn release_metadata_as_erlang() {
     let version = "1.2.3".try_into().unwrap();
     let homepage = "https://gleam.run".parse().unwrap();
     let github = "https://github.com/lpil/myapp".parse().unwrap();
-    let req1 = Range::new("~> 1.2.3 or >= 5.0.0".into());
-    let req2 = Range::new("~> 1.2".into());
+    let req1 = Range::new("~> 1.2.3 or >= 5.0.0".into()).unwrap();
+    let req2 = Range::new("~> 1.2".into()).unwrap();
     let meta = ReleaseMetadata {
         name: "myapp",
         version: &version,

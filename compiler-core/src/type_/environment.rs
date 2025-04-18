@@ -1,4 +1,4 @@
-use pubgrub::range::Range;
+use pubgrub::Range;
 
 use crate::{
     analyse::TargetSupport,
