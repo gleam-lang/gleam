@@ -823,28 +823,6 @@ impl TypedExpr {
         }
     }
 
-    #[must_use]
-    pub fn is_function_call(&self) -> bool {
-        match self {
-            TypedExpr::Fn { .. } => true,
-            TypedExpr::Pipeline { .. } => true,
-            TypedExpr::Call { fun, .. } => fun.is_function_call(),
-            TypedExpr::ModuleSelect {
-                constructor: ModuleValueConstructor::Fn { .. },
-                ..
-            } => true,
-            TypedExpr::Var {
-                constructor:
-                    ValueConstructor {
-                        variant: ValueConstructorVariant::ModuleFn { .. },
-                        ..
-                    },
-                ..
-            } => true,
-            _ => false,
-        }
-    }
-
     /// If `self` is a record constructor, returns the nuber of arguments it
     /// needs to be called. Otherwise, returns `None`.
     ///
