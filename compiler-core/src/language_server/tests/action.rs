@@ -7719,3 +7719,21 @@ pub fn main() {
         find_position_of("Wobble()").to_selection(),
     );
 }
+
+#[test]
+fn add_missing_patterns_with_labels() {
+    assert_code_action!(
+        ADD_MISSING_PATTERNS,
+        "
+pub type Wibble {
+  Wibble(integer: Int, float: Float)
+  Wobble(string: String, bool: Bool)
+}
+
+pub fn main(w: Wibble) {
+  case w {}
+}
+",
+        find_position_of("case w").select_until(find_position_of("{}")),
+    );
+}

@@ -19,6 +19,12 @@ pub fn missing_patterns(
     missing
 }
 
+#[derive(Debug, Clone)]
+pub struct VariantField {
+    pub label: Option<EcoString>,
+    pub variable: Variable,
+}
+
 /// Information about a single constructor/value (aka term) being tested, used
 /// to build a list of names of missing patterns.
 #[derive(Debug)]
@@ -27,7 +33,7 @@ pub enum Term {
         variable: Variable,
         name: EcoString,
         module: EcoString,
-        fields: Vec<Variable>,
+        fields: Vec<VariantField>,
     },
     Tuple {
         variable: Variable,
@@ -162,7 +168,12 @@ impl<'a, 'env> MissingPatternsGenerator<'a, 'env> {
                 elements: elements.clone(),
             },
 
-            RuntimeCheck::Variant { index, fields, .. } => {
+            RuntimeCheck::Variant {
+                index,
+                fields,
+                labels,
+                ..
+            } => {
                 let (module, name) = variable
                     .type_
                     .named_type_name()
@@ -178,11 +189,20 @@ impl<'a, 'env> MissingPatternsGenerator<'a, 'env> {
                     .name
                     .clone();
 
+                let fields = fields
+                    .iter()
+                    .enumerate()
+                    .map(|(index, variable)| VariantField {
+                        label: labels.get(&index).cloned(),
+                        variable: variable.clone(),
+                    })
+                    .collect();
+
                 Term::Variant {
                     variable,
                     name,
                     module,
-                    fields: fields.clone(),
+                    fields,
                 }
             }
 
