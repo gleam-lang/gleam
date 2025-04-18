@@ -10,8 +10,6 @@ use serde::{
     de::{self, Deserializer},
 };
 
-pub use pubgrub::report as pubgrub_report;
-
 mod lexer;
 mod parser;
 #[cfg(test)]
@@ -101,7 +99,7 @@ impl Version {
     }
 
     /// Parse a Hex compatible version range. i.e. `> 1 and < 2 or == 4.5.2`.
-    fn parse_range(input: &str) -> Result<pubgrub::range::Range<Version>, parser::Error> {
+    fn parse_range(input: &str) -> Result<pubgrub::Range<Version>, parser::Error> {
         let mut parser = Parser::new(input)?;
         let version = parser.range()?;
         if !parser.is_eof() {
@@ -117,6 +115,10 @@ impl Version {
         Ok(version)
     }
 
+    pub fn lowest() -> Self {
+        Self::new(0, 0, 0)
+    }
+
     fn tuple(&self) -> (u32, u32, u32, PreOrder<'_>) {
         (
             self.major,
@@ -128,6 +130,21 @@ impl Version {
 
     pub fn is_pre(&self) -> bool {
         !self.pre.is_empty()
+    }
+}
+
+pub trait LowestVersion {
+    fn lowest_version(&self) -> Option<Version>;
+}
+impl LowestVersion for pubgrub::Range<Version> {
+    fn lowest_version(&self) -> Option<Version> {
+        self.iter()
+            .flat_map(|(lower, _higher)| match lower {
+                std::ops::Bound::Included(v) => Some(v.clone()),
+                std::ops::Bound::Excluded(_) => None,
+                std::ops::Bound::Unbounded => Some(Version::lowest()),
+            })
+            .min()
     }
 }
 
@@ -160,104 +177,6 @@ impl std::cmp::Ord for Version {
     fn cmp(&self, other: &Self) -> Ordering {
         self.tuple().cmp(&other.tuple())
     }
-}
-
-impl pubgrub::version::Version for Version {
-    fn lowest() -> Self {
-        Self::new(0, 0, 0)
-    }
-
-    fn bump(&self) -> Self {
-        if self.is_pre() {
-            let mut pre = self.pre.clone();
-            let last_component = pre
-                .last_mut()
-                // This `.expect` is safe, as we know there to be at least
-                // one pre-release component.
-                .expect("no pre-release components");
-
-            match last_component {
-                Identifier::Numeric(pre) => *pre += 1,
-                Identifier::AlphaNumeric(pre) => {
-                    let mut segments = split_alphanumeric(pre);
-                    let last_segment = segments.last_mut().unwrap();
-
-                    match last_segment {
-                        AlphaOrNumeric::Numeric(n) => *n += 1,
-                        AlphaOrNumeric::Alpha(alpha) => {
-                            // We should potentially be smarter about this (for instance, pick the next letter in the
-                            // alphabetic sequence), however, this seems like it could be quite a bit more complex.
-                            alpha.push('1')
-                        }
-                    }
-
-                    *pre = segments
-                        .into_iter()
-                        .map(|segment| match segment {
-                            AlphaOrNumeric::Alpha(segment) => segment,
-                            AlphaOrNumeric::Numeric(segment) => segment.to_string(),
-                        })
-                        .collect::<Vec<_>>()
-                        .join("");
-                }
-            }
-
-            Self {
-                major: self.major,
-                minor: self.minor,
-                patch: self.patch,
-                pre,
-                build: None,
-            }
-        } else {
-            self.bump_patch()
-        }
-    }
-}
-
-enum AlphaOrNumeric {
-    Alpha(String),
-    Numeric(u32),
-}
-
-/// Splits the given string into alphabetic and numeric segments.
-fn split_alphanumeric(str: &str) -> Vec<AlphaOrNumeric> {
-    let mut segments = Vec::new();
-    let mut current_segment = String::new();
-    let mut previous_char_was_numeric = None;
-
-    for char in str.chars() {
-        let is_numeric = char.is_ascii_digit();
-        match previous_char_was_numeric {
-            Some(previous_char_was_numeric) if previous_char_was_numeric == is_numeric => {
-                current_segment.push(char)
-            }
-            _ => {
-                if !current_segment.is_empty() {
-                    if current_segment.chars().any(|char| char.is_ascii_digit()) {
-                        segments.push(AlphaOrNumeric::Numeric(current_segment.parse().unwrap()));
-                    } else {
-                        segments.push(AlphaOrNumeric::Alpha(current_segment));
-                    }
-
-                    current_segment = String::new();
-                }
-
-                current_segment.push(char);
-                previous_char_was_numeric = Some(is_numeric);
-            }
-        }
-    }
-
-    if !current_segment.is_empty() {
-        if current_segment.chars().any(|char| char.is_ascii_digit()) {
-            segments.push(AlphaOrNumeric::Numeric(current_segment.parse().unwrap()));
-        } else {
-            segments.push(AlphaOrNumeric::Alpha(current_segment));
-        }
-    }
-
-    segments
 }
 
 impl<'a> TryFrom<&'a str> for Version {
@@ -317,18 +236,18 @@ impl Identifier {
 #[derive(Clone, PartialEq, Eq)]
 pub struct Range {
     spec: String,
-    range: pubgrub::range::Range<Version>,
+    range: pubgrub::Range<Version>,
 }
 
 impl Range {
     pub fn new(spec: String) -> Result<Self, parser::Error> {
-        let range = Version::parse_range(spec.as_str())?;
+        let range = Version::parse_range(&spec)?;
         Ok(Self { spec, range })
     }
 }
 
 impl Range {
-    pub fn to_pubgrub(&self) -> &pubgrub::range::Range<Version> {
+    pub fn to_pubgrub(&self) -> &pubgrub::Range<Version> {
         &self.range
     }
 
@@ -337,16 +256,15 @@ impl Range {
     }
 }
 
-impl From<pubgrub::range::Range<Version>> for Range {
-    fn from(range: pubgrub::range::Range<Version>) -> Self {
+impl From<pubgrub::Range<Version>> for Range {
+    fn from(range: pubgrub::Range<Version>) -> Self {
         let spec = range.to_string();
         Self { spec, range }
     }
 }
-
 impl From<Version> for Range {
     fn from(version: Version) -> Self {
-        pubgrub::range::Range::exact(version).into()
+        pubgrub::Range::singleton(version).into()
     }
 }
 

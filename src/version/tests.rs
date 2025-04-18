@@ -2,7 +2,6 @@ use std::cmp::Ordering::{Equal, Greater, Less};
 use std::collections::HashMap;
 
 use parser::Error;
-use pubgrub::version::Version as _;
 
 use super::{
     Identifier::{AlphaNumeric, Numeric},
@@ -208,17 +207,21 @@ fn v_(major: u32, minor: u32, patch: u32, pre: Vec<Identifier>, build: Option<St
     }
 }
 
-type PubgrubRange = pubgrub::range::Range<Version>;
+type PubgrubRange = pubgrub::Range<Version>;
 
-parse_range_test!(leading_space, " 1.2.3", PubgrubRange::exact(v(1, 2, 3)));
-parse_range_test!(trailing_space, "1.2.3 ", PubgrubRange::exact(v(1, 2, 3)));
+parse_range_test!(leading_space, " 1.2.3", PubgrubRange::singleton(v(1, 2, 3)));
+parse_range_test!(
+    trailing_space,
+    "1.2.3 ",
+    PubgrubRange::singleton(v(1, 2, 3))
+);
 
-parse_range_test!(eq_triplet, "== 1.2.3 ", PubgrubRange::exact(v(1, 2, 3)));
+parse_range_test!(eq_triplet, "== 1.2.3 ", PubgrubRange::singleton(v(1, 2, 3)));
 
 parse_range_test!(
     eq_triplet_nospace,
     "==1.2.3 ",
-    PubgrubRange::exact(v(1, 2, 3))
+    PubgrubRange::singleton(v(1, 2, 3))
 );
 
 parse_range_test!(
@@ -227,12 +230,12 @@ parse_range_test!(
     PubgrubRange::strictly_lower_than(v(1, 2, 3)).union(&PubgrubRange::higher_than(v(1, 2, 4)))
 );
 
-parse_range_test!(implicit_eq, "2.2.3", PubgrubRange::exact(v(2, 2, 3)));
+parse_range_test!(implicit_eq, "2.2.3", PubgrubRange::singleton(v(2, 2, 3)));
 
 parse_range_test!(
     range_pre_build,
     "1.2.3-thing+oop",
-    PubgrubRange::exact(v_(
+    PubgrubRange::singleton(v_(
         1,
         2,
         3,
@@ -387,30 +390,6 @@ assert_order!(ord_pre_smaller_than_zero, "1.0.0", Greater, "1.0.0-rc1");
 assert_order!(ord_pre_smaller_than_zero_flip, "1.0.0-rc1", Less, "1.0.0");
 
 assert_order!(ord_pre_rc1_2, "1.0.0-rc1", Less, "1.0.0-rc2");
-
-#[test]
-fn test_pubgrub_bump_patch() {
-    assert_eq!(
-        Version::parse("1.0.0").unwrap().bump(),
-        Version::parse("1.0.1").unwrap()
-    );
-}
-
-#[test]
-fn test_pubgrub_bump_prerelease_ending_with_a_number() {
-    assert_eq!(
-        Version::parse("1.0.0-rc2").unwrap().bump(),
-        Version::parse("1.0.0-rc3").unwrap()
-    );
-}
-
-#[test]
-fn test_pubgrub_bump_prerelease_ending_with_a_letter() {
-    assert_eq!(
-        Version::parse("1.0.0-rc2a").unwrap().bump(),
-        Version::parse("1.0.0-rc2a1").unwrap()
-    );
-}
 
 #[test]
 fn manifest_toml() {

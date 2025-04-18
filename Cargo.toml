@@ -33,7 +33,7 @@ ring = "0.17"
 # PEM -> DER conversion
 x509-parser = "0.15"
 # Pubgrub dependency resolution algorithm
-pubgrub = "0.2"
+pubgrub = "0.3"
 # Basic auth HTTP helper
 http-auth-basic = "0.3"
 # base16 encoding
