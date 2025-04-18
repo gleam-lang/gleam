@@ -146,6 +146,34 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The compiler will now emit a warning when the return value of a call to a
+  pure function is unused. For example the following code:
+
+  ```gleam
+  fn add(a, b) { a + b }
+
+  pub fn main() {
+    add(1, 2)
+    Nil
+  }
+  ```
+
+  Will produce the following warning:
+
+  ```
+  warning: Unused pure function call
+    ┌─ /home/gears/projects/playground/gleam/src/playground.gleam:4:3
+    │
+  4 │   add(1, 2)
+    │   ^^^^^^^^^ This pure function call is never used
+
+  Gleam is an immutable language, meaning functions cannot mutate state
+  simply by being called. This function is pure, so it must be assigned to a
+  variable to have an effect on the program.
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - The build tool now supports placing modules in a directory called `dev`,
