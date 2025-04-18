@@ -2398,17 +2398,25 @@ where
 {
     pub(crate) fn check_for_truncated_value(&self) -> Option<BitArraySegmentTruncation> {
         // Both the size and the value must be two compile-time known constants.
-        let segment_bits = self.bits_size()?;
+        let segment_bits = self.bits_size()?.to_i64()?;
         let literal_value = self.value.as_int_literal()?;
-        if literal_value.sign() != Sign::Plus || segment_bits.sign() != Sign::Plus {
+        if segment_bits <= 0 {
             return None;
         }
 
-        let truncated = truncate(&literal_value, segment_bits.to_i64()?);
-        if literal_value != truncated {
+        let safe_range = match literal_value.sign() {
+            Sign::NoSign => return None,
+            Sign::Minus => {
+                (-(BigInt::one() << (segment_bits - 1)))
+                    ..((BigInt::one() << (segment_bits - 1)) - 1)
+            }
+            Sign::Plus => BigInt::ZERO..((BigInt::one() << segment_bits) - 1),
+        };
+
+        if !safe_range.contains(&literal_value) {
             Some(BitArraySegmentTruncation {
-                truncated_value: literal_value,
-                truncated_into: truncated,
+                truncated_value: literal_value.clone(),
+                truncated_into: truncate(&literal_value, segment_bits),
                 value_location: self.value.location(),
                 segment_bits,
             })
@@ -2456,7 +2464,7 @@ pub struct BitArraySegmentTruncation {
     /// The span of the segment's value being truncated.
     pub value_location: SrcSpan,
     /// The size of the segment.
-    pub segment_bits: BigInt,
+    pub segment_bits: i64,
 }
 
 impl TypedPatternBitArraySegment {
