@@ -1,7 +1,10 @@
 use super::*;
 use crate::{
     ast::{Arg, Function, ModuleConstant, Publicity},
-    type_::{Deprecation, expression::Implementations},
+    type_::{
+        Deprecation,
+        expression::{Implementations, Purity},
+    },
 };
 use ecow::EcoString;
 
@@ -45,6 +48,7 @@ fn parse_and_order(
                 can_run_on_erlang: true,
                 can_run_on_javascript: true,
             },
+            purity: Purity::Impure,
         })
         .collect_vec();
     let constants = constants

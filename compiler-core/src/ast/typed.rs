@@ -775,6 +775,13 @@ impl TypedExpr {
         }
     }
 
+    pub fn is_pure_function_call(&self) -> bool {
+        match self {
+            TypedExpr::Call { fun, .. } => fun.is_pure_function(),
+            _ => false,
+        }
+    }
+
     pub fn is_pure_value_constructor(&self) -> bool {
         match self {
             TypedExpr::Int { .. }
@@ -815,7 +822,7 @@ impl TypedExpr {
                 TypedExpr::Fn { body, .. } => body.iter().all(|s| s.is_pure_value_constructor()),
                 // And calling a record builder is a pure value constructor:
                 // `Some(1)`
-                fun => fun.is_record_builder(),
+                fun => fun.is_record_builder() || fun.is_pure_function(),
             },
 
             // A block is pure if all the statements it's made of are pure.
@@ -845,6 +852,37 @@ impl TypedExpr {
             TypedExpr::Todo { .. }
             | TypedExpr::Panic { .. }
             | TypedExpr::Echo { .. }
+            | TypedExpr::Invalid { .. } => false,
+        }
+    }
+
+    pub fn is_pure_function(&self) -> bool {
+        match self {
+            TypedExpr::Var { constructor, .. } => constructor.is_pure_module_function(),
+            TypedExpr::ModuleSelect { constructor, .. } => constructor.is_pure_module_function(),
+            // Technically some of these can be pure functions, such as `Fn` or `Block`, but since
+            // this is only for warning users about unused pure functions, it's OK to have some false
+            // negatives when 99% of cases are covered by `Var` `ModuleSelect`
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
             | TypedExpr::Invalid { .. } => false,
         }
     }

@@ -16,6 +16,7 @@ use ecow::EcoString;
 pub use environment::*;
 pub use error::{Error, Problems, UnifyErrorSituation, Warning};
 pub(crate) use expression::ExprTyper;
+use expression::Purity;
 pub use fields::FieldMap;
 use hexpm::version::Version;
 pub use prelude::*;
@@ -684,6 +685,7 @@ pub enum ValueConstructorVariant {
         implementations: Implementations,
         external_erlang: Option<(EcoString, EcoString)>,
         external_javascript: Option<(EcoString, EcoString)>,
+        purity: Purity,
     },
 
     /// A constructor for a custom type
@@ -749,6 +751,7 @@ impl ValueConstructorVariant {
                 documentation: None,
                 location: *location,
                 field_map: None,
+                purity: Purity::Impure,
             },
 
             Self::ModuleFn {
@@ -759,6 +762,7 @@ impl ValueConstructorVariant {
                 field_map,
                 external_erlang,
                 external_javascript,
+                purity,
                 ..
             } => ModuleValueConstructor::Fn {
                 name: name.clone(),
@@ -768,6 +772,7 @@ impl ValueConstructorVariant {
                 external_javascript: external_javascript.clone(),
                 location: *location,
                 field_map: field_map.clone(),
+                purity: *purity,
             },
         }
     }
@@ -883,6 +888,7 @@ pub enum ModuleValueConstructor {
         external_javascript: Option<(EcoString, EcoString)>,
         field_map: Option<FieldMap>,
         documentation: Option<EcoString>,
+        purity: Purity,
     },
 
     Constant {
@@ -906,6 +912,15 @@ impl ModuleValueConstructor {
             ModuleValueConstructor::Record { documentation, .. }
             | ModuleValueConstructor::Fn { documentation, .. }
             | ModuleValueConstructor::Constant { documentation, .. } => documentation.as_deref(),
+        }
+    }
+
+    pub fn is_pure_module_function(&self) -> bool {
+        match self {
+            ModuleValueConstructor::Record { .. } | ModuleValueConstructor::Constant { .. } => {
+                false
+            }
+            ModuleValueConstructor::Fn { purity, .. } => purity.is_pure(),
         }
     }
 }
@@ -1368,6 +1383,16 @@ impl ValueConstructor {
             | ValueConstructorVariant::ModuleConstant { documentation, .. } => {
                 Some(documentation.as_ref()?.as_str())
             }
+        }
+    }
+
+    pub fn is_pure_module_function(&self) -> bool {
+        match &self.variant {
+            ValueConstructorVariant::LocalVariable { .. }
+            | ValueConstructorVariant::ModuleConstant { .. }
+            | ValueConstructorVariant::LocalConstant { .. }
+            | ValueConstructorVariant::Record { .. } => false,
+            ValueConstructorVariant::ModuleFn { purity, .. } => purity.is_pure(),
         }
     }
 }
