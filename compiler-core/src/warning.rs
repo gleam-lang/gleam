@@ -15,8 +15,6 @@ use crate::{
 use camino::Utf8PathBuf;
 use debug_ignore::DebugIgnore;
 use ecow::EcoString;
-use num_bigint::BigInt;
-use num_traits::One;
 use std::{
     io::Write,
     sync::{Arc, atomic::Ordering},
@@ -1212,10 +1210,10 @@ information.",
                             value_location,
                         },
                 } => {
-                    let (unit, segment_size, taken) = if segment_bits % 8 == BigInt::ZERO {
+                    let (unit, segment_size, taken) = if segment_bits % 8 == 0 {
                         let bytes = segment_bits / 8;
-                        let segment_size = pluralise(format!("{bytes} byte"), &bytes);
-                        let taken = if bytes == BigInt::one() {
+                        let segment_size = pluralise(format!("{bytes} byte"), bytes);
+                        let taken = if bytes == 1 {
                             "its first byte".into()
                         } else {
                             format!("its first {bytes} bytes")
@@ -1223,8 +1221,8 @@ information.",
 
                         ("bytes", segment_size, taken)
                     } else {
-                        let segment_size = pluralise(format!("{segment_bits} bit"), segment_bits);
-                        let taken = if segment_bits == &BigInt::one() {
+                        let segment_size = pluralise(format!("{segment_bits} bit"), *segment_bits);
+                        let taken = if *segment_bits == 1 {
                             "its first bit".into()
                         } else {
                             format!("its first {segment_bits} bits")
@@ -1309,8 +1307,8 @@ can already tell whether it will be true or false.",
     }
 }
 
-fn pluralise(string: String, quantity: &BigInt) -> String {
-    if quantity == &BigInt::one() {
+fn pluralise(string: String, quantity: i64) -> String {
+    if quantity == 1 {
         string
     } else {
         format!("{string}s")
