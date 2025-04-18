@@ -3098,3 +3098,61 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn bit_array_truncated_segment_in_range() {
+    assert_no_warnings!(
+        "
+pub fn main() {
+  <<255>>
+}
+"
+    );
+}
+
+#[test]
+fn bit_array_truncated_segment_in_range_2() {
+    assert_no_warnings!(
+        "
+pub fn main() {
+  <<0>>
+}
+"
+    );
+}
+
+#[test]
+fn bit_array_negative_truncated_segment() {
+    assert_warning!(
+        "
+pub fn main() {
+  // -5 in 2's complement is 1111...111011
+  // so if we truncate it to its first 3 bits we
+  // get 011, which is positive 3!
+  <<-5:size(3)>>
+}
+"
+    );
+}
+
+#[test]
+fn bit_array_negative_truncated_segment_2() {
+    assert_warning!(
+        "
+pub fn main() {
+  <<-200:size(8)>>
+}
+"
+    );
+}
+
+#[test]
+fn bit_array_negative_truncated_segment_in_range() {
+    assert_no_warnings!(
+        "
+pub fn main() {
+  <<-128>>
+}
+"
+    );
+}
