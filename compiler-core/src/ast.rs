@@ -2410,7 +2410,7 @@ where
                 (-(BigInt::one() << (segment_bits - 1)))
                     ..((BigInt::one() << (segment_bits - 1)) - 1)
             }
-            Sign::Plus => BigInt::ZERO..((BigInt::one() << segment_bits) - 1),
+            Sign::Plus => BigInt::ZERO..(BigInt::one() << segment_bits),
         };
 
         if !safe_range.contains(&literal_value) {
