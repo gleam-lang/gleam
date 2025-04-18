@@ -157,6 +157,7 @@ Parsed {
                             uses_erlang_externals: false,
                             uses_javascript_externals: false,
                         },
+                        purity: Pure,
                     },
                 ),
                 target: None,
