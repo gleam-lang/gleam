@@ -2707,6 +2707,7 @@ fn assert_suitable_main_function_wrong_arity() {
                 can_run_on_erlang: true,
                 can_run_on_javascript: true,
             },
+            purity: Purity::Pure,
         },
     };
     assert!(
@@ -2737,6 +2738,7 @@ fn assert_suitable_main_function_ok() {
                 can_run_on_erlang: true,
                 can_run_on_javascript: true,
             },
+            purity: Purity::Pure,
         },
     };
     assert!(
@@ -2767,6 +2769,7 @@ fn assert_suitable_main_function_erlang_not_supported() {
                 can_run_on_erlang: false,
                 can_run_on_javascript: true,
             },
+            purity: Purity::Impure,
         },
     };
     assert!(
@@ -2797,6 +2800,7 @@ fn assert_suitable_main_function_javascript_not_supported() {
                 can_run_on_erlang: true,
                 can_run_on_javascript: false,
             },
+            purity: Purity::Impure,
         },
     };
     assert!(

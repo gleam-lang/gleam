@@ -18,7 +18,8 @@ use crate::{
         self, AccessorsMap, Deprecation, FieldMap, ModuleInterface, Opaque, RecordAccessor,
         References, Type, TypeAliasConstructor, TypeConstructor, TypeValueConstructor,
         TypeValueConstructorField, TypeVariantConstructors, ValueConstructor,
-        ValueConstructorVariant, expression::Implementations,
+        ValueConstructorVariant,
+        expression::{Implementations, Purity},
     },
     uid::UniqueIdGenerator,
 };
@@ -602,6 +603,11 @@ impl ModuleDecoder {
         &self,
         reader: &value_constructor_variant::module_fn::Reader<'_>,
     ) -> Result<ValueConstructorVariant> {
+        let purity = match reader.get_pure() {
+            true => Purity::Pure,
+            false => Purity::Impure,
+        };
+
         Ok(ValueConstructorVariant::ModuleFn {
             name: self.string(reader.get_name()?)?,
             module: self.string(reader.get_module()?)?,
@@ -612,6 +618,7 @@ impl ModuleDecoder {
             implementations: self.implementations(reader.get_implementations()?),
             external_erlang: self.optional_external(reader.get_external_erlang()?)?,
             external_javascript: self.optional_external(reader.get_external_javascript()?)?,
+            purity,
         })
     }
 

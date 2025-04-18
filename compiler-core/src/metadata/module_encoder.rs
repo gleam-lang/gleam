@@ -430,12 +430,14 @@ impl<'a> ModuleEncoder<'a> {
                 implementations,
                 external_erlang,
                 external_javascript,
+                purity,
             } => {
                 let mut builder = builder.init_module_fn();
                 builder.set_name(name);
                 builder.set_module(module);
                 builder.set_arity(*arity as u16);
                 builder.set_documentation(doc.as_ref().map(EcoString::as_str).unwrap_or_default());
+                builder.set_pure(purity.is_pure());
                 self.build_external(builder.reborrow().init_external_erlang(), external_erlang);
                 self.build_external(
                     builder.reborrow().init_external_javascript(),

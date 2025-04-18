@@ -24,7 +24,7 @@ use vec1::Vec1;
 
 #[derive(Clone, Copy, Debug, Eq, PartialOrd, Ord, PartialEq, Serialize)]
 pub struct Implementations {
-    /// Wether the function has a pure-gleam implementation.
+    /// Whether the function has a pure-gleam implementation.
     ///
     /// It's important to notice that, even if all individual targets are
     /// supported, it would not be the same as being pure Gleam.
@@ -42,10 +42,10 @@ pub struct Implementations {
     pub gleam: bool,
     pub can_run_on_erlang: bool,
     pub can_run_on_javascript: bool,
-    /// Wether the function has an implementation that uses external erlang
+    /// Whether the function has an implementation that uses external erlang
     /// code.
     pub uses_erlang_externals: bool,
-    /// Wether the function has an implementation that uses external javascript
+    /// Whether the function has an implementation that uses external javascript
     /// code.
     pub uses_javascript_externals: bool,
 }
@@ -58,6 +58,21 @@ impl Implementations {
             can_run_on_javascript: true,
             uses_javascript_externals: false,
             uses_erlang_externals: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Purity {
+    Pure,
+    Impure,
+}
+
+impl Purity {
+    pub fn is_pure(&self) -> bool {
+        match self {
+            Purity::Pure => true,
+            Purity::Impure => false,
         }
     }
 }
@@ -205,6 +220,7 @@ pub(crate) struct ExprTyper<'a, 'b> {
     pub(crate) already_warned_for_unreachable_code: bool,
 
     pub(crate) implementations: Implementations,
+    pub(crate) purity: Purity,
     pub(crate) current_function_definition: FunctionDefinition,
 
     // Type hydrator for creating types from annotations
@@ -233,6 +249,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             uses_javascript_externals: definition.has_javascript_external,
         };
 
+        let purity =
+            if implementations.uses_erlang_externals || implementations.uses_javascript_externals {
+                Purity::Impure
+            } else {
+                Purity::Pure
+            };
+
         hydrator.permit_holes(true);
         Self {
             hydrator,
@@ -240,6 +263,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             already_warned_for_unreachable_code: false,
             environment,
             implementations,
+            purity,
             current_function_definition: definition,
             minimum_required_version: Version::new(0, 1, 0),
             problems,
@@ -476,6 +500,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             type_: type_.clone(),
         });
 
+        self.purity = Purity::Impure;
+
         let message = message.map(|message| {
             // If there is a message expression then it must be a string.
             let message = self.infer(*message);
@@ -496,6 +522,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_panic(&mut self, location: SrcSpan, message: Option<Box<UntypedExpr>>) -> TypedExpr {
         let type_ = self.new_unbound_var();
+
+        self.purity = Purity::Impure;
+
         let message = match message {
             None => None,
             Some(message) => {
@@ -517,6 +546,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_echo(&mut self, location: SrcSpan, expression: Option<Box<UntypedExpr>>) -> TypedExpr {
         self.environment.echo_found = true;
+        self.purity = Purity::Impure;
+
         if let Some(expression) = expression {
             let expression = self.infer(*expression);
             if self.previous_panics {
@@ -588,6 +619,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             self.problems.warning(Warning::ImplicitlyDiscardedResult {
                 location: discarded.location(),
             });
+        } else if discarded.is_pure_function_call() {
+            self.problems.warning(Warning::UnusedPureFunctionCall {
+                location: discarded.location(),
+            })
         } else if discarded.is_pure_value_constructor() {
             self.problems.warning(Warning::UnusedValue {
                 location: discarded.location(),
@@ -907,6 +942,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 args_location,
                 args: args.len(),
             });
+        }
+
+        if !fun.is_pure_function() {
+            self.purity = Purity::Impure;
         }
 
         TypedExpr::Call {
@@ -1703,6 +1742,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             AssignmentKind::Let => AssignmentKind::Let,
             AssignmentKind::Generated => AssignmentKind::Generated,
             AssignmentKind::Assert { location, message } => {
+                self.purity = Purity::Impure;
+
                 let message = match message {
                     Some(message) => {
                         self.track_feature_usage(

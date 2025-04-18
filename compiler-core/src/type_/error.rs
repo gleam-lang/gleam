@@ -748,6 +748,10 @@ pub enum Warning {
         location: SrcSpan,
     },
 
+    UnusedPureFunctionCall {
+        location: SrcSpan,
+    },
+
     NoFieldsRecordUpdate {
         location: SrcSpan,
     },
@@ -1170,6 +1174,7 @@ impl Warning {
             | Warning::ImplicitlyDiscardedResult { location, .. }
             | Warning::UnusedLiteral { location, .. }
             | Warning::UnusedValue { location, .. }
+            | Warning::UnusedPureFunctionCall { location, .. }
             | Warning::NoFieldsRecordUpdate { location, .. }
             | Warning::AllFieldsRecordUpdate { location, .. }
             | Warning::UnusedType { location, .. }

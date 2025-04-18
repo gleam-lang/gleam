@@ -920,6 +920,26 @@ can already tell which branch is going to match with this value.",
                     }),
                 },
 
+                type_::Warning::UnusedPureFunctionCall { location } => Diagnostic {
+                    title: "Unused pure function call".into(),
+                    text: wrap(
+                        "Gleam is an immutable language, \
+meaning functions cannot mutate state simply by being called. This function is \
+pure, so it must be assigned to a variable to have an effect on the program.",
+                    ),
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        path: path.to_path_buf(),
+                        src: src.clone(),
+                        label: diagnostic::Label {
+                            text: Some("This pure function call is never used".into()),
+                            span: *location,
+                        },
+                        extra_labels: Vec::new(),
+                    }),
+                },
+
                 type_::Warning::InternalTypeLeak { location, leaked } => {
                     let mut printer = Printer::new();
 

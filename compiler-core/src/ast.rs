@@ -16,7 +16,7 @@ use crate::bit_array;
 use crate::build::{ExpressionPosition, Located, Target, module_erlang_name};
 use crate::parse::SpannedString;
 use crate::type_::error::VariableOrigin;
-use crate::type_::expression::Implementations;
+use crate::type_::expression::{Implementations, Purity};
 use crate::type_::printer::Names;
 use crate::type_::{
     self, Deprecation, HasType, ModuleValueConstructor, PatternConstructor, Type, TypedCallArg,
@@ -690,6 +690,7 @@ pub struct Function<T, Expr> {
     pub external_erlang: Option<(EcoString, EcoString, SrcSpan)>,
     pub external_javascript: Option<(EcoString, EcoString, SrcSpan)>,
     pub implementations: Implementations,
+    pub purity: Purity,
 }
 
 pub type TypedFunction = Function<Arc<Type>, TypedExpr>;
