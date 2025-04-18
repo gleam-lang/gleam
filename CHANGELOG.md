@@ -76,9 +76,9 @@
   module, for running development entrypoints.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- Updated the `erlang-shipment-entrypoint.sh` to add an exec statement so the
-  erlang process replaces the shell's process and can receive signals when
-  deployed in a docker container.
+- Updated the Erlang shipment POSIX entrypoint script to add an exec statement
+  so the Erlang process replaces the shell's process and can receive signals
+  when deployed.
   ([Christopher De Vries](https://github.com/devries))
 
 ### Language server
