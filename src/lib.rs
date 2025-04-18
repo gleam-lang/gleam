@@ -856,10 +856,6 @@ impl<Meta> Release<Meta> {
     pub fn is_retired(&self) -> bool {
         self.retirement_status.is_some()
     }
-
-    fn is_pre(&self) -> bool {
-        self.version.is_pre()
-    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize)]
@@ -924,26 +920,6 @@ pub struct Dependency {
     pub app: Option<String>,
     /// If set, the repository where the dependency is located
     pub repository: Option<String>,
-}
-
-impl Dependency {
-    pub(crate) fn from_range(range: Range) -> Self {
-        Dependency {
-            app: None,
-            optional: false,
-            repository: None,
-            requirement: range,
-        }
-    }
-
-    pub(crate) fn from_version(version: &Version) -> Self {
-        Dependency {
-            app: None,
-            optional: false,
-            repository: None,
-            requirement: Range::new(version.to_string()),
-        }
-    }
 }
 
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), " (", env!("CARGO_PKG_VERSION"), ")");
