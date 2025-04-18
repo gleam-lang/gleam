@@ -29,7 +29,7 @@ toml = "0"
 # Enum trait impl macros
 strum = { version = "0", features = ["derive"] }
 # Hex package manager client
-hexpm = "3.3"
+hexpm = "4"
 # Creation of tar file archives
 tar = "0"
 # gzip compression
@@ -61,4 +61,4 @@ pretty_assertions = "1"
 insta = { version = "1", features = ["glob"] }
 # A transitive dependency needed to compile into wasm32-unknown-unknown
 # See https://docs.rs/getrandom/latest/getrandom/index.html#webassembly-support
-getrandom = { version = "0", features = ["js"] }
+getrandom = { version = "0.2", features = ["js"] }

@@ -9,7 +9,7 @@ use crate::{Error, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use ecow::EcoString;
 use globset::{Glob, GlobSetBuilder};
-use hexpm::version::{self, Version};
+use hexpm::version::{self, LowestVersion, Version};
 use http::Uri;
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Serialize};
@@ -80,39 +80,50 @@ impl AsRef<str> for SpdxLicense {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct GleamVersion {
-    pubgrub: pubgrub::range::Range<Version>,
-    hex: version::Range,
+pub struct GleamVersion(version::Range);
+impl From<version::Range> for GleamVersion {
+    fn from(range: version::Range) -> Self {
+        Self(range)
+    }
+}
+
+impl From<GleamVersion> for version::Range {
+    fn from(gleam_version: GleamVersion) -> Self {
+        gleam_version.0
+    }
+}
+
+impl From<GleamVersion> for pubgrub::Range<Version> {
+    fn from(gleam_version: GleamVersion) -> Self {
+        gleam_version.0.into()
+    }
 }
 
 impl GleamVersion {
-    pub fn from_pubgrub(range: pubgrub::range::Range<Version>) -> Self {
-        Self {
-            hex: version::Range::new(range.to_string()),
-            pubgrub: range,
-        }
+    pub fn from_pubgrub(range: pubgrub::Range<Version>) -> Self {
+        let range: version::Range = range.into();
+        range.into()
     }
 
-    pub fn as_pubgrub(&self) -> pubgrub::range::Range<Version> {
-        self.pubgrub.clone()
+    pub fn as_pubgrub(&self) -> &pubgrub::Range<Version> {
+        self.0.to_pubgrub()
     }
 
     pub fn new(spec: String) -> Result<GleamVersion> {
-        let hex = version::Range::new(spec.to_string());
-        let pubgrub = hex.to_pubgrub().map_err(|e| Error::InvalidVersionFormat {
-            input: spec,
-            error: e.to_string(),
-        })?;
-
-        Ok(Self { pubgrub, hex })
+        let hex =
+            version::Range::new(spec.to_string()).map_err(|e| Error::InvalidVersionFormat {
+                input: spec,
+                error: e.to_string(),
+            })?;
+        Ok(hex.into())
     }
 
     pub fn lowest_version(&self) -> Option<Version> {
-        self.pubgrub.lowest_version()
+        self.as_pubgrub().lowest_version()
     }
 
     pub fn hex(&self) -> &version::Range {
-        &self.hex
+        &self.0
     }
 }
 
@@ -162,7 +173,7 @@ where
     S: serde::Serializer,
 {
     match gleam_gersion {
-        Some(version) => serializer.serialize_str(&version.hex.to_string()),
+        Some(version) => serializer.serialize_str(&version.hex().to_string()),
         None => serializer.serialize_none(),
     }
 }
@@ -173,10 +184,8 @@ where
 {
     match Deserialize::deserialize(deserialiser)? {
         Some(range_string) => {
-            let hex = version::Range::new(range_string);
-            let pubgrub = hex.clone().to_pubgrub().map_err(serde::de::Error::custom)?;
-
-            Ok(Some(GleamVersion { hex, pubgrub }))
+            let hex = version::Range::new(range_string).map_err(serde::de::Error::custom)?;
+            Ok(Some(hex.into()))
         }
         None => Ok(None),
     }
@@ -272,7 +281,7 @@ impl PackageConfig {
     // with the current compiler version
     pub fn check_gleam_compatibility(&self) -> Result<(), Error> {
         if let Some(version) = &self.gleam_version {
-            let range = &version.pubgrub;
+            let range = version.as_pubgrub();
             let compiler_version =
                 Version::parse(COMPILER_VERSION).expect("Parse compiler semantic version");
 
@@ -296,13 +305,13 @@ impl PackageConfig {
 fn locked_no_manifest() {
     let mut config = PackageConfig::default();
     config.dependencies = [
-        ("prod1".into(), Requirement::hex("~> 1.0")),
-        ("prod2".into(), Requirement::hex("~> 2.0")),
+        ("prod1".into(), Requirement::hex("~> 1.0").unwrap()),
+        ("prod2".into(), Requirement::hex("~> 2.0").unwrap()),
     ]
     .into();
     config.dev_dependencies = [
-        ("dev1".into(), Requirement::hex("~> 1.0")),
-        ("dev2".into(), Requirement::hex("~> 2.0")),
+        ("dev1".into(), Requirement::hex("~> 1.0").unwrap()),
+        ("dev2".into(), Requirement::hex("~> 2.0").unwrap()),
     ]
     .into();
     assert_eq!(config.locked(None).unwrap(), [].into());
@@ -312,13 +321,13 @@ fn locked_no_manifest() {
 fn locked_no_changes() {
     let mut config = PackageConfig::default();
     config.dependencies = [
-        ("prod1".into(), Requirement::hex("~> 1.0")),
-        ("prod2".into(), Requirement::hex("~> 2.0")),
+        ("prod1".into(), Requirement::hex("~> 1.0").unwrap()),
+        ("prod2".into(), Requirement::hex("~> 2.0").unwrap()),
     ]
     .into();
     config.dev_dependencies = [
-        ("dev1".into(), Requirement::hex("~> 1.0")),
-        ("dev2".into(), Requirement::hex("~> 2.0")),
+        ("dev1".into(), Requirement::hex("~> 1.0").unwrap()),
+        ("dev2".into(), Requirement::hex("~> 2.0").unwrap()),
     ]
     .into();
     let manifest = Manifest {
@@ -345,8 +354,8 @@ fn locked_no_changes() {
 #[test]
 fn locked_some_removed() {
     let mut config = PackageConfig::default();
-    config.dependencies = [("prod1".into(), Requirement::hex("~> 1.0"))].into();
-    config.dev_dependencies = [("dev2".into(), Requirement::hex("~> 2.0"))].into();
+    config.dependencies = [("prod1".into(), Requirement::hex("~> 1.0").unwrap())].into();
+    config.dev_dependencies = [("dev2".into(), Requirement::hex("~> 2.0").unwrap())].into();
     let manifest = Manifest {
         requirements: config.all_direct_dependencies().unwrap(),
         packages: vec![
@@ -372,21 +381,21 @@ fn locked_some_removed() {
 fn locked_some_changed() {
     let mut config = PackageConfig::default();
     config.dependencies = [
-        ("prod1".into(), Requirement::hex("~> 3.0")), // Does not match manifest
-        ("prod2".into(), Requirement::hex("~> 2.0")),
+        ("prod1".into(), Requirement::hex("~> 3.0").unwrap()), // Does not match manifest
+        ("prod2".into(), Requirement::hex("~> 2.0").unwrap()),
     ]
     .into();
     config.dev_dependencies = [
-        ("dev1".into(), Requirement::hex("~> 3.0")), // Does not match manifest
-        ("dev2".into(), Requirement::hex("~> 2.0")),
+        ("dev1".into(), Requirement::hex("~> 3.0").unwrap()), // Does not match manifest
+        ("dev2".into(), Requirement::hex("~> 2.0").unwrap()),
     ]
     .into();
     let manifest = Manifest {
         requirements: [
-            ("prod1".into(), Requirement::hex("~> 1.0")),
-            ("prod2".into(), Requirement::hex("~> 2.0")),
-            ("dev1".into(), Requirement::hex("~> 1.0")),
-            ("dev2".into(), Requirement::hex("~> 2.0")),
+            ("prod1".into(), Requirement::hex("~> 1.0").unwrap()),
+            ("prod2".into(), Requirement::hex("~> 2.0").unwrap()),
+            ("dev1".into(), Requirement::hex("~> 1.0").unwrap()),
+            ("dev2".into(), Requirement::hex("~> 2.0").unwrap()),
         ]
         .into(),
         packages: vec![
@@ -412,15 +421,15 @@ fn locked_some_changed() {
 fn locked_nested_are_removed_too() {
     let mut config = PackageConfig::default();
     config.dependencies = [
-        ("1".into(), Requirement::hex("~> 2.0")), // Does not match manifest
-        ("2".into(), Requirement::hex("~> 1.0")),
+        ("1".into(), Requirement::hex("~> 2.0").unwrap()), // Does not match manifest
+        ("2".into(), Requirement::hex("~> 1.0").unwrap()),
     ]
     .into();
     config.dev_dependencies = [].into();
     let manifest = Manifest {
         requirements: [
-            ("1".into(), Requirement::hex("~> 1.0")),
-            ("2".into(), Requirement::hex("~> 1.0")),
+            ("1".into(), Requirement::hex("~> 1.0").unwrap()),
+            ("2".into(), Requirement::hex("~> 1.0").unwrap()),
         ]
         .into(),
         packages: vec![
@@ -463,16 +472,16 @@ fn locked_nested_are_removed_too() {
 fn locked_unlock_new() {
     let mut config = PackageConfig::default();
     config.dependencies = [
-        ("1".into(), Requirement::hex("~> 1.0")),
-        ("2".into(), Requirement::hex("~> 1.0")),
-        ("3".into(), Requirement::hex("~> 3.0")), // Does not match manifest
+        ("1".into(), Requirement::hex("~> 1.0").unwrap()),
+        ("2".into(), Requirement::hex("~> 1.0").unwrap()),
+        ("3".into(), Requirement::hex("~> 3.0").unwrap()), // Does not match manifest
     ]
     .into();
     config.dev_dependencies = [].into();
     let manifest = Manifest {
         requirements: [
-            ("1".into(), Requirement::hex("~> 1.0")),
-            ("2".into(), Requirement::hex("~> 1.0")),
+            ("1".into(), Requirement::hex("~> 1.0").unwrap()),
+            ("2".into(), Requirement::hex("~> 1.0").unwrap()),
         ]
         .into(),
         packages: vec![
