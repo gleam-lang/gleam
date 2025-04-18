@@ -11,7 +11,7 @@ use futures::future;
 use gleam_core::{
     Error, Result,
     build::{Mode, Target, Telemetry},
-    config::PackageConfig,
+    config::{GleamVersion, PackageConfig},
     dependency,
     error::{FileIoAction, FileKind, ShellCommandFailureReason, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
@@ -295,7 +295,10 @@ fn remove_extra_requirements(config: &PackageConfig, manifest: &mut Manifest) ->
 pub fn parse_gleam_add_specifier(package: &str) -> Result<(EcoString, Requirement)> {
     let Some((package, version)) = package.split_once('@') else {
         // Default to the latest version available.
-        return Ok((package.into(), Requirement::hex(">= 0.0.0")));
+        return Ok((
+            package.into(),
+            Requirement::hex(">= 0.0.0").expect(">= 0.0.0 should be a valid requirement"),
+        ));
     };
 
     // Parse the major and minor from the provided semantic version.
@@ -338,7 +341,7 @@ pub fn parse_gleam_add_specifier(package: &str) -> Result<(EcoString, Requiremen
                 ),
             });
         }
-    };
+    }?;
 
     Ok((package.into(), requirement))
 }
@@ -1026,8 +1029,8 @@ fn provide_package(
     match provided.get(&package_name) {
         Some(package) if package.source == package_source => {
             // This package has already been provided from this source, return the version
-            let version = hexpm::version::Range::new(format!("== {}", &package.version));
-            return Ok(version);
+            let version = GleamVersion::new(format!("== {}", &package.version))?;
+            return Ok(version.hex().clone());
         }
         Some(package) => {
             // This package has already been provided from a different source which conflicts
@@ -1074,7 +1077,7 @@ fn provide_package(
     }
     let _ = parents.pop();
     // Add the package to the provided packages dictionary
-    let version = hexpm::version::Range::new(format!("== {}", &config.version));
+    let version = GleamVersion::new(format!("== {}", &config.version))?;
     let _ = provided.insert(
         config.name,
         ProvidedPackage {
@@ -1084,7 +1087,7 @@ fn provide_package(
         },
     );
     // Return the version
-    Ok(version)
+    Ok(version.hex().clone())
 }
 
 /// Unlocks specified packages and their unique dependencies.
