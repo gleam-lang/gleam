@@ -3071,3 +3071,16 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn error_for_missing_type_parameters() {
+    assert_module_error!(
+        r#"
+type Wibble(a)
+
+type Wobble {
+  Wobble(Wibble)
+}
+"#
+    );
+}
