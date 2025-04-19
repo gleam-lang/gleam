@@ -1064,7 +1064,7 @@ where
             location: SrcSpan { start, end },
             value: Box::new(value),
             is_generated: false,
-            compiled_case: CompiledCase::default(),
+            compiled_case: CompiledCase::failure(),
             pattern,
             annotation,
             kind,

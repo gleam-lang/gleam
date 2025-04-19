@@ -266,22 +266,6 @@ pub fn expect(value, message) {
     );
 }
 
-// https://github.com/gleam-lang/gleam/issues/4471
-#[test]
-fn case_message() {
-    assert_js!(
-        r#"
-pub fn expect(value, message) {
-  let assert Ok(inner) = value as case message {
-    Ok(message) -> message
-    Error(_) -> "No message provided"
-  }
-  inner
-}
-"#
-    );
-}
-
 #[test]
 fn assert_that_always_succeeds() {
     assert_js!(

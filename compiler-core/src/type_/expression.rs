@@ -1793,27 +1793,38 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // The exhaustiveness checker expects patterns to be valid and to type check;
         // if they are invalid, it will crash. Therefore, if any errors were found
         // when type checking the pattern, we don't perform the exhaustiveness check.
-        if pattern_typechecked_successfully {
-            // Do not perform exhaustiveness checking if user explicitly used `let assert ... = ...`.
-            let (output, exhaustiveness_check) =
-                self.check_let_exhaustiveness(location, value.type_(), &pattern);
-            match (&kind, exhaustiveness_check) {
-                // The pattern is exhaustive in a let assignment, there's no problem here.
-                (AssignmentKind::Let | AssignmentKind::Generated, Ok(_)) => {}
+        if !pattern_typechecked_successfully {
+            return Assignment {
+                location,
+                annotation,
+                kind,
+                compiled_case: CompiledCase::failure(),
+                is_generated,
+                pattern,
+                value: Box::new(value),
+            };
+        }
 
-                // If the pattern is not exhaustive and we're not asserting we want to
-                // report the error!
-                (AssignmentKind::Let | AssignmentKind::Generated, Err(e)) => {
-                    self.problems.error(e);
-                }
+        let (output, not_exhaustive_error) =
+            self.check_let_exhaustiveness(location, value.type_(), &pattern);
 
-                // If we're asserting but the pattern already covers all cases then the
-                // `assert` is redundant and can be safely removed.
-                (AssignmentKind::Assert { location, .. }, Ok(_)) => {
-                    self.problems.warning(Warning::RedundantAssertAssignment {
-                        location: *location,
-                    })
-                }
+        match (&kind, not_exhaustive_error) {
+            // The pattern is exhaustive in a let assignment, there's no problem here.
+            (AssignmentKind::Let, Ok(_)) => {}
+
+            // If the pattern is not exhaustive and we're not asserting we want to
+            // report the error!
+            (AssignmentKind::Let, Err(e)) => {
+                self.problems.error(e);
+            }
+
+            // If we're asserting but the pattern already covers all cases then the
+            // `assert` is redundant and can be safely removed.
+            (AssignmentKind::Assert { location, .. }, Ok(_)) => {
+                self.problems.warning(Warning::RedundantAssertAssignment {
+                    location: *location,
+                })
+            }
 
                 // Otherwise, if the pattern is never reachable (through variant inference),
                 // we can warn the user about this.
@@ -1848,7 +1859,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             location,
             annotation,
             kind,
-            compiled_case,
+            compiled_case: output.compiled_case,
             is_generated,
             pattern,
             value: Box::new(value),
@@ -1978,14 +1989,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 return TypedExpr::Case {
                     location,
                     type_: return_type,
-                    compiled_case: CompiledCase {
-                        tree: exhaustiveness::Decision::Fail,
-                        subject_variables: vec![],
-                    },
-                    compiled_case: CompiledCase {
-                        tree: exhaustiveness::Decision::Fail,
-                        subject_variables: vec![],
-                    },
+                    compiled_case: CompiledCase::failure(),
                     subjects: typed_subjects,
                     clauses: Vec::new(),
                 };
@@ -2023,9 +2027,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         self.previous_panics = all_clauses_panic || any_subject_panics;
 
-        if let Err(e) = self.check_case_exhaustiveness(location, &subject_types, &typed_clauses) {
-            self.problems.error(e);
-        };
+        let compiled_case =
+            self.check_case_exhaustiveness(location, &subject_types, &typed_clauses);
 
         // We track if the case expression is used like an if: that is all its
         // patterns are discarded and there's at least a guard. For example:
@@ -2976,7 +2979,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             },
             annotation: None,
             is_generated: true,
-            compiled_case: CompiledCase::default(),
+            compiled_case: CompiledCase::failure(),
             kind: AssignmentKind::Let,
             value: Box::new(record),
         };
@@ -4335,7 +4338,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
         subject: Arc<Type>,
         pattern: &TypedPattern,
-    ) -> Result<(), Error> {
+    ) -> (CompileCaseResult, Result<(), Error>) {
         let mut case = exhaustiveness::CaseToCompile::new(&[subject]);
         case.add_pattern(pattern);
         let output = case.compile(self.environment);
@@ -4348,7 +4351,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             })
         } else {
             Ok(())
-        }
+        };
+
+        (output, result)
     }
 
     fn check_case_exhaustiveness(
@@ -4683,7 +4688,7 @@ impl UseAssignments {
                         pattern,
                         annotation,
                         is_generated: true,
-                        compiled_case: CompiledCase::default(),
+                        compiled_case: CompiledCase::failure(),
                         kind: AssignmentKind::Let,
                         value: Box::new(UntypedExpr::Var { location, name }),
                     };

@@ -214,7 +214,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
                 docvec![value, ".startsWith(", string(prefix), ")"]
             }
 
-            RuntimeCheck::BitArray { value } => todo!(),
+            RuntimeCheck::BitArray { test } => todo!(),
 
             // When checking on a tuple there's always going to be a single choice
             // and the code generation will always skip generating the check for it
@@ -380,7 +380,7 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
                 docvec!["!", value, ".startsWith(", string(prefix), ")"]
             }
 
-            RuntimeCheck::BitArray { value } => todo!(),
+            RuntimeCheck::BitArray { test } => todo!(),
 
             // When checking on a tuple there's always going to be a single choice
             // and the code generation will always skip generating the check for it
@@ -728,6 +728,10 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         let assigned_value = match value {
             BoundValue::Variable(variable) => self.get_value(variable).to_doc(),
             BoundValue::LiteralString(value) => string(value),
+            BoundValue::BitArraySlice {
+                bit_array,
+                read_action,
+            } => todo!(),
         };
         let_doc(variable_name.clone(), assigned_value)
     }
