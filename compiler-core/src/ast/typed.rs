@@ -783,6 +783,18 @@ impl TypedExpr {
                         .iter()
                         .all(|argument| argument.value.is_pure_value_constructor())
             }
+            TypedExpr::Pipeline {
+                first_value,
+                assignments,
+                finally,
+                ..
+            } => {
+                first_value.value.is_pure_value_constructor()
+                    && assignments
+                        .iter()
+                        .all(|(assignment, _)| assignment.value.is_pure_value_constructor())
+                    && finally.is_pure_value_constructor()
+            }
             _ => false,
         }
     }
@@ -812,14 +824,21 @@ impl TypedExpr {
             TypedExpr::ModuleSelect { .. } => true,
 
             // A pipeline is a pure value constructor if its last step is a record builder,
-            // or a call to a fn expression that has a body comprised of just pure value
-            // constructors. For example:
+            // or a call to a pure function. For example:
             //  - `wibble() |> wobble() |> Ok`
             //  - `"hello" |> fn(s) { s <> " world!" }`
-            TypedExpr::Pipeline { finally, .. } => match finally.as_ref() {
-                TypedExpr::Fn { body, .. } => body.iter().all(|s| s.is_pure_value_constructor()),
-                fun => fun.is_pure_value_constructor(),
-            },
+            TypedExpr::Pipeline {
+                first_value,
+                assignments,
+                finally,
+                ..
+            } => {
+                first_value.value.is_pure_value_constructor()
+                    && assignments
+                        .iter()
+                        .all(|(assignment, _)| assignment.value.is_pure_value_constructor())
+                    && finally.is_pure_value_constructor()
+            }
 
             TypedExpr::Call { fun, args, .. } => {
                 (fun.is_record_builder() || fun.is_pure_function())
