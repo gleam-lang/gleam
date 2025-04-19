@@ -6361,6 +6361,49 @@ pub fn main() {
 }
 
 #[test]
+fn generate_function_labels_and_arguments_can_share_the_same_name() {
+    assert_code_action!(
+        GENERATE_FUNCTION,
+        "
+pub fn main() {
+  let wibble = 10
+  wubble(wibble, wibble: 14)
+}
+",
+        find_position_of("wubble").to_selection()
+    );
+}
+
+#[test]
+fn generate_function_arguments_with_same_name_get_renamed() {
+    assert_code_action!(
+        GENERATE_FUNCTION,
+        "
+pub fn main() {
+  let wibble = 10
+  wubble(wibble, wibble)
+}
+",
+        find_position_of("wubble").to_selection()
+    );
+}
+
+#[test]
+fn generate_function_arguments_with_labels_and_variables_uses_different_names() {
+    assert_code_action!(
+        GENERATE_FUNCTION,
+        "
+pub fn main() {
+  let list = [2, 4, 5]
+  let value = 1
+  find(each: value, in: list)
+}
+",
+        find_position_of("find").to_selection()
+    );
+}
+
+#[test]
 fn pattern_match_on_argument_generates_unique_names_even_with_labels() {
     assert_code_action!(
         PATTERN_MATCH_ON_ARGUMENT,
