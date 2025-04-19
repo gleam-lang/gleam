@@ -12,7 +12,7 @@ use gleam_core::{
     Error, Result,
     build::{Mode, Target, Telemetry},
     config::{GleamVersion, PackageConfig},
-    dependency,
+    dependency::{self, PackageFetchError},
     error::{FileIoAction, FileKind, ShellCommandFailureReason, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
     io::{HttpClient as _, TarUnpacker, WrappedReader},
@@ -1180,6 +1180,7 @@ async fn lookup_package(
     }
 }
 
+#[derive(Debug)]
 struct PackageFetcher {
     runtime: tokio::runtime::Handle,
     http: HttpClient,
@@ -1221,26 +1222,14 @@ impl TarUnpacker for Untar {
 }
 
 impl dependency::PackageFetcher for PackageFetcher {
-    fn get_dependencies(
-        &self,
-        package: &str,
-    ) -> Result<hexpm::Package, Box<dyn std::error::Error>> {
+    fn get_dependencies(&self, package: &str) -> Result<hexpm::Package, PackageFetchError> {
         tracing::debug!(package = package, "looking_up_hex_package");
         let config = hexpm::Config::new();
         let request = hexpm::get_package_request(package, None, &config);
         let response = self
             .runtime
             .block_on(self.http.send(request))
-            .map_err(Box::new)?;
-
-        match hexpm::get_package_response(response, HEXPM_PUBLIC_KEY) {
-            Ok(a) => Ok(a),
-            Err(e) => match e {
-                hexpm::ApiError::NotFound => {
-                    Err(format!("I couldn't find a package called `{}`", package).into())
-                }
-                _ => Err(e.into()),
-            },
-        }
+            .map_err(|e| PackageFetchError::fetch_error(e.to_string()))?;
+        hexpm::get_package_response(response, HEXPM_PUBLIC_KEY).map_err(|e| e.into())
     }
 }

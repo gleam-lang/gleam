@@ -1,20 +1,17 @@
-use std::{borrow::Borrow, cell::RefCell, collections::HashMap, error::Error as StdError};
+use std::{cell::RefCell, cmp::Reverse, collections::HashMap};
 
 use crate::{Error, Result};
 
 use ecow::EcoString;
 use hexpm::{
     Dependency, Release,
-    version::{Range, ResolutionError, Version},
+    version::{Range, Version},
 };
-use pubgrub::{
-    solver::{Dependencies, choose_package_with_fewest_versions},
-    type_aliases::Map,
-};
+use pubgrub::{Dependencies, Map};
 
 pub type PackageVersions = HashMap<String, Version>;
 
-type PubgrubRange = pubgrub::range::Range<Version>;
+type PubgrubRange = pubgrub::Range<Version>;
 
 pub fn resolve_versions<Requirements>(
     package_fetcher: Box<dyn PackageFetcher>,
@@ -50,7 +47,7 @@ where
         }],
     };
 
-    let packages = pubgrub::solver::resolve(
+    let packages = pubgrub::resolve(
         &DependencyProvider::new(package_fetcher, provided_packages, root, locked, exact_deps),
         root_name.as_str().into(),
         root_version,
@@ -81,7 +78,7 @@ fn parse_exact_version(ver: &str) -> Option<Version> {
 fn root_dependencies<Requirements>(
     base_requirements: Requirements,
     locked: &HashMap<EcoString, Version>,
-) -> Result<HashMap<String, Dependency>, ResolutionError>
+) -> Result<HashMap<String, Dependency>, ResolutionError<'_>>
 where
     Requirements: Iterator<Item = (EcoString, Range)>,
 {
@@ -122,10 +119,13 @@ where
             Some(locked_version) => {
                 let compatible = range.to_pubgrub().contains(locked_version);
                 if !compatible {
-                    return Err(ResolutionError::Failure(format!(
-                        "{name} is specified with the requirement `{range}`, \
+                    return Err(ResolutionError::ErrorChoosingVersion {
+                        package: name.to_string(),
+                        source: PackageFetchError::IncompatibleLockedVersion(format!(
+                            "{name} is specified with the requirement `{range}`, \
 but it is locked to {locked_version}, which is incompatible.",
-                    )));
+                        )),
+                    });
                 }
             }
         };
@@ -134,11 +134,39 @@ but it is locked to {locked_version}, which is incompatible.",
     Ok(requirements)
 }
 
-pub trait PackageFetcher {
-    fn get_dependencies(&self, package: &str) -> Result<hexpm::Package, Box<dyn StdError>>;
+#[derive(Debug)]
+pub enum PackageFetchError {
+    ApiError(hexpm::ApiError),
+    FetchError(String),
+    IncompatibleLockedVersion(String),
+}
+impl std::fmt::Display for PackageFetchError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ApiError(api_error) => f.write_str(&api_error.to_string()),
+            Self::FetchError(str) => f.write_str(str),
+            Self::IncompatibleLockedVersion(str) => f.write_str(str),
+        }
+    }
+}
+impl std::error::Error for PackageFetchError {}
+impl From<hexpm::ApiError> for PackageFetchError {
+    fn from(api_error: hexpm::ApiError) -> Self {
+        Self::ApiError(api_error)
+    }
+}
+impl PackageFetchError {
+    pub fn fetch_error(msg: String) -> Self {
+        Self::FetchError(msg)
+    }
 }
 
-struct DependencyProvider<'a> {
+pub trait PackageFetcher: std::fmt::Debug {
+    fn get_dependencies(&self, package: &str) -> Result<hexpm::Package, PackageFetchError>;
+}
+
+#[derive(Debug)]
+pub struct DependencyProvider<'a> {
     packages: RefCell<HashMap<EcoString, hexpm::Package>>,
     remote: Box<dyn PackageFetcher>,
     locked: &'a HashMap<EcoString, Version>,
@@ -146,7 +174,7 @@ struct DependencyProvider<'a> {
     // We need this because by default pubgrub checks exact version by checking if a version is between the exact
     // and the version 1 bump ahead. That default breaks on prerelease builds since a bump includes the whole patch
     exact_only: &'a HashMap<String, Version>,
-    optional_dependencies: RefCell<HashMap<EcoString, pubgrub::range::Range<Version>>>,
+    optional_dependencies: RefCell<HashMap<EcoString, pubgrub::Range<Version>>>,
 }
 
 impl<'a> DependencyProvider<'a> {
@@ -179,7 +207,7 @@ impl<'a> DependencyProvider<'a> {
         // `&self` with interop mutability.
         &self,
         name: &str,
-    ) -> Result<(), Box<dyn StdError>> {
+    ) -> Result<(), PackageFetchError> {
         let mut packages = self.packages.borrow_mut();
         if packages.get(name).is_none() {
             let mut package = self.remote.get_dependencies(name)?;
@@ -199,69 +227,41 @@ impl<'a> DependencyProvider<'a> {
 }
 
 type PackageName = String;
+pub type ResolutionError<'a> = pubgrub::PubGrubError<DependencyProvider<'a>>;
 
-impl pubgrub::solver::DependencyProvider<PackageName, Version> for DependencyProvider<'_> {
-    fn choose_package_version<Name: Borrow<PackageName>, Ver: Borrow<PubgrubRange>>(
-        &self,
-        potential_packages: impl Iterator<Item = (Name, Ver)>,
-    ) -> Result<(Name, Option<Version>), Box<dyn StdError>> {
-        let potential_packages: Vec<_> = potential_packages
-            .map::<Result<_, Box<dyn StdError>>, _>(|pair| {
-                self.ensure_package_fetched(pair.0.borrow())?;
-                Ok(pair)
-            })
-            .collect::<Result<_, _>>()?;
-        let list_available_versions = |name: &PackageName| {
-            let name = name.as_str();
-            let exact_package = self.exact_only.get(name);
-            self.packages
-                .borrow()
-                .get(name)
-                .cloned()
-                .into_iter()
-                .flat_map(move |p| {
-                    p.releases
-                        .into_iter()
-                        // if an exact version of a package is specified then we only want to allow that version as available
-                        .filter(move |release| match exact_package {
-                            Some(ver) => ver == &release.version,
-                            _ => true,
-                        })
-                })
-                .map(|p| p.version)
-        };
-        Ok(choose_package_with_fewest_versions(
-            list_available_versions,
-            potential_packages.into_iter(),
-        ))
-    }
-
+impl pubgrub::DependencyProvider for DependencyProvider<'_> {
     fn get_dependencies(
         &self,
-        name: &PackageName,
-        version: &Version,
-    ) -> Result<Dependencies<PackageName, Version>, Box<dyn StdError>> {
-        self.ensure_package_fetched(name)?;
+        package: &Self::P,
+        version: &Self::V,
+    ) -> Result<Dependencies<Self::P, Self::VS, Self::M>, Self::Err> {
+        self.ensure_package_fetched(package)?;
         let packages = self.packages.borrow();
         let release = match packages
-            .get(name.as_str())
+            .get(package.as_str())
             .into_iter()
             .flat_map(|p| p.releases.iter())
             .find(|r| &r.version == version)
         {
             Some(release) => release,
-            None => return Ok(Dependencies::Unknown),
+            None => {
+                return Ok(Dependencies::Unavailable(format!(
+                    "{package}@{version} is not available"
+                )));
+            }
         };
 
         // Only use retired versions if they have been locked
-        if release.is_retired() && self.locked.get(name.as_str()) != Some(version) {
-            return Ok(Dependencies::Unknown);
+        if release.is_retired() && self.locked.get(package.as_str()) != Some(version) {
+            return Ok(Dependencies::Unavailable(format!(
+                "{package}@{version} is retired"
+            )));
         }
 
         let mut deps: Map<PackageName, PubgrubRange> = Default::default();
         for (name, d) in &release.requirements {
-            let mut opt_deps = self.optional_dependencies.borrow_mut();
             let mut range = d.requirement.to_pubgrub().clone();
+            let mut opt_deps = self.optional_dependencies.borrow_mut();
             // if it's optional and it was not provided yet, store and skip
             if d.optional && !packages.contains_key(name.as_str()) {
                 let _ = opt_deps
@@ -280,24 +280,84 @@ impl pubgrub::solver::DependencyProvider<PackageName, Version> for DependencyPro
 
             let _ = deps.insert(name.clone(), range);
         }
-        Ok(Dependencies::Known(deps))
+        Ok(Dependencies::Available(deps))
     }
+
+    fn prioritize(
+        &self,
+        package: &Self::P,
+        range: &Self::VS,
+        _package_conflicts_counts: &pubgrub::PackageResolutionStatistics,
+    ) -> Self::Priority {
+        Reverse(
+            self.packages
+                .borrow()
+                .get(package.as_str())
+                .cloned()
+                .into_iter()
+                .flat_map(|p| {
+                    p.releases
+                        .into_iter()
+                        .filter(|r| range.contains(&r.version))
+                })
+                .count(),
+        )
+    }
+
+    fn choose_version(
+        &self,
+        package: &Self::P,
+        range: &Self::VS,
+    ) -> std::result::Result<Option<Self::V>, Self::Err> {
+        self.ensure_package_fetched(package)?;
+
+        let exact_package = self.exact_only.get(package);
+        let potential_versions = self
+            .packages
+            .borrow()
+            .get(package.as_str())
+            .cloned()
+            .into_iter()
+            .flat_map(move |p| {
+                p.releases
+                    .into_iter()
+                    // if an exact version of a package is specified then we only want to allow that version as available
+                    .filter_map(move |release| match exact_package {
+                        Some(ver) => (ver == &release.version).then_some(release.version),
+                        _ => Some(release.version),
+                    })
+            })
+            .filter(|v| range.contains(v));
+        match potential_versions.clone().filter(|v| !v.is_pre()).max() {
+            // Don't resolve to a pre-releaase package unless we *have* to
+            Some(v) => Ok(Some(v)),
+            None => Ok(potential_versions.max()),
+        }
+    }
+
+    type P = PackageName;
+    type V = Version;
+    type VS = PubgrubRange;
+    type Priority = Reverse<usize>;
+    type M = String;
+    type Err = PackageFetchError;
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    #[derive(Debug)]
     struct Remote {
         deps: HashMap<String, hexpm::Package>,
     }
 
     impl PackageFetcher for Remote {
-        fn get_dependencies(&self, package: &str) -> Result<hexpm::Package, Box<dyn StdError>> {
+        fn get_dependencies(&self, package: &str) -> Result<hexpm::Package, PackageFetchError> {
             self.deps
                 .get(package)
                 .cloned()
-                .ok_or(Box::new(hexpm::ApiError::NotFound))
+                .ok_or(hexpm::ApiError::NotFound.into())
         }
     }
 
@@ -813,7 +873,7 @@ mod tests {
         match err {
             Error::DependencyResolutionFailed(msg) => assert_eq!(
                 msg,
-                "An unrecoverable error happened while solving dependencies: gleam_stdlib is specified with the requirement `~> 0.1.0`, but it is locked to 0.2.0, which is incompatible."
+                "An error occured while chosing the version of gleam_stdlib: gleam_stdlib is specified with the requirement `~> 0.1.0`, but it is locked to 0.2.0, which is incompatible."
             ),
             _ => panic!("wrong error: {err}"),
         }
