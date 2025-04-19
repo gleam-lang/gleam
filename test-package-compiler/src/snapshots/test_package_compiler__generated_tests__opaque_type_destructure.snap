@@ -17,3 +17,11 @@ error: Unknown variable
   │     ^
 
 The name `name` is not in scope here.
+
+error: Unknown variable
+  ┌─ src/two.gleam:8:11
+  │
+8 │   #(name, score)
+  │           ^
+
+The name `score` is not in scope here.
