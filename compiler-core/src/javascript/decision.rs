@@ -1,6 +1,6 @@
 use super::{
     Error, INDENT, Output,
-    expression::{Generator, Ordering, float, int},
+    expression::{self, Generator, Ordering, float, int},
 };
 use crate::{
     ast::{AssignmentKind, TypedClause, TypedExpr},
@@ -275,7 +275,7 @@ pub fn let_<'a>(
     kind: &'a AssignmentKind<TypedExpr>,
     expression_generator: &mut Generator<'_, 'a>,
 ) -> Output<'a> {
-    let is_tail = expression_generator.scope_position.is_tail();
+    let scope_position = expression_generator.scope_position.clone();
     let mut variables = Variables::new(expression_generator);
     let assignment = variables.assign_subject(compiled_case, subject)?;
     let assignment_name = assignment.name();
@@ -283,11 +283,13 @@ pub fn let_<'a>(
         .decision(assignment_name.clone().to_doc(), &compiled_case.tree)?;
 
     let doc = docvec![assignments_to_doc(vec![assignment]), decision];
-    if is_tail {
-        Ok(docvec![doc, line(), "return ", assignment_name, ";"])
-    } else {
-        Ok(doc)
-    }
+    Ok(match scope_position {
+        expression::Position::NotTail(_ordering) => doc,
+        expression::Position::Tail => docvec![doc, line(), "return ", assignment_name, ";"],
+        expression::Position::Assign(variable) => {
+            docvec![doc, line(), variable, " = ", assignment_name, ";"]
+        }
+    })
 }
 
 struct LetPrinter<'generator, 'module, 'a> {
@@ -360,8 +362,9 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
         let generator = &mut self.variables.expression_generator;
         let message = match message {
             None => string("Pattern match failed, no pattern matched the value."),
-            Some(message) => generator
-                .not_in_tail_position(Some(Ordering::Loose), |this| this.expression(message))?,
+            Some(message) => generator.not_in_tail_position(Some(Ordering::Strict), |this| {
+                this.wrap_expression(message)
+            })?,
         };
         Ok(generator.throw_error("let_assert", &message, *location, [("value", subject)]))
     }
