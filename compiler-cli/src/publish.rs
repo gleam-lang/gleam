@@ -335,8 +335,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
             // inferred lower bound could be lower.
             let minimum_required_version =
                 std::cmp::max(minimum_required_version, Version::new(1, 0, 0));
-            let inferred_version_range =
-                pubgrub::range::Range::higher_than(minimum_required_version);
+            let inferred_version_range = pubgrub::Range::higher_than(minimum_required_version);
             config.gleam_version = Some(GleamVersion::from_pubgrub(inferred_version_range));
         }
         // Otherwise we need to check that the annotated version range is

@@ -1,5 +1,5 @@
 use hexpm::version::Version;
-use pubgrub::range::Range;
+use pubgrub::Range;
 
 use crate::{
     assert_js, assert_js_no_warnings_with_gleam_version, assert_js_warnings_with_gleam_version,

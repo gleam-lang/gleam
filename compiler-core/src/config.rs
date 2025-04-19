@@ -9,7 +9,7 @@ use crate::{Error, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use ecow::EcoString;
 use globset::{Glob, GlobSetBuilder};
-use hexpm::version::{self, Version};
+use hexpm::version::{self, LowestVersion, Version};
 use http::Uri;
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Serialize};
@@ -100,12 +100,12 @@ impl From<GleamVersion> for pubgrub::Range<Version> {
 }
 
 impl GleamVersion {
-    pub fn from_pubgrub(range: pubgrub::range::Range<Version>) -> Self {
+    pub fn from_pubgrub(range: pubgrub::Range<Version>) -> Self {
         let range: version::Range = range.into();
         range.into()
     }
 
-    pub fn as_pubgrub(&self) -> &pubgrub::range::Range<Version> {
+    pub fn as_pubgrub(&self) -> &pubgrub::Range<Version> {
         self.0.to_pubgrub()
     }
 
