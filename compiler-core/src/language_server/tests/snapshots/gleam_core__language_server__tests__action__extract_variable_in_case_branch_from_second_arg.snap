@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  case todo {\n    Ok(_) -> #(Ok(1), Error(\"s\"))\n    Error(_) -> panic\n  }\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  case todo {
+    Ok(_) -> #(Ok(1), Error("s"))
+                      ↑          
+    Error(_) -> panic
+  }
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  case todo {
+    Ok(_) -> {
+      let result = Error("s")
+      #(Ok(1), result)
+    }
+    Error(_) -> panic
+  }
+}
