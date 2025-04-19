@@ -66,6 +66,13 @@
       Person(name:, age:)
   ```
 
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- The analysis of lists, tuples, negation operators, `panic`, `echo` and `todo`
+  is now fault tolerant, meaning that the compiler will not stop reporting
+  errors as soon as it finds one.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Build tool
 
 - The build tool now supports placing modules in a directory called `dev`,
