@@ -370,7 +370,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location,
                 elements,
                 tail,
-            } => self.infer_list(elements, tail, location),
+            } => Ok(self.infer_list(elements, tail, location)),
 
             UntypedExpr::Call {
                 location,
@@ -892,38 +892,43 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         elements: Vec<UntypedExpr>,
         tail: Option<Box<UntypedExpr>>,
         location: SrcSpan,
-    ) -> Result<TypedExpr, Error> {
+    ) -> TypedExpr {
         let type_ = self.new_unbound_var();
         // Type check each elements
-        let elements = elements
-            .into_iter()
-            .map(|element| {
-                let element = self.infer(element)?;
-                // Ensure they all have the same type
-                unify(type_.clone(), element.type_()).map_err(|e| {
-                    convert_unify_error(e.list_element_mismatch(), element.location())
-                })?;
-                Ok(element)
-            })
-            .try_collect()?;
+        let mut inferred_elements = Vec::with_capacity(elements.len());
+        for element in elements {
+            let element = self.infer_no_error(element);
+            if let Err(error) = unify(type_.clone(), element.type_()) {
+                self.problems.error(convert_unify_error(
+                    error.list_element_mismatch(),
+                    element.location(),
+                ))
+            };
+            inferred_elements.push(element);
+        }
+
         // Type check the ..tail, if there is one
         let type_ = list(type_);
         let tail = match tail {
             Some(tail) => {
-                let tail = self.infer(*tail)?;
+                let tail = self.infer_no_error(*tail);
                 // Ensure the tail has the same type as the preceding elements
-                unify(type_.clone(), tail.type_())
-                    .map_err(|e| convert_unify_error(e.list_tail_mismatch(), tail.location()))?;
+                if let Err(error) = unify(type_.clone(), tail.type_()) {
+                    self.problems.error(convert_unify_error(
+                        error.list_tail_mismatch(),
+                        tail.location(),
+                    ))
+                }
                 Some(Box::new(tail))
             }
             None => None,
         };
-        Ok(TypedExpr::List {
+        TypedExpr::List {
             location,
             type_,
-            elements,
+            elements: inferred_elements,
             tail,
-        })
+        }
     }
 
     fn infer_tuple(
