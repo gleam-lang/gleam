@@ -3293,3 +3293,59 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn pure_pipeline_raises_warning() {
+    assert_warning!(
+        "
+fn add(a, b) { a + b }
+
+pub fn main() {
+  1 |> add(2)
+  Nil
+}
+"
+    );
+}
+
+#[test]
+fn pure_pipeline_with_many_steps_raises_warning() {
+    assert_warning!(
+        "
+fn add(a, b) { a + b }
+
+pub fn main() {
+  1 |> add(2) |> add(3) |> add(4)
+  Nil
+}
+"
+    );
+}
+
+#[test]
+fn pipeline_with_echo_is_impure() {
+    assert_no_warnings!(
+        "
+fn add(a, b) { a + b }
+
+pub fn main() {
+  1 |> add(2) |> echo |> add(3)
+  Nil
+}
+"
+    );
+}
+
+#[test]
+fn pipeline_with_impure_function_raises_no_warnings() {
+    assert_no_warnings!(
+        "
+fn add(a, b) { echo a + b }
+
+pub fn main() {
+  1 |> add(2)
+  Nil
+}
+"
+    );
+}
