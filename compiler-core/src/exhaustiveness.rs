@@ -623,6 +623,22 @@ pub enum VariantMatch {
     },
 }
 
+impl VariantMatch {
+    pub(crate) fn name(&self) -> EcoString {
+        match self {
+            VariantMatch::ExplicitlyMatchedOn { name, module: _ } => name.clone(),
+            VariantMatch::NeverExplicitlyMatchedOn { name } => name.clone(),
+        }
+    }
+
+    pub(crate) fn module(&self) -> Option<EcoString> {
+        match self {
+            VariantMatch::ExplicitlyMatchedOn { name: _, module } => module.clone(),
+            VariantMatch::NeverExplicitlyMatchedOn { name: _ } => None,
+        }
+    }
+}
+
 /// A variable that can be matched on in a branch.
 ///
 #[derive(Eq, PartialEq, Clone, Debug)]
