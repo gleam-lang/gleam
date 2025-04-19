@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\nfn add(a, b) { a + b }\n\npub fn main() {\n  1 |> add(2)\n  Nil\n}\n"
+---
+----- SOURCE CODE
+
+fn add(a, b) { a + b }
+
+pub fn main() {
+  1 |> add(2)
+  Nil
+}
+
+
+----- WARNING
+warning: Unused pure function call
+  ┌─ /src/warning/wrn.gleam:5:3
+  │
+5 │   1 |> add(2)
+  │   ^^^^^^^^^^^ This pure function call is never used
+
+Gleam is an immutable language, meaning functions cannot mutate state
+simply by being called. This function is pure, so it must be assigned to a
+variable to have an effect on the program.
