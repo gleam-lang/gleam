@@ -1466,14 +1466,16 @@ pub fn int(value: &str) -> Document<'_> {
         value
     };
 
-    // If the number starts with `0x_`, `0b_` or `0o_`, that is valid Gleam syntax
-    // but not valid JavaScript syntax, so we remove the `_` here.
-    let value = value.trim_start_matches('_');
-
     let value = value.trim_start_matches('0');
     if value.is_empty() {
         out.push('0');
     }
+
+    // If the number starts with a `0` then an underscore, the `0` will be stripped,
+    // leaving the number to look something like `_1_2_3`, which is not valid syntax.
+    // Therefore, we strip the `_` to avoid this case.
+    let value = value.trim_start_matches('_');
+
     out.push_str(value);
 
     out.to_doc()
