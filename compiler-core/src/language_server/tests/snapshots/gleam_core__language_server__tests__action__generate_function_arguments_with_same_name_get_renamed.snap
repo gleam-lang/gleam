@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  let wibble = 10\n  wubble(wibble, wibble)\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  let wibble = 10
+  wubble(wibble, wibble)
+  ↑                     
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  let wibble = 10
+  wubble(wibble, wibble)
+}
+
+fn wubble(wibble: Int, wibble_2: Int) -> a {
+  todo
+}

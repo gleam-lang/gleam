@@ -4822,37 +4822,30 @@ impl<'a> GenerateFunction<'a> {
             return vec![];
         };
 
-        let mut name_generator = NameGenerator::new();
+        // Labels do not share the same namespace as argument so we use two separate
+        // generators to avoid renaming a label in case it shares a name with an argument.
+        let mut label_names = NameGenerator::new();
+        let mut argument_names = NameGenerator::new();
         let mut printer = Printer::new(&self.module.ast.names);
         let args = arguments
             .iter()
             .enumerate()
             .map(|(index, (arg_label, arg_type))| {
-                let arg_name = if let Some(label) = arg_label {
-                    name_generator.add_used_name(label.clone());
-                    label.clone()
-                } else {
-                    let given_argument = given_arguments
-                        .and_then(|arguments| arguments.get(index).map(|argument| &argument.value));
-
-                    match given_argument {
-                        // If the argument is a record, we can't use it as an argument name.
-                        // Similarly, we don't want to base the variable name off a
-                        // compiler-generated variable like `_pipe`.
-                        Some(TypedExpr::Var {
-                            name, constructor, ..
-                        }) if !constructor.variant.is_record()
-                            && !constructor.variant.is_generated_variable() =>
-                        {
-                            name_generator.add_used_name(name.clone());
-                            name.clone()
-                        }
-                        _ => name_generator.generate_name_from_type(arg_type),
-                    }
-                };
+                let arg_name = given_arguments
+                    .and_then(|arguments| arguments.get(index))
+                    .map(|argument| &argument.value)
+                    // We always favour a name derived from the expression (for example if
+                    // the argument is a variable)
+                    .and_then(|value| argument_names.generate_name_from_expression(value))
+                    // If we don't have such a name and there's a label we use that name.
+                    .or_else(|| Some(argument_names.rename_to_avoid_shadowing(arg_label.clone()?)))
+                    // If all else fails we fallback to using a name derived from the
+                    // argument's type.
+                    .unwrap_or_else(|| argument_names.generate_name_from_type(arg_type));
 
                 let pretty_type = printer.print_type(arg_type);
                 if let Some(arg_label) = arg_label {
+                    let arg_label = label_names.rename_to_avoid_shadowing(arg_label.clone());
                     format!("{arg_label} {arg_name}: {pretty_type}")
                 } else {
                     format!("{arg_name}: {pretty_type}")
@@ -5032,6 +5025,22 @@ impl NameGenerator {
         };
 
         self.rename_to_avoid_shadowing(base_name)
+    }
+
+    fn generate_name_from_expression(&mut self, expression: &TypedExpr) -> Option<EcoString> {
+        match expression {
+            // If the argument is a record, we can't use it as an argument name.
+            // Similarly, we don't want to base the variable name off a
+            // compiler-generated variable like `_pipe`.
+            TypedExpr::Var {
+                name, constructor, ..
+            } if !constructor.variant.is_record()
+                && !constructor.variant.is_generated_variable() =>
+            {
+                Some(self.rename_to_avoid_shadowing(name.clone()))
+            }
+            _ => None,
+        }
     }
 
     pub fn add_used_name(&mut self, name: EcoString) {
