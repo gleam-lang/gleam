@@ -14,6 +14,14 @@ error: Unknown variable
 
 The name `x` is not in scope here.
 
+error: Unknown variable
+  ┌─ /src/one/two.gleam:1:32
+  │
+1 │ let assert [-1.8e308, b] = [x, y]
+  │                                ^
+
+The name `y` is not in scope here.
+
 error: Float is outside Erlang's floating point range
   ┌─ /src/one/two.gleam:1:13
   │

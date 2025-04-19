@@ -3016,3 +3016,25 @@ fn int_operator_on_floats_2() {
 fn add_on_strings() {
     assert_error!(r#""Hello, " + "Jak""#);
 }
+
+#[test]
+fn fault_tolerant_list() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  [1, "a", 1.0, "a" + 1]
+}
+"#
+    );
+}
+
+#[test]
+fn fault_tolerant_list_tail() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  [1, "a", ..["a", "b"]]
+}
+"#
+    );
+}
