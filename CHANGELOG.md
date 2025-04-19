@@ -161,3 +161,7 @@
 - Fixed a bug where `case` expressions in custom panic messages would compile
   to invalid syntax on the JavaScript target.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where an underscore after a zero in a number would compile to
+  invalid syntax on the JavaScript target.
+  ([Surya Rose](https://github.com/GearsDatapacks))
