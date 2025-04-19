@@ -56,7 +56,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         let mut expressions = expressions.into_iter();
         let first = expressions.next().expect("Empty pipeline in typer");
         let first_location = first.location();
-        let first = match expr_typer.infer(first) {
+        let first = match expr_typer.infer_or_error(first) {
             Ok(inferred) => inferred,
             Err(e) => {
                 expr_typer.problems.error(e);
@@ -136,7 +136,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                     location,
                     ..
                 } => {
-                    let fun = match self.expr_typer.infer(*fun) {
+                    let fun = match self.expr_typer.infer_or_error(*fun) {
                         Ok(fun) => fun,
                         Err(e) => {
                             // In case we cannot infer the function we'll
@@ -335,7 +335,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
     /// b is the `function` argument.
     fn infer_apply_pipe(&mut self, function: UntypedExpr) -> TypedExpr {
         let function_location = function.location();
-        let function = Box::new(match self.expr_typer.infer(function) {
+        let function = Box::new(match self.expr_typer.infer_or_error(function) {
             Ok(function) => function,
             Err(error) => {
                 // If we cannot infer the function we put an invalid expression
