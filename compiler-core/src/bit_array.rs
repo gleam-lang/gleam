@@ -1,6 +1,7 @@
 use ecow::EcoString;
+use num_bigint::BigInt;
 
-use crate::ast::{BitArrayOption, SrcSpan};
+use crate::ast::{self, BitArrayOption, SrcSpan};
 use crate::type_::Type;
 use std::sync::Arc;
 
@@ -265,9 +266,7 @@ where
         if let Some(abox) = size.value() {
             match abox.as_int_literal() {
                 None => (),
-                Some(16) => (),
-                Some(32) => (),
-                Some(64) => (),
+                Some(value) if value == 16.into() || value == 32.into() || value == 64.into() => (),
                 _ => return err(ErrorType::FloatWithSize, size.location()),
             }
         }
@@ -277,21 +276,16 @@ where
 }
 
 pub trait GetLiteralValue {
-    fn as_int_literal(&self) -> Option<i64>;
+    fn as_int_literal(&self) -> Option<BigInt>;
 }
 
-impl GetLiteralValue for crate::ast::TypedPattern {
-    fn as_int_literal(&self) -> Option<i64> {
-        match self {
-            crate::ast::Pattern::Int { value, .. } => {
-                if let Ok(val) = value.parse::<i64>() {
-                    return Some(val);
-                }
-            }
-            crate::ast::Pattern::VarUsage { .. } => return None,
-            _ => (),
+impl GetLiteralValue for ast::TypedPattern {
+    fn as_int_literal(&self) -> Option<BigInt> {
+        if let ast::Pattern::Int { int_value, .. } = self {
+            Some(int_value.clone())
+        } else {
+            None
         }
-        None
     }
 }
 

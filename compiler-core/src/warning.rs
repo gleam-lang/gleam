@@ -1,5 +1,5 @@
 use crate::{
-    ast::{SrcSpan, TodoKind},
+    ast::{BitArraySegmentTruncation, SrcSpan, TodoKind},
     build::Target,
     diagnostic::{self, Diagnostic, Location},
     error::wrap,
@@ -1172,6 +1172,60 @@ information.",
                         extra_labels: Vec::new(),
                     }),
                 },
+
+                type_::Warning::BitArraySegmentTruncatedValue {
+                    location: _,
+                    truncation:
+                        BitArraySegmentTruncation {
+                            truncated_value,
+                            truncated_into,
+                            segment_bits,
+                            value_location,
+                        },
+                } => {
+                    let (unit, segment_size, taken) = if segment_bits % 8 == 0 {
+                        let bytes = segment_bits / 8;
+                        let segment_size = pluralise(format!("{bytes} byte"), bytes);
+                        let taken = if bytes == 1 {
+                            "its first byte".into()
+                        } else {
+                            format!("its first {bytes} bytes")
+                        };
+
+                        ("bytes", segment_size, taken)
+                    } else {
+                        let segment_size = pluralise(format!("{segment_bits} bit"), *segment_bits);
+                        let taken = if *segment_bits == 1 {
+                            "its first bit".into()
+                        } else {
+                            format!("its first {segment_bits} bits")
+                        };
+                        ("bits", segment_size, taken)
+                    };
+
+                    let text = format!(
+                        "This segment is {segment_size} long, but {truncated_value} \
+doesn't fit in that many {unit}. It would be truncated by taking its {taken}, resulting in the value {truncated_into}."
+                    );
+
+                    Diagnostic {
+                        title: "Truncated bit array segment".into(),
+                        text: wrap(&text),
+                        hint: None,
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            path: path.to_path_buf(),
+                            src: src.clone(),
+                            label: diagnostic::Label {
+                                text: Some(format!(
+                                    "You can safely replace this with {truncated_into}"
+                                )),
+                                span: *value_location,
+                            },
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
             },
 
             Warning::DeprecatedEnvironmentVariable { name } => Diagnostic {
@@ -1195,5 +1249,13 @@ information.",
         let mut nocolor = Buffer::no_color();
         self.pretty(&mut nocolor);
         String::from_utf8(nocolor.into_inner()).expect("Warning printing produced invalid utf8")
+    }
+}
+
+fn pluralise(string: String, quantity: i64) -> String {
+    if quantity == 1 {
+        string
+    } else {
+        format!("{string}s")
     }
 }

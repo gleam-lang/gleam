@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn main() {\n  <<-200:size(8)>>\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  <<-200:size(8)>>
+}
+
+
+----- WARNING
+warning: Truncated bit array segment
+  ┌─ /src/warning/wrn.gleam:3:5
+  │
+3 │   <<-200:size(8)>>
+  │     ^^^^ You can safely replace this with 56
+
+This segment is 1 byte long, but -200 doesn't fit in that many bytes. It
+would be truncated by taking its its first byte, resulting in the value 56.
