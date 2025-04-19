@@ -2163,16 +2163,20 @@ But function expects:
                 TypeError::IncorrectTypeArity {
                     location,
                     expected,
-                    given,
-                    ..
+                    given: given_number,
+                    name,
                 } => {
-                    let text = wrap("Functions and constructors have to be \
-called with their expected number of arguments.");
                     let expected = match expected {
-                        0 => "no arguments".into(),
-                        1 => "1 argument".into(),
-                        _ => format!("{expected} arguments"),
+                        0 => "no type arguments".into(),
+                        1 => "1 type argument".into(),
+                        _ => format!("{expected} type arguments"),
                     };
+                    let given = match given_number {
+                        0 => "none",
+                        _ => &format!("{given_number}")
+                    };
+                    let text = wrap_format!("`{name}` requires {expected} \
+but {given} where provided.");
                     Diagnostic {
                         title: "Incorrect arity".into(),
                         text,
@@ -2180,7 +2184,7 @@ called with their expected number of arguments.");
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: Some(format!("Expected {expected}, got {given}")),
+                                text: Some(format!("Expected {expected}, got {given_number}")),
                                 span: *location,
                             },
                             path: path.clone(),
