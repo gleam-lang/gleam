@@ -287,22 +287,22 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 message: label,
                 kind,
                 ..
-            } => self.infer_todo(location, kind, label),
+            } => Ok(self.infer_todo(location, kind, label)),
 
             // A placeholder is used when the author has not provided a function
             // body, instead only giving an external implementation for this
             // target. This placeholder implementation will never be used so we
             // treat it as a `panic` expression during analysis.
-            UntypedExpr::Placeholder { location } => self.infer_panic(location, None),
+            UntypedExpr::Placeholder { location } => Ok(self.infer_panic(location, None)),
 
             UntypedExpr::Panic {
                 location, message, ..
-            } => self.infer_panic(location, message),
+            } => Ok(self.infer_panic(location, message)),
 
             UntypedExpr::Echo {
                 location,
                 expression,
-            } => self.infer_echo(location, expression),
+            } => Ok(self.infer_echo(location, expression)),
 
             UntypedExpr::Var { location, name, .. } => {
                 self.infer_var(name, location, ReferenceRegistration::RegisterReferences)
@@ -437,7 +437,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
         kind: TodoKind,
         message: Option<Box<UntypedExpr>>,
-    ) -> Result<TypedExpr, Error> {
+    ) -> TypedExpr {
         // Type the todo as whatever it would need to be to type check.
         let type_ = self.new_unbound_var();
 
@@ -452,65 +452,61 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             type_: type_.clone(),
         });
 
-        let message = message
-            .map(|message| {
-                // If there is a message expression then it must be a string.
-                let message = self.infer(*message)?;
-                unify(string(), message.type_())
-                    .map_err(|e| convert_unify_error(e, message.location()))?;
-                Ok(Box::new(message))
-            })
-            .transpose()?;
+        let message = message.map(|message| {
+            // If there is a message expression then it must be a string.
+            let message = self.infer_no_error(*message);
+            if let Err(error) = unify(string(), message.type_()) {
+                self.problems
+                    .error(convert_unify_error(error, message.location()));
+            }
+            Box::new(message)
+        });
 
-        Ok(TypedExpr::Todo {
+        TypedExpr::Todo {
             location,
             type_,
             message,
             kind,
-        })
+        }
     }
 
-    fn infer_panic(
-        &mut self,
-        location: SrcSpan,
-        message: Option<Box<UntypedExpr>>,
-    ) -> Result<TypedExpr, Error> {
+    fn infer_panic(&mut self, location: SrcSpan, message: Option<Box<UntypedExpr>>) -> TypedExpr {
         let type_ = self.new_unbound_var();
         let message = match message {
+            None => None,
             Some(message) => {
-                let message = self.infer(*message)?;
-                unify(string(), message.type_())
-                    .map_err(|e| convert_unify_error(e, message.location()))?;
+                let message = self.infer_no_error(*message);
+                if let Err(error) = unify(string(), message.type_()) {
+                    self.problems
+                        .error(convert_unify_error(error, message.location()))
+                }
                 Some(Box::new(message))
             }
-            None => None,
         };
         self.previous_panics = true;
-        Ok(TypedExpr::Panic {
+        TypedExpr::Panic {
             location,
             type_,
             message,
-        })
+        }
     }
 
-    fn infer_echo(
-        &mut self,
-        location: SrcSpan,
-        expression: Option<Box<UntypedExpr>>,
-    ) -> Result<TypedExpr, Error> {
+    fn infer_echo(&mut self, location: SrcSpan, expression: Option<Box<UntypedExpr>>) -> TypedExpr {
         self.environment.echo_found = true;
         if let Some(expression) = expression {
-            let expression = self.infer(*expression)?;
+            let expression = self.infer_no_error(*expression);
             if self.previous_panics {
                 self.warn_for_unreachable_code(location, PanicPosition::EchoExpression);
             }
-            Ok(TypedExpr::Echo {
+            TypedExpr::Echo {
                 location,
                 type_: expression.type_(),
                 expression: Some(Box::new(expression)),
-            })
+            }
         } else {
-            Err(Error::EchoWithNoFollowingExpression { location })
+            self.problems
+                .error(Error::EchoWithNoFollowingExpression { location });
+            self.error_expr(location)
         }
     }
 
