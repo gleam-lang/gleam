@@ -168,9 +168,8 @@ impl<'a> CallGraphBuilder<'a> {
             }
             Statement::Assert(assert) => {
                 self.expression(&assert.value);
-                match &assert.message {
-                    Some(message) => self.expression(message),
-                    None => {}
+                if let Some(message) = &assert.message {
+                    self.expression(message)
                 }
             }
         };
