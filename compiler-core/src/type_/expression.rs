@@ -1706,13 +1706,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         } = assert;
         let value_location = value.location();
 
-        let value = match self.infer(value) {
-            Ok(value) => value,
-            Err(error) => {
-                self.problems.error(error);
-                self.error_expr(value_location)
-            }
-        };
+        let value = self.infer(value);
 
         if value.is_known_value() {
             self.problems.warning(Warning::AssertLiteralValue {
@@ -1749,7 +1743,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_assert_message(&mut self, message: UntypedExpr) -> Result<TypedExpr, Error> {
         let message_location = message.location();
-        let message = self.infer(message)?;
+        let message = self.infer(message);
 
         match unify(string(), message.type_()) {
             Ok(()) => {}
