@@ -736,6 +736,30 @@ impl TypedExpr {
         }
     }
 
+    pub fn is_pure_function_call(&self) -> bool {
+        match self {
+            TypedExpr::Call { fun, args, .. } => {
+                fun.is_pure_function()
+                    && args
+                        .iter()
+                        .all(|argument| argument.value.is_pure_value_constructor())
+            }
+            TypedExpr::Pipeline {
+                first_value,
+                assignments,
+                finally,
+                ..
+            } => {
+                first_value.value.is_pure_value_constructor()
+                    && assignments
+                        .iter()
+                        .all(|(assignment, _)| assignment.value.is_pure_value_constructor())
+                    && finally.is_pure_value_constructor()
+            }
+            _ => false,
+        }
+    }
+
     pub fn is_pure_value_constructor(&self) -> bool {
         match self {
             TypedExpr::Int { .. }
@@ -761,23 +785,28 @@ impl TypedExpr {
             TypedExpr::ModuleSelect { .. } => true,
 
             // A pipeline is a pure value constructor if its last step is a record builder,
-            // or a call to a fn expression that has a body comprised of just pure value
-            // constructors. For example:
+            // or a call to a pure function. For example:
             //  - `wibble() |> wobble() |> Ok`
             //  - `"hello" |> fn(s) { s <> " world!" }`
-            TypedExpr::Pipeline { finally, .. } => match finally.as_ref() {
-                TypedExpr::Fn { body, .. } => body.iter().all(|s| s.is_pure_value_constructor()),
-                fun => fun.is_pure_value_constructor(),
-            },
+            TypedExpr::Pipeline {
+                first_value,
+                assignments,
+                finally,
+                ..
+            } => {
+                first_value.value.is_pure_value_constructor()
+                    && assignments
+                        .iter()
+                        .all(|(assignment, _)| assignment.value.is_pure_value_constructor())
+                    && finally.is_pure_value_constructor()
+            }
 
-            TypedExpr::Call { fun, .. } => match fun.as_ref() {
-                // Immediately calling a fn expression that has a body comprised of just
-                // pure value constructors is in itself pure.
-                TypedExpr::Fn { body, .. } => body.iter().all(|s| s.is_pure_value_constructor()),
-                // And calling a record builder is a pure value constructor:
-                // `Some(1)`
-                fun => fun.is_record_builder(),
-            },
+            TypedExpr::Call { fun, args, .. } => {
+                (fun.is_record_builder() || fun.is_pure_function())
+                    && args
+                        .iter()
+                        .all(|argument| argument.value.is_pure_value_constructor())
+            }
 
             // A block is pure if all the statements it's made of are pure.
             // For example `{ True 1 }`
@@ -806,6 +835,37 @@ impl TypedExpr {
             TypedExpr::Todo { .. }
             | TypedExpr::Panic { .. }
             | TypedExpr::Echo { .. }
+            | TypedExpr::Invalid { .. } => false,
+        }
+    }
+
+    pub fn is_pure_function(&self) -> bool {
+        match self {
+            TypedExpr::Var { constructor, .. } => constructor.is_pure_module_function(),
+            TypedExpr::ModuleSelect { constructor, .. } => constructor.is_pure_module_function(),
+            TypedExpr::Fn { body, .. } => body.iter().all(|s| s.is_pure_value_constructor()),
+            // Technically some of these can be pure functions, such as `Block`, but since
+            // this is only for warning users about unused pure functions, it's OK to have some false
+            // negatives when 99% of cases are covered by `Var` `ModuleSelect`
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
             | TypedExpr::Invalid { .. } => false,
         }
     }

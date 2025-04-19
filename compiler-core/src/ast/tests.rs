@@ -7,7 +7,7 @@ use crate::build::Target;
 use crate::config::PackageConfig;
 use crate::line_numbers::LineNumbers;
 use crate::type_::error::VariableOrigin;
-use crate::type_::expression::FunctionDefinition;
+use crate::type_::expression::{FunctionDefinition, Purity};
 use crate::type_::{Deprecation, PRELUDE_MODULE_NAME, Problems};
 use crate::warning::WarningEmitter;
 use crate::{
@@ -380,6 +380,7 @@ fn find_node_module_select() {
             location: SrcSpan { start: 1, end: 55 },
             documentation: None,
             field_map: None,
+            purity: Purity::Pure,
         },
     };
 
