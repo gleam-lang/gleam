@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/assert.rs
+expression: assert True as 10
+---
+----- SOURCE CODE
+assert True as 10
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:16
+  │
+1 │ assert True as 10
+  │                ^^
+
+Expected type:
+
+    String
+
+Found type:
+
+    Int

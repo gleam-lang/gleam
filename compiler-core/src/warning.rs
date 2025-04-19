@@ -1121,6 +1121,7 @@ See: https://tour.gleam.run/functions/pipelines/",
                         FeatureKind::JavaScriptUnalignedBitArray => {
                             "Use of unaligned bit arrays on the JavaScript target was"
                         }
+                        FeatureKind::BoolAssert => "The bool `assert` statement was",
                     };
 
                     Diagnostic {
@@ -1167,6 +1168,25 @@ information.",
                         src: src.clone(),
                         label: diagnostic::Label {
                             text: Some("This is not a safe integer value on JavaScript".into()),
+                            span: *location,
+                        },
+                        extra_labels: Vec::new(),
+                    }),
+                },
+
+                type_::Warning::AssertLiteralValue { location } => Diagnostic {
+                    title: "Assertion of a literal value".into(),
+                    text: wrap(
+                        "Asserting that a literal value is true is redundant since you \
+can already tell whether it will be true or false.",
+                    ),
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        src: src.clone(),
+                        path: path.to_path_buf(),
+                        label: diagnostic::Label {
+                            text: Some("There's no need to assert this value".into()),
                             span: *location,
                         },
                         extra_labels: Vec::new(),

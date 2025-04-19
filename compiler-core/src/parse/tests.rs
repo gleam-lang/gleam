@@ -1766,3 +1766,23 @@ fn nested_tuple_access_after_function() {
 fn case_expression_without_body() {
     assert_parse!("case a");
 }
+
+#[test]
+fn assert_statement() {
+    assert_parse!("assert 10 != 11");
+}
+
+#[test]
+fn assert_statement_with_message() {
+    assert_parse!(r#"assert False as "Uh oh""#);
+}
+
+#[test]
+fn assert_statement_without_expression() {
+    assert_error!("assert");
+}
+
+#[test]
+fn assert_statement_followed_by_statement() {
+    assert_error!("assert let a = 10");
+}

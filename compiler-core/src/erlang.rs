@@ -889,6 +889,7 @@ fn statement<'a>(statement: &'a TypedStatement, env: &mut Env<'a>) -> Document<'
         Statement::Expression(e) => expr(e, env),
         Statement::Assignment(a) => assignment(a, env),
         Statement::Use(use_) => expr(&use_.call, env),
+        Statement::Assert(a) => assert(a, env),
     }
 }
 
@@ -2155,6 +2156,397 @@ fn assignment<'a>(assignment: &'a TypedAssignment, env: &mut Env<'a>) -> Documen
             message.as_deref(),
         ),
     }
+}
+
+fn assert<'a>(assert: &'a TypedAssert, env: &mut Env<'a>) -> Document<'a> {
+    let Assert {
+        value,
+        location,
+        message,
+    } = assert;
+
+    let message = match message {
+        Some(message) => expr(message, env),
+        None => string("Assertion failed."),
+    };
+
+    let mut assignments = Vec::new();
+
+    let (subject, mut fields) = match value {
+        TypedExpr::Call { fun, args, .. } => assert_call(fun, args, &mut assignments, env),
+        TypedExpr::BinOp {
+            name, left, right, ..
+        } => {
+            let operator = match name {
+                BinOp::And => {
+                    return assert_and(left, right, message, *location, env);
+                }
+                BinOp::Or => {
+                    return assert_or(left, right, message, *location, env);
+                }
+                BinOp::Eq => "=:=",
+                BinOp::NotEq => "/=",
+                BinOp::LtInt | BinOp::LtFloat => "<",
+                BinOp::LtEqInt | BinOp::LtEqFloat => "=<",
+                BinOp::GtInt | BinOp::GtFloat => ">",
+                BinOp::GtEqInt | BinOp::GtEqFloat => ">=",
+                BinOp::AddInt
+                | BinOp::AddFloat
+                | BinOp::SubInt
+                | BinOp::SubFloat
+                | BinOp::MultInt
+                | BinOp::MultFloat
+                | BinOp::DivInt
+                | BinOp::DivFloat
+                | BinOp::RemainderInt
+                | BinOp::Concatenate => {
+                    panic!("Non-boolean operators cannot appear here in well-typed code")
+                }
+            };
+
+            let left_document = assign_to_variable(left, &mut assignments, env);
+            let right_document = assign_to_variable(right, &mut assignments, env);
+            (
+                binop_documents(left_document.clone(), operator, right_document.clone()),
+                vec![
+                    ("kind", atom("binary_operator")),
+                    ("operator", atom(name.name())),
+                    (
+                        "left",
+                        asserted_expression(
+                            AssertExpression::from_expression(left),
+                            Some(left_document),
+                            left.location(),
+                        ),
+                    ),
+                    (
+                        "right",
+                        asserted_expression(
+                            AssertExpression::from_expression(right),
+                            Some(right_document),
+                            right.location(),
+                        ),
+                    ),
+                ],
+            )
+        }
+
+        _ => (
+            maybe_block_expr(value, env),
+            vec![
+                ("kind", atom("expression")),
+                (
+                    "expression",
+                    asserted_expression(
+                        AssertExpression::from_expression(value),
+                        Some("false".to_doc()),
+                        value.location(),
+                    ),
+                ),
+            ],
+        ),
+    };
+
+    fields.push(("assert_start", location.start.to_doc()));
+    fields.push(("expression_start", value.location().start.to_doc()));
+    fields.push(("expression_end", value.location().end.to_doc()));
+
+    let clauses = docvec![
+        line(),
+        "true -> nil;",
+        line(),
+        "false -> ",
+        erlang_error("assert", &message, *location, fields, env),
+    ];
+
+    docvec![
+        assignments,
+        "case ",
+        subject,
+        " of",
+        clauses.nest(INDENT),
+        line(),
+        "end"
+    ]
+}
+
+fn assert_call<'a>(
+    function: &'a TypedExpr,
+    arguments: &'a Vec<CallArg<TypedExpr>>,
+    assignments: &mut Vec<Document<'a>>,
+    env: &mut Env<'a>,
+) -> (Document<'a>, Vec<(&'static str, Document<'a>)>) {
+    let argument_variables = arguments
+        .iter()
+        .map(|argument| assign_to_variable(&argument.value, assignments, env))
+        .collect_vec();
+
+    let arguments = join(
+        argument_variables
+            .iter()
+            .zip(arguments)
+            .map(|(variable, argument)| {
+                asserted_expression(
+                    AssertExpression::from_expression(&argument.value),
+                    Some(variable.clone()),
+                    argument.location(),
+                )
+            }),
+        break_(",", ", "),
+    )
+    .nest(INDENT)
+    .surround("[", "]");
+
+    (
+        docs_args_call(function, argument_variables, env),
+        vec![("kind", atom("function_call")), ("arguments", arguments)],
+    )
+}
+
+/// In Gleam, the `&&` operator is short-circuiting, meaning that we can't
+/// pre-evaluate both sides of it, and use them in the exception that is
+/// thrown.
+/// Instead, we need to implement this short-circuiting logic ourself.
+///
+/// If we short-circuit, we must leave the second expression unevaluated,
+/// and signal that using the `unevaluated` variant, as detailed in the
+/// exception format. For the first expression, we know it must be `false`,
+/// otherwise we would have continued by evaluating the second expression.
+///
+/// Similarly, if we do evaluate the second expression and fail, we know
+/// that the first expression must have evaluated to `true`, and the second
+/// to `false`. This way, we avoid needing to evaluate either expression
+/// twice.
+///
+/// The generated code then looks something like this:
+/// ```erlang
+/// case expr1 of
+///   true -> case expr2 of
+///     true -> true;
+///     false -> <throw exception>
+///   end;
+///   false -> <throw exception>
+/// end
+/// ```
+///
+fn assert_and<'a>(
+    left: &'a TypedExpr,
+    right: &'a TypedExpr,
+    message: Document<'a>,
+    location: SrcSpan,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    let left_kind = AssertExpression::from_expression(left);
+    let right_kind = AssertExpression::from_expression(right);
+
+    let fields_if_short_circuiting = vec![
+        ("kind", atom("binary_operator")),
+        ("operator", atom("&&")),
+        (
+            "left",
+            asserted_expression(left_kind, Some("false".to_doc()), left.location()),
+        ),
+        (
+            "right",
+            asserted_expression(AssertExpression::Unevaluated, None, right.location()),
+        ),
+        ("assert_start", location.start.to_doc()),
+        ("expression_start", left.location().start.to_doc()),
+        ("expression_end", right.location().end.to_doc()),
+    ];
+
+    let fields = vec![
+        ("kind", atom("binary_operator")),
+        ("operator", atom("&&")),
+        (
+            "left",
+            asserted_expression(left_kind, Some("true".to_doc()), left.location()),
+        ),
+        (
+            "right",
+            asserted_expression(right_kind, Some("false".to_doc()), right.location()),
+        ),
+        ("assert_start", location.start.to_doc()),
+        ("expression_start", left.location().start.to_doc()),
+        ("expression_end", right.location().end.to_doc()),
+    ];
+
+    let right_clauses = docvec![
+        line(),
+        "true -> nil;",
+        line(),
+        "false -> ",
+        erlang_error("assert", &message, location, fields, env),
+    ];
+
+    let left_clauses = docvec![
+        line(),
+        "true -> ",
+        docvec![
+            "case ",
+            maybe_block_expr(right, env),
+            " of",
+            right_clauses.nest(INDENT),
+            line(),
+            "end"
+        ]
+        .nest(INDENT),
+        ";",
+        line(),
+        "false -> ",
+        erlang_error(
+            "assert",
+            &message,
+            location,
+            fields_if_short_circuiting,
+            env
+        ),
+    ];
+
+    docvec![
+        "case ",
+        maybe_block_expr(left, env),
+        " of",
+        left_clauses.nest(INDENT),
+        line(),
+        "end"
+    ]
+}
+
+/// Similar to `&&`, `||` is also short-circuiting in Gleam. However, if `||`
+/// short-circuits, that's because the first expression evaluated to `true`,
+/// meaning the whole assertion succeeds. This allows us to directly use Erlang's
+/// `orelse` operator as the subject of the `case` expression.
+///
+/// The only difference is that due to the nature of `||`, if the assertion fails,
+/// we know that both sides must have evaluated to `false`, so we don't
+/// need to store the values of them in variables beforehand.
+fn assert_or<'a>(
+    left: &'a TypedExpr,
+    right: &'a TypedExpr,
+    message: Document<'a>,
+    location: SrcSpan,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    let fields = vec![
+        ("kind", atom("binary_operator")),
+        ("operator", atom("||")),
+        (
+            "left",
+            asserted_expression(
+                AssertExpression::from_expression(left),
+                Some("false".to_doc()),
+                left.location(),
+            ),
+        ),
+        (
+            "right",
+            asserted_expression(
+                AssertExpression::from_expression(right),
+                Some("false".to_doc()),
+                right.location(),
+            ),
+        ),
+        ("assert_start", location.start.to_doc()),
+        ("expression_start", left.location().start.to_doc()),
+        ("expression_end", right.location().end.to_doc()),
+    ];
+
+    let clauses = docvec![
+        line(),
+        "true -> nil;",
+        line(),
+        "false -> ",
+        erlang_error("assert", &message, location, fields, env),
+    ];
+
+    docvec![
+        "case ",
+        docvec![
+            maybe_block_expr(left, env),
+            " orelse ",
+            maybe_block_expr(right, env)
+        ]
+        .nest(INDENT),
+        " of",
+        clauses.nest(INDENT),
+        line(),
+        "end"
+    ]
+}
+
+fn assign_to_variable<'a>(
+    value: &'a TypedExpr,
+    assignments: &mut Vec<Document<'a>>,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    if value.is_var() {
+        expr(value, env)
+    } else {
+        let value = maybe_block_expr(value, env);
+        let variable = env.next_local_var_name(ASSERT_SUBJECT_VARIABLE);
+        let definition = docvec![variable.clone(), " = ", value, ",", line()];
+        assignments.push(definition);
+        variable
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum AssertExpression {
+    Literal,
+    Expression,
+    Unevaluated,
+}
+
+impl AssertExpression {
+    fn from_expression(expression: &TypedExpr) -> Self {
+        if expression.is_literal() {
+            Self::Literal
+        } else {
+            Self::Expression
+        }
+    }
+}
+
+fn asserted_expression(
+    kind: AssertExpression,
+    value: Option<Document<'_>>,
+    location: SrcSpan,
+) -> Document<'_> {
+    let kind = match kind {
+        AssertExpression::Literal => atom("literal"),
+        AssertExpression::Expression => atom("expression"),
+        AssertExpression::Unevaluated => atom("unevaluated"),
+    };
+
+    let start = location.start.to_doc();
+    let end = location.end.to_doc();
+
+    let value_field = if let Some(value) = value {
+        docvec!["value => ", value, ",", line()]
+    } else {
+        nil()
+    };
+
+    let fields_doc = docvec![
+        "kind => ",
+        kind,
+        ",",
+        line(),
+        value_field,
+        "start => ",
+        start,
+        ",",
+        line(),
+        // `end` is a keyword in Erlang, so we have to quote it
+        "'end' => ",
+        end,
+        line(),
+    ];
+
+    "#{".to_doc()
+        .append(fields_doc.group().nest(INDENT))
+        .append("}")
 }
 
 fn negate_with<'a>(op: &'static str, value: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {

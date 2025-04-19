@@ -6540,3 +6540,55 @@ fn echo_printing_one_line_pipeline() {
 "#
     );
 }
+
+#[test]
+fn assert() {
+    assert_format!(
+        "pub fn main() {
+  assert True
+}
+"
+    );
+}
+
+#[test]
+fn assert_with_long_expression() {
+    assert_format!(
+        "pub fn main() {
+  assert some_function_with_a_very_long_name_that_exceeds_the_eighty_character_limit()
+}
+"
+    );
+}
+
+#[test]
+fn assert_with_message() {
+    assert_format!(
+        r#"pub fn main() {
+  assert True as "This is always true"
+}
+"#
+    );
+}
+
+#[test]
+fn assert_with_long_message() {
+    assert_format!(
+        r#"pub fn main() {
+  assert True
+    as "This should never panic, because it is a literal True value, and so will always be true."
+}
+"#
+    );
+}
+
+#[test]
+fn assert_with_long_expression_and_long_message() {
+    assert_format!(
+        r#"pub fn main() {
+  assert some_long_function_name_which_if_everything_is_right_should_always_be_true
+    as "This should never panic, because the function only ever returns true."
+}
+"#
+    );
+}

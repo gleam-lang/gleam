@@ -16,6 +16,7 @@ use crate::{
 };
 use camino::Utf8Path;
 
+mod assert;
 mod bit_arrays;
 mod case;
 mod conditional_compilation;

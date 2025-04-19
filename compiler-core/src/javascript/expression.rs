@@ -2,7 +2,7 @@ use num_bigint::BigInt;
 use vec1::Vec1;
 
 use super::{
-    pattern::{Assignment, CompiledPattern},
+    pattern::{ASSIGNMENT_VAR, Assignment, CompiledPattern},
     *,
 };
 use crate::{
@@ -209,7 +209,8 @@ impl<'module, 'a> Generator<'module, 'a> {
         let expression_doc = match statement {
             Statement::Expression(expression) => self.expression(expression),
             Statement::Assignment(assignment) => self.assignment(assignment),
-            Statement::Use(_use) => self.expression(&_use.call),
+            Statement::Use(use_) => self.expression(&use_.call),
+            Statement::Assert(assert) => self.assert(assert),
         }?;
         Ok(self.add_statement_level(expression_doc))
     }
@@ -480,16 +481,16 @@ impl<'module, 'a> Generator<'module, 'a> {
         }
     }
 
-    pub fn not_in_tail_position<CompileFn>(
+    pub fn not_in_tail_position<CompileFn, Output>(
         &mut self,
         // If ordering is None, it is inherited from the parent scope.
         // It will be None in cases like `!x`, where `x` can be lifted
         // only if the ordering is already loose.
         ordering: Option<Ordering>,
         compile: CompileFn,
-    ) -> Output<'a>
+    ) -> Output
     where
-        CompileFn: Fn(&mut Self) -> Output<'a>,
+        CompileFn: Fn(&mut Self) -> Output,
     {
         let new_ordering = ordering.unwrap_or(self.scope_position.ordering());
 
@@ -709,9 +710,12 @@ impl<'module, 'a> Generator<'module, 'a> {
                 },
 
                 Statement::Use(use_) => return self.child_expression(&use_.call),
+
+                // Similar to `let assert`, we can't immediately return the value
+                // that is asserted; we have to actually perform the assertion.
+                Statement::Assert(_) => {}
             }
         }
-
         match &self.scope_position {
             Position::Tail | Position::Assign(_) => self.block_document(statements),
             Position::NotTail(Ordering::Strict) => self
@@ -847,6 +851,360 @@ impl<'module, 'a> Generator<'module, 'a> {
         };
 
         Ok(doc.append(afterwards).force_break())
+    }
+
+    fn assert(&mut self, assert: &'a TypedAssert) -> Output<'a> {
+        let TypedAssert {
+            location,
+            value,
+            message,
+        } = assert;
+
+        let message = match message {
+            Some(m) => self.not_in_tail_position(
+                Some(Ordering::Strict),
+                |this: &mut Generator<'module, 'a>| this.expression(m),
+            )?,
+            None => string("Assertion failed."),
+        };
+
+        let check = self.not_in_tail_position(Some(Ordering::Loose), |this| {
+            this.assert_check(value, &message, *location)
+        })?;
+
+        Ok(match &self.scope_position {
+            Position::NotTail(_) => check,
+            Position::Tail | Position::Assign(_) => {
+                docvec![check, line(), self.wrap_return("undefined".to_doc())]
+            }
+        })
+    }
+
+    fn assert_check(
+        &mut self,
+        subject: &'a TypedExpr,
+        message: &Document<'a>,
+        location: SrcSpan,
+    ) -> Output<'a> {
+        let (subject_document, mut fields) = match subject {
+            TypedExpr::Call { fun, args, .. } => {
+                let argument_variables: Vec<_> = args
+                    .iter()
+                    .map(|element| {
+                        self.not_in_tail_position(Some(Ordering::Strict), |this| {
+                            this.assign_to_variable(&element.value)
+                        })
+                    })
+                    .try_collect()?;
+                (
+                    self.call_with_doc_args(fun, argument_variables.clone())?,
+                    vec![
+                        ("kind", string("function_call")),
+                        (
+                            "arguments",
+                            array(argument_variables.into_iter().zip(args).map(
+                                |(variable, argument)| {
+                                    Ok(self.asserted_expression(
+                                        AssertExpression::from_expression(&argument.value),
+                                        Some(variable),
+                                        argument.location(),
+                                    ))
+                                },
+                            ))?,
+                        ),
+                    ],
+                )
+            }
+
+            TypedExpr::BinOp {
+                name, left, right, ..
+            } => {
+                match name {
+                    BinOp::And => return self.assert_and(left, right, message, location),
+                    BinOp::Or => return self.assert_or(left, right, message, location),
+                    _ => {}
+                }
+
+                let left_document = self.assign_to_variable(left)?;
+                let right_document = self.not_in_tail_position(Some(Ordering::Strict), |this| {
+                    this.assign_to_variable(right)
+                })?;
+
+                (
+                    self.bin_op_with_doc_operands(
+                        *name,
+                        left_document.clone(),
+                        right_document.clone(),
+                        &left.type_(),
+                    )
+                    .surround("(", ")"),
+                    vec![
+                        ("kind", string("binary_operator")),
+                        ("operator", string(name.name())),
+                        (
+                            "left",
+                            self.asserted_expression(
+                                AssertExpression::from_expression(left),
+                                Some(left_document),
+                                left.location(),
+                            ),
+                        ),
+                        (
+                            "right",
+                            self.asserted_expression(
+                                AssertExpression::from_expression(right),
+                                Some(right_document),
+                                right.location(),
+                            ),
+                        ),
+                    ],
+                )
+            }
+
+            _ => (
+                self.wrap_expression(subject)?,
+                vec![
+                    ("kind", string("expression")),
+                    (
+                        "expression",
+                        self.asserted_expression(
+                            AssertExpression::from_expression(subject),
+                            Some("false".to_doc()),
+                            subject.location(),
+                        ),
+                    ),
+                ],
+            ),
+        };
+
+        fields.push(("assert_start", location.start.to_doc()));
+        fields.push(("expression_start", subject.location().start.to_doc()));
+        fields.push(("expression_end", subject.location().end.to_doc()));
+
+        Ok(docvec![
+            "if (",
+            docvec!["!", subject_document].nest(INDENT),
+            break_("", ""),
+            ") {",
+            docvec![
+                line(),
+                self.throw_error("assert", message, location, fields),
+            ]
+            .nest(INDENT),
+            line(),
+            "}",
+        ]
+        .group())
+    }
+
+    /// In Gleam, the `&&` operator is short-circuiting, meaning that we can't
+    /// pre-evaluate both sides of it, and use them in the exception that is
+    /// thrown.
+    /// Instead, we need to implement this short-circuiting logic ourself.
+    ///
+    /// If we short-circuit, we must leave the second expression unevaluated,
+    /// and signal that using the `unevaluated` variant, as detailed in the
+    /// exception format. For the first expression, we know it must be `false`,
+    /// otherwise we would have continued by evaluating the second expression.
+    ///
+    /// Similarly, if we do evaluate the second expression and fail, we know
+    /// that the first expression must have evaluated to `true`, and the second
+    /// to `false`. This way, we avoid needing to evaluate either expression
+    /// twice.
+    ///
+    /// The generated code then looks something like this:
+    /// ```javascript
+    /// if (expr1) {
+    ///   if (!expr2) {
+    ///     <throw exception>
+    ///   }
+    /// } else {
+    ///   <throw exception>
+    /// }
+    /// ```
+    ///
+    fn assert_and(
+        &mut self,
+        left: &'a TypedExpr,
+        right: &'a TypedExpr,
+        message: &Document<'a>,
+        location: SrcSpan,
+    ) -> Output<'a> {
+        let left_kind = AssertExpression::from_expression(left);
+        let right_kind = AssertExpression::from_expression(right);
+
+        let fields_if_short_circuiting = vec![
+            ("kind", string("binary_operator")),
+            ("operator", string("&&")),
+            (
+                "left",
+                self.asserted_expression(left_kind, Some("false".to_doc()), left.location()),
+            ),
+            (
+                "right",
+                self.asserted_expression(AssertExpression::Unevaluated, None, right.location()),
+            ),
+            ("assert_start", location.start.to_doc()),
+            ("expression_start", left.location().start.to_doc()),
+            ("expression_end", right.location().end.to_doc()),
+        ];
+
+        let fields = vec![
+            ("kind", string("binary_operator")),
+            ("operator", string("&&")),
+            (
+                "left",
+                self.asserted_expression(left_kind, Some("true".to_doc()), left.location()),
+            ),
+            (
+                "right",
+                self.asserted_expression(right_kind, Some("false".to_doc()), right.location()),
+            ),
+            ("assert_start", location.start.to_doc()),
+            ("expression_start", left.location().start.to_doc()),
+            ("expression_end", right.location().end.to_doc()),
+        ];
+
+        let left_value =
+            self.not_in_tail_position(Some(Ordering::Loose), |this| this.wrap_expression(left))?;
+
+        let right_value =
+            self.not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(right))?;
+
+        let right_check = docvec![
+            line(),
+            "if (",
+            docvec!["!", right_value].nest(INDENT),
+            ") {",
+            docvec![
+                line(),
+                self.throw_error("assert", message, location, fields)
+            ]
+            .nest(INDENT),
+            line(),
+            "}",
+        ];
+
+        Ok(docvec![
+            "if (",
+            left_value.nest(INDENT),
+            ") {",
+            right_check.nest(INDENT),
+            line(),
+            "} else {",
+            docvec![
+                line(),
+                self.throw_error("assert", message, location, fields_if_short_circuiting)
+            ]
+            .nest(INDENT),
+            line(),
+            "}"
+        ])
+    }
+
+    /// Similar to `&&`, `||` is also short-circuiting in Gleam. However, if `||`
+    /// short-circuits, that's because the first expression evaluated to `true`,
+    /// meaning the whole assertion succeeds. This allows us to directly use the
+    /// `||` operator in JavaScript.
+    ///
+    /// The only difference is that due to the nature of `||`, if the assertion fails,
+    /// we know that both sides must have evaluated to `false`, so we don't
+    /// need to store the values of them in variables beforehand.
+    fn assert_or(
+        &mut self,
+        left: &'a TypedExpr,
+        right: &'a TypedExpr,
+        message: &Document<'a>,
+        location: SrcSpan,
+    ) -> Output<'a> {
+        let fields = vec![
+            ("kind", string("binary_operator")),
+            ("operator", string("||")),
+            (
+                "left",
+                self.asserted_expression(
+                    AssertExpression::from_expression(left),
+                    Some("false".to_doc()),
+                    left.location(),
+                ),
+            ),
+            (
+                "right",
+                self.asserted_expression(
+                    AssertExpression::from_expression(right),
+                    Some("false".to_doc()),
+                    right.location(),
+                ),
+            ),
+            ("assert_start", location.start.to_doc()),
+            ("expression_start", left.location().start.to_doc()),
+            ("expression_end", right.location().end.to_doc()),
+        ];
+
+        let left_value =
+            self.not_in_tail_position(Some(Ordering::Loose), |this| this.child_expression(left))?;
+
+        let right_value =
+            self.not_in_tail_position(Some(Ordering::Strict), |this| this.child_expression(right))?;
+
+        Ok(docvec![
+            line(),
+            "if (",
+            docvec!["!(", left_value, " || ", right_value, ")"].nest(INDENT),
+            ") {",
+            docvec![
+                line(),
+                self.throw_error("assert", message, location, fields)
+            ]
+            .nest(INDENT),
+            line(),
+            "}",
+        ])
+    }
+
+    fn assign_to_variable(&mut self, value: &'a TypedExpr) -> Output<'a> {
+        match value {
+            TypedExpr::Var { .. } => self.expression(value),
+            _ => {
+                let value = self.wrap_expression(value)?;
+                let variable = self.next_local_var(&ASSIGNMENT_VAR.into());
+                let assignment = docvec!["let ", variable.clone(), " = ", value, ";"];
+                self.statement_level.push(assignment);
+                Ok(variable.to_doc())
+            }
+        }
+    }
+
+    fn asserted_expression(
+        &mut self,
+        kind: AssertExpression,
+        value: Option<Document<'a>>,
+        location: SrcSpan,
+    ) -> Document<'a> {
+        let kind = match kind {
+            AssertExpression::Literal => string("literal"),
+            AssertExpression::Expression => string("expression"),
+            AssertExpression::Unevaluated => string("unevaluated"),
+        };
+
+        let start = location.start.to_doc();
+        let end = location.end.to_doc();
+        let items = if let Some(value) = value {
+            vec![
+                ("kind", kind),
+                ("value", value),
+                ("start", start),
+                ("end", end),
+            ]
+        } else {
+            vec![("kind", kind), ("start", start), ("end", end)]
+        };
+
+        wrap_object(
+            items
+                .into_iter()
+                .map(|(key, value)| (key.to_doc(), Some(value))),
+        )
     }
 
     fn case(&mut self, subject_values: &'a [TypedExpr], clauses: &'a [TypedClause]) -> Output<'a> {
@@ -1214,6 +1572,23 @@ impl<'module, 'a> Generator<'module, 'a> {
         Ok(self.prelude_equal_call(should_be_equal, left, right))
     }
 
+    fn equal_with_doc_operands(
+        &mut self,
+        left: Document<'a>,
+        right: Document<'a>,
+        type_: Arc<Type>,
+        should_be_equal: bool,
+    ) -> Document<'a> {
+        // If it is a simple scalar type then we can use JS' reference identity
+        if is_js_scalar(type_) {
+            let operator = if should_be_equal { " === " } else { " !== " };
+            return docvec![left, operator, right];
+        }
+
+        // Other types must be compared using structural equality
+        self.prelude_equal_call(should_be_equal, left, right)
+    }
+
     pub(super) fn prelude_equal_call(
         &mut self,
         should_be_equal: bool,
@@ -1243,6 +1618,42 @@ impl<'module, 'a> Generator<'module, 'a> {
         let right =
             self.not_in_tail_position(Some(Ordering::Strict), |this| this.child_expression(right))?;
         Ok(docvec![left, " ", op, " ", right])
+    }
+
+    fn bin_op_with_doc_operands(
+        &mut self,
+        name: BinOp,
+        left: Document<'a>,
+        right: Document<'a>,
+        type_: &Arc<Type>,
+    ) -> Document<'a> {
+        match name {
+            BinOp::And => docvec![left, " && ", right],
+            BinOp::Or => docvec![left, " || ", right],
+            BinOp::LtInt | BinOp::LtFloat => docvec![left, " < ", right],
+            BinOp::LtEqInt | BinOp::LtEqFloat => docvec![left, " <= ", right],
+            BinOp::Eq => self.equal_with_doc_operands(left, right, type_.clone(), true),
+            BinOp::NotEq => self.equal_with_doc_operands(left, right, type_.clone(), false),
+            BinOp::GtInt | BinOp::GtFloat => docvec![left, " > ", right],
+            BinOp::GtEqInt | BinOp::GtEqFloat => docvec![left, " >= ", right],
+            BinOp::Concatenate | BinOp::AddInt | BinOp::AddFloat => {
+                docvec![left, " + ", right]
+            }
+            BinOp::SubInt | BinOp::SubFloat => docvec![left, " - ", right],
+            BinOp::MultInt | BinOp::MultFloat => docvec![left, " * ", right],
+            BinOp::RemainderInt => {
+                self.tracker.int_remainder_used = true;
+                docvec!["remainderInt", wrap_args([left, right])]
+            }
+            BinOp::DivInt => {
+                self.tracker.int_remainder_used = true;
+                docvec!["divideInt", wrap_args([left, right])]
+            }
+            BinOp::DivFloat => {
+                self.tracker.int_remainder_used = true;
+                docvec!["divideFloat", wrap_args([left, right])]
+            }
+        }
     }
 
     fn todo(&mut self, message: Option<&'a TypedExpr>, location: &'a SrcSpan) -> Output<'a> {
@@ -1440,6 +1851,23 @@ impl<'module, 'a> Generator<'module, 'a> {
             Ok(self.line_numbers.line_number(location.start).to_doc()),
         ])?;
         Ok(self.wrap_return(docvec!["echo", echo_argument]))
+    }
+}
+
+#[derive(Clone, Copy)]
+enum AssertExpression {
+    Literal,
+    Expression,
+    Unevaluated,
+}
+
+impl AssertExpression {
+    fn from_expression(expression: &TypedExpr) -> Self {
+        if expression.is_literal() {
+            Self::Literal
+        } else {
+            Self::Expression
+        }
     }
 }
 
@@ -2040,6 +2468,7 @@ fn requires_semicolon(statement: &TypedStatement) -> bool {
 
         Statement::Assignment(_) => false,
         Statement::Use(_) => false,
+        Statement::Assert(_) => false,
     }
 }
 

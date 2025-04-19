@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/javascript/tests/assert.rs
+expression: "\npub fn main() {\n  assert True as \"This shouldn't fail\"\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  assert True as "This shouldn't fail"
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError } from "../gleam.mjs";
+
+export function main() {
+  if (!true) {
+    throw makeError(
+      "assert",
+      "my/mod",
+      3,
+      "main",
+      "This shouldn't fail",
+      {
+        kind: "expression",
+        expression: { kind: "expression", value: false, start: 26, end: 30 },
+        assert_start: 19,
+        expression_start: 26,
+        expression_end: 30
+      }
+    )
+  }
+  return undefined;
+}
