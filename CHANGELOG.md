@@ -73,6 +73,31 @@
   errors as soon as it finds one.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The error message for types used with the wrong number of arguments has been
+  improved. For example, this piece of code:
+
+  ```gleam
+  type Wibble(a)
+
+  type Wobble {
+    Wobble(Wibble)
+  }
+  ```
+
+  Produces the following error:
+
+  ```txt
+    error: Incorrect arity
+    ┌─ /src/one/two.gleam:5:10
+    │
+  5 │   Wobble(Wibble)
+    │          ^^^^^^ Expected 1 type argument, got 0
+
+  `Wibble` requires 1 type argument but none where provided.
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Build tool
 
 - The build tool now supports placing modules in a directory called `dev`,
