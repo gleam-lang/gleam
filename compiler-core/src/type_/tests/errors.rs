@@ -3060,3 +3060,14 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn fault_tolerant_tuple() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  #(1, 1 + "a", not_in_scope)
+}
+"#
+    );
+}

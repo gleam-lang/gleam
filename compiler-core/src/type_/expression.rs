@@ -330,7 +330,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             UntypedExpr::Tuple {
                 location, elements, ..
-            } => self.infer_tuple(elements, location),
+            } => Ok(self.infer_tuple(elements, location)),
 
             UntypedExpr::Float {
                 location, value, ..
@@ -933,21 +933,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn infer_tuple(
-        &mut self,
-        elements: Vec<UntypedExpr>,
-        location: SrcSpan,
-    ) -> Result<TypedExpr, Error> {
-        let elements: Vec<_> = elements
+    fn infer_tuple(&mut self, elements: Vec<UntypedExpr>, location: SrcSpan) -> TypedExpr {
+        let elements = elements
             .into_iter()
-            .map(|element| self.infer(element))
-            .try_collect()?;
-        let type_ = tuple(elements.iter().map(HasType::type_).collect());
-        Ok(TypedExpr::Tuple {
+            .map(|element| self.infer_no_error(element))
+            .collect_vec();
+        let type_ = tuple(elements.iter().map(HasType::type_).collect_vec());
+        TypedExpr::Tuple {
             location,
             elements,
             type_,
-        })
+        }
     }
 
     fn infer_var(
