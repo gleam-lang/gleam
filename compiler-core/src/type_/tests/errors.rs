@@ -3038,3 +3038,25 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn fault_tolerant_negate_bool() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  !!{ True || a }
+}
+"#
+    );
+}
+
+#[test]
+fn fault_tolerant_negate_int() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  --{ 1 + a }
+}
+"#
+    );
+}

@@ -418,9 +418,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 arguments: args,
             } => self.infer_record_update(*constructor, record, args, location),
 
-            UntypedExpr::NegateBool { location, value } => self.infer_negate_bool(location, *value),
+            UntypedExpr::NegateBool { location, value } => {
+                Ok(self.infer_negate_bool(location, *value))
+            }
 
-            UntypedExpr::NegateInt { location, value } => self.infer_negate_int(location, *value),
+            UntypedExpr::NegateInt { location, value } => {
+                Ok(self.infer_negate_int(location, *value))
+            }
         }
     }
 
@@ -729,34 +733,32 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
-    fn infer_negate_bool(
-        &mut self,
-        location: SrcSpan,
-        value: UntypedExpr,
-    ) -> Result<TypedExpr, Error> {
-        let value = self.infer(value)?;
+    fn infer_negate_bool(&mut self, location: SrcSpan, value: UntypedExpr) -> TypedExpr {
+        let value = self.infer_no_error(value);
 
-        unify(bool(), value.type_()).map_err(|e| convert_unify_error(e, value.location()))?;
+        if let Err(error) = unify(bool(), value.type_()) {
+            self.problems
+                .error(convert_unify_error(error, value.location()))
+        }
 
         if let TypedExpr::NegateBool { .. } = value {
             self.problems
                 .warning(Warning::UnnecessaryDoubleBoolNegation { location });
         }
 
-        Ok(TypedExpr::NegateBool {
+        TypedExpr::NegateBool {
             location,
             value: Box::new(value),
-        })
+        }
     }
 
-    fn infer_negate_int(
-        &mut self,
-        location: SrcSpan,
-        value: UntypedExpr,
-    ) -> Result<TypedExpr, Error> {
-        let value = self.infer(value)?;
+    fn infer_negate_int(&mut self, location: SrcSpan, value: UntypedExpr) -> TypedExpr {
+        let value = self.infer_no_error(value);
 
-        unify(int(), value.type_()).map_err(|e| convert_unify_error(e, value.location()))?;
+        if let Err(error) = unify(int(), value.type_()) {
+            self.problems
+                .error(convert_unify_error(error, value.location()));
+        }
 
         if let TypedExpr::Int { value: ref v, .. } = value {
             if v.starts_with('-') {
@@ -770,10 +772,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .warning(Warning::UnnecessaryDoubleIntNegation { location });
         }
 
-        Ok(TypedExpr::NegateInt {
+        TypedExpr::NegateInt {
             location,
             value: Box::new(value),
-        })
+        }
     }
 
     fn infer_fn(

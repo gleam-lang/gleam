@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn main() {\n  --{ 1 + a }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  --{ 1 + a }
+}
+
+
+----- ERROR
+error: Unknown variable
+  ┌─ /src/one/two.gleam:3:11
+  │
+3 │   --{ 1 + a }
+  │           ^
+
+The name `a` is not in scope here.
