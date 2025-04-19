@@ -2673,7 +2673,7 @@ pub enum Statement<TypeT, ExpressionT> {
     Assignment(Assignment<TypeT, ExpressionT>),
     /// A `use` expression.
     Use(Use<TypeT, ExpressionT>),
-    /// An boolean assertion.
+    /// A bool assertion.
     Assert(Assert<ExpressionT>),
 }
 

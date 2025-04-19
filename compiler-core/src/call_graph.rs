@@ -7,9 +7,9 @@ mod into_dependency_order_tests;
 use crate::{
     Result,
     ast::{
-        AssignName, BitArrayOption, ClauseGuard, Constant, Pattern, SrcSpan, Statement,
-        UntypedClauseGuard, UntypedExpr, UntypedFunction, UntypedModuleConstant, UntypedPattern,
-        UntypedStatement,
+        AssignName, AssignmentKind, BitArrayOption, ClauseGuard, Constant, Pattern, SrcSpan,
+        Statement, UntypedClauseGuard, UntypedExpr, UntypedFunction, UntypedModuleConstant,
+        UntypedPattern, UntypedStatement,
     },
     type_::Error,
 };
@@ -150,6 +150,15 @@ impl<'a> CallGraphBuilder<'a> {
             Statement::Assignment(assignment) => {
                 self.expression(&assignment.value);
                 self.pattern(&assignment.pattern);
+                match &assignment.kind {
+                    AssignmentKind::Assert {
+                        message: Some(message),
+                        ..
+                    } => self.expression(message),
+                    AssignmentKind::Let
+                    | AssignmentKind::Generated
+                    | AssignmentKind::Assert { message: None, .. } => {}
+                }
             }
             Statement::Use(use_) => {
                 self.expression(&use_.call);
@@ -159,6 +168,10 @@ impl<'a> CallGraphBuilder<'a> {
             }
             Statement::Assert(assert) => {
                 self.expression(&assert.value);
+                match &assert.message {
+                    Some(message) => self.expression(message),
+                    None => {}
+                }
             }
         };
     }

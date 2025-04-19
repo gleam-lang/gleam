@@ -687,3 +687,39 @@ fn bug_2275() {
         vec![vec!["two"], vec!["one"]]
     );
 }
+
+#[test]
+fn let_assert_message() {
+    let functions = [
+        ("a", [].as_slice(), r#"{ let assert True = False as b() }"#),
+        ("b", [].as_slice(), r#"a()"#),
+    ];
+    assert_eq!(
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
+        vec![vec!["b", "a"]]
+    );
+}
+
+#[test]
+fn assert_subject() {
+    let functions = [
+        ("a", [].as_slice(), r#"{ assert b() }"#),
+        ("b", [].as_slice(), r#"a()"#),
+    ];
+    assert_eq!(
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
+        vec![vec!["b", "a"]]
+    );
+}
+
+#[test]
+fn assert_message() {
+    let functions = [
+        ("a", [].as_slice(), r#"{ assert False as b() }"#),
+        ("b", [].as_slice(), r#"a()"#),
+    ];
+    assert_eq!(
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
+        vec![vec!["b", "a"]]
+    );
+}

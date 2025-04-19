@@ -99,7 +99,7 @@
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - You can now use the `assert` keyword by itself to test a boolean expression.
-  If the expression evaluates to `false` at runtime, the `assert` statement
+  If the expression evaluates to `False` at runtime, the `assert` statement
   will cause the program to panic, with information about the expression that
   was asserted.
 
