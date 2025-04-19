@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  let list = [2, 4, 5]\n  let value = 1\n  find(each: value, in: list)\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  let list = [2, 4, 5]
+  let value = 1
+  find(each: value, in: list)
+  ↑                          
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  let list = [2, 4, 5]
+  let value = 1
+  find(each: value, in: list)
+}
+
+fn find(each value: Int, in list: List(Int)) -> a {
+  todo
+}

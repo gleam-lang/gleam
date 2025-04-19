@@ -156,11 +156,37 @@
     }
   }
   ```
+
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 - The language server now provides hover, autocomplete and goto definition
   for constant definitions.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- The "generate function" code action can now choose better names based on the
+  labels and variables used. For example if I write the following code:
+
+  ```gleam
+  pub fn main() -> List(Int) {
+    let list = [1, 2, 3]
+    let number = 1
+    remove(each: number, in: list)
+  //^^^^ This function doesn't exist yet!
+  }
+  ```
+
+  And ask the language server to generate the missing function, the generated
+  code will now look like this:
+
+  ```gleam
+  fn remove(each number: Int, in list: List(Int)) -> List(Int) {
+    todo
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Formatter
 
@@ -177,3 +203,7 @@
 - Fixed a bug where an underscore after a zero in a number would compile to
   invalid syntax on the JavaScript target.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where the "generate function" code action could generate invalid
+  code when the same variable was passed as an argument twice.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
