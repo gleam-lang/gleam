@@ -710,7 +710,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                 Statement::Expression(expression) => return self.child_expression(expression),
 
                 Statement::Assignment(assignment) => match &assignment.kind {
-                    AssignmentKind::Let | AssignmentKind::Generated => {
+                    AssignmentKind::Let => {
                         return self.child_expression(assignment.value.as_ref());
                     }
                     // We can't just return the right-hand side of a `let assert`
@@ -833,50 +833,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             return self.simple_variable_assignment(name, value);
         }
 
-        // Otherwise we need to compile the patterns
-        //
-        let (subject, subject_assignment) = pattern::assign_subject(self, value);
-        let subject = subject.to_doc();
-        // Value needs to be rendered before traversing pattern to have correctly incremented variables.
-        let value =
-            self.not_in_tail_position(Some(Ordering::Loose), |this| this.wrap_expression(value))?;
-        let mut pattern_generator = pattern::Generator::new(self);
-        pattern_generator.traverse_pattern(&subject, pattern)?;
-        let compiled = pattern_generator.take_compiled();
-
-        // If we are in tail position we can return value being assigned
-        let afterwards = match &self.scope_position {
-            Position::NotTail(_) => nil(),
-            Position::Tail => docvec![
-                line(),
-                "return ",
-                subject_assignment
-                    .clone()
-                    .map_or_else(|| value.clone(), |s| s.to_doc()),
-                ";"
-            ],
-            Position::Assign(block_variable) => docvec![
-                line(),
-                block_variable.clone(),
-                " = ",
-                subject_assignment.clone().unwrap_or_else(|| value.clone()),
-                ";"
-            ],
-        };
-
-        let compiled =
-            self.pattern_into_assignment_doc(compiled, subject, pattern.location(), kind)?;
-        // If there is a subject name given create a variable to hold it for
-        // use in patterns
-        let doc = match subject_assignment {
-            Some(name) => docvec!["let ", name, " = ", value, ";", line(), compiled],
-            None => compiled,
-        };
-
-        Ok(doc.append(afterwards).force_break())
-
         decision::let_(compiled_case, value, kind, self)
-
     }
 
     fn assert(&mut self, assert: &'a TypedAssert) -> Output<'a> {
