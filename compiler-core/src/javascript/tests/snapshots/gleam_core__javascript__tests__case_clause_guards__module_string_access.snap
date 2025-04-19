@@ -19,8 +19,8 @@ import * as $hero from "../../package/hero.mjs";
 
 export function main() {
   let name = "Tony Stark";
-  if (name === ($hero.ironman)) {
-    let n = name;
+  let n = name;
+  if (n === ($hero.ironman)) {
     return true;
   } else {
     return false;

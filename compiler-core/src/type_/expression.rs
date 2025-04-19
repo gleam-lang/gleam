@@ -1245,7 +1245,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         Ok(TypedExpr::BitArray {
             location,
             segments,
-            type_: bits(),
+            type_: bit_array(),
         })
     }
 
@@ -1342,14 +1342,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 {
                     let mut using_unaligned_bit_array = false;
 
-                    if type_ == int() {
+                    if type_.is_int() {
                         match &(**value).as_int_literal() {
                             Some(size) if size % 8 != 0 => {
                                 using_unaligned_bit_array = true;
                             }
                             _ => (),
                         }
-                    } else if type_ == bits() {
+                    } else if type_.is_bit_array() {
                         using_unaligned_bit_array = true;
                     }
 
@@ -1554,6 +1554,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             kind,
             annotation,
             location,
+            is_generated,
+            compiled_case: _,
         } = assignment;
         let value_location = value.location();
         let value = match self.in_new_scope(|value_typer| value_typer.infer(*value)) {
@@ -1611,54 +1613,72 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // The exhaustiveness checker expects patterns to be valid and to type check;
         // if they are invalid, it will crash. Therefore, if any errors were found
         // when type checking the pattern, we don't perform the exhaustiveness check.
-        if pattern_typechecked_successfully {
-            // Do not perform exhaustiveness checking if user explicitly used `let assert ... = ...`.
-            let (output, exhaustiveness_check) =
-                self.check_let_exhaustiveness(location, value.type_(), &pattern);
-            match (&kind, exhaustiveness_check) {
-                // The pattern is exhaustive in a let assignment, there's no problem here.
-                (AssignmentKind::Let | AssignmentKind::Generated, Ok(_)) => {}
+        if !pattern_typechecked_successfully {
+            return Assignment {
+                location,
+                annotation,
+                kind,
+                compiled_case: CompiledCase::failure(),
+                is_generated,
+                pattern,
+                value: Box::new(value),
+            };
+        }
 
-                // If the pattern is not exhaustive and we're not asserting we want to
-                // report the error!
-                (AssignmentKind::Let | AssignmentKind::Generated, Err(e)) => {
-                    self.problems.error(e);
-                }
+        let (output, not_exhaustive_error) =
+            self.check_let_exhaustiveness(location, value.type_(), &pattern);
 
-                // If we're asserting but the pattern already covers all cases then the
-                // `assert` is redundant and can be safely removed.
-                (AssignmentKind::Assert { location, .. }, Ok(_)) => {
-                    self.problems.warning(Warning::RedundantAssertAssignment {
-                        location: *location,
-                    })
-                }
+        match (&kind, not_exhaustive_error) {
+            // The pattern is exhaustive in a let assignment, there's no problem here.
+            (AssignmentKind::Let, Ok(_)) => {}
 
-                // Otherwise, if the pattern is never reachable (through variant inference),
-                // we can warn the user about this.
-                (AssignmentKind::Assert { .. }, Err(_)) => {
-                    // There is only one pattern to match, so it is index 0
-                    match output.is_reachable(0) {
-                        Reachability::Unreachable(
-                            UnreachableCaseClauseReason::ImpossibleVariant,
-                        ) => self
-                            .problems
+            // If the pattern is not exhaustive and we're not asserting we want to
+            // report the error!
+            (AssignmentKind::Let, Err(e)) => {
+                self.problems.error(e);
+            }
+
+            // If we're asserting but the pattern already covers all cases then the
+            // `assert` is redundant and can be safely removed.
+            (AssignmentKind::Assert { location, .. }, Ok(_)) => {
+                self.problems.warning(Warning::RedundantAssertAssignment {
+                    location: *location,
+                })
+            }
+
+            // Otherwise, if the pattern is never reachable (through variant inference),
+            // we can warn the user about this.
+            (AssignmentKind::Assert { .. }, Err(_)) => {
+                // There is only one pattern to match, so it is index 0
+                match output.is_reachable(0) {
+                    Reachability::Unreachable(UnreachableCaseClauseReason::ImpossibleVariant) => {
+                        self.problems
                             .warning(Warning::AssertAssignmentOnInferredVariant {
                                 location: pattern.location(),
-                            }),
-                        // A duplicate pattern warning should not happen, since there is only one pattern.
-                        Reachability::Reachable
-                        | Reachability::Unreachable(
-                            UnreachableCaseClauseReason::DuplicatePattern,
-                        ) => {}
+                            })
                     }
+                    // A duplicate pattern warning should not happen, since there is only one pattern.
+                    Reachability::Reachable
+                    | Reachability::Unreachable(UnreachableCaseClauseReason::DuplicatePattern) => {}
                 }
             }
         }
+
+        // If the pattern is a let assert we want to include the compiled case
+        // we got from the analysis so that it can be used for code generation!
+        let kind = match kind {
+            AssignmentKind::Let => kind,
+            AssignmentKind::Assert {
+                location, message, ..
+            } => AssignmentKind::Assert { location, message },
+        };
 
         Assignment {
             location,
             annotation,
             kind,
+            compiled_case: output.compiled_case,
+            is_generated,
             pattern,
             value: Box::new(value),
         }
@@ -1670,7 +1690,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> AssignmentKind<TypedExpr> {
         match kind {
             AssignmentKind::Let => AssignmentKind::Let,
-            AssignmentKind::Generated => AssignmentKind::Generated,
             AssignmentKind::Assert { location, message } => {
                 let message = match message {
                     Some(message) => {
@@ -1736,10 +1755,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 return TypedExpr::Case {
                     location,
                     type_: return_type,
-                    compiled_case: CompiledCase {
-                        tree: exhaustiveness::Decision::Fail,
-                        subject_variables: vec![],
-                    },
+                    compiled_case: CompiledCase::failure(),
                     subjects: typed_subjects,
                     clauses: Vec::new(),
                 };
@@ -2775,7 +2791,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 origin: VariableOrigin::Generated,
             },
             annotation: None,
-            kind: AssignmentKind::Generated,
+            is_generated: true,
+            compiled_case: CompiledCase::failure(),
+            kind: AssignmentKind::Let,
             value: Box::new(record),
         };
 
@@ -4180,6 +4198,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         } else {
             Ok(())
         };
+
         (output, result)
     }
 
@@ -4484,7 +4503,9 @@ impl UseAssignments {
                         location,
                         pattern,
                         annotation,
-                        kind: AssignmentKind::Generated,
+                        is_generated: true,
+                        compiled_case: CompiledCase::failure(),
+                        kind: AssignmentKind::Let,
                         value: Box::new(UntypedExpr::Var { location, name }),
                     };
                     assignments

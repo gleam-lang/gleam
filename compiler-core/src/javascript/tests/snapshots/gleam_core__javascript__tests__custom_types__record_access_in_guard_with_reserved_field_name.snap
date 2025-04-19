@@ -30,7 +30,7 @@ export class Thing extends $CustomType {
 export function main() {
   let a = new Thing(undefined);
   let $ = undefined;
-  if (!$ && (a.constructor$ === undefined)) {
+  if (a.constructor$ === undefined) {
     return a.constructor$;
   } else {
     return undefined;

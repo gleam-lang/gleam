@@ -19,8 +19,8 @@ import { isEqual } from "../gleam.mjs";
 function go(x, y) {
   let z = false;
   let $ = true;
-  if (isEqual([$, z], [true, false])) {
-    let x$1 = $;
+  let x$1 = $;
+  if (isEqual([x$1, z], [true, false])) {
     return x$1;
   } else {
     return false;

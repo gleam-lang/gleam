@@ -178,7 +178,7 @@ pub fn named(
     })
 }
 
-pub fn bits() -> Arc<Type> {
+pub fn bit_array() -> Arc<Type> {
     Arc::new(Type::Named {
         args: vec![],
         publicity: Publicity::Public,
@@ -254,7 +254,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                 let v = TypeConstructor {
                     origin: Default::default(),
                     parameters: vec![],
-                    type_: bits(),
+                    type_: bit_array(),
                     module: PRELUDE_MODULE_NAME.into(),
                     publicity: Publicity::Public,
                     deprecation: NotDeprecated,

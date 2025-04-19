@@ -77,7 +77,7 @@ impl TypedConstant {
             Constant::Int { .. } => type_::int(),
             Constant::Float { .. } => type_::float(),
             Constant::String { .. } | Constant::StringConcatenation { .. } => type_::string(),
-            Constant::BitArray { .. } => type_::bits(),
+            Constant::BitArray { .. } => type_::bit_array(),
             Constant::Tuple { elements, .. } => {
                 type_::tuple(elements.iter().map(|element| element.type_()).collect())
             }
@@ -85,6 +85,42 @@ impl TypedConstant {
             | Constant::Record { type_, .. }
             | Constant::Var { type_, .. }
             | Constant::Invalid { type_, .. } => type_.clone(),
+        }
+    }
+
+    pub(crate) fn referenced_variables(&self) -> HashSet<&EcoString> {
+        match self {
+            Constant::Var { name, .. } => hashset![name],
+
+            Constant::Invalid { .. }
+            | Constant::Int { .. }
+            | Constant::Float { .. }
+            | Constant::String { .. } => hashset![],
+
+            Constant::List { elements, .. } | Constant::Tuple { elements, .. } => elements
+                .iter()
+                .map(|element| element.referenced_variables())
+                .fold(hashset![], HashSet::union),
+
+            Constant::Record { args, .. } => args
+                .iter()
+                .map(|arg| arg.value.referenced_variables())
+                .fold(hashset![], HashSet::union),
+
+            Constant::BitArray { segments, .. } => segments
+                .iter()
+                .map(|segment| {
+                    segment
+                        .options
+                        .iter()
+                        .map(|option| option.referenced_variables())
+                        .fold(segment.value.referenced_variables(), HashSet::union)
+                })
+                .fold(hashset![], HashSet::union),
+
+            Constant::StringConcatenation { left, right, .. } => left
+                .referenced_variables()
+                .union(right.referenced_variables()),
         }
     }
 }

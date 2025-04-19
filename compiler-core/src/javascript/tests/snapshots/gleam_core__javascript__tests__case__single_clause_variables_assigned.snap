@@ -18,11 +18,9 @@ export function main() {
   let text = "first defined";
   let _block;
   let $ = "defined again";
-  {
-    let text$1 = $;
-    _block = undefined;
-  }
+  let text$1 = $;
+  _block = undefined;
   let other = _block;
-  let text$1 = "a third time";
-  return text$1;
+  let text$2 = "a third time";
+  return text$2;
 }

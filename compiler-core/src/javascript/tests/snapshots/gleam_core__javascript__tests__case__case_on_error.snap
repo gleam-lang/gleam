@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\nfn a_result() { Error(1) }\n\npub fn main() {\n  case a_result() {\n    Error(_) -> 1\n    _ -> 2\n  }\n}"
+---
+----- SOURCE CODE
+
+fn a_result() { Error(1) }
+
+pub fn main() {
+  case a_result() {
+    Error(_) -> 1
+    _ -> 2
+  }
+}
+
+----- COMPILED JAVASCRIPT
+import { Error } from "../gleam.mjs";
+
+function a_result() {
+  return new Error(1);
+}
+
+export function main() {
+  let $ = a_result();
+  if (!$.isOk()) {
+    return 1;
+  } else {
+    return 2;
+  }
+}

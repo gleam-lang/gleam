@@ -23,12 +23,16 @@ import * as $other from "../other.mjs";
 import { Two } from "../other.mjs";
 
 export function main(x) {
-  if (x instanceof Two && x.a === 1) {
+  let $ = x.a;
+  if ($ === 1) {
     return 1;
-  } else if (x instanceof $other.Two && x.b === 2) {
-    let c = x.c;
-    return c;
   } else {
-    return 3;
+    let $1 = x.b;
+    if ($1 === 2) {
+      let c = x.c;
+      return c;
+    } else {
+      return 3;
+    }
   }
 }
