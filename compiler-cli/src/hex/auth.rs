@@ -1,7 +1,8 @@
 use crate::{cli, fs::ConsoleWarningEmitter, http::HttpClient};
 use gleam_core::{
-    Error, Result, Warning, encryption, hex, paths::global_hexpm_credentials_path,
-    warning::WarningEmitter,
+    Error, Result, Warning, encryption, hex,
+    paths::global_hexpm_credentials_path,
+    warning::{DeprecatedEnvironmentVariable, WarningEmitter},
 };
 use std::{rc::Rc, time::SystemTime};
 
@@ -162,10 +163,7 @@ fn ask_local_password(warnings: &mut Vec<Warning>) -> std::result::Result<String
     std::env::var(PASS_ENV_NAME)
         .inspect(|_| {
             warnings.push(Warning::DeprecatedEnvironmentVariable {
-                name: PASS_ENV_NAME.into(),
-                message: Some(format!(
-                    "Use the `{API_ENV_NAME}` environment variable instead."
-                )),
+                variable: DeprecatedEnvironmentVariable::HexpmPass,
             })
         })
         .or_else(|_| cli::ask_password(LOCAL_PASS_PROMPT))
@@ -175,10 +173,7 @@ fn ask_password(warnings: &mut Vec<Warning>) -> std::result::Result<String, Erro
     std::env::var(PASS_ENV_NAME)
         .inspect(|_| {
             warnings.push(Warning::DeprecatedEnvironmentVariable {
-                name: PASS_ENV_NAME.into(),
-                message: Some(format!(
-                    "Use the `{API_ENV_NAME}` environment variable instead."
-                )),
+                variable: DeprecatedEnvironmentVariable::HexpmPass,
             })
         })
         .or_else(|_| cli::ask_password(PASS_PROMPT))
@@ -188,10 +183,7 @@ fn ask_username(warnings: &mut Vec<Warning>) -> std::result::Result<String, Erro
     std::env::var(USER_ENV_NAME)
         .inspect(|_| {
             warnings.push(Warning::DeprecatedEnvironmentVariable {
-                name: USER_ENV_NAME.into(),
-                message: Some(format!(
-                    "Use the `{API_ENV_NAME}` environment variable instead."
-                )),
+                variable: DeprecatedEnvironmentVariable::HexpmUser,
             })
         })
         .or_else(|_| cli::ask(USER_PROMPT))
