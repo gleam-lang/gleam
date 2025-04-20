@@ -2115,3 +2115,19 @@ pub fn main() {
         Position::new(4, 21)
     );
 }
+
+#[test]
+fn no_label_completions_in_nested_expression() {
+    // Since we are completing inside a list, labels are no longer available
+    let code = "
+pub type Wibble {
+  Wibble(wibble: Int, wobble: Float)
+}
+
+pub fn main() {
+  Wibble([w])
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(6, 11));
+}

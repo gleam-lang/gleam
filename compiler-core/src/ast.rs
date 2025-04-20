@@ -1416,7 +1416,10 @@ impl CallArg<TypedExpr> {
             //
             _ => match self.value.find_node(byte_index) {
                 Some(Located::Expression { expression, .. })
-                    if expression.location() == self.value.location() && self.label.is_none() =>
+                // This is only possibly a label if we are at the end of the expression
+                // (so not in the middle like `[abc|]`) and if this argument doesn't
+                // already have a label.
+                    if byte_index == self.value.location().end && self.label.is_none() =>
                 {
                     Some(Located::Expression {
                         expression,
