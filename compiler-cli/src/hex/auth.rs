@@ -163,6 +163,9 @@ fn ask_local_password(warnings: &mut Vec<Warning>) -> std::result::Result<String
         .inspect(|_| {
             warnings.push(Warning::DeprecatedEnvironmentVariable {
                 name: PASS_ENV_NAME.into(),
+                message: Some(format!(
+                    "Use the `{API_ENV_NAME}` environment variable instead."
+                )),
             })
         })
         .or_else(|_| cli::ask_password(LOCAL_PASS_PROMPT))
@@ -173,6 +176,9 @@ fn ask_password(warnings: &mut Vec<Warning>) -> std::result::Result<String, Erro
         .inspect(|_| {
             warnings.push(Warning::DeprecatedEnvironmentVariable {
                 name: PASS_ENV_NAME.into(),
+                message: Some(format!(
+                    "Use the `{API_ENV_NAME}` environment variable instead."
+                )),
             })
         })
         .or_else(|_| cli::ask_password(PASS_PROMPT))
@@ -183,6 +189,9 @@ fn ask_username(warnings: &mut Vec<Warning>) -> std::result::Result<String, Erro
         .inspect(|_| {
             warnings.push(Warning::DeprecatedEnvironmentVariable {
                 name: USER_ENV_NAME.into(),
+                message: Some(format!(
+                    "Use the `{API_ENV_NAME}` environment variable instead."
+                )),
             })
         })
         .or_else(|_| cli::ask(USER_PROMPT))

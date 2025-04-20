@@ -165,6 +165,7 @@ pub enum Warning {
 
     DeprecatedEnvironmentVariable {
         name: String,
+        message: Option<String>,
     },
 }
 
@@ -1174,13 +1175,22 @@ information.",
                 },
             },
 
-            Warning::DeprecatedEnvironmentVariable { name } => Diagnostic {
-                title: "Use of deprecated environment variable".into(),
-                text: wrap(&format!("The environment variable `{name}` is deprecated.")),
-                hint: None,
-                level: diagnostic::Level::Warning,
-                location: None,
-            },
+            Warning::DeprecatedEnvironmentVariable { name, message } => {
+                let text = if let Some(message) = message {
+                    wrap(&format!(
+                        "The environment variable `{name}` is deprecated.\n\n{message}"
+                    ))
+                } else {
+                    wrap(&format!("The environment variable `{name}` is deprecated."))
+                };
+                Diagnostic {
+                    title: "Use of deprecated environment variable".into(),
+                    text,
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: None,
+                }
+            }
         }
     }
 
