@@ -3349,3 +3349,80 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn function_is_pure_on_js_if_external_on_erlang() {
+    assert_js_warning!(
+        r#"
+@external(erlang, "maths", "add")
+fn add(a: Int, b: Int) -> Int { a + b }
+
+pub fn main() {
+  add(1, 2)
+  Nil
+}
+"#
+    );
+}
+
+#[test]
+fn function_is_pure_on_erlang_if_external_on_js() {
+    assert_warning!(
+        r#"
+@external(javascript, "./maths.mjs", "add")
+fn add(a: Int, b: Int) -> Int { a + b }
+
+pub fn main() {
+  add(1, 2)
+  Nil
+}
+"#
+    );
+}
+
+#[test]
+fn pure_standard_library_function() {
+    assert_warning!(
+        (
+            "gleam/dict",
+            r#"
+pub type Dict(key, value)
+
+pub fn new() -> Dict(a, b) { panic }
+
+@external(erlang, "map", "insert")
+pub fn insert(dict: Dict(key, value), key: key, value: value) -> Dict(key, value)
+"#
+        ),
+        "
+import gleam/dict
+
+pub fn main() {
+  dict.insert(dict.new(), 1, 2)
+  Nil
+}
+"
+    );
+}
+
+#[test]
+fn impure_standard_library_function() {
+    assert_no_warnings!(
+        (
+            "gleam_stdlib",
+            "gleam/io",
+            r#"
+@external(erlang, "io", "print")
+pub fn println(message: String) -> Nil
+"#
+        ),
+        r#"
+import gleam/io
+
+pub fn main() {
+  io.println("Hello, world!")
+  Nil
+}
+"#
+    );
+}
