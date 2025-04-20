@@ -2038,3 +2038,80 @@ pub fn some_function() { todo }
         Position::new(13, 28)
     );
 }
+
+#[test]
+fn labelled_arguments() {
+    let code = "
+pub type Wibble {
+  Wibble(wibble: Int, wobble: Float)
+}
+
+pub fn main() {
+  Wibble(w)
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(6, 10));
+}
+
+#[test]
+fn labelled_arguments_with_existing_label() {
+    // This should only suggest the `wobble:` label
+    let code = "
+pub type Wibble {
+  Wibble(wibble: Int, wobble: Float)
+}
+
+pub fn main() {
+  Wibble(wibble: 10, w)
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(6, 22));
+}
+
+#[test]
+fn labelled_arguments_after_label() {
+    // This should not suggest any labels, as `wibble: wibble:` is not valid syntax.
+    let code = "
+pub type Wibble {
+  Wibble(wibble: Int, wobble: Float)
+}
+
+pub fn main() {
+  Wibble(wibble: w)
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(6, 18));
+}
+
+#[test]
+fn labelled_arguments_function_call() {
+    let code = "
+pub fn divide(x: Int, by y: Int) { x / y }
+
+pub fn main() {
+  divide(10, b)
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(4, 14));
+}
+
+#[test]
+fn labelled_arguments_from_different_module() {
+    let code = "
+import wibble
+
+pub fn main() {
+  wibble.divide(10, b)
+}
+";
+
+    assert_completion!(
+        TestProject::for_source(code)
+            .add_hex_module("wibble", "pub fn divide(x: Int, by y: Int) { x / y }"),
+        Position::new(4, 21)
+    );
+}

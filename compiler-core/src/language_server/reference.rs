@@ -46,19 +46,23 @@ pub fn reference_for_ast_node(
     current_module: &EcoString,
 ) -> Option<Referenced> {
     match found {
-        Located::Expression(TypedExpr::Var {
-            constructor:
-                ValueConstructor {
-                    variant:
-                        ValueConstructorVariant::LocalVariable {
-                            location: definition_location,
-                            origin,
+        Located::Expression {
+            expression:
+                TypedExpr::Var {
+                    constructor:
+                        ValueConstructor {
+                            variant:
+                                ValueConstructorVariant::LocalVariable {
+                                    location: definition_location,
+                                    origin,
+                                },
+                            ..
                         },
+                    location,
                     ..
                 },
-            location,
             ..
-        }) => Some(Referenced::LocalVariable {
+        } => Some(Referenced::LocalVariable {
             definition_location: *definition_location,
             location: *location,
             origin: Some(origin.clone()),
@@ -104,18 +108,22 @@ pub fn reference_for_ast_node(
             }),
             ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => None,
         },
-        Located::Expression(TypedExpr::Var {
-            constructor:
-                ValueConstructor {
-                    variant:
-                        ValueConstructorVariant::ModuleConstant { module, .. }
-                        | ValueConstructorVariant::ModuleFn { module, .. },
+        Located::Expression {
+            expression:
+                TypedExpr::Var {
+                    constructor:
+                        ValueConstructor {
+                            variant:
+                                ValueConstructorVariant::ModuleConstant { module, .. }
+                                | ValueConstructorVariant::ModuleFn { module, .. },
+                            ..
+                        },
+                    name,
+                    location,
                     ..
                 },
-            name,
-            location,
             ..
-        }) => Some(Referenced::ModuleValue {
+        } => Some(Referenced::ModuleValue {
             module: module.clone(),
             name: name.clone(),
             location: *location,
@@ -123,14 +131,19 @@ pub fn reference_for_ast_node(
             target_kind: RenameTarget::Unqualified,
         }),
 
-        Located::Expression(TypedExpr::ModuleSelect {
-            module_name,
-            label,
-            constructor: ModuleValueConstructor::Fn { .. } | ModuleValueConstructor::Constant { .. },
-            location,
-            field_start,
+        Located::Expression {
+            expression:
+                TypedExpr::ModuleSelect {
+                    module_name,
+                    label,
+                    constructor:
+                        ModuleValueConstructor::Fn { .. } | ModuleValueConstructor::Constant { .. },
+                    location,
+                    field_start,
+                    ..
+                },
             ..
-        }) => Some(Referenced::ModuleValue {
+        } => Some(Referenced::ModuleValue {
             module: module_name.clone(),
             name: label.clone(),
 
@@ -155,29 +168,37 @@ pub fn reference_for_ast_node(
             name_kind: Named::Function,
             target_kind: RenameTarget::Definition,
         }),
-        Located::Expression(TypedExpr::Var {
-            constructor:
-                ValueConstructor {
-                    variant: ValueConstructorVariant::Record { module, name, .. },
+        Located::Expression {
+            expression:
+                TypedExpr::Var {
+                    constructor:
+                        ValueConstructor {
+                            variant: ValueConstructorVariant::Record { module, name, .. },
+                            ..
+                        },
+                    location,
                     ..
                 },
-            location,
             ..
-        }) => Some(Referenced::ModuleValue {
+        } => Some(Referenced::ModuleValue {
             module: module.clone(),
             name: name.clone(),
             location: *location,
             name_kind: Named::CustomTypeVariant,
             target_kind: RenameTarget::Unqualified,
         }),
-        Located::Expression(TypedExpr::ModuleSelect {
-            module_name,
-            label,
-            constructor: ModuleValueConstructor::Record { .. },
-            location,
-            field_start,
+        Located::Expression {
+            expression:
+                TypedExpr::ModuleSelect {
+                    module_name,
+                    label,
+                    constructor: ModuleValueConstructor::Record { .. },
+                    location,
+                    field_start,
+                    ..
+                },
             ..
-        }) => Some(Referenced::ModuleValue {
+        } => Some(Referenced::ModuleValue {
             module: module_name.clone(),
             name: label.clone(),
             location: SrcSpan::new(*field_start, location.end),

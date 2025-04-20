@@ -5,7 +5,9 @@ use crate::{
         self, CustomType, Definition, DefinitionLocation, ModuleConstant, PatternUnusedArguments,
         SrcSpan, TypedArg, TypedConstant, TypedExpr, TypedFunction, TypedModule, TypedPattern,
     },
-    build::{Located, Module, UnqualifiedImport, type_constructor_from_modules},
+    build::{
+        ExpressionPosition, Located, Module, UnqualifiedImport, type_constructor_from_modules,
+    },
     config::PackageConfig,
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
@@ -286,20 +288,44 @@ where
                 Located::PatternSpread { .. } => None,
                 Located::Pattern(_pattern) => None,
                 // Do not show completions when typing inside a string.
-                Located::Expression(TypedExpr::String { .. }) => None,
-                Located::Expression(TypedExpr::Call { fun, args, .. }) => {
+                Located::Expression {
+                    expression: TypedExpr::String { .. },
+                    ..
+                } => None,
+                Located::Expression {
+                    expression: TypedExpr::Call { fun, args, .. },
+                    ..
+                } => {
                     let mut completions = vec![];
                     completions.append(&mut completer.completion_values());
                     completions.append(&mut completer.completion_labels(fun, args));
                     Some(completions)
                 }
-                Located::Expression(TypedExpr::RecordAccess { record, .. }) => {
+                Located::Expression {
+                    expression: TypedExpr::RecordAccess { record, .. },
+                    ..
+                } => {
                     let mut completions = vec![];
                     completions.append(&mut completer.completion_values());
                     completions.append(&mut completer.completion_field_accessors(record.type_()));
                     Some(completions)
                 }
-                Located::Statement(_) | Located::Expression(_) => {
+                Located::Expression {
+                    position:
+                        ExpressionPosition::ArgumentOrLabel {
+                            called_function,
+                            function_arguments,
+                        },
+                    ..
+                } => {
+                    let mut completions = vec![];
+                    completions.append(&mut completer.completion_values());
+                    completions.append(
+                        &mut completer.completion_labels(called_function, function_arguments),
+                    );
+                    Some(completions)
+                }
+                Located::Statement(_) | Located::Expression { .. } => {
                     Some(completer.completion_values())
                 }
                 Located::ModuleStatement(Definition::Function(_)) => {
@@ -913,7 +939,7 @@ Unused labelled fields:
                         range,
                     })
                 }
-                Located::Expression(expression) => Some(hover_for_expression(
+                Located::Expression { expression, .. } => Some(hover_for_expression(
                     expression,
                     lines,
                     module,
@@ -953,8 +979,8 @@ Unused labelled fields:
     ) -> Response<Option<SignatureHelp>> {
         self.respond(
             |this| match this.node_at_position(&params.text_document_position_params) {
-                Some((_lines, Located::Expression(expr))) => {
-                    Ok(signature_help::for_expression(expr))
+                Some((_lines, Located::Expression { expression, .. })) => {
+                    Ok(signature_help::for_expression(expression))
                 }
                 Some((_lines, _located)) => Ok(None),
                 None => Ok(None),
