@@ -207,3 +207,7 @@
 - Fixed a bug where the "generate function" code action could generate invalid
   code when the same variable was passed as an argument twice.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where replacing a Hex dependency with a Git dependency of the
+  same name would cause the build tool to fail.
+  ([Surya Rose](https://github.com/GearsDatapacks))

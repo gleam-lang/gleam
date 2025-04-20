@@ -927,6 +927,15 @@ fn download_git_package(
     project_paths: &ProjectPaths,
 ) -> Result<EcoString> {
     let package_path = project_paths.build_packages_package(package_name);
+
+    // If the package path exists but is not inside a git work tree, we need to
+    // remove the directory because running `git init` in a non-empty directory
+    // followed by `git checkout ...` is an error. See
+    // https://github.com/gleam-lang/gleam/issues/4488 for details.
+    if !fs::is_inside_git_work_tree(&package_path).unwrap_or(false) {
+        fs::delete_directory(&package_path)?;
+    }
+
     fs::mkdir(&package_path)?;
 
     let _ = execute_command(Command::new("git").arg("init").current_dir(&package_path))?;
