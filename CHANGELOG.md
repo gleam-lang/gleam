@@ -357,3 +357,7 @@
   array pattern in a `let assert` assignment would generate invalid code on the
   Erlang target.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed instances where the "Extract variable" code action would produce invalid
+  code, most noticeable in code inside `case` clauses and `use` expressions.
+  ([Matias Carlander](https://github.com/matiascr))
