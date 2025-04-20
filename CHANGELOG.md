@@ -88,6 +88,10 @@
   when deployed.
   ([Christopher De Vries](https://github.com/devries))
 
+- The build tool now provides additional information when printing warnings for
+  deprecated environment variables.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Language server
 
 - The code action to add missing labels to function now also works in patterns:
