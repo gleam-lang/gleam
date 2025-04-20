@@ -4,6 +4,7 @@ use type_::{FieldMap, TypedCallArg};
 
 use super::*;
 use crate::{
+    build::ExpressionPosition,
     exhaustiveness::CompiledCase,
     type_::{HasType, Type, ValueConstructorVariant, bool},
 };
@@ -338,7 +339,7 @@ impl TypedExpr {
 
             Self::Call { fun, args, .. } => args
                 .iter()
-                .find_map(|arg| arg.find_node(byte_index))
+                .find_map(|arg| arg.find_node(byte_index, fun, args))
                 .or_else(|| fun.find_node(byte_index))
                 .or_else(|| self.self_if_contains_location(byte_index)),
 
@@ -368,10 +369,15 @@ impl TypedExpr {
                 .find_map(|arg| arg.find_node(byte_index))
                 .or_else(|| self.self_if_contains_location(byte_index)),
 
-            Self::RecordUpdate { record, args, .. } => args
+            Self::RecordUpdate {
+                record,
+                constructor,
+                args,
+                ..
+            } => args
                 .iter()
                 .filter(|arg| arg.implicit.is_none())
-                .find_map(|arg| arg.find_node(byte_index))
+                .find_map(|arg| arg.find_node(byte_index, constructor, args))
                 .or_else(|| record.find_node(byte_index))
                 .or_else(|| self.self_if_contains_location(byte_index)),
         }
@@ -936,8 +942,11 @@ impl TypedExpr {
 }
 
 impl<'a> From<&'a TypedExpr> for Located<'a> {
-    fn from(value: &'a TypedExpr) -> Self {
-        Located::Expression(value)
+    fn from(expression: &'a TypedExpr) -> Self {
+        Located::Expression {
+            expression,
+            position: ExpressionPosition::Expression,
+        }
     }
 }
 

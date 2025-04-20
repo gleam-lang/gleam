@@ -12,13 +12,14 @@ pub use self::untyped::{FunctionLiteralKind, UntypedExpr};
 pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
 use crate::analyse::Inferred;
-use crate::build::{Located, Target, module_erlang_name};
+use crate::build::{ExpressionPosition, Located, Target, module_erlang_name};
 use crate::parse::SpannedString;
 use crate::type_::error::VariableOrigin;
 use crate::type_::expression::Implementations;
 use crate::type_::printer::Names;
 use crate::type_::{
-    self, Deprecation, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor,
+    self, Deprecation, ModuleValueConstructor, PatternConstructor, Type, TypedCallArg,
+    ValueConstructor,
 };
 use std::sync::Arc;
 
@@ -1386,7 +1387,12 @@ impl<A> CallArg<A> {
 }
 
 impl CallArg<TypedExpr> {
-    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+    pub fn find_node<'a>(
+        &'a self,
+        byte_index: u32,
+        called_function: &'a TypedExpr,
+        function_arguments: &'a [TypedCallArg],
+    ) -> Option<Located<'a>> {
         match (self.implicit, &self.value) {
             // If a call argument is the implicit use callback then we don't
             // want to look at its arguments and body but we don't want to
@@ -1409,8 +1415,19 @@ impl CallArg<TypedExpr> {
             // In all other cases we're happy with the default behaviour.
             //
             _ => match self.value.find_node(byte_index) {
+                Some(Located::Expression { expression, .. })
+                    if expression.location() == self.value.location() && self.label.is_none() =>
+                {
+                    Some(Located::Expression {
+                        expression,
+                        position: ExpressionPosition::ArgumentOrLabel {
+                            called_function,
+                            function_arguments,
+                        },
+                    })
+                }
                 Some(located) => Some(located),
-                _ => {
+                None => {
                     if self.location.contains(byte_index) && self.label.is_some() {
                         Some(Located::Label(self.location, self.value.type_()))
                     } else {

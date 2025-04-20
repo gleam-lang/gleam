@@ -21,7 +21,7 @@ use crate::ast::{
     TypedDefinition, TypedExpr, TypedFunction, TypedPattern, TypedRecordConstructor,
     TypedStatement,
 };
-use crate::type_::Type;
+use crate::type_::{Type, TypedCallArg};
 use crate::{
     ast::{Definition, SrcSpan, TypedModule},
     config::{self, PackageConfig},
@@ -334,6 +334,18 @@ pub struct UnqualifiedImport<'a> {
     pub location: &'a SrcSpan,
 }
 
+/// The position of a located expression. Used to determine extra context,
+/// such as whether to provide label completions if the expression is in
+/// argument position.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ExpressionPosition<'a> {
+    Expression,
+    ArgumentOrLabel {
+        called_function: &'a TypedExpr,
+        function_arguments: &'a [TypedCallArg],
+    },
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Located<'a> {
     Pattern(&'a TypedPattern),
@@ -342,7 +354,10 @@ pub enum Located<'a> {
         pattern: &'a TypedPattern,
     },
     Statement(&'a TypedStatement),
-    Expression(&'a TypedExpr),
+    Expression {
+        expression: &'a TypedExpr,
+        position: ExpressionPosition<'a>,
+    },
     ModuleStatement(&'a TypedDefinition),
     VariantConstructorDefinition(&'a TypedRecordConstructor),
     FunctionBody(&'a TypedFunction),
@@ -383,7 +398,7 @@ impl<'a> Located<'a> {
             Self::Pattern(pattern) => pattern.definition_location(),
             Self::Statement(statement) => statement.definition_location(),
             Self::FunctionBody(statement) => None,
-            Self::Expression(expression) => expression.definition_location(),
+            Self::Expression { expression, .. } => expression.definition_location(),
             Self::ModuleStatement(Definition::Import(import)) => Some(DefinitionLocation {
                 module: Some(import.module.clone()),
                 span: SrcSpan { start: 0, end: 0 },
@@ -429,7 +444,7 @@ impl<'a> Located<'a> {
         match self {
             Located::Pattern(pattern) => Some(pattern.type_()),
             Located::Statement(statement) => Some(statement.type_()),
-            Located::Expression(typed_expr) => Some(typed_expr.type_()),
+            Located::Expression { expression, .. } => Some(expression.type_()),
             Located::Arg(arg) => Some(arg.type_.clone()),
             Located::Label(_, type_) | Located::Annotation { type_, .. } => Some(type_.clone()),
             Located::Constant(constant) => Some(constant.type_()),

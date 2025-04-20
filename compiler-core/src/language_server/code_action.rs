@@ -1025,9 +1025,12 @@ pub fn code_action_add_missing_patterns(
             return;
         }
 
-        let Some(Located::Expression(TypedExpr::Case {
-            clauses, subjects, ..
-        })) = module.find_node(location.start)
+        let Some(Located::Expression {
+            expression: TypedExpr::Case {
+                clauses, subjects, ..
+            },
+            ..
+        }) = module.find_node(location.start)
         else {
             continue;
         };
