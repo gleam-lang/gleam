@@ -923,9 +923,9 @@ can already tell which branch is going to match with this value.",
                 type_::Warning::UnusedPureFunctionCall { location } => Diagnostic {
                     title: "Unused pure function call".into(),
                     text: wrap(
-                        "Gleam is an immutable language, \
-meaning functions cannot mutate state simply by being called. This function is \
-pure, so it must be assigned to a variable to have an effect on the program.",
+                        "This expression computes a value without any side \
+effects, but then the value isn't used at all. You might way to assign it to a \
+variable, or delete the expression entirely if it not needed.",
                     ),
                     hint: None,
                     level: diagnostic::Level::Warning,

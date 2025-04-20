@@ -1,21 +1,24 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-expression: "\npub fn main() {\n    fn(a) { a + 1 }(1)\n    Nil\n}\n"
+expression: "\n@external(erlang, \"maths\", \"add\")\nfn add(a: Int, b: Int) -> Int { a + b }\n\npub fn main() {\n  add(1, 2)\n  Nil\n}\n"
 ---
 ----- SOURCE CODE
 
+@external(erlang, "maths", "add")
+fn add(a: Int, b: Int) -> Int { a + b }
+
 pub fn main() {
-    fn(a) { a + 1 }(1)
-    Nil
+  add(1, 2)
+  Nil
 }
 
 
 ----- WARNING
 warning: Unused pure function call
-  ┌─ /src/warning/wrn.gleam:3:5
+  ┌─ /src/warning/wrn.gleam:6:3
   │
-3 │     fn(a) { a + 1 }(1)
-  │     ^^^^^^^^^^^^^^^^^^ This pure function call is never used
+6 │   add(1, 2)
+  │   ^^^^^^^^^ This pure function call is never used
 
 This expression computes a value without any side effects, but then the
 value isn't used at all. You might way to assign it to a variable, or

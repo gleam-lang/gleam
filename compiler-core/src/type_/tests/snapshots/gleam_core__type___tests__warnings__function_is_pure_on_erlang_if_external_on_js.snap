@@ -1,10 +1,11 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-expression: "\nfn add(a, b) { a + b }\n\npub fn main() {\n  add(1, 2)\n  Nil\n}\n"
+expression: "\n@external(javascript, \"./maths.mjs\", \"add\")\nfn add(a: Int, b: Int) -> Int { a + b }\n\npub fn main() {\n  add(1, 2)\n  Nil\n}\n"
 ---
 ----- SOURCE CODE
 
-fn add(a, b) { a + b }
+@external(javascript, "./maths.mjs", "add")
+fn add(a: Int, b: Int) -> Int { a + b }
 
 pub fn main() {
   add(1, 2)
@@ -14,9 +15,9 @@ pub fn main() {
 
 ----- WARNING
 warning: Unused pure function call
-  ┌─ /src/warning/wrn.gleam:5:3
+  ┌─ /src/warning/wrn.gleam:6:3
   │
-5 │   add(1, 2)
+6 │   add(1, 2)
   │   ^^^^^^^^^ This pure function call is never used
 
 This expression computes a value without any side effects, but then the

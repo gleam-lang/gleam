@@ -249,12 +249,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             uses_javascript_externals: definition.has_javascript_external,
         };
 
-        let purity =
-            if implementations.uses_erlang_externals || implementations.uses_javascript_externals {
-                Purity::Impure
-            } else {
-                Purity::Pure
-            };
+        let uses_externals = match environment.target {
+            Target::Erlang => implementations.uses_erlang_externals,
+            Target::JavaScript => implementations.uses_javascript_externals,
+        };
+        let purity = if uses_externals {
+            Purity::Impure
+        } else {
+            Purity::Pure
+        };
 
         hydrator.permit_holes(true);
         Self {
