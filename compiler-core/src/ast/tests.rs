@@ -748,6 +748,15 @@ fn find_node_call() {
         type_: type_::int(),
     };
 
+    let TypedExpr::Call {
+        fun: called_function,
+        args: function_arguments,
+        ..
+    } = expr
+    else {
+        panic!("Expression was not a function call");
+    };
+
     assert_eq!(
         expr.find_node(11),
         Some(Located::Expression {
@@ -766,7 +775,10 @@ fn find_node_call() {
         expr.find_node(16),
         Some(Located::Expression {
             expression: &arg1,
-            position: ExpressionPosition::Expression
+            position: ExpressionPosition::ArgumentOrLabel {
+                called_function,
+                function_arguments
+            }
         })
     );
     assert_eq!(
@@ -787,7 +799,10 @@ fn find_node_call() {
         expr.find_node(19),
         Some(Located::Expression {
             expression: &arg2,
-            position: ExpressionPosition::Expression
+            position: ExpressionPosition::ArgumentOrLabel {
+                called_function,
+                function_arguments
+            }
         })
     );
     assert_eq!(
