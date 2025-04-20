@@ -2686,8 +2686,32 @@ where
         let mut unqualified_values = vec![];
         let mut unqualified_types = vec![];
 
-        if self.maybe_one(&Token::Dot).is_some() {
-            let _ = self.expect_one(&Token::LeftBrace)?;
+        if let Some((dot_start, dot_end)) = self.maybe_one(&Token::Dot) {
+            let _ = self.expect_one(&Token::LeftBrace).map_err(|e| {
+                // If the module does contain a '/', then it's unlikely that the user
+                // intended for the import to be pythonic, so skip this.
+                if module.contains('/') {
+                    return e;
+                }
+
+                // Catch `import gleam.io` and provide a more helpful error...
+                let ParseErrorType::UnexpectedToken {
+                    token: Token::Name { name } | Token::UpName { name },
+                    ..
+                } = &e.error
+                else {
+                    return e;
+                };
+
+                ParseError {
+                    error: ParseErrorType::PythonicImport {
+                        module: module.as_str().into(),
+                        item: name.clone(),
+                    },
+                    location: SrcSpan::new(dot_start, dot_end),
+                }
+            })?;
+
             let parsed = self.parse_unqualified_imports()?;
             unqualified_types = parsed.types;
             unqualified_values = parsed.values;
