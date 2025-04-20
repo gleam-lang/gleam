@@ -163,8 +163,6 @@
   for constant definitions.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-  ([Surya Rose](https://github.com/GearsDatapacks))
-
 - The "generate function" code action can now choose better names based on the
   labels and variables used. For example if I write the following code:
 
@@ -187,6 +185,24 @@
   ```
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The language server now provides autocomplete suggestions for labels after
+  part of the label has already been typed. For example, in this code:
+
+  ```gleam
+  pub type Person {
+    Person(name: String, number: Int)
+  }
+
+  pub fn main() {
+    Person(n|)
+  }
+  ```
+
+  The language server will provide `name:` and `number:` as autocomplete
+  suggestions.
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
 
 ### Formatter
 
