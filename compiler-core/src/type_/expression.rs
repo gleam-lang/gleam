@@ -380,7 +380,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 body,
                 return_annotation,
                 ..
-            } => self.infer_fn(args, &[], body, kind, return_annotation, location),
+            } => Ok(self.infer_fn(args, &[], body, kind, return_annotation, location)),
 
             UntypedExpr::Case {
                 location,
@@ -805,7 +805,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         kind: FunctionLiteralKind,
         return_annotation: Option<TypeAst>,
         location: SrcSpan,
-    ) -> Result<TypedExpr, Error> {
+    ) -> TypedExpr {
         for Arg { names, .. } in args.iter() {
             check_argument_names(names, self.problems);
         }
@@ -814,7 +814,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         self.already_warned_for_unreachable_code = false;
         self.previous_panics = false;
 
-        let (args, body) = self.do_infer_fn(args, expected_args, body, &return_annotation)?;
+        let (args, body) = match self.do_infer_fn(args, expected_args, body, &return_annotation) {
+            Ok(result) => result,
+            Err(error) => {
+                self.problems.error(error);
+                return self.error_expr(location);
+            }
+        };
         let args_types = args.iter().map(|a| a.type_.clone()).collect();
         let type_ = fn_(args_types, body.last().type_());
 
@@ -822,14 +828,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         self.already_warned_for_unreachable_code = already_warned_for_unreachable_code;
         self.previous_panics = false;
 
-        Ok(TypedExpr::Fn {
+        TypedExpr::Fn {
             location,
             type_,
             kind,
             args,
             body,
             return_annotation,
-        })
+        }
     }
 
     fn infer_arg(
@@ -3629,20 +3635,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
         kind: CallKind,
     ) -> (TypedExpr, Vec<TypedCallArg>, Arc<Type>) {
-        let function_location = fun.location();
-        let typed_fun = match fun {
+        let fun = match fun {
             UntypedExpr::FieldAccess {
                 label,
                 container,
                 label_location,
                 location,
-            } => Ok(self.infer_field_access(
+            } => self.infer_field_access(
                 *container,
                 location,
                 label,
                 label_location,
                 FieldAccessUsage::MethodCall,
-            )),
+            ),
 
             UntypedExpr::Fn {
                 location,
@@ -3660,15 +3665,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location,
             ),
 
-            fun => self.infer_or_error(fun),
-        };
-
-        let fun = match typed_fun {
-            Ok(fun) => fun,
-            Err(function_inference_error) => {
-                self.problems.error(function_inference_error);
-                self.error_expr(function_location)
-            }
+            fun => self.infer(fun),
         };
 
         let (fun, args, type_) = self.do_infer_call_with_known_fun(fun, args, location, kind);
@@ -3683,7 +3680,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         kind: FunctionLiteralKind,
         return_annotation: Option<TypeAst>,
         location: SrcSpan,
-    ) -> Result<TypedExpr, Error> {
+    ) -> TypedExpr {
         let typed_call_args: Vec<Arc<Type>> = call_args
             .iter()
             .map(|a| {
@@ -3932,9 +3929,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         kind: ArgumentKind,
     ) -> TypedExpr {
         let type_ = collapse_links(type_);
-
-        let value_location = value.location();
-        let result = match (&*type_, value) {
+        let value = match (&*type_, value) {
             // If the argument is expected to be a function and we are passed a
             // function literal with the correct number of arguments then we
             // have special handling of this argument, passing in information
@@ -3965,36 +3960,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             ),
 
             // Otherwise just perform normal type inference.
-            (_, value) => self.infer_or_error(value),
+            (_, value) => self.infer(value),
         };
 
-        match result {
-            Err(error) => {
-                // If we couldn't infer the value, we record the error and
-                // return an invalid expression with the type we were expecting
-                // to see.
-                self.problems.error(error);
-                TypedExpr::Invalid {
-                    location: value_location,
-                    type_,
-                }
-            }
-            Ok(value) => match unify(type_.clone(), value.type_()) {
-                Ok(_) => value,
-                Err(error) => {
-                    // If we couldn't unify it, we record the error and return
-                    // an invalid expression with the type we infered for the
-                    // value.
-                    let location = value.location();
-                    let error = convert_unify_call_error(error, location, kind);
-                    self.problems.error(error);
-                    TypedExpr::Invalid {
-                        location,
-                        type_: value.type_(),
-                    }
-                }
-            },
+        if let Err(error) = unify(type_.clone(), value.type_()) {
+            self.problems
+                .error(convert_unify_call_error(error, value.location(), kind));
         }
+
+        value
     }
 
     pub fn do_infer_fn(
