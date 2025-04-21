@@ -1069,7 +1069,7 @@ fn make_wibble() -> wobble.Wibble { wobble.Wibble }
 
     assert_hover!(
         TestProject::for_source(code).add_hex_module("wibble/wobble", "pub type Wibble { Wibble }"),
-        find_position_of("-> wobble").under_char('o')
+        find_position_of("-> wobble.Wibble").under_char('i')
     );
 }
 
@@ -1131,7 +1131,7 @@ fn main(wibble: wubble.Wibble) {
 
     assert_hover!(
         TestProject::for_source(code).add_hex_module("wibble/wobble", "pub type Wibble { Wibble }"),
-        find_position_of(": wubble").under_char('e')
+        find_position_of(": wubble.Wibble").under_char('W')
     );
 }
 
@@ -1343,5 +1343,410 @@ pub fn main() {
     assert_hover!(
         TestProject::for_source(code),
         find_position_of("Int").under_char('n')
+    );
+}
+
+#[test]
+fn hover_on_pipe_with_invalid_step() {
+    assert_hover!(
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> map(wibble)
+  |> filter(fn(value) { value })
+}
+
+fn map(list: List(a), fun: fn(a) -> b) -> List(b) {}
+fn filter(list: List(a), fun: fn(a) -> Bool) -> List(a) {}
+",
+        find_position_of("[")
+    );
+}
+
+#[test]
+fn hover_on_pipe_with_invalid_step_1() {
+    assert_hover!(
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> map(wibble)
+  |> filter(fn(value) { value })
+}
+
+fn map(list: List(a), fun: fn(a) -> b) -> List(b) {}
+fn filter(list: List(a), fun: fn(a) -> Bool) -> List(a) {}
+",
+        find_position_of("1")
+    );
+}
+
+#[test]
+fn hover_on_pipe_with_invalid_step_2() {
+    assert_hover!(
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> map(wibble)
+  |> filter(fn(value) { value })
+}
+
+fn map(list: List(a), fun: fn(a) -> b) -> List(b) {}
+fn filter(list: List(a), fun: fn(a) -> Bool) -> List(a) {}
+",
+        find_position_of("map")
+    );
+}
+
+#[test]
+fn hover_on_pipe_with_invalid_step_3() {
+    assert_hover!(
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> map(wibble)
+  |> filter(fn(value) { value })
+}
+
+fn map(list: List(a), fun: fn(a) -> b) -> List(b) {}
+fn filter(list: List(a), fun: fn(a) -> Bool) -> List(a) {}
+",
+        find_position_of("wibble")
+    );
+}
+
+#[test]
+fn hover_on_pipe_with_invalid_step_4() {
+    assert_hover!(
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> map(wibble)
+  |> filter(fn(value) { value })
+}
+
+fn map(list: List(a), fun: fn(a) -> b) -> List(b) {}
+fn filter(list: List(a), fun: fn(a) -> Bool) -> List(a) {}
+",
+        find_position_of("filter")
+    );
+}
+
+#[test]
+fn hover_on_pipe_with_invalid_step_5() {
+    assert_hover!(
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> map(wibble)
+  |> filter(fn(value) { value })
+}
+
+fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
+fn filter(list: List(a), fun: fn(a) -> Bool) -> List(a) { todo }
+",
+        find_position_of("fn(value)")
+    );
+}
+
+#[test]
+fn hover_on_pipe_with_invalid_step_6() {
+    assert_hover!(
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> wibble
+  |> filter(fn(value) { value })
+}
+
+fn filter(list: List(a), fun: fn(a) -> Bool) -> List(a) { todo }
+",
+        find_position_of("wibble")
+    );
+}
+
+#[test]
+fn hover_on_pipe_with_invalid_step_8() {
+    assert_hover!(
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> wibble
+  |> filter(fn(value) { value })
+}
+
+fn filter(list: List(a), fun: fn(a) -> Bool) -> List(a) { todo }
+",
+        find_position_of("fn(value)")
+    );
+}
+
+#[test]
+fn hover_over_module_name() {
+    let src = "
+import wibble
+
+pub fn main() {
+  wibble.wibble()
+}
+";
+    assert_hover!(
+        TestProject::for_source(src).add_hex_module(
+            "wibble",
+            "
+//// This is the wibble module.
+//// Here is some documentation about it.
+//// This module does stuff
+
+pub fn wibble() {
+  todo
+}
+"
+        ),
+        find_position_of("wibble.")
+    );
+}
+
+#[test]
+fn hover_over_module_with_path() {
+    let src = "
+import wibble/wobble
+
+pub fn main() {
+  wobble.wibble()
+}
+";
+    assert_hover!(
+        TestProject::for_source(src).add_hex_module(
+            "wibble/wobble",
+            "
+//// The module documentation
+
+pub fn wibble() {
+  todo
+}
+"
+        ),
+        find_position_of("wobble.")
+    );
+}
+
+#[test]
+fn hover_over_module_name_in_annotation() {
+    let src = "
+import wibble
+
+pub fn main(w: wibble.Wibble) {
+  todo
+}
+";
+    assert_hover!(
+        TestProject::for_source(src).add_hex_module(
+            "wibble",
+            "
+//// This is the wibble module.
+//// Here is some documentation about it.
+//// This module does stuff
+
+pub type Wibble
+"
+        ),
+        find_position_of("wibble.")
+    );
+}
+
+#[test]
+fn hover_over_imported_module() {
+    let src = "
+import wibble
+";
+    assert_hover!(
+        TestProject::for_source(src).add_hex_module(
+            "wibble",
+            "
+//// This is the wibble module.
+//// Here is some documentation about it.
+//// This module does stuff
+"
+        ),
+        find_position_of("wibble")
+    );
+}
+
+#[test]
+fn no_hexdocs_link_when_hovering_over_local_module() {
+    let src = "
+import wibble
+";
+    assert_hover!(
+        TestProject::for_source(src).add_module(
+            "wibble",
+            "
+//// This is the wibble module.
+//// Here is some documentation about it.
+//// This module does stuff
+"
+        ),
+        find_position_of("wibble")
+    );
+}
+
+#[test]
+fn hover_for_constant_int() {
+    assert_hover!(
+        "
+const ten = 10
+",
+        find_position_of("10")
+    );
+}
+
+#[test]
+fn hover_for_constant_float() {
+    assert_hover!(
+        "
+const pi = 3.14
+",
+        find_position_of("3.14")
+    );
+}
+#[test]
+fn hover_for_constant_string() {
+    assert_hover!(
+        r#"
+const message = "Hello!"
+"#,
+        find_position_of("!")
+    );
+}
+
+#[test]
+fn hover_for_constant_other_constant() {
+    assert_hover!(
+        "
+const constant1 = 10
+const constant2 = constant1
+",
+        find_position_of("= constant1").under_char('s')
+    );
+}
+
+#[test]
+fn hover_for_constant_record() {
+    assert_hover!(
+        "
+type Wibble {
+  Wibble(Int)
+}
+
+const w = Wibble(10)
+",
+        find_position_of("Wibble(10)").under_char('i')
+    );
+}
+
+#[test]
+fn hover_for_constant_tuple() {
+    assert_hover!(
+        "
+const tuple = #(1, 3.5, False)
+",
+        find_position_of("#(")
+    );
+}
+
+#[test]
+fn hover_for_constant_tuple_element() {
+    assert_hover!(
+        "
+const tuple = #(1, 3.5, False)
+",
+        find_position_of("False")
+    );
+}
+
+#[test]
+fn hover_for_constant_list() {
+    assert_hover!(
+        "
+const numbers = [2, 4, 6, 8]
+",
+        find_position_of("[")
+    );
+}
+
+#[test]
+fn hover_for_constant_list_element() {
+    assert_hover!(
+        "
+const numbers = [2, 4, 6, 8]
+",
+        find_position_of("4")
+    );
+}
+
+#[test]
+fn hover_for_constant_string_concatenation() {
+    assert_hover!(
+        r#"
+const name = "Bob"
+const message = "Hello " <> name
+"#,
+        find_position_of("<>")
+    );
+}
+
+#[test]
+fn hover_for_constant_string_concatenation_side() {
+    assert_hover!(
+        r#"
+const name = "Bob"
+const message = "Hello " <> name
+"#,
+        find_position_of("<> name").under_char('n')
+    );
+}
+
+#[test]
+fn hover_for_constant_bit_array() {
+    assert_hover!(
+        "
+const bits = <<1:2, 3:4>>
+",
+        find_position_of(",")
+    );
+}
+
+#[test]
+fn hover_for_constant_bit_array_segment() {
+    assert_hover!(
+        "
+const bits = <<1:2, 3:4>>
+",
+        find_position_of("1")
+    );
+}
+
+#[test]
+fn hover_for_constant_bit_array_segment_option() {
+    assert_hover!(
+        "
+const bits = <<1:size(2), 3:4>>
+",
+        find_position_of("2")
+    );
+}
+
+#[test]
+fn hover_for_nested_constant() {
+    assert_hover!(
+        "
+type Wibble {
+  Wibble
+  Wobble(BitArray)
+}
+
+const value = #(1, 2, [Wibble, Wobble(<<1, 2, 3>>), Wibble])
+",
+        find_position_of("3")
     );
 }

@@ -4,6 +4,9 @@ mod completion;
 mod definition;
 mod document_symbols;
 mod hover;
+mod reference;
+mod rename;
+mod router;
 mod signature_help;
 
 use std::{
@@ -20,20 +23,20 @@ use itertools::Itertools;
 use lsp_types::{Position, TextDocumentIdentifier, TextDocumentPositionParams, Url};
 
 use crate::{
+    Result,
     config::PackageConfig,
     io::{
-        memory::InMemoryFileSystem, BeamCompiler, CommandExecutor, FileSystemReader,
-        FileSystemWriter, ReadDir, WrappedReader,
+        BeamCompiler, Command, CommandExecutor, FileSystemReader, FileSystemWriter, ReadDir,
+        WrappedReader, memory::InMemoryFileSystem,
     },
     language_server::{
-        engine::LanguageServerEngine, files::FileSystemProxy, progress::ProgressReporter,
-        DownloadDependencies, LockGuard, Locker, MakeLocker,
+        DownloadDependencies, LockGuard, Locker, MakeLocker, engine::LanguageServerEngine,
+        files::FileSystemProxy, progress::ProgressReporter,
     },
     line_numbers::LineNumbers,
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
     paths::ProjectPaths,
     requirement::Requirement,
-    Result,
 };
 
 pub const LSP_TEST_ROOT_PACKAGE_NAME: &str = "app";
@@ -85,6 +88,13 @@ impl LanguageServerTestIO {
     pub fn test_module(&self, name: &str, code: &str) -> Utf8PathBuf {
         let test_dir = self.paths.test_directory();
         let path = test_dir.join(name).with_extension("gleam");
+        self.module(&path, code);
+        path
+    }
+
+    pub fn dev_module(&self, name: &str, code: &str) -> Utf8PathBuf {
+        let dev_directory = self.paths.dev_directory();
+        let path = dev_directory.join(name).with_extension("gleam");
         self.module(&path, code);
         path
     }
@@ -208,14 +218,14 @@ impl DownloadDependencies for LanguageServerTestIO {
 }
 
 impl CommandExecutor for LanguageServerTestIO {
-    fn exec(
-        &self,
-        program: &str,
-        args: &[String],
-        env: &[(&str, String)],
-        cwd: Option<&Utf8Path>,
-        stdio: crate::io::Stdio,
-    ) -> Result<i32> {
+    fn exec(&self, command: Command) -> Result<i32> {
+        let Command {
+            program,
+            args,
+            env,
+            cwd,
+            stdio,
+        } = command;
         panic!("exec({program:?}, {args:?}, {env:?}, {cwd:?}, {stdio:?}) is not implemented")
     }
 }
@@ -227,7 +237,7 @@ impl BeamCompiler for LanguageServerTestIO {
         lib: &Utf8Path,
         modules: &HashSet<Utf8PathBuf>,
         stdio: crate::io::Stdio,
-    ) -> Result<()> {
+    ) -> Result<Vec<String>> {
         panic!(
             "compile_beam({:?}, {:?}, {:?}, {:?}) is not implemented",
             out, lib, modules, stdio
@@ -259,9 +269,9 @@ impl TestLocker {
 }
 
 impl Locker for TestLocker {
-    fn lock_for_build(&self) -> LockGuard {
+    fn lock_for_build(&self) -> Result<LockGuard> {
         self.record(Action::LockBuild);
-        LockGuard(Box::new(Guard(self.actions.clone())))
+        Ok(LockGuard(Box::new(Guard(self.actions.clone()))))
     }
 }
 
@@ -304,7 +314,13 @@ fn add_package_from_manifest<B>(
                 version: Range::new("1.0.0".into()),
             },
             ManifestPackageSource::Local { ref path } => Requirement::Path { path: path.into() },
-            ManifestPackageSource::Git { ref repo, .. } => Requirement::Git { git: repo.clone() },
+            ManifestPackageSource::Git {
+                ref repo,
+                ref commit,
+            } => Requirement::Git {
+                git: repo.clone(),
+                ref_: commit.clone(),
+            },
         },
     );
     write_toml_from_manifest(engine, toml_path, package);
@@ -323,7 +339,13 @@ fn add_dev_package_from_manifest<B>(
                 version: Range::new("1.0.0".into()),
             },
             ManifestPackageSource::Local { ref path } => Requirement::Path { path: path.into() },
-            ManifestPackageSource::Git { ref repo, .. } => Requirement::Git { git: repo.clone() },
+            ManifestPackageSource::Git {
+                ref repo,
+                ref commit,
+            } => Requirement::Git {
+                git: repo.clone(),
+                ref_: commit.clone(),
+            },
         },
     );
     write_toml_from_manifest(engine, toml_path, package);
@@ -380,9 +402,11 @@ struct TestProject<'a> {
     root_package_modules: Vec<(&'a str, &'a str)>,
     dependency_modules: Vec<(&'a str, &'a str)>,
     test_modules: Vec<(&'a str, &'a str)>,
+    dev_modules: Vec<(&'a str, &'a str)>,
     hex_modules: Vec<(&'a str, &'a str)>,
     dev_hex_modules: Vec<(&'a str, &'a str)>,
     indirect_hex_modules: Vec<(&'a str, &'a str)>,
+    package_modules: HashMap<&'a str, Vec<(&'a str, &'a str)>>,
 }
 
 impl<'a> TestProject<'a> {
@@ -392,20 +416,27 @@ impl<'a> TestProject<'a> {
             root_package_modules: vec![],
             dependency_modules: vec![],
             test_modules: vec![],
+            dev_modules: vec![],
             hex_modules: vec![],
             dev_hex_modules: vec![],
             indirect_hex_modules: vec![],
+            package_modules: HashMap::new(),
         }
     }
 
+    pub fn module_name_from_url(&self, url: &Url) -> Option<String> {
+        Some(
+            url.path_segments()?
+                .skip_while(|segment| *segment != "src")
+                .skip(1)
+                .join("/")
+                .trim_end_matches(".gleam")
+                .into(),
+        )
+    }
+
     pub fn src_from_module_url(&self, url: &Url) -> Option<&str> {
-        let module_name: EcoString = url
-            .path_segments()?
-            .skip_while(|segment| *segment != "src")
-            .skip(1)
-            .join("/")
-            .trim_end_matches(".gleam")
-            .into();
+        let module_name: EcoString = self.module_name_from_url(url)?.into();
 
         if module_name == "app" {
             return Some(self.src);
@@ -441,6 +472,11 @@ impl<'a> TestProject<'a> {
         self
     }
 
+    pub fn add_dev_module(mut self, name: &'a str, src: &'a str) -> Self {
+        self.dev_modules.push((name, src));
+        self
+    }
+
     pub fn add_hex_module(mut self, name: &'a str, src: &'a str) -> Self {
         self.hex_modules.push((name, src));
         self
@@ -453,6 +489,14 @@ impl<'a> TestProject<'a> {
 
     pub fn add_indirect_hex_module(mut self, name: &'a str, src: &'a str) -> Self {
         self.indirect_hex_modules.push((name, src));
+        self
+    }
+
+    pub fn add_package_module(mut self, package: &'a str, name: &'a str, src: &'a str) -> Self {
+        self.package_modules
+            .entry(package)
+            .or_default()
+            .push((name, src));
         self
     }
 
@@ -473,6 +517,13 @@ impl<'a> TestProject<'a> {
             _ = io.hex_dep_module("indirect_hex", name, code);
         });
 
+        for (package, modules) in self.package_modules.iter() {
+            io.add_hex_package(package);
+            for (module, code) in modules {
+                _ = io.hex_dep_module(package, module, code);
+            }
+        }
+
         let mut engine = setup_engine(io);
 
         // Add an external dependency and all its modules
@@ -490,6 +541,12 @@ impl<'a> TestProject<'a> {
         self.test_modules.iter().for_each(|(name, code)| {
             let _ = io.test_module(name, code);
         });
+
+        // Add all the dev modules
+        self.dev_modules.iter().for_each(|(name, code)| {
+            let _ = io.dev_module(name, code);
+        });
+
         for package in &io.manifest.packages {
             let toml_path = engine.paths.build_packages_package_config(&package.name);
             add_package_from_manifest(&mut engine, toml_path, package.clone());
@@ -556,6 +613,22 @@ impl<'a> TestProject<'a> {
         TextDocumentPositionParams::new(TextDocumentIdentifier::new(url), position)
     }
 
+    pub fn build_dev_path(
+        &self,
+        position: Position,
+        test_name: &str,
+    ) -> TextDocumentPositionParams {
+        let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
+            format!(r"\\?\C:\dev\{test_name}.gleam")
+        } else {
+            format!("/dev/{test_name}.gleam")
+        });
+
+        let url = Url::from_file_path(path).unwrap();
+
+        TextDocumentPositionParams::new(TextDocumentIdentifier::new(url), position)
+    }
+
     pub fn positioned_with_io(
         &self,
         position: Position,
@@ -594,6 +667,28 @@ impl<'a> TestProject<'a> {
         assert!(response.result.is_ok());
 
         let param = self.build_test_path(position, test_name);
+
+        (engine, param)
+    }
+
+    pub fn positioned_with_io_in_dev(
+        &self,
+        position: Position,
+        test_name: &str,
+    ) -> (
+        LanguageServerEngine<LanguageServerTestIO, LanguageServerTestIO>,
+        TextDocumentPositionParams,
+    ) {
+        let mut io = LanguageServerTestIO::new();
+        let mut engine = self.build_engine(&mut io);
+
+        // Add the final module we're going to be positioning the cursor in.
+        _ = io.src_module("app", self.src);
+
+        let response = engine.compile_please();
+        assert!(response.result.is_ok());
+
+        let param = self.build_dev_path(position, test_name);
 
         (engine, param)
     }

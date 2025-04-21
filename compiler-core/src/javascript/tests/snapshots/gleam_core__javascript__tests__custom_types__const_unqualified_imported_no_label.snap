@@ -3,6 +3,10 @@ source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "import other.{Two}\npub const main = Two(1)\n"
 ---
 ----- SOURCE CODE
+-- other.gleam
+pub type One { Two(Int) }
+
+-- main.gleam
 import other.{Two}
 pub const main = Two(1)
 

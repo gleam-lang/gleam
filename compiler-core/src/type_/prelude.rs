@@ -9,8 +9,9 @@ use crate::{
 };
 
 use super::{
-    ModuleInterface, Type, TypeConstructor, TypeValueConstructor, TypeValueConstructorField,
-    TypeVar, TypeVariantConstructors, ValueConstructor, ValueConstructorVariant,
+    ModuleInterface, Opaque, References, Type, TypeConstructor, TypeValueConstructor,
+    TypeValueConstructorField, TypeVar, TypeVariantConstructors, ValueConstructor,
+    ValueConstructorVariant,
 };
 use crate::type_::Deprecation::NotDeprecated;
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
@@ -19,7 +20,7 @@ const BIT_ARRAY: &str = "BitArray";
 const BOOL: &str = "Bool";
 const FLOAT: &str = "Float";
 const INT: &str = "Int";
-const LIST: &str = "List";
+pub const LIST: &str = "List";
 const NIL: &str = "Nil";
 const RESULT: &str = "Result";
 const STRING: &str = "String";
@@ -152,12 +153,12 @@ fn result_with_variant(a: Arc<Type>, e: Arc<Type>, variant_index: Option<u16>) -
     })
 }
 
-pub fn tuple(elems: Vec<Arc<Type>>) -> Arc<Type> {
-    Arc::new(Type::Tuple { elems })
+pub fn tuple(elements: Vec<Arc<Type>>) -> Arc<Type> {
+    Arc::new(Type::Tuple { elements })
 }
 
-pub fn fn_(args: Vec<Arc<Type>>, retrn: Arc<Type>) -> Arc<Type> {
-    Arc::new(Type::Fn { retrn, args })
+pub fn fn_(args: Vec<Arc<Type>>, return_: Arc<Type>) -> Arc<Type> {
+    Arc::new(Type::Fn { return_, args })
 }
 
 pub fn named(
@@ -241,6 +242,10 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
         // prelude doesn't have real line numbers
         line_numbers: LineNumbers::new(""),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
+        contains_echo: false,
+        references: References::default(),
     };
 
     for t in PreludeType::iter() {
@@ -267,12 +272,15 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                             TypeValueConstructor {
                                 name: "True".into(),
                                 parameters: vec![],
+                                documentation: None,
                             },
                             TypeValueConstructor {
                                 name: "False".into(),
                                 parameters: vec![],
+                                documentation: None,
                             },
                         ],
+                        opaque: Opaque::NotOpaque,
                     },
                 );
                 let _ = prelude.values.insert(
@@ -403,7 +411,9 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         variants: vec![TypeValueConstructor {
                             name: "Nil".into(),
                             parameters: vec![],
+                            documentation: None,
                         }],
+                        opaque: Opaque::NotOpaque,
                     },
                 );
             }
@@ -434,15 +444,20 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                                 name: "Ok".into(),
                                 parameters: vec![TypeValueConstructorField {
                                     type_: result_value,
+                                    label: None,
                                 }],
+                                documentation: None,
                             },
                             TypeValueConstructor {
                                 name: "Error".into(),
                                 parameters: vec![TypeValueConstructorField {
                                     type_: result_error,
+                                    label: None,
                                 }],
+                                documentation: None,
                             },
                         ],
+                        opaque: Opaque::NotOpaque,
                     },
                 );
                 let ok = generic_var(ids.next());

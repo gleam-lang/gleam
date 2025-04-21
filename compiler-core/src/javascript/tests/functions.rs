@@ -1,7 +1,5 @@
 use crate::{assert_js, assert_ts_def};
 
-use super::CURRENT_PACKAGE;
-
 #[test]
 fn exported_functions() {
     assert_js!(
@@ -212,7 +210,7 @@ fn reserved_word_fn() {
 #[test]
 fn reserved_word_imported() {
     assert_js!(
-        (CURRENT_PACKAGE, "for", "pub fn class() { 1 }"),
+        ("for", "pub fn class() { 1 }"),
         r#"import for.{class}
 
 pub fn export() {
@@ -225,7 +223,7 @@ pub fn export() {
 #[test]
 fn reserved_word_imported_alias() {
     assert_js!(
-        (CURRENT_PACKAGE, "for", "pub fn class() { 1 }"),
+        ("for", "pub fn class() { 1 }"),
         r#"import for.{class as while} as function
 
 pub fn export() {
@@ -370,7 +368,7 @@ pub fn version(n) {
 #[test]
 fn pipe_shadow_import() {
     assert_js!(
-        (CURRENT_PACKAGE, "wibble", "pub fn println(x: String) {  }"),
+        ("wibble", "pub fn println(x: String) {  }"),
         r#"
         import wibble.{println}
         pub fn main() {
@@ -483,6 +481,62 @@ pub fn main() {
   wibble(B, D, a: A, c: C)
   wibble(B, D, c: C, a: A)
   wibble(C, D, b: B, a: A)
+}
+"
+    );
+}
+
+// During the implementation of https://github.com/gleam-lang/gleam/pull/4337,
+// a bug was found where this code would compile incorrectly.
+#[test]
+fn two_pipes_in_a_row() {
+    assert_js!(
+        "
+pub type Function(a) {
+  Function(fn() -> a)
+}
+
+pub fn main() {
+  [fn() { 1 } |> Function, fn() { 2 } |> Function]
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4472
+#[test]
+fn pipe_into_block() {
+    assert_js!(
+        "
+fn side_effects(x) { x }
+
+pub fn main() {
+  1
+  |> side_effects
+  |> {
+    side_effects(2)
+    side_effects
+  }
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4472
+#[test]
+fn pipe_with_block_in_the_middle() {
+    assert_js!(
+        "
+fn side_effects(x) { x }
+
+pub fn main() {
+  1
+  |> side_effects
+  |> {
+    side_effects(2)
+    side_effects
+  }
+  |> side_effects
 }
 "
     );

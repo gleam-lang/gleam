@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "const number = 123\n\npub fn main() {\n  use x <- result.try(todo)\n  Ok(number)\n}"
+---
+----- BEFORE ACTION
+const number = 123
+
+pub fn main() {
+  use x <- result.try(todo)
+  Ok(number)
+  ↑         
+}
+
+
+----- AFTER ACTION
+const number = 123
+
+const result = Ok(number)
+
+pub fn main() {
+  use x <- result.try(todo)
+  result
+}

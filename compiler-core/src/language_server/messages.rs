@@ -7,8 +7,8 @@ use lsp_types::{
     self as lsp,
     notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument},
     request::{
-        CodeActionRequest, Completion, DocumentSymbolRequest, Formatting, HoverRequest,
-        SignatureHelpRequest,
+        CodeActionRequest, Completion, DocumentSymbolRequest, Formatting, GotoTypeDefinition,
+        HoverRequest, PrepareRenameRequest, References, Rename, SignatureHelpRequest,
     },
 };
 use std::time::Duration;
@@ -24,10 +24,14 @@ pub enum Request {
     Format(lsp::DocumentFormattingParams),
     Hover(lsp::HoverParams),
     GoToDefinition(lsp::GotoDefinitionParams),
+    GoToTypeDefinition(lsp::GotoDefinitionParams),
     Completion(lsp::CompletionParams),
     CodeAction(lsp::CodeActionParams),
     SignatureHelp(lsp::SignatureHelpParams),
     DocumentSymbol(lsp::DocumentSymbolParams),
+    PrepareRename(lsp::TextDocumentPositionParams),
+    Rename(lsp::RenameParams),
+    FindReferences(lsp::ReferenceParams),
 }
 
 impl Request {
@@ -62,6 +66,22 @@ impl Request {
                 let params = cast_request::<DocumentSymbolRequest>(request);
                 Some(Message::Request(id, Request::DocumentSymbol(params)))
             }
+            "textDocument/rename" => {
+                let params = cast_request::<Rename>(request);
+                Some(Message::Request(id, Request::Rename(params)))
+            }
+            "textDocument/prepareRename" => {
+                let params = cast_request::<PrepareRenameRequest>(request);
+                Some(Message::Request(id, Request::PrepareRename(params)))
+            }
+            "textDocument/typeDefinition" => {
+                let params = cast_request::<GotoTypeDefinition>(request);
+                Some(Message::Request(id, Request::GoToTypeDefinition(params)))
+            }
+            "textDocument/references" => {
+                let params = cast_request::<References>(request);
+                Some(Message::Request(id, Request::FindReferences(params)))
+            }
             _ => None,
         }
     }
@@ -94,7 +114,7 @@ impl Notification {
                 let params = cast_notification::<DidChangeTextDocument>(notification);
                 let notification = Notification::SourceFileChangedInMemory {
                     path: super::path(&params.text_document.uri),
-                    text: params.content_changes.into_iter().last()?.text,
+                    text: params.content_changes.into_iter().next_back()?.text,
                 };
                 Some(Message::Notification(notification))
             }
@@ -117,7 +137,7 @@ impl Notification {
             "workspace/didChangeWatchedFiles" => {
                 let params = cast_notification::<DidChangeWatchedFiles>(notification);
                 let notification = Notification::ConfigFileChanged {
-                    path: super::path(&params.changes.into_iter().last()?.uri),
+                    path: super::path(&params.changes.into_iter().next_back()?.uri),
                 };
                 Some(Message::Notification(notification))
             }

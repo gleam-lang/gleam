@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
+use crate::Result;
 use crate::io::{make_relative, ordered_map};
 use crate::requirement::Requirement;
-use crate::Result;
 use camino::{Utf8Path, Utf8PathBuf};
 use ecow::EcoString;
 use hexpm::version::Version;
@@ -180,6 +180,11 @@ impl ManifestPackage {
     pub fn is_local(&self) -> bool {
         matches!(self.source, ManifestPackageSource::Local { .. })
     }
+
+    #[inline]
+    pub fn is_git(&self) -> bool {
+        matches!(self.source, ManifestPackageSource::Git { .. })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
@@ -231,7 +236,7 @@ mod tests {
                 ("aaa".into(), Requirement::hex("> 0.0.0")),
                 (
                     "awsome_local2".into(),
-                    Requirement::git("https://github.com/gleam-lang/gleam.git"),
+                    Requirement::git("https://github.com/gleam-lang/gleam.git", "bd9fe02f"),
                 ),
                 (
                     "awsome_local1".into(),
@@ -324,7 +329,7 @@ packages = [
 [requirements]
 aaa = { version = "> 0.0.0" }
 awsome_local1 = { path = "../path/to/package" }
-awsome_local2 = { git = "https://github.com/gleam-lang/gleam.git" }
+awsome_local2 = { git = "https://github.com/gleam-lang/gleam.git", ref = "bd9fe02f" }
 gleam_stdlib = { version = "~> 0.17" }
 gleeunit = { version = "~> 0.1" }
 zzz = { version = "> 0.0.0" }
@@ -341,7 +346,7 @@ zzz = { version = "> 0.0.0" }
                 ("aaa".into(), Requirement::hex("> 0.0.0")),
                 (
                     "awsome_local2".into(),
-                    Requirement::git("https://github.com/gleam-lang/gleam.git"),
+                    Requirement::git("https://github.com/gleam-lang/gleam.git", "main"),
                 ),
                 (
                     "awsome_local1".into(),
@@ -434,7 +439,7 @@ packages = [
 [requirements]
 aaa = { version = "> 0.0.0" }
 awsome_local1 = { path = "../path/to/package" }
-awsome_local2 = { git = "https://github.com/gleam-lang/gleam.git" }
+awsome_local2 = { git = "https://github.com/gleam-lang/gleam.git", ref = "main" }
 gleam_stdlib = { version = "~> 0.17" }
 gleeunit = { version = "~> 0.1" }
 zzz = { version = "> 0.0.0" }

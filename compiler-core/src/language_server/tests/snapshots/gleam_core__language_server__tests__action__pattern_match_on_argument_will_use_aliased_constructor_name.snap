@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport wibble.{Wobble as IWantToSeeThisName}\n\npub fn main(arg: wibble.Wibble) {\n  todo\n}\n"
+---
+----- BEFORE ACTION
+
+import wibble.{Wobble as IWantToSeeThisName}
+
+pub fn main(arg: wibble.Wibble) {
+            ↑                    
+  todo
+}
+
+
+----- AFTER ACTION
+
+import wibble.{Wobble as IWantToSeeThisName}
+
+pub fn main(arg: wibble.Wibble) {
+  let IWantToSeeThisName(label:) = arg
+  todo
+}

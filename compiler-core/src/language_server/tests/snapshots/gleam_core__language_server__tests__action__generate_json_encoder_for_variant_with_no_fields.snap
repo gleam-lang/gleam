@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+assertion_line: 6551
+expression: "\npub type Wibble {\n  Wibble\n}\n"
+snapshot_kind: text
+---
+----- BEFORE ACTION
+
+pub type Wibble {
+    ↑            
+  Wibble
+}
+
+
+----- AFTER ACTION
+import gleam/json
+
+pub type Wibble {
+  Wibble
+}
+
+fn wibble_to_json(wibble: Wibble) -> json.Json {
+  json.string("wibble")
+}

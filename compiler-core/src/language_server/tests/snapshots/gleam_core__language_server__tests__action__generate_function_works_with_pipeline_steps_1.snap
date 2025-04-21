@@ -1,0 +1,41 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  [1, 2, 3]\n  |> map(int_to_string)\n  |> join\n}\n\nfn map(list: List(a), fun: fn(a) -> b) -> List(b) {\n  todo\n}\n\nfn join(n: List(String)) -> String {\n  todo\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  [1, 2, 3]
+  |> map(int_to_string)
+         ↑             
+  |> join
+}
+
+fn map(list: List(a), fun: fn(a) -> b) -> List(b) {
+  todo
+}
+
+fn join(n: List(String)) -> String {
+  todo
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  [1, 2, 3]
+  |> map(int_to_string)
+  |> join
+}
+
+fn int_to_string(int: Int) -> String {
+  todo
+}
+
+fn map(list: List(a), fun: fn(a) -> b) -> List(b) {
+  todo
+}
+
+fn join(n: List(String)) -> String {
+  todo
+}

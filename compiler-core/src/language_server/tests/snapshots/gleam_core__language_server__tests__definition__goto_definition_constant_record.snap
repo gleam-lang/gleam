@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/definition.rs
+expression: output
+---
+----- Jumping from `src/app.gleam`
+
+type Wibble {
+  Wibble(Int)
+}
+
+const wibble = Wibble(10)
+                   ↑     
+
+----- Jumped to `src/app.gleam`
+
+type Wibble {
+  Wibble(Int)
+  ↑▔▔▔▔▔▔▔▔▔▔
+}
+
+const wibble = Wibble(10)

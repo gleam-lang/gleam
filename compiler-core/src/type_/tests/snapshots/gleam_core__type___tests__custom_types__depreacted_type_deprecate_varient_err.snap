@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/custom_types.rs
-assertion_line: 68
 expression: "\n@deprecated(\"2\")\npub type Numbers {\n  @deprecated(\"1\")\n  One\n  Two\n}\n\npub fn num() {\n  let _two = Two\n  Nil\n}\n"
 ---
 ----- SOURCE CODE

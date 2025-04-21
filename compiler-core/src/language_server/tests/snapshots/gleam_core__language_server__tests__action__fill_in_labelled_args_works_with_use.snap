@@ -1,12 +1,13 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "\npub fn main() {\n  use <- wibble()\n}\n\npub fn wibble(arg1 arg1, arg2 arg2) { Nil }\n "
+expression: "\npub fn main() {\n  use <- wibble()\n  todo\n}\n\npub fn wibble(arg1 arg1, arg2 arg2) { Nil }\n "
 ---
 ----- BEFORE ACTION
 
 pub fn main() {
   use <- wibble()
          ▔▔▔▔▔▔▔↑
+  todo
 }
 
 pub fn wibble(arg1 arg1, arg2 arg2) { Nil }
@@ -17,6 +18,7 @@ pub fn wibble(arg1 arg1, arg2 arg2) { Nil }
 
 pub fn main() {
   use <- wibble(arg1: todo)
+  todo
 }
 
 pub fn wibble(arg1 arg1, arg2 arg2) { Nil }

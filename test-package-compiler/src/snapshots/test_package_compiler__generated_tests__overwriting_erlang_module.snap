@@ -1,6 +1,5 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 273
 expression: "./cases/overwriting_erlang_module"
 ---
 error: Erlang module name collision

@@ -97,6 +97,38 @@ fn compile_error_in_test() {
 }
 
 #[test]
+fn compile_error_in_dev() {
+    let io = LanguageServerTestIO::new();
+    let mut engine = setup_engine(&io);
+
+    _ = io.dev_module("app/error", "pub type Error {");
+
+    let response = engine.compile_please();
+    assert!(response.result.is_err());
+    assert!(response.warnings.is_empty());
+    assert_eq!(response.compilation, Compilation::Yes(vec![]));
+
+    drop(engine);
+    let actions = io.into_actions();
+    assert_eq!(
+        actions,
+        vec![
+            // new
+            Action::DependencyDownloadingStarted,
+            Action::DownloadDependencies,
+            Action::DependencyDownloadingFinished,
+            Action::LockBuild,
+            Action::UnlockBuild,
+            // compile_please
+            Action::CompilationStarted,
+            Action::LockBuild,
+            Action::UnlockBuild,
+            Action::CompilationFinished,
+        ]
+    )
+}
+
+#[test]
 fn compile_recompile() {
     let io = LanguageServerTestIO::new();
     let mut engine = setup_engine(&io);
@@ -119,7 +151,7 @@ fn compile_recompile() {
     // This time it does not compile the module again, instead using the
     // cache from the previous run.
     let response = engine.compile_please();
-    assert!(response.result.is_ok());
+    assert_eq!(response.result, Ok(()));
     assert!(response.warnings.is_empty());
     assert_eq!(response.compilation, Compilation::Yes(vec![]));
 

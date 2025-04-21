@@ -1,0 +1,39 @@
+---
+source: compiler-core/src/javascript/tests/assignments.rs
+expression: "\npub fn expect(value, message) {\n  let assert Ok(inner) = value as case message {\n    Ok(message) -> message\n    Error(_) -> \"No message provided\"\n  }\n  inner\n}\n"
+---
+----- SOURCE CODE
+
+pub fn expect(value, message) {
+  let assert Ok(inner) = value as case message {
+    Ok(message) -> message
+    Error(_) -> "No message provided"
+  }
+  inner
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError } from "../gleam.mjs";
+
+export function expect(value, message) {
+  if (!value.isOk()) {
+    throw makeError(
+      "let_assert",
+      "my/mod",
+      3,
+      "expect",
+      (() => {
+        if (message.isOk()) {
+          let message$1 = message[0];
+          return message$1;
+        } else {
+          return "No message provided";
+        }
+      })(),
+      { value: value }
+    )
+  }
+  let inner = value[0];
+  return inner;
+}

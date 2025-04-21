@@ -1,0 +1,56 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: "\npub type Wibble {\n  Wibble(wibble: Int, wobble: Float)\n}\n\npub fn main() {\n  Wibble(w)\n}\n"
+---
+pub type Wibble {
+  Wibble(wibble: Int, wobble: Float)
+}
+
+pub fn main() {
+  Wibble(w|)
+}
+
+
+----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True
+Wibble
+  kind:   Constructor
+  detail: fn(Int, Float) -> Wibble
+  sort:   2_Wibble
+  desc:   app
+  edits:
+    [6:9-6:9]: "Wibble"
+main
+  kind:   Function
+  detail: fn() -> Wibble
+  sort:   2_main
+  desc:   app
+  edits:
+    [6:9-6:9]: "main"
+wibble:
+  kind:   Field
+  detail: Int
+  sort:   0_wibble:
+wobble:
+  kind:   Field
+  detail: Float
+  sort:   0_wobble:

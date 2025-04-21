@@ -1,5 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/records.rs
-expression: "record_definition(\"PetCat\",\n    &[(\"name\", type_::tuple(vec![])), (\"is_cute\", type_::tuple(vec![]))])"
+expression: "record_definition(\"PetCat\",\n&[(\"name\", type_::tuple(vec![])), (\"is_cute\", type_::tuple(vec![]))])"
 ---
 -record(pet_cat, {name :: {}, is_cute :: {}}).

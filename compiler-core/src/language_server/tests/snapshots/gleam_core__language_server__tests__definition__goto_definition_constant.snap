@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/definition.rs
+expression: output
+---
+----- Jumping from `src/app.gleam`
+
+const value = 25
+
+const my_constant = value
+                     ↑   
+
+----- Jumped to `src/app.gleam`
+
+const value = 25
+↑▔▔▔▔▔▔▔▔▔▔     
+
+const my_constant = value

@@ -14,7 +14,7 @@ pub fn woo(__: a, _two: b) -> Nil
 
 -export([woo/2]).
 
--file("/root/project/test/my/mod.gleam", 3).
+-file("project/test/my/mod.gleam", 3).
 -spec woo(any(), any()) -> nil.
 woo(Argument, _two) ->
     wibble:wobble(Argument, _two).

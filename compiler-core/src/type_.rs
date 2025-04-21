@@ -31,6 +31,7 @@ use crate::{
     bit_array,
     build::{Origin, Target},
     line_numbers::LineNumbers,
+    reference::ReferenceMap,
     type_::expression::Implementations,
 };
 use error::*;
@@ -97,7 +98,7 @@ pub enum Type {
     ///
     Fn {
         args: Vec<Arc<Type>>,
-        retrn: Arc<Type>,
+        return_: Arc<Type>,
     },
 
     /// A type variable. See the contained `TypeVar` enum for more information.
@@ -108,13 +109,13 @@ pub enum Type {
     /// can have a different type, so the `tuple` type is the sum of all the
     /// contained types.
     ///
-    Tuple { elems: Vec<Arc<Type>> },
+    Tuple { elements: Vec<Arc<Type>> },
 }
 
 impl Type {
     pub fn is_result_constructor(&self) -> bool {
         match self {
-            Type::Fn { retrn, .. } => retrn.is_result(),
+            Type::Fn { return_, .. } => return_.is_result(),
             Type::Var { type_ } => type_.borrow().is_result(),
             _ => false,
         }
@@ -134,6 +135,18 @@ impl Type {
                 module, name, args, ..
             } if "Result" == name && is_prelude_module(module) => args.first().cloned(),
             Self::Var { type_ } => type_.borrow().result_ok_type(),
+            Self::Named { .. } | Self::Tuple { .. } | Type::Fn { .. } => None,
+        }
+    }
+
+    pub fn result_types(&self) -> Option<(Arc<Type>, Arc<Type>)> {
+        match self {
+            Self::Named {
+                module, name, args, ..
+            } if "Result" == name && is_prelude_module(module) => {
+                Some((args.first().cloned()?, args.get(1).cloned()?))
+            }
+            Self::Var { type_ } => type_.borrow().result_types(),
             Self::Named { .. } | Self::Tuple { .. } | Type::Fn { .. } => None,
         }
     }
@@ -161,7 +174,7 @@ impl Type {
 
     pub fn return_type(&self) -> Option<Arc<Self>> {
         match self {
-            Self::Fn { retrn, .. } => Some(retrn.clone()),
+            Self::Fn { return_, .. } => Some(return_.clone()),
             Self::Var { type_ } => type_.borrow().return_type(),
             _ => None,
         }
@@ -169,7 +182,7 @@ impl Type {
 
     pub fn fn_types(&self) -> Option<(Vec<Arc<Self>>, Arc<Self>)> {
         match self {
-            Self::Fn { args, retrn, .. } => Some((args.clone(), retrn.clone())),
+            Self::Fn { args, return_, .. } => Some((args.clone(), return_.clone())),
             Self::Var { type_ } => type_.borrow().fn_types(),
             _ => None,
         }
@@ -178,7 +191,8 @@ impl Type {
     /// Gets the types inside of a tuple. Returns `None` if the type is not a tuple.
     pub fn tuple_types(&self) -> Option<Vec<Arc<Self>>> {
         match self {
-            Self::Tuple { elems } => Some(elems.clone()),
+            Self::Tuple { elements } => Some(elements.clone()),
+            Self::Var { type_, .. } => type_.borrow().tuple_types(),
             _ => None,
         }
     }
@@ -190,6 +204,41 @@ impl Type {
             Self::Named { args, .. } => Some(args.clone()),
             Self::Var { type_, .. } => type_.borrow().constructor_types(),
             _ => None,
+        }
+    }
+
+    /// If the type is a Gleam's prelude's List this will return its wrapped
+    /// type.
+    pub fn list_type(&self) -> Option<Arc<Self>> {
+        match self {
+            Type::Named {
+                publicity: Publicity::Public,
+                name,
+                module,
+                package,
+                args,
+                inferred_variant: _,
+            } if package == PRELUDE_PACKAGE_NAME
+                && module == PRELUDE_MODULE_NAME
+                && name == LIST =>
+            {
+                match args.as_slice() {
+                    [inner_type] => Some(inner_type.clone()),
+                    [] | [_, _, ..] => None,
+                }
+            }
+            _ => None,
+        }
+    }
+
+    pub fn list(inner_type: Arc<Self>) -> Self {
+        Type::Named {
+            publicity: Publicity::Public,
+            package: PRELUDE_PACKAGE_NAME.into(),
+            module: PRELUDE_MODULE_NAME.into(),
+            name: LIST.into(),
+            args: vec![inner_type],
+            inferred_variant: None,
         }
     }
 
@@ -213,6 +262,18 @@ impl Type {
     pub fn is_bit_array(&self) -> bool {
         match self {
             Self::Named { module, name, .. } if "BitArray" == name && is_prelude_module(module) => {
+                true
+            }
+            Self::Var { type_ } => type_.borrow().is_nil(),
+            _ => false,
+        }
+    }
+
+    pub fn is_utf_codepoint(&self) -> bool {
+        match self {
+            Self::Named { module, name, .. }
+                if "UtfCodepoint" == name && is_prelude_module(module) =>
+            {
                 true
             }
             Self::Var { type_ } => type_.borrow().is_nil(),
@@ -264,6 +325,16 @@ impl Type {
         }
     }
 
+    pub fn named_type_information(&self) -> Option<(EcoString, EcoString, Vec<Arc<Self>>)> {
+        match self {
+            Self::Named {
+                module, name, args, ..
+            } => Some((module.clone(), name.clone(), args.clone())),
+            Self::Var { type_ } => type_.borrow().named_type_information(),
+            _ => None,
+        }
+    }
+
     pub fn set_custom_type_variant(&mut self, index: u16) {
         match self {
             Type::Named {
@@ -280,16 +351,16 @@ impl Type {
                 inferred_variant, ..
             } => *inferred_variant = None,
             Type::Var { type_ } => type_.borrow_mut().generalise_custom_type_variant(),
-            Type::Tuple { elems } => {
-                for element in elems {
+            Type::Tuple { elements } => {
+                for element in elements {
                     Arc::make_mut(element).generalise_custom_type_variant();
                 }
             }
-            Type::Fn { args, retrn } => {
+            Type::Fn { args, return_ } => {
                 for argument in args {
                     Arc::make_mut(argument).generalise_custom_type_variant();
                 }
-                Arc::make_mut(retrn).generalise_custom_type_variant();
+                Arc::make_mut(return_).generalise_custom_type_variant();
             }
         }
     }
@@ -379,13 +450,15 @@ impl Type {
                 ..
             } => Some(self.clone()),
 
-            Self::Named { args, .. } => args.iter().find_map(|t| t.find_private_type()),
+            Self::Named { args, .. } => args.iter().find_map(|type_| type_.find_private_type()),
 
-            Self::Tuple { elems, .. } => elems.iter().find_map(|t| t.find_private_type()),
+            Self::Tuple { elements, .. } => {
+                elements.iter().find_map(|type_| type_.find_private_type())
+            }
 
-            Self::Fn { retrn, args, .. } => retrn
+            Self::Fn { return_, args, .. } => return_
                 .find_private_type()
-                .or_else(|| args.iter().find_map(|t| t.find_private_type())),
+                .or_else(|| args.iter().find_map(|type_| type_.find_private_type())),
 
             Self::Var { type_, .. } => match type_.borrow().deref() {
                 TypeVar::Unbound { .. } => None,
@@ -401,13 +474,15 @@ impl Type {
         match self {
             Self::Named { publicity, .. } if publicity.is_internal() => Some(self.clone()),
 
-            Self::Named { args, .. } => args.iter().find_map(|t| t.find_internal_type()),
+            Self::Named { args, .. } => args.iter().find_map(|type_| type_.find_internal_type()),
 
-            Self::Tuple { elems, .. } => elems.iter().find_map(|t| t.find_internal_type()),
+            Self::Tuple { elements, .. } => {
+                elements.iter().find_map(|type_| type_.find_internal_type())
+            }
 
-            Self::Fn { retrn, args, .. } => retrn
+            Self::Fn { return_, args, .. } => return_
                 .find_internal_type()
-                .or_else(|| args.iter().find_map(|t| t.find_internal_type())),
+                .or_else(|| args.iter().find_map(|type_| type_.find_internal_type())),
 
             Self::Var { type_, .. } => match type_.borrow().deref() {
                 TypeVar::Unbound { .. } | TypeVar::Generic { .. } => None,
@@ -420,6 +495,121 @@ impl Type {
         match self {
             Self::Fn { args, .. } => Some(args.len()),
             _ => None,
+        }
+    }
+
+    #[must_use]
+    /// Returns `true` is the two types are the same. This differs from the
+    /// standard `Eq` implementation as it also follows all links to check if
+    /// two types are really the same.
+    ///
+    pub fn same_as(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Type::Named { .. }, Type::Fn { .. } | Type::Tuple { .. }) => false,
+            (one @ Type::Named { .. }, Type::Var { type_ }) => {
+                type_.as_ref().borrow().same_as_other_type(one)
+            }
+            // When comparing two types we don't care about the inferred variant:
+            // `True` has the same type as `False`, even if the inferred variants
+            // differ.
+            (
+                Type::Named {
+                    publicity,
+                    package,
+                    module,
+                    name,
+                    args,
+                    inferred_variant: _,
+                },
+                Type::Named {
+                    publicity: other_publicity,
+                    package: other_package,
+                    module: other_module,
+                    name: other_name,
+                    args: other_args,
+                    inferred_variant: _,
+                },
+            ) => {
+                publicity == other_publicity
+                    && package == other_package
+                    && module == other_module
+                    && name == other_name
+                    && args == other_args
+            }
+
+            (Type::Fn { .. }, Type::Named { .. } | Type::Tuple { .. }) => false,
+            (one @ Type::Fn { .. }, Type::Var { type_ }) => {
+                type_.as_ref().borrow().same_as_other_type(one)
+            }
+            (
+                Type::Fn { args, return_ },
+                Type::Fn {
+                    args: other_args,
+                    return_: other_return,
+                },
+            ) => {
+                args.len() == other_args.len()
+                    && args
+                        .iter()
+                        .zip(other_args)
+                        .all(|(one, other)| one.same_as(other))
+                    && return_.same_as(other_return)
+            }
+
+            (Type::Var { type_ }, other) => type_.as_ref().borrow().same_as_other_type(other),
+
+            (Type::Tuple { .. }, Type::Fn { .. } | Type::Named { .. }) => false,
+            (one @ Type::Tuple { .. }, Type::Var { type_ }) => {
+                type_.as_ref().borrow().same_as_other_type(one)
+            }
+            (
+                Type::Tuple { elements },
+                Type::Tuple {
+                    elements: other_elements,
+                },
+            ) => {
+                elements.len() == other_elements.len()
+                    && elements
+                        .iter()
+                        .zip(other_elements)
+                        .all(|(one, other)| one.same_as(other))
+            }
+        }
+    }
+}
+
+impl TypeVar {
+    #[must_use]
+    fn same_as_other_type(&self, other: &Type) -> bool {
+        match (self, other) {
+            (TypeVar::Unbound { .. }, _) => true,
+            (TypeVar::Link { type_ }, other) => type_.same_as(other),
+
+            (
+                TypeVar::Generic { .. },
+                Type::Named { .. } | Type::Fn { .. } | Type::Tuple { .. },
+            ) => false,
+
+            (one @ TypeVar::Generic { .. }, Type::Var { type_ }) => {
+                one.same_as(&type_.as_ref().borrow())
+            }
+        }
+    }
+
+    #[must_use]
+    fn same_as(&self, other: &Self) -> bool {
+        match (self, other) {
+            (TypeVar::Unbound { .. }, _) | (_, TypeVar::Unbound { .. }) => true,
+            (TypeVar::Link { type_ }, TypeVar::Link { type_: other_type }) => {
+                type_.same_as(other_type)
+            }
+            (TypeVar::Link { type_ }, other @ TypeVar::Generic { .. }) => {
+                other.same_as_other_type(type_)
+            }
+            (TypeVar::Generic { id }, TypeVar::Generic { id: other_id }) => id == other_id,
+            (one @ TypeVar::Generic { .. }, TypeVar::Link { type_ }) => {
+                one.same_as_other_type(type_)
+            }
         }
     }
 }
@@ -463,13 +653,17 @@ pub struct RecordAccessor {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ValueConstructorVariant {
     /// A locally defined variable or function parameter
-    LocalVariable { location: SrcSpan },
+    LocalVariable {
+        location: SrcSpan,
+        origin: VariableOrigin,
+    },
 
     /// A module constant
     ModuleConstant {
         documentation: Option<EcoString>,
         location: SrcSpan,
         module: EcoString,
+        name: EcoString,
         literal: Constant<Arc<Type>, EcoString>,
         implementations: Implementations,
     },
@@ -580,7 +774,7 @@ impl ValueConstructorVariant {
 
     pub fn definition_location(&self) -> SrcSpan {
         match self {
-            ValueConstructorVariant::LocalVariable { location }
+            ValueConstructorVariant::LocalVariable { location, .. }
             | ValueConstructorVariant::ModuleConstant { location, .. }
             | ValueConstructorVariant::ModuleFn { location, .. }
             | ValueConstructorVariant::Record { location, .. } => *location,
@@ -591,6 +785,22 @@ impl ValueConstructorVariant {
     /// Returns `true` if the variant is [`LocalVariable`].
     pub fn is_local_variable(&self) -> bool {
         matches!(self, Self::LocalVariable { .. })
+    }
+
+    /// Returns `true` if the variant is a local variable generated by the compiler.
+    #[must_use]
+    pub fn is_generated_variable(&self) -> bool {
+        match self {
+            ValueConstructorVariant::LocalVariable {
+                origin: VariableOrigin::Generated,
+                ..
+            } => true,
+            ValueConstructorVariant::LocalVariable { .. } => false,
+            ValueConstructorVariant::ModuleConstant { .. }
+            | ValueConstructorVariant::LocalConstant { .. }
+            | ValueConstructorVariant::ModuleFn { .. }
+            | ValueConstructorVariant::Record { .. } => false,
+        }
     }
 
     /// Returns `true` if the value constructor variant is [`ModuleFn`].
@@ -718,20 +928,38 @@ pub struct ModuleInterface {
     pub line_numbers: LineNumbers,
     /// Used for determining the source path of the module on disk
     pub src_path: Utf8PathBuf,
-    // Whether the module is internal or not. Internal modules are technically
-    // importable by other packages but to do so is violating the contract of
-    // the package and as such is not recommended.
+    /// Whether the module is internal or not. Internal modules are technically
+    /// importable by other packages but to do so is violating the contract of
+    /// the package and as such is not recommended.
     pub is_internal: bool,
     /// Warnings emitted during analysis of this module.
     pub warnings: Vec<Warning>,
     /// The minimum Gleam version needed to use this module.
     pub minimum_required_version: Version,
+    pub type_aliases: HashMap<EcoString, TypeAliasConstructor>,
+    pub documentation: Vec<EcoString>,
+    /// Wether there's any echo in the module.
+    pub contains_echo: bool,
+    pub references: References,
 }
 
 impl ModuleInterface {
     pub fn contains_todo(&self) -> bool {
         self.warnings.iter().any(|warning| warning.is_todo())
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct References {
+    pub imported_modules: HashSet<EcoString>,
+    pub value_references: ReferenceMap,
+    pub type_references: ReferenceMap,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Opaque {
+    Opaque,
+    NotOpaque,
 }
 
 /// Information on the constructors of a custom type.
@@ -751,6 +979,7 @@ pub struct TypeVariantConstructors {
     /// and `a` is a Generic type variable with id 1, then this field will be `[1]`.
     ///
     pub type_parameters_ids: Vec<u64>,
+    pub opaque: Opaque,
     pub variants: Vec<TypeValueConstructor>,
 }
 
@@ -758,6 +987,7 @@ impl TypeVariantConstructors {
     pub(crate) fn new(
         variants: Vec<TypeValueConstructor>,
         type_parameters: &[&EcoString],
+        opaque: Opaque,
         hydrator: Hydrator,
     ) -> TypeVariantConstructors {
         let named_types = hydrator.named_type_variables();
@@ -780,6 +1010,7 @@ impl TypeVariantConstructors {
         Self {
             type_parameters_ids: type_parameters,
             variants,
+            opaque,
         }
     }
 }
@@ -788,12 +1019,14 @@ impl TypeVariantConstructors {
 pub struct TypeValueConstructor {
     pub name: EcoString,
     pub parameters: Vec<TypeValueConstructorField>,
+    pub documentation: Option<EcoString>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeValueConstructorField {
     /// This type of this parameter
     pub type_: Arc<Type>,
+    pub label: Option<EcoString>,
 }
 
 impl ModuleInterface {
@@ -818,6 +1051,7 @@ impl ModuleInterface {
     pub fn get_main_function(&self, target: Target) -> Result<ModuleFunction, crate::Error> {
         let not_found = || crate::Error::ModuleDoesNotHaveMainFunction {
             module: self.name.clone(),
+            origin: self.origin,
         };
 
         // Module must have a value with the name "main"
@@ -826,7 +1060,7 @@ impl ModuleInterface {
             .get(&EcoString::from("main"))
             .ok_or_else(not_found)?;
 
-        assert_suitable_main_function(value, &self.name, target)?;
+        assert_suitable_main_function(value, &self.name, self.origin, target)?;
 
         Ok(ModuleFunction {
             package: self.package.clone(),
@@ -863,9 +1097,9 @@ pub struct PatternConstructor {
 }
 
 impl PatternConstructor {
-    pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
+    pub fn definition_location(&self) -> Option<DefinitionLocation> {
         Some(DefinitionLocation {
-            module: Some(self.module.as_str()),
+            module: Some(self.module.clone()),
             span: self.location,
         })
     }
@@ -924,6 +1158,13 @@ impl TypeVar {
         }
     }
 
+    pub fn tuple_types(&self) -> Option<Vec<Arc<Type>>> {
+        match self {
+            Self::Link { type_ } => type_.tuple_types(),
+            Self::Unbound { .. } | Self::Generic { .. } => None,
+        }
+    }
+
     pub fn constructor_types(&self) -> Option<Vec<Arc<Type>>> {
         match self {
             Self::Link { type_ } => type_.constructor_types(),
@@ -948,6 +1189,13 @@ impl TypeVar {
     pub fn result_ok_type(&self) -> Option<Arc<Type>> {
         match self {
             TypeVar::Link { type_ } => type_.result_ok_type(),
+            TypeVar::Unbound { .. } | TypeVar::Generic { .. } => None,
+        }
+    }
+
+    pub fn result_types(&self) -> Option<(Arc<Type>, Arc<Type>)> {
+        match self {
+            TypeVar::Link { type_ } => type_.result_types(),
             TypeVar::Unbound { .. } | TypeVar::Generic { .. } => None,
         }
     }
@@ -1005,6 +1253,13 @@ impl TypeVar {
     pub fn named_type_name(&self) -> Option<(EcoString, EcoString)> {
         match self {
             Self::Link { type_ } => type_.named_type_name(),
+            Self::Unbound { .. } | Self::Generic { .. } => None,
+        }
+    }
+
+    pub fn named_type_information(&self) -> Option<(EcoString, EcoString, Vec<Arc<Type>>)> {
+        match self {
+            Self::Link { type_ } => type_.named_type_information(),
             Self::Unbound { .. } | Self::Generic { .. } => None,
         }
     }
@@ -1076,7 +1331,7 @@ impl ValueConstructor {
         self.variant.is_local_variable()
     }
 
-    pub fn definition_location(&self) -> DefinitionLocation<'_> {
+    pub fn definition_location(&self) -> DefinitionLocation {
         match &self.variant {
             ValueConstructorVariant::Record {
                 module, location, ..
@@ -1087,7 +1342,7 @@ impl ValueConstructor {
             | ValueConstructorVariant::ModuleFn {
                 location, module, ..
             } => DefinitionLocation {
-                module: Some(module.as_str()),
+                module: Some(module.clone()),
                 span: *location,
             },
 
@@ -1096,7 +1351,7 @@ impl ValueConstructor {
                 span: literal.location(),
             },
 
-            ValueConstructorVariant::LocalVariable { location } => DefinitionLocation {
+            ValueConstructorVariant::LocalVariable { location, .. } => DefinitionLocation {
                 module: None,
                 span: *location,
             },
@@ -1121,8 +1376,11 @@ impl ValueConstructor {
 pub struct TypeAliasConstructor {
     pub publicity: Publicity,
     pub module: EcoString,
-    pub type_: Type,
+    pub type_: Arc<Type>,
     pub arity: usize,
+    pub deprecation: Deprecation,
+    pub documentation: Option<EcoString>,
+    pub origin: SrcSpan,
 }
 
 impl ValueConstructor {
@@ -1185,16 +1443,16 @@ fn unify_unbound_type(type_: Arc<Type>, own_id: u64) -> Result<(), UnifyError> {
             Ok(())
         }
 
-        Type::Fn { args, retrn } => {
+        Type::Fn { args, return_ } => {
             for arg in args {
                 unify_unbound_type(arg.clone(), own_id)?;
             }
-            unify_unbound_type(retrn.clone(), own_id)
+            unify_unbound_type(return_.clone(), own_id)
         }
 
-        Type::Tuple { elems, .. } => {
-            for elem in elems {
-                unify_unbound_type(elem.clone(), own_id)?
+        Type::Tuple { elements, .. } => {
+            for element in elements {
+                unify_unbound_type(element.clone(), own_id)?
             }
             Ok(())
         }
@@ -1216,31 +1474,31 @@ fn match_fun_type(
 
             TypeVar::Unbound { .. } => {
                 let args: Vec<_> = (0..arity).map(|_| environment.new_unbound_var()).collect();
-                let retrn = environment.new_unbound_var();
-                Some((args, retrn))
+                let return_ = environment.new_unbound_var();
+                Some((args, return_))
             }
 
             TypeVar::Generic { .. } => None,
         };
 
-        if let Some((args, retrn)) = new_value {
+        if let Some((args, return_)) = new_value {
             *type_.borrow_mut() = TypeVar::Link {
-                type_: fn_(args.clone(), retrn.clone()),
+                type_: fn_(args.clone(), return_.clone()),
             };
-            return Ok((args, retrn));
+            return Ok((args, return_));
         }
     }
 
-    if let Type::Fn { args, retrn } = type_.deref() {
+    if let Type::Fn { args, return_ } = type_.deref() {
         return if args.len() != arity {
             Err(MatchFunTypeError::IncorrectArity {
                 expected: args.len(),
                 given: arity,
                 args: args.clone(),
-                return_type: retrn.clone(),
+                return_type: return_.clone(),
             })
         } else {
-            Ok((args.clone(), retrn.clone()))
+            Ok((args.clone(), return_.clone()))
         };
     }
 
@@ -1265,7 +1523,7 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
             args,
             inferred_variant: _,
         } => {
-            let args = args.iter().map(|t| generalise(t.clone())).collect();
+            let args = args.iter().map(|type_| generalise(type_.clone())).collect();
             Arc::new(Type::Named {
                 publicity: *publicity,
                 module: module.clone(),
@@ -1276,12 +1534,17 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
             })
         }
 
-        Type::Fn { args, retrn } => fn_(
-            args.iter().map(|t| generalise(t.clone())).collect(),
-            generalise(retrn.clone()),
+        Type::Fn { args, return_ } => fn_(
+            args.iter().map(|type_| generalise(type_.clone())).collect(),
+            generalise(return_.clone()),
         ),
 
-        Type::Tuple { elems } => tuple(elems.iter().map(|t| generalise(t.clone())).collect()),
+        Type::Tuple { elements } => tuple(
+            elements
+                .iter()
+                .map(|type_| generalise(type_.clone()))
+                .collect(),
+        ),
     }
 }
 
@@ -1303,10 +1566,12 @@ pub enum FieldAccessUsage {
 fn assert_suitable_main_function(
     value: &ValueConstructor,
     module_name: &EcoString,
+    origin: Origin,
     target: Target,
 ) -> Result<(), crate::Error> {
     let not_found = || crate::Error::ModuleDoesNotHaveMainFunction {
         module: module_name.clone(),
+        origin,
     };
 
     // The value must be a module function

@@ -8,30 +8,32 @@ use lsp_types::{
     TextEdit,
 };
 use strum::IntoEnumIterator;
+use vec1::Vec1;
 
 use crate::{
+    Result,
     ast::{
         self, Arg, CallArg, Definition, Function, FunctionLiteralKind, Pattern, Publicity,
         TypedExpr,
     },
-    build::Module,
+    build::{Module, Origin},
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
     type_::{
-        self, collapse_links, pretty::Printer, FieldMap, ModuleInterface, PreludeType,
-        RecordAccessor, Type, TypeConstructor, ValueConstructorVariant, PRELUDE_MODULE_NAME,
+        self, FieldMap, ModuleInterface, PRELUDE_MODULE_NAME, PreludeType, RecordAccessor, Type,
+        TypeConstructor, ValueConstructorVariant, collapse_links, error::VariableOrigin,
+        pretty::Printer,
     },
-    Result,
 };
 
 use super::{
+    DownloadDependencies, MakeLocker,
     compiler::LspProjectCompiler,
     edits::{
-        add_newlines_after_import, get_import, get_import_edit,
-        position_of_first_definition_if_import, Newlines,
+        Newlines, add_newlines_after_import, get_import, get_import_edit,
+        position_of_first_definition_if_import,
     },
     files::FileSystemProxy,
-    DownloadDependencies, MakeLocker,
 };
 
 // Represents the kind/specificity of completion that is being requested.
@@ -71,6 +73,8 @@ fn sort_text(kind: CompletionKind, label: &str) -> String {
 enum TypeCompletionForm {
     // The type completion is for an unqualified import.
     UnqualifiedImport,
+    // The type completion is for an unqualified import within braces.
+    UnqualifiedImportWithinBraces,
     Default,
 }
 
@@ -210,10 +214,15 @@ where
             let importing_module_name = src.get(6..dot_index)?.trim();
             let importing_module: &ModuleInterface =
                 self.compiler.get_module_interface(importing_module_name)?;
+            let within_braces = match src.get(dot_index + 1..) {
+                Some(x) => x.trim_start().starts_with('{'),
+                None => false,
+            };
 
-            Some(Ok(Some(
-                self.unqualified_completions_from_module(importing_module),
-            )))
+            Some(Ok(Some(self.unqualified_completions_from_module(
+                importing_module,
+                within_braces,
+            ))))
         } else {
             // Find where to start and end the import completion
             let start = self.src_line_numbers.line_and_column_number(start_of_line);
@@ -232,6 +241,7 @@ where
     pub fn unqualified_completions_from_module(
         &'a self,
         module_being_imported_from: &'a ModuleInterface,
+        within_braces: bool,
     ) -> Vec<CompletionItem> {
         let insert_range = self.get_phrase_surrounding_completion_for_import();
         let mut completions = vec![];
@@ -275,7 +285,11 @@ where
                 name,
                 type_,
                 insert_range,
-                TypeCompletionForm::UnqualifiedImport,
+                if within_braces {
+                    TypeCompletionForm::UnqualifiedImportWithinBraces
+                } else {
+                    TypeCompletionForm::UnqualifiedImport
+                },
                 CompletionKind::ImportedModule,
             ));
         }
@@ -333,16 +347,18 @@ where
             .get_importable_modules()
             .iter()
             //
-            // It is possible to import modules from dependencies of dependencies
-            // but it's not recommended so we don't include them in completions
-            .filter(|(_, module)| {
-                let is_root_or_prelude =
-                    module.package == self.root_package_name() || module.package.is_empty();
-                is_root_or_prelude || direct_dep_packages.contains(&module.package)
-            })
+            // You cannot import yourself
+            .filter(|(name, _)| *name != &self.module.name)
             //
-            // src/ cannot import test/
-            .filter(|(_, module)| module.origin.is_src() || !self.module.origin.is_src())
+            // Different origin directories will get different import completions
+            .filter(|(_, module)| match self.module.origin {
+                // src/ can import from src/
+                Origin::Src => module.origin.is_src(),
+                // dev/ can import from src/ or dev/
+                Origin::Dev => !module.origin.is_test(),
+                // Test can import from anywhere
+                Origin::Test => true,
+            })
             //
             // It is possible to import internal modules from other packages,
             // but it's not recommended so we don't include them in completions
@@ -351,8 +367,13 @@ where
             // You cannot import a module twice
             .filter(|(name, _)| !already_imported.contains(*name))
             //
-            // You cannot import yourself
-            .filter(|(name, _)| *name != &self.module.name)
+            // It is possible to import modules from dependencies of dependencies
+            // but it's not recommended so we don't include them in completions
+            .filter(|(_, module)| {
+                let is_root_or_prelude =
+                    module.package == self.root_package_name() || module.package.is_empty();
+                is_root_or_prelude || direct_dep_packages.contains(&module.package)
+            })
             .collect()
     }
 
@@ -388,22 +409,10 @@ where
 
         let (insert_range, module_select) = surrounding_completion;
 
-        // Prelude types
-        for type_ in PreludeType::iter() {
-            let label: String = type_.name().into();
-            let sort_text = Some(sort_text(CompletionKind::Prelude, &label));
-            completions.push(CompletionItem {
-                label,
-                detail: Some("Type".into()),
-                kind: Some(CompletionItemKind::CLASS),
-                sort_text,
-                ..Default::default()
-            });
-        }
-
-        // Module types
+        // Module and prelude types
         // Do not complete direct module types if the user has already started typing a module select.
-        // e.x. when the user has typed mymodule.| we know local module types are no longer relevant
+        // e.x. when the user has typed mymodule.| we know local module types and prelude types are no
+        // longer relevant.
         if module_select.is_none() {
             for (name, type_) in &self.module.ast.type_info.types {
                 completions.push(type_completion(
@@ -414,6 +423,18 @@ where
                     TypeCompletionForm::Default,
                     CompletionKind::LocallyDefined,
                 ));
+            }
+
+            for type_ in PreludeType::iter() {
+                let label: String = type_.name().into();
+                let sort_text = Some(sort_text(CompletionKind::Prelude, &label));
+                completions.push(CompletionItem {
+                    label,
+                    detail: Some("Type".into()),
+                    kind: Some(CompletionItemKind::CLASS),
+                    sort_text,
+                    ..Default::default()
+                });
             }
         }
 
@@ -455,16 +476,15 @@ where
             // e.x. when the user has typed mymodule.| we know unqualified module types are no longer relevant.
             if module_select.is_none() {
                 for unqualified in &import.unqualified_types {
-                    match module.get_public_type(&unqualified.name) {
-                        Some(type_) => completions.push(type_completion(
+                    if let Some(type_) = module.get_public_type(&unqualified.name) {
+                        completions.push(type_completion(
                             None,
                             unqualified.used_name(),
                             type_,
                             insert_range,
                             TypeCompletionForm::Default,
                             CompletionKind::ImportedModule,
-                        )),
-                        None => continue,
+                        ))
                     }
                 }
             }
@@ -490,7 +510,7 @@ where
 
             let qualifier = module_full_name
                 .split('/')
-                .last()
+                .next_back()
                 .unwrap_or(module_full_name);
 
             // If the user has already started a module select then don't show irrelevant modules.
@@ -536,44 +556,10 @@ where
 
         let (insert_range, module_select) = surrounding_completion;
 
-        let mut push_prelude_completion = |label: &str, kind| {
-            let label = label.to_string();
-            let sort_text = Some(sort_text(CompletionKind::Prelude, &label));
-            completions.push(CompletionItem {
-                label,
-                detail: Some(PRELUDE_MODULE_NAME.into()),
-                kind: Some(kind),
-                sort_text,
-                ..Default::default()
-            });
-        };
-
-        // Prelude values
-        for type_ in PreludeType::iter() {
-            match type_ {
-                PreludeType::Bool => {
-                    push_prelude_completion("True", CompletionItemKind::ENUM_MEMBER);
-                    push_prelude_completion("False", CompletionItemKind::ENUM_MEMBER);
-                }
-                PreludeType::Nil => {
-                    push_prelude_completion("Nil", CompletionItemKind::ENUM_MEMBER);
-                }
-                PreludeType::Result => {
-                    push_prelude_completion("Ok", CompletionItemKind::CONSTRUCTOR);
-                    push_prelude_completion("Error", CompletionItemKind::CONSTRUCTOR);
-                }
-                PreludeType::BitArray
-                | PreludeType::Float
-                | PreludeType::Int
-                | PreludeType::List
-                | PreludeType::String
-                | PreludeType::UtfCodepoint => {}
-            }
-        }
-
-        // Module values
+        // Module and prelude values
         // Do not complete direct module values if the user has already started typing a module select.
-        // e.x. when the user has typed mymodule.| we know local module values are no longer relevant
+        // e.x. when the user has typed mymodule.| we know local module and prelude values are no longer
+        // relevant.
         if module_select.is_none() {
             let cursor = self
                 .src_line_numbers
@@ -602,6 +588,40 @@ where
                     insert_range,
                     CompletionKind::LocallyDefined,
                 ));
+            }
+
+            let mut push_prelude_completion = |label: &str, kind| {
+                let label = label.to_string();
+                let sort_text = Some(sort_text(CompletionKind::Prelude, &label));
+                completions.push(CompletionItem {
+                    label,
+                    detail: Some(PRELUDE_MODULE_NAME.into()),
+                    kind: Some(kind),
+                    sort_text,
+                    ..Default::default()
+                });
+            };
+
+            for type_ in PreludeType::iter() {
+                match type_ {
+                    PreludeType::Bool => {
+                        push_prelude_completion("True", CompletionItemKind::ENUM_MEMBER);
+                        push_prelude_completion("False", CompletionItemKind::ENUM_MEMBER);
+                    }
+                    PreludeType::Nil => {
+                        push_prelude_completion("Nil", CompletionItemKind::ENUM_MEMBER);
+                    }
+                    PreludeType::Result => {
+                        push_prelude_completion("Ok", CompletionItemKind::CONSTRUCTOR);
+                        push_prelude_completion("Error", CompletionItemKind::CONSTRUCTOR);
+                    }
+                    PreludeType::BitArray
+                    | PreludeType::Float
+                    | PreludeType::Int
+                    | PreludeType::List
+                    | PreludeType::String
+                    | PreludeType::UtfCodepoint => {}
+                }
             }
         }
 
@@ -643,19 +663,16 @@ where
             // e.x. when the user has typed mymodule.| we know unqualified module values are no longer relevant.
             if module_select.is_none() {
                 for unqualified in &import.unqualified_values {
-                    match module.get_public_value(&unqualified.name) {
-                        Some(value) => {
-                            let name = unqualified.used_name();
-                            completions.push(value_completion(
-                                None,
-                                mod_name,
-                                name,
-                                value,
-                                insert_range,
-                                CompletionKind::ImportedModule,
-                            ))
-                        }
-                        None => continue,
+                    if let Some(value) = module.get_public_value(&unqualified.name) {
+                        let name = unqualified.used_name();
+                        completions.push(value_completion(
+                            None,
+                            mod_name,
+                            name,
+                            value,
+                            insert_range,
+                            CompletionKind::ImportedModule,
+                        ))
                     }
                 }
             }
@@ -679,7 +696,7 @@ where
             }
             let qualifier = module_full_name
                 .split('/')
-                .last()
+                .next_back()
                 .unwrap_or(module_full_name);
 
             // If the user has already started a module select then don't show irrelevant modules.
@@ -873,7 +890,8 @@ fn type_completion(
         text_edit: Some(CompletionTextEdit::Edit(TextEdit {
             range: insert_range,
             new_text: match include_type_in_completion {
-                TypeCompletionForm::UnqualifiedImport => format!("type {label}"),
+                TypeCompletionForm::UnqualifiedImport => format!("{{type {label}}}"),
+                TypeCompletionForm::UnqualifiedImportWithinBraces => format!("type {label}"),
                 TypeCompletionForm::Default => label.clone(),
             },
         })),
@@ -1056,7 +1074,7 @@ impl<'ast> ast::visit::Visit<'ast> for LocalCompletion<'_> {
         _: &'ast Arc<Type>,
         _: &'ast FunctionLiteralKind,
         args: &'ast [ast::TypedArg],
-        body: &'ast [ast::TypedStatement],
+        body: &'ast Vec1<ast::TypedStatement>,
         _: &'ast Option<ast::TypeAst>,
     ) {
         self.visit_fn_args(args);
@@ -1070,6 +1088,7 @@ impl<'ast> ast::visit::Visit<'ast> for LocalCompletion<'_> {
         _: &'ast ast::SrcSpan,
         name: &'ast EcoString,
         type_: &'ast Arc<Type>,
+        _origin: &'ast VariableOrigin,
     ) {
         self.push_completion(name, type_.clone());
     }

@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  [#(1, 2)]\n  |> map(fn(tuple) {})\n}\n\nfn map(list: List(a), fun: fn(a) -> b) { todo }\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  [#(1, 2)]
+  |> map(fn(tuple) {})
+            ↑         
+}
+
+fn map(list: List(a), fun: fn(a) -> b) { todo }
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  [#(1, 2)]
+  |> map(fn(tuple) {
+  let #(value_0, value_1) = tuple
+})
+}
+
+fn map(list: List(a), fun: fn(a) -> b) { todo }

@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-assertion_line: 1215
 expression: "\nimport dep.{wibble,wabble,type Wibble}\n\npub fn main() {\n  0\n}"
 ---
 import dep.{|wibble,wabble,type Wibble}

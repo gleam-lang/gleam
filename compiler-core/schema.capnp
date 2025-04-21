@@ -30,6 +30,47 @@ struct Module {
   srcPath @7 :Text;
   isInternal @8 :Bool;
   requiredVersion @9 :Version;
+  typeAliases @10 :List(Property(TypeAliasConstructor));
+  documentation @11 :List(Text);
+  containsEcho @12 :Bool;
+  references @13 :References;
+}
+
+struct References {
+  importedModules @0 :List(Text);
+  valueReferences @1 :List(ReferenceMap);
+  typeReferences @2 :List(ReferenceMap);
+}
+
+struct ReferenceMap {
+  module @0 :Text;
+  name @1 :Text;
+  references @2 :List(Reference);
+}
+
+struct Reference {
+  location @0 :SrcSpan;
+  kind @1 :ReferenceKind;
+}
+
+struct ReferenceKind {
+  union {
+    qualified @0 :Void;
+    unqualified @1 :Void;
+    import @2 :Void;
+    definition @3 :Void;
+    alias @4 :Void;
+  }
+}
+
+struct TypeAliasConstructor {
+    publicity @0 :Publicity;
+    module @1 :Text;
+    type @2 :Type;
+    arity @3 :UInt32;
+    deprecation @4 :Text;
+    documentation @5 :Text;
+    origin @6 :SrcSpan;
 }
 
 struct Version {
@@ -41,15 +82,18 @@ struct Version {
 struct TypesVariantConstructors {
   variants @0 :List(TypeValueConstructor);
   typeParametersIds @1 :List(UInt16);
+  opaque @2 :Bool;
 }
 
 struct TypeValueConstructor {
   name @0 :Text;
   parameters @1 :List(TypeValueConstructorParameter);
+  documentation @2 :Text;
 }
 
 struct TypeValueConstructorParameter {
   type @0 :Type;
+  label @1 :Text;
 }
 
 struct TypeConstructor {
@@ -69,6 +113,7 @@ struct AccessorsMap {
   type @0 :Type;
   sharedAccessors @1 :List(Property(RecordAccessor));
   variantSpecificAccessors @2 :List(VariantSpecificAccessors);
+  publicity @3 :Publicity;
 }
 
 struct VariantSpecificAccessors {
@@ -144,6 +189,7 @@ struct ValueConstructorVariant {
       literal @0 :Constant;
       location @1 :SrcSpan;
       module @2 :Text;
+      name @22 :Text;
       documentation @14 :Text;
       implementations @19 :Implementations;
     }

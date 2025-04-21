@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  list.map(\n    [1, 2, 3],\n    int.add(1, _),\n  )\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  list.map(
+    [1, 2, 3],
+    ↑         
+    int.add(1, _),
+  )
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  let ints = [1, 2, 3]
+  list.map(
+    ints,
+    int.add(1, _),
+  )
+}

@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
 expression: "fn go(x: List(a, b)) -> Int { 1 }"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 fn go(x: List(a, b)) -> Int { 1 }
@@ -11,7 +10,6 @@ error: Incorrect arity
   ┌─ /src/one/two.gleam:1:10
   │
 1 │ fn go(x: List(a, b)) -> Int { 1 }
-  │          ^^^^^^^^^^ Expected 1 argument, got 2
+  │          ^^^^^^^^^^ Expected 1 type argument, got 2
 
-Functions and constructors have to be called with their expected number of
-arguments.
+`List` requires 1 type argument but 2 where provided.

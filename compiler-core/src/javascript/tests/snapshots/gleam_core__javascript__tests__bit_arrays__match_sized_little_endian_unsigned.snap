@@ -10,10 +10,10 @@ fn go(x) {
 
 
 ----- COMPILED JAVASCRIPT
-import { makeError } from "../gleam.mjs";
+import { makeError, bitArraySliceToInt } from "../gleam.mjs";
 
 function go(x) {
-  if (!(x.length == 2)) {
+  if (!(x.bitSize == 16)) {
     throw makeError(
       "let_assert",
       "my/mod",
@@ -23,6 +23,6 @@ function go(x) {
       { value: x }
     )
   }
-  let a = x.intFromSlice(0, 2, false, false);
+  let a = bitArraySliceToInt(x, 0, 16, false, false);
   return x;
 }

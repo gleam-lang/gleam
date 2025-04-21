@@ -70,20 +70,20 @@ impl Printer {
                 }
             }
 
-            Type::Fn { args, retrn } => "fn("
+            Type::Fn { args, return_ } => "fn("
                 .to_doc()
                 .append(self.args_to_gleam_doc(args))
                 .append(") ->")
                 .append(
                     break_("", " ")
-                        .append(self.print(retrn))
+                        .append(self.print(return_))
                         .nest(INDENT)
                         .group(),
                 ),
 
             Type::Var { type_, .. } => self.type_var_doc(&type_.borrow()),
 
-            Type::Tuple { elems, .. } => self.args_to_gleam_doc(elems).surround("#(", ")"),
+            Type::Tuple { elements, .. } => self.args_to_gleam_doc(elements).surround("#(", ")"),
         }
     }
 
@@ -97,7 +97,7 @@ impl Printer {
 
     fn type_var_doc<'a>(&mut self, type_: &TypeVar) -> Document<'a> {
         match type_ {
-            TypeVar::Link { ref type_, .. } => self.print(type_),
+            TypeVar::Link { type_, .. } => self.print(type_),
             TypeVar::Unbound { id, .. } | TypeVar::Generic { id, .. } => self.generic_type_var(*id),
         }
     }
@@ -145,7 +145,7 @@ impl Printer {
         }
 
         let args = join(
-            args.iter().map(|t| self.print(t).group()),
+            args.iter().map(|type_| self.print(type_).group()),
             break_(",", ", "),
         );
         break_("", "")
@@ -311,7 +311,7 @@ fn pretty_print_test() {
                     inferred_variant: None,
                 }),
             ],
-            retrn: Arc::new(Type::Named {
+            return_: Arc::new(Type::Named {
                 args: vec![],
                 module: "whatever".into(),
                 package: "whatever".into(),

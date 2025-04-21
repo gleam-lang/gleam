@@ -469,6 +469,62 @@ fn no_eq_after_binding1() {
 }
 
 #[test]
+fn echo_followed_by_expression_ends_where_expression_ends() {
+    assert_parse!("echo wibble");
+}
+
+#[test]
+fn echo_with_no_expressions_after_it() {
+    assert_parse!("echo");
+}
+
+#[test]
+fn echo_with_block() {
+    assert_parse!("echo { 1 + 1 }");
+}
+
+#[test]
+fn echo_has_lower_precedence_than_binop() {
+    assert_parse!("echo 1 + 1");
+}
+
+#[test]
+fn echo_in_a_pipeline() {
+    assert_parse!("[] |> echo |> wibble");
+}
+
+#[test]
+fn echo_has_lower_precedence_than_pipeline() {
+    assert_parse!("echo wibble |> wobble |> woo");
+}
+
+#[test]
+fn echo_cannot_have_an_expression_in_a_pipeline() {
+    // So this is actually two pipelines!
+    assert_parse!("[] |> echo fun |> wibble");
+}
+
+#[test]
+fn panic_with_echo() {
+    assert_parse!("panic as echo \"string\"");
+}
+
+#[test]
+fn echo_with_panic() {
+    assert_parse!("echo panic as \"a\"");
+}
+
+#[test]
+fn repeated_echos() {
+    assert_parse!("echo echo echo 1");
+}
+
+#[test]
+fn echo_at_start_of_pipeline_wraps_the_whole_thing() {
+    assert_parse!("echo 1 |> wibble |> wobble");
+}
+
+#[test]
 fn no_let_binding_snapshot_1() {
     assert_error!("wibble = 4");
 }
@@ -600,6 +656,33 @@ fn unknown_external_target() {
 pub fn one(x: Int) -> Int {
   todo
 }"#
+    );
+}
+
+#[test]
+fn unknown_target() {
+    assert_module_error!(
+        r#"
+@target(abc)
+pub fn one() {}"#
+    );
+}
+
+#[test]
+fn missing_target() {
+    assert_module_error!(
+        r#"
+@target()
+pub fn one() {}"#
+    );
+}
+
+#[test]
+fn missing_target_and_bracket() {
+    assert_module_error!(
+        r#"
+@target(
+pub fn one() {}"#
     );
 }
 
@@ -1677,4 +1760,9 @@ type Wibble {
 // https://github.com/gleam-lang/gleam/issues/3870
 fn nested_tuple_access_after_function() {
     assert_parse!("tuple().0.1");
+}
+
+#[test]
+fn case_expression_without_body() {
+    assert_parse!("case a");
 }

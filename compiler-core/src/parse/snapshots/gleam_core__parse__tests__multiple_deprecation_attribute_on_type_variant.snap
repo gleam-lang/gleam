@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 1593
 expression: "\ntype Wibble {\n    @deprecated(\"1\")\n    @deprecated(\"2\")\n    Wibble1\n    Wibble2\n}\n"
 ---
 ----- SOURCE CODE

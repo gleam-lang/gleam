@@ -1,9 +1,13 @@
 use std::sync::OnceLock;
 
-use type_::TypedCallArg;
+use type_::{FieldMap, TypedCallArg};
 
 use super::*;
-use crate::type_::{bool, HasType, Type, ValueConstructorVariant};
+use crate::{
+    build::ExpressionPosition,
+    exhaustiveness::CompiledCase,
+    type_::{HasType, Type, ValueConstructorVariant, bool},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypedExpr {
@@ -38,8 +42,10 @@ pub enum TypedExpr {
     /// locations when showing it in error messages, etc.
     Pipeline {
         location: SrcSpan,
-        assignments: Vec<TypedAssignment>,
+        first_value: TypedPipelineAssignment,
+        assignments: Vec<(TypedPipelineAssignment, PipelineAssignmentKind)>,
         finally: Box<Self>,
+        finally_kind: PipelineAssignmentKind,
     },
 
     Var {
@@ -75,6 +81,7 @@ pub enum TypedExpr {
         location: SrcSpan,
         type_: Arc<Type>,
         name: BinOp,
+        name_location: SrcSpan,
         left: Box<Self>,
         right: Box<Self>,
     },
@@ -84,10 +91,12 @@ pub enum TypedExpr {
         type_: Arc<Type>,
         subjects: Vec<Self>,
         clauses: Vec<Clause<Self, Arc<Type>, EcoString>>,
+        compiled_case: CompiledCase,
     },
 
     RecordAccess {
         location: SrcSpan,
+        field_start: u32,
         type_: Arc<Type>,
         label: EcoString,
         index: u64,
@@ -96,6 +105,7 @@ pub enum TypedExpr {
 
     ModuleSelect {
         location: SrcSpan,
+        field_start: u32,
         type_: Arc<Type>,
         label: EcoString,
         module_name: EcoString,
@@ -106,7 +116,7 @@ pub enum TypedExpr {
     Tuple {
         location: SrcSpan,
         type_: Arc<Type>,
-        elems: Vec<Self>,
+        elements: Vec<Self>,
     },
 
     TupleIndex {
@@ -127,6 +137,12 @@ pub enum TypedExpr {
         location: SrcSpan,
         message: Option<Box<Self>>,
         type_: Arc<Type>,
+    },
+
+    Echo {
+        location: SrcSpan,
+        type_: Arc<Type>,
+        expression: Option<Box<Self>>,
     },
 
     BitArray {
@@ -192,24 +208,64 @@ impl TypedExpr {
             | Self::Panic { .. }
             | Self::Float { .. }
             | Self::String { .. }
-            | Self::ModuleSelect { .. }
             | Self::Invalid { .. } => self.self_if_contains_location(byte_index),
+
+            Self::ModuleSelect {
+                location,
+                field_start,
+                module_name,
+                ..
+            } => {
+                // We want to return the `ModuleSelect` only when we're hovering
+                // over the selected field, not on the module part.
+                let field_span = SrcSpan {
+                    start: *field_start,
+                    end: location.end,
+                };
+
+                // We subtract 1 so the location doesn't include the `.` character.
+                let module_span = SrcSpan::new(location.start, field_start - 1);
+
+                if field_span.contains(byte_index) {
+                    Some(self.into())
+                } else if module_span.contains(byte_index) {
+                    Some(Located::ModuleName {
+                        location: module_span,
+                        name: module_name,
+                        layer: Layer::Value,
+                    })
+                } else {
+                    None
+                }
+            }
+
+            Self::Echo { expression, .. } => expression
+                .as_ref()
+                .and_then(|expression| expression.find_node(byte_index))
+                .or_else(|| self.self_if_contains_location(byte_index)),
 
             Self::Todo { kind, .. } => match kind {
                 TodoKind::Keyword => self.self_if_contains_location(byte_index),
                 // We don't want to match on todos that were implicitly inserted
                 // by the compiler as it would result in confusing suggestions
                 // from the LSP.
-                TodoKind::EmptyFunction | TodoKind::EmptyBlock | TodoKind::IncompleteUse => None,
+                TodoKind::EmptyFunction { .. } | TodoKind::EmptyBlock | TodoKind::IncompleteUse => {
+                    None
+                }
             },
 
             Self::Pipeline {
+                first_value,
                 assignments,
                 finally,
                 ..
-            } => assignments
-                .iter()
-                .find_map(|e| e.find_node(byte_index))
+            } => first_value
+                .find_node(byte_index)
+                .or_else(|| {
+                    assignments
+                        .iter()
+                        .find_map(|(e, _)| e.find_node(byte_index))
+                })
                 .or_else(|| finally.find_node(byte_index)),
 
             // Exit the search and return None if during iteration a statement
@@ -232,7 +288,8 @@ impl TypedExpr {
             // if during iteration, an element is encountered with a start index
             // beyond the index under search.
             Self::Tuple {
-                elems: expressions, ..
+                elements: expressions,
+                ..
             } => {
                 for expression in expressions {
                     if expression.location().start > byte_index {
@@ -282,7 +339,7 @@ impl TypedExpr {
 
             Self::Call { fun, args, .. } => args
                 .iter()
-                .find_map(|arg| arg.find_node(byte_index))
+                .find_map(|arg| arg.find_node(byte_index, fun, args))
                 .or_else(|| fun.find_node(byte_index))
                 .or_else(|| self.self_if_contains_location(byte_index)),
 
@@ -312,12 +369,150 @@ impl TypedExpr {
                 .find_map(|arg| arg.find_node(byte_index))
                 .or_else(|| self.self_if_contains_location(byte_index)),
 
+            Self::RecordUpdate {
+                record,
+                constructor,
+                args,
+                ..
+            } => args
+                .iter()
+                .filter(|arg| arg.implicit.is_none())
+                .find_map(|arg| arg.find_node(byte_index, constructor, args))
+                .or_else(|| record.find_node(byte_index))
+                .or_else(|| self.self_if_contains_location(byte_index)),
+        }
+    }
+
+    pub fn find_statement(&self, byte_index: u32) -> Option<&TypedStatement> {
+        match self {
+            Self::Var { .. }
+            | Self::Int { .. }
+            | Self::Panic { .. }
+            | Self::Float { .. }
+            | Self::String { .. }
+            | Self::ModuleSelect { .. }
+            | Self::Invalid { .. }
+            | Self::Todo { .. } => None,
+
+            Self::Pipeline {
+                first_value,
+                assignments,
+                finally,
+                ..
+            } => first_value
+                .find_statement(byte_index)
+                .or_else(|| {
+                    assignments
+                        .iter()
+                        .find_map(|(e, _)| e.find_statement(byte_index))
+                })
+                .or_else(|| finally.find_statement(byte_index)),
+
+            // Exit the search and return None if during iteration a statement
+            // is found with a start index beyond the index under search.
+            Self::Block { statements, .. } => {
+                for statement in statements {
+                    if statement.location().start > byte_index {
+                        break;
+                    }
+
+                    if let Some(located) = statement.find_statement(byte_index) {
+                        return Some(located);
+                    }
+                }
+
+                None
+            }
+
+            // Exit the search and return the encompassing type (e.g., list or tuple)
+            // if during iteration, an element is encountered with a start index
+            // beyond the index under search.
+            Self::Tuple {
+                elements: expressions,
+                ..
+            } => {
+                for expression in expressions {
+                    if expression.location().start > byte_index {
+                        break;
+                    }
+
+                    if let Some(located) = expression.find_statement(byte_index) {
+                        return Some(located);
+                    }
+                }
+
+                None
+            }
+
+            Self::List {
+                elements: expressions,
+                tail,
+                ..
+            } => {
+                for expression in expressions {
+                    if expression.location().start > byte_index {
+                        break;
+                    }
+
+                    if let Some(located) = expression.find_statement(byte_index) {
+                        return Some(located);
+                    }
+                }
+
+                if let Some(tail) = tail {
+                    if let Some(node) = tail.find_statement(byte_index) {
+                        return Some(node);
+                    }
+                }
+                None
+            }
+
+            Self::NegateBool { value, .. } | Self::NegateInt { value, .. } => {
+                value.find_statement(byte_index)
+            }
+
+            Self::Fn { body, .. } => body.iter().find_map(|s| s.find_statement(byte_index)),
+
+            Self::Call { fun, args, .. } => args
+                .iter()
+                .find_map(|arg| arg.find_statement(byte_index))
+                .or_else(|| fun.find_statement(byte_index)),
+
+            Self::BinOp { left, right, .. } => left
+                .find_statement(byte_index)
+                .or_else(|| right.find_statement(byte_index)),
+
+            Self::Case {
+                subjects, clauses, ..
+            } => subjects
+                .iter()
+                .find_map(|subject| subject.find_statement(byte_index))
+                .or_else(|| {
+                    clauses
+                        .iter()
+                        .find_map(|c| c.then.find_statement(byte_index))
+                }),
+
+            Self::RecordAccess {
+                record: expression, ..
+            }
+            | Self::TupleIndex {
+                tuple: expression, ..
+            } => expression.find_statement(byte_index),
+
+            Self::Echo { expression, .. } => expression
+                .as_ref()
+                .and_then(|expression| expression.find_statement(byte_index)),
+
+            Self::BitArray { segments, .. } => segments
+                .iter()
+                .find_map(|arg| arg.value.find_statement(byte_index)),
+
             Self::RecordUpdate { record, args, .. } => args
                 .iter()
                 .filter(|arg| arg.implicit.is_none())
-                .find_map(|arg| arg.find_node(byte_index))
-                .or_else(|| record.find_node(byte_index))
-                .or_else(|| self.self_if_contains_location(byte_index)),
+                .find_map(|arg| arg.find_statement(byte_index))
+                .or_else(|| record.value.find_statement(byte_index)),
         }
     }
 
@@ -336,8 +531,6 @@ impl TypedExpr {
         matches!(
             self,
             Self::Int{ value, .. } | Self::Float { value, .. } if NON_ZERO.get_or_init(||
-
-
                 Regex::new(r"[1-9]").expect("NON_ZERO regex")).is_match(value)
         )
     }
@@ -348,6 +541,7 @@ impl TypedExpr {
             | Self::Int { location, .. }
             | Self::Var { location, .. }
             | Self::Todo { location, .. }
+            | Self::Echo { location, .. }
             | Self::Case { location, .. }
             | Self::Call { location, .. }
             | Self::List { location, .. }
@@ -375,6 +569,7 @@ impl TypedExpr {
             | Self::Int { location, .. }
             | Self::Var { location, .. }
             | Self::Todo { location, .. }
+            | Self::Echo { location, .. }
             | Self::Case { location, .. }
             | Self::Call { location, .. }
             | Self::List { location, .. }
@@ -396,7 +591,7 @@ impl TypedExpr {
         }
     }
 
-    pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
+    pub fn definition_location(&self) -> Option<DefinitionLocation> {
         match self {
             TypedExpr::Fn { .. }
             | TypedExpr::Int { .. }
@@ -404,6 +599,7 @@ impl TypedExpr {
             | TypedExpr::Call { .. }
             | TypedExpr::Case { .. }
             | TypedExpr::Todo { .. }
+            | TypedExpr::Echo { .. }
             | TypedExpr::Panic { .. }
             | TypedExpr::BinOp { .. }
             | TypedExpr::Float { .. }
@@ -428,7 +624,7 @@ impl TypedExpr {
                 constructor,
                 ..
             } => Some(DefinitionLocation {
-                module: Some(module_name.as_str()),
+                module: Some(module_name.clone()),
                 span: constructor.location(),
             }),
 
@@ -445,6 +641,7 @@ impl TypedExpr {
             Self::Fn { type_, .. }
             | Self::Int { type_, .. }
             | Self::Todo { type_, .. }
+            | Self::Echo { type_, .. }
             | Self::Case { type_, .. }
             | Self::List { type_, .. }
             | Self::Call { type_, .. }
@@ -472,6 +669,13 @@ impl TypedExpr {
             | Self::Tuple { .. }
             | Self::String { .. }
             | Self::BitArray { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_literal_string(&self) -> bool {
+        match self {
+            Self::String { .. } => true,
             _ => false,
         }
     }
@@ -505,6 +709,7 @@ impl TypedExpr {
             | TypedExpr::Tuple { .. }
             | TypedExpr::TupleIndex { .. }
             | TypedExpr::Todo { .. }
+            | TypedExpr::Echo { .. }
             | TypedExpr::Panic { .. }
             | TypedExpr::BitArray { .. }
             | TypedExpr::RecordUpdate { .. }
@@ -604,7 +809,10 @@ impl TypedExpr {
             // `panic`, `todo`, and placeholders are never considered pure value constructors,
             // we don't want to raise a warning for an unused value if it's one
             // of those.
-            TypedExpr::Todo { .. } | TypedExpr::Panic { .. } | TypedExpr::Invalid { .. } => false,
+            TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::Invalid { .. } => false,
         }
     }
 
@@ -684,17 +892,61 @@ impl TypedExpr {
             | TypedExpr::NegateBool { location, .. }
             | TypedExpr::NegateInt { location, .. }
             | TypedExpr::Invalid { location, .. }
+            | TypedExpr::Echo { location, .. }
             | TypedExpr::Pipeline { location, .. } => *location,
 
             TypedExpr::Block { statements, .. } => statements.last().last_location(),
             TypedExpr::Fn { body, .. } => body.last().last_location(),
         }
     }
+
+    pub fn field_map(&self) -> Option<&FieldMap> {
+        match self {
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => None,
+
+            TypedExpr::Var { constructor, .. } => constructor.field_map(),
+            TypedExpr::ModuleSelect { constructor, .. } => match constructor {
+                ModuleValueConstructor::Record { field_map, .. }
+                | ModuleValueConstructor::Fn { field_map, .. } => field_map.as_ref(),
+                ModuleValueConstructor::Constant { .. } => None,
+            },
+        }
+    }
+
+    pub(crate) fn is_invalid(&self) -> bool {
+        match self {
+            TypedExpr::Invalid { .. } => true,
+            _ => false,
+        }
+    }
 }
 
 impl<'a> From<&'a TypedExpr> for Located<'a> {
-    fn from(value: &'a TypedExpr) -> Self {
-        Located::Expression(value)
+    fn from(expression: &'a TypedExpr) -> Self {
+        Located::Expression {
+            expression,
+            position: ExpressionPosition::Expression,
+        }
     }
 }
 

@@ -18,13 +18,13 @@ use crate::{
     package_interface::PackageInterface,
     paths::ProjectPaths,
     pretty,
-    type_::Deprecation,
+    type_::{self, Deprecation},
     version::COMPILER_VERSION,
 };
 use askama::Template;
 use ecow::EcoString;
 use itertools::Itertools;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::to_string as serde_to_string;
 
 const MAX_COLUMNS: isize = 65;
@@ -33,6 +33,12 @@ const MAX_COLUMNS: isize = 65;
 pub enum DocContext {
     HexPublish,
     Build,
+}
+
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
+pub struct PackageInformation {
+    #[serde(rename = "gleam.toml")]
+    package_config: PackageConfig,
 }
 
 pub fn generate_html<IO: FileSystemReader>(
@@ -46,7 +52,7 @@ pub fn generate_html<IO: FileSystemReader>(
 ) -> Vec<OutputFile> {
     let modules = analysed
         .iter()
-        .filter(|module| !module.is_test())
+        .filter(|module| module.origin.is_src())
         .filter(|module| !config.is_internal_module(&module.name));
 
     let rendering_timestamp = rendering_timestamp
@@ -74,6 +80,12 @@ pub fn generate_html<IO: FileSystemReader>(
         path,
     });
 
+    let host = if is_hex_publish == DocContext::HexPublish {
+        "https://hexdocs.pm"
+    } else {
+        ""
+    };
+
     // https://github.com/gleam-lang/gleam/issues/3020
     let links: Vec<_> = match is_hex_publish {
         DocContext::HexPublish => doc_links
@@ -88,7 +100,7 @@ pub fn generate_html<IO: FileSystemReader>(
 
     let mut files = vec![];
 
-    let mut search_indexes = vec![];
+    let mut search_items = vec![];
 
     let modules_links: Vec<_> = modules
         .clone()
@@ -119,6 +131,7 @@ pub fn generate_html<IO: FileSystemReader>(
             "index" => config.description.to_string().clone(),
             _other => "".to_owned(),
         };
+        let path = Utf8PathBuf::from(&page.path);
 
         let temp = PageTemplate {
             gleam_version: COMPILER_VERSION,
@@ -128,22 +141,25 @@ pub fn generate_html<IO: FileSystemReader>(
             project_name: &config.name,
             page_title: &page_title,
             page_meta_description: &page_meta_description,
+            file_path: &path.clone(),
             project_version: &config.version.to_string(),
             content: rendered_content,
             rendering_timestamp: &rendering_timestamp,
+            host,
             unnest: &unnest,
         };
 
         files.push(OutputFile {
-            path: Utf8PathBuf::from(&page.path),
+            path,
             content: Content::Text(temp.render().expect("Page template rendering")),
         });
 
-        search_indexes.push(SearchIndex {
-            doc: config.name.to_string(),
+        search_items.push(SearchItem {
+            type_: SearchItemType::Page,
+            parent_title: config.name.to_string(),
             title: config.name.to_string(),
             content,
-            url: page.path.to_string(),
+            reference: page.path.to_string(),
         })
     }
 
@@ -159,15 +175,6 @@ pub fn generate_html<IO: FileSystemReader>(
         let rendered_documentation =
             render_markdown(&documentation_content.clone(), MarkdownSource::Comment);
 
-        let functions: Vec<DocsFunction<'_>> = module
-            .ast
-            .definitions
-            .iter()
-            .filter(|statement| !statement.is_internal())
-            .flat_map(|statement| function(&source_links, statement))
-            .sorted()
-            .collect();
-
         let types: Vec<Type<'_>> = module
             .ast
             .definitions
@@ -177,12 +184,12 @@ pub fn generate_html<IO: FileSystemReader>(
             .sorted()
             .collect();
 
-        let constants: Vec<Constant<'_>> = module
+        let values: Vec<DocsValues<'_>> = module
             .ast
             .definitions
             .iter()
             .filter(|statement| !statement.is_internal())
-            .flat_map(|statement| constant(&source_links, statement))
+            .flat_map(|statement| value(&source_links, statement))
             .sorted()
             .collect();
 
@@ -204,8 +211,9 @@ pub fn generate_html<IO: FileSystemReader>(
                 })
                 .join("\n");
 
-            search_indexes.push(SearchIndex {
-                doc: module.name.to_string(),
+            search_items.push(SearchItem {
+                type_: SearchItemType::Type,
+                parent_title: module.name.to_string(),
                 title: type_.name.to_string(),
                 content: format!(
                     "{}\n{}\n{}\n{}",
@@ -214,12 +222,13 @@ pub fn generate_html<IO: FileSystemReader>(
                     constructors,
                     import_synonyms(&module.name, type_.name)
                 ),
-                url: format!("{}.html#{}", module.name, type_.name),
+                reference: format!("{}.html#{}", module.name, type_.name),
             })
         });
-        constants.iter().for_each(|constant| {
-            search_indexes.push(SearchIndex {
-                doc: module.name.to_string(),
+        values.iter().for_each(|constant| {
+            search_items.push(SearchItem {
+                type_: SearchItemType::Value,
+                parent_title: module.name.to_string(),
                 title: constant.name.to_string(),
                 content: format!(
                     "{}\n{}\n{}",
@@ -227,34 +236,25 @@ pub fn generate_html<IO: FileSystemReader>(
                     constant.text_documentation,
                     import_synonyms(&module.name, constant.name)
                 ),
-                url: format!("{}.html#{}", module.name, constant.name),
+                reference: format!("{}.html#{}", module.name, constant.name),
             })
         });
-        functions.iter().for_each(|function| {
-            search_indexes.push(SearchIndex {
-                doc: module.name.to_string(),
-                title: function.name.to_string(),
-                content: format!(
-                    "{}\n{}\n{}",
-                    function.signature,
-                    function.text_documentation,
-                    import_synonyms(&module.name, function.name)
-                ),
-                url: format!("{}.html#{}", module.name, function.name),
-            })
-        });
-        search_indexes.push(SearchIndex {
-            doc: module.name.to_string(),
+
+        search_items.push(SearchItem {
+            type_: SearchItemType::Module,
+            parent_title: module.name.to_string(),
             title: module.name.to_string(),
             content: documentation_content,
-            url: format!("{}.html", module.name),
+            reference: format!("{}.html", module.name),
         });
 
         let page_title = format!("{} · {} · v{}", name, config.name, config.version);
         let page_meta_description = "";
+        let path = Utf8PathBuf::from(format!("{}.html", module.name));
 
         let template = ModuleTemplate {
             gleam_version: COMPILER_VERSION,
+            host,
             unnest,
             links: &links,
             pages: &pages,
@@ -263,16 +263,16 @@ pub fn generate_html<IO: FileSystemReader>(
             project_name: &config.name,
             page_title: &page_title,
             page_meta_description,
-            module_name: name,
+            module_name: EcoString::from(&name),
+            file_path: &path.clone(),
             project_version: &config.version.to_string(),
-            functions,
             types,
-            constants,
+            values,
             rendering_timestamp: &rendering_timestamp,
         };
 
         files.push(OutputFile {
-            path: Utf8PathBuf::from(format!("{}.html", module.name)),
+            path,
             content: Content::Text(
                 template
                     .render()
@@ -346,20 +346,22 @@ pub fn generate_html<IO: FileSystemReader>(
         ),
     });
 
-    // lunr.min.js, search-data.js and index.js:
+    // lunr.min.js, search_data.json and index.js
 
     files.push(OutputFile {
         path: Utf8PathBuf::from("js/lunr.min.js"),
         content: Content::Text(std::include_str!("../templates/docs-js/lunr.min.js").to_string()),
     });
 
+    let search_data_json = serde_to_string(&SearchData {
+        items: escape_html_contents(search_items),
+        programming_language: SearchProgrammingLanguage::Gleam,
+    })
+    .expect("search index serialization");
+
     files.push(OutputFile {
-        path: Utf8PathBuf::from("search-data.js"),
-        content: Content::Text(format!(
-            "window.Gleam.initSearch({});",
-            serde_to_string(&escape_html_contents(search_indexes))
-                .expect("search index serialization")
-        )),
+        path: Utf8PathBuf::from("search_data.json"),
+        content: Content::Text(search_data_json.to_string()),
     });
 
     files.push(OutputFile {
@@ -446,14 +448,32 @@ pub fn generate_html<IO: FileSystemReader>(
     files
 }
 
-pub fn generate_json_package_interface(path: Utf8PathBuf, package: &Package) -> OutputFile {
+pub fn generate_json_package_interface(
+    path: Utf8PathBuf,
+    package: &Package,
+    cached_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
+) -> OutputFile {
     OutputFile {
         path,
         content: Content::Text(
-            serde_json::to_string(&PackageInterface::from_package(package))
+            serde_json::to_string(&PackageInterface::from_package(package, cached_modules))
                 .expect("JSON module interface serialisation"),
         ),
     }
+}
+
+pub fn generate_json_package_information(path: Utf8PathBuf, config: PackageConfig) -> OutputFile {
+    OutputFile {
+        path,
+        content: Content::Text(package_information_as_json(config)),
+    }
+}
+
+fn package_information_as_json(config: PackageConfig) -> String {
+    let info = PackageInformation {
+        package_config: config,
+    };
+    serde_json::to_string_pretty(&info).expect("JSON module information serialisation")
 }
 
 fn page_unnest(path: &str) -> String {
@@ -493,62 +513,29 @@ fn escape_html_content(it: String) -> String {
         .replace('\'', "&#39;")
 }
 
-fn escape_html_contents(indexes: Vec<SearchIndex>) -> Vec<SearchIndex> {
+#[test]
+fn escape_html_content_test() {
+    assert_eq!(
+        escape_html_content("&<>\"'".to_string()),
+        "&amp;&lt;&gt;&quot;&#39;"
+    );
+}
+
+fn escape_html_contents(indexes: Vec<SearchItem>) -> Vec<SearchItem> {
     indexes
         .into_iter()
-        .map(|idx| SearchIndex {
-            doc: idx.doc,
+        .map(|idx| SearchItem {
+            type_: idx.type_,
+            parent_title: idx.parent_title,
             title: idx.title,
             content: escape_html_content(idx.content),
-            url: idx.url,
+            reference: idx.reference,
         })
-        .collect::<Vec<SearchIndex>>()
+        .collect::<Vec<SearchItem>>()
 }
 
 fn import_synonyms(parent: &str, child: &str) -> String {
     format!("Synonyms:\n{parent}.{child}\n{parent} {child}")
-}
-
-fn function<'a>(
-    source_links: &SourceLinker,
-    statement: &'a TypedDefinition,
-) -> Option<DocsFunction<'a>> {
-    let mut formatter = format::Formatter::new();
-
-    match statement {
-        Definition::Function(Function {
-            publicity: Publicity::Public,
-            name,
-            documentation: doc,
-            arguments: args,
-            return_type: ret,
-            location,
-            deprecation,
-            ..
-        }) => {
-            let (_, name) = name
-                .as_ref()
-                .expect("Function in a definition must be named");
-
-            Some(DocsFunction {
-                name,
-                documentation: markdown_documentation(doc),
-                text_documentation: text_documentation(doc),
-                signature: print(
-                    formatter
-                        .docs_fn_signature(Publicity::Public, name, args, ret.clone(), location)
-                        .group(),
-                ),
-                source_url: source_links.url(*location),
-                deprecation_message: match deprecation {
-                    Deprecation::NotDeprecated => "".to_string(),
-                    Deprecation::Deprecated { message } => message.to_string(),
-                },
-            })
-        }
-
-        _ => None,
-    }
 }
 
 fn text_documentation(doc: &Option<(u32, EcoString)>) -> String {
@@ -691,12 +678,43 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
     }
 }
 
-fn constant<'a>(
+fn value<'a>(
     source_links: &SourceLinker,
     statement: &'a TypedDefinition,
-) -> Option<Constant<'a>> {
+) -> Option<DocsValues<'a>> {
     let mut formatter = format::Formatter::new();
     match statement {
+        Definition::Function(Function {
+            publicity: Publicity::Public,
+            name,
+            documentation: doc,
+            arguments: args,
+            return_type: ret,
+            location,
+            deprecation,
+            ..
+        }) => {
+            let (_, name) = name
+                .as_ref()
+                .expect("Function in a definition must be named");
+
+            Some(DocsValues {
+                name,
+                definition: print(
+                    formatter
+                        .docs_fn_signature(Publicity::Public, name, args, ret.clone(), location)
+                        .group(),
+                ),
+                documentation: markdown_documentation(doc),
+                text_documentation: text_documentation(doc),
+                source_url: source_links.url(*location),
+                deprecation_message: match deprecation {
+                    Deprecation::NotDeprecated => "".to_string(),
+                    Deprecation::Deprecated { message } => message.to_string(),
+                },
+            })
+        }
+
         Definition::ModuleConstant(ModuleConstant {
             publicity: Publicity::Public,
             documentation: doc,
@@ -704,12 +722,13 @@ fn constant<'a>(
             value,
             location,
             ..
-        }) => Some(Constant {
+        }) => Some(DocsValues {
             name,
             definition: print(formatter.docs_const_expr(Publicity::Public, name, value)),
             documentation: markdown_documentation(doc),
             text_documentation: text_documentation(doc),
             source_url: source_links.url(*location),
+            deprecation_message: "".to_string(),
         }),
 
         _ => None,
@@ -724,16 +743,6 @@ fn print(doc: pretty::Document<'_>) -> String {
 struct Link {
     name: String,
     path: String,
-}
-
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
-struct DocsFunction<'a> {
-    name: &'a str,
-    signature: String,
-    documentation: String,
-    text_documentation: String,
-    source_url: String,
-    deprecation_message: String,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -763,12 +772,13 @@ struct Type<'a> {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
-struct Constant<'a> {
+struct DocsValues<'a> {
     name: &'a str,
     definition: String,
     documentation: String,
     text_documentation: String,
     source_url: String,
+    deprecation_message: String,
 }
 
 #[derive(Template)]
@@ -776,8 +786,10 @@ struct Constant<'a> {
 struct PageTemplate<'a> {
     gleam_version: &'a str,
     unnest: &'a str,
+    host: &'a str,
     page_title: &'a str,
     page_meta_description: &'a str,
+    file_path: &'a Utf8PathBuf,
     project_name: &'a str,
     project_version: &'a str,
     pages: &'a [Link],
@@ -792,25 +804,119 @@ struct PageTemplate<'a> {
 struct ModuleTemplate<'a> {
     gleam_version: &'a str,
     unnest: String,
+    host: &'a str,
     page_title: &'a str,
     page_meta_description: &'a str,
+    file_path: &'a Utf8PathBuf,
     module_name: EcoString,
     project_name: &'a str,
     project_version: &'a str,
     pages: &'a [Link],
     links: &'a [Link],
     modules: &'a [Link],
-    functions: Vec<DocsFunction<'a>>,
     types: Vec<Type<'a>>,
-    constants: Vec<Constant<'a>>,
+    values: Vec<DocsValues<'a>>,
     documentation: String,
     rendering_timestamp: &'a str,
 }
 
 #[derive(Serialize, PartialEq, Eq, PartialOrd, Ord, Clone)]
-struct SearchIndex {
-    doc: String,
+struct SearchData {
+    items: Vec<SearchItem>,
+    #[serde(rename = "proglang")]
+    programming_language: SearchProgrammingLanguage,
+}
+
+#[derive(Serialize, PartialEq, Eq, PartialOrd, Ord, Clone)]
+struct SearchItem {
+    #[serde(rename = "type")]
+    type_: SearchItemType,
+    #[serde(rename = "parentTitle")]
+    parent_title: String,
     title: String,
+    #[serde(rename = "doc")]
     content: String,
-    url: String,
+    #[serde(rename = "ref")]
+    reference: String,
+}
+
+#[derive(Serialize, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[serde(rename_all = "lowercase")]
+enum SearchItemType {
+    Value,
+    Module,
+    Page,
+    Type,
+}
+
+#[derive(Serialize, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[serde(rename_all = "lowercase")]
+enum SearchProgrammingLanguage {
+    // Elixir,
+    // Erlang,
+    Gleam,
+}
+
+#[test]
+fn package_config_to_json() {
+    let input = r#"
+name = "my_project"
+version = "1.0.0"
+licences = ["Apache-2.0", "MIT"]
+description = "Pretty complex config"
+target = "erlang"
+repository = { type = "github", user = "example", repo = "my_dep" }
+links = [{ title = "Home page", href = "https://example.com" }]
+internal_modules = ["my_app/internal"]
+gleam = ">= 0.30.0"
+
+[dependencies]
+gleam_stdlib = ">= 0.18.0 and < 2.0.0"
+my_other_project = { path = "../my_other_project" }
+
+[dev-dependencies]
+gleeunit = ">= 1.0.0 and < 2.0.0"
+
+[documentation]
+pages = [{ title = "My Page", path = "my-page.html", source = "./path/to/my-page.md" }]
+
+[erlang]
+application_start_module = "my_app/application"
+extra_applications = ["inets", "ssl"]
+
+[javascript]
+typescript_declarations = true
+runtime = "node"
+
+[javascript.deno]
+allow_all = false
+allow_ffi = true
+allow_env = ["DATABASE_URL"]
+allow_net = ["example.com:443"]
+allow_read = ["./database.sqlite"]
+"#;
+
+    let config = toml::from_str::<PackageConfig>(&input).unwrap();
+    let info = PackageInformation {
+        package_config: config.clone(),
+    };
+    let json = package_information_as_json(config);
+    let output = format!("--- GLEAM.TOML\n{input}\n\n--- EXPORTED JSON\n\n{json}");
+    insta::assert_snapshot!(output);
+
+    let roundtrip: PackageInformation = serde_json::from_str(&json).unwrap();
+    assert_eq!(info, roundtrip);
+}
+
+#[test]
+fn barebones_package_config_to_json() {
+    let input = r#"
+name = "my_project"
+version = "1.0.0"
+"#;
+
+    let config = toml::from_str::<PackageConfig>(&input).unwrap();
+    let json = package_information_as_json(config);
+    let output = format!("--- GLEAM.TOML\n{input}\n\n--- EXPORTED JSON\n\n{json}");
+    insta::assert_snapshot!(output);
 }

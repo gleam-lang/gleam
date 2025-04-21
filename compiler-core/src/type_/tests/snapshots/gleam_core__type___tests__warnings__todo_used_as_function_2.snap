@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "pub fn main() {\n          todo(1)\n        }"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn main() {

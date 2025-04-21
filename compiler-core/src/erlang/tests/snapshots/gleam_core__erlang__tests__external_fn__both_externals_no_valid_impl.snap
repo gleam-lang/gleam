@@ -22,7 +22,7 @@ pub fn should_not_be_generated() {
 
 -export([erl/0]).
 
--file("/root/project/test/my/mod.gleam", 6).
+-file("project/test/my/mod.gleam", 6).
 -spec erl() -> nil.
 erl() ->
     one:one().

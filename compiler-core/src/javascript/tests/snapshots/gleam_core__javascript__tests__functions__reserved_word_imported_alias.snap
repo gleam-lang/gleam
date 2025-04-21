@@ -3,6 +3,10 @@ source: compiler-core/src/javascript/tests/functions.rs
 expression: "import for.{class as while} as function\n\npub fn export() {\n  let delete = function.class\n  while()\n}\n"
 ---
 ----- SOURCE CODE
+-- for.gleam
+pub fn class() { 1 }
+
+-- main.gleam
 import for.{class as while} as function
 
 pub fn export() {

@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-assertion_line: 866
 expression: "\n@internal pub type Alias = Result(Int, String)\n@internal pub type AnotherType {\n  Wibble\n}\n"
 ---
 @internal pub type Alias = Result(Int, String)

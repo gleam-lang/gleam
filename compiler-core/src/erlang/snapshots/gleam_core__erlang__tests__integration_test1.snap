@@ -11,7 +11,7 @@ pub fn t() { True }
 
 -export([t/0]).
 
--file("/root/project/test/my/mod.gleam", 1).
+-file("project/test/my/mod.gleam", 1).
 -spec t() -> boolean().
 t() ->
     true.

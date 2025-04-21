@@ -15,7 +15,7 @@ pub fn go() {
 
 -export([go/0]).
 
--file("/root/project/test/my/mod.gleam", 1).
+-file("project/test/my/mod.gleam", 1).
 -spec go() -> integer().
 go() ->
     Y = 1,

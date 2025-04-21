@@ -45,6 +45,7 @@
     unused_results
 )]
 #![allow(
+    clippy::assign_op_pattern,
     clippy::to_string_trait_impl,
     clippy::match_single_binding,
     clippy::match_like_matches_macro,
@@ -94,6 +95,7 @@ mod call_graph;
 mod dep_tree;
 mod exhaustiveness;
 pub(crate) mod graph;
+mod reference;
 
 pub use error::{Error, Result};
 pub use warning::Warning;

@@ -1,11 +1,11 @@
 use camino::{Utf8Path, Utf8PathBuf};
 use gleam_core::{
-    io::{memory::InMemoryFileSystem, Content, FileSystemWriter},
+    io::{Content, FileSystemWriter, memory::InMemoryFileSystem},
     version::COMPILER_VERSION,
 };
 use itertools::Itertools;
 use regex::Regex;
-use std::{collections::HashMap, fmt::Write, sync::OnceLock};
+use std::{collections::HashMap, fmt::Write, sync::LazyLock};
 
 #[derive(Debug)]
 pub struct TestCompileOutput {
@@ -45,9 +45,6 @@ impl TestCompileOutput {
 
                 Content::Text(text) => {
                     let text = FILE_LINE_REGEX
-                        .get_or_init(|| {
-                            Regex::new(r#"-file\("([^"]+)", (\d+)\)\."#).expect("Invalid regex")
-                        })
                         .replace_all(text, |caps: &regex::Captures| {
                             let path = caps
                                 .get(1)
@@ -82,8 +79,8 @@ pub fn to_in_memory_filesystem(path: &Utf8Path) -> InMemoryFileSystem {
         .follow_links(true)
         .into_iter()
         .filter_map(Result::ok)
-        .filter(|e| e.file_type().is_file())
-        .map(|d| d.into_path());
+        .filter(|entry| entry.file_type().is_file())
+        .map(|entry| entry.into_path());
 
     for fullpath in files {
         let content = std::fs::read(&fullpath).unwrap();
@@ -95,7 +92,8 @@ pub fn to_in_memory_filesystem(path: &Utf8Path) -> InMemoryFileSystem {
     fs
 }
 
-static FILE_LINE_REGEX: OnceLock<Regex> = OnceLock::new();
+static FILE_LINE_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"-file\("([^"]+)", (\d+)\)\."#).expect("Invalid regex"));
 
 pub fn normalise_diagnostic(text: &str) -> String {
     // There is an extra ^ on Windows in some error messages' code

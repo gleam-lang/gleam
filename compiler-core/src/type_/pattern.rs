@@ -1,22 +1,26 @@
 use hexpm::version::Version;
 use im::hashmap;
 use itertools::Itertools;
+use num_bigint::BigInt;
 
 /// Type inference and checking of patterns used in case expressions
 /// and variables bindings.
 ///
 use super::*;
 use crate::{
-    analyse::{name::check_name_case, Inferred},
+    analyse::{Inferred, name::check_name_case},
     ast::{
         AssignName, BitArrayOption, ImplicitCallArgOrigin, Layer, UntypedPatternBitArraySegment,
     },
+    reference::ReferenceKind,
+    type_::expression::FunctionDefinition,
 };
 use std::sync::Arc;
 
 pub struct PatternTyper<'a, 'b> {
     environment: &'a mut Environment<'b>,
     implementations: &'a Implementations,
+    current_function: &'a FunctionDefinition,
     hydrator: &'a Hydrator,
     mode: PatternMode,
     initial_pattern_vars: HashSet<EcoString>,
@@ -27,6 +31,8 @@ pub struct PatternTyper<'a, 'b> {
 
     /// The minimum Gleam version required to compile the typed pattern.
     pub minimum_required_version: Version,
+
+    pub error_encountered: bool,
 }
 
 enum PatternMode {
@@ -38,18 +44,21 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
     pub fn new(
         environment: &'a mut Environment<'b>,
         implementations: &'a Implementations,
+        current_function: &'a FunctionDefinition,
         hydrator: &'a Hydrator,
         problems: &'a mut Problems,
     ) -> Self {
         Self {
             environment,
             implementations,
+            current_function,
             hydrator,
             mode: PatternMode::Initial,
             initial_pattern_vars: HashSet::new(),
             inferred_variant_variables: HashMap::new(),
             minimum_required_version: Version::new(0, 1, 0),
             problems,
+            error_encountered: false,
         }
     }
 
@@ -58,23 +67,22 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         name: &str,
         type_: Arc<Type>,
         location: SrcSpan,
-    ) -> Result<(), UnifyError> {
+        origin: VariableOrigin,
+    ) {
         self.check_name_case(location, &EcoString::from(name), Named::Variable);
 
         match &mut self.mode {
             PatternMode::Initial => {
                 // Register usage for the unused variable detection
-                self.environment.init_usage(
-                    name.into(),
-                    EntityKind::Variable {
-                        how_to_ignore: Some(format!("_{name}").into()),
-                    },
-                    location,
-                    self.problems,
-                );
+                self.environment
+                    .init_usage(name.into(), origin.clone(), location, self.problems);
                 // Ensure there are no duplicate variable names in the pattern
                 if self.initial_pattern_vars.contains(name) {
-                    return Err(UnifyError::DuplicateVarInPattern { name: name.into() });
+                    self.error(convert_unify_error(
+                        UnifyError::DuplicateVarInPattern { name: name.into() },
+                        location,
+                    ));
+                    return;
                 }
                 // We no longer have access to the variable from the subject of the pattern
                 // so it doesn't need to be inferred any more.
@@ -86,8 +94,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 // And now insert the variable for use in the code that comes
                 // after the pattern.
                 self.environment
-                    .insert_local_variable(name.into(), location, type_);
-                Ok(())
+                    .insert_local_variable(name.into(), location, origin, type_);
             }
 
             PatternMode::Alternative(assigned) => {
@@ -95,14 +102,22 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     // This variable was defined in the Initial multi-pattern
                     Some(initial) if self.initial_pattern_vars.contains(name) => {
                         assigned.push(name.into());
-                        let initial_typ = initial.type_.clone();
-                        unify(initial_typ, type_.clone())?;
+                        let initial_type = initial.type_.clone();
+                        match unify(initial_type, type_.clone()) {
+                            Ok(()) => {}
+                            Err(error) => {
+                                self.problems.error(convert_unify_error(error, location));
+                                self.error_encountered = true;
+                            }
+                        };
                         unify_constructor_variants(Arc::make_mut(&mut initial.type_), &type_);
-                        Ok(())
                     }
 
                     // This variable was not defined in the Initial multi-pattern
-                    _ => Err(UnifyError::ExtraVarInAlternativePattern { name: name.into() }),
+                    _ => self.error(convert_unify_error(
+                        UnifyError::ExtraVarInAlternativePattern { name: name.into() },
+                        location,
+                    )),
                 }
             }
         }
@@ -134,8 +149,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     .insert(name.clone(), variant_index);
                 // This variable is only inferred in this branch of the case expression
                 self.environment.insert_local_variable(
-                    name,
+                    name.clone(),
                     variable.definition_location().span,
+                    VariableOrigin::Variable(name),
                     type_,
                 );
             }
@@ -169,9 +185,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         multi_pattern: UntypedMultiPattern,
         subjects: &[TypedExpr],
         location: &SrcSpan,
-    ) -> Result<Vec<TypedPattern>, Error> {
+    ) -> Vec<TypedPattern> {
         self.mode = PatternMode::Alternative(vec![]);
-        let typed_multi = self.infer_multi_pattern(multi_pattern, subjects, location)?;
+        let typed_multi = self.infer_multi_pattern(multi_pattern, subjects, location);
+
+        if self.error_encountered {
+            return typed_multi;
+        }
+
         match &self.mode {
             PatternMode::Initial => panic!("Pattern mode switched from Alternative to Initial"),
             PatternMode::Alternative(assigned)
@@ -180,7 +201,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 for name in assigned {
                     let _ = self.initial_pattern_vars.remove(name);
                 }
-                Err(Error::MissingVarInAlternativePattern {
+                self.error(Error::MissingVarInAlternativePattern {
                     location: *location,
                     // It is safe to use expect here as we checked the length above
                     name: self
@@ -189,9 +210,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         .next()
                         .expect("Getting undefined pattern variable")
                         .clone(),
-                })
+                });
+                typed_multi
             }
-            PatternMode::Alternative(_) => Ok(typed_multi),
+            PatternMode::Alternative(_) => typed_multi,
         }
     }
 
@@ -200,14 +222,15 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         multi_pattern: UntypedMultiPattern,
         subjects: &[TypedExpr],
         location: &SrcSpan,
-    ) -> Result<Vec<TypedPattern>, Error> {
+    ) -> Vec<TypedPattern> {
         // If there are N subjects the multi-pattern is expected to be N patterns
         if subjects.len() != multi_pattern.len() {
-            return Err(Error::IncorrectNumClausePatterns {
+            self.error(Error::IncorrectNumClausePatterns {
                 location: *location,
                 expected: subjects.len(),
                 given: multi_pattern.len(),
             });
+            return Vec::new();
         }
 
         // Unify each pattern in the multi-pattern with the corresponding subject
@@ -228,91 +251,142 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 _ => None,
             };
 
-            let pattern = self.unify(pattern, subject.type_(), subject_variable)?;
+            let pattern = self.unify(pattern, subject.type_(), subject_variable);
             typed_multi.push(pattern);
         }
-        Ok(typed_multi)
+        typed_multi
     }
 
     fn infer_pattern_bit_array(
         &mut self,
         mut segments: Vec<UntypedPatternBitArraySegment>,
         location: SrcSpan,
-    ) -> Result<TypedPattern, Error> {
+    ) -> TypedPattern {
         let last_segment = segments.pop();
 
         let mut typed_segments: Vec<_> = segments
             .into_iter()
             .map(|s| self.infer_pattern_segment(s, false))
-            .try_collect()?;
+            .collect();
 
         if let Some(s) = last_segment {
-            let typed_last_segment = self.infer_pattern_segment(s, true)?;
+            let typed_last_segment = self.infer_pattern_segment(s, true);
             typed_segments.push(typed_last_segment)
         }
 
-        Ok(TypedPattern::BitArray {
+        TypedPattern::BitArray {
             location,
             segments: typed_segments,
-        })
+        }
     }
 
     fn infer_pattern_segment(
         &mut self,
-        segment: UntypedPatternBitArraySegment,
+        mut segment: UntypedPatternBitArraySegment,
         is_last_segment: bool,
-    ) -> Result<TypedPatternBitArraySegment, Error> {
-        let UntypedPatternBitArraySegment {
-            location,
-            options,
-            value,
-            ..
-        } = segment;
+    ) -> TypedPatternBitArraySegment {
+        // If the segment doesn't have an explicit type option we add a default
+        // one ourselves if the pattern is unambiguous: literal strings are
+        // implicitly considered utf-8 encoded strings, while floats are
+        // implicitly given the float type option.
+        if !segment.has_type_option() {
+            match segment.value.as_ref() {
+                Pattern::String { location, .. } => {
+                    self.track_feature_usage(FeatureKind::UnannotatedUtf8StringSegment, *location);
+                    segment.options.push(BitArrayOption::Utf8 {
+                        location: SrcSpan::default(),
+                    });
+                }
 
-        let options = match value.as_ref() {
-            Pattern::String { location, .. } if options.is_empty() => {
-                self.track_feature_usage(FeatureKind::UnannotatedUtf8StringSegment, *location);
-                vec![BitArrayOption::Utf8 {
-                    location: SrcSpan::default(),
-                }]
+                Pattern::Float { location, .. } => {
+                    self.track_feature_usage(FeatureKind::UnannotatedFloatSegment, *location);
+                    segment.options.push(BitArrayOption::Float {
+                        location: SrcSpan::default(),
+                    })
+                }
+
+                _ => (),
             }
-            _ => options,
-        };
+        }
 
-        let options: Vec<_> = options
+        let options: Vec<_> = segment
+            .options
             .into_iter()
             .map(|o| {
                 crate::analyse::infer_bit_array_option(o, |value, type_| {
-                    self.unify(value, type_, None)
+                    Ok(self.unify(value, type_, None))
                 })
             })
-            .try_collect()?;
+            .try_collect()
+            .expect("The function always returns Ok");
 
-        let segment_type = bit_array::type_options_for_pattern(&options, !is_last_segment)
-            .map_err(|error| Error::BitArraySegmentError {
-                error: error.error,
-                location: error.location,
-            })?;
-
-        let type_ = {
-            match value.deref() {
-                Pattern::Variable { .. } if segment_type == string() => {
-                    Err(Error::BitArraySegmentError {
-                        error: bit_array::ErrorType::VariableUtfSegmentInPattern,
-                        location,
-                    })
-                }
-                _ => Ok(segment_type),
+        let segment_type = match bit_array::type_options_for_pattern(&options, !is_last_segment) {
+            Ok(type_) => type_,
+            Err(error) => {
+                self.error(Error::BitArraySegmentError {
+                    error: error.error,
+                    location: error.location,
+                });
+                self.environment.new_unbound_var()
             }
-        }?;
-        let typed_value = self.unify(*value, type_.clone(), None)?;
+        };
 
-        Ok(BitArraySegment {
-            location,
+        // Track usage of the unaligned bit arrays feature on JavaScript so that
+        // warnings can be emitted if the Gleam version constraint is too low
+        if self.environment.target == Target::JavaScript
+            && !self.current_function.has_javascript_external
+        {
+            for option in options.iter() {
+                match option {
+                    // Use of the `bits` segment type
+                    BitArrayOption::<TypedPattern>::Bits { location } => {
+                        self.track_feature_usage(
+                            FeatureKind::JavaScriptUnalignedBitArray,
+                            *location,
+                        );
+                    }
+
+                    // Int segments that aren't a whole number of bytes
+                    BitArrayOption::<TypedPattern>::Size { value, .. } if segment_type == int() => {
+                        match &**value {
+                            Pattern::<_>::Int {
+                                location,
+                                int_value,
+                                ..
+                            } if int_value % 8 != BigInt::ZERO => {
+                                self.track_feature_usage(
+                                    FeatureKind::JavaScriptUnalignedBitArray,
+                                    *location,
+                                );
+                            }
+                            _ => (),
+                        }
+                    }
+
+                    _ => (),
+                }
+            }
+        }
+
+        let type_ = match segment.value.deref() {
+            Pattern::Variable { .. } if segment_type == string() => {
+                self.error(Error::BitArraySegmentError {
+                    error: bit_array::ErrorType::VariableUtfSegmentInPattern,
+                    location: segment.location,
+                });
+                self.environment.new_unbound_var()
+            }
+            _ => segment_type,
+        };
+
+        let typed_value = self.unify(*segment.value, type_.clone(), None);
+
+        BitArraySegment {
+            location: segment.location,
             value: Box::new(typed_value),
             options,
             type_,
-        })
+        }
     }
 
     /// When we have an assignment or a case expression we unify the pattern with the
@@ -339,56 +413,66 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         // in the inner scope, we can infer that the `some_wibble` variable is the `Wibble` variant
         //
         subject_variable: Option<EcoString>,
-    ) -> Result<TypedPattern, Error> {
+    ) -> TypedPattern {
         match pattern {
             Pattern::Discard { name, location, .. } => {
                 self.check_name_case(location, &name, Named::Discard);
-                Ok(Pattern::Discard {
+                Pattern::Discard {
                     type_,
                     name,
                     location,
-                })
+                }
             }
-            Pattern::Invalid { location, .. } => Ok(Pattern::Invalid { type_, location }),
+            Pattern::Invalid { location, .. } => Pattern::Invalid { type_, location },
 
-            Pattern::Variable { name, location, .. } => {
-                self.insert_variable(&name, type_.clone(), location)
-                    .map_err(|e| convert_unify_error(e, location))?;
+            Pattern::Variable {
+                name,
+                location,
+                origin,
+                ..
+            } => {
+                self.insert_variable(&name, type_.clone(), location, origin.clone());
 
-                Ok(Pattern::Variable {
+                Pattern::Variable {
                     type_,
                     name,
                     location,
-                })
+                    origin,
+                }
             }
 
             Pattern::VarUsage { name, location, .. } => {
-                let vc = self
-                    .environment
-                    .get_variable(&name)
-                    .cloned()
-                    .ok_or_else(|| Error::UnknownVariable {
-                        location,
-                        name: name.clone(),
-                        variables: self.environment.local_value_names(),
-                        type_with_name_in_scope: self
-                            .environment
-                            .module_types
-                            .keys()
-                            .any(|type_| type_ == &name),
-                    })?;
-                self.environment.increment_usage(&name);
-                let type_ =
-                    self.environment
-                        .instantiate(vc.type_.clone(), &mut hashmap![], self.hydrator);
-                unify(int(), type_.clone()).map_err(|e| convert_unify_error(e, location))?;
+                let constructor = match self.environment.get_variable(&name) {
+                    Some(constructor) => constructor.clone(),
+                    None => {
+                        self.error(Error::UnknownVariable {
+                            location,
+                            name: name.clone(),
+                            variables: self.environment.local_value_names(),
+                            type_with_name_in_scope: self
+                                .environment
+                                .module_types
+                                .keys()
+                                .any(|type_| type_ == &name),
+                        });
+                        return Pattern::Invalid { location, type_ };
+                    }
+                };
 
-                Ok(Pattern::VarUsage {
+                self.environment.increment_usage(&name);
+                let type_ = self.environment.instantiate(
+                    constructor.type_.clone(),
+                    &mut hashmap![],
+                    self.hydrator,
+                );
+                self.unify_types(int(), type_.clone(), location);
+
+                Pattern::VarUsage {
                     name,
                     location,
-                    constructor: Some(vc),
+                    constructor: Some(constructor),
                     type_,
-                })
+                }
             }
 
             Pattern::StringPrefix {
@@ -400,30 +484,43 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 right_side_assignment,
             } => {
                 // The entire concatenate pattern must be a string
-                unify(type_, string()).map_err(|e| convert_unify_error(e, location))?;
+                self.unify_types(type_, string(), location);
 
                 // The left hand side may assign a variable, which is the prefix of the string
                 if let Some((left, left_location)) = &left_side_assignment {
-                    self.insert_variable(left.as_ref(), string(), *left_location)
-                        .map_err(|e| convert_unify_error(e, location))?;
+                    self.insert_variable(
+                        left.as_ref(),
+                        string(),
+                        *left_location,
+                        VariableOrigin::AssignmentPattern,
+                    );
                 }
 
                 // The right hand side may assign a variable, which is the suffix of the string
-                if let AssignName::Variable(right) = &right_side_assignment {
-                    self.insert_variable(right.as_ref(), string(), right_location)
-                        .map_err(|e| convert_unify_error(e, location))?;
-                } else if let AssignName::Discard(right) = &right_side_assignment {
-                    self.check_name_case(right_location, right, Named::Discard);
+                match &right_side_assignment {
+                    AssignName::Variable(right) => {
+                        self.insert_variable(
+                            right.as_ref(),
+                            string(),
+                            right_location,
+                            VariableOrigin::Variable(right.clone()),
+                        );
+                    }
+                    AssignName::Discard(_) => {
+                        if let AssignName::Discard(right) = &right_side_assignment {
+                            self.check_name_case(right_location, right, Named::Discard);
+                        }
+                    }
                 };
 
-                Ok(Pattern::StringPrefix {
+                Pattern::StringPrefix {
                     location,
                     left_location,
                     right_location,
                     left_side_string,
                     left_side_assignment,
                     right_side_assignment,
-                })
+                }
             }
 
             Pattern::Assign {
@@ -431,14 +528,18 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 pattern,
                 location,
             } => {
-                let pattern = self.unify(*pattern, type_, subject_variable)?;
-                self.insert_variable(&name, pattern.type_().clone(), location)
-                    .map_err(|e| convert_unify_error(e, pattern.location()))?;
-                Ok(Pattern::Assign {
+                let pattern = self.unify(*pattern, type_, subject_variable);
+                self.insert_variable(
+                    &name,
+                    pattern.type_().clone(),
+                    location,
+                    VariableOrigin::AssignmentPattern,
+                );
+                Pattern::Assign {
                     name,
                     pattern: Box::new(pattern),
                     location,
-                })
+                }
             }
 
             Pattern::Int {
@@ -446,29 +547,36 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 value,
                 int_value,
             } => {
-                unify(type_, int()).map_err(|e| convert_unify_error(e, location))?;
+                self.unify_types(type_, int(), location);
 
                 if self.environment.target == Target::JavaScript
-                    && !self.implementations.uses_javascript_externals
+                    && !self.current_function.has_javascript_external
                 {
                     check_javascript_int_safety(&int_value, location, self.problems);
                 }
 
-                Ok(Pattern::Int {
+                Pattern::Int {
                     location,
                     value,
                     int_value,
-                })
+                }
             }
 
             Pattern::Float { location, value } => {
-                unify(type_, float()).map_err(|e| convert_unify_error(e, location))?;
-                Ok(Pattern::Float { location, value })
+                self.unify_types(type_, float(), location);
+
+                if self.environment.target == Target::Erlang
+                    && !self.implementations.uses_erlang_externals
+                {
+                    check_erlang_float_safety(&value, location, self.problems)
+                }
+
+                Pattern::Float { location, value }
             }
 
             Pattern::String { location, value } => {
-                unify(type_, string()).map_err(|e| convert_unify_error(e, location))?;
-                Ok(Pattern::String { location, value })
+                self.unify_types(type_, string(), location);
+                Pattern::String { location, value }
             }
 
             Pattern::List {
@@ -492,85 +600,91 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     let elements = elements
                         .into_iter()
                         .map(|element| self.unify(element, type_.clone(), None))
-                        .try_collect()?;
+                        .collect();
                     let type_ = list(type_);
 
-                    let tail = match tail {
-                        Some(tail) => Some(Box::new(self.unify(*tail, type_.clone(), None)?)),
-                        None => None,
-                    };
+                    let tail = tail.map(|tail| Box::new(self.unify(*tail, type_.clone(), None)));
 
-                    Ok(Pattern::List {
+                    Pattern::List {
                         location,
                         elements,
                         tail,
                         type_,
-                    })
+                    }
                 }
 
-                None => Err(Error::CouldNotUnify {
-                    given: list(self.environment.new_unbound_var()),
-                    expected: type_.clone(),
-                    situation: None,
-                    location,
-                }),
+                None => {
+                    self.problems.error(Error::CouldNotUnify {
+                        given: list(self.environment.new_unbound_var()),
+                        expected: type_.clone(),
+                        situation: None,
+                        location,
+                    });
+                    self.error_encountered = true;
+
+                    Pattern::Invalid { location, type_ }
+                }
             },
 
-            Pattern::Tuple { elems, location } => match collapse_links(type_.clone()).deref() {
-                Type::Tuple { elems: type_elems } => {
-                    if elems.len() != type_elems.len() {
-                        return Err(Error::IncorrectArity {
+            Pattern::Tuple { elements, location } => match collapse_links(type_.clone()).deref() {
+                Type::Tuple {
+                    elements: type_elements,
+                } => {
+                    if elements.len() != type_elements.len() {
+                        self.error(Error::IncorrectArity {
                             labels: vec![],
                             location,
-                            expected: type_elems.len(),
-                            given: elems.len(),
+                            expected: type_elements.len(),
+                            given: elements.len(),
                         });
+                        return Pattern::Invalid { location, type_ };
                     }
 
-                    let elems = elems
+                    let elements = elements
                         .into_iter()
-                        .zip(type_elems)
+                        .zip(type_elements)
                         .map(|(pattern, type_)| self.unify(pattern, type_.clone(), None))
-                        .try_collect()?;
-                    Ok(Pattern::Tuple { elems, location })
+                        .collect();
+                    Pattern::Tuple { elements, location }
                 }
 
                 Type::Var { .. } => {
-                    let elems_types: Vec<_> = (0..(elems.len()))
+                    let elements_types: Vec<_> = (0..(elements.len()))
                         .map(|_| self.environment.new_unbound_var())
                         .collect();
-                    unify(tuple(elems_types.clone()), type_)
-                        .map_err(|e| convert_unify_error(e, location))?;
-                    let elems = elems
+                    self.unify_types(tuple(elements_types.clone()), type_, location);
+                    let elements = elements
                         .into_iter()
-                        .zip(elems_types)
+                        .zip(elements_types)
                         .map(|(pattern, type_)| self.unify(pattern, type_, None))
-                        .try_collect()?;
-                    Ok(Pattern::Tuple { elems, location })
+                        .collect();
+                    Pattern::Tuple { elements, location }
                 }
 
                 _ => {
-                    let elems_types = (0..(elems.len()))
+                    let elements_types = (0..(elements.len()))
                         .map(|_| self.environment.new_unbound_var())
                         .collect();
 
-                    Err(Error::CouldNotUnify {
-                        given: tuple(elems_types),
-                        expected: type_,
+                    self.error(Error::CouldNotUnify {
+                        given: tuple(elements_types),
+                        expected: type_.clone(),
                         situation: None,
                         location,
-                    })
+                    });
+                    Pattern::Invalid { location, type_ }
                 }
             },
 
             Pattern::BitArray { location, segments } => {
-                unify(type_, bits()).map_err(|e| convert_unify_error(e, location))?;
+                self.unify_types(type_, bits(), location);
                 self.infer_pattern_bit_array(segments, location)
             }
 
             Pattern::Constructor {
                 location,
                 module,
+                name_location,
                 name,
                 arguments: mut pattern_args,
                 spread,
@@ -579,28 +693,36 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 // Register the value as seen for detection of unused values
                 self.environment.increment_usage(&name);
 
-                let cons = self
+                let constructor = self
                     .environment
-                    .get_value_constructor(module.as_ref().map(|(module, _)| module), &name)
-                    .map_err(|e| {
-                        convert_get_value_constructor_error(
-                            e,
+                    .get_value_constructor(module.as_ref().map(|(module, _)| module), &name);
+
+                let constructor = match constructor {
+                    Ok(constructor) => constructor,
+                    Err(error) => {
+                        self.error(convert_get_value_constructor_error(
+                            error,
                             location,
                             module.as_ref().map(|(_, location)| *location),
-                        )
-                    })?;
+                        ));
+                        return Pattern::Invalid { location, type_ };
+                    }
+                };
 
-                match cons.field_map() {
+                match constructor.field_map() {
                     // The fun has a field map so labelled arguments may be present and need to be reordered.
                     Some(field_map) => {
                         if let Some(spread_location) = spread {
                             // Using the spread operator when you have already provided variables for all of the
                             // record's fields throws an error
                             if pattern_args.len() == field_map.arity as usize {
-                                return Err(Error::UnnecessarySpreadOperator {
-                                    location: spread_location,
-                                    arity: field_map.arity as usize,
-                                });
+                                {
+                                    self.problems.error(Error::UnnecessarySpreadOperator {
+                                        location: spread_location,
+                                        arity: field_map.arity as usize,
+                                    });
+                                    self.error_encountered = true;
+                                };
                             }
 
                             // Insert discard variables to match the unspecified fields
@@ -611,7 +733,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             // Potential future optimisation.
                             let index_of_first_labelled_arg = pattern_args
                                 .iter()
-                                .position(|a| a.label.is_some())
+                                .position(|argument| argument.label.is_some())
                                 .unwrap_or(pattern_args.len());
 
                             // In Gleam we can pass in positional unlabelled args to a constructor
@@ -639,7 +761,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             let supplied_unlabelled_args = index_of_first_labelled_arg;
                             let supplied_labelled_args = pattern_args
                                 .iter()
-                                .filter_map(|l| l.label.clone())
+                                .filter_map(|argument| argument.label.clone())
                                 .collect::<HashSet<_>>();
                             let constructor_unlabelled_args =
                                 field_map.arity - field_map.fields.len() as u32;
@@ -651,7 +773,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                 .fields
                                 .iter()
                                 // We take the labels in order of definition in the constructor...
-                                .sorted_by_key(|(_, pos)| *pos)
+                                .sorted_by_key(|(_, position)| *position)
                                 .map(|(label, _)| label.clone())
                                 // ...and then remove the ones that were supplied as unlabelled
                                 // positional arguments...
@@ -676,15 +798,28 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             }
                         }
 
-                        field_map.reorder(&mut pattern_args, location)?
+                        if let Err(error) = field_map.reorder(&mut pattern_args, location) {
+                            {
+                                self.problems.error(error);
+                                self.error_encountered = true;
+                            };
+                        }
                     }
 
                     None => {
                         // The fun has no field map and so we error if arguments have been labelled
-                        assert_no_labelled_arguments(&pattern_args)?;
+                        match assert_no_labelled_arguments(&pattern_args) {
+                            Ok(()) => {}
+                            Err(error) => {
+                                self.problems.error(error);
+                                self.error_encountered = true;
+                            }
+                        }
 
                         if let Some(spread_location) = spread {
-                            if let ValueConstructorVariant::Record { arity, .. } = &cons.variant {
+                            if let ValueConstructorVariant::Record { arity, .. } =
+                                &constructor.variant
+                            {
                                 while pattern_args.len() < usize::from(*arity) {
                                     pattern_args.push(CallArg {
                                         value: Pattern::Discard {
@@ -702,8 +837,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     }
                 }
 
-                let constructor_typ = cons.type_.clone();
-                let constructor = match &cons.variant {
+                let constructor_type = constructor.type_.clone();
+                let constructor_deprecation = constructor.deprecation.clone();
+                let pattern_constructor = match &constructor.variant {
                     ValueConstructorVariant::Record {
                         name,
                         documentation,
@@ -711,14 +847,26 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         location,
                         variant_index: constructor_index,
                         ..
-                    } => PatternConstructor {
-                        documentation: documentation.clone(),
-                        name: name.clone(),
-                        field_map: cons.field_map().cloned(),
-                        module: module.clone(),
-                        location: *location,
-                        constructor_index: *constructor_index,
-                    },
+                    } => {
+                        let constructor_index = *constructor_index;
+                        let constructor = PatternConstructor {
+                            documentation: documentation.clone(),
+                            name: name.clone(),
+                            field_map: constructor.field_map().cloned(),
+                            module: module.clone(),
+                            location: *location,
+                            constructor_index,
+                        };
+
+                        if let Some(ref variable_name) = subject_variable {
+                            self.set_subject_variable_variant(
+                                variable_name.clone(),
+                                constructor_index,
+                            );
+                        }
+
+                        constructor
+                    }
                     ValueConstructorVariant::LocalVariable { .. }
                     | ValueConstructorVariant::LocalConstant { .. }
                     | ValueConstructorVariant::ModuleConstant { .. }
@@ -727,7 +875,6 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     }
                 };
 
-                let constructor_deprecation = cons.deprecation.clone();
                 match constructor_deprecation {
                     Deprecation::NotDeprecated => {}
                     Deprecation::Deprecated { message } => {
@@ -739,101 +886,113 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     }
                 }
 
+                self.environment.references.register_value_reference(
+                    pattern_constructor.module.clone(),
+                    pattern_constructor.name.clone(),
+                    &name,
+                    name_location,
+                    if module.is_some() {
+                        ReferenceKind::Qualified
+                    } else {
+                        ReferenceKind::Unqualified
+                    },
+                );
+
                 let instantiated_constructor_type =
                     self.environment
-                        .instantiate(constructor_typ, &mut hashmap![], self.hydrator);
+                        .instantiate(constructor_type, &mut hashmap![], self.hydrator);
                 match instantiated_constructor_type.deref() {
-                    Type::Fn { args, retrn } => {
-                        if args.len() == pattern_args.len() {
-                            let pattern_args = pattern_args
-                                .into_iter()
-                                .zip(args)
-                                .map(|(arg, type_)| {
-                                    if !arg.is_implicit() && arg.uses_label_shorthand() {
-                                        self.track_feature_usage(
-                                            FeatureKind::LabelShorthandSyntax,
-                                            arg.location,
-                                        );
-                                    }
+                    Type::Fn { args, return_ } => {
+                        self.unify_types(type_.clone(), return_.clone(), location);
 
-                                    let CallArg {
-                                        value,
-                                        location,
-                                        implicit,
-                                        label,
-                                    } = arg;
-                                    let value = self.unify(value, type_.clone(), None)?;
-                                    Ok(CallArg {
-                                        value,
-                                        location,
-                                        implicit,
-                                        label,
-                                    })
-                                })
-                                .try_collect()?;
-                            unify(type_.clone(), retrn.clone())
-                                .map_err(|e| convert_unify_error(e, location))?;
+                        if let Some((variable_to_infer, inferred_variant)) =
+                            subject_variable.zip(return_.custom_type_inferred_variant())
+                        {
+                            self.set_subject_variable_variant(variable_to_infer, inferred_variant);
+                        }
 
-                            if let Some((variable_to_infer, inferred_variant)) =
-                                subject_variable.zip(retrn.custom_type_inferred_variant())
-                            {
-                                self.set_subject_variable_variant(
-                                    variable_to_infer,
-                                    inferred_variant,
-                                );
-                            }
-
-                            Ok(Pattern::Constructor {
-                                location,
-                                module,
-                                name,
-                                arguments: pattern_args,
-                                constructor: Inferred::Known(constructor),
-                                spread,
-                                type_: retrn.clone(),
-                            })
-                        } else {
-                            Err(Error::IncorrectArity {
+                        if args.len() != pattern_args.len() {
+                            self.error(Error::IncorrectArity {
                                 labels: vec![],
                                 location,
                                 expected: args.len(),
                                 given: pattern_args.len(),
+                            });
+                        }
+
+                        let pattern_args = pattern_args
+                            .into_iter()
+                            .enumerate()
+                            .map(|(index, arg)| {
+                                if !arg.is_implicit() && arg.uses_label_shorthand() {
+                                    self.track_feature_usage(
+                                        FeatureKind::LabelShorthandSyntax,
+                                        arg.location,
+                                    );
+                                }
+
+                                let CallArg {
+                                    value,
+                                    location,
+                                    implicit,
+                                    label,
+                                } = arg;
+
+                                let type_ = args
+                                    .get(index)
+                                    .cloned()
+                                    .unwrap_or_else(|| self.environment.new_unbound_var());
+
+                                let value = self.unify(value, type_, None);
+                                CallArg {
+                                    value,
+                                    location,
+                                    implicit,
+                                    label,
+                                }
                             })
+                            .collect();
+
+                        Pattern::Constructor {
+                            location,
+                            name_location,
+                            name,
+                            module,
+                            constructor: Inferred::Known(pattern_constructor),
+                            arguments: pattern_args,
+                            spread,
+                            type_: return_.clone(),
                         }
                     }
 
                     Type::Named {
                         inferred_variant, ..
                     } => {
-                        if pattern_args.is_empty() {
-                            unify(type_, instantiated_constructor_type.clone())
-                                .map_err(|e| convert_unify_error(e, location))?;
+                        self.unify_types(type_, instantiated_constructor_type.clone(), location);
 
-                            if let Some((variable_to_infer, inferred_variant)) =
-                                subject_variable.zip(*inferred_variant)
-                            {
-                                self.set_subject_variable_variant(
-                                    variable_to_infer,
-                                    inferred_variant,
-                                );
-                            }
+                        if let Some((variable_to_infer, inferred_variant)) =
+                            subject_variable.zip(*inferred_variant)
+                        {
+                            self.set_subject_variable_variant(variable_to_infer, inferred_variant);
+                        }
 
-                            Ok(Pattern::Constructor {
-                                location,
-                                module,
-                                name,
-                                arguments: vec![],
-                                constructor: Inferred::Known(constructor),
-                                spread,
-                                type_: instantiated_constructor_type,
-                            })
-                        } else {
-                            Err(Error::IncorrectArity {
+                        if !pattern_args.is_empty() {
+                            self.error(Error::IncorrectArity {
                                 labels: vec![],
                                 location,
                                 expected: 0,
                                 given: pattern_args.len(),
-                            })
+                            });
+                        }
+                        Pattern::Constructor {
+                            location,
+                            name_location,
+                            module,
+                            name,
+                            arguments: vec![],
+                            constructor: Inferred::Known(pattern_constructor),
+                            spread,
+                            type_: instantiated_constructor_type,
                         }
                     }
 
@@ -847,6 +1006,18 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         if let Err(error) = check_name_case(location, name, kind) {
             self.problems.error(error);
         }
+    }
+
+    fn unify_types(&mut self, first: Arc<Type>, second: Arc<Type>, location: SrcSpan) {
+        match unify(first, second) {
+            Ok(()) => {}
+            Err(error) => self.error(convert_unify_error(error, location)),
+        }
+    }
+
+    fn error(&mut self, error: Error) {
+        self.problems.error(error);
+        self.error_encountered = true;
     }
 
     fn track_feature_usage(&mut self, feature_kind: FeatureKind, location: SrcSpan) {

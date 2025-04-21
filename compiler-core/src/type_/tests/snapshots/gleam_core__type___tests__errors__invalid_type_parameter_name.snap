@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
 expression: "type Wrapper(innerType) {}"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 type Wrapper(innerType) {}

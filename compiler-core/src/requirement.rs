@@ -6,16 +6,26 @@ use crate::io::make_relative;
 use camino::{Utf8Path, Utf8PathBuf};
 use ecow::EcoString;
 use hexpm::version::Range;
+use serde::Deserialize;
 use serde::de::{self, Deserializer, MapAccess, Visitor};
 use serde::ser::{Serialize, SerializeMap, Serializer};
-use serde::Deserialize;
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(untagged, remote = "Self")]
 pub enum Requirement {
-    Hex { version: Range },
-    Path { path: Utf8PathBuf },
-    Git { git: EcoString },
+    Hex {
+        #[serde(deserialize_with = "deserialise_range")]
+        version: Range,
+    },
+    Path {
+        path: Utf8PathBuf,
+    },
+
+    Git {
+        git: EcoString,
+        #[serde(rename = "ref")]
+        ref_: EcoString,
+    },
 }
 
 impl Requirement {
@@ -29,8 +39,11 @@ impl Requirement {
         Requirement::Path { path: path.into() }
     }
 
-    pub fn git(url: &str) -> Requirement {
-        Requirement::Git { git: url.into() }
+    pub fn git(url: &str, ref_: &str) -> Requirement {
+        Requirement::Git {
+            git: url.into(),
+            ref_: ref_.into(),
+        }
     }
 
     pub fn to_toml(&self, root_path: &Utf8Path) -> String {
@@ -44,7 +57,9 @@ impl Requirement {
                     make_relative(root_path, path).as_str().replace('\\', "/")
                 )
             }
-            Requirement::Git { git: url } => format!(r#"{{ git = "{url}" }}"#),
+            Requirement::Git { git: url, ref_ } => {
+                format!(r#"{{ git = "{url}", ref = "{ref_}" }}"#)
+            }
         }
     }
 }
@@ -60,13 +75,24 @@ impl Serialize for Requirement {
         match self {
             Requirement::Hex { version: range } => map.serialize_entry("version", range)?,
             Requirement::Path { path } => map.serialize_entry("path", path)?,
-            Requirement::Git { git: url } => map.serialize_entry("git", url)?,
+            Requirement::Git { git: url, ref_ } => {
+                map.serialize_entry("git", url)?;
+                map.serialize_entry("ref", ref_)?;
+            }
         }
         map.end()
     }
 }
 
 // Deserialization
+
+fn deserialise_range<'de, D>(deserializer: D) -> Result<Range, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let version = String::deserialize(deserializer)?;
+    Ok(Range::new(version))
+}
 
 #[derive(Debug, Copy, Clone)]
 pub struct Void;
@@ -124,7 +150,7 @@ mod tests {
             short = "~> 0.5"
             hex = { version = "~> 1.0.0" }
             local = { path = "/path/to/package" }
-            github = { git = "https://github.com/gleam-lang/otp.git" }
+            github = { git = "https://github.com/gleam-lang/otp.git", ref = "4d34935" }
         "#;
         let deps: HashMap<String, Requirement> = toml::from_str(toml).unwrap();
         assert_eq!(deps["short"], Requirement::hex("~> 0.5"));
@@ -132,7 +158,7 @@ mod tests {
         assert_eq!(deps["local"], Requirement::path("/path/to/package"));
         assert_eq!(
             deps["github"],
-            Requirement::git("https://github.com/gleam-lang/otp.git")
+            Requirement::git("https://github.com/gleam-lang/otp.git", "4d34935")
         );
     }
 }

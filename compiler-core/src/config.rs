@@ -1,5 +1,7 @@
+mod stale_package_remover;
 use crate::error::{FileIoAction, FileKind};
 use crate::io::FileSystemReader;
+use crate::io::ordered_map;
 use crate::manifest::Manifest;
 use crate::requirement::Requirement;
 use crate::version::COMPILER_VERSION;
@@ -9,8 +11,9 @@ use ecow::EcoString;
 use globset::{Glob, GlobSetBuilder};
 use hexpm::version::{self, Version};
 use http::Uri;
-use serde::Deserialize;
-use std::collections::{HashMap, HashSet};
+use serde::ser::SerializeSeq;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fmt::{self};
 use std::marker::PhantomData;
 
@@ -61,34 +64,81 @@ impl<'de> Deserialize<'de> for SpdxLicense {
     }
 }
 
+impl Serialize for SpdxLicense {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.licence)
+    }
+}
+
 impl AsRef<str> for SpdxLicense {
     fn as_ref(&self) -> &str {
         self.licence.as_str()
     }
 }
 
-#[derive(Deserialize, Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
+pub struct GleamVersion {
+    pubgrub: pubgrub::range::Range<Version>,
+    hex: version::Range,
+}
+
+impl GleamVersion {
+    pub fn from_pubgrub(range: pubgrub::range::Range<Version>) -> Self {
+        Self {
+            hex: version::Range::new(range.to_string()),
+            pubgrub: range,
+        }
+    }
+
+    pub fn as_pubgrub(&self) -> pubgrub::range::Range<Version> {
+        self.pubgrub.clone()
+    }
+
+    pub fn new(spec: String) -> Result<GleamVersion> {
+        let hex = version::Range::new(spec.to_string());
+        let pubgrub = hex.to_pubgrub().map_err(|e| Error::InvalidVersionFormat {
+            input: spec,
+            error: e.to_string(),
+        })?;
+
+        Ok(Self { pubgrub, hex })
+    }
+
+    pub fn lowest_version(&self) -> Option<Version> {
+        self.pubgrub.lowest_version()
+    }
+
+    pub fn hex(&self) -> &version::Range {
+        &self.hex
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub struct PackageConfig {
-    #[serde(with = "package_name")]
+    #[serde(deserialize_with = "package_name::deserialize")]
     pub name: EcoString,
     #[serde(default = "default_version")]
     pub version: Version,
+
     #[serde(
         default,
         rename = "gleam",
-        serialize_with = "serialise_range",
-        deserialize_with = "deserialise_range"
+        deserialize_with = "deserialise_gleam_version",
+        serialize_with = "serialise_gleam_version"
     )]
-    pub gleam_version: Option<pubgrub::range::Range<Version>>,
+    pub gleam_version: Option<GleamVersion>,
     #[serde(default, alias = "licenses")]
     pub licences: Vec<SpdxLicense>,
     #[serde(default)]
     pub description: EcoString,
     #[serde(default, alias = "docs")]
     pub documentation: Docs,
-    #[serde(default)]
+    #[serde(default, serialize_with = "ordered_map")]
     pub dependencies: Dependencies,
-    #[serde(default, rename = "dev-dependencies")]
+    #[serde(default, rename = "dev-dependencies", serialize_with = "ordered_map")]
     pub dev_dependencies: Dependencies,
     #[serde(default)]
     pub repository: Repository,
@@ -104,31 +154,30 @@ pub struct PackageConfig {
     pub internal_modules: Option<Vec<Glob>>,
 }
 
-pub fn serialise_range<S>(
-    range: Option<pubgrub::range::Range<Version>>,
-    serialiser: S,
+pub fn serialise_gleam_version<S>(
+    gleam_gersion: &Option<GleamVersion>,
+    serializer: S,
 ) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
 {
-    match range {
-        Some(range) => serialiser.serialize_some(&range.to_string()),
-        None => serialiser.serialize_none(),
+    match gleam_gersion {
+        Some(version) => serializer.serialize_str(&version.hex.to_string()),
+        None => serializer.serialize_none(),
     }
 }
 
-pub fn deserialise_range<'de, D>(
-    deserialiser: D,
-) -> Result<Option<pubgrub::range::Range<Version>>, D::Error>
+pub fn deserialise_gleam_version<'de, D>(deserialiser: D) -> Result<Option<GleamVersion>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
     match Deserialize::deserialize(deserialiser)? {
-        Some(range_string) => Ok(Some(
-            version::Range::new(range_string)
-                .to_pubgrub()
-                .map_err(serde::de::Error::custom)?,
-        )),
+        Some(range_string) => {
+            let hex = version::Range::new(range_string);
+            let pubgrub = hex.clone().to_pubgrub().map_err(serde::de::Error::custom)?;
+
+            Ok(Some(GleamVersion { hex, pubgrub }))
+        }
         None => Ok(None),
     }
 }
@@ -184,7 +233,12 @@ impl PackageConfig {
         match manifest {
             None => Ok(HashMap::new()),
             Some(manifest) => {
-                StalePackageRemover::fresh_and_locked(&self.all_direct_dependencies()?, manifest)
+                let requirements = self.all_direct_dependencies()?;
+                let fresh_and_locked = stale_package_remover::StalePackageRemover::fresh_and_locked(
+                    &requirements,
+                    manifest,
+                );
+                Ok(fresh_and_locked)
             }
         }
     }
@@ -217,7 +271,8 @@ impl PackageConfig {
     // Checks to see if the gleam version specified in the config is compatible
     // with the current compiler version
     pub fn check_gleam_compatibility(&self) -> Result<(), Error> {
-        if let Some(range) = &self.gleam_version {
+        if let Some(version) = &self.gleam_version {
+            let range = &version.pubgrub;
             let compiler_version =
                 Version::parse(COMPILER_VERSION).expect("Parse compiler semantic version");
 
@@ -232,78 +287,6 @@ impl PackageConfig {
                     gleam_version: COMPILER_VERSION.to_string(),
                 });
             }
-        }
-        Ok(())
-    }
-}
-
-#[derive(Debug)]
-struct StalePackageRemover<'a> {
-    // These are the packages for which the requirement or their parents
-    // requirement has not changed.
-    fresh: HashSet<&'a str>,
-    locked: HashMap<EcoString, &'a Vec<EcoString>>,
-}
-
-impl<'a> StalePackageRemover<'a> {
-    pub fn fresh_and_locked(
-        requirements: &'a HashMap<EcoString, Requirement>,
-        manifest: &'a Manifest,
-    ) -> Result<HashMap<EcoString, Version>> {
-        let locked = manifest
-            .packages
-            .iter()
-            .map(|p| (p.name.clone(), &p.requirements))
-            .collect();
-        Self {
-            fresh: HashSet::new(),
-            locked,
-        }
-        .run(requirements, manifest)
-    }
-
-    fn run(
-        &mut self,
-        requirements: &'a HashMap<EcoString, Requirement>,
-        manifest: &'a Manifest,
-    ) -> Result<HashMap<EcoString, Version>> {
-        // Record all the requirements that have not changed
-        for (name, requirement) in requirements {
-            if manifest.requirements.get(name) != Some(requirement) {
-                continue; // This package has changed, don't record it
-            }
-
-            // Recursively record the package and its deps as being fresh
-            self.record_tree_fresh(name)?;
-        }
-
-        // Return all the previously resolved packages that have not been
-        // recorded as fresh
-        Ok(manifest
-            .packages
-            .iter()
-            .filter(|package| {
-                let new = requirements.contains_key(package.name.as_str())
-                    && !manifest.requirements.contains_key(package.name.as_str());
-                let fresh = self.fresh.contains(package.name.as_str());
-                let locked = !new && fresh;
-                if !locked {
-                    tracing::info!(name = package.name.as_str(), "unlocking_stale_package");
-                }
-                locked
-            })
-            .map(|package| (package.name.clone(), package.version.clone()))
-            .collect())
-    }
-
-    fn record_tree_fresh(&mut self, name: &'a str) -> Result<()> {
-        // Record the top level package
-        let _ = self.fresh.insert(name);
-
-        let deps = self.locked.get(name).ok_or(Error::CorruptManifest)?;
-        // Record each of its deps recursively
-        for package in *deps {
-            self.record_tree_fresh(package)?;
         }
         Ok(())
     }
@@ -617,7 +600,10 @@ fn manifest_package(
         version: Version::parse(version).unwrap(),
         build_tools: vec![],
         otp_app: None,
-        requirements: requirements.iter().map(|e| (*e).into()).collect(),
+        requirements: requirements
+            .iter()
+            .map(|requirement| (*requirement).into())
+            .collect(),
         source: crate::manifest::ManifestPackageSource::Hex {
             outer_checksum: Base16Checksum(vec![]),
         },
@@ -650,7 +636,7 @@ impl Default for PackageConfig {
     }
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq, Default, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Default, Clone)]
 pub struct ErlangConfig {
     #[serde(default)]
     pub application_start_module: Option<EcoString>,
@@ -658,7 +644,7 @@ pub struct ErlangConfig {
     pub extra_applications: Vec<EcoString>,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Default, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
 pub struct JavaScriptConfig {
     #[serde(default)]
     pub typescript_declarations: bool,
@@ -677,6 +663,24 @@ pub enum DenoFlag {
 impl Default for DenoFlag {
     fn default() -> Self {
         Self::Allow(Vec::new())
+    }
+}
+
+impl Serialize for DenoFlag {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            DenoFlag::AllowAll => serializer.serialize_bool(true),
+            DenoFlag::Allow(items) => {
+                let mut seq = serializer.serialize_seq(Some(items.len()))?;
+                for e in items {
+                    seq.serialize_element(e)?;
+                }
+                seq.end()
+            }
+        }
     }
 }
 
@@ -719,7 +723,7 @@ where
     deserializer.deserialize_any(StringOrVec(PhantomData))
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq, Default, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Default, Clone)]
 pub struct DenoConfig {
     #[serde(default, deserialize_with = "bool_or_seq_string_to_deno_flag")]
     pub allow_env: DenoFlag,
@@ -741,11 +745,15 @@ pub struct DenoConfig {
     pub allow_all: bool,
     #[serde(default)]
     pub unstable: bool,
-    #[serde(default, deserialize_with = "uri_serde::deserialize_option")]
+    #[serde(
+        default,
+        serialize_with = "uri_serde::serialize_option",
+        deserialize_with = "uri_serde::deserialize_option"
+    )]
     pub location: Option<Uri>,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Repository {
     GitHub {
@@ -773,7 +781,10 @@ pub enum Repository {
         user: String,
         repo: String,
         path: Option<String>,
-        #[serde(with = "uri_serde_default_https")]
+        #[serde(
+            serialize_with = "uri_serde::serialize",
+            deserialize_with = "uri_serde_default_https::deserialize"
+        )]
         host: Uri,
     },
     SourceHut {
@@ -833,20 +844,20 @@ impl Default for Repository {
     }
 }
 
-#[derive(Deserialize, Default, Debug, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Serialize, Default, Debug, PartialEq, Eq, Clone)]
 pub struct Docs {
     #[serde(default)]
     pub pages: Vec<DocsPage>,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub struct DocsPage {
     pub title: String,
     pub path: String,
     pub source: Utf8PathBuf,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub struct Link {
     pub title: String,
     #[serde(with = "uri_serde")]
@@ -856,7 +867,7 @@ pub struct Link {
 // Note we don't use http-serde since we also want to validate the scheme and host is set.
 mod uri_serde {
     use http::uri::InvalidUri;
-    use serde::{de::Error as _, Deserialize, Deserializer};
+    use serde::{Deserialize, Deserializer, de::Error as _};
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<http::Uri, D::Error>
     where
@@ -885,12 +896,29 @@ mod uri_serde {
             None => Ok(None),
         }
     }
+
+    pub fn serialize_option<S>(uri: &Option<http::Uri>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match uri {
+            Some(uri) => serialize(uri, serializer),
+            None => serializer.serialize_unit(),
+        }
+    }
+
+    pub fn serialize<S>(uri: &http::Uri, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&uri.to_string())
+    }
 }
 
 // This prefixes https as a default in the event no scheme was provided
 mod uri_serde_default_https {
     use http::uri::InvalidUri;
-    use serde::{de::Error as _, Deserialize, Deserializer};
+    use serde::{Deserialize, Deserializer, de::Error as _};
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<http::Uri, D::Error>
     where
@@ -962,4 +990,65 @@ name = "1"
             .to_string(),
         "Package names may only contain lowercase letters, numbers, and underscores for key `name` at line 1 column 1"
     )
+}
+
+#[test]
+fn package_config_to_json() {
+    let input = r#"
+name = "my_project"
+version = "1.0.0"
+licences = ["Apache-2.0", "MIT"]
+description = "Pretty complex config"
+target = "erlang"
+repository = { type = "github", user = "example", repo = "my_dep" }
+links = [{ title = "Home page", href = "https://example.com" }]
+internal_modules = ["my_app/internal"]
+gleam = ">= 0.30.0"
+
+[dependencies]
+gleam_stdlib = ">= 0.18.0 and < 2.0.0"
+my_other_project = { path = "../my_other_project" }
+
+[dev-dependencies]
+gleeunit = ">= 1.0.0 and < 2.0.0"
+
+[documentation]
+pages = [{ title = "My Page", path = "my-page.html", source = "./path/to/my-page.md" }]
+
+[erlang]
+application_start_module = "my_app/application"
+extra_applications = ["inets", "ssl"]
+
+[javascript]
+typescript_declarations = true
+runtime = "node"
+
+[javascript.deno]
+allow_all = false
+allow_ffi = true
+allow_env = ["DATABASE_URL"]
+allow_net = ["example.com:443"]
+allow_read = ["./database.sqlite"]
+"#;
+
+    let config = toml::from_str::<PackageConfig>(&input).unwrap();
+    let json = serde_json::to_string_pretty(&config).unwrap();
+    let output = format!("--- GLEAM.TOML\n{input}\n\n--- EXPORTED JSON\n\n{json}");
+    insta::assert_snapshot!(output);
+
+    let roundtrip = serde_json::from_str::<PackageConfig>(&json).unwrap();
+    assert_eq!(config, roundtrip);
+}
+
+#[test]
+fn barebones_package_config_to_json() {
+    let input = r#"
+name = "my_project"
+version = "1.0.0"
+"#;
+
+    let config = toml::from_str::<PackageConfig>(&input).unwrap();
+    let json = serde_json::to_string_pretty(&config).unwrap();
+    let output = format!("--- GLEAM.TOML\n{input}\n\n--- EXPORTED JSON\n\n{json}");
+    insta::assert_snapshot!(output);
 }

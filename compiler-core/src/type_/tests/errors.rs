@@ -1,6 +1,5 @@
 use crate::{
     assert_error, assert_internal_module_error, assert_module_error, assert_module_syntax_error,
-    assert_with_module_error,
 };
 
 #[test]
@@ -28,11 +27,6 @@ fn bit_arrays3() {
 #[test]
 fn bit_arrays4() {
     assert_error!("let <<x:utf32>> = <<1>>");
-}
-
-#[test]
-fn bit_array() {
-    assert_error!("case <<1>> { <<2.0, a>> -> 1 _ -> 2 }");
 }
 
 #[test]
@@ -1772,7 +1766,7 @@ fn negate_string() {
 
 #[test]
 fn ambiguous_type_error() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "pub type Thing { Thing }"),
         "import wibble pub type Thing { Thing }
         pub fn main() {
@@ -1783,7 +1777,7 @@ fn ambiguous_type_error() {
 
 #[test]
 fn ambiguous_import_error_no_unqualified() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble/sub", "pub fn wobble() { 1 }"),
         ("wibble2/sub", "pub fn wobble() { 1 }"),
         "
@@ -1798,7 +1792,7 @@ fn ambiguous_import_error_no_unqualified() {
 
 #[test]
 fn ambiguous_import_error_with_unqualified() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble/sub", "pub fn wobble() { 1 }"),
         ("wibble2/sub", "pub fn wobble() { 1 }"),
         "
@@ -1813,7 +1807,7 @@ fn ambiguous_import_error_with_unqualified() {
 
 #[test]
 fn same_imports_multiple_times() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "gleam/wibble",
             "
@@ -1831,7 +1825,7 @@ fn same_imports_multiple_times() {
 
 #[test]
 fn same_imports_multiple_times_1() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "one",
             "
@@ -1853,7 +1847,7 @@ fn same_imports_multiple_times_1() {
 
 #[test]
 fn same_imports_multiple_times_2() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "one",
             "
@@ -1875,7 +1869,7 @@ fn same_imports_multiple_times_2() {
 
 #[test]
 fn same_imports_multiple_times_3() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "one",
             "
@@ -1897,7 +1891,7 @@ fn same_imports_multiple_times_3() {
 
 #[test]
 fn same_imports_multiple_times_4() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "one",
             "
@@ -1919,7 +1913,7 @@ fn same_imports_multiple_times_4() {
 
 #[test]
 fn same_imports_multiple_times_5() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "one",
             "
@@ -1941,7 +1935,7 @@ fn same_imports_multiple_times_5() {
 
 #[test]
 fn same_imports_multiple_times_6() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "one",
             "
@@ -1963,7 +1957,7 @@ fn same_imports_multiple_times_6() {
 
 #[test]
 fn same_imports_multiple_times_7() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "one",
             "
@@ -2039,7 +2033,7 @@ pub fn main(user: User) {
 
 #[test]
 fn unknown_imported_module_type() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("one/two", ""),
         "
 import one/two
@@ -2053,7 +2047,7 @@ pub fn main(_x: two.Thing) {
 
 #[test]
 fn value_imported_as_type() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "gleam/wibble",
             "pub type Wibble {
@@ -2066,7 +2060,7 @@ fn value_imported_as_type() {
 
 #[test]
 fn type_imported_as_value() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "gleam/wibble",
             "pub type Wibble {
@@ -2225,7 +2219,7 @@ pub fn main() {
 
 #[test]
 fn unknown_module_suggest_import() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("utils", "pub fn helpful() {}"),
         "
 pub fn main() {
@@ -2237,7 +2231,7 @@ pub fn main() {
 
 #[test]
 fn unknown_module_suggest_typo_for_imported_module() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "pub fn wobble() {}"),
         "
 import wibble
@@ -2250,7 +2244,7 @@ pub fn main() {
 
 #[test]
 fn unknown_module_suggest_typo_for_unimported_module() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble/wobble", "pub fn wubble() {}"),
         "
 pub fn main() {
@@ -2262,7 +2256,7 @@ pub fn main() {
 
 #[test]
 fn qualified_type_mismatched_type_error() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "pub type Wobble"),
         "
 import wibble
@@ -2273,7 +2267,7 @@ const my_wobble: wibble.Wobble = Nil
 
 #[test]
 fn qualified_type_similar_type_name() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "pub type Int"),
         "
 import wibble
@@ -2284,7 +2278,7 @@ const value: wibble.Int = 20
 
 #[test]
 fn qualified_type_not_a_function() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "pub type Function { Function(fn() -> Nil) }"),
         "
 import wibble.{type Function as FuncWrapper}
@@ -2313,7 +2307,7 @@ pub fn main(not_a_record: gleam.Int) {
 
 #[test]
 fn qualified_type_invalid_operands() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("maths", "pub type Vector { Vector(x: Float, y: Float) }"),
         "
 import maths as math
@@ -2326,7 +2320,7 @@ pub fn add_two_vectors(a: math.Vector, b: math.Vector) {
 
 #[test]
 fn qualified_type_invalid_pipe_argument() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "mod",
             "pub type Wibble pub fn takes_wibble(value: Wibble) { value }"
@@ -2358,7 +2352,7 @@ const list_of_bools = [True, False, gleam.False]
 
 #[test]
 fn qualified_type_not_a_tuple() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("mod", "pub type Pair(a, b) { Pair(a, b) }"),
         "
 import mod.{type Pair as Duo}
@@ -2371,7 +2365,7 @@ pub fn first(pair: Duo(a, b)) {
 
 #[test]
 fn qualified_type_not_fn_in_use() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("some_mod", "pub type Function(param1, param2, return)"),
         "
 import some_mod as sm
@@ -2384,7 +2378,7 @@ pub fn main(func: sm.Function(Int, String, Float)) {
 
 #[test]
 fn qualified_type_use_fn_without_callback() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "some_mod",
             "pub type NotACallback pub fn do_a_thing(a: Int, _b: NotACallback) { a }"
@@ -2414,7 +2408,7 @@ fn add_1(to x) { x + 1 }
 
 #[test]
 fn unknown_field_that_appears_in_an_imported_variant_has_note() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "some_mod",
             "pub type Wibble {
@@ -2535,7 +2529,7 @@ pub fn b_to_a(value: MyRecord) {
 
 #[test]
 fn record_update_wrong_variant_imported_type() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "wibble",
             "
@@ -2577,8 +2571,8 @@ pub fn main() {
     );
 }
 
-#[test]
 // https://github.com/gleam-lang/gleam/issues/3783
+#[test]
 fn duplicate_fields_in_record_update_reports_error() {
     assert_module_error!(
         "
@@ -2652,6 +2646,441 @@ fn inexhaustive_use_reports_error() {
         r#"
 use [1, 2, 3] <- todo
 todo
+"#
+    );
+}
+
+#[test]
+fn out_of_range_erlang_float() {
+    assert_error!(r#"1.8e308"#);
+}
+
+#[test]
+fn out_of_range_erlang_float_in_pattern() {
+    assert_error!(r#"let assert [1.8e308, b] = [x, y]"#);
+}
+
+#[test]
+fn out_of_range_erlang_float_in_const() {
+    assert_module_error!(r#"const x = 1.8e308"#);
+}
+
+#[test]
+fn negative_out_of_range_erlang_float() {
+    assert_error!(r#"-1.8e308"#);
+}
+
+#[test]
+fn negative_out_of_range_erlang_float_in_pattern() {
+    assert_error!(r#"let assert [-1.8e308, b] = [x, y]"#);
+}
+
+#[test]
+fn negative_out_of_range_erlang_float_in_const() {
+    assert_module_error!(r#"const x = -1.8e308"#);
+}
+
+#[test]
+fn missing_case_body() {
+    assert_error!("case True");
+}
+
+#[test]
+fn suggest_wrapping_a_value_into_ok_if_types_match() {
+    assert_module_error!(
+        "
+pub fn main() {
+  case todo {
+    1 -> Ok(2)
+    _ -> 1
+  }
+}
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_value_into_ok_if_types_match_2() {
+    assert_module_error!(
+        "
+pub fn main() {
+  wibble(1)
+}
+
+fn wibble(arg: Result(Int, String)) { todo }
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_value_into_ok_if_types_match_with_block() {
+    assert_module_error!(
+        "
+pub fn main() {
+  case todo {
+    1 -> Ok(2)
+    _ -> {
+      todo
+      1
+    }
+  }
+}
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_value_into_ok_with_generic_type() {
+    assert_module_error!(
+        "
+pub fn first(list: List(a)) -> Result(a, Nil) {
+  case list {
+    [] -> Error(Nil)
+    [first, ..rest] -> first
+  }
+}
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_value_into_ok_if_types_match_with_multiline_result_in_block() {
+    assert_module_error!(
+        "
+pub fn main() {
+  case todo {
+    1 -> Ok(2)
+    _ -> {
+      todo
+      1
+      |> add_1
+    }
+  }
+}
+
+fn add_1(n: Int) { n + 1 }
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_value_into_error_if_types_match() {
+    assert_module_error!(
+        "
+pub fn main() {
+  case todo {
+    1 -> Error(1)
+    _ -> 1
+  }
+}
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_value_into_error_if_types_match_2() {
+    assert_module_error!(
+        "
+pub fn main() {
+    wibble(\"a\")
+}
+
+fn wibble(arg: Result(Int, String)) { todo }
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_function_return_value_in_ok() {
+    assert_module_error!(
+        "
+pub fn main() -> Result(Int, Bool) {
+  1
+}
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_function_return_value_in_error() {
+    assert_module_error!(
+        "
+pub fn main() -> Result(Int, Bool) {
+  True
+}
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_use_returned_value_in_ok() {
+    assert_module_error!(
+        "
+pub fn main() -> Result(Int, Bool) {
+  use <- want_result
+  1
+}
+
+pub fn want_result(wibble: fn() -> Result(Int, Bool)) {
+  todo
+}
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_use_returned_value_in_error() {
+    assert_module_error!(
+        "
+pub fn main() -> Result(Int, Bool) {
+  use <- want_result
+  False
+}
+
+pub fn want_result(wibble: fn() -> Result(Int, Bool)) {
+  todo
+}
+"
+    );
+}
+
+#[test]
+// https://github.com/gleam-lang/gleam/issues/4195
+fn let_assert_binding_cannot_be_used_in_panic_message() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  let assert Ok(message) = Error("Not Message") as { "Uh oh: " <> message }
+}
+"#
+    );
+}
+
+#[test]
+fn echo_followed_by_no_expression() {
+    assert_error!("echo");
+}
+
+#[test]
+fn echo_followed_by_no_expression_2() {
+    assert_module_error!(
+        r#"
+  pub fn wibble(a) { a }
+
+  pub fn main() {
+    wibble(echo)
+  }
+"#
+    );
+}
+
+#[test]
+fn echo_followed_by_no_expression_3() {
+    assert_module_error!(
+        r#"
+  pub fn main() {
+    echo + 1
+  }
+"#
+    );
+}
+
+#[test]
+fn echo_followed_by_no_expression_4() {
+    assert_module_error!(
+        r#"
+  pub fn main() {
+    "wibble" <> echo
+  }
+"#
+    );
+}
+
+#[test]
+fn echo_followed_by_no_expression_5() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  panic as echo
+}
+"#
+    );
+}
+
+#[test]
+fn echo_followed_by_no_expression_6() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  [echo, 1, 2]
+}
+"#
+    );
+}
+#[test]
+fn echo_followed_by_no_expression_7() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  #(1, echo)
+}
+"#
+    );
+}
+
+#[test]
+fn echo_followed_by_no_expression_8() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  todo
+  |> fn(_) { echo }
+  |> todo
+}
+"#
+    );
+}
+
+#[test]
+fn echo_followed_by_no_expression_9() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  todo
+  |> { echo }
+  |> todo
+}
+"#
+    );
+}
+
+#[test]
+fn echo_followed_by_no_expression_10() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  echo
+  |> todo
+}
+"#
+    );
+}
+
+#[test]
+fn function_that_does_not_exist_does_not_produce_error_for_labelled_args() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  // We only want to error on `wibble` since it doesn't exist, we don't want
+  // an error on the label at this point!
+  wibble(label: 1)
+}
+"#
+    );
+}
+
+#[test]
+fn constructor_that_does_not_exist_does_not_produce_error_for_labelled_args() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  // We only want to error on `Wibble` since it doesn't exist, we don't want
+  // an error on the label at this point!
+  Wibble(label: 1)
+}
+"#
+    );
+}
+
+#[test]
+fn float_operator_on_ints() {
+    assert_error!("1 +. 2");
+}
+
+#[test]
+fn float_operator_on_ints_2() {
+    assert_error!("1 <. 2");
+}
+
+#[test]
+fn int_operator_on_floats() {
+    assert_error!("1.1 + 2.0");
+}
+
+#[test]
+fn int_operator_on_floats_2() {
+    assert_error!("1.1 > 2.0");
+}
+
+#[test]
+fn add_on_strings() {
+    assert_error!(r#""Hello, " + "Jak""#);
+}
+
+#[test]
+fn fault_tolerant_list() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  [1, "a", 1.0, "a" + 1]
+}
+"#
+    );
+}
+
+#[test]
+fn fault_tolerant_list_tail() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  [1, "a", ..["a", "b"]]
+}
+"#
+    );
+}
+
+#[test]
+fn fault_tolerant_negate_bool() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  !!{ True || a }
+}
+"#
+    );
+}
+
+#[test]
+fn fault_tolerant_negate_int() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  --{ 1 + a }
+}
+"#
+    );
+}
+
+#[test]
+fn fault_tolerant_tuple() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  #(1, 1 + "a", not_in_scope)
+}
+"#
+    );
+}
+
+#[test]
+fn error_for_missing_type_parameters() {
+    assert_module_error!(
+        r#"
+type Wibble(a)
+
+type Wobble {
+  Wobble(Wibble)
+}
 "#
     );
 }

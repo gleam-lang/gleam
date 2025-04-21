@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/package_interface/tests.rs
-expression: "\n@internal pub const float = 1.1\n@internal pub fn main() {}\n@internal pub type Foo\n@internal pub type Bar = Int\n"
+expression: "\n@internal pub const float = 1.1\n@internal pub fn main() {}\n@internal pub type Wibble\n@internal pub type Wobble = Int\n"
 ---
 {
   "name": "my_package",

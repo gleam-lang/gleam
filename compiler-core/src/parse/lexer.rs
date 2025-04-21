@@ -15,7 +15,6 @@ pub struct Lexer<T: Iterator<Item = (u32, char)>> {
     chr1: Option<char>,
     loc0: u32,
     loc1: u32,
-    location: u32,
 }
 pub type Spanned = (u32, Token, u32);
 pub type LexResult = Result<Spanned, LexicalError>;
@@ -119,7 +118,6 @@ where
         let mut lxr = Lexer {
             chars: input,
             pending: Vec::new(),
-            location: 0,
             chr0: None,
             chr1: None,
             loc0: 0,
@@ -127,7 +125,6 @@ where
         };
         let _ = lxr.next_char();
         let _ = lxr.next_char();
-        lxr.location = 0;
         lxr
     }
 
@@ -477,12 +474,15 @@ where
 
         let end_pos = self.get_pos();
 
-        if let Some(tok) = str_to_keyword(&name) {
-            Ok((start_pos, tok, end_pos))
-        } else if name.starts_with('_') {
-            Ok((start_pos, Token::DiscardName { name: name.into() }, end_pos))
-        } else {
-            Ok((start_pos, Token::Name { name: name.into() }, end_pos))
+        match str_to_keyword(&name) {
+            Some(tok) => Ok((start_pos, tok, end_pos)),
+            _ => {
+                if name.starts_with('_') {
+                    Ok((start_pos, Token::DiscardName { name: name.into() }, end_pos))
+                } else {
+                    Ok((start_pos, Token::Name { name: name.into() }, end_pos))
+                }
+            }
         }
     }
     // A type name or constructor
@@ -496,10 +496,9 @@ where
 
         let end_pos = self.get_pos();
 
-        if let Some(tok) = str_to_keyword(&name) {
-            Ok((start_pos, tok, end_pos))
-        } else {
-            Ok((start_pos, Token::UpName { name: name.into() }, end_pos))
+        match str_to_keyword(&name) {
+            Some(tok) => Ok((start_pos, tok, end_pos)),
+            _ => Ok((start_pos, Token::UpName { name: name.into() }, end_pos)),
         }
     }
 

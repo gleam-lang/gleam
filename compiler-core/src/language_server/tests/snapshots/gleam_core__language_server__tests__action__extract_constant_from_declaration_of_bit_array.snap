@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  let b = <<\"arr\":utf32>>\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  let b = <<"arr":utf32>>
+                  ▔▔▔▔▔▔↑
+}
+
+
+----- AFTER ACTION
+const bit_array = <<"arr":utf32>>
+
+pub fn main() {
+  let b = bit_array
+}

@@ -4,247 +4,262 @@
 
 ### Compiler
 
-- Removed compiler hint about pattern matching a `Result(a, b)` when being used where `a` is expected.
-  ([Kieran O'Reilly](https://github.com/SoTeKie))
-
-- Optimised code generated for record updates.
-  ([yoshi](https://github.com/joshi-monster))
-
-- The compiler now allows for record updates to change the generic type
-  parameters of the record:
+- The compiler can now tell if some branches with bit array patterns are
+  unreachable. For example, the following code:
 
   ```gleam
-  type Box(value) {
-    Box(password: String, value: value)
-  }
-
-  fn insert(box: Box(a), value: b) -> Box(b) {
-    Box(..box, value:)
+  case payload {
+    <<first_byte, _:bits>> -> first_byte
+    <<1, _:bits>> -> 1
+    _ -> 0
   }
   ```
 
-  ([yoshi](https://github.com/joshi-monster))
+  Will raise the following warning:
 
-- It is now allowed to write a block with no expressions. Like an empty function
-  body, an empty block is considered incomplete as if it contained a `todo`
-  expression.
+  ```
+  warning: Unreachable case clause
+    ┌─ /src/bit_array.gleam:4:5
+    │
+  4 │     <<1, _:bits>> -> 1
+    │     ^^^^^^^^^^^^^^^^^^
+  This case clause cannot be reached as a previous clause matches the same
+  values.
+  Hint: It can be safely removed.
+  ```
+
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The shorthand names for the two targets, `erl` and `js` are now
-  deprecated in code such as `@target`.
-
-  ([Surya Rose](https://github.com/GearsDatapacks))
-
-- A custom panic message can now be specified when asserting a value with `let assert`:
+- The compiler will now include labels in the error message when a `case`
+  expression is inexhaustive. For example, this code:
 
   ```gleam
-  let assert Ok(regex) = regex.compile("ab?c+") as "This regex is always valid"
+  pub type Person {
+    Person(name: String, age: Int)
+  }
+
+  pub fn classify(person: Person) {
+    case person {
+      Person(name: "John", age: 27) -> todo
+      Person(name: _, age: 42) -> todo
+    }
+  }
+  ```
+
+  Will produces this error:
+
+  ```
+  error: Inexhaustive patterns
+    ┌─ /src/main.gleam:6:3
+    │
+  6 │ ╭   case person {
+  7 │ │     Person(name: "John", age: 27) -> todo
+  8 │ │     Person(name: _, age: 42) -> todo
+  9 │ │   }
+    │ ╰───^
+
+  This case expression does not have a pattern for all possible values. If it
+  is run on one of the values without a pattern then it will crash.
+
+  The missing patterns are:
+
+      Person(name:, age:)
   ```
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- When targeting JavaScript the compiler now generates faster and smaller code
-  for `Int` values in bit array expressions and patterns by evaluating them at
-  compile time where possible.
-  ([Richard Viney](https://github.com/richard-viney))
+- The analysis of lists, tuples, negation operators, `panic`, `echo` and `todo`
+  is now fault tolerant, meaning that the compiler will not stop reporting
+  errors as soon as it finds one.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- Qualified records can now be used in clause guards.
-  ([Surya Rose](https://github.com/GearsDatapacks))
-
-- The compiler now allows deprecating specific custom type variants using the
-  `@deprecated` attribute:
+- The error message for types used with the wrong number of arguments has been
+  improved. For example, this piece of code:
 
   ```gleam
-  pub type HashAlgorithm {
-    @deprecated("Please upgrade to another algorithm")
-    Md5
-    Sha224
-    Sha512
-  }
+  type Wibble(a)
 
-  pub fn hash_password(input: String) -> String {
-    hash(input:, algorithm: Md5) // Warning: Deprecated value used
+  type Wobble {
+    Wobble(Wibble)
   }
   ```
 
-  ([Iesha](https://github.com/wilbert-mad))
+  Produces the following error:
 
-- On the JavaScript target, taking byte-aligned slices of bit arrays is now an
-  O(1) operation instead of O(N), significantly improving performance.
-  ([Richard Viney](https://github.com/richard-viney))
+  ```txt
+    error: Incorrect arity
+    ┌─ /src/one/two.gleam:5:10
+    │
+  5 │   Wobble(Wibble)
+    │          ^^^^^^ Expected 1 type argument, got 0
 
-- Better error message for existed type constructor being used as value constructor.
-  ([Jiangda Wang](https://github.com/Frank-III))
+  `Wibble` requires 1 type argument but none where provided.
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Build tool
 
-- Improved the error message you get when trying to add a package that doesn't
-  exist with `gleam add`.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
-- External files (such as `.mjs` and `.erl`) are now permitted in subdirectories
-  of `src/` and `test/`.
-  ([PgBiel](https://github.com/PgBiel))
-
-- `gleam publish` now requires more verbose confirmation for publishing Gleam
-  team packages and v0 packages.
-  ([Louis Pilfold](https://github.com/lpil))
-
-- `gleam publish` now warns when publishing packages that define multiple top-level
-  modules, as this can lead to namespace pollution and conflicts for consumers.
-  ([Aleksei Gurianov](https://github.com/guria))
-
-- New projects now require `gleam_stdlib` v0.44.0.
-
-- `gleam remove` no longer requires a network connection.
-  ([yoshi](https://github.com/joshi-monster))
-
-- Commands that work with the Hex package manager API now create and store an
-  API key rather than creating a new one each time. This API key is encrypted
-  with a local password, reducing risk of your Hex password being compromised.
-  ([Louis Pilfold](https://github.com/lpil))
-
-### Language Server
-
-- The language server now provides type information when hovering over argument
-  labels.
-
+- The build tool now supports placing modules in a directory called `dev`,
+  which like `test`, is only for development code.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- The Language Server now suggests a code action to desugar a use expression
-  into the equivalent function call. For example, this snippet of code:
+- There is now a new CLI command, `gleam dev`, which runs the `$PACKAGE_dev`
+  module, for running development entrypoints.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Updated the Erlang shipment POSIX entrypoint script to add an exec statement
+  so the Erlang process replaces the shell's process and can receive signals
+  when deployed.
+  ([Christopher De Vries](https://github.com/devries))
+
+- The build tool now provides additional information when printing warnings for
+  deprecated environment variables.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+### Language server
+
+- The code action to add missing labels to function now also works in patterns:
 
   ```gleam
-  pub fn main() {
-    use profile <- result.try(fetch_profile(user))
-    render_welcome(user, profile)
+  pub type Person {
+    Person(name: String, age: Int, job: String)
   }
-  ```
 
-  Will be turned into:
-
-  ```gleam
-  pub fn main() {
-    result.try(fetch_profile(user), fn(profile) {
-      render_welcome(user, profile)
-    })
-  }
-  ```
-
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
-- The Language Server now suggests a code action to turn a function call into
-  the equivalent use expression. For example, this snippet of code:
-
-  ```gleam
-  pub fn main() {
-    result.try(fetch_profile(user) fn(profile) {
-      render_welcome(user, profile)
-    })
-  }
-  ```
-
-  Will be turned into:
-
-  ```gleam
-  pub fn main() {
-    use profile <- result.try(fetch_profile(user))
-    render_welcome(user, profile)
-  }
-  ```
-
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
-- The language server now provides correct information when hovering over
-  patterns in use expressions.
-
-- The language server now suggests a code action to convert an inexhaustive
-  `let` assignment into a `case` expression:
-
-  ```gleam
-  pub fn unwrap_result(result: Result(a, b)) -> a {
-    let Ok(inner) = result
-    inner
+  pub fn age(person: Person) {
+    let Person(age:) = person
+    age
   }
   ```
 
   Becomes:
 
   ```gleam
-  pub fn unwrap_result(result: Result(a, b)) -> a {
-    let inner = case result {
-      Ok(inner) -> inner
-      Error(_) -> todo
-    }
-    inner
+  pub type Person {
+    Person(name: String, age: Int, job: String)
+  }
+
+  pub fn age(person: Person) {
+    let Person(age:, name:, job:) = person
+    age
   }
   ```
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The JSON encoding function that the language server code action generates is
+  now named `$TYPENAME_to_json` instead of `encode_$TYPENAME`. This is to remove
+  ambiguity with functions that encode to other formats, and to make the
+  function easier to discover by searching.
+
+  ([Louis Pilfold](https://github.com/lpil))
+
+- The code action to add missing patterns to a `case` expression now includes
+  labels in the generated patterns. For example:
+
+  ```gleam
+  pub type Person {
+    Person(name: String, age: Int)
+  }
+
+  pub fn classify(person: Person) {
+    case person {
+      Person(name: "John", age: 27) -> todo
+      Person(name: _, age: 42) -> todo
+    }
+  }
+  ```
+
+  Will now become:
+
+  ```gleam
+  pub type Person {
+    Person(name: String, age: Int)
+  }
+
+  pub fn classify(person: Person) {
+    case person {
+      Person(name: "John", age: 27) -> todo
+      Person(name: _, age: 42) -> todo
+      Person(name:, age:) -> todo
+    }
+  }
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- The language server now provides hover, autocomplete and goto definition
+  for constant definitions.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- The "generate function" code action can now choose better names based on the
+  labels and variables used. For example if I write the following code:
+
+  ```gleam
+  pub fn main() -> List(Int) {
+    let list = [1, 2, 3]
+    let number = 1
+    remove(each: number, in: list)
+  //^^^^ This function doesn't exist yet!
+  }
+  ```
+
+  And ask the language server to generate the missing function, the generated
+  code will now look like this:
+
+  ```gleam
+  fn remove(each number: Int, in list: List(Int)) -> List(Int) {
+    todo
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The language server now provides autocomplete suggestions for labels after
+  part of the label has already been typed. For example, in this code:
+
+  ```gleam
+  pub type Person {
+    Person(name: String, number: Int)
+  }
+
+  pub fn main() {
+    Person(n|)
+  }
+  ```
+
+  The language server will provide `name:` and `number:` as autocomplete
+  suggestions.
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Formatter
 
-- The formatter now adds a `todo` inside empty blocks.
+### Bug fixes
+
+- Fixed a bug where `case` expressions in custom panic messages would compile
+  to invalid syntax on the JavaScript target.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where `case` expressions in custom panic messages would compile
+  to invalid syntax on the JavaScript target.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where an underscore after a zero in a number would compile to
+  invalid syntax on the JavaScript target.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where the "generate function" code action could generate invalid
+  code when the same variable was passed as an argument twice.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-### Bug fixed
-
-- The compiler now throws an error when a float literal ends with an `e` and
-  is missing an exponent.
+- Fixed a bug where replacing a Hex dependency with a Git dependency of the
+  same name would cause the build tool to fail.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- Fixed a crash with ENOTEMPTY (os error 39) when building on NTFS partitions
-  ([Ivan Ermakov](https://github.com/ivanjermakov))
-
-- Fixed a bug where the compiler would crash when pattern matching on multiple
-  subjects and one of them being a constant record.
+- Fixed a bug where updating the remote URL of a Git dependency would fail to
+  update the remote in the local dependency, causing a caching issue.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- Variant inference on prelude types now works correctly if the variant is constant.
-  ([Surya Rose](https://github.com/GearsDatapacks))
-
-- Fixed a bug where patterns in `use` expressions would not be checked to ensure that
-  they were exhaustive.
-  ([Surya Rose](https://github.com/GearsDatapacks))
-
-- Fixed a bug where a `module.mjs` file would be overwritten by a `module.gleam`
-  file of same name without warning. It now produces an error.
-  ([PgBiel](https://github.com/PgBiel))
-
-- Modules depending on removed or renamed modules now get automatically recompiled.
-  ([Sakari Bergen](https://github.com/sbergen))
-
-- The compiler now raises a warning for unused case expressions, code blocks and
-  pipelines that would be safe to remove.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
-- Fixed a bug where assigning the prefix of a string pattern to a variable
-  nested inside another pattern would produce invalid code on Javascript.
-  ([yoshi](https://github.com/joshi-monster))
-
-- Fixed a bug where expressions which use an unsafe integer on JavaScript would
-  not emit a warning if an @external function had been referenced.
-  ([Richard Viney](https://github.com/richard-viney))
-
-- Fixed a bug where nested tuple access would not be parsed correctly when
-  the left-hand side was a function call.
-  ([Surya Rose](https://github.com/GearsDatapacks))
-
-- Fixed a bug where Gleam would be unable to compile to BEAM bytecode on older
-  versions of Erlang/OTP.
-  ([yoshi](https://github.com/joshi-monster))
-
-- Fixed a bug where the inferred variant of values was not properly cached,
-  leading to incorrect errors on incremental builds and in the Language Server.
-  ([Surya Rose](https://github.com/GearsDatapacks))
-  
- - Fixed a bug where Gleam would be unable to compile to BEAM bytecode if the
-   project path contains a non-ascii character.
-   ([yoshi](https://github.com/joshi-monster))
-
-## v1.6.1 - 2024-11-19
-
-### Bug fixed
-
-- Fixed a bug where `gleam update` would fail to update versions.
-  ([Jason Sipula](https://github.com/SnakeDoc))
+- Fix slightly wrong error message for missing main function in test module.
+  ([Samuel Cristobal](https://github.com/scristobal))

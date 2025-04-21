@@ -3,6 +3,10 @@ source: compiler-core/src/javascript/tests/modules.rs
 expression: "\nimport rocket_ship\npub const variable = rocket_ship.class\n"
 ---
 ----- SOURCE CODE
+-- rocket_ship.gleam
+pub const class = 1
+
+-- main.gleam
 
 import rocket_ship
 pub const variable = rocket_ship.class

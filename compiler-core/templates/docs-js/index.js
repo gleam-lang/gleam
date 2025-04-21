@@ -14,7 +14,7 @@ window.Gleam = (function () {
     let value;
     try {
       value = localStorage.getItem(`Gleam.${property}`);
-    } catch (_error) {}
+    } catch (_error) { }
     if (-1 < [null, undefined].indexOf(value)) {
       return gleamConfig[property].values[0].value;
     }
@@ -26,7 +26,7 @@ window.Gleam = (function () {
       (acc, name) =>
         `${acc}
         <svg class="icon icon-${name}"><use xlink:href="#icon-${name}"></use></svg>`,
-      ""
+      "",
     );
   };
 
@@ -67,6 +67,9 @@ window.Gleam = (function () {
   const sidebarToggles = document.querySelectorAll(".sidebar-toggle");
   const displayControls = document.createElement("div");
 
+  const isMac = navigator?.userAgentData?.platform === 'macOS'
+    || /mac/i.test(navigator.userAgent);
+
   displayControls.classList.add("display-controls");
   sidebar.appendChild(displayControls);
 
@@ -100,11 +103,11 @@ window.Gleam = (function () {
         `<button
           id="${property}-toggle"
           class="control control-${property} toggle toggle-0">
-        `
+        `,
       ) +
-        `
-        </button>
       `
+        </button>
+      `,
     );
 
     setProperty(null, property, function () {
@@ -121,21 +124,21 @@ window.Gleam = (function () {
 
     try {
       localStorage.setItem("Gleam." + property, value);
-    } catch (_error) {}
+    } catch (_error) { }
 
     bodyClasses.remove(`${property}-${previousValue}`);
     bodyClasses.add(`${property}-${value}`);
 
     const isDefault = value === gleamConfig[property].values[0].value;
     const toggleClasses = document.querySelector(
-      `#${property}-toggle`
+      `#${property}-toggle`,
     ).classList;
     toggleClasses.remove(`toggle-${isDefault ? 1 : 0}`);
     toggleClasses.add(`toggle-${isDefault ? 0 : 1}`);
 
     try {
       gleamConfig[property].callback(value);
-    } catch (_error) {}
+    } catch (_error) { }
 
     return value;
   };
@@ -151,7 +154,7 @@ window.Gleam = (function () {
       `;
     body.appendChild(el);
     self.hashOffset = parseInt(
-      getComputedStyle(el).getPropertyValue("height") || "0"
+      getComputedStyle(el).getPropertyValue("height") || "0",
     );
     body.removeChild(el);
   };
@@ -168,7 +171,7 @@ window.Gleam = (function () {
     else el.addEventListener(type, handler);
   };
 
-  const searchLoaded = function (index, docs) {
+  const searchLoaded = function (index, searchItems) {
     const preview_words_after = 10;
     const preview_words_before = 5;
     const previews = 3;
@@ -178,6 +181,9 @@ window.Gleam = (function () {
     const searchResults = document.getElementById("search-results");
     let currentInput;
     let currentSearchIndex = 0;
+
+    // Set search input placeholder based on OS
+    searchInput.setAttribute("placeholder", isMac ? "Search ⌘ + K" : "Search Ctrl + K")
 
     function showSearch() {
       document.documentElement.classList.add("search-active");
@@ -255,7 +261,7 @@ window.Gleam = (function () {
         start,
         batchSize,
         batchMillis,
-        searchIndex
+        searchIndex,
       ) {
         if (searchIndex != currentSearchIndex) {
           return;
@@ -273,19 +279,19 @@ window.Gleam = (function () {
             start + batchSize,
             batchSize,
             batchMillis,
-            searchIndex
+            searchIndex,
           );
         }, batchMillis);
       }
 
       function addResult(resultsList, result) {
-        const doc = docs[result.ref];
+        const searchItem = searchItems[result.ref];
         const resultsListItem = document.createElement("li");
         resultsListItem.classList.add("search-results-list-item");
         resultsList.appendChild(resultsListItem);
         const resultLink = document.createElement("a");
         resultLink.classList.add("search-result");
-        resultLink.setAttribute("href", `${window.unnest}/${doc.url}`);
+        resultLink.setAttribute("href", `${window.unnest}/${searchItem.ref}`);
         resultsListItem.appendChild(resultLink);
         const resultTitle = document.createElement("div");
         resultTitle.classList.add("search-result-title");
@@ -297,14 +303,14 @@ window.Gleam = (function () {
         resultTitle.appendChild(resultDoc);
         const resultDocTitle = document.createElement("div");
         resultDocTitle.classList.add("search-result-doc-title");
-        resultDocTitle.innerHTML = doc.doc;
+        resultDocTitle.innerHTML = searchItem.parentTitle;
         resultDoc.appendChild(resultDocTitle);
         let resultDocOrSection = resultDocTitle;
-        if (doc.doc != doc.title) {
+        if (searchItem.parentTitle != searchItem.title) {
           resultDoc.classList.add("search-result-doc-parent");
           const resultSection = document.createElement("div");
           resultSection.classList.add("search-result-section");
-          resultSection.innerHTML = doc.title;
+          resultSection.innerHTML = searchItem.title;
           resultTitle.appendChild(resultSection);
           resultDocOrSection = resultSection;
         }
@@ -328,11 +334,11 @@ window.Gleam = (function () {
               let ellipsesBefore = true;
               let ellipsesAfter = true;
               for (let k = 0; k < preview_words_before; k++) {
-                const nextSpace = doc.content.lastIndexOf(
+                const nextSpace = searchItem.doc.lastIndexOf(
                   " ",
-                  previewStart - 2
+                  previewStart - 2,
                 );
-                const nextDot = doc.content.lastIndexOf(". ", previewStart - 2);
+                const nextDot = searchItem.doc.lastIndexOf(". ", previewStart - 2);
                 if (nextDot >= 0 && nextDot > nextSpace) {
                   previewStart = nextDot + 1;
                   ellipsesBefore = false;
@@ -346,15 +352,15 @@ window.Gleam = (function () {
                 previewStart = nextSpace + 1;
               }
               for (let k = 0; k < preview_words_after; k++) {
-                const nextSpace = doc.content.indexOf(" ", previewEnd + 1);
-                const nextDot = doc.content.indexOf(". ", previewEnd + 1);
+                const nextSpace = searchItem.doc.indexOf(" ", previewEnd + 1);
+                const nextDot = searchItem.doc.indexOf(". ", previewEnd + 1);
                 if (nextDot >= 0 && nextDot < nextSpace) {
                   previewEnd = nextDot;
                   ellipsesAfter = false;
                   break;
                 }
                 if (nextSpace < 0) {
-                  previewEnd = doc.content.length;
+                  previewEnd = searchItem.doc.length;
                   ellipsesAfter = false;
                   break;
                 }
@@ -377,10 +383,10 @@ window.Gleam = (function () {
           resultDocOrSection.innerHTML = "";
           addHighlightedText(
             resultDocOrSection,
-            doc.title,
+            searchItem.title,
             0,
-            doc.title.length,
-            titlePositions
+            searchItem.title.length,
+            titlePositions,
           );
         }
         if (contentPositions.length > 0) {
@@ -416,7 +422,7 @@ window.Gleam = (function () {
           const resultPreviews = document.createElement("div");
           resultPreviews.classList.add("search-result-previews");
           resultLink.appendChild(resultPreviews);
-          const content = doc.content;
+          const content = searchItem.doc;
           for (
             let j = 0;
             j < Math.min(previewPositions.length, previews);
@@ -434,7 +440,7 @@ window.Gleam = (function () {
               content,
               position.previewStart,
               position.previewEnd,
-              position.highlight
+              position.highlight,
             );
             if (position.ellipsesAfter) {
               resultPreview.appendChild(document.createTextNode(" ..."));
@@ -443,7 +449,7 @@ window.Gleam = (function () {
         }
         const resultRelUrl = document.createElement("span");
         resultRelUrl.classList.add("search-result-rel-url");
-        resultRelUrl.innerText = doc.url;
+        resultRelUrl.innerText = searchItem.ref;
         resultTitle.appendChild(resultRelUrl);
       }
 
@@ -465,6 +471,25 @@ window.Gleam = (function () {
         parent.appendChild(span);
       }
     }
+
+    addEvent(document, "keydown", function (event) {
+      // Don't do anything when search is already in focus
+      if (document.activeElement == searchInput) {
+        return
+      }
+
+      if (
+        // Handle cmd/ctrl + k
+        ((event.metaKey || event.ctrlKey) && event.key === 'k') ||
+        // Handle s or /
+        event.key === 's' || event.key === '/'
+      ) {
+        event.preventDefault();
+
+        searchInput.focus();
+        return;
+      }
+    })
 
     addEvent(searchInput, "focus", function () {
       setTimeout(update, 0);
@@ -495,7 +520,7 @@ window.Gleam = (function () {
             if (active.parentElement.previousSibling) {
               const previous =
                 active.parentElement.previousSibling.querySelector(
-                  ".search-result"
+                  ".search-result",
                 );
               previous.classList.add("active");
             }
@@ -508,7 +533,7 @@ window.Gleam = (function () {
             if (active.parentElement.nextSibling) {
               const next =
                 active.parentElement.nextSibling.querySelector(
-                  ".search-result"
+                  ".search-result",
                 );
               active.classList.remove("active");
               next.classList.add("active");
@@ -542,28 +567,30 @@ window.Gleam = (function () {
     });
   };
 
-  self.initSearch = function initSeach(docs) {
+  self.initSearch = function initSeach(searchData) {
     // enable support for hyphenated search words
     lunr.tokenizer.separator = /[\s/]+/;
-
     const index = lunr(function () {
       this.ref("id");
+      // this.field("type");
+      // this.field("parentTitle");
       this.field("title", { boost: 200 });
-      this.field("content", { boost: 2 });
-      this.field("url");
+      this.field("doc", { boost: 2 });
+      this.field("ref");
       this.metadataWhitelist = ["position"];
 
-      for (let [i, entry] of docs.entries()) {
+      for (let [i, entry] of searchData.items.entries()) {
         this.add({
           id: i,
+          // type: entry.type,
+          parentTitle: entry.parentTitle,
           title: entry.title,
-          content: entry.content,
-          url: `${window.unnest}/${entry.url}`,
+          doc: entry.doc,
+          ref: `${window.unnest}/${entry.ref}`,
         });
       }
     });
-
-    searchLoaded(index, docs);
+    searchLoaded(index, searchData.items);
   };
 
   const init = function () {
@@ -595,12 +622,12 @@ window.Gleam = (function () {
         `
       .module-name > a,
       .member-name a[href^='#']
-    `
+    `,
       )
       .forEach(function (title) {
         title.innerHTML = title.innerHTML.replace(
           /([A-Z])|([_/])/g,
-          "$2<wbr>$1"
+          "$2<wbr>$1",
         );
       });
   };

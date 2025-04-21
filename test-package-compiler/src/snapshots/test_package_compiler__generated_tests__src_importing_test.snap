@@ -1,6 +1,5 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 273
 expression: "./cases/src_importing_test"
 ---
 error: App importing test module
@@ -11,6 +10,5 @@ error: App importing test module
 
 The application module `one` is importing the test module `two`.
 
-Test modules are not included in production builds so test modules cannot
-import them. Perhaps move the `two` module to the src directory.
-
+Test modules are not included in production builds so application modules
+cannot import them. Perhaps move the `two` module to the src directory.

@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/javascript/tests/case_clause_guards.rs
+expression: "\npub fn main() {\n  case 5.1 /. 0.0 {\n    x if x == 5.1 /. 0.0 -> True\n    _ -> False\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  case 5.1 /. 0.0 {
+    x if x == 5.1 /. 0.0 -> True
+    _ -> False
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { divideFloat } from "../gleam.mjs";
+
+export function main() {
+  let $ = divideFloat(5.1, 0.0);
+  if ($ === (divideFloat(5.1, 0.0))) {
+    let x = $;
+    return true;
+  } else {
+    return false;
+  }
+}

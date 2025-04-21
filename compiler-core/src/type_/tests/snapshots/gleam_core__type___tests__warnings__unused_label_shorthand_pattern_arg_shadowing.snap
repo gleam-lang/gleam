@@ -20,7 +20,7 @@ warning: Unused variable
 5 │   let Wibble(arg1:, arg2:) = Wibble(1, True)
   │              ^^^^^ This variable is never used
 
-Hint: You can ignore it with an underscore: `_arg1`.
+Hint: You can ignore it with an underscore: `arg1: _`.
 
 warning: Unused variable
   ┌─ /src/warning/wrn.gleam:5:21
@@ -28,4 +28,4 @@ warning: Unused variable
 5 │   let Wibble(arg1:, arg2:) = Wibble(1, True)
   │                     ^^^^^ This variable is never used
 
-Hint: You can ignore it with an underscore: `_arg2`.
+Hint: You can ignore it with an underscore: `arg2: _`.

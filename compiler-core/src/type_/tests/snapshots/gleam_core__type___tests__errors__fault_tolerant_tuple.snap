@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn main() {\n  #(1, 1 + \"a\", not_in_scope)\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  #(1, 1 + "a", not_in_scope)
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:12
+  │
+3 │   #(1, 1 + "a", not_in_scope)
+  │            ^^^
+
+The + operator expects arguments of this type:
+
+    Int
+
+But this argument has this type:
+
+    String
+
+Hint: Strings can be joined using the `<>` operator.
+
+error: Unknown variable
+  ┌─ /src/one/two.gleam:3:17
+  │
+3 │   #(1, 1 + "a", not_in_scope)
+  │                 ^^^^^^^^^^^^
+
+The name `not_in_scope` is not in scope here.

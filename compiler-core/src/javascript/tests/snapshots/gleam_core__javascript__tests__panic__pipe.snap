@@ -14,14 +14,14 @@ import { makeError } from "../gleam.mjs";
 
 function go(f) {
   let _pipe = f;
-  return (() => {
-    throw makeError(
-      "panic",
-      "my/mod",
-      3,
-      "go",
-      "`panic` expression evaluated.",
-      {}
-    )
-  })()(_pipe);
+  let _block;
+  throw makeError(
+    "panic",
+    "my/mod",
+    3,
+    "go",
+    "`panic` expression evaluated.",
+    {}
+  )
+  return _block(_pipe);
 }

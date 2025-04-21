@@ -1,6 +1,4 @@
-use crate::{
-    assert_error, assert_module_error, assert_no_warnings, assert_warning, assert_with_module_error,
-};
+use crate::{assert_error, assert_module_error, assert_no_warnings, assert_warning};
 
 #[test]
 fn whatever() {
@@ -991,7 +989,7 @@ pub fn main(wibble) {
 
 #[test]
 fn case_error_prints_module_names() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "pub type Wibble { Wibble Wobble }"),
         "
 import wibble
@@ -1007,7 +1005,7 @@ pub fn main(wobble_thing) {
 
 #[test]
 fn case_error_prints_module_alias() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "pub type Wibble { Wibble Wobble }"),
         "
 import wibble as wobble
@@ -1022,7 +1020,7 @@ pub fn main(wibble) {
 
 #[test]
 fn case_error_prints_unqualified_value() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "pub type Wibble { Wibble Wobble }"),
         "
 import wibble.{Wibble, Wobble}
@@ -1037,7 +1035,7 @@ pub fn main(wibble) {
 
 #[test]
 fn case_error_prints_aliased_unqualified_value() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "pub type Wibble { Wibble Wobble }"),
         "
 import wibble.{Wibble, Wobble as Wubble}
@@ -1080,7 +1078,7 @@ pub fn main(res: Result(Int, Nil)) {
 
 #[test]
 fn case_error_prints_module_when_shadowed() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("mod", "pub type Wibble { Wibble Wobble }"),
         "
 import mod.{Wibble}
@@ -1097,7 +1095,7 @@ pub fn main() {
 
 #[test]
 fn case_error_prints_module_when_aliased_and_shadowed() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("mod", "pub type Wibble { Wibble Wobble }"),
         "
 import mod.{Wibble as Wobble}
@@ -1114,7 +1112,7 @@ pub fn main() {
 
 #[test]
 fn case_error_prints_unqualifed_when_aliased() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("mod", "pub type Wibble { Wibble Wobble }"),
         "
 import mod.{Wibble as Wobble}
@@ -1369,5 +1367,294 @@ pub fn main() {
   }
 }
 "
+    );
+}
+
+#[test]
+fn unreachable_string_pattern_after_prefix() {
+    assert_warning!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "wib" <> rest -> rest
+    "wibble" -> "a"
+    _ -> "b"
+  }
+}"#
+    );
+}
+
+#[test]
+fn reachable_string_pattern_after_prefix() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "wib" <> rest if True -> rest
+    "wibble" -> "a"
+    _ -> "b"
+  }
+}"#
+    );
+}
+
+#[test]
+fn reachable_string_pattern_after_prefix_1() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "wibble" <> rest -> rest
+    "wib" -> "a"
+    _ -> "b"
+  }
+}"#
+    );
+}
+
+#[test]
+fn unreachable_prefix_pattern_after_prefix() {
+    assert_warning!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "wib" <> rest -> rest
+    "wibble" <> rest -> rest
+    _ -> "a"
+  }
+}"#
+    );
+}
+
+#[test]
+fn reachable_prefix_pattern_after_prefix() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "wib" <> rest if True -> rest
+    "wibble" <> rest -> rest
+    _ -> "a"
+  }
+}"#
+    );
+}
+
+#[test]
+fn reachable_prefix_pattern_after_prefix_1() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "wibble" <> rest -> rest
+    "wib" <> rest -> rest
+    _ -> "a"
+  }
+}"#
+    );
+}
+
+#[test]
+fn multiple_unreachable_prefix_patterns() {
+    assert_warning!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "wib" <> rest -> rest
+    "wibble" <> rest -> rest
+    "wibblest" <> rest -> rest
+    _ -> "a"
+  }
+}"#
+    );
+}
+
+#[test]
+fn multiple_unreachable_prefix_patterns_1() {
+    assert_warning!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "wib" <> rest if True -> rest
+    "wibble" <> rest -> rest
+    "wibblest" <> rest -> rest
+    _ -> "a"
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_bits_catches_everything() {
+    assert_warning!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<_:bits>> -> 1
+    <<1>> -> 2
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_bytes_needs_catch_all() {
+    assert_module_error!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<_:bytes>> -> 1
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_overlapping_patterns_are_redundant() {
+    assert_warning!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<1, a:size(16)>> -> a
+    <<1, b:size(8)-unit(2)>> -> b
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_similar_overlapping_patterns_are_not_redundant() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<1, a:size(16)>> -> a
+    <<2, b:size(8)-unit(2)>> -> b
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_overlapping_redundant_patterns_with_variable_size() {
+    assert_warning!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  let len = 3
+  case bit_array {
+    <<a:size(len), _:size(16)>> -> a
+    <<_:size(len), b:size(8)-unit(2)>> -> b
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_overlapping_redundant_patterns_with_variable_size_2() {
+    assert_warning!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<len, _:size(len)-unit(3)>> -> 1
+    <<len, _:size(len)-unit(2), 1:size(len)>> -> 2
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_overlapping_patterns_with_variable_size_not_redundant() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<len, 1:size(len)-unit(3)>> -> 1
+    <<len, _:size(len)-unit(2), 1:size(len)>> -> 2
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_patterns_with_different_length_with_same_name_are_not_redundant() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  let len = 10
+  case bit_array {
+    <<_, _:size(len)-unit(3)>> -> 1
+    // Down here len is not the same as the len above, so the branch below is
+    // not redundant!
+    <<len, _:size(len)-unit(3)>> -> 2
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_patterns_with_different_length_with_same_name_are_not_redundant_1() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  let len = 10
+  case bit_array {
+    <<len, _:size(len)-unit(3)>> -> 1
+    // Down here len is not the same as the len above, so the branch below is
+    // not redundant!
+    <<_, _:size(len)-unit(3)>> -> 2
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_patterns_with_different_length_with_same_name_are_not_redundant_2() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<_, len, _:size(len)>> -> 1
+    // Down here len is not the same as the len above, so the branch below is
+    // not redundant!
+    <<len, _, _:size(len)>> -> 2
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn same_catch_all_bytes_are_redundant() {
+    assert_warning!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<_:bytes>> -> <<>>
+    <<a:bytes>> -> a
+    _ -> <<>>
+  }
+}"#
+    );
+}
+
+#[test]
+fn different_catch_all_bytes_are_not_redundant() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<_, _:bytes>> -> <<>>
+    <<_:bytes>> -> <<>>
+    _ -> <<>>
+  }
+}"#
     );
 }

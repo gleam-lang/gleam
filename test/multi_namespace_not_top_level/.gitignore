@@ -1,0 +1,4 @@
+*.beam
+*.ez
+build
+manifest.toml

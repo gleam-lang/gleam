@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
 expression: "let add = fn(numA: Int, num_b: Int) { numA + num_b }"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 let add = fn(numA: Int, num_b: Int) { numA + num_b }

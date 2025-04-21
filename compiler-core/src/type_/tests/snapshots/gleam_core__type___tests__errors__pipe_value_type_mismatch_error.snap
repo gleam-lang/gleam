@@ -24,7 +24,7 @@ error: Type mismatch
 
 Expected type:
 
-    fn(fn(Veg) -> String) -> a
+    fn(fn(Veg) -> String) -> String
 
 Found type:
 

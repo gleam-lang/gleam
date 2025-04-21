@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub type Wibble {\n  Wibble(a: Int, b: Float, c: String)\n  Wobble(d: Bool, e: BitArray, f: List(Result(String, Nil)))\n}\n\npub fn main(w: Wibble) {\n  case w {\n    Wibble(..) -> todo\n    Wobble() -> todo\n  }\n}\n"
+---
+----- BEFORE ACTION
+
+pub type Wibble {
+  Wibble(a: Int, b: Float, c: String)
+  Wobble(d: Bool, e: BitArray, f: List(Result(String, Nil)))
+}
+
+pub fn main(w: Wibble) {
+  case w {
+    Wibble(..) -> todo
+    Wobble() -> todo
+    ↑               
+  }
+}
+
+
+----- AFTER ACTION
+
+pub type Wibble {
+  Wibble(a: Int, b: Float, c: String)
+  Wobble(d: Bool, e: BitArray, f: List(Result(String, Nil)))
+}
+
+pub fn main(w: Wibble) {
+  case w {
+    Wibble(..) -> todo
+    Wobble(d:, e:, f:) -> todo
+  }
+}

@@ -61,10 +61,35 @@ should_fail run --module module/no_main_function
 
 # Main function with wrong arity
 should_fail run --module module/wrong_arity
+should_fail run --module wrong_test_arity
+should_fail run --module wrong_dev_arity
 
-# try running gleam_module_javascript_test, which will crash if target is erlang
-should_succeed run --module gleam_module_javascript_test
+# Test modules
+should_succeed test --target erlang
+should_succeed test --target javascript --runtime nodejs
+should_succeed test --target javascript --runtime deno
 
-# verify that javascript target doesn't crash and erlang target does crash
-should_succeed run --module gleam_module_javascript_test --target=javascript
-should_fail run --module gleam_module_javascript_test --target=erlang
+should_succeed run --module module_in_test --target erlang
+should_succeed run --module module_in_test --target javascript --runtime nodejs
+should_succeed run --module module_in_test --target javascript --runtime deno
+
+# Nested module in test
+should_succeed run --module nested/module_in_test --target erlang
+should_succeed run --module nested/module_in_test --target javascript --runtime nodejs
+should_succeed run --module nested/module_in_test --target javascript --runtime deno
+
+
+# Dev modules
+should_succeed dev --target erlang
+should_succeed dev --target javascript --runtime nodejs
+should_succeed dev --target javascript --runtime deno
+
+should_succeed run --module module_in_dev --target erlang
+should_succeed run --module module_in_dev --target javascript --runtime nodejs
+should_succeed run --module module_in_dev --target javascript --runtime deno
+
+# Nested module in dev
+should_succeed run --module nested/module_in_dev --target erlang
+should_succeed run --module nested/module_in_dev --target javascript --runtime nodejs
+should_succeed run --module nested/module_in_dev --target javascript --runtime deno
+

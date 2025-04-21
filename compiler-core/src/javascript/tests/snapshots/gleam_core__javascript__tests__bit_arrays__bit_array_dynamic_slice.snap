@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\nfn go(x) {\n  let i = 4\n  <<<<0xAB>>:bits-size(i)>>\n}\n"
+---
+----- SOURCE CODE
+
+fn go(x) {
+  let i = 4
+  <<<<0xAB>>:bits-size(i)>>
+}
+
+
+----- COMPILED JAVASCRIPT
+import { toBitArray, bitArraySlice } from "../gleam.mjs";
+
+function go(x) {
+  let i = 4;
+  return toBitArray([bitArraySlice(toBitArray([171]), 0, i)]);
+}

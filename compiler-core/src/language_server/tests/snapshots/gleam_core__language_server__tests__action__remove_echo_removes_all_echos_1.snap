@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  echo 1 |> echo |> echo |> wibble |> echo\n  echo wibble(echo 1, echo 2)\n  echo 1\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  echo 1 |> echo |> echo |> wibble |> echo
+            ↑                             
+  echo wibble(echo 1, echo 2)
+  echo 1
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  1 |> wibble
+  wibble(1, 2)
+  1
+}

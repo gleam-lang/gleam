@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 1628
 expression: "\ntype Wibble {\n    @target(erlang)\n    Wibble2\n}\n"
 ---
 ----- SOURCE CODE

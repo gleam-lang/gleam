@@ -4,12 +4,12 @@ use std::time::SystemTime;
 use debug_ignore::DebugIgnore;
 
 use crate::{
+    Result,
     error::Error,
     io::{
-        memory::InMemoryFileSystem, BeamCompiler, CommandExecutor, FileSystemReader,
-        FileSystemWriter, ReadDir, Stdio, WrappedReader,
+        BeamCompiler, Command, CommandExecutor, FileSystemReader, FileSystemWriter, ReadDir, Stdio,
+        WrappedReader, memory::InMemoryFileSystem,
     },
-    Result,
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -157,14 +157,7 @@ impl<IO> CommandExecutor for FileSystemProxy<IO>
 where
     IO: CommandExecutor,
 {
-    fn exec(
-        &self,
-        _program: &str,
-        _args: &[String],
-        _env: &[(&str, String)],
-        _cwd: Option<&Utf8Path>,
-        _stdio: Stdio,
-    ) -> Result<i32> {
+    fn exec(&self, _command: Command) -> Result<i32> {
         panic!("The language server is not permitted to create subprocesses")
     }
 }
@@ -179,7 +172,7 @@ where
         _lib: &Utf8Path,
         _modules: &HashSet<Utf8PathBuf>,
         _stdio: Stdio,
-    ) -> Result<(), Error> {
+    ) -> Result<Vec<String>, Error> {
         panic!("The language server is not permitted to create subprocesses")
     }
 }

@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-assertion_line: 1186
 expression: "\nimport dep.{\n  wibble,\n\n}\n\npub fn main() {\n  0\n}"
 ---
 import dep.{

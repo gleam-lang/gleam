@@ -1,6 +1,5 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 151
 expression: "./cases/import_shadowed_name_warning"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one.cache
@@ -32,6 +31,16 @@ expression: "./cases/import_shadowed_name_warning"
 
 -export([use_type/1]).
 -export_type([shadowing/0]).
+
+-if(?OTP_RELEASE >= 27).
+-define(MODULEDOC(Str), -moduledoc(Str)).
+-define(DOC(Str), -doc(Str)).
+-else.
+-define(MODULEDOC(Str), -compile([])).
+-define(DOC(Str), -compile([])).
+-endif.
+
+?MODULEDOC(" https://github.com/gleam-lang/otp/pull/22\n").
 
 -type shadowing() :: port.
 

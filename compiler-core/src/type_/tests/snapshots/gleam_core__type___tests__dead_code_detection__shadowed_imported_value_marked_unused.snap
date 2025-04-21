@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/type_/tests/dead_code_detection.rs
+expression: "\nimport wibble.{wibble}\n\npub const wibble = 2\n"
+---
+----- SOURCE CODE
+-- wibble.gleam
+
+pub const wibble = 1
+
+
+-- main.gleam
+
+import wibble.{wibble}
+
+pub const wibble = 2
+
+
+----- WARNING
+warning: Unused imported value
+  ┌─ /src/warning/wrn.gleam:2:16
+  │
+2 │ import wibble.{wibble}
+  │                ^^^^^^ This imported value is never used
+
+Hint: You can safely remove it.

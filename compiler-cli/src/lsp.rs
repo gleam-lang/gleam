@@ -1,9 +1,12 @@
-use crate::{build_lock::BuildLock, fs::ProjectIO};
+use crate::{
+    build_lock::{BuildLock, Guard},
+    fs::ProjectIO,
+};
 use gleam_core::{
+    Result,
     build::{Mode, NullTelemetry, Target},
     language_server::{LanguageServer, LockGuard, Locker},
     paths::ProjectPaths,
-    Result,
 };
 
 pub fn main() -> Result<()> {
@@ -19,7 +22,11 @@ Many editors will automatically start the language server for you
 when you open a Gleam project. If yours does not you may need to
 look up how to configure your editor to use a language server.
 
-You can exit this program by pressing ctrl+c.
+If you are seeing this in the logs of your editor you can safely
+ignore this message.
+
+If you have run `gleam lsp` yourself in your terminal then exit
+this program by pressing ctrl+c.
 "
     );
 
@@ -50,7 +57,8 @@ impl LspLocker {
 }
 
 impl Locker for LspLocker {
-    fn lock_for_build(&self) -> LockGuard {
-        LockGuard(Box::new(self.0.lock(&NullTelemetry)))
+    fn lock_for_build(&self) -> Result<LockGuard> {
+        let guard: Guard = self.0.lock(&NullTelemetry)?;
+        Ok(LockGuard(Box::new(guard)))
     }
 }

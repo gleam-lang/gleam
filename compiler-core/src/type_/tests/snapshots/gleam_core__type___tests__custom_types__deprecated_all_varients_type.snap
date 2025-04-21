@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/custom_types.rs
-assertion_line: 35
 expression: "\npub type Numbers {\n  @deprecated(\"1\")\n  One\n  @deprecated(\"2\")\n  Two\n}\n"
 ---
 ----- SOURCE CODE

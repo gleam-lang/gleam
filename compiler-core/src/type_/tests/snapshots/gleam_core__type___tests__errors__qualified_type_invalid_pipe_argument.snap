@@ -16,10 +16,10 @@ pub fn main() {
 
 ----- ERROR
 error: Type mismatch
-  ┌─ /src/one/two.gleam:4:13
+  ┌─ /src/one/two.gleam:4:10
   │
 4 │   Nil |> mod.takes_wibble
-  │             ^^^^^^^^^^^^^ This function does not accept the piped type
+  │          ^^^^^^^^^^^^^^^^ This function does not accept the piped type
 
 The argument is:
 

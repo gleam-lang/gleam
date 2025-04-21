@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/language_server/tests/reference.rs
+expression: "\npub fn main() {\n  let wibble = 10\n  let wobble = wibble + 1\n  wibble + wobble\n}\n"
+---
+-- app.gleam
+
+pub fn main() {
+  let wibble = 10
+      ↑▔▔▔▔▔     
+  let wobble = wibble + 1
+               ▔▔▔▔▔▔    
+  wibble + wobble
+  ▔▔▔▔▔▔         
+}

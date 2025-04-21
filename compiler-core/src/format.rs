@@ -2,6 +2,7 @@
 mod tests;
 
 use crate::{
+    Error, Result,
     ast::{
         CustomType, Import, ModuleConstant, TypeAlias, TypeAstConstructor, TypeAstFn, TypeAstHole,
         TypeAstTuple, TypeAstVar, *,
@@ -9,14 +10,13 @@ use crate::{
     build::Target,
     docvec,
     io::Utf8Writer,
-    parse::extra::{Comment, ModuleExtra},
     parse::SpannedString,
+    parse::extra::{Comment, ModuleExtra},
     pretty::{self, *},
     type_::{self, Type},
     warning::WarningEmitter,
-    Error, Result,
 };
-use ecow::{eco_format, EcoString};
+use ecow::{EcoString, eco_format};
 use itertools::Itertools;
 use std::{cmp::Ordering, sync::Arc};
 use vec1::Vec1;
@@ -71,6 +71,30 @@ impl<'a> Intermediate<'a> {
     }
 }
 
+#[derive(Debug)]
+enum FnCapturePosition {
+    RightHandSideOfPipe,
+    EverywhereElse,
+}
+
+#[derive(Debug)]
+/// One of the pieces making a record update arg list: it could be the starting
+/// record being updated, or one of the subsequent arguments.
+///
+enum RecordUpdatePiece<'a> {
+    Record(&'a RecordBeingUpdated),
+    Argument(&'a UntypedRecordUpdateArg),
+}
+
+impl HasLocation for RecordUpdatePiece<'_> {
+    fn location(&self) -> SrcSpan {
+        match self {
+            RecordUpdatePiece::Record(record) => record.location,
+            RecordUpdatePiece::Argument(arg) => arg.location,
+        }
+    }
+}
+
 /// Hayleigh's bane
 #[derive(Debug, Clone, Default)]
 pub struct Formatter<'a> {
@@ -112,7 +136,7 @@ impl<'comments> Formatter<'comments> {
     fn pop_comments_with_position(
         &mut self,
         limit: u32,
-    ) -> impl Iterator<Item = (u32, Option<&'comments str>)> {
+    ) -> impl Iterator<Item = (u32, Option<&'comments str>)> + use<'comments> {
         let (popped, rest, empty_lines) =
             comments_before(self.comments, self.empty_lines, limit, true);
         self.comments = rest;
@@ -122,14 +146,20 @@ impl<'comments> Formatter<'comments> {
 
     /// Pop comments that occur before a byte-index in the source, consuming
     /// and retaining any empty lines contained within.
-    fn pop_comments(&mut self, limit: u32) -> impl Iterator<Item = Option<&'comments str>> {
+    fn pop_comments(
+        &mut self,
+        limit: u32,
+    ) -> impl Iterator<Item = Option<&'comments str>> + use<'comments> {
         self.pop_comments_with_position(limit)
             .map(|(_position, comment)| comment)
     }
 
     /// Pop doc comments that occur before a byte-index in the source, consuming
     /// and dropping any empty lines contained within.
-    fn pop_doc_comments(&mut self, limit: u32) -> impl Iterator<Item = Option<&'comments str>> {
+    fn pop_doc_comments(
+        &mut self,
+        limit: u32,
+    ) -> impl Iterator<Item = Option<&'comments str>> + use<'comments> {
         let (popped, rest, empty_lines) =
             comments_before(self.doc_comments, self.empty_lines, limit, false);
         self.doc_comments = rest;
@@ -259,7 +289,7 @@ impl<'comments> Formatter<'comments> {
     fn imports<'a>(&mut self, imports: Vec<&'a TargetedDefinition>) -> Vec<Document<'a>> {
         let mut import_groups_docs = vec![];
         let mut current_group = vec![];
-        let mut current_group_delimiter = docvec!();
+        let mut current_group_delimiter = nil();
 
         for import in imports {
             let start = import.definition.location().start;
@@ -286,7 +316,7 @@ impl<'comments> Formatter<'comments> {
 
                 let comments = self.pop_comments(start);
                 let _ = self.pop_empty_lines(start);
-                current_group_delimiter = printed_comments(comments, true).unwrap_or(docvec!());
+                current_group_delimiter = printed_comments(comments, true).unwrap_or(nil());
             }
             // Lastly we add the import to the group.
             current_group.push(import);
@@ -364,11 +394,11 @@ impl<'comments> Formatter<'comments> {
                     let unqualified_types = unqualified_types
                         .iter()
                         .sorted_by(|a, b| a.name.cmp(&b.name))
-                        .map(|e| docvec!["type ", e]);
+                        .map(|type_| docvec!["type ", type_]);
                     let unqualified_values = unqualified_values
                         .iter()
                         .sorted_by(|a, b| a.name.cmp(&b.name))
-                        .map(|e| e.to_doc());
+                        .map(|value| value.to_doc());
                     let unqualified = join(
                         unqualified_types.chain(unqualified_values),
                         flex_break(",", ", "),
@@ -382,7 +412,7 @@ impl<'comments> Formatter<'comments> {
                 };
 
                 let doc = docvec!["import ", module.as_str(), second];
-                let default_module_access_name = module.split('/').last().map(EcoString::from);
+                let default_module_access_name = module.split('/').next_back().map(EcoString::from);
                 match (default_module_access_name, as_name) {
                     // If the `as name` is the same as the module name that would be
                     // used anyways we won't render it. For example:
@@ -445,7 +475,7 @@ impl<'comments> Formatter<'comments> {
             } => {
                 let segment_docs = segments
                     .iter()
-                    .map(|s| bit_array_segment(s, |e| self.const_expr(e)))
+                    .map(|segment| bit_array_segment(segment, |e| self.const_expr(e)))
                     .collect_vec();
 
                 self.bit_array(
@@ -546,7 +576,7 @@ impl<'comments> Formatter<'comments> {
         }
 
         let comma = match elements.first() {
-            // If the list is made of records and it gets too long we want to
+            // If the list is made of non-simple constants and it gets too long we want to
             // have each record on its own line instead of trying to fit as much
             // as possible in each line. For example:
             //
@@ -556,8 +586,8 @@ impl<'comments> Formatter<'comments> {
             //       Some("wobble wibble"),
             //    ]
             //
-            Some(Constant::Record { .. }) => break_(",", ", "),
-            // For all other items, if we have to break the list we still try to
+            Some(el) if !el.is_simple() => break_(",", ", "),
+            // For simple constants(String, Int, Float), if we have to break the list we still try to
             // fit as much as possible into a single line instead of putting
             // each item on its own separate line. For example:
             //
@@ -568,7 +598,11 @@ impl<'comments> Formatter<'comments> {
             //
             Some(_) | None => flex_break(",", ", "),
         };
-        let elements = join(elements.iter().map(|e| self.const_expr(e)), comma);
+
+        let elements = join(
+            elements.iter().map(|element| self.const_expr(element)),
+            comma,
+        );
 
         let doc = break_("[", "[").append(elements).nest(INDENT);
 
@@ -616,7 +650,7 @@ impl<'comments> Formatter<'comments> {
             };
         }
 
-        let args_docs = elements.iter().map(|e| self.const_expr(e));
+        let args_docs = elements.iter().map(|element| self.const_expr(element));
         let tuple_doc = break_("#(", "#(")
             .append(join(args_docs, break_(",", ", ")).next_break_fits(NextBreakFitsMode::Disabled))
             .nest(INDENT);
@@ -671,6 +705,7 @@ impl<'comments> Formatter<'comments> {
         name: &'a str,
         args: &'a [TypeAst],
         location: &SrcSpan,
+        _name_location: &SrcSpan,
     ) -> Document<'a> {
         let head = module
             .as_ref()
@@ -693,30 +728,31 @@ impl<'comments> Formatter<'comments> {
                 arguments: args,
                 module,
                 location,
-            }) => self.type_ast_constructor(module, name, args, location),
+                name_location,
+            }) => self.type_ast_constructor(module, name, args, location, name_location),
 
             TypeAst::Fn(TypeAstFn {
                 arguments: args,
-                return_: retrn,
+                return_,
                 location,
             }) => "fn"
                 .to_doc()
                 .append(self.type_arguments(args, location))
                 .group()
                 .append(" ->")
-                .append(break_("", " ").append(self.type_ast(retrn)).nest(INDENT)),
+                .append(break_("", " ").append(self.type_ast(return_)).nest(INDENT)),
 
             TypeAst::Var(TypeAstVar { name, .. }) => name.to_doc(),
 
-            TypeAst::Tuple(TypeAstTuple { elems, location }) => {
-                "#".to_doc().append(self.type_arguments(elems, location))
+            TypeAst::Tuple(TypeAstTuple { elements, location }) => {
+                "#".to_doc().append(self.type_arguments(elements, location))
             }
         }
         .group()
     }
 
     fn type_arguments<'a>(&mut self, args: &'a [TypeAst], location: &SrcSpan) -> Document<'a> {
-        let args = args.iter().map(|t| self.type_ast(t)).collect_vec();
+        let args = args.iter().map(|type_| self.type_ast(type_)).collect_vec();
         self.wrap_args(args, location.end)
     }
 
@@ -768,7 +804,7 @@ impl<'comments> Formatter<'comments> {
         let args = function
             .arguments
             .iter()
-            .map(|e| self.fn_arg(e))
+            .map(|argument| self.fn_arg(argument))
             .collect_vec();
         let signature = pub_(function.publicity)
             .append("fn ")
@@ -819,7 +855,7 @@ impl<'comments> Formatter<'comments> {
         location: &SrcSpan,
         end_of_head_byte_index: &u32,
     ) -> Document<'a> {
-        let args_docs = args.iter().map(|e| self.fn_arg(e)).collect_vec();
+        let args_docs = args.iter().map(|arg| self.fn_arg(arg)).collect_vec();
         let args = self
             .wrap_args(args_docs, *end_of_head_byte_index)
             .group()
@@ -941,6 +977,11 @@ impl<'comments> Formatter<'comments> {
                 message: Some(l), ..
             } => docvec!["todo as ", self.expr(l)],
 
+            UntypedExpr::Echo {
+                expression,
+                location: _,
+            } => self.echo(expression),
+
             UntypedExpr::PipeLine { expressions, .. } => self.pipeline(expressions, false),
 
             UntypedExpr::Int { value, .. } => self.int(value),
@@ -965,7 +1006,9 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::NegateBool { value, .. } => self.negate_bool(value),
 
-            UntypedExpr::Fn { kind, body, .. } if kind.is_capture() => self.fn_capture(body),
+            UntypedExpr::Fn { kind, body, .. } if kind.is_capture() => {
+                self.fn_capture(body, FnCapturePosition::EverywhereElse)
+            }
 
             UntypedExpr::Fn {
                 return_annotation,
@@ -1003,7 +1046,7 @@ impl<'comments> Formatter<'comments> {
                 subjects,
                 clauses,
                 location,
-            } => self.case(subjects, clauses, location),
+            } => self.case(subjects, clauses.as_deref().unwrap_or_default(), location),
 
             UntypedExpr::FieldAccess {
                 label, container, ..
@@ -1015,14 +1058,14 @@ impl<'comments> Formatter<'comments> {
             .append(".")
             .append(label.as_str()),
 
-            UntypedExpr::Tuple { elems, location } => self.tuple(elems, location),
+            UntypedExpr::Tuple { elements, location } => self.tuple(elements, location),
 
             UntypedExpr::BitArray {
                 segments, location, ..
             } => {
                 let segment_docs = segments
                     .iter()
-                    .map(|s| bit_array_segment(s, |e| self.bit_array_segment_expr(e)))
+                    .map(|segment| bit_array_segment(segment, |e| self.bit_array_segment_expr(e)))
                     .collect_vec();
 
                 self.bit_array(
@@ -1056,7 +1099,7 @@ impl<'comments> Formatter<'comments> {
         match lines.as_slice() {
             [] | [_] => string.to_doc().surround("\"", "\""),
             [first_line, lines @ ..] => {
-                let mut doc = docvec!("\"", first_line);
+                let mut doc = docvec!["\"", first_line];
                 for line in lines {
                     doc = doc
                         .append(pretty::line().set_nesting(0))
@@ -1204,6 +1247,7 @@ impl<'comments> Formatter<'comments> {
             | UntypedExpr::Tuple { .. }
             | UntypedExpr::TupleIndex { .. }
             | UntypedExpr::Todo { .. }
+            | UntypedExpr::Echo { .. }
             | UntypedExpr::Panic { .. }
             | UntypedExpr::BitArray { .. }
             | UntypedExpr::RecordUpdate { .. }
@@ -1255,10 +1299,10 @@ impl<'comments> Formatter<'comments> {
     // resulting document will try to first split that before splitting all the
     // other arguments.
     // This is used for function calls and tuples.
-    fn append_inlinable_wrapped_args<'a, T, ToExpr, ToDoc>(
+    fn append_inlinable_wrapped_args<'a, 'b, T, ToExpr, ToDoc>(
         &mut self,
         doc: Document<'a>,
-        values: &'a [T],
+        values: &'b [T],
         location: &SrcSpan,
         to_expr: ToExpr,
         to_doc: ToDoc,
@@ -1266,7 +1310,7 @@ impl<'comments> Formatter<'comments> {
     where
         T: HasLocation,
         ToExpr: Fn(&T) -> &UntypedExpr,
-        ToDoc: Fn(&mut Self, &'a T) -> Document<'a>,
+        ToDoc: Fn(&mut Self, &'b T) -> Document<'a>,
     {
         match init_and_last(values) {
             Some((initial_values, last_value))
@@ -1311,6 +1355,7 @@ impl<'comments> Formatter<'comments> {
             .nest(INDENT)
             .append(break_("", " "))
             .append("{")
+            .next_break_fits(NextBreakFitsMode::Disabled)
             .group();
 
         let clauses_doc = concat(
@@ -1326,8 +1371,8 @@ impl<'comments> Formatter<'comments> {
         // Otherwise those would be moved out of the case expression.
         let comments = self.pop_comments(location.end);
         let closing_bracket = match printed_comments(comments, false) {
-            None => docvec!(line(), "}"),
-            Some(comment) => docvec!(line(), comment)
+            None => docvec![line(), "}"],
+            Some(comment) => docvec![line(), comment]
                 .nest(INDENT)
                 .append(line())
                 .append("}"),
@@ -1346,18 +1391,27 @@ impl<'comments> Formatter<'comments> {
         args: &'a [UntypedRecordUpdateArg],
         location: &SrcSpan,
     ) -> Document<'a> {
-        use std::iter::once;
-        let constructor_doc = self.expr(constructor);
-        let comments = self.pop_comments(record.base.location().start);
-        let spread_doc = commented("..".to_doc().append(self.expr(&record.base)), comments);
-        let arg_docs = args
-            .iter()
-            .map(|a| self.record_update_arg(a).group())
+        let constructor_doc: Document<'a> = self.expr(constructor);
+        let pieces = std::iter::once(RecordUpdatePiece::Record(record))
+            .chain(args.iter().map(RecordUpdatePiece::Argument))
             .collect_vec();
-        let all_arg_docs = once(spread_doc).chain(arg_docs);
-        constructor_doc
-            .append(self.wrap_args(all_arg_docs, location.end))
-            .group()
+
+        self.append_inlinable_wrapped_args(
+            constructor_doc,
+            &pieces,
+            location,
+            |arg| match arg {
+                RecordUpdatePiece::Argument(arg) => &arg.value,
+                RecordUpdatePiece::Record(record) => record.base.as_ref(),
+            },
+            |this, arg| match arg {
+                RecordUpdatePiece::Argument(arg) => this.record_update_arg(arg),
+                RecordUpdatePiece::Record(record) => {
+                    let comments = this.pop_comments(record.base.location().start);
+                    commented("..".to_doc().append(this.expr(&record.base)), comments)
+                }
+            },
+        )
     }
 
     pub fn bin_op<'a>(
@@ -1424,6 +1478,24 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
+    fn spans_multiple_lines(&self, start: u32, end: u32) -> bool {
+        self.new_lines
+            .binary_search_by(|newline| {
+                if *newline <= start {
+                    Ordering::Less
+                } else if *newline >= end {
+                    Ordering::Greater
+                } else {
+                    // If the newline is in between the pipe start and end
+                    // then we've found it!
+                    Ordering::Equal
+                }
+            })
+            // If we couldn't find any newline between the start and end of
+            // the pipeline then we will try and keep it on a single line.
+            .is_ok()
+    }
+
     fn pipeline<'a>(
         &mut self,
         expressions: &'a Vec1<UntypedExpr>,
@@ -1437,36 +1509,14 @@ impl<'comments> Formatter<'comments> {
 
         let pipeline_start = expressions.first().location().start;
         let pipeline_end = expressions.last().location().end;
-        let try_to_keep_on_one_line = self
-            .new_lines
-            .binary_search_by(|newline| {
-                if *newline <= pipeline_start {
-                    Ordering::Less
-                } else if *newline >= pipeline_end {
-                    Ordering::Greater
-                } else {
-                    // If the newline is in between the pipe start and end
-                    // then we've found it!
-                    Ordering::Equal
-                }
-            })
-            // If we couldn't find any newline between the start and end of
-            // the pipeline then we will try and keep it on a single line.
-            .is_err();
+        let try_to_keep_on_one_line = !self.spans_multiple_lines(pipeline_start, pipeline_end);
 
         for expr in expressions.iter().skip(1) {
             let comments = self.pop_comments(expr.location().start);
             let doc = match expr {
                 UntypedExpr::Fn { kind, body, .. } if kind.is_capture() => {
-                    let body = match body.first() {
-                        Statement::Expression(expression) => expression,
-                        Statement::Assignment(_) | Statement::Use(_) => {
-                            unreachable!("Non expression capture body")
-                        }
-                    };
-                    self.pipe_capture_right_hand_side(body)
+                    self.fn_capture(body, FnCapturePosition::RightHandSideOfPipe)
                 }
-
                 _ => self.expr(expr),
             };
             let doc = if nest_pipe { doc.nest(INDENT) } else { doc };
@@ -1488,83 +1538,83 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn pipe_capture_right_hand_side<'a>(&mut self, fun: &'a UntypedExpr) -> Document<'a> {
-        let (fun, args) = match fun {
-            UntypedExpr::Call {
-                fun,
-                arguments: args,
-                ..
-            } => (fun, args),
-            _ => panic!("Function capture found not to have a function call body when formatting"),
-        };
-
-        let hole_in_first_position = matches!(
-            args.first(),
-            Some(CallArg {
-                value: UntypedExpr::Var { name, .. },
-                ..
-            }) if name == CAPTURE_VARIABLE
-        );
-        let first_argument_is_labelled = args.first().is_some_and(|arg| arg.label.is_some());
-        let arity = args.len();
-
-        // If the first argument is labelled, we don't remove it as the label adds
-        // extra information and could be used to make code more readable.
-        if hole_in_first_position && args.len() == 1 && !first_argument_is_labelled {
-            // x |> fun(_)
-            self.expr(fun)
-        } else if hole_in_first_position && !first_argument_is_labelled {
-            // x |> fun(_, 2, 3)
-            let args = args
-                .iter()
-                .skip(1)
-                .map(|a| self.call_arg(a, arity))
-                .collect_vec();
-            self.expr(fun)
-                .append(self.wrap_args(args, fun.location().end).group())
-        } else {
-            // x |> fun(1, _, 3)
-            let args = args.iter().map(|a| self.call_arg(a, arity)).collect_vec();
-            self.expr(fun)
-                .append(self.wrap_args(args, fun.location().end).group())
-        }
-    }
-
-    fn fn_capture<'a>(&mut self, call: &'a [UntypedStatement]) -> Document<'a> {
+    fn fn_capture<'a>(
+        &mut self,
+        call: &'a [UntypedStatement],
+        position: FnCapturePosition,
+    ) -> Document<'a> {
         // The body of a capture being multiple statements shouldn't be possible...
         if call.len() != 1 {
             panic!("Function capture found not to have a single statement call");
         }
 
-        match call.first() {
-            Some(Statement::Expression(UntypedExpr::Call {
-                fun,
-                arguments: args,
-                location,
-                ..
-            })) => {
-                let arity = args.len();
-                match args.as_slice() {
-                    [first, second]
-                        if is_breakable_expr(&second.value) && first.is_capture_hole() =>
-                    {
-                        self.expr(fun)
-                            .append("(_, ")
-                            .append(self.call_arg(second, arity))
-                            .append(")")
-                            .group()
-                    }
+        let Some(Statement::Expression(UntypedExpr::Call {
+            fun,
+            arguments,
+            location,
+        })) = call.first()
+        else {
+            // The body of a capture being not a fn shouldn't be possible...
+            panic!("Function capture body found not to be a call in the formatter")
+        };
 
-                    _ => {
-                        let args = args.iter().map(|a| self.call_arg(a, arity)).collect_vec();
-                        self.expr(fun)
-                            .append(self.wrap_args(args, location.end).group())
-                    }
-                }
+        match (position, arguments.as_slice()) {
+            // The capture has a single unlabelled hole:
+            //
+            //     wibble |> wobble(_)
+            //     list.map([], wobble(_))
+            //
+            // We want these to become:
+            //
+            //     wibble |> wobble
+            //     list.map([], wobble)
+            //
+            (FnCapturePosition::RightHandSideOfPipe | FnCapturePosition::EverywhereElse, [arg])
+                if arg.is_capture_hole() && arg.label.is_none() =>
+            {
+                self.expr(fun)
             }
 
-            // The body of a capture being not a fn shouldn't be possible...
-            _ => panic!("Function capture body found not to be a call in the formatter"),
+            // The capture is on the right hand side of a pipe and its first
+            // argument it an unlabelled capture hole:
+            //
+            //     wibble |> wobble(_, woo)
+            //
+            // We want it to become:
+            //
+            //     wibble |> wobble(woo)
+            //
+            (FnCapturePosition::RightHandSideOfPipe, [arg, rest @ ..])
+                if arg.is_capture_hole() && arg.label.is_none() =>
+            {
+                let expr = self.expr(fun);
+                let arity = rest.len();
+                self.append_inlinable_wrapped_args(
+                    expr,
+                    rest,
+                    location,
+                    |arg| &arg.value,
+                    |self_, arg| self_.call_arg(arg, arity),
+                )
+            }
+
+            // In all other cases we print it like a regular function call
+            // without changing it.
+            //
+            (
+                FnCapturePosition::RightHandSideOfPipe | FnCapturePosition::EverywhereElse,
+                arguments,
+            ) => {
+                let expr = self.expr(fun);
+                let arity = arguments.len();
+                self.append_inlinable_wrapped_args(
+                    expr,
+                    arguments,
+                    location,
+                    |arg| &arg.value,
+                    |self_, arg| self_.call_arg(arg, arity),
+                )
+            }
         }
     }
 
@@ -1736,7 +1786,10 @@ impl<'comments> Formatter<'comments> {
             ArgNames::NamedLabelled { label, name, .. } => docvec![label, " ", name],
             // We remove the underscore from discarded function arguments since we don't want to
             // expose this kind of detail: https://github.com/gleam-lang/gleam/issues/2561
-            ArgNames::Discard { name, .. } => name.strip_prefix('_').unwrap_or(name).to_doc(),
+            ArgNames::Discard { name, .. } => match name.strip_prefix('_').unwrap_or(name) {
+                "" => "arg".to_doc(),
+                name => name.to_doc(),
+            },
             ArgNames::LabelledDiscard { label, name, .. } => {
                 docvec![label, " ", name.strip_prefix('_').unwrap_or(name).to_doc()]
             }
@@ -1789,7 +1842,8 @@ impl<'comments> Formatter<'comments> {
                     .as_str()
                     .to_doc()
                     .append(": ")
-                    .append(self.expr(&arg.value));
+                    .append(self.expr(&arg.value))
+                    .group();
 
                 if arg.value.is_binop() || arg.value.is_pipeline() {
                     commented(doc, comments).nest(INDENT)
@@ -2127,9 +2181,12 @@ impl<'comments> Formatter<'comments> {
             } => self.pattern_constructor(name, args, module, *spread, location),
 
             Pattern::Tuple {
-                elems, location, ..
+                elements, location, ..
             } => {
-                let args = elems.iter().map(|e| self.pattern(e)).collect_vec();
+                let args = elements
+                    .iter()
+                    .map(|element| self.pattern(element))
+                    .collect_vec();
                 "#".to_doc()
                     .append(self.wrap_args(args, location.end))
                     .group()
@@ -2140,7 +2197,7 @@ impl<'comments> Formatter<'comments> {
             } => {
                 let segment_docs = segments
                     .iter()
-                    .map(|s| bit_array_segment(s, |e| self.pattern(e)))
+                    .map(|segment| bit_array_segment(segment, |pattern| self.pattern(pattern)))
                     .collect_vec();
 
                 self.bit_array(segment_docs, false, location)
@@ -2179,7 +2236,10 @@ impl<'comments> Formatter<'comments> {
                 None => "[]".to_doc(),
             };
         }
-        let elements = join(elements.iter().map(|e| self.pattern(e)), break_(",", ", "));
+        let elements = join(
+            elements.iter().map(|element| self.pattern(element)),
+            break_(",", ", "),
+        );
         let doc = break_("[", "[").append(elements);
         match tail {
             None => doc.nest(INDENT).append(break_(",", "")),
@@ -2470,6 +2530,7 @@ impl<'comments> Formatter<'comments> {
             | UntypedExpr::TupleIndex { .. }
             | UntypedExpr::Todo { .. }
             | UntypedExpr::Panic { .. }
+            | UntypedExpr::Echo { .. }
             | UntypedExpr::BitArray { .. }
             | UntypedExpr::RecordUpdate { .. }
             | UntypedExpr::NegateBool { .. }
@@ -2535,9 +2596,9 @@ impl<'comments> Formatter<'comments> {
         // Otherwise those would be moved out of the call.
         let comments = self.pop_comments(location.end);
         let closing_parens = match printed_comments(comments, false) {
-            None => docvec!(break_(",", ""), ")"),
+            None => docvec![break_(",", ""), ")"],
             Some(comment) => {
-                docvec!(break_(",", "").nest(INDENT), comment, line(), ")").force_break()
+                docvec![break_(",", "").nest(INDENT), comment, line(), ")"].force_break()
             }
         };
 
@@ -2667,6 +2728,36 @@ impl<'comments> Formatter<'comments> {
         }
         let doc = concat(doc);
         Some(doc.force_break())
+    }
+
+    fn echo<'a>(&mut self, expression: &'a Option<Box<UntypedExpr>>) -> Document<'a> {
+        let Some(expression) = expression else {
+            return "echo".to_doc();
+        };
+
+        match expression.as_ref() {
+            // When a pipeline gets broken on multiple lines we don't want it to
+            // be on the same line as echo, or it would look confusing; instead
+            // it's nested onto a new line:
+            //
+            // ```gleam
+            // echo first
+            //   |> wobble
+            //   |> wibble
+            // ```
+            //
+            // So it's easier to see echo is printing the whole thing. Otherwise,
+            // it would look like echo is printing just the first item:
+            //
+            // ```gleam
+            // echo first
+            // |> wobble
+            // |> wibble
+            // ```
+            //
+            UntypedExpr::PipeLine { .. } => docvec!["echo ", self.expr(expression).nest(INDENT)],
+            _ => docvec!["echo ", self.expr(expression)],
+        }
     }
 }
 
@@ -2820,7 +2911,9 @@ where
         BitArraySegment { value, options, .. } if options.is_empty() => to_doc(value),
 
         BitArraySegment { value, options, .. } => to_doc(value).append(":").append(join(
-            options.iter().map(|o| segment_option(o, |e| to_doc(e))),
+            options
+                .iter()
+                .map(|option| segment_option(option, |value| to_doc(value))),
             "-".to_doc(),
         )),
     }
@@ -2915,19 +3008,6 @@ pub fn comments_before<'a>(
         popped,
         comments.get(end_comments..).expect("in bounds"),
         empty_lines.get(end_empty_lines..).expect("in bounds"),
-    )
-}
-
-fn is_breakable_expr(expr: &UntypedExpr) -> bool {
-    matches!(
-        expr,
-        UntypedExpr::Fn { .. }
-            | UntypedExpr::Block { .. }
-            | UntypedExpr::Call { .. }
-            | UntypedExpr::Case { .. }
-            | UntypedExpr::List { .. }
-            | UntypedExpr::Tuple { .. }
-            | UntypedExpr::BitArray { .. }
     )
 }
 

@@ -5,11 +5,13 @@ use crate::{
         Constant, Publicity, SrcSpan, TypedConstant, TypedConstantBitArraySegment,
         TypedConstantBitArraySegmentOption,
     },
+    reference::{Reference, ReferenceKind, ReferenceMap},
     schema_capnp::{self as schema, *},
     type_::{
-        self, expression::Implementations, AccessorsMap, Deprecation, FieldMap, RecordAccessor,
-        Type, TypeConstructor, TypeValueConstructor, TypeVar, TypeVariantConstructors,
-        ValueConstructor, ValueConstructorVariant,
+        self, AccessorsMap, Deprecation, FieldMap, Opaque, RecordAccessor, Type,
+        TypeAliasConstructor, TypeConstructor, TypeValueConstructor, TypeVar,
+        TypeVariantConstructors, ValueConstructor, ValueConstructorVariant,
+        expression::Implementations,
     },
 };
 use std::{collections::HashMap, ops::Deref, sync::Arc};
@@ -42,12 +44,16 @@ impl<'a> ModuleEncoder<'a> {
         module.set_package(&self.data.package);
         module.set_src_path(self.data.src_path.as_str());
         module.set_is_internal(self.data.is_internal);
+        module.set_contains_echo(self.data.contains_echo);
         self.set_module_types(&mut module);
         self.set_module_values(&mut module);
         self.set_module_accessors(&mut module);
         self.set_module_types_constructors(&mut module);
         self.set_line_numbers(&mut module);
         self.set_version(&mut module);
+        self.set_module_documentation(&mut module);
+        self.set_module_type_aliases(&mut module);
+        self.set_module_references(&mut module);
 
         capnp::serialize_packed::write_message(&mut buffer, &message).expect("capnp encode");
         Ok(buffer)
@@ -63,8 +69,16 @@ impl<'a> ModuleEncoder<'a> {
         }
     }
 
+    fn set_module_documentation(&mut self, module: &mut module::Builder<'_>) {
+        let mut documentation = module
+            .reborrow()
+            .init_documentation(self.data.documentation.len() as u32);
+        for (i, documentation_part) in self.data.documentation.iter().enumerate() {
+            documentation.set(i as u32, documentation_part.as_str());
+        }
+    }
+
     fn set_module_accessors(&mut self, module: &mut module::Builder<'_>) {
-        tracing::trace!("Writing module metadata accessors");
         let mut builder = module
             .reborrow()
             .init_accessors(self.data.accessors.len() as u32);
@@ -81,6 +95,7 @@ impl<'a> ModuleEncoder<'a> {
         accessors: &AccessorsMap,
     ) {
         self.build_type(builder.reborrow().init_type(), &accessors.type_);
+        self.build_publicity(builder.reborrow().init_publicity(), accessors.publicity);
         let mut accessors_builder = builder
             .reborrow()
             .init_shared_accessors(accessors.shared_accessors.len() as u32);
@@ -121,7 +136,6 @@ impl<'a> ModuleEncoder<'a> {
     }
 
     fn set_module_types(&mut self, module: &mut module::Builder<'_>) {
-        tracing::trace!("Writing module metadata types");
         let mut types = module.reborrow().init_types(self.data.types.len() as u32);
         for (i, (name, type_)) in self.data.types.iter().enumerate() {
             let mut property = types.reborrow().get(i as u32);
@@ -130,8 +144,18 @@ impl<'a> ModuleEncoder<'a> {
         }
     }
 
+    fn set_module_type_aliases(&mut self, module: &mut module::Builder<'_>) {
+        let mut types = module
+            .reborrow()
+            .init_type_aliases(self.data.type_aliases.len() as u32);
+        for (i, (name, alias)) in self.data.type_aliases.iter().enumerate() {
+            let mut property = types.reborrow().get(i as u32);
+            property.set_key(name);
+            self.build_type_alias_constructor(property.init_value(), alias)
+        }
+    }
+
     fn set_module_types_constructors(&mut self, module: &mut module::Builder<'_>) {
-        tracing::trace!("Writing module metadata types to constructors mapping");
         let mut types_constructors = module
             .reborrow()
             .init_types_constructors(self.data.types_value_constructors.len() as u32);
@@ -147,6 +171,10 @@ impl<'a> ModuleEncoder<'a> {
         mut builder: types_variant_constructors::Builder<'_>,
         data: &TypeVariantConstructors,
     ) {
+        match data.opaque {
+            Opaque::Opaque => builder.set_opaque(true),
+            Opaque::NotOpaque => builder.set_opaque(false),
+        }
         {
             let mut builder = builder
                 .reborrow()
@@ -163,13 +191,62 @@ impl<'a> ModuleEncoder<'a> {
     }
 
     fn set_module_values(&mut self, module: &mut module::Builder<'_>) {
-        tracing::trace!("Writing module metadata values");
         let mut values = module.reborrow().init_values(self.data.values.len() as u32);
         for (i, (name, value)) in self.data.values.iter().enumerate() {
             let mut property = values.reborrow().get(i as u32);
             property.set_key(name);
             self.build_value_constructor(property.init_value(), value)
         }
+    }
+
+    fn set_module_references(&mut self, module: &mut module::Builder<'_>) {
+        let references = &self.data.references;
+        let mut builder = module.reborrow().init_references();
+        let mut imported_modules = builder
+            .reborrow()
+            .init_imported_modules(references.imported_modules.len() as u32);
+        for (i, module) in references.imported_modules.iter().enumerate() {
+            imported_modules.set(i as u32, module);
+        }
+
+        let value_references = builder
+            .reborrow()
+            .init_value_references(references.value_references.len() as u32);
+        self.build_reference_map(value_references, &references.value_references);
+        let type_references = builder
+            .reborrow()
+            .init_type_references(references.type_references.len() as u32);
+        self.build_reference_map(type_references, &references.type_references);
+    }
+
+    fn build_reference_map(
+        &mut self,
+        mut builder: capnp::struct_list::Builder<'_, reference_map::Owned>,
+        map: &ReferenceMap,
+    ) {
+        for (i, ((module, name), references)) in map.iter().enumerate() {
+            let mut builder = builder.reborrow().get(i as u32);
+            builder.set_module(module);
+            builder.set_name(name);
+            let mut references_builder =
+                builder.reborrow().init_references(references.len() as u32);
+            for (i, reference) in references.iter().enumerate() {
+                let builder = references_builder.reborrow().get(i as u32);
+                self.build_reference(builder, reference);
+            }
+        }
+    }
+
+    fn build_reference(&mut self, mut builder: reference::Builder<'_>, reference: &Reference) {
+        let mut kind = builder.reborrow().init_kind();
+        match reference.kind {
+            ReferenceKind::Qualified => kind.set_qualified(()),
+            ReferenceKind::Unqualified => kind.set_unqualified(()),
+            ReferenceKind::Import => kind.set_import(()),
+            ReferenceKind::Definition => kind.set_definition(()),
+            ReferenceKind::Alias => kind.set_alias(()),
+        }
+        self.build_src_span(builder.init_location(), reference.location);
     }
 
     fn set_version(&mut self, module: &mut module::Builder<'_>) {
@@ -208,12 +285,31 @@ impl<'a> ModuleEncoder<'a> {
         );
     }
 
+    fn build_type_alias_constructor(
+        &mut self,
+        mut builder: type_alias_constructor::Builder<'_>,
+        constructor: &TypeAliasConstructor,
+    ) {
+        builder.set_module(&constructor.module);
+        builder.set_deprecation(match &constructor.deprecation {
+            Deprecation::NotDeprecated => "",
+            Deprecation::Deprecated { message } => message,
+        });
+        self.build_publicity(builder.reborrow().init_publicity(), constructor.publicity);
+        let type_builder = builder.reborrow().init_type();
+        self.build_type(type_builder, &constructor.type_);
+        self.build_src_span(builder.reborrow().init_origin(), constructor.origin);
+        builder.set_documentation(constructor.documentation.as_deref().unwrap_or_default());
+        builder.set_arity(constructor.arity as u32)
+    }
+
     fn build_type_value_constructor(
         &mut self,
         mut builder: type_value_constructor::Builder<'_>,
         constructor: &TypeValueConstructor,
     ) {
         builder.set_name(&constructor.name);
+        builder.set_documentation(constructor.documentation.as_deref().unwrap_or_default());
         let mut builder = builder.init_parameters(constructor.parameters.len() as u32);
         for (i, parameter) in constructor.parameters.iter().enumerate() {
             self.build_type_value_constructor_parameter(
@@ -225,10 +321,11 @@ impl<'a> ModuleEncoder<'a> {
 
     fn build_type_value_constructor_parameter(
         &mut self,
-        builder: type_value_constructor_parameter::Builder<'_>,
+        mut builder: type_value_constructor_parameter::Builder<'_>,
         parameter: &type_::TypeValueConstructorField,
     ) {
-        self.build_type(builder.init_type(), parameter.type_.as_ref());
+        self.build_type(builder.reborrow().init_type(), parameter.type_.as_ref());
+        builder.set_label(parameter.label.as_deref().unwrap_or_default());
     }
 
     fn build_value_constructor(
@@ -291,12 +388,14 @@ impl<'a> ModuleEncoder<'a> {
                 module,
                 documentation: doc,
                 implementations,
+                name,
             } => {
                 let mut builder = builder.init_module_constant();
                 builder.set_documentation(doc.as_ref().map(EcoString::as_str).unwrap_or_default());
                 self.build_src_span(builder.reborrow().init_location(), *location);
                 self.build_constant(builder.reborrow().init_literal(), literal);
                 builder.reborrow().set_module(module);
+                builder.reborrow().set_name(name);
                 self.build_implementations(builder.init_implementations(), *implementations)
             }
 
@@ -513,10 +612,10 @@ impl<'a> ModuleEncoder<'a> {
 
     fn build_type(&mut self, builder: schema::type_::Builder<'_>, type_: &Type) {
         match type_ {
-            Type::Fn { args, retrn } => {
+            Type::Fn { args, return_ } => {
                 let mut fun = builder.init_fn();
                 self.build_types(fun.reborrow().init_arguments(args.len() as u32), args);
-                self.build_type(fun.init_return(), retrn)
+                self.build_type(fun.init_return(), return_)
             }
 
             Type::Named {
@@ -539,9 +638,9 @@ impl<'a> ModuleEncoder<'a> {
                 self.build_types(app.reborrow().init_parameters(args.len() as u32), args);
             }
 
-            Type::Tuple { elems } => self.build_types(
-                builder.init_tuple().init_elements(elems.len() as u32),
-                elems,
+            Type::Tuple { elements } => self.build_types(
+                builder.init_tuple().init_elements(elements.len() as u32),
+                elements,
             ),
 
             Type::Var { type_ } => match type_.borrow().deref() {

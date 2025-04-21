@@ -1,6 +1,4 @@
-use crate::{
-    assert_infer_with_module, assert_module_error, assert_module_infer, assert_with_module_error,
-};
+use crate::{assert_module_error, assert_module_infer};
 
 #[test]
 fn alias_dep() {
@@ -64,7 +62,7 @@ type A = #(A, A)
 
 #[test]
 fn alias_different_module() {
-    assert_infer_with_module!(
+    assert_module_infer!(
         ("other", "pub type Blah = Bool"),
         r#"
             import other
@@ -143,7 +141,7 @@ fn example(a: X) {
 #[test]
 fn conflict_with_import() {
     // We cannot declare a type with the same name as an imported type
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "pub type Wobble = String"),
         "import wibble.{type Wobble} type Wobble = Int",
     );

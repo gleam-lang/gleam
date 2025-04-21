@@ -3,6 +3,10 @@ source: compiler-core/src/javascript/tests/functions.rs
 expression: "import for.{class}\n\npub fn export() {\n  class()\n}\n"
 ---
 ----- SOURCE CODE
+-- for.gleam
+pub fn class() { 1 }
+
+-- main.gleam
 import for.{class}
 
 pub fn export() {

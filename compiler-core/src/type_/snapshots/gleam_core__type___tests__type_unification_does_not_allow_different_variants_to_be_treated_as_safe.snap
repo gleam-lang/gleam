@@ -21,10 +21,10 @@ pub fn main() {
 
 ----- ERROR
 error: Unknown record field
-   ┌─ /src/one/two.gleam:13:4
+   ┌─ /src/one/two.gleam:13:5
    │
 13 │   a.b
-   │    ^^ Did you mean `a`?
+   │     ^ Did you mean `a`?
 
 The value being accessed has this type:
 

@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 1527
 expression: "\npub type A {\n  A(Int)\n}\n\nconst a = A()\n"
 ---
 ----- SOURCE CODE

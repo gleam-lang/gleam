@@ -1,16 +1,16 @@
 use crate::{
+    Error, Result,
     build::SourceFingerprint,
     error::{FileIoAction, FileKind},
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
-        engine::LanguageServerEngine, files::FileSystemProxy, progress::ProgressReporter,
-        DownloadDependencies, MakeLocker,
+        DownloadDependencies, MakeLocker, engine::LanguageServerEngine, files::FileSystemProxy,
+        progress::ProgressReporter,
     },
     paths::ProjectPaths,
-    Error, Result,
 };
 use std::{
-    collections::{hash_map::Entry, HashMap},
+    collections::{HashMap, hash_map::Entry},
     time::SystemTime,
 };
 
@@ -72,11 +72,16 @@ where
             path
         };
 
-        // If the gleam.toml has changed then discard the project as the target,
+        // If the gleam.toml has changed or the build directory is missing
+        // (e.g. `gleam clean`), then discard the project as the target,
         // deps, etc may have changed and we need to rebuild taking them into
         // account.
         if let Some(project) = self.engines.get(&path) {
-            if Self::gleam_toml_changed(&path, project, &self.io)? {
+            let paths = ProjectPaths::new(path.clone());
+
+            if !self.io.exists(&paths.build_directory())
+                || Self::gleam_toml_changed(&paths, project, &self.io)?
+            {
                 let _ = self.engines.remove(&path);
             }
         }
@@ -94,16 +99,15 @@ where
 
     /// Has gleam.toml changed since the last time we saw this project?
     fn gleam_toml_changed(
-        path: &Utf8PathBuf,
+        paths: &ProjectPaths,
         project: &Project<IO, Reporter>,
         io: &FileSystemProxy<IO>,
     ) -> Result<bool, Error> {
         // Get the location of gleam.toml for this project
-        let paths = ProjectPaths::new(path.clone());
         let config_path = paths.root_config();
 
         // See if the file modification time has changed.
-        if io.modification_time(path)? == project.gleam_toml_modification_time {
+        if io.modification_time(&config_path)? == project.gleam_toml_modification_time {
             return Ok(false); // Not changed
         }
 
@@ -150,7 +154,7 @@ where
 /// Given a given path, find the nearest parent directory containing a
 /// `gleam.toml` file.
 ///
-/// The file must be in either the `src` or `test` directory if it is not a
+/// The file must be in either the `src`, `test` or `dev` directory if it is not a
 /// `.gleam` file.
 fn find_gleam_project_parent<IO>(io: &IO, path: &Utf8Path) -> Option<Utf8PathBuf>
 where
@@ -172,8 +176,12 @@ where
             continue;
         }
 
-        // If it is a Gleam module then it must reside in the src or test directory.
-        if is_module && !(directory.ends_with("test") || directory.ends_with("src")) {
+        // If it is a Gleam module then it must reside in the src, test dev directory.
+        if is_module
+            && !(directory.ends_with("test")
+                || directory.ends_with("src")
+                || directory.ends_with("dev"))
+        {
             _ = directory.pop();
             continue;
         }
@@ -194,7 +202,7 @@ pub(crate) struct Project<A, B> {
 #[cfg(test)]
 mod find_gleam_project_parent_tests {
     use super::*;
-    use crate::io::{memory::InMemoryFileSystem, FileSystemWriter};
+    use crate::io::{FileSystemWriter, memory::InMemoryFileSystem};
 
     #[test]
     fn root() {
@@ -251,9 +259,19 @@ mod find_gleam_project_parent_tests {
         );
     }
 
+    #[test]
+    fn dev_module() {
+        let io = InMemoryFileSystem::new();
+        io.write(Utf8Path::new("/app/gleam.toml"), "").unwrap();
+        assert_eq!(
+            find_gleam_project_parent(&io, Utf8Path::new("/app/dev/one/two/three.gleam")),
+            Some(Utf8PathBuf::from("/app"))
+        );
+    }
+
     // https://github.com/gleam-lang/gleam/issues/2121
     #[test]
-    fn module_in_project_but_not_src_or_test() {
+    fn module_in_project_but_not_src_or_test_or_dev() {
         let io = InMemoryFileSystem::new();
         io.write(Utf8Path::new("/app/gleam.toml"), "").unwrap();
         assert_eq!(

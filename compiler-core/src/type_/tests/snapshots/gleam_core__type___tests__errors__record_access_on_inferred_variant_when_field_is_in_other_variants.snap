@@ -17,10 +17,10 @@ pub fn main() {
 
 ----- ERROR
 error: Unknown record field
-  ┌─ /src/one/two.gleam:9:16
+  ┌─ /src/one/two.gleam:9:17
   │
 9 │   always_wibble.wobble
-  │                ^^^^^^^ Did you mean `wibble`?
+  │                 ^^^^^^ Did you mean `wibble`?
 
 The value being accessed has this type:
 

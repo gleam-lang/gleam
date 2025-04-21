@@ -28,3 +28,18 @@ The + operator expects arguments of this type:
 But this argument has this type:
 
     math.Vector
+
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:4:7
+  │
+4 │   a + b
+  │       ^
+
+The + operator expects arguments of this type:
+
+    Int
+
+But this argument has this type:
+
+    math.Vector

@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\npub fn main(a) {\n  case a {\n    <<\"hello\">> -> Nil\n    _ -> Nil\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

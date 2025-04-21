@@ -19,10 +19,10 @@ pub fn main(wibble: some_mod.Wibble) {
 
 ----- ERROR
 error: Unknown record field
-  ┌─ /src/one/two.gleam:4:9
+  ┌─ /src/one/two.gleam:4:10
   │
 4 │   wibble.field
-  │         ^^^^^^ This field does not exist
+  │          ^^^^^ This field does not exist
 
 The value being accessed has this type:
 

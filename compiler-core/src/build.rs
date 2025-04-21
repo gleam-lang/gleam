@@ -17,10 +17,11 @@ pub use self::project_compiler::{Built, Options, ProjectCompiler};
 pub use self::telemetry::{NullTelemetry, Telemetry};
 
 use crate::ast::{
-    CallArg, CustomType, DefinitionLocation, Pattern, TypeAst, TypedArg, TypedDefinition,
-    TypedExpr, TypedFunction, TypedPattern, TypedStatement,
+    self, CallArg, CustomType, DefinitionLocation, TypeAst, TypedArg, TypedConstant,
+    TypedDefinition, TypedExpr, TypedFunction, TypedPattern, TypedRecordConstructor,
+    TypedStatement,
 };
-use crate::type_::Type;
+use crate::type_::{Type, TypedCallArg};
 use crate::{
     ast::{Definition, SrcSpan, TypedModule},
     config::{self, PackageConfig},
@@ -34,7 +35,7 @@ use camino::Utf8PathBuf;
 use ecow::EcoString;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::sync::Arc;
 use std::time::SystemTime;
 use std::{collections::HashMap, ffi::OsString, fs::DirEntry, iter::Peekable, process};
@@ -187,9 +188,9 @@ pub enum Mode {
 }
 
 impl Mode {
-    /// Returns `true` if the mode includes test code.
+    /// Returns `true` if the mode includes development code.
     ///
-    pub fn includes_tests(&self) -> bool {
+    pub fn includes_dev_code(&self) -> bool {
         match self {
             Self::Dev | Self::Lsp => true,
             Self::Prod => false,
@@ -205,16 +206,17 @@ impl Mode {
 }
 
 #[test]
-fn mode_includes_tests() {
-    assert!(Mode::Dev.includes_tests());
-    assert!(Mode::Lsp.includes_tests());
-    assert!(!Mode::Prod.includes_tests());
+fn mode_includes_dev_code() {
+    assert!(Mode::Dev.includes_dev_code());
+    assert!(Mode::Lsp.includes_dev_code());
+    assert!(!Mode::Prod.includes_dev_code());
 }
 
 #[derive(Debug)]
 pub struct Package {
     pub config: PackageConfig,
     pub modules: Vec<Module>,
+    pub cached_module_names: Vec<EcoString>,
 }
 
 impl Package {
@@ -245,14 +247,14 @@ pub struct Module {
 }
 
 impl Module {
-    pub fn compiled_erlang_path(&self) -> Utf8PathBuf {
-        let mut path = self.name.replace("/", "@");
-        path.push_str(".erl");
-        Utf8PathBuf::from(path.as_ref())
+    pub fn erlang_name(&self) -> EcoString {
+        module_erlang_name(&self.name)
     }
 
-    pub fn is_test(&self) -> bool {
-        self.origin == Origin::Test
+    pub fn compiled_erlang_path(&self) -> Utf8PathBuf {
+        let mut path = Utf8PathBuf::from(&module_erlang_name(&self.name));
+        assert!(path.set_extension("erl"), "Couldn't set file extension");
+        path
     }
 
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
@@ -267,6 +269,8 @@ impl Module {
             .iter()
             .map(|span| Comment::from((span, self.code.as_str())).content.into())
             .collect();
+
+        self.ast.type_info.documentation = self.ast.documentation.clone();
 
         // Order statements to avoid misassociating doc comments after the
         // order has changed during compilation.
@@ -318,6 +322,10 @@ impl Module {
     }
 }
 
+pub fn module_erlang_name(gleam_name: &EcoString) -> EcoString {
+    gleam_name.replace("/", "@")
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnqualifiedImport<'a> {
     pub name: &'a EcoString,
@@ -326,21 +334,46 @@ pub struct UnqualifiedImport<'a> {
     pub location: &'a SrcSpan,
 }
 
+/// The position of a located expression. Used to determine extra context,
+/// such as whether to provide label completions if the expression is in
+/// argument position.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ExpressionPosition<'a> {
+    Expression,
+    ArgumentOrLabel {
+        called_function: &'a TypedExpr,
+        function_arguments: &'a [TypedCallArg],
+    },
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Located<'a> {
     Pattern(&'a TypedPattern),
     PatternSpread {
         spread_location: SrcSpan,
-        arguments: &'a Vec<CallArg<TypedPattern>>,
+        pattern: &'a TypedPattern,
     },
     Statement(&'a TypedStatement),
-    Expression(&'a TypedExpr),
+    Expression {
+        expression: &'a TypedExpr,
+        position: ExpressionPosition<'a>,
+    },
     ModuleStatement(&'a TypedDefinition),
+    VariantConstructorDefinition(&'a TypedRecordConstructor),
     FunctionBody(&'a TypedFunction),
     Arg(&'a TypedArg),
-    Annotation(SrcSpan, std::sync::Arc<Type>),
+    Annotation {
+        ast: &'a TypeAst,
+        type_: std::sync::Arc<Type>,
+    },
     UnqualifiedImport(UnqualifiedImport<'a>),
     Label(SrcSpan, std::sync::Arc<Type>),
+    ModuleName {
+        location: SrcSpan,
+        name: &'a EcoString,
+        layer: ast::Layer,
+    },
+    Constant(&'a TypedConstant),
 }
 
 impl<'a> Located<'a> {
@@ -349,9 +382,9 @@ impl<'a> Located<'a> {
         &self,
         importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
         type_: std::sync::Arc<Type>,
-    ) -> Option<DefinitionLocation<'_>> {
+    ) -> Option<DefinitionLocation> {
         type_constructor_from_modules(importable_modules, type_).map(|t| DefinitionLocation {
-            module: Some(&t.module),
+            module: Some(t.module.clone()),
             span: t.origin,
         })
     }
@@ -359,20 +392,24 @@ impl<'a> Located<'a> {
     pub fn definition_location(
         &self,
         importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
-    ) -> Option<DefinitionLocation<'_>> {
+    ) -> Option<DefinitionLocation> {
         match self {
             Self::PatternSpread { .. } => None,
             Self::Pattern(pattern) => pattern.definition_location(),
             Self::Statement(statement) => statement.definition_location(),
             Self::FunctionBody(statement) => None,
-            Self::Expression(expression) => expression.definition_location(),
+            Self::Expression { expression, .. } => expression.definition_location(),
             Self::ModuleStatement(Definition::Import(import)) => Some(DefinitionLocation {
-                module: Some(import.module.as_str()),
+                module: Some(import.module.clone()),
                 span: SrcSpan { start: 0, end: 0 },
             }),
             Self::ModuleStatement(statement) => Some(DefinitionLocation {
                 module: None,
                 span: statement.location(),
+            }),
+            Self::VariantConstructorDefinition(record) => Some(DefinitionLocation {
+                module: None,
+                span: record.location,
             }),
             Self::UnqualifiedImport(UnqualifiedImport {
                 module,
@@ -382,20 +419,128 @@ impl<'a> Located<'a> {
             }) => importable_modules.get(*module).and_then(|m| {
                 if *is_type {
                     m.types.get(*name).map(|t| DefinitionLocation {
-                        module: Some(&module),
+                        module: Some((*module).clone()),
                         span: t.origin,
                     })
                 } else {
                     m.values.get(*name).map(|v| DefinitionLocation {
-                        module: Some(&module),
+                        module: Some((*module).clone()),
                         span: v.definition_location().span,
                     })
                 }
             }),
             Self::Arg(_) => None,
-            Self::Annotation(_, type_) => self.type_location(importable_modules, type_.clone()),
+            Self::Annotation { type_, .. } => self.type_location(importable_modules, type_.clone()),
             Self::Label(_, _) => None,
+            Self::ModuleName { name, .. } => Some(DefinitionLocation {
+                module: Some((*name).clone()),
+                span: SrcSpan::new(0, 0),
+            }),
+            Self::Constant(constant) => constant.definition_location(),
         }
+    }
+
+    pub(crate) fn type_(&self) -> Option<Arc<Type>> {
+        match self {
+            Located::Pattern(pattern) => Some(pattern.type_()),
+            Located::Statement(statement) => Some(statement.type_()),
+            Located::Expression { expression, .. } => Some(expression.type_()),
+            Located::Arg(arg) => Some(arg.type_.clone()),
+            Located::Label(_, type_) | Located::Annotation { type_, .. } => Some(type_.clone()),
+            Located::Constant(constant) => Some(constant.type_()),
+
+            Located::PatternSpread { .. } => None,
+            Located::ModuleStatement(definition) => None,
+            Located::VariantConstructorDefinition(_) => None,
+            Located::FunctionBody(function) => None,
+            Located::UnqualifiedImport(unqualified_import) => None,
+            Located::ModuleName { .. } => None,
+        }
+    }
+
+    pub(crate) fn type_definition_locations(
+        &self,
+        importable_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
+    ) -> Option<Vec<DefinitionLocation>> {
+        let type_ = self.type_()?;
+        Some(type_to_definition_locations(type_, importable_modules))
+    }
+}
+
+/// Returns the locations of all the types that one could reach starting from
+/// the given type (included). This includes all types that are part of a
+/// tuple/function type or that are used as args in a named type.
+///
+/// For example, given this type `Dict(Int, #(Wibble, Wobble))` all the
+/// "reachable" include: `Dict`, `Int`, `Wibble` and `Wobble`.
+///
+/// This is what powers the "go to type definition" capability of the language
+/// server.
+///
+fn type_to_definition_locations<'a>(
+    type_: Arc<Type>,
+    importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
+) -> Vec<DefinitionLocation> {
+    match type_.as_ref() {
+        // For named types we start with the location of the named type itself
+        // followed by the locations of all types they reference in their args.
+        //
+        // For example with a `Dict(Wibble, Wobble)` we'd start with the
+        // definition of `Dict`, followed by the definition of `Wibble` and
+        // `Wobble`.
+        //
+        Type::Named {
+            module, name, args, ..
+        } => {
+            let Some(module) = importable_modules.get(module) else {
+                return vec![];
+            };
+
+            let Some(type_) = module.get_public_type(&name) else {
+                return vec![];
+            };
+
+            let mut locations = vec![DefinitionLocation {
+                module: Some(module.name.clone()),
+                span: type_.origin,
+            }];
+            for arg in args {
+                locations.extend(type_to_definition_locations(
+                    arg.clone(),
+                    importable_modules,
+                ));
+            }
+            locations
+        }
+
+        // For fn types we just get the locations of their arguments and return
+        // type.
+        //
+        Type::Fn { args, return_ } => args
+            .iter()
+            .flat_map(|arg| type_to_definition_locations(arg.clone(), importable_modules))
+            .chain(type_to_definition_locations(
+                return_.clone(),
+                importable_modules,
+            ))
+            .collect_vec(),
+
+        // In case of a var we just follow it and get the locations of the type
+        // it points to.
+        //
+        Type::Var { type_ } => match type_.borrow().clone() {
+            type_::TypeVar::Unbound { .. } | type_::TypeVar::Generic { .. } => vec![],
+            type_::TypeVar::Link { type_ } => {
+                type_to_definition_locations(type_, importable_modules)
+            }
+        },
+
+        // In case of tuples we get the locations of the wrapped types.
+        //
+        Type::Tuple { elements } => elements
+            .iter()
+            .flat_map(|element| type_to_definition_locations(element.clone(), importable_modules))
+            .collect_vec(),
     }
 }
 
@@ -417,6 +562,7 @@ pub fn type_constructor_from_modules(
 pub enum Origin {
     Src,
     Test,
+    Dev,
 }
 
 impl Origin {
@@ -426,6 +572,32 @@ impl Origin {
     #[must_use]
     pub fn is_src(&self) -> bool {
         matches!(self, Self::Src)
+    }
+
+    /// Returns `true` if the origin is [`Test`].
+    ///
+    /// [`Test`]: Origin::Test
+    #[must_use]
+    pub fn is_test(&self) -> bool {
+        matches!(self, Self::Test)
+    }
+
+    /// Returns `true` if the origin is [`Dev`].
+    ///
+    /// [`Dev`]: Origin::Dev
+    #[must_use]
+    pub fn is_dev(&self) -> bool {
+        matches!(self, Self::Dev)
+    }
+
+    /// Name of the folder containing the origin.
+    #[must_use]
+    pub fn folder_name(&self) -> &str {
+        match self {
+            Origin::Src => "src",
+            Origin::Test => "test",
+            Origin::Dev => "dev",
+        }
     }
 }
 

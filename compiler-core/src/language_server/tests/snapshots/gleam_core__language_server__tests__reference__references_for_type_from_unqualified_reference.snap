@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/language_server/tests/reference.rs
+expression: "\nimport mod.{type Wibble}\n\npub fn main() -> Wibble {\n  let _: mod.Wibble = todo\n}\n"
+---
+-- mod.gleam
+
+pub type Wibble { Wibble }
+         ▔▔▔▔▔▔           
+
+fn wobble() -> Wibble {
+               ▔▔▔▔▔▔  
+  todo
+}
+
+
+-- app.gleam
+
+import mod.{type Wibble}
+                 ▔▔▔▔▔▔ 
+
+pub fn main() -> Wibble {
+                 ↑▔▔▔▔▔  
+  let _: mod.Wibble = todo
+             ▔▔▔▔▔▔       
+}

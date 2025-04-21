@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/records.rs
-expression: "record_definition(\"PetCat\",\n    &[(\"name\", type_::generic_var(1)), (\"is_cute\", type_::unbound_var(1)),\n                (\"linked\", type_::link(type_::int())),\n                (\"whatever\",\n                    type_::list(type_::tuple(vec![type_::nil(),\n                                type_::list(type_::tuple(vec![type_::nil(), type_::nil(),\n                                type_::nil()])), type_::nil(),\n                                type_::list(type_::tuple(vec![type_::nil(), type_::nil(),\n                                type_::nil()])), type_::nil(),\n                                type_::list(type_::tuple(vec![type_::nil(), type_::nil(),\n                                type_::nil()])),])))])"
+expression: "record_definition(\"PetCat\",\n&[(\"name\", type_::generic_var(1)), (\"is_cute\", type_::unbound_var(1)),\n(\"linked\", type_::link(type_::int())),\n(\"whatever\",\ntype_::list(type_::tuple(vec![type_::nil(),\ntype_::list(type_::tuple(vec![type_::nil(), type_::nil(), type_::nil()])),\ntype_::nil(),\ntype_::list(type_::tuple(vec![type_::nil(), type_::nil(), type_::nil()])),\ntype_::nil(),\ntype_::list(type_::tuple(vec![type_::nil(), type_::nil(),\ntype_::nil()])),]))),])"
 ---
 -record(pet_cat, {
     name :: any(),

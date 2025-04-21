@@ -12,10 +12,10 @@ pub fn get_height(person: Person) { person.height }
 
 ----- ERROR
 error: Unknown record field
-  ┌─ /src/one/two.gleam:6:43
+  ┌─ /src/one/two.gleam:6:44
   │
 6 │ pub fn get_height(person: Person) { person.height }
-  │                                           ^^^^^^^ This field does not exist
+  │                                            ^^^^^^ This field does not exist
 
 The value being accessed has this type:
 

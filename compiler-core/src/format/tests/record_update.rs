@@ -89,3 +89,17 @@ fn multiple_line_custom_type_field_comments() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4120
+#[test]
+fn record_update_gets_formatted_like_a_function_call() {
+    assert_format!(
+        r#"pub fn example() {
+  Record(..record, field: {
+    use _ <- list.map(record.field)
+    io.print("Example")
+  })
+}
+"#
+    );
+}

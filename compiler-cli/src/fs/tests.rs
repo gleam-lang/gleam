@@ -1,4 +1,5 @@
 use camino::Utf8Path;
+use itertools::Itertools;
 
 #[test]
 fn is_inside_git_work_tree_ok() {
@@ -72,9 +73,52 @@ fn exclude_build_dir() {
     let gleam_file = path.join("b/build/f.gleam").to_path_buf();
     super::write(&gleam_file, "").unwrap();
 
-    let files = super::gleam_files_excluding_gitignore(path).collect::<Vec<_>>();
+    let files = super::gleam_files(path).collect::<Vec<_>>();
 
     assert_eq!(files, vec![gleam_file]);
+}
+
+#[test]
+fn erlang_files_include_gitignored_files() {
+    let tmp_dir = tempfile::tempdir().unwrap();
+    let path = Utf8Path::from_path(tmp_dir.path()).expect("Non Utf-8 Path");
+
+    let included_files = &[
+        ".hidden.erl",
+        "abc.erl",
+        "abc.hrl",
+        "build/include/abc.erl",
+        "build/include/abc.hrl",
+        "ignored.erl",
+        "ignored.hrl",
+    ];
+
+    let excluded_files = &[
+        ".gitignore",
+        "abc.gleam",
+        "abc.js",
+        "build/abc.gleam",
+        "build/abc.js",
+    ];
+
+    let gitignore = "build/
+ignored.*";
+
+    for &file in included_files.iter().chain(excluded_files) {
+        let contents = match file {
+            ".gitignore" => gitignore,
+            _ => "",
+        };
+
+        super::write(&path.join(file), contents).unwrap();
+    }
+
+    let mut chosen_files = super::erlang_files(path).collect_vec();
+    chosen_files.sort_unstable();
+
+    let expected_files = included_files.iter().map(|s| path.join(s)).collect_vec();
+
+    assert_eq!(expected_files, chosen_files);
 }
 
 #[test]
@@ -98,4 +142,48 @@ fn is_gleam_path_test() {
         Utf8Path::new("/some-prefix/one_2/a123.gleam"),
         Utf8Path::new("/some-prefix/")
     ));
+}
+
+#[test]
+fn extract_distro_id_test() {
+    let os_release = "
+PRETTY_NAME=\"Debian GNU/Linux 12 (bookworm)\"
+NAME=\"Debian GNU/Linux\"
+VERSION_ID=\"12\"
+VERSION=\"12 (bookworm)\"
+VERSION_CODENAME=bookworm
+ID=debian
+HOME_URL=\"https://www.debian.org/\"
+";
+    assert_eq!(super::extract_distro_id(os_release.to_string()), "debian");
+
+    let os_release = "
+VERSION_CODENAME=jammy
+ID=ubuntu
+ID_LIKE=debian
+HOME_URL=\"https://www.ubuntu.com/\"
+";
+    assert_eq!(super::extract_distro_id(os_release.to_string()), "ubuntu");
+
+    assert_eq!(super::extract_distro_id("".to_string()), "");
+    assert_eq!(super::extract_distro_id("\n".to_string()), "");
+    assert_eq!(super::extract_distro_id("ID=".to_string()), "");
+    assert_eq!(super::extract_distro_id("ID= ".to_string()), " ");
+    assert_eq!(
+        super::extract_distro_id("ID= space test ".to_string()),
+        " space test "
+    );
+    assert_eq!(super::extract_distro_id("id=ubuntu".to_string()), "");
+    assert_eq!(
+        super::extract_distro_id("NAME=\"Debian\"\nID=debian".to_string()),
+        "debian"
+    );
+    assert_eq!(
+        super::extract_distro_id("\n\nNAME=\n\n\nID=test123\n".to_string()),
+        "test123"
+    );
+    assert_eq!(
+        super::extract_distro_id("\nID=\"id first\"\nID=another_id".to_string()),
+        "id first"
+    );
 }

@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub type CannotBeDestructured {\n  One(one: String)\n  Two(two: Int)\n}\n\npub fn main(arg: CannotBeDestructured) {}\n"
+---
+----- BEFORE ACTION
+
+pub type CannotBeDestructured {
+  One(one: String)
+  Two(two: Int)
+}
+
+pub fn main(arg: CannotBeDestructured) {}
+            ↑                            
+
+
+----- AFTER ACTION
+
+pub type CannotBeDestructured {
+  One(one: String)
+  Two(two: Int)
+}
+
+pub fn main(arg: CannotBeDestructured) {
+  case arg {
+    One(one:) -> todo
+    Two(two:) -> todo
+  }
+}

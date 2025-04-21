@@ -313,3 +313,120 @@ fn main(x) {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4459
+#[test]
+fn underscore_after_hexadecimal_prefix() {
+    assert_js!(
+        "
+pub fn main() {
+  0x_12_34
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4459
+#[test]
+fn underscore_after_octal_prefix() {
+    assert_js!(
+        "
+pub fn main() {
+  0o_12_34
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4459
+#[test]
+fn underscore_after_binary_prefix() {
+    assert_js!(
+        "
+pub fn main() {
+  0b_10_01
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4481
+#[test]
+fn underscore_after_zero_after_hex_prefix() {
+    assert_js!(
+        "
+pub fn main() {
+  0x0_1_2_3
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4481
+#[test]
+fn underscore_after_zero_after_octal_prefix() {
+    assert_js!(
+        "
+pub fn main() {
+  0o0_1_2_3
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4481
+#[test]
+fn underscore_after_zero_after_binary_prefix() {
+    assert_js!(
+        "
+pub fn main() {
+  0b0_1_0_1
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4481
+#[test]
+fn underscore_after_zero() {
+    assert_js!(
+        "
+pub fn main() {
+  0_1_2_3
+}
+"
+    );
+}
+
+#[test]
+fn zero_after_underscore_after_hex_prefix() {
+    assert_js!(
+        "
+pub fn main() {
+  0x_0_1_2_3
+}
+"
+    );
+}
+
+#[test]
+fn zero_after_underscore_after_octal_prefix() {
+    assert_js!(
+        "
+pub fn main() {
+  0o_0_1_2_3
+}
+"
+    );
+}
+
+#[test]
+fn zero_after_underscore_after_binary_prefix() {
+    assert_js!(
+        "
+pub fn main() {
+  0b_0_1_0_1
+}
+"
+    );
+}

@@ -163,3 +163,33 @@ fn subjects_are_not_split_if_not_necessary() {
 "#
     );
 }
+
+#[test]
+fn case_in_call_gets_broken_if_it_goes_over_the_limit_with_subject() {
+    assert_format!(
+        r#"fn main() {
+  do_diff_attributes(
+    dict.delete(prev, attr.name),
+    rest,
+    case attr.value == old.value {
+      True -> added
+      False -> [attr, ..added]
+    },
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn case_in_call_is_not_broken_if_it_goes_over_the_limit_with_branches() {
+    assert_format!(
+        r#"fn main() {
+  do_diff_attributes(rest, case attr.value == old.value {
+    True -> added
+    False -> [attr, ..added]
+  })
+}
+"#
+    );
+}

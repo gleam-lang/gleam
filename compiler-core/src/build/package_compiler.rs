@@ -1,13 +1,16 @@
 use crate::analyse::{ModuleAnalyzerConstructor, TargetSupport};
+use crate::build::package_loader::CacheFiles;
+use crate::io::files_with_extension;
 use crate::line_numbers::{self, LineNumbers};
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
+    Error, Result, Warning,
     ast::{SrcSpan, TypedModule, UntypedModule},
     build::{
+        Mode, Module, Origin, Outcome, Package, SourceFingerprint, Target,
         elixir_libraries::ElixirLibraries,
         native_file_copier::NativeFileCopier,
         package_loader::{CodegenRequired, PackageLoader, StaleTracker},
-        Mode, Module, Origin, Outcome, Package, SourceFingerprint, Target,
     },
     codegen::{Erlang, ErlangApp, JavaScript, TypeScriptDeclarations},
     config::PackageConfig,
@@ -18,7 +21,6 @@ use crate::{
     paths, type_,
     uid::UniqueIdGenerator,
     warning::{TypeWarningEmitter, WarningEmitter},
-    Error, Result, Warning,
 };
 use askama::Template;
 use ecow::EcoString;
@@ -29,6 +31,13 @@ use vec1::Vec1;
 use camino::{Utf8Path, Utf8PathBuf};
 
 use super::{ErlangAppCodegenConfiguration, TargetCodegenConfiguration, Telemetry};
+
+pub struct Compiled {
+    /// The modules which were just compiled
+    pub modules: Vec<Module>,
+    /// The names of all cached modules, which are not present in the `modules` field.
+    pub cached_module_names: Vec<EcoString>,
+}
 
 #[derive(Debug)]
 pub struct PackageCompiler<'a, IO> {
@@ -104,7 +113,7 @@ where
         stale_modules: &mut StaleTracker,
         incomplete_modules: &mut HashSet<EcoString>,
         telemetry: &dyn Telemetry,
-    ) -> Outcome<Vec<Module>, Error> {
+    ) -> Outcome<Compiled, Error> {
         let span = tracing::info_span!("compile", package = %self.config.name.as_str());
         let _enter = span.enter();
 
@@ -145,6 +154,8 @@ where
             Loaded::empty()
         };
 
+        let mut cached_module_names = Vec::new();
+
         // Load the cached modules that have previously been compiled
         for module in loaded.cached.into_iter() {
             // Emit any cached warnings.
@@ -153,6 +164,8 @@ where
             if let Err(e) = self.emit_warnings(warnings, &module) {
                 return e.into();
             }
+
+            cached_module_names.push(module.name.clone());
 
             // Register the cached module so its type information etc can be
             // used for compiling futher modules.
@@ -184,7 +197,16 @@ where
 
         let modules = match outcome {
             Outcome::Ok(modules) => modules,
-            Outcome::PartialFailure(_, _) | Outcome::TotalFailure(_) => return outcome,
+            Outcome::PartialFailure(modules, error) => {
+                return Outcome::PartialFailure(
+                    Compiled {
+                        modules,
+                        cached_module_names,
+                    },
+                    error,
+                );
+            }
+            Outcome::TotalFailure(error) => return Outcome::TotalFailure(error),
         };
 
         tracing::debug!("performing_code_generation");
@@ -197,19 +219,26 @@ where
             return error.into();
         }
 
-        Outcome::Ok(modules)
+        Outcome::Ok(Compiled {
+            modules,
+            cached_module_names,
+        })
     }
 
-    fn compile_erlang_to_beam(&mut self, modules: &HashSet<Utf8PathBuf>) -> Result<(), Error> {
+    fn compile_erlang_to_beam(
+        &mut self,
+        modules: &HashSet<Utf8PathBuf>,
+    ) -> Result<Vec<EcoString>, Error> {
         if modules.is_empty() {
             tracing::debug!("no_erlang_to_compile");
-            return Ok(());
+            return Ok(Vec::new());
         }
 
         tracing::debug!("compiling_erlang");
 
         self.io
             .compile_beam(self.out, self.lib, modules, self.subprocess_stdio)
+            .map(|modules| modules.iter().map(|str| EcoString::from(str)).collect())
     }
 
     fn copy_project_native_files(
@@ -258,17 +287,13 @@ where
 
         tracing::debug!("writing_module_caches");
         for module in modules {
-            let module_name = module.name.replace("/", "@");
+            let cache_files = CacheFiles::new(&artefact_dir, &module.name);
 
-            // Write metadata file
-            let name = format!("{}.cache", &module_name);
-            let path = artefact_dir.join(name);
+            // Write cache file
             let bytes = ModuleEncoder::new(&module.ast.type_info).encode()?;
-            self.io.write_bytes(&path, &bytes)?;
+            self.io.write_bytes(&cache_files.cache_path, &bytes)?;
 
-            // Write cache info
-            let name = format!("{}.cache_meta", &module_name);
-            let path = artefact_dir.join(name);
+            // Write cache metadata
             let info = CacheMetadata {
                 mtime: module.mtime,
                 codegen_performed: self.perform_codegen,
@@ -276,18 +301,17 @@ where
                 fingerprint: SourceFingerprint::new(&module.code),
                 line_numbers: module.ast.type_info.line_numbers.clone(),
             };
-            self.io.write_bytes(&path, &info.to_binary())?;
+            self.io
+                .write_bytes(&cache_files.meta_path, &info.to_binary())?;
 
             // Write warnings.
             // Dependency packages don't get warnings persisted as the
             // programmer doesn't want to be told every time about warnings they
             // cannot fix directly.
             if self.cached_warnings.should_use() {
-                let name = format!("{}.cache_warnings", &module_name);
-                let path = artefact_dir.join(name);
                 let warnings = &module.ast.type_info.warnings;
                 let data = bincode::serialize(warnings).expect("Serialise warnings");
-                self.io.write_bytes(&path, &data)?;
+                self.io.write_bytes(&cache_files.warnings_path, &data)?;
             }
         }
         Ok(())
@@ -332,14 +356,6 @@ where
             tracing::debug!("skipping_native_file_copying");
         }
 
-        if let Some(config) = app_file_config {
-            ErlangApp::new(&self.out.join("ebin"), config).render(
-                io.clone(),
-                &self.config,
-                modules,
-            )?;
-        }
-
         if self.compile_beam_bytecode && self.write_entrypoint {
             self.render_erlang_entrypoint_module(&build_dir, &mut written)?;
         } else {
@@ -350,13 +366,23 @@ where
         // we overwrite any precompiled Erlang that was included in the Hex
         // package. Otherwise we will build the potentially outdated precompiled
         // version and not the newly compiled version.
-        Erlang::new(&build_dir, &include_dir).render(io, modules)?;
+        Erlang::new(&build_dir, &include_dir).render(io.clone(), modules, self.root)?;
 
-        if self.compile_beam_bytecode {
+        let native_modules: Vec<EcoString> = if self.compile_beam_bytecode {
             written.extend(modules.iter().map(Module::compiled_erlang_path));
-            self.compile_erlang_to_beam(&written)?;
+            self.compile_erlang_to_beam(&written)?
         } else {
             tracing::debug!("skipping_erlang_bytecode_compilation");
+            Vec::new()
+        };
+
+        if let Some(config) = app_file_config {
+            ErlangApp::new(&self.out.join("ebin"), config).render(
+                io,
+                &self.config,
+                modules,
+                native_modules,
+            )?;
         }
         Ok(())
     }
@@ -374,8 +400,14 @@ where
             TypeScriptDeclarations::None
         };
 
-        JavaScript::new(&self.out, typescript, prelude_location, self.target_support)
-            .render(&self.io, modules)?;
+        JavaScript::new(
+            &self.out,
+            typescript,
+            prelude_location,
+            &self.root,
+            self.target_support,
+        )
+        .render(&self.io, modules, self.stdlib_package())?;
 
         if self.copy_native_files {
             self.copy_project_native_files(&self.out, &mut written)?;
@@ -427,6 +459,22 @@ where
 
         Ok(())
     }
+
+    fn stdlib_package(&self) -> StdlibPackage {
+        if self.config.dependencies.contains_key("gleam_stdlib")
+            || self.config.dev_dependencies.contains_key("gleam_stdlib")
+        {
+            StdlibPackage::Present
+        } else {
+            StdlibPackage::Missing
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum StdlibPackage {
+    Present,
+    Missing,
 }
 
 fn analyse(
@@ -482,12 +530,8 @@ fn analyse(
             Outcome::Ok(ast) => {
                 // Module has compiled successfully. Make sure it isn't marked as incomplete.
                 let _ = incomplete_modules.remove(&name.clone());
-                // Register the types from this module so they can be imported into
-                // other modules.
-                let _ = module_types.insert(name.clone(), ast.type_info.clone());
-                // Register the successfully type checked module data so that it can be
-                // used for code generation and in the language server.
-                modules.push(Module {
+
+                let mut module = Module {
                     dependencies,
                     origin,
                     extra,
@@ -496,7 +540,15 @@ fn analyse(
                     code,
                     ast,
                     input_path: path,
-                });
+                };
+                module.attach_doc_and_module_comments();
+
+                // Register the types from this module so they can be imported into
+                // other modules.
+                let _ = module_types.insert(module.name.clone(), module.ast.type_info.clone());
+                // Register the successfully type checked module data so that it can be
+                // used for code generation and in the language server.
+                modules.push(module);
             }
 
             Outcome::PartialFailure(ast, errors) => {
@@ -530,31 +582,12 @@ fn analyse(
                     path: path.clone(),
                     src: code.clone(),
                     errors,
-                })
+                });
             }
         };
     }
 
     Outcome::Ok(modules)
-}
-
-pub(crate) fn module_name(package_path: &Utf8Path, full_module_path: &Utf8Path) -> EcoString {
-    // /path/to/project/_build/default/lib/the_package/src/my/module.gleam
-
-    // my/module.gleam
-    let mut module_path = full_module_path
-        .strip_prefix(package_path)
-        .expect("Stripping package prefix from module path")
-        .to_path_buf();
-
-    // my/module
-    let _ = module_path.set_extension("");
-
-    // Stringify
-    let name = module_path.to_string();
-
-    // normalise windows paths
-    name.replace("\\", "/").into()
 }
 
 #[derive(Debug)]

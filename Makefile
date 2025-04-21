@@ -12,7 +12,7 @@ build: ## Build the compiler
 
 .PHONY: install
 install: ## Build the Gleam compiler and place it on PATH
-	cd compiler-cli && cargo install --path . --force --locked
+	cd gleam-bin && cargo install --path . --force --locked
 
 .PHONY: test
 test: ## Run the compiler unit tests

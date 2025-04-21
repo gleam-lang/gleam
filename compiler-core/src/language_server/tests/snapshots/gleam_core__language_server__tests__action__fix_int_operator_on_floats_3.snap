@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  1.3 * wobble()\n}\n\nfn wobble() { 3.2 }\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  1.3 * wobble()
+      ↑         
+}
+
+fn wobble() { 3.2 }
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  1.3 *. wobble()
+}
+
+fn wobble() { 3.2 }

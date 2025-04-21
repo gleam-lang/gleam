@@ -3,6 +3,10 @@ source: compiler-core/src/javascript/tests/modules.rs
 expression: "\nimport rocket_ship as boop\npub fn go() { boop.x }\n"
 ---
 ----- SOURCE CODE
+-- rocket_ship.gleam
+pub const x = 1
+
+-- main.gleam
 
 import rocket_ship as boop
 pub fn go() { boop.x }

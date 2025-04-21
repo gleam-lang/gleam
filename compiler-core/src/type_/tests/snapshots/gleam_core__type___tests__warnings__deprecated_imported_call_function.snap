@@ -13,9 +13,9 @@ pub fn a() {
 
 ----- WARNING
 warning: Deprecated value used
-  ┌─ /src/warning/wrn.gleam:5:9
+  ┌─ /src/warning/wrn.gleam:5:10
   │
 5 │   module.a()
-  │         ^^ This value has been deprecated
+  │          ^ This value has been deprecated
 
 It was deprecated with this message: Don't use this!

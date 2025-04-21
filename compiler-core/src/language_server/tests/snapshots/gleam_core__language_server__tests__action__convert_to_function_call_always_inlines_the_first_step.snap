@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  [1, 2, 3]\n  |> map(todo)\n  |> filter(todo)\n}\n\nfn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }\nfn filter(list: List(a), fun: fn(a) -> Bool) -> List(b) { todo }\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  [1, 2, 3]
+  ▔▔▔▔▔▔▔▔▔
+  |> map(todo)
+▔▔▔▔▔↑        
+  |> filter(todo)
+}
+
+fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
+fn filter(list: List(a), fun: fn(a) -> Bool) -> List(b) { todo }
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  map([1, 2, 3], todo)
+  |> filter(todo)
+}
+
+fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
+fn filter(list: List(a), fun: fn(a) -> Bool) -> List(b) { todo }

@@ -12,7 +12,6 @@ allow = [
     "Apache-2.0",
     "MPL-2.0",
     "ISC",
-    "OpenSSL",
     "CC0-1.0",
     "BSD-3-Clause",
     "Unicode-DFS-2016",

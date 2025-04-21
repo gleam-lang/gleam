@@ -3,6 +3,10 @@ source: compiler-core/src/type_/tests/warnings.rs
 expression: "\nimport wibble\n\npub fn main() {\n  wibble.println\n  1\n}\n"
 ---
 ----- SOURCE CODE
+-- wibble.gleam
+pub fn println(a) { Nil }
+
+-- main.gleam
 
 import wibble
 
@@ -14,7 +18,7 @@ pub fn main() {
 
 ----- WARNING
 warning: Unused value
-  ┌─ /src/warning/wrn.gleam:5:9
+  ┌─ /src/warning/wrn.gleam:5:3
   │
 5 │   wibble.println
-  │         ^^^^^^^^ This value is never used
+  │   ^^^^^^^^^^^^^^ This value is never used

@@ -5,6 +5,7 @@ mod wasm_filesystem;
 
 use camino::Utf8PathBuf;
 use gleam_core::{
+    Error,
     analyse::TargetSupport,
     build::{
         Mode, NullTelemetry, PackageCompiler, StaleTracker, Target, TargetCodegenConfiguration,
@@ -13,7 +14,6 @@ use gleam_core::{
     io::{FileSystemReader, FileSystemWriter},
     uid::UniqueIdGenerator,
     warning::{VectorWarningEmitterIO, WarningEmitter},
-    Error,
 };
 use hexpm::version::Version;
 use im::HashMap;

@@ -1,8 +1,11 @@
 use gleam_core::{
-    error::Error,
+    Result,
+    error::{Error, ShellCommandFailureReason},
     io::{FileSystemWriter, Stdio},
-    paths, Result,
+    paths,
 };
+
+use crate::fs::get_os;
 
 use std::{
     collections::HashSet,
@@ -33,15 +36,12 @@ impl BeamCompiler {
         lib: &Utf8Path,
         modules: &HashSet<Utf8PathBuf>,
         stdio: Stdio,
-    ) -> Result<(), Error> {
+    ) -> Result<Vec<String>, Error> {
         let inner = match self.inner {
-            Some(ref mut inner) => {
-                if let Ok(None) = inner.process.try_wait() {
-                    inner
-                } else {
-                    self.inner.insert(self.spawn(io, out)?)
-                }
-            }
+            Some(ref mut inner) => match inner.process.try_wait() {
+                Ok(None) => inner,
+                _ => self.inner.insert(self.spawn(io, out)?),
+            },
 
             None => self.inner.insert(self.spawn(io, out)?),
         };
@@ -60,18 +60,27 @@ impl BeamCompiler {
 
         writeln!(inner.stdin, "{}.", args).map_err(|e| Error::ShellCommand {
             program: "escript".into(),
-            err: Some(e.kind()),
+            reason: ShellCommandFailureReason::IoError(e.kind()),
         })?;
 
         let mut buf = String::new();
+        let mut accumulated_modules: Vec<String> = Vec::new();
         while let (Ok(_), Ok(None)) = (inner.stdout.read_line(&mut buf), inner.process.try_wait()) {
             match buf.trim() {
-                "gleam-compile-result-ok" => return Ok(()),
+                "gleam-compile-result-ok" => {
+                    // Return Ok with the accumulated modules
+                    return Ok(accumulated_modules);
+                }
                 "gleam-compile-result-error" => {
                     return Err(Error::ShellCommand {
                         program: "escript".into(),
-                        err: None,
-                    })
+                        reason: ShellCommandFailureReason::Unknown,
+                    });
+                }
+                s if s.starts_with("gleam-compile-module:") => {
+                    if let Some(module_content) = s.strip_prefix("gleam-compile-module:") {
+                        accumulated_modules.push(module_content.to_string());
+                    }
                 }
                 _ => match stdio {
                     Stdio::Inherit => print!("{}", buf),
@@ -85,7 +94,7 @@ impl BeamCompiler {
         // if we get here, stdout got closed before we got an "ok" or "err".
         Err(Error::ShellCommand {
             program: "escript".into(),
-            err: None,
+            reason: ShellCommandFailureReason::Unknown,
         })
     }
 
@@ -104,17 +113,18 @@ impl BeamCompiler {
         tracing::trace!(escript_path=?escript_path, "spawn_beam_compiler");
 
         let mut process = std::process::Command::new("escript")
-            .args([escript_path])
+            .arg(escript_path)
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .spawn()
             .map_err(|e| match e.kind() {
                 io::ErrorKind::NotFound => Error::ShellProgramNotFound {
                     program: "escript".into(),
+                    os: get_os(),
                 },
                 other => Error::ShellCommand {
                     program: "escript".into(),
-                    err: Some(other),
+                    reason: ShellCommandFailureReason::IoError(other),
                 },
             })?;
 

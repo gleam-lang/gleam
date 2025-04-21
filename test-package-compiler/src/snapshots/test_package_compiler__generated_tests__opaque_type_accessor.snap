@@ -3,10 +3,10 @@ source: test-package-compiler/src/generated_tests.rs
 expression: "./cases/opaque_type_accessor"
 ---
 error: Unknown record field
-  ┌─ src/two.gleam:7:18
+  ┌─ src/two.gleam:7:19
   │
 7 │   let name = user.name
-  │                  ^ This field does not exist
+  │                   ^ This field does not exist
 
 The value being accessed has this type:
 
@@ -15,10 +15,10 @@ The value being accessed has this type:
 It does not have any fields.
 
 error: Unknown record field
-  ┌─ src/two.gleam:8:19
+  ┌─ src/two.gleam:8:20
   │
 8 │   let score = user.score
-  │                   ^ This field does not exist
+  │                    ^ This field does not exist
 
 The value being accessed has this type:
 

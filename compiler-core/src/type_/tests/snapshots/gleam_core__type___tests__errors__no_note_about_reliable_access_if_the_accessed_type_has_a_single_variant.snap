@@ -15,10 +15,10 @@ pub fn main() {
 
 ----- ERROR
 error: Unknown record field
-  ┌─ /src/one/two.gleam:7:14
+  ┌─ /src/one/two.gleam:7:15
   │
 7 │   User("Jak").nam
-  │              ^^^^ Did you mean `name`?
+  │               ^^^ Did you mean `name`?
 
 The value being accessed has this type:
 

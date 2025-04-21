@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: "\npub fn main(something: Bool) {\n  case so\n}\n"
+---
+pub fn main(something: Bool) {
+  case so|
+}
+
+
+----- After applying completion -----
+
+pub fn main(something: Bool) {
+  case something
+}

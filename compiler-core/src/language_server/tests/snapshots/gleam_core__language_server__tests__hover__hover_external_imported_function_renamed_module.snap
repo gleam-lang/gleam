@@ -5,7 +5,7 @@ expression: "\nimport example_module as renamed_module\nfn main() {\n    renamed
 import example_module as renamed_module
 fn main() {
     renamed_module.my_fn
-                  ▔▔▔▔↑▔
+    ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑▔
 }
 
 

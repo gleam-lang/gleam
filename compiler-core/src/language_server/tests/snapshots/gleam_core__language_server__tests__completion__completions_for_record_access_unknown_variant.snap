@@ -13,26 +13,6 @@ fn fun(some_wibble: Wibble) {
 
 
 ----- Completion content -----
-Error
-  kind:   Constructor
-  detail: gleam
-  sort:   4_Error
-False
-  kind:   EnumMember
-  detail: gleam
-  sort:   4_False
-Nil
-  kind:   EnumMember
-  detail: gleam
-  sort:   4_Nil
-Ok
-  kind:   Constructor
-  detail: gleam
-  sort:   4_Ok
-True
-  kind:   EnumMember
-  detail: gleam
-  sort:   4_True
 a
   kind:   Field
   detail: Int

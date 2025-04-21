@@ -6,10 +6,11 @@ mod pattern;
 #[cfg(test)]
 mod tests;
 
-use crate::build::Target;
+use crate::build::{Target, module_erlang_name};
 use crate::strings::convert_string_escape_chars;
 use crate::type_::is_prelude_module;
 use crate::{
+    Result,
     ast::{CustomType, Function, Import, ModuleConstant, TypeAlias, *},
     docvec,
     line_numbers::LineNumbers,
@@ -18,9 +19,9 @@ use crate::{
         ModuleValueConstructor, PatternConstructor, Type, TypeVar, TypedCallArg, ValueConstructor,
         ValueConstructorVariant,
     },
-    Result,
 };
-use ecow::{eco_format, EcoString};
+use camino::Utf8Path;
+use ecow::{EcoString, eco_format};
 use heck::ToSnakeCase;
 use im::HashSet;
 use itertools::Itertools;
@@ -45,17 +46,31 @@ fn module_name_atom(module: &str) -> Document<'static> {
 struct Env<'a> {
     module: &'a str,
     function: &'a str,
+    src_path: &'a Utf8Path,
+    project_root: &'a Utf8Path,
     line_numbers: &'a LineNumbers,
+    needs_function_docs: bool,
+    echo_used: bool,
     current_scope_vars: im::HashMap<String, usize>,
     erl_function_scope_vars: im::HashMap<String, usize>,
 }
 
 impl<'env> Env<'env> {
-    pub fn new(module: &'env str, function: &'env str, line_numbers: &'env LineNumbers) -> Self {
+    pub fn new(
+        module: &'env str,
+        src_path: &'env Utf8Path,
+        project_root: &'env Utf8Path,
+        function: &'env str,
+        line_numbers: &'env LineNumbers,
+    ) -> Self {
         let vars: im::HashMap<_, _> = std::iter::once(("_".into(), 0)).collect();
         Self {
             current_scope_vars: vars.clone(),
             erl_function_scope_vars: vars,
+            needs_function_docs: false,
+            echo_used: false,
+            src_path,
+            project_root,
             line_numbers,
             function,
             module,
@@ -130,31 +145,36 @@ pub fn record_definition(name: &str, fields: &[(&str, Arc<Type>)]) -> String {
     let type_printer = TypePrinter::new("").var_as_any();
     let fields = fields.iter().map(move |(name, type_)| {
         let type_ = type_printer.print(type_);
-        docvec!(atom_string((*name).to_string()), " :: ", type_.group())
+        docvec![atom_string((*name).to_string()), " :: ", type_.group()]
     });
     let fields = break_("", "")
         .append(join(fields, break_(",", ", ")))
         .nest(INDENT)
         .append(break_("", ""))
         .group();
-    docvec!(
+    docvec![
         "-record(",
         atom_string(name.to_string()),
         ", {",
         fields,
         "}).",
         line()
-    )
+    ]
     .to_pretty_string(MAX_COLUMNS)
 }
 
-pub fn module<'a>(module: &'a TypedModule, line_numbers: &'a LineNumbers) -> Result<String> {
-    Ok(module_document(module, line_numbers)?.to_pretty_string(MAX_COLUMNS))
+pub fn module<'a>(
+    module: &'a TypedModule,
+    line_numbers: &'a LineNumbers,
+    root: &'a Utf8Path,
+) -> Result<String> {
+    Ok(module_document(module, line_numbers, root)?.to_pretty_string(MAX_COLUMNS))
 }
 
 fn module_document<'a>(
     module: &'a TypedModule,
     line_numbers: &'a LineNumbers,
+    root: &'a Utf8Path,
 ) -> Result<Document<'a>> {
     let mut exports = vec![];
     let mut type_defs = vec![];
@@ -162,7 +182,7 @@ fn module_document<'a>(
 
     let header = "-module("
         .to_doc()
-        .append(module.name.replace("/", "@"))
+        .append(module.erlang_name())
         .append(").")
         .append(line());
 
@@ -215,23 +235,73 @@ fn module_document<'a>(
         join(type_defs, lines(2)).append(lines(2))
     };
 
-    let src_path = EcoString::from(module.type_info.src_path.as_str());
+    let src_path_full = &module.type_info.src_path;
+    let src_path_relative = src_path_full.strip_prefix(root).unwrap_or(src_path_full);
 
-    let statements = join(
-        module
-            .definitions
-            .iter()
-            .flat_map(|s| module_statement(s, &module.name, line_numbers, &src_path)),
+    let mut needs_function_docs = false;
+    let mut echo_used = false;
+    let mut statements = Vec::with_capacity(module.definitions.len());
+    for definition in module.definitions.iter() {
+        if let Some((statement_document, env)) = module_statement(
+            definition,
+            &module.name,
+            module.type_info.is_internal,
+            line_numbers,
+            src_path_relative,
+            root,
+        ) {
+            needs_function_docs = needs_function_docs || env.needs_function_docs;
+            echo_used = echo_used || env.echo_used;
+            statements.push(statement_document);
+        }
+    }
+
+    let module_doc = if module.type_info.is_internal {
+        Some(hidden_module_doc().append(lines(2)))
+    } else if module.documentation.is_empty() {
+        None
+    } else {
+        Some(module_doc(&module.documentation).append(lines(2)))
+    };
+
+    // We're going to need the documentation directives if any of the module's
+    // functions need it, or if the module has a module comment that we want to
+    // include in the generated Erlang source, or if the module is internal.
+    let needs_doc_directive = needs_function_docs || module_doc.is_some();
+    let documentation_directive = if needs_doc_directive {
+        "-if(?OTP_RELEASE >= 27).
+-define(MODULEDOC(Str), -moduledoc(Str)).
+-define(DOC(Str), -doc(Str)).
+-else.
+-define(MODULEDOC(Str), -compile([])).
+-define(DOC(Str), -compile([])).
+-endif."
+            .to_doc()
+            .append(lines(2))
+    } else {
+        nil()
+    };
+
+    let module = docvec![
+        header,
+        "-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).",
         lines(2),
-    );
+        exports,
+        documentation_directive,
+        module_doc,
+        type_defs,
+        join(statements, lines(2)),
+    ];
 
-    Ok(header
-        .append("-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).")
-        .append(lines(2))
-        .append(exports)
-        .append(type_defs)
-        .append(statements)
-        .append(line()))
+    let module = if echo_used {
+        module
+            .append(lines(2))
+            .append(std::include_str!("../templates/echo.erl").to_doc())
+    } else {
+        module
+    };
+
+    Ok(module.append(line()))
 }
 
 fn register_imports(
@@ -352,27 +422,36 @@ fn register_imports(
 fn module_statement<'a>(
     statement: &'a TypedDefinition,
     module: &'a str,
+    is_internal_module: bool,
     line_numbers: &'a LineNumbers,
-    src_path: &EcoString,
-) -> Option<Document<'a>> {
+    src_path: &'a Utf8Path,
+    project_root: &'a Utf8Path,
+) -> Option<(Document<'a>, Env<'a>)> {
     match statement {
         Definition::TypeAlias(TypeAlias { .. })
         | Definition::CustomType(CustomType { .. })
         | Definition::Import(Import { .. })
         | Definition::ModuleConstant(ModuleConstant { .. }) => None,
 
-        Definition::Function(function) => {
-            module_function(function, module, line_numbers, src_path.clone())
-        }
+        Definition::Function(function) => module_function(
+            function,
+            module,
+            is_internal_module,
+            line_numbers,
+            src_path,
+            project_root,
+        ),
     }
 }
 
 fn module_function<'a>(
     function: &'a TypedFunction,
     module: &'a str,
+    is_internal_module: bool,
     line_numbers: &'a LineNumbers,
-    src_path: EcoString,
-) -> Option<Document<'a>> {
+    src_path: &'a Utf8Path,
+    project_root: &'a Utf8Path,
+) -> Option<(Document<'a>, Env<'a>)> {
     // Private external functions don't need to render anything, the underlying
     // Erlang implementation is used directly at the call site.
     if function.external_erlang.is_some() && function.publicity.is_private() {
@@ -392,7 +471,7 @@ fn module_function<'a>(
     let function_name = escape_erlang_existing_name(function_name);
     let file_attribute = file_attribute(src_path, function, line_numbers);
 
-    let mut env = Env::new(module, function_name, line_numbers);
+    let mut env = Env::new(module, src_path, project_root, function_name, line_numbers);
     let var_usages = collect_type_var_usages(
         HashMap::new(),
         std::iter::once(&function.return_type).chain(function.arguments.iter().map(|a| &a.type_)),
@@ -424,26 +503,104 @@ fn module_function<'a>(
         })
         .unwrap_or_else(|| statement_sequence(&function.body, &mut env));
 
-    Some(docvec![
-        file_attribute,
-        line(),
-        spec,
-        atom_string(escape_erlang_existing_name(function_name).to_string()),
-        arguments,
-        " ->",
-        line().append(body).nest(INDENT).group(),
-        ".",
-    ])
+    let attributes = file_attribute;
+    let attributes = if is_internal_module || function.publicity.is_internal() {
+        // If a function is marked as internal or comes from an internal module
+        // we want to hide its documentation in the Erlang shell!
+        // So the doc directive will look like this: `-doc(false).`
+        env.needs_function_docs = true;
+        docvec![attributes, line(), hidden_function_doc()]
+    } else {
+        match &function.documentation {
+            Some((_, documentation)) => {
+                env.needs_function_docs = true;
+                let doc_lines = documentation
+                    .trim_end()
+                    .split('\n')
+                    .map(EcoString::from)
+                    .collect_vec();
+                docvec![attributes, line(), function_doc(&doc_lines)]
+            }
+            _ => attributes,
+        }
+    };
+
+    Some((
+        docvec![
+            attributes,
+            line(),
+            spec,
+            atom_string(escape_erlang_existing_name(function_name).to_string()),
+            arguments,
+            " ->",
+            line().append(body).nest(INDENT).group(),
+            ".",
+        ],
+        env,
+    ))
 }
 
 fn file_attribute<'a>(
-    path: EcoString,
+    path: &'a Utf8Path,
     function: &'a TypedFunction,
     line_numbers: &'a LineNumbers,
 ) -> Document<'a> {
     let line = line_numbers.line_number(function.location.start);
-    let path = path.replace("\\", "\\\\");
+    let path = EcoString::from(path.as_str()).replace("\\", "\\\\");
     docvec!["-file(\"", path, "\", ", line, ")."]
+}
+
+enum DocCommentKind {
+    Module,
+    Function,
+}
+
+enum DocCommentContent<'a> {
+    String(&'a Vec<EcoString>),
+    False,
+}
+
+fn hidden_module_doc<'a>() -> Document<'a> {
+    doc_attribute(DocCommentKind::Module, DocCommentContent::False)
+}
+
+fn module_doc<'a>(content: &Vec<EcoString>) -> Document<'a> {
+    doc_attribute(DocCommentKind::Module, DocCommentContent::String(content))
+}
+
+fn hidden_function_doc<'a>() -> Document<'a> {
+    doc_attribute(DocCommentKind::Function, DocCommentContent::False)
+}
+
+fn function_doc<'a>(content: &Vec<EcoString>) -> Document<'a> {
+    doc_attribute(DocCommentKind::Function, DocCommentContent::String(content))
+}
+
+fn doc_attribute<'a>(kind: DocCommentKind, content: DocCommentContent<'_>) -> Document<'a> {
+    let prefix = match kind {
+        DocCommentKind::Module => "?MODULEDOC",
+        DocCommentKind::Function => "?DOC",
+    };
+
+    match content {
+        DocCommentContent::False => prefix.to_doc().append("(false)."),
+        DocCommentContent::String(doc_lines) => {
+            let is_multiline_doc_comment = doc_lines.len() > 1;
+            let doc_lines = join(
+                doc_lines.iter().map(|line| {
+                    let line = line.replace("\\", "\\\\").replace("\"", "\\\"");
+                    docvec!["\"", line, "\\n\""]
+                }),
+                line(),
+            );
+            if is_multiline_doc_comment {
+                let nested_documentation = docvec![line(), doc_lines].nest(INDENT);
+                docvec![prefix, "(", nested_documentation, line(), ")."]
+            } else {
+                docvec![prefix, "(", doc_lines, ")."]
+            }
+        }
+    }
 }
 
 fn external_fun_args<'a>(args: &'a [TypedArg], env: &mut Env<'a>) -> Document<'a> {
@@ -486,14 +643,14 @@ where
 fn fun_spec<'a>(
     name: &'a str,
     args: impl IntoIterator<Item = Document<'a>>,
-    retrn: Document<'a>,
+    return_: Document<'a>,
 ) -> Document<'a> {
     "-spec "
         .to_doc()
         .append(atom(name))
         .append(wrap_args(args))
         .append(" -> ")
-        .append(retrn)
+        .append(return_)
         .append(".")
         .append(line())
         .group()
@@ -521,7 +678,7 @@ fn atom(value: &str) -> Document<'_> {
     }
 }
 
-fn escape_atom_string(value: String) -> EcoString {
+pub fn escape_atom_string(value: String) -> EcoString {
     if is_erlang_reserved_word(&value) {
         // Escape because of keyword collision
         eco_format!("'{value}'")
@@ -566,17 +723,17 @@ fn string_length_utf8_bytes(str: &EcoString) -> usize {
     convert_string_escape_chars(str).len()
 }
 
-fn tuple<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
-    join(elems, break_(",", ", "))
+fn tuple<'a>(elements: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
+    join(elements, break_(",", ", "))
         .nest(INDENT)
         .surround("{", "}")
         .group()
 }
 
 fn const_string_concatenate_bit_array<'a>(
-    elems: impl IntoIterator<Item = Document<'a>>,
+    elements: impl IntoIterator<Item = Document<'a>>,
 ) -> Document<'a> {
-    join(elems, break_(",", ", "))
+    join(elements, break_(",", ", "))
         .nest(INDENT)
         .surround("<<", ">>")
         .group()
@@ -677,8 +834,8 @@ fn string_concatenate_argument<'a>(value: &'a TypedExpr, env: &mut Env<'a>) -> D
     }
 }
 
-fn bit_array<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
-    join(elems, break_(",", ", "))
+fn bit_array<'a>(elements: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
+    join(elements, break_(",", ", "))
         .nest(INDENT)
         .surround("<<", ">>")
         .group()
@@ -865,8 +1022,12 @@ where
 }
 
 fn block<'a>(statements: &'a Vec1<TypedStatement>, env: &mut Env<'a>) -> Document<'a> {
-    if statements.len() == 1 && statements.first().is_non_pipe_expression() {
-        return docvec!['(', statement(statements.first(), env), ')'];
+    if statements.len() == 1 {
+        if let Statement::Expression(expression) = statements.first() {
+            if !needs_begin_end_wrapping(expression) {
+                return docvec!['(', expr(expression, env), ')'];
+            }
+        }
     }
 
     let vars = env.current_scope_vars.clone();
@@ -1004,7 +1165,7 @@ fn let_assert<'a>(
     let mut vars: Vec<&str> = vec![];
     let body = maybe_block_expr(value, env);
     let (subject_var, subject_definition) = if value.is_var() {
-        (body, docvec![])
+        (body, nil())
     } else {
         let var = env.next_local_var_name(ASSERT_SUBJECT_VARIABLE);
         let definition = docvec![var.clone(), " = ", body, ",", line()];
@@ -1084,22 +1245,27 @@ fn expr_list<'a>(
     env: &mut Env<'a>,
 ) -> Document<'a> {
     let elements = join(
-        elements.iter().map(|e| maybe_block_expr(e, env)),
+        elements
+            .iter()
+            .map(|element| maybe_block_expr(element, env)),
         break_(",", ", "),
     );
-    list(elements, tail.as_ref().map(|e| maybe_block_expr(e, env)))
+    list(
+        elements,
+        tail.as_ref().map(|element| maybe_block_expr(element, env)),
+    )
 }
 
-fn list<'a>(elems: Document<'a>, tail: Option<Document<'a>>) -> Document<'a> {
-    let elems = match tail {
-        Some(tail) if elems.is_empty() => return tail.to_doc(),
+fn list<'a>(elements: Document<'a>, tail: Option<Document<'a>>) -> Document<'a> {
+    let elements = match tail {
+        Some(tail) if elements.is_empty() => return tail.to_doc(),
 
-        Some(tail) => elems.append(break_(" |", " | ")).append(tail),
+        Some(tail) => elements.append(break_(" |", " | ")).append(tail),
 
-        None => elems,
+        None => elements,
     };
 
-    elems.to_doc().nest(INDENT).surround("[", "]").group()
+    elements.to_doc().nest(INDENT).surround("[", "]").group()
 }
 
 fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) -> Document<'a> {
@@ -1138,9 +1304,9 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
             ..
         } => function_reference(Some(module), name, *arity),
 
-        ValueConstructorVariant::ModuleFn {
-            arity, ref module, ..
-        } if module == env.module => function_reference(None, name, *arity),
+        ValueConstructorVariant::ModuleFn { arity, module, .. } if module == env.module => {
+            function_reference(None, name, *arity)
+        }
 
         ValueConstructorVariant::ModuleFn {
             arity,
@@ -1179,10 +1345,12 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
         Constant::Int { value, .. } => int(value),
         Constant::Float { value, .. } => float(value),
         Constant::String { value, .. } => string(value),
-        Constant::Tuple { elements, .. } => tuple(elements.iter().map(|e| const_inline(e, env))),
+        Constant::Tuple { elements, .. } => {
+            tuple(elements.iter().map(|element| const_inline(element, env)))
+        }
 
         Constant::List { elements, .. } => join(
-            elements.iter().map(|e| const_inline(e, env)),
+            elements.iter().map(|element| const_inline(element, env)),
             break_(",", ", "),
         )
         .nest(INDENT)
@@ -1495,7 +1663,11 @@ fn case<'a>(subjects: &'a [TypedExpr], cs: &'a [TypedClause], env: &mut Env<'a>)
             .expect("erl case printing of single subject");
         maybe_block_expr(subject, env).group()
     } else {
-        tuple(subjects.iter().map(|e| maybe_block_expr(e, env)))
+        tuple(
+            subjects
+                .iter()
+                .map(|element| maybe_block_expr(element, env)),
+        )
     };
     "case "
         .to_doc()
@@ -1578,7 +1750,7 @@ fn docs_args_call<'a>(
                         ValueConstructorVariant::ModuleConstant {
                             literal:
                                 Constant::Var {
-                                    constructor: Some(ref constructor),
+                                    constructor: Some(constructor),
                                     ..
                                 },
                             ..
@@ -1586,18 +1758,18 @@ fn docs_args_call<'a>(
                     ..
                 },
             ..
-        } if constructor.variant.is_module_fn() => {
-            if let ValueConstructorVariant::ModuleFn {
+        } if constructor.variant.is_module_fn() => match &constructor.variant {
+            ValueConstructorVariant::ModuleFn {
                 external_erlang: Some((module, name)),
                 ..
             }
-            | ValueConstructorVariant::ModuleFn { module, name, .. } = &constructor.variant
-            {
+            | ValueConstructorVariant::ModuleFn { module, name, .. } => {
                 module_fn_with_args(module, name, args, env)
-            } else {
+            }
+            _ => {
                 unreachable!("The above clause guard ensures that this is a module fn")
             }
-        }
+        },
 
         TypedExpr::ModuleSelect {
             constructor:
@@ -1618,7 +1790,7 @@ fn docs_args_call<'a>(
             // This also enables an optimisation in the Erlang compiler in which
             // some Erlang BIFs can be replaced with literals if their arguments
             // are literals, such as `binary_to_atom`.
-            atom_string(module.replace("/", "@").to_string())
+            atom_string(module_erlang_name(module).to_string())
                 .append(":")
                 .append(atom_string(name.to_string()))
                 .append(args)
@@ -1716,6 +1888,7 @@ fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
         | TypedExpr::Tuple { .. }
         | TypedExpr::TupleIndex { .. }
         | TypedExpr::Todo { .. }
+        | TypedExpr::Echo { .. }
         | TypedExpr::Panic { .. }
         | TypedExpr::BitArray { .. }
         | TypedExpr::NegateBool { .. }
@@ -1738,6 +1911,28 @@ fn panic<'a>(location: SrcSpan, message: Option<&'a TypedExpr>, env: &mut Env<'a
         None => string("`panic` expression evaluated."),
     };
     erlang_error("panic", &message, location, vec![], env)
+}
+
+fn echo<'a>(body: Document<'a>, location: &SrcSpan, env: &mut Env<'a>) -> Document<'a> {
+    env.echo_used = true;
+
+    let relative_path = env
+        .src_path
+        .strip_prefix(env.project_root)
+        .unwrap_or(env.src_path)
+        .as_str();
+
+    let relative_path_doc = EcoString::from(relative_path)
+        .replace("\\", "\\\\")
+        .to_doc();
+
+    let relative_path_doc = docvec!["\"", relative_path_doc, "\""];
+
+    "echo".to_doc().append(wrap_args(vec![
+        body,
+        relative_path_doc,
+        env.line_numbers.line_number(location.start).to_doc(),
+    ]))
 }
 
 fn erlang_error<'a>(
@@ -1796,15 +1991,27 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
             location, message, ..
         } => panic(*location, message.as_deref(), env),
 
+        TypedExpr::Echo {
+            expression,
+            location,
+            ..
+        } => {
+            let expression = expression
+                .as_ref()
+                .expect("echo with no expression outside of pipe");
+            echo(maybe_block_expr(expression, env), location, env)
+        }
+
         TypedExpr::Int { value, .. } => int(value),
         TypedExpr::Float { value, .. } => float(value),
         TypedExpr::String { value, .. } => string(value),
 
         TypedExpr::Pipeline {
+            first_value,
             assignments,
             finally,
             ..
-        } => pipeline(assignments, finally, env),
+        } => pipeline(first_value, assignments, finally, env),
 
         TypedExpr::Block { statements, .. } => block(statements, env),
 
@@ -1867,7 +2074,11 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
             name, left, right, ..
         } => bin_op(name, left, right, env),
 
-        TypedExpr::Tuple { elems, .. } => tuple(elems.iter().map(|e| maybe_block_expr(e, env))),
+        TypedExpr::Tuple { elements, .. } => tuple(
+            elements
+                .iter()
+                .map(|element| maybe_block_expr(element, env)),
+        ),
 
         TypedExpr::BitArray { segments, .. } => bit_array(
             segments
@@ -1880,19 +2091,55 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
 }
 
 fn pipeline<'a>(
-    assignments: &'a [TypedAssignment],
+    first_value: &'a TypedPipelineAssignment,
+    assignments: &'a [(TypedPipelineAssignment, PipelineAssignmentKind)],
     finally: &'a TypedExpr,
     env: &mut Env<'a>,
 ) -> Document<'a> {
     let mut documents = Vec::with_capacity((assignments.len() + 1) * 3);
 
-    for a in assignments {
-        documents.push(assignment(a, env));
-        documents.push(','.to_doc());
+    let all_assignments = std::iter::once(first_value)
+        .chain(assignments.iter().map(|(assignment, _kind)| assignment));
+
+    let echo_doc = |var_name: &Option<Document<'a>>, location: &SrcSpan, env: &mut Env<'a>| {
+        let name = var_name
+            .to_owned()
+            .expect("echo with no previous step in a pipe");
+        echo(name, location, env)
+    };
+
+    let mut prev_local_var_name = None;
+    for a in all_assignments {
+        match a.value.as_ref() {
+            // An echo in a pipeline won't result in an assignment, instead it
+            // just prints the previous variable assigned in the pipeline.
+            TypedExpr::Echo {
+                expression: None,
+                location,
+                ..
+            } => documents.push(echo_doc(&prev_local_var_name, location, env)),
+
+            // Otherwise we assign the intermediate pipe value to a variable.
+            _ => {
+                let body = maybe_block_expr(&a.value, env).group();
+                let name = env.next_local_var_name(&a.name);
+                prev_local_var_name = Some(name.clone());
+                documents.push(docvec![name, " = ", body]);
+            }
+        };
+        documents.push(",".to_doc());
         documents.push(line());
     }
 
-    documents.push(expr(finally, env));
+    match finally {
+        TypedExpr::Echo {
+            expression: None,
+            location,
+            ..
+        } => documents.push(echo_doc(&prev_local_var_name, location, env)),
+        _ => documents.push(expr(finally, env)),
+    }
+
     documents.to_doc()
 }
 
@@ -2174,15 +2421,15 @@ fn type_var_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
                 }
             }
         },
-        Type::Fn { args, retrn } => {
+        Type::Fn { args, return_ } => {
             for arg in args {
                 type_var_ids(arg, ids)
             }
-            type_var_ids(retrn, ids);
+            type_var_ids(return_, ids);
         }
-        Type::Tuple { elems } => {
-            for elem in elems {
-                type_var_ids(elem, ids)
+        Type::Tuple { elements } => {
+            for element in elements {
+                type_var_ids(element, ids)
             }
         }
     }
@@ -2270,9 +2517,9 @@ impl<'a> TypePrinter<'a> {
                 name, module, args, ..
             } => self.print_type_app(module, name, args),
 
-            Type::Fn { args, retrn } => self.print_fn(args, retrn),
+            Type::Fn { args, return_ } => self.print_fn(args, return_),
 
-            Type::Tuple { elems } => tuple(elems.iter().map(|e| self.print(e))),
+            Type::Tuple { elements } => tuple(elements.iter().map(|element| self.print(element))),
         }
     }
 
@@ -2329,14 +2576,14 @@ impl<'a> TypePrinter<'a> {
         }
     }
 
-    fn print_fn(&self, args: &[Arc<Type>], retrn: &Type) -> Document<'static> {
+    fn print_fn(&self, args: &[Arc<Type>], return_: &Type) -> Document<'static> {
         let args = join(args.iter().map(|a| self.print(a)), ", ".to_doc());
-        let retrn = self.print(retrn);
+        let return_ = self.print(return_);
         "fun(("
             .to_doc()
             .append(args)
             .append(") -> ")
-            .append(retrn)
+            .append(return_)
             .append(")")
     }
 

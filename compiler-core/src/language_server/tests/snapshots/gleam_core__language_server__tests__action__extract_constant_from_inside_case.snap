@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main(result) {\n  case result {\n    Ok(value) -> value + 1\n    Error(_) -> panic\n  }\n}"
+---
+----- BEFORE ACTION
+pub fn main(result) {
+  case result {
+    Ok(value) -> value + 1
+                         ↑
+    Error(_) -> panic
+  }
+}
+
+
+----- AFTER ACTION
+const int = 1
+
+pub fn main(result) {
+  case result {
+    Ok(value) -> value + int
+    Error(_) -> panic
+  }
+}

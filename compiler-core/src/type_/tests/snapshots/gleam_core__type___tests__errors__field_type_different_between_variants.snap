@@ -13,10 +13,10 @@ pub fn get_x(shape: Shape) { shape.x }
 
 ----- ERROR
 error: Unknown record field
-  ┌─ /src/one/two.gleam:6:35
+  ┌─ /src/one/two.gleam:6:36
   │
 6 │ pub fn get_x(shape: Shape) { shape.x }
-  │                                   ^^ This field does not exist
+  │                                    ^ This field does not exist
 
 The value being accessed has this type:
 

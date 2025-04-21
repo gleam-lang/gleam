@@ -1,7 +1,7 @@
 use super::*;
 use crate::{
     assert_js_no_warnings, assert_js_warning, assert_no_warnings, assert_warning,
-    assert_warnings_with_gleam_version, assert_warnings_with_imports,
+    assert_warnings_with_gleam_version,
 };
 
 #[test]
@@ -782,19 +782,6 @@ pub const x = some_module.x
 }
 
 #[test]
-fn no_unused_warnings_for_broken_code() {
-    let src = r#"
-pub fn main() {
-  let x = 1
-  1 + ""
-  x
-}"#;
-    let warnings = VectorWarningEmitterIO::default();
-    _ = compile_module("test_module", src, Some(Rc::new(warnings.clone())), vec![]).unwrap_err();
-    assert!(warnings.take().is_empty());
-}
-
-#[test]
 fn deprecated_constant() {
     assert_warning!(
         r#"
@@ -984,11 +971,11 @@ fn unused_module_wuth_alias_warning_test() {
 
 #[test]
 fn unused_alias_warning_test() {
-    assert_warnings_with_imports!(
-        ("gleam/wibble", "pub const one = 1");
+    assert_warning!(
+        ("gleam/wibble", "pub const one = 1"),
         r#"
             import gleam/wibble.{one} as wobble
-            const one = one
+            pub const one = one
         "#,
     );
 }
@@ -1011,13 +998,13 @@ fn discarded_module_no_warnings_test() {
 
 #[test]
 fn unused_alias_for_duplicate_module_no_warning_for_alias_test() {
-    assert_warnings_with_imports!(
+    assert_warning!(
         ("a/wibble", "pub const one = 1"),
-        ("b/wibble", "pub const two = 2");
+        ("b/wibble", "pub const two = 2"),
         r#"
             import a/wibble
             import b/wibble as wobble
-            const one = wibble.one
+            pub const one = wibble.one
         "#,
     );
 }
@@ -2480,6 +2467,41 @@ pub fn main(a) {
 }
 
 #[test]
+fn missing_float_option_in_bit_array_segment_requires_v1_10() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub fn main() {
+  <<1.2>>
+}
+",
+    );
+}
+
+#[test]
+fn missing_float_option_in_bit_array_constant_segment_requires_v1_10() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "pub const bits = <<1.2>>"
+    );
+}
+
+#[test]
+fn missing_float_option_in_bit_array_pattern_segment_requires_v1_10() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub fn main(a) {
+  case a {
+    <<1.2>> -> Nil
+    _ -> Nil
+  }
+}
+",
+    );
+}
+
+#[test]
 fn record_update_variant_inference_requires_v1_6() {
     assert_warnings_with_gleam_version!(
         Range::higher_than(Version::new(1, 0, 0)),
@@ -2525,7 +2547,7 @@ fn let_assert_with_message_requires_v1_7() {
         Range::higher_than(Version::new(1, 0, 0)),
         r#"
 pub fn main() {
-  let assert Ok(10) = Error(20) as "This will crash..."
+  let assert Ok(10) = Ok(20) as "This will crash..."
 }
 "#,
     );
@@ -2946,5 +2968,88 @@ pub fn main() {
 
 fn each(list, _fun) { list }
 "#
+    );
+}
+
+#[test]
+// https://github.com/gleam-lang/gleam/issues/3425
+fn unused_variable_assignment_pattern() {
+    assert_warning!(
+        "
+type Wibble {
+  Wibble(a: Int, b: Int)
+}
+
+pub fn main() {
+  let Wibble(a:, ..) as w = Wibble(1, 2)
+  a
+}
+"
+    );
+}
+
+#[test]
+fn unused_variable_string_prefix_pattern() {
+    assert_warning!(
+        r#"
+pub fn main() {
+  let assert "hello" as hello <> rest = "hello, world"
+  rest
+}
+"#
+    );
+}
+
+#[test]
+fn unused_variable_string_prefix_pattern2() {
+    assert_warning!(
+        r#"
+pub fn main() {
+  let assert "hello" as hello <> rest = "hello, world"
+  hello
+}
+"#
+    );
+}
+
+#[test]
+fn echo_followed_by_panic() {
+    assert_warning!(
+        "
+pub fn main() {
+  echo panic
+}
+"
+    );
+}
+
+#[test]
+fn echo_followed_by_panicking_expression() {
+    assert_warning!(
+        "
+pub fn main(a) {
+  echo case a {
+    1 -> panic
+    _ -> [1, panic]
+  }
+}
+"
+    );
+}
+
+#[test]
+fn assert_on_inferred_variant() {
+    assert_warning!(
+        "
+type Wibble {
+  Wibble(w: Int)
+  Wobble(w: String)
+}
+
+pub fn main() {
+  let assert Wobble(w) = Wibble(10)
+  w
+}
+"
     );
 }

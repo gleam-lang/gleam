@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 1150
 expression: "\ntype Wibble {\n    Wibble(wibble: String)\n}\n\nfn wobble() {\n  Wibble(\"a\").\n}\n"
 ---
 Parsed {
@@ -48,6 +47,10 @@ Parsed {
                                         ast: Constructor(
                                             TypeAstConstructor {
                                                 location: SrcSpan {
+                                                    start: 34,
+                                                    end: 40,
+                                                },
+                                                name_location: SrcSpan {
                                                     start: 34,
                                                     end: 40,
                                                 },

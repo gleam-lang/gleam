@@ -3,6 +3,10 @@ source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "import other.{Two as Three}\npub fn main() {\n  Three\n}"
 ---
 ----- SOURCE CODE
+-- other.gleam
+pub type One { Two }
+
+-- main.gleam
 import other.{Two as Three}
 pub fn main() {
   Three

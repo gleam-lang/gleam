@@ -17,7 +17,7 @@ use debug_ignore::DebugIgnore;
 use ecow::EcoString;
 use std::{
     io::Write,
-    sync::{atomic::Ordering, Arc},
+    sync::{Arc, atomic::Ordering},
 };
 use std::{rc::Rc, sync::atomic::AtomicUsize};
 use termcolor::Buffer;
@@ -162,6 +162,36 @@ pub enum Warning {
         src: EcoString,
         warning: DeprecatedSyntaxWarning,
     },
+
+    DeprecatedEnvironmentVariable {
+        variable: DeprecatedEnvironmentVariable,
+    },
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Copy)]
+pub enum DeprecatedEnvironmentVariable {
+    HexpmUser,
+    HexpmPass,
+}
+
+impl DeprecatedEnvironmentVariable {
+    fn name(&self) -> &'static str {
+        match self {
+            DeprecatedEnvironmentVariable::HexpmUser => "HEXPM_USER",
+            DeprecatedEnvironmentVariable::HexpmPass => "HEXPM_PASS",
+        }
+    }
+
+    fn message(&self) -> &'static str {
+        match self {
+            DeprecatedEnvironmentVariable::HexpmUser => {
+                "Use the `{API_ENV_NAME}` environment variable instead."
+            }
+            DeprecatedEnvironmentVariable::HexpmPass => {
+                "Use the `{API_ENV_NAME}` environment variable instead."
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
@@ -354,7 +384,7 @@ To match on all possible lists, use the `_` catch-all pattern instead.",
                 }
             }
 
-            Self::Type { path, warning, src } => match warning {
+            Warning::Type { path, warning, src } => match warning {
                 type_::Warning::Todo {
                     kind,
                     location,
@@ -375,7 +405,7 @@ A block must always contain at least one expression.",
                             );
                             "Incomplete block"
                         }
-                        TodoKind::EmptyFunction => "Unimplemented function",
+                        TodoKind::EmptyFunction { .. } => "Unimplemented function",
                         TodoKind::IncompleteUse => {
                             text.push_str(
                                 "
@@ -630,15 +660,10 @@ Hint: You can safely remove it.
                     }),
                 },
 
-                type_::Warning::UnusedVariable {
-                    location,
-                    how_to_ignore,
-                } => Diagnostic {
+                type_::Warning::UnusedVariable { location, origin } => Diagnostic {
                     title: "Unused variable".into(),
                     text: "".into(),
-                    hint: how_to_ignore.as_ref().map(|rewrite_as| {
-                        format!("You can ignore it with an underscore: `{rewrite_as}`.")
-                    }),
+                    hint: origin.how_to_ignore(),
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         src: src.clone(),
@@ -945,6 +970,27 @@ hidden from the package's documentation.",
                     }),
                 },
 
+                type_::Warning::AssertAssignmentOnInferredVariant { location } => Diagnostic {
+                    title: "Assertion that will always fail".into(),
+                    text: wrap(
+                        "We can tell from the code above that the value will never match \
+this pattern and that this code will always crash.
+
+Either change the pattern or use `panic` to unconditionally fail.",
+                    ),
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        label: diagnostic::Label {
+                            text: None,
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
+
                 type_::Warning::TodoOrPanicUsedAsFunction {
                     kind,
                     location,
@@ -1007,14 +1053,21 @@ See: https://tour.gleam.run/advanced-features/{name}/"
                     panic_position: unreachable_code_kind,
                 } => {
                     let text = match unreachable_code_kind {
-                        PanicPosition::PreviousExpression =>
-                            "This code is unreachable because it comes after a `panic`.",
-                        PanicPosition::PreviousFunctionArgument =>
+                        PanicPosition::PreviousExpression => {
+                            "This code is unreachable because it comes after a `panic`."
+                        }
+                        PanicPosition::PreviousFunctionArgument => {
                             "This argument is unreachable because the previous one always panics. \
-Your code will crash before reaching this point.",
-                        PanicPosition::LastFunctionArgument =>
+Your code will crash before reaching this point."
+                        }
+                        PanicPosition::LastFunctionArgument => {
                             "This function call is unreachable because its last argument always panics. \
-Your code will crash before reaching this point.",
+Your code will crash before reaching this point."
+                        }
+                        PanicPosition::EchoExpression => {
+                            "This `echo` won't print anything because the expression it \
+should be printing always panics."
+                        }
                     };
 
                     Diagnostic {
@@ -1069,6 +1122,9 @@ See: https://tour.gleam.run/functions/pipelines/",
                         FeatureKind::UnannotatedUtf8StringSegment => {
                             "The ability to omit the `utf8` annotation for string segments was"
                         }
+                        FeatureKind::UnannotatedFloatSegment => {
+                            "The ability to omit the `float` annotation for float segments was"
+                        }
                         FeatureKind::NestedTupleAccess => {
                             "The ability to access nested tuple fields was"
                         }
@@ -1087,6 +1143,9 @@ See: https://tour.gleam.run/functions/pipelines/",
                         }
                         FeatureKind::VariantWithDeprecatedAnnotation => {
                             "Deprecating individual custom type variants was"
+                        }
+                        FeatureKind::JavaScriptUnalignedBitArray => {
+                            "Use of unaligned bit arrays on the JavaScript target was"
                         }
                     };
 
@@ -1140,6 +1199,23 @@ information.",
                     }),
                 },
             },
+
+            Warning::DeprecatedEnvironmentVariable { variable } => {
+                let name = variable.name();
+                let message = variable.message();
+
+                let text = wrap(&format!(
+                    "The environment variable `{name}` is deprecated.\n\n{message}"
+                ));
+
+                Diagnostic {
+                    title: "Use of deprecated environment variable".into(),
+                    text,
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: None,
+                }
+            }
         }
     }
 

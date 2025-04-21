@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\npub fn main() {\n  <<\"hello\">>\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

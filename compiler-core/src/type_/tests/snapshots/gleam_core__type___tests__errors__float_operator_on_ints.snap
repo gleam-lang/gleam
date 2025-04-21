@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: 1 +. 2
+---
+----- SOURCE CODE
+1 +. 2
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:3
+  │
+1 │ 1 +. 2
+  │   ^^ Use + instead
+
+The +. operator can only be used on Floats.

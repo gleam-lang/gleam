@@ -1,15 +1,15 @@
 use gleam_core::{
+    Result, Warning,
     build::{NullTelemetry, Target},
-    error::{Error, FileIoAction, FileKind},
+    error::{Error, FileIoAction, FileKind, OS, ShellCommandFailureReason, parse_os},
     io::{
-        BeamCompiler, CommandExecutor, Content, DirEntry, FileSystemReader, FileSystemWriter,
-        OutputFile, ReadDir, Stdio, WrappedReader,
+        BeamCompiler, Command, CommandExecutor, Content, DirEntry, FileSystemReader,
+        FileSystemWriter, OutputFile, ReadDir, Stdio, WrappedReader, is_native_file_extension,
     },
     language_server::{DownloadDependencies, Locker, MakeLocker},
     manifest::Manifest,
     paths::ProjectPaths,
     warning::WarningEmitterIO,
-    Result, Warning,
 };
 use std::{
     collections::HashSet,
@@ -54,8 +54,34 @@ pub fn get_project_root(path: Utf8PathBuf) -> Result<Utf8PathBuf, Error> {
     })
 }
 
+pub fn get_os() -> OS {
+    parse_os(std::env::consts::OS, get_distro_str().as_str())
+}
+
+// try to extract the distro id from /etc/os-release
+pub fn extract_distro_id(os_release: String) -> String {
+    let distro = os_release.lines().find(|line| line.starts_with("ID="));
+    if let Some(distro) = distro {
+        let id = distro.split('=').nth(1).unwrap_or("").replace("\"", "");
+        return id;
+    }
+    "".to_string()
+}
+
+pub fn get_distro_str() -> String {
+    let path = Utf8Path::new("/etc/os-release");
+    if std::env::consts::OS != "linux" || !path.exists() {
+        return "other".to_string();
+    }
+    let os_release = read(path);
+    match os_release {
+        Ok(os_release) => extract_distro_id(os_release),
+        Err(_) => "other".to_string(),
+    }
+}
+
 /// A `FileWriter` implementation that writes to the file system.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ProjectIO {
     beam_compiler: Arc<Mutex<crate::beam_compiler::BeamCompiler>>,
 }
@@ -160,21 +186,21 @@ impl FileSystemWriter for ProjectIO {
 }
 
 impl CommandExecutor for ProjectIO {
-    fn exec(
-        &self,
-        program: &str,
-        args: &[String],
-        env: &[(&str, String)],
-        cwd: Option<&Utf8Path>,
-        stdio: Stdio,
-    ) -> Result<i32, Error> {
+    fn exec(&self, command: Command) -> Result<i32, Error> {
+        let Command {
+            program,
+            args,
+            env,
+            cwd,
+            stdio,
+        } = command;
         tracing::trace!(program=program, args=?args.join(" "), env=?env, cwd=?cwd, "command_exec");
-        let result = std::process::Command::new(program)
+        let result = std::process::Command::new(&program)
             .args(args)
             .stdin(stdio.get_process_stdio())
             .stdout(stdio.get_process_stdio())
-            .envs(env.iter().map(|pair| (pair.0, &pair.1)))
-            .current_dir(cwd.unwrap_or_else(|| Utf8Path::new("./")))
+            .envs(env.iter().map(|pair| (&pair.0, &pair.1)))
+            .current_dir(cwd.unwrap_or_else(|| Utf8Path::new("./").to_path_buf()))
             .status();
 
         match result {
@@ -182,12 +208,13 @@ impl CommandExecutor for ProjectIO {
 
             Err(error) => Err(match error.kind() {
                 io::ErrorKind::NotFound => Error::ShellProgramNotFound {
-                    program: program.to_string(),
+                    program,
+                    os: get_os(),
                 },
 
                 other => Error::ShellCommand {
-                    program: program.to_string(),
-                    err: Some(other),
+                    program,
+                    reason: ShellCommandFailureReason::IoError(other),
                 },
             }),
         }
@@ -201,7 +228,7 @@ impl BeamCompiler for ProjectIO {
         lib: &Utf8Path,
         modules: &HashSet<Utf8PathBuf>,
         stdio: Stdio,
-    ) -> Result<(), Error> {
+    ) -> Result<Vec<String>, Error> {
         self.beam_compiler
             .lock()
             .as_mut()
@@ -362,48 +389,87 @@ fn is_gleam_build_dir(e: &ignore::DirEntry) -> bool {
     parent_path.join("gleam.toml").exists()
 }
 
-pub fn gleam_files_excluding_gitignore(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
+/// Walks through all Gleam module files in the directory, even if ignored,
+/// except for those in the `build/` directory. Excludes any Gleam files within
+/// invalid module paths, for example if they or a folder they're in contain a
+/// dot or a hyphen within their names.
+pub fn gleam_files(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
     ignore::WalkBuilder::new(dir)
         .follow_links(true)
-        .require_git(false)
-        .filter_entry(|e| !is_gleam_build_dir(e))
+        .standard_filters(false)
+        .filter_entry(|entry| !is_gleam_build_dir(entry))
         .build()
         .filter_map(Result::ok)
-        .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
+        .filter(|entry| {
+            entry
+                .file_type()
+                .map(|type_| type_.is_file())
+                .unwrap_or(false)
+        })
         .map(ignore::DirEntry::into_path)
-        .map(|pb| Utf8PathBuf::from_path_buf(pb).expect("Non Utf-8 Path"))
+        .map(|path| Utf8PathBuf::from_path_buf(path).expect("Non Utf-8 Path"))
         .filter(move |d| is_gleam_path(d, dir))
 }
 
-pub fn native_files(dir: &Utf8Path) -> Result<impl Iterator<Item = Utf8PathBuf> + '_> {
-    Ok(read_dir(dir)?
-        .flat_map(Result::ok)
-        .map(|e| e.into_path())
-        .filter(|path| {
-            let extension = path.extension().unwrap_or_default();
-            matches!(extension, "erl" | "hrl" | "ex" | "js" | "mjs" | "ts")
-        }))
-}
-
-pub fn private_files_excluding_gitignore(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
+/// Walks through all native files in the directory, such as `.mjs` and `.erl`,
+/// even if ignored.
+pub fn native_files(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
     ignore::WalkBuilder::new(dir)
         .follow_links(true)
-        .require_git(false)
+        .standard_filters(false)
+        .filter_entry(|entry| !is_gleam_build_dir(entry))
         .build()
         .filter_map(Result::ok)
-        .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
+        .filter(|entry| {
+            entry
+                .file_type()
+                .map(|type_| type_.is_file())
+                .unwrap_or(false)
+        })
         .map(ignore::DirEntry::into_path)
-        .map(|pb| Utf8PathBuf::from_path_buf(pb).expect("Non Utf-8 Path"))
+        .map(|path| Utf8PathBuf::from_path_buf(path).expect("Non Utf-8 Path"))
+        .filter(|path| {
+            let extension = path.extension().unwrap_or_default();
+            is_native_file_extension(extension)
+        })
 }
 
-pub fn erlang_files(dir: &Utf8Path) -> Result<impl Iterator<Item = Utf8PathBuf> + '_> {
-    Ok(read_dir(dir)?
-        .flat_map(Result::ok)
-        .map(|e| e.into_path())
+/// Walks through all files in the directory, even if ignored.
+pub fn private_files(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
+    ignore::WalkBuilder::new(dir)
+        .follow_links(true)
+        .standard_filters(false)
+        .build()
+        .filter_map(Result::ok)
+        .filter(|entry| {
+            entry
+                .file_type()
+                .map(|type_| type_.is_file())
+                .unwrap_or(false)
+        })
+        .map(ignore::DirEntry::into_path)
+        .map(|path| Utf8PathBuf::from_path_buf(path).expect("Non Utf-8 Path"))
+}
+
+/// Walks through all `.erl` and `.hrl` files in the directory, even if ignored.
+pub fn erlang_files(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
+    ignore::WalkBuilder::new(dir)
+        .follow_links(true)
+        .standard_filters(false)
+        .build()
+        .filter_map(Result::ok)
+        .filter(|entry| {
+            entry
+                .file_type()
+                .map(|type_| type_.is_file())
+                .unwrap_or(false)
+        })
+        .map(ignore::DirEntry::into_path)
+        .map(|path| Utf8PathBuf::from_path_buf(path).expect("Non Utf-8 Path"))
         .filter(|path| {
             let extension = path.extension().unwrap_or_default();
             extension == "erl" || extension == "hrl"
-        }))
+        })
 }
 
 pub fn create_tar_archive(outputs: Vec<OutputFile>) -> Result<Vec<u8>, Error> {
@@ -634,7 +700,7 @@ pub fn is_inside_git_work_tree(path: &Utf8Path) -> Result<bool, Error> {
 
             other => Err(Error::ShellCommand {
                 program: "git".into(),
-                err: Some(other),
+                reason: ShellCommandFailureReason::IoError(other),
             }),
         },
     }
@@ -652,7 +718,14 @@ pub fn git_init(path: &Utf8Path) -> Result<(), Error> {
 
     let args = vec!["init".into(), "--quiet".into(), path.to_string()];
 
-    match ProjectIO::new().exec("git", &args, &[], None, Stdio::Inherit) {
+    let command = Command {
+        program: "git".to_string(),
+        args,
+        env: vec![],
+        cwd: None,
+        stdio: Stdio::Inherit,
+    };
+    match ProjectIO::new().exec(command) {
         Ok(_) => Ok(()),
         Err(err) => match err {
             Error::ShellProgramNotFound { .. } => Ok(()),

@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\npub fn main() {\n  let wibble = 10\n  let wibble = wibble / 2\n  wibble\n}\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+pub fn main() {
+  let wibble = 10
+  let wibble = wibble / 2
+               ↑▔▔▔▔▔    
+  wibble
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+
+pub fn main() {
+  let wobble = 10
+  let wibble = wobble / 2
+  wibble
+}

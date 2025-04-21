@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/type_/tests/dead_code_detection.rs
+expression: "\nimport wibble\n\npub fn main() {\n  let wibble = 10\n  // This does not reference the `wibble` variable!\n  wibble.wibble\n}\n"
+---
+----- SOURCE CODE
+-- wibble.gleam
+
+pub const wibble = 1
+
+
+-- main.gleam
+
+import wibble
+
+pub fn main() {
+  let wibble = 10
+  // This does not reference the `wibble` variable!
+  wibble.wibble
+}
+
+
+----- WARNING
+warning: Unused variable
+  ┌─ /src/warning/wrn.gleam:5:7
+  │
+5 │   let wibble = 10
+  │       ^^^^^^ This variable is never used
+
+Hint: You can ignore it with an underscore: `_wibble`.

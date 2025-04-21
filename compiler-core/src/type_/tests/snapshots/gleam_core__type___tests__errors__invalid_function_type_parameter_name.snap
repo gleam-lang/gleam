@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
 expression: "fn identity(value: someType) { value }"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 fn identity(value: someType) { value }

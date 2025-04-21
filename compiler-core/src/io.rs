@@ -274,27 +274,9 @@ pub trait FileSystemReader {
     fn canonicalise(&self, path: &Utf8Path) -> Result<Utf8PathBuf, Error>;
 }
 
-/// Iterates over Gleam source files (`.gleam`) in a certain directory.
+/// Iterates over files with the given extension in a certain directory.
 /// Symlinks are followed.
-pub fn gleam_source_files<'a>(
-    io: &'a impl FileSystemReader,
-    dir: &'a Utf8Path,
-) -> impl Iterator<Item = Utf8PathBuf> + 'a {
-    tracing::trace!("gleam_source_files {:?}", dir);
-    files_with_extension(io, dir, "gleam")
-}
-
-/// Iterates over Gleam cache files (`.cache`) in a certain directory.
-/// Symlinks are followed.
-pub fn gleam_cache_files<'a>(
-    io: &'a impl FileSystemReader,
-    dir: &'a Utf8Path,
-) -> impl Iterator<Item = Utf8PathBuf> + 'a {
-    tracing::trace!("gleam_cache_files {:?}", dir);
-    files_with_extension(io, dir, "cache")
-}
-
-fn files_with_extension<'a>(
+pub fn files_with_extension<'a>(
     io: &'a impl FileSystemReader,
     dir: &'a Utf8Path,
     extension: &'a str,
@@ -307,14 +289,17 @@ fn files_with_extension<'a>(
 
 /// A trait used to run other programs.
 pub trait CommandExecutor {
-    fn exec(
-        &self,
-        program: &str,
-        args: &[String],
-        env: &[(&str, String)],
-        cwd: Option<&Utf8Path>,
-        stdio: Stdio,
-    ) -> Result<i32, Error>;
+    fn exec(&self, command: Command) -> Result<i32, Error>;
+}
+
+/// A command one can run with a `CommandExecutor`
+#[derive(Debug, Eq, PartialEq)]
+pub struct Command {
+    pub program: String,
+    pub args: Vec<String>,
+    pub env: Vec<(String, String)>,
+    pub cwd: Option<Utf8PathBuf>,
+    pub stdio: Stdio,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -340,7 +325,7 @@ pub trait BeamCompiler {
         lib: &Utf8Path,
         modules: &HashSet<Utf8PathBuf>,
         stdio: Stdio,
-    ) -> Result<(), Error>;
+    ) -> Result<Vec<String>, Error>;
 }
 
 /// A trait used to write files.
@@ -399,7 +384,7 @@ impl Reader for WrappedReader {
 #[async_trait]
 pub trait HttpClient {
     async fn send(&self, request: http::Request<Vec<u8>>)
-        -> Result<http::Response<Vec<u8>>, Error>;
+    -> Result<http::Response<Vec<u8>>, Error>;
 }
 
 pub trait TarUnpacker {
@@ -441,6 +426,11 @@ pub trait TarUnpacker {
                 err: Some(e.to_string()),
             })
     }
+}
+
+#[inline]
+pub fn is_native_file_extension(extension: &str) -> bool {
+    matches!(extension, "erl" | "hrl" | "ex" | "js" | "mjs" | "ts")
 }
 
 pub fn ordered_map<S, K, V>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>

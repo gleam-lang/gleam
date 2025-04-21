@@ -4,11 +4,11 @@ use crate::{Error, Result};
 
 use ecow::EcoString;
 use hexpm::{
-    version::{Range, ResolutionError, Version},
     Dependency, Release,
+    version::{Range, ResolutionError, Version},
 };
 use pubgrub::{
-    solver::{choose_package_with_fewest_versions, Dependencies},
+    solver::{Dependencies, choose_package_with_fewest_versions},
     type_aliases::Map,
 };
 
@@ -70,14 +70,10 @@ fn parse_exact_version(ver: &str) -> Option<Version> {
     let first_byte = version.as_bytes().first();
 
     // Version is exact if it starts with an explicit == or a number
-    if version.starts_with("==") || first_byte.map_or(false, |v| v.is_ascii_digit()) {
+    if version.starts_with("==") || first_byte.is_some_and(|v| v.is_ascii_digit()) {
         let version = version.replace("==", "");
         let version = version.as_str().trim();
-        if let Ok(v) = Version::parse(version) {
-            Some(v)
-        } else {
-            None
-        }
+        Version::parse(version).ok()
     } else {
         None
     }

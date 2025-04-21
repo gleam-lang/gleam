@@ -1,4 +1,6 @@
-use lsp_types::{GotoDefinitionParams, Location, Position, Range, Url};
+use lsp_types::{
+    GotoDefinitionParams, Location, Position, Range, Url, request::GotoTypeDefinitionParams,
+};
 
 use super::*;
 
@@ -10,7 +12,6 @@ fn definition(tester: &TestProject<'_>, position: Position) -> Option<Location> 
             partial_result_params: Default::default(),
         };
         let response = engine.goto_definition(params);
-
         response.result.unwrap()
     })
 }
@@ -18,37 +19,76 @@ fn definition(tester: &TestProject<'_>, position: Position) -> Option<Location> 
 fn pretty_definition(project: TestProject<'_>, position_finder: PositionFinder) -> String {
     let position = position_finder.find_position(project.src);
     let location = definition(&project, position).expect("a location to jump to");
-    let pretty_destination = location
-        .uri
-        .path_segments()
-        .expect("a location to jump to")
-        // To make snapshots the same both on windows and unix systems we need
-        // to discard windows' `C:` path segment at the beginning of a uri.
-        .skip_while(|segment| *segment == "C:")
-        .join("/");
+    jump_locations_to_string(project, position, vec![location])
+}
 
+fn type_definition(tester: &TestProject<'_>, position: Position) -> Vec<Location> {
+    tester.at(position, |engine, param, _| {
+        let params = GotoTypeDefinitionParams {
+            text_document_position_params: param,
+            work_done_progress_params: Default::default(),
+            partial_result_params: Default::default(),
+        };
+        let response = engine.goto_type_definition(params);
+
+        response.result.unwrap()
+    })
+}
+
+fn pretty_type_definition(project: TestProject<'_>, position_finder: PositionFinder) -> String {
+    let position = position_finder.find_position(project.src);
+    let location = type_definition(&project, position);
+    format!(
+        "Jumping to type definition\n\n{}",
+        jump_locations_to_string(project, position, location)
+    )
+}
+
+fn jump_locations_to_string(
+    project: TestProject<'_>,
+    original_position: Position,
+    locations: Vec<Location>,
+) -> String {
     let src = hover::show_hover(
         project.src,
         Range {
-            start: position,
-            end: position,
+            start: original_position,
+            end: original_position,
         },
-        position,
+        original_position,
     );
 
-    let destination = hover::show_hover(
-        project
-            .src_from_module_url(&location.uri)
-            .expect("a module to jump to"),
-        location.range,
-        location.range.start,
-    );
+    let destinations = locations
+        .iter()
+        .map(|location| {
+            let pretty_destination = location
+                .uri
+                .path_segments()
+                .expect("a location to jump to")
+                // To make snapshots the same both on windows and unix systems we need
+                // to discard windows' `C:` path segment at the beginning of a uri.
+                .skip_while(|segment| *segment == "C:")
+                .join("/");
+
+            let destination_code = hover::show_hover(
+                project
+                    .src_from_module_url(&location.uri)
+                    .expect("a module to jump to"),
+                location.range,
+                location.range.start,
+            );
+
+            format!(
+                "----- Jumped to `{pretty_destination}`
+{destination_code}"
+            )
+        })
+        .join("\n\n");
 
     format!(
         "----- Jumping from `src/app.gleam`
 {src}
------ Jumped to `{pretty_destination}`
-{destination}",
+{destinations}",
     )
 }
 
@@ -62,6 +102,131 @@ macro_rules! assert_goto {
         let output = pretty_definition($project, $position);
         insta::assert_snapshot!(insta::internals::AutoName, output);
     };
+}
+
+#[macro_export]
+macro_rules! assert_goto_type {
+    ($src:literal, $position:expr) => {
+        let project = TestProject::for_source($src);
+        assert_goto_type!(project, $position);
+    };
+    ($project:expr, $position:expr) => {
+        let output = pretty_type_definition($project, $position);
+        insta::assert_snapshot!(insta::internals::AutoName, output);
+    };
+}
+
+#[test]
+fn goto_type_definition_in_same_file() {
+    assert_goto_type!(
+        "
+pub type Wibble {
+  Wibble
+}
+
+pub fn main() {
+  let x = Wibble
+  x
+}",
+        find_position_of("x").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn goto_type_definition_in_different_file_of_same_project() {
+    let src = "
+import wibble.{type Wibble}
+
+pub fn main() {
+  use_wibble(todo)
+}
+
+pub fn use_wibble(wibble: Wibble) { todo }
+";
+
+    assert_goto_type!(
+        TestProject::for_source(src).add_module("wibble", "pub type Wibble"),
+        find_position_of("todo")
+    );
+}
+
+#[test]
+fn goto_type_definition_in_different_file_of_dependency() {
+    let src = "
+import wibble.{type Wibble}
+
+pub fn main() {
+  use_wibble(todo)
+}
+
+pub fn use_wibble(wibble: Wibble) { todo }
+";
+
+    assert_goto_type!(
+        TestProject::for_source(src).add_dep_module("wibble", "pub type Wibble"),
+        find_position_of("todo")
+    );
+}
+
+#[test]
+fn goto_type_definition_can_jump_to_multiple_types() {
+    let src = "
+import wibble.{type Wibble, Wibble}
+import box.{Box}
+
+pub fn main() {
+  let a = Box(Wibble)
+}
+";
+
+    assert_goto_type!(
+        TestProject::for_source(src)
+            .add_dep_module("wibble", "pub type Wibble { Wibble }")
+            .add_dep_module("box", "pub type Box(a) { Box(a) }"),
+        find_position_of("let a")
+    );
+}
+
+#[test]
+fn goto_type_definition_can_jump_to_all_types_in_a_tuple() {
+    let src = "
+import wibble.{type Wibble}
+import wobble.{type Wobble}
+import box.{type Box}
+
+pub fn main() {
+  let a: #(Box(Wibble), Wobble) = todo
+}
+";
+
+    assert_goto_type!(
+        TestProject::for_source(src)
+            .add_dep_module("wibble", "pub type Wibble { Wibble }")
+            .add_dep_module("wobble", "pub type Wobble { Wobble }")
+            .add_dep_module("box", "pub type Box(a) { Box(a) }"),
+        find_position_of("let a")
+    );
+}
+
+#[test]
+fn goto_type_definition_can_jump_to_all_types_in_a_function_type() {
+    let src = "
+import wibble.{type Wibble}
+import wobble.{type Wobble}
+import box.{type Box}
+
+pub fn main() {
+  let a = fn(wibble: Wibble) { box.Box(wobble.Wobble) }
+}
+";
+
+    assert_goto_type!(
+        TestProject::for_source(src)
+            .add_dep_module("wibble", "pub type Wibble { Wibble }")
+            .add_dep_module("wobble", "pub type Wobble { Wobble }")
+            .add_dep_module("box", "pub type Box(a) { Box(a) }"),
+        find_position_of("let a")
+    );
 }
 
 #[test]
@@ -624,5 +789,75 @@ pub fn main() {
     assert_goto!(
         TestProject::for_source(code),
         find_position_of("w: Wibble").under_char('i')
+    );
+}
+
+#[test]
+fn goto_definition_module() {
+    let code = "
+import wibble
+
+pub fn main() {
+  wibble.wibble()
+}
+";
+
+    assert_goto!(
+        TestProject::for_source(code).add_module("wibble", "pub fn wibble() {}"),
+        find_position_of("wibble.").under_char('i')
+    );
+}
+
+#[test]
+fn goto_definition_constant() {
+    assert_goto!(
+        "
+const value = 25
+
+const my_constant = value
+",
+        find_position_of("= value").under_char('a')
+    );
+}
+
+#[test]
+fn goto_definition_constant_record() {
+    assert_goto!(
+        "
+type Wibble {
+  Wibble(Int)
+}
+
+const wibble = Wibble(10)
+",
+        find_position_of("Wibble(10)").under_char('l')
+    );
+}
+
+#[test]
+fn goto_definition_imported_constant() {
+    let src = "
+import wibble
+
+const my_constant = wibble.value
+";
+
+    assert_goto!(
+        TestProject::for_source(src).add_hex_module("wibble", "pub const value = 10"),
+        find_position_of("= wibble").under_char('w')
+    );
+}
+
+#[test]
+fn goto_definition_constant_imported_record() {
+    let src = "
+import wibble
+
+const my_constant = wibble.Wibble(10)
+";
+
+    assert_goto!(
+        TestProject::for_source(src).add_hex_module("wibble", "pub type Wibble { Wibble(Int) }"),
+        find_position_of("= wibble").under_char('w')
     );
 }

@@ -7,14 +7,6 @@ use gleam_core::{
     paths::ProjectPaths,
 };
 
-use crate::fs::{get_current_directory, get_project_root};
-
-pub fn root_config() -> Result<PackageConfig, Error> {
-    let dir = get_project_root(get_current_directory()?)?;
-    let paths = ProjectPaths::new(dir);
-    read(paths.root_config())
-}
-
 #[derive(Debug, Clone, Copy)]
 pub enum PackageKind {
     Dependency,
@@ -47,7 +39,7 @@ pub fn find_package_config_for_module(
         return Ok((configuration, PackageKind::Dependency));
     }
 
-    Ok((root_config()?, PackageKind::Root))
+    Ok((root_config(project_paths)?, PackageKind::Root))
 }
 
 fn package_root(package: &ManifestPackage, project_paths: &ProjectPaths) -> Utf8PathBuf {
@@ -58,6 +50,10 @@ fn package_root(package: &ManifestPackage, project_paths: &ProjectPaths) -> Utf8
             project_paths.build_packages_package(&package.name)
         }
     }
+}
+
+pub fn root_config(paths: &ProjectPaths) -> Result<PackageConfig, Error> {
+    read(paths.root_config())
 }
 
 pub fn read(config_path: Utf8PathBuf) -> Result<PackageConfig, Error> {

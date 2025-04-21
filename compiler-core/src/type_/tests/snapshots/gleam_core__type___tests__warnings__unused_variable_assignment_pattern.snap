@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\ntype Wibble {\n  Wibble(a: Int, b: Int)\n}\n\npub fn main() {\n  let Wibble(a:, ..) as w = Wibble(1, 2)\n  a\n}\n"
+---
+----- SOURCE CODE
+
+type Wibble {
+  Wibble(a: Int, b: Int)
+}
+
+pub fn main() {
+  let Wibble(a:, ..) as w = Wibble(1, 2)
+  a
+}
+
+
+----- WARNING
+warning: Unused variable
+  ┌─ /src/warning/wrn.gleam:7:25
+  │
+7 │   let Wibble(a:, ..) as w = Wibble(1, 2)
+  │                         ^ This variable is never used
+
+Hint: You can safely remove it.

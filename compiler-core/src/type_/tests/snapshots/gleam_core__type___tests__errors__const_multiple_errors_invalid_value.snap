@@ -13,7 +13,7 @@ error: Unknown variable
 1 │ const invalid_value: String = MyInvalidValue
   │                               ^^^^^^^^^^^^^^
 
-The name `MyInvalidValue` is not in scope here.
+The custom type variant constructor `MyInvalidValue` is not in scope here.
 
 error: Type mismatch
   ┌─ /src/one/two.gleam:2:39

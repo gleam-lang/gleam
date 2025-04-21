@@ -5,6 +5,7 @@ pub(crate) mod name;
 mod tests;
 
 use crate::{
+    GLEAM_CORE_PACKAGE_NAME,
     ast::{
         self, Arg, BitArrayOption, CustomType, Definition, DefinitionLocation, Function,
         GroupedStatements, Import, ModuleConstant, Publicity, RecordConstructor,
@@ -14,26 +15,26 @@ use crate::{
         UntypedModule, UntypedModuleConstant, UntypedStatement, UntypedTypeAlias,
     },
     build::{Origin, Outcome, Target},
-    call_graph::{into_dependency_order, CallGraphNode},
+    call_graph::{CallGraphNode, into_dependency_order},
     config::PackageConfig,
     dep_tree,
     line_numbers::LineNumbers,
     parse::SpannedString,
+    reference::{EntityKind, ReferenceKind},
     type_::{
-        self,
+        self, AccessorsMap, Deprecation, FieldMap, ModuleInterface, Opaque, PatternConstructor,
+        RecordAccessor, References, Type, TypeAliasConstructor, TypeConstructor,
+        TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors, ValueConstructor,
+        ValueConstructorVariant, Warning,
         environment::*,
-        error::{convert_unify_error, Error, FeatureKind, MissingAnnotation, Named, Problems},
+        error::{Error, FeatureKind, MissingAnnotation, Named, Problems, convert_unify_error},
         expression::{ExprTyper, FunctionDefinition, Implementations},
-        fields::{FieldMap, FieldMapBuilder},
+        fields::FieldMapBuilder,
         hydrator::Hydrator,
         prelude::*,
-        AccessorsMap, Deprecation, ModuleInterface, PatternConstructor, RecordAccessor, Type,
-        TypeConstructor, TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors,
-        ValueConstructor, ValueConstructorVariant, Warning,
     },
     uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
-    GLEAM_CORE_PACKAGE_NAME,
 };
 use camino::Utf8PathBuf;
 use ecow::EcoString;
@@ -74,7 +75,7 @@ impl<T> Inferred<T> {
 }
 
 impl Inferred<PatternConstructor> {
-    pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
+    pub fn definition_location(&self) -> Option<DefinitionLocation> {
         match self {
             Inferred::Known(value) => value.definition_location(),
             Inferred::Unknown => None,
@@ -84,6 +85,13 @@ impl Inferred<PatternConstructor> {
     pub fn get_documentation(&self) -> Option<&str> {
         match self {
             Inferred::Known(value) => value.get_documentation(),
+            Inferred::Unknown => None,
+        }
+    }
+
+    pub fn field_map(&self) -> Option<&FieldMap> {
+        match self {
+            Inferred::Known(value) => value.field_map.as_ref(),
             Inferred::Unknown => None,
         }
     }
@@ -202,7 +210,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let env = Environment::new(
             self.ids.clone(),
             self.package_config.name.clone(),
-            self.package_config.gleam_version.clone(),
+            self.package_config
+                .gleam_version
+                .clone()
+                .map(|version| version.as_pubgrub()),
             self.module_name.clone(),
             self.target,
             self.importable_modules,
@@ -300,6 +311,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             module_values: values,
             accessors,
             names: type_names,
+            module_type_aliases: type_aliases,
+            echo_found,
             ..
         } = env;
 
@@ -319,7 +332,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
 
         let module = ast::Module {
-            documentation,
+            documentation: documentation.clone(),
             name: self.module_name.clone(),
             definitions: typed_statements,
             type_info: ModuleInterface {
@@ -335,6 +348,18 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 src_path: self.src_path,
                 warnings,
                 minimum_required_version: self.minimum_required_version,
+                type_aliases,
+                documentation,
+                contains_echo: echo_found,
+                references: References {
+                    imported_modules: env
+                        .imported_modules
+                        .values()
+                        .map(|(_location, module)| module.name.clone())
+                        .collect(),
+                    value_references: env.references.value_references,
+                    type_references: env.references.type_references,
+                },
             },
             names: type_names,
         };
@@ -366,6 +391,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             ..
         } = c;
         self.check_name_case(name_location, &name, Named::Constant);
+
+        environment.references.begin_constant();
 
         let definition = FunctionDefinition {
             has_body: true,
@@ -402,6 +429,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 location,
                 literal: typed_expr.clone(),
                 module: self.module_name.clone(),
+                name: name.clone(),
                 implementations,
             },
             type_: type_.clone(),
@@ -416,14 +444,17 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         );
         environment.insert_module_value(name.clone(), variant);
 
-        if publicity.is_private() {
-            environment.init_usage(
-                name.clone(),
-                EntityKind::PrivateConstant,
-                location,
-                &mut self.problems,
-            );
-        }
+        environment
+            .references
+            .register_constant(name.clone(), location, publicity);
+
+        environment.references.register_value_reference(
+            environment.current_module.clone(),
+            name.clone(),
+            &name,
+            name_location,
+            ReferenceKind::Definition,
+        );
 
         Definition::ModuleConstant(ModuleConstant {
             documentation: doc,
@@ -510,6 +541,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .zip(&prereg_args_types)
             .map(|(a, t)| a.set_type(t.clone()))
             .collect_vec();
+
+        // We have already registered the function in the `register_value_from_function`
+        // method, but here we must set this as the current function again, so that anything
+        // we reference in the body of it can be tracked properly in the call graph.
+        environment.references.set_current_node(name.clone());
 
         // Infer the type using the preregistered args + return types as a starting point
         let result = environment.in_new_scope(&mut self.problems, |environment, problems| {
@@ -627,6 +663,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             preregistered_type.clone(),
             publicity,
             deprecation.clone(),
+        );
+
+        environment.references.register_value_reference(
+            environment.current_module.clone(),
+            name.clone(),
+            &name,
+            name_location,
+            ReferenceKind::Definition,
         );
 
         Definition::Function(Function {
@@ -847,27 +891,28 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                         .expect("Could not find preregistered type for function");
                     let preregistered_type = preregistered_fn.type_.clone();
 
-                    let args =
-                        if let Some((args_types, _return_type)) = preregistered_type.fn_types() {
-                            args.into_iter()
-                                .zip(&args_types)
-                                .map(|(argument, t)| {
-                                    if let Some((location, label)) = &argument.label {
-                                        self.check_name_case(*location, label, Named::Label);
-                                    }
+                    let args = match preregistered_type.fn_types() {
+                        Some((args_types, _return_type)) => args
+                            .into_iter()
+                            .zip(&args_types)
+                            .map(|(argument, t)| {
+                                if let Some((location, label)) = &argument.label {
+                                    self.check_name_case(*location, label, Named::Label);
+                                }
 
-                                    RecordConstructorArg {
-                                        label: argument.label,
-                                        ast: argument.ast,
-                                        location: argument.location,
-                                        type_: t.clone(),
-                                        doc: argument.doc,
-                                    }
-                                })
-                                .collect()
-                        } else {
+                                RecordConstructorArg {
+                                    label: argument.label,
+                                    ast: argument.ast,
+                                    location: argument.location,
+                                    type_: t.clone(),
+                                    doc: argument.doc,
+                                }
+                            })
+                            .collect(),
+                        _ => {
                             vec![]
-                        };
+                        }
+                    };
 
                     RecordConstructor {
                         location,
@@ -958,25 +1003,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .type_
             .clone();
 
-        let Accessors {
-            shared_accessors,
-            variant_specific_accessors,
-        } = custom_type_accessors(constructors, &mut hydrator, environment, &mut self.problems)?;
-
-        let map = AccessorsMap {
-            publicity: if *opaque {
-                Publicity::Private
-            } else {
-                *publicity
-            },
-            shared_accessors,
-            // TODO: improve the ownership here so that we can use the
-            // `return_type_constructor` below rather than looking it up twice.
-            type_: type_.clone(),
-            variant_specific_accessors,
-        };
-        environment.insert_accessors(name.clone(), map);
-
         let mut constructors_data = vec![];
 
         let mut index = 0;
@@ -990,12 +1016,35 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 continue;
             }
 
-            let mut field_map = FieldMap::new(constructor.arguments.len() as u32);
+            // If the constructor belongs to an opaque type then it's going to be
+            // considered as private.
+            let value_constructor_publicity = if *opaque {
+                Publicity::Private
+            } else {
+                *publicity
+            };
+
+            environment.references.register_value(
+                constructor.name.clone(),
+                EntityKind::Constructor,
+                constructor.location,
+                value_constructor_publicity,
+            );
+
+            environment
+                .references
+                .register_type_reference_in_call_graph(name.clone());
+
+            let mut field_map_builder = FieldMapBuilder::new(constructor.arguments.len() as u32);
             let mut args_types = Vec::with_capacity(constructor.arguments.len());
             let mut fields = Vec::with_capacity(constructor.arguments.len());
 
-            for (i, RecordConstructorArg { label, ast, .. }) in
-                constructor.arguments.iter().enumerate()
+            for RecordConstructorArg {
+                label,
+                ast,
+                location,
+                ..
+            } in constructor.arguments.iter()
             {
                 // Build a type from the annotation AST
                 let t = match hydrator.type_from_ast(ast, environment, &mut self.problems) {
@@ -1006,22 +1055,25 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     }
                 };
 
-                fields.push(TypeValueConstructorField { type_: t.clone() });
+                fields.push(TypeValueConstructorField {
+                    type_: t.clone(),
+                    label: label.as_ref().map(|(_location, label)| label.clone()),
+                });
 
                 // Register the type for this parameter
                 args_types.push(t);
 
-                // Register the label for this parameter, if there is one
-                if let Some((location, label)) = label {
-                    if field_map.insert(label.clone(), i as u32).is_err() {
-                        self.problems.error(Error::DuplicateField {
-                            label: label.clone(),
-                            location: *location,
-                        });
-                    };
+                let (label_location, label) = match label {
+                    Some((location, label)) => (*location, Some(label)),
+                    None => (*location, None),
+                };
+
+                // Register the label for this parameter
+                if let Err(error) = field_map_builder.add(label, label_location) {
+                    self.problems.error(error);
                 }
             }
-            let field_map = field_map.into_option();
+            let field_map = field_map_builder.finish();
             // Insert constructor function into module scope
             let mut type_ = type_.deref().clone();
             type_.set_custom_type_variant(index as u16);
@@ -1044,14 +1096,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             };
             index += 1;
 
-            // If the contructor belongs to an opaque type then it's going to be
-            // considered as private.
-            let value_constructor_publicity = if *opaque {
-                Publicity::Private
-            } else {
-                *publicity
-            };
-
             // If the whole custom type is deprecated all of its varints are too.
             // Otherwise just the varint(s) attributed as deprecated are.
             let deprecate_constructor = if deprecation.is_deprecated() {
@@ -1070,18 +1114,21 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 },
             );
 
-            if value_constructor_publicity.is_private() {
-                environment.init_usage(
-                    constructor.name.clone(),
-                    EntityKind::PrivateTypeConstructor(name.clone()),
-                    constructor.location,
-                    &mut self.problems,
-                );
-            }
+            environment.references.register_value_reference(
+                environment.current_module.clone(),
+                constructor.name.clone(),
+                &constructor.name,
+                constructor.name_location,
+                ReferenceKind::Definition,
+            );
 
             constructors_data.push(TypeValueConstructor {
                 name: constructor.name.clone(),
                 parameters: fields,
+                documentation: constructor
+                    .documentation
+                    .as_ref()
+                    .map(|(_, documentation)| documentation.clone()),
             });
             environment.insert_variable(
                 constructor.name.clone(),
@@ -1098,10 +1145,34 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             );
         }
 
+        let Accessors {
+            shared_accessors,
+            variant_specific_accessors,
+        } = custom_type_accessors(&constructors_data)?;
+
+        let map = AccessorsMap {
+            publicity: if *opaque {
+                Publicity::Private
+            } else {
+                *publicity
+            },
+            shared_accessors,
+            // TODO: improve the ownership here so that we can use the
+            // `return_type_constructor` below rather than looking it up twice.
+            type_: type_.clone(),
+            variant_specific_accessors,
+        };
+        environment.insert_accessors(name.clone(), map);
+
+        let opaque = if *opaque {
+            Opaque::Opaque
+        } else {
+            Opaque::NotOpaque
+        };
         // Now record the constructors for the type.
         environment.insert_type_to_constructors(
             name.clone(),
-            TypeVariantConstructors::new(constructors_data, type_parameters, hydrator),
+            TypeVariantConstructors::new(constructors_data, type_parameters, opaque, hydrator),
         );
 
         Ok(())
@@ -1185,20 +1256,24 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             name.clone(),
         );
 
+        environment
+            .references
+            .register_type(name.clone(), EntityKind::Type, *location, publicity);
+
+        environment.references.register_type_reference(
+            environment.current_module.clone(),
+            name.clone(),
+            name,
+            *name_location,
+            ReferenceKind::Definition,
+        );
+
         if *opaque && constructors.is_empty() {
             self.problems.warning(Warning::OpaqueExternalType {
                 location: *location,
             });
         }
 
-        if publicity.is_private() {
-            environment.init_usage(
-                name.clone(),
-                EntityKind::PrivateType,
-                *location,
-                &mut self.problems,
-            );
-        };
         Ok(())
     }
 
@@ -1225,10 +1300,15 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         self.check_name_case(*name_location, name, Named::TypeAlias);
 
+        environment
+            .references
+            .register_type(name.clone(), EntityKind::Type, *location, *publicity);
+
         // Use the hydrator to convert the AST into a type, erroring if the AST was invalid
         // in some fashion.
         let mut hydrator = Hydrator::new();
         let parameters = self.make_type_vars(args, &mut hydrator, environment);
+        let arity = parameters.len();
         let tryblock = || {
             hydrator.disallow_new_type_variables();
             let type_ = hydrator.type_from_ast(resolved_type, environment, &mut self.problems)?;
@@ -1244,10 +1324,23 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     origin: *location,
                     module: self.module_name.clone(),
                     parameters,
-                    type_,
+                    type_: type_.clone(),
                     deprecation: deprecation.clone(),
                     publicity: *publicity,
                     documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
+                },
+            )?;
+
+            environment.insert_type_alias(
+                name.clone(),
+                TypeAliasConstructor {
+                    origin: *location,
+                    module: self.module_name.clone(),
+                    type_,
+                    publicity: *publicity,
+                    deprecation: deprecation.clone(),
+                    documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
+                    arity,
                 },
             )?;
 
@@ -1262,16 +1355,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         };
         let result = tryblock();
         self.record_if_error(result);
-
-        // Register the type for detection of dead code.
-        if publicity.is_private() {
-            environment.init_usage(
-                name.clone(),
-                EntityKind::PrivateType,
-                *location,
-                &mut self.problems,
-            );
-        };
     }
 
     fn make_type_vars(
@@ -1327,6 +1410,13 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         self.check_name_case(*name_location, name, Named::Function);
 
+        environment.references.register_value(
+            name.clone(),
+            EntityKind::Function,
+            *location,
+            *publicity,
+        );
+
         let mut builder = FieldMapBuilder::new(args.len() as u32);
         for Arg {
             names, location, ..
@@ -1376,14 +1466,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             *publicity,
             deprecation.clone(),
         );
-        if publicity.is_private() {
-            environment.init_usage(
-                name.clone(),
-                EntityKind::PrivateFunction,
-                *location,
-                &mut self.problems,
-            );
-        };
         Ok(())
     }
 
@@ -1592,6 +1674,7 @@ fn generalise_module_constant(
         literal: *value.clone(),
         module: module_name.clone(),
         implementations,
+        name: name.clone(),
     };
     environment.insert_variable(
         name.clone(),
@@ -1727,46 +1810,39 @@ struct Accessors {
     variant_specific_accessors: Vec<HashMap<EcoString, RecordAccessor>>,
 }
 
-fn custom_type_accessors<A: std::fmt::Debug>(
-    constructors: &[RecordConstructor<A>],
-    hydrator: &mut Hydrator,
-    environment: &mut Environment<'_>,
-    problems: &mut Problems,
-) -> Result<Accessors, Error> {
+fn custom_type_accessors(constructors: &[TypeValueConstructor]) -> Result<Accessors, Error> {
     let args = get_compatible_record_fields(constructors);
 
     let mut shared_accessors = HashMap::with_capacity(args.len());
 
-    hydrator.disallow_new_type_variables();
-    for (index, label, ast) in args {
-        let type_ = hydrator.type_from_ast(ast, environment, problems)?;
+    for (index, label, type_) in args {
         let _ = shared_accessors.insert(
             label.clone(),
             RecordAccessor {
                 index: index as u64,
                 label: label.clone(),
-                type_,
+                type_: type_.clone(),
             },
         );
     }
 
-    let mut variant_specific_accessors = Vec::with_capacity(constructors.len());
+    let mut variant_specific_accessors: Vec<HashMap<EcoString, RecordAccessor>> =
+        Vec::with_capacity(constructors.len());
 
     for constructor in constructors {
-        let mut fields = HashMap::with_capacity(constructor.arguments.len());
+        let mut fields = HashMap::with_capacity(constructor.parameters.len());
 
-        for (index, argument) in constructor.arguments.iter().enumerate() {
-            let Some((_location, label)) = &argument.label else {
+        for (index, parameter) in constructor.parameters.iter().enumerate() {
+            let Some(label) = &parameter.label else {
                 continue;
             };
 
-            let type_ = hydrator.type_from_ast(&argument.ast, environment, problems)?;
             let _ = fields.insert(
                 label.clone(),
                 RecordAccessor {
                     index: index as u64,
                     label: label.clone(),
-                    type_,
+                    type_: parameter.type_.clone(),
                 },
             );
         }
@@ -1781,9 +1857,9 @@ fn custom_type_accessors<A: std::fmt::Debug>(
 
 /// Returns the fields that have the same label and type across all variants of
 /// the given type.
-fn get_compatible_record_fields<A: std::fmt::Debug>(
-    constructors: &[RecordConstructor<A>],
-) -> Vec<(usize, &EcoString, &TypeAst)> {
+fn get_compatible_record_fields(
+    constructors: &[TypeValueConstructor],
+) -> Vec<(usize, &EcoString, &Arc<Type>)> {
     let mut compatible = vec![];
 
     let first = match constructors.first() {
@@ -1791,10 +1867,10 @@ fn get_compatible_record_fields<A: std::fmt::Debug>(
         None => return compatible,
     };
 
-    'next_argument: for (index, first_argument) in first.arguments.iter().enumerate() {
+    'next_argument: for (index, first_parameter) in first.parameters.iter().enumerate() {
         // Fields without labels do not have accessors
-        let first_label = match first_argument.label.as_ref() {
-            Some((_, label)) => label,
+        let first_label = match first_parameter.label.as_ref() {
+            Some(label) => label,
             None => continue 'next_argument,
         };
 
@@ -1802,22 +1878,22 @@ fn get_compatible_record_fields<A: std::fmt::Debug>(
         // with the same label and the same type
         for constructor in constructors.iter().skip(1) {
             // The field must exist in all variants
-            let argument = match constructor.arguments.get(index) {
+            let parameter = match constructor.parameters.get(index) {
                 Some(argument) => argument,
                 None => continue 'next_argument,
             };
 
             // The labels must be the same
-            if argument
+            if parameter
                 .label
                 .as_ref()
-                .is_none_or(|(_, arg_label)| arg_label != first_label)
+                .is_none_or(|arg_label| arg_label != first_label)
             {
                 continue 'next_argument;
             }
 
             // The types must be the same
-            if !argument.ast.is_logically_equal(&first_argument.ast) {
+            if !parameter.type_.same_as(&first_parameter.type_) {
                 continue 'next_argument;
             }
         }
@@ -1825,7 +1901,7 @@ fn get_compatible_record_fields<A: std::fmt::Debug>(
         // The previous loop did not find any incompatible fields in the other
         // variants so this field is compatible across variants and we should
         // generate an accessor for it.
-        compatible.push((index, first_label, &first_argument.ast))
+        compatible.push((index, first_label, &first_parameter.type_))
     }
 
     compatible
@@ -1861,9 +1937,9 @@ fn get_type_dependencies(type_: &TypeAst) -> Vec<EcoString> {
             }
             deps.extend(get_type_dependencies(return_))
         }
-        TypeAst::Tuple(TypeAstTuple { elems, .. }) => {
-            for elem in elems {
-                deps.extend(get_type_dependencies(elem))
+        TypeAst::Tuple(TypeAstTuple { elements, .. }) => {
+            for element in elements {
+                deps.extend(get_type_dependencies(element))
             }
         }
     }

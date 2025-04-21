@@ -6,7 +6,7 @@ BASE=$(dirname "$0")
 COMMAND="${1-default}"
 
 run() {
-  erl \
+  exec erl \
     -pa "$BASE"/*/ebin \
     -eval "$PACKAGE@@main:run($PACKAGE)" \
     -noshell \

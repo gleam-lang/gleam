@@ -5,17 +5,17 @@
 mod into_dependency_order_tests;
 
 use crate::{
+    Result,
     ast::{
         AssignName, BitArrayOption, ClauseGuard, Constant, Pattern, SrcSpan, Statement,
         UntypedClauseGuard, UntypedExpr, UntypedFunction, UntypedModuleConstant, UntypedPattern,
         UntypedStatement,
     },
     type_::Error,
-    Result,
 };
 use itertools::Itertools;
 use petgraph::stable_graph::NodeIndex;
-use petgraph::{stable_graph::StableGraph, Directed};
+use petgraph::{Directed, stable_graph::StableGraph};
 
 #[derive(Debug, Default)]
 struct CallGraphBuilder<'a> {
@@ -179,6 +179,15 @@ impl<'a> CallGraphBuilder<'a> {
                 }
             }
 
+            UntypedExpr::Echo {
+                expression,
+                location: _,
+            } => {
+                if let Some(expression) = expression {
+                    self.expression(expression);
+                }
+            }
+
             // Aha! A variable is being referenced.
             UntypedExpr::Var { name, .. } => {
                 self.referenced(name);
@@ -197,8 +206,8 @@ impl<'a> CallGraphBuilder<'a> {
                 }
             }
 
-            UntypedExpr::Tuple { elems, .. } => {
-                for expression in elems {
+            UntypedExpr::Tuple { elements, .. } => {
+                for expression in elements {
                     self.expression(expression);
                 }
             }
@@ -278,7 +287,7 @@ impl<'a> CallGraphBuilder<'a> {
                 for subject in subjects {
                     self.expression(subject);
                 }
-                for clause in clauses {
+                for clause in clauses.as_deref().unwrap_or_default() {
                     let names = self.names.clone();
                     for pattern in &clause.pattern {
                         self.pattern(pattern);
@@ -314,7 +323,7 @@ impl<'a> CallGraphBuilder<'a> {
             }
 
             Pattern::Tuple {
-                elems: patterns, ..
+                elements: patterns, ..
             } => {
                 for pattern in patterns {
                     self.pattern(pattern);

@@ -1,14 +1,18 @@
 use crate::{
+    Error, Result, Warning,
     analyse::TargetSupport,
     build::{
-        package_compiler, package_compiler::PackageCompiler, package_loader::StaleTracker,
-        project_compiler, telemetry::Telemetry, Mode, Module, Origin, Package, Target,
+        Mode, Module, Origin, Package, Target,
+        package_compiler::{self, PackageCompiler},
+        package_loader::StaleTracker,
+        project_compiler,
+        telemetry::Telemetry,
     },
     codegen::{self, ErlangApp},
     config::PackageConfig,
     dep_tree,
-    error::{FileIoAction, FileKind},
-    io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
+    error::{FileIoAction, FileKind, ShellCommandFailureReason},
+    io::{BeamCompiler, Command, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     manifest::{ManifestPackage, ManifestPackageSource},
     metadata,
     paths::{self, ProjectPaths},
@@ -16,7 +20,6 @@ use crate::{
     uid::UniqueIdGenerator,
     version::COMPILER_VERSION,
     warning::{self, WarningEmitter, WarningEmitterIO},
-    Error, Result, Warning,
 };
 use ecow::EcoString;
 use hexpm::version::Version;
@@ -33,8 +36,9 @@ use std::{
 };
 
 use super::{
-    elixir_libraries::ElixirLibraries, package_compiler::CachedWarnings, Codegen, Compile,
-    ErlangAppCodegenConfiguration, Outcome,
+    Codegen, Compile, ErlangAppCodegenConfiguration, Outcome,
+    elixir_libraries::ElixirLibraries,
+    package_compiler::{CachedWarnings, Compiled},
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -65,7 +69,7 @@ pub struct Options {
 #[derive(Debug)]
 pub struct Built {
     pub root_package: Package,
-    module_interfaces: im::HashMap<EcoString, type_::ModuleInterface>,
+    pub module_interfaces: im::HashMap<EcoString, type_::ModuleInterface>,
     compiled_dependency_modules: Vec<Module>,
 }
 
@@ -166,14 +170,19 @@ where
         self.options.target.unwrap_or(self.config.target)
     }
 
-    /// Compiles all packages in the project and returns the compiled
-    /// information from the root package
-    pub fn compile(mut self) -> Result<Built> {
+    pub fn reset_state_for_new_compile_run(&mut self) {
         // We make sure the stale module tracker is empty before we start, to
         // avoid mistakenly thinking a module is stale due to outdated state
         // from a previous build. A ProjectCompiler instance is re-used by the
         // LSP engine so state could be reused if we don't reset it.
+
         self.stale_modules.empty();
+    }
+
+    /// Compiles all packages in the project and returns the compiled
+    /// information from the root package
+    pub fn compile(mut self) -> Result<Built> {
+        self.reset_state_for_new_compile_run();
 
         // Each package may specify a Gleam version that it supports, so we
         // verify that this version is appropriate.
@@ -208,7 +217,16 @@ where
     pub fn compile_root_package(&mut self) -> Outcome<Package, Error> {
         let config = self.config.clone();
         self.compile_gleam_package(&config, true, self.paths.root().to_path_buf())
-            .map(|modules| Package { config, modules })
+            .map(
+                |Compiled {
+                     modules,
+                     cached_module_names,
+                 }| Package {
+                    config,
+                    modules,
+                    cached_module_names,
+                },
+            )
     }
 
     /// Checks that version file found in the build directory matches the
@@ -244,6 +262,11 @@ where
     }
 
     pub fn compile_dependencies(&mut self) -> Result<Vec<Module>, Error> {
+        assert!(
+            self.stale_modules.is_empty(),
+            "The project compiler stale tracker was not emptied from the previous compilation"
+        );
+
         let sequence = order_packages(&self.packages)?;
         let mut modules = vec![];
 
@@ -299,7 +322,7 @@ where
                 return Err(Error::UnsupportedBuildTool {
                     package: package.name.to_string(),
                     build_tools: package.build_tools.clone(),
-                })
+                });
             }
         };
 
@@ -358,33 +381,37 @@ where
         self.io.mkdir(&package_build)?;
         self.io.copy_dir(&package, &package_build)?;
 
-        let env = [
-            ("ERL_LIBS", "../*/ebin".into()),
-            ("REBAR_BARE_COMPILER_OUTPUT_DIR", package_build.to_string()),
-            ("REBAR_PROFILE", "prod".into()),
-            ("TERM", "dumb".into()),
+        let env = vec![
+            ("ERL_LIBS".to_string(), "../*/ebin".to_string()),
+            (
+                "REBAR_BARE_COMPILER_OUTPUT_DIR".to_string(),
+                package_build.to_string(),
+            ),
+            ("REBAR_PROFILE".to_string(), "prod".to_string()),
+            ("REBAR_SKIP_PROJECT_PLUGINS".to_string(), "true".to_string()),
+            ("TERM".to_string(), "dumb".to_string()),
         ];
-        let args = [
+        let args = vec![
             "bare".into(),
             "compile".into(),
             "--paths".into(),
             "../*/ebin".into(),
         ];
 
-        let status = self.io.exec(
-            REBAR_EXECUTABLE,
-            &args,
-            &env,
-            Some(&package_build),
-            self.subprocess_stdio,
-        )?;
+        let status = self.io.exec(Command {
+            program: REBAR_EXECUTABLE.into(),
+            args,
+            env,
+            cwd: Some(package_build),
+            stdio: self.subprocess_stdio,
+        })?;
 
         if status == 0 {
             Ok(())
         } else {
             Err(Error::ShellCommand {
                 program: "rebar3".into(),
-                err: None,
+                reason: ShellCommandFailureReason::Unknown,
             })
         }
     }
@@ -447,29 +474,30 @@ where
             }
         }
 
-        let env = [
-            ("MIX_BUILD_PATH", mix_path(&mix_build_dir)),
-            ("MIX_ENV", mix_target.into()),
-            ("MIX_QUIET", "1".into()),
-            ("TERM", "dumb".into()),
+        let env = vec![
+            ("MIX_BUILD_PATH".to_string(), mix_path(&mix_build_dir)),
+            ("MIX_ENV".to_string(), mix_target.to_string()),
+            ("MIX_QUIET".to_string(), "1".to_string()),
+            ("TERM".to_string(), "dumb".to_string()),
         ];
-        let args = [
-            "-pa".into(),
+        let args = vec![
+            "-pa".to_string(),
             mix_path(&ebins),
-            "-S".into(),
-            "mix".into(),
-            "compile".into(),
-            "--no-deps-check".into(),
-            "--no-load-deps".into(),
-            "--no-protocol-consolidation".into(),
+            "-S".to_string(),
+            "mix".to_string(),
+            "compile".to_string(),
+            "--no-deps-check".to_string(),
+            "--no-load-deps".to_string(),
+            "--no-protocol-consolidation".to_string(),
         ];
-        let status = self.io.exec(
-            ELIXIR_EXECUTABLE,
-            &args,
-            &env,
-            Some(&project_dir),
-            self.subprocess_stdio,
-        )?;
+
+        let status = self.io.exec(Command {
+            program: ELIXIR_EXECUTABLE.into(),
+            args,
+            env,
+            cwd: Some(project_dir),
+            stdio: self.subprocess_stdio,
+        })?;
 
         if status == 0 {
             // TODO: unit test
@@ -482,7 +510,7 @@ where
         } else {
             Err(Error::ShellCommand {
                 program: "mix".into(),
-                err: None,
+                reason: ShellCommandFailureReason::Unknown,
             })
         }
     }
@@ -514,6 +542,7 @@ where
         let config = PackageConfig::read(config_path, &self.io)?;
         self.compile_gleam_package(&config, false, package_root)
             .into_result()
+            .map(|compiled| compiled.modules)
     }
 
     fn compile_gleam_package(
@@ -521,7 +550,7 @@ where
         config: &PackageConfig,
         is_root: bool,
         root_path: Utf8PathBuf,
-    ) -> Outcome<Vec<Module>, Error> {
+    ) -> Outcome<Compiled, Error> {
         let out_path =
             self.paths
                 .build_directory_for_package(self.mode(), self.target(), &config.name);

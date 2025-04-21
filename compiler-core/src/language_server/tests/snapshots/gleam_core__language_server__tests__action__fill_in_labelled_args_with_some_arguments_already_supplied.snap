@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  wibble(1,)\n}\n\npub fn wibble(arg1 arg1, arg2 arg2) { Nil }\n "
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  wibble(1,)
+    ↑       
+}
+
+pub fn wibble(arg1 arg1, arg2 arg2) { Nil }
+ 
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  wibble(1,arg2: todo)
+}
+
+pub fn wibble(arg1 arg1, arg2 arg2) { Nil }

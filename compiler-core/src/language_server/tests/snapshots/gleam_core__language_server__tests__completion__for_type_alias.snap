@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-assertion_line: 535
 expression: "\npub type Wibble = Result(\n  String,\n  String\n)\n"
 ---
 pub type Wibble = Result(

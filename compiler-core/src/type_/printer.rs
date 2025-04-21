@@ -1,9 +1,9 @@
 use bimap::BiMap;
-use ecow::EcoString;
+use ecow::{EcoString, eco_format};
 use im::HashMap;
 use std::{collections::HashSet, sync::Arc};
 
-use crate::type_::{collapse_links, Type, TypeVar};
+use crate::type_::{Type, TypeVar};
 
 /// This class keeps track of what names are used for modules in the current
 /// scope, so they can be printed in errors, etc.
@@ -126,9 +126,7 @@ fn compare_arguments(arguments: &[Arc<Type>], parameters: &[Arc<Type>]) -> bool 
     arguments
         .iter()
         .zip(parameters)
-        .all(|(argument, parameter)| {
-            collapse_links(argument.clone()) == collapse_links(parameter.clone())
-        })
+        .all(|(argument, parameter)| argument.same_as(parameter))
 }
 
 impl Names {
@@ -232,7 +230,7 @@ impl Names {
         module: &'a EcoString,
         name: &'a EcoString,
     ) -> NameContextInformation<'a> {
-        let key: (EcoString, EcoString) = (module.clone(), name.clone());
+        let key = (module.clone(), name.clone());
 
         // There is a local name for this value, use that.
         if let Some(name) = self.local_value_constructors.get_by_left(&key) {
@@ -245,6 +243,10 @@ impl Names {
         };
 
         NameContextInformation::Unimported(name.as_str())
+    }
+
+    pub fn is_imported(&self, module: &str) -> bool {
+        self.imported_modules.contains_key(module)
     }
 }
 
@@ -318,6 +320,13 @@ impl<'a> Printer<'a> {
         buffer
     }
 
+    pub fn print_module(&self, module: &str) -> EcoString {
+        match self.names.imported_modules.get(module) {
+            Some(module) => module.clone(),
+            _ => module.split("/").last().unwrap_or(module).into(),
+        }
+    }
+
     pub fn print_type_without_aliases(&mut self, type_: &Type) -> EcoString {
         let mut buffer = EcoString::new();
         self.print(type_, &mut buffer, PrintMode::ExpandAliases);
@@ -335,7 +344,7 @@ impl<'a> Printer<'a> {
                     // TODO: indicate that the module is not import and as such
                     // needs to be, as well as how.
                     NameContextInformation::Unimported(n) => {
-                        (Some(module.split('/').last().unwrap_or(module)), n)
+                        (Some(module.split('/').next_back().unwrap_or(module)), n)
                     }
                 };
 
@@ -352,11 +361,11 @@ impl<'a> Printer<'a> {
                 }
             }
 
-            Type::Fn { args, retrn } => {
+            Type::Fn { args, return_ } => {
                 buffer.push_str("fn(");
                 self.print_arguments(args, buffer, print_mode);
                 buffer.push_str(") -> ");
-                self.print(retrn, buffer, print_mode);
+                self.print(return_, buffer, print_mode);
             }
 
             Type::Var { type_, .. } => match *type_.borrow() {
@@ -366,24 +375,39 @@ impl<'a> Printer<'a> {
                 }
             },
 
-            Type::Tuple { elems, .. } => {
+            Type::Tuple { elements, .. } => {
                 buffer.push_str("#(");
-                self.print_arguments(elems, buffer, print_mode);
+                self.print_arguments(elements, buffer, print_mode);
                 buffer.push(')');
             }
+        }
+    }
+
+    pub fn print_constructor(&mut self, module: &EcoString, name: &EcoString) -> EcoString {
+        let (module, name) = match self.names.named_constructor(module, name) {
+            NameContextInformation::Qualified(module, name) => (Some(module), name),
+            NameContextInformation::Unqualified(name) => (None, name),
+            NameContextInformation::Unimported(name) => {
+                (Some(module.split('/').next_back().unwrap_or(module)), name)
+            }
+        };
+
+        match module {
+            Some(module) => eco_format!("{module}.{name}"),
+            None => name.into(),
         }
     }
 
     fn print_arguments(
         &mut self,
         args: &[Arc<Type>],
-        typ_str: &mut EcoString,
+        type_str: &mut EcoString,
         print_mode: PrintMode,
     ) {
         for (i, arg) in args.iter().enumerate() {
-            self.print(arg, typ_str, print_mode);
+            self.print(arg, type_str, print_mode);
             if i < args.len() - 1 {
-                typ_str.push_str(", ");
+                type_str.push_str(", ");
             }
         }
     }
@@ -524,7 +548,7 @@ fn test_tuple_type() {
     let mut printer = Printer::new(&names);
 
     let type_ = Type::Tuple {
-        elems: vec![
+        elements: vec![
             Arc::new(Type::Named {
                 name: "Int".into(),
                 args: vec![],
@@ -573,7 +597,7 @@ fn test_fn_type() {
                 inferred_variant: None,
             }),
         ],
-        retrn: Arc::new(Type::Named {
+        return_: Arc::new(Type::Named {
             name: "Bool".into(),
             args: vec![],
             module: "gleam".into(),

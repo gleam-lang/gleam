@@ -1,19 +1,18 @@
 use camino::{Utf8Path, Utf8PathBuf};
 
 use gleam_core::{
-    error::{FileIoAction, FileKind},
     Error, Result,
+    error::{FileIoAction, FileKind},
+    paths::ProjectPaths,
 };
 
 use crate::{
     cli,
-    dependencies::{parse_gleam_add_specifier, UseManifest},
+    dependencies::{UseManifest, parse_gleam_add_specifier},
     fs,
 };
 
-pub fn command(packages_to_add: Vec<String>, dev: bool) -> Result<()> {
-    let paths = crate::find_project_paths()?;
-
+pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) -> Result<()> {
     let mut new_package_requirements = Vec::with_capacity(packages_to_add.len());
     for specifier in packages_to_add {
         new_package_requirements.push(parse_gleam_add_specifier(&specifier)?);
@@ -22,7 +21,7 @@ pub fn command(packages_to_add: Vec<String>, dev: bool) -> Result<()> {
     // Insert the new packages into the manifest and perform dependency
     // resolution to determine suitable versions
     let manifest = crate::dependencies::download(
-        &paths,
+        paths,
         cli::Reporter::new(),
         Some((new_package_requirements.clone(), dev)),
         Vec::new(),
@@ -30,8 +29,8 @@ pub fn command(packages_to_add: Vec<String>, dev: bool) -> Result<()> {
     )?;
 
     // Read gleam.toml and manifest.toml so we can insert new deps into it
-    let mut gleam_toml = read_toml_edit("gleam.toml")?;
-    let mut manifest_toml = read_toml_edit("manifest.toml")?;
+    let mut gleam_toml = read_toml_edit(&paths.root_config())?;
+    let mut manifest_toml = read_toml_edit(&paths.manifest())?;
 
     // Insert the new deps
     for (added_package, _) in new_package_requirements {
@@ -74,13 +73,13 @@ pub fn command(packages_to_add: Vec<String>, dev: bool) -> Result<()> {
     }
 
     // Write the updated config
-    fs::write(Utf8Path::new("gleam.toml"), &gleam_toml.to_string())?;
-    fs::write(Utf8Path::new("manifest.toml"), &manifest_toml.to_string())?;
+    fs::write(&paths.root_config(), &gleam_toml.to_string())?;
+    fs::write(&paths.manifest(), &manifest_toml.to_string())?;
 
     Ok(())
 }
 
-fn read_toml_edit(name: &str) -> Result<toml_edit::DocumentMut, Error> {
+fn read_toml_edit(name: &Utf8Path) -> Result<toml_edit::DocumentMut, Error> {
     fs::read(name)?
         .parse::<toml_edit::DocumentMut>()
         .map_err(|e| Error::FileIo {

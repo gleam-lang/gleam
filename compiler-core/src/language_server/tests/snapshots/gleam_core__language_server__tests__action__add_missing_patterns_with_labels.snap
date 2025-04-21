@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub type Wibble {\n  Wibble(integer: Int, float: Float)\n  Wobble(string: String, bool: Bool)\n}\n\npub fn main(w: Wibble) {\n  case w {}\n}\n"
+---
+----- BEFORE ACTION
+
+pub type Wibble {
+  Wibble(integer: Int, float: Float)
+  Wobble(string: String, bool: Bool)
+}
+
+pub fn main(w: Wibble) {
+  case w {}
+  ▔▔▔▔▔▔▔↑ 
+}
+
+
+----- AFTER ACTION
+
+pub type Wibble {
+  Wibble(integer: Int, float: Float)
+  Wobble(string: String, bool: Bool)
+}
+
+pub fn main(w: Wibble) {
+  case w {
+    Wibble(integer:, float:) -> todo
+    Wobble(string:, bool:) -> todo
+  }
+}

@@ -1,0 +1,61 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn main() {\n  [1, \"a\", 1.0, \"a\" + 1]\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  [1, "a", 1.0, "a" + 1]
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:7
+  │
+3 │   [1, "a", 1.0, "a" + 1]
+  │       ^^^
+
+All elements of a list must be the same type, but this one doesn't
+match the one before it.
+
+Expected type:
+
+    Int
+
+Found type:
+
+    String
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:12
+  │
+3 │   [1, "a", 1.0, "a" + 1]
+  │            ^^^
+
+All elements of a list must be the same type, but this one doesn't
+match the one before it.
+
+Expected type:
+
+    Int
+
+Found type:
+
+    Float
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:17
+  │
+3 │   [1, "a", 1.0, "a" + 1]
+  │                 ^^^
+
+The + operator expects arguments of this type:
+
+    Int
+
+But this argument has this type:
+
+    String
+
+Hint: Strings can be joined using the `<>` operator.

@@ -7,6 +7,8 @@ mod feedback;
 mod files;
 mod messages;
 mod progress;
+mod reference;
+mod rename;
 mod router;
 mod server;
 mod signature_help;
@@ -17,18 +19,18 @@ mod tests;
 pub use server::LanguageServer;
 
 use crate::{
-    ast::SrcSpan, build::Target, line_numbers::LineNumbers, manifest::Manifest,
-    paths::ProjectPaths, Result,
+    Result, ast::SrcSpan, build::Target, line_numbers::LineNumbers, manifest::Manifest,
+    paths::ProjectPaths,
 };
 use camino::Utf8PathBuf;
-use lsp_types::{Position, Range, Url};
+use lsp_types::{Position, Range, TextEdit, Url};
 use std::any::Any;
 
 #[derive(Debug)]
 pub struct LockGuard(pub Box<dyn Any>);
 
 pub trait Locker {
-    fn lock_for_build(&self) -> LockGuard;
+    fn lock_for_build(&self) -> Result<LockGuard>;
 }
 
 pub trait MakeLocker {
@@ -49,6 +51,60 @@ pub fn src_span_to_lsp_range(location: SrcSpan, line_numbers: &LineNumbers) -> R
     )
 }
 
+pub fn lsp_range_to_src_span(range: Range, line_numbers: &LineNumbers) -> SrcSpan {
+    let Range { start, end } = range;
+    let start = line_numbers.byte_index(start.line, start.character);
+    let end = line_numbers.byte_index(end.line, end.character);
+    SrcSpan { start, end }
+}
+
+/// A little wrapper around LineNumbers to make it easier to build text edits.
+///
+#[derive(Debug)]
+pub struct TextEdits<'a> {
+    line_numbers: &'a LineNumbers,
+    edits: Vec<TextEdit>,
+}
+
+impl<'a> TextEdits<'a> {
+    pub fn new(line_numbers: &'a LineNumbers) -> Self {
+        TextEdits {
+            line_numbers,
+            edits: vec![],
+        }
+    }
+
+    pub fn src_span_to_lsp_range(&self, location: SrcSpan) -> Range {
+        src_span_to_lsp_range(location, self.line_numbers)
+    }
+
+    pub fn lsp_range_to_src_span(&self, range: Range) -> SrcSpan {
+        lsp_range_to_src_span(range, self.line_numbers)
+    }
+
+    pub fn replace(&mut self, location: SrcSpan, new_text: String) {
+        self.edits.push(TextEdit {
+            range: src_span_to_lsp_range(location, self.line_numbers),
+            new_text,
+        })
+    }
+
+    pub fn insert(&mut self, at: u32, new_text: String) {
+        self.replace(SrcSpan { start: at, end: at }, new_text)
+    }
+
+    pub fn delete(&mut self, location: SrcSpan) {
+        self.replace(location, "".to_string())
+    }
+
+    fn delete_range(&mut self, range: Range) {
+        self.edits.push(TextEdit {
+            range,
+            new_text: "".into(),
+        })
+    }
+}
+
 fn path(uri: &Url) -> Utf8PathBuf {
     // The to_file_path method is available on these platforms
     #[cfg(any(unix, windows, target_os = "redox", target_os = "wasi"))]
@@ -57,4 +113,27 @@ fn path(uri: &Url) -> Utf8PathBuf {
 
     #[cfg(not(any(unix, windows, target_os = "redox", target_os = "wasi")))]
     return Utf8PathBuf::from_path_buf(uri.path().into()).expect("Non Utf8 Path");
+}
+
+fn url_from_path(path: &str) -> Option<Url> {
+    // The targets for which `from_file_path` is defined
+    #[cfg(any(
+        unix,
+        windows,
+        target_os = "redox",
+        target_os = "wasi",
+        target_os = "hermit"
+    ))]
+    let uri = Url::from_file_path(path).ok();
+
+    #[cfg(not(any(
+        unix,
+        windows,
+        target_os = "redox",
+        target_os = "wasi",
+        target_os = "hermit"
+    )))]
+    let uri = Url::parse(&format!("file://{path}")).ok();
+
+    uri
 }

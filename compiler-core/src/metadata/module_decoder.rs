@@ -1,26 +1,28 @@
 #![allow(clippy::unnecessary_wraps)] // Needed for macro
 
-use capnp::text;
+use capnp::{text, text_list};
 use ecow::EcoString;
 use itertools::Itertools;
 
 use crate::{
+    Result,
     ast::{
         BitArrayOption, BitArraySegment, CallArg, Constant, Publicity, SrcSpan, TypedConstant,
         TypedConstantBitArraySegment, TypedConstantBitArraySegmentOption,
     },
     build::Origin,
     line_numbers::LineNumbers,
+    reference::{Reference, ReferenceKind, ReferenceMap},
     schema_capnp::{self as schema, *},
     type_::{
-        self, expression::Implementations, AccessorsMap, Deprecation, FieldMap, ModuleInterface,
-        RecordAccessor, Type, TypeConstructor, TypeValueConstructor, TypeValueConstructorField,
-        TypeVariantConstructors, ValueConstructor, ValueConstructorVariant,
+        self, AccessorsMap, Deprecation, FieldMap, ModuleInterface, Opaque, RecordAccessor,
+        References, Type, TypeAliasConstructor, TypeConstructor, TypeValueConstructor,
+        TypeValueConstructorField, TypeVariantConstructors, ValueConstructor,
+        ValueConstructorVariant, expression::Implementations,
     },
     uid::UniqueIdGenerator,
-    Result,
 };
-use std::{collections::HashMap, io::BufRead, sync::Arc};
+use std::{collections::HashMap, collections::HashSet, io::BufRead, sync::Arc};
 
 macro_rules! read_vec {
     ($reader:expr, $self:expr, $method:ident) => {{
@@ -83,6 +85,10 @@ impl ModuleDecoder {
             src_path: self.str(reader.get_src_path()?)?.into(),
             warnings: vec![],
             minimum_required_version: self.version(&reader.get_required_version()?),
+            type_aliases: read_hashmap!(reader.get_type_aliases()?, self, type_alias_constructor),
+            documentation: self.string_list(reader.get_documentation()?)?,
+            contains_echo: reader.get_contains_echo(),
+            references: self.references(reader.get_references()?)?,
         })
     }
 
@@ -90,10 +96,66 @@ impl ModuleDecoder {
         self.str(reader).map(|str| str.into())
     }
 
+    fn string_list(&self, reader: text_list::Reader<'_>) -> Result<Vec<EcoString>> {
+        let mut vec = Vec::with_capacity(reader.len() as usize);
+        for reader in reader.into_iter() {
+            vec.push(self.string(reader?)?);
+        }
+        Ok(vec)
+    }
+
     fn str<'a>(&self, reader: text::Reader<'a>) -> Result<&'a str> {
         reader
             .to_str()
-            .map_err(|_| capnp::Error::failed("String contains non-utf8 charaters".into()).into())
+            .map_err(|_| capnp::Error::failed("String contains non-utf8 characters".into()).into())
+    }
+
+    fn references(&self, reader: references::Reader<'_>) -> Result<References> {
+        Ok(References {
+            imported_modules: self.string_set(reader.get_imported_modules()?)?,
+            value_references: self.reference_map(reader.get_value_references()?)?,
+            type_references: self.reference_map(reader.get_type_references()?)?,
+        })
+    }
+
+    fn string_set(&self, reader: text_list::Reader<'_>) -> Result<HashSet<EcoString>> {
+        let mut set = HashSet::with_capacity(reader.len() as usize);
+        for reader in reader.into_iter() {
+            let _ = set.insert(self.string(reader?)?);
+        }
+        Ok(set)
+    }
+
+    fn reference_map(
+        &self,
+        reader: capnp::struct_list::Reader<'_, reference_map::Owned>,
+    ) -> Result<ReferenceMap> {
+        let mut map = HashMap::with_capacity(reader.len() as usize);
+        for prop in reader.into_iter() {
+            let module = self.string(prop.get_module()?)?;
+            let name = self.string(prop.get_name()?)?;
+            let references = read_vec!(prop.get_references()?, self, reference);
+            let _ = map.insert((module, name), references);
+        }
+        Ok(map)
+    }
+
+    fn reference(&self, reader: &reference::Reader<'_>) -> Result<Reference> {
+        Ok(Reference {
+            location: self.src_span(&reader.get_location()?)?,
+            kind: self.reference_kind(&reader.get_kind()?)?,
+        })
+    }
+
+    fn reference_kind(&self, reader: &reference_kind::Reader<'_>) -> Result<ReferenceKind> {
+        use reference_kind::Which;
+        Ok(match reader.which()? {
+            Which::Qualified(_) => ReferenceKind::Qualified,
+            Which::Unqualified(_) => ReferenceKind::Unqualified,
+            Which::Import(_) => ReferenceKind::Import,
+            Which::Definition(_) => ReferenceKind::Definition,
+            Which::Alias(_) => ReferenceKind::Alias,
+        })
     }
 
     fn type_constructor(
@@ -117,6 +179,30 @@ impl ModuleDecoder {
             type_,
             deprecation,
             documentation: self.optional_string(self.str(reader.get_documentation()?)?),
+        })
+    }
+
+    fn type_alias_constructor(
+        &mut self,
+        reader: &type_alias_constructor::Reader<'_>,
+    ) -> Result<TypeAliasConstructor> {
+        let type_ = self.type_(&reader.get_type()?)?;
+        let deprecation = reader.get_deprecation()?;
+        let deprecation = if deprecation.is_empty() {
+            Deprecation::NotDeprecated
+        } else {
+            Deprecation::Deprecated {
+                message: self.string(deprecation)?,
+            }
+        };
+        Ok(TypeAliasConstructor {
+            publicity: self.publicity(reader.get_publicity()?)?,
+            origin: self.src_span(&reader.get_origin()?)?,
+            module: self.string(reader.get_module()?)?,
+            type_,
+            deprecation,
+            documentation: self.optional_string(self.str(reader.get_documentation()?)?),
+            arity: reader.get_arity() as usize,
         })
     }
 
@@ -148,14 +234,14 @@ impl ModuleDecoder {
     }
 
     fn type_fn(&mut self, reader: &schema::type_::fn_::Reader<'_>) -> Result<Arc<Type>> {
-        let retrn = self.type_(&reader.get_return()?)?;
+        let return_ = self.type_(&reader.get_return()?)?;
         let args = read_vec!(&reader.get_arguments()?, self, type_);
-        Ok(Arc::new(Type::Fn { args, retrn }))
+        Ok(Arc::new(Type::Fn { args, return_ }))
     }
 
     fn type_tuple(&mut self, reader: &schema::type_::tuple::Reader<'_>) -> Result<Arc<Type>> {
-        let elems = read_vec!(&reader.get_elements()?, self, type_);
-        Ok(Arc::new(Type::Tuple { elems }))
+        let elements = read_vec!(&reader.get_elements()?, self, type_);
+        Ok(Arc::new(Type::Tuple { elements }))
     }
 
     fn type_var(&mut self, reader: &schema::type_::var::Reader<'_>) -> Result<Arc<Type>> {
@@ -189,9 +275,16 @@ impl ModuleDecoder {
             self,
             type_variant_constructor_type_parameter_id
         );
+        let opaque = if reader.get_opaque() {
+            Opaque::Opaque
+        } else {
+            Opaque::NotOpaque
+        };
+
         Ok(TypeVariantConstructors {
             variants,
             type_parameters_ids,
+            opaque,
         })
     }
 
@@ -210,6 +303,7 @@ impl ModuleDecoder {
                 self,
                 type_value_constructor_parameter
             ),
+            documentation: self.optional_string(self.str(reader.get_documentation()?)?),
         })
     }
 
@@ -219,6 +313,7 @@ impl ModuleDecoder {
     ) -> Result<TypeValueConstructorField> {
         Ok(TypeValueConstructorField {
             type_: self.type_(&reader.get_type()?)?,
+            label: self.optional_string(self.str(reader.get_label()?)?),
         })
     }
 
@@ -336,6 +431,7 @@ impl ModuleDecoder {
             tag,
             type_,
             field_map: None,
+            record_constructor: None,
         })
     }
 
@@ -482,6 +578,7 @@ impl ModuleDecoder {
             location: self.src_span(&reader.get_location()?)?,
             literal: self.constant(&reader.get_literal()?)?,
             module: self.string(reader.get_module()?)?,
+            name: self.string(reader.get_name()?)?,
             implementations: self.implementations(reader.get_implementations()?),
         })
     }
@@ -564,7 +661,7 @@ impl ModuleDecoder {
 
     fn accessors_map(&mut self, reader: &accessors_map::Reader<'_>) -> Result<AccessorsMap> {
         Ok(AccessorsMap {
-            publicity: Publicity::Public,
+            publicity: self.publicity(reader.get_publicity()?)?,
             type_: self.type_(&reader.get_type()?)?,
             shared_accessors: read_hashmap!(&reader.get_shared_accessors()?, self, record_accessor),
             variant_specific_accessors: read_vec!(

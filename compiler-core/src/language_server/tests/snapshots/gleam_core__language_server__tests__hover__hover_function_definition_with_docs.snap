@@ -13,6 +13,6 @@ fn append(x, y) {
 ----- Hover content -----
 Scalar(
     String(
-        "```gleam\nfn(String, String) -> String\n```\n Exciting documentation\n Maybe even multiple lines\n",
+        "```gleam\nfn(String, String) -> String\n```\n Exciting documentation\n Maybe even multiple lines",
     ),
 )

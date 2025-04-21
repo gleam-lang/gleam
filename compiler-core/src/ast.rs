@@ -12,12 +12,14 @@ pub use self::untyped::{FunctionLiteralKind, UntypedExpr};
 pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
 use crate::analyse::Inferred;
-use crate::build::{Located, Target};
+use crate::build::{ExpressionPosition, Located, Target, module_erlang_name};
 use crate::parse::SpannedString;
+use crate::type_::error::VariableOrigin;
 use crate::type_::expression::Implementations;
 use crate::type_::printer::Names;
 use crate::type_::{
-    self, Deprecation, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor,
+    self, Deprecation, ModuleValueConstructor, PatternConstructor, Type, TypedCallArg,
+    ValueConstructor,
 };
 use std::sync::Arc;
 
@@ -33,6 +35,7 @@ pub const RECORD_UPDATE_VARIABLE: &str = "_record";
 pub const ASSERT_FAIL_VARIABLE: &str = "_assert_fail";
 pub const ASSERT_SUBJECT_VARIABLE: &str = "_assert_subject";
 pub const CAPTURE_VARIABLE: &str = "_capture";
+pub const BLOCK_VARIABLE: &str = "_block";
 
 pub trait HasLocation {
     fn location(&self) -> SrcSpan;
@@ -51,11 +54,23 @@ pub struct Module<Info, Statements> {
     pub names: Names,
 }
 
+impl<Info, Statements> Module<Info, Statements> {
+    pub fn erlang_name(&self) -> EcoString {
+        module_erlang_name(&self.name)
+    }
+}
+
 impl TypedModule {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         self.definitions
             .iter()
             .find_map(|statement| statement.find_node(byte_index))
+    }
+
+    pub fn find_statement(&self, byte_index: u32) -> Option<&TypedStatement> {
+        self.definitions
+            .iter()
+            .find_map(|definition| definition.find_statement(byte_index))
     }
 }
 
@@ -262,6 +277,7 @@ impl<T: PartialEq> RecordConstructorArg<T> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeAstConstructor {
     pub location: SrcSpan,
+    pub name_location: SrcSpan,
     pub module: Option<(EcoString, SrcSpan)>,
     pub name: EcoString,
     pub arguments: Vec<TypeAst>,
@@ -283,7 +299,7 @@ pub struct TypeAstVar {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeAstTuple {
     pub location: SrcSpan,
-    pub elems: Vec<TypeAst>,
+    pub elements: Vec<TypeAst>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -319,12 +335,14 @@ impl TypeAst {
                 name,
                 arguments,
                 location: _,
+                name_location: _,
             }) => match other {
                 TypeAst::Constructor(TypeAstConstructor {
                     module: o_module,
                     name: o_name,
                     arguments: o_arguments,
                     location: _,
+                    name_location: _,
                 }) => {
                     let module_name =
                         |m: &Option<(EcoString, _)>| m.as_ref().map(|(m, _)| m.clone());
@@ -364,15 +382,18 @@ impl TypeAst {
                 }) => name == o_name,
                 _ => false,
             },
-            TypeAst::Tuple(TypeAstTuple { elems, location: _ }) => match other {
+            TypeAst::Tuple(TypeAstTuple {
+                elements,
+                location: _,
+            }) => match other {
                 TypeAst::Tuple(TypeAstTuple {
-                    elems: o_elems,
+                    elements: other_elements,
                     location: _,
                 }) => {
-                    elems.len() == o_elems.len()
-                        && elems
+                    elements.len() == other_elements.len()
+                        && elements
                             .iter()
-                            .zip(o_elems)
+                            .zip(other_elements)
                             .all(|a| a.0.is_logically_equal(a.1))
                 }
                 _ => false,
@@ -411,8 +432,10 @@ impl TypeAst {
 
                     None
                 })
-                .or(Some(Located::Annotation(self.location(), type_))),
-            TypeAst::Constructor(TypeAstConstructor { arguments, .. }) => type_
+                .or(Some(Located::Annotation { ast: self, type_ })),
+            TypeAst::Constructor(TypeAstConstructor {
+                arguments, module, ..
+            }) => type_
                 .constructor_types()
                 .and_then(|arg_types| {
                     if let Some(arg) = arguments
@@ -425,11 +448,22 @@ impl TypeAst {
 
                     None
                 })
-                .or(Some(Located::Annotation(self.location(), type_))),
-            TypeAst::Tuple(TypeAstTuple { elems, .. }) => type_
+                .or(module.as_ref().and_then(|(name, location)| {
+                    if location.contains(byte_index) {
+                        Some(Located::ModuleName {
+                            location: *location,
+                            name,
+                            layer: Layer::Type,
+                        })
+                    } else {
+                        None
+                    }
+                }))
+                .or(Some(Located::Annotation { ast: self, type_ })),
+            TypeAst::Tuple(TypeAstTuple { elements, .. }) => type_
                 .tuple_types()
                 .and_then(|elem_types| {
-                    if let Some(e) = elems
+                    if let Some(e) = elements
                         .iter()
                         .zip(elem_types)
                         .find_map(|(e, e_type)| e.find_node(byte_index, e_type.clone()))
@@ -439,8 +473,8 @@ impl TypeAst {
 
                     None
                 })
-                .or(Some(Located::Annotation(self.location(), type_))),
-            TypeAst::Var(_) | TypeAst::Hole(_) => Some(Located::Annotation(self.location(), type_)),
+                .or(Some(Located::Annotation { ast: self, type_ })),
+            TypeAst::Var(_) | TypeAst::Hole(_) => Some(Located::Annotation { ast: self, type_ }),
         }
     }
 
@@ -451,9 +485,9 @@ impl TypeAst {
             TypeAst::Hole(hole) => buffer.push_str(&hole.name),
             TypeAst::Tuple(tuple) => {
                 buffer.push_str("#(");
-                for (i, elem) in tuple.elems.iter().enumerate() {
-                    elem.print(buffer);
-                    if i < tuple.elems.len() - 1 {
+                for (i, element) in tuple.elements.iter().enumerate() {
+                    element.print(buffer);
+                    if i < tuple.elements.len() - 1 {
                         buffer.push_str(", ");
                     }
                 }
@@ -523,6 +557,7 @@ fn type_ast_print_constructor() {
         name: "SomeType".into(),
         module: Some(("some_module".into(), SrcSpan { start: 1, end: 1 })),
         location: SrcSpan { start: 1, end: 1 },
+        name_location: SrcSpan { start: 1, end: 1 },
         arguments: vec![
             TypeAst::Var(TypeAstVar {
                 location: SrcSpan { start: 1, end: 1 },
@@ -543,11 +578,12 @@ fn type_ast_print_tuple() {
     let mut buffer = EcoString::new();
     let ast = TypeAst::Tuple(TypeAstTuple {
         location: SrcSpan { start: 1, end: 1 },
-        elems: vec![
+        elements: vec![
             TypeAst::Constructor(TypeAstConstructor {
                 name: "SomeType".into(),
                 module: Some(("some_module".into(), SrcSpan { start: 1, end: 1 })),
                 location: SrcSpan { start: 1, end: 1 },
+                name_location: SrcSpan { start: 1, end: 1 },
                 arguments: vec![
                     TypeAst::Var(TypeAstVar {
                         location: SrcSpan { start: 1, end: 1 },
@@ -691,7 +727,7 @@ impl<T> Import<T> {
         match self.as_name.as_ref() {
             Some((AssignName::Variable(name), _)) => Some(name.clone()),
             Some((AssignName::Discard(_), _)) => None,
-            None => self.module.split('/').last().map(EcoString::from),
+            None => self.module.split('/').next_back().map(EcoString::from),
         }
     }
 
@@ -728,6 +764,7 @@ pub struct ModuleConstant<T, ConstantRecordTag> {
 }
 
 pub type UntypedCustomType = CustomType<()>;
+pub type TypedCustomType = CustomType<Arc<Type>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A newly defined type with one or more constructors.
@@ -871,20 +908,21 @@ impl TypedDefinition {
 
             Definition::CustomType(custom) => {
                 // Check if location is within the type of one of the arguments of a constructor.
-                if let Some(annotation) = custom
+                if let Some(constructor) = custom
                     .constructors
                     .iter()
                     .find(|constructor| constructor.location.contains(byte_index))
-                    .and_then(|constructor| {
-                        constructor
-                            .arguments
-                            .iter()
-                            .find(|arg| arg.location.contains(byte_index))
-                    })
-                    .filter(|arg| arg.location.contains(byte_index))
-                    .and_then(|arg| arg.ast.find_node(byte_index, arg.type_.clone()))
                 {
-                    return Some(annotation);
+                    if let Some(annotation) = constructor
+                        .arguments
+                        .iter()
+                        .find(|arg| arg.location.contains(byte_index))
+                        .and_then(|arg| arg.ast.find_node(byte_index, arg.type_.clone()))
+                    {
+                        return Some(annotation);
+                    }
+
+                    return Some(Located::VariantConstructorDefinition(constructor));
                 }
 
                 // Note that the custom type `.location` covers the function
@@ -915,6 +953,10 @@ impl TypedDefinition {
                     if let Some(l) = annotation.find_node(byte_index, constant.type_.clone()) {
                         return Some(l);
                     }
+                }
+
+                if let Some(located) = constant.value.find_node(byte_index) {
+                    return Some(located);
                 }
 
                 if constant.location.contains(byte_index) {
@@ -961,6 +1003,23 @@ impl TypedDefinition {
                     None
                 }
             }
+        }
+    }
+
+    pub fn find_statement(&self, byte_index: u32) -> Option<&TypedStatement> {
+        match self {
+            Definition::Function(function) => {
+                if !function.full_location().contains(byte_index) {
+                    return None;
+                }
+
+                function
+                    .body
+                    .iter()
+                    .find_map(|statement| statement.find_statement(byte_index))
+            }
+
+            _ => None,
         }
     }
 }
@@ -1039,6 +1098,8 @@ impl<A, B, C, E> Definition<A, B, C, E> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnqualifiedImport {
     pub location: SrcSpan,
+    /// The location excluding the potential `as ...` clause, or the `type` keyword
+    pub imported_name_location: SrcSpan,
     pub name: EcoString,
     pub as_name: Option<EcoString>,
 }
@@ -1108,6 +1169,8 @@ pub enum OperatorKind {
     FloatMath,
     StringConcatenation,
 }
+
+pub const PIPE_PRECEDENCE: u8 = 6;
 
 impl BinOp {
     pub fn precedence(&self) -> u8 {
@@ -1191,6 +1254,90 @@ impl BinOp {
     pub fn can_be_grouped_with(&self, other: &BinOp) -> bool {
         self.operator_kind() == other.operator_kind()
     }
+
+    pub(crate) fn is_float_operator(&self) -> bool {
+        match self {
+            BinOp::LtFloat
+            | BinOp::LtEqFloat
+            | BinOp::GtEqFloat
+            | BinOp::GtFloat
+            | BinOp::AddFloat
+            | BinOp::SubFloat
+            | BinOp::MultFloat
+            | BinOp::DivFloat => true,
+
+            BinOp::And
+            | BinOp::Or
+            | BinOp::Eq
+            | BinOp::NotEq
+            | BinOp::LtInt
+            | BinOp::LtEqInt
+            | BinOp::GtEqInt
+            | BinOp::GtInt
+            | BinOp::AddInt
+            | BinOp::SubInt
+            | BinOp::MultInt
+            | BinOp::DivInt
+            | BinOp::RemainderInt
+            | BinOp::Concatenate => false,
+        }
+    }
+
+    pub(crate) fn is_int_operator(&self) -> bool {
+        match self {
+            BinOp::LtInt
+            | BinOp::LtEqInt
+            | BinOp::GtEqInt
+            | BinOp::GtInt
+            | BinOp::AddInt
+            | BinOp::SubInt
+            | BinOp::MultInt
+            | BinOp::DivInt
+            | BinOp::RemainderInt => true,
+
+            BinOp::And
+            | BinOp::Or
+            | BinOp::Eq
+            | BinOp::NotEq
+            | BinOp::LtFloat
+            | BinOp::LtEqFloat
+            | BinOp::GtEqFloat
+            | BinOp::GtFloat
+            | BinOp::AddFloat
+            | BinOp::SubFloat
+            | BinOp::MultFloat
+            | BinOp::DivFloat
+            | BinOp::Concatenate => false,
+        }
+    }
+
+    pub fn float_equivalent(&self) -> Option<BinOp> {
+        match self {
+            BinOp::LtInt => Some(BinOp::LtFloat),
+            BinOp::LtEqInt => Some(BinOp::LtEqFloat),
+            BinOp::GtEqInt => Some(BinOp::GtEqFloat),
+            BinOp::GtInt => Some(BinOp::GtFloat),
+            BinOp::AddInt => Some(BinOp::AddFloat),
+            BinOp::SubInt => Some(BinOp::SubFloat),
+            BinOp::MultInt => Some(BinOp::MultFloat),
+            BinOp::DivInt => Some(BinOp::DivFloat),
+            _ => None,
+        }
+    }
+
+    pub fn int_equivalent(&self) -> Option<BinOp> {
+        match self {
+            BinOp::LtFloat => Some(BinOp::LtInt),
+            BinOp::LtEqFloat => Some(BinOp::LtEqInt),
+            BinOp::GtEqFloat => Some(BinOp::GtEqInt),
+            BinOp::GtFloat => Some(BinOp::GtInt),
+            BinOp::AddFloat => Some(BinOp::AddInt),
+            BinOp::SubFloat => Some(BinOp::SubInt),
+            BinOp::MultFloat => Some(BinOp::MultInt),
+            BinOp::DivFloat => Some(BinOp::DivInt),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -1229,10 +1376,23 @@ impl<A> CallArg<A> {
     pub fn is_implicit(&self) -> bool {
         self.implicit.is_some()
     }
+
+    #[must_use]
+    pub fn is_use_implicit_callback(&self) -> bool {
+        match self.implicit {
+            Some(ImplicitCallArgOrigin::Use | ImplicitCallArgOrigin::IncorrectArityUse) => true,
+            Some(_) | None => false,
+        }
+    }
 }
 
 impl CallArg<TypedExpr> {
-    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+    pub fn find_node<'a>(
+        &'a self,
+        byte_index: u32,
+        called_function: &'a TypedExpr,
+        function_arguments: &'a [TypedCallArg],
+    ) -> Option<Located<'a>> {
         match (self.implicit, &self.value) {
             // If a call argument is the implicit use callback then we don't
             // want to look at its arguments and body but we don't want to
@@ -1254,10 +1414,58 @@ impl CallArg<TypedExpr> {
                 .or_else(|| body.iter().find_map(|s| s.find_node(byte_index))),
             // In all other cases we're happy with the default behaviour.
             //
+            _ => match self.value.find_node(byte_index) {
+                Some(Located::Expression { expression, .. })
+                // This is only possibly a label if we are at the end of the expression
+                // (so not in the middle like `[abc|]`) and if this argument doesn't
+                // already have a label.
+                    if byte_index == self.value.location().end && self.label.is_none() =>
+                {
+                    Some(Located::Expression {
+                        expression,
+                        position: ExpressionPosition::ArgumentOrLabel {
+                            called_function,
+                            function_arguments,
+                        },
+                    })
+                }
+                Some(located) => Some(located),
+                None => {
+                    if self.location.contains(byte_index) && self.label.is_some() {
+                        Some(Located::Label(self.location, self.value.type_()))
+                    } else {
+                        None
+                    }
+                }
+            },
+        }
+    }
+
+    pub fn find_statement(&self, byte_index: u32) -> Option<&TypedStatement> {
+        match (self.implicit, &self.value) {
+            (Some(ImplicitCallArgOrigin::Use), TypedExpr::Invalid { .. }) => None,
+            (Some(ImplicitCallArgOrigin::Use), TypedExpr::Fn { body, .. }) => {
+                body.iter().find_map(|s| s.find_statement(byte_index))
+            }
+
+            _ => self.value.find_statement(byte_index),
+        }
+    }
+
+    pub fn is_capture_hole(&self) -> bool {
+        match &self.value {
+            TypedExpr::Var { name, .. } => name == CAPTURE_VARIABLE,
+            _ => false,
+        }
+    }
+}
+
+impl CallArg<TypedPattern> {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        match self.value.find_node(byte_index) {
+            Some(located) => Some(located),
             _ => {
-                if let Some(located) = self.value.find_node(byte_index) {
-                    Some(located)
-                } else if self.location.contains(byte_index) && self.label.is_some() {
+                if self.location.contains(byte_index) && self.label.is_some() {
                     Some(Located::Label(self.location, self.value.type_()))
                 } else {
                     None
@@ -1267,14 +1475,17 @@ impl CallArg<TypedExpr> {
     }
 }
 
-impl CallArg<TypedPattern> {
+impl CallArg<TypedConstant> {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
-        if let Some(located) = self.value.find_node(byte_index) {
-            Some(located)
-        } else if self.location.contains(byte_index) && self.label.is_some() {
-            Some(Located::Label(self.location, self.value.type_()))
-        } else {
-            None
+        match self.value.find_node(byte_index) {
+            Some(located) => Some(located),
+            _ => {
+                if self.location.contains(byte_index) && self.label.is_some() {
+                    Some(Located::Label(self.location, self.value.type_()))
+                } else {
+                    None
+                }
+            }
         }
     }
 }
@@ -1282,7 +1493,7 @@ impl CallArg<TypedPattern> {
 impl CallArg<UntypedExpr> {
     pub fn is_capture_hole(&self) -> bool {
         match &self.value {
-            UntypedExpr::Var { ref name, .. } => name == CAPTURE_VARIABLE,
+            UntypedExpr::Var { name, .. } => name == CAPTURE_VARIABLE,
             _ => false,
         }
     }
@@ -1321,6 +1532,12 @@ impl UntypedRecordUpdateArg {
     #[must_use]
     pub fn uses_label_shorthand(&self) -> bool {
         self.value.location() == self.location
+    }
+}
+
+impl HasLocation for UntypedRecordUpdateArg {
+    fn location(&self) -> SrcSpan {
+        self.location
     }
 }
 
@@ -1508,6 +1725,7 @@ pub enum ClauseGuard<Type, RecordTag> {
         location: SrcSpan,
         type_: Type,
         name: EcoString,
+        definition_location: SrcSpan,
     },
 
     TupleIndex {
@@ -1664,6 +1882,17 @@ impl SrcSpan {
         byte_index >= self.start && byte_index <= self.end
     }
 
+    /// Merges two spans into a new one that starts at the start of the smaller
+    /// one and ends at the end of the bigger one. For example:
+    ///
+    /// ```txt
+    /// wibble    wobble
+    /// ─┬────    ─┬────
+    ///  │         ╰─ one span
+    ///  ╰─ the other span
+    /// ─┬──────────────
+    ///  ╰─ the span you get by merging the two
+    /// ```
     pub fn merge(&self, with: &SrcSpan) -> SrcSpan {
         Self {
             start: self.start.min(with.start),
@@ -1673,8 +1902,8 @@ impl SrcSpan {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct DefinitionLocation<'module> {
-    pub module: Option<&'module str>,
+pub struct DefinitionLocation {
+    pub module: Option<EcoString>,
     pub span: SrcSpan,
 }
 
@@ -1705,6 +1934,7 @@ pub enum Pattern<Type> {
         location: SrcSpan,
         name: EcoString,
         type_: Type,
+        origin: VariableOrigin,
     },
 
     /// A reference to a variable in a bit array. This is always a variable
@@ -1743,6 +1973,7 @@ pub enum Pattern<Type> {
     /// The constructor for a custom type. Starts with an uppercase letter.
     Constructor {
         location: SrcSpan,
+        name_location: SrcSpan,
         name: EcoString,
         arguments: Vec<CallArg<Self>>,
         module: Option<(EcoString, SrcSpan)>,
@@ -1753,7 +1984,7 @@ pub enum Pattern<Type> {
 
     Tuple {
         location: SrcSpan,
-        elems: Vec<Self>,
+        elements: Vec<Self>,
     },
 
     BitArray {
@@ -1786,7 +2017,7 @@ impl Default for Inferred<()> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum AssignName {
     Variable(EcoString),
     Discard(EcoString),
@@ -1853,7 +2084,7 @@ impl<A> Pattern<A> {
 }
 
 impl TypedPattern {
-    pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
+    pub fn definition_location(&self) -> Option<DefinitionLocation> {
         match self {
             Pattern::Int { .. }
             | Pattern::Float { .. }
@@ -1909,7 +2140,9 @@ impl TypedPattern {
 
             Pattern::Discard { type_, .. } => type_.clone(),
 
-            Pattern::Tuple { elems, .. } => type_::tuple(elems.iter().map(|p| p.type_()).collect()),
+            Pattern::Tuple { elements, .. } => {
+                type_::tuple(elements.iter().map(|p| p.type_()).collect())
+            }
         }
     }
 
@@ -1933,7 +2166,6 @@ impl TypedPattern {
             | Pattern::VarUsage { .. }
             | Pattern::Assign { .. }
             | Pattern::Discard { .. }
-            | Pattern::BitArray { .. }
             | Pattern::StringPrefix { .. }
             | Pattern::Invalid { .. } => Some(Located::Pattern(self)),
 
@@ -1943,7 +2175,7 @@ impl TypedPattern {
                 Some(spread_location) if spread_location.contains(byte_index) => {
                     Some(Located::PatternSpread {
                         spread_location: *spread_location,
-                        arguments,
+                        pattern: self,
                     })
                 }
 
@@ -1954,11 +2186,60 @@ impl TypedPattern {
                 .find_map(|p| p.find_node(byte_index))
                 .or_else(|| tail.as_ref().and_then(|p| p.find_node(byte_index))),
 
-            Pattern::Tuple { elems, .. } => elems.iter().find_map(|p| p.find_node(byte_index)),
+            Pattern::Tuple { elements, .. } => {
+                elements.iter().find_map(|p| p.find_node(byte_index))
+            }
+
+            Pattern::BitArray { segments, .. } => segments
+                .iter()
+                .find_map(|segment| segment.find_node(byte_index))
+                .or(Some(Located::Pattern(self))),
         }
         .or(Some(Located::Pattern(self)))
     }
+
+    /// If the pattern is a `Constructor` with a spread, it returns a tuple with
+    /// all the ignored fields. Split in unlabelled and labelled ones.
+    ///
+    pub(crate) fn unused_arguments(&self) -> Option<PatternUnusedArguments> {
+        let TypedPattern::Constructor {
+            arguments,
+            spread: Some(_),
+            ..
+        } = self
+        else {
+            return None;
+        };
+
+        let mut positional = vec![];
+        let mut labelled = vec![];
+        for argument in arguments {
+            // We only want to display the arguments that were ignored using `..`.
+            // Any argument ignored that way is marked as implicit, so if it is
+            // not implicit we just ignore it.
+            if !argument.is_implicit() {
+                continue;
+            }
+            let type_ = argument.value.type_();
+            match &argument.label {
+                Some(label) => labelled.push((label.clone(), type_)),
+                None => positional.push(type_),
+            }
+        }
+
+        Some(PatternUnusedArguments {
+            positional,
+            labelled,
+        })
+    }
 }
+
+#[derive(Debug, Default)]
+pub struct PatternUnusedArguments {
+    pub positional: Vec<Arc<Type>>,
+    pub labelled: Vec<(EcoString, Arc<Type>)>,
+}
+
 impl<A> HasLocation for Pattern<A> {
     fn location(&self) -> SrcSpan {
         self.location()
@@ -2025,9 +2306,107 @@ pub struct BitArraySegment<Value, Type> {
     pub type_: Type,
 }
 
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Hash)]
+pub enum Endianness {
+    Big,
+    Little,
+}
+
+impl Endianness {
+    pub fn is_big(&self) -> bool {
+        *self == Endianness::Big
+    }
+}
+
+impl<Value> BitArraySegment<Value, Arc<Type>> {
+    #[must_use]
+    pub fn has_native_option(&self) -> bool {
+        self.options
+            .iter()
+            .any(|x| matches!(x, BitArrayOption::Native { .. }))
+    }
+
+    pub fn endianness(&self) -> Endianness {
+        if self
+            .options
+            .iter()
+            .any(|x| matches!(x, BitArrayOption::Little { .. }))
+        {
+            Endianness::Little
+        } else {
+            Endianness::Big
+        }
+    }
+
+    pub(crate) fn signed(&self) -> bool {
+        self.options
+            .iter()
+            .any(|x| matches!(x, BitArrayOption::Signed { .. }))
+    }
+
+    pub fn size(&self) -> Option<&Value> {
+        self.options.iter().find_map(|x| match x {
+            BitArrayOption::Size { value, .. } => Some(value.as_ref()),
+            _ => None,
+        })
+    }
+
+    pub fn unit(&self) -> u8 {
+        self.options
+            .iter()
+            .find_map(|option| match option {
+                BitArrayOption::Unit { value, .. } => Some(*value),
+                BitArrayOption::Bytes { .. } => Some(8),
+                _ => None,
+            })
+            .unwrap_or(1)
+    }
+
+    pub(crate) fn has_bits_option(&self) -> bool {
+        self.options.iter().any(|option| match option {
+            BitArrayOption::Bits { .. } => true,
+            _ => false,
+        })
+    }
+
+    pub(crate) fn has_bytes_option(&self) -> bool {
+        self.options.iter().any(|option| match option {
+            BitArrayOption::Bytes { .. } => true,
+            _ => false,
+        })
+    }
+}
+
+impl<Value, Type> BitArraySegment<Value, Type> {
+    #[must_use]
+    pub(crate) fn has_type_option(&self) -> bool {
+        self.options.iter().any(|option| option.is_type_option())
+    }
+}
+
 impl TypedExprBitArraySegment {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         self.value.find_node(byte_index)
+    }
+}
+
+impl TypedPatternBitArraySegment {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        self.value.find_node(byte_index).or_else(|| {
+            self.options
+                .iter()
+                .find_map(|option| option.find_node(byte_index))
+        })
+    }
+}
+
+impl TypedConstantBitArraySegment {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        self.value.find_node(byte_index).or_else(|| {
+            self.options
+                .iter()
+                .find_map(|option| option.find_node(byte_index))
+        })
     }
 }
 
@@ -2158,12 +2537,83 @@ impl<A> BitArrayOption<A> {
             BitArrayOption::Unit { .. } => "unit".into(),
         }
     }
+
+    fn is_type_option(&self) -> bool {
+        match self {
+            BitArrayOption::Bytes { .. }
+            | BitArrayOption::Int { .. }
+            | BitArrayOption::Float { .. }
+            | BitArrayOption::Bits { .. }
+            | BitArrayOption::Utf8 { .. }
+            | BitArrayOption::Utf16 { .. }
+            | BitArrayOption::Utf32 { .. }
+            | BitArrayOption::Utf8Codepoint { .. }
+            | BitArrayOption::Utf16Codepoint { .. }
+            | BitArrayOption::Utf32Codepoint { .. } => true,
+
+            BitArrayOption::Signed { .. }
+            | BitArrayOption::Unsigned { .. }
+            | BitArrayOption::Big { .. }
+            | BitArrayOption::Little { .. }
+            | BitArrayOption::Native { .. }
+            | BitArrayOption::Size { .. }
+            | BitArrayOption::Unit { .. } => false,
+        }
+    }
+}
+
+impl BitArrayOption<TypedPattern> {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        match self {
+            BitArrayOption::Bytes { .. }
+            | BitArrayOption::Int { .. }
+            | BitArrayOption::Float { .. }
+            | BitArrayOption::Bits { .. }
+            | BitArrayOption::Utf8 { .. }
+            | BitArrayOption::Utf16 { .. }
+            | BitArrayOption::Utf32 { .. }
+            | BitArrayOption::Utf8Codepoint { .. }
+            | BitArrayOption::Utf16Codepoint { .. }
+            | BitArrayOption::Utf32Codepoint { .. }
+            | BitArrayOption::Signed { .. }
+            | BitArrayOption::Unsigned { .. }
+            | BitArrayOption::Big { .. }
+            | BitArrayOption::Little { .. }
+            | BitArrayOption::Native { .. }
+            | BitArrayOption::Unit { .. } => None,
+            BitArrayOption::Size { value, .. } => value.find_node(byte_index),
+        }
+    }
+}
+
+impl BitArrayOption<TypedConstant> {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        match self {
+            BitArrayOption::Bytes { .. }
+            | BitArrayOption::Int { .. }
+            | BitArrayOption::Float { .. }
+            | BitArrayOption::Bits { .. }
+            | BitArrayOption::Utf8 { .. }
+            | BitArrayOption::Utf16 { .. }
+            | BitArrayOption::Utf32 { .. }
+            | BitArrayOption::Utf8Codepoint { .. }
+            | BitArrayOption::Utf16Codepoint { .. }
+            | BitArrayOption::Utf32Codepoint { .. }
+            | BitArrayOption::Signed { .. }
+            | BitArrayOption::Unsigned { .. }
+            | BitArrayOption::Big { .. }
+            | BitArrayOption::Little { .. }
+            | BitArrayOption::Native { .. }
+            | BitArrayOption::Unit { .. } => None,
+            BitArrayOption::Size { value, .. } => value.find_node(byte_index),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum TodoKind {
     Keyword,
-    EmptyFunction,
+    EmptyFunction { function_location: SrcSpan },
     IncompleteUse,
     EmptyBlock,
 }
@@ -2360,13 +2810,6 @@ impl TypedStatement {
         }
     }
 
-    pub fn is_non_pipe_expression(&self) -> bool {
-        match self {
-            Statement::Expression(expression) => !expression.is_pipeline(),
-            _ => false,
-        }
-    }
-
     pub fn location(&self) -> SrcSpan {
         match self {
             Statement::Expression(expression) => expression.location(),
@@ -2394,7 +2837,7 @@ impl TypedStatement {
         }
     }
 
-    pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
+    pub fn definition_location(&self) -> Option<DefinitionLocation> {
         match self {
             Statement::Expression(expression) => expression.definition_location(),
             Statement::Assignment(_) => None,
@@ -2413,6 +2856,22 @@ impl TypedStatement {
                     None
                 }
             }),
+        }
+    }
+
+    pub fn find_statement(&self, byte_index: u32) -> Option<&TypedStatement> {
+        match self {
+            Statement::Use(use_) => use_.call.find_statement(byte_index),
+            Statement::Expression(expression) => expression.find_statement(byte_index),
+            Statement::Assignment(assignment) => {
+                assignment.value.find_statement(byte_index).or_else(|| {
+                    if assignment.location.contains(byte_index) {
+                        Some(self)
+                    } else {
+                        None
+                    }
+                })
+            }
         }
     }
 
@@ -2464,4 +2923,72 @@ impl TypedAssignment {
     pub fn type_(&self) -> Arc<Type> {
         self.value.type_()
     }
+}
+
+/// A pipeline is desugared to a series of assignments:
+///
+/// ```gleam
+/// wibble |> wobble |> woo
+/// ```
+///
+/// Becomes:
+///
+/// ```erl
+/// Pipe1 = wibble
+/// Pipe2 = wobble(Pipe1)
+/// woo(Pipe2)
+/// ```
+///
+/// This represents one of such assignments once the pipeline has been desugared
+/// and each step has been typed.
+///
+/// > We're not using a more general `TypedAssignment` node since that has much
+/// > more informations to carry around. This one is limited since we know it
+/// > will always be in the form `VarName = <Expr>`, with no patterns on the
+/// > left hand side of the assignment.
+/// > Being more constrained simplifies code generation for pipelines!
+///
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypedPipelineAssignment {
+    pub location: SrcSpan,
+    pub name: EcoString,
+    pub value: Box<TypedExpr>,
+}
+
+impl TypedPipelineAssignment {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        self.value.find_node(byte_index)
+    }
+
+    pub fn find_statement(&self, byte_index: u32) -> Option<&TypedStatement> {
+        self.value.find_statement(byte_index)
+    }
+
+    pub fn type_(&self) -> Arc<Type> {
+        self.value.type_()
+    }
+}
+
+/// The kind of desugaring that might take place when rewriting a pipeline to
+/// regular assignments.
+///
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PipelineAssignmentKind {
+    /// In case `a |> b(c)` is desugared to `b(a, c)`.
+    FirstArgument {
+        /// The location of the second argument of the call, in case there's any:
+        /// - `a |> b(c, d)`: here it's `Some` wrapping the location of `c`.
+        /// - `a |> b()`: here it's `None`.
+        second_argument: Option<SrcSpan>,
+    },
+
+    /// In case there's an explicit hole and `a |> b(_, c)` is desugared to
+    /// `b(a, c)`.
+    Hole { hole: SrcSpan },
+
+    /// In case `a |> b(c)` is desugared to `b(c)(a)`
+    FunctionCall,
+
+    /// In case there's an echo in the middle of a pipeline `a |> echo`
+    Echo,
 }

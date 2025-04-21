@@ -1,15 +1,15 @@
 use gleam_core::{
     analyse::TargetSupport,
     build::{Codegen, Compile, Mode, Options, Target},
-    error::Error,
+    error::{Error, ShellCommandFailureReason},
+    paths::ProjectPaths,
 };
 use std::process::Command;
 
-pub fn command() -> Result<(), Error> {
-    let paths = crate::find_project_paths()?;
-
+pub fn command(paths: &ProjectPaths) -> Result<(), Error> {
     // Build project
     let _ = crate::build::main(
+        paths,
         Options {
             root_target_support: TargetSupport::Enforced,
             warnings_as_errors: false,
@@ -19,7 +19,7 @@ pub fn command() -> Result<(), Error> {
             target: Some(Target::Erlang),
             no_print_progress: false,
         },
-        crate::build::download_dependencies(crate::cli::Reporter::new())?,
+        crate::build::download_dependencies(paths, crate::cli::Reporter::new())?,
     )?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell
@@ -43,7 +43,7 @@ pub fn command() -> Result<(), Error> {
     tracing::info!("Running OS process {:?}", command);
     let _ = command.status().map_err(|e| Error::ShellCommand {
         program: "erl".into(),
-        err: Some(e.kind()),
+        reason: ShellCommandFailureReason::IoError(e.kind()),
     })?;
     Ok(())
 }

@@ -4,7 +4,7 @@ use ecow::EcoString;
 
 use crate::type_::printer::{NameContextInformation, Names};
 
-use super::{missing_patterns::Term, Variable};
+use super::{Variable, missing_patterns::Term};
 
 #[derive(Debug)]
 pub struct Printer<'a> {
@@ -50,14 +50,14 @@ impl<'a> Printer<'a> {
             Term::Variant {
                 name,
                 module,
-                arguments,
+                fields,
                 ..
             } => {
                 let (module, name) = match self.names.named_constructor(module, name) {
                     NameContextInformation::Qualified(m, n) => (Some(m), n),
                     NameContextInformation::Unqualified(n) => (None, n),
                     NameContextInformation::Unimported(n) => {
-                        (Some(module.split('/').last().unwrap_or(module)), n)
+                        (Some(module.split('/').next_back().unwrap_or(module)), n)
                     }
                 };
 
@@ -67,31 +67,55 @@ impl<'a> Printer<'a> {
                 }
                 buffer.push_str(name);
 
-                if arguments.is_empty() {
+                if fields.is_empty() {
                     return;
                 }
                 buffer.push('(');
-                for (i, variable) in arguments.iter().enumerate() {
+                for (i, field) in fields.iter().enumerate() {
                     if i != 0 {
                         buffer.push_str(", ");
                     }
 
-                    if let Some(&idx) = mapping.get(&variable.id) {
-                        self.print(
-                            terms.get(idx).expect("Term must exist"),
-                            terms,
-                            mapping,
-                            buffer,
-                        );
-                    } else {
+                    let mut has_label = false;
+
+                    if let Some(label) = &field.label {
+                        buffer.push_str(label);
+                        buffer.push(':');
+                        has_label = true;
+                    }
+
+                    if let Some(&idx) = mapping.get(&field.variable.id) {
+                        let term = terms.get(idx).expect("Term must exist");
+
+                        match term {
+                            // If it is an infinite term and this field is labelled, it is generally
+                            // more useful to print just the label using label shorthand syntax.
+                            // For example, printing `Person(name:, age:)` instead of
+                            // `Person(name: _, age: _)`.
+                            Term::Infinite { .. } if has_label => {}
+                            Term::Infinite { .. }
+                            | Term::Variant { .. }
+                            | Term::Tuple { .. }
+                            | Term::EmptyList { .. }
+                            | Term::List { .. } => {
+                                // If this field has a label, the current buffer looks like `label:`,
+                                // so we want to print a space before printing the pattern for it.
+                                // If there is no label, we don't need to print the space.
+                                if has_label {
+                                    buffer.push(' ');
+                                }
+                                self.print(term, terms, mapping, buffer);
+                            }
+                        }
+                    } else if !has_label {
                         buffer.push('_');
                     }
                 }
                 buffer.push(')');
             }
-            Term::Tuple { arguments, .. } => {
+            Term::Tuple { elements, .. } => {
                 buffer.push_str("#(");
-                for (i, variable) in arguments.iter().enumerate() {
+                for (i, variable) in elements.iter().enumerate() {
                     if i != 0 {
                         buffer.push_str(", ");
                     }
@@ -163,19 +187,33 @@ impl<'a> Printer<'a> {
 
 #[cfg(test)]
 mod tests {
+    use ecow::EcoString;
+
     use super::Printer;
     use std::{collections::HashMap, sync::Arc};
 
     use crate::{
-        exhaustiveness::{missing_patterns::Term, Variable},
-        type_::{printer::Names, Type},
+        exhaustiveness::{
+            Variable,
+            missing_patterns::{Term, VariantField},
+        },
+        type_::{Type, printer::Names},
     };
 
     /// Create a variable with a dummy type, for ease of writing tests
     fn make_variable(id: usize) -> Variable {
         Variable {
             id,
-            type_: Arc::new(Type::Tuple { elems: Vec::new() }),
+            type_: Arc::new(Type::Tuple {
+                elements: Vec::new(),
+            }),
+        }
+    }
+
+    fn field(variable: Variable, label: Option<&str>) -> VariantField {
+        VariantField {
+            variable,
+            label: label.map(EcoString::from),
         }
     }
 
@@ -201,7 +239,7 @@ mod tests {
             variable: subjects[0].clone(),
             name: "Wibble".into(),
             module: "module".into(),
-            arguments: Vec::new(),
+            fields: Vec::new(),
         };
 
         let terms = &[term];
@@ -227,7 +265,7 @@ mod tests {
             variable: subjects[0].clone(),
             name: "Wibble".into(),
             module: "module".into(),
-            arguments: vec![var1.clone(), var2.clone()],
+            fields: vec![field(var1.clone(), None), field(var2.clone(), None)],
         };
 
         let terms = &[
@@ -244,6 +282,42 @@ mod tests {
     }
 
     #[test]
+    fn test_value_in_current_module_with_labelled_arguments() {
+        let mut names = Names::new();
+
+        names.named_constructor_in_scope("module".into(), "Wibble".into(), "Wibble".into());
+
+        let printer = Printer::new(&names);
+
+        let var1 = make_variable(1);
+
+        let var2 = make_variable(2);
+
+        let subjects = &[make_variable(0)];
+        let term = Term::Variant {
+            variable: subjects[0].clone(),
+            name: "Wibble".into(),
+            module: "module".into(),
+            fields: vec![
+                field(var1.clone(), Some("list")),
+                field(var2.clone(), Some("other")),
+            ],
+        };
+
+        let terms = &[
+            term,
+            Term::EmptyList { variable: var1 },
+            Term::Infinite { variable: var2 },
+        ];
+        let mapping = get_mapping(terms);
+
+        assert_eq!(
+            printer.print_terms(subjects, terms, &mapping),
+            "Wibble(list: [], other:)"
+        );
+    }
+
+    #[test]
     fn test_module_alias() {
         let mut names = Names::new();
 
@@ -256,7 +330,7 @@ mod tests {
             variable: subjects[0].clone(),
             name: "Rectangle".into(),
             module: "mod".into(),
-            arguments: Vec::new(),
+            fields: Vec::new(),
         };
 
         let terms = &[term];
@@ -283,7 +357,7 @@ mod tests {
             variable: subjects[0].clone(),
             name: "Regex".into(),
             module: "regex".into(),
-            arguments: vec![arg.clone()],
+            fields: vec![field(arg.clone(), None)],
         };
 
         let terms = &[term, Term::Infinite { variable: arg }];
@@ -308,7 +382,7 @@ mod tests {
             variable: subjects[0].clone(),
             name: "Regex".into(),
             module: "regex".into(),
-            arguments: vec![arg.clone()],
+            fields: vec![field(arg.clone(), None)],
         };
 
         let terms = &[
@@ -317,7 +391,7 @@ mod tests {
                 variable: arg,
                 name: "None".into(),
                 module: "gleam".into(),
-                arguments: vec![],
+                fields: vec![],
             },
         ];
         let mapping = get_mapping(terms);
@@ -350,7 +424,7 @@ mod tests {
                 variable: var1,
                 name: "Type".into(),
                 module: "module".into(),
-                arguments: Vec::new(),
+                fields: Vec::new(),
             },
             Term::List {
                 variable: var2,
@@ -383,13 +457,13 @@ mod tests {
                 variable: subjects[0].clone(),
                 name: "Ok".into(),
                 module: "gleam".into(),
-                arguments: vec![make_variable(3)],
+                fields: vec![field(make_variable(3), None)],
             },
             Term::Variant {
                 variable: subjects[2].clone(),
                 name: "False".into(),
                 module: "gleam".into(),
-                arguments: Vec::new(),
+                fields: Vec::new(),
             },
         ];
         let mapping = get_mapping(terms);

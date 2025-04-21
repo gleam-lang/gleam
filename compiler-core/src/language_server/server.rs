@@ -3,24 +3,25 @@ use super::{
     progress::ConnectionProgressReporter,
 };
 use crate::{
+    Result,
     diagnostic::{Diagnostic, Level},
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
+        DownloadDependencies, MakeLocker,
         engine::{self, LanguageServerEngine},
         feedback::{Feedback, FeedbackBookKeeper},
         files::FileSystemProxy,
         router::Router,
-        src_span_to_lsp_range, DownloadDependencies, MakeLocker,
+        src_span_to_lsp_range,
     },
     line_numbers::LineNumbers,
-    Result,
 };
 use camino::{Utf8Path, Utf8PathBuf};
 use debug_ignore::DebugIgnore;
 use itertools::Itertools;
 use lsp_types::{
     self as lsp, HoverProviderCapability, InitializeParams, Position, PublishDiagnosticsParams,
-    Range, TextEdit, Url,
+    Range, RenameOptions, TextEdit, Url,
 };
 use serde_json::Value as Json;
 use std::collections::{HashMap, HashSet};
@@ -105,6 +106,10 @@ where
             Request::CodeAction(param) => self.code_action(param),
             Request::SignatureHelp(param) => self.signature_help(param),
             Request::DocumentSymbol(param) => self.document_symbol(param),
+            Request::PrepareRename(param) => self.prepare_rename(param),
+            Request::Rename(param) => self.rename(param),
+            Request::GoToTypeDefinition(param) => self.goto_type_definition(param),
+            Request::FindReferences(param) => self.find_references(param),
         };
 
         self.publish_feedback(feedback);
@@ -306,6 +311,14 @@ where
         self.respond_with_engine(path, |engine| engine.goto_definition(params))
     }
 
+    fn goto_type_definition(
+        &mut self,
+        params: lsp_types::GotoDefinitionParams,
+    ) -> (Json, Feedback) {
+        let path = super::path(&params.text_document_position_params.text_document.uri);
+        self.respond_with_engine(path, |engine| engine.goto_type_definition(params))
+    }
+
     fn completion(&mut self, params: lsp::CompletionParams) -> (Json, Feedback) {
         let path = super::path(&params.text_document_position.text_document.uri);
 
@@ -333,6 +346,21 @@ where
         self.respond_with_engine(path, |engine| engine.document_symbol(params))
     }
 
+    fn prepare_rename(&mut self, params: lsp::TextDocumentPositionParams) -> (Json, Feedback) {
+        let path = super::path(&params.text_document.uri);
+        self.respond_with_engine(path, |engine| engine.prepare_rename(params))
+    }
+
+    fn rename(&mut self, params: lsp::RenameParams) -> (Json, Feedback) {
+        let path = super::path(&params.text_document_position.text_document.uri);
+        self.respond_with_engine(path, |engine| engine.rename(params))
+    }
+
+    fn find_references(&mut self, params: lsp_types::ReferenceParams) -> (Json, Feedback) {
+        let path = super::path(&params.text_document_position.text_document.uri);
+        self.respond_with_engine(path, |engine| engine.find_references(params))
+    }
+
     fn cache_file_in_memory(&mut self, path: Utf8PathBuf, text: String) -> Feedback {
         self.project_changed(&path);
         if let Err(error) = self.io.write_mem_cache(&path, &text) {
@@ -358,7 +386,7 @@ where
         let mut accumulator = Feedback::none();
         let projects = std::mem::take(&mut self.changed_projects);
         for path in projects {
-            let (_, feedback) = self.respond_with_engine(path, |e| e.compile_please());
+            let (_, feedback) = self.respond_with_engine(path, |this| this.compile_please());
             accumulator.append_feedback(feedback);
         }
         accumulator
@@ -406,9 +434,9 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
             },
         }),
         definition_provider: Some(lsp::OneOf::Left(true)),
-        type_definition_provider: None,
+        type_definition_provider: Some(lsp::TypeDefinitionProviderCapability::Simple(true)),
         implementation_provider: None,
-        references_provider: None,
+        references_provider: Some(lsp::OneOf::Left(true)),
         document_highlight_provider: None,
         document_symbol_provider: Some(lsp::OneOf::Left(true)),
         workspace_symbol_provider: None,
@@ -417,7 +445,12 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
         document_formatting_provider: Some(lsp::OneOf::Left(true)),
         document_range_formatting_provider: None,
         document_on_type_formatting_provider: None,
-        rename_provider: None,
+        rename_provider: Some(lsp::OneOf::Right(RenameOptions {
+            prepare_provider: Some(true),
+            work_done_progress_options: lsp::WorkDoneProgressOptions {
+                work_done_progress: None,
+            },
+        })),
         document_link_provider: None,
         color_provider: None,
         folding_range_provider: None,
@@ -483,17 +516,18 @@ fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
         .iter()
         .map(|extra| {
             let message = extra.label.text.clone().unwrap_or_default();
-            let location = if let Some((src, path)) = &extra.src_info {
-                let line_numbers = LineNumbers::new(src);
-                lsp::Location {
-                    uri: path_to_uri(path.clone()),
-                    range: src_span_to_lsp_range(extra.label.span, &line_numbers),
+            let location = match &extra.src_info {
+                Some((src, path)) => {
+                    let line_numbers = LineNumbers::new(src);
+                    lsp::Location {
+                        uri: path_to_uri(path.clone()),
+                        range: src_span_to_lsp_range(extra.label.span, &line_numbers),
+                    }
                 }
-            } else {
-                lsp::Location {
+                _ => lsp::Location {
                     uri: path.clone(),
                     range: src_span_to_lsp_range(extra.label.span, &line_numbers),
-                }
+                },
             };
             lsp::DiagnosticRelatedInformation { location, message }
         })

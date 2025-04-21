@@ -5,7 +5,7 @@ expression: "\nimport example_module\nfn main() {\n  example_module.my_const\n}\
 import example_module
 fn main() {
   example_module.my_const
-                ▔▔▔↑▔▔▔▔▔
+  ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑▔▔▔▔▔
 }
 
 

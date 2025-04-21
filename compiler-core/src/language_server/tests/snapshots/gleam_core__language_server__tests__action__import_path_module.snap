@@ -1,9 +1,0 @@
----
-source: compiler-core/src/language_server/tests/action.rs
-expression: "apply_first_code_action(r#\"pub fn main() {\n    io.println(\"Hello, world!\")\n}\"#,\n    1)"
----
-import gleam/io
-
-pub fn main() {
-    io.println("Hello, world!")
-}

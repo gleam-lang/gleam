@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main(tuple: #(Int, String, Bool)) {\n  todo\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main(tuple: #(Int, String, Bool)) {
+            ▔▔▔▔▔▔▔▔▔↑                    
+  todo
+}
+
+
+----- AFTER ACTION
+
+pub fn main(tuple: #(Int, String, Bool)) {
+  let #(value_0, value_1, value_2) = tuple
+  todo
+}

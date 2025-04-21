@@ -60,6 +60,10 @@ impl ParseError {
             ParseErrorType::ExpectedFunctionDefinition => {
                 ("I was expecting a function definition after this", vec![])
             }
+            ParseErrorType::ExpectedTargetName => (
+                "I was expecting a target name after this",
+                vec!["Try `erlang`, `javascript`.".into()],
+            ),
             ParseErrorType::ExtraSeparator => (
                 "This is an extra delimiter",
                 vec!["Hint: Try removing it?".into()],
@@ -351,6 +355,7 @@ pub enum ParseErrorType {
     ExpectedDefinition,         // after attributes
     ExpectedDeprecationMessage, // after "deprecated"
     ExpectedFunctionDefinition, // after function-only attributes
+    ExpectedTargetName,         // after "@target("
     ExprLparStart,              // it seems "(" was used to start an expression
     ExtraSeparator,             // #(1,,) <- the 2nd comma is an extra separator
     IncorrectName,              // UpName or DiscardName used when Name was expected

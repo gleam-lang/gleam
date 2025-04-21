@@ -6,11 +6,11 @@ use hexpm::version::Version;
 use pretty_assertions::assert_eq;
 
 use gleam_core::{
+    Error,
     build::Runtime,
     config::{DenoConfig, DenoFlag, Docs, ErlangConfig, JavaScriptConfig, Repository},
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
     requirement::Requirement,
-    Error,
 };
 
 use crate::dependencies::*;
@@ -59,6 +59,250 @@ fn list_manifest_format() {
         r#"root 1.0.0
 aaa 0.4.2
 zzz 0.4.0
+"#
+    )
+}
+
+#[test]
+fn tree_format() {
+    let mut buffer = vec![];
+    let manifest = Manifest {
+        requirements: HashMap::new(),
+        packages: vec![
+            ManifestPackage {
+                name: "deps_proj".into(),
+                version: Version::parse("1.0.0").unwrap(),
+                build_tools: [].into(),
+                otp_app: None,
+                requirements: vec!["gleam_regexp".into(), "gleam_stdlib".into()],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![1, 2, 3, 4]),
+                },
+            },
+            ManifestPackage {
+                name: "gleam_stdlib".into(),
+                version: Version::new(0, 52, 0),
+                build_tools: ["rebar3".into(), "make".into()].into(),
+                otp_app: Some("aaa_app".into()),
+                requirements: vec![],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![3, 22]),
+                },
+            },
+            ManifestPackage {
+                name: "gleam_regexp".into(),
+                version: Version::new(1, 0, 0),
+                build_tools: ["mix".into()].into(),
+                otp_app: None,
+                requirements: vec!["gleam_stdlib".into()],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![3, 22]),
+                },
+            },
+        ],
+    };
+
+    let options = TreeOptions {
+        package: None,
+        invert: None,
+    };
+
+    let root_package_name = EcoString::from("deps_proj");
+
+    list_package_and_dependencies_tree(
+        &mut buffer,
+        options,
+        manifest.packages.clone(),
+        root_package_name,
+    )
+    .unwrap();
+    assert_eq!(
+        std::str::from_utf8(&buffer).unwrap(),
+        r#"deps_proj v1.0.0
+├── gleam_regexp v1.0.0
+│   └── gleam_stdlib v0.52.0
+└── gleam_stdlib v0.52.0
+"#
+    )
+}
+
+#[test]
+fn tree_package_format() {
+    let mut buffer = vec![];
+    let manifest = Manifest {
+        requirements: HashMap::new(),
+        packages: vec![
+            ManifestPackage {
+                name: "gleam_stdlib".into(),
+                version: Version::new(0, 52, 0),
+                build_tools: ["rebar3".into(), "make".into()].into(),
+                otp_app: Some("aaa_app".into()),
+                requirements: vec![],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![3, 22]),
+                },
+            },
+            ManifestPackage {
+                name: "deps_proj".into(),
+                version: Version::parse("1.0.0").unwrap(),
+                build_tools: [].into(),
+                otp_app: None,
+                requirements: vec!["gleam_stdlib".into(), "gleam_regexp".into()],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![1, 2, 3, 4]),
+                },
+            },
+            ManifestPackage {
+                name: "gleam_regexp".into(),
+                version: Version::new(1, 0, 0),
+                build_tools: ["mix".into()].into(),
+                otp_app: None,
+                requirements: vec!["gleam_stdlib".into()],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![3, 22]),
+                },
+            },
+        ],
+    };
+    let options = TreeOptions {
+        package: Some("gleam_regexp".to_string()),
+        invert: None,
+    };
+
+    let root_package_name = EcoString::from("deps_proj");
+
+    list_package_and_dependencies_tree(
+        &mut buffer,
+        options,
+        manifest.packages.clone(),
+        root_package_name,
+    )
+    .unwrap();
+    assert_eq!(
+        std::str::from_utf8(&buffer).unwrap(),
+        r#"gleam_regexp v1.0.0
+└── gleam_stdlib v0.52.0
+"#
+    )
+}
+
+#[test]
+fn tree_invert_format() {
+    let mut buffer = vec![];
+    let manifest = Manifest {
+        requirements: HashMap::new(),
+        packages: vec![
+            ManifestPackage {
+                name: "gleam_stdlib".into(),
+                version: Version::new(0, 52, 0),
+                build_tools: ["rebar3".into(), "make".into()].into(),
+                otp_app: Some("aaa_app".into()),
+                requirements: vec![],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![3, 22]),
+                },
+            },
+            ManifestPackage {
+                name: "deps_proj".into(),
+                version: Version::parse("1.0.0").unwrap(),
+                build_tools: [].into(),
+                otp_app: None,
+                requirements: vec!["gleam_stdlib".into(), "gleam_regexp".into()],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![1, 2, 3, 4]),
+                },
+            },
+            ManifestPackage {
+                name: "gleam_regexp".into(),
+                version: Version::new(1, 0, 0),
+                build_tools: ["mix".into()].into(),
+                otp_app: None,
+                requirements: vec!["gleam_stdlib".into()],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![3, 22]),
+                },
+            },
+        ],
+    };
+    let options = TreeOptions {
+        package: None,
+        invert: Some("gleam_stdlib".to_string()),
+    };
+
+    let root_package_name = EcoString::from("deps_proj");
+
+    list_package_and_dependencies_tree(
+        &mut buffer,
+        options,
+        manifest.packages.clone(),
+        root_package_name,
+    )
+    .unwrap();
+    assert_eq!(
+        std::str::from_utf8(&buffer).unwrap(),
+        r#"gleam_stdlib v0.52.0
+├── deps_proj v1.0.0
+└── gleam_regexp v1.0.0
+    └── deps_proj v1.0.0
+"#
+    )
+}
+
+#[test]
+fn list_tree_invalid_package_format() {
+    let mut buffer = vec![];
+    let manifest = Manifest {
+        requirements: HashMap::new(),
+        packages: vec![
+            ManifestPackage {
+                name: "gleam_stdlib".into(),
+                version: Version::new(0, 52, 0),
+                build_tools: ["rebar3".into(), "make".into()].into(),
+                otp_app: Some("aaa_app".into()),
+                requirements: vec![],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![3, 22]),
+                },
+            },
+            ManifestPackage {
+                name: "gleam_regexp".into(),
+                version: Version::new(1, 0, 0),
+                build_tools: ["mix".into()].into(),
+                otp_app: None,
+                requirements: vec!["gleam_stdlib".into()],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![3, 22]),
+                },
+            },
+            ManifestPackage {
+                name: "root".into(),
+                version: Version::parse("1.0.0").unwrap(),
+                build_tools: [].into(),
+                otp_app: None,
+                requirements: vec!["gleam_regexp".into(), "gleam_stdlib".into()],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![1, 2, 3, 4]),
+                },
+            },
+        ],
+    };
+    let options = TreeOptions {
+        package: Some("zzzzzz".to_string()),
+        invert: None,
+    };
+
+    let root_package_name = EcoString::from("deps_proj");
+
+    list_package_and_dependencies_tree(
+        &mut buffer,
+        options,
+        manifest.packages.clone(),
+        root_package_name,
+    )
+    .unwrap();
+    assert_eq!(
+        std::str::from_utf8(&buffer).unwrap(),
+        r#"Package not found. Please check the package name.
 "#
     )
 }
@@ -263,14 +507,16 @@ fn provide_wrong_package() {
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
-    if let Err(Error::WrongDependencyProvided {
-        expected, found, ..
-    }) = result
-    {
-        assert_eq!(expected, "wrong_name");
-        assert_eq!(found, "hello_world");
-    } else {
-        panic!("Expected WrongDependencyProvided error")
+    match result {
+        Err(Error::WrongDependencyProvided {
+            expected, found, ..
+        }) => {
+            assert_eq!(expected, "wrong_name");
+            assert_eq!(found, "hello_world");
+        }
+        _ => {
+            panic!("Expected WrongDependencyProvided error")
+        }
     }
 }
 
@@ -324,10 +570,13 @@ fn provide_conflicting_package() {
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
-    if let Err(Error::ProvidedDependencyConflict { package, .. }) = result {
-        assert_eq!(package, "hello_world");
-    } else {
-        panic!("Expected ProvidedDependencyConflict error")
+    match result {
+        Err(Error::ProvidedDependencyConflict { package, .. }) => {
+            assert_eq!(package, "hello_world");
+        }
+        _ => {
+            panic!("Expected ProvidedDependencyConflict error")
+        }
     }
 }
 
@@ -345,10 +594,13 @@ fn provided_is_absolute() {
     );
     assert_eq!(result, Ok(hexpm::version::Range::new("== 0.1.0".into())));
     let package = provided.get("hello_world").unwrap().clone();
-    if let ProvidedPackageSource::Local { path } = package.source {
-        assert!(path.is_absolute())
-    } else {
-        panic!("Provide_local_package provided a package that is not local!")
+    match package.source {
+        ProvidedPackageSource::Local { path } => {
+            assert!(path.is_absolute())
+        }
+        _ => {
+            panic!("Provide_local_package provided a package that is not local!")
+        }
     }
 }
 

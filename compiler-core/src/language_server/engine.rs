@@ -1,10 +1,13 @@
 use crate::{
+    Error, Result, Warning,
     analyse::name::correct_name_case,
     ast::{
-        CustomType, Definition, ModuleConstant, SrcSpan, TypedArg, TypedExpr, TypedFunction,
-        TypedModule, TypedPattern,
+        self, CustomType, Definition, DefinitionLocation, ModuleConstant, PatternUnusedArguments,
+        SrcSpan, TypedArg, TypedConstant, TypedExpr, TypedFunction, TypedModule, TypedPattern,
     },
-    build::{type_constructor_from_modules, Located, Module, UnqualifiedImport},
+    build::{
+        ExpressionPosition, Located, Module, UnqualifiedImport, type_constructor_from_modules,
+    },
     config::PackageConfig,
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
@@ -13,31 +16,44 @@ use crate::{
     line_numbers::LineNumbers,
     paths::ProjectPaths,
     type_::{
-        self, printer::Printer, Deprecation, ModuleInterface, Type, TypeConstructor,
+        self, Deprecation, ModuleInterface, Type, TypeConstructor, ValueConstructor,
         ValueConstructorVariant,
+        error::{Named, VariableOrigin},
+        printer::Printer,
     },
-    Error, Result, Warning,
 };
 use camino::Utf8PathBuf;
 use ecow::EcoString;
 use itertools::Itertools;
 use lsp::CodeAction;
 use lsp_types::{
-    self as lsp, DocumentSymbol, Hover, HoverContents, MarkedString, Position, Range,
-    SignatureHelp, SymbolKind, SymbolTag, TextEdit, Url,
+    self as lsp, DocumentSymbol, Hover, HoverContents, MarkedString, Position,
+    PrepareRenameResponse, Range, SignatureHelp, SymbolKind, SymbolTag, TextEdit, Url,
+    WorkspaceEdit,
 };
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 use super::{
+    DownloadDependencies, MakeLocker,
     code_action::{
-        code_action_add_missing_patterns, code_action_convert_qualified_constructor_to_unqualified,
+        AddAnnotations, CodeActionBuilder, ConvertFromUse, ConvertToFunctionCall, ConvertToPipe,
+        ConvertToUse, ExpandFunctionCapture, ExtractConstant, ExtractVariable,
+        FillInMissingLabelledArgs, FillUnusedFields, FixBinaryOperation, GenerateDynamicDecoder,
+        GenerateFunction, GenerateJsonEncoder, InlineVariable, InterpolateString, LetAssertToCase,
+        PatternMatchOnValue, RedundantTupleInCaseSubject, RemoveEchos, UseLabelShorthandSyntax,
+        WrapInBlock, code_action_add_missing_patterns,
+        code_action_convert_qualified_constructor_to_unqualified,
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
-        code_action_inexhaustive_let_to_case, AddAnnotations, CodeActionBuilder, DesugarUse,
-        FillInMissingLabelledArgs, LabelShorthandSyntax, LetAssertToCase,
-        RedundantTupleInCaseSubject, TurnIntoUse,
+        code_action_inexhaustive_let_to_case,
     },
     completer::Completer,
-    signature_help, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
+    reference::{
+        Referenced, find_module_references, find_variable_references, reference_for_ast_node,
+    },
+    rename::{
+        RenameTarget, Renamed, VariableRenameKind, rename_local_variable, rename_module_entity,
+    },
+    signature_help, src_span_to_lsp_range,
 };
 
 #[derive(Debug, PartialEq, Eq)]
@@ -75,7 +91,7 @@ pub struct LanguageServerEngine<IO, Reporter> {
 
     /// Used to know if to show the "View on HexDocs" link
     /// when hovering on an imported value
-    hex_deps: std::collections::HashSet<EcoString>,
+    hex_deps: HashSet<EcoString>,
 }
 
 impl<'a, IO, Reporter> LanguageServerEngine<IO, Reporter>
@@ -178,29 +194,62 @@ where
                 None => return Ok(None),
             };
 
-            let location = match node
-                .definition_location(this.compiler.project_compiler.get_importable_modules())
-            {
-                Some(location) => location,
-                None => return Ok(None),
+            let Some(location) =
+                node.definition_location(this.compiler.project_compiler.get_importable_modules())
+            else {
+                return Ok(None);
             };
 
-            let (uri, line_numbers) = match location.module {
-                None => (params.text_document.uri, &line_numbers),
-                Some(name) => {
-                    let module = match this.compiler.get_source(name) {
-                        Some(module) => module,
-                        _ => return Ok(None),
-                    };
-                    let url = Url::parse(&format!("file:///{}", &module.path))
-                        .expect("goto definition URL parse");
-                    (url, &module.line_numbers)
-                }
-            };
-            let range = src_span_to_lsp_range(location.span, line_numbers);
-
-            Ok(Some(lsp::Location { uri, range }))
+            Ok(this.definition_location_to_lsp_location(&line_numbers, &params, location))
         })
+    }
+
+    pub(crate) fn goto_type_definition(
+        &mut self,
+        params: lsp_types::GotoDefinitionParams,
+    ) -> Response<Vec<lsp::Location>> {
+        self.respond(|this| {
+            let params = params.text_document_position_params;
+            let (line_numbers, node) = match this.node_at_position(&params) {
+                Some(location) => location,
+                None => return Ok(vec![]),
+            };
+
+            let Some(locations) = node
+                .type_definition_locations(this.compiler.project_compiler.get_importable_modules())
+            else {
+                return Ok(vec![]);
+            };
+
+            let locations = locations
+                .into_iter()
+                .filter_map(|location| {
+                    this.definition_location_to_lsp_location(&line_numbers, &params, location)
+                })
+                .collect_vec();
+
+            Ok(locations)
+        })
+    }
+
+    fn definition_location_to_lsp_location(
+        &self,
+        line_numbers: &LineNumbers,
+        params: &lsp_types::TextDocumentPositionParams,
+        location: DefinitionLocation,
+    ) -> Option<lsp::Location> {
+        let (uri, line_numbers) = match location.module {
+            None => (params.text_document.uri.clone(), line_numbers),
+            Some(name) => {
+                let module = self.compiler.get_source(&name)?;
+                let url = Url::parse(&format!("file:///{}", &module.path))
+                    .expect("goto definition URL parse");
+                (url, &module.line_numbers)
+            }
+        };
+        let range = src_span_to_lsp_range(location.span, line_numbers);
+
+        Some(lsp::Location { uri, range })
     }
 
     pub fn completion(
@@ -239,20 +288,44 @@ where
                 Located::PatternSpread { .. } => None,
                 Located::Pattern(_pattern) => None,
                 // Do not show completions when typing inside a string.
-                Located::Expression(TypedExpr::String { .. }) => None,
-                Located::Expression(TypedExpr::Call { fun, args, .. }) => {
+                Located::Expression {
+                    expression: TypedExpr::String { .. },
+                    ..
+                } => None,
+                Located::Expression {
+                    expression: TypedExpr::Call { fun, args, .. },
+                    ..
+                } => {
                     let mut completions = vec![];
                     completions.append(&mut completer.completion_values());
                     completions.append(&mut completer.completion_labels(fun, args));
                     Some(completions)
                 }
-                Located::Expression(TypedExpr::RecordAccess { record, .. }) => {
+                Located::Expression {
+                    expression: TypedExpr::RecordAccess { record, .. },
+                    ..
+                } => {
                     let mut completions = vec![];
                     completions.append(&mut completer.completion_values());
                     completions.append(&mut completer.completion_field_accessors(record.type_()));
                     Some(completions)
                 }
-                Located::Statement(_) | Located::Expression(_) => {
+                Located::Expression {
+                    position:
+                        ExpressionPosition::ArgumentOrLabel {
+                            called_function,
+                            function_arguments,
+                        },
+                    ..
+                } => {
+                    let mut completions = vec![];
+                    completions.append(&mut completer.completion_values());
+                    completions.append(
+                        &mut completer.completion_labels(called_function, function_arguments),
+                    );
+                    Some(completions)
+                }
+                Located::Statement(_) | Located::Expression { .. } => {
                     Some(completer.completion_values())
                 }
                 Located::ModuleStatement(Definition::Function(_)) => {
@@ -261,9 +334,8 @@ where
 
                 Located::FunctionBody(_) => Some(completer.completion_values()),
 
-                Located::ModuleStatement(Definition::TypeAlias(_) | Definition::CustomType(_)) => {
-                    Some(completer.completion_types())
-                }
+                Located::ModuleStatement(Definition::TypeAlias(_) | Definition::CustomType(_))
+                | Located::VariantConstructorDefinition(_) => Some(completer.completion_types()),
 
                 // If the import completions returned no results and we are in an import then
                 // we should try to provide completions for unqualified values
@@ -271,18 +343,29 @@ where
                     .compiler
                     .get_module_interface(import.module.as_str())
                     .map(|importing_module| {
-                        completer.unqualified_completions_from_module(importing_module)
+                        completer.unqualified_completions_from_module(importing_module, true)
                     }),
 
-                Located::ModuleStatement(Definition::ModuleConstant(_)) => None,
+                Located::ModuleStatement(Definition::ModuleConstant(_)) | Located::Constant(_) => {
+                    Some(completer.completion_values())
+                }
 
                 Located::UnqualifiedImport(_) => None,
 
                 Located::Arg(_) => None,
 
-                Located::Annotation(_, _) => Some(completer.completion_types()),
+                Located::Annotation { .. } => Some(completer.completion_types()),
 
                 Located::Label(_, _) => None,
+
+                Located::ModuleName {
+                    layer: ast::Layer::Type,
+                    ..
+                } => Some(completer.completion_types()),
+                Located::ModuleName {
+                    layer: ast::Layer::Value,
+                    ..
+                } => Some(completer.completion_values()),
             };
 
             Ok(completions)
@@ -325,13 +408,37 @@ where
                 &this.error,
                 &mut actions,
             );
+            actions.extend(FixBinaryOperation::new(module, &lines, &params).code_actions());
             actions.extend(LetAssertToCase::new(module, &lines, &params).code_actions());
             actions
                 .extend(RedundantTupleInCaseSubject::new(module, &lines, &params).code_actions());
-            actions.extend(LabelShorthandSyntax::new(module, &lines, &params).code_actions());
+            actions.extend(UseLabelShorthandSyntax::new(module, &lines, &params).code_actions());
             actions.extend(FillInMissingLabelledArgs::new(module, &lines, &params).code_actions());
-            actions.extend(DesugarUse::new(module, &lines, &params).code_actions());
-            actions.extend(TurnIntoUse::new(module, &lines, &params).code_actions());
+            actions.extend(ConvertFromUse::new(module, &lines, &params).code_actions());
+            actions.extend(RemoveEchos::new(module, &lines, &params).code_actions());
+            actions.extend(ConvertToUse::new(module, &lines, &params).code_actions());
+            actions.extend(ExpandFunctionCapture::new(module, &lines, &params).code_actions());
+            actions.extend(FillUnusedFields::new(module, &lines, &params).code_actions());
+            actions.extend(InterpolateString::new(module, &lines, &params).code_actions());
+            actions.extend(ExtractVariable::new(module, &lines, &params).code_actions());
+            actions.extend(ExtractConstant::new(module, &lines, &params).code_actions());
+            actions.extend(GenerateFunction::new(module, &lines, &params).code_actions());
+            actions.extend(ConvertToPipe::new(module, &lines, &params).code_actions());
+            actions.extend(ConvertToFunctionCall::new(module, &lines, &params).code_actions());
+            actions.extend(
+                PatternMatchOnValue::new(module, &lines, &params, &this.compiler).code_actions(),
+            );
+            actions.extend(InlineVariable::new(module, &lines, &params).code_actions());
+            actions.extend(WrapInBlock::new(module, &lines, &params).code_actions());
+            GenerateDynamicDecoder::new(module, &lines, &params, &mut actions).code_actions();
+            GenerateJsonEncoder::new(
+                module,
+                &lines,
+                &params,
+                &mut actions,
+                &this.compiler.project_compiler.config,
+            )
+            .code_actions();
             AddAnnotations::new(module, &lines, &params).code_action(&mut actions);
             Ok(if actions.is_empty() {
                 None
@@ -486,6 +593,227 @@ where
         })
     }
 
+    /// Check whether a particular module is in the same package as this one
+    fn is_same_package(&self, current_module: &Module, module_name: &str) -> bool {
+        let other_module = self
+            .compiler
+            .project_compiler
+            .get_importable_modules()
+            .get(module_name);
+        match other_module {
+            // We can't rename values from other packages if we are not aliasing an unqualified import.
+            Some(module) => module.package == current_module.ast.type_info.package,
+            None => false,
+        }
+    }
+
+    pub fn prepare_rename(
+        &mut self,
+        params: lsp::TextDocumentPositionParams,
+    ) -> Response<Option<PrepareRenameResponse>> {
+        self.respond(|this| {
+            let (lines, found) = match this.node_at_position(&params) {
+                Some(value) => value,
+                None => return Ok(None),
+            };
+
+            let Some(current_module) = this.module_for_uri(&params.text_document.uri) else {
+                return Ok(None);
+            };
+
+            let success_response = |location| {
+                Some(PrepareRenameResponse::Range(src_span_to_lsp_range(
+                    location, &lines,
+                )))
+            };
+
+            let byte_index = lines.byte_index(params.position.line, params.position.character);
+
+            Ok(match reference_for_ast_node(found, &current_module.name) {
+                Some(Referenced::LocalVariable {
+                    location, origin, ..
+                }) if location.contains(byte_index) => match origin {
+                    Some(VariableOrigin::Generated) => None,
+                    Some(
+                        VariableOrigin::Variable(_)
+                        | VariableOrigin::AssignmentPattern
+                        | VariableOrigin::LabelShorthand(_),
+                    )
+                    | None => success_response(location),
+                },
+                Some(
+                    Referenced::ModuleValue {
+                        module,
+                        location,
+                        target_kind,
+                        ..
+                    }
+                    | Referenced::ModuleType {
+                        module,
+                        location,
+                        target_kind,
+                        ..
+                    },
+                ) if location.contains(byte_index) => {
+                    // We can't rename types or values from other packages if we are not aliasing an unqualified import.
+                    let rename_allowed = match target_kind {
+                        RenameTarget::Qualified => this.is_same_package(current_module, &module),
+                        RenameTarget::Unqualified | RenameTarget::Definition => true,
+                    };
+                    if rename_allowed {
+                        success_response(location)
+                    } else {
+                        None
+                    }
+                }
+                _ => None,
+            })
+        })
+    }
+
+    pub fn rename(&mut self, params: lsp::RenameParams) -> Response<Option<WorkspaceEdit>> {
+        self.respond(|this| {
+            let position = &params.text_document_position;
+
+            let (lines, found) = match this.node_at_position(position) {
+                Some(value) => value,
+                None => return Ok(None),
+            };
+
+            let Some(module) = this.module_for_uri(&position.text_document.uri) else {
+                return Ok(None);
+            };
+
+            Ok(match reference_for_ast_node(found, &module.name) {
+                Some(Referenced::LocalVariable {
+                    origin,
+                    definition_location,
+                    ..
+                }) => {
+                    let rename_kind = match origin {
+                        Some(VariableOrigin::Generated) => return Ok(None),
+                        Some(VariableOrigin::LabelShorthand(_)) => {
+                            VariableRenameKind::LabelShorthand
+                        }
+                        Some(VariableOrigin::AssignmentPattern | VariableOrigin::Variable(_))
+                        | None => VariableRenameKind::Variable,
+                    };
+                    rename_local_variable(module, &lines, &params, definition_location, rename_kind)
+                }
+                Some(Referenced::ModuleValue {
+                    module: module_name,
+                    target_kind,
+                    name,
+                    name_kind,
+                    ..
+                }) => rename_module_entity(
+                    &params,
+                    module,
+                    this.compiler.project_compiler.get_importable_modules(),
+                    &this.compiler.sources,
+                    Renamed {
+                        module_name: &module_name,
+                        name: &name,
+                        name_kind,
+                        target_kind,
+                        layer: ast::Layer::Value,
+                    },
+                ),
+                Some(Referenced::ModuleType {
+                    module: module_name,
+                    target_kind,
+                    name,
+                    ..
+                }) => rename_module_entity(
+                    &params,
+                    module,
+                    this.compiler.project_compiler.get_importable_modules(),
+                    &this.compiler.sources,
+                    Renamed {
+                        module_name: &module_name,
+                        name: &name,
+                        name_kind: Named::Type,
+                        target_kind,
+                        layer: ast::Layer::Type,
+                    },
+                ),
+                None => None,
+            })
+        })
+    }
+
+    pub fn find_references(
+        &mut self,
+        params: lsp::ReferenceParams,
+    ) -> Response<Option<Vec<lsp::Location>>> {
+        self.respond(|this| {
+            let position = &params.text_document_position;
+
+            let (lines, found) = match this.node_at_position(position) {
+                Some(value) => value,
+                None => return Ok(None),
+            };
+
+            let uri = position.text_document.uri.clone();
+
+            let Some(module) = this.module_for_uri(&uri) else {
+                return Ok(None);
+            };
+
+            let byte_index = lines.byte_index(position.position.line, position.position.character);
+
+            Ok(match reference_for_ast_node(found, &module.name) {
+                Some(Referenced::LocalVariable {
+                    origin,
+                    definition_location,
+                    location,
+                }) if location.contains(byte_index) => match origin {
+                    Some(VariableOrigin::Generated) => None,
+                    Some(
+                        VariableOrigin::LabelShorthand(_)
+                        | VariableOrigin::AssignmentPattern
+                        | VariableOrigin::Variable(_),
+                    )
+                    | None => Some(
+                        find_variable_references(&module.ast, definition_location)
+                            .into_iter()
+                            .chain(std::iter::once(definition_location))
+                            .map(|location| lsp::Location {
+                                uri: uri.clone(),
+                                range: src_span_to_lsp_range(location, &lines),
+                            })
+                            .collect(),
+                    ),
+                },
+                Some(Referenced::ModuleValue {
+                    module,
+                    name,
+                    location,
+                    ..
+                }) if location.contains(byte_index) => Some(find_module_references(
+                    module,
+                    name,
+                    this.compiler.project_compiler.get_importable_modules(),
+                    &this.compiler.sources,
+                    ast::Layer::Value,
+                )),
+                Some(Referenced::ModuleType {
+                    module,
+                    name,
+                    location,
+                    ..
+                }) if location.contains(byte_index) => Some(find_module_references(
+                    module,
+                    name,
+                    this.compiler.project_compiler.get_importable_modules(),
+                    &this.compiler.sources,
+                    ast::Layer::Type,
+                )),
+                _ => None,
+            })
+        })
+    }
+
     fn respond<T>(&mut self, handler: impl FnOnce(&mut Self) -> Result<T>) -> Response<T> {
         let result = handler(self);
         let warnings = self.take_warnings();
@@ -525,7 +853,20 @@ where
                 Located::ModuleStatement(Definition::ModuleConstant(constant)) => {
                     Some(hover_for_module_constant(constant, lines, module))
                 }
+                Located::Constant(constant) => Some(hover_for_constant(constant, lines, module)),
+                Located::ModuleStatement(Definition::Import(import)) => {
+                    let Some(module) = this.compiler.get_module_interface(&import.module) else {
+                        return Ok(None);
+                    };
+                    Some(hover_for_module(
+                        module,
+                        import.location,
+                        &lines,
+                        &this.hex_deps,
+                    ))
+                }
                 Located::ModuleStatement(_) => None,
+                Located::VariantConstructorDefinition(_) => None,
                 Located::UnqualifiedImport(UnqualifiedImport {
                     name,
                     module: module_name,
@@ -559,30 +900,28 @@ where
                 Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines, module)),
                 Located::PatternSpread {
                     spread_location,
-                    arguments,
+                    pattern,
                 } => {
                     let range = Some(src_span_to_lsp_range(spread_location, &lines));
 
-                    let mut positional = vec![];
-                    let mut labelled = vec![];
-                    for argument in arguments {
-                        // We only want to display the arguments that were ignored using `..`.
-                        // Any argument ignored that way is marked as implicit, so if it is
-                        // not implicit we just ignore it.
-                        if !argument.is_implicit() {
-                            continue;
-                        }
+                    let mut printer = Printer::new(&module.ast.names);
 
-                        let type_ = Printer::new(&module.ast.names)
-                            .print_type(argument.value.type_().as_ref());
-                        match &argument.label {
-                            Some(label) => labelled.push(format!("- `{label}: {type_}`")),
-                            None => positional.push(format!("- `{type_}`")),
-                        }
-                    }
+                    let PatternUnusedArguments {
+                        positional,
+                        labelled,
+                    } = pattern.unused_arguments().unwrap_or_default();
 
-                    let positional = positional.join("\n");
-                    let labelled = labelled.join("\n");
+                    let positional = positional
+                        .iter()
+                        .map(|type_| format!("- `{}`", printer.print_type(type_)))
+                        .join("\n");
+                    let labelled = labelled
+                        .iter()
+                        .map(|(label, type_)| {
+                            format!("- `{}: {}`", label, printer.print_type(type_))
+                        })
+                        .join("\n");
+
                     let content = match (positional.is_empty(), labelled.is_empty()) {
                         (true, false) => format!("Unused labelled fields:\n{labelled}"),
                         (false, true) => format!("Unused positional fields:\n{positional}"),
@@ -600,7 +939,7 @@ Unused labelled fields:
                         range,
                     })
                 }
-                Located::Expression(expression) => Some(hover_for_expression(
+                Located::Expression { expression, .. } => Some(hover_for_expression(
                     expression,
                     lines,
                     module,
@@ -608,13 +947,13 @@ Unused labelled fields:
                 )),
                 Located::Arg(arg) => Some(hover_for_function_argument(arg, lines, module)),
                 Located::FunctionBody(_) => None,
-                Located::Annotation(annotation, type_) => {
+                Located::Annotation { ast, type_ } => {
                     let type_constructor = type_constructor_from_modules(
                         this.compiler.project_compiler.get_importable_modules(),
                         type_.clone(),
                     );
                     Some(hover_for_annotation(
-                        annotation,
+                        ast.location(),
                         &type_,
                         type_constructor,
                         lines,
@@ -623,6 +962,12 @@ Unused labelled fields:
                 }
                 Located::Label(location, type_) => {
                     Some(hover_for_label(location, type_, lines, module))
+                }
+                Located::ModuleName { location, name, .. } => {
+                    let Some(module) = this.compiler.get_module_interface(name) else {
+                        return Ok(None);
+                    };
+                    Some(hover_for_module(module, location, &lines, &this.hex_deps))
                 }
             })
         })
@@ -634,8 +979,8 @@ Unused labelled fields:
     ) -> Response<Option<SignatureHelp>> {
         self.respond(
             |this| match this.node_at_position(&params.text_document_position_params) {
-                Some((_lines, Located::Expression(expr))) => {
-                    Ok(signature_help::for_expression(expr))
+                Some((_lines, Located::Expression { expression, .. })) => {
+                    Ok(signature_help::for_expression(expression))
                 }
                 Some((_lines, _located)) => Ok(None),
                 None => Ok(None),
@@ -823,7 +1168,7 @@ fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers, module: 
 fn get_function_type(fun: &TypedFunction) -> Type {
     Type::Fn {
         args: fun.arguments.iter().map(|arg| arg.type_.clone()).collect(),
-        retrn: fun.return_type.clone(),
+        return_: fun.return_type.clone(),
     }
 }
 
@@ -926,11 +1271,24 @@ fn hover_for_module_constant(
     }
 }
 
+fn hover_for_constant(
+    constant: &TypedConstant,
+    line_numbers: LineNumbers,
+    module: &Module,
+) -> Hover {
+    let type_ = Printer::new(&module.ast.names).print_type(&constant.type_());
+    let contents = format!("```gleam\n{type_}\n```");
+    Hover {
+        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        range: Some(src_span_to_lsp_range(constant.location(), &line_numbers)),
+    }
+}
+
 fn hover_for_expression(
     expression: &TypedExpr,
     line_numbers: LineNumbers,
     module: &Module,
-    hex_deps: &std::collections::HashSet<EcoString>,
+    hex_deps: &HashSet<EcoString>,
 ) -> Hover {
     let documentation = expression.get_documentation().unwrap_or_default();
 
@@ -955,7 +1313,7 @@ fn hover_for_expression(
 }
 
 fn hover_for_imported_value(
-    value: &type_::ValueConstructor,
+    value: &ValueConstructor,
     location: &SrcSpan,
     line_numbers: LineNumbers,
     hex_module_imported_from: Option<&ModuleInterface>,
@@ -965,7 +1323,7 @@ fn hover_for_imported_value(
     let documentation = value.get_documentation().unwrap_or_default();
 
     let link_section = hex_module_imported_from.map_or("".to_string(), |m| {
-        format_hexdocs_link_section(m.package.as_str(), m.name.as_str(), name)
+        format_hexdocs_link_section(m.package.as_str(), m.name.as_str(), Some(name))
     });
 
     // Show the type of the hovered node to the user
@@ -979,6 +1337,34 @@ fn hover_for_imported_value(
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(*location, &line_numbers)),
+    }
+}
+
+fn hover_for_module(
+    module: &ModuleInterface,
+    location: SrcSpan,
+    line_numbers: &LineNumbers,
+    hex_deps: &HashSet<EcoString>,
+) -> Hover {
+    let documentation = module.documentation.join("\n");
+    let name = &module.name;
+
+    let link_section = if hex_deps.contains(&module.package) {
+        format_hexdocs_link_section(&module.package, name, None)
+    } else {
+        String::new()
+    };
+
+    let contents = format!(
+        "```gleam
+{name}
+```
+{documentation}
+{link_section}",
+    );
+    Hover {
+        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        range: Some(src_span_to_lsp_range(location, line_numbers)),
     }
 }
 
@@ -1000,6 +1386,8 @@ fn position_within(position: Position, range: Range) -> bool {
     position >= range.start && position <= range.end
 }
 
+/// Builds the code action to assign an unused value to `_`.
+///
 fn code_action_unused_values(
     module: &Module,
     line_numbers: &LineNumbers,
@@ -1059,6 +1447,8 @@ fn code_action_unused_values(
     }
 }
 
+/// Code action to remove unused imports.
+///
 fn code_action_unused_imports(
     module: &Module,
     line_numbers: &LineNumbers,
@@ -1209,8 +1599,15 @@ fn get_expr_qualified_name(expression: &TypedExpr) -> Option<(&EcoString, &EcoSt
     }
 }
 
-fn format_hexdocs_link_section(package_name: &str, module_name: &str, name: &str) -> String {
-    let link = format!("https://hexdocs.pm/{package_name}/{module_name}.html#{name}");
+fn format_hexdocs_link_section(
+    package_name: &str,
+    module_name: &str,
+    name: Option<&str>,
+) -> String {
+    let link = match name {
+        Some(name) => format!("https://hexdocs.pm/{package_name}/{module_name}.html#{name}"),
+        None => format!("https://hexdocs.pm/{package_name}/{module_name}.html"),
+    };
     format!("\nView on [HexDocs]({link})")
 }
 
@@ -1218,7 +1615,7 @@ fn get_hexdocs_link_section(
     module_name: &str,
     name: &str,
     ast: &TypedModule,
-    hex_deps: &std::collections::HashSet<EcoString>,
+    hex_deps: &HashSet<EcoString>,
 ) -> Option<String> {
     let package_name = ast.definitions.iter().find_map(|def| match def {
         Definition::Import(p) if p.module == module_name && hex_deps.contains(&p.package) => {
@@ -1227,7 +1624,11 @@ fn get_hexdocs_link_section(
         _ => None,
     })?;
 
-    Some(format_hexdocs_link_section(package_name, module_name, name))
+    Some(format_hexdocs_link_section(
+        package_name,
+        module_name,
+        Some(name),
+    ))
 }
 
 /// Converts the source start position of a documentation comment's contents into

@@ -1,0 +1,37 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "\npub type Function(a) {\n  Function(fn() -> a)\n}\n\npub fn main() {\n  [fn() { 1 } |> Function, fn() { 2 } |> Function]\n}\n"
+---
+----- SOURCE CODE
+
+pub type Function(a) {
+  Function(fn() -> a)
+}
+
+pub fn main() {
+  [fn() { 1 } |> Function, fn() { 2 } |> Function]
+}
+
+
+----- COMPILED JAVASCRIPT
+import { toList, CustomType as $CustomType } from "../gleam.mjs";
+
+export class Function extends $CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+}
+
+export function main() {
+  return toList([
+    (() => {
+      let _pipe = () => { return 1; };
+      return new Function(_pipe);
+    })(),
+    (() => {
+      let _pipe = () => { return 2; };
+      return new Function(_pipe);
+    })(),
+  ]);
+}

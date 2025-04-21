@@ -1,0 +1,37 @@
+---
+source: compiler-core/src/erlang/tests/echo.rs
+expression: "\npub type Wobble { Wobble(id: Int, name: String) }\n\npub fn main() {\n  let wobble = Wobble(1, \"wobble\")\n  echo Wobble(..wobble, id: 1)\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wobble { Wobble(id: Int, name: String) }
+
+pub fn main() {
+  let wobble = Wobble(1, "wobble")
+  echo Wobble(..wobble, id: 1)
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([main/0]).
+-export_type([wobble/0]).
+
+-type wobble() :: {wobble, integer(), binary()}.
+
+-file("project/test/my/mod.gleam", 4).
+-spec main() -> wobble().
+main() ->
+    Wobble = {wobble, 1, <<"wobble"/utf8>>},
+    echo(
+        begin
+            _record = Wobble,
+            {wobble, 1, erlang:element(3, _record)}
+        end,
+        "project/test/my/mod.gleam",
+        6
+    ).
+
+% ...omitted code from `templates/echo.erl`...

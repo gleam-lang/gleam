@@ -1,19 +1,18 @@
 use camino::Utf8PathBuf;
 use gleam_core::{
+    Result,
     analyse::TargetSupport,
     build::{Codegen, Compile, Mode, Options, Target},
-    Result,
+    paths::ProjectPaths,
 };
 
-#[cfg(target_os = "windows")]
-static ENTRYPOINT_FILENAME: &str = "entrypoint.ps1";
-#[cfg(not(target_os = "windows"))]
-static ENTRYPOINT_FILENAME: &str = "entrypoint.sh";
+static ENTRYPOINT_FILENAME_POWERSHELL: &str = "entrypoint.ps1";
+static ENTRYPOINT_FILENAME_POSIX_SHELL: &str = "entrypoint.sh";
 
-#[cfg(target_os = "windows")]
-static ENTRYPOINT_TEMPLATE: &str = include_str!("../templates/erlang-shipment-entrypoint.ps1");
-#[cfg(not(target_os = "windows"))]
-static ENTRYPOINT_TEMPLATE: &str = include_str!("../templates/erlang-shipment-entrypoint.sh");
+static ENTRYPOINT_TEMPLATE_POWERSHELL: &str =
+    include_str!("../templates/erlang-shipment-entrypoint.ps1");
+static ENTRYPOINT_TEMPLATE_POSIX_SHELL: &str =
+    include_str!("../templates/erlang-shipment-entrypoint.sh");
 
 // TODO: start in embedded mode
 // TODO: test
@@ -26,8 +25,7 @@ static ENTRYPOINT_TEMPLATE: &str = include_str!("../templates/erlang-shipment-en
 /// - ebin
 /// - include
 /// - priv
-pub(crate) fn erlang_shipment() -> Result<()> {
-    let paths = crate::find_project_paths()?;
+pub(crate) fn erlang_shipment(paths: &ProjectPaths) -> Result<()> {
     let target = Target::Erlang;
     let mode = Mode::Prod;
     let build = paths.build_directory_for_target(mode, target);
@@ -41,6 +39,7 @@ pub(crate) fn erlang_shipment() -> Result<()> {
 
     // Build project in production mode
     let built = crate::build::main(
+        paths,
         Options {
             root_target_support: TargetSupport::Enforced,
             warnings_as_errors: false,
@@ -50,7 +49,7 @@ pub(crate) fn erlang_shipment() -> Result<()> {
             target: Some(target),
             no_print_progress: false,
         },
-        crate::build::download_dependencies(crate::cli::Reporter::new())?,
+        crate::build::download_dependencies(paths, crate::cli::Reporter::new())?,
     )?;
 
     for entry in crate::fs::read_dir(&build)?.filter_map(Result::ok) {
@@ -77,12 +76,19 @@ pub(crate) fn erlang_shipment() -> Result<()> {
         }
     }
 
-    // Write entrypoint script
-    let entrypoint = out.join(ENTRYPOINT_FILENAME);
-    let text =
-        ENTRYPOINT_TEMPLATE.replace("$PACKAGE_NAME_FROM_GLEAM", &built.root_package.config.name);
-    crate::fs::write(&entrypoint, &text)?;
-    crate::fs::make_executable(&entrypoint)?;
+    // PowerShell entry point script.
+    write_entrypoint_script(
+        &out.join(ENTRYPOINT_FILENAME_POWERSHELL),
+        ENTRYPOINT_TEMPLATE_POWERSHELL,
+        &built.root_package.config.name,
+    )?;
+
+    // POSIX Shell entry point script.
+    write_entrypoint_script(
+        &out.join(ENTRYPOINT_FILENAME_POSIX_SHELL),
+        ENTRYPOINT_TEMPLATE_POSIX_SHELL,
+        &built.root_package.config.name,
+    )?;
 
     crate::cli::print_exported(&built.root_package.config.name);
 
@@ -91,19 +97,29 @@ pub(crate) fn erlang_shipment() -> Result<()> {
 Your Erlang shipment has been generated to {out}.
 
 It can be copied to a compatible server with Erlang installed and run with
-the {ENTRYPOINT_FILENAME} script.
-
-    {entrypoint}
+one of the following scripts:
+    - {ENTRYPOINT_FILENAME_POWERSHELL} (PowerShell script)
+    - {ENTRYPOINT_FILENAME_POSIX_SHELL} (POSIX Shell script)
 ",
     );
 
     Ok(())
 }
 
-pub fn hex_tarball() -> Result<()> {
-    let paths = crate::find_project_paths()?;
-    let mut config = crate::config::root_config()?;
-    let data: Vec<u8> = crate::publish::build_hex_tarball(&paths, &mut config)?;
+fn write_entrypoint_script(
+    entrypoint_output_path: &Utf8PathBuf,
+    entrypoint_template_path: &str,
+    package_name: &str,
+) -> Result<(), gleam_core::Error> {
+    let text = entrypoint_template_path.replace("$PACKAGE_NAME_FROM_GLEAM", package_name);
+    crate::fs::write(entrypoint_output_path, &text)?;
+    crate::fs::make_executable(entrypoint_output_path)?;
+    Ok(())
+}
+
+pub fn hex_tarball(paths: &ProjectPaths) -> Result<()> {
+    let mut config = crate::config::root_config(paths)?;
+    let data: Vec<u8> = crate::publish::build_hex_tarball(paths, &mut config)?;
 
     let path = paths.build_export_hex_tarball(&config.name, &config.version.to_string());
     crate::fs::write_bytes(&path, &data)?;
@@ -126,9 +142,10 @@ pub fn typescript_prelude() -> Result<()> {
     Ok(())
 }
 
-pub fn package_interface(path: Utf8PathBuf) -> Result<()> {
+pub fn package_interface(paths: &ProjectPaths, out: Utf8PathBuf) -> Result<()> {
     // Build the project
     let mut built = crate::build::main(
+        paths,
         Options {
             mode: Mode::Prod,
             target: None,
@@ -138,11 +155,22 @@ pub fn package_interface(path: Utf8PathBuf) -> Result<()> {
             root_target_support: TargetSupport::Enforced,
             no_print_progress: false,
         },
-        crate::build::download_dependencies(crate::cli::Reporter::new())?,
+        crate::build::download_dependencies(paths, crate::cli::Reporter::new())?,
     )?;
     built.root_package.attach_doc_and_module_comments();
 
-    let out = gleam_core::docs::generate_json_package_interface(path, &built.root_package);
-    crate::fs::write_outputs_under(&[out], crate::find_project_paths()?.root())?;
+    let out = gleam_core::docs::generate_json_package_interface(
+        out,
+        &built.root_package,
+        &built.module_interfaces,
+    );
+    crate::fs::write_outputs_under(&[out], paths.root())?;
+    Ok(())
+}
+
+pub fn package_information(paths: &ProjectPaths, out: Utf8PathBuf) -> Result<()> {
+    let config = crate::config::root_config(paths)?;
+    let out = gleam_core::docs::generate_json_package_information(out, config);
+    crate::fs::write_outputs_under(&[out], paths.root())?;
     Ok(())
 }

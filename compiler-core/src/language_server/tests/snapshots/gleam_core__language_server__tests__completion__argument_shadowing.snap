@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-assertion_line: 1742
 expression: "\npub fn main(x: Int) {\n  fn(x: Float) {\n\n  }\n}\n"
 ---
 pub fn main(x: Int) {

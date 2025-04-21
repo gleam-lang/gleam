@@ -48,6 +48,10 @@ impl ProjectPaths {
         self.root.join("test")
     }
 
+    pub fn dev_directory(&self) -> Utf8PathBuf {
+        self.root.join("dev")
+    }
+
     pub fn build_directory(&self) -> Utf8PathBuf {
         self.root.join("build")
     }
@@ -166,6 +170,8 @@ fn paths() {
             .ends_with("hex/hexpm/packages/gleam_stdlib-0.17.1.tar")
     );
 
-    assert!(global_package_cache_package_tarball("elli", "1.0.0")
-        .ends_with("hex/hexpm/packages/elli-1.0.0.tar"));
+    assert!(
+        global_package_cache_package_tarball("elli", "1.0.0")
+            .ends_with("hex/hexpm/packages/elli-1.0.0.tar")
+    );
 }

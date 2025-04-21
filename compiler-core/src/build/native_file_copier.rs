@@ -4,11 +4,12 @@ mod tests;
 use std::collections::{HashMap, HashSet};
 
 use camino::{Utf8Path, Utf8PathBuf};
-use ecow::{eco_format, EcoString};
+use ecow::{EcoString, eco_format};
 
 use crate::{
-    io::{DirWalker, FileSystemReader, FileSystemWriter},
     Error, Result,
+    io::{DirWalker, FileSystemReader, FileSystemWriter},
+    paths::ProjectPaths,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -19,7 +20,7 @@ pub(crate) struct CopiedNativeFiles {
 
 pub(crate) struct NativeFileCopier<'a, IO> {
     io: IO,
-    root: &'a Utf8Path,
+    paths: ProjectPaths,
     destination_dir: &'a Utf8Path,
     seen_native_files: HashSet<Utf8PathBuf>,
     seen_modules: HashMap<EcoString, Utf8PathBuf>,
@@ -34,7 +35,7 @@ where
     pub(crate) fn new(io: IO, root: &'a Utf8Path, out: &'a Utf8Path) -> Self {
         Self {
             io,
-            root,
+            paths: ProjectPaths::new(root.into()),
             destination_dir: out,
             to_compile: Vec::new(),
             seen_native_files: HashSet::new(),
@@ -52,12 +53,17 @@ where
     pub fn run(mut self) -> Result<CopiedNativeFiles> {
         self.io.mkdir(&self.destination_dir)?;
 
-        let src = self.root.join("src");
+        let src = self.paths.src_directory();
         self.copy_files(&src)?;
 
-        let test = self.root.join("test");
+        let test = self.paths.test_directory();
         if self.io.is_directory(&test) {
             self.copy_files(&test)?;
+        }
+
+        let dev = self.paths.dev_directory();
+        if self.io.is_directory(&dev) {
+            self.copy_files(&dev)?;
         }
 
         // Sort for deterministic output
@@ -95,7 +101,7 @@ where
         }
 
         // Skip unknown file formats that are not supported native files
-        if !matches!(extension, "mjs" | "js" | "ts" | "hrl" | "erl" | "ex") {
+        if !crate::io::is_native_file_extension(extension) {
             return Ok(());
         }
 

@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/language_server/tests/definition.rs
+expression: output
+---
+----- Jumping from `src/app.gleam`
+
+import wibble
+
+pub fn main() {
+  wibble.wibble()
+   ↑             
+}
+
+----- Jumped to `src/wibble.gleam`
+pub fn wibble() {}
+↑

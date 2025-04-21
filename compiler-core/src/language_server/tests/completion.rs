@@ -332,9 +332,11 @@ pub fn wobble() {
 }
 ";
 
-    assert_completion!(TestProject::for_source(code)
-        .add_module("dep", dep)
-        .add_module("dep2", dep2));
+    assert_completion!(
+        TestProject::for_source(code)
+            .add_module("dep", dep)
+            .add_module("dep2", dep2)
+    );
 }
 
 #[test]
@@ -351,6 +353,36 @@ pub fn wobble() {
 }
 
 #[test]
+fn completions_for_type_import_completions_without_brackets() {
+    let src = "import dep.";
+    let dep = "
+pub opaque type Wibble {
+  Wibble(wibble: String, wobble: Int)
+}
+";
+    let position = Position::new(0, 11);
+    let tester = TestProject::for_source("import dep").add_module("dep", dep);
+    let mut io = LanguageServerTestIO::new();
+    let mut engine = tester.build_engine(&mut io);
+    // pass a valid src to compile once
+    _ = io.src_module("app", tester.src);
+    let _ = engine.compile_please();
+    // update src to the one we want to test
+    _ = io.src_module("app", src);
+    let param = tester.build_path(position);
+    let response = engine.completion(param, src.into());
+
+    let mut completions = response.result.unwrap().unwrap_or_default();
+    completions.sort_by(|a, b| a.label.cmp(&b.label));
+    let output = format!(
+        "{}\n\n----- Completion content -----\n{}",
+        show_complete(src, position),
+        format_completion_results(completions)
+    );
+    insta::assert_snapshot!(insta::internals::AutoName, output, src);
+}
+
+#[test]
 fn importable_adds_extra_new_line_if_no_imports() {
     let dep = "pub fn wobble() {\nNil\n}";
     let code = "";
@@ -363,9 +395,11 @@ fn importable_adds_extra_new_line_if_import_exists_below_other_definitions() {
     let dep = "pub fn wobble() {\nNil\n}";
     let code = "\nimport dep2\n"; // "code" goes after "fn typing_in_here() {}".
 
-    assert_completion!(TestProject::for_source(code)
-        .add_module("dep", dep)
-        .add_module("dep2", ""));
+    assert_completion!(
+        TestProject::for_source(code)
+            .add_module("dep", dep)
+            .add_module("dep2", "")
+    );
 }
 
 #[test]
@@ -1222,6 +1256,39 @@ pub fn test_helper() {
 }
 
 #[test]
+fn completions_for_an_import_while_in_dev() {
+    let code = "import gleam
+
+pub fn main() {
+  0
+}";
+    let dev_helper = "
+pub fn dev_helper() {
+  0
+}
+";
+
+    let position = Position::new(0, 12);
+    let (mut engine, position_param) = TestProject::for_source(code)
+        .add_test_module("my_test", code)
+        .add_dev_module("my_dev_code", code)
+        .add_dev_module("dev_helper", dev_helper)
+        .positioned_with_io_in_dev(position, "my_dev_code");
+
+    let response = engine.completion(position_param, code.into());
+
+    let mut completions = response.result.unwrap().unwrap_or_default();
+    completions.sort_by(|a, b| a.label.cmp(&b.label));
+
+    let output = format!(
+        "{}\n\n----- Completion content -----\n{}",
+        show_complete(code, position),
+        format_completion_results(completions)
+    );
+    insta::assert_snapshot!(insta::internals::AutoName, output, code);
+}
+
+#[test]
 fn completions_for_an_import_with_docs() {
     let code = "import gleam
 
@@ -1316,6 +1383,41 @@ pub fn main() {
     completions.sort_by(|a, b| a.label.cmp(&b.label));
 
     assert_debug_snapshot!(completions,);
+}
+
+#[test]
+fn completions_for_an_import_not_from_dev_dependency_in_dev() {
+    let code = "import gleam
+
+pub fn main() {
+  0
+}";
+    let dev = "import gleam
+
+pub fn main() {
+  0
+}
+";
+    let dep = "";
+
+    let position = Position::new(0, 10);
+    let (mut engine, position_param) = TestProject::for_source(code)
+        .add_dev_module("my_dev_module", dev)
+        .add_hex_module("example_module", dep)
+        .add_dev_hex_module("indirect_module", "")
+        .positioned_with_io_in_dev(position, "my_dev_module");
+
+    let response = engine.completion(position_param, code.into());
+
+    let mut completions = response.result.unwrap().unwrap_or_default();
+    completions.sort_by(|a, b| a.label.cmp(&b.label));
+
+    let output = format!(
+        "{}\n\n----- Completion content -----\n{}",
+        show_complete(dev, position),
+        format_completion_results(completions)
+    );
+    insta::assert_snapshot!(insta::internals::AutoName, output, dev);
 }
 
 #[test]
@@ -1855,4 +1957,177 @@ pub fn map(_, _) { [] }
         "list.map",
         Position::new(3, 8)
     );
+}
+
+#[test]
+fn case_subject() {
+    let code = "
+pub fn main(something: Bool) {
+  case so
+}
+";
+
+    assert_apply_completion!(
+        TestProject::for_source(code),
+        "something",
+        Position::new(2, 9)
+    );
+}
+
+#[test]
+fn constant() {
+    let code = "
+const hello = 10
+const world = he
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(2, 16));
+}
+
+#[test]
+fn constant_with_many_options() {
+    let code = "
+import wibble.{Wobble}
+
+type Wibble {
+  Wibble
+}
+
+const pi = 3.14159
+
+fn some_function() {
+  todo
+}
+
+const my_constant = a
+";
+
+    assert_completion!(
+        TestProject::for_source(code).add_hex_module("wibble", "pub type Wibble { Wobble Wubble }"),
+        Position::new(13, 21)
+    );
+}
+
+#[test]
+fn constant_with_module_select() {
+    let code = "
+import wibble
+
+type Wibble {
+  Wibble
+}
+
+const pi = 3.14159
+
+fn some_function() {
+  todo
+}
+
+const my_constant = wibble.W
+";
+
+    assert_completion!(
+        TestProject::for_source(code).add_hex_module(
+            "wibble",
+            "
+pub type Wibble { Wobble Wubble }
+pub const some_constant = 1
+pub fn some_function() { todo }
+"
+        ),
+        Position::new(13, 28)
+    );
+}
+
+#[test]
+fn labelled_arguments() {
+    let code = "
+pub type Wibble {
+  Wibble(wibble: Int, wobble: Float)
+}
+
+pub fn main() {
+  Wibble(w)
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(6, 10));
+}
+
+#[test]
+fn labelled_arguments_with_existing_label() {
+    // This should only suggest the `wobble:` label
+    let code = "
+pub type Wibble {
+  Wibble(wibble: Int, wobble: Float)
+}
+
+pub fn main() {
+  Wibble(wibble: 10, w)
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(6, 22));
+}
+
+#[test]
+fn labelled_arguments_after_label() {
+    // This should not suggest any labels, as `wibble: wibble:` is not valid syntax.
+    let code = "
+pub type Wibble {
+  Wibble(wibble: Int, wobble: Float)
+}
+
+pub fn main() {
+  Wibble(wibble: w)
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(6, 18));
+}
+
+#[test]
+fn labelled_arguments_function_call() {
+    let code = "
+pub fn divide(x: Int, by y: Int) { x / y }
+
+pub fn main() {
+  divide(10, b)
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(4, 14));
+}
+
+#[test]
+fn labelled_arguments_from_different_module() {
+    let code = "
+import wibble
+
+pub fn main() {
+  wibble.divide(10, b)
+}
+";
+
+    assert_completion!(
+        TestProject::for_source(code)
+            .add_hex_module("wibble", "pub fn divide(x: Int, by y: Int) { x / y }"),
+        Position::new(4, 21)
+    );
+}
+
+#[test]
+fn no_label_completions_in_nested_expression() {
+    // Since we are completing inside a list, labels are no longer available
+    let code = "
+pub type Wibble {
+  Wibble(wibble: Int, wobble: Float)
+}
+
+pub fn main() {
+  Wibble([w])
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(6, 11));
 }

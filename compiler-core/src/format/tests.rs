@@ -3637,9 +3637,13 @@ fn commented_constructors() {
 
 #[test]
 fn function_captures_test() {
-    assert_format!(
+    assert_format_rewrite!(
         "pub fn main() {
   run(_)
+}
+",
+        "pub fn main() {
+  run
 }
 "
     );
@@ -3651,9 +3655,13 @@ fn function_captures_test() {
 "
     );
 
-    assert_format!(
+    assert_format_rewrite!(
         "pub fn main() {
   run(1, 2, _, 4, 5)(_)
+}
+",
+        "pub fn main() {
+  run(1, 2, _, 4, 5)
 }
 "
     );
@@ -6313,6 +6321,221 @@ fn let_assert_as_variable_message() {
         r#"pub fn main() {
   let message = "Hi :)"
   let assert 1 = 2 as message
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4121
+#[test]
+fn function_capture_formatted_like_regular_calls() {
+    assert_format!(
+        r#"pub fn main() {
+  capture(a, _, [
+    really_long_thing_that_can_be_broken,
+    something_else_for_good_measure,
+  ])
+}
+"#
+    );
+}
+
+#[test]
+fn function_capture_formatted_like_regular_calls_2() {
+    assert_format!(
+        r#"pub fn main() {
+  capture(
+    a,
+    _,
+    really_long_thing_that_cannot_be_broken,
+    something_else_for_good_measure,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn function_capture_formatted_like_regular_calls_3() {
+    assert_format!(
+        r#"pub fn main() {
+  list.fold(my_list, _, fn(a) {
+    io.print("Meh")
+    io.print("Meh")
+  })
+}
+"#
+    );
+}
+
+#[test]
+fn function_capture_formatted_like_regular_calls_inside_a_long_list() {
+    assert_format!(
+        r#"pub fn main() {
+  [
+    capture(a, _, [
+      really_long_thing_that_can_be_broken,
+      something_else_for_good_measure,
+    ]),
+    regular_call(a, [
+      really_long_thing_that_can_be_broken,
+      something_else_for_good_measure,
+    ]),
+  ]
+}
+"#
+    );
+}
+
+#[test]
+fn function_capture_formatted_like_regular_calls_in_a_pipe() {
+    assert_format!(
+        r#"pub fn main() {
+  [1, 2, 3]
+  |> list.fold(from: 1, over: _, with: fn(a, b) {
+    // a comment!
+    a + b
+  })
+}
+"#
+    );
+}
+
+#[test]
+fn echo() {
+    assert_format!(
+        "fn main() {
+  echo
+}
+"
+    );
+}
+
+#[test]
+fn echo_with_value() {
+    assert_format!(
+        r#"fn main() {
+  echo value
+}
+"#
+    );
+}
+
+#[test]
+fn echo_with_big_value_that_needs_to_be_split() {
+    assert_format!(
+        r#"fn main() {
+  echo [
+    this_is_a_long_list_and_requires_splitting,
+    wibble_wobble_woo,
+    multiple_lines,
+  ]
+}
+"#
+    );
+}
+
+#[test]
+fn echo_inside_a_pipeline() {
+    assert_format!(
+        r#"fn main() {
+  wibble
+  |> echo
+  |> wobble
+}
+"#
+    );
+}
+
+#[test]
+fn echo_inside_a_single_line_pipeline() {
+    assert_format!(
+        r#"fn main() {
+  wibble |> echo |> wobble
+}
+"#
+    );
+}
+
+#[test]
+fn echo_as_last_item_of_pipeline() {
+    assert_format!(
+        r#"fn main() {
+  wibble |> wobble |> echo
+}
+"#
+    );
+}
+
+#[test]
+fn echo_as_last_item_of_multiline_pipeline() {
+    assert_format!(
+        r#"fn main() {
+  wibble
+  |> wobble
+  |> echo
+}
+"#
+    );
+}
+
+#[test]
+fn echo_with_related_expression_on_following_line() {
+    assert_format_rewrite!(
+        r#"fn main() {
+  panic as echo
+  "wibble"
+}
+"#,
+        r#"fn main() {
+  panic as echo "wibble"
+}
+"#
+    );
+}
+
+#[test]
+fn echo_with_following_value_in_a_pipeline() {
+    assert_format_rewrite!(
+        r#"fn main() {
+  []
+  |> echo wibble
+  |> wobble
+}
+"#,
+        r#"fn main() {
+  []
+  |> echo
+  wibble
+  |> wobble
+}
+"#
+    );
+}
+
+#[test]
+fn echo_printing_multiline_pipeline() {
+    assert_format_rewrite!(
+        r#"fn main() {
+  echo first
+  |> wibble
+  |> wobble
+}
+"#,
+        r#"fn main() {
+  echo first
+    |> wibble
+    |> wobble
+}
+"#
+    );
+}
+
+#[test]
+fn echo_printing_one_line_pipeline() {
+    assert_format!(
+        r#"fn main() {
+  echo first |> wibble |> wobble
 }
 "#
     );

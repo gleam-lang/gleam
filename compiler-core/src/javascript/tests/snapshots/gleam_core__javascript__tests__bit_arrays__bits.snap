@@ -13,5 +13,5 @@ fn go(x) {
 import { toBitArray } from "../gleam.mjs";
 
 function go(x) {
-  return toBitArray([x.buffer]);
+  return toBitArray([x]);
 }

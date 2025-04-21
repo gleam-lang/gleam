@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-assertion_line: 1243
 expression: "\n\nconst wibble: Int = 7\n\npub fn main() {\n  let wibble: Int = 7\n}\n"
 ---
 const wibble: In|t = 7

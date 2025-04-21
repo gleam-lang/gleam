@@ -18,7 +18,7 @@ pub fn should_not_be_generated(x: Int) -> Int
 
 -export([should_be_generated/1]).
 
--file("/root/project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec should_be_generated(integer()) -> integer().
 should_be_generated(X) ->
     X.

@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\n@target(abc)\npub fn one() {}"
+---
+----- SOURCE CODE
+
+@target(abc)
+pub fn one() {}
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:9
+  │
+2 │ @target(abc)
+  │         ^^^ I don't recognise this target
+
+Try `erlang`, `javascript`.

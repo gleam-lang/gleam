@@ -1,24 +1,25 @@
 use std::rc::Rc;
 
-use camino::{Utf8Path, Utf8PathBuf};
 use gleam_core::{
+    Error, Result, Warning,
     analyse::TargetSupport,
     build::{Codegen, Compile, Mode, Options},
     error::{FileIoAction, FileKind},
+    paths::ProjectPaths,
     type_,
     warning::VectorWarningEmitterIO,
-    Error, Result, Warning,
 };
 use hexpm::version::Version;
 
 use crate::{build, cli};
 
-pub fn run() -> Result<()> {
+pub fn run(paths: &ProjectPaths) -> Result<()> {
     // When running gleam fix we want all the compilation warnings to be hidden,
     // at the same time we need to access those to apply the fixes: so we
     // accumulate those into a vector.
     let warnings = Rc::new(VectorWarningEmitterIO::new());
     let _built = build::main_with_warnings(
+        paths,
         Options {
             root_target_support: TargetSupport::Enforced,
             warnings_as_errors: false,
@@ -28,29 +29,30 @@ pub fn run() -> Result<()> {
             target: None,
             no_print_progress: false,
         },
-        build::download_dependencies(cli::Reporter::new())?,
+        build::download_dependencies(paths, cli::Reporter::new())?,
         warnings.clone(),
     )?;
     let warnings = warnings.take();
 
-    fix_minimum_required_version(warnings)?;
+    fix_minimum_required_version(paths, warnings)?;
 
     println!("Done!");
     Ok(())
 }
 
-fn fix_minimum_required_version(warnings: Vec<Warning>) -> Result<()> {
+fn fix_minimum_required_version(paths: &ProjectPaths, warnings: Vec<Warning>) -> Result<()> {
     let Some(minimum_required_version) = minimum_required_version_from_warnings(warnings) else {
         return Ok(());
     };
 
     // Set the version requirement in gleam.toml
-    let mut toml = crate::fs::read("gleam.toml")?
+    let root_config = paths.root_config();
+    let mut toml = crate::fs::read(&root_config)?
         .parse::<toml_edit::DocumentMut>()
         .map_err(|e| Error::FileIo {
             kind: FileKind::File,
             action: FileIoAction::Parse,
-            path: Utf8PathBuf::from("gleam.toml"),
+            path: root_config.to_path_buf(),
             err: Some(e.to_string()),
         })?;
 
@@ -60,7 +62,7 @@ fn fix_minimum_required_version(warnings: Vec<Warning>) -> Result<()> {
     }
 
     // Write the updated config
-    crate::fs::write(Utf8Path::new("gleam.toml"), &toml.to_string())?;
+    crate::fs::write(root_config.as_path(), &toml.to_string())?;
 
     println!("- Set required Gleam version to \">= {minimum_required_version}\"");
     Ok(())

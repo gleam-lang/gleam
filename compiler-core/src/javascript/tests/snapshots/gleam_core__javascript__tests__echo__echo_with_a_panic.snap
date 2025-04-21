@@ -1,0 +1,37 @@
+---
+source: compiler-core/src/javascript/tests/echo.rs
+expression: "\npub fn main() {\n  echo panic\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  echo panic
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
+import {
+  CustomType as $CustomType,
+  makeError,
+  bitArraySlice,
+  bitArraySliceToInt,
+  BitArray as $BitArray,
+  List as $List,
+  UtfCodepoint as $UtfCodepoint,
+} from "../gleam.mjs";
+
+export function main() {
+  let _block;
+  throw makeError(
+    "panic",
+    "my/mod",
+    3,
+    "main",
+    "`panic` expression evaluated.",
+    {}
+  )
+  return echo(_block, "src/module.gleam", 3);
+}
+
+// ...omitted code from `templates/echo.mjs`...

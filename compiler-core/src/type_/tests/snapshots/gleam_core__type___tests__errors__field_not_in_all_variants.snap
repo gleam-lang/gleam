@@ -12,10 +12,10 @@ pub fn get_title(person: Person) { person.title }
 
 ----- ERROR
 error: Unknown record field
-  ┌─ /src/one/two.gleam:6:42
+  ┌─ /src/one/two.gleam:6:43
   │
 6 │ pub fn get_title(person: Person) { person.title }
-  │                                          ^^^^^^ This field does not exist
+  │                                           ^^^^^ This field does not exist
 
 The value being accessed has this type:
 

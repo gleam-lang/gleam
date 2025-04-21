@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
 expression: "type GleamOption(okType) = Result(okType, Nil)"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 type GleamOption(okType) = Result(okType, Nil)
