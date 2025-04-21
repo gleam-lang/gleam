@@ -263,6 +263,24 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         result
     }
 
+    fn expr_in_new_scope(
+        &mut self,
+        process_scope: impl FnOnce(&mut Self) -> TypedExpr,
+    ) -> TypedExpr {
+        // Create new scope
+        let environment_reset_data = self.environment.open_new_scope();
+        let hydrator_reset_data = self.hydrator.open_new_scope();
+
+        // Process the scope
+        let result = process_scope(self);
+
+        // Close scope, discarding any scope local state
+        self.environment
+            .close_scope(environment_reset_data, !result.is_invalid(), self.problems);
+        self.hydrator.close_scope(hydrator_reset_data);
+        result
+    }
+
     pub fn type_from_ast(&mut self, ast: &TypeAst) -> Result<Arc<Type>, Error> {
         self.hydrator
             .type_from_ast(ast, self.environment, self.problems)
@@ -326,7 +344,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             UntypedExpr::Block {
                 statements,
                 location,
-            } => self.infer_block(statements, location),
+            } => Ok(self.infer_block(statements, location)),
 
             UntypedExpr::Tuple {
                 location, elements, ..
@@ -1554,15 +1572,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             annotation,
             location,
         } = assignment;
-        let value_location = value.location();
-        let value = match self.in_new_scope(|value_typer| value_typer.infer_or_error(*value)) {
-            Ok(value) => value,
-            Err(error) => {
-                self.problems.error(error);
-                self.error_expr(value_location)
-            }
-        };
-
+        let value = self.expr_in_new_scope(|this| this.infer(*value));
         let type_ = value.type_();
         let kind = self.infer_assignment_kind(kind.clone());
 
@@ -1710,19 +1720,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         self.previous_panics = false;
         let mut any_subject_panics = false;
         for subject in subjects {
-            let subject_location = subject.location();
-            let subject = self.in_new_scope(|subject_typer| {
-                let subject = subject_typer.infer_or_error(subject)?;
-                Ok(subject)
-            });
-            let subject = match subject {
-                Ok(subject) => subject,
-                Err(error) => {
-                    self.problems.error(error);
-                    self.error_expr(subject_location)
-                }
-            };
-
+            let subject = self.expr_in_new_scope(|this| this.infer(subject));
             any_subject_panics = any_subject_panics || self.previous_panics;
             subject_types.push(subject.type_());
             typed_subjects.push(subject);
@@ -1828,25 +1826,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         } = clause;
         let then_location = then.location();
 
-        let scoped_clause_inference = self.in_new_scope(|clause_typer| {
+        let scoped_clause_inference = self.in_new_scope(|this| {
             // Check the types
-            let (typed_pattern, typed_alternatives, error_encountered) = clause_typer
-                .infer_clause_pattern(pattern, alternative_patterns, subjects, &location);
-            let guard = match clause_typer.infer_optional_clause_guard(guard) {
+            let (typed_pattern, typed_alternatives, error_encountered) =
+                this.infer_clause_pattern(pattern, alternative_patterns, subjects, &location);
+            let guard = match this.infer_optional_clause_guard(guard) {
                 Ok(guard) => guard,
                 // If an error occurs inferring guard then assume no guard
                 Err(error) => {
-                    clause_typer.problems.error(error);
+                    this.problems.error(error);
                     None
                 }
             };
-            let then = match clause_typer.infer_or_error(then) {
-                Ok(then) => then,
-                Err(error) => {
-                    clause_typer.problems.error(error);
-                    clause_typer.error_expr(then_location)
-                }
-            };
+            let then = this.infer(then);
 
             Ok((
                 guard,
@@ -4069,6 +4061,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         if body.first().is_placeholder() {
             self.implementations.gleam = false;
         }
+
         self.in_new_scope(|body_typer| {
             // Used to track if any argument names are used more than once
             let mut argument_names = HashSet::with_capacity(args.len());
@@ -4145,17 +4138,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
-    fn infer_block(
-        &mut self,
-        statements: Vec1<UntypedStatement>,
-        location: SrcSpan,
-    ) -> Result<TypedExpr, Error> {
-        self.in_new_scope(|typer| {
+    fn infer_block(&mut self, statements: Vec1<UntypedStatement>, location: SrcSpan) -> TypedExpr {
+        self.expr_in_new_scope(|typer| {
             let statements = typer.infer_statements(statements);
-            Ok(TypedExpr::Block {
+            TypedExpr::Block {
                 statements,
                 location,
-            })
+            }
         })
     }
 
