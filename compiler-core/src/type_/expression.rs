@@ -245,38 +245,43 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    pub fn in_new_scope<T, E>(
+    fn in_new_scope<T, E>(
         &mut self,
         process_scope: impl FnOnce(&mut Self) -> Result<T, E>,
     ) -> Result<T, E> {
-        // Create new scope
-        let environment_reset_data = self.environment.open_new_scope();
-        let hydrator_reset_data = self.hydrator.open_new_scope();
+        self.scoped(|this| {
+            let result = process_scope(this);
+            let was_successful = result.is_ok();
+            (result, was_successful)
+        })
+    }
 
-        // Process the scope
-        let result = process_scope(self);
-
-        // Close scope, discarding any scope local state
-        self.environment
-            .close_scope(environment_reset_data, result.is_ok(), self.problems);
-        self.hydrator.close_scope(hydrator_reset_data);
-        result
+    fn value_in_new_scope<A>(&mut self, process_scope: impl FnOnce(&mut Self) -> A) -> A {
+        self.scoped(|this| (process_scope(this), true))
     }
 
     fn expr_in_new_scope(
         &mut self,
         process_scope: impl FnOnce(&mut Self) -> TypedExpr,
     ) -> TypedExpr {
+        self.scoped(|this| {
+            let expr = process_scope(this);
+            let was_successful = !expr.is_invalid();
+            (expr, was_successful)
+        })
+    }
+
+    fn scoped<A>(&mut self, process_scope: impl FnOnce(&mut Self) -> (A, bool)) -> A {
         // Create new scope
         let environment_reset_data = self.environment.open_new_scope();
         let hydrator_reset_data = self.hydrator.open_new_scope();
 
         // Process the scope
-        let result = process_scope(self);
+        let (result, was_successful) = process_scope(self);
 
         // Close scope, discarding any scope local state
         self.environment
-            .close_scope(environment_reset_data, !result.is_invalid(), self.problems);
+            .close_scope(environment_reset_data, was_successful, self.problems);
         self.hydrator.close_scope(hydrator_reset_data);
         result
     }
@@ -1756,20 +1761,18 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 all_patterns_are_discards && clause.pattern.iter().all(|p| p.is_discard());
 
             self.previous_panics = false;
-            let typed_clause = match self.infer_clause(clause, &typed_subjects) {
-                Ok(clause) => clause,
-                Err(clause) => {
-                    patterns_typechecked_successfully = false;
-                    clause
-                }
-            };
+            let (typed_clause, error_typing_patterns) = self.infer_clause(clause, &typed_subjects);
+            if error_typing_patterns {
+                patterns_typechecked_successfully = false
+            }
             all_clauses_panic = all_clauses_panic && self.previous_panics;
 
-            if let Err(e) = unify(return_type.clone(), typed_clause.then.type_()).map_err(|e| {
-                e.case_clause_mismatch(typed_clause.location)
-                    .into_error(typed_clause.then.type_defining_location())
-            }) {
-                self.problems.error(e);
+            if let Err(error) = unify(return_type.clone(), typed_clause.then.type_()) {
+                self.problems.error(
+                    error
+                        .case_clause_mismatch(typed_clause.location)
+                        .into_error(typed_clause.then.type_defining_location()),
+                );
             }
             typed_clauses.push(typed_clause);
         }
@@ -1812,11 +1815,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
+    /// Returns a tuple with the typed clause and a bool that is true if an error
+    /// was encountered while typing the clause patterns.
+    ///
     fn infer_clause(
         &mut self,
         clause: UntypedClause,
         subjects: &[TypedExpr],
-    ) -> Result<TypedClause, TypedClause> {
+    ) -> (TypedClause, bool) {
         let Clause {
             pattern,
             alternative_patterns,
@@ -1824,12 +1830,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             then,
             location,
         } = clause;
-        let then_location = then.location();
-
-        let scoped_clause_inference = self.in_new_scope(|this| {
-            // Check the types
+        self.value_in_new_scope(|this| {
             let (typed_pattern, typed_alternatives, error_encountered) =
                 this.infer_clause_pattern(pattern, alternative_patterns, subjects, &location);
+
             let guard = match this.infer_optional_clause_guard(guard) {
                 Ok(guard) => guard,
                 // If an error occurs inferring guard then assume no guard
@@ -1839,49 +1843,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }
             };
             let then = this.infer(then);
-
-            Ok((
+            let clause = Clause {
+                location,
+                pattern: typed_pattern,
+                alternative_patterns: typed_alternatives,
                 guard,
                 then,
-                typed_pattern,
-                typed_alternatives,
-                error_encountered,
-            ))
-        });
-        let (guard, then, typed_pattern, typed_alternatives, error_encountered) =
-            match scoped_clause_inference {
-                Ok(res) => res,
-                Err(error) => {
-                    // NOTE: theoretically it should be impossible to get here
-                    // since the individual parts have been made fault tolerant
-                    // but in_new_scope requires that the return type be a result
-                    self.problems.error(error);
-                    (
-                        None,
-                        TypedExpr::Invalid {
-                            location: then_location,
-                            type_: self.new_unbound_var(),
-                        },
-                        vec![],
-                        vec![],
-                        true,
-                    )
-                }
             };
-
-        let clause = Clause {
-            location,
-            pattern: typed_pattern,
-            alternative_patterns: typed_alternatives,
-            guard,
-            then,
-        };
-
-        if error_encountered {
-            Err(clause)
-        } else {
-            Ok(clause)
-        }
+            (clause, error_encountered)
+        })
     }
 
     fn infer_clause_pattern(
