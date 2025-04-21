@@ -227,3 +227,7 @@
 - Fixed a bug where replacing a Hex dependency with a Git dependency of the
   same name would cause the build tool to fail.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where updating the remote URL of a Git dependency would fail to
+  update the remote in the local dependency, causing a caching issue.
+  ([Surya Rose](https://github.com/GearsDatapacks))

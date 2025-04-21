@@ -920,6 +920,36 @@ fn execute_command(command: &mut Command) -> Result<std::process::Output> {
     }
 }
 
+/// Downloads a git package from a remote repository. The commands that are run
+/// looks like this:
+///
+/// ```sh
+/// git init
+/// git remote remove origin
+/// git remote add origin <repo>
+/// git fetch origin
+/// git checkout <ref>
+/// git rev-parse HEAD
+/// ```
+///
+/// This is somewhat inefficient as we have to fetch the entire git history before
+/// switching to the exact commit we want. There a few alternatives to this:
+///
+/// - `git clone --depth 1 --branch="<ref>"` This works, but only allows us to use
+///   branch names as refs, however we want to allow commit hashes as well.
+/// - `git fetch --depth 1 origin <ref>` Similarly, this imposes an unwanted
+///   restriction. `git fetch` only allows branch names or full commit hashes,
+///   but we want to allow partial hashes as well.
+///
+/// Since Git dependencies will be used quite rarely, this option was settled upon
+/// because it allows branch names, full and partial commit hashes as refs.
+///
+/// In the future we can optimise this more, for example first checking if we
+/// are already checked out to the commit stored in the manifest, or by only
+/// fetching the history without the objects to resolve partial commit hashes.
+/// For now though this is good enough until it become an actual performance
+/// problem.
+///
 fn download_git_package(
     package_name: &str,
     repo: &str,
@@ -940,17 +970,27 @@ fn download_git_package(
 
     let _ = execute_command(Command::new("git").arg("init").current_dir(&package_path))?;
 
-    // This command can fail if the directory already exists,
-    // for example if we resolve versions, then download dependencies.
-    // If that happens, we don't really care: We already have the origin,
-    // so we can safely ignore any errors here
+    // If this directory already exists, but the remote URL has been edited in
+    // `gleam.toml` without a `gleam clean`, `git remote add` will fail, causing
+    // the remote to be stuck as the original value. Here we remove the remote
+    // first, which ensures that `git remote add` properly add the remote each
+    // time. If this fails, that means we haven't set the remote in the first
+    // place, so we can safely ignore the error.
     let _ = Command::new("git")
         .arg("remote")
-        .arg("add")
+        .arg("remove")
         .arg("origin")
-        .arg(repo)
         .current_dir(&package_path)
         .output();
+
+    let _ = execute_command(
+        Command::new("git")
+            .arg("remote")
+            .arg("add")
+            .arg("origin")
+            .arg(repo)
+            .current_dir(&package_path),
+    )?;
 
     let _ = execute_command(
         Command::new("git")
