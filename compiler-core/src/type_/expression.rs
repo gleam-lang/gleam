@@ -4010,7 +4010,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // Used to track if any argument names are used more than once
             let mut argument_names = HashSet::with_capacity(args.len());
 
-            for (arg, t) in args.iter().zip(args.iter().map(|arg| arg.type_.clone())) {
+            for arg in args.iter() {
                 match &arg.names {
                     ArgNames::Named { name, location }
                     | ArgNames::NamedLabelled {
@@ -4032,7 +4032,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             name.clone(),
                             *location,
                             VariableOrigin::Variable(name.clone()),
-                            t,
+                            arg.type_.clone(),
                         );
 
                         if !body.first().is_placeholder() {
