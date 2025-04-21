@@ -18,6 +18,8 @@ use pubgrub::package::Package;
 use pubgrub::report::DerivationTree;
 use pubgrub::version::Version;
 use std::borrow::Cow;
+use std::collections::{HashMap, HashSet};
+use std::env;
 use std::collections::HashSet;
 use std::fmt::{Debug, Display};
 use std::io::Write;
@@ -236,8 +238,11 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("Failed to create canonical path for package {0}")]
     DependencyCanonicalizationFailed(String),
 
-    #[error("Dependency tree resolution failed: {0}")]
-    DependencyResolutionFailed(String),
+    #[error("Dependency tree resolution failed: {error}")]
+    DependencyResolutionFailed {
+        error: String,
+        locked_conflicts: Vec<EcoString>,
+    },
 
     #[error("The package {0} is listed in dependencies and dev-dependencies")]
     DuplicateDependency(EcoString),
@@ -425,7 +430,10 @@ impl Error {
         Self::TarFinish(error.to_string())
     }
 
-    pub fn dependency_resolution_failed(error: ResolutionError) -> Error {
+    pub fn dependency_resolution_failed(
+        error: ResolutionError,
+        locked: &HashMap<EcoString, hexpm::version::Version>,
+    ) -> Error {
         fn collect_conflicting_packages<'dt, P: Package, V: Version>(
             derivation_tree: &'dt DerivationTree<P, V>,
             conflicting_packages: &mut HashSet<&'dt P>,
@@ -453,57 +461,85 @@ impl Error {
             }
         }
 
-        Self::DependencyResolutionFailed(match error {
+        match error {
             ResolutionError::NoSolution(mut derivation_tree) => {
                 derivation_tree.collapse_no_versions();
 
                 let mut conflicting_packages = HashSet::new();
                 collect_conflicting_packages(&derivation_tree, &mut conflicting_packages);
 
-                wrap_format!(
-                    "Unable to find compatible versions for \
-the version constraints in your gleam.toml. \
-The conflicting packages are:
+                let conflict_names: Vec<EcoString> = conflicting_packages
+                    .iter()
+                    .map(|pkg| (*pkg).into())
+                    .collect();
 
-{}
-",
-                    conflicting_packages
-                        .into_iter()
-                        .map(|s| format!("- {s}"))
-                        .join("\n")
-                )
+                let locked_conflicts: Vec<EcoString> = conflict_names
+                    .iter()
+                    .filter(|name| locked.contains_key(*name))
+                    .cloned()
+                    .collect();
+
+                Error::DependencyResolutionFailed {
+                    error: format!(
+                        "Unable to find compatible versions for the version constraints in your gleam.toml.\n\
+                         The conflicting packages are:\n{}",
+                        conflicting_packages.into_iter().map(|s| format!("- {s}")).join("\n")
+                    ),
+                    locked_conflicts,
+                }
             }
 
             ResolutionError::ErrorRetrievingDependencies {
                 package,
                 version,
                 source,
-            } => format!(
-                "An error occurred while trying to retrieve dependencies of {package}@{version}: {source}",
-            ),
+            } => {
+                Error::DependencyResolutionFailed{
+                    error: format!(
+                    "An error occurred while trying to retrieve dependencies of {package}@{version}: {source}"),
+                    locked_conflicts:  vec![],
+                }
+            }
 
             ResolutionError::DependencyOnTheEmptySet {
                 package,
                 version,
                 dependent,
-            } => format!("{package}@{version} has an impossible dependency on {dependent}",),
+            } => {
+                Error::DependencyResolutionFailed{
+                    error: format!("{package}@{version} has an impossible dependency on {dependent}"),
+                    locked_conflicts: vec![],
+                }
+            }
 
             ResolutionError::SelfDependency { package, version } => {
-                format!("{package}@{version} somehow depends on itself.")
+                Error::DependencyResolutionFailed{
+                    error: format!("{package}@{version} somehow depends on itself."),
+                    locked_conflicts: vec![],
+                }
             }
 
             ResolutionError::ErrorChoosingPackageVersion(err) => {
-                format!("Unable to determine package versions: {err}")
+                Error::DependencyResolutionFailed{
+                    error: format!("Unable to determine package versions: {err}"),
+                    locked_conflicts: vec![],
+                }
             }
 
             ResolutionError::ErrorInShouldCancel(err) => {
-                format!("Dependency resolution was cancelled. {err}")
+                Error::DependencyResolutionFailed{
+                    error: format!("Dependency resolution was cancelled. {err}"),
+                    locked_conflicts: vec![],
+                }
             }
 
             ResolutionError::Failure(err) => {
-                format!("An unrecoverable error happened while solving dependencies: {err}")
+                Error::DependencyResolutionFailed{
+                    error: format!("An unrecoverable error happened while solving dependencies: {err}"),
+                    locked_conflicts: vec![],
+                }
             }
-        })
+        }
     }
 
     pub fn expand_tar<E>(error: E) -> Error
@@ -3917,7 +3953,7 @@ The error from the parser was:
                 }]
             }
 
-            Error::DependencyResolutionFailed(error) => {
+            Error::DependencyResolutionFailed{error, locked_conflicts: _} => {
                 let text = format!(
                     "An error occurred while determining what dependency packages and
 versions should be downloaded.
@@ -3933,7 +3969,8 @@ The error from the version resolver library was:
                     location: None,
                     level: Level::Error,
                 }]
-            }
+            },
+
 
             Error::WrongDependencyProvided {
                 path,

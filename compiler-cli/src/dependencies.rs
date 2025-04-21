@@ -799,6 +799,23 @@ impl PartialEq for ProvidedPackageSource {
     }
 }
 
+// Estimates whether the CLI is ran in a CI environment for use in silencing
+// certain CLI dialogues.
+fn is_ci_env() -> bool {
+    let ci_vars = [
+        "CI",
+        "TRAVIS",
+        "CIRCLECI",
+        "GITHUB_ACTIONS",
+        "GITLAB_CI",
+        "JENKINS_URL",
+        "TF_BUILD",
+        "BITBUCKET_COMMIT",
+    ];
+
+    ci_vars.iter().any(|var| std::env::var_os(*var).is_some())
+}
+
 fn resolve_versions<Telem: Telemetry>(
     runtime: tokio::runtime::Handle,
     mode: Mode,
@@ -846,18 +863,52 @@ fn resolve_versions<Telem: Telemetry>(
     }
 
     // Convert provided packages into hex packages for pub-grub resolve
-    let provided_hex_packages = provided_packages
+    let provided_hex_packages: HashMap<EcoString, hexpm::Package> = provided_packages
         .iter()
         .map(|(name, package)| (name.clone(), package.to_hex_package(name)))
         .collect();
 
-    let resolved = dependency::resolve_versions(
+    let root_requirements_clone = root_requirements.clone();
+    let resolved: HashMap<String, Version> = match dependency::resolve_versions(
         PackageFetcher::boxed(runtime.clone()),
-        provided_hex_packages,
+        provided_hex_packages.clone(),
         config.name.clone(),
         root_requirements.into_iter(),
         &locked,
-    )?;
+    ) {
+        Ok(it) => it,
+        Err(
+            ref err @ Error::DependencyResolutionFailed {
+                error: _,
+                ref locked_conflicts,
+            },
+        ) => {
+            // Do not ask the user to unlock conflicts in CI or if they don't exist
+            if is_ci_env() || locked_conflicts.is_empty() {
+                return Err(err.clone());
+            }
+
+            if cli::confirm(
+                "\nSome of these dependencies are locked to specific versions. It may
+be possible to find a solution if they are unlocked, would you like
+to unlock and try again?",
+            )? {
+                unlock_packages(&mut locked, locked_conflicts, manifest)?;
+
+                dependency::resolve_versions(
+                    PackageFetcher::boxed(runtime.clone()),
+                    provided_hex_packages,
+                    config.name.clone(),
+                    root_requirements_clone.into_iter(),
+                    &locked,
+                )?
+            } else {
+                return Err(err.clone());
+            }
+        }
+
+        Err(err) => return Err(err),
+    };
 
     // Convert the hex packages and local packages into manifest packages
     let manifest_packages = runtime.block_on(future::try_join_all(
