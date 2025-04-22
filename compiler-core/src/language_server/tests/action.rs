@@ -1507,11 +1507,12 @@ fn test_assign_unused_result() {
         ASSIGN_UNUSED_RESULT,
         r#"
 pub fn main() {
-    Ok(0)
+    let x = 1
+    Ok(x)
     Nil
 }
 "#,
-        find_position_of("Ok").select_until(find_position_of("(0)")),
+        find_position_of("Ok").select_until(find_position_of("(x)")),
     );
 }
 
@@ -1522,13 +1523,14 @@ fn test_assign_unused_result_in_block() {
         r#"
 pub fn main() {
     {
-        Ok(0)
+        let x = 1
+        Ok(x)
         Nil
     }
     Nil
 }
 "#,
-        find_position_of("Ok").select_until(find_position_of("(0)")),
+        find_position_of("Ok").select_until(find_position_of("(x)")),
     );
 }
 
@@ -1539,8 +1541,9 @@ fn test_assign_unused_result_on_block_start() {
         r#"
 pub fn main() {
     {
-        Ok(0)
-        Ok(0)
+        let x = 1
+        Ok(x)
+        Ok(x)
     }
     Nil
 }
@@ -1556,8 +1559,9 @@ fn test_assign_unused_result_on_block_end() {
         r#"
 pub fn main() {
     {
-        Ok(0)
-        Ok(0)
+        let x = 1
+        Ok(x)
+        Ok(x)
     }
     Nil
 }
@@ -1574,12 +1578,13 @@ fn test_assign_unused_result_inside_block() {
         r#"
 pub fn main() {
     {
+        let x = 1
         Nil
-        Ok(1)
+        Ok(x)
     }
 }
 "#,
-        find_position_of("Ok").select_until(find_position_of("(1)"))
+        find_position_of("Ok").select_until(find_position_of("(x)"))
     );
 }
 
@@ -1589,12 +1594,13 @@ fn test_assign_unused_result_only_first_action() {
         ASSIGN_UNUSED_RESULT,
         r#"
 pub fn main() {
-    Ok(0)
-    Ok(1)
+    let x = 1
+    Ok(x)
+    Ok(x)
     Nil
 }
 "#,
-        find_position_of("Ok").select_until(find_position_of("(0)"))
+        find_position_of("Ok").select_until(find_position_of("(x)"))
     );
 }
 
@@ -1605,10 +1611,11 @@ fn test_assign_unused_result_not_on_return_value() {
         ASSIGN_UNUSED_RESULT,
         r#"
 pub fn main() {
-    Ok(0)
+    let x = 1
+    Ok(x)
 }
 "#,
-        find_position_of("Ok").select_until(find_position_of("(0)"))
+        find_position_of("Ok").select_until(find_position_of("(x)"))
     );
 }
 
@@ -1620,11 +1627,12 @@ fn test_assign_unused_result_not_on_return_value_in_block() {
         r#"
 pub fn main() {
     let _ = {
-        Ok(0)
+        let x = 1
+        Ok(x)
     }
     Nil
 }"#,
-        find_position_of("Ok").select_until(find_position_of("(0)"))
+        find_position_of("Ok").select_until(find_position_of("(x)"))
     );
 }
 

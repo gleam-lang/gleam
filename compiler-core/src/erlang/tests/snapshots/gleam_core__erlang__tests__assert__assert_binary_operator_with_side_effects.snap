@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/erlang/tests/assert.rs
+assertion_line: 92
 expression: "\nfn wibble(a, b) {\n  let result = a + b\n  result == 10\n}\n\npub fn go(x) {\n  assert True && wibble(1, 4)\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -36,7 +38,7 @@ go(X) ->
                         message => <<"Assertion failed."/utf8>>,
                         kind => binary_operator,
                         operator => '&&',
-                        left => #{kind => expression,
+                        left => #{kind => literal,
                             value => true,
                             start => 82,
                             'end' => 86
@@ -57,7 +59,7 @@ go(X) ->
                 message => <<"Assertion failed."/utf8>>,
                 kind => binary_operator,
                 operator => '&&',
-                left => #{kind => expression,
+                left => #{kind => literal,
                     value => false,
                     start => 82,
                     'end' => 86

@@ -1,12 +1,15 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "\npub fn main() {\n    {\n        Ok(0)\n        Nil\n    }\n    Nil\n}\n"
+assertion_line: 1521
+expression: "\npub fn main() {\n    {\n        let x = 1\n        Ok(x)\n        Nil\n    }\n    Nil\n}\n"
+snapshot_kind: text
 ---
 ----- BEFORE ACTION
 
 pub fn main() {
     {
-        Ok(0)
+        let x = 1
+        Ok(x)
         ▔▔↑  
         Nil
     }
@@ -18,7 +21,8 @@ pub fn main() {
 
 pub fn main() {
     {
-        let _ = Ok(0)
+        let x = 1
+        let _ = Ok(x)
         Nil
     }
     Nil
