@@ -622,10 +622,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             self.problems.warning(Warning::ImplicitlyDiscardedResult {
                 location: discarded.location(),
             });
-        } else if discarded.is_pure_function_call() {
-            self.problems.warning(Warning::UnusedPureFunctionCall {
-                location: discarded.location(),
-            })
         } else if discarded.is_pure_value_constructor() {
             self.problems.warning(Warning::UnusedValue {
                 location: discarded.location(),
