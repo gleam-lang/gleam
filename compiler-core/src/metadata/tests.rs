@@ -693,7 +693,7 @@ fn module_fn_value_regression() {
                         can_run_on_erlang: true,
                         can_run_on_javascript: true,
                     },
-                    purity: Purity::Pure,
+                    purity: Purity::TrustedPure,
                 },
             },
         )]
@@ -1552,7 +1552,7 @@ fn internal_module_fn() {
                         can_run_on_erlang: true,
                         can_run_on_javascript: true,
                     },
-                    purity: Purity::Impure,
+                    purity: Purity::Unknown,
                 },
             },
         )]

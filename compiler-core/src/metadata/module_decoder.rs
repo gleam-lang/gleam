@@ -603,9 +603,11 @@ impl ModuleDecoder {
         &self,
         reader: &value_constructor_variant::module_fn::Reader<'_>,
     ) -> Result<ValueConstructorVariant> {
-        let purity = match reader.get_pure() {
-            true => Purity::Pure,
-            false => Purity::Impure,
+        let purity = match reader.get_purity()?.which()? {
+            purity::Which::Pure(()) => Purity::Pure,
+            purity::Which::TrustedPure(()) => Purity::TrustedPure,
+            purity::Which::Impure(()) => Purity::Impure,
+            purity::Which::Unknown(()) => Purity::Unknown,
         };
 
         Ok(ValueConstructorVariant::ModuleFn {

@@ -3,6 +3,10 @@ source: compiler-core/src/type_/tests/warnings.rs
 expression: "\nimport module\n\npub fn a() {\n  module.a\n}\n"
 ---
 ----- SOURCE CODE
+-- module.gleam
+@deprecated("Don't use this!") pub fn a() { Nil }
+
+-- main.gleam
 
 import module
 

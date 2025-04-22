@@ -11,7 +11,7 @@ use crate::{
         self, AccessorsMap, Deprecation, FieldMap, Opaque, RecordAccessor, Type,
         TypeAliasConstructor, TypeConstructor, TypeValueConstructor, TypeVar,
         TypeVariantConstructors, ValueConstructor, ValueConstructorVariant,
-        expression::Implementations,
+        expression::{Implementations, Purity},
     },
 };
 use std::{collections::HashMap, ops::Deref, sync::Arc};
@@ -437,7 +437,15 @@ impl<'a> ModuleEncoder<'a> {
                 builder.set_module(module);
                 builder.set_arity(*arity as u16);
                 builder.set_documentation(doc.as_ref().map(EcoString::as_str).unwrap_or_default());
-                builder.set_pure(purity.is_pure());
+
+                let mut purity_builder = builder.reborrow().init_purity();
+                match purity {
+                    Purity::Pure => purity_builder.set_pure(()),
+                    Purity::TrustedPure => purity_builder.set_trusted_pure(()),
+                    Purity::Impure => purity_builder.set_impure(()),
+                    Purity::Unknown => purity_builder.set_unknown(()),
+                }
+
                 self.build_external(builder.reborrow().init_external_erlang(), external_erlang);
                 self.build_external(
                     builder.reborrow().init_external_javascript(),

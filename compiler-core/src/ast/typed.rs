@@ -61,6 +61,7 @@ pub enum TypedExpr {
         args: Vec<TypedArg>,
         body: Vec1<TypedStatement>,
         return_annotation: Option<TypeAst>,
+        purity: Purity,
     },
 
     List {
@@ -775,30 +776,6 @@ impl TypedExpr {
         }
     }
 
-    pub fn is_pure_function_call(&self) -> bool {
-        match self {
-            TypedExpr::Call { fun, args, .. } => {
-                fun.is_pure_function()
-                    && args
-                        .iter()
-                        .all(|argument| argument.value.is_pure_value_constructor())
-            }
-            TypedExpr::Pipeline {
-                first_value,
-                assignments,
-                finally,
-                ..
-            } => {
-                first_value.value.is_pure_value_constructor()
-                    && assignments
-                        .iter()
-                        .all(|(assignment, _)| assignment.value.is_pure_value_constructor())
-                    && finally.is_pure_value_constructor()
-            }
-            _ => false,
-        }
-    }
-
     pub fn is_pure_value_constructor(&self) -> bool {
         match self {
             TypedExpr::Int { .. }
@@ -841,7 +818,7 @@ impl TypedExpr {
             }
 
             TypedExpr::Call { fun, args, .. } => {
-                (fun.is_record_builder() || fun.is_pure_function())
+                (fun.is_record_builder() || fun.purity().is_pure())
                     && args
                         .iter()
                         .all(|argument| argument.value.is_pure_value_constructor())
@@ -878,14 +855,11 @@ impl TypedExpr {
         }
     }
 
-    pub fn is_pure_function(&self) -> bool {
+    pub fn purity(&self) -> Purity {
         match self {
-            TypedExpr::Var { constructor, .. } => constructor.is_pure_module_function(),
-            TypedExpr::ModuleSelect { constructor, .. } => constructor.is_pure_module_function(),
-            TypedExpr::Fn { body, .. } => body.iter().all(|s| s.is_pure_value_constructor()),
-            // Technically some of these can be pure functions, such as `Block`, but since
-            // this is only for warning users about unused pure functions, it's OK to have some false
-            // negatives when 99% of cases are covered by `Var` `ModuleSelect`
+            TypedExpr::Var { constructor, .. } => constructor.purity(),
+            TypedExpr::ModuleSelect { constructor, .. } => constructor.purity(),
+            TypedExpr::Fn { purity, .. } => *purity,
             TypedExpr::Int { .. }
             | TypedExpr::Float { .. }
             | TypedExpr::String { .. }
@@ -905,7 +879,7 @@ impl TypedExpr {
             | TypedExpr::RecordUpdate { .. }
             | TypedExpr::NegateBool { .. }
             | TypedExpr::NegateInt { .. }
-            | TypedExpr::Invalid { .. } => false,
+            | TypedExpr::Invalid { .. } => Purity::Unknown,
         }
     }
 

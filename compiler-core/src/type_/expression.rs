@@ -1,5 +1,6 @@
 use super::{pipe::PipeTyper, *};
 use crate::{
+    STDLIB_PACKAGE_NAME,
     analyse::{infer_bit_array_option, name::check_argument_names},
     ast::{
         Arg, Assert, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment, CallArg,
@@ -62,18 +63,84 @@ impl Implementations {
     }
 }
 
+/// The purity of a function.
+///
+/// This is not actually proper purity tracking, rather an approximation, which
+/// is good enough for the purpose it is currently used for: warning for unused
+/// pure functions. The current system contains some false negatives, i.e. some
+/// cases where it will fail to emit a warning when it probably should.
+///
+/// If we wanted to properly track function side effects - say to perform
+/// optimisations on pure Gleam code - we would probably need to lift that
+/// tracking into the type system, the same way that variant inference currently
+/// works. This would require quite a lot of work and doesn't seem a worthwhile
+/// amount of effort for a single warning message, where a much simpler solution
+/// is generally going to be good enough.
+///
+/// In the future we may want to implement a full side effect tracking system;
+/// this current implementation will not be sufficient for anything beyond a
+/// warning message to help people out in certain cases.
+///
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Purity {
+    /// The function is in pure Gleam, and does not reference any language
+    /// feature that can cause side effects, such as `panic`, `assert` or `echo`.
+    /// It also does not call any impure functions.
     Pure,
+    /// This function is part of the standard library, or an otherwise trusted
+    /// source, and though it might use FFI, we can trust that the FFI function
+    /// will not cause any side effects.
+    TrustedPure,
+    /// This function is impure because it either uses FFI, panics, uses `echo`,
+    /// or calls another impure function.
     Impure,
+    /// We don't know the purity of this function. This highlights the main issue
+    /// with the current purity tracking system. In the following code for example:
+    ///
+    /// ```gleam
+    /// let f = function.identity
+    ///
+    /// f(10)
+    /// ```
+    ///
+    /// Since purity is not currently part of the type system, when analysing the
+    /// call of the local `f` function, we now have no information about the
+    /// purity of it, and therefore cannot infer the consequences of calling it.
+    ///
+    /// If there was a `purity` or `side_effects` field in the `Type::Fn` variant,
+    /// we would be able to properly infer it.
+    ///
+    Unknown,
 }
 
 impl Purity {
     pub fn is_pure(&self) -> bool {
         match self {
-            Purity::Pure => true,
-            Purity::Impure => false,
+            Purity::Pure | Purity::TrustedPure => true,
+            Purity::Impure | Purity::Unknown => false,
         }
+    }
+
+    pub fn merge(&mut self, other: Purity) {
+        let new_purity = match (*self, other) {
+            // If we call a trusted pure function, the current function remains pure
+            (Purity::Pure, Purity::TrustedPure) => Purity::Pure,
+            (Purity::Pure, other) => other,
+
+            // If we call a pure function, the current function remains trusted pure
+            (Purity::TrustedPure, Purity::Pure) => Purity::TrustedPure,
+            (Purity::TrustedPure, other) => other,
+
+            // Nothing can make an already impure function pure again
+            (Purity::Impure, _) => Purity::Impure,
+
+            // If we call an impure function from a function we don't know the
+            // purity of, we are now certain that it is impure.
+            (Purity::Unknown, Purity::Impure) => Purity::Impure,
+            (Purity::Unknown, _) => Purity::Impure,
+        };
+
+        *self = new_purity;
     }
 }
 
@@ -253,7 +320,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             Target::Erlang => implementations.uses_erlang_externals,
             Target::JavaScript => implementations.uses_javascript_externals,
         };
-        let purity = if uses_externals {
+
+        let is_non_io_standard_library_function = environment.current_package
+            == STDLIB_PACKAGE_NAME
+            && environment.current_module != "gleam/io";
+
+        let purity = if is_non_io_standard_library_function {
+            Purity::TrustedPure
+        } else if uses_externals {
             Purity::Impure
         } else {
             Purity::Pure
@@ -344,11 +418,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // body, instead only giving an external implementation for this
             // target. This placeholder implementation will never be used so we
             // treat it as a `panic` expression during analysis.
-            UntypedExpr::Placeholder { location } => Ok(self.infer_panic(location, None)),
+            UntypedExpr::Placeholder { location } => {
+                Ok(self.infer_panic(location, None, PanicKind::Placeholder))
+            }
 
             UntypedExpr::Panic {
                 location, message, ..
-            } => Ok(self.infer_panic(location, message)),
+            } => Ok(self.infer_panic(location, message, PanicKind::Panic)),
 
             UntypedExpr::Echo {
                 location,
@@ -523,10 +599,21 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn infer_panic(&mut self, location: SrcSpan, message: Option<Box<UntypedExpr>>) -> TypedExpr {
+    fn infer_panic(
+        &mut self,
+        location: SrcSpan,
+        message: Option<Box<UntypedExpr>>,
+        kind: PanicKind,
+    ) -> TypedExpr {
         let type_ = self.new_unbound_var();
 
-        self.purity = Purity::Impure;
+        match kind {
+            PanicKind::Panic => self.purity = Purity::Impure,
+            // If this panic is a placeholder, we've already tracked impurity
+            // based on the FFI of this function, and don't need to change
+            // anything here.
+            PanicKind::Placeholder => {}
+        }
 
         let message = match message {
             None => None,
@@ -851,6 +938,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         self.already_warned_for_unreachable_code = false;
         self.previous_panics = false;
 
+        let outer_purity = self.purity;
+
+        // If an anonymous function can panic, that doesn't mean that the outer
+        // function can too, so we track the purity separately.
+        self.purity = Purity::Pure;
+
         let (args, body) = match self.do_infer_fn(args, expected_args, body, &return_annotation) {
             Ok(result) => result,
             Err(error) => {
@@ -865,6 +958,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         self.already_warned_for_unreachable_code = already_warned_for_unreachable_code;
         self.previous_panics = false;
 
+        let function_purity = self.purity;
+        self.purity = outer_purity;
+
         TypedExpr::Fn {
             location,
             type_,
@@ -872,6 +968,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             args,
             body,
             return_annotation,
+            purity: function_purity,
         }
     }
 
@@ -943,9 +1040,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             });
         }
 
-        if !fun.is_pure_function() {
-            self.purity = Purity::Impure;
-        }
+        self.purity.merge(fun.purity());
 
         TypedExpr::Call {
             location,
@@ -1610,7 +1705,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         };
 
         // Check that we're actually using `list.length` from the standard library.
-        if list_module.package != crate::STDLIB_PACKAGE_NAME {
+        if list_module.package != STDLIB_PACKAGE_NAME {
             return;
         }
 
@@ -1776,6 +1871,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let value_location = value.location();
 
         let value = self.infer(value);
+
+        self.purity = Purity::Impure;
 
         if value.is_known_value() {
             self.problems.warning(Warning::AssertLiteralValue {
@@ -4575,4 +4672,9 @@ impl RecordUpdateVariant<'_> {
     fn field_names(&self) -> Vec<EcoString> {
         self.fields.keys().cloned().collect()
     }
+}
+
+enum PanicKind {
+    Panic,
+    Placeholder,
 }

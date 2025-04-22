@@ -3,6 +3,10 @@ source: compiler-core/src/type_/tests/warnings.rs
 expression: "import gleam/one.{two} as three\npub fn wibble() { two() }"
 ---
 ----- SOURCE CODE
+-- gleam/one.gleam
+pub fn two() { 1 }
+
+-- main.gleam
 import gleam/one.{two} as three
 pub fn wibble() { two() }
 
