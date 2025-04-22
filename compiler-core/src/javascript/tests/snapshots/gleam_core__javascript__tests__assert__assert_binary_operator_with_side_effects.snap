@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/assert.rs
+assertion_line: 92
 expression: "\nfn wibble(a, b) {\n  let result = a + b\n  result == 10\n}\n\npub fn go(x) {\n  assert True && wibble(1, 4)\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -34,7 +36,7 @@ export function go(x) {
         {
           kind: "binary_operator",
           operator: "&&",
-          left: { kind: "expression", value: true, start: 82, end: 86 },
+          left: { kind: "literal", value: true, start: 82, end: 86 },
           right: { kind: "expression", value: false, start: 90, end: 102 },
           assert_start: 75,
           expression_start: 82,
@@ -52,7 +54,7 @@ export function go(x) {
       {
         kind: "binary_operator",
         operator: "&&",
-        left: { kind: "expression", value: false, start: 82, end: 86 },
+        left: { kind: "literal", value: false, start: 82, end: 86 },
         right: { kind: "unevaluated", start: 90, end: 102 },
         assert_start: 75,
         expression_start: 82,

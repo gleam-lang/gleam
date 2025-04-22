@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/assert.rs
+assertion_line: 28
 expression: "\npub fn main() {\n  let x = True\n  assert x || False\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -27,7 +29,7 @@ export function main() {
         kind: "binary_operator",
         operator: "||",
         left: { kind: "expression", value: false, start: 41, end: 42 },
-        right: { kind: "expression", value: false, start: 46, end: 51 },
+        right: { kind: "literal", value: false, start: 46, end: 51 },
         assert_start: 34,
         expression_start: 41,
         expression_end: 51
