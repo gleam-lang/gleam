@@ -132,7 +132,6 @@ pub fn main() -> Nil {{
 
             Self::TestModule => Some(
                 r#"import gleeunit
-import gleeunit/should
 
 pub fn main() -> Nil {
   gleeunit.main()
@@ -140,8 +139,10 @@ pub fn main() -> Nil {
 
 // gleeunit test functions end in `_test`
 pub fn hello_world_test() {
-  1
-  |> should.equal(1)
+  let name = "Joe"
+  let greeting = "Hello, " <> name <> "!"
+
+  assert greeting == "Hello, Joe!"
 }
 "#
                 .into(),
