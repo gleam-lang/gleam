@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/type_/tests/assert.rs
+assertion_line: 54
 expression: "\npub fn main() {\n  assert True\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -14,7 +16,7 @@ warning: Assertion of a literal value
   ┌─ /src/warning/wrn.gleam:3:10
   │
 3 │   assert True
-  │          ^^^^ There's no need to assert this value
+  │          ^^^^ This is always the same
 
-Asserting that a literal value is true is redundant since you can already
-tell whether it will be true or false.
+Asserting that a literal value is redundant since you can already tell
+whether it will be true or false.
