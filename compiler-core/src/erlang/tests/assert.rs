@@ -88,6 +88,21 @@ pub fn go(x) {
 }
 
 #[test]
+fn assert_nested_function_call() {
+    assert_erl!(
+        "
+fn and(x, y) {
+  x && y
+}
+
+pub fn main() {
+  assert and(and(True, False), True)
+}
+"
+    );
+}
+
+#[test]
 fn assert_binary_operator_with_side_effects() {
     assert_erl!(
         "
