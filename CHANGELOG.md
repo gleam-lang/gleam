@@ -147,29 +147,24 @@
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 - The compiler will now emit a warning when the return value of a call to a
-  pure function is unused. For example the following code:
+  function without side effects is unused. For example the following code:
 
   ```gleam
   fn add(a, b) { a + b }
-
-  pub fn main() {
-    add(1, 2)
-    Nil
-  }
   ```
 
   Will produce the following warning:
 
   ```
-  warning: Unused pure function call
-    ┌─ /home/gears/projects/playground/gleam/src/playground.gleam:4:3
+  warning: Unused value
+    ┌─ /src/main.gleam:4:3
     │
   4 │   add(1, 2)
-    │   ^^^^^^^^^ This pure function call is never used
+    │   ^^^^^^^^^ This value is never used
 
-  Gleam is an immutable language, meaning functions cannot mutate state
-  simply by being called. This function is pure, so it must be assigned to a
-  variable to have an effect on the program.
+  This expression computes a value without any side effects, but then the
+  value isn't used at all. You might way to assign it to a variable, or
+  delete the expression entirely if it not needed.
   ```
 
   ([Surya Rose](https://github.com/GearsDatapacks))

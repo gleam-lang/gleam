@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 2779
 expression: "\npub fn main() {\n  {\n    True\n    1\n  }\n  Nil\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -25,6 +23,9 @@ warning: Unused value
 6 │ │   }
   │ ╰───^ This value is never used
 
+This expression computes a value without any side effects, but then the
+value isn't used at all. You might way to assign it to a variable, or
+delete the expression entirely if it not needed.
 
 warning: Unused literal
   ┌─ /src/warning/wrn.gleam:4:5

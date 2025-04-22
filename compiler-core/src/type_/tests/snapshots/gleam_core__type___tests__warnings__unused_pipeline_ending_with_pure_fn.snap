@@ -13,12 +13,12 @@ pub fn main() {
 
 
 ----- WARNING
-warning: Unused pure function call
+warning: Unused value
   ┌─ /src/warning/wrn.gleam:3:5
   │  
 3 │ ╭     1
 4 │ │     |> fn(n) { n + 1 }
-  │ ╰──────────────────────^ This pure function call is never used
+  │ ╰──────────────────────^ This value is never used
 
 This expression computes a value without any side effects, but then the
 value isn't used at all. You might way to assign it to a variable, or
