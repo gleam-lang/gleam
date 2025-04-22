@@ -204,7 +204,7 @@ struct ValueConstructorVariant {
       implementations @18 :Implementations;
       externalErlang @20 :Option(External);
       externalJavascript @21 :Option(External);
-      pure @23 :Bool;
+      purity @23 :Purity;
     }
 
     record :group {
@@ -217,6 +217,15 @@ struct ValueConstructorVariant {
       documentation @16 :Text;
       constructorIndex @17 :UInt16;
     }
+  }
+}
+
+struct Purity {
+  union {
+    pure @0 :Void;
+    trustedPure @1 :Void;
+    impure @2 :Void;
+    unknown @3 :Void;
   }
 }
 

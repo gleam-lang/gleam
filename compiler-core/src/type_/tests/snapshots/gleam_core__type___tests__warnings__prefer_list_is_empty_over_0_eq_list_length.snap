@@ -3,6 +3,10 @@ source: compiler-core/src/type_/tests/warnings.rs
 expression: "\n        import gleam/list\n\n        pub fn main() {\n            let a_list = []\n            let _ = 0 == list.length(a_list)\n        }\n        "
 ---
 ----- SOURCE CODE
+-- gleam/list.gleam
+pub fn length(_list: List(a)) -> Int { 0 }
+
+-- main.gleam
 
         import gleam/list
 

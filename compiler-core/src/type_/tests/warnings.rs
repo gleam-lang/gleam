@@ -3384,11 +3384,13 @@ pub fn main() {
 fn pure_standard_library_function() {
     assert_warning!(
         (
+            "gleam_stdlib",
             "gleam/dict",
             r#"
 pub type Dict(key, value)
 
-pub fn new() -> Dict(a, b) { panic }
+@external(erlang, "map", "new")
+pub fn new() -> Dict(a, b)
 
 @external(erlang, "map", "insert")
 pub fn insert(dict: Dict(key, value), key: key, value: value) -> Dict(key, value)
@@ -3421,6 +3423,85 @@ import gleam/io
 
 pub fn main() {
   io.println("Hello, world!")
+  Nil
+}
+"#
+    );
+}
+
+#[test]
+fn trusted_pure_standard_library_function_that_panics_is_impure() {
+    assert_no_warnings!(
+        (
+            "gleam_stdlib",
+            "gleam/int",
+            r#"
+pub fn add(_a, _b) {
+  panic
+}
+"#
+        ),
+        "
+import gleam/int
+pub fn main() {
+  int.add(1, 2)
+  Nil
+}
+"
+    );
+}
+
+#[test]
+fn higher_order_function_is_not_marked_as_pure() {
+    assert_no_warnings!(
+        (
+            "gleam/list",
+            r#"
+pub fn each(list, f) {
+  case list {
+    [] -> Nil
+    [first, ..rest] -> {
+      f(first)
+      each(rest, f)
+    }
+  }
+}
+"#
+        ),
+        "
+import gleam/list
+pub fn main() {
+  list.each([1, 2, 3, 4], fn(x) { echo x })
+  Nil
+}
+"
+    );
+}
+
+#[test]
+fn calling_local_variable_not_marked_as_pure() {
+    assert_no_warnings!(
+        "
+pub fn main() {
+  let side_effects = fn() { panic }
+
+  side_effects()
+  Nil
+}
+"
+    );
+}
+
+#[test]
+fn constructing_anonymous_function_is_pure() {
+    assert_warning!(
+        r#"
+fn make_panic(message) {
+  fn() { panic as message }
+}
+
+pub fn main() {
+  make_panic("This is a crash")
   Nil
 }
 "#

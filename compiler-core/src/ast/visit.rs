@@ -750,6 +750,7 @@ where
             args,
             body,
             return_annotation,
+            purity: _,
         } => v.visit_typed_expr_fn(location, type_, kind, args, body, return_annotation),
         TypedExpr::List {
             location,

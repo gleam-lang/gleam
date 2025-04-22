@@ -3,6 +3,10 @@ source: compiler-core/src/type_/tests/warnings.rs
 expression: "\nimport some_module\npub const x = some_module.x\n        "
 ---
 ----- SOURCE CODE
+-- some_module.gleam
+pub const x = 1
+
+-- main.gleam
 
 import some_module
 pub const x = some_module.x
