@@ -2554,7 +2554,7 @@ pub fn main() {
 }
 
 #[test]
-fn bool_assert_requires_v1_10() {
+fn bool_assert_requires_v1_11() {
     assert_warnings_with_gleam_version!(
         Range::higher_than(Version::new(1, 0, 0)),
         "
