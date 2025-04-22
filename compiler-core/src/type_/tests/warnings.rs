@@ -3275,6 +3275,22 @@ pub fn main() {
 }
 
 #[test]
+fn function_is_impure_if_uses_assert() {
+    assert_no_warnings!(
+        r#"
+fn assert_equal(a, b) {
+  assert a == b
+}
+
+pub fn main() {
+  assert_equal(1, 2)
+  Nil
+}
+"#
+    );
+}
+
+#[test]
 fn function_is_impure_if_call_impure_function() {
     assert_no_warnings!(
         r#"
