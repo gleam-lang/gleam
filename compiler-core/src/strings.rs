@@ -110,3 +110,34 @@ pub fn to_upper_camel_case(string: &str) -> EcoString {
 
     pascal_case
 }
+
+/// Converts a string into its UTF-16 representation in bytes
+pub fn string_to_utf16_bytes(string: &str) -> Vec<u8> {
+    let mut bytes = Vec::with_capacity(string.len() * 2);
+
+    for character in string.chars() {
+        let mut character_buffer = [0, 0];
+
+        _ = character.encode_utf16(&mut character_buffer);
+
+        bytes.extend(character_buffer[0].to_le_bytes());
+
+        if character_buffer[1] != 0 {
+            bytes.extend(character_buffer[1].to_le_bytes());
+        }
+    }
+
+    bytes
+}
+
+/// Converts a string into its UTF-32 representation in bytes
+pub fn string_to_utf32_bytes(string: &str) -> Vec<u8> {
+    let mut bytes = Vec::with_capacity(string.len() * 4);
+
+    for character in string.chars() {
+        let u32 = character as u32;
+        bytes.extend(u32.to_le_bytes());
+    }
+
+    bytes
+}
