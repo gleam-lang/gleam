@@ -121,8 +121,9 @@ impl Purity {
         }
     }
 
-    pub fn merge(&mut self, other: Purity) {
-        let new_purity = match (*self, other) {
+    #[must_use]
+    pub fn merge(self, other: Purity) -> Purity {
+        match (self, other) {
             // If we call a trusted pure function, the current function remains pure
             (Purity::Pure, Purity::TrustedPure) => Purity::Pure,
             (Purity::Pure, other) => other,
@@ -138,9 +139,7 @@ impl Purity {
             // purity of, we are now certain that it is impure.
             (Purity::Unknown, Purity::Impure) => Purity::Impure,
             (Purity::Unknown, _) => Purity::Impure,
-        };
-
-        *self = new_purity;
+        }
     }
 }
 
@@ -941,7 +940,24 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let outer_purity = self.purity;
 
         // If an anonymous function can panic, that doesn't mean that the outer
-        // function can too, so we track the purity separately.
+        // function can too, so we track the purity separately. For example, in
+        // this code:
+        //
+        // ```gleam
+        // pub fn divide_partial(dividend: Int) {
+        //   fn(divisor) {
+        //     case divisor {
+        //       0 -> panic as "Cannot divide by 0"
+        //       _ -> dividend / divisor
+        //     }
+        //   }
+        // }
+        // ```
+        //
+        // Although the `divide_partial` function uses the `panic` keyword, it is
+        // actually pure. Only the anonymous function that it constructs is impure;
+        // constructing and returning it does not have any side effects, so there is
+        // no way for a call to `divide_partial` to produce any side effects.
         self.purity = Purity::Pure;
 
         let (args, body) = match self.do_infer_fn(args, expected_args, body, &return_annotation) {
@@ -1040,7 +1056,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             });
         }
 
-        self.purity.merge(fun.purity());
+        self.purity = self.purity.merge(fun.called_function_purity());
 
         TypedExpr::Call {
             location,

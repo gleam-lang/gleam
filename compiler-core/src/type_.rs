@@ -915,10 +915,34 @@ impl ModuleValueConstructor {
         }
     }
 
-    pub fn purity(&self) -> Purity {
+    /// Returns the purity of this value constructor if it is called as a function.
+    /// Referencing a module value by itself is always pure, but calling is as a
+    /// function might not be.
+    pub fn called_function_purity(&self) -> Purity {
         match self {
-            ModuleValueConstructor::Record { .. } => Purity::Pure,
+            // If we call a module constant or local variable as a function, we
+            // no longer have enough information to determine its purity. For
+            // example:
+            //
+            // ```gleam
+            // const function1 = io.println
+            // const function2 = function.identity
+            //
+            // pub fn main() {
+            //   function1("Hello")
+            //   function2("Hello")
+            // }
+            // ```
+            //
+            // At this point, we don't have any information about the purity of
+            // the `function1` and `function2` functions, and must return
+            // `Purity::Unknown`. See the documentation for the `Purity` type
+            // for more information on why this is the case.
             ModuleValueConstructor::Constant { .. } => Purity::Unknown,
+
+            // Constructing records is always pure
+            ModuleValueConstructor::Record { .. } => Purity::Pure,
+
             ModuleValueConstructor::Fn { purity, .. } => *purity,
         }
     }
@@ -1385,12 +1409,36 @@ impl ValueConstructor {
         }
     }
 
-    pub fn purity(&self) -> Purity {
+    /// Returns the purity of this value constructor if it is called as a function.
+    /// Referencing a value constructor by itself is always pure, but calling is as a
+    /// function might not be.
+    pub fn called_function_purity(&self) -> Purity {
         match &self.variant {
+            // If we call a module constant or local variable as a function, we
+            // no longer have enough information to determine its purity. For
+            // example:
+            //
+            // ```gleam
+            // const function1 = io.println
+            // const function2 = function.identity
+            //
+            // pub fn main() {
+            //   function1("Hello")
+            //   function2("Hello")
+            // }
+            // ```
+            //
+            // At this point, we don't have any information about the purity of
+            // the `function1` and `function2` functions, and must return
+            // `Purity::Unknown`. See the documentation for the `Purity` type
+            // for more information on why this is the case.
             ValueConstructorVariant::LocalVariable { .. }
             | ValueConstructorVariant::ModuleConstant { .. }
             | ValueConstructorVariant::LocalConstant { .. } => Purity::Unknown,
+
+            // Constructing records is always pure
             ValueConstructorVariant::Record { .. } => Purity::Pure,
+
             ValueConstructorVariant::ModuleFn { purity, .. } => *purity,
         }
     }
