@@ -410,6 +410,30 @@ impl<'module, 'a> Generator<'module, 'a> {
                     Ok(docvec!["codepointBits(", value, ")"])
                 }
 
+                // UTF16 strings
+                [Opt::Utf16 { .. }] => {
+                    self.tracker.string_utf16_bit_array_segment_used = true;
+                    Ok(docvec!["stringToUtf16(", value, ")"])
+                }
+
+                // UTF16 codepoints
+                [Opt::Utf16Codepoint { .. }] => {
+                    self.tracker.codepoint_utf16_bit_array_segment_used = true;
+                    Ok(docvec!["codepointToUtf16(", value, ")"])
+                }
+
+                // UTF32 strings
+                [Opt::Utf32 { .. }] => {
+                    self.tracker.string_utf32_bit_array_segment_used = true;
+                    Ok(docvec!["stringToUtf32(", value, ")"])
+                }
+
+                // UTF32 codepoints
+                [Opt::Utf32Codepoint { .. }] => {
+                    self.tracker.codepoint_utf32_bit_array_segment_used = true;
+                    Ok(docvec!["codepointToUtf32(", value, ")"])
+                }
+
                 // Bit arrays
                 [Opt::Bits { .. }] => Ok(value),
 
