@@ -3086,6 +3086,7 @@ fn add(a, b) { a + b }
 pub fn main() {
   add(1, 2)
   Nil
+}
 "
     );
 }
@@ -3096,6 +3097,7 @@ fn bit_array_truncated_segment_in_bytes() {
         "
 pub fn main() {
   <<258:size(8)>>
+}
 "
     );
 }

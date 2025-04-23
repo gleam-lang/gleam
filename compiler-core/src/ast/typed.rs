@@ -818,7 +818,7 @@ impl TypedExpr {
             }
 
             TypedExpr::Call { fun, args, .. } => {
-                (fun.is_record_builder() || fun.purity().is_pure())
+                (fun.is_record_builder() || fun.called_function_purity().is_pure())
                     && args
                         .iter()
                         .all(|argument| argument.value.is_pure_value_constructor())
@@ -855,26 +855,58 @@ impl TypedExpr {
         }
     }
 
-    pub fn purity(&self) -> Purity {
+    /// Returns the purity of the left hand side of a function call. For example:
+    ///
+    /// ```gleam
+    /// io.println("Hello, world!")
+    /// ```
+    ///
+    /// Here, the left hand side is `io.println`, which is an impure function,
+    /// so we would return `Purity::Impure`.
+    ///
+    /// This does not check whether an expression is pure on its own; for that
+    /// see `is_pure_value_constructor`.
+    ///
+    pub fn called_function_purity(&self) -> Purity {
         match self {
-            TypedExpr::Var { constructor, .. } => constructor.purity(),
-            TypedExpr::ModuleSelect { constructor, .. } => constructor.purity(),
+            TypedExpr::Var { constructor, .. } => constructor.called_function_purity(),
+            TypedExpr::ModuleSelect { constructor, .. } => constructor.called_function_purity(),
             TypedExpr::Fn { purity, .. } => *purity,
+
+            // While we can infer the purity of some of these expressions, such
+            // as `Case`, in this example:
+            //  ```gleam
+            // case x {
+            //   True -> io.println
+            //   False -> function.identity
+            // }("Hello")
+            // ```
+            //
+            // This kind of code is rare in real Gleam applications, and as this
+            // system is just used for warnings, it is unlikely that supporting
+            // them will provide any significant benefit to developer experience,
+            // so we just return `Unknown` for simplicity.
+            //
+            TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Echo { .. } => Purity::Unknown,
+
+            // The following expressions are all invalid on the left hand side
+            // of a call expression: `10()` is not valid Gleam. Therefore, we
+            // don't really care about any of these as they shouldn't appear in
+            // well typed Gleam code, and so we can just return `Unknown`.
             TypedExpr::Int { .. }
             | TypedExpr::Float { .. }
             | TypedExpr::String { .. }
-            | TypedExpr::Block { .. }
-            | TypedExpr::Pipeline { .. }
             | TypedExpr::List { .. }
-            | TypedExpr::Call { .. }
             | TypedExpr::BinOp { .. }
-            | TypedExpr::Case { .. }
-            | TypedExpr::RecordAccess { .. }
             | TypedExpr::Tuple { .. }
-            | TypedExpr::TupleIndex { .. }
             | TypedExpr::Todo { .. }
             | TypedExpr::Panic { .. }
-            | TypedExpr::Echo { .. }
             | TypedExpr::BitArray { .. }
             | TypedExpr::RecordUpdate { .. }
             | TypedExpr::NegateBool { .. }
