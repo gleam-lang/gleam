@@ -81,7 +81,7 @@ class ListIterator {
   }
 }
 
-export class Empty extends List {}
+export class Empty extends List { }
 
 export class NonEmpty extends List {
   constructor(head, tail) {
@@ -586,7 +586,7 @@ export function toBitArray(segments) {
       return new BitArray(segment);
     }
 
-    return new BitArray(new Uint8Array(/** @type {number[]} */ (segments)));
+    return new BitArray(new Uint8Array(/** @type {number[]} */(segments)));
   }
 
   // Count the total number of bits and check if all segments are numbers, i.e.
@@ -608,7 +608,7 @@ export function toBitArray(segments) {
   // If all segments are numbers then pass the segments array directly to the
   // Uint8Array constructor
   if (areAllSegmentsNumbers) {
-    return new BitArray(new Uint8Array(/** @type {number[]} */ (segments)));
+    return new BitArray(new Uint8Array(/** @type {number[]} */(segments)));
   }
 
   // Pack the segments into a Uint8Array
@@ -1234,7 +1234,7 @@ function intFromUnalignedSliceUsingBigInt(
 
 /**
  * Interprets a 16-bit unsigned integer value as a 16-bit floating point value.
- * 
+ *
  * @param {number} intValue
  * @returns {number}
  */
@@ -1356,6 +1356,76 @@ export function codepointBits(codepoint) {
   return stringBits(String.fromCodePoint(codepoint.value));
 }
 
+/**
+ * @internal
+ *
+ * Returns the UTF-16 bytes for a string.
+ *
+ * @param {string} string
+ * @returns {Uint8Array}
+*/
+export function stringToUtf16(string) {
+  const buffer = new ArrayBuffer(string.length * 2);
+  const bufferView = new Uint16Array(buffer);
+
+  for (let i = 0; i < string.length; i++) {
+    bufferView[i] = string.charCodeAt(i);
+  }
+
+  return new Uint8Array(buffer);
+}
+
+/**
+ * @internal
+ *
+ * Returns the UTF-16 bytes for a single UTF codepoint.
+ *
+ * @param {UtfCodepoint} codepoint
+ * @returns {Uint8Array}
+ */
+export function codePointToUtf16(codepoint) {
+  return stringToUtf16(String.fromCodePoint(codepoint.value));
+}
+
+/**
+ * @internal
+ *
+ * Returns the UTF-32 bytes for a string.
+ *
+ * @param {string} string
+ * @returns {Uint8Array}
+*/
+export function stringToUtf32(string) {
+  const buffer = new ArrayBuffer(string.length * 4);
+  const bufferView = new Uint32Array(buffer);
+  let length = 0;
+
+  for (let i = 0; i < string.length; i++) {
+    const codePoint = string.codePointAt(i);
+
+    bufferView[length] = codePoint;
+    length++;
+
+    if (codePoint > 0xFFFF) {
+      i++;
+    }
+  }
+
+  return new Uint8Array(buffer.slice(0, length * 4));
+}
+
+/**
+ * @internal
+ *
+ * Returns the UTF-32 bytes for a single UTF codepoint.
+ *
+ * @param {UtfCodepoint} codepoint
+ * @returns {Uint8Array}
+ */
+export function codePointToUtf32(codepoint) {
+  return stringToUtf32(String.fromCodePoint(codepoint.value));
+}
+
 export class Result extends CustomType {
   // @internal
   static isResult(data) {
@@ -1411,7 +1481,7 @@ export function isEqual(x, y) {
       try {
         if (a.equals(b)) continue;
         else return false;
-      } catch {}
+      } catch { }
     }
 
     let [keys, get] = getters(a);
