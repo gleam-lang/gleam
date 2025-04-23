@@ -1362,14 +1362,15 @@ export function codepointBits(codepoint) {
  * Returns the UTF-16 bytes for a string.
  *
  * @param {string} string
+ * @param {boolean} isBigEndian
  * @returns {Uint8Array}
 */
-export function stringToUtf16(string) {
+export function stringToUtf16(string, isBigEndian) {
   const buffer = new ArrayBuffer(string.length * 2);
-  const bufferView = new Uint16Array(buffer);
+  const bufferView = new DataView(buffer);
 
   for (let i = 0; i < string.length; i++) {
-    bufferView[i] = string.charCodeAt(i);
+    bufferView.setUint16(i * 2, string.charCodeAt(i), !isBigEndian);
   }
 
   return new Uint8Array(buffer);
@@ -1381,10 +1382,11 @@ export function stringToUtf16(string) {
  * Returns the UTF-16 bytes for a single UTF codepoint.
  *
  * @param {UtfCodepoint} codepoint
+ * @param {boolean} isBigEndian
  * @returns {Uint8Array}
  */
-export function codePointToUtf16(codepoint) {
-  return stringToUtf16(String.fromCodePoint(codepoint.value));
+export function codePointToUtf16(codepoint, isBigEndian) {
+  return stringToUtf16(String.fromCodePoint(codepoint.value), isBigEndian);
 }
 
 /**
@@ -1393,20 +1395,21 @@ export function codePointToUtf16(codepoint) {
  * Returns the UTF-32 bytes for a string.
  *
  * @param {string} string
+ * @param {boolean} isBigEndian
  * @returns {Uint8Array}
 */
-export function stringToUtf32(string) {
+export function stringToUtf32(string, isBigEndian) {
   const buffer = new ArrayBuffer(string.length * 4);
-  const bufferView = new Uint32Array(buffer);
+  const bufferView = new DataView(buffer);
   let length = 0;
 
   for (let i = 0; i < string.length; i++) {
-    const codePoint = string.codePointAt(i);
+    const codepoint = string.codePointAt(i);
 
-    bufferView[length] = codePoint;
+    bufferView.setUint32(length * 4, codepoint, !isBigEndian)
     length++;
 
-    if (codePoint > 0xFFFF) {
+    if (codepoint > 0xFFFF) {
       i++;
     }
   }
@@ -1420,10 +1423,11 @@ export function stringToUtf32(string) {
  * Returns the UTF-32 bytes for a single UTF codepoint.
  *
  * @param {UtfCodepoint} codepoint
+ * @param {boolean} isBigEndian
  * @returns {Uint8Array}
  */
-export function codePointToUtf32(codepoint) {
-  return stringToUtf32(String.fromCodePoint(codepoint.value));
+export function codePointToUtf32(codepoint, isBigEndian) {
+  return stringToUtf32(String.fromCodePoint(codepoint.value), isBigEndian);
 }
 
 export class Result extends CustomType {

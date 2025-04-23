@@ -1,6 +1,8 @@
 use ecow::EcoString;
 use itertools::Itertools;
 
+use crate::ast::Endianness;
+
 /// Converts any escape sequences from the given string to their correct
 /// bytewise UTF-8 representation and returns the resulting string.
 pub fn convert_string_escape_chars(str: &EcoString) -> EcoString {
@@ -112,7 +114,7 @@ pub fn to_upper_camel_case(string: &str) -> EcoString {
 }
 
 /// Converts a string into its UTF-16 representation in bytes
-pub fn string_to_utf16_bytes(string: &str) -> Vec<u8> {
+pub fn string_to_utf16_bytes(string: &str, endianness: Endianness) -> Vec<u8> {
     let mut bytes = Vec::with_capacity(string.len() * 2);
 
     for character in string.chars() {
@@ -120,10 +122,18 @@ pub fn string_to_utf16_bytes(string: &str) -> Vec<u8> {
 
         _ = character.encode_utf16(&mut character_buffer);
 
-        bytes.extend(character_buffer[0].to_le_bytes());
+        let first_two_bytes = match endianness {
+            Endianness::Big => character_buffer[0].to_be_bytes(),
+            Endianness::Little => character_buffer[0].to_le_bytes(),
+        };
+        bytes.extend(first_two_bytes);
 
         if character_buffer[1] != 0 {
-            bytes.extend(character_buffer[1].to_le_bytes());
+            let next_two_bytes = match endianness {
+                Endianness::Big => character_buffer[1].to_be_bytes(),
+                Endianness::Little => character_buffer[1].to_le_bytes(),
+            };
+            bytes.extend(next_two_bytes);
         }
     }
 
@@ -131,12 +141,15 @@ pub fn string_to_utf16_bytes(string: &str) -> Vec<u8> {
 }
 
 /// Converts a string into its UTF-32 representation in bytes
-pub fn string_to_utf32_bytes(string: &str) -> Vec<u8> {
+pub fn string_to_utf32_bytes(string: &str, endianness: Endianness) -> Vec<u8> {
     let mut bytes = Vec::with_capacity(string.len() * 4);
 
     for character in string.chars() {
-        let u32 = character as u32;
-        bytes.extend(u32.to_le_bytes());
+        let character_bytes = match endianness {
+            Endianness::Big => (character as u32).to_be_bytes(),
+            Endianness::Little => (character as u32).to_le_bytes(),
+        };
+        bytes.extend(character_bytes);
     }
 
     bytes
