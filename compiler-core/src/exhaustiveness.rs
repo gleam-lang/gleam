@@ -25,7 +25,7 @@
 //!
 //! ```text
 //! case {
-//!   a is Some, b is 1, c is _  -> todo
+//!   a is Some, b is 1, c is _ -> todo
 //!   a is wibble -> todo
 //! }
 //! ```
@@ -368,12 +368,12 @@ impl Body {
 
     fn assign_bit_array_slice(
         &mut self,
-        variable: EcoString,
+        segment_name: EcoString,
         bit_array: Variable,
         value: ReadAction,
     ) {
         self.bindings.push((
-            variable,
+            segment_name,
             BoundValue::BitArraySlice {
                 bit_array,
                 read_action: value,
@@ -1081,7 +1081,7 @@ impl Offset {
                     variable.as_ref().clone(),
                 ),
             },
-            ReadSize::AnyBits | ReadSize::AnyBytes => self,
+            ReadSize::RemainingBits | ReadSize::RemainingBytes => self,
         }
     }
 
@@ -1152,8 +1152,8 @@ pub enum ReadSize {
     ///       ╰─ We take all the remaining bits from the bit array
     /// ```
     ///
-    AnyBits,
-    AnyBytes,
+    RemainingBits,
+    RemainingBytes,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
@@ -2569,8 +2569,8 @@ impl CaseToCompile {
             // be a catch all that matches with any number of remaining bits.
             let is_last_segment = i + 1 == segments_count;
             match &segment_size {
-                ReadSize::AnyBits => (),
-                ReadSize::AnyBytes => tests.push_back(BitArrayTest::CatchAllIsBytes {
+                ReadSize::RemainingBits => (),
+                ReadSize::RemainingBytes => tests.push_back(BitArrayTest::CatchAllIsBytes {
                     size_so_far: previous_end.clone(),
                 }),
                 segment_size => {
@@ -2667,8 +2667,8 @@ fn segment_size(
         // If a segment has the `bits`/`bytes` option and has no size, that
         // means it's the final catch all segment: we'll have to read any number
         // of bits.
-        _ if segment.has_bits_option() => ReadSize::AnyBits,
-        _ if segment.has_bytes_option() => ReadSize::AnyBytes,
+        _ if segment.has_bits_option() => ReadSize::RemainingBits,
+        _ if segment.has_bytes_option() => ReadSize::RemainingBytes,
 
         // If there's no size option we go for a default: 8 bits for int
         // segments, and 64 for anything else.
