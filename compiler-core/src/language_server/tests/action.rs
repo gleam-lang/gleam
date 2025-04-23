@@ -4448,29 +4448,39 @@ fn extract_variable_does_not_extract_top_level_statement_inside_block() {
 
 #[test]
 fn extract_variable_does_not_extract_top_level_statement_inside_use() {
-    assert_no_code_actions!(
-        EXTRACT_VARIABLE,
-        r#"import gleam/result
+    let src = "import gleam/result
 
 pub fn main() {
   use x <- result.try(Ok(1))
   let y = 2
   Ok(y + x)
-}"#,
+}";
+
+    assert_no_code_actions!(
+        EXTRACT_VARIABLE,
+        TestProject::for_source(src).add_hex_module(
+            "gleam/result",
+            "pub fn try(result: Result(a, e), fun: fn(a) -> Result(b, e)) -> Result(b, e) { todo }",
+        ),
         find_position_of("2").to_selection()
     );
 }
 
 #[test]
 fn extract_variable_does_not_extract_use() {
-    assert_no_code_actions!(
-        EXTRACT_VARIABLE,
-        r#"import gleam/result
+    let src = "import gleam/result
 
 pub fn main() {
   use x <- result.try(Ok(1))
   Ok(x)
-}"#,
+}";
+
+    assert_no_code_actions!(
+        EXTRACT_VARIABLE,
+        TestProject::for_source(src).add_hex_module(
+            "gleam/result",
+            "pub fn try(result: Result(a, e), fun: fn(a) -> Result(b, e)) -> Result(b, e) { todo }",
+        ),
         find_position_of("use").to_selection()
     );
 }
@@ -4501,41 +4511,54 @@ fn extract_variable_does_not_extract_echo() {
 
 #[test]
 fn extract_variable_from_arg_in_pipelined_call() {
-    assert_code_action!(
-        EXTRACT_VARIABLE,
-        r#"import gleam/int
+    let src = "import gleam/int
 import gleam/list
 
 pub fn main() {
   let add = int.add
   let x = [4, 5, 6] |> list.map2([1, 2, 3], add)
   x
-}"#,
+}";
+
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        TestProject::for_source(src).add_hex_module(
+            "gleam/list",
+            "pub fn map2(list1: List(a), list2: List(b), fun: fn(a, b) -> c) -> List(c) { todo }",
+        ).add_hex_module(
+            "gleam/int",
+            "pub fn add(a: Int, b: Int) -> Int { todo }",
+        ),
         find_position_of("[1").to_selection()
     );
 }
 
 #[test]
 fn extract_variable_from_arg_in_pipelined_call_to_capture() {
-    assert_code_action!(
-        EXTRACT_VARIABLE,
-        r#"import gleam/int
+    let src = "import gleam/int
 import gleam/list
 
 pub fn main() {
   let add = int.add
   let x = add |> list.reduce([1, 2, 3], _)
   x
-}"#,
+}";
+
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        TestProject::for_source(src)
+            .add_hex_module(
+                "gleam/list",
+                "pub fn reduce(list: List(a), fun: fn(a, a) -> a) -> Result(a, Nil) { todo }",
+            )
+            .add_hex_module("gleam/int", "pub fn add(a: Int, b: Int) -> Int { todo }"),
         find_position_of("[1").to_selection()
     );
 }
 
 #[test]
 fn extract_variable_from_arg_in_nested_function_called_in_pipeline() {
-    assert_code_action!(
-        EXTRACT_VARIABLE,
-        r#"import gleam/int
+    let src = "import gleam/int
 import gleam/list
 
 pub fn main() {
@@ -4545,7 +4568,20 @@ pub fn main() {
     |> list.map(int.subtract(_, 9))
 
   result
-}"#,
+}";
+
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        TestProject::for_source(src)
+            .add_hex_module(
+                "gleam/list",
+                "pub fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }",
+            )
+            .add_hex_module(
+                "gleam/int",
+                "pub fn add(a: Int, b: Int) -> Int { todo }
+pub fn subtract(a: Int, b: Int) -> Int { todo }"
+            ),
         find_position_of("9").to_selection()
     );
 }
