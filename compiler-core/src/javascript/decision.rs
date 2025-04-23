@@ -92,7 +92,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         // Otherwise we'll have to generate a series of if-else to check which
         // pattern is going to match!
 
-        let mut if_ = if self.variables.is_bound_in_scope(var) {
+        let assignments = if self.variables.is_bound_in_scope(var) {
             // If the variable is already bound to a name in the current
             // scope we don't have to generate any additional code...
             nil()
@@ -104,9 +104,10 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             let name = self.variables.next_local_var(&ASSIGNMENT_VAR.into());
             let value = self.variables.get_value(var);
             self.variables.bind(name.clone(), var);
-            docvec![let_doc(name, value.to_doc()), line()]
+            let_doc(name, value.to_doc())
         };
 
+        let mut if_ = nil();
         for (i, (check, decision)) in choices.iter().enumerate() {
             self.variables.record_check_assignments(var, check);
             let check_doc = self.runtime_check(var, check);
@@ -129,6 +130,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         }
 
         let body = self.inside_new_scope(|this| this.decision(fallback))?;
+        let if_ = join_with_line(assignments, if_);
         if body.is_empty() {
             Ok(if_)
         } else {
@@ -169,7 +171,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
 
         // Before generating the if-else condition we want to generate all the
         // assignments that will be needed by the guard condition so we can rest
-        // assured they are in scope for the if condition to use those.
+        // assured they are in scope and the if condition can use those.
         let guard_variables = guard.referenced_variables();
         let (check_bindings, if_true_bindings): (Vec<_>, Vec<_>) = if_true
             .bindings
@@ -207,9 +209,9 @@ impl<'a> CasePrinter<'_, '_, 'a> {
     ) -> Document<'a> {
         let value = self.variables.get_value(variable);
         match runtime_check {
-            RuntimeCheck::String { value: literal } => docvec![value, " === ", string(literal)],
-            RuntimeCheck::Float { value: literal } => docvec![value, " === ", float(literal)],
-            RuntimeCheck::Int { value: literal } => docvec![value, " === ", int(literal)],
+            RuntimeCheck::String { value: expected } => docvec![value, " === ", string(expected)],
+            RuntimeCheck::Float { value: expected } => docvec![value, " === ", float(expected)],
+            RuntimeCheck::Int { value: expected } => docvec![value, " === ", int(expected)],
             RuntimeCheck::StringPrefix { prefix, .. } => {
                 docvec![value, ".startsWith(", string(prefix), ")"]
             }
@@ -637,6 +639,9 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         Ok(assignment)
     }
 
+    fn local_var(&mut self, name: &EcoString) -> EcoString {
+        self.expression_generator.local_var(name)
+    }
     fn next_local_var(&mut self, name: &EcoString) -> EcoString {
         self.expression_generator.next_local_var(name)
     }
