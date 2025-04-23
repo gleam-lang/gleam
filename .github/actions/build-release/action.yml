@@ -75,7 +75,7 @@ runs:
           BINARY_PATH="${BINARY_PATH}.exe"
         fi
 
-        if ! file -b "$BINARY_PATH" | grep -q "${{ inputs.expected-binary-architecture }}"; then
+        if ! file -b "$BINARY_PATH" | grep -iq "${{ inputs.expected-binary-architecture }}"; then
           echo "error: Architecture mismatch"
           echo "Expected architecture: '${{ inputs.expected-binary-architecture }}'"
           echo "Found binary type: '$(file -b "$BINARY_PATH")'"
@@ -117,7 +117,7 @@ runs:
       shell: bash
       run: |
         case "$TARGET" in
-          x86_64-pc-windows-msvc)
+          *windows*)
             7z x "$ARCHIVE"
             ./gleam.exe --version
             ;;
