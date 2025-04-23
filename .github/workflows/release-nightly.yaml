@@ -66,6 +66,7 @@ jobs:
           - x86_64-apple-darwin
           - aarch64-apple-darwin
           - x86_64-pc-windows-msvc
+          - aarch64-pc-windows-msvc
         toolchain: [ stable ]
         include:
           - os: ubuntu-latest
@@ -88,6 +89,10 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             expected-binary-architecture: x86-64
+            cargo-tool: cargo
+          - os: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            expected-binary-architecture: arm64
             cargo-tool: cargo
           - os: ubuntu-latest
             target: wasm32-unknown-unknown
