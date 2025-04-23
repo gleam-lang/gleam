@@ -187,19 +187,35 @@ impl<'a> Generator<'a> {
 
         if self.tracker.sized_integer_segment_used {
             self.register_prelude_usage(&mut imports, "sizedInt", None);
-        };
+        }
 
         if self.tracker.string_bit_array_segment_used {
             self.register_prelude_usage(&mut imports, "stringBits", None);
-        };
+        }
+
+        if self.tracker.string_utf16_bit_array_segment_used {
+            self.register_prelude_usage(&mut imports, "stringToUtf16", None);
+        }
+
+        if self.tracker.string_utf32_bit_array_segment_used {
+            self.register_prelude_usage(&mut imports, "stringToUtf32", None);
+        }
 
         if self.tracker.codepoint_bit_array_segment_used {
             self.register_prelude_usage(&mut imports, "codepointBits", None);
-        };
+        }
+
+        if self.tracker.codepoint_utf16_bit_array_segment_used {
+            self.register_prelude_usage(&mut imports, "stringToUtf16", None);
+        }
+
+        if self.tracker.codepoint_utf32_bit_array_segment_used {
+            self.register_prelude_usage(&mut imports, "stringToUtf32", None);
+        }
 
         if self.tracker.float_bit_array_segment_used {
             self.register_prelude_usage(&mut imports, "sizedFloat", None);
-        };
+        }
 
         let echo = if self.tracker.echo_used {
             if StdlibPackage::Present == self.stdlib_package {
@@ -861,7 +877,11 @@ pub(crate) struct UsageTracker {
     pub bit_array_slice_to_int_used: bool,
     pub sized_integer_segment_used: bool,
     pub string_bit_array_segment_used: bool,
+    pub string_utf16_bit_array_segment_used: bool,
+    pub string_utf32_bit_array_segment_used: bool,
     pub codepoint_bit_array_segment_used: bool,
+    pub codepoint_utf16_bit_array_segment_used: bool,
+    pub codepoint_utf32_bit_array_segment_used: bool,
     pub float_bit_array_segment_used: bool,
     pub echo_used: bool,
 }
