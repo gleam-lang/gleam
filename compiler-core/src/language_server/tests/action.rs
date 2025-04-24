@@ -4557,6 +4557,28 @@ pub fn main() {
 }
 
 #[test]
+fn extract_variable_from_arg_in_pipelined_call_of_function_to_capture() {
+    let src = "import gleam/list
+
+pub fn main() {
+  fn(total, item) { total + item }
+  |> list.fold(with: _, from: 0, over: [1, 2, 3])
+}
+";
+
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        TestProject::for_source(src)
+            .add_hex_module(
+                "gleam/list",
+                "pub fn fold(over l: List(a), from i: t, with f: fn(t, a) -> t) -> acc { todo }",
+            )
+            .add_hex_module("gleam/int", "pub fn add(a: Int, b: Int) -> Int { todo }"),
+        find_position_of("fold").to_selection()
+    );
+}
+
+#[test]
 fn extract_variable_from_arg_in_nested_function_called_in_pipeline() {
     let src = "import gleam/int
 import gleam/list
@@ -4781,6 +4803,72 @@ fn extract_variable_in_multiline_use() {
     todo
 }"#,
         find_position_of("[1").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_after_nested_anonymous_function() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+    let f = fn() {
+        let x = 1 + 2
+        let ff = fn() {
+            let y = x + 3
+            let z = y + x
+            z
+        }
+        let z = x * 4
+        z
+    }
+    let y = 5 + 6
+    f()
+}"#,
+        find_position_of("6").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_in_nested_anonymous_function() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+    let f = fn() {
+        let x = 1 + 2
+        let ff = fn() {
+            let y = x + 3
+            let z = y + x
+            z
+        }
+        let z = x * 4
+        z
+    }
+    let y = 5 + 6
+    f()
+}"#,
+        find_position_of("4").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_in_double_nested_anonymous_function() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+    let f = fn() {
+        let x = 1 + 2
+        let ff = fn() {
+            let y = x + 3
+            let z = y + x
+            z
+        }
+        let z = x * 4
+        z
+    }
+    let y = 5 + 6
+    f()
+}"#,
+        find_position_of("3").to_selection()
     );
 }
 

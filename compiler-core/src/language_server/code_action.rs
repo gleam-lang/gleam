@@ -2886,10 +2886,12 @@ impl<'a> ExtractVariable<'a> {
     where
         F: Fn(&mut Self),
     {
+        let previous_statement = self.latest_statement;
         let previous_position = self.position;
         self.position = position;
         fun(self);
         self.position = previous_position;
+        self.latest_statement = previous_statement;
     }
 }
 

@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "import gleam/list\n\npub fn main() {\n  fn(total, item) { total + item }\n  |> list.fold(with: _, from: 0, over: [1, 2, 3])\n}\n"
+---
+----- BEFORE ACTION
+import gleam/list
+
+pub fn main() {
+  fn(total, item) { total + item }
+  |> list.fold(with: _, from: 0, over: [1, 2, 3])
+          ↑                                      
+}
+
+
+----- AFTER ACTION
+import gleam/list
+
+pub fn main() {
+  let value = list.fold(with: _, from: 0, over: [1, 2, 3])
+  fn(total, item) { total + item }
+  |> value
+}
