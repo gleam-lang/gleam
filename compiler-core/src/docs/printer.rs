@@ -386,11 +386,20 @@ impl Printer<'_> {
         if package == PRELUDE_PACKAGE_NAME && module == PRELUDE_MODULE_NAME {
             self.title(name)
         } else if package == self.package && module == self.module {
-            self.link(eco_format!("#{name}"), self.title(name))
+            self.link(eco_format!("#{name}"), self.title(name), None)
         } else {
+            let module_name = module.split('/').next_back().unwrap_or(module);
+            let qualified_name = docvec![
+                self.variable(EcoString::from(module_name)),
+                ".",
+                self.title(name)
+            ];
+            let title = eco_format!("{module}.{{type {name}}}");
+
             self.link(
                 eco_format!("https://hexdocs.pm/{package}/{module}.html#{name}"),
-                self.title(name),
+                qualified_name,
+                Some(title),
             )
         }
     }
@@ -438,9 +447,20 @@ impl Printer<'_> {
         )
     }
 
-    fn link<'a>(&self, href: EcoString, name: impl Documentable<'a>) -> Document<'a> {
+    fn link<'a>(
+        &self,
+        href: EcoString,
+        name: impl Documentable<'a>,
+        title: Option<EcoString>,
+    ) -> Document<'a> {
+        let opening_tag = if let Some(title) = title {
+            eco_format!(r#"<a href="{href}" title="{title}">"#)
+        } else {
+            eco_format!(r#"<a href="{href}">"#)
+        };
+
         name.to_doc().surround(
-            zero_width_string(eco_format!(r#"<a href="{href}">"#)),
+            zero_width_string(opening_tag),
             zero_width_string("</a>".into()),
         )
     }
