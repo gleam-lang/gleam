@@ -264,7 +264,7 @@ expression: "compile(config, modules)"
       
     </div>
 
-    <pre><code class="hljs gleam">pub fn discard(discarded: a) -&gt; Int</code></pre>
+    <pre><code class="hljs gleam hljs-ignore"><span class="hljs-keyword">pub fn </span><span class="hljs-title">discard</span>(<span class="hljs-variable">discarded</span>: <span class="hljs-variable">a</span>) -> <span class="hljs-title">Int</span></code></pre>
     
     <div class="rendered-markdown"></div>
   </div>
@@ -343,6 +343,9 @@ expression: "compile(config, modules)"
           elem.classList.add("gleam");
         }
       });
+      hljs.configure({
+        cssSelector: 'pre code:not(.hljs-ignore)'
+      })
       hljs.highlightAll();
     </script>
 
