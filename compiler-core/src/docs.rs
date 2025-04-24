@@ -1,3 +1,4 @@
+mod printer;
 mod source_links;
 #[cfg(test)]
 mod tests;
@@ -5,20 +6,16 @@ mod tests;
 use std::time::SystemTime;
 
 use camino::Utf8PathBuf;
+use printer::Printer;
 
 use crate::{
-    ast::{
-        CustomType, Definition, Function, ModuleConstant, Publicity, TypeAlias, TypedDefinition,
-    },
     build::{Module, Package},
     config::{DocsPage, PackageConfig},
     docs::source_links::SourceLinker,
-    format,
     io::{Content, FileSystemReader, OutputFile},
     package_interface::PackageInterface,
     paths::ProjectPaths,
-    pretty,
-    type_::{self, Deprecation},
+    type_::{self},
     version::COMPILER_VERSION,
 };
 use askama::Template;
@@ -26,8 +23,6 @@ use ecow::EcoString;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use serde_json::to_string as serde_to_string;
-
-const MAX_COLUMNS: isize = 65;
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum DocContext {
@@ -175,12 +170,14 @@ pub fn generate_html<IO: FileSystemReader>(
         let rendered_documentation =
             render_markdown(&documentation_content.clone(), MarkdownSource::Comment);
 
-        let types: Vec<Type<'_>> = module
+        let mut printer = Printer::new(&module.ast.names);
+
+        let types: Vec<TypeDefinition<'_>> = module
             .ast
             .definitions
             .iter()
             .filter(|statement| !statement.is_internal())
-            .flat_map(|statement| type_(&source_links, statement))
+            .flat_map(|statement| printer.type_definition(&source_links, statement))
             .sorted()
             .collect();
 
@@ -189,7 +186,7 @@ pub fn generate_html<IO: FileSystemReader>(
             .definitions
             .iter()
             .filter(|statement| !statement.is_internal())
-            .flat_map(|statement| value(&source_links, statement))
+            .flat_map(|statement| printer.value(&source_links, statement))
             .sorted()
             .collect();
 
@@ -581,164 +578,6 @@ fn render_markdown(text: &str, source: MarkdownSource) -> String {
     s
 }
 
-fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Option<Type<'a>> {
-    let mut formatter = format::Formatter::new();
-
-    match statement {
-        Definition::CustomType(ct) if ct.publicity.is_importable() && !ct.opaque => Some(Type {
-            name: &ct.name,
-            // TODO: Don't use the same printer for docs as for the formatter.
-            // We are not interested in showing the exact implementation in the
-            // documentation and we could add things like colours, etc.
-            definition: print(formatter.custom_type(ct)),
-            documentation: markdown_documentation(&ct.documentation),
-            text_documentation: text_documentation(&ct.documentation),
-            deprecation_message: match &ct.deprecation {
-                Deprecation::NotDeprecated => "".to_string(),
-                Deprecation::Deprecated { message } => message.to_string(),
-            },
-            constructors: ct
-                .constructors
-                .iter()
-                .map(|constructor| TypeConstructor {
-                    definition: print(formatter.record_constructor(constructor)),
-                    documentation: markdown_documentation(&constructor.documentation),
-                    text_documentation: text_documentation(&constructor.documentation),
-                    arguments: constructor
-                        .arguments
-                        .iter()
-                        .filter_map(|arg| arg.label.as_ref().map(|(_, label)| (arg, label)))
-                        .map(|(argument, label)| TypeConstructorArg {
-                            name: label.trim_end().to_string(),
-                            doc: markdown_documentation(&argument.doc),
-                        })
-                        .filter(|arg| !arg.doc.is_empty())
-                        .collect(),
-                })
-                .collect(),
-            source_url: source_links.url(ct.location),
-            opaque: ct.opaque,
-        }),
-
-        Definition::CustomType(CustomType {
-            publicity: Publicity::Public,
-            opaque: true,
-            name,
-            parameters,
-            documentation: doc,
-            location,
-            deprecation,
-            ..
-        }) => Some(Type {
-            name,
-            definition: print(
-                formatter
-                    .docs_opaque_custom_type(Publicity::Public, name, parameters, location)
-                    .group(),
-            ),
-            documentation: markdown_documentation(doc),
-            text_documentation: text_documentation(doc),
-            constructors: vec![],
-            source_url: source_links.url(*location),
-            deprecation_message: match deprecation {
-                Deprecation::NotDeprecated => "".to_string(),
-                Deprecation::Deprecated { message } => message.to_string(),
-            },
-            opaque: true,
-        }),
-
-        Definition::TypeAlias(TypeAlias {
-            publicity: Publicity::Public,
-            alias: name,
-            type_ast: type_,
-            documentation: doc,
-            parameters: args,
-            location,
-            deprecation,
-            ..
-        }) => Some(Type {
-            name,
-            definition: print(
-                formatter
-                    .type_alias(Publicity::Public, name, args, type_, deprecation, location)
-                    .group(),
-            ),
-            documentation: markdown_documentation(doc),
-            text_documentation: text_documentation(doc),
-            constructors: vec![],
-            source_url: source_links.url(*location),
-            deprecation_message: match deprecation {
-                Deprecation::NotDeprecated => "".to_string(),
-                Deprecation::Deprecated { message } => message.to_string(),
-            },
-            opaque: false,
-        }),
-
-        _ => None,
-    }
-}
-
-fn value<'a>(
-    source_links: &SourceLinker,
-    statement: &'a TypedDefinition,
-) -> Option<DocsValues<'a>> {
-    let mut formatter = format::Formatter::new();
-    match statement {
-        Definition::Function(Function {
-            publicity: Publicity::Public,
-            name,
-            documentation: doc,
-            arguments: args,
-            return_type: ret,
-            location,
-            deprecation,
-            ..
-        }) => {
-            let (_, name) = name
-                .as_ref()
-                .expect("Function in a definition must be named");
-
-            Some(DocsValues {
-                name,
-                definition: print(
-                    formatter
-                        .docs_fn_signature(Publicity::Public, name, args, ret.clone(), location)
-                        .group(),
-                ),
-                documentation: markdown_documentation(doc),
-                text_documentation: text_documentation(doc),
-                source_url: source_links.url(*location),
-                deprecation_message: match deprecation {
-                    Deprecation::NotDeprecated => "".to_string(),
-                    Deprecation::Deprecated { message } => message.to_string(),
-                },
-            })
-        }
-
-        Definition::ModuleConstant(ModuleConstant {
-            publicity: Publicity::Public,
-            documentation: doc,
-            name,
-            value,
-            location,
-            ..
-        }) => Some(DocsValues {
-            name,
-            definition: print(formatter.docs_const_expr(Publicity::Public, name, value)),
-            documentation: markdown_documentation(doc),
-            text_documentation: text_documentation(doc),
-            source_url: source_links.url(*location),
-            deprecation_message: "".to_string(),
-        }),
-
-        _ => None,
-    }
-}
-
-fn print(doc: pretty::Document<'_>) -> String {
-    doc.to_pretty_string(MAX_COLUMNS)
-}
-
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
 struct Link {
     name: String,
@@ -760,7 +599,7 @@ struct TypeConstructorArg {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
-struct Type<'a> {
+struct TypeDefinition<'a> {
     name: &'a str,
     definition: String,
     documentation: String,
@@ -814,7 +653,7 @@ struct ModuleTemplate<'a> {
     pages: &'a [Link],
     links: &'a [Link],
     modules: &'a [Link],
-    types: Vec<Type<'a>>,
+    types: Vec<TypeDefinition<'a>>,
     values: Vec<DocsValues<'a>>,
     documentation: String,
     rendering_timestamp: &'a str,
