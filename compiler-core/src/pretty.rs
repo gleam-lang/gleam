@@ -257,6 +257,11 @@ pub enum Document<'a> {
         ///
         graphemes: isize,
     },
+
+    /// A string that is not taken into account when determining line length.
+    /// This is useful for additional formatting text which won't be rendered
+    /// in the final output, such as ANSI codes or HTML elements.
+    ZeroWidthString { string: EcoString },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -399,6 +404,9 @@ fn fits(
             Document::Str { graphemes, .. } | Document::EcoString { graphemes, .. } => {
                 current_width += graphemes
             }
+
+            // Zero width strings do nothing: they do not contribute to line length
+            Document::ZeroWidthString { .. } => {}
 
             // If we get to a break we need to first see if it has to be
             // rendered as its unbroken or broken string, depending on the mode.
@@ -565,6 +573,11 @@ fn format(
                 writer.str_write(string)?;
             }
 
+            Document::ZeroWidthString { string } => {
+                // We write the string, but do not increment the length
+                writer.str_write(string)?;
+            }
+
             // If multiple documents need to be printed, then they are all
             // pushed to the front of the queue and will be printed one by one.
             Document::Vec(vec) => {
@@ -690,6 +703,20 @@ pub fn flex_break<'a>(broken: &'a str, unbroken: &'a str) -> Document<'a> {
     }
 }
 
+/// A string that is not taken into account when determining line length.
+/// This is useful for additional formatting text which won't be rendered
+/// in the final output, such as ANSI codes or HTML elements.
+///
+/// For example:
+/// ```rust:norun
+/// let document = docvec!["Hello", zero_width_string("This is a very long string"), break_("", ""), "world"];
+/// assert_eq!(document.to_pretty_string(20), "HelloThis is a very long stringworld");
+/// ```
+///
+pub fn zero_width_string<'a>(string: EcoString) -> Document<'a> {
+    Document::ZeroWidthString { string }
+}
+
 impl<'a> Document<'a> {
     /// Creates a document from a string slice.
     pub fn str(string: &'a str) -> Self {
@@ -808,6 +835,10 @@ impl<'a> Document<'a> {
             Break { broken, .. } => broken.is_empty(),
             ForceBroken(d) | Nest(_, _, _, d) | Group(d) | NextBreakFits(d, _) => d.is_empty(),
             Vec(docs) => docs.iter().all(|d| d.is_empty()),
+            // Zero-width strings don't count towards line length, but they are
+            // still printed and so are not empty. (Unless their string contents
+            // is also empty)
+            ZeroWidthString { string } => string.is_empty(),
         }
     }
 }
