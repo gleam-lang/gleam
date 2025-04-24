@@ -1,0 +1,38 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n    let f = fn() {\n        let x = 1 + 2\n        let ff = fn() {\n            let y = x + 3\n            let z = y + x\n            z\n        }\n        let z = x * 4\n        z\n    }\n    let y = 5 + 6\n    f()\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+    let f = fn() {
+        let x = 1 + 2
+        let ff = fn() {
+            let y = x + 3
+            let z = y + x
+            z
+        }
+        let z = x * 4
+                    ↑
+        z
+    }
+    let y = 5 + 6
+    f()
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+    let f = fn() {
+        let x = 1 + 2
+        let ff = fn() {
+            let y = x + 3
+            let z = y + x
+            z
+        }
+        let int = 4
+        let z = x * int
+        z
+    }
+    let y = 5 + 6
+    f()
+}
