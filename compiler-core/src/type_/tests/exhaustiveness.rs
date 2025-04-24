@@ -1658,3 +1658,36 @@ fn different_catch_all_bytes_are_not_redundant() {
 }"#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2616
+#[test]
+fn duplicated_alternative_patterns() {
+    assert_warning!(
+        "
+pub fn main() {
+  let x = 1
+  case x {
+    2 | 2 -> 2
+    _ -> panic
+  }
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2616
+#[test]
+fn duplicated_pattern_in_alternative() {
+    assert_warning!(
+        "
+pub fn main() {
+  let x = 1
+  case x {
+    2 -> x
+    1 | 2 -> x - 4
+    _ -> panic
+  }
+}
+"
+    );
+}

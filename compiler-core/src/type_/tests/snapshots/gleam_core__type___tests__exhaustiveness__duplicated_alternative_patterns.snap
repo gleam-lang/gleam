@@ -1,24 +1,24 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
-expression: "\npub fn main(x) {\n  case x {\n    True -> 1\n    False -> 2\n    True -> 3\n  }\n}\n"
+expression: "\npub fn main() {\n  let x = 1\n  case x {\n    2 | 2 -> 2\n    _ -> panic\n  }\n}\n"
 ---
 ----- SOURCE CODE
 
-pub fn main(x) {
+pub fn main() {
+  let x = 1
   case x {
-    True -> 1
-    False -> 2
-    True -> 3
+    2 | 2 -> 2
+    _ -> panic
   }
 }
 
 
 ----- WARNING
 warning: Unreachable pattern
-  ┌─ /src/warning/wrn.gleam:6:5
+  ┌─ /src/warning/wrn.gleam:5:9
   │
-6 │     True -> 3
-  │     ^^^^
+5 │     2 | 2 -> 2
+  │         ^
 
 This pattern cannot be reached as a previous pattern matches the same
 values.

@@ -289,3 +289,8 @@
 
 - Fix slightly wrong error message for missing main function in test module.
   ([Samuel Cristobal](https://github.com/scristobal))
+
+- Fixed a bug where the compiler would not properly warn for unreachable
+  patterns in a `case` expression when the clause matched on multiple
+  alternative patterns.
+  ([Surya Rose](https://github.com/GearsDatapacks))

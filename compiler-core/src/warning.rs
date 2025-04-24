@@ -7,7 +7,7 @@ use crate::{
         self,
         error::{
             FeatureKind, LiteralCollectionKind, PanicPosition, TodoOrPanic,
-            UnreachableCaseClauseReason,
+            UnreachablePatternReason,
         },
         pretty::Printer,
     },
@@ -804,19 +804,19 @@ Run this command to add it to your dependencies:
                     }
                 }
 
-                type_::Warning::UnreachableCaseClause { location, reason } => {
+                type_::Warning::UnreachableCasePattern { location, reason } => {
                     let text: String = match reason {
-                        UnreachableCaseClauseReason::DuplicatePattern => wrap(
-                            "This case clause cannot be reached as a previous clause matches \
-the same values.\n",
+                        UnreachablePatternReason::DuplicatePattern => wrap(
+                            "This pattern cannot be reached as a previous \
+pattern matches the same values.\n",
                         ),
-                        UnreachableCaseClauseReason::ImpossibleVariant => wrap(
-                            "This case clause cannot be reached as it matches \
-on a variant of a type which is never present.\n",
+                        UnreachablePatternReason::ImpossibleVariant => wrap(
+                            "This pattern cannot be reached as it matches on \
+a variant of a type which is never present.\n",
                         ),
                     };
                     Diagnostic {
-                        title: "Unreachable case clause".into(),
+                        title: "Unreachable pattern".into(),
                         text,
                         hint: Some("It can be safely removed.".into()),
                         level: diagnostic::Level::Warning,

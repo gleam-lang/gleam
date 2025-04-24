@@ -88,7 +88,7 @@ use crate::{
     ast::{self, AssignName, Endianness, TypedClause, TypedPattern, TypedPatternBitArraySegment},
     type_::{
         Environment, Type, TypeValueConstructor, TypeValueConstructorField, TypeVar,
-        TypeVariantConstructors, collapse_links, error::UnreachableCaseClauseReason,
+        TypeVariantConstructors, collapse_links, error::UnreachablePatternReason,
         is_prelude_module, string,
     },
 };
@@ -1290,13 +1290,21 @@ pub struct CompileCaseResult {
 }
 
 impl CompileCaseResult {
-    pub fn is_reachable(&self, clause: usize) -> Reachability {
-        if self.diagnostics.reachable.contains(&clause) {
+    pub fn is_reachable(&self, clause: usize, pattern_index: usize) -> Reachability {
+        if self
+            .diagnostics
+            .reachable
+            .contains(&(clause, pattern_index))
+        {
             Reachability::Reachable
-        } else if self.diagnostics.match_impossible_variants.contains(&clause) {
-            Reachability::Unreachable(UnreachableCaseClauseReason::ImpossibleVariant)
+        } else if self
+            .diagnostics
+            .match_impossible_variants
+            .contains(&(clause, pattern_index))
+        {
+            Reachability::Unreachable(UnreachablePatternReason::ImpossibleVariant)
         } else {
-            Reachability::Unreachable(UnreachableCaseClauseReason::DuplicatePattern)
+            Reachability::Unreachable(UnreachablePatternReason::DuplicatePattern)
         }
     }
 
@@ -1320,12 +1328,12 @@ impl CompiledCase {
     }
 }
 
-/// Whether a clause is reachable, or why it is unreachable.
+/// Whether a pattern is reachable, or why it is unreachable.
 ///
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Reachability {
     Reachable,
-    Unreachable(UnreachableCaseClauseReason),
+    Unreachable(UnreachablePatternReason),
 }
 
 /// A type for storing diagnostics produced by the decision tree compiler.
@@ -1335,14 +1343,30 @@ pub struct Diagnostics {
     /// A flag indicating the match is missing one or more pattern.
     pub missing: bool,
 
-    /// The right-hand sides that are reachable.
-    /// If a right-hand side isn't in this list it means its pattern is
-    /// redundant.
-    pub reachable: HashSet<usize>,
+    /// The patterns that are reachable. If a pattern isn't in this list it
+    /// means it is redundant.
+    /// Each entry is a pair of indices: The index of the clause the pattern
+    /// belongs to, followed by the index of the pattern itself within the
+    /// clause. For example, in this case expression:
+    /// ```gleam
+    /// case x {
+    ///   1 -> todo
+    ///   2 | 3 -> todo
+    ///   _ -> todo
+    /// }
+    /// ```
+    ///
+    /// The `3` pattern would be `(1, 1)`, because it is the second pattern of
+    /// the second clause, and both are zero-indexed.
+    ///
+    pub reachable: HashSet<(usize, usize)>,
 
-    /// Clauses which match on variants of a type which the compiler
+    /// Patterns which match on variants of a type which the compiler
     /// can tell will never be present, due to variant inference.
-    pub match_impossible_variants: HashSet<usize>,
+    ///
+    /// See `reachable` for an explanation of its structure.
+    ///
+    pub match_impossible_variants: HashSet<(usize, usize)>,
 }
 
 impl<'a> Compiler<'a> {
@@ -1375,15 +1399,21 @@ impl<'a> Compiler<'a> {
     }
 
     fn mark_as_reached(&mut self, branch: &Branch) {
-        let _ = self.diagnostics.reachable.insert(branch.clause_index);
+        let _ = self
+            .diagnostics
+            .reachable
+            .insert((branch.clause_index, branch.alternative_index));
     }
 
     fn mark_as_matching_impossible_variant(&mut self, branch: &Branch) {
-        let _ = self.diagnostics.reachable.remove(&branch.clause_index);
+        let _ = self
+            .diagnostics
+            .reachable
+            .remove(&(branch.clause_index, branch.alternative_index));
         let _ = self
             .diagnostics
             .match_impossible_variants
-            .insert(branch.clause_index);
+            .insert((branch.clause_index, branch.alternative_index));
     }
 
     fn compile(&mut self, mut branches: VecDeque<Branch>) -> Decision {
