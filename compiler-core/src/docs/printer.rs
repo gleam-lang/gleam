@@ -8,12 +8,12 @@ use itertools::Itertools;
 
 use crate::{
     ast::{
-        ArgNames, Definition, Function, Publicity, RecordConstructorArg, TypedArg, TypedCustomType,
-        TypedDefinition, TypedFunction, TypedModuleConstant, TypedRecordConstructor,
-        TypedTypeAlias,
+        ArgNames, CustomType, Definition, Function, ModuleConstant, Publicity,
+        RecordConstructorArg, SrcSpan, TypeAlias, TypedArg, TypedDefinition,
+        TypedRecordConstructor,
     },
     docvec,
-    pretty::{Document, Documentable, break_, join, line},
+    pretty::{Document, Documentable, break_, join, line, nil},
     type_::{Deprecation, Type, TypeVar, printer::Names},
 };
 
@@ -45,17 +45,26 @@ impl Printer<'_> {
         statement: &'a TypedDefinition,
     ) -> Option<TypeDefinition<'a>> {
         match statement {
-            Definition::CustomType(ct) if ct.publicity.is_public() => Some(TypeDefinition {
-                name: &ct.name,
-                definition: print(self.custom_type(ct)),
-                documentation: markdown_documentation(&ct.documentation),
-                text_documentation: text_documentation(&ct.documentation),
-                deprecation_message: match &ct.deprecation {
+            Definition::CustomType(CustomType {
+                publicity: Publicity::Public,
+                location,
+                name,
+                constructors,
+                documentation,
+                deprecation,
+                opaque,
+                parameters,
+                ..
+            }) => Some(TypeDefinition {
+                name,
+                definition: print(self.custom_type(name, parameters, constructors, *opaque)),
+                documentation: markdown_documentation(documentation),
+                text_documentation: text_documentation(documentation),
+                deprecation_message: match deprecation {
                     Deprecation::NotDeprecated => "".to_string(),
                     Deprecation::Deprecated { message } => message.to_string(),
                 },
-                constructors: ct
-                    .constructors
+                constructors: constructors
                     .iter()
                     .map(|constructor| TypeConstructor {
                         definition: print(self.record_constructor(constructor)),
@@ -73,18 +82,27 @@ impl Printer<'_> {
                             .collect(),
                     })
                     .collect(),
-                source_url: source_links.url(ct.location),
-                opaque: ct.opaque,
+                source_url: source_links.url(*location),
+                opaque: *opaque,
             }),
 
-            Definition::TypeAlias(alias) if alias.publicity.is_public() => Some(TypeDefinition {
-                name: alias.alias.as_str(),
-                definition: print(self.type_alias(alias).group()),
-                documentation: markdown_documentation(&alias.documentation),
-                text_documentation: text_documentation(&alias.documentation),
+            Definition::TypeAlias(TypeAlias {
+                publicity: Publicity::Public,
+                location,
+                alias: name,
+                parameters,
+                type_,
+                documentation,
+                deprecation,
+                ..
+            }) => Some(TypeDefinition {
+                name,
+                definition: print(self.type_alias(name, type_, parameters).group()),
+                documentation: markdown_documentation(documentation),
+                text_documentation: text_documentation(documentation),
                 constructors: vec![],
-                source_url: source_links.url(alias.location),
-                deprecation_message: match &alias.deprecation {
+                source_url: source_links.url(*location),
+                deprecation_message: match deprecation {
                     Deprecation::NotDeprecated => "".to_string(),
                     Deprecation::Deprecated { message } => message.to_string(),
                 },
@@ -101,80 +119,73 @@ impl Printer<'_> {
         statement: &'a TypedDefinition,
     ) -> Option<DocsValues<'a>> {
         match statement {
-            Definition::Function(
-                function @ Function {
-                    publicity: Publicity::Public,
-                    name,
-                    documentation: doc,
-
-                    location,
-                    deprecation,
-                    ..
+            Definition::Function(Function {
+                publicity: Publicity::Public,
+                name: Some((_, name)),
+                documentation: doc,
+                location,
+                deprecation,
+                arguments,
+                return_type,
+                ..
+            }) => Some(DocsValues {
+                name,
+                definition: print(self.function_signature(name, arguments, return_type)),
+                documentation: markdown_documentation(doc),
+                text_documentation: text_documentation(doc),
+                source_url: source_links.url(*location),
+                deprecation_message: match deprecation {
+                    Deprecation::NotDeprecated => "".to_string(),
+                    Deprecation::Deprecated { message } => message.to_string(),
                 },
-            ) => {
-                let (_, name) = name
-                    .as_ref()
-                    .expect("Function in a definition must be named");
+            }),
 
-                Some(DocsValues {
-                    name,
-                    definition: print(self.function_signature(function)),
-                    documentation: markdown_documentation(doc),
-                    text_documentation: text_documentation(doc),
-                    source_url: source_links.url(*location),
-                    deprecation_message: match deprecation {
-                        Deprecation::NotDeprecated => "".to_string(),
-                        Deprecation::Deprecated { message } => message.to_string(),
-                    },
-                })
-            }
-
-            Definition::ModuleConstant(constant) if constant.publicity.is_public() => {
-                Some(DocsValues {
-                    name: constant.name.as_str(),
-                    definition: print(self.constant(constant)),
-                    documentation: markdown_documentation(&constant.documentation),
-                    text_documentation: text_documentation(&constant.documentation),
-                    source_url: source_links.url(constant.location),
-                    deprecation_message: match &constant.deprecation {
-                        Deprecation::NotDeprecated => "".to_string(),
-                        Deprecation::Deprecated { message } => message.to_string(),
-                    },
-                })
-            }
+            Definition::ModuleConstant(ModuleConstant {
+                publicity: Publicity::Public,
+                documentation,
+                location,
+                name,
+                type_,
+                deprecation,
+                ..
+            }) => Some(DocsValues {
+                name,
+                definition: print(self.constant(name, type_)),
+                documentation: markdown_documentation(documentation),
+                text_documentation: text_documentation(documentation),
+                source_url: source_links.url(*location),
+                deprecation_message: match deprecation {
+                    Deprecation::NotDeprecated => "".to_string(),
+                    Deprecation::Deprecated { message } => message.to_string(),
+                },
+            }),
 
             _ => None,
         }
     }
 
-    fn custom_type<'a>(&mut self, custom_type: &'a TypedCustomType) -> Document<'a> {
-        let doc = "pub "
-            .to_doc()
-            .append(if custom_type.opaque {
-                "opaque type "
-            } else {
-                "type "
-            })
-            .append(if custom_type.parameters.is_empty() {
-                custom_type.name.clone().to_doc()
-            } else {
-                let arguments = custom_type.parameters.iter().map(|(_, e)| e.to_doc());
+    fn custom_type<'a>(
+        &mut self,
+        name: &'a str,
+        parameters: &'a [(SrcSpan, EcoString)],
+        constructors: &'a [TypedRecordConstructor],
+        opaque: bool,
+    ) -> Document<'a> {
+        let arguments = if parameters.is_empty() {
+            nil()
+        } else {
+            Self::wrap_arguments(parameters.iter().map(|(_, parameter)| parameter.to_doc()))
+        };
 
-                custom_type
-                    .name
-                    .as_str()
-                    .to_doc()
-                    .append(Self::wrap_arguments(arguments))
-                    .group()
-            });
+        let keywords = if opaque { "opaque type " } else { "type " };
 
-        if custom_type.constructors.is_empty() {
-            return doc;
+        let type_head = docvec!["pub ", keywords, name, arguments];
+
+        if constructors.is_empty() {
+            return type_head;
         }
-        let doc = doc.append(" {");
 
-        let inner = custom_type
-            .constructors
+        let constructors = constructors
             .iter()
             .map(|constructor| {
                 line()
@@ -183,7 +194,7 @@ impl Printer<'_> {
             })
             .collect_vec();
 
-        doc.append(inner).append(line()).append("}")
+        docvec![type_head, " {", constructors, line(), "}"]
     }
 
     pub fn record_constructor<'a>(
@@ -208,42 +219,51 @@ impl Printer<'_> {
             .append(Self::wrap_arguments(arguments))
     }
 
-    fn type_alias<'a>(&mut self, alias: &'a TypedTypeAlias) -> Document<'a> {
-        "pub type "
-            .to_doc()
-            .append(alias.alias.as_str())
-            .append(" = ")
-            .append(self.type_(&alias.type_))
+    fn type_alias<'a>(
+        &mut self,
+        name: &'a str,
+        type_: &Type,
+        parameters: &[(SrcSpan, EcoString)],
+    ) -> Document<'a> {
+        let parameters = if parameters.is_empty() {
+            nil()
+        } else {
+            let arguments = parameters.iter().map(|(_, parameter)| parameter.to_doc());
+            Self::wrap_arguments(arguments)
+        };
+
+        docvec![
+            "pub type ",
+            name,
+            parameters,
+            break_(" =", " = "),
+            self.type_(type_).nest(INDENT)
+        ]
     }
 
-    fn constant<'a>(&mut self, constant: &'a TypedModuleConstant) -> Document<'a> {
-        "pub const "
-            .to_doc()
-            .append(constant.name.as_str())
-            .append(": ")
-            .append(self.type_(&constant.type_))
+    fn constant<'a>(&mut self, name: &'a str, type_: &Type) -> Document<'a> {
+        docvec!["pub const ", name, ": ", self.type_(type_)]
     }
 
-    fn function_signature<'a>(&mut self, function: &'a TypedFunction) -> Document<'a> {
-        let arguments = function.arguments.iter().map(|argument| {
+    fn function_signature<'a>(
+        &mut self,
+        name: &'a str,
+        arguments: &'a [TypedArg],
+        return_type: &Type,
+    ) -> Document<'a> {
+        let arguments = arguments.iter().map(|argument| {
             let name = self.argument_name(argument);
             docvec![name, ": ", self.type_(&argument.type_)].group()
         });
 
-        "pub fn "
-            .to_doc()
-            .append(
-                function
-                    .name
-                    .as_ref()
-                    .expect("Module functions must have names")
-                    .1
-                    .as_str(),
-            )
-            .append(Self::wrap_arguments(arguments))
-            .append(" -> ")
-            .append(self.type_(&function.return_type))
-            .group()
+        docvec![
+            "pub fn ",
+            name,
+            Self::wrap_arguments(arguments),
+            " -> ",
+            self.type_(return_type)
+        ]
+        .group()
     }
 
     fn argument_name<'a>(&self, arg: &'a TypedArg) -> Document<'a> {
