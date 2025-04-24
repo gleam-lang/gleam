@@ -1,0 +1,51 @@
+---
+source: compiler-core/src/type_/tests/exhaustiveness.rs
+expression: "\npub fn main() {\n  let x = 1\n  case x {\n    1 -> 1\n    3 -> 3\n    5 -> 5\n    1 | 2 | 3 | 4 | 5 -> x - 1\n    _ -> panic\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let x = 1
+  case x {
+    1 -> 1
+    3 -> 3
+    5 -> 5
+    1 | 2 | 3 | 4 | 5 -> x - 1
+    _ -> panic
+  }
+}
+
+
+----- WARNING
+warning: Unreachable pattern
+  ┌─ /src/warning/wrn.gleam:8:5
+  │
+8 │     1 | 2 | 3 | 4 | 5 -> x - 1
+  │     ^
+
+This pattern cannot be reached as a previous pattern matches the same
+values.
+
+Hint: It can be safely removed.
+
+warning: Unreachable pattern
+  ┌─ /src/warning/wrn.gleam:8:13
+  │
+8 │     1 | 2 | 3 | 4 | 5 -> x - 1
+  │             ^
+
+This pattern cannot be reached as a previous pattern matches the same
+values.
+
+Hint: It can be safely removed.
+
+warning: Unreachable pattern
+  ┌─ /src/warning/wrn.gleam:8:21
+  │
+8 │     1 | 2 | 3 | 4 | 5 -> x - 1
+  │                     ^
+
+This pattern cannot be reached as a previous pattern matches the same
+values.
+
+Hint: It can be safely removed.
