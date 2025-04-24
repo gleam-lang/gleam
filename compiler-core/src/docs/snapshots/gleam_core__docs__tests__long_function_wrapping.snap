@@ -272,9 +272,9 @@ expression: "compile(config, modules)"
     
     <div class="custom-type-constructors">
       <div class="rendered-markdown"></div>
-      <pre><code class="hljs gleam">pub type Option(t) {
-  Some(t)
-  None
+      <pre><code class="hljs gleam hljs-ignore"><span class="hljs-keyword">pub </span><span class="hljs-keyword">type </span><span class="hljs-title">Option</span>(<span class="hljs-variable">t</span>) {
+  <span class="hljs-title">Some</span>(<span class="hljs-variable">t</span>)
+  <span class="hljs-title">None</span>
 }</code></pre>
       
       <h3>
@@ -285,7 +285,7 @@ expression: "compile(config, modules)"
         <li class="constructor-item">
           <div class="constructor-row">
             <svg class="icon icon-star"><use xlink:href="#icon-star"></use></svg>
-            <pre class="constructor-name"><code class="hljs gleam">Some(t)</code></pre>
+            <pre class="constructor-name"><code class="hljs gleam hljs-ignore"><span class="hljs-title">Some</span>(<span class="hljs-variable">t</span>)</code></pre>
           </div>
 
           <div class="constructor-item-docs">
@@ -298,7 +298,7 @@ expression: "compile(config, modules)"
         <li class="constructor-item">
           <div class="constructor-row">
             <svg class="icon icon-star"><use xlink:href="#icon-star"></use></svg>
-            <pre class="constructor-name"><code class="hljs gleam">None</code></pre>
+            <pre class="constructor-name"><code class="hljs gleam hljs-ignore"><span class="hljs-title">None</span></code></pre>
           </div>
 
           <div class="constructor-item-docs">
@@ -333,10 +333,10 @@ expression: "compile(config, modules)"
       
     </div>
 
-    <pre><code class="hljs gleam">pub fn lazy_or(
-  first: Option(a),
-  second: fn() -&gt; Option(a),
-) -&gt; Option(a)</code></pre>
+    <pre><code class="hljs gleam hljs-ignore"><span class="hljs-keyword">pub fn </span><span class="hljs-title">lazy_or</span>(
+  <span class="hljs-variable">first</span>: <a href="#Option"><span class="hljs-title">Option</span></a>(<span class="hljs-variable">a</span>),
+  <span class="hljs-variable">second</span>: <span class="hljs-keyword">fn</span>() -> <a href="#Option"><span class="hljs-title">Option</span></a>(<span class="hljs-variable">a</span>),
+) -> <a href="#Option"><span class="hljs-title">Option</span></a>(<span class="hljs-variable">a</span>)</code></pre>
     
     <div class="rendered-markdown"><p>Returns the first value if it is <code>Some</code>, otherwise evaluates the given
 function for a fallback value.</p>
@@ -417,6 +417,9 @@ function for a fallback value.</p>
           elem.classList.add("gleam");
         }
       });
+      hljs.configure({
+        cssSelector: 'pre code:not(.hljs-ignore)'
+      })
       hljs.highlightAll();
     </script>
 

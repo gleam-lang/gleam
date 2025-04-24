@@ -153,7 +153,7 @@ pub fn generate_html<IO: FileSystemReader>(
             type_: SearchItemType::Page,
             parent_title: config.name.to_string(),
             title: config.name.to_string(),
-            content,
+            content: escape_html_content(content),
             reference: page.path.to_string(),
         })
     }
@@ -170,14 +170,17 @@ pub fn generate_html<IO: FileSystemReader>(
         let rendered_documentation =
             render_markdown(&documentation_content.clone(), MarkdownSource::Comment);
 
-        let mut printer = Printer::new(&module.ast.names);
+        let mut printer = Printer::new(
+            module.ast.type_info.package.clone(),
+            module.name.clone(),
+            &module.ast.names,
+        );
 
         let types: Vec<TypeDefinition<'_>> = module
             .ast
             .definitions
             .iter()
-            .filter(|statement| !statement.is_internal())
-            .flat_map(|statement| printer.type_definition(&source_links, statement))
+            .filter_map(|statement| printer.type_definition(&source_links, statement))
             .sorted()
             .collect();
 
@@ -185,8 +188,7 @@ pub fn generate_html<IO: FileSystemReader>(
             .ast
             .definitions
             .iter()
-            .filter(|statement| !statement.is_internal())
-            .flat_map(|statement| printer.value(&source_links, statement))
+            .filter_map(|statement| printer.value(&source_links, statement))
             .sorted()
             .collect();
 
@@ -351,7 +353,7 @@ pub fn generate_html<IO: FileSystemReader>(
     });
 
     let search_data_json = serde_to_string(&SearchData {
-        items: escape_html_contents(search_items),
+        items: search_items,
         programming_language: SearchProgrammingLanguage::Gleam,
     })
     .expect("search index serialization");
@@ -518,19 +520,6 @@ fn escape_html_content_test() {
     );
 }
 
-fn escape_html_contents(indexes: Vec<SearchItem>) -> Vec<SearchItem> {
-    indexes
-        .into_iter()
-        .map(|idx| SearchItem {
-            type_: idx.type_,
-            parent_title: idx.parent_title,
-            title: idx.title,
-            content: escape_html_content(idx.content),
-            reference: idx.reference,
-        })
-        .collect::<Vec<SearchItem>>()
-}
-
 fn import_synonyms(parent: &str, child: &str) -> String {
     format!("Synonyms:\n{parent}.{child}\n{parent} {child}")
 }
@@ -542,7 +531,7 @@ fn text_documentation(doc: &Option<(u32, EcoString)>) -> String {
         .unwrap_or_else(|| "".into());
 
     // TODO: parse markdown properly and extract the text nodes
-    raw_text.replace("```gleam", "").replace("```", "")
+    escape_html_content(raw_text.replace("```gleam", "").replace("```", ""))
 }
 
 fn markdown_documentation(doc: &Option<(u32, EcoString)>) -> String {
