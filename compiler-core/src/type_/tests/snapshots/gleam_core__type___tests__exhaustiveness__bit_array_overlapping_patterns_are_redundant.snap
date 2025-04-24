@@ -13,13 +13,13 @@ pub fn main() {
 }
 
 ----- WARNING
-warning: Unreachable case clause
+warning: Unreachable pattern
   ┌─ /src/warning/wrn.gleam:5:5
   │
 5 │     <<1, b:size(8)-unit(2)>> -> b
-  │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  │     ^^^^^^^^^^^^^^^^^^^^^^^^
 
-This case clause cannot be reached as a previous clause matches the same
+This pattern cannot be reached as a previous pattern matches the same
 values.
 
 Hint: It can be safely removed.

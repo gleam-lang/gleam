@@ -824,9 +824,9 @@ pub enum Warning {
         layer: Layer,
     },
 
-    UnreachableCaseClause {
+    UnreachableCasePattern {
         location: SrcSpan,
-        reason: UnreachableCaseClauseReason,
+        reason: UnreachablePatternReason,
     },
 
     /// This happens when someone tries to write a case expression where one of
@@ -1043,7 +1043,7 @@ pub enum TodoOrPanic {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub enum UnreachableCaseClauseReason {
+pub enum UnreachablePatternReason {
     /// The clause is unreachable because a previous pattern
     /// matches the same case.
     DuplicatePattern,
@@ -1177,7 +1177,7 @@ impl Warning {
             | Warning::InefficientEmptyListCheck { location, .. }
             | Warning::TransitiveDependencyImported { location, .. }
             | Warning::DeprecatedItem { location, .. }
-            | Warning::UnreachableCaseClause { location, .. }
+            | Warning::UnreachableCasePattern { location, .. }
             | Warning::CaseMatchOnLiteralCollection { location, .. }
             | Warning::CaseMatchOnLiteralValue { location, .. }
             | Warning::OpaqueExternalType { location, .. }

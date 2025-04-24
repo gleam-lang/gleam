@@ -1660,19 +1660,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // we can warn the user about this.
                 (AssignmentKind::Assert { .. }, Err(_)) => {
                     // There is only one pattern to match, so it is index 0
-                    match output.is_reachable(0) {
-                        Reachability::Unreachable(
-                            UnreachableCaseClauseReason::ImpossibleVariant,
-                        ) => self
-                            .problems
-                            .warning(Warning::AssertAssignmentOnInferredVariant {
-                                location: pattern.location(),
-                            }),
+                    match output.is_reachable(0, 0) {
+                        Reachability::Unreachable(UnreachablePatternReason::ImpossibleVariant) => {
+                            self.problems
+                                .warning(Warning::AssertAssignmentOnInferredVariant {
+                                    location: pattern.location(),
+                                })
+                        }
                         // A duplicate pattern warning should not happen, since there is only one pattern.
                         Reachability::Reachable
-                        | Reachability::Unreachable(
-                            UnreachableCaseClauseReason::DuplicatePattern,
-                        ) => {}
+                        | Reachability::Unreachable(UnreachablePatternReason::DuplicatePattern) => {
+                        }
                     }
                 }
             }
@@ -4195,15 +4193,27 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             });
         }
 
-        // Emit warnings for unreachable clauses
+        // Emit warnings for unreachable patterns
         for (clause_index, clause) in clauses.iter().enumerate() {
-            match result.is_reachable(clause_index) {
-                Reachability::Reachable => {}
-                Reachability::Unreachable(reason) => {
-                    self.problems.warning(Warning::UnreachableCaseClause {
-                        location: clause.location,
-                        reason,
-                    })
+            let patterns_iterator =
+                std::iter::once(&clause.pattern).chain(clause.alternative_patterns.iter());
+
+            for (pattern_index, multi_pattern) in patterns_iterator.enumerate() {
+                match result.is_reachable(clause_index, pattern_index) {
+                    Reachability::Reachable => {}
+                    Reachability::Unreachable(reason) => {
+                        let first = multi_pattern
+                            .first()
+                            .expect("All case expressions match at least one subject");
+                        let last = multi_pattern
+                            .last()
+                            .expect("All case expressions match at least one subject");
+
+                        let location = SrcSpan::new(first.location().start, last.location().end);
+
+                        self.problems
+                            .warning(Warning::UnreachableCasePattern { location, reason })
+                    }
                 }
             }
         }
