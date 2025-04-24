@@ -814,7 +814,6 @@ impl<T> CustomType<T> {
 }
 
 pub type UntypedTypeAlias = TypeAlias<()>;
-pub type TypedTypeAlias = TypeAlias<Arc<Type>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A new name for an existing type
