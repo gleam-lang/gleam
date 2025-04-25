@@ -1,24 +1,22 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "\nimport gleam/list\nimport gleam/int\n\npub fn main() {\n  list.map([1, 2, 3], int.add(1, _))\n}"
+expression: "\npub fn main() {\n  map([1, 2, 3], add(1, _))\n}\npub fn add(n, m) { todo }\npub fn map(l, f) { todo }\n"
 ---
 ----- BEFORE ACTION
 
-import gleam/list
-import gleam/int
-
 pub fn main() {
-  list.map([1, 2, 3], int.add(1, _))
-                      ▔▔▔▔↑         
+  map([1, 2, 3], add(1, _))
+                 ↑         
 }
+pub fn add(n, m) { todo }
+pub fn map(l, f) { todo }
 
 
 ----- AFTER ACTION
 
-import gleam/list
-import gleam/int
-
 pub fn main() {
-  let value = int.add(1, _)
-  list.map([1, 2, 3], value)
+  let value = add(1, _)
+  map([1, 2, 3], value)
 }
+pub fn add(n, m) { todo }
+pub fn map(l, f) { todo }

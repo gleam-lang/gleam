@@ -4448,39 +4448,31 @@ fn extract_variable_does_not_extract_top_level_statement_inside_block() {
 
 #[test]
 fn extract_variable_does_not_extract_top_level_statement_inside_use() {
-    let src = "import gleam/result
-
-pub fn main() {
-  use x <- result.try(Ok(1))
-  let y = 2
-  Ok(y + x)
-}";
-
     assert_no_code_actions!(
         EXTRACT_VARIABLE,
-        TestProject::for_source(src).add_hex_module(
-            "gleam/result",
-            "pub fn try(result: Result(a, e), fun: fn(a) -> Result(b, e)) -> Result(b, e) { todo }",
-        ),
+        "
+pub fn main() {
+  use x <- try(Ok(1))
+  let y = 2
+  Ok(y + x)
+}
+pub fn try(result: Result(a, e), fun: fn(a) -> Result(b, e)) -> Result(b, e) { todo }
+",
         find_position_of("2").to_selection()
     );
 }
 
 #[test]
 fn extract_variable_does_not_extract_use() {
-    let src = "import gleam/result
-
-pub fn main() {
-  use x <- result.try(Ok(1))
-  Ok(x)
-}";
-
     assert_no_code_actions!(
         EXTRACT_VARIABLE,
-        TestProject::for_source(src).add_hex_module(
-            "gleam/result",
-            "pub fn try(result: Result(a, e), fun: fn(a) -> Result(b, e)) -> Result(b, e) { todo }",
-        ),
+        "
+pub fn main() {
+  use x <- try(Ok(1))
+  Ok(x)
+}
+pub fn try(result: Result(a, e), fun: fn(a) -> Result(b, e)) -> Result(b, e) { todo }
+",
         find_position_of("use").to_selection()
     );
 }
@@ -4511,99 +4503,70 @@ fn extract_variable_does_not_extract_echo() {
 
 #[test]
 fn extract_variable_from_arg_in_pipelined_call() {
-    let src = "import gleam/int
-import gleam/list
-
-pub fn main() {
-  let add = int.add
-  let x = [4, 5, 6] |> list.map2([1, 2, 3], add)
-  x
-}";
-
     assert_code_action!(
         EXTRACT_VARIABLE,
-        TestProject::for_source(src).add_hex_module(
-            "gleam/list",
-            "pub fn map2(list1: List(a), list2: List(b), fun: fn(a, b) -> c) -> List(c) { todo }",
-        ).add_hex_module(
-            "gleam/int",
-            "pub fn add(a: Int, b: Int) -> Int { todo }",
-        ),
+        "
+pub fn main() {
+  let adder = add
+  let x = [4, 5, 6] |> map2([1, 2, 3], adder)
+  x
+}
+pub fn map2(list1: List(a), list2: List(b), fun: fn(a, b) -> c) -> List(c) { todo }
+pub fn add(a: Int, b: Int) -> Int { todo }
+",
         find_position_of("[1").to_selection()
     );
 }
 
 #[test]
 fn extract_variable_from_arg_in_pipelined_call_to_capture() {
-    let src = "import gleam/int
-import gleam/list
-
-pub fn main() {
-  let add = int.add
-  let x = add |> list.reduce([1, 2, 3], _)
-  x
-}";
-
     assert_code_action!(
         EXTRACT_VARIABLE,
-        TestProject::for_source(src)
-            .add_hex_module(
-                "gleam/list",
-                "pub fn reduce(list: List(a), fun: fn(a, a) -> a) -> Result(a, Nil) { todo }",
-            )
-            .add_hex_module("gleam/int", "pub fn add(a: Int, b: Int) -> Int { todo }"),
+        "
+pub fn main() {
+  let adder = add
+  let x = adder |> reduce([1, 2, 3], _)
+  x
+}
+pub fn reduce(list: List(a), fun: fn(a, a) -> a) -> Result(a, Nil) { todo }
+pub fn add(a: Int, b: Int) -> Int { todo }
+",
         find_position_of("[1").to_selection()
     );
 }
 
 #[test]
 fn extract_variable_from_arg_in_pipelined_call_of_function_to_capture() {
-    let src = "import gleam/list
-
-pub fn main() {
-  fn(total, item) { total + item }
-  |> list.fold(with: _, from: 0, over: [1, 2, 3])
-}
-";
-
     assert_code_action!(
         EXTRACT_VARIABLE,
-        TestProject::for_source(src)
-            .add_hex_module(
-                "gleam/list",
-                "pub fn fold(over l: List(a), from i: t, with f: fn(t, a) -> t) -> acc { todo }",
-            )
-            .add_hex_module("gleam/int", "pub fn add(a: Int, b: Int) -> Int { todo }"),
+        "
+pub fn main() {
+  fn(total, item) { total + item }
+  |> fold(with: _, from: 0, over: [1, 2, 3])
+}
+pub fn fold(over l: List(a), from i: t, with f: fn(t, a) -> t) -> acc { todo }
+",
         find_position_of("fold").to_selection()
     );
 }
 
 #[test]
 fn extract_variable_from_arg_in_nested_function_called_in_pipeline() {
-    let src = "import gleam/int
-import gleam/list
-
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        "
 pub fn main() {
   let result =
     [1, 2, 3]
-    |> list.map(int.add(_, 1))
-    |> list.map(int.subtract(_, 9))
+    |> map(add(_, 1))
+    |> map(subtract(_, 9))
 
   result
-}";
-
-    assert_code_action!(
-        EXTRACT_VARIABLE,
-        TestProject::for_source(src)
-            .add_hex_module(
-                "gleam/list",
-                "pub fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }",
-            )
-            .add_hex_module(
-                "gleam/int",
-                "pub fn add(a: Int, b: Int) -> Int { todo }
-pub fn subtract(a: Int, b: Int) -> Int { todo }"
-            ),
+}
+pub fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
+pub fn add(a: Int, b: Int) -> Int { todo }
+pub fn subtract(a: Int, b: Int) -> Int { todo }
+",
         find_position_of("9").to_selection()
     );
 }
@@ -4612,14 +4575,15 @@ pub fn subtract(a: Int, b: Int) -> Int { todo }"
 fn extract_variable_does_not_extract_an_entire_pipeline_step() {
     assert_no_code_actions!(
         EXTRACT_VARIABLE,
-        r#"pub fn main() {
-    [1, 2, 3]
-    |> map(todo)
-    |> map(todo)
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> map(todo)
+  |> map(todo)
 }
 
 fn map(list, fun) { todo }
-"#,
+",
         find_position_of("map").to_selection()
     );
 }
@@ -4642,20 +4606,16 @@ fn map(list, fun) { todo }
 
 #[test]
 fn extract_variable_2() {
-    let src = r#"
-import gleam/list
-import gleam/int
-
-pub fn main() {
-  list.map([1, 2, 3], int.add(1, _))
-}"#;
-
     assert_code_action!(
         EXTRACT_VARIABLE,
-        TestProject::for_source(src)
-            .add_module("gleam/int", "pub fn add(n, m) { todo }")
-            .add_module("gleam/list", "pub fn map(l, f) { todo }"),
-        find_position_of("int.").select_until(find_position_of("add"))
+        "
+pub fn main() {
+  map([1, 2, 3], add(1, _))
+}
+pub fn add(n, m) { todo }
+pub fn map(l, f) { todo }
+",
+        find_position_of("add").to_selection()
     );
 }
 

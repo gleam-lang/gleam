@@ -1,26 +1,26 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "import gleam/int\nimport gleam/list\n\npub fn main() {\n  let add = int.add\n  let x = add |> list.reduce([1, 2, 3], _)\n  x\n}"
+expression: "\npub fn main() {\n  let adder = add\n  let x = adder |> reduce([1, 2, 3], _)\n  x\n}\npub fn reduce(list: List(a), fun: fn(a, a) -> a) -> Result(a, Nil) { todo }\npub fn add(a: Int, b: Int) -> Int { todo }\n"
 ---
 ----- BEFORE ACTION
-import gleam/int
-import gleam/list
 
 pub fn main() {
-  let add = int.add
-  let x = add |> list.reduce([1, 2, 3], _)
-                             ↑            
+  let adder = add
+  let x = adder |> reduce([1, 2, 3], _)
+                          ↑            
   x
 }
+pub fn reduce(list: List(a), fun: fn(a, a) -> a) -> Result(a, Nil) { todo }
+pub fn add(a: Int, b: Int) -> Int { todo }
 
 
 ----- AFTER ACTION
-import gleam/int
-import gleam/list
 
 pub fn main() {
-  let add = int.add
+  let adder = add
   let ints = [1, 2, 3]
-  let x = add |> list.reduce(ints, _)
+  let x = adder |> reduce(ints, _)
   x
 }
+pub fn reduce(list: List(a), fun: fn(a, a) -> a) -> Result(a, Nil) { todo }
+pub fn add(a: Int, b: Int) -> Int { todo }

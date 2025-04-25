@@ -1,26 +1,26 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "import gleam/int\nimport gleam/list\n\npub fn main() {\n  let add = int.add\n  let x = [4, 5, 6] |> list.map2([1, 2, 3], add)\n  x\n}"
+expression: "\npub fn main() {\n  let adder = add\n  let x = [4, 5, 6] |> map2([1, 2, 3], adder)\n  x\n}\npub fn map2(list1: List(a), list2: List(b), fun: fn(a, b) -> c) -> List(c) { todo }\npub fn add(a: Int, b: Int) -> Int { todo }\n"
 ---
 ----- BEFORE ACTION
-import gleam/int
-import gleam/list
 
 pub fn main() {
-  let add = int.add
-  let x = [4, 5, 6] |> list.map2([1, 2, 3], add)
-                                 ↑              
+  let adder = add
+  let x = [4, 5, 6] |> map2([1, 2, 3], adder)
+                            ↑                
   x
 }
+pub fn map2(list1: List(a), list2: List(b), fun: fn(a, b) -> c) -> List(c) { todo }
+pub fn add(a: Int, b: Int) -> Int { todo }
 
 
 ----- AFTER ACTION
-import gleam/int
-import gleam/list
 
 pub fn main() {
-  let add = int.add
+  let adder = add
   let ints = [1, 2, 3]
-  let x = [4, 5, 6] |> list.map2(ints, add)
+  let x = [4, 5, 6] |> map2(ints, adder)
   x
 }
+pub fn map2(list1: List(a), list2: List(b), fun: fn(a, b) -> c) -> List(c) { todo }
+pub fn add(a: Int, b: Int) -> Int { todo }
