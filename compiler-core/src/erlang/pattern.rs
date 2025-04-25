@@ -93,7 +93,10 @@ fn print<'a>(
             ..
         } => {
             let right = match right_side_assignment {
-                AssignName::Variable(right) => env.next_local_var_name(right),
+                AssignName::Variable(right) => {
+                    vars.push(right);
+                    env.next_local_var_name(right)
+                }
                 AssignName::Discard(_) => "_".to_doc(),
             };
 
@@ -110,6 +113,7 @@ fn print<'a>(
                     //   to variables within the pattern, we first match the expected prefix length in
                     //   bytes, then use a guard clause to verify the content.
                     //
+                    vars.push(left_name);
                     let name = env.next_local_var_name(left_name);
                     guards.push(docvec![name.clone(), " =:= ", string(left_side_string)]);
                     docvec![
