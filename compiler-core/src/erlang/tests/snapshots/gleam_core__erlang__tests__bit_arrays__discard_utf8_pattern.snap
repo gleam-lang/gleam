@@ -17,7 +17,7 @@ pub fn main() {
 -file("project/test/my/mod.gleam", 2).
 -spec main() -> bitstring().
 main() ->
-    Rest = case <<>> of
+    Rest@1 = case <<>> of
         <<_/utf8, Rest/bitstring>> -> Rest;
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,

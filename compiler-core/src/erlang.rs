@@ -1179,8 +1179,8 @@ fn let_assert<'a>(
         None => string("Pattern match failed, no pattern matched the value."),
     };
 
-    let variables_doc = match vars.as_slice() {
-        [] => nil(),
+    let value = match vars.as_slice() {
+        [] => "nil".to_doc(),
         [variable] => env.local_var_name(variable),
         variables => {
             let variables = variables
@@ -1196,16 +1196,21 @@ fn let_assert<'a>(
         }
     };
 
-    let value = if vars.is_empty() {
-        "nil".to_doc()
-    } else {
-        variables_doc.clone()
-    };
-
-    let assignment = if vars.is_empty() {
-        variables_doc
-    } else {
-        variables_doc.append(" = ")
+    let assignment = match vars.as_slice() {
+        [] => nil(),
+        [variable] => env.next_local_var_name(variable).append(" = "),
+        variables => {
+            let variables = variables
+                .iter()
+                .map(|variable| env.next_local_var_name(variable));
+            docvec![
+                break_("{", "{"),
+                join(variables, break_(",", ", ")).nest(INDENT),
+                break_(",", ""),
+                "} = "
+            ]
+            .group()
+        }
     };
 
     let clauses = docvec![

@@ -17,7 +17,7 @@ pub fn go(x) {
 -file("project/test/my/mod.gleam", 1).
 -spec go(bitstring()) -> bitstring().
 go(X) ->
-    {Name_size, Name} = case X of
+    {Name_size@1, Name@1} = case X of
         <<Name_size:8, Name:Name_size/binary>> -> {Name_size, Name};
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
@@ -27,4 +27,4 @@ go(X) ->
                         function => <<"go"/utf8>>,
                         line => 2})
     end,
-    Name.
+    Name@1.

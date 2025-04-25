@@ -20,7 +20,7 @@ pub fn main() {
 -spec main() -> integer().
 main() ->
     A = 1,
-    B = case <<1, A>> of
+    B@1 = case <<1, A>> of
         <<B, 1>> -> B;
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
@@ -30,4 +30,4 @@ main() ->
                         function => <<"main"/utf8>>,
                         line => 3})
     end,
-    B.
+    B@1.

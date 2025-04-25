@@ -17,7 +17,7 @@ pub fn go() {
 -file("project/test/my/mod.gleam", 1).
 -spec go() -> integer().
 go() ->
-    Y = case {ok, 1} of
+    Y@1 = case {ok, 1} of
         {ok, Y} -> Y;
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
@@ -27,4 +27,4 @@ go() ->
                         function => <<"go"/utf8>>,
                         line => 2})
     end,
-    Y.
+    Y@1.
