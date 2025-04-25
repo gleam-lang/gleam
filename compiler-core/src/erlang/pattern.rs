@@ -18,30 +18,22 @@ pub(super) fn pattern<'a>(
 fn print<'a>(
     p: &'a TypedPattern,
     vars: &mut Vec<&'a str>,
-    define_variables: bool,
     env: &mut Env<'a>,
     guards: &mut Vec<Document<'a>>,
 ) -> Document<'a> {
     match p {
         Pattern::Assign {
             name, pattern: p, ..
-        } if define_variables => {
+        } => {
             vars.push(name);
-            print(p, vars, define_variables, env, guards)
+            print(p, vars, env, guards)
                 .append(" = ")
                 .append(env.next_local_var_name(name))
         }
 
-        Pattern::Assign { pattern: p, .. } => print(p, vars, define_variables, env, guards),
-
-        Pattern::List { elements, tail, .. } => pattern_list(
-            elements,
-            tail.as_deref(),
-            vars,
-            define_variables,
-            env,
-            guards,
-        ),
+        Pattern::List { elements, tail, .. } => {
+            pattern_list(elements, tail.as_deref(), vars, env, guards)
+        }
 
         Pattern::Discard { .. } => "_".to_doc(),
 
@@ -60,12 +52,10 @@ fn print<'a>(
             }
         }
 
-        Pattern::Variable { name, .. } if define_variables => {
+        Pattern::Variable { name, .. } => {
             vars.push(name);
             env.next_local_var_name(name)
         }
-
-        Pattern::Variable { .. } => "_".to_doc(),
 
         Pattern::Int { value, .. } => int(value),
 
@@ -77,7 +67,7 @@ fn print<'a>(
             arguments: args,
             constructor: Inferred::Known(PatternConstructor { name, .. }),
             ..
-        } => tag_tuple_pattern(name, args, vars, define_variables, env, guards),
+        } => tag_tuple_pattern(name, args, vars, env, guards),
 
         Pattern::Constructor {
             constructor: Inferred::Unknown,
@@ -86,17 +76,15 @@ fn print<'a>(
             panic!("Erlang generation performed with uninferred pattern constructor")
         }
 
-        Pattern::Tuple { elements, .. } => tuple(
-            elements
-                .iter()
-                .map(|p| print(p, vars, define_variables, env, guards)),
-        ),
-
-        Pattern::BitArray { segments, .. } => {
-            bit_array(segments.iter().map(|s| {
-                pattern_segment(&s.value, &s.options, vars, define_variables, env, guards)
-            }))
+        Pattern::Tuple { elements, .. } => {
+            tuple(elements.iter().map(|p| print(p, vars, env, guards)))
         }
+
+        Pattern::BitArray { segments, .. } => bit_array(
+            segments
+                .iter()
+                .map(|s| pattern_segment(&s.value, &s.options, vars, env, guards)),
+        ),
 
         Pattern::StringPrefix {
             left_side_string,
@@ -105,8 +93,8 @@ fn print<'a>(
             ..
         } => {
             let right = match right_side_assignment {
-                AssignName::Variable(right) if define_variables => env.next_local_var_name(right),
-                AssignName::Variable(_) | AssignName::Discard(_) => "_".to_doc(),
+                AssignName::Variable(right) => env.next_local_var_name(right),
+                AssignName::Discard(_) => "_".to_doc(),
             };
 
             match left_side_assignment {
@@ -156,23 +144,13 @@ pub(super) fn to_doc<'a>(
     env: &mut Env<'a>,
     guards: &mut Vec<Document<'a>>,
 ) -> Document<'a> {
-    print(p, vars, true, env, guards)
-}
-
-pub(super) fn to_doc_discarding_all<'a>(
-    p: &'a TypedPattern,
-    vars: &mut Vec<&'a str>,
-    env: &mut Env<'a>,
-    guards: &mut Vec<Document<'a>>,
-) -> Document<'a> {
-    print(p, vars, false, env, guards)
+    print(p, vars, env, guards)
 }
 
 fn tag_tuple_pattern<'a>(
     name: &'a str,
     args: &'a [CallArg<TypedPattern>],
     vars: &mut Vec<&'a str>,
-    define_variables: bool,
     env: &mut Env<'a>,
     guards: &mut Vec<Document<'a>>,
 ) -> Document<'a> {
@@ -180,10 +158,9 @@ fn tag_tuple_pattern<'a>(
         atom_string(name.to_snake_case())
     } else {
         tuple(
-            [atom_string(name.to_snake_case())].into_iter().chain(
-                args.iter()
-                    .map(|p| print(&p.value, vars, define_variables, env, guards)),
-            ),
+            [atom_string(name.to_snake_case())]
+                .into_iter()
+                .chain(args.iter().map(|p| print(&p.value, vars, env, guards))),
         )
     }
 }
@@ -192,7 +169,6 @@ fn pattern_segment<'a>(
     value: &'a TypedPattern,
     options: &'a [BitArrayOption<TypedPattern>],
     vars: &mut Vec<&'a str>,
-    define_variables: bool,
     env: &mut Env<'a>,
     guards: &mut Vec<Document<'a>>,
 ) -> Document<'a> {
@@ -207,13 +183,9 @@ fn pattern_segment<'a>(
         Pattern::Discard { .. }
         | Pattern::Variable { .. }
         | Pattern::Int { .. }
-        | Pattern::Float { .. } => print(
-            value,
-            &mut vars.borrow_mut(),
-            define_variables,
-            env,
-            &mut guards.borrow_mut(),
-        ),
+        | Pattern::Float { .. } => {
+            print(value, &mut vars.borrow_mut(), env, &mut guards.borrow_mut())
+        }
         _ => panic!("Pattern segment match not recognised"),
     };
 
@@ -221,7 +193,6 @@ fn pattern_segment<'a>(
         Some(":".to_doc().append(print(
             value,
             &mut vars.borrow_mut(),
-            define_variables,
             env,
             &mut guards.borrow_mut(),
         )))
@@ -244,16 +215,15 @@ fn pattern_list<'a>(
     elements: &'a [TypedPattern],
     tail: Option<&'a TypedPattern>,
     vars: &mut Vec<&'a str>,
-    define_variables: bool,
     env: &mut Env<'a>,
     guards: &mut Vec<Document<'a>>,
 ) -> Document<'a> {
     let elements = join(
         elements
             .iter()
-            .map(|element| print(element, vars, define_variables, env, guards)),
+            .map(|element| print(element, vars, env, guards)),
         break_(",", ", "),
     );
-    let tail = tail.map(|tail| print(tail, vars, define_variables, env, guards));
+    let tail = tail.map(|tail| print(tail, vars, env, guards));
     list(elements, tail)
 }

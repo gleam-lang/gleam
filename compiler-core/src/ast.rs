@@ -2235,6 +2235,28 @@ impl TypedPattern {
             labelled,
         })
     }
+
+    /// Whether the pattern always matches. For example, a tuple or simple
+    /// variable assignment always match and can never fail.
+    #[must_use]
+    pub fn always_matches(&self) -> bool {
+        match self {
+            Pattern::Variable { .. } | Pattern::Discard { .. } => true,
+            Pattern::Assign { pattern, .. } => pattern.always_matches(),
+            Pattern::Tuple { elements, .. } => {
+                elements.iter().all(|element| element.always_matches())
+            }
+            Pattern::Int { .. }
+            | Pattern::Float { .. }
+            | Pattern::String { .. }
+            | Pattern::VarUsage { .. }
+            | Pattern::List { .. }
+            | Pattern::Constructor { .. }
+            | Pattern::BitArray { .. }
+            | Pattern::StringPrefix { .. }
+            | Pattern::Invalid { .. } => false,
+        }
+    }
 }
 
 #[derive(Debug, Default)]
