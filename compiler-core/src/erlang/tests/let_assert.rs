@@ -223,3 +223,16 @@ pub fn go() {
 }"#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4145
+#[test]
+fn reference_earlier_segment() {
+    assert_erl!(
+        "
+pub fn main() {
+  let assert <<length, bytes:size(length)-unit(8)>> = <<3, 1, 2, 3>>
+  bytes
+}
+"
+    );
+}
