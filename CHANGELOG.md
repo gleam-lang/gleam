@@ -169,6 +169,10 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The compiler will now generate more efficient code for `let assert` on the
+  Erlang target.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - The build tool now supports placing modules in a directory called `dev`,
@@ -343,3 +347,8 @@
 - Fixed a bug where the language server would generate invalid code for the
   "fill in missing labels" code action.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where referencing an earlier segment of the bit array in a bit
+  array pattern in a `let assert` assignment would generate invalid code on the
+  Erlang target.
+  ([Surya Rose](https://github.com/GearsDatapacks))
