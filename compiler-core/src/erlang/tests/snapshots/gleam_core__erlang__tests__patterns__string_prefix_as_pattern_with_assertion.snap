@@ -17,7 +17,7 @@ pub fn a(x) {
 -file("project/test/my/mod.gleam", 1).
 -spec a(any()) -> binary().
 a(X) ->
-    {Rest, A} = case <<"wibble"/utf8>> of
+    {Rest@1, A@1} = case <<"wibble"/utf8>> of
         <<A:1/binary, Rest/binary>> when A =:= <<"a"/utf8>> -> {Rest, A};
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
@@ -27,4 +27,4 @@ a(X) ->
                         function => <<"a"/utf8>>,
                         line => 2})
     end,
-    A.
+    A@1.

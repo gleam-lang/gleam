@@ -19,7 +19,7 @@ pub fn unwrap_or_panic(value) {
 -file("project/test/my/mod.gleam", 2).
 -spec unwrap_or_panic({ok, K} | {error, any()}) -> K.
 unwrap_or_panic(Value) ->
-    Inner = case Value of
+    Inner@1 = case Value of
         {ok, Inner} -> Inner;
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
@@ -29,4 +29,4 @@ unwrap_or_panic(Value) ->
                         function => <<"unwrap_or_panic"/utf8>>,
                         line => 3})
     end,
-    Inner.
+    Inner@1.
