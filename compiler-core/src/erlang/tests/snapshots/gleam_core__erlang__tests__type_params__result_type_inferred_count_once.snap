@@ -37,9 +37,8 @@ wobble() ->
 -file("project/test/my/mod.gleam", 2).
 -spec wibble() -> {ok, any()} | {error, wobble(any())}.
 wibble() ->
-    _assert_subject = wobble(),
-    {ok, _} = case _assert_subject of
-        {ok, _} -> _assert_subject;
+    case wobble() of
+        {ok, _} -> nil;
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,

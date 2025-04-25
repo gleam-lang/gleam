@@ -26,9 +26,8 @@ main() ->
     A = 1,
     Simple = <<1, A>>,
     Complex = <<4/integer-big, 5.0/little-float, 6/native-integer>>,
-    _assert_subject = <<1>>,
-    <<7:2, 8:3, B:4/binary>> = case _assert_subject of
-        <<7:2, 8:3, _:4/binary>> -> _assert_subject;
+    B = case <<1>> of
+        <<7:2, 8:3, B:4/binary>> -> B;
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
@@ -37,9 +36,8 @@ main() ->
                         function => <<"main"/utf8>>,
                         line => 5})
     end,
-    _assert_subject@1 = <<1>>,
-    <<C:8/unit:1, D:2/binary-unit:2>> = case _assert_subject@1 of
-        <<_:8/unit:1, _:2/binary-unit:2>> -> _assert_subject@1;
+    {C, D} = case <<1>> of
+        <<C:8/unit:1, D:2/binary-unit:2>> -> {C, D};
         _assert_fail@1 ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,

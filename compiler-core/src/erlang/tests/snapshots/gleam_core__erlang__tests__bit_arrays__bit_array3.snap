@@ -20,8 +20,8 @@ pub fn main() {
 -spec main() -> integer().
 main() ->
     A = <<"test"/utf8>>,
-    <<B/utf8, "st"/utf8>> = case A of
-        <<_/utf8, "st"/utf8>> -> A;
+    B = case A of
+        <<B/utf8, "st"/utf8>> -> B;
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,

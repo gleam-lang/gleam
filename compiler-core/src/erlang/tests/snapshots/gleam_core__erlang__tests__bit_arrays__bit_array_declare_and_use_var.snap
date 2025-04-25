@@ -17,8 +17,8 @@ pub fn go(x) {
 -file("project/test/my/mod.gleam", 1).
 -spec go(bitstring()) -> bitstring().
 go(X) ->
-    <<Name_size@1:8, Name:Name_size@1/binary>> = case X of
-        <<_:8, _:Name_size/binary>> -> X;
+    {Name_size, Name} = case X of
+        <<Name_size:8, Name:Name_size/binary>> -> {Name_size, Name};
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,

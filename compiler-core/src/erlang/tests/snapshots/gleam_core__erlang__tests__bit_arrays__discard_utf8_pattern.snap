@@ -17,9 +17,8 @@ pub fn main() {
 -file("project/test/my/mod.gleam", 2).
 -spec main() -> bitstring().
 main() ->
-    _assert_subject = <<>>,
-    <<_/utf8, Rest/bitstring>> = case _assert_subject of
-        <<_/utf8, _/bitstring>> -> _assert_subject;
+    Rest = case <<>> of
+        <<_/utf8, Rest/bitstring>> -> Rest;
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,

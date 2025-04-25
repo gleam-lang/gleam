@@ -17,8 +17,8 @@ pub fn x(y) {
 -file("project/test/my/mod.gleam", 1).
 -spec x({ok, any()} | {error, any()}) -> integer().
 x(Y) ->
-    {ok, _} = case Y of
-        {ok, _} -> Y;
+    case Y of
+        {ok, _} -> nil;
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
