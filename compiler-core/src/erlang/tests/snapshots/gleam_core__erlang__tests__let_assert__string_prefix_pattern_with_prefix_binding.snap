@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/erlang/tests/let_assert.rs
+expression: "pub fn go() {\n  let assert \"Hello \" as greeting <> name = \"Hello John\"\n  #(greeting, name)\n}"
+---
+----- SOURCE CODE
+pub fn go() {
+  let assert "Hello " as greeting <> name = "Hello John"
+  #(greeting, name)
+}
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([go/0]).
+
+-file("project/test/my/mod.gleam", 1).
+-spec go() -> {binary(), binary()}.
+go() ->
+    {Name@1, Greeting@1} = case <<"Hello John"/utf8>> of
+        <<Greeting:6/binary, Name/binary>> when Greeting =:= <<"Hello "/utf8>> -> {
+        Name,
+            Greeting};
+        _assert_fail ->
+            erlang:error(#{gleam_error => let_assert,
+                        message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
+                        value => _assert_fail,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"go"/utf8>>,
+                        line => 2})
+    end,
+    {Greeting@1, Name@1}.

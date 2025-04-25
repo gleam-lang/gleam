@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/erlang/tests/let_assert.rs
+expression: "pub fn go() {\n  let assert 1.5 = 5.1\n}"
+---
+----- SOURCE CODE
+pub fn go() {
+  let assert 1.5 = 5.1
+}
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([go/0]).
+
+-file("project/test/my/mod.gleam", 1).
+-spec go() -> float().
+go() ->
+    case 5.1 of
+        1.5 -> nil;
+        _assert_fail ->
+            erlang:error(#{gleam_error => let_assert,
+                        message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
+                        value => _assert_fail,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"go"/utf8>>,
+                        line => 2})
+    end.
