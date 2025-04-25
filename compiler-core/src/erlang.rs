@@ -1159,37 +1159,60 @@ fn binop_documents<'a>(left: Document<'a>, op: &'static str, right: Document<'a>
 
 fn let_assert<'a>(
     value: &'a TypedExpr,
-    pat: &'a TypedPattern,
+    pattern: &'a TypedPattern,
     env: &mut Env<'a>,
     message: Option<&'a TypedExpr>,
 ) -> Document<'a> {
+    if pattern.always_matches() {
+        return let_(value, pattern, env);
+    }
+
     let mut vars: Vec<&str> = vec![];
-    let body = maybe_block_expr(value, env);
-    let (subject_var, subject_definition) = if value.is_var() {
-        (body, nil())
-    } else {
-        let var = env.next_local_var_name(ASSERT_SUBJECT_VARIABLE);
-        let definition = docvec![var.clone(), " = ", body, ",", line()];
-        (var, definition)
-    };
+    let subject = maybe_block_expr(value, env);
 
     let mut guards = vec![];
-    let check_pattern = pattern::to_doc_discarding_all(pat, &mut vars, env, &mut guards);
+    let pattern_document = pattern::to_doc(pattern, &mut vars, env, &mut guards);
     let clause_guard = optional_clause_guard(None, guards, env);
 
-    // We don't take the guards from the assign pattern or we would end up with
-    // all the same guards repeated twice!
-    let assign_pattern = pattern::to_doc(pat, &mut vars, env, &mut vec![]);
     let message = match message {
         Some(message) => expr(message, env),
         None => string("Pattern match failed, no pattern matched the value."),
     };
 
+    let variables_doc = match vars.as_slice() {
+        [] => nil(),
+        [variable] => env.local_var_name(variable),
+        variables => {
+            let variables = variables
+                .iter()
+                .map(|variable| env.local_var_name(variable));
+            docvec![
+                break_("{", "{"),
+                join(variables, break_(",", ", ")).nest(INDENT),
+                break_(",", ""),
+                "}"
+            ]
+            .group()
+        }
+    };
+
+    let value = if vars.is_empty() {
+        "nil".to_doc()
+    } else {
+        variables_doc.clone()
+    };
+
+    let assignment = if vars.is_empty() {
+        variables_doc
+    } else {
+        variables_doc.append(" = ")
+    };
+
     let clauses = docvec![
-        check_pattern.clone(),
+        pattern_document,
         clause_guard,
         " -> ",
-        subject_var.clone(),
+        value,
         ";",
         line(),
         env.next_local_var_name(ASSERT_FAIL_VARIABLE),
@@ -1199,7 +1222,7 @@ fn let_assert<'a>(
             erlang_error(
                 "let_assert",
                 &message,
-                pat.location(),
+                pattern.location(),
                 vec![("value", env.local_var_name(ASSERT_FAIL_VARIABLE))],
                 env,
             )
@@ -1208,10 +1231,9 @@ fn let_assert<'a>(
         .nest(INDENT)
     ];
     docvec![
-        subject_definition,
-        assign_pattern,
-        " = case ",
-        subject_var,
+        assignment,
+        "case ",
+        subject,
         " of",
         docvec![line(), clauses].nest(INDENT),
         line(),
