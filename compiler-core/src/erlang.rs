@@ -1189,7 +1189,6 @@ fn let_assert<'a>(
             docvec![
                 break_("{", "{"),
                 join(variables, break_(",", ", ")).nest(INDENT),
-                break_(",", ""),
                 "}"
             ]
             .group()
@@ -1206,7 +1205,6 @@ fn let_assert<'a>(
             docvec![
                 break_("{", "{"),
                 join(variables, break_(",", ", ")).nest(INDENT),
-                break_(",", ""),
                 "} = "
             ]
             .group()
