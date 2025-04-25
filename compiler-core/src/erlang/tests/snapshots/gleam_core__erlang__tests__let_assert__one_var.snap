@@ -17,9 +17,8 @@ pub fn go() {
 -file("project/test/my/mod.gleam", 1).
 -spec go() -> integer().
 go() ->
-    _assert_subject = {ok, 1},
-    {ok, Y} = case _assert_subject of
-        {ok, _} -> _assert_subject;
+    Y = case {ok, 1} of
+        {ok, Y} -> Y;
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,

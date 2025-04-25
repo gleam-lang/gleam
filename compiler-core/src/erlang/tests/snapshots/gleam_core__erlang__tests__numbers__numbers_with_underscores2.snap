@@ -20,9 +20,8 @@ pub fn main() {
 -file("project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
-    _assert_subject = 1,
-    100000 = case _assert_subject of
-        100000 -> _assert_subject;
+    case 1 of
+        100000 -> nil;
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
@@ -31,9 +30,8 @@ main() ->
                         function => <<"main"/utf8>>,
                         line => 3})
     end,
-    _assert_subject@1 = 1.0,
-    100000.00101 = case _assert_subject@1 of
-        100000.00101 -> _assert_subject@1;
+    case 1.0 of
+        100000.00101 -> nil;
         _assert_fail@1 ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,

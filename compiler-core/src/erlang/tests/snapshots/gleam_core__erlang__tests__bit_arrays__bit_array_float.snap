@@ -23,8 +23,8 @@ main() ->
         5.0:32/float,
         6.0:64/float-little,
         1.0:(lists:max([(B), 0]))/float>>,
-    <<1.0:16/float, 5.0:32/float, 6.0:64/float-little, 1.0:B/float>> = case Floats of
-        <<1.0:16/float, 5.0:32/float, 6.0:64/float-little, 1.0:B/float>> -> Floats;
+    case Floats of
+        <<1.0:16/float, 5.0:32/float, 6.0:64/float-little, 1.0:B/float>> -> nil;
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,

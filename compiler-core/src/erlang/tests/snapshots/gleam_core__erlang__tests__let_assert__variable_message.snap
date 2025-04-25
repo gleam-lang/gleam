@@ -19,8 +19,8 @@ pub fn expect(value, message) {
 -file("project/test/my/mod.gleam", 2).
 -spec expect({ok, L} | {error, any()}, binary()) -> L.
 expect(Value, Message) ->
-    {ok, Inner} = case Value of
-        {ok, _} -> Value;
+    Inner = case Value of
+        {ok, Inner} -> Inner;
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => Message,
