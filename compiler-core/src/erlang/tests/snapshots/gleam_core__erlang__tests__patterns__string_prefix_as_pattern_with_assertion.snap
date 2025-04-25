@@ -17,9 +17,8 @@ pub fn a(x) {
 -file("project/test/my/mod.gleam", 1).
 -spec a(any()) -> binary().
 a(X) ->
-    _assert_subject = <<"wibble"/utf8>>,
-    <<A@1:1/binary, Rest/binary>> = case _assert_subject of
-        <<A:1/binary, _/binary>> when A =:= <<"a"/utf8>> -> _assert_subject;
+    {Rest, A} = case <<"wibble"/utf8>> of
+        <<A:1/binary, Rest/binary>> when A =:= <<"a"/utf8>> -> {Rest, A};
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
@@ -28,4 +27,4 @@ a(X) ->
                         function => <<"a"/utf8>>,
                         line => 2})
     end,
-    A@1.
+    A.
