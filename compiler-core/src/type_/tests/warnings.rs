@@ -3547,3 +3547,102 @@ pub fn main() {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4505
+#[test]
+fn impure_function_using_a_pipe() {
+    assert_no_warnings!(
+        "
+fn impure(_x) {
+  panic
+}
+
+fn also_impure(x) {
+  x |> impure
+}
+
+pub fn main() {
+  also_impure(10)
+  Nil
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4505
+#[test]
+fn impure_function_using_a_pipe_with_a_call() {
+    assert_no_warnings!(
+        "
+fn impure(_x, _y) {
+  panic
+}
+
+fn also_impure(x) {
+  x |> impure(1)
+}
+
+pub fn main() {
+  also_impure(10)
+  Nil
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4505
+#[test]
+fn impure_function_using_a_pipe_into_anonymous_function() {
+    assert_no_warnings!(
+        "
+
+fn impure(x) {
+  x |> fn(_x) { panic }
+}
+
+pub fn main() {
+  impure(10)
+  Nil
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4505
+#[test]
+fn impure_function_using_a_pipe_into_echo() {
+    assert_no_warnings!(
+        "
+
+fn impure(x) {
+  x |> echo
+}
+
+pub fn main() {
+  impure(10)
+  Nil
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4505
+#[test]
+fn impure_function_using_a_pipe_into_result_of_call() {
+    assert_no_warnings!(
+        "
+fn make_panic() {
+  fn(_x) { panic }
+}
+
+fn impure(x) {
+  x |> make_panic()
+}
+
+pub fn main() {
+  impure(10)
+  Nil
+}
+"
+    );
+}
