@@ -320,9 +320,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             Target::JavaScript => implementations.uses_javascript_externals,
         };
 
-        let is_non_io_standard_library_function = environment.current_package
-            == STDLIB_PACKAGE_NAME
-            && environment.current_module != "gleam/io";
+        let is_non_io_standard_library_function = is_non_io_standard_library_module(
+            &environment.current_package,
+            &environment.current_module,
+        );
 
         let purity = if is_non_io_standard_library_function {
             Purity::TrustedPure
@@ -4410,6 +4411,36 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         if minimum_required_version > self.minimum_required_version {
             self.minimum_required_version = minimum_required_version;
         }
+    }
+}
+
+/// Returns `true` if the given module is from the standard library, but does
+/// not have any side effects (e.g. `gleam/io`). Used in purity tracking.
+fn is_non_io_standard_library_module(current_package: &str, current_module: &str) -> bool {
+    if current_package != STDLIB_PACKAGE_NAME {
+        return false;
+    }
+
+    match current_module {
+        "gleam/bit_array"
+        | "gleam/bool"
+        | "gleam/bytes_tree"
+        | "gleam/dict"
+        | "gleam/dynamic"
+        | "gleam/dynamic/decode"
+        | "gleam/float"
+        | "gleam/function"
+        | "gleam/int"
+        | "gleam/list"
+        | "gleam/option"
+        | "gleam/order"
+        | "gleam/pair"
+        | "gleam/result"
+        | "gleam/set"
+        | "gleam/string"
+        | "gleam/string_tree"
+        | "gleam/uri" => true,
+        _ => false,
     }
 }
 
