@@ -1,12 +1,19 @@
 use std::{collections::HashSet, time::SystemTime};
 
-use super::{SearchData, SearchItem, SearchItemType, SearchProgrammingLanguage};
+use super::{
+    SearchData, SearchItem, SearchItemType, SearchProgrammingLanguage, printer::Printer,
+    source_links::SourceLinker,
+};
 use crate::{
-    build::{Mode, NullTelemetry, PackageCompiler, StaleTracker, TargetCodegenConfiguration},
+    build::{
+        self, Mode, NullTelemetry, Origin, PackageCompiler, StaleTracker,
+        TargetCodegenConfiguration,
+    },
     config::{DocsPage, PackageConfig, Repository},
     docs::DocContext,
     io::{FileSystemWriter, memory::InMemoryFileSystem},
     paths::ProjectPaths,
+    type_,
     uid::UniqueIdGenerator,
     version::COMPILER_VERSION,
     warning::WarningEmitter,
@@ -122,6 +129,114 @@ pub fn compile(config: PackageConfig, modules: Vec<(&str, &str)>) -> EcoString {
         vec![],
         CompileWithMarkdownPagesOpts::default(),
     )
+}
+
+fn compile_documentation(main_module: &str, modules: Vec<(&str, &str, &str)>) -> EcoString {
+    let module = type_::tests::compile_module("main", main_module, None, modules)
+        .expect("Module should compile successfully");
+
+    let mut config = PackageConfig::default();
+    config.name = "thepackage".into();
+    let paths = ProjectPaths::new("/".into());
+    let build_module = build::Module {
+        name: "main".into(),
+        code: main_module.into(),
+        mtime: SystemTime::now(),
+        input_path: "/".into(),
+        origin: Origin::Src,
+        ast: module,
+        extra: Default::default(),
+        dependencies: Default::default(),
+    };
+
+    let source_links = SourceLinker::new(&paths, &config, &build_module);
+
+    let module = build_module.ast;
+
+    let mut printer = Printer::new(
+        module.type_info.package.clone(),
+        module.name.clone(),
+        &module.names,
+    );
+
+    let types = module
+        .definitions
+        .iter()
+        .filter_map(|statement| printer.type_definition(&source_links, statement))
+        .sorted()
+        .collect_vec();
+
+    let values = module
+        .definitions
+        .iter()
+        .filter_map(|statement| printer.value(&source_links, statement))
+        .sorted()
+        .collect_vec();
+
+    let mut output = EcoString::new();
+
+    if !types.is_empty() {
+        output.push_str("---- TYPES");
+    }
+    for type_ in types {
+        output.push_str("\n\n--- ");
+        output.push_str(type_.name);
+        if !type_.documentation.is_empty() {
+            output.push('\n');
+            output.push_str(&type_.documentation);
+        }
+        output.push_str("\n<pre><code>");
+        output.push_str(&type_.definition);
+        output.push_str("</code></pre>");
+
+        if !type_.constructors.is_empty() {
+            output.push_str("\n\n-- CONSTRUCTORS");
+        }
+        for constructor in type_.constructors {
+            output.push_str("\n\n");
+            if !constructor.documentation.is_empty() {
+                output.push_str(&constructor.documentation);
+                output.push('\n');
+            }
+            output.push_str("<pre><code>");
+            output.push_str(&constructor.definition);
+            output.push_str("</code></pre>");
+        }
+    }
+
+    if !values.is_empty() {
+        output.push_str("\n\n---- VALUES");
+    }
+    for value in values {
+        output.push_str("\n\n--- ");
+        output.push_str(value.name);
+        if !value.documentation.is_empty() {
+            output.push('\n');
+            output.push_str(&value.documentation);
+        }
+        output.push_str("\n<pre><code>");
+        output.push_str(&value.definition);
+        output.push_str("</code></pre>");
+    }
+
+    output
+}
+
+macro_rules! assert_documentation {
+    ($src:literal $(,)?) => {
+        let output = compile_documentation( $src, Vec::new());
+        insta::assert_snapshot!(output);
+    };
+
+    ($(($name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
+        let output = compile_documentation($src, vec![$(("thepackage", $name, $module_src)),*]);
+        insta::assert_snapshot!(output);
+    };
+
+    ($(($package:expr, $name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
+        let output = compile_documentation($src, vec![$(($package, $name, $module_src)),*]);
+        insta::assert_snapshot!(output);
+    };
 }
 
 #[test]
@@ -561,4 +676,91 @@ fn output_of_search_data_json() {
     let data = create_sample_search_data();
     let json = serde_to_string(&data).unwrap();
     insta::assert_snapshot!(json);
+}
+
+// https://github.com/gleam-lang/gleam/issues/2629
+#[test]
+fn print_type_variables_in_function_signatures() {
+    assert_documentation!(
+        "
+pub type Dict(key, value)
+
+pub fn insert(dict: Dict(key, value), key: key, value: value) -> Dict(key, value) {
+  dict
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/828
+#[test]
+fn print_qualified_names_from_other_modules() {
+    assert_documentation!(
+        (
+            "gleam/option",
+            "
+pub type Option(t) {
+  Some(t)
+  None
+}
+"
+        ),
+        "
+import gleam/option.{type Option, Some, None}
+
+pub fn from_option(o: Option(t), e: e) -> Result(t, e) {
+  case o {
+    Some(t) -> Ok(t)
+    None -> Error(e)
+  }
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3461
+#[test]
+fn link_to_type_in_same_module() {
+    assert_documentation!(
+        "
+pub type Dict(a, b)
+
+pub fn new() -> Dict(a, b) { todo }
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3461
+#[test]
+fn link_to_type_in_different_module() {
+    assert_documentation!(
+        ("gleam/dict", "pub type Dict(a, b)"),
+        "
+import gleam/dict
+
+pub fn make_dict() -> dict.Dict(a, b) { todo }
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3461
+#[test]
+fn link_to_type_in_different_package() {
+    assert_documentation!(
+        ("gleam_stdlib", "gleam/dict", "pub type Dict(a, b)"),
+        "
+import gleam/dict
+
+pub fn make_dict() -> dict.Dict(a, b) { todo }
+"
+    );
+}
+
+#[test]
+fn no_links_to_prelude_types() {
+    assert_documentation!(
+        "
+pub fn int_to_string(i: Int) -> String { todo }
+"
+    );
 }
