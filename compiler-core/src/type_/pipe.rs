@@ -102,11 +102,14 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             let (kind, call) = match call {
                 func @ UntypedExpr::Fn { location, kind, .. } => {
                     let (func, args, return_type) = self.expr_typer.do_infer_call(
-                        func.clone(),
+                        func,
                         vec![self.untyped_left_hand_value_variable_call_argument()],
                         location,
                         CallKind::Function,
                     );
+
+                    self.expr_typer.purity =
+                        self.expr_typer.purity.merge(func.called_function_purity());
 
                     let kind = match kind {
                         FunctionLiteralKind::Capture { hole } => {
@@ -152,18 +155,28 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
 
                     match fun.type_().fn_types() {
                         // Rewrite as right(..args)(left)
-                        Some((args, _)) if args.len() == arguments.len() => (
-                            PipelineAssignmentKind::FunctionCall,
-                            self.infer_apply_to_call_pipe(fun, arguments, location),
-                        ),
+                        Some((args, _)) if args.len() == arguments.len() => {
+                            // We are calling the return value of another function.
+                            // Without lifting purity tracking into the type system,
+                            // we have no idea whether it's pure or not!
+                            self.expr_typer.purity = self.expr_typer.purity.merge(Purity::Unknown);
+                            (
+                                PipelineAssignmentKind::FunctionCall,
+                                self.infer_apply_to_call_pipe(fun, arguments, location),
+                            )
+                        }
 
                         // Rewrite as right(left, ..args)
-                        _ => (
-                            PipelineAssignmentKind::FirstArgument {
-                                second_argument: arguments.first().map(|arg| arg.location),
-                            },
-                            self.infer_insert_pipe(fun, arguments, location),
-                        ),
+                        _ => {
+                            self.expr_typer.purity =
+                                self.expr_typer.purity.merge(fun.called_function_purity());
+                            (
+                                PipelineAssignmentKind::FirstArgument {
+                                    second_argument: arguments.first().map(|arg| arg.location),
+                                },
+                                self.infer_insert_pipe(fun, arguments, location),
+                            )
+                        }
                     }
                 }
 
@@ -172,6 +185,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                     expression: None,
                 } => {
                     self.expr_typer.environment.echo_found = true;
+                    self.expr_typer.purity = Purity::Impure;
                     // An echo that is not followed by an expression that is
                     // used as a pipeline's step is just like the identity
                     // function.
@@ -347,6 +361,11 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 }
             }
         });
+
+        self.expr_typer.purity = self
+            .expr_typer
+            .purity
+            .merge(function.called_function_purity());
 
         let return_type = self.expr_typer.new_unbound_var();
         // Ensure that the function accepts one argument of the correct type
