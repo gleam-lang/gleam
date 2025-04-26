@@ -3525,3 +3525,25 @@ pub fn main() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4504
+#[test]
+fn impure_stdlib_test_function() {
+    assert_no_warnings!(
+        (
+            "gleam_stdlib",
+            "gleam/should",
+            r#"
+@external(erlang, "gleam_test_ffi", "should_equal")
+pub fn equal(a: t, b: t) -> Nil
+"#
+        ),
+        "
+import gleam/should
+
+pub fn main() {
+  1 |> should.equal(1)
+}
+"
+    );
+}
