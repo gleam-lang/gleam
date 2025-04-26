@@ -2666,13 +2666,7 @@ fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64, env: &mut Env<'a>) -> Docum
 
 fn module_select_fn<'a>(type_: Arc<Type>, module_name: &'a str, label: &'a str) -> Document<'a> {
     match crate::type_::collapse_links(type_).as_ref() {
-        Type::Fn { args, .. } => "fun "
-            .to_doc()
-            .append(module_name_atom(module_name))
-            .append(":")
-            .append(atom(label))
-            .append("/")
-            .append(args.len()),
+        Type::Fn { args, .. } => function_reference(Some(module_name), label, args.len()),
 
         _ => module_name_atom(module_name)
             .append(":")
