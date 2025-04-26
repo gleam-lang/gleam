@@ -34,10 +34,6 @@ use vec1::Vec1;
 const INDENT: isize = 4;
 const MAX_COLUMNS: isize = 80;
 
-fn module_name_to_erlang(module: &str) -> Document<'_> {
-    EcoString::from(module.replace('/', "@")).to_doc()
-}
-
 fn module_name_atom(module: &str) -> Document<'static> {
     atom_string(module.replace('/', "@"))
 }
@@ -2672,13 +2668,13 @@ fn module_select_fn<'a>(type_: Arc<Type>, module_name: &'a str, label: &'a str) 
     match crate::type_::collapse_links(type_).as_ref() {
         Type::Fn { args, .. } => "fun "
             .to_doc()
-            .append(module_name_to_erlang(module_name))
+            .append(module_name_atom(module_name))
             .append(":")
             .append(atom(label))
             .append("/")
             .append(args.len()),
 
-        _ => module_name_to_erlang(module_name)
+        _ => module_name_atom(module_name)
             .append(":")
             .append(atom(label))
             .append("()"),
