@@ -7798,6 +7798,21 @@ pub fn main() {
 }
 
 #[test]
+// https://github.com/gleam-lang/gleam/issues/4499
+fn fill_labels_with_function_with_unlabelled_arguments() {
+    assert_no_code_actions!(
+        FILL_LABELS,
+        "
+pub fn main() {
+    fold(0, over: [], with: fn(acc, item) { acc + item })
+}
+
+pub fn fold(over list, from initial, with fun) { todo }",
+        find_position_of("fold").to_selection(),
+    );
+}
+
+#[test]
 fn add_missing_patterns_with_labels() {
     assert_code_action!(
         ADD_MISSING_PATTERNS,

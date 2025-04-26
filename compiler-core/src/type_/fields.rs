@@ -161,44 +161,40 @@ impl FieldMap {
     /// ```
     ///
     pub fn missing_labels<A: std::fmt::Debug>(&self, args: &[CallArg<A>]) -> Vec<EcoString> {
-        let mut arg_position_to_label = self
-            .fields
+        // We need to know how many positional arguments are in the function
+        // arguments. That's given by the position of the first labelled
+        // argument; if the first label argument is third, then we know the
+        // function also needs two unlabelled arguments first.
+        let Some(positional_arguments) = self.fields.iter().map(|(_, position)| *position).min()
+        else {
+            return vec![];
+        };
+
+        // We need to count how many positional arguments were actually supplied
+        // in the call, to remove the corresponding labelled arguments that have
+        // been taken by any positional argument.
+        let given_positional_arguments = args
             .iter()
-            .map(|(label, position)| (position, label.clone()))
-            .collect::<HashMap<_, _>>();
+            .filter(|argument| argument.label.is_none() && !argument.is_use_implicit_callback())
+            .count();
 
-        // We first get rid of all the labels taken by the positional arguments
-        // that have been supplied.
-        let mut position = 0;
-        for arg in args {
-            if arg.label.is_none() && !arg.is_use_implicit_callback() {
-                let _ = arg_position_to_label.remove(&position);
-                position += 1;
-            } else {
-                // As soon as we find an unlabelled argument we break out of the
-                // loop, we know that now there's only going to be labelled
-                // arguments
-                break;
-            }
-        }
-
-        let mut arg_label_to_position = arg_position_to_label
+        let explicit_labels = args
             .iter()
-            .map(|(position, label)| (label.clone(), position))
-            .collect::<HashMap<_, _>>();
+            .filter_map(|argument| argument.label.as_ref())
+            .collect::<HashSet<&EcoString>>();
 
-        // Now we're just left with labelled args, we remove those from the
-        // remaining labels.
-        for arg in args.iter().skip(position as usize) {
-            if let Some(label) = &arg.label {
-                let _ = arg_label_to_position.remove(label);
-            }
-        }
-
-        arg_label_to_position
+        self.fields
             .iter()
+            // As a start we remove all the labels that are already used explicitly,
+            // for sure those are not going to be unused!
+            .filter(|(label, _)| !explicit_labels.contains(label))
+            // ...then we sort all the labels in order by their original position in
+            // the function definition
             .sorted_by_key(|(_, position)| *position)
-            .map(|(label, _position)| label.clone())
+            // ... finally we remove all the ones that are taken by a positional
+            // argument
+            .dropping(given_positional_arguments.saturating_sub(positional_arguments as usize))
+            .map(|(label, _)| label.clone())
             .collect_vec()
     }
 
