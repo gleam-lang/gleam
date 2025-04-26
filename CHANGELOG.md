@@ -339,3 +339,7 @@
   patterns in a `case` expression when the clause matched on multiple
   alternative patterns.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where the language server would generate invalid code for the
+  "fill in missing labels" code action.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
