@@ -164,7 +164,7 @@
 
   This expression computes a value without any side effects, but then the
   value isn't used at all. You might way to assign it to a variable, or
-  delete the expression entirely if it not needed.
+  delete the expression entirely if it's not needed.
   ```
 
   ([Surya Rose](https://github.com/GearsDatapacks))

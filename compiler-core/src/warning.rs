@@ -909,7 +909,7 @@ can already tell which branch is going to match with this value.",
                     text: wrap(
                         "This expression computes a value without any side \
 effects, but then the value isn't used at all. You might way to assign it to a \
-variable, or delete the expression entirely if it not needed.",
+variable, or delete the expression entirely if it's not needed.",
                     ),
                     hint: None,
                     level: diagnostic::Level::Warning,
