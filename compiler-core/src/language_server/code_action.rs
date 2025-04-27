@@ -2701,6 +2701,16 @@ fn turn_expression_into_use(expr: &TypedExpr) -> Option<CallLocations> {
         return None;
     };
 
+    // The function arguments in the ast are reordered using function's field map.
+    // This means that in the `args` array they might not appear in the same order
+    // in which they are written by the user. Since the rest of the code relies
+    // on their order in the written code we first have to sort them by their
+    // source position.
+    let args = args
+        .iter()
+        .sorted_by_key(|arg| arg.location.start)
+        .collect_vec();
+
     let CallArg {
         value: last_arg,
         implicit: None,
