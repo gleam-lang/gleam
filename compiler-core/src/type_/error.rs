@@ -629,6 +629,10 @@ pub enum Error {
         operator: BinOp,
         location: SrcSpan,
     },
+
+    DoubleVariableAssignmentInBitArray {
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1131,7 +1135,8 @@ impl Error {
             | Error::ErlangFloatUnsafe { location }
             | Error::FloatOperatorOnInts { location, .. }
             | Error::IntOperatorOnFloats { location, .. }
-            | Error::StringConcatenationWithAddInt { location } => location.start,
+            | Error::StringConcatenationWithAddInt { location }
+            | Error::DoubleVariableAssignmentInBitArray { location } => location.start,
 
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)

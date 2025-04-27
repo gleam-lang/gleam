@@ -381,6 +381,24 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
         let typed_value = self.unify(*segment.value, type_.clone(), None);
 
+        match &typed_value {
+            // We can't directly match on the contents of a `Box`, so we must
+            // use a guard here.
+            Pattern::Assign {
+                location, pattern, ..
+            } if pattern.is_variable() => {
+                // It is tricky to generate code on Erlang for a pattern like
+                // `<<a as b>>`, since assignment patterns are not allowed in
+                // bit array patterns in Erlang. Since there is basically no
+                // reason to ever need to do this anyway, we simply emit an error
+                // here.
+                self.error(Error::DoubleVariableAssignmentInBitArray {
+                    location: *location,
+                });
+            }
+            _ => {}
+        };
+
         BitArraySegment {
             location: segment.location,
             value: Box::new(typed_value),
