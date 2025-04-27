@@ -3661,6 +3661,25 @@ To join two strings together you can use the <> operator."),
                         extra_labels: vec![],
                     }),
                 },
+
+
+
+                TypeError::DoubleVariableAssignmentInBitArray { location } => Diagnostic {
+                    title: "Double variable assignment".to_string(),
+                    text:wrap("This pattern assigns to two different variables \
+at once, which is not possible in bit arrays."),
+                    hint: Some(wrap("Remove the `as` assignment.")),
+                    level: Level::Error,
+                    location: Some(Location {
+                        label: Label {
+                            text: None,
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
             }
         }).collect_vec(),
 
