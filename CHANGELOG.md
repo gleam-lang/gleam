@@ -310,6 +310,10 @@
 
 ### Formatter
 
+### Installation
+
+- Windows ARM64 pre-built binaries are now provided.
+
 ### Bug fixes
 
 - Fixed a bug where `case` expressions in custom panic messages would compile
