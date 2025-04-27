@@ -134,7 +134,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
                         continue;
                     }
 
-                    let segment_local_name = this.variables.next_local_var(&segment_name);
+                    let segment_local_name = this.variables.next_local_var(segment_name);
                     let segment_value = this
                         .variables
                         .get_segment_value(segment_name)
@@ -685,7 +685,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                 bit_array,
                 read_action,
             } => self
-                .get_segment_value(&variable_name)
+                .get_segment_value(variable_name)
                 .unwrap_or_else(|| self.read_action_to_doc(bit_array, read_action)),
         };
         let_doc(local_variable_name.clone(), assigned_value)
@@ -860,7 +860,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                     && from_bits.clone() % 8 == BigInt::ZERO =>
             {
                 let from_byte: BigInt = from_bits / 8;
-                return docvec![bit_array, ".byteAt(", from_byte, ")"];
+                docvec![bit_array, ".byteAt(", from_byte, ")"]
             }
 
             // If we're reading all the remaining bits/bytes of an array.
