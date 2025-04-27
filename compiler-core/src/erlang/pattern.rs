@@ -194,7 +194,10 @@ fn pattern_segment<'a>(
         Pattern::Assign { name, pattern, .. } => {
             vars.borrow_mut().push(name);
             let variable_name = env.next_local_var_name(name);
+
             match pattern.as_ref() {
+                // In Erlang, assignment patterns inside bit arrays are not allowed. So instead of
+                // generating `<<1 = A>>`, we  use guards, and generate `<<A>> when A =:= 1`.
                 Pattern::Int { value, .. } => {
                     guards
                         .borrow_mut()
@@ -208,17 +211,24 @@ fn pattern_segment<'a>(
                     variable_name
                 }
 
+                // Here we do the same as for floats and ints, but we must calculate the size of
+                // the string first, so we can correctly match the bit array segment then compare
+                // it afterwards.
                 Pattern::String { value, .. } => {
                     guards.borrow_mut().push(docvec![
                         variable_name.clone(),
                         " =:= ",
                         string(value)
                     ]);
-                    docvec![variable_name, ":", string_length_utf8_bytes(value),]
+                    docvec![variable_name, ":", string_length_utf8_bytes(value)]
                 }
 
+                // Doing a pattern such as `<<_ as a>>` is the same as just `<<a>>`, so we treat it
+                // as such.
                 Pattern::Discard { .. } => variable_name,
 
+                // Any other pattern is invalid as a bit array segment. We already handle the case
+                // of `<<a as b>>` in the type-checker, and assignment patterns cannot be nested.
                 _ => panic!("Pattern segment match not recognised"),
             }
         }

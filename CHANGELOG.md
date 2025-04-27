@@ -361,3 +361,7 @@
 - Fixed instances where the "Extract variable" code action would produce invalid
   code, most noticeable in code inside `case` clauses and `use` expressions.
   ([Matias Carlander](https://github.com/matiascr))
+
+- Fixed a bug where the compiler would crash when type-checking code containing
+  an assignment pattern inside a bit-array pattern.
+  ([Surya Rose](https://github.com/GearsDatapacks))
