@@ -3,7 +3,7 @@ use std::sync::Arc;
 use camino::Utf8PathBuf;
 
 use crate::analyse::TargetSupport;
-use crate::build::{ExpressionPosition, Target};
+use crate::build::{ExpressionPosition, Origin, Target};
 use crate::config::PackageConfig;
 use crate::line_numbers::LineNumbers;
 use crate::type_::error::VariableOrigin;
@@ -14,7 +14,7 @@ use crate::{
     ast::{SrcSpan, TypedExpr},
     build::Located,
     type_::{
-        self, AccessorsMap, Environment, ExprTyper, FieldMap, ModuleValueConstructor,
+        self, AccessorsMap, EnvironmentArguments, ExprTyper, FieldMap, ModuleValueConstructor,
         RecordAccessor, Type, ValueConstructor, ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
@@ -45,7 +45,7 @@ fn compile_module(src: &str) -> TypedModule {
     crate::analyse::ModuleAnalyzerConstructor::<()> {
         target: Target::Erlang,
         ids: &ids,
-        origin: crate::build::Origin::Src,
+        origin: Origin::Src,
         importable_modules: &modules,
         warnings: &TypeWarningEmitter::null(),
         direct_dependencies: &std::collections::HashMap::new(),
@@ -75,15 +75,17 @@ fn compile_expression(src: &str) -> TypedStatement {
     // to have one place where we create all this required state for use in each
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), type_::build_prelude(&ids));
-    let mut environment = Environment::new(
+    let mut environment = EnvironmentArguments {
         ids,
-        "mypackage".into(),
-        None,
-        "mymod".into(),
-        Target::Erlang,
-        &modules,
-        TargetSupport::Enforced,
-    );
+        current_package: "thepackage".into(),
+        gleam_version: None,
+        current_module: "mymod".into(),
+        target: Target::Erlang,
+        importable_modules: &modules,
+        target_support: TargetSupport::Enforced,
+        current_origin: Origin::Src,
+    }
+    .build();
 
     // Insert a cat record to use in the tests
     let cat_type = Arc::new(Type::Named {

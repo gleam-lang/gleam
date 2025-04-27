@@ -320,12 +320,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             Target::JavaScript => implementations.uses_javascript_externals,
         };
 
-        let is_non_io_standard_library_function = is_non_io_standard_library_module(
-            &environment.current_package,
-            &environment.current_module,
-        );
-
-        let purity = if is_non_io_standard_library_function {
+        let purity = if is_trusted_pure_module(environment) {
+            // The standard library uses a lot of FFI, but as we are the maintainers we know that
+            // it can be trusted to pure pure.
             Purity::TrustedPure
         } else if uses_externals {
             Purity::Impure
@@ -4414,34 +4411,22 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     }
 }
 
-/// Returns `true` if the given module is from the standard library, but does
-/// not have any side effects (e.g. `gleam/io`). Used in purity tracking.
-fn is_non_io_standard_library_module(current_package: &str, current_module: &str) -> bool {
-    if current_package != STDLIB_PACKAGE_NAME {
+/// Returns `true` if the current function is one that the Gleam core team
+/// maintains and we know it to be pure.
+/// Used in purity tracking.
+fn is_trusted_pure_module(environment: &Environment<'_>) -> bool {
+    // We only t
+    if environment.current_package != STDLIB_PACKAGE_NAME {
         return false;
     }
 
-    match current_module {
-        "gleam/bit_array"
-        | "gleam/bool"
-        | "gleam/bytes_tree"
-        | "gleam/dict"
-        | "gleam/dynamic"
-        | "gleam/dynamic/decode"
-        | "gleam/float"
-        | "gleam/function"
-        | "gleam/int"
-        | "gleam/list"
-        | "gleam/option"
-        | "gleam/order"
-        | "gleam/pair"
-        | "gleam/result"
-        | "gleam/set"
-        | "gleam/string"
-        | "gleam/string_tree"
-        | "gleam/uri" => true,
-        _ => false,
+    // The gleam/io module has side effects
+    if environment.current_module == "gleam/io" {
+        return false;
     }
+
+    // Test and dev modules may have side effects
+    environment.origin == Origin::Src
 }
 
 #[derive(Debug, Clone, Copy)]

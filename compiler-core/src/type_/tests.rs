@@ -352,15 +352,17 @@ fn compile_statement_sequence(
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
     let mut problems = Problems::new();
-    let mut environment = Environment::new(
+    let mut environment = EnvironmentArguments {
         ids,
-        "thepackage".into(),
-        None,
-        "themodule".into(),
-        Target::Erlang,
-        &modules,
-        TargetSupport::Enforced,
-    );
+        current_package: "thepackage".into(),
+        gleam_version: None,
+        current_module: "themodule".into(),
+        target: Target::Erlang,
+        importable_modules: &modules,
+        target_support: TargetSupport::Enforced,
+        current_origin: Origin::Src,
+    }
+    .build();
     let res = ExprTyper::new(
         &mut environment,
         FunctionDefinition {

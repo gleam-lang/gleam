@@ -13,8 +13,27 @@ use super::*;
 use std::collections::HashMap;
 
 #[derive(Debug)]
+pub struct EnvironmentArguments<'a> {
+    pub ids: UniqueIdGenerator,
+    pub current_package: EcoString,
+    pub gleam_version: Option<Range<Version>>,
+    pub current_module: EcoString,
+    pub target: Target,
+    pub importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
+    pub target_support: TargetSupport,
+    pub current_origin: Origin,
+}
+
+impl<'a> EnvironmentArguments<'a> {
+    pub fn build(self) -> Environment<'a> {
+        Environment::new(self)
+    }
+}
+
+#[derive(Debug)]
 pub struct Environment<'a> {
     pub current_package: EcoString,
+    pub origin: Origin,
 
     /// The gleam version range required by the current package as stated in its
     /// gleam.toml
@@ -71,13 +90,16 @@ pub struct Environment<'a> {
 
 impl<'a> Environment<'a> {
     pub fn new(
-        ids: UniqueIdGenerator,
-        current_package: EcoString,
-        gleam_version: Option<Range<Version>>,
-        current_module: EcoString,
-        target: Target,
-        importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
-        target_support: TargetSupport,
+        EnvironmentArguments {
+            ids,
+            current_package,
+            gleam_version,
+            current_module,
+            target,
+            importable_modules,
+            target_support,
+            current_origin: origin,
+        }: EnvironmentArguments<'a>,
     ) -> Self {
         let prelude = importable_modules
             .get(PRELUDE_MODULE_NAME)
@@ -101,6 +123,7 @@ impl<'a> Environment<'a> {
             gleam_version,
             previous_id: ids.next(),
             ids,
+            origin,
             target,
             module_types: prelude.types.clone(),
             module_types_constructors: prelude.types_value_constructors.clone(),

@@ -207,18 +207,21 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
 
         let documentation = std::mem::take(&mut module.documentation);
-        let env = Environment::new(
-            self.ids.clone(),
-            self.package_config.name.clone(),
-            self.package_config
+        let env = EnvironmentArguments {
+            ids: self.ids.clone(),
+            current_package: self.package_config.name.clone(),
+            gleam_version: self
+                .package_config
                 .gleam_version
                 .clone()
                 .map(|version| version.as_pubgrub()),
-            self.module_name.clone(),
-            self.target,
-            self.importable_modules,
-            self.target_support,
-        );
+            current_module: self.module_name.clone(),
+            target: self.target,
+            importable_modules: self.importable_modules,
+            target_support: self.target_support,
+            current_origin: self.origin,
+        }
+        .build();
 
         let statements = GroupedStatements::new(module.into_iter_statements(self.target));
         let statements_count = statements.len();
