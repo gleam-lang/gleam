@@ -369,3 +369,8 @@
 - Fixed a bug where a using the pipe operator in the `size` option of a bit array
   segment would generate invalid code on the Erlang target.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where the language server would generate invalid code for the
+  "convert to use" code action, when used on a function call with labelled
+  arguments.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
