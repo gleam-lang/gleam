@@ -165,8 +165,7 @@ impl FieldMap {
         // arguments. That's given by the position of the first labelled
         // argument; if the first label argument is third, then we know the
         // function also needs two unlabelled arguments first.
-        let Some(positional_arguments) = self.fields.iter().map(|(_, position)| *position).min()
-        else {
+        let Some(positional_arguments) = self.fields.values().min().cloned() else {
             return vec![];
         };
 
