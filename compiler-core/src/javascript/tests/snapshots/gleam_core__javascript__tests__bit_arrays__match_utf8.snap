@@ -14,6 +14,7 @@ import { makeError } from "../gleam.mjs";
 
 function go(x) {
   if (
+    x.bitSize !== 80 ||
     x.byteAt(0) !== 71 ||
     x.byteAt(1) !== 108 ||
     x.byteAt(2) !== 101 ||
@@ -23,8 +24,7 @@ function go(x) {
     x.byteAt(6) !== 240 ||
     x.byteAt(7) !== 159 ||
     x.byteAt(8) !== 145 ||
-    x.byteAt(9) !== 141 ||
-    !(x.bitSize == 80)
+    x.byteAt(9) !== 141
   ) {
     throw makeError(
       "let_assert",

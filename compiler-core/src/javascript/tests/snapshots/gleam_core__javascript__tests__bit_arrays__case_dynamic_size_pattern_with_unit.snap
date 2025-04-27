@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\nfn go(x) {\n  let size = 3\n  case x {\n    <<1:size(size)-unit(2)>> -> 1\n    _ -> 2\n  }\n}\n"
+---
+----- SOURCE CODE
+
+fn go(x) {
+  let size = 3
+  case x {
+    <<1:size(size)-unit(2)>> -> 1
+    _ -> 2
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { bitArraySliceToInt } from "../gleam.mjs";
+
+function go(x) {
+  let size = 3;
+  if (x.bitSize === size * 2) {
+    if (bitArraySliceToInt(x, 0, size * 2, true, false) === 1) {
+      return 1;
+    } else {
+      return 2;
+    }
+  } else {
+    return 2;
+  }
+}

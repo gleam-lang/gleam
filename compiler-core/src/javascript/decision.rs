@@ -1,19 +1,26 @@
 use super::{
-    Error, INDENT, Output,
+    Error, INDENT, Output, bit_array_segment_int_value_to_bytes,
     expression::{self, Generator, Ordering, float, int},
 };
 use crate::{
-    ast::{AssignmentKind, TypedClause, TypedExpr},
+    ast::{AssignmentKind, Endianness, TypedClause, TypedExpr},
     docvec,
     exhaustiveness::{
-        Body, BoundValue, CompiledCase, Decision, FallbackCheck, RuntimeCheck, Variable,
+        BitArrayMatchedValue, BitArrayTest, Body, BoundValue, CompiledCase, Decision,
+        FallbackCheck, MatchTest, Offset, ReadAction, ReadSize, ReadType, RuntimeCheck,
+        SizeOperator, SizeTest, Variable, VariableUsage,
     },
     format::break_block,
-    javascript::{expression::string, maybe_escape_property},
+    javascript::{
+        expression::{eco_string_int, string},
+        maybe_escape_property,
+    },
     pretty::{Document, Documentable, break_, join, line, nil},
     strings::convert_string_escape_chars,
 };
 use ecow::{EcoString, eco_format};
+use itertools::Itertools;
+use num_bigint::BigInt;
 use std::{
     collections::{HashMap, VecDeque},
     sync::OnceLock,
@@ -38,6 +45,18 @@ struct CasePrinter<'module, 'generator, 'a> {
     variables: Variables<'generator, 'module, 'a>,
 }
 
+/// Code generation for decision trees can look a bit daunting at a first glance
+/// so let's go over the big idea to hopefully make it easier to understand why
+/// the code is organised the way it is :)
+///
+/// > It might be helpful to go over the `exhaustiveness` module first and get
+/// > familiar with the structure of the decision tree.
+///
+/// A decision tree has nodes that perform checks on pattern variables until
+/// it reaches a body with an expression to run. This will be turned into a
+///
+/// TODO)) finire la documentazione
+///
 impl<'a> CasePrinter<'_, '_, 'a> {
     fn decision(&mut self, decision: &'a Decision) -> Output<'a> {
         match decision {
@@ -91,34 +110,56 @@ impl<'a> CasePrinter<'_, '_, 'a> {
 
         // Otherwise we'll have to generate a series of if-else to check which
         // pattern is going to match!
-
-        let assignments = if self.variables.is_bound_in_scope(var) {
-            // If the variable is already bound to a name in the current
-            // scope we don't have to generate any additional code...
-            nil()
-        } else {
-            // ... if it's not we will be binding the value to a variable
-            // name so we can use this variable to reference it and never
-            // do any duplicate work recomputing its value every time
+        let mut assignments = vec![];
+        if !self.variables.is_bound_in_scope(var) {
+            // If the variable is not bound already we will be binding it to a
+            // new made up name so we can use this variable to reference it and
+            // never do any duplicate work recomputing its value every time
             // this pattern variable is used.
             let name = self.variables.next_local_var(&ASSIGNMENT_VAR.into());
             let value = self.variables.get_value(var);
             self.variables.bind(name.clone(), var);
-            let_doc(name, value.to_doc())
+            assignments.push(let_doc(name, value.to_doc()))
         };
 
         let mut if_ = nil();
         for (i, (check, decision)) in choices.iter().enumerate() {
             self.variables.record_check_assignments(var, check);
-            let check_doc = self.runtime_check(var, check);
-            let body = self.inside_new_scope(|this| this.decision(decision))?;
+
+            let (check_doc, body, mut check_assignments) = self.inside_new_scope(|this| {
+                let mut check_assignments = vec![];
+                for (segment_name, _) in check.referenced_segment_patterns() {
+                    // TODO)) Aggiungi documentazione!
+                    if this.variables.segment_is_bound_in_scope(segment_name) {
+                        continue;
+                    }
+
+                    let segment_local_name = this.variables.next_local_var(&segment_name);
+                    let segment_value = this
+                        .variables
+                        .get_segment_value(segment_name)
+                        .expect("segment referenced in a check before being created");
+
+                    this.variables
+                        .bind_segment(segment_name.clone(), segment_local_name.clone());
+                    check_assignments.push(let_doc(segment_local_name, segment_value))
+                }
+
+                let check_doc =
+                    this.variables
+                        .runtime_check(var, check, CheckNegation::NotNegated)?;
+                let body = this.decision(decision);
+                Ok((check_doc, body, check_assignments))
+            })?;
+
+            assignments.append(&mut check_assignments);
 
             let branch = if i == 0 {
                 docvec!["if (", check_doc, ") "]
             } else {
                 docvec![" else if (", check_doc, ") "]
             };
-            if_ = if_.append(docvec![branch, break_block(body)]);
+            if_ = if_.append(docvec![branch, break_block(body?)]);
         }
 
         // In case there's some new variables we can extract after the
@@ -130,7 +171,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         }
 
         let body = self.inside_new_scope(|this| this.decision(fallback))?;
-        let if_ = join_with_line(assignments, if_);
+        let if_ = join_with_line(join(assignments, line()), if_);
         if body.is_empty() {
             Ok(if_)
         } else {
@@ -149,9 +190,13 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             .current_scope_vars
             .clone();
         let old_names = self.variables.scoped_variable_names.clone();
+        let old_segments = self.variables.segment_values.clone();
+        let old_segment_names = self.variables.scoped_segment_names.clone();
         let output = run(self);
         self.variables.expression_generator.current_scope_vars = old_scope;
         self.variables.scoped_variable_names = old_names;
+        self.variables.segment_values = old_segments;
+        self.variables.scoped_segment_names = old_segment_names;
         output
     }
 
@@ -199,70 +244,6 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         } else {
             let else_ = docvec![" else ", break_block(if_false)];
             Ok(docvec![if_, else_])
-        }
-    }
-
-    fn runtime_check(
-        &mut self,
-        variable: &Variable,
-        runtime_check: &'a RuntimeCheck,
-    ) -> Document<'a> {
-        let value = self.variables.get_value(variable);
-        match runtime_check {
-            RuntimeCheck::String { value: expected } => docvec![value, " === ", string(expected)],
-            RuntimeCheck::Float { value: expected } => docvec![value, " === ", float(expected)],
-            RuntimeCheck::Int { value: expected } => docvec![value, " === ", int(expected)],
-            RuntimeCheck::StringPrefix { prefix, .. } => {
-                docvec![value, ".startsWith(", string(prefix), ")"]
-            }
-
-            RuntimeCheck::BitArray { test } => todo!(),
-
-            // When checking on a tuple there's always going to be a single choice
-            // and the code generation will always skip generating the check for it
-            // as the type system ensures it must match.
-            RuntimeCheck::Tuple { .. } => unreachable!("tried generating runtime check for tuple"),
-
-            RuntimeCheck::Variant { match_, .. } if variable.type_.is_bool() => {
-                if match_.name() == "True" {
-                    value.to_doc()
-                } else {
-                    docvec!["!", value]
-                }
-            }
-
-            RuntimeCheck::Variant { match_, .. } if variable.type_.is_result() => {
-                if match_.name() == "Ok" {
-                    docvec![value, ".isOk()"]
-                } else {
-                    docvec!["!", value, ".isOk()"]
-                }
-            }
-
-            RuntimeCheck::Variant { match_, .. } => {
-                let qualification = match_
-                    .module()
-                    .map(|module| eco_format!("${module}."))
-                    .unwrap_or_default();
-
-                docvec![value, " instanceof ", qualification, match_.name()]
-            }
-
-            RuntimeCheck::NonEmptyList { .. } => {
-                self.variables
-                    .expression_generator
-                    .tracker
-                    .list_non_empty_class_used = true;
-                docvec![value, " instanceof $NonEmpty"]
-            }
-
-            RuntimeCheck::EmptyList => {
-                self.variables
-                    .expression_generator
-                    .tracker
-                    .list_empty_class_used = true;
-                docvec![value, " instanceof $Empty"]
-            }
         }
     }
 }
@@ -329,11 +310,22 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
         let checks = if self.is_redundant {
             nil()
         } else {
+            // TODO)) Find the size checks on all bit arrays and only keep the
+            // most restrictive one. All the other ones can be ignored as they
+            // are already checked by checking the most restrictive one is not
+            // violated.
+            //
+            // Most restrictive means: `==` over `>=`, and `>= a` over `>= b`
+            // if `a > b`.
+            //
             let checks = checks.iter().filter_map(|(variable, check)| {
                 self.variables.record_check_assignments(variable, check);
                 match check {
                     RuntimeCheck::Tuple { .. } => None,
-                    _ => Some(self.negated_runtime_check(variable, check)),
+                    _ => self
+                        .variables
+                        .runtime_check(variable, check, CheckNegation::Negated)
+                        .ok(),
                 }
             });
             docvec![break_("", ""), join(checks, break_(" ||", " || "))]
@@ -369,76 +361,6 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
             })?,
         };
         Ok(generator.throw_error("let_assert", &message, *location, [("value", subject)]))
-    }
-
-    fn negated_runtime_check(
-        &mut self,
-        variable: &Variable,
-        runtime_check: &'a RuntimeCheck,
-    ) -> Document<'a> {
-        let value = self.variables.get_value(variable);
-        match runtime_check {
-            RuntimeCheck::String { value: literal } => docvec![value, " !== ", string(literal)],
-            RuntimeCheck::Float { value: literal } => docvec![value, " !== ", float(literal)],
-            RuntimeCheck::Int { value: literal } => docvec![value, " !== ", int(literal)],
-            RuntimeCheck::StringPrefix { prefix, .. } => {
-                docvec!["!", value, ".startsWith(", string(prefix), ")"]
-            }
-
-            RuntimeCheck::BitArray { test } => todo!(),
-
-            // When checking on a tuple there's always going to be a single choice
-            // and the code generation will always skip generating the check for it
-            // as the type system ensures it must match.
-            RuntimeCheck::Tuple { .. } => unreachable!("tried generating runtime check for tuple"),
-
-            // Checking a variable is not `Nil` is always going to be false because
-            // the type system ensures that the value we get there must be of type
-            // `Nil` and thus it can't be anything different from `Nil`.
-            RuntimeCheck::Variant { .. } if variable.type_.is_nil() => docvec!["false"],
-
-            RuntimeCheck::Variant { match_, .. } if variable.type_.is_bool() => {
-                if match_.name() == "True" {
-                    docvec!["!", value]
-                } else {
-                    value.to_doc()
-                }
-            }
-
-            RuntimeCheck::Variant { match_, .. } if variable.type_.is_result() => {
-                if match_.name() == "Ok" {
-                    docvec!["!", value, ".isOk()"]
-                } else {
-                    docvec![value, ".isOk()"]
-                }
-            }
-
-            RuntimeCheck::Variant { match_, .. } => {
-                let qualification = match_
-                    .module()
-                    .map(|module| eco_format!("${module}."))
-                    .unwrap_or_default();
-
-                let check = docvec![value, " instanceof ", qualification, match_.name()];
-                docvec!["!(", check, ")"]
-            }
-
-            RuntimeCheck::NonEmptyList { .. } => {
-                self.variables
-                    .expression_generator
-                    .tracker
-                    .list_empty_class_used = true;
-                docvec![value, " instanceof $Empty"]
-            }
-
-            RuntimeCheck::EmptyList => {
-                self.variables
-                    .expression_generator
-                    .tracker
-                    .list_non_empty_class_used = true;
-                docvec![value, " instanceof $NonEmpty"]
-            }
-        }
     }
 
     /// A let decision tree has a very precise structure since it's made of a
@@ -594,6 +516,10 @@ struct Variables<'generator, 'module, 'a> {
     /// `a$0`.
     ///
     scoped_variable_names: HashMap<usize, EcoString>,
+
+    // TODO)) Aggiungere documentazione
+    segment_values: HashMap<EcoString, Document<'a>>,
+    scoped_segment_names: HashMap<EcoString, EcoString>,
 }
 
 impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
@@ -602,6 +528,8 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             expression_generator,
             variable_values: HashMap::new(),
             scoped_variable_names: HashMap::new(),
+            segment_values: HashMap::new(),
+            scoped_segment_names: HashMap::new(),
         }
     }
 
@@ -642,6 +570,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     fn local_var(&mut self, name: &EcoString) -> EcoString {
         self.expression_generator.local_var(name)
     }
+
     fn next_local_var(&mut self, name: &EcoString) -> EcoString {
         self.expression_generator.next_local_var(name)
     }
@@ -667,6 +596,16 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     ///
     fn set_value(&mut self, variable: &Variable, value: EcoString) {
         let _ = self.variable_values.insert(variable.id, value);
+    }
+
+    fn set_segment_value(
+        &mut self,
+        bit_array: &Variable,
+        segment_name: EcoString,
+        read_action: &ReadAction,
+    ) {
+        let value = self.read_action_to_doc(bit_array, read_action);
+        let _ = self.segment_values.insert(segment_name, value);
     }
 
     /// During the code generation process we might end up having to generate
@@ -715,6 +654,12 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         let _ = self.scoped_variable_names.insert(variable.id, name);
     }
 
+    fn bind_segment(&mut self, segment_name: EcoString, bound_to_variable: EcoString) {
+        let _ = self
+            .scoped_segment_names
+            .insert(segment_name, bound_to_variable);
+    }
+
     fn bindings_doc(&mut self, bindings: &'a [(EcoString, BoundValue)]) -> Document<'a> {
         let bindings =
             (bindings.iter()).map(|(variable, value)| self.body_binding_doc(variable, value));
@@ -732,21 +677,503 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         variable_name: &'a EcoString,
         value: &'a BoundValue,
     ) -> Document<'a> {
-        let variable_name = self.next_local_var(variable_name);
+        let local_variable_name = self.next_local_var(variable_name);
         let assigned_value = match value {
             BoundValue::Variable(variable) => self.get_value(variable).to_doc(),
             BoundValue::LiteralString(value) => string(value),
             BoundValue::BitArraySlice {
                 bit_array,
                 read_action,
-            } => todo!(),
+            } => self
+                .get_segment_value(&variable_name)
+                .unwrap_or_else(|| self.read_action_to_doc(bit_array, read_action)),
         };
-        let_doc(variable_name.clone(), assigned_value)
+        let_doc(local_variable_name.clone(), assigned_value)
+    }
+
+    fn runtime_check(
+        &mut self,
+        variable: &Variable,
+        runtime_check: &'a RuntimeCheck,
+        negation: CheckNegation,
+    ) -> Output<'a> {
+        let value = self.get_value(variable);
+
+        let equality = if negation.is_negated() {
+            " !== "
+        } else {
+            " === "
+        };
+
+        let result = match runtime_check {
+            RuntimeCheck::String { value: expected } => docvec![value, equality, string(expected)],
+            RuntimeCheck::Float { value: expected } => docvec![value, equality, float(expected)],
+            RuntimeCheck::Int { value: expected } => docvec![value, equality, int(expected)],
+            RuntimeCheck::StringPrefix { prefix, .. } => {
+                let negation = if negation.is_negated() {
+                    "!".to_doc()
+                } else {
+                    nil()
+                };
+
+                docvec![negation, value, ".startsWith(", string(prefix), ")"]
+            }
+
+            RuntimeCheck::BitArray { test } => match test {
+                // In this case we need to check that the remaining part of the
+                // bit array has a whole number of bytes.
+                BitArrayTest::CatchAllIsBytes { size_so_far } => {
+                    if size_so_far.is_zero() {
+                        docvec![value, ".bitSize % 8", equality, "0"]
+                    } else {
+                        let size_so_far = self.offset_to_doc(size_so_far, true);
+                        let remaining_bits = docvec![value, ".bitSize - ", size_so_far];
+                        docvec!["(", remaining_bits, ") % 8", equality, "0"]
+                    }
+                }
+
+                // Here we need to make sure that the bit array has a specific
+                // size.
+                BitArrayTest::Size(SizeTest { operator, size }) => {
+                    let operator = match operator {
+                        SizeOperator::GreaterEqual if negation.is_negated() => " < ",
+                        SizeOperator::GreaterEqual => " >= ",
+                        SizeOperator::Equal => equality,
+                    };
+                    let size = self.offset_to_doc(size, false);
+                    docvec![value, ".bitSize", operator, size]
+                }
+
+                // Finally, here we need to check that a given portion of the
+                // bit array matches a given value.
+                BitArrayTest::Match(MatchTest {
+                    value: expected,
+                    read_action,
+                }) => match expected {
+                    BitArrayMatchedValue::LiteralString(expected) => self
+                        .literal_string_segment_bytes_check(value, expected, read_action, negation),
+                    BitArrayMatchedValue::LiteralFloat(expected) => self
+                        .literal_float_segment_bytes_check(value, expected, read_action, negation),
+                    BitArrayMatchedValue::LiteralInt(expected) => self
+                        .literal_int_segment_bytes_check(
+                            value,
+                            expected.clone(),
+                            read_action,
+                            negation,
+                        )?,
+                    BitArrayMatchedValue::Variable(..) | BitArrayMatchedValue::Discard(..) => {
+                        panic!("unreachable")
+                    }
+                },
+            },
+
+            // When checking on a tuple there's always going to be a single choice
+            // and the code generation will always skip generating the check for it
+            // as the type system ensures it must match.
+            RuntimeCheck::Tuple { .. } => unreachable!("tried generating runtime check for tuple"),
+
+            RuntimeCheck::Variant { match_, .. } if variable.type_.is_bool() => {
+                match (match_.name().as_str(), negation) {
+                    ("True", CheckNegation::NotNegated) => value.to_doc(),
+                    ("True", CheckNegation::Negated) => docvec!["!", value],
+                    (_, CheckNegation::NotNegated) => docvec!["!", value],
+                    (_, CheckNegation::Negated) => value.to_doc(),
+                }
+            }
+
+            RuntimeCheck::Variant { match_, .. } if variable.type_.is_result() => {
+                match (match_.name().as_str(), negation) {
+                    ("Ok", CheckNegation::NotNegated) => docvec![value, ".isOk()"],
+                    ("Ok", CheckNegation::Negated) => docvec!["!", value, ".isOk()"],
+                    (_, CheckNegation::NotNegated) => docvec!["!", value, ".isOk()"],
+                    (_, CheckNegation::Negated) => docvec![value, ".isOk()"],
+                }
+            }
+
+            RuntimeCheck::Variant { .. } if variable.type_.is_nil() && negation.is_negated() => {
+                "false".to_doc()
+            }
+
+            RuntimeCheck::Variant { match_, .. } => {
+                let qualification = match_
+                    .module()
+                    .map(|module| eco_format!("${module}."))
+                    .unwrap_or_default();
+
+                let check = docvec![value, " instanceof ", qualification, match_.name()];
+                if negation.is_negated() {
+                    docvec!["!(", check, ")"]
+                } else {
+                    check
+                }
+            }
+
+            RuntimeCheck::NonEmptyList { .. } if negation.is_negated() => {
+                self.expression_generator.tracker.list_empty_class_used = true;
+                docvec![value, " instanceof $Empty"]
+            }
+
+            RuntimeCheck::NonEmptyList { .. } => {
+                self.expression_generator.tracker.list_non_empty_class_used = true;
+                docvec![value, " instanceof $NonEmpty"]
+            }
+
+            RuntimeCheck::EmptyList if negation.is_negated() => {
+                self.expression_generator.tracker.list_non_empty_class_used = true;
+                docvec![value, " instanceof $NonEmpty"]
+            }
+
+            RuntimeCheck::EmptyList => {
+                self.expression_generator.tracker.list_empty_class_used = true;
+                docvec![value, " instanceof $Empty"]
+            }
+        };
+
+        Ok(result)
+    }
+
+    /// Turns a read action into a document that can be used to extract the
+    /// corresponding value from the given bit array and assign it to a
+    /// variable.
+    ///
+    fn read_action_to_doc(
+        &mut self,
+        bit_array: &Variable,
+        read_action: &ReadAction,
+    ) -> Document<'a> {
+        let ReadAction {
+            from,
+            size,
+            type_,
+            endianness,
+            signed,
+        } = read_action;
+        let bit_array = self.get_value(bit_array);
+
+        match (size, from.constant_bits()) {
+            // If we're reading a single byte as un unsigned int from a byte aligned
+            // offset then we can optimise this call as a `.byteAt` call!
+            (ReadSize::ConstantBits(size), Some(from_bits))
+                if type_.is_int()
+                    && *size == BigInt::from(8)
+                    && !signed
+                    && from_bits.clone() % 8 == BigInt::ZERO =>
+            {
+                let from_byte: BigInt = from_bits / 8;
+                return docvec![bit_array, ".byteAt(", from_byte, ")"];
+            }
+
+            // If we're reading all the remaining bits/bytes of an array.
+            (ReadSize::RemainingBits | ReadSize::RemainingBytes, _) => {
+                self.bit_array_slice(bit_array, from)
+            }
+
+            // If both the start and and are known at compile time we can use
+            // those directly in the slice call.
+            (ReadSize::ConstantBits(size), Some(from_bits)) => {
+                let start = from_bits.clone();
+                let end = from_bits + size;
+                match type_ {
+                    ReadType::Int => {
+                        self.bit_array_slice_to_int(bit_array, start, end, endianness, *signed)
+                    }
+                    ReadType::Float => {
+                        self.bit_array_slice_to_float(bit_array, start, end, endianness)
+                    }
+                    ReadType::BitArray => self.bit_array_slice_with_end(bit_array, from, end),
+                    _ => panic!(
+                        "invalid slice type made it to code generation: {:#?}",
+                        type_
+                    ),
+                }
+            }
+
+            // Otherwise we need to add the variable and constant parts together
+            // in order to take a slice out of the bit array.
+            (size, _) => {
+                let size = self.read_size_to_doc(size).expect("no variable size");
+                let start = self.offset_to_doc(from, false);
+                let end = if from.is_zero() {
+                    size
+                } else {
+                    docvec![start.clone(), " + ", size]
+                };
+
+                match type_ {
+                    ReadType::Int => {
+                        self.bit_array_slice_to_int(bit_array, start, end, endianness, *signed)
+                    }
+                    ReadType::Float => {
+                        self.bit_array_slice_to_float(bit_array, start, end, endianness)
+                    }
+                    ReadType::BitArray => self.bit_array_slice_with_end(bit_array, from, end),
+                    _ => panic!("invalid slice type made it to code generation"),
+                }
+            }
+        }
+    }
+
+    fn offset_to_doc(&mut self, offset: &Offset, parenthesise: bool) -> Document<'a> {
+        if offset.is_zero() {
+            return "0".to_doc();
+        }
+
+        let mut pieces = vec![];
+        if offset.constant != BigInt::ZERO {
+            pieces.push(eco_string_int(offset.constant.to_string().into()));
+        }
+
+        for (variable, times) in offset
+            .variables
+            .iter()
+            .sorted_by(|(one, _), (other, _)| one.name().cmp(other.name()))
+        {
+            let mut variable = match variable {
+                VariableUsage::PatternSegment(segment_name, _) => self
+                    .get_segment_value(segment_name)
+                    .expect("segment referenced in a check before being created"),
+                VariableUsage::OutsideVariable(name) => self.local_var(name).to_doc(),
+            };
+            if *times != 1 {
+                variable = variable.append(" * ").append(*times)
+            }
+            pieces.push(variable.to_doc())
+        }
+
+        if pieces.len() > 1 && parenthesise {
+            docvec!["(", join(pieces, " + ".to_doc()), ")"]
+        } else {
+            join(pieces, " + ".to_doc())
+        }
+    }
+
+    /// If the read size has a constant value (that is, it's not a "read all the
+    /// remaining bits/bytes") this returns a document representing that size.
+    ///
+    fn read_size_to_doc(&mut self, size: &ReadSize) -> Option<Document<'a>> {
+        match size {
+            ReadSize::ConstantBits(value) => Some(value.clone().to_doc()),
+            ReadSize::VariableBits { variable, unit } => {
+                let variable = self.local_var(variable.name());
+                Some(if *unit == 1 {
+                    variable.to_doc()
+                } else {
+                    docvec![variable, " * ", unit]
+                })
+            }
+            ReadSize::RemainingBits | ReadSize::RemainingBytes => None,
+        }
+    }
+
+    fn bit_array_slice_to_int(
+        &mut self,
+        bit_array: impl Documentable<'a>,
+        start: impl Documentable<'a>,
+        end: impl Documentable<'a>,
+        endianness: &Endianness,
+        signed: bool,
+    ) -> Document<'a> {
+        self.expression_generator
+            .tracker
+            .bit_array_slice_to_int_used = true;
+
+        let endianness = match endianness {
+            Endianness::Big => "true",
+            Endianness::Little => "false",
+        };
+        let signed = if signed { "true" } else { "false" };
+        let args = join(
+            [
+                bit_array.to_doc(),
+                start.to_doc(),
+                end.to_doc(),
+                endianness.to_doc(),
+                signed.to_doc(),
+            ],
+            ", ".to_doc(),
+        );
+        docvec!["bitArraySliceToInt(", args, ")"]
+    }
+
+    fn bit_array_slice_to_float(
+        &mut self,
+        bit_array: impl Documentable<'a>,
+        start: impl Documentable<'a>,
+        end: impl Documentable<'a>,
+        endianness: &Endianness,
+    ) -> Document<'a> {
+        self.expression_generator
+            .tracker
+            .bit_array_slice_to_float_used = true;
+
+        let endianness = match endianness {
+            Endianness::Big => "true",
+            Endianness::Little => "false",
+        };
+        let args = join(
+            [
+                bit_array.to_doc(),
+                start.to_doc(),
+                end.to_doc(),
+                endianness.to_doc(),
+            ],
+            ", ".to_doc(),
+        );
+        docvec!["bitArraySliceToFloat(", args, ")"]
+    }
+
+    fn bit_array_slice_with_end(
+        &mut self,
+        bit_array: impl Documentable<'a>,
+        from: &Offset,
+        end: impl Documentable<'a>,
+    ) -> Document<'a> {
+        self.expression_generator.tracker.bit_array_slice_used = true;
+        let from = self.offset_to_doc(from, false);
+        docvec!["bitArraySlice(", bit_array, ", ", from, ", ", end, ")"]
+    }
+
+    fn bit_array_slice(&mut self, bit_array: impl Documentable<'a>, from: &Offset) -> Document<'a> {
+        self.expression_generator.tracker.bit_array_slice_used = true;
+        let from = self.offset_to_doc(from, false);
+        docvec!["bitArraySlice(", bit_array, ", ", from, ")"]
+    }
+
+    fn literal_string_segment_bytes_check(
+        &mut self,
+        // A document representing the bit array value we read bits from.
+        bit_array: EcoString,
+        literal_string: &EcoString,
+        read_action: &ReadAction,
+        check_negation: CheckNegation,
+    ) -> Document<'a> {
+        let ReadAction {
+            from: start,
+            endianness,
+            signed,
+            ..
+        } = read_action;
+        let mut checks = vec![];
+
+        let equality = if check_negation.is_negated() {
+            " !== "
+        } else {
+            " === "
+        };
+
+        if let Some(mut from_byte) = start.constant_bytes() {
+            for byte in convert_string_escape_chars(literal_string).as_bytes() {
+                let byte_access = docvec![bit_array.clone(), ".byteAt(", from_byte.clone(), ")"];
+                checks.push(docvec![byte_access, equality, byte]);
+                from_byte += 1;
+            }
+        } else {
+            for byte in convert_string_escape_chars(literal_string).as_bytes() {
+                let end = self.offset_to_doc(&start.add_constant(8), false);
+                let from = self.offset_to_doc(start, false);
+                let byte_access =
+                    self.bit_array_slice_to_int(&bit_array, from, end, endianness, *signed);
+                checks.push(docvec![byte_access, equality, byte]);
+            }
+        }
+
+        if check_negation.is_negated() {
+            join(checks, break_(" ||", " || ")).group()
+        } else {
+            join(checks, break_(" &&", " && ")).nest(INDENT).group()
+        }
+    }
+
+    fn literal_int_segment_bytes_check(
+        &mut self,
+        // A document representing the bit array value we read bits from.
+        bit_array: EcoString,
+        literal_int: BigInt,
+        read_action: &ReadAction,
+        check_negation: CheckNegation,
+    ) -> Output<'a> {
+        let ReadAction {
+            from: start,
+            size,
+            endianness,
+            signed,
+            ..
+        } = read_action;
+
+        let equality = if check_negation.is_negated() {
+            " !== "
+        } else {
+            " === "
+        };
+
+        if let (Some(mut from_byte), Some(size)) = (start.constant_bytes(), size.constant_bytes()) {
+            let mut checks = vec![];
+            for byte in bit_array_segment_int_value_to_bytes(literal_int, size * 8, *endianness)? {
+                let byte_access = docvec![bit_array.clone(), ".byteAt(", from_byte.clone(), ")"];
+                checks.push(docvec![byte_access, equality, byte]);
+                from_byte += 1;
+            }
+
+            Ok(if check_negation.is_negated() {
+                join(checks, break_(" ||", " || ")).group()
+            } else {
+                join(checks, break_(" &&", " && ")).nest(INDENT).group()
+            })
+        } else {
+            let start_doc = self.offset_to_doc(start, false);
+            let end = match (start.constant_bits(), size.constant_bits()) {
+                (Some(start), _) if start == BigInt::ZERO => self
+                    .read_size_to_doc(size)
+                    .expect("unexpected catch all size"),
+                (Some(start), Some(end)) => (start + end).to_doc(),
+                (_, _) => docvec![start_doc.clone(), " + ", self.read_size_to_doc(size)],
+            };
+            let check = self.bit_array_slice_to_int(bit_array, start_doc, end, endianness, *signed);
+            Ok(docvec![check, equality, literal_int])
+        }
+    }
+
+    fn literal_float_segment_bytes_check(
+        &mut self,
+        // A document representing the bit array value we read bits from.
+        bit_array: EcoString,
+        expected: &EcoString,
+        read_action: &ReadAction,
+        check_negation: CheckNegation,
+    ) -> Document<'a> {
+        let ReadAction {
+            from: start,
+            size,
+            endianness,
+            ..
+        } = read_action;
+
+        let equality = if check_negation.is_negated() {
+            " !== "
+        } else {
+            " === "
+        };
+
+        let start_doc = self.offset_to_doc(start, false);
+        let end = match (start.constant_bits(), size.constant_bits()) {
+            (Some(start), _) if start == BigInt::ZERO => self
+                .read_size_to_doc(size)
+                .expect("unexpected catch all size"),
+            (Some(start), Some(end)) => (start + end).to_doc(),
+            (_, _) => docvec![start_doc.clone(), " + ", self.read_size_to_doc(size)],
+        };
+        let check = self.bit_array_slice_to_float(bit_array, start_doc, end, endianness);
+        docvec![check, equality, expected]
     }
 
     #[must_use]
     fn is_bound_in_scope(&self, variable: &Variable) -> bool {
         self.scoped_variable_names.contains_key(&variable.id)
+    }
+
+    #[must_use]
+    fn segment_is_bound_in_scope(&self, segment_name: &EcoString) -> bool {
+        self.scoped_segment_names.contains_key(segment_name)
     }
 
     /// In case the check introduces new variables, this will record their
@@ -758,8 +1185,13 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             RuntimeCheck::Int { .. }
             | RuntimeCheck::Float { .. }
             | RuntimeCheck::String { .. }
-            | RuntimeCheck::BitArray { .. }
             | RuntimeCheck::EmptyList => (),
+
+            RuntimeCheck::BitArray { test } => {
+                for (segment_name, read_action) in test.referenced_segment_patterns() {
+                    self.set_segment_value(variable, segment_name.clone(), read_action)
+                }
+            }
 
             RuntimeCheck::StringPrefix { rest, prefix } => {
                 let prefix_size = utf16_no_escape_len(prefix);
@@ -801,6 +1233,32 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             .get(&variable.id)
             .expect("pattern variable used before assignment")
             .clone()
+    }
+
+    fn get_segment_value(&self, segment_name: &EcoString) -> Option<Document<'a>> {
+        // If the segment was already assigned to a variable that is in scope
+        // we use that variable name!
+        if let Some(name) = self.scoped_segment_names.get(segment_name) {
+            return Some(name.clone().to_doc());
+        }
+
+        // Otherwise we fallback to using its value directly.
+        self.segment_values.get(segment_name).cloned()
+    }
+}
+
+#[derive(Eq, PartialEq)]
+enum CheckNegation {
+    Negated,
+    NotNegated,
+}
+
+impl CheckNegation {
+    fn is_negated(&self) -> bool {
+        match self {
+            CheckNegation::Negated => true,
+            CheckNegation::NotNegated => false,
+        }
     }
 }
 

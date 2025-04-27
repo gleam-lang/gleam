@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\nfn go(x) {\n  case x {\n    <<1, y>> -> y\n    _ -> 1\n  }\n}\n"
+---
+----- SOURCE CODE
+
+fn go(x) {
+  case x {
+    <<1, y>> -> y
+    _ -> 1
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+function go(x) {
+  if (x.bitSize >= 8) {
+    if (x.byteAt(0) === 1) {
+      if (x.bitSize === 16) {
+        let y = x.byteAt(1);
+        return y;
+      } else {
+        return 1;
+      }
+    } else {
+      return 1;
+    }
+  } else {
+    return 1;
+  }
+}

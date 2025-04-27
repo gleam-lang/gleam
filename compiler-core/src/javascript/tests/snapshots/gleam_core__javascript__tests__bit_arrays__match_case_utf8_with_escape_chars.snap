@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\nfn go(x) {\n  case x {\n    <<\"\\\"\\\\\\r\\n\\t\\f\\u{1f600}\">> -> 1\n    _ -> 2\n  }\n}\n"
+---
+----- SOURCE CODE
+
+fn go(x) {
+  case x {
+    <<"\"\\\r\n\t\f\u{1f600}">> -> 1
+    _ -> 2
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+function go(x) {
+  if (x.bitSize === 80) {
+    if (x.byteAt(0) === 34 &&
+      x.byteAt(1) === 92 &&
+      x.byteAt(2) === 13 &&
+      x.byteAt(3) === 10 &&
+      x.byteAt(4) === 9 &&
+      x.byteAt(5) === 12 &&
+      x.byteAt(6) === 240 &&
+      x.byteAt(7) === 159 &&
+      x.byteAt(8) === 152 &&
+      x.byteAt(9) === 128) {
+      return 1;
+    } else {
+      return 2;
+    }
+  } else {
+    return 2;
+  }
+}

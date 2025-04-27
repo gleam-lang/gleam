@@ -1,0 +1,39 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\nfn go(x) {\n  case x {\n    <<_:16, _:8>> -> 1\n    _ -> 2\n  }\n  case x {\n    <<_:16-little-signed, _:8>> -> 1\n    _ -> 2\n  }\n}\n"
+---
+----- SOURCE CODE
+
+fn go(x) {
+  case x {
+    <<_:16, _:8>> -> 1
+    _ -> 2
+  }
+  case x {
+    <<_:16-little-signed, _:8>> -> 1
+    _ -> 2
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+function go(x) {
+  if (x.bitSize >= 16) {
+    if (x.bitSize === 24) {
+      1
+    } else {
+      2
+    }
+  } else {
+    2
+  }
+  if (x.bitSize >= 16) {
+    if (x.bitSize === 24) {
+      return 1;
+    } else {
+      return 2;
+    }
+  } else {
+    return 2;
+  }
+}

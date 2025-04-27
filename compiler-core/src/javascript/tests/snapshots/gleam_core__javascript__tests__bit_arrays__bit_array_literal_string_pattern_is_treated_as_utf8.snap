@@ -12,14 +12,28 @@ pub fn main() {
 }
 
 ----- COMPILED JAVASCRIPT
-import { toBitArray, bitArraySlice } from "../gleam.mjs";
+import { toBitArray } from "../gleam.mjs";
 
 export function main() {
   let $ = toBitArray([]);
-  if ($.byteAt(0) === 97 &&
-  $.byteAt(1) === 98 &&
-  ($.bitSize >= 16 && ($.bitSize - 16) % 8 === 0)) {
-    return 1;
+  if ($.bitSize >= 8) {
+    if ($.byteAt(0) === 97) {
+      if ($.bitSize >= 16) {
+        if ($.byteAt(1) === 98) {
+          if (($.bitSize - 16) % 8 === 0) {
+            return 1;
+          } else {
+            return 2;
+          }
+        } else {
+          return 2;
+        }
+      } else {
+        return 2;
+      }
+    } else {
+      return 2;
+    }
   } else {
     return 2;
   }

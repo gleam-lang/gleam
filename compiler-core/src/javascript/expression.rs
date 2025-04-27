@@ -2233,6 +2233,10 @@ impl AssertExpression {
 }
 
 pub fn int(value: &str) -> Document<'_> {
+    eco_string_int(value.into())
+}
+
+pub fn eco_string_int<'a>(value: EcoString) -> Document<'a> {
     let mut out = EcoString::with_capacity(value.len());
 
     if value.starts_with('-') {

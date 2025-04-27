@@ -2377,6 +2377,20 @@ impl<Value> BitArraySegment<Value, Arc<Type>> {
             .any(|x| matches!(x, BitArrayOption::Native { .. }))
     }
 
+    #[must_use]
+    pub fn has_utf16_option(&self) -> bool {
+        self.options
+            .iter()
+            .any(|x| matches!(x, BitArrayOption::Utf16 { .. }))
+    }
+
+    #[must_use]
+    pub fn has_utf32_option(&self) -> bool {
+        self.options
+            .iter()
+            .any(|x| matches!(x, BitArrayOption::Utf32 { .. }))
+    }
+
     pub fn endianness(&self) -> Endianness {
         if self
             .options
