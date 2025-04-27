@@ -1,10 +1,7 @@
 use num_bigint::BigInt;
 use vec1::Vec1;
 
-use super::{
-    pattern::{ASSIGNMENT_VAR, Assignment, CompiledPattern},
-    *,
-};
+use super::{decision::ASSIGNMENT_VAR, *};
 use crate::{
     ast::*,
     line_numbers::LineNumbers,
@@ -1188,127 +1185,6 @@ impl<'module, 'a> Generator<'module, 'a> {
                 .into_iter()
                 .map(|(key, value)| (key.to_doc(), Some(value))),
         )
-    }
-
-    fn case(&mut self, subject_values: &'a [TypedExpr], clauses: &'a [TypedClause]) -> Output<'a> {
-        let (subjects, subject_assignments): (Vec<_>, Vec<_>) =
-            pattern::assign_subjects(self, subject_values)
-                .into_iter()
-                .unzip();
-        let mut generator = pattern::Generator::new(self);
-
-        let mut doc = nil();
-
-        // We wish to be able to know whether this is the first or clause being
-        // processed, so record the index number. We use this instead of
-        // `Iterator.enumerate` because we are using a nested for loop.
-        let mut clause_number = 0;
-        let total_patterns: usize = clauses
-            .iter()
-            .map(|c| c.alternative_patterns.len())
-            .sum::<usize>()
-            + clauses.len();
-
-        // A case has many clauses `pattern -> consequence`
-        for clause in clauses {
-            let multipattern = std::iter::once(&clause.pattern);
-            let multipatterns = multipattern.chain(&clause.alternative_patterns);
-
-            // A clause can have many patterns `pattern, pattern ->...`
-            for multipatterns in multipatterns {
-                let scope = generator.expression_generator.current_scope_vars.clone();
-                let mut compiled =
-                    generator.generate(&subjects, multipatterns, clause.guard.as_ref())?;
-                let consequence = generator
-                    .expression_generator
-                    .expression_flattening_blocks(&clause.then)?;
-
-                // We've seen one more clause
-                clause_number += 1;
-
-                // Reset the scope now that this clause has finished, causing the
-                // variables to go out of scope.
-                generator.expression_generator.current_scope_vars = scope;
-
-                // If the pattern assigns any variables we need to render assignments
-                let body = if compiled.has_assignments() {
-                    let assignments = generator
-                        .expression_generator
-                        .pattern_take_assignments_doc(&mut compiled);
-                    docvec![assignments, line(), consequence]
-                } else {
-                    consequence
-                };
-
-                let is_final_clause = clause_number == total_patterns;
-                let is_first_clause = clause_number == 1;
-                let is_only_clause = is_final_clause && is_first_clause;
-
-                doc = if is_only_clause {
-                    // If this is the only clause and there are no checks then we can
-                    // render just the body as the case does nothing
-                    // A block is used as it could declare variables still.
-                    doc.append("{")
-                        .append(docvec![line(), body].nest(INDENT))
-                        .append(line())
-                        .append("}")
-                } else if is_final_clause {
-                    // If this is the final clause and there are no checks then we can
-                    // render `else` instead of `else if (...)`
-                    doc.append(" else {")
-                        .append(docvec![line(), body].nest(INDENT))
-                        .append(line())
-                        .append("}")
-                } else {
-                    doc.append(if is_first_clause {
-                        "if ("
-                    } else {
-                        " else if ("
-                    })
-                    .append(
-                        generator
-                            .expression_generator
-                            .pattern_take_checks_doc(&mut compiled, true),
-                    )
-                    .append(") {")
-                    .append(docvec![line(), body].nest(INDENT))
-                    .append(line())
-                    .append("}")
-                };
-            }
-        }
-
-        // If there is a subject name given create a variable to hold it for
-        // use in patterns
-        let subject_assignments: Vec<_> = subject_assignments
-            .into_iter()
-            .zip(subject_values)
-            .flat_map(|(assignment_name, value)| assignment_name.map(|name| (name, value)))
-            .map(|(name, value)| {
-                let value = self.not_in_tail_position(Some(Ordering::Strict), |this| {
-                    this.wrap_expression(value)
-                })?;
-                Ok(docvec!["let ", name, " = ", value, ";", line()])
-            })
-            .try_collect()?;
-
-        Ok(docvec![subject_assignments, doc].force_break())
-    }
-
-    fn assignment_no_match(
-        &mut self,
-        location: SrcSpan,
-        subject: Document<'a>,
-        message: Option<&'a TypedExpr>,
-    ) -> Output<'a> {
-        let message = match message {
-            Some(m) => {
-                self.not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(m))?
-            }
-            None => string("Pattern match failed, no pattern matched the value."),
-        };
-
-        Ok(self.throw_error("let_assert", &message, location, [("value", subject)]))
     }
 
     fn tuple(&mut self, elements: &'a [TypedExpr]) -> Output<'a> {

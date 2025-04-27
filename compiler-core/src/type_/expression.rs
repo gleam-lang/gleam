@@ -1810,7 +1810,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         match (&kind, not_exhaustive_error) {
             // The pattern is exhaustive in a let assignment, there's no problem here.
-            (AssignmentKind::Let, Ok(_)) => {}
+            (AssignmentKind::Let, Ok(_)) => (),
 
             // If the pattern is not exhaustive and we're not asserting we want to
             // report the error!
@@ -1826,22 +1826,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 })
             }
 
-                // Otherwise, if the pattern is never reachable (through variant inference),
-                // we can warn the user about this.
-                (AssignmentKind::Assert { .. }, Err(_)) => {
-                    // There is only one pattern to match, so it is index 0
-                    match output.is_reachable(0, 0) {
-                        Reachability::Unreachable(UnreachablePatternReason::ImpossibleVariant) => {
-                            self.problems
-                                .warning(Warning::AssertAssignmentOnInferredVariant {
-                                    location: pattern.location(),
-                                })
-                        }
-                        // A duplicate pattern warning should not happen, since there is only one pattern.
-                        Reachability::Reachable
-                        | Reachability::Unreachable(UnreachablePatternReason::DuplicatePattern) => {
-                        }
-                    }
+            // Otherwise, if the pattern is never reachable (through variant inference),
+            // we can warn the user about this.
+            (AssignmentKind::Assert { .. }, Err(_)) => {
+                // There is only one pattern to match, so it is index 0
+                match output.is_reachable(0, 0) {
+                    Reachability::Unreachable(UnreachablePatternReason::ImpossibleVariant) => self
+                        .problems
+                        .warning(Warning::AssertAssignmentOnInferredVariant {
+                            location: pattern.location(),
+                        }),
+                    // A duplicate pattern warning should not happen, since there is only one pattern.
+                    Reachability::Reachable
+                    | Reachability::Unreachable(UnreachablePatternReason::DuplicatePattern) => {}
                 }
             }
         };
@@ -1872,11 +1869,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> AssignmentKind<TypedExpr> {
         match kind {
             AssignmentKind::Let => AssignmentKind::Let,
-            AssignmentKind::Assert {
-                location,
-                message,
-                compiled_case,
-            } => {
+            AssignmentKind::Assert { location, message } => {
                 self.purity = Purity::Impure;
                 let message = match message {
                     Some(message) => {
