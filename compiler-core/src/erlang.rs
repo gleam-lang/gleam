@@ -933,7 +933,7 @@ fn expr_segment<'a>(
         }
 
         _ => {
-            let inner_expr = expr(expression, env).surround("(", ")");
+            let inner_expr = maybe_block_expr(expression, env).surround("(", ")");
             // The value of size must be a non-negative integer, we use lists:max here to ensure
             // it is at least 0;
             let value_guard = ":(lists:max(["
