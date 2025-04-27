@@ -590,9 +590,7 @@ impl RuntimeCheck {
         }
     }
 
-    pub(crate) fn referenced_segment_patterns<'a>(
-        &'a self,
-    ) -> Vec<(&'a EcoString, &'a ReadAction)> {
+    pub(crate) fn referenced_segment_patterns(&self) -> Vec<(&EcoString, &ReadAction)> {
         match self {
             RuntimeCheck::BitArray { test } => test.referenced_segment_patterns(),
             _ => vec![],
@@ -2811,9 +2809,9 @@ fn segment_size(
             }
             // If the segment is a literal string then it has an automatic size
             // given by its number of bytes.
-            ast::Pattern::String { value, .. } => ReadSize::ConstantBits(
-                convert_string_escape_chars(value).as_bytes().len() * BigInt::from(8),
-            ),
+            ast::Pattern::String { value, .. } => {
+                ReadSize::ConstantBits(convert_string_escape_chars(value).len() * BigInt::from(8))
+            }
             // In all other cases the segment is considered to be 64 bits.
             _ => ReadSize::ConstantBits(64.into()),
         },
