@@ -86,6 +86,7 @@ pub mod printer;
 
 use crate::{
     ast::{self, AssignName, Endianness, TypedClause, TypedPattern, TypedPatternBitArraySegment},
+    strings::convert_string_escape_chars,
     type_::{
         Environment, Type, TypeValueConstructor, TypeValueConstructorField, TypeVar,
         TypeVariantConstructors, collapse_links, error::UnreachablePatternReason,
@@ -588,6 +589,15 @@ impl RuntimeCheck {
             _ => false,
         }
     }
+
+    pub(crate) fn referenced_segment_patterns<'a>(
+        &'a self,
+    ) -> Vec<(&'a EcoString, &'a ReadAction)> {
+        match self {
+            RuntimeCheck::BitArray { test } => test.referenced_segment_patterns(),
+            _ => vec![],
+        }
+    }
 }
 
 #[derive(Eq, PartialEq, Clone, Hash, Debug)]
@@ -811,6 +821,37 @@ impl BitArrayTest {
             _ => false,
         }
     }
+
+    pub(crate) fn referenced_segment_patterns(&self) -> Vec<(&EcoString, &ReadAction)> {
+        match self {
+            BitArrayTest::Size(SizeTest { operator: _, size })
+            | BitArrayTest::CatchAllIsBytes { size_so_far: size } => {
+                size.referenced_segment_patterns()
+            }
+
+            BitArrayTest::Match(MatchTest {
+                read_action: ReadAction { from, size, .. },
+                ..
+            }) => {
+                let mut references = vec![];
+                references.append(&mut from.referenced_segment_patterns());
+                match size {
+                    ReadSize::VariableBits { variable, unit: _ } => match variable.as_ref() {
+                        VariableUsage::PatternSegment(segment_value, read_action) => {
+                            references.push((segment_value, read_action))
+                        }
+                        VariableUsage::OutsideVariable(..) => (),
+                    },
+
+                    ReadSize::ConstantBits(..)
+                    | ReadSize::RemainingBits
+                    | ReadSize::RemainingBytes => (),
+                };
+
+                references
+            }
+        }
+    }
 }
 
 /// Test to make sure the bit array has a specific number of bits.
@@ -889,7 +930,7 @@ pub struct MatchTest {
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum BitArrayMatchedValue {
     LiteralFloat(EcoString),
-    LiteralInt(EcoString),
+    LiteralInt(BigInt),
     LiteralString(EcoString),
     Variable(EcoString),
     Discard(EcoString),
@@ -1029,6 +1070,17 @@ pub enum ReadType {
     UtfCodepoint,
 }
 
+impl ReadType {
+    pub(crate) fn is_int(&self) -> bool {
+        match self {
+            ReadType::Int => true,
+            ReadType::Float | ReadType::String | ReadType::BitArray | ReadType::UtfCodepoint => {
+                false
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Confidence {
     Certain,
@@ -1085,6 +1137,13 @@ impl Offset {
         }
     }
 
+    pub fn add_constant(&self, constant: impl Into<BigInt>) -> Offset {
+        Offset {
+            constant: self.constant.clone() + constant.into(),
+            variables: self.variables.clone(),
+        }
+    }
+
     /// Returns `true` if we can tell for certain this offset is greater than
     /// another one.
     ///
@@ -1114,6 +1173,44 @@ impl Offset {
     ///
     fn different(&self, other: &Offset) -> Confidence {
         self.greater(other).or_else(|| other.greater(self))
+    }
+
+    pub(crate) fn is_zero(&self) -> bool {
+        self.constant == BigInt::ZERO && self.variables.is_empty()
+    }
+
+    /// If this offset has a constant size, returns its size in bits.
+    ///
+    pub(crate) fn constant_bits(&self) -> Option<BigInt> {
+        if self.variables.is_empty() {
+            Some(self.constant.clone())
+        } else {
+            None
+        }
+    }
+
+    /// If this offset has a constant size that's a whole number of bytes,
+    /// returns its size in bytes.
+    ///
+    pub(crate) fn constant_bytes(&self) -> Option<BigInt> {
+        let bits = self.constant_bits()?;
+        if bits.clone() % 8 == BigInt::ZERO {
+            Some(bits / 8)
+        } else {
+            None
+        }
+    }
+
+    fn referenced_segment_patterns(&self) -> Vec<(&EcoString, &ReadAction)> {
+        self.variables
+            .keys()
+            .filter_map(|variable_usage| match variable_usage {
+                VariableUsage::PatternSegment(segment_name, read_action) => {
+                    Some((segment_name, read_action))
+                }
+                VariableUsage::OutsideVariable(..) => None,
+            })
+            .collect_vec()
     }
 }
 
@@ -1156,12 +1253,43 @@ pub enum ReadSize {
     RemainingBytes,
 }
 
+impl ReadSize {
+    /// If this is a constant number of bits returns it wrapped in `Some`.
+    pub(crate) fn constant_bits(&self) -> Option<BigInt> {
+        match self {
+            ReadSize::ConstantBits(value) => Some(value.clone()),
+            ReadSize::VariableBits { .. } | ReadSize::RemainingBits | ReadSize::RemainingBytes => {
+                None
+            }
+        }
+    }
+
+    /// If this is a constant number of bytes returns it wrapped in `Some`.
+    pub(crate) fn constant_bytes(&self) -> Option<BigInt> {
+        let bits = self.constant_bits()?;
+        if bits.clone() % 8 == BigInt::ZERO {
+            Some(bits / 8)
+        } else {
+            None
+        }
+    }
+}
+
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub enum VariableUsage {
-    /// A variable that was brought into scope in the bit array pattern itself.
-    PatternVariable(ReadAction),
+    /// A bit array named segment that was brought into scope in the bit array
+    /// pattern itself and might be referenced by later segments.
+    PatternSegment(EcoString, ReadAction),
     /// A variable defined somewhere else
     OutsideVariable(EcoString),
+}
+
+impl VariableUsage {
+    pub fn name(&self) -> &EcoString {
+        match self {
+            VariableUsage::PatternSegment(name, _) | VariableUsage::OutsideVariable(name) => name,
+        }
+    }
 }
 
 /// This is the decision tree that a pattern matching expression gets turned
@@ -2627,9 +2755,9 @@ impl CaseToCompile {
     }
 }
 
-fn segment_matched_value(pattern: &TypedPattern) -> BitArrayMatchedValue {
-    match pattern {
-        ast::Pattern::Int { value, .. } => BitArrayMatchedValue::LiteralInt(value.clone()),
+fn segment_matched_value(segment: &TypedPatternBitArraySegment) -> BitArrayMatchedValue {
+    match segment.value.as_ref() {
+        ast::Pattern::Int { int_value, .. } => BitArrayMatchedValue::LiteralInt(int_value.clone()),
         ast::Pattern::Float { value, .. } => BitArrayMatchedValue::LiteralFloat(value.clone()),
         ast::Pattern::String { value, .. } => BitArrayMatchedValue::LiteralString(value.clone()),
         ast::Pattern::Variable { name, .. } => BitArrayMatchedValue::Variable(name.clone()),
@@ -2654,7 +2782,9 @@ fn segment_size(
         }
         Some(ast::Pattern::VarUsage { name, .. }) => {
             let variable = match pattern_variables.get(name) {
-                Some(read_action) => VariableUsage::PatternVariable(read_action.clone()),
+                Some(read_action) => {
+                    VariableUsage::PatternSegment(name.clone(), read_action.clone())
+                }
                 None => VariableUsage::OutsideVariable(name.clone()),
             };
             ReadSize::VariableBits {
@@ -2673,7 +2803,20 @@ fn segment_size(
         // If there's no size option we go for a default: 8 bits for int
         // segments, and 64 for anything else.
         None if segment.type_.is_int() => ReadSize::ConstantBits(8.into()),
-        None => ReadSize::ConstantBits(64.into()),
+        None => match segment.value.as_ref() {
+            ast::Pattern::String { .. }
+                if segment.has_utf16_option() || segment.has_utf32_option() =>
+            {
+                panic!("non utf8 string in bit array pattern on js target")
+            }
+            // If the segment is a literal string then it has an automatic size
+            // given by its number of bytes.
+            ast::Pattern::String { value, .. } => ReadSize::ConstantBits(
+                convert_string_escape_chars(value).as_bytes().len() * BigInt::from(8),
+            ),
+            // In all other cases the segment is considered to be 64 bits.
+            _ => ReadSize::ConstantBits(64.into()),
+        },
     }
 }
 

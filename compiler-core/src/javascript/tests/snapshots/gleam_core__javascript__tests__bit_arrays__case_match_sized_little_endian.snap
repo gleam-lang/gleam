@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\nfn go(x) {\n  case x {\n    <<a:16-little>> -> a\n    _ -> 1\n  }\n}\n"
+---
+----- SOURCE CODE
+
+fn go(x) {
+  case x {
+    <<a:16-little>> -> a
+    _ -> 1
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { bitArraySliceToInt } from "../gleam.mjs";
+
+function go(x) {
+  if (x.bitSize === 16) {
+    let a = bitArraySliceToInt(x, 0, 16, false, false);
+    return a;
+  } else {
+    return 1;
+  }
+}

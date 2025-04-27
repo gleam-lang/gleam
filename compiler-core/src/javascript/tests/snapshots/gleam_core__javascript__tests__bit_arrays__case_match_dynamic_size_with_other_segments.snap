@@ -1,0 +1,40 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\nfn go(x) {\n  let n = 16\n  let m = 32\n  case x {\n    <<first:size(8), a:size(n), b:size(m), rest:bits>> -> first + a + b\n    _ -> 1\n  }\n}\n"
+---
+----- SOURCE CODE
+
+fn go(x) {
+  let n = 16
+  let m = 32
+  case x {
+    <<first:size(8), a:size(n), b:size(m), rest:bits>> -> first + a + b
+    _ -> 1
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { bitArraySlice, bitArraySliceToInt } from "../gleam.mjs";
+
+function go(x) {
+  let n = 16;
+  let m = 32;
+  if (x.bitSize >= 8) {
+    if (x.bitSize >= 8 + n) {
+      if (x.bitSize >= 8 + m + n) {
+        let first = x.byteAt(0);
+        let a = bitArraySliceToInt(x, 8, 8 + n, true, false);
+        let b = bitArraySliceToInt(x, 8 + n, 8 + n + m, true, false);
+        let rest = bitArraySlice(x, 8 + m + n);
+        return (first + a) + b;
+      } else {
+        return 1;
+      }
+    } else {
+      return 1;
+    }
+  } else {
+    return 1;
+  }
+}

@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\nfn go(x) {\n  let assert <<1.4, b:int>> = x\n}\n"
+---
+----- SOURCE CODE
+
+fn go(x) {
+  let assert <<1.4, b:int>> = x
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError, bitArraySliceToFloat } from "../gleam.mjs";
+
+function go(x) {
+  if (
+    x.bitSize < 64 ||
+    bitArraySliceToFloat(x, 0, 64, true) !== 1.4 ||
+    x.bitSize !== 72
+  ) {
+    throw makeError(
+      "let_assert",
+      "my/mod",
+      3,
+      "go",
+      "Pattern match failed, no pattern matched the value.",
+      { value: x }
+    )
+  }
+  let b = x.byteAt(8);
+  return x;
+}

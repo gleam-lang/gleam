@@ -1331,6 +1331,83 @@ fn go(x) {
 }
 
 #[test]
+fn match_literal_float() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<1.4, b:int>> = x
+}
+"#,
+    );
+}
+
+#[test]
+fn case_match_literal_float() {
+    assert_js!(
+        r#"
+fn go(x) {
+  case x {
+    <<1.4, b:int>> -> 1
+    _ -> 2
+  }
+}
+"#,
+    );
+}
+
+#[test]
+fn match_literal_unaligned_float() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let n = 1
+  let assert <<_:size(n), 1.1, _:bits>> = x
+}
+"#,
+    );
+}
+
+#[test]
+fn case_match_literal_unaligned_float() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let n = 1
+  case x {
+    <<_:size(n), 1.1, _:int>> -> 1
+    _ -> 2
+  }
+}
+"#,
+    );
+}
+
+#[test]
+fn match_literal_aligned_float() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<_, 1.1, _:bits>> = x
+}
+"#,
+    );
+}
+
+#[test]
+fn case_match_literal_aligned_float() {
+    assert_js!(
+        r#"
+fn go(x) {
+  case x {
+    <<_, 1.1, _:int>> -> 1
+    _ -> 2
+  }
+}
+"#,
+    );
+}
+
+#[test]
 fn match_float_16_bit() {
     assert_js!(
         r#"
@@ -1764,6 +1841,21 @@ fn go(x) {
 }
 
 #[test]
+fn case_dynamic_size_float_pattern_with_unit() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let size = 3
+  case x {
+    <<1.3:size(size)-unit(2)>> -> 1
+    _ -> 2
+  }
+}
+"#,
+    );
+}
+
+#[test]
 fn case_with_remaining_bytes_after_constant_size() {
     assert_js!(
         r#"
@@ -1834,4 +1926,33 @@ fn go(x) {
 }
 "#,
     );
+}
+
+#[test]
+fn variable_sized_segment() {
+    assert_js!(
+        r#"
+fn go(x) {
+  case x {
+    <<n, rest:size(n)>> -> 1
+    _ -> 2
+  }
+}
+"#
+    )
+}
+
+#[test]
+fn segments_shadowing_each_other() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let n = 1
+  case x {
+    <<n, rest:size(n)>> -> 1
+    _ -> 2
+  }
+}
+"#
+    )
 }

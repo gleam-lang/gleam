@@ -14,7 +14,7 @@ import { makeError, toBitArray, bitArraySlice } from "../gleam.mjs";
 
 function go(x) {
   let $ = toBitArray([1, 2, 3]);
-  if (!(($.bitSize >= 8 && ($.bitSize - 8) % 8 === 0))) {
+  if ($.bitSize < 8 || ($.bitSize - 8) % 8 !== 0) {
     throw makeError(
       "let_assert",
       "my/mod",
