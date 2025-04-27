@@ -190,6 +190,39 @@ fn pattern_segment<'a>(
         | Pattern::Float { .. } => {
             print(value, &mut vars.borrow_mut(), env, &mut guards.borrow_mut())
         }
+
+        Pattern::Assign { name, pattern, .. } => {
+            vars.borrow_mut().push(name);
+            let variable_name = env.next_local_var_name(name);
+            match pattern.as_ref() {
+                Pattern::Int { value, .. } => {
+                    guards
+                        .borrow_mut()
+                        .push(docvec![variable_name.clone(), " =:= ", int(value)]);
+                    variable_name
+                }
+                Pattern::Float { value, .. } => {
+                    guards
+                        .borrow_mut()
+                        .push(docvec![variable_name.clone(), " =:= ", float(value)]);
+                    variable_name
+                }
+
+                Pattern::String { value, .. } => {
+                    guards.borrow_mut().push(docvec![
+                        variable_name.clone(),
+                        " =:= ",
+                        string(value)
+                    ]);
+                    docvec![variable_name, ":", string_length_utf8_bytes(value),]
+                }
+
+                Pattern::Discard { .. } => variable_name,
+
+                _ => panic!("Pattern segment match not recognised"),
+            }
+        }
+
         _ => panic!("Pattern segment match not recognised"),
     };
 
