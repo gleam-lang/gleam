@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/erlang/tests/bit_arrays.rs
+expression: "\npub fn main() {\n  <<0xAE:size(5 |> identity)>>\n}\n\nfn identity(x) {\n  x\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  <<0xAE:size(5 |> identity)>>
+}
+
+fn identity(x) {
+  x
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 6).
+-spec identity(J) -> J.
+identity(X) ->
+    X.
+
+-file("project/test/my/mod.gleam", 2).
+-spec main() -> bitstring().
+main() ->
+    <<16#AE:(lists:max([(begin
+            _pipe = 5,
+            identity(_pipe)
+        end), 0]))>>.

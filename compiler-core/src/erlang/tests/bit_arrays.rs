@@ -204,3 +204,19 @@ pub fn main() {
 }"#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3944
+#[test]
+fn pipe_size_segment() {
+    assert_erl!(
+        "
+pub fn main() {
+  <<0xAE:size(5 |> identity)>>
+}
+
+fn identity(x) {
+  x
+}
+"
+    );
+}
