@@ -313,6 +313,7 @@
 ### Installation
 
 - Windows ARM64 pre-built binaries are now provided.
+  ([Jonatan Männchen](https://github.com/maennchen))
 
 ### Bug fixes
 
