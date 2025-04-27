@@ -877,6 +877,10 @@ pub enum BitArrayMatchedValue {
     LiteralString(EcoString),
     Variable(EcoString),
     Discard(EcoString),
+    Assign {
+        name: EcoString,
+        pattern_match: Box<BitArrayMatchedValue>,
+    },
 }
 
 impl BitArrayTest {
@@ -2566,7 +2570,7 @@ impl CaseToCompile {
 
             // Each segment is also turned into a match test, checking the
             // selected bits match with the pattern's value.
-            let value = segment_matched_value(segment);
+            let value = segment_matched_value(&segment.value);
 
             let type_ = match &segment.type_ {
                 type_ if type_.is_int() => ReadType::Int,
@@ -2588,9 +2592,16 @@ impl CaseToCompile {
             // Then if the matched value is a variable that is in scope for the
             // rest of the pattern we keep track of it, so it can be used in the
             // following read actions as a valid size.
-            if let BitArrayMatchedValue::Variable(name) = &value {
-                let _ = pattern_variables.insert(name.clone(), read_action.clone());
-            };
+            match &value {
+                BitArrayMatchedValue::LiteralFloat(_)
+                | BitArrayMatchedValue::LiteralInt(_)
+                | BitArrayMatchedValue::LiteralString(_)
+                | BitArrayMatchedValue::Discard(_) => {}
+                BitArrayMatchedValue::Variable(name)
+                | BitArrayMatchedValue::Assign { name, .. } => {
+                    let _ = pattern_variables.insert(name.clone(), read_action.clone());
+                }
+            }
 
             tests.push_back(BitArrayTest::Match(MatchTest { value, read_action }));
 
@@ -2600,13 +2611,17 @@ impl CaseToCompile {
     }
 }
 
-fn segment_matched_value(segment: &TypedPatternBitArraySegment) -> BitArrayMatchedValue {
-    match segment.value.as_ref() {
+fn segment_matched_value(pattern: &TypedPattern) -> BitArrayMatchedValue {
+    match pattern {
         ast::Pattern::Int { value, .. } => BitArrayMatchedValue::LiteralInt(value.clone()),
         ast::Pattern::Float { value, .. } => BitArrayMatchedValue::LiteralFloat(value.clone()),
         ast::Pattern::String { value, .. } => BitArrayMatchedValue::LiteralString(value.clone()),
         ast::Pattern::Variable { name, .. } => BitArrayMatchedValue::Variable(name.clone()),
         ast::Pattern::Discard { name, .. } => BitArrayMatchedValue::Discard(name.clone()),
+        ast::Pattern::Assign { name, pattern, .. } => BitArrayMatchedValue::Assign {
+            name: name.clone(),
+            pattern_match: Box::new(segment_matched_value(pattern)),
+        },
         x => panic!("unexpected segment value pattern {:?}", x),
     }
 }
