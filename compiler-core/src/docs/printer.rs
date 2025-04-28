@@ -292,8 +292,8 @@ impl Printer<'_> {
             self.keyword("pub type "),
             self.title(name),
             parameters,
-            break_(" =", " = "),
-            self.type_(type_).nest(INDENT)
+            " =",
+            line().append(self.type_(type_)).nest(INDENT)
         ]
     }
 
