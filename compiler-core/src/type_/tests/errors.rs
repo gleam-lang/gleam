@@ -3084,3 +3084,8 @@ type Wobble {
 "#
     );
 }
+
+#[test]
+fn double_assignment_in_bit_array() {
+    assert_error!("let assert <<a as b>> = <<>>");
+}

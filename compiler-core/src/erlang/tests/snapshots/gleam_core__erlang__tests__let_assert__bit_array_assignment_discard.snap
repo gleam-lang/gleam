@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/erlang/tests/let_assert.rs
+expression: "\npub fn main() {\n  let assert <<_ as number>> = <<10>>\n  number\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let assert <<_ as number>> = <<10>>
+  number
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec main() -> integer().
+main() ->
+    Number@1 = case <<10>> of
+        <<Number>> -> Number;
+        _assert_fail ->
+            erlang:error(#{gleam_error => let_assert,
+                        message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
+                        value => _assert_fail,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"main"/utf8>>,
+                        line => 3})
+    end,
+    Number@1.
