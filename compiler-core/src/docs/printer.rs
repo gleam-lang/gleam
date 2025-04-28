@@ -46,9 +46,15 @@ pub struct Printer<'a> {
     package: EcoString,
     module: EcoString,
 
+    /// Type variables which don't have annotated names and we have generated
+    /// names for.
     printed_type_variables: HashMap<u64, EcoString>,
+    /// Names of type variables that we have generated or printed in a given
+    /// definition. This ensures that we have no duplicate generated names.
     printed_type_variable_names: HashSet<EcoString>,
-    uid: u64,
+    /// An incrementing number used to generate the next type variable name.
+    /// `0` becomes `a`, `1` becomes `b`, etc.
+    next_type_variable_id: u64,
 }
 
 impl Printer<'_> {
@@ -60,10 +66,12 @@ impl Printer<'_> {
             module,
             printed_type_variables: HashMap::new(),
             printed_type_variable_names: HashSet::new(),
-            uid: 0,
+            next_type_variable_id: 0,
         }
     }
 
+    // This is currently only used in the tests, though it might be useful in
+    // application code in future. If it is needed, simply remove this attribute.
     #[cfg(test)]
     pub fn set_options(&mut self, options: PrintOptions) {
         self.options = options;
@@ -156,7 +164,7 @@ impl Printer<'_> {
         // affect our printing of this definition. Two type variables in different
         // definitions can have the same name without clashing.
         self.printed_type_variable_names.clear();
-        self.uid = 0;
+        self.next_type_variable_id = 0;
 
         match statement {
             Definition::Function(Function {
@@ -419,12 +427,13 @@ impl Printer<'_> {
         }
     }
 
+    // Copied from the `next_letter` method of the `type_::printer`.
     fn next_letter(&mut self) -> EcoString {
         let alphabet_length = 26;
-        let char_offset = 97;
+        let char_offset = 'a' as u8;
         let mut chars = vec![];
         let mut n;
-        let mut rest = self.uid;
+        let mut rest = self.next_type_variable_id;
 
         loop {
             n = rest % alphabet_length;
@@ -437,7 +446,7 @@ impl Printer<'_> {
             rest -= 1
         }
 
-        self.uid += 1;
+        self.next_type_variable_id += 1;
         chars.into_iter().rev().collect()
     }
 
