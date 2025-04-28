@@ -1,0 +1,8 @@
+---
+source: compiler-core/src/docs/tests.rs
+expression: output
+---
+---- TYPES
+
+--- Option
+<pre><code><span class="hljs-keyword">pub type </span><span class="hljs-title">Option</span>(<span class="hljs-variable">a</span>) = <span class="hljs-title">Result</span>(<span class="hljs-variable">a</span>, <span class="hljs-title">Nil</span>)</code></pre>
