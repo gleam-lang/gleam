@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/erlang/tests/external_fn.rs
+expression: "import my_app\npub fn main() {\n  let x = my_app.run\n  id(my_app.run)\n}\nfn id(x) { x }\n"
+---
+----- SOURCE CODE
+import my_app
+pub fn main() {
+  let x = my_app.run
+  id(my_app.run)
+}
+fn id(x) { x }
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 6).
+-spec id(L) -> L.
+id(X) ->
+    X.
+
+-file("project/test/my/mod.gleam", 2).
+-spec main() -> fun(() -> integer()).
+main() ->
+    X = fun 'Elixir.MyApp':run/0,
+    id(fun 'Elixir.MyApp':run/0).
