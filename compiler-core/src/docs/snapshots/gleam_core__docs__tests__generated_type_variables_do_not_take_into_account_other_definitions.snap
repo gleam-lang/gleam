@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/docs/tests.rs
+expression: output
+---
+---- VALUES
+
+--- identity
+<pre><code>pub fn identity(x: a) -> a</code></pre>
+
+--- wibble
+<pre><code>pub fn wibble(a: a, b: b, c: c) -> d</code></pre>

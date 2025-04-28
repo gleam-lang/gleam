@@ -42,8 +42,10 @@ impl PrintOptions {
 pub struct Printer<'a> {
     options: PrintOptions,
     names: &'a Names,
+
     package: EcoString,
     module: EcoString,
+
     printed_type_variables: HashMap<u64, EcoString>,
     printed_type_variable_names: HashSet<EcoString>,
     uid: u64,
@@ -150,6 +152,12 @@ impl Printer<'_> {
         source_links: &SourceLinker,
         statement: &'a TypedDefinition,
     ) -> Option<DocsValues<'a>> {
+        // Ensure that any type variables we printed in previous definitions don't
+        // affect our printing of this definition. Two type variables in different
+        // definitions can have the same name without clashing.
+        self.printed_type_variable_names.clear();
+        self.uid = 0;
+
         match statement {
             Definition::Function(Function {
                 publicity: Publicity::Public,
@@ -283,6 +291,8 @@ impl Printer<'_> {
     }
 
     fn constant<'a>(&mut self, name: &'a str, type_: &Type) -> Document<'a> {
+        self.register_local_type_variable_names(type_);
+
         docvec![
             self.keyword("pub const "),
             self.title(name),
@@ -297,6 +307,11 @@ impl Printer<'_> {
         arguments: &'a [TypedArg],
         return_type: &Type,
     ) -> Document<'a> {
+        for argument in arguments {
+            self.register_local_type_variable_names(&argument.type_);
+        }
+        self.register_local_type_variable_names(return_type);
+
         let arguments = arguments.iter().map(|argument| {
             let name = self.variable(self.argument_name(argument));
             docvec![name, ": ", self.type_(&argument.type_)].group()
@@ -404,6 +419,28 @@ impl Printer<'_> {
         }
     }
 
+    fn next_letter(&mut self) -> EcoString {
+        let alphabet_length = 26;
+        let char_offset = 97;
+        let mut chars = vec![];
+        let mut n;
+        let mut rest = self.uid;
+
+        loop {
+            n = rest % alphabet_length;
+            rest /= alphabet_length;
+            chars.push((n as u8 + char_offset) as char);
+
+            if rest == 0 {
+                break;
+            }
+            rest -= 1
+        }
+
+        self.uid += 1;
+        chars.into_iter().rev().collect()
+    }
+
     fn named_type_name(&self, package: &str, module: &str, name: &EcoString) -> Document<'static> {
         if package == PRELUDE_PACKAGE_NAME && module == PRELUDE_MODULE_NAME {
             self.title(name)
@@ -426,26 +463,47 @@ impl Printer<'_> {
         }
     }
 
-    fn next_letter(&mut self) -> EcoString {
-        let alphabet_length = 26;
-        let char_offset = 97;
-        let mut chars = vec![];
-        let mut n;
-        let mut rest = self.uid;
-
-        loop {
-            n = rest % alphabet_length;
-            rest /= alphabet_length;
-            chars.push((n as u8 + char_offset) as char);
-
-            if rest == 0 {
-                break;
+    /// Walk a type and register all the type variable names which occur within
+    /// it. This is to ensure that when generating type variable names for
+    /// unannotated arguments, we don't print any that clash with existing names.
+    ///
+    /// We preregister all names before actually printing anything, because we
+    /// could run into code like this:
+    ///
+    /// ```gleam
+    /// pub fn wibble(_, _: a) -> b {}
+    /// ```
+    ///
+    /// If we did not preregister the type variables in this case, we would end
+    /// up printing `fn wibble(_: a, _: a) -> b` which is not correct.
+    ///
+    fn register_local_type_variable_names(&mut self, type_: &Type) {
+        match type_ {
+            Type::Named { args, .. } => {
+                for arg in args {
+                    self.register_local_type_variable_names(arg);
+                }
             }
-            rest -= 1
+            Type::Fn { args, return_ } => {
+                for arg in args {
+                    self.register_local_type_variable_names(arg);
+                }
+                self.register_local_type_variable_names(return_);
+            }
+            Type::Var { type_ } => match type_.borrow().deref() {
+                TypeVar::Link { type_ } => self.register_local_type_variable_names(type_),
+                TypeVar::Unbound { id } | TypeVar::Generic { id } => {
+                    if let Some(name) = self.names.get_type_variable(*id) {
+                        _ = self.printed_type_variable_names.insert(name.clone());
+                    }
+                }
+            },
+            Type::Tuple { elements } => {
+                for element in elements {
+                    self.register_local_type_variable_names(element);
+                }
+            }
         }
-
-        self.uid += 1;
-        chars.into_iter().rev().collect()
     }
 
     fn keyword<'a>(&self, keyword: impl Documentable<'a>) -> Document<'a> {
