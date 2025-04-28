@@ -35,7 +35,7 @@ pub fn case<'a>(
     expression_generator: &mut Generator<'_, 'a>,
 ) -> Output<'a> {
     let mut variables = Variables::new(expression_generator);
-    let assignments = variables.assign_subjects(compiled_case, subjects)?;
+    let assignments = variables.assign_case_subjects(compiled_case, subjects)?;
     let decision = CasePrinter { clauses, variables }.decision(&compiled_case.tree)?;
     Ok(docvec![assignments_to_doc(assignments), decision].force_break())
 }
@@ -50,12 +50,61 @@ struct CasePrinter<'module, 'generator, 'a> {
 /// the code is organised the way it is :)
 ///
 /// > It might be helpful to go over the `exhaustiveness` module first and get
-/// > familiar with the structure of the decision tree.
+/// > familiar with the structure of the decision tree!
 ///
 /// A decision tree has nodes that perform checks on pattern variables until
 /// it reaches a body with an expression to run. This will be turned into a
+/// series of if-else checks.
 ///
-/// TODO)) finire la documentazione
+/// While on the surface it might sound pretty straightforward, the code generation
+/// needs to take care of a couple of tricky aspects: when a check succeeds it's
+/// not just allowing us to move to the next check, but it also introduces new
+/// variables in the scope that we can reference. Let's look at an example:
+///
+/// ```gleam
+/// case value {
+///   [1, ..rest] -> rest
+///   _ -> []
+/// }
+/// ```
+///
+/// Here we will first need to check that the list is not empty:
+///
+/// ```js
+/// if (value instanceOf $NonEmptyList) {
+///   // ...
+/// } else {
+///   return [];
+/// }
+/// ```
+///
+/// Once that check succeeds we know that now we can access two new values: the
+/// first element of the list and the rest of the list! So we need to keep track
+/// of that in case further checks need to use those values; and in the example
+/// above they actually do! The second check we need to perform will be on the
+/// first item of the list, so we need to actually create a variable for it:
+///
+/// ```js
+/// if (value instanceOf $NonEmptyList) {
+///   let $ = value.head;
+///   if ($ === 1) {
+///     // ...
+///   } else {
+///     // ...
+///   }
+/// } else {
+///   return [];
+/// }
+/// ```
+///
+/// So, as we're generating code for each check and move further down the decision
+/// tree, we will have to keep track of all the variables that we've discovered
+/// after each successfull check.
+///
+/// In order to do that we'll be using a `Variables` data structure to hold all
+/// this information about the current scope. This also allows us to reuse a lot
+/// of code between a `CasePrinter` and a `LetPrinter` that can generate code from
+/// the decision tree of let expressions!
 ///
 impl<'a> CasePrinter<'_, '_, 'a> {
     fn decision(&mut self, decision: &'a Decision) -> Output<'a> {
@@ -102,6 +151,9 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         // If there's just a single choice we can just generate the code for
         // it: no need to do any checking, we know it must match!
         if choices.is_empty() {
+            // However, if the choice had an associated check (that is, it was
+            // not just a simple catch all) we need to keep track of all the
+            // variables brought into scope by the (always) successfull check.
             if let FallbackCheck::RuntimeCheck { check } = fallback_check {
                 self.variables.record_check_assignments(var, check);
             }
@@ -112,10 +164,10 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         // pattern is going to match!
         let mut assignments = vec![];
         if !self.variables.is_bound_in_scope(var) {
-            // If the variable is not bound already we will be binding it to a
-            // new made up name so we can use this variable to reference it and
-            // never do any duplicate work recomputing its value every time
-            // this pattern variable is used.
+            // If the variable we need to perform a check on is not already bound
+            // in scope we will be binding it to a new made up name. This way we
+            // can also reference this exact name in further checks instead of
+            // recomputing the value each time.
             let name = self.variables.next_local_var(&ASSIGNMENT_VAR.into());
             let value = self.variables.get_value(var);
             self.variables.bind(name.clone(), var);
@@ -126,33 +178,20 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         for (i, (check, decision)) in choices.iter().enumerate() {
             self.variables.record_check_assignments(var, check);
 
-            let (check_doc, body, mut check_assignments) = self.inside_new_scope(|this| {
-                let mut check_assignments = vec![];
-                for (segment_name, _) in check.referenced_segment_patterns() {
-                    // TODO)) Aggiungi documentazione!
-                    if this.variables.segment_is_bound_in_scope(segment_name) {
-                        continue;
-                    }
-
-                    let segment_local_name = this.variables.next_local_var(segment_name);
-                    let segment_value = this
-                        .variables
-                        .get_segment_value(segment_name)
-                        .expect("segment referenced in a check before being created");
-
-                    this.variables
-                        .bind_segment(segment_name.clone(), segment_local_name.clone());
-                    check_assignments.push(let_doc(segment_local_name, segment_value))
-                }
-
+            // For each check we generate:
+            // - the document to perform such check
+            // - the body to run if the check is successful
+            // - the assignments we need to bring all the bit array segments
+            //   referenced by this check
+            let (check_doc, body, mut segment_assignments) = self.inside_new_scope(|this| {
+                let segment_assignments = this.variables.bit_array_segment_assignments(check);
                 let check_doc =
                     this.variables
                         .runtime_check(var, check, CheckNegation::NotNegated)?;
                 let body = this.decision(decision);
-                Ok((check_doc, body, check_assignments))
+                Ok((check_doc, body, segment_assignments))
             })?;
-
-            assignments.append(&mut check_assignments);
+            assignments.append(&mut segment_assignments);
 
             let branch = if i == 0 {
                 docvec!["if (", check_doc, ") "]
@@ -164,20 +203,19 @@ impl<'a> CasePrinter<'_, '_, 'a> {
 
         // In case there's some new variables we can extract after the
         // successful final check we store those. But we don't need to perform
-        // the check itself: the type system makes sure that, if we ever
-        // get here, the check is going to match no matter what!
+        // the check itself: the type system ensures that, if we ever get here,
+        // the check is going to match no matter what!
         if let FallbackCheck::RuntimeCheck { check } = fallback_check {
             self.variables.record_check_assignments(var, check);
         }
 
         let body = self.inside_new_scope(|this| this.decision(fallback))?;
         let if_ = join_with_line(join(assignments, line()), if_);
-        if body.is_empty() {
-            Ok(if_)
+        Ok(if body.is_empty() {
+            if_
         } else {
-            let else_ = docvec![" else ", break_block(body)];
-            Ok(docvec![if_, else_])
-        }
+            docvec![if_, " else ", break_block(body)]
+        })
     }
 
     fn inside_new_scope<A, F>(&mut self, run: F) -> A
@@ -216,7 +254,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
 
         // Before generating the if-else condition we want to generate all the
         // assignments that will be needed by the guard condition so we can rest
-        // assured they are in scope and the if condition can use those.
+        // assured they are in scope and the guard check can use those.
         let guard_variables = guard.referenced_variables();
         let (check_bindings, if_true_bindings): (Vec<_>, Vec<_>) = if_true
             .bindings
@@ -226,10 +264,8 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         let check_bindings = self.variables.bindings_ref_doc(&check_bindings);
         let check = self.variables.expression_generator.guard(guard)?;
         let if_true = self.inside_new_scope(|this| {
-            // All the other bindings are not needed by the guard check will
-            // end up directly in the body of the if clause to avoid doing any
-            // extra work before making sure the condition is true and they are
-            // actually needed.
+            // All the other bindings that are not needed by the guard check will
+            // end up directly in the body of the if clause.
             let if_true_bindings = this.variables.bindings_ref_doc(&if_true_bindings);
             let if_true_body = this.body_expression(if_true.clause_index)?;
             Ok(join_with_line(if_true_bindings, if_true_body))
@@ -260,7 +296,7 @@ pub fn let_<'a>(
 ) -> Output<'a> {
     let scope_position = expression_generator.scope_position.clone();
     let mut variables = Variables::new(expression_generator);
-    let assignment = variables.assign_subject(compiled_case, subject)?;
+    let assignment = variables.assign_let_subject(compiled_case, subject)?;
     let assignment_name = assignment.name();
     let decision = LetPrinter::new(variables, kind)
         .decision(assignment_name.clone().to_doc(), &compiled_case.tree)?;
@@ -278,9 +314,36 @@ pub fn let_<'a>(
 struct LetPrinter<'generator, 'module, 'a> {
     variables: Variables<'generator, 'module, 'a>,
     kind: &'a AssignmentKind<TypedExpr>,
+    // If the let assert is always going to fail it is redundant and we can
+    // directly generate an exception instead of first performing some checks
+    // that we know are going to match.
     is_redundant: bool,
 }
 
+/// Generating code for a let (or let assert) assignment is quite different from
+/// case expressions. A lot of code can be shared between the two but the
+/// generated `if-else` code will look a lot different.
+///
+/// A destructuring let is always guaranteed by the type system to succeed, and
+/// we don't want to generate any redundant checks for those. At the same time
+/// we want to turn a let-assert into a single if statement that looks like this:
+///
+/// ```gleam
+/// let assert Ok(1) = result
+/// ```
+///
+/// ```js
+/// if (!result.isOk() || result[0] !== 1) {
+///   // throw exception
+/// }
+///
+/// // keep going here...
+/// ```
+///
+/// So we have to throw an exception if any of the checks that we need to perform
+/// would fail. Otherwise the let assert is successfull and we can get a hold of
+/// the variables that were bound in the pattern.
+///
 impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
     fn new(
         variables: Variables<'generator, 'module, 'a>,
@@ -310,17 +373,16 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
         let checks = if self.is_redundant {
             nil()
         } else {
-            // TODO)) Find the size checks on all bit arrays and only keep the
-            // most restrictive one. All the other ones can be ignored as they
-            // are already checked by checking the most restrictive one is not
-            // violated.
-            //
-            // Most restrictive means: `==` over `>=`, and `>= a` over `>= b`
-            // if `a > b`.
-            //
             let checks = checks.iter().filter_map(|(variable, check)| {
+                // Just like with a case expression, we still need to keep track
+                // of all the variables introduced by successful checks.
                 self.variables.record_check_assignments(variable, check);
+                // We then generate a negated version of the runtime check: if
+                // any of these evaluates to false we know we can throw an
+                // exception.
                 match check {
+                    // We never generate runtime checks for tuples, so we skip
+                    // those altogether here.
                     RuntimeCheck::Tuple { .. } => None,
                     _ => self
                         .variables
@@ -328,6 +390,7 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
                         .ok(),
                 }
             });
+
             docvec![break_("", ""), join(checks, break_(" ||", " || "))]
                 .nest(INDENT)
                 .append(break_("", ""))
@@ -384,7 +447,8 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
     ///
     /// If there's no `Run` node it means that this pattern will _always_ fail
     /// and there's no useful data we could ever return.
-    /// This could happen due to variant inference (e.g. `let assert Wibble = Wobble`).
+    /// This could happen due to variant inference (e.g. `let assert Wibble = Wobble`),
+    /// in that case the assert is redundant.
     ///
     fn positive_checks_and_bindings(
         &mut self,
@@ -455,7 +519,7 @@ impl<'a> ChecksAndBindings<'a> {
 }
 
 /// This is a useful piece of state that is kept separate from the generator
-/// itself so we can reuse it both with cases and let asserts without rewriting
+/// itself so we can reuse it both with `case`s and `let`s without rewriting
 /// everything from scratch.
 ///
 struct Variables<'generator, 'module, 'a> {
@@ -464,9 +528,14 @@ struct Variables<'generator, 'module, 'a> {
     /// All the pattern variables will be assigned a specific value: being bound
     /// to a constructor field, tuple element and so on. Pattern variables never
     /// end up in the generated code but we replace them with their actual value.
-    /// We store those values as we find them in this map.
+    /// We store those values as `EcoString`s in this map; the key is the pattern
+    /// variable's unique id.
     ///
     variable_values: HashMap<usize, EcoString>,
+
+    /// The same happens for bit array segments. Unlike pattern variables, we
+    /// identify those using their names and store their value as a `Document`.
+    segment_values: HashMap<EcoString, Document<'a>>,
 
     /// When we discover new variables after a runtime check we don't immediately
     /// generate assignments for each of them, because that could lead to wasted
@@ -517,8 +586,9 @@ struct Variables<'generator, 'module, 'a> {
     ///
     scoped_variable_names: HashMap<usize, EcoString>,
 
-    // TODO)) Aggiungere documentazione
-    segment_values: HashMap<EcoString, Document<'a>>,
+    /// Once again, this is the same as `scoped_variable_names` with the
+    /// difference that a segment is identified by its name.
+    ///
     scoped_segment_names: HashMap<EcoString, EcoString>,
 }
 
@@ -533,12 +603,19 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         }
     }
 
-    fn assign_subjects(
+    /// Give a unique name to each of the subjects of a case expression and keep
+    /// track of each of those names in case it needs to be referenced later.
+    ///
+    fn assign_case_subjects(
         &mut self,
         compiled_case: &'a CompiledCase,
         subjects: &'a [TypedExpr],
     ) -> Result<Vec<SubjectAssignment<'a>>, Error> {
-        let assignments = assign_subjects(self.expression_generator, subjects)?;
+        let assignments: Vec<_> = subjects
+            .iter()
+            .map(|subject| assign_subject(self.expression_generator, subject))
+            .try_collect()?;
+
         for (variable, assignment) in compiled_case
             .subject_variables
             .iter()
@@ -549,10 +626,15 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             self.set_value(variable, assignment.name());
             self.bind(assignment.name(), variable);
         }
+
         Ok(assignments)
     }
 
-    fn assign_subject(
+    /// Give a unique name to the subject of a let expression (if it needs one
+    /// and it's not already a variable) and keep track of that name in case it
+    /// needs to be referenced later.
+    ///
+    fn assign_let_subject(
         &mut self,
         compiled_case: &'a CompiledCase,
         subject: &'a TypedExpr,
@@ -598,6 +680,8 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         let _ = self.variable_values.insert(variable.id, value);
     }
 
+    /// This is conceptually the same as set value, but it's for bit array
+    /// segments instead of pattern variables.
     fn set_segment_value(
         &mut self,
         bit_array: &Variable,
@@ -609,7 +693,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     }
 
     /// During the code generation process we might end up having to generate
-    /// code to materialese one of the pattern variables and give it a name to
+    /// code to materialises one of the pattern variables and gives it a name to
     /// be used to avoid repeating it every single time.
     ///
     /// For example if a pattern variable is referencing the fifth element in a
@@ -654,10 +738,12 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         let _ = self.scoped_variable_names.insert(variable.id, name);
     }
 
-    fn bind_segment(&mut self, segment_name: EcoString, bound_to_variable: EcoString) {
-        let _ = self
-            .scoped_segment_names
-            .insert(segment_name, bound_to_variable);
+    /// This has the exact same purpose as `bind` but works with bit array
+    /// segments instead of pattern variables introduced during the decision
+    /// tree compilation.
+    ///
+    fn bind_segment(&mut self, bound_to_variable: EcoString, segment: EcoString) {
+        let _ = self.scoped_segment_names.insert(segment, bound_to_variable);
     }
 
     fn bindings_doc(&mut self, bindings: &'a [(EcoString, BoundValue)]) -> Document<'a> {
@@ -691,6 +777,9 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         let_doc(local_variable_name.clone(), assigned_value)
     }
 
+    /// Generates the document to perform a (possibly negated) runtime check on
+    /// the given variable.
+    ///
     fn runtime_check(
         &mut self,
         variable: &Variable,
@@ -772,6 +861,8 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             // as the type system ensures it must match.
             RuntimeCheck::Tuple { .. } => unreachable!("tried generating runtime check for tuple"),
 
+            // Some variants like `Bool` and `Result` are special cased and checked
+            // in a different way from all other variants.
             RuntimeCheck::Variant { match_, .. } if variable.type_.is_bool() => {
                 match (match_.name().as_str(), negation) {
                     ("True", CheckNegation::NotNegated) => value.to_doc(),
@@ -790,6 +881,8 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                 }
             }
 
+            // Checking that a value typed as `Nil` is not `Nil` is always going
+            // fail.
             RuntimeCheck::Variant { .. } if variable.type_.is_nil() && negation.is_negated() => {
                 "false".to_doc()
             }
@@ -808,24 +901,24 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                 }
             }
 
-            RuntimeCheck::NonEmptyList { .. } if negation.is_negated() => {
-                self.expression_generator.tracker.list_empty_class_used = true;
-                docvec![value, " instanceof $Empty"]
-            }
-
             RuntimeCheck::NonEmptyList { .. } => {
-                self.expression_generator.tracker.list_non_empty_class_used = true;
-                docvec![value, " instanceof $NonEmpty"]
-            }
-
-            RuntimeCheck::EmptyList if negation.is_negated() => {
-                self.expression_generator.tracker.list_non_empty_class_used = true;
-                docvec![value, " instanceof $NonEmpty"]
+                if negation.is_negated() {
+                    self.expression_generator.tracker.list_empty_class_used = true;
+                    docvec![value, " instanceof $Empty"]
+                } else {
+                    self.expression_generator.tracker.list_non_empty_class_used = true;
+                    docvec![value, " instanceof $NonEmpty"]
+                }
             }
 
             RuntimeCheck::EmptyList => {
-                self.expression_generator.tracker.list_empty_class_used = true;
-                docvec![value, " instanceof $Empty"]
+                if negation.is_negated() {
+                    self.expression_generator.tracker.list_non_empty_class_used = true;
+                    docvec![value, " instanceof $NonEmpty"]
+                } else {
+                    self.expression_generator.tracker.list_empty_class_used = true;
+                    docvec![value, " instanceof $Empty"]
+                }
             }
         };
 
@@ -849,8 +942,10 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             signed,
         } = read_action;
         let bit_array = self.get_value(bit_array);
+        let from_bits = from.constant_bits();
 
-        match (size, from.constant_bits()) {
+        // There's two special cases we need to take care of:
+        match (size, &from_bits) {
             // If we're reading a single byte as un unsigned int from a byte aligned
             // offset then we can optimise this call as a `.byteAt` call!
             (ReadSize::ConstantBits(size), Some(from_bits))
@@ -860,37 +955,31 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                     && from_bits.clone() % 8 == BigInt::ZERO =>
             {
                 let from_byte: BigInt = from_bits / 8;
-                docvec![bit_array, ".byteAt(", from_byte, ")"]
+                return docvec![bit_array, ".byteAt(", from_byte, ")"];
             }
 
-            // If we're reading all the remaining bits/bytes of an array.
+            // If we're reading all the remaining bits/bytes of an array we'll
+            // take the remaining slice.
             (ReadSize::RemainingBits | ReadSize::RemainingBytes, _) => {
-                self.bit_array_slice(bit_array, from)
+                return self.bit_array_slice(bit_array, from);
             }
 
-            // If both the start and and are known at compile time we can use
-            // those directly in the slice call.
-            (ReadSize::ConstantBits(size), Some(from_bits)) => {
-                let start = from_bits.clone();
-                let end = from_bits + size;
-                match type_ {
-                    ReadType::Int => {
-                        self.bit_array_slice_to_int(bit_array, start, end, endianness, *signed)
-                    }
-                    ReadType::Float => {
-                        self.bit_array_slice_to_float(bit_array, start, end, endianness)
-                    }
-                    ReadType::BitArray => self.bit_array_slice_with_end(bit_array, from, end),
-                    _ => panic!(
-                        "invalid slice type made it to code generation: {:#?}",
-                        type_
-                    ),
-                }
-            }
+            _ => (),
+        }
 
-            // Otherwise we need to add the variable and constant parts together
-            // in order to take a slice out of the bit array.
-            (size, _) => {
+        // Otherwise we'll take a regular slice out of the bit array, depending
+        // on the type of the segment.
+        let (start, end) =
+            if let (ReadSize::ConstantBits(size), Some(from_bits)) = (size, from_bits) {
+                // If both the start and and are known at compile time we can use
+                // those directly in the slice call and perform no addition at
+                // runtime.
+                let start = from_bits.clone().to_doc();
+                let end = (from_bits + size).to_doc();
+                (start, end)
+            } else {
+                // Otherwise we'll have to sum the variable part and the constant
+                // one to tell how long the slice should be.
                 let size = self.read_size_to_doc(size).expect("no variable size");
                 let start = self.offset_to_doc(from, false);
                 let end = if from.is_zero() {
@@ -898,18 +987,19 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                 } else {
                     docvec![start.clone(), " + ", size]
                 };
+                (start, end)
+            };
 
-                match type_ {
-                    ReadType::Int => {
-                        self.bit_array_slice_to_int(bit_array, start, end, endianness, *signed)
-                    }
-                    ReadType::Float => {
-                        self.bit_array_slice_to_float(bit_array, start, end, endianness)
-                    }
-                    ReadType::BitArray => self.bit_array_slice_with_end(bit_array, from, end),
-                    _ => panic!("invalid slice type made it to code generation"),
-                }
+        match type_ {
+            ReadType::Int => {
+                self.bit_array_slice_to_int(bit_array, start, end, endianness, *signed)
             }
+            ReadType::Float => self.bit_array_slice_to_float(bit_array, start, end, endianness),
+            ReadType::BitArray => self.bit_array_slice_with_end(bit_array, from, end),
+            _ => panic!(
+                "invalid slice type made it to code generation: {:#?}",
+                type_
+            ),
         }
     }
 
@@ -965,6 +1055,9 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         }
     }
 
+    /// Generates the document that calls the `bitArraySliceToInt` function, with
+    /// the given arguments.
+    ///
     fn bit_array_slice_to_int(
         &mut self,
         bit_array: impl Documentable<'a>,
@@ -995,6 +1088,9 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         docvec!["bitArraySliceToInt(", args, ")"]
     }
 
+    /// Generates the document that calls the `bitArraySliceToFloat` function,
+    /// with the given arguments.
+    ///
     fn bit_array_slice_to_float(
         &mut self,
         bit_array: impl Documentable<'a>,
@@ -1022,6 +1118,10 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         docvec!["bitArraySliceToFloat(", args, ")"]
     }
 
+    /// Generates the document that calls the `bitArraySlice` function, with
+    /// an end argument as well. If you need to take a slice that starts at a
+    /// given offset and read the entire array you can use `bit_array_slice`.
+    ///
     fn bit_array_slice_with_end(
         &mut self,
         bit_array: impl Documentable<'a>,
@@ -1033,15 +1133,24 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         docvec!["bitArraySlice(", bit_array, ", ", from, ", ", end, ")"]
     }
 
+    /// Generates the document that calls the `bitArraySlice` function, starting
+    /// at a given offset. This will read the entire remaining bit of the array,
+    /// if you know that the slice should end at a given offset you can use
+    /// `bit_array_slice_with_end` instead.
+    ///
     fn bit_array_slice(&mut self, bit_array: impl Documentable<'a>, from: &Offset) -> Document<'a> {
         self.expression_generator.tracker.bit_array_slice_used = true;
         let from = self.offset_to_doc(from, false);
         docvec!["bitArraySlice(", bit_array, ", ", from, ")"]
     }
 
+    /// This generates all the checks that need to be performed to make sure a
+    /// bit array segment (obtained with the read action passed as argument)
+    /// matches with a literal string.
+    ///
     fn literal_string_segment_bytes_check(
         &mut self,
-        // A document representing the bit array value we read bits from.
+        // A string representing the bit array value we read bits from.
         bit_array: EcoString,
         literal_string: &EcoString,
         read_action: &ReadAction,
@@ -1062,12 +1171,17 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         };
 
         if let Some(mut from_byte) = start.constant_bytes() {
+            // If the string starts at a compile-time known byte, then we can
+            // optimise this by reading all the subsequent bytes and checking
+            // they have a specific value.
             for byte in convert_string_escape_chars(literal_string).as_bytes() {
                 let byte_access = docvec![bit_array.clone(), ".byteAt(", from_byte.clone(), ")"];
                 checks.push(docvec![byte_access, equality, byte]);
                 from_byte += 1;
             }
         } else {
+            // If the string doesn't start at a byte aligned offset then we'll
+            // have to take slices out of it to check that each byte matches.
             for byte in convert_string_escape_chars(literal_string).as_bytes() {
                 let end = self.offset_to_doc(&start.add_constant(8), false);
                 let from = self.offset_to_doc(start, false);
@@ -1078,15 +1192,21 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         }
 
         if check_negation.is_negated() {
+            // If the check is negated, it fails if any of the byte checks fail.
             join(checks, break_(" ||", " || ")).group()
         } else {
+            // Otherwise the check succeeds if all the byte checks succeed.
             join(checks, break_(" &&", " && ")).nest(INDENT).group()
         }
     }
 
+    /// This generates all the checks that need to be performed to make sure a
+    /// bit array segment (obtained with the read action passed as argument)
+    /// matches with a literal int.
+    ///
     fn literal_int_segment_bytes_check(
         &mut self,
-        // A document representing the bit array value we read bits from.
+        // A string representing the bit array value we read bits from.
         bit_array: EcoString,
         literal_int: BigInt,
         read_action: &ReadAction,
@@ -1107,6 +1227,9 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         };
 
         if let (Some(mut from_byte), Some(size)) = (start.constant_bytes(), size.constant_bytes()) {
+            // If the number starts at a byte-aligned offset and is made of a
+            // whole number of bytes then we can optimise this by checking that
+            // all the bytes starting at the given offset match the int bytes.
             let mut checks = vec![];
             for byte in bit_array_segment_int_value_to_bytes(literal_int, size * 8, *endianness)? {
                 let byte_access = docvec![bit_array.clone(), ".byteAt(", from_byte.clone(), ")"];
@@ -1120,6 +1243,8 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                 join(checks, break_(" &&", " && ")).nest(INDENT).group()
             })
         } else {
+            // Otherwise we have to take an int slice out of the bit array and
+            // check it matches the expected value.
             let start_doc = self.offset_to_doc(start, false);
             let end = match (start.constant_bits(), size.constant_bits()) {
                 (Some(start), _) if start == BigInt::ZERO => self
@@ -1133,9 +1258,13 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         }
     }
 
+    /// This generates all the checks that need to be performed to make sure a
+    /// bit array segment (obtained with the read action passed as argument)
+    /// matches with a literal float.
+    ///
     fn literal_float_segment_bytes_check(
         &mut self,
-        // A document representing the bit array value we read bits from.
+        // A string representing the bit array value we read bits from.
         bit_array: EcoString,
         expected: &EcoString,
         read_action: &ReadAction,
@@ -1154,6 +1283,9 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             " === "
         };
 
+        // Unlike literal integers and strings, for now we don't try and apply any
+        // optimisation in the way we match on those: we take an entire slice,
+        // convert it to a float and check if it matches the expected value.
         let start_doc = self.offset_to_doc(start, false);
         let end = match (start.constant_bits(), size.constant_bits()) {
             (Some(start), _) if start == BigInt::ZERO => self
@@ -1177,7 +1309,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     }
 
     /// In case the check introduces new variables, this will record their
-    /// actual value to be used by later checks and assignments
+    /// actual value to be used by later checks and assignments.
     ///
     fn record_check_assignments(&mut self, variable: &Variable, check: &RuntimeCheck) {
         let value = self.get_value(variable);
@@ -1221,6 +1353,37 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         }
     }
 
+    /// A runtime check might need to reference some bit array segments in its
+    /// check (for example if a bit array length depends on a previous segment).
+    /// This function returns a vector with all the assignments needed to bring
+    /// the referenced segments into scope, so they're available to use for the
+    /// runtime check.
+    ///
+    fn bit_array_segment_assignments(&mut self, check: &RuntimeCheck) -> Vec<Document<'a>> {
+        let mut check_assignments = vec![];
+        for (segment, _) in check.referenced_segment_patterns() {
+            // If the segment was already bound to a variable in this scope we
+            // don't need to generate any further assignment for it. We will just
+            // reuse that existing variable when we need to access this segment
+            if self.segment_is_bound_in_scope(segment) {
+                continue;
+            }
+
+            let variable_name = self.next_local_var(segment);
+            let segment_value = self
+                .get_segment_value(segment)
+                .expect("segment referenced in a check before being created");
+            self.bind_segment(variable_name.clone(), segment.clone());
+            check_assignments.push(let_doc(variable_name, segment_value))
+        }
+        check_assignments
+    }
+
+    /// Returns a string representing the value of a pattern variable: it might
+    /// be the code needed to obtain such variable (for example accessing a
+    /// list item `wibble.head`), or it could be a name this variable was bound
+    /// to in the current scope to avoid doing any repeated work!
+    ///
     fn get_value(&self, variable: &Variable) -> EcoString {
         // If the pattern variable was already assigned to a variable that is
         // in scope we use that variable name!
@@ -1248,6 +1411,8 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
 }
 
 #[derive(Eq, PartialEq)]
+/// Wether a runtime check should be negated or not.
+///
 enum CheckNegation {
     Negated,
     NotNegated,
@@ -1264,7 +1429,7 @@ impl CheckNegation {
 
 /// When going over the subjects of a case expression/let we might end up in two
 /// situation: the subject might be a variable or it could be a more complex
-/// expression (like a function call, math expression, ...).
+/// expression (like a function call, a complex expression, ...).
 ///
 /// ```gleam
 /// case a_variable { ... }
@@ -1273,8 +1438,8 @@ impl CheckNegation {
 ///
 /// When checking on a case we might end up repeating the subjects multiple times
 /// (as they need to appear in various checks), this means that if we ended up
-/// doing the simple thing of just repeating the subject as it is we might end
-/// up dramatically changin the meaning of the program when the subject is a
+/// doing the simple thing of just repeating the subject as it is, we might end
+/// up dramatically changing the meaning of the program when the subject is a
 /// complex expression! Imagine this example:
 ///
 /// ```gleam
@@ -1297,10 +1462,10 @@ impl CheckNegation {
 /// It would be quite bad as we would end up running the same function multiple
 /// times instead of just once!
 ///
-/// So we need to categorize each subject in two categories: if it is a simple
+/// So we need to split each subject in two categories: if it is a simple
 /// variable already, it's no big deal and we can repeat that name as many times
-/// as we want; however if it's anything else we first need to bind that subject
-/// to a variable we can than reference multiple times.
+/// as we want; however, if it's anything else we first need to bind that subject
+/// to a variable we can then reference multiple times.
 ///
 enum SubjectAssignment<'a> {
     /// The subject is a complex expression with a `value` that has to be
@@ -1322,17 +1487,6 @@ impl SubjectAssignment<'_> {
             | SubjectAssignment::AlreadyAVariable { name } => name.clone(),
         }
     }
-}
-
-fn assign_subjects<'a>(
-    expression_generator: &mut Generator<'_, 'a>,
-    subjects: &'a [TypedExpr],
-) -> Result<Vec<SubjectAssignment<'a>>, Error> {
-    let mut out = Vec::with_capacity(subjects.len());
-    for subject in subjects {
-        out.push(assign_subject(expression_generator, subject)?)
-    }
-    Ok(out)
 }
 
 fn assign_subject<'a>(

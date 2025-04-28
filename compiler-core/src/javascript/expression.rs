@@ -2013,8 +2013,6 @@ impl<'module, 'a> Generator<'module, 'a> {
         }
     }
 
-    // TODO)) This could be simplified by making the var case a function to change as
-    //        needed.
     fn guard_constant_expression(&mut self, expression: &'a TypedConstant) -> Output<'a> {
         match expression {
             Constant::Tuple { elements, .. } => array(
