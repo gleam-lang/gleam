@@ -1059,7 +1059,29 @@ fn bit_array_tests() -> List(Test) {
 fn bit_array_target_tests() -> List(Test) {
   [
     "<<60, 0>> == <<1.0:float-16>>"
-    |> example(fn() { assert_equal(True, <<60, 0>> == <<1.0:float-16>>) }),
+      |> example(fn() { assert_equal(True, <<60, 0>> == <<1.0:float-16>>) }),
+    // https://github.com/gleam-lang/gleam/issues/3375
+    "assignment int pattern in a bit array"
+      |> example(fn() {
+        assert_equal(10, {
+          let assert <<10 as a, _>> = <<10, 20>>
+          a
+        })
+      }),
+    "assignment float pattern in a bit array"
+      |> example(fn() {
+        assert_equal(3.14, {
+          let assert <<3.14 as pi:float>> = <<3.14>>
+          pi
+        })
+      }),
+    "assignment string pattern in a bit array"
+      |> example(fn() {
+        assert_equal("Hello", {
+          let assert <<"Hello" as h:utf8, ", world!">> = <<"Hello, world!">>
+          h
+        })
+      }),
   ]
 }
 
