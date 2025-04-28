@@ -58,7 +58,7 @@ pub struct Printer<'a> {
 }
 
 impl Printer<'_> {
-    pub fn new<'a>(package: EcoString, module: EcoString, names: &'a Names) -> Printer<'a> {
+    pub fn new(package: EcoString, module: EcoString, names: &Names) -> Printer<'_> {
         Printer {
             options: PrintOptions::all(),
             names,
@@ -430,7 +430,7 @@ impl Printer<'_> {
     // Copied from the `next_letter` method of the `type_::printer`.
     fn next_letter(&mut self) -> EcoString {
         let alphabet_length = 26;
-        let char_offset = 'a' as u8;
+        let char_offset = b'a';
         let mut chars = vec![];
         let mut n;
         let mut rest = self.next_type_variable_id;
