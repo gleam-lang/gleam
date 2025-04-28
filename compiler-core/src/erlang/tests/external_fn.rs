@@ -101,6 +101,48 @@ pub fn main() {
 }
 
 #[test]
+fn reference_to_imported_elixir_external_fn() {
+    assert_erl!(
+        (
+            "lib",
+            "my_app",
+            r#"
+@external(erlang, "Elixir.MyApp", "run")
+pub fn run() -> Int
+"#
+        ),
+        r#"import my_app
+pub fn main() {
+  let x = my_app.run
+  id(my_app.run)
+}
+fn id(x) { x }
+"#
+    );
+}
+
+#[test]
+fn unqualified_reference_to_imported_elixir_external_fn() {
+    assert_erl!(
+        (
+            "lib",
+            "my_app",
+            r#"
+@external(erlang, "Elixir.MyApp", "run")
+pub fn run() -> Int
+"#
+        ),
+        r#"import my_app.{run}
+pub fn main() {
+  let x = run
+  id(run)
+}
+fn id(x) { x }
+"#
+    );
+}
+
+#[test]
 fn attribute_erlang() {
     assert_erl!(
         r#"
