@@ -41,8 +41,9 @@ use super::{
         FillInMissingLabelledArgs, FillUnusedFields, FixBinaryOperation,
         FixTruncatedBitArraySegment, GenerateDynamicDecoder, GenerateFunction, GenerateJsonEncoder,
         GenerateVariant, InlineVariable, InterpolateString, LetAssertToCase, PatternMatchOnValue,
-        RedundantTupleInCaseSubject, RemoveEchos, UseLabelShorthandSyntax, WrapInBlock,
-        code_action_add_missing_patterns, code_action_convert_qualified_constructor_to_unqualified,
+        RedundantTupleInCaseSubject, RemoveEchos, RemoveUnusedImports, UseLabelShorthandSyntax,
+        WrapInBlock, code_action_add_missing_patterns,
+        code_action_convert_qualified_constructor_to_unqualified,
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
         code_action_inexhaustive_let_to_case,
     },
@@ -382,7 +383,7 @@ where
             let lines = LineNumbers::new(&module.code);
 
             code_action_unused_values(module, &lines, &params, &mut actions);
-            code_action_unused_imports(module, &lines, &params, &mut actions);
+            actions.extend(RemoveUnusedImports::new(module, &lines, &params).code_actions());
             code_action_convert_qualified_constructor_to_unqualified(
                 module,
                 &lines,
@@ -1459,68 +1460,6 @@ fn code_action_unused_values(
     }
 }
 
-/// Code action to remove unused imports.
-///
-fn code_action_unused_imports(
-    module: &Module,
-    line_numbers: &LineNumbers,
-    params: &lsp::CodeActionParams,
-    actions: &mut Vec<CodeAction>,
-) {
-    let uri = &params.text_document.uri;
-    let unused: Vec<&SrcSpan> = module
-        .ast
-        .type_info
-        .warnings
-        .iter()
-        .filter_map(|warning| match warning {
-            type_::Warning::UnusedImportedModuleAlias { location, .. }
-            | type_::Warning::UnusedImportedModule { location, .. } => Some(location),
-            _ => None,
-        })
-        .collect();
-
-    if unused.is_empty() {
-        return;
-    }
-
-    let mut hovered = false;
-    let mut edits = Vec::with_capacity(unused.len());
-
-    for unused in unused {
-        let SrcSpan { start, end } = *unused;
-
-        // If removing an unused alias or at the beginning of the file, don't backspace
-        // Otherwise, adjust the end position by 1 to ensure the entire line is deleted with the import.
-        let adjusted_end = if delete_line(unused, line_numbers) {
-            end + 1
-        } else {
-            end
-        };
-
-        let range = src_span_to_lsp_range(SrcSpan::new(start, adjusted_end), line_numbers);
-        // Keep track of whether any unused import has is where the cursor is
-        hovered = hovered || overlaps(params.range, range);
-
-        edits.push(TextEdit {
-            range,
-            new_text: "".into(),
-        });
-    }
-
-    // If none of the imports are where the cursor is we do nothing
-    if !hovered {
-        return;
-    }
-    edits.sort_by_key(|edit| edit.range.start);
-
-    CodeActionBuilder::new("Remove unused imports")
-        .kind(lsp_types::CodeActionKind::QUICKFIX)
-        .changes(uri.clone(), edits)
-        .preferred(true)
-        .push_to(actions);
-}
-
 struct NameCorrection {
     pub location: SrcSpan,
     pub correction: EcoString,
@@ -1576,13 +1515,6 @@ fn code_action_fix_names(
                 .push_to(actions);
         }
     }
-}
-
-// Check if the edit empties a whole line; if so, delete the line.
-fn delete_line(span: &SrcSpan, line_numbers: &LineNumbers) -> bool {
-    line_numbers.line_starts.iter().any(|&line_start| {
-        line_start == span.start && line_numbers.line_starts.contains(&(span.end + 1))
-    })
 }
 
 fn get_expr_qualified_name(expression: &TypedExpr) -> Option<(&EcoString, &EcoString)> {
