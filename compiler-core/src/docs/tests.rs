@@ -707,6 +707,57 @@ const NONE: PrintOptions = PrintOptions {
     print_links: false,
 };
 
+#[test]
+fn highlight_function_definition() {
+    assert_documentation!(
+        "
+pub fn wibble(list: List(Int), generic: a, function: fn(a) -> b) -> #(a, b) { todo }
+"
+    );
+}
+
+#[test]
+fn highlight_constant_definition() {
+    assert_documentation!(
+        "
+pub const x = 22
+"
+    );
+}
+
+#[test]
+fn highlight_type_alias() {
+    assert_documentation!(
+        "
+pub type Option(a) = Result(a, Nil)
+"
+    );
+}
+
+#[test]
+fn highlight_custom_type() {
+    assert_documentation!(
+        "
+pub type Wibble(a, b) {
+  Wibble(a, i: Int)
+  Wobble(b: b, c: String)
+}
+"
+    );
+}
+
+#[test]
+fn highlight_opaque_custom_type() {
+    assert_documentation!(
+        "
+pub opaque type Wibble(a, b) {
+  Wibble(a, i: Int)
+  Wobble(b: b, c: String)
+}
+"
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/2629
 #[test]
 fn print_type_variables_in_function_signatures() {

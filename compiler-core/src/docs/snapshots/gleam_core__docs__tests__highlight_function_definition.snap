@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/docs/tests.rs
+expression: output
+---
+---- VALUES
+
+--- wibble
+<pre><code><span class="hljs-keyword">pub fn </span><span class="hljs-title">wibble</span>(
+  <span class="hljs-variable">list</span>: <span class="hljs-title">List</span>(<span class="hljs-title">Int</span>),
+  <span class="hljs-variable">generic</span>: <span class="hljs-variable">a</span>,
+  <span class="hljs-variable">function</span>: <span class="hljs-keyword">fn</span>(<span class="hljs-variable">a</span>) -> <span class="hljs-variable">b</span>,
+) -> #(<span class="hljs-variable">a</span>, <span class="hljs-variable">b</span>)</code></pre>

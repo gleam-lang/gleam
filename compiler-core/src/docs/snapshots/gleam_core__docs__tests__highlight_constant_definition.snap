@@ -1,0 +1,8 @@
+---
+source: compiler-core/src/docs/tests.rs
+expression: output
+---
+---- VALUES
+
+--- x
+<pre><code><span class="hljs-keyword">pub const </span><span class="hljs-title">x</span>: <span class="hljs-title">Int</span></code></pre>
