@@ -590,6 +590,10 @@ impl RuntimeCheck {
         }
     }
 
+    /// Returns all the bit array segments referenced in this check.
+    /// For each segment it returns its name and the read action used to access
+    /// such segment.
+    ///
     pub(crate) fn referenced_segment_patterns(&self) -> Vec<(&EcoString, &ReadAction)> {
         match self {
             RuntimeCheck::BitArray { test } => test.referenced_segment_patterns(),
