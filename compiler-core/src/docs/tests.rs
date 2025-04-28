@@ -1,7 +1,8 @@
 use std::{collections::HashSet, time::SystemTime};
 
 use super::{
-    SearchData, SearchItem, SearchItemType, SearchProgrammingLanguage, printer::Printer,
+    SearchData, SearchItem, SearchItemType, SearchProgrammingLanguage,
+    printer::{PrintOptions, Printer},
     source_links::SourceLinker,
 };
 use crate::{
@@ -131,7 +132,11 @@ pub fn compile(config: PackageConfig, modules: Vec<(&str, &str)>) -> EcoString {
     )
 }
 
-fn compile_documentation(main_module: &str, modules: Vec<(&str, &str, &str)>) -> EcoString {
+fn compile_documentation(
+    main_module: &str,
+    modules: Vec<(&str, &str, &str)>,
+    options: PrintOptions,
+) -> EcoString {
     let module = type_::tests::compile_module("main", main_module, None, modules)
         .expect("Module should compile successfully");
 
@@ -158,6 +163,7 @@ fn compile_documentation(main_module: &str, modules: Vec<(&str, &str, &str)>) ->
         module.name.clone(),
         &module.names,
     );
+    printer.set_options(options);
 
     let types = module
         .definitions
@@ -224,17 +230,31 @@ fn compile_documentation(main_module: &str, modules: Vec<(&str, &str, &str)>) ->
 
 macro_rules! assert_documentation {
     ($src:literal $(,)?) => {
-        let output = compile_documentation( $src, Vec::new());
+        assert_documentation!($src, PrintOptions::all());
+    };
+
+    ($src:literal, $options:expr $(,)?) => {
+        let output = compile_documentation($src, Vec::new(), $options);
         insta::assert_snapshot!(output);
     };
 
     ($(($name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
-        let output = compile_documentation($src, vec![$(("thepackage", $name, $module_src)),*]);
+        let output = compile_documentation($src, vec![$(("thepackage", $name, $module_src)),*], PrintOptions::all());
+        insta::assert_snapshot!(output);
+    };
+
+    ($(($name:expr, $module_src:literal)),+, $src:literal, $options:expr $(,)?) => {
+        let output = compile_documentation($src, vec![$(("thepackage", $name, $module_src)),*], $options);
         insta::assert_snapshot!(output);
     };
 
     ($(($package:expr, $name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
-        let output = compile_documentation($src, vec![$(($package, $name, $module_src)),*]);
+        let output = compile_documentation($src, vec![$(($package, $name, $module_src)),*], PrintOptions::all());
+        insta::assert_snapshot!(output);
+    };
+
+    ($(($package:expr, $name:expr, $module_src:literal)),+, $src:literal, $options:expr $(,)?) => {
+        let output = compile_documentation($src, vec![$(($package, $name, $module_src)),*], $options);
         insta::assert_snapshot!(output);
     };
 }
@@ -678,6 +698,15 @@ fn output_of_search_data_json() {
     insta::assert_snapshot!(json);
 }
 
+const ONLY_LINKS: PrintOptions = PrintOptions {
+    print_highlighting: false,
+    print_links: true,
+};
+const NONE: PrintOptions = PrintOptions {
+    print_highlighting: false,
+    print_links: false,
+};
+
 // https://github.com/gleam-lang/gleam/issues/2629
 #[test]
 fn print_type_variables_in_function_signatures() {
@@ -688,7 +717,8 @@ pub type Dict(key, value)
 pub fn insert(dict: Dict(key, value), key: key, value: value) -> Dict(key, value) {
   dict
 }
-"
+",
+        NONE
     );
 }
 
@@ -714,7 +744,8 @@ pub fn from_option(o: Option(t), e: e) -> Result(t, e) {
     None -> Error(e)
   }
 }
-"
+",
+        NONE
     );
 }
 
@@ -726,7 +757,8 @@ fn link_to_type_in_same_module() {
 pub type Dict(a, b)
 
 pub fn new() -> Dict(a, b) { todo }
-"
+",
+        ONLY_LINKS
     );
 }
 
@@ -739,7 +771,8 @@ fn link_to_type_in_different_module() {
 import gleam/dict
 
 pub fn make_dict() -> dict.Dict(a, b) { todo }
-"
+",
+        ONLY_LINKS
     );
 }
 
@@ -752,7 +785,8 @@ fn link_to_type_in_different_package() {
 import gleam/dict
 
 pub fn make_dict() -> dict.Dict(a, b) { todo }
-"
+",
+        ONLY_LINKS
     );
 }
 
@@ -761,6 +795,7 @@ fn no_links_to_prelude_types() {
     assert_documentation!(
         "
 pub fn int_to_string(i: Int) -> String { todo }
-"
+",
+        ONLY_LINKS
     );
 }

@@ -5,9 +5,9 @@ expression: output
 ---- TYPES
 
 --- Dict
-<pre><code><span class="hljs-keyword">pub </span><span class="hljs-keyword">type </span><span class="hljs-title">Dict</span>(<span class="hljs-variable">a</span>, <span class="hljs-variable">b</span>)</code></pre>
+<pre><code>pub type Dict(a, b)</code></pre>
 
 ---- VALUES
 
 --- new
-<pre><code><span class="hljs-keyword">pub fn </span><span class="hljs-title">new</span>() -> <a href="#Dict"><span class="hljs-title">Dict</span></a>(<span class="hljs-variable">a</span>, <span class="hljs-variable">b</span>)</code></pre>
+<pre><code>pub fn new() -> <a href="#Dict">Dict</a>(a, b)</code></pre>

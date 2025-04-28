@@ -24,7 +24,23 @@ use super::{
     source_links::SourceLinker, text_documentation,
 };
 
+#[derive(Clone, Copy)]
+pub struct PrintOptions {
+    pub print_highlighting: bool,
+    pub print_links: bool,
+}
+
+impl PrintOptions {
+    pub fn all() -> Self {
+        Self {
+            print_highlighting: true,
+            print_links: true,
+        }
+    }
+}
+
 pub struct Printer<'a> {
+    options: PrintOptions,
     names: &'a Names,
     package: EcoString,
     module: EcoString,
@@ -36,6 +52,7 @@ pub struct Printer<'a> {
 impl Printer<'_> {
     pub fn new<'a>(package: EcoString, module: EcoString, names: &'a Names) -> Printer<'a> {
         Printer {
+            options: PrintOptions::all(),
             names,
             package,
             module,
@@ -43,6 +60,11 @@ impl Printer<'_> {
             printed_type_variable_names: HashSet::new(),
             uid: 0,
         }
+    }
+
+    #[cfg(test)]
+    pub fn set_options(&mut self, options: PrintOptions) {
+        self.options = options;
     }
 
     pub fn type_definition<'a>(
@@ -427,6 +449,10 @@ impl Printer<'_> {
     }
 
     fn keyword<'a>(&self, keyword: impl Documentable<'a>) -> Document<'a> {
+        if !self.options.print_highlighting {
+            return keyword.to_doc();
+        }
+
         keyword.to_doc().surround(
             zero_width_string(r#"<span class="hljs-keyword">"#.into()),
             zero_width_string("</span>".into()),
@@ -434,6 +460,10 @@ impl Printer<'_> {
     }
 
     fn title<'a>(&self, name: impl Documentable<'a>) -> Document<'a> {
+        if !self.options.print_highlighting {
+            return name.to_doc();
+        }
+
         name.to_doc().surround(
             zero_width_string(r#"<span class="hljs-title">"#.into()),
             zero_width_string("</span>".into()),
@@ -441,6 +471,10 @@ impl Printer<'_> {
     }
 
     fn variable<'a>(&self, name: impl Documentable<'a>) -> Document<'a> {
+        if !self.options.print_highlighting {
+            return name.to_doc();
+        }
+
         name.to_doc().surround(
             zero_width_string(r#"<span class="hljs-variable">"#.into()),
             zero_width_string("</span>".into()),
@@ -453,6 +487,10 @@ impl Printer<'_> {
         name: impl Documentable<'a>,
         title: Option<EcoString>,
     ) -> Document<'a> {
+        if !self.options.print_links {
+            return name.to_doc();
+        }
+
         let opening_tag = if let Some(title) = title {
             eco_format!(r#"<a href="{href}" title="{title}">"#)
         } else {
