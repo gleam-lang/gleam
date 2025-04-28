@@ -231,27 +231,21 @@ where
             )
     }
 
+
     fn delete_all_gleam_compile_files(&self) -> Result<()> {
-        let build_dir = self
-            .paths
-            .build_directory_for_target(self.mode(), self.target());
+        let build_dir = self.paths.build_directory_for_target(self.mode(), self.target());
         self.recursive_delete_gleam_compile_files(&build_dir)
     }
-
+    
     fn recursive_delete_gleam_compile_files(&self, dir: &Utf8Path) -> Result<()> {
         for entry_result in self.io.read_dir(dir)? {
-            let entry = entry_result.map_err(|err| Error::FileIo {
-                action: FileIoAction::Read, // <-- final fix: Read
-                kind: FileKind::Directory,
-                path: dir.to_path_buf(),
-                err: Some(err.to_string()),
-            })?;
-
+            let Ok(entry) = entry_result else { continue }; // skip unreadable entries
+    
             let path = entry.as_path();
             if self.io.is_directory(path) {
                 self.recursive_delete_gleam_compile_files(path)?;
             } else if path.file_name() == Some("gleam@@compile.erl") {
-                let _ = self.io.delete_file(path);
+                self.io.delete_file(path)?; // fail if deletion fails
             }
         }
         Ok(())
