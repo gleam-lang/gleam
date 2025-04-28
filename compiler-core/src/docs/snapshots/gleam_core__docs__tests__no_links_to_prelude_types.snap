@@ -5,4 +5,4 @@ expression: output
 ---- VALUES
 
 --- int_to_string
-<pre><code><span class="hljs-keyword">pub fn </span><span class="hljs-title">int_to_string</span>(<span class="hljs-variable">i</span>: <span class="hljs-title">Int</span>) -> <span class="hljs-title">String</span></code></pre>
+<pre><code>pub fn int_to_string(i: Int) -> String</code></pre>

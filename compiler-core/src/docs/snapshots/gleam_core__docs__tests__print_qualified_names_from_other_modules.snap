@@ -5,4 +5,4 @@ expression: output
 ---- VALUES
 
 --- from_option
-<pre><code><span class="hljs-keyword">pub fn </span><span class="hljs-title">from_option</span>(<span class="hljs-variable">o</span>: <a href="https://hexdocs.pm/thepackage/gleam/option.html#Option" title="gleam/option.{type Option}"><span class="hljs-variable">option</span>.<span class="hljs-title">Option</span></a>(<span class="hljs-variable">t</span>), <span class="hljs-variable">e</span>: <span class="hljs-variable">e</span>) -> <span class="hljs-title">Result</span>(<span class="hljs-variable">t</span>, <span class="hljs-variable">e</span>)</code></pre>
+<pre><code>pub fn from_option(o: option.Option(t), e: e) -> Result(t, e)</code></pre>

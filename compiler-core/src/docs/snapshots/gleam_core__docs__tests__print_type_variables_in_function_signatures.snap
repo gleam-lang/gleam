@@ -5,13 +5,13 @@ expression: output
 ---- TYPES
 
 --- Dict
-<pre><code><span class="hljs-keyword">pub </span><span class="hljs-keyword">type </span><span class="hljs-title">Dict</span>(<span class="hljs-variable">key</span>, <span class="hljs-variable">value</span>)</code></pre>
+<pre><code>pub type Dict(key, value)</code></pre>
 
 ---- VALUES
 
 --- insert
-<pre><code><span class="hljs-keyword">pub fn </span><span class="hljs-title">insert</span>(
-  <span class="hljs-variable">dict</span>: <a href="#Dict"><span class="hljs-title">Dict</span></a>(<span class="hljs-variable">key</span>, <span class="hljs-variable">value</span>),
-  <span class="hljs-variable">key</span>: <span class="hljs-variable">key</span>,
-  <span class="hljs-variable">value</span>: <span class="hljs-variable">value</span>,
-) -> <a href="#Dict"><span class="hljs-title">Dict</span></a>(<span class="hljs-variable">key</span>, <span class="hljs-variable">value</span>)</code></pre>
+<pre><code>pub fn insert(
+  dict: Dict(key, value),
+  key: key,
+  value: value,
+) -> Dict(key, value)</code></pre>
