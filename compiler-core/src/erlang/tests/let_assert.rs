@@ -236,3 +236,55 @@ pub fn main() {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3375
+#[test]
+fn bit_array_assignment_int() {
+    assert_erl!(
+        "
+pub fn main() {
+  let assert <<1 as a>> = <<1>>
+  a
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3375
+#[test]
+fn bit_array_assignment_float() {
+    assert_erl!(
+        "
+pub fn main() {
+  let assert <<3.14 as pi:float>> = <<3.14>>
+  pi
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3375
+#[test]
+fn bit_array_assignment_string() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  let assert <<"Hello, world!" as message:utf8>> = <<"Hello, world!">>
+  message
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3375
+#[test]
+fn bit_array_assignment_discard() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  let assert <<_ as number>> = <<10>>
+  number
+}
+"#
+    );
+}
