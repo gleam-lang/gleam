@@ -1,0 +1,8 @@
+---
+source: compiler-core/src/docs/tests.rs
+expression: output
+---
+---- VALUES
+
+--- wibble
+<pre><code>pub fn wibble(a: c, b: d, c: b, d: a) -> e</code></pre>

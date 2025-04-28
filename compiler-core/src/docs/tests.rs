@@ -799,3 +799,53 @@ pub fn int_to_string(i: Int) -> String { todo }
         ONLY_LINKS
     );
 }
+
+#[test]
+fn generated_type_variables() {
+    assert_documentation!(
+        "
+pub fn wibble(_a, _b, _c, _d) {
+  todo
+}
+",
+        NONE
+    );
+}
+
+#[test]
+fn generated_type_variables_mixed_with_existing_variables() {
+    assert_documentation!(
+        "
+pub fn wibble(_a: b, _b: a, _c, _d) {
+  todo
+}
+",
+        NONE
+    );
+}
+
+#[test]
+fn generated_type_variables_with_existing_variables_coming_afterwards() {
+    assert_documentation!(
+        "
+pub fn wibble(_a, _b, _c: b, _d: a) {
+  todo
+}
+",
+        NONE
+    );
+}
+
+#[test]
+fn generated_type_variables_do_not_take_into_account_other_definitions() {
+    assert_documentation!(
+        "
+pub fn wibble(_a: a, _b: b, _c: c) -> d {
+  todo
+}
+
+pub fn identity(x) { x }
+",
+        NONE
+    );
+}
