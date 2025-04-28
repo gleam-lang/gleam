@@ -5,7 +5,7 @@ expression: output
 ---- TYPES
 
 --- Wibble
-<pre><code><span class="hljs-keyword">pub </span><span class="hljs-keyword">type </span><span class="hljs-title">Wibble</span>(<span class="hljs-variable">a</span>, <span class="hljs-variable">b</span>) {
+<pre><code><span class="hljs-keyword">pub type </span><span class="hljs-title">Wibble</span>(<span class="hljs-variable">a</span>, <span class="hljs-variable">b</span>) {
   <span class="hljs-title">Wibble</span>(<span class="hljs-variable">a</span>, <span class="hljs-variable">i</span>: <span class="hljs-title">Int</span>)
   <span class="hljs-title">Wobble</span>(<span class="hljs-variable">b</span>: <span class="hljs-variable">b</span>, <span class="hljs-variable">c</span>: <span class="hljs-title">String</span>)
 }</code></pre>

@@ -229,14 +229,13 @@ impl Printer<'_> {
             )
         };
 
-        let keywords = if opaque { "opaque type " } else { "type " };
+        let keywords = if opaque {
+            "pub opaque type "
+        } else {
+            "pub type "
+        };
 
-        let type_head = docvec![
-            self.keyword("pub "),
-            self.keyword(keywords),
-            self.title(name),
-            arguments
-        ];
+        let type_head = docvec![self.keyword(keywords), self.title(name), arguments];
 
         if constructors.is_empty() || opaque {
             return type_head;

@@ -272,7 +272,7 @@ expression: "compile(config, modules)"
     
     <div class="custom-type-constructors">
       <div class="rendered-markdown"></div>
-      <pre><code class="hljs gleam hljs-ignore"><span class="hljs-keyword">pub </span><span class="hljs-keyword">type </span><span class="hljs-title">Wibble</span> {
+      <pre><code class="hljs gleam hljs-ignore"><span class="hljs-keyword">pub type </span><span class="hljs-title">Wibble</span> {
   <span class="hljs-title">Wobble</span>(<span class="hljs-variable">wabble</span>: <span class="hljs-title">Int</span>)
 }</code></pre>
       
