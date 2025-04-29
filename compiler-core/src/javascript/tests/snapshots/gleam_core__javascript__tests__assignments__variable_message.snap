@@ -11,10 +11,10 @@ pub fn expect(value, message) {
 
 
 ----- COMPILED JAVASCRIPT
-import { makeError } from "../gleam.mjs";
+import { Ok, makeError } from "../gleam.mjs";
 
 export function expect(value, message) {
-  if (!value.isOk()) {
+  if (!(value instanceof Ok)) {
     throw makeError(
       "let_assert",
       "my/mod",

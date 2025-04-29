@@ -397,3 +397,19 @@ fn go(x) {
 "
     );
 }
+
+#[test]
+fn pattern_matching_on_aliased_result_constructor() {
+    assert_js!(
+        "
+import gleam.{Error as E, Ok as O}
+
+pub fn go(x) {
+  case x {
+    E(_) -> 1
+    O(_) -> 2
+  }
+}
+"
+    );
+}

@@ -13,11 +13,11 @@ pub fn unimplemented(message) {
 
 
 ----- COMPILED JAVASCRIPT
-import { makeError } from "../gleam.mjs";
+import { Ok, makeError } from "../gleam.mjs";
 
 export function unimplemented(message) {
   let _block;
-  if (message.isOk()) {
+  if (message instanceof Ok) {
     let message$1 = message[0];
     _block = message$1;
   } else {

@@ -11,10 +11,10 @@ pub fn unwrap_or_panic(value) {
 
 
 ----- COMPILED JAVASCRIPT
-import { makeError } from "../gleam.mjs";
+import { Ok, makeError } from "../gleam.mjs";
 
 export function unwrap_or_panic(value) {
-  if (!value.isOk()) {
+  if (!(value instanceof Ok)) {
     throw makeError(
       "let_assert",
       "my/mod",

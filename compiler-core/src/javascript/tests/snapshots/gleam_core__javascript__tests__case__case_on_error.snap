@@ -22,7 +22,7 @@ function a_result() {
 
 export function main() {
   let $ = a_result();
-  if (!$.isOk()) {
+  if ($ instanceof Error) {
     return 1;
   } else {
     return 2;
