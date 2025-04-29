@@ -57,7 +57,6 @@ expression: "\nlet tup = #(#(5, 6))\ntup.0.1\n"
                 tree: Fail,
                 subject_variables: [],
             },
-            is_generated: false,
             annotation: None,
         },
     ),

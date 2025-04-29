@@ -58,7 +58,6 @@ expression: "let assert [x]: List(Int) = [2]"
                 tree: Fail,
                 subject_variables: [],
             },
-            is_generated: false,
             annotation: Some(
                 Constructor(
                     TypeAstConstructor {

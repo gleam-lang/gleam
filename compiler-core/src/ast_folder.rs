@@ -626,7 +626,6 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 kind,
                 annotation,
                 compiled_case,
-                is_generated,
             }) => {
                 let pattern = self.fold_pattern(pattern);
                 let annotation = annotation.map(|type_| self.fold_type(type_));
@@ -638,7 +637,6 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                     kind,
                     annotation,
                     compiled_case,
-                    is_generated,
                 })
             }
 
