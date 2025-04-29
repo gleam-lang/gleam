@@ -811,6 +811,9 @@ pub enum BitArrayTest {
     CatchAllIsBytes {
         size_so_far: Offset,
     },
+    VariableIsPositive {
+        variable: VariableUsage,
+    },
 }
 
 impl BitArrayTest {
@@ -826,6 +829,13 @@ impl BitArrayTest {
 
     pub(crate) fn referenced_segment_patterns(&self) -> Vec<(&EcoString, &ReadAction)> {
         match self {
+            BitArrayTest::VariableIsPositive { variable } => match variable {
+                VariableUsage::PatternSegment(segment_value, read_action) => {
+                    vec![(segment_value, read_action)]
+                }
+                VariableUsage::OutsideVariable(..) => vec![],
+            },
+
             BitArrayTest::Size(SizeTest { operator: _, size })
             | BitArrayTest::CatchAllIsBytes { size_so_far: size } => {
                 size.referenced_segment_patterns()
@@ -2692,6 +2702,23 @@ impl CaseToCompile {
         let segments_count = segments.len();
         for (i, segment) in segments.iter().enumerate() {
             let segment_size = segment_size(segment, &pattern_variables);
+
+            // If we're reading a variable number of bits we need to make sure
+            // that that variable is positive!
+            if let ReadSize::VariableBits { variable, .. } = &segment_size {
+                match variable.as_ref() {
+                    // If the size variable comes from reading an unsigned number
+                    // we know that it must be positive! So we can skip checking it.
+                    VariableUsage::PatternSegment(_, read_action) if !read_action.signed => (),
+
+                    // Otherwise we must make sure that the variable has a positive
+                    // size.
+                    VariableUsage::PatternSegment(..) | VariableUsage::OutsideVariable(_) => tests
+                        .push_back(BitArrayTest::VariableIsPositive {
+                            variable: variable.as_ref().clone(),
+                        }),
+                }
+            }
 
             // All segments but the last will require the original bit array to
             // have a minimum number of bits for the pattern to succeed. The

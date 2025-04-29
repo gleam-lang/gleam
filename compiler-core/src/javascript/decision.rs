@@ -822,6 +822,14 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                     }
                 }
 
+                BitArrayTest::VariableIsPositive { variable } => {
+                    if negation.is_negated() {
+                        docvec![self.local_var(variable.name()), " <= 0"]
+                    } else {
+                        docvec![self.local_var(variable.name()), " > 0"]
+                    }
+                }
+
                 // Here we need to make sure that the bit array has a specific
                 // size.
                 BitArrayTest::Size(SizeTest { operator, size }) => {
