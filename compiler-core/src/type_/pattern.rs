@@ -8,7 +8,7 @@ use num_bigint::BigInt;
 ///
 use super::*;
 use crate::{
-    analyse::{Inferred, name::check_name_case},
+    analyse::{self, Inferred, name::check_name_case},
     ast::{
         AssignName, BitArrayOption, ImplicitCallArgOrigin, Layer, UntypedPatternBitArraySegment,
     },
@@ -290,7 +290,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         // implicitly considered utf-8 encoded strings, while floats are
         // implicitly given the float type option.
         if !segment.has_type_option() {
-            match segment.value.as_ref() {
+            match segment.value_unwrapping_assign() {
                 Pattern::String { location, .. } => {
                     self.track_feature_usage(FeatureKind::UnannotatedUtf8StringSegment, *location);
                     segment.options.push(BitArrayOption::Utf8 {
@@ -312,8 +312,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         let options: Vec<_> = segment
             .options
             .into_iter()
-            .map(|o| {
-                crate::analyse::infer_bit_array_option(o, |value, type_| {
+            .map(|option| {
+                analyse::infer_bit_array_option(option, |value, type_| {
                     Ok(self.unify(value, type_, None))
                 })
             })
@@ -369,6 +369,13 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         }
 
         let type_ = match segment.value.deref() {
+            Pattern::Assign { pattern, .. } if pattern.is_discard() && segment_type.is_string() => {
+                self.error(Error::BitArraySegmentError {
+                    error: bit_array::ErrorType::VariableUtfSegmentInPattern,
+                    location: segment.location,
+                });
+                self.environment.new_unbound_var()
+            }
             Pattern::Variable { .. } if segment_type.is_string() => {
                 self.error(Error::BitArraySegmentError {
                     error: bit_array::ErrorType::VariableUtfSegmentInPattern,

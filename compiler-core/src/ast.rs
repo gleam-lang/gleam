@@ -2374,6 +2374,28 @@ impl Endianness {
     }
 }
 
+impl<Type> BitArraySegment<Pattern<Type>, Type> {
+    /// Returns the value of the pattern unwrapping any assign pattern.
+    ///
+    pub fn value_unwrapping_assign(&self) -> &Pattern<Type> {
+        match self.value.as_ref() {
+            Pattern::Assign { pattern, .. } => pattern,
+            Pattern::Int { .. }
+            | Pattern::Float { .. }
+            | Pattern::String { .. }
+            | Pattern::Variable { .. }
+            | Pattern::VarUsage { .. }
+            | Pattern::Discard { .. }
+            | Pattern::List { .. }
+            | Pattern::Constructor { .. }
+            | Pattern::Tuple { .. }
+            | Pattern::BitArray { .. }
+            | Pattern::StringPrefix { .. }
+            | Pattern::Invalid { .. } => self.value.as_ref(),
+        }
+    }
+}
+
 impl<Value> BitArraySegment<Value, Arc<Type>> {
     #[must_use]
     pub fn has_native_option(&self) -> bool {
