@@ -182,6 +182,9 @@
   compiler.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler will not generate needless code for unused pattern variables.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Build tool
 
 - The build tool now supports placing modules in a directory called `dev`,
@@ -388,10 +391,6 @@
   non-alphanumeric module name would compile to invalid syntax on the Erlang
   target.
   ([Mathieu Darse](https://github.com/mdarse))
-
-- Fixed a bug were the compiler would generate needless code for unused pattern
-  variables on the JavaScript target.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - Fixed a bug where the compiler would not correctly check the size of bit
   arrays when doing bit array pattern matching on the JavaScript target.
