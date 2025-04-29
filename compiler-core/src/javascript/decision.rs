@@ -362,7 +362,7 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
         else {
             // In case we never reach a body, we know that this let assert will
             // always throw an exception!
-            self.variables.expression_generator.statement_always_throws = true;
+            self.variables.expression_generator.let_assert_always_panics = true;
             return self.assignment_no_match(subject);
         };
 
