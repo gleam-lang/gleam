@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/assert.rs
-assertion_line: 54
 expression: "\npub fn main() {\n  assert True\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

@@ -1,8 +1,0 @@
----
-source: compiler-core/src/error/tests.rs
-expression: "err[0].text"
----
-The program `erlc` was not found. Is it installed?
-
-Documentation for installing Erlang can be viewed here:
-https://gleam.run/getting-started/installing/

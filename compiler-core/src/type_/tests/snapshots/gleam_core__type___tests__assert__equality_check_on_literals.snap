@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/assert.rs
-assertion_line: 76
 expression: "\npub fn main() {\n  assert 1 == 2\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

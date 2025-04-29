@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/assert.rs
-assertion_line: 17
 expression: "\npub fn main() {\n  assert False\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

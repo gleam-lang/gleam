@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 1724
 expression: "\n        pub fn wibble(_, _) { 1 }\n        pub fn main() {\n          wibble(1, panic)\n          1\n        }"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

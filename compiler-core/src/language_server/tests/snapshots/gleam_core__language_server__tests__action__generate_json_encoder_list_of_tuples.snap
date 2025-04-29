@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-assertion_line: 6662
 expression: "\npub type Wibble {\n  Wibble(values: List(#(Int, String)))\n}\n"
-snapshot_kind: text
 ---
 ----- BEFORE ACTION
 

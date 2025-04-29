@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "\npub fn f(result) {\n    case result {\n        Ok(reresult) -> {\n            case reresult {\n                Ok(w) -> w\n                Error(_) -> panic\n            }\n        }\n        Error(_) -> panic\n    }\n}"
+expression: "\npub fn f(result) {\n  case result {\n    Ok(reresult) -> {\n      case reresult {\n        Ok(w) -> w\n        Error(_) -> panic\n      }\n    }\n    Error(_) -> panic\n  }\n}"
 ---
 ----- BEFORE ACTION
 

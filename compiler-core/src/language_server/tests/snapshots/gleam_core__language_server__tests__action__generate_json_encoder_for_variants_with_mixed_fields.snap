@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-assertion_line: 6592
 expression: "\npub type Wibble {\n  Wibble\n  Wobble(field: String, field1: Int)\n}\n"
-snapshot_kind: text
 ---
 ----- BEFORE ACTION
 
