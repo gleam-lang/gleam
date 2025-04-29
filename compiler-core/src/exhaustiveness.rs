@@ -296,7 +296,6 @@ impl Branch {
                                     value: BitArrayMatchedValue::Variable(name.clone()),
                                     read_action: read_action.clone(),
                                 });
-                                continue;
                             }
 
                             // Just like regular assigns, those patterns are unrefutable
@@ -313,7 +312,6 @@ impl Branch {
                                     value: value.as_ref().clone(),
                                     read_action: read_action.clone(),
                                 });
-                                continue;
                             }
 
                             // Discards are removed directly without even binding them
