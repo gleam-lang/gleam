@@ -766,6 +766,102 @@ pub fn main() {
 }
 
 #[test]
+fn test_remove_unused_value() {
+    let src = "
+// test
+import result.{is_ok}
+import option
+
+pub fn main() {
+  result.is_ok
+}
+";
+    assert_code_action!(
+        REMOVE_UNUSED_IMPORTS,
+        TestProject::for_source(src)
+            .add_hex_module("result", "pub fn is_ok() {}")
+            .add_hex_module("option", ""),
+        find_position_of("// test").select_until(find_position_of("pub")),
+    );
+}
+
+#[test]
+fn test_remove_aliased_unused_value() {
+    let src = "
+// test
+import result.{is_ok as ok}
+import option
+
+pub fn main() {
+  result.is_ok
+}
+";
+    assert_code_action!(
+        REMOVE_UNUSED_IMPORTS,
+        TestProject::for_source(src)
+            .add_hex_module("result", "pub fn is_ok() {}")
+            .add_hex_module("option", ""),
+        find_position_of("// test").select_until(find_position_of("pub")),
+    );
+}
+
+#[test]
+fn test_remove_multiple_unused_values() {
+    let src = "
+// test
+import result.{type Unused, used, unused, unused_again, type Used, used_again}
+
+pub fn main(x: Used) {
+  used
+  used_again
+  todo
+}
+";
+    assert_code_action!(
+        REMOVE_UNUSED_IMPORTS,
+        TestProject::for_source(src).add_hex_module(
+            "result",
+            "
+pub const used = 1
+pub const unused = 2
+pub const unused_again = 3
+pub const used_again = 4
+pub type Unused
+pub type Used
+"
+        ),
+        find_position_of("// test").select_until(find_position_of("pub")),
+    );
+}
+
+#[test]
+fn test_remove_multiple_unused_values_2() {
+    let src = "
+// test
+import result.{type Unused, used, unused, type Used, unused_again}
+
+pub fn main(x: Used) {
+  used
+  todo
+}
+";
+    assert_code_action!(
+        REMOVE_UNUSED_IMPORTS,
+        TestProject::for_source(src).add_hex_module(
+            "result",
+            "
+pub const used = 1
+pub const unused = 2
+pub const unused_again = 3
+pub type Unused
+pub type Used
+"
+        ),
+        find_position_of("// test").select_until(find_position_of("pub")),
+    );
+}
+
+#[test]
 fn test_remove_redundant_tuple_in_case_subject_simple() {
     assert_code_action!(
         REMOVE_REDUNDANT_TUPLES,
