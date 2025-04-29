@@ -13,11 +13,7 @@ fn go(x) {
 import { makeError, bitArraySliceToFloat } from "../gleam.mjs";
 
 function go(x) {
-  if (
-    x.bitSize < 8 ||
-    x.bitSize < 72 ||
-    bitArraySliceToFloat(x, 8, 72, true) !== 1.1
-  ) {
+  if (x.bitSize < 72 || bitArraySliceToFloat(x, 8, 72, true) !== 1.1) {
     throw makeError(
       "let_assert",
       "my/mod",

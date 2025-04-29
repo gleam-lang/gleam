@@ -455,6 +455,58 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
         &mut self,
         decision: &'a Decision,
     ) -> Option<ChecksAndBindings<'a>> {
+        let ChecksAndBindings {
+            mut checks,
+            bindings,
+        } = self.checks_and_bindings_loop(decision)?;
+
+        // Now we try and reduce the number of size checks that bit array patterns
+        // need to perform. In particular if all size checks do not depend on any
+        // previous segment then we can remove all the size checks except the last
+        // one, as it implies all the other ones!
+        let mut most_restrictive_size_check = None;
+        for (variable, check) in &checks {
+            if !check.referenced_segment_patterns().is_empty() {
+                // If any of the checks does reference a previous segment then
+                // it's not safe to remove intermediate checks! In that case we
+                // do not try and perform any optimisation and return all the
+                // checks as they are.
+                return Some(ChecksAndBindings { checks, bindings });
+            }
+
+            if let RuntimeCheck::BitArray {
+                test: BitArrayTest::Size(_),
+            } = check
+            {
+                most_restrictive_size_check = Some((variable.clone(), *check))
+            }
+        }
+
+        let Some(size_check) = most_restrictive_size_check else {
+            // If there's no size test at all, then there's no meaningful optimisation
+            // we can apply!
+            return Some(ChecksAndBindings { checks, bindings });
+        };
+
+        checks.retain(|(_variable, check)| {
+            if let RuntimeCheck::BitArray {
+                test: BitArrayTest::Size(_),
+            } = check
+            {
+                false
+            } else {
+                true
+            }
+        });
+
+        checks.push_front(size_check);
+        Some(ChecksAndBindings { checks, bindings })
+    }
+
+    fn checks_and_bindings_loop(
+        &mut self,
+        decision: &'a Decision,
+    ) -> Option<ChecksAndBindings<'a>> {
         match decision {
             Decision::Run { body, .. } => Some(ChecksAndBindings::new(&body.bindings)),
             Decision::Guard { .. } => unreachable!("guard in let assert decision tree"),

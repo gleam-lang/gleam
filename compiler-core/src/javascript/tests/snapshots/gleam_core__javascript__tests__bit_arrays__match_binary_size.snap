@@ -14,7 +14,7 @@ fn go(x) {
 import { makeError, bitArraySlice } from "../gleam.mjs";
 
 function go(x) {
-  if (x.bitSize < 8 || x.bitSize !== 24) {
+  if (x.bitSize !== 24) {
     throw makeError(
       "let_assert",
       "my/mod",
@@ -25,7 +25,7 @@ function go(x) {
     )
   }
   let a = bitArraySlice(x, 8, 24);
-  if (x.bitSize < 8 || x.bitSize !== 24) {
+  if (x.bitSize !== 24) {
     throw makeError(
       "let_assert",
       "my/mod",
