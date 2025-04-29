@@ -4241,6 +4241,24 @@ pub fn main() {
 }
 
 #[test]
+// https://github.com/gleam-lang/gleam/issues/4498
+fn turn_call_into_use_with_out_of_order_arguments() {
+    assert_code_action!(
+        CONVERT_TO_USE,
+        r#"
+pub fn main() {
+  fold(0, over: [], with: fn (a, b) { todo })
+}
+
+fn fold(over list: List(a), from acc: acc, with fun: fn(acc, a) -> acc) -> acc {
+  todo
+}
+"#,
+        find_position_of("fold").to_selection(),
+    );
+}
+
+#[test]
 fn inexhaustive_let_result_to_case() {
     assert_code_action!(
         CONVERT_TO_CASE,
