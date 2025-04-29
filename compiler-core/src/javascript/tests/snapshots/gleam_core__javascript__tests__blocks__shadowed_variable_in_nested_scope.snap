@@ -20,10 +20,12 @@ pub fn main() {
 export function main() {
   {
     let x = 1;
-    let $ = (() => {
+    let _block;
+    {
       let x$1 = 2;
-      return x$1;
-    })();
+      _block = x$1;
+    }
+    let $ = _block;
     
     return x;
   }
