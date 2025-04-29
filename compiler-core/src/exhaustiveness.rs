@@ -271,7 +271,7 @@ impl Branch {
                     // any size test, so if we find a `ReadAction` that is the first
                     // test to perform in a bit array pattern we know it's always
                     // going to match and can be safely moved into the branch's body.
-                    Pattern::BitArray { tests } => match tests.front() {
+                    Pattern::BitArray { tests } => match tests.front_mut() {
                         Some(BitArrayTest::Match(MatchTest {
                             value: BitArrayMatchedValue::Variable(name),
                             read_action,
@@ -285,15 +285,37 @@ impl Branch {
                             let _ = tests.pop_front();
                         }
 
-                        // Discards are removed directly without even binding them
-                        // in the branch's body.
-                        Some(test) if test.is_discard() => {
-                            let _ = tests.pop_front();
-                        }
+                        Some(test) => match test {
+                            // Just like regular assigns, those patterns are unrefutable
+                            // and will become assignments in the branch's body.
+                            BitArrayTest::Match(MatchTest {
+                                value: BitArrayMatchedValue::Assign { name, value },
+                                read_action,
+                            }) => {
+                                let bit_array = check.var.clone();
+                                self.body.assign_bit_array_slice(
+                                    name.clone(),
+                                    bit_array,
+                                    read_action.clone(),
+                                );
+                                // We will still need to check the aliased value!
+                                *test = BitArrayTest::Match(MatchTest {
+                                    value: value.as_ref().clone(),
+                                    read_action: read_action.clone(),
+                                });
+                                continue;
+                            }
 
-                        // Otherwise there's no unconditional test to pop, we
-                        // keep the pattern without changing it.
-                        Some(_) => return true,
+                            // Discards are removed directly without even binding them
+                            // in the branch's body.
+                            _ if test.is_discard() => {
+                                let _ = tests.pop_front();
+                            }
+
+                            // Otherwise there's no unconditional test to pop, we
+                            // keep the pattern without changing it.
+                            _ => return true,
+                        },
 
                         // If a bit array pattern has no tests then it's always
                         // going to match, no matter what. We just remove it.
@@ -955,7 +977,7 @@ pub enum BitArrayMatchedValue {
     Discard(EcoString),
     Assign {
         name: EcoString,
-        pattern_match: Box<BitArrayMatchedValue>,
+        value: Box<BitArrayMatchedValue>,
     },
 }
 
@@ -2791,8 +2813,8 @@ impl CaseToCompile {
     }
 }
 
-fn segment_matched_value(segment: &TypedPatternBitArraySegment) -> BitArrayMatchedValue {
-    match segment.value.as_ref() {
+fn segment_matched_value(pattern: &TypedPattern) -> BitArrayMatchedValue {
+    match pattern {
         ast::Pattern::Int { int_value, .. } => BitArrayMatchedValue::LiteralInt(int_value.clone()),
         ast::Pattern::Float { value, .. } => BitArrayMatchedValue::LiteralFloat(value.clone()),
         ast::Pattern::String { value, .. } => BitArrayMatchedValue::LiteralString(value.clone()),
@@ -2800,7 +2822,7 @@ fn segment_matched_value(segment: &TypedPatternBitArraySegment) -> BitArrayMatch
         ast::Pattern::Discard { name, .. } => BitArrayMatchedValue::Discard(name.clone()),
         ast::Pattern::Assign { name, pattern, .. } => BitArrayMatchedValue::Assign {
             name: name.clone(),
-            pattern_match: Box::new(segment_matched_value(pattern)),
+            value: Box::new(segment_matched_value(pattern)),
         },
         x => panic!("unexpected segment value pattern {:?}", x),
     }

@@ -911,7 +911,9 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                             read_action,
                             negation,
                         )?,
-                    BitArrayMatchedValue::Variable(..) | BitArrayMatchedValue::Discard(..) => {
+                    BitArrayMatchedValue::Variable(..)
+                    | BitArrayMatchedValue::Discard(..)
+                    | BitArrayMatchedValue::Assign { .. } => {
                         panic!("unreachable")
                     }
                 },
