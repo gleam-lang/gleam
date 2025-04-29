@@ -188,6 +188,9 @@ where
         // verify that this version is appropriate.
         self.check_gleam_version()?;
 
+        // Check if JavaScript configuration has changed
+        self.check_javascript_config()?;
+
         // The JavaScript target requires a prelude module to be written.
         self.write_prelude()?;
 
@@ -261,6 +264,50 @@ where
             })
     }
 
+    /// Checks if the TypeScript declarations setting has changed since the last build.
+    /// If it has changed, we clear the build directory to make sure it generates TypeScript definitions.
+    pub fn check_javascript_config(&self) -> Result<(), Error> {
+        if !self.target().is_javascript() {
+            return Ok(());
+        }
+
+        let build_path = self
+            .paths
+            .build_directory_for_target(self.mode(), self.target());
+        let config_path = build_path.join("gleam-toml.lock");
+
+        let current_setting = format!(
+            "typescript_declarations={}",
+            self.config.javascript.typescript_declarations
+        );
+
+        if self.io.is_file(&config_path) {
+            let stored_setting = self.io.read(&config_path)?;
+            if stored_setting == current_setting {
+                return Ok(());
+            }
+
+            tracing::debug!(
+                "typescript_declarations_changed from: {} to: {}",
+                stored_setting,
+                current_setting
+            );
+        }
+
+        tracing::info!("removing_build_state_due_to_typescript_declarations_change");
+        self.io.delete_directory(&build_path)?;
+
+        self.io.mkdir(&build_path)?;
+        self.io
+            .write(&config_path, &current_setting)
+            .map_err(|e| Error::FileIo {
+                action: FileIoAction::WriteTo,
+                kind: FileKind::File,
+                path: config_path,
+                err: Some(e.to_string()),
+            })
+    }
+
     pub fn compile_dependencies(&mut self) -> Result<Vec<Module>, Error> {
         assert!(
             self.stale_modules.is_empty(),
@@ -297,9 +344,7 @@ where
         // Write the TypeScript prelude, if asked for
         if self.config.javascript.typescript_declarations {
             let path = build.join("prelude.d.mts");
-            if !self.io.is_file(&path) {
-                self.io.write(&path, crate::javascript::PRELUDE_TS_DEF)?;
-            }
+            self.io.write(&path, crate::javascript::PRELUDE_TS_DEF)?;
         }
 
         Ok(())
