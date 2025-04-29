@@ -1956,3 +1956,46 @@ fn go(x) {
 "#
     )
 }
+
+#[test]
+fn negative_size_pattern() {
+    assert_js!(
+        r#"
+fn go(x) {
+  case x {
+    <<int:size(-10)>> -> int
+    _ -> 2
+  }
+}
+"#
+    )
+}
+
+#[test]
+fn negative_size_pattern_2() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let n = -10
+  case x {
+    <<int:size(n)>> -> int
+    _ -> 2
+  }
+}
+"#
+    )
+}
+
+#[test]
+fn negative_size_pattern_3() {
+    assert_js!(
+        r#"
+fn go(x) {
+  case x {
+    <<n:signed, int:size(n)>> -> int
+    _ -> 2
+  }
+}
+"#
+    )
+}

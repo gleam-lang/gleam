@@ -18,9 +18,13 @@ import { bitArraySliceToFloat } from "../gleam.mjs";
 
 function go(x) {
   let size = 3;
-  if (x.bitSize === size * 2) {
-    if (bitArraySliceToFloat(x, 0, size * 2, true) === 1.3) {
-      return 1;
+  if (size > 0) {
+    if (x.bitSize === size * 2) {
+      if (bitArraySliceToFloat(x, 0, size * 2, true) === 1.3) {
+        return 1;
+      } else {
+        return 2;
+      }
     } else {
       return 2;
     }

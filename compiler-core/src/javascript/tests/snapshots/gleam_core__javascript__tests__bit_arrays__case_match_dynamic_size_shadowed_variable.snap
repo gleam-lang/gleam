@@ -20,9 +20,13 @@ import { bitArraySliceToInt } from "../gleam.mjs";
 function go(x) {
   let n = 16;
   let n$1 = 5;
-  if (x.bitSize === n$1) {
-    let a = bitArraySliceToInt(x, 0, n$1, true, false);
-    return a;
+  if (n$1 > 0) {
+    if (x.bitSize === n$1) {
+      let a = bitArraySliceToInt(x, 0, n$1, true, false);
+      return a;
+    } else {
+      return 1;
+    }
   } else {
     return 1;
   }

@@ -18,9 +18,13 @@ import { bitArraySlice } from "../gleam.mjs";
 
 function go(x) {
   let n = 3;
-  if (x.bitSize === n * 8) {
-    let a = bitArraySlice(x, 0, n * 8);
-    return a;
+  if (n > 0) {
+    if (x.bitSize === n * 8) {
+      let a = bitArraySlice(x, 0, n * 8);
+      return a;
+    } else {
+      return x;
+    }
   } else {
     return x;
   }
