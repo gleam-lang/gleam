@@ -165,6 +165,16 @@ fn bit_array_segment_type_does_not_allow_size_utf32() {
 }
 
 #[test]
+fn bit_array_segment_type_does_not_allow_variable_string() {
+    assert_error!("case <<>> { <<a:utf8>> -> 1 _ -> 2 }");
+}
+
+#[test]
+fn bit_array_segment_type_does_not_allow_aliased_variable_string() {
+    assert_error!("case <<>> { <<_ as a:utf8>> -> 1 _ -> 2 }");
+}
+
+#[test]
 fn bit_array_segment_unit_no_size() {
     assert_error!("let x = <<1:unit(5)>> x");
 }
