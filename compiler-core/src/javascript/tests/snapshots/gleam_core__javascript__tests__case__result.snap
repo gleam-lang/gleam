@@ -13,8 +13,10 @@ fn go(x) {
 
 
 ----- COMPILED JAVASCRIPT
+import { Ok } from "../gleam.mjs";
+
 function go(x) {
-  if (x.isOk()) {
+  if (x instanceof Ok) {
     return 1;
   } else {
     return 0;

@@ -873,16 +873,15 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                 }
             }
 
-            RuntimeCheck::Variant { match_, .. } if variable.type_.is_result() => {
-                match (match_.name().as_str(), negation) {
-                    ("Ok", CheckNegation::NotNegated) => docvec![value, ".isOk()"],
-                    ("Ok", CheckNegation::Negated) => docvec!["!", value, ".isOk()"],
-                    (_, CheckNegation::NotNegated) => docvec!["!", value, ".isOk()"],
-                    (_, CheckNegation::Negated) => docvec![value, ".isOk()"],
+            RuntimeCheck::Variant { match_, index, .. } => {
+                if variable.type_.is_result() {
+                    if *index == 0 {
+                        self.expression_generator.tracker.ok_used = true;
+                    } else {
+                        self.expression_generator.tracker.error_used = true;
+                    }
                 }
-            }
 
-            RuntimeCheck::Variant { match_, .. } => {
                 let qualification = match_
                     .module()
                     .map(|module| eco_format!("${module}."))
