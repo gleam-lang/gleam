@@ -14,9 +14,8 @@ import { makeError } from "../gleam.mjs";
 
 function go(x) {
   if (
-    x.bitSize < 16 ||
-    x.byteAt(0) !== 4 || x.byteAt(1) !== 210 ||
     x.bitSize !== 24 ||
+    x.byteAt(0) !== 4 || x.byteAt(1) !== 210 ||
     x.byteAt(2) !== 123
   ) {
     throw makeError(
