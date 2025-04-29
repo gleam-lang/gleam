@@ -597,7 +597,14 @@ impl RuntimeCheck {
     pub(crate) fn referenced_segment_patterns(&self) -> Vec<(&EcoString, &ReadAction)> {
         match self {
             RuntimeCheck::BitArray { test } => test.referenced_segment_patterns(),
-            _ => vec![],
+            RuntimeCheck::Int { .. }
+            | RuntimeCheck::Float { .. }
+            | RuntimeCheck::String { .. }
+            | RuntimeCheck::StringPrefix { .. }
+            | RuntimeCheck::Tuple { .. }
+            | RuntimeCheck::Variant { .. }
+            | RuntimeCheck::NonEmptyList { .. }
+            | RuntimeCheck::EmptyList => vec![],
         }
     }
 }
