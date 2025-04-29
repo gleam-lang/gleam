@@ -1742,7 +1742,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             kind,
             annotation,
             location,
-            is_generated,
             compiled_case: _,
         } = assignment;
         let value = self.expr_in_new_scope(|this| this.infer(*value));
@@ -1799,7 +1798,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 annotation,
                 kind,
                 compiled_case: CompiledCase::failure(),
-                is_generated,
                 pattern,
                 value: Box::new(value),
             };
@@ -1810,11 +1808,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         match (&kind, not_exhaustive_error) {
             // The pattern is exhaustive in a let assignment, there's no problem here.
-            (AssignmentKind::Let, Ok(_)) => (),
+            (AssignmentKind::Let | AssignmentKind::Generated, Ok(_)) => (),
 
             // If the pattern is not exhaustive and we're not asserting we want to
             // report the error!
-            (AssignmentKind::Let, Err(e)) => {
+            (AssignmentKind::Let | AssignmentKind::Generated, Err(e)) => {
                 self.problems.error(e);
             }
 
@@ -1846,7 +1844,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // If the pattern is a let assert we want to include the compiled case
         // we got from the analysis so that it can be used for code generation!
         let kind = match kind {
-            AssignmentKind::Let => kind,
+            AssignmentKind::Let | AssignmentKind::Generated => kind,
             AssignmentKind::Assert {
                 location, message, ..
             } => AssignmentKind::Assert { location, message },
@@ -1857,7 +1855,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             annotation,
             kind,
             compiled_case: output.compiled_case,
-            is_generated,
             pattern,
             value: Box::new(value),
         }
@@ -1869,6 +1866,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> AssignmentKind<TypedExpr> {
         match kind {
             AssignmentKind::Let => AssignmentKind::Let,
+            AssignmentKind::Generated => AssignmentKind::Generated,
             AssignmentKind::Assert { location, message } => {
                 self.purity = Purity::Impure;
                 let message = match message {
@@ -2977,9 +2975,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 origin: VariableOrigin::Generated,
             },
             annotation: None,
-            is_generated: true,
             compiled_case: CompiledCase::failure(),
-            kind: AssignmentKind::Let,
+            kind: AssignmentKind::Generated,
             value: Box::new(record),
         };
 
@@ -4686,9 +4683,8 @@ impl UseAssignments {
                         location,
                         pattern,
                         annotation,
-                        is_generated: true,
                         compiled_case: CompiledCase::failure(),
-                        kind: AssignmentKind::Let,
+                        kind: AssignmentKind::Generated,
                         value: Box::new(UntypedExpr::Var { location, name }),
                     };
                     assignments

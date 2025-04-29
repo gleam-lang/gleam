@@ -707,7 +707,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                 Statement::Expression(expression) => return self.child_expression(expression),
 
                 Statement::Assignment(assignment) => match &assignment.kind {
-                    AssignmentKind::Let => {
+                    AssignmentKind::Let | AssignmentKind::Generated => {
                         return self.child_expression(assignment.value.as_ref());
                     }
                     // We can't just return the right-hand side of a `let assert`
@@ -820,7 +820,6 @@ impl<'module, 'a> Generator<'module, 'a> {
             compiled_case,
             annotation: _,
             location: _,
-            is_generated: _,
         } = assignment;
 
         // In case the pattern is just a variable, we special case it to

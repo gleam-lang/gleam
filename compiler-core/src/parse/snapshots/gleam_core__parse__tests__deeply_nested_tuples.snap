@@ -65,7 +65,6 @@ expression: "\nlet tup = #(#(#(#(4))))\n{{{tup.0}.0}.0}.0\n"
                 tree: Fail,
                 subject_variables: [],
             },
-            is_generated: false,
             annotation: None,
         },
     ),

@@ -155,7 +155,9 @@ impl<'a> CallGraphBuilder<'a> {
                         message: Some(message),
                         ..
                     } => self.expression(message),
-                    AssignmentKind::Let | AssignmentKind::Assert { message: None, .. } => {}
+                    AssignmentKind::Let
+                    | AssignmentKind::Generated
+                    | AssignmentKind::Assert { message: None, .. } => {}
                 }
             }
             Statement::Use(use_) => {

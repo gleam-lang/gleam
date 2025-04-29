@@ -32,7 +32,6 @@ expression: "\nlet a = \"inner 'quotes'\"\n"
                 tree: Fail,
                 subject_variables: [],
             },
-            is_generated: false,
             annotation: None,
         },
     ),

@@ -2248,7 +2248,9 @@ fn assignment<'a>(
     position: Position,
 ) -> Document<'a> {
     match &assignment.kind {
-        AssignmentKind::Let => let_(&assignment.value, &assignment.pattern, env),
+        AssignmentKind::Let | AssignmentKind::Generated => {
+            let_(&assignment.value, &assignment.pattern, env)
+        }
         AssignmentKind::Assert { message, .. } => let_assert(
             &assignment.value,
             &assignment.pattern,
