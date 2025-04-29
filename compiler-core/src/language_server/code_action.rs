@@ -7020,7 +7020,7 @@ pub struct RemoveUnusedImports<'a> {
 
 #[derive(Debug)]
 enum UnusedImport {
-    Value(SrcSpan),
+    ValueOrType(SrcSpan),
     Module(SrcSpan),
     ModuleAlias(SrcSpan),
 }
@@ -7028,7 +7028,7 @@ enum UnusedImport {
 impl UnusedImport {
     fn location(&self) -> SrcSpan {
         match self {
-            UnusedImport::Value(location)
+            UnusedImport::ValueOrType(location)
             | UnusedImport::Module(location)
             | UnusedImport::ModuleAlias(location) => *location,
         }
@@ -7049,6 +7049,24 @@ impl<'a> RemoveUnusedImports<'a> {
         }
     }
 
+    /// Given an import location, returns a list of the spans of all the
+    /// unqualified values it's importing. Sorted by SrcSpan location.
+    ///
+    fn imported_values(&self, import_location: SrcSpan) -> Vec<SrcSpan> {
+        self.imports
+            .iter()
+            .find(|import| import.location.contains(import_location.start))
+            .map(|import| {
+                let types = import.unqualified_types.iter().map(|type_| type_.location);
+                let values = import.unqualified_values.iter().map(|value| value.location);
+                types
+                    .chain(values)
+                    .sorted_by_key(|location| location.start)
+                    .collect_vec()
+            })
+            .unwrap_or_default()
+    }
+
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         // If there's no import in the module then there can't be any unused
         // import to remove.
@@ -7060,8 +7078,13 @@ impl<'a> RemoveUnusedImports<'a> {
         let unused_imports = (self.module.ast.type_info.warnings.iter())
             .filter_map(|warning| match warning {
                 type_::Warning::UnusedImportedValue { location, .. } => {
-                    Some(UnusedImport::Value(*location))
+                    Some(UnusedImport::ValueOrType(*location))
                 }
+                type_::Warning::UnusedType {
+                    location,
+                    imported: true,
+                    ..
+                } => Some(UnusedImport::ValueOrType(*location)),
                 type_::Warning::UnusedImportedModule { location, .. } => {
                     Some(UnusedImport::Module(*location))
                 }
@@ -7071,9 +7094,6 @@ impl<'a> RemoveUnusedImports<'a> {
                 _ => None,
             })
             .collect_vec();
-
-        println!("{:#?}", unused_imports);
-        println!("{:#?}", self.params.range);
 
         // If the cursor is not over any of the unused imports then we don't offer
         // the code action.
@@ -7105,18 +7125,59 @@ impl<'a> RemoveUnusedImports<'a> {
                 }
 
                 // When removing unused imported values we have to be a bit more
-                // careful: an unused value might be followed by a comma that we
-                // also need to remove! So we have to look for this imported
-                // value and also delete all characters between it and the
-                // following imported value. For example:
-                //
-                // ```gleam
-                // import wibble.{wobble,    woo}
-                // //             ^^^^^^^^^^^ If wobble is unused we must remove
-                // //                         all of this!
-                // ```
-                //
-                UnusedImport::Value(_) => continue,
+                // careful: an unused value might be followed or preceded by a
+                // comma that we also need to remove!
+                UnusedImport::ValueOrType(location) => {
+                    let imported = self.imported_values(location);
+                    let unused_index = imported.binary_search(&location);
+                    let is_last = unused_index.is_ok_and(|index| index == imported.len() - 1);
+                    let next_value = unused_index
+                        .ok()
+                        .and_then(|value_index| imported.get(value_index + 1));
+                    let previous_value = unused_index.ok().and_then(|value_index| {
+                        value_index
+                            .checked_sub(1)
+                            .and_then(|previous_index| imported.get(previous_index))
+                    });
+
+                    match (previous_value, next_value) {
+                        // If there's a value following the unused import we need
+                        // to remove all characters until its start!
+                        //
+                        // ```gleam
+                        // import wibble.{unused,    used}
+                        // //             ^^^^^^^^^^^ We need to remove all of this!
+                        // ```
+                        //
+                        (_, Some(next_value)) => self.edits.delete(SrcSpan {
+                            start: location.start,
+                            end: next_value.start,
+                        }),
+                        // If this unused import is the last of the unuqualified
+                        // list and is preceded by another value then we need to
+                        // remove all characters starting from its end.
+                        //
+                        // ```gleam
+                        // import wibble.{used,     unused}
+                        // //                 ^^^^^^^^^^^^ We need to remove all of this!
+                        // ```
+                        //
+                        (Some(previous_value), _) if is_last => self.edits.delete(SrcSpan {
+                            start: previous_value.end,
+                            end: location.end,
+                        }),
+                        // In all other cases it means that this is the only
+                        // item in the import list. We can just remove it.
+                        //
+                        // ```gleam
+                        // import wibble.{unused}
+                        // //             ^^^^^^ We remove this import, the formatter will already
+                        // //                    take care of removing the empty curly braces
+                        // ```
+                        //
+                        (_, _) => self.edits.delete(location),
+                    }
+                }
             }
         }
 
