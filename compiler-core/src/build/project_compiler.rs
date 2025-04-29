@@ -276,7 +276,6 @@ where
             .build_directory_for_target(self.mode(), self.target());
         let config_path = build_path.join("gleam-toml.lock");
 
-        // Store settings in TOML format so we can parse and compare individual settings
         let current_setting = format!(
             "[javascript]\ntypescript_declarations = {}\n",
             self.config.javascript.typescript_declarations
