@@ -118,10 +118,11 @@ pub(crate) struct Generator<'module, 'ast> {
     ///
     statement_level: Vec<Document<'ast>>,
 
-    /// This will be true if we've generated a statement that is guaranteed to
-    /// throw. This means we can stop code generation for all following statements
+    /// This will be true if we've generated a `let assert` statement that we know
+    /// is guaranteed to throw.
+    /// This means we can stop code generation for all the following statements
     /// in the same block!
-    pub statement_always_throws: bool,
+    pub let_assert_always_panics: bool,
 }
 
 impl<'module, 'a> Generator<'module, 'a> {
@@ -160,7 +161,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             function_position: Position::Tail,
             scope_position: Position::Tail,
             statement_level: Vec::new(),
-            statement_always_throws: false,
+            let_assert_always_panics: false,
         }
     }
 
@@ -773,8 +774,8 @@ impl<'module, 'a> Generator<'module, 'a> {
 
             // If we've generated code for a statement that always throws, we
             // can skip code generation for all the following ones.
-            if self.statement_always_throws {
-                self.statement_always_throws = false;
+            if self.let_assert_always_panics {
+                self.let_assert_always_panics = false;
                 break;
             }
         }
