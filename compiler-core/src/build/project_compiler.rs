@@ -302,10 +302,6 @@ where
                         );
                     }
                 }
-            } else {
-                // If we can't parse the stored setting as TOML (migrating from previous format),
-                // just treat it as a change
-                tracing::debug!("javascript_config_format_changed from old format to TOML");
             }
         }
 
