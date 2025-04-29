@@ -1,0 +1,54 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn go(x) {\n case x {\n    <<\"Hello\" as message>>\n    | <<\"Jak\" as message, _:bytes>> -> message\n    _ -> \"wibble\"\n }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+ case x {
+    <<"Hello" as message>>
+    | <<"Jak" as message, _:bytes>> -> message
+    _ -> "wibble"
+ }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function go(x) {
+  if (x.bitSize === 64) {
+    if (x.byteAt(0) === 72 &&
+      x.byteAt(1) === 101 &&
+      x.byteAt(2) === 108 &&
+      x.byteAt(3) === 108 &&
+      x.byteAt(4) === 111) {
+      let message = "Hello";
+      return message;
+    } else {
+      if (x.byteAt(0) === 74 && x.byteAt(1) === 97 && x.byteAt(2) === 107) {
+        if ((x.bitSize - 64) % 8 === 0) {
+          let message = "Jak";
+          return message;
+        } else {
+          return "wibble";
+        }
+      } else {
+        return "wibble";
+      }
+    }
+  } else {
+    if (x.bitSize >= 64) {
+      if (x.byteAt(0) === 74 && x.byteAt(1) === 97 && x.byteAt(2) === 107) {
+        if ((x.bitSize - 64) % 8 === 0) {
+          let message = "Jak";
+          return message;
+        } else {
+          return "wibble";
+        }
+      } else {
+        return "wibble";
+      }
+    } else {
+      return "wibble";
+    }
+  }
+}

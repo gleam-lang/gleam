@@ -17,12 +17,12 @@ pub fn go(x) {
 export function go(x) {
   if (x.bitSize === 8) {
     if (x.byteAt(0) === 1) {
-      let n = x.byteAt(0);
+      let n = 1;
       return n;
     } else {
       if (x.byteAt(0) === 2) {
         if ((x.bitSize - 8) % 8 === 0) {
-          let n = x.byteAt(0);
+          let n = 2;
           return n;
         } else {
           return 1;
@@ -35,7 +35,7 @@ export function go(x) {
     if (x.bitSize >= 8) {
       if (x.byteAt(0) === 2) {
         if ((x.bitSize - 8) % 8 === 0) {
-          let n = x.byteAt(0);
+          let n = 2;
           return n;
         } else {
           return 1;

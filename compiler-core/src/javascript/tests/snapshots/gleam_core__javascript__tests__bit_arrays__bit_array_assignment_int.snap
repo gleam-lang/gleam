@@ -25,6 +25,6 @@ export function main() {
       { value: $ }
     )
   }
-  let a = $.byteAt(0);
+  let a = 1;
   return a;
 }

@@ -286,18 +286,28 @@ impl Branch {
                         }
 
                         Some(test) => match test {
+                            // If we have `_ as a` we treat that as a regular variable
+                            // assignment.
+                            BitArrayTest::Match(MatchTest {
+                                value: BitArrayMatchedValue::Assign { name, value },
+                                read_action,
+                            }) if value.is_discard() => {
+                                *test = BitArrayTest::Match(MatchTest {
+                                    value: BitArrayMatchedValue::Variable(name.clone()),
+                                    read_action: read_action.clone(),
+                                });
+                                continue;
+                            }
+
                             // Just like regular assigns, those patterns are unrefutable
                             // and will become assignments in the branch's body.
                             BitArrayTest::Match(MatchTest {
                                 value: BitArrayMatchedValue::Assign { name, value },
                                 read_action,
                             }) => {
-                                let bit_array = check.var.clone();
-                                self.body.assign_bit_array_slice(
-                                    name.clone(),
-                                    bit_array,
-                                    read_action.clone(),
-                                );
+                                self.body
+                                    .assign_segment_constant_value(name.clone(), value.as_ref());
+
                                 // We will still need to check the aliased value!
                                 *test = BitArrayTest::Match(MatchTest {
                                     value: value.as_ref().clone(),
@@ -362,6 +372,14 @@ pub enum BoundValue {
     ///
     LiteralString(EcoString),
 
+    /// `let a = 123`
+    ///
+    LiteralInt(BigInt),
+
+    /// `let a = 12.2`
+    ///
+    LiteralFloat(EcoString),
+
     /// `let a = sliceAsInt(bit_array, 0, 16, ...)`
     ///
     BitArraySlice {
@@ -402,6 +420,21 @@ impl Body {
                 read_action: value,
             },
         ))
+    }
+
+    fn assign_segment_constant_value(&mut self, name: EcoString, value: &BitArrayMatchedValue) {
+        let value = match value {
+            BitArrayMatchedValue::LiteralFloat(value) => BoundValue::LiteralFloat(value.clone()),
+            BitArrayMatchedValue::LiteralInt(value) => BoundValue::LiteralInt(value.clone()),
+            BitArrayMatchedValue::LiteralString(value) => BoundValue::LiteralString(value.clone()),
+            BitArrayMatchedValue::Variable(_)
+            | BitArrayMatchedValue::Discard(_)
+            | BitArrayMatchedValue::Assign { .. } => {
+                panic!("aliased non constant value: {:#?}", value)
+            }
+        };
+
+        self.bindings.push((name, value))
     }
 }
 
@@ -979,6 +1012,19 @@ pub enum BitArrayMatchedValue {
         name: EcoString,
         value: Box<BitArrayMatchedValue>,
     },
+}
+
+impl BitArrayMatchedValue {
+    pub fn is_discard(&self) -> bool {
+        match self {
+            BitArrayMatchedValue::Discard(_) => true,
+            BitArrayMatchedValue::LiteralFloat(_)
+            | BitArrayMatchedValue::LiteralInt(_)
+            | BitArrayMatchedValue::LiteralString(_)
+            | BitArrayMatchedValue::Variable(_)
+            | BitArrayMatchedValue::Assign { .. } => false,
+        }
+    }
 }
 
 impl BitArrayTest {
