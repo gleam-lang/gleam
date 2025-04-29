@@ -19,12 +19,12 @@ import { bitArraySliceToFloat } from "../gleam.mjs";
 export function go(x) {
   if (x.bitSize === 64) {
     if (bitArraySliceToFloat(x, 0, 64, true) === 3.14) {
-      let pi = bitArraySliceToFloat(x, 0, 64, true);
+      let pi = 3.14;
       return pi;
     } else {
       if (bitArraySliceToFloat(x, 0, 64, true) === 1.1) {
         if ((x.bitSize - 64) % 8 === 0) {
-          let pi = bitArraySliceToFloat(x, 0, 64, true);
+          let pi = 1.1;
           return pi;
         } else {
           return 1.1;
@@ -37,7 +37,7 @@ export function go(x) {
     if (x.bitSize >= 64) {
       if (bitArraySliceToFloat(x, 0, 64, true) === 1.1) {
         if ((x.bitSize - 64) % 8 === 0) {
-          let pi = bitArraySliceToFloat(x, 0, 64, true);
+          let pi = 1.1;
           return pi;
         } else {
           return 1.1;

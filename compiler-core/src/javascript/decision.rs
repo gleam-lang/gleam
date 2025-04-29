@@ -820,6 +820,8 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         let assigned_value = match value {
             BoundValue::Variable(variable) => self.get_value(variable).to_doc(),
             BoundValue::LiteralString(value) => string(value),
+            BoundValue::LiteralFloat(value) => float(value),
+            BoundValue::LiteralInt(value) => eco_string_int(eco_format!("{value}")),
             BoundValue::BitArraySlice {
                 bit_array,
                 read_action,
