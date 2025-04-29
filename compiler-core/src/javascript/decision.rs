@@ -384,6 +384,7 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
                     // We never generate runtime checks for tuples, so we skip
                     // those altogether here.
                     RuntimeCheck::Tuple { .. } => None,
+                    RuntimeCheck::Variant { .. } if variable.type_.is_nil() => None,
                     _ => self
                         .variables
                         .runtime_check(variable, check, CheckNegation::Negated)
@@ -879,12 +880,6 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                     (_, CheckNegation::NotNegated) => docvec!["!", value, ".isOk()"],
                     (_, CheckNegation::Negated) => docvec![value, ".isOk()"],
                 }
-            }
-
-            // Checking that a value typed as `Nil` is not `Nil` is always going
-            // fail.
-            RuntimeCheck::Variant { .. } if variable.type_.is_nil() && negation.is_negated() => {
-                "false".to_doc()
             }
 
             RuntimeCheck::Variant { match_, .. } => {

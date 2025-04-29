@@ -162,3 +162,14 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn assert_nil_always_throws() {
+    assert_js!(
+        r#"
+pub fn go(x: Nil) {
+  let assert Nil = x
+}
+"#
+    );
+}
