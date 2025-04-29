@@ -2872,6 +2872,10 @@ function and try again.");
                                 "This needs an explicit size",
                                 vec!["Hint: If you specify unit() you must also specify size().".into()],
                             ),
+                            bit_array::ErrorType::ConstantSizeNotPositive => (
+                                "A constant size must be a positive number",
+                                vec![]
+                            )
                         };
                     extra.push("See: https://tour.gleam.run/data-types/bit-arrays/".into());
                     let text = extra.join("\n");

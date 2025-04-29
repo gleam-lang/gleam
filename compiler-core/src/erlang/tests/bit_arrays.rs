@@ -129,17 +129,6 @@ fn bit_array_declare_and_use_var() {
     );
 }
 
-#[test]
-fn negative_size() {
-    assert_erl!(
-        r#"
-pub fn main() {
-  <<1:size(-1)>>
-}
-"#,
-    );
-}
-
 // https://github.com/gleam-lang/gleam/issues/3050
 #[test]
 fn unicode_bit_array_1() {
