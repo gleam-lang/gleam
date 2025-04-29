@@ -282,25 +282,27 @@ where
             self.config.javascript.typescript_declarations
         );
 
+        // Skip rebuild if file exists and configs match
         if self.io.is_file(&config_path) {
             let stored_setting = self.io.read(&config_path)?;
 
-            if let Ok(stored_toml) = toml::from_str::<toml::Value>(&stored_setting) {
-                if let Ok(current_toml) = toml::from_str::<toml::Value>(&current_setting) {
-                    if stored_toml.get("javascript") == current_toml.get("javascript") {
-                        return Ok(());
-                    }
+            let stored_result = toml::from_str::<toml::Value>(&stored_setting);
+            let current_result = toml::from_str::<toml::Value>(&current_setting);
 
-                    if let (Some(stored_js), Some(current_js)) = (
-                        stored_toml.get("javascript"),
-                        current_toml.get("javascript"),
-                    ) {
-                        tracing::debug!(
-                            "javascript_config_changed from: {:?} to: {:?}",
-                            stored_js,
-                            current_js
-                        );
-                    }
+            if let (Ok(stored_toml), Ok(current_toml)) = (&stored_result, &current_result) {
+                if stored_toml.get("javascript") == current_toml.get("javascript") {
+                    return Ok(());
+                }
+
+                if let (Some(stored_js), Some(current_js)) = (
+                    stored_toml.get("javascript"),
+                    current_toml.get("javascript"),
+                ) {
+                    tracing::debug!(
+                        "javascript_config_changed from: {:?} to: {:?}",
+                        stored_js,
+                        current_js
+                    );
                 }
             }
         }
