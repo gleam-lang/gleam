@@ -173,6 +173,11 @@
   Erlang target.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The compiler will now reject bit array segments whose constant size is zero or
+  negative. Previously a zero or negative sized segment would crash the
+  compiler.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Build tool
 
 - The build tool now supports placing modules in a directory called `dev`,
