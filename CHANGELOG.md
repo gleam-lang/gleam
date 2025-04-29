@@ -422,6 +422,28 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server can now also remove unused imported values and types:
+
+  ```gleam
+  import a_module.{type Unused, unused, used}
+
+  pub fn main() {
+    used
+  }
+  ```
+
+  Triggering the code action will remove all unused types and values:
+
+  ```gleam
+  import a_module.{used}
+
+  pub fn main() {
+    used
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 - Improved the formatting of `echo` when followed by long binary expressions.
