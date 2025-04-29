@@ -3089,3 +3089,23 @@ type Wobble {
 fn double_assignment_in_bit_array() {
     assert_error!("let assert <<a as b>> = <<>>");
 }
+
+#[test]
+fn negative_size_value() {
+    assert_error!("<<1:size(-1)>>");
+}
+
+#[test]
+fn negative_size_pattern() {
+    assert_error!("let assert <<1:size(-1)>> = <<>>");
+}
+
+#[test]
+fn zero_size_value() {
+    assert_error!("<<1:size(0)>>");
+}
+
+#[test]
+fn zero_size_pattern() {
+    assert_error!("let assert <<1:size(0)>> = <<>>");
+}

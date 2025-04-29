@@ -272,6 +272,17 @@ where
         }
     }
 
+    // If size is a literal integer, then it must be positive. Otherwise, we
+    // know it's never going to match and makes no sense to write it down!
+    if let Some(size @ Size { value, .. }) = categories.size {
+        match value.as_int_literal() {
+            Some(n) if n <= BigInt::ZERO => {
+                return err(ErrorType::ConstantSizeNotPositive, size.location());
+            }
+            Some(_) | None => (),
+        }
+    }
+
     Ok(categories.segment_type())
 }
 
@@ -329,4 +340,5 @@ pub enum ErrorType {
     TypeDoesNotAllowUnit { type_: EcoString },
     UnitMustHaveSize,
     VariableUtfSegmentInPattern,
+    ConstantSizeNotPositive,
 }

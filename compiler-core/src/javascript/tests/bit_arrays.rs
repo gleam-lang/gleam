@@ -1000,28 +1000,6 @@ fn as_module_const() {
 }
 
 #[test]
-fn negative_size() {
-    assert_js!(
-        r#"
-fn go(x: Int) {
-  <<x:size(-1)>>
-}
-"#,
-    );
-}
-
-#[test]
-fn negative_size_constant_value() {
-    assert_js!(
-        r#"
-fn go(x: Int) {
-  <<1:size(-1)>>
-}
-"#,
-    );
-}
-
-#[test]
 fn bit_array_literal_string_constant_is_treated_as_utf8() {
     assert_js!(r#"const a = <<"hello", " ", "world">>"#);
 }
