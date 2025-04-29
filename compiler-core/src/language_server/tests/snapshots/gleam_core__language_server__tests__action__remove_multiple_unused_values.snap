@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\n// test\nimport result.{type Unused, used, unused, unused_again, type Used, used_again}\n\npub fn main(x: Used) {\n  used\n  used_again\n  todo\n}\n"
+---
+----- BEFORE ACTION
+
+// test
+▔▔▔▔▔▔▔
+import result.{type Unused, used, unused, unused_again, type Used, used_again}
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+
+pub fn main(x: Used) {
+↑                     
+  used
+  used_again
+  todo
+}
+
+
+----- AFTER ACTION
+
+// test
+import result.{used, type Used, used_again}
+
+pub fn main(x: Used) {
+  used
+  used_again
+  todo
+}

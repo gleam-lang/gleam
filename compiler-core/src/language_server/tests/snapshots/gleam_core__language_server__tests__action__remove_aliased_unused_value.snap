@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\n// test\nimport result.{is_ok as ok}\nimport option\n\npub fn main() {\n  result.is_ok\n}\n"
+---
+----- BEFORE ACTION
+
+// test
+▔▔▔▔▔▔▔
+import result.{is_ok as ok}
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+import option
+▔▔▔▔▔▔▔▔▔▔▔▔▔
+
+pub fn main() {
+↑              
+  result.is_ok
+}
+
+
+----- AFTER ACTION
+
+// test
+import result.{}
+
+pub fn main() {
+  result.is_ok
+}
