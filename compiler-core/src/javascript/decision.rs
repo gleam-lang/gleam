@@ -614,7 +614,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     ) -> Result<Vec<SubjectAssignment<'a>>, Error> {
         let assignments: Vec<_> = subjects
             .iter()
-            .map(|subject| assign_subject(self.expression_generator, subject))
+            .map(|subject| assign_subject(self.expression_generator, subject, Ordering::Strict))
             .try_collect()?;
 
         for (variable, assignment) in compiled_case
@@ -644,7 +644,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             .subject_variables
             .first()
             .expect("decision tree with no subjects");
-        let assignment = assign_subject(self.expression_generator, subject)?;
+        let assignment = assign_subject(self.expression_generator, subject, Ordering::Loose)?;
         self.set_value(variable, assignment.name());
         self.bind(assignment.name(), variable);
         Ok(assignment)
@@ -1486,6 +1486,7 @@ impl SubjectAssignment<'_> {
 fn assign_subject<'a>(
     expression_generator: &mut Generator<'_, 'a>,
     subject: &'a TypedExpr,
+    ordering: Ordering,
 ) -> Result<SubjectAssignment<'a>, Error> {
     static ASSIGNMENT_VAR_ECO_STR: OnceLock<EcoString> = OnceLock::new();
 
@@ -1505,9 +1506,7 @@ fn assign_subject<'a>(
             let name = expression_generator
                 .next_local_var(ASSIGNMENT_VAR_ECO_STR.get_or_init(|| ASSIGNMENT_VAR.into()));
             let value = expression_generator
-                .not_in_tail_position(Some(Ordering::Strict), |this| {
-                    this.wrap_expression(subject)
-                })?;
+                .not_in_tail_position(Some(ordering), |this| this.wrap_expression(subject))?;
 
             Ok(SubjectAssignment::BindToVariable { value, name })
         }

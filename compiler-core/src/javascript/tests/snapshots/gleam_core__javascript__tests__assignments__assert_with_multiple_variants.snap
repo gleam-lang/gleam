@@ -41,16 +41,16 @@ class Woo extends $CustomType {
 }
 
 function go() {
-  let $ = (() => {
-    throw makeError(
-      "todo",
-      "my/mod",
-      9,
-      "go",
-      "`todo` expression evaluated. This code has not yet been implemented.",
-      {}
-    )
-  })();
+  let _block;
+  throw makeError(
+    "todo",
+    "my/mod",
+    9,
+    "go",
+    "`todo` expression evaluated. This code has not yet been implemented.",
+    {}
+  )
+  let $ = _block;
   if (!($ instanceof Wobble)) {
     throw makeError(
       "let_assert",
