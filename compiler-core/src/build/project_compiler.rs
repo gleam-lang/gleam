@@ -276,25 +276,40 @@ where
             .build_directory_for_target(self.mode(), self.target());
         let config_path = build_path.join("gleam-toml.lock");
 
+        // Store settings in TOML format so we can parse and compare individual settings
         let current_setting = format!(
-            "typescript_declarations={}",
+            "[javascript]\ntypescript_declarations = {}\n",
             self.config.javascript.typescript_declarations
         );
 
         if self.io.is_file(&config_path) {
             let stored_setting = self.io.read(&config_path)?;
-            if stored_setting == current_setting {
-                return Ok(());
-            }
 
-            tracing::debug!(
-                "typescript_declarations_changed from: {} to: {}",
-                stored_setting,
-                current_setting
-            );
+            if let Ok(stored_toml) = toml::from_str::<toml::Value>(&stored_setting) {
+                if let Ok(current_toml) = toml::from_str::<toml::Value>(&current_setting) {
+                    if stored_toml.get("javascript") == current_toml.get("javascript") {
+                        return Ok(());
+                    }
+
+                    if let (Some(stored_js), Some(current_js)) = (
+                        stored_toml.get("javascript"),
+                        current_toml.get("javascript"),
+                    ) {
+                        tracing::debug!(
+                            "javascript_config_changed from: {:?} to: {:?}",
+                            stored_js,
+                            current_js
+                        );
+                    }
+                }
+            } else {
+                // If we can't parse the stored setting as TOML (migrating from previous format),
+                // just treat it as a change
+                tracing::debug!("javascript_config_format_changed from old format to TOML");
+            }
         }
 
-        tracing::info!("removing_build_state_due_to_typescript_declarations_change");
+        tracing::info!("removing_build_state_due_to_javascript_config_change");
         self.io.delete_directory(&build_path)?;
 
         self.io.mkdir(&build_path)?;
