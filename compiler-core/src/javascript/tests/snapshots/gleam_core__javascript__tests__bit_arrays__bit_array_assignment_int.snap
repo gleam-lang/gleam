@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn main() {\n let assert <<1 as a>> = <<1>>\n a\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+ let assert <<1 as a>> = <<1>>
+ a
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError, toBitArray } from "../gleam.mjs";
+
+export function main() {
+  let $ = toBitArray([1]);
+  if ($.bitSize !== 8 || $.byteAt(0) !== 1) {
+    throw makeError(
+      "let_assert",
+      "my/mod",
+      3,
+      "main",
+      "Pattern match failed, no pattern matched the value.",
+      { value: $ }
+    )
+  }
+  let a = $.byteAt(0);
+  return a;
+}

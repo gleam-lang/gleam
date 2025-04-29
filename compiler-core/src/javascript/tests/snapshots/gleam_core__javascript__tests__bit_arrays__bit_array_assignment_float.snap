@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn main() {\n let assert <<3.14 as pi:float>> = <<3.14>>\n pi\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+ let assert <<3.14 as pi:float>> = <<3.14>>
+ pi
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError, toBitArray, bitArraySliceToFloat, sizedFloat } from "../gleam.mjs";
+
+export function main() {
+  let $ = toBitArray([sizedFloat(3.14, 64, true)]);
+  if ($.bitSize !== 64 || bitArraySliceToFloat($, 0, 64, true) !== 3.14) {
+    throw makeError(
+      "let_assert",
+      "my/mod",
+      3,
+      "main",
+      "Pattern match failed, no pattern matched the value.",
+      { value: $ }
+    )
+  }
+  let pi = bitArraySliceToFloat($, 0, 64, true);
+  return pi;
+}

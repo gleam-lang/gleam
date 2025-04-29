@@ -1999,3 +1999,115 @@ fn go(x) {
 "#
     )
 }
+
+// https://github.com/gleam-lang/gleam/issues/3375
+#[test]
+fn bit_array_assignment_int() {
+    assert_js!(
+        "
+pub fn main() {
+ let assert <<1 as a>> = <<1>>
+ a
+}
+"
+    );
+}
+
+#[test]
+fn case_bit_array_assignment_int() {
+    assert_js!(
+        "
+pub fn go(x) {
+ case x {
+    <<1 as n>>
+    | <<2 as n, _:bytes>> -> n
+    _ -> 1
+ }
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3375
+#[test]
+fn bit_array_assignment_float() {
+    assert_js!(
+        "
+pub fn main() {
+ let assert <<3.14 as pi:float>> = <<3.14>>
+ pi
+}
+"
+    );
+}
+
+#[test]
+fn case_bit_array_assignment_float() {
+    assert_js!(
+        "
+pub fn go(x) {
+ case x {
+    <<3.14 as pi:float>>
+    | <<1.1 as pi:float, _:bytes>> -> pi
+    _ -> 1.1
+ }
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3375
+#[test]
+fn bit_array_assignment_string() {
+    assert_js!(
+        r#"
+pub fn main() {
+ let assert <<"Hello, world!" as message:utf8>> = <<"Hello, world!">>
+ message
+}
+"#
+    );
+}
+
+#[test]
+fn case_bit_array_assignment_string() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+ case x {
+    <<"Hello" as message>>
+    | <<"Jak" as message, _:bytes>> -> message
+    _ -> "wibble"
+ }
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3375
+#[test]
+fn bit_array_assignment_discard() {
+    assert_js!(
+        r#"
+pub fn main() {
+ let assert <<_ as number>> = <<10>>
+ number
+}
+"#
+    );
+}
+
+#[test]
+fn case_bit_array_assignment_discard() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+ case x {
+    <<_ as n>>
+    | <<_ as n, _:bytes>> -> n
+    _ -> 1
+ }
+}
+"#
+    );
+}
