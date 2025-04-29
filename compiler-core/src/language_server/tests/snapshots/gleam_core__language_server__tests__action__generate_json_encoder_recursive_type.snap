@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-assertion_line: 6629
 expression: "\nimport gleam/option.{Some}\n\npub type LinkedList {\n  LinkedList(value: Int, next: option.Option(LinkedList))\n}\n"
-snapshot_kind: text
 ---
 ----- BEFORE ACTION
 

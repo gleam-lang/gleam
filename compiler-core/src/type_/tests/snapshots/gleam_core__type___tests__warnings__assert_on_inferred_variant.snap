@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 3020
 expression: "\ntype Wibble {\n  Wibble(w: Int)\n  Wobble(w: String)\n}\n\npub fn main() {\n  let assert Wobble(w) = Wibble(10)\n  w\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

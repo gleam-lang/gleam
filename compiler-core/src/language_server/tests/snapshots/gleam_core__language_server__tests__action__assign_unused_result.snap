@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-assertion_line: 1506
 expression: "\npub fn main() {\n    let x = 1\n    Ok(x)\n    Nil\n}\n"
-snapshot_kind: text
 ---
 ----- BEFORE ACTION
 

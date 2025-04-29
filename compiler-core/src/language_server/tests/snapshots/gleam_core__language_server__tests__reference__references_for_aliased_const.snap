@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/reference.rs
-assertion_line: 549
 expression: "\npub const wibble = 123\n\npub fn main() {\n  wibble\n}\n"
-snapshot_kind: text
 ---
 -- mod.gleam
 

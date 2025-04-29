@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "import gleam/io\n\npub fn main() {\n  let b = <<1234:unit(4)-size(32)>>\n  io.debug(b)\n}"
+expression: "import gleam/io\n\nconst n = 24\n\npub fn main() {\n  let bits = <<8080:size(n)>>\n  bits\n}"
 ---
 ----- BEFORE ACTION
 import gleam/io

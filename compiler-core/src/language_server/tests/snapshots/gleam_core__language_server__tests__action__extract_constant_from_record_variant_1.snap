@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "pub type Auth {\n  Verified(String)\n  Unverified\n}\n\npub fn main() {\n  let u = Verified(\"User\")\n  let v = verify(something, u)\n\n  v\n}\n"
+expression: "pub type Auth {\n  Verified(String)\n  Unverified\n}\n\npub fn main() {\n  let u = Verified(\"User\")\n  let v = verify(something, u)\n\n  v\n}"
 ---
 ----- BEFORE ACTION
 pub type Auth {

@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-assertion_line: 6500
 expression: "\nimport gleam/json as json_encoding\n\npub type Wibble {\n  Wibble(a: Int, b: Float, c: String)\n}\n"
-snapshot_kind: text
 ---
 ----- BEFORE ACTION
 

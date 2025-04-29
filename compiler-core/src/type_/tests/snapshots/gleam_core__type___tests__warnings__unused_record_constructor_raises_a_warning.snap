@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 1218
 expression: "\npub type Thing {\n  Thing(value: Int)\n}\n\npub fn main() {\n  Thing(1)\n  1\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

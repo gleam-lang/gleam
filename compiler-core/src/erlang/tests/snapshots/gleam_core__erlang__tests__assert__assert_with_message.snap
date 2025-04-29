@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/assert.rs
-assertion_line: 124
 expression: "\npub fn main() {\n  assert True as \"This shouldn't fail\"\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

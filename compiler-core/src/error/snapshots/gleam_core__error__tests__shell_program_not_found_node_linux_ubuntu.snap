@@ -1,8 +1,0 @@
----
-source: compiler-core/src/error/tests.rs
-expression: "err[0].text"
----
-The program `node` was not found. Is it installed?
-
-Documentation for installing Node.js via package manager can be viewed here:
-https://nodejs.org/en/download/package-manager/all/
