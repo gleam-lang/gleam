@@ -84,6 +84,22 @@ impl CodeActionBuilder {
     }
 }
 
+/// A small helper function to get the indentation at a given position.
+fn count_indentation(code: &str, line_numbers: &LineNumbers, line: u32) -> usize {
+    let mut indent_size = 0;
+    let line_start = *line_numbers
+        .line_starts
+        .get(line as usize)
+        .expect("Line number should be valid");
+
+    let mut chars = code[line_start as usize..].chars();
+    while chars.next() == Some(' ') {
+        indent_size += 1;
+    }
+
+    indent_size
+}
+
 /// Code action to remove literal tuples in case subjects, essentially making
 /// the elements of the tuples into the case's subjects.
 ///
@@ -1036,28 +1052,7 @@ pub fn code_action_add_missing_patterns(
             continue;
         };
 
-        // Find the start of the line. We can't just use the start of the case
-        // expression for cases like:
-        //
-        //```gleam
-        // let value = case a {}
-        //```
-        //
-        // Here, the start of the expression is part-way through the line, meaning
-        // we think we are more indented than we actually are
-        //
-        let mut indent_size = 0;
-        let line_start = *edits
-            .line_numbers
-            .line_starts
-            .get(range.start.line as usize)
-            .expect("Line number should be valid");
-        let chars = module.code.chars();
-        let mut chars = chars.skip(line_start as usize);
-        // Count indentation
-        while chars.next() == Some(' ') {
-            indent_size += 1;
-        }
+        let indent_size = count_indentation(&module.code, &edits.line_numbers, range.start.line);
 
         let indent = " ".repeat(indent_size);
 
@@ -1102,13 +1097,7 @@ pub fn code_action_add_missing_patterns(
                 .end;
 
             // Find the opening brace of the case expression
-
-            // Calculate the number of characters from the start of the line to the end of the
-            // last subject, to skip, so we can find the opening brace.
-            // That is: the location we want to get to, minus the start of the line which we skipped to begin with,
-            // minus the number we skipped for the indent, minus one more because we go one past the end of indentation
-            let num_to_skip = last_subject_location - line_start - indent_size as u32 - 1;
-            let chars = chars.skip(num_to_skip as usize);
+            let chars = module.code[last_subject_location as usize..].chars();
             let mut start_brace_location = last_subject_location;
             for char in chars {
                 start_brace_location += 1;
@@ -2850,19 +2839,11 @@ impl<'a> ExtractVariable<'a> {
 
         let range = self.edits.src_span_to_lsp_range(insert_location);
 
-        let line_starts = self.edits.line_numbers.line_starts.to_owned();
-        let line_start = line_starts
-            .get(range.start.line as usize)
-            .expect("Line number should be valid");
-
-        let chars = self.module.code.chars();
-        let mut chars = chars.skip(*line_start as usize);
-
-        // Count indentation
-        let mut indent_size = 0;
-        while chars.next() == Some(' ') {
-            indent_size += 1;
-        }
+        let indent_size = count_indentation(
+            &self.module.code,
+            &self.edits.line_numbers,
+            range.start.line,
+        );
 
         let mut indent = " ".repeat(indent_size);
 
@@ -2870,7 +2851,10 @@ impl<'a> ExtractVariable<'a> {
         // Wrap in a block if needed
         let mut insertion = format!("let {variable_name} = {content}");
         if self.to_be_wrapped {
-            let line_end = line_starts
+            let line_end = self
+                .edits
+                .line_numbers
+                .line_starts
                 .get((range.end.line + 1) as usize)
                 .expect("Line number should be valid");
 
@@ -3443,23 +3427,16 @@ impl<'a> ExtractConstant<'a> {
                 let range = self
                     .edits
                     .src_span_to_lsp_range(self.selected_expression.expect("Real range value"));
-                let mut indent_size = 0;
-                let line_start = *self
-                    .edits
-                    .line_numbers
-                    .line_starts
-                    .get(range.start.line as usize)
-                    .expect("Line number should be valid");
-                let chars = self.module.code.chars();
-                let mut chars = chars.skip(line_start as usize);
-                // Count indentation
-                while chars.next() == Some(' ') {
-                    indent_size += 1;
-                }
+
+                let indent_size = count_indentation(
+                    &self.module.code,
+                    &self.edits.line_numbers,
+                    range.start.line,
+                );
 
                 let expr_span_with_new_line = SrcSpan {
                     // We remove leading indentation + 1 to remove the newline with it
-                    start: expr_span.start - (indent_size + 1),
+                    start: expr_span.start - (indent_size as u32 + 1),
                     end: expr_span.end,
                 };
                 self.edits.delete(expr_span_with_new_line);
@@ -5550,8 +5527,7 @@ impl<'a> InlineVariable<'a> {
 
         let mut location = assignment.location;
 
-        let chars = self.module.code.chars();
-        let mut chars = chars.skip(assignment.location.end as usize);
+        let mut chars = self.module.code[location.end as usize..].chars();
         // Delete any whitespace after the removed statement
         while chars.next().is_some_and(char::is_whitespace) {
             location.end += 1;
@@ -6415,20 +6391,12 @@ impl<'a> WrapInBlock<'a> {
             .edits
             .src_span_to_lsp_range(self.selected_expression.expect("Real range value"));
 
-        let line_start = *self
-            .edits
-            .line_numbers
-            .line_starts
-            .get(range.start.line as usize)
-            .expect("Line number should be valid");
-        let chars = self.module.code.chars();
-        let mut chars = chars.skip(line_start as usize);
+        let indent_size = count_indentation(
+            &self.module.code,
+            &self.edits.line_numbers,
+            range.start.line,
+        );
 
-        // Count indentation
-        let mut indent_size = 0;
-        while chars.next() == Some(' ') {
-            indent_size += 1;
-        }
         let expr_indent_size = indent_size + 2;
 
         let indent = " ".repeat(indent_size);

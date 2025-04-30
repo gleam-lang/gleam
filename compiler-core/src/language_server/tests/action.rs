@@ -8089,3 +8089,18 @@ pub fn main(w: Wibble) {
         find_position_of("case w").select_until(find_position_of("{}")),
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3628#issuecomment-2543342212
+#[test]
+fn add_missing_patterns_multibyte_grapheme() {
+    assert_code_action!(
+        ADD_MISSING_PATTERNS,
+        r#"
+// ä
+fn wibble() {
+  case True {}
+}
+"#,
+        find_position_of("case").select_until(find_position_of("True {"))
+    );
+}
