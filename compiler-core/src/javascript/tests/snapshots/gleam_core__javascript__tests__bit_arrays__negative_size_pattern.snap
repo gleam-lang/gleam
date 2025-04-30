@@ -1,12 +1,13 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-expression: "\nfn go(x) {\n  case x {\n    <<int:size(-10)>> -> int\n    _ -> 2\n  }\n}\n"
+expression: "\nfn go(x) {\n  let n = -10\n  case x {\n    <<int:size(n)>> -> int\n    _ -> 2\n  }\n}\n"
 ---
 ----- SOURCE CODE
 
 fn go(x) {
+  let n = -10
   case x {
-    <<int:size(-10)>> -> int
+    <<int:size(n)>> -> int
     _ -> 2
   }
 }
@@ -16,9 +17,14 @@ fn go(x) {
 import { bitArraySliceToInt } from "../gleam.mjs";
 
 function go(x) {
-  if (x.bitSize === -10) {
-    let int = bitArraySliceToInt(x, 0, -10, true, false);
-    return int;
+  let n = -10;
+  if (n > 0) {
+    if (x.bitSize === n) {
+      let int = bitArraySliceToInt(x, 0, n, true, false);
+      return int;
+    } else {
+      return 2;
+    }
   } else {
     return 2;
   }
