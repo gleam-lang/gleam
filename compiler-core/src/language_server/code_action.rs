@@ -1052,7 +1052,7 @@ pub fn code_action_add_missing_patterns(
             continue;
         };
 
-        let indent_size = count_indentation(&module.code, &edits.line_numbers, range.start.line);
+        let indent_size = count_indentation(&module.code, edits.line_numbers, range.start.line);
 
         let indent = " ".repeat(indent_size);
 
@@ -2833,11 +2833,8 @@ impl<'a> ExtractVariable<'a> {
 
         let range = self.edits.src_span_to_lsp_range(insert_location);
 
-        let indent_size = count_indentation(
-            &self.module.code,
-            &self.edits.line_numbers,
-            range.start.line,
-        );
+        let indent_size =
+            count_indentation(&self.module.code, self.edits.line_numbers, range.start.line);
 
         let mut indent = " ".repeat(indent_size);
 
@@ -3422,11 +3419,8 @@ impl<'a> ExtractConstant<'a> {
                     .edits
                     .src_span_to_lsp_range(self.selected_expression.expect("Real range value"));
 
-                let indent_size = count_indentation(
-                    &self.module.code,
-                    &self.edits.line_numbers,
-                    range.start.line,
-                );
+                let indent_size =
+                    count_indentation(&self.module.code, self.edits.line_numbers, range.start.line);
 
                 let expr_span_with_new_line = SrcSpan {
                     // We remove leading indentation + 1 to remove the newline with it
@@ -6385,11 +6379,8 @@ impl<'a> WrapInBlock<'a> {
             .edits
             .src_span_to_lsp_range(self.selected_expression.expect("Real range value"));
 
-        let indent_size = count_indentation(
-            &self.module.code,
-            &self.edits.line_numbers,
-            range.start.line,
-        );
+        let indent_size =
+            count_indentation(&self.module.code, self.edits.line_numbers, range.start.line);
 
         let expr_indent_size = indent_size + 2;
 
