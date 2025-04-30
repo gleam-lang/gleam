@@ -374,3 +374,8 @@
   "convert to use" code action, when used on a function call with labelled
   arguments.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where a reference to an imported external function with a
+  non-alphanumeric module name would compile to invalid syntax on the Erlang
+  target.
+  ([Mathieu Darse](https://github.com/mdarse))
