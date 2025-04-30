@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/docs/tests.rs
-expression: "html_page_to_string(compile(config, modules), vec![\".content\"])"
+expression: "\n//// Here's an example code snippet:\n//// ```\n//// wibble\n////   |> wobble\n//// ```\n////\n"
 ---
 <!-- Page: app.html -->
 

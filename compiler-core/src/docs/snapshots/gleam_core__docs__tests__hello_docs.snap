@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/docs/tests.rs
-expression: "to_html_pages_snapshot(compile(config, modules))"
+expression: "\n/// Here is some documentation\npub fn one() {\n  1\n}\n"
 ---
 //// app.html
 

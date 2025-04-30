@@ -157,41 +157,42 @@ fn html_page_to_string(pages: Vec<(String, scraper::Html)>, raw_selectors: Vec<&
     }
 }
 
+macro_rules! assert_docs {
+    ($src:expr $(,)?) => {{
+        assert_docs!(vec![], $src);
+    }};
+
+    ($selectors:expr, $src:expr $(,)?) => {{
+        let mut config = PackageConfig::default();
+        config.name = EcoString::from("test_project_name");
+        let modules = vec![("app.gleam", $src)];
+        let output = html_page_to_string(compile(config, modules), $selectors);
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    }};
+}
+
 #[test]
 fn hello_docs() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
-    let modules = vec![(
-        "app.gleam",
+    assert_docs!(
         r#"
 /// Here is some documentation
 pub fn one() {
   1
 }
 "#,
-    )];
-
-    insta::assert_snapshot!(html_page_to_string(compile(config, modules), vec![]));
+    );
 }
 
 #[test]
 fn ignored_argument_is_called_arg() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
-    let modules = vec![("app.gleam", "pub fn one(_) { 1 }")];
-    insta::assert_snapshot!(html_page_to_string(
-        compile(config, modules),
-        vec![".member:has(#one)"]
-    ));
+    assert_docs!(vec![".member:has(#one)"], "pub fn one(_) { 1 }");
 }
 
 // https://github.com/gleam-lang/gleam/issues/2347
 #[test]
 fn tables() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
-    let modules = vec![(
-        "app.gleam",
+    assert_docs!(
+        vec![".member:has(#one)"],
         r#"
 /// | heading 1    | heading 2    |
 /// |--------------|--------------|
@@ -202,20 +203,14 @@ pub fn one() {
   1
 }
 "#,
-    )];
-    insta::assert_snapshot!(html_page_to_string(
-        compile(config, modules),
-        vec![".member:has(#one)"]
-    ));
+    );
 }
 
 // https://github.com/gleam-lang/gleam/issues/2202
 #[test]
 fn long_function_wrapping() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
-    let modules = vec![(
-        "app.gleam",
+    assert_docs!(
+        vec![".member:has(#lazy_or)"],
         r#"
 pub type Option(t) {
   Some(t)
@@ -232,20 +227,13 @@ pub fn lazy_or(first: Option(a), second: fn() -> Option(a)) -> Option(a) {
   }
 }
 "#,
-    )];
-
-    insta::assert_snapshot!(html_page_to_string(
-        compile(config, modules),
-        vec![".member:has(#lazy_or)"]
-    ));
+    );
 }
 
 #[test]
 fn internal_definitions_are_not_included() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
-    let modules = vec![(
-        "app.gleam",
+    assert_docs!(
+        vec![".content", ".sidebar"],
         r#"
 @internal
 pub const wibble = 1
@@ -259,32 +247,23 @@ pub type Wobble { Wobble }
 @internal
 pub fn one() { 1 }
 "#,
-    )];
-    insta::assert_snapshot!(html_page_to_string(
-        compile(config, modules),
-        vec![".content", ".sidebar"]
-    ));
+    );
 }
 
 // https://github.com/gleam-lang/gleam/issues/2561
 #[test]
 fn discarded_arguments_are_not_shown() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
-    let modules = vec![("app.gleam", "pub fn discard(_discarded: a) -> Int { 1 }")];
-    insta::assert_snapshot!(html_page_to_string(
-        compile(config, modules),
-        vec![".member:has(#discard)"]
-    ));
+    assert_docs!(
+        vec![".member:has(#discard)"],
+        "pub fn discard(_discarded: a) -> Int { 1 }"
+    );
 }
 
 // https://github.com/gleam-lang/gleam/issues/2631
 #[test]
 fn docs_of_a_type_constructor_are_not_used_by_the_following_function() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
-    let modules = vec![(
-        "app.gleam",
+    assert_docs!(
+        vec![".member:has(#Wibble)", ".member:has(#main)"],
         r#"
 pub type Wibble {
   Wobble(
@@ -295,11 +274,7 @@ pub type Wibble {
 
 pub fn main() { todo }
 "#,
-    )];
-    insta::assert_snapshot!(html_page_to_string(
-        compile(config, modules),
-        vec![".member:has(#Wibble)", ".member:has(#main)"]
-    ));
+    );
 }
 
 #[test]
@@ -326,10 +301,8 @@ pub fn indentation_test() {
 
 #[test]
 fn markdown_code_from_function_comment_is_trimmed() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
-    let modules = vec![(
-        "app.gleam",
+    assert_docs!(
+        vec![".member:has(#indentation_test)"],
         "
 /// Here's an example code snippet:
 /// ```
@@ -341,19 +314,13 @@ pub fn indentation_test() {
   todo
 }
 ",
-    )];
-    insta::assert_snapshot!(html_page_to_string(
-        compile(config, modules),
-        vec![".member:has(#indentation_test)"]
-    ));
+    );
 }
 
 #[test]
 fn markdown_code_from_module_comment_is_trimmed() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
-    let modules = vec![(
-        "app.gleam",
+    assert_docs!(
+        vec![".content"],
         "
 //// Here's an example code snippet:
 //// ```
@@ -362,11 +329,7 @@ fn markdown_code_from_module_comment_is_trimmed() {
 //// ```
 ////
 ",
-    )];
-    insta::assert_snapshot!(html_page_to_string(
-        compile(config, modules),
-        vec![".content"]
-    ));
+    );
 }
 
 #[test]

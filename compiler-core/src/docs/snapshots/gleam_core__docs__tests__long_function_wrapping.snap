@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/docs/tests.rs
-expression: "html_page_to_string(compile(config, modules), vec![\".member:has(#lazy_or)\"])"
+expression: "\npub type Option(t) {\n  Some(t)\n  None\n}\n\n/// Returns the first value if it is `Some`, otherwise evaluates the given\n/// function for a fallback value.\n///\npub fn lazy_or(first: Option(a), second: fn() -> Option(a)) -> Option(a) {\n  case first {\n    Some(_) -> first\n    None -> second()\n  }\n}\n"
 ---
 <!-- Page: app.html -->
 

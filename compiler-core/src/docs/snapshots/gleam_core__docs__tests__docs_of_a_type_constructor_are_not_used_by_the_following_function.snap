@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/docs/tests.rs
-expression: "html_page_to_string(compile(config, modules),\nvec![\".member:has(#Wibble)\", \".member:has(#main)\"])"
+expression: "\npub type Wibble {\n  Wobble(\n    /// Documentation!!\n    wabble: Int,\n  )\n}\n\npub fn main() { todo }\n"
 ---
 <!-- Page: app.html -->
 

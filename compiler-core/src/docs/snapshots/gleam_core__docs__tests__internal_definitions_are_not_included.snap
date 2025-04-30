@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/docs/tests.rs
-expression: "html_page_to_string(compile(config, modules), vec![\".content\", \".sidebar\"])"
+expression: "\n@internal\npub const wibble = 1\n\n@internal\npub type Wibble = Int\n\n@internal\npub type Wobble { Wobble }\n\n@internal\npub fn one() { 1 }\n"
 ---
 <!-- Page: app.html -->
 

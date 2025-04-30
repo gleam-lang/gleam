@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/docs/tests.rs
-expression: "html_page_to_string(compile(config, modules), vec![\".member:has(#one)\"])"
+expression: "\n/// | heading 1    | heading 2    |\n/// |--------------|--------------|\n/// | row 1 cell 1 | row 1 cell 2 |\n/// | row 2 cell 1 | row 2 cell 2 |\n///\npub fn one() {\n  1\n}\n"
 ---
 <!-- Page: app.html -->
 

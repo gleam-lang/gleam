@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/docs/tests.rs
-expression: "to_html_pages_snapshot(compile_with_markdown_pages(config, vec![], pages,\nCompileWithMarkdownPagesOpts::default()))"
+expression: "html_pages_to_string(compile_with_markdown_pages(config, vec![], pages,\nCompileWithMarkdownPagesOpts::default()))"
 ---
 //// one.html
 
