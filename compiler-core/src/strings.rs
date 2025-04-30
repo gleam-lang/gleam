@@ -117,23 +117,18 @@ pub fn to_upper_camel_case(string: &str) -> EcoString {
 pub fn string_to_utf16_bytes(string: &str, endianness: Endianness) -> Vec<u8> {
     let mut bytes = Vec::with_capacity(string.len() * 2);
 
+    let mut character_buffer = [0, 0];
     for character in string.chars() {
-        let mut character_buffer = [0, 0];
+        let segments = character.encode_utf16(&mut character_buffer);
 
-        _ = character.encode_utf16(&mut character_buffer);
-
-        let first_two_bytes = match endianness {
-            Endianness::Big => character_buffer[0].to_be_bytes(),
-            Endianness::Little => character_buffer[0].to_le_bytes(),
-        };
-        bytes.extend(first_two_bytes);
-
-        if character_buffer[1] != 0 {
-            let next_two_bytes = match endianness {
-                Endianness::Big => character_buffer[1].to_be_bytes(),
-                Endianness::Little => character_buffer[1].to_le_bytes(),
+        for segment in segments {
+            let segment_bytes = match endianness {
+                Endianness::Big => segment.to_be_bytes(),
+                Endianness::Little => segment.to_le_bytes(),
             };
-            bytes.extend(next_two_bytes);
+
+            bytes.push(segment_bytes[0]);
+            bytes.push(segment_bytes[1]);
         }
     }
 
@@ -153,4 +148,21 @@ pub fn string_to_utf32_bytes(string: &str, endianness: Endianness) -> Vec<u8> {
     }
 
     bytes
+}
+
+/// Gets the number of UTF-16 codepoints it would take to encode a given string.
+pub fn length_utf16(string: &str) -> usize {
+    let mut length = 0;
+
+    for char in string.chars() {
+        length += char.len_utf16()
+    }
+
+    length
+}
+
+/// Gets the number of UTF-32 codepoints in a string (also known as the number of
+/// characters).
+pub fn length_utf32(string: &str) -> usize {
+    string.chars().count()
 }

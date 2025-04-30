@@ -8,7 +8,7 @@ use crate::{
     exhaustiveness::{
         BitArrayMatchedValue, BitArrayTest, Body, BoundValue, CompiledCase, Decision,
         FallbackCheck, MatchTest, Offset, ReadAction, ReadSize, ReadType, RuntimeCheck,
-        SizeOperator, SizeTest, Variable, VariableUsage,
+        SizeOperator, SizeTest, StringEncoding, Variable, VariableUsage,
     },
     format::break_block,
     javascript::{
@@ -16,7 +16,7 @@ use crate::{
         maybe_escape_property,
     },
     pretty::{Document, Documentable, break_, join, line, nil},
-    strings::convert_string_escape_chars,
+    strings::{convert_string_escape_chars, string_to_utf16_bytes, string_to_utf32_bytes},
 };
 use ecow::{EcoString, eco_format};
 use itertools::Itertools;
@@ -902,8 +902,16 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                     value: expected,
                     read_action,
                 }) => match expected {
-                    BitArrayMatchedValue::LiteralString(expected) => self
-                        .literal_string_segment_bytes_check(value, expected, read_action, negation),
+                    BitArrayMatchedValue::LiteralString {
+                        value: expected,
+                        encoding,
+                    } => self.literal_string_segment_bytes_check(
+                        value,
+                        expected,
+                        read_action,
+                        negation,
+                        *encoding,
+                    ),
                     BitArrayMatchedValue::LiteralFloat(expected) => self
                         .literal_float_segment_bytes_check(value, expected, read_action, negation),
                     BitArrayMatchedValue::LiteralInt(expected) => self
@@ -1213,6 +1221,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         literal_string: &EcoString,
         read_action: &ReadAction,
         check_negation: CheckNegation,
+        encoding: StringEncoding,
     ) -> Document<'a> {
         let ReadAction {
             from: start,
@@ -1228,11 +1237,28 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             " === "
         };
 
+        let escaped = convert_string_escape_chars(literal_string);
+        // We need to have this vector here so that we don't run into lifetime
+        // issues when calling `.as_slice` on the local vectors created when this
+        // isn't a UTF-8 string.
+        let mut _bytes_vec = Vec::new();
+        let bytes = match encoding {
+            StringEncoding::Utf8 => escaped.as_bytes(),
+            StringEncoding::Utf16 => {
+                _bytes_vec = string_to_utf16_bytes(&escaped, read_action.endianness);
+                _bytes_vec.as_slice()
+            }
+            StringEncoding::Utf32 => {
+                _bytes_vec = string_to_utf32_bytes(&escaped, read_action.endianness);
+                _bytes_vec.as_slice()
+            }
+        };
+
         if let Some(mut from_byte) = start.constant_bytes() {
             // If the string starts at a compile-time known byte, then we can
             // optimise this by reading all the subsequent bytes and checking
             // they have a specific value.
-            for byte in convert_string_escape_chars(literal_string).as_bytes() {
+            for byte in bytes {
                 let byte_access = docvec![bit_array.clone(), ".byteAt(", from_byte.clone(), ")"];
                 checks.push(docvec![byte_access, equality, byte]);
                 from_byte += 1;
@@ -1240,7 +1266,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         } else {
             // If the string doesn't start at a byte aligned offset then we'll
             // have to take slices out of it to check that each byte matches.
-            for byte in convert_string_escape_chars(literal_string).as_bytes() {
+            for byte in bytes {
                 let end = self.offset_to_doc(&start.add_constant(8), false);
                 let from = self.offset_to_doc(start, false);
                 let byte_access =

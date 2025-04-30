@@ -85,8 +85,11 @@ mod missing_patterns;
 pub mod printer;
 
 use crate::{
-    ast::{self, AssignName, Endianness, TypedClause, TypedPattern, TypedPatternBitArraySegment},
-    strings::convert_string_escape_chars,
+    ast::{
+        self, AssignName, BitArrayOption, Endianness, TypedClause, TypedPattern,
+        TypedPatternBitArraySegment,
+    },
+    strings::{convert_string_escape_chars, length_utf16, length_utf32},
     type_::{
         Environment, Type, TypeValueConstructor, TypeValueConstructorField, TypeVar,
         TypeVariantConstructors, collapse_links, error::UnreachablePatternReason,
@@ -424,7 +427,9 @@ impl Body {
         let value = match value {
             BitArrayMatchedValue::LiteralFloat(value) => BoundValue::LiteralFloat(value.clone()),
             BitArrayMatchedValue::LiteralInt(value) => BoundValue::LiteralInt(value.clone()),
-            BitArrayMatchedValue::LiteralString(value) => BoundValue::LiteralString(value.clone()),
+            BitArrayMatchedValue::LiteralString { value, .. } => {
+                BoundValue::LiteralString(value.clone())
+            }
             BitArrayMatchedValue::Variable(_)
             | BitArrayMatchedValue::Discard(_)
             | BitArrayMatchedValue::Assign { .. } => {
@@ -1003,7 +1008,10 @@ pub struct MatchTest {
 pub enum BitArrayMatchedValue {
     LiteralFloat(EcoString),
     LiteralInt(BigInt),
-    LiteralString(EcoString),
+    LiteralString {
+        value: EcoString,
+        encoding: StringEncoding,
+    },
     Variable(EcoString),
     Discard(EcoString),
     Assign {
@@ -1012,13 +1020,20 @@ pub enum BitArrayMatchedValue {
     },
 }
 
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
+pub enum StringEncoding {
+    Utf8,
+    Utf16,
+    Utf32,
+}
+
 impl BitArrayMatchedValue {
     pub fn is_discard(&self) -> bool {
         match self {
             BitArrayMatchedValue::Discard(_) => true,
             BitArrayMatchedValue::LiteralFloat(_)
             | BitArrayMatchedValue::LiteralInt(_)
-            | BitArrayMatchedValue::LiteralString(_)
+            | BitArrayMatchedValue::LiteralString { .. }
             | BitArrayMatchedValue::Variable(_)
             | BitArrayMatchedValue::Assign { .. } => false,
         }
@@ -2816,7 +2831,7 @@ impl CaseToCompile {
 
             // Each segment is also turned into a match test, checking the
             // selected bits match with the pattern's value.
-            let value = segment_matched_value(&segment.value);
+            let value = segment_matched_value(&segment.value, &segment.options);
 
             let type_ = match &segment.type_ {
                 type_ if type_.is_int() => ReadType::Int,
@@ -2841,7 +2856,7 @@ impl CaseToCompile {
             match &value {
                 BitArrayMatchedValue::LiteralFloat(_)
                 | BitArrayMatchedValue::LiteralInt(_)
-                | BitArrayMatchedValue::LiteralString(_)
+                | BitArrayMatchedValue::LiteralString { .. }
                 | BitArrayMatchedValue::Discard(_) => {}
                 BitArrayMatchedValue::Variable(name)
                 | BitArrayMatchedValue::Assign { name, .. } => {
@@ -2857,16 +2872,42 @@ impl CaseToCompile {
     }
 }
 
-fn segment_matched_value(pattern: &TypedPattern) -> BitArrayMatchedValue {
+fn segment_matched_value(
+    pattern: &TypedPattern,
+    options: &[BitArrayOption<TypedPattern>],
+) -> BitArrayMatchedValue {
     match pattern {
         ast::Pattern::Int { int_value, .. } => BitArrayMatchedValue::LiteralInt(int_value.clone()),
         ast::Pattern::Float { value, .. } => BitArrayMatchedValue::LiteralFloat(value.clone()),
-        ast::Pattern::String { value, .. } => BitArrayMatchedValue::LiteralString(value.clone()),
+        ast::Pattern::String { value, .. }
+            if options
+                .iter()
+                .any(|x| matches!(x, BitArrayOption::Utf16 { .. })) =>
+        {
+            BitArrayMatchedValue::LiteralString {
+                value: value.clone(),
+                encoding: StringEncoding::Utf16,
+            }
+        }
+        ast::Pattern::String { value, .. }
+            if options
+                .iter()
+                .any(|x| matches!(x, BitArrayOption::Utf32 { .. })) =>
+        {
+            BitArrayMatchedValue::LiteralString {
+                value: value.clone(),
+                encoding: StringEncoding::Utf32,
+            }
+        }
+        ast::Pattern::String { value, .. } => BitArrayMatchedValue::LiteralString {
+            value: value.clone(),
+            encoding: StringEncoding::Utf8,
+        },
         ast::Pattern::Variable { name, .. } => BitArrayMatchedValue::Variable(name.clone()),
         ast::Pattern::Discard { name, .. } => BitArrayMatchedValue::Discard(name.clone()),
         ast::Pattern::Assign { name, pattern, .. } => BitArrayMatchedValue::Assign {
             name: name.clone(),
-            value: Box::new(segment_matched_value(pattern)),
+            value: Box::new(segment_matched_value(pattern, options)),
         },
         x => panic!("unexpected segment value pattern {:?}", x),
     }
@@ -2906,10 +2947,17 @@ fn segment_size(
         // segments, and 64 for anything else.
         None if segment.type_.is_int() => ReadSize::ConstantBits(8.into()),
         None => match segment.value.as_ref() {
-            ast::Pattern::String { .. }
-                if segment.has_utf16_option() || segment.has_utf32_option() =>
-            {
-                panic!("non utf8 string in bit array pattern on js target")
+            ast::Pattern::String { value, .. } if segment.has_utf16_option() => {
+                ReadSize::ConstantBits(
+                    // Each utf16 code unit is 16 bits
+                    length_utf16(&convert_string_escape_chars(value)) * BigInt::from(16),
+                )
+            }
+            ast::Pattern::String { value, .. } if segment.has_utf32_option() => {
+                // Each utf32 codepoint is 32 bits
+                ReadSize::ConstantBits(
+                    length_utf32(&convert_string_escape_chars(value)) * BigInt::from(32),
+                )
             }
             // If the segment is a literal string then it has an automatic size
             // given by its number of bytes.
