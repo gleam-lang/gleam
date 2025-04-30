@@ -225,7 +225,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         } else {
             let mut statements = std::mem::take(&mut self.statement_level);
             statements.push(expression);
-            join(statements.into_iter(), line())
+            join(statements, line())
         }
     }
 
