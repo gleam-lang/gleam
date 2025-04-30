@@ -130,7 +130,8 @@ fn html_pages_to_string(pages: Vec<(String, scraper::Html)>) -> String {
     pages
         .into_iter()
         .map(|(path, html)| format!("//// {}\n\n{}\n\n", path, html.html()))
-        .collect()
+        .collect::<String>()
+        .replace("\r\n", "\n")
 }
 
 fn html_page_to_string(pages: Vec<(String, scraper::Html)>, raw_selectors: Vec<&str>) -> String {
@@ -152,7 +153,7 @@ fn html_page_to_string(pages: Vec<(String, scraper::Html)>, raw_selectors: Vec<&
                 })
                 .join("\n\n");
 
-            format!("<!-- Page: {} -->\n\n{}", path, selected)
+            format!("<!-- Page: {} -->\n\n{}", path, selected).replace("\r\n", "\n")
         }
     }
 }
