@@ -1,0 +1,42 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "\nfn identity(x) { x }\n\npub type Wibble {\n  Wibble(a: Int, b: Int)\n}\n\npub fn main() {\n  let w = Wibble(1, 2)\n  identity(Wibble(..w |> identity, b: 4)) |> identity\n}\n"
+---
+----- SOURCE CODE
+
+fn identity(x) { x }
+
+pub type Wibble {
+  Wibble(a: Int, b: Int)
+}
+
+pub fn main() {
+  let w = Wibble(1, 2)
+  identity(Wibble(..w |> identity, b: 4)) |> identity
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class Wibble extends $CustomType {
+  constructor(a, b) {
+    super();
+    this.a = a;
+    this.b = b;
+  }
+}
+
+function identity(x) {
+  return x;
+}
+
+export function main() {
+  let w = new Wibble(1, 2);
+  let _pipe = identity((() => { let _block;
+      let _pipe = w;
+      _block = identity(_pipe);
+      let _record = _block;
+      return new Wibble(_record.a, 4); })());
+  return identity(_pipe);
+}
