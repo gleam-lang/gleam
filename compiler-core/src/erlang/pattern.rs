@@ -2,7 +2,10 @@ use std::cell::RefCell;
 
 use ecow::eco_format;
 
-use crate::analyse::Inferred;
+use crate::{
+    analyse::Inferred,
+    strings::{length_utf16, length_utf32},
+};
 
 use super::*;
 
@@ -215,12 +218,33 @@ fn pattern_segment<'a>(
                 // the string first, so we can correctly match the bit array segment then compare
                 // it afterwards.
                 Pattern::String { value, .. } => {
+                    let escaped = convert_string_escape_chars(value);
+                    let (utf_option, string_length) = if options
+                        .iter()
+                        .any(|option| matches!(option, BitArrayOption::Utf16 { .. }))
+                    {
+                        // Each UTF-16 codepoint is 2 bytes
+                        ("utf16", length_utf16(&escaped) * 2)
+                    } else if options
+                        .iter()
+                        .any(|option| matches!(option, BitArrayOption::Utf32 { .. }))
+                    {
+                        // Each UTF-32 codepoint is 4 bytes
+                        ("utf32", length_utf32(&escaped) * 4)
+                    } else {
+                        ("utf8", escaped.len())
+                    };
+
                     guards.borrow_mut().push(docvec![
                         variable_name.clone(),
                         " =:= ",
-                        string(value)
+                        "<<\"",
+                        string_inner(value),
+                        "\"/",
+                        utf_option,
+                        ">>",
                     ]);
-                    docvec![variable_name, ":", string_length_utf8_bytes(value)]
+                    docvec![variable_name, ":", string_length]
                 }
 
                 // Doing a pattern such as `<<_ as a>>` is the same as just `<<a>>`, so we treat it
