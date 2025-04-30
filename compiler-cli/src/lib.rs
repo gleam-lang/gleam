@@ -111,6 +111,7 @@ struct TreeOptions {
         short,
         long,
         ignore_case = true,
+        conflicts_with = "invert",
         help = "Package to be used as the root of the tree"
     )]
     package: Option<String>,
@@ -119,6 +120,7 @@ struct TreeOptions {
         short,
         long,
         ignore_case = true,
+        conflicts_with = "package",
         help = "Invert the tree direction and focus on the given package",
         value_name = "PACKAGE"
     )]

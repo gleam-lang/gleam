@@ -8,7 +8,7 @@
   on the Erlang target.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- Analysis it now fault tolerant in the presence of errors in field definitions
+- Analysis is now fault tolerant in the presence of errors in field definitions
   of custom type variants.
   ([Adi Salimgereyev](https://github.com/abs0luty))
 
@@ -22,6 +22,11 @@
   `gleam run --help` has been improved: now each one states which function it's
   going to run.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The `--invert` and `--package` options of `gleam deps tree` are now mutually
+  exclusive; if both options are given the command will fail. Previously,
+  `--invert` would be silently ignored if given together with `--package`.
+  ([Evan Silberman](https://github.com/silby))
 
 ### Language server
 
