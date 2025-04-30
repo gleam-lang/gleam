@@ -862,6 +862,32 @@ pub type Used
 }
 
 #[test]
+fn test_remove_entire_unused_import() {
+    let src = "
+// test
+import result.{unused, unused_again}
+
+pub fn main() {
+  todo
+}
+";
+    assert_code_action!(
+        REMOVE_UNUSED_IMPORTS,
+        TestProject::for_source(src).add_hex_module(
+            "result",
+            "
+pub const used = 1
+pub const unused = 2
+pub const unused_again = 3
+pub type Unused
+pub type Used
+"
+        ),
+        find_position_of("// test").select_until(find_position_of("pub")),
+    );
+}
+
+#[test]
 fn test_remove_redundant_tuple_in_case_subject_simple() {
     assert_code_action!(
         REMOVE_REDUNDANT_TUPLES,

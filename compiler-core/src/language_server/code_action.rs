@@ -7093,6 +7093,7 @@ impl<'a> RemoveUnusedImports<'a> {
                 }
                 _ => None,
             })
+            .sorted_by_key(|import| import.location())
             .collect_vec();
 
         // If the cursor is not over any of the unused imports then we don't offer
@@ -7106,7 +7107,7 @@ impl<'a> RemoveUnusedImports<'a> {
         }
 
         // Otherwise we start removing all unused imports:
-        for import in unused_imports {
+        for import in &unused_imports {
             match import {
                 // When an entire module is unused we can delete its entire location
                 // in the source code.
@@ -7120,7 +7121,7 @@ impl<'a> RemoveUnusedImports<'a> {
                             end: location.end + 1,
                         })
                     } else {
-                        self.edits.delete(location)
+                        self.edits.delete(*location)
                     }
                 }
 
@@ -7128,7 +7129,7 @@ impl<'a> RemoveUnusedImports<'a> {
                 // careful: an unused value might be followed or preceded by a
                 // comma that we also need to remove!
                 UnusedImport::ValueOrType(location) => {
-                    let imported = self.imported_values(location);
+                    let imported = self.imported_values(*location);
                     let unused_index = imported.binary_search(&location);
                     let is_last = unused_index.is_ok_and(|index| index == imported.len() - 1);
                     let next_value = unused_index
@@ -7138,6 +7139,12 @@ impl<'a> RemoveUnusedImports<'a> {
                         value_index
                             .checked_sub(1)
                             .and_then(|previous_index| imported.get(previous_index))
+                    });
+                    let previous_is_unused = previous_value.is_some_and(|previous| {
+                        unused_imports
+                            .as_slice()
+                            .binary_search_by_key(previous, |import| import.location())
+                            .is_ok()
                     });
 
                     match (previous_value, next_value) {
@@ -7153,19 +7160,26 @@ impl<'a> RemoveUnusedImports<'a> {
                             start: location.start,
                             end: next_value.start,
                         }),
+
                         // If this unused import is the last of the unuqualified
-                        // list and is preceded by another value then we need to
-                        // remove all characters starting from its end.
+                        // list and is preceded by another used value then we
+                        // need to do some additional cleanup and remove all
+                        // characters starting from its end.
+                        // (If the previous one is unused as well it will take
+                        // care of removing all the extra space)
                         //
                         // ```gleam
                         // import wibble.{used,     unused}
                         // //                 ^^^^^^^^^^^^ We need to remove all of this!
                         // ```
                         //
-                        (Some(previous_value), _) if is_last => self.edits.delete(SrcSpan {
-                            start: previous_value.end,
-                            end: location.end,
-                        }),
+                        (Some(previous_value), _) if is_last && !previous_is_unused => {
+                            self.edits.delete(SrcSpan {
+                                start: previous_value.end,
+                                end: location.end,
+                            })
+                        }
+
                         // In all other cases it means that this is the only
                         // item in the import list. We can just remove it.
                         //
@@ -7175,7 +7189,7 @@ impl<'a> RemoveUnusedImports<'a> {
                         // //                    take care of removing the empty curly braces
                         // ```
                         //
-                        (_, _) => self.edits.delete(location),
+                        (_, _) => self.edits.delete(*location),
                     }
                 }
             }
