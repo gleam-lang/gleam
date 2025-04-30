@@ -1330,12 +1330,16 @@ impl QualifiedConstructor<'_> {
 pub struct QualifiedToUnqualifiedImportFirstPass<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
-    line_numbers: LineNumbers,
+    line_numbers: &'a LineNumbers,
     qualified_constructor: Option<QualifiedConstructor<'a>>,
 }
 
 impl<'a> QualifiedToUnqualifiedImportFirstPass<'a> {
-    fn new(module: &'a Module, params: &'a CodeActionParams, line_numbers: LineNumbers) -> Self {
+    fn new(
+        module: &'a Module,
+        params: &'a CodeActionParams,
+        line_numbers: &'a LineNumbers,
+    ) -> Self {
         Self {
             module,
             params,
@@ -1854,8 +1858,7 @@ pub fn code_action_convert_qualified_constructor_to_unqualified(
     params: &CodeActionParams,
     actions: &mut Vec<CodeAction>,
 ) {
-    let mut first_pass =
-        QualifiedToUnqualifiedImportFirstPass::new(module, params, line_numbers.clone());
+    let mut first_pass = QualifiedToUnqualifiedImportFirstPass::new(module, params, line_numbers);
     first_pass.visit_typed_module(&module.ast);
     let Some(qualified_constructor) = first_pass.qualified_constructor else {
         return;
@@ -1879,12 +1882,16 @@ struct UnqualifiedConstructor<'a> {
 struct UnqualifiedToQualifiedImportFirstPass<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
-    line_numbers: LineNumbers,
+    line_numbers: &'a LineNumbers,
     unqualified_constructor: Option<UnqualifiedConstructor<'a>>,
 }
 
 impl<'a> UnqualifiedToQualifiedImportFirstPass<'a> {
-    fn new(module: &'a Module, params: &'a CodeActionParams, line_numbers: LineNumbers) -> Self {
+    fn new(
+        module: &'a Module,
+        params: &'a CodeActionParams,
+        line_numbers: &'a LineNumbers,
+    ) -> Self {
         Self {
             module,
             params,
@@ -2272,8 +2279,7 @@ pub fn code_action_convert_unqualified_constructor_to_qualified(
     params: &CodeActionParams,
     actions: &mut Vec<CodeAction>,
 ) {
-    let mut first_pass =
-        UnqualifiedToQualifiedImportFirstPass::new(module, params, line_numbers.clone());
+    let mut first_pass = UnqualifiedToQualifiedImportFirstPass::new(module, params, line_numbers);
     first_pass.visit_typed_module(&module.ast);
     let Some(unqualified_constructor) = first_pass.unqualified_constructor else {
         return;
@@ -2944,7 +2950,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         finally: &'ast TypedExpr,
         finally_kind: &'ast PipelineAssignmentKind,
     ) {
-        let expr_range = self.edits.src_span_to_lsp_range(location.to_owned());
+        let expr_range = self.edits.src_span_to_lsp_range(*location);
         if !within(self.params.range, expr_range) {
             ast::visit::visit_typed_expr_pipeline(
                 self,
@@ -3063,7 +3069,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
                 } else {
                     self.statement_before_selected_expression = self.latest_statement;
                 };
-                self.selected_expression = Some((location.to_owned(), expr.type_()));
+                self.selected_expression = Some((*location, expr.type_()));
             }
         }
 
@@ -3104,7 +3110,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         location: &'ast SrcSpan,
         statements: &'ast [TypedStatement],
     ) {
-        let range = self.edits.src_span_to_lsp_range(location.to_owned());
+        let range = self.edits.src_span_to_lsp_range(*location);
         if !within(self.params.range, range) {
             ast::visit::visit_typed_expr_block(self, location, statements);
             return;
@@ -6453,7 +6459,7 @@ impl<'ast> ast::visit::Visit<'ast> for WrapInBlock<'ast> {
         ) {
             return;
         }
-        match *assignment.to_owned().value {
+        match assignment.value.as_ref() {
             // To avoid wrapping the same expression in multiple, nested blocks.
             TypedExpr::Block { .. } => {}
             TypedExpr::RecordAccess { .. }
