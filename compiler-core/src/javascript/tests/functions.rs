@@ -541,3 +541,22 @@ pub fn main() {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4533
+#[test]
+fn immediately_invoked_function_expressions_include_statement_level() {
+    assert_js!(
+        "
+fn identity(x) { x }
+
+pub type Wibble {
+  Wibble(a: Int, b: Int)
+}
+
+pub fn main() {
+  let w = Wibble(1, 2)
+  identity(Wibble(..w |> identity, b: 4)) |> identity
+}
+"
+    );
+}

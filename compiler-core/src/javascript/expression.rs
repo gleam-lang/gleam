@@ -225,9 +225,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         } else {
             let mut statements = std::mem::take(&mut self.statement_level);
             statements.push(expression);
-            Itertools::intersperse(statements.into_iter(), line())
-                .collect_vec()
-                .to_doc()
+            join(statements.into_iter(), line())
         }
     }
 
@@ -582,7 +580,8 @@ impl<'module, 'a> Generator<'module, 'a> {
         self.scope_position = scope_position;
 
         // Wrap in iife document
-        let doc = immediately_invoked_function_expression_document(result?);
+        let doc =
+            immediately_invoked_function_expression_document(self.add_statement_level(result?));
         Ok(self.wrap_return(doc))
     }
 
