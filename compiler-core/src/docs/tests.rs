@@ -14,6 +14,7 @@ use crate::{
 use camino::Utf8PathBuf;
 use ecow::EcoString;
 use itertools::Itertools;
+use scraper::Selector;
 use serde_json::to_string as serde_to_string;
 
 #[derive(Default)]
@@ -26,7 +27,7 @@ fn compile_with_markdown_pages(
     modules: Vec<(&str, &str)>,
     markdown_pages: Vec<(&str, &str)>,
     opts: CompileWithMarkdownPagesOpts,
-) -> EcoString {
+) -> Vec<(String, scraper::Html)> {
     let fs = InMemoryFileSystem::new();
     for (name, src) in modules {
         fs.write(&Utf8PathBuf::from(format!("/src/{name}")), src)
@@ -101,27 +102,59 @@ fn compile_with_markdown_pages(
     .into_iter()
     .filter(|file| file.path.extension() == Some("html"))
     .sorted_by(|a, b| a.path.cmp(&b.path))
-    .flat_map(|file| {
-        Some(format!(
-            "//// {}\n\n{}\n\n",
-            file.path.as_str(),
-            file.content
-                .text()?
-                .replace(COMPILER_VERSION, "GLEAM_VERSION_HERE")
-        ))
+    .map(|file| {
+        (
+            file.path.to_string(),
+            scraper::Html::parse_document(
+                &file
+                    .content
+                    .text()
+                    .unwrap()
+                    .replace(COMPILER_VERSION, "GLEAM_VERSION_HERE"),
+            ),
+        )
     })
-    .collect::<String>()
-    .chars()
-    .collect()
+    .collect_vec()
 }
 
-pub fn compile(config: PackageConfig, modules: Vec<(&str, &str)>) -> EcoString {
+fn compile(config: PackageConfig, modules: Vec<(&str, &str)>) -> Vec<(String, scraper::Html)> {
     compile_with_markdown_pages(
         config,
         modules,
         vec![],
         CompileWithMarkdownPagesOpts::default(),
     )
+}
+
+fn html_pages_to_string(pages: Vec<(String, scraper::Html)>) -> String {
+    pages
+        .into_iter()
+        .map(|(path, html)| format!("//// {}\n\n{}\n\n", path, html.html()))
+        .collect()
+}
+
+fn html_page_to_string(pages: Vec<(String, scraper::Html)>, raw_selectors: Vec<&str>) -> String {
+    match (pages.as_slice(), raw_selectors.as_slice()) {
+        ([] | [_, _, ..], _) => panic!("generated more than one page"),
+        ([(path, html)], []) => {
+            format!("//// {}\n\n{}\n\n", path, html.html())
+        }
+        ([(path, html)], raw_selectors) => {
+            let selected = raw_selectors
+                .iter()
+                .map(|raw_selector| {
+                    let selector = Selector::parse(raw_selector).expect("invalid selector");
+                    let selected = html
+                        .select(&selector)
+                        .map(|element| element.html())
+                        .join("\n\n");
+                    format!("<!-- Selector: {} -->\n{}", raw_selector, selected)
+                })
+                .join("\n\n");
+
+            format!("<!-- Page: {} -->\n\n{}", path, selected)
+        }
+    }
 }
 
 #[test]
@@ -137,7 +170,8 @@ pub fn one() {
 }
 "#,
     )];
-    insta::assert_snapshot!(compile(config, modules));
+
+    insta::assert_snapshot!(html_page_to_string(compile(config, modules), vec![]));
 }
 
 #[test]
@@ -145,7 +179,10 @@ fn ignored_argument_is_called_arg() {
     let mut config = PackageConfig::default();
     config.name = EcoString::from("test_project_name");
     let modules = vec![("app.gleam", "pub fn one(_) { 1 }")];
-    insta::assert_snapshot!(compile(config, modules));
+    insta::assert_snapshot!(html_page_to_string(
+        compile(config, modules),
+        vec![".member:has(#one)"]
+    ));
 }
 
 // https://github.com/gleam-lang/gleam/issues/2347
@@ -166,7 +203,10 @@ pub fn one() {
 }
 "#,
     )];
-    insta::assert_snapshot!(compile(config, modules));
+    insta::assert_snapshot!(html_page_to_string(
+        compile(config, modules),
+        vec![".member:has(#one)"]
+    ));
 }
 
 // https://github.com/gleam-lang/gleam/issues/2202
@@ -194,7 +234,10 @@ pub fn lazy_or(first: Option(a), second: fn() -> Option(a)) -> Option(a) {
 "#,
     )];
 
-    insta::assert_snapshot!(compile(config, modules));
+    insta::assert_snapshot!(html_page_to_string(
+        compile(config, modules),
+        vec![".member:has(#lazy_or)"]
+    ));
 }
 
 #[test]
@@ -217,7 +260,10 @@ pub type Wobble { Wobble }
 pub fn one() { 1 }
 "#,
     )];
-    insta::assert_snapshot!(compile(config, modules));
+    insta::assert_snapshot!(html_page_to_string(
+        compile(config, modules),
+        vec![".content", ".sidebar"]
+    ));
 }
 
 // https://github.com/gleam-lang/gleam/issues/2561
@@ -226,7 +272,10 @@ fn discarded_arguments_are_not_shown() {
     let mut config = PackageConfig::default();
     config.name = EcoString::from("test_project_name");
     let modules = vec![("app.gleam", "pub fn discard(_discarded: a) -> Int { 1 }")];
-    insta::assert_snapshot!(compile(config, modules));
+    insta::assert_snapshot!(html_page_to_string(
+        compile(config, modules),
+        vec![".member:has(#discard)"]
+    ));
 }
 
 // https://github.com/gleam-lang/gleam/issues/2631
@@ -247,7 +296,10 @@ pub type Wibble {
 pub fn main() { todo }
 "#,
     )];
-    insta::assert_snapshot!(compile(config, modules));
+    insta::assert_snapshot!(html_page_to_string(
+        compile(config, modules),
+        vec![".member:has(#Wibble)", ".member:has(#main)"]
+    ));
 }
 
 #[test]
@@ -264,12 +316,12 @@ pub fn indentation_test() {
 }
 ```",
     )];
-    insta::assert_snapshot!(compile_with_markdown_pages(
+    insta::assert_snapshot!(html_pages_to_string(compile_with_markdown_pages(
         config,
         vec![],
         pages,
         CompileWithMarkdownPagesOpts::default()
-    ));
+    )));
 }
 
 #[test]
@@ -290,7 +342,10 @@ pub fn indentation_test() {
 }
 ",
     )];
-    insta::assert_snapshot!(compile(config, modules));
+    insta::assert_snapshot!(html_page_to_string(
+        compile(config, modules),
+        vec![".member:has(#indentation_test)"]
+    ));
 }
 
 #[test]
@@ -308,7 +363,10 @@ fn markdown_code_from_module_comment_is_trimmed() {
 ////
 ",
     )];
-    insta::assert_snapshot!(compile(config, modules));
+    insta::assert_snapshot!(html_page_to_string(
+        compile(config, modules),
+        vec![".content"]
+    ));
 }
 
 #[test]
@@ -325,7 +383,7 @@ fn doc_for_commented_definitions_is_not_included_in_next_constant() {
 pub const wobble = 1
 ",
     )];
-    assert!(!compile(config, modules).contains("Not included!"));
+    assert!(!html_pages_to_string(compile(config, modules)).contains("Not included!"));
 }
 
 #[test]
@@ -345,7 +403,7 @@ pub type Wibble {
 }
 ",
     )];
-    assert!(!compile(config, modules).contains("Not included!"));
+    assert!(!html_pages_to_string(compile(config, modules)).contains("Not included!"));
 }
 
 #[test]
@@ -362,7 +420,7 @@ fn doc_for_commented_definitions_is_not_included_in_next_function() {
 pub fn wobble(arg) {}
 ",
     )];
-    assert!(!compile(config, modules).contains("Not included!"));
+    assert!(!html_pages_to_string(compile(config, modules)).contains("Not included!"));
 }
 
 #[test]
@@ -379,7 +437,7 @@ fn doc_for_commented_definitions_is_not_included_in_next_type_alias() {
 pub type Wibble = Int
 ",
     )];
-    assert!(!compile(config, modules).contains("Not included!"));
+    assert!(!html_pages_to_string(compile(config, modules)).contains("Not included!"));
 }
 
 #[test]
@@ -394,7 +452,7 @@ fn source_link_for_github_repository() {
 
     let modules = vec![("app.gleam", "pub type Wibble = Int")];
     assert!(
-        compile(config, modules)
+        html_pages_to_string(compile(config, modules))
             .contains("https://github.com/wibble/wobble/blob/v0.1.0/src/app.gleam#L1-L1")
     );
 }
@@ -410,7 +468,7 @@ fn source_link_for_github_repository_with_path() {
     };
 
     let modules = vec![("app.gleam", "pub type Wibble = Int")];
-    assert!(compile(config, modules).contains(
+    assert!(html_pages_to_string(compile(config, modules)).contains(
         "https://github.com/wibble/wobble/blob/v0.1.0/path/to/package/src/app.gleam#L1-L1"
     ));
 }
@@ -446,12 +504,12 @@ pub fn one() {
 # LICENSE
     "#,
     )];
-    insta::assert_snapshot!(compile_with_markdown_pages(
+    insta::assert_snapshot!(html_pages_to_string(compile_with_markdown_pages(
         config,
         modules,
         pages,
         CompileWithMarkdownPagesOpts::default()
-    ));
+    )));
 }
 
 #[test]
@@ -485,14 +543,14 @@ pub fn one() {
 # LICENSE
     "#,
     )];
-    insta::assert_snapshot!(compile_with_markdown_pages(
+    insta::assert_snapshot!(html_pages_to_string(compile_with_markdown_pages(
         config,
         modules,
         pages,
         CompileWithMarkdownPagesOpts {
             hex_publish: Some(DocContext::Build)
         }
-    ));
+    )));
 }
 
 fn create_sample_search_data() -> SearchData {

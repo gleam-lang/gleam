@@ -1,24 +1,22 @@
 ---
 source: compiler-core/src/docs/tests.rs
-expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMarkdownPagesOpts::default())"
+expression: "to_html_pages_snapshot(compile_with_markdown_pages(config, modules, pages,\nCompileWithMarkdownPagesOpts::default()))"
 ---
 //// LICENSE.html
 
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+<!DOCTYPE html><html><head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport">
     <title>LICENSE · test_project_name · v0.1.0</title>
-    <meta name="description" content=""/>
-    <meta name="theme-color" content="#ffaff3" media="(prefers-color-scheme: light)"/>
-    <meta name="theme-color" content="#33384d" media="(prefers-color-scheme: dark)"/>
-    <link rel="stylesheet" href="./css/index.css?v=GLEAM_VERSION_HERE" type="text/css"/>
+    <meta content="" name="description">
+    <meta content="#ffaff3" media="(prefers-color-scheme: light)" name="theme-color">
+    <meta content="#33384d" media="(prefers-color-scheme: dark)" name="theme-color">
+    <link href="./css/index.css?v=GLEAM_VERSION_HERE" rel="stylesheet" type="text/css">
     <!-- The docs_config.js file is provided by HexDocs and shared
          between multiple versions of the same package. -->
     <script src="./docs_config.js"></script>
-    <link id="syntax-theme" rel="stylesheet" href="./css/atom-one-light.min.css?v=GLEAM_VERSION_HERE"/>
-    <link rel="canonical" href="https://hexdocs.pm/test_project_name/LICENSE.html" />
+    <link href="./css/atom-one-light.min.css?v=GLEAM_VERSION_HERE" id="syntax-theme" rel="stylesheet">
+    <link href="https://hexdocs.pm/test_project_name/LICENSE.html" rel="canonical">
   </head>
   <body class="prewrap-off theme-light drawer-closed">
     <script>
@@ -144,8 +142,8 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
 
     <header class="page-header">
       <button class="sidebar-toggle" tabindex="0">
-        <svg class="label label-closed icon icon-menu" alt="Open Menu" title="Open Menu"><use xlink:href="#icon-menu"></use></svg>
-        <svg class="label label-open icon icon-x-circle" alt="Close Menu" title="Close Menu"><use xlink:href="#icon-x-circle"></use></svg>
+        <svg alt="Open Menu" class="label label-closed icon icon-menu" title="Open Menu"><use xlink:href="#icon-menu"></use></svg>
+        <svg alt="Close Menu" class="label label-open icon icon-x-circle" title="Close Menu"><use xlink:href="#icon-x-circle"></use></svg>
       </button>
 
       <h2>
@@ -187,14 +185,14 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
       </h2>
       <div class="search">
         <div class="search-input-wrap">
-          <input type="text" id="search-input" class="search-input" tabindex="0" aria-label="Search test_project_name" autocomplete="off">
-          <label for="search-input" class="search-label"><svg viewBox="0 0 24 24" class="search-icon"><use xlink:href="#icon-svg-search"></use></svg></label>
+          <input aria-label="Search test_project_name" autocomplete="off" class="search-input" id="search-input" tabindex="0" type="text">
+          <label class="search-label" for="search-input"><svg class="search-icon" viewBox="0 0 24 24"><use xlink:href="#icon-svg-search"></use></svg></label>
         </div>
-        <div id="search-results" class="search-results"></div>
+        <div class="search-results" id="search-results"></div>
       </div>
 
       <button class="search-nav-button" id="search-nav-button" tabindex="0">
-        <svg class="label icon icon-x-circle" alt="Open Search" title="Open Search"><use xlink:href="#icon-svg-search"></use></svg>
+        <svg alt="Open Search" class="label icon icon-x-circle" title="Open Search"><use xlink:href="#icon-svg-search"></use></svg>
       </button>
 
     </header>
@@ -202,7 +200,7 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
     <div class="page">
       <nav class="sidebar">
         <button class="sidebar-toggle" tabindex="1">
-          <svg class="label icon icon-x-circle" alt="Close Menu" title="Close Menu"><use xlink:href="#icon-x-circle"></use></svg>
+          <svg alt="Close Menu" class="label icon icon-x-circle" title="Close Menu"><use xlink:href="#icon-x-circle"></use></svg>
         </button>
 
         
@@ -226,9 +224,9 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
         <h2>Modules</h2>
         <ul>
         
-          <li><a href="./app.html" class="module-link">app</a></li>
+          <li><a class="module-link" href="./app.html">app</a></li>
         
-          <li><a href="./gleam/otp/actor.html" class="module-link">gleam<wbr />/otp<wbr />/actor</a></li>
+          <li><a class="module-link" href="./gleam/otp/actor.html">gleam<wbr>/otp<wbr>/actor</a></li>
         
         </ul>
 
@@ -285,14 +283,14 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
 
         <symbol id="icon-svg-search" viewBox="0 0 24 24">
             <title>Search</title>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-search">
-                <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            <svg class="feather feather-search" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="11" cy="11" r="8"></circle><line x1="21" x2="16.65" y1="21" y2="16.65"></line>
             </svg>
         </symbol>
 
         <symbol id="icon-svg-doc" viewBox="0 0 24 24">
             <title>Document</title>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file">
+            <svg class="feather feather-file" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
                 <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline>
             </svg>
         </symbol>
@@ -321,26 +319,24 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
         .then(response => response.json())
         .then(data => window.Gleam.initSearch(data));
     </script>
-  </body>
-</html>
+  
+</body></html>
 
 //// app.html
 
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+<!DOCTYPE html><html><head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport">
     <title>app · test_project_name · v0.1.0</title>
-    <meta name="description" content=""/>
-    <meta name="theme-color" content="#ffaff3" media="(prefers-color-scheme: light)"/>
-    <meta name="theme-color" content="#33384d" media="(prefers-color-scheme: dark)"/>
-    <link rel="stylesheet" href="./css/index.css?v=GLEAM_VERSION_HERE" type="text/css"/>
+    <meta content="" name="description">
+    <meta content="#ffaff3" media="(prefers-color-scheme: light)" name="theme-color">
+    <meta content="#33384d" media="(prefers-color-scheme: dark)" name="theme-color">
+    <link href="./css/index.css?v=GLEAM_VERSION_HERE" rel="stylesheet" type="text/css">
     <!-- The docs_config.js file is provided by HexDocs and shared
          between multiple versions of the same package. -->
     <script src="./docs_config.js"></script>
-    <link id="syntax-theme" rel="stylesheet" href="./css/atom-one-light.min.css?v=GLEAM_VERSION_HERE"/>
-    <link rel="canonical" href="https://hexdocs.pm/test_project_name/app.html" />
+    <link href="./css/atom-one-light.min.css?v=GLEAM_VERSION_HERE" id="syntax-theme" rel="stylesheet">
+    <link href="https://hexdocs.pm/test_project_name/app.html" rel="canonical">
   </head>
   <body class="prewrap-off theme-light drawer-closed">
     <script>
@@ -466,8 +462,8 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
 
     <header class="page-header">
       <button class="sidebar-toggle" tabindex="0">
-        <svg class="label label-closed icon icon-menu" alt="Open Menu" title="Open Menu"><use xlink:href="#icon-menu"></use></svg>
-        <svg class="label label-open icon icon-x-circle" alt="Close Menu" title="Close Menu"><use xlink:href="#icon-x-circle"></use></svg>
+        <svg alt="Open Menu" class="label label-closed icon icon-menu" title="Open Menu"><use xlink:href="#icon-menu"></use></svg>
+        <svg alt="Close Menu" class="label label-open icon icon-x-circle" title="Close Menu"><use xlink:href="#icon-x-circle"></use></svg>
       </button>
 
       <h2>
@@ -509,14 +505,14 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
       </h2>
       <div class="search">
         <div class="search-input-wrap">
-          <input type="text" id="search-input" class="search-input" tabindex="0" aria-label="Search test_project_name" autocomplete="off">
-          <label for="search-input" class="search-label"><svg viewBox="0 0 24 24" class="search-icon"><use xlink:href="#icon-svg-search"></use></svg></label>
+          <input aria-label="Search test_project_name" autocomplete="off" class="search-input" id="search-input" tabindex="0" type="text">
+          <label class="search-label" for="search-input"><svg class="search-icon" viewBox="0 0 24 24"><use xlink:href="#icon-svg-search"></use></svg></label>
         </div>
-        <div id="search-results" class="search-results"></div>
+        <div class="search-results" id="search-results"></div>
       </div>
 
       <button class="search-nav-button" id="search-nav-button" tabindex="0">
-        <svg class="label icon icon-x-circle" alt="Open Search" title="Open Search"><use xlink:href="#icon-svg-search"></use></svg>
+        <svg alt="Open Search" class="label icon icon-x-circle" title="Open Search"><use xlink:href="#icon-svg-search"></use></svg>
       </button>
 
     </header>
@@ -524,7 +520,7 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
     <div class="page">
       <nav class="sidebar">
         <button class="sidebar-toggle" tabindex="1">
-          <svg class="label icon icon-x-circle" alt="Close Menu" title="Close Menu"><use xlink:href="#icon-x-circle"></use></svg>
+          <svg alt="Close Menu" class="label icon icon-x-circle" title="Close Menu"><use xlink:href="#icon-x-circle"></use></svg>
         </button>
 
         
@@ -548,9 +544,9 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
         <h2>Modules</h2>
         <ul>
         
-          <li><a href="./app.html" class="module-link">app</a></li>
+          <li><a class="module-link" href="./app.html">app</a></li>
         
-          <li><a href="./gleam/otp/actor.html" class="module-link">gleam<wbr />/otp<wbr />/actor</a></li>
+          <li><a class="module-link" href="./gleam/otp/actor.html">gleam<wbr>/otp<wbr>/actor</a></li>
         
         </ul>
 
@@ -570,7 +566,7 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
 
       <main class="content">
         
-<h1 id="module-name" class="module-name">
+<h1 class="module-name" id="module-name">
   <a href="#module-name">app</a>
   <svg class="icon icon-gleam-chasse"><use xlink:href="#icon-gleam-chasse"></use></svg>
 </h1>
@@ -580,7 +576,7 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
 
 
 <section class="module-members">
-  <h1 id="module-values" class="module-member-kind">
+  <h1 class="module-member-kind" id="module-values">
     <a href="#module-values">Values</a>
     <svg class="icon icon-gleam-chasse"><use xlink:href="#icon-gleam-chasse"></use></svg>
   </h1>
@@ -649,14 +645,14 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
 
         <symbol id="icon-svg-search" viewBox="0 0 24 24">
             <title>Search</title>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-search">
-                <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            <svg class="feather feather-search" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="11" cy="11" r="8"></circle><line x1="21" x2="16.65" y1="21" y2="16.65"></line>
             </svg>
         </symbol>
 
         <symbol id="icon-svg-doc" viewBox="0 0 24 24">
             <title>Document</title>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file">
+            <svg class="feather feather-file" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
                 <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline>
             </svg>
         </symbol>
@@ -685,26 +681,24 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
         .then(response => response.json())
         .then(data => window.Gleam.initSearch(data));
     </script>
-  </body>
-</html>
+  
+</body></html>
 
 //// gleam/otp/actor.html
 
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+<!DOCTYPE html><html><head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport">
     <title>gleam/otp/actor · test_project_name · v0.1.0</title>
-    <meta name="description" content=""/>
-    <meta name="theme-color" content="#ffaff3" media="(prefers-color-scheme: light)"/>
-    <meta name="theme-color" content="#33384d" media="(prefers-color-scheme: dark)"/>
-    <link rel="stylesheet" href="../../css/index.css?v=GLEAM_VERSION_HERE" type="text/css"/>
+    <meta content="" name="description">
+    <meta content="#ffaff3" media="(prefers-color-scheme: light)" name="theme-color">
+    <meta content="#33384d" media="(prefers-color-scheme: dark)" name="theme-color">
+    <link href="../../css/index.css?v=GLEAM_VERSION_HERE" rel="stylesheet" type="text/css">
     <!-- The docs_config.js file is provided by HexDocs and shared
          between multiple versions of the same package. -->
     <script src="../../docs_config.js"></script>
-    <link id="syntax-theme" rel="stylesheet" href="../../css/atom-one-light.min.css?v=GLEAM_VERSION_HERE"/>
-    <link rel="canonical" href="https://hexdocs.pm/test_project_name/gleam/otp/actor.html" />
+    <link href="../../css/atom-one-light.min.css?v=GLEAM_VERSION_HERE" id="syntax-theme" rel="stylesheet">
+    <link href="https://hexdocs.pm/test_project_name/gleam/otp/actor.html" rel="canonical">
   </head>
   <body class="prewrap-off theme-light drawer-closed">
     <script>
@@ -830,8 +824,8 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
 
     <header class="page-header">
       <button class="sidebar-toggle" tabindex="0">
-        <svg class="label label-closed icon icon-menu" alt="Open Menu" title="Open Menu"><use xlink:href="#icon-menu"></use></svg>
-        <svg class="label label-open icon icon-x-circle" alt="Close Menu" title="Close Menu"><use xlink:href="#icon-x-circle"></use></svg>
+        <svg alt="Open Menu" class="label label-closed icon icon-menu" title="Open Menu"><use xlink:href="#icon-menu"></use></svg>
+        <svg alt="Close Menu" class="label label-open icon icon-x-circle" title="Close Menu"><use xlink:href="#icon-x-circle"></use></svg>
       </button>
 
       <h2>
@@ -873,14 +867,14 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
       </h2>
       <div class="search">
         <div class="search-input-wrap">
-          <input type="text" id="search-input" class="search-input" tabindex="0" aria-label="Search test_project_name" autocomplete="off">
-          <label for="search-input" class="search-label"><svg viewBox="0 0 24 24" class="search-icon"><use xlink:href="#icon-svg-search"></use></svg></label>
+          <input aria-label="Search test_project_name" autocomplete="off" class="search-input" id="search-input" tabindex="0" type="text">
+          <label class="search-label" for="search-input"><svg class="search-icon" viewBox="0 0 24 24"><use xlink:href="#icon-svg-search"></use></svg></label>
         </div>
-        <div id="search-results" class="search-results"></div>
+        <div class="search-results" id="search-results"></div>
       </div>
 
       <button class="search-nav-button" id="search-nav-button" tabindex="0">
-        <svg class="label icon icon-x-circle" alt="Open Search" title="Open Search"><use xlink:href="#icon-svg-search"></use></svg>
+        <svg alt="Open Search" class="label icon icon-x-circle" title="Open Search"><use xlink:href="#icon-svg-search"></use></svg>
       </button>
 
     </header>
@@ -888,7 +882,7 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
     <div class="page">
       <nav class="sidebar">
         <button class="sidebar-toggle" tabindex="1">
-          <svg class="label icon icon-x-circle" alt="Close Menu" title="Close Menu"><use xlink:href="#icon-x-circle"></use></svg>
+          <svg alt="Close Menu" class="label icon icon-x-circle" title="Close Menu"><use xlink:href="#icon-x-circle"></use></svg>
         </button>
 
         
@@ -912,9 +906,9 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
         <h2>Modules</h2>
         <ul>
         
-          <li><a href="../../app.html" class="module-link">app</a></li>
+          <li><a class="module-link" href="../../app.html">app</a></li>
         
-          <li><a href="../../gleam/otp/actor.html" class="module-link">gleam<wbr />/otp<wbr />/actor</a></li>
+          <li><a class="module-link" href="../../gleam/otp/actor.html">gleam<wbr>/otp<wbr>/actor</a></li>
         
         </ul>
 
@@ -934,7 +928,7 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
 
       <main class="content">
         
-<h1 id="module-name" class="module-name">
+<h1 class="module-name" id="module-name">
   <a href="#module-name">gleam/otp/actor</a>
   <svg class="icon icon-gleam-chasse"><use xlink:href="#icon-gleam-chasse"></use></svg>
 </h1>
@@ -944,7 +938,7 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
 
 
 <section class="module-members">
-  <h1 id="module-values" class="module-member-kind">
+  <h1 class="module-member-kind" id="module-values">
     <a href="#module-values">Values</a>
     <svg class="icon icon-gleam-chasse"><use xlink:href="#icon-gleam-chasse"></use></svg>
   </h1>
@@ -1013,14 +1007,14 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
 
         <symbol id="icon-svg-search" viewBox="0 0 24 24">
             <title>Search</title>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-search">
-                <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            <svg class="feather feather-search" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="11" cy="11" r="8"></circle><line x1="21" x2="16.65" y1="21" y2="16.65"></line>
             </svg>
         </symbol>
 
         <symbol id="icon-svg-doc" viewBox="0 0 24 24">
             <title>Document</title>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file">
+            <svg class="feather feather-file" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
                 <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline>
             </svg>
         </symbol>
@@ -1049,5 +1043,5 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
         .then(response => response.json())
         .then(data => window.Gleam.initSearch(data));
     </script>
-  </body>
-</html>
+  
+</body></html>
