@@ -531,7 +531,7 @@ fn text_documentation(doc: &Option<(u32, EcoString)>) -> String {
         .unwrap_or_else(|| "".into());
 
     // TODO: parse markdown properly and extract the text nodes
-    escape_html_content(raw_text.replace("```gleam", "").replace("```", ""))
+    raw_text.replace("```gleam", "").replace("```", "")
 }
 
 fn markdown_documentation(doc: &Option<(u32, EcoString)>) -> String {
