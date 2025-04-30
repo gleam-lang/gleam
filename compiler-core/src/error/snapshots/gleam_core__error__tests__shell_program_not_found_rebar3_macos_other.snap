@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/error/tests.rs
+expression: "err[0].text"
+---
+The program `rebar3` was not found. Is it installed?
+
+You can install Rebar3 via homebrew: brew install rebar3
+
+Documentation for installing Rebar3 can be viewed here:
+https://rebar3.org/docs/getting-started/
