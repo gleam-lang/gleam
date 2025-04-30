@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\n// test\nimport result.{unused, unused_again}\n\npub fn main() {\n  todo\n}\n"
+---
+----- BEFORE ACTION
+
+// test
+▔▔▔▔▔▔▔
+import result.{unused, unused_again}
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+
+pub fn main() {
+↑              
+  todo
+}
+
+
+----- AFTER ACTION
+
+// test
+import result.{}
+
+pub fn main() {
+  todo
+}
