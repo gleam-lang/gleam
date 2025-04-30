@@ -15,7 +15,7 @@ pub fn type_options_for_value<TypedValue>(
 where
     TypedValue: GetLiteralValue,
 {
-    type_options(input_options, true, false)
+    type_options(input_options, TypeOptionsMode::Expression, false)
 }
 
 pub fn type_options_for_pattern<TypedValue>(
@@ -25,7 +25,7 @@ pub fn type_options_for_pattern<TypedValue>(
 where
     TypedValue: GetLiteralValue,
 {
-    type_options(input_options, false, must_have_size)
+    type_options(input_options, TypeOptionsMode::Pattern, must_have_size)
 }
 
 struct SegmentOptionCategories<'a, T> {
@@ -73,9 +73,18 @@ impl<T> SegmentOptionCategories<'_, T> {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
+/// Whether we're typing options for a bit array segment that's part of a pattern
+/// or an expression.
+///
+enum TypeOptionsMode {
+    Expression,
+    Pattern,
+}
+
 fn type_options<TypedValue>(
     input_options: &[BitArrayOption<TypedValue>],
-    value_mode: bool,
+    mode: TypeOptionsMode,
     must_have_size: bool,
 ) -> Result<Arc<Type>, Error>
 where
@@ -154,7 +163,7 @@ where
     }
 
     // Some options are not allowed in value mode
-    if value_mode {
+    if mode == TypeOptionsMode::Expression {
         match categories {
             SegmentOptionCategories {
                 signed: Some(opt), ..
@@ -272,9 +281,11 @@ where
         }
     }
 
-    // If size is a literal integer, then it must be positive. Otherwise, we
-    // know it's never going to match and makes no sense to write it down!
-    if let Some(size @ Size { value, .. }) = categories.size {
+    // Segment patterns with a zero or negative constant size must be rejected,
+    // we know they will never match!
+    // A negative size is still allowed in expressions as it will just result
+    // in an empty segment.
+    if let (Some(size @ Size { value, .. }), TypeOptionsMode::Pattern) = (categories.size, mode) {
         match value.as_int_literal() {
             Some(n) if n <= BigInt::ZERO => {
                 return err(ErrorType::ConstantSizeNotPositive, size.location());
