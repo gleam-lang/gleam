@@ -26,11 +26,11 @@ warning: Unused imported value
 
 Hint: You can safely remove it.
 
-warning: Definition of "foo" shadows an imported function
+warning: Definition of "foo" shadows an imported value
   ┌─ /src/warning/wrn.gleam:3:4
   │
 3 │ fn foo(x) {
   │    ^^^
 
-The imported function could not be used anyway.
-Hint: You could remove the imported function.
+The imported value could not be used anyway.
+Hint: You could remove the imported value.

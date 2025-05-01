@@ -1277,9 +1277,9 @@ can already tell whether it will be true or false.",
                     }),
                 },
                 type_::Warning::FunctionDefinitionShadowsImport { location, name } => Diagnostic {
-                    title: format!("Definition of \"{name}\" shadows an imported function"),
-                    text: wrap("The imported function could not be used anyway."),
-                    hint: Some("You could remove the imported function.".into()),
+                    title: format!("Definition of \"{name}\" shadows an imported value"),
+                    text: wrap("The imported value could not be used anyway."),
+                    hint: Some("You could remove the imported value.".into()),
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         src: src.clone(),
