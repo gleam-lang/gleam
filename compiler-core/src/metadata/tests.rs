@@ -767,7 +767,7 @@ fn module_fn_value_with_field_map() {
 
 #[test]
 fn record_value() {
-    let mut random = rand::thread_rng();
+    let mut random = rand::rng();
 
     let module = ModuleInterface {
         warnings: vec![],
@@ -789,13 +789,13 @@ fn record_value() {
                     name: "one".into(),
                     module: "themodule".into(),
                     field_map: None,
-                    arity: random.r#gen(),
-                    variants_count: random.r#gen(),
+                    arity: random.random(),
+                    variants_count: random.random(),
                     location: SrcSpan {
-                        start: random.r#gen(),
-                        end: random.r#gen(),
+                        start: random.random(),
+                        end: random.random(),
                     },
-                    variant_index: random.r#gen(),
+                    variant_index: random.random(),
                 },
             },
         )]
@@ -815,7 +815,7 @@ fn record_value() {
 
 #[test]
 fn record_value_with_field_map() {
-    let mut random = rand::thread_rng();
+    let mut random = rand::rng();
 
     let module = ModuleInterface {
         warnings: vec![],
@@ -837,16 +837,19 @@ fn record_value_with_field_map() {
                     module: "themodule".into(),
                     name: "one".into(),
                     field_map: Some(FieldMap {
-                        arity: random.r#gen(),
-                        fields: [("ok".into(), random.r#gen()), ("ko".into(), random.r#gen())]
-                            .into(),
+                        arity: random.random(),
+                        fields: [
+                            ("ok".into(), random.random()),
+                            ("ko".into(), random.random()),
+                        ]
+                        .into(),
                     }),
-                    arity: random.r#gen(),
-                    variants_count: random.r#gen(),
-                    variant_index: random.r#gen(),
+                    arity: random.random(),
+                    variants_count: random.random(),
+                    variant_index: random.random(),
                     location: SrcSpan {
-                        start: random.r#gen(),
-                        end: random.r#gen(),
+                        start: random.random(),
+                        end: random.random(),
                     },
                 },
             },
