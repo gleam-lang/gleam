@@ -2724,7 +2724,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_module_access(
         &mut self,
-        module_alias: &EcoString,
+        // This is the name of the module coming before the `.`: for example
+        // in `result.try` it's `result`.
+        selected_module: &EcoString,
         label: EcoString,
         module_location: &SrcSpan,
         select_location: SrcSpan,
@@ -2735,13 +2737,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             let (_, module) = self
                 .environment
                 .imported_modules
-                .get(module_alias)
+                .get(selected_module)
                 .ok_or_else(|| Error::UnknownModule {
-                    name: module_alias.clone(),
+                    name: selected_module.clone(),
                     location: *module_location,
                     suggestions: self
                         .environment
-                        .suggest_modules(module_alias, Imported::Value(label.clone())),
+                        .suggest_modules(selected_module, Imported::Value(label.clone())),
                 })?;
 
             let constructor =
@@ -2767,11 +2769,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             self.environment
                 .references
-                .register_module_reference(module_alias.clone());
-            let constructor = constructor.clone();
-            let module_name = module.name.clone();
+                .register_module_reference(selected_module.clone());
 
-            (module_name, constructor)
+            (module.name.clone(), constructor.clone())
         };
 
         let type_ = self.instantiate(constructor.type_, &mut hashmap![]);
@@ -2797,7 +2797,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             label,
             type_: Arc::clone(&type_),
             module_name,
-            module_alias: module_alias.clone(),
+            module_alias: selected_module.clone(),
             constructor,
         })
     }
