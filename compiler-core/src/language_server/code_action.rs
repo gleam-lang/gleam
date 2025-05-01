@@ -1422,7 +1422,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
         name: &'ast EcoString,
         arguments: &'ast Vec<ast::TypeAst>,
     ) {
-        let range = src_span_to_lsp_range(*location, &self.line_numbers);
+        let range = src_span_to_lsp_range(*location, self.line_numbers);
         if overlaps(self.params.range, range) {
             if let Some((module_alias, _)) = module {
                 if let Some(import) = self.module.find_node(location.end).and_then(|node| {
@@ -1468,7 +1468,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
         // option.Some
         //  ↑
         // This allows us to offer a code action when hovering over the module name.
-        let range = src_span_to_lsp_range(*location, &self.line_numbers);
+        let range = src_span_to_lsp_range(*location, self.line_numbers);
         if overlaps(self.params.range, range) {
             if let ModuleValueConstructor::Record {
                 name: constructor_name,
@@ -1511,7 +1511,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
         spread: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
     ) {
-        let range = src_span_to_lsp_range(*location, &self.line_numbers);
+        let range = src_span_to_lsp_range(*location, self.line_numbers);
         if overlaps(self.params.range, range) {
             if let Some((module_alias, _)) = module {
                 if let crate::analyse::Inferred::Known(constructor) = constructor {
@@ -1996,7 +1996,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
         if module.is_none()
             && overlaps(
                 self.params.range,
-                src_span_to_lsp_range(*location, &self.line_numbers),
+                src_span_to_lsp_range(*location, self.line_numbers),
             )
         {
             self.get_module_import_from_type_constructor(name);
@@ -2018,7 +2018,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
         constructor: &'ast ValueConstructor,
         name: &'ast EcoString,
     ) {
-        let range = src_span_to_lsp_range(*location, &self.line_numbers);
+        let range = src_span_to_lsp_range(*location, self.line_numbers);
         if overlaps(self.params.range, range) {
             if let Some(module_name) = match &constructor.variant {
                 type_::ValueConstructorVariant::ModuleConstant { module, .. }
@@ -2048,7 +2048,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
         if module.is_none()
             && overlaps(
                 self.params.range,
-                src_span_to_lsp_range(*location, &self.line_numbers),
+                src_span_to_lsp_range(*location, self.line_numbers),
             )
         {
             if let crate::analyse::Inferred::Known(constructor) = constructor {
