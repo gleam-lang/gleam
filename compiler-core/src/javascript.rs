@@ -206,11 +206,11 @@ impl<'a> Generator<'a> {
         }
 
         if self.tracker.codepoint_utf16_bit_array_segment_used {
-            self.register_prelude_usage(&mut imports, "stringToUtf16", None);
+            self.register_prelude_usage(&mut imports, "codepointToUtf16", None);
         }
 
         if self.tracker.codepoint_utf32_bit_array_segment_used {
-            self.register_prelude_usage(&mut imports, "stringToUtf32", None);
+            self.register_prelude_usage(&mut imports, "codepointToUtf32", None);
         }
 
         if self.tracker.float_bit_array_segment_used {
