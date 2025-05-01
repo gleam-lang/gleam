@@ -6,7 +6,7 @@ expression: "./cases/imported_constants"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
-<89 byte binary>
+<97 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
@@ -27,7 +27,7 @@ expression: "./cases/imported_constants"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<324 byte binary>
+<332 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).

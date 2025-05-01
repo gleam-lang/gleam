@@ -6,7 +6,7 @@ expression: "./cases/alias_unqualified_import"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
-<77 byte binary>
+<85 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
@@ -27,7 +27,7 @@ id(X) ->
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<88 byte binary>
+<96 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).
