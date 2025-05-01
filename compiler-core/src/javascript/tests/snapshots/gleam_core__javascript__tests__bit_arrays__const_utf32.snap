@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub const message = <<\"Hello, world!\":utf32>>\n"
+---
+----- SOURCE CODE
+
+pub const message = <<"Hello, world!":utf32>>
+
+
+----- COMPILED JAVASCRIPT
+import { toBitArray, stringToUtf32 } from "../gleam.mjs";
+
+export const message = /* @__PURE__ */ toBitArray([
+  stringToUtf32("Hello, world!", true),
+]);

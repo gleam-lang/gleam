@@ -1,0 +1,50 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn go(x) {\n  let assert <<\"Hello\":utf32-little, _rest:bytes>> = x\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  let assert <<"Hello":utf32-little, _rest:bytes>> = x
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError } from "../gleam.mjs";
+
+export function go(x) {
+  if (
+    x.bitSize < 160 ||
+    x.byteAt(0) !== 72 ||
+    x.byteAt(1) !== 0 ||
+    x.byteAt(2) !== 0 ||
+    x.byteAt(3) !== 0 ||
+    x.byteAt(4) !== 101 ||
+    x.byteAt(5) !== 0 ||
+    x.byteAt(6) !== 0 ||
+    x.byteAt(7) !== 0 ||
+    x.byteAt(8) !== 108 ||
+    x.byteAt(9) !== 0 ||
+    x.byteAt(10) !== 0 ||
+    x.byteAt(11) !== 0 ||
+    x.byteAt(12) !== 108 ||
+    x.byteAt(13) !== 0 ||
+    x.byteAt(14) !== 0 ||
+    x.byteAt(15) !== 0 ||
+    x.byteAt(16) !== 111 ||
+    x.byteAt(17) !== 0 ||
+    x.byteAt(18) !== 0 ||
+    x.byteAt(19) !== 0 ||
+    (x.bitSize - 160) % 8 !== 0
+  ) {
+    throw makeError(
+      "let_assert",
+      "my/mod",
+      3,
+      "go",
+      "Pattern match failed, no pattern matched the value.",
+      { value: x }
+    )
+  }
+  return x;
+}
