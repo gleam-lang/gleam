@@ -372,10 +372,10 @@ impl Environment<'_> {
     ///
     pub fn get_type_constructor(
         &mut self,
-        module_alias: &Option<(EcoString, SrcSpan)>,
+        module: &Option<(EcoString, SrcSpan)>,
         name: &EcoString,
     ) -> Result<&TypeConstructor, UnknownTypeConstructorError> {
-        match module_alias {
+        match module {
             None => self
                 .module_types
                 .get(name)
