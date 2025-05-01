@@ -1852,6 +1852,70 @@ impl<'module, 'a> Generator<'module, 'a> {
                     Ok(docvec!["codepointBits(", value, ")"])
                 }
 
+                // UTF16 strings
+                [Opt::Utf16 { .. }]
+                | [Opt::Utf16 { .. }, Opt::Big { .. }]
+                | [Opt::Big { .. }, Opt::Utf16 { .. }] => {
+                    self.tracker.string_utf16_bit_array_segment_used = true;
+                    let is_big = "true".to_doc();
+                    Ok(docvec!["stringToUtf16(", value, ", ", is_big, ")"])
+                }
+
+                [Opt::Utf16 { .. }, Opt::Little { .. }]
+                | [Opt::Little { .. }, Opt::Utf16 { .. }] => {
+                    self.tracker.string_utf16_bit_array_segment_used = true;
+                    let is_big = "false".to_doc();
+                    Ok(docvec!["stringToUtf16(", value, ", ", is_big, ")"])
+                }
+
+                // UTF16 codepoints
+                [Opt::Utf16Codepoint { .. }]
+                | [Opt::Utf16Codepoint { .. }, Opt::Big { .. }]
+                | [Opt::Big { .. }, Opt::Utf16Codepoint { .. }] => {
+                    self.tracker.codepoint_utf16_bit_array_segment_used = true;
+                    let is_big = "true".to_doc();
+                    Ok(docvec!["codepointToUtf16(", value, ", ", is_big, ")"])
+                }
+
+                [Opt::Utf16Codepoint { .. }, Opt::Little { .. }]
+                | [Opt::Little { .. }, Opt::Utf16Codepoint { .. }] => {
+                    self.tracker.codepoint_utf16_bit_array_segment_used = true;
+                    let is_big = "false".to_doc();
+                    Ok(docvec!["codepointToUtf16(", value, ", ", is_big, ")"])
+                }
+
+                // UTF32 strings
+                [Opt::Utf32 { .. }]
+                | [Opt::Utf32 { .. }, Opt::Big { .. }]
+                | [Opt::Big { .. }, Opt::Utf32 { .. }] => {
+                    self.tracker.string_utf32_bit_array_segment_used = true;
+                    let is_big = "true".to_doc();
+                    Ok(docvec!["stringToUtf32(", value, ", ", is_big, ")"])
+                }
+
+                [Opt::Utf32 { .. }, Opt::Little { .. }]
+                | [Opt::Little { .. }, Opt::Utf32 { .. }] => {
+                    self.tracker.string_utf32_bit_array_segment_used = true;
+                    let is_big = "false".to_doc();
+                    Ok(docvec!["stringToUtf32(", value, ", ", is_big, ")"])
+                }
+
+                // UTF32 codepoints
+                [Opt::Utf32Codepoint { .. }]
+                | [Opt::Utf32Codepoint { .. }, Opt::Big { .. }]
+                | [Opt::Big { .. }, Opt::Utf32Codepoint { .. }] => {
+                    self.tracker.codepoint_utf32_bit_array_segment_used = true;
+                    let is_big = "true".to_doc();
+                    Ok(docvec!["codepointToUtf32(", value, ", ", is_big, ")"])
+                }
+
+                [Opt::Utf32Codepoint { .. }, Opt::Little { .. }]
+                | [Opt::Little { .. }, Opt::Utf32Codepoint { .. }] => {
+                    self.tracker.codepoint_utf32_bit_array_segment_used = true;
+                    let is_big = "false".to_doc();
+                    Ok(docvec!["codepointToUtf32(", value, ", ", is_big, ")"])
+                }
+
                 // Bit arrays
                 [Opt::Bits { .. }] => Ok(value),
 
