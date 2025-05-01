@@ -62,10 +62,20 @@ impl<'a> ModuleEncoder<'a> {
     fn set_line_numbers(&mut self, module: &mut module::Builder<'_>) {
         let mut line_numbers = module.reborrow().init_line_numbers();
         line_numbers.set_length(self.data.line_numbers.length);
-        let mut line_starts =
-            line_numbers.init_line_starts(self.data.line_numbers.line_starts.len() as u32);
+
+        let mut line_starts = line_numbers
+            .reborrow()
+            .init_line_starts(self.data.line_numbers.line_starts.len() as u32);
         for (i, l) in self.data.line_numbers.line_starts.iter().enumerate() {
             line_starts.reborrow().set(i as u32, *l);
+        }
+
+        let mut mapping = line_numbers.init_mapping(self.data.line_numbers.mapping.len() as u32);
+        for (i, (byte_index, character)) in self.data.line_numbers.mapping.iter().enumerate() {
+            let mut builder = mapping.reborrow().get(i as u32);
+            builder.set_byte_index(*byte_index as u64);
+            builder.set_length_utf8(character.length_utf8);
+            builder.set_length_utf16(character.length_utf16);
         }
     }
 
