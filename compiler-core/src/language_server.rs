@@ -52,9 +52,8 @@ pub fn src_span_to_lsp_range(location: SrcSpan, line_numbers: &LineNumbers) -> R
 }
 
 pub fn lsp_range_to_src_span(range: Range, line_numbers: &LineNumbers) -> SrcSpan {
-    let Range { start, end } = range;
-    let start = line_numbers.byte_index(start.line + 1, start.character + 1);
-    let end = line_numbers.byte_index(end.line + 1, end.character + 1);
+    let start = line_numbers.byte_index(range.start);
+    let end = line_numbers.byte_index(range.end);
     SrcSpan { start, end }
 }
 
