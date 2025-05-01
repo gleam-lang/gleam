@@ -11,7 +11,7 @@ use crate::{
         TypedConstantBitArraySegment, TypedConstantBitArraySegmentOption,
     },
     build::Origin,
-    line_numbers::LineNumbers,
+    line_numbers::{Character, LineNumbers},
     reference::{Reference, ReferenceKind, ReferenceMap},
     schema_capnp::{self as schema, *},
     type_::{
@@ -708,7 +708,28 @@ impl ModuleDecoder {
         Ok(LineNumbers {
             length: reader.get_length(),
             line_starts: read_vec!(reader.get_line_starts()?, self, line_starts),
+            mapping: self.mapping(reader.get_mapping()?),
         })
+    }
+
+    fn mapping(
+        &self,
+        reader: capnp::struct_list::Reader<'_, character::Owned>,
+    ) -> HashMap<usize, Character> {
+        let mut map = HashMap::with_capacity(reader.len() as usize);
+        for character in reader.into_iter() {
+            let byte_index = character.get_byte_index() as usize;
+            let length_utf8 = character.get_length_utf8();
+            let length_utf16 = character.get_length_utf16();
+            _ = map.insert(
+                byte_index,
+                Character {
+                    length_utf16,
+                    length_utf8,
+                },
+            )
+        }
+        map
     }
 
     fn version(&self, reader: &version::Reader<'_>) -> hexpm::version::Version {

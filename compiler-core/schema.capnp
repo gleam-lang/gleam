@@ -341,4 +341,11 @@ struct BitArraySegmentOption {
 struct LineNumbers {
   lineStarts @0 :List(UInt32);
   length @1 :UInt32;
+  mapping @2 :List(Character);
+}
+
+struct Character {
+  byteIndex @0 :UInt64;
+  lengthUtf8 @1 :UInt8;
+  lengthUtf16 @2 :UInt8;
 }
