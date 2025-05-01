@@ -64,14 +64,18 @@ impl LineNumbers {
     }
 
     pub fn line_and_column_number(&self, byte_index: u32) -> LineColumn {
-        let mut line_and_column = self.line_and_column_number_utf8(byte_index);
+        let line = self.line_number(byte_index);
+        let line_start = self
+            .line_starts
+            .get(line as usize - 1)
+            .copied()
+            .unwrap_or_default();
 
-        let mut u8_offset = 0;
+        let mut u8_offset = line_start;
         let mut u16_offset = 0;
-        let target = line_and_column.column - 1;
 
         loop {
-            if u8_offset >= target {
+            if u8_offset >= byte_index {
                 break;
             }
 
@@ -84,9 +88,10 @@ impl LineNumbers {
             }
         }
 
-        line_and_column.column = u16_offset + 1;
-
-        line_and_column
+        LineColumn {
+            line,
+            column: u16_offset + 1,
+        }
     }
 
     /// 0 indexed line and character to byte index
@@ -96,12 +101,11 @@ impl LineNumbers {
             None => return self.length,
         };
 
-        let mut u8_offset = 0;
+        let mut u8_offset = line_start;
         let mut u16_offset = 0;
-        let target = character;
 
         loop {
-            if u16_offset >= target {
+            if u16_offset >= character {
                 break;
             }
 
@@ -114,7 +118,7 @@ impl LineNumbers {
             }
         }
 
-        line_start + u8_offset
+        u8_offset
     }
 }
 
