@@ -403,3 +403,7 @@
 - Fixed a bug where some code actions would produce invalid code when a file
   contained characters that were represented with more than one byte in UTF-8.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where LSP ranges would be incorrect when a file contained characters
+  that were represented wit more than one byte in UTF-8.
+  ([Surya Rose](https://github.com/GearsDatapacks))
