@@ -248,6 +248,15 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
 
         for f in &statements.functions {
+            let (name_location, name) = f.name.clone().expect("A module's function must be named");
+            if env.unqualified_imported_names.contains_key(&name) {
+                self.problems
+                    .warning(Warning::TopLevelDefinitionShadowsImport {
+                        location: name_location,
+                        name,
+                    });
+            }
+
             if let Err(error) = self.register_value_from_function(f, &mut env) {
                 return self.all_errors(error);
             }

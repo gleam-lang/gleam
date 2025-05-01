@@ -458,6 +458,22 @@ pub const make_two = one.Two
     );
 }
 
+#[test]
+fn shadow_imported_function() {
+    assert_warning!(
+        ("thepackage", "one", "pub fn foo(x) { let _ = x }"),
+        "
+import one.{foo}
+fn foo(x) {
+    let _ = x + 1
+}
+pub fn main() {
+    let _ = foo(1)
+}
+"
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/2050
 #[test]
 fn double_unary_integer_literal() {

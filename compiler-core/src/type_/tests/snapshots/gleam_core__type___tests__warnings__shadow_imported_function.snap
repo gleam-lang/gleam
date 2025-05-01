@@ -1,0 +1,36 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\nimport one.{foo}\nfn foo(x) {\n    let _ = x + 1\n}\npub fn main() {\n    let _ = foo(1)\n}\n"
+---
+----- SOURCE CODE
+-- one.gleam
+pub fn foo(x) { let _ = x }
+
+-- main.gleam
+
+import one.{foo}
+fn foo(x) {
+    let _ = x + 1
+}
+pub fn main() {
+    let _ = foo(1)
+}
+
+
+----- WARNING
+warning: Unused imported value
+  ┌─ /src/warning/wrn.gleam:2:13
+  │
+2 │ import one.{foo}
+  │             ^^^ This imported value is never used
+
+Hint: You can safely remove it.
+
+warning: Definition of "foo" shadows an imported item
+  ┌─ /src/warning/wrn.gleam:3:4
+  │
+3 │ fn foo(x) {
+  │    ^^^
+
+The imported item could not be used anyway.
+Hint: You could remove the imported item.

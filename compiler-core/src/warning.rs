@@ -1276,6 +1276,21 @@ can already tell whether it will be true or false.",
                         extra_labels: Vec::new(),
                     }),
                 },
+                type_::Warning::TopLevelDefinitionShadowsImport { location, name } => Diagnostic {
+                    title: format!("Definition of \"{name}\" shadows an imported item"),
+                    text: wrap("The imported item could not be used anyway."),
+                    hint: Some("You could remove the imported item.".into()),
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        src: src.clone(),
+                        path: path.to_path_buf(),
+                        label: diagnostic::Label {
+                            text: None,
+                            span: *location,
+                        },
+                        extra_labels: vec![],
+                    }),
+                },
             },
 
             Warning::DeprecatedEnvironmentVariable { variable } => {
