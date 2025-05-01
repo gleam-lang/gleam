@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use lsp_types::Position;
+
 /// A struct which contains information about line numbers of a source file,
 /// and can convert between byte offsets that are used in the compiler and
 /// line-column pairs used in LSP.
@@ -107,10 +109,10 @@ impl LineNumbers {
         }
     }
 
-    /// Returns the byte index of the corresponding 1-indexed line and column
-    /// numbers, translating from a UTF-16 character index to a UTF-8 byte index.
-    pub fn byte_index(&self, line: u32, character: u32) -> u32 {
-        let line_start = match self.line_starts.get(line as usize - 1) {
+    /// Returns the byte index of the corresponding LSP line-column `Position`,
+    /// translating from a UTF-16 character index to a UTF-8 byte index.
+    pub fn byte_index(&self, position: Position) -> u32 {
+        let line_start = match self.line_starts.get(position.line as usize) {
             Some(&line_start) => line_start,
             None => return self.length,
         };
@@ -119,7 +121,7 @@ impl LineNumbers {
         let mut u16_offset = 0;
 
         loop {
-            if u16_offset >= character - 1 {
+            if u16_offset >= position.character {
                 break;
             }
 
@@ -146,10 +148,34 @@ pub fn main() {
 "#;
     let line_numbers = LineNumbers::new(src);
 
-    assert_eq!(line_numbers.byte_index(1, 1), 0);
-    assert_eq!(line_numbers.byte_index(1, 5), 4);
-    assert_eq!(line_numbers.byte_index(100, 1), src.len() as u32);
-    assert_eq!(line_numbers.byte_index(3, 2), 18);
+    assert_eq!(
+        line_numbers.byte_index(Position {
+            line: 0,
+            character: 0
+        }),
+        0
+    );
+    assert_eq!(
+        line_numbers.byte_index(Position {
+            line: 0,
+            character: 4
+        }),
+        4
+    );
+    assert_eq!(
+        line_numbers.byte_index(Position {
+            line: 100,
+            character: 0
+        }),
+        src.len() as u32
+    );
+    assert_eq!(
+        line_numbers.byte_index(Position {
+            line: 2,
+            character: 1
+        }),
+        18
+    );
 }
 
 // https://github.com/gleam-lang/gleam/issues/3628
@@ -165,10 +191,34 @@ pub fn main() {
 "#;
     let line_numbers = LineNumbers::new(src);
 
-    assert_eq!(line_numbers.byte_index(2, 7), 30);
-    assert_eq!(line_numbers.byte_index(6, 3), 52);
-    assert_eq!(line_numbers.byte_index(6, 18), 75);
-    assert_eq!(line_numbers.byte_index(7, 2), 91);
+    assert_eq!(
+        line_numbers.byte_index(Position {
+            line: 1,
+            character: 6
+        }),
+        30
+    );
+    assert_eq!(
+        line_numbers.byte_index(Position {
+            line: 5,
+            character: 2
+        }),
+        52
+    );
+    assert_eq!(
+        line_numbers.byte_index(Position {
+            line: 5,
+            character: 17
+        }),
+        75
+    );
+    assert_eq!(
+        line_numbers.byte_index(Position {
+            line: 6,
+            character: 1
+        }),
+        91
+    );
 }
 
 // https://github.com/gleam-lang/gleam/issues/3628
@@ -205,6 +255,7 @@ pub fn main() {
     );
 }
 
+/// A 1-index line and column position
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LineColumn {
     pub line: u32,

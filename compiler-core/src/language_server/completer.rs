@@ -130,10 +130,7 @@ where
         &'a self,
         valid_phrase_char: &impl Fn(char) -> bool,
     ) -> (Range, String) {
-        let cursor = self.src_line_numbers.byte_index(
-            self.cursor_position.line + 1,
-            self.cursor_position.character + 1,
-        );
+        let cursor = self.src_line_numbers.byte_index(*self.cursor_position);
 
         // Get part of phrase prior to cursor
         let before = self
@@ -194,12 +191,14 @@ where
     /// If the line includes a dot then it provides unqualified import completions.
     /// Otherwise it provides direct module import completions.
     pub fn import_completions(&'a self) -> Option<Result<Option<Vec<CompletionItem>>>> {
-        let start_of_line = self
-            .src_line_numbers
-            .byte_index(self.cursor_position.line + 1, 1);
-        let end_of_line = self
-            .src_line_numbers
-            .byte_index(self.cursor_position.line + 2, 1);
+        let start_of_line = self.src_line_numbers.byte_index(Position {
+            line: self.cursor_position.line,
+            character: 0,
+        });
+        let end_of_line = self.src_line_numbers.byte_index(Position {
+            line: self.cursor_position.line + 1,
+            character: 0,
+        });
 
         // Drop all lines except the line the cursor is on
         let src = self.src.get(start_of_line as usize..end_of_line as usize)?;
@@ -562,10 +561,7 @@ where
         // e.x. when the user has typed mymodule.| we know local module and prelude values are no longer
         // relevant.
         if module_select.is_none() {
-            let cursor = self.src_line_numbers.byte_index(
-                self.cursor_position.line + 1,
-                self.cursor_position.character + 1,
-            );
+            let cursor = self.src_line_numbers.byte_index(*self.cursor_position);
 
             // Find the function that the cursor is in and push completions for
             // its arguments and local variables.
