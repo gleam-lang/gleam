@@ -194,6 +194,10 @@
   constructor is wrong).
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- On the JavaScript target, bit arrays now support UTf-16 and UTF-32 string
+  segments.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - The build tool now supports placing modules in a directory called `dev`,
