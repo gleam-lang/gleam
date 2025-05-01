@@ -189,6 +189,10 @@
   continue to occur if a function references invalid type in its signature.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- On the JavaScript target, bit arrays now support UTf-16 and UTF-32 string
+  segments.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - The build tool now supports placing modules in a directory called `dev`,
