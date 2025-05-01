@@ -1276,10 +1276,10 @@ can already tell whether it will be true or false.",
                         extra_labels: Vec::new(),
                     }),
                 },
-                type_::Warning::TopLevelDefinitionShadowsImport { location, name } => Diagnostic {
-                    title: format!("Definition of \"{name}\" shadows an imported item"),
-                    text: wrap("The imported item could not be used anyway."),
-                    hint: Some("You could remove the imported item.".into()),
+                type_::Warning::FunctionDefinitionShadowsImport { location, name } => Diagnostic {
+                    title: format!("Definition of \"{name}\" shadows an imported function"),
+                    text: wrap("The imported function could not be used anyway."),
+                    hint: Some("You could remove the imported function.".into()),
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         src: src.clone(),

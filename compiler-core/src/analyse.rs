@@ -251,7 +251,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             let (name_location, name) = f.name.clone().expect("A module's function must be named");
             if env.unqualified_imported_names.contains_key(&name) {
                 self.problems
-                    .warning(Warning::TopLevelDefinitionShadowsImport {
+                    .warning(Warning::FunctionDefinitionShadowsImport {
                         location: name_location,
                         name,
                     });
