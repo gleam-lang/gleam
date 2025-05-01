@@ -51,18 +51,6 @@ impl LineNumbers {
             + 1
     }
 
-    pub fn line_and_column_number_utf8(&self, byte_index: u32) -> LineColumn {
-        let line = self.line_number(byte_index);
-        let column = byte_index
-            - self
-                .line_starts
-                .get(line as usize - 1)
-                .copied()
-                .unwrap_or_default()
-            + 1;
-        LineColumn { line, column }
-    }
-
     pub fn line_and_column_number(&self, byte_index: u32) -> LineColumn {
         let line = self.line_number(byte_index);
         let line_start = self
@@ -136,6 +124,59 @@ pub fn main() {
     assert_eq!(line_numbers.byte_index(0, 4), 4);
     assert_eq!(line_numbers.byte_index(100, 1), src.len() as u32);
     assert_eq!(line_numbers.byte_index(2, 1), 18);
+}
+
+// https://github.com/gleam-lang/gleam/issues/3628
+#[test]
+fn byte_index_with_multibyte_characters() {
+    let src = r#"fn wibble(_a, _b, _c) {
+  todo
+}
+
+pub fn main() {
+  wibble("क्षि", 10, <<"abc">>)
+}
+"#;
+    let line_numbers = LineNumbers::new(src);
+
+    assert_eq!(line_numbers.byte_index(1, 6), 30);
+    assert_eq!(line_numbers.byte_index(5, 2), 52);
+    assert_eq!(line_numbers.byte_index(5, 17), 75);
+    assert_eq!(line_numbers.byte_index(6, 1), 91);
+}
+
+// https://github.com/gleam-lang/gleam/issues/3628
+#[test]
+fn line_and_column_with_multibyte_characters() {
+    let src = r#"fn wibble(_a, _b, _c) {
+  todo
+}
+
+pub fn main() {
+  wibble("क्षि", 10, <<"abc">>)
+}
+"#;
+    let line_numbers = LineNumbers::new(src);
+
+    assert_eq!(
+        line_numbers.line_and_column_number(30),
+        LineColumn { line: 2, column: 7 }
+    );
+    assert_eq!(
+        line_numbers.line_and_column_number(52),
+        LineColumn { line: 6, column: 3 }
+    );
+    assert_eq!(
+        line_numbers.line_and_column_number(75),
+        LineColumn {
+            line: 6,
+            column: 18
+        }
+    );
+    assert_eq!(
+        line_numbers.line_and_column_number(91),
+        LineColumn { line: 7, column: 2 }
+    );
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
