@@ -33,6 +33,7 @@ pub fn main() {
         "dynamic sized bit array patterns",
         dynamic_size_bit_array_pattern_tests(),
       ),
+      suite("non UTF-8 string bit arrays", non_utf8_string_bit_array_tests()),
       suite("list spread", list_spread_tests()),
       suite("clause guards", clause_guard_tests()),
       suite("imported custom types", imported_custom_types_test()),
@@ -1604,6 +1605,93 @@ let assert <<value:size(size)>> = <<61:6>>"
           let size = size + 2
           let assert <<value:size(size)>> = <<61:6>>
           value
+        })
+      }),
+  ]
+}
+
+fn non_utf8_string_bit_array_tests() -> List(Test) {
+  [
+    "let assert <<\"Hello, world\":utf16>> = <<\"Hello, world\":utf16>>"
+      |> example(fn() {
+        assert_equal("Hello, world", {
+          let assert <<"Hello, world":utf16>> = <<"Hello, world":utf16>>
+          "Hello, world"
+        })
+      }),
+    "let assert <<\"Hello, world\":utf32>> = <<\"Hello, world\":utf32>>"
+      |> example(fn() {
+        assert_equal("Hello, world", {
+          let assert <<"Hello, world":utf32>> = <<"Hello, world":utf32>>
+          "Hello, world"
+        })
+      }),
+    "UTF-16 bytes"
+      |> example(fn() {
+        assert_equal(<<"Hello, 🌍!":utf16>>, <<
+          0, 72, 0, 101, 0, 108, 0, 108, 0, 111, 0, 44, 0, 32, 216, 60, 223, 13,
+          0, 33,
+        >>)
+      }),
+    "UTF-32 bytes"
+      |> example(fn() {
+        assert_equal(<<"Hello, 🌍!":utf32>>, <<
+          0, 0, 0, 72, 0, 0, 0, 101, 0, 0, 0, 108, 0, 0, 0, 108, 0, 0, 0, 111, 0,
+          0, 0, 44, 0, 0, 0, 32, 0, 1, 243, 13, 0, 0, 0, 33,
+        >>)
+      }),
+    "UTF-16 pattern matching"
+      |> example(fn() {
+        assert_equal("Hello, 🌍!", {
+          let assert <<"Hello, 🌍!":utf16>> = <<
+            0, 72, 0, 101, 0, 108, 0, 108, 0, 111, 0, 44, 0, 32, 216, 60, 223,
+            13, 0, 33,
+          >>
+          "Hello, 🌍!"
+        })
+      }),
+    "UTF-32 pattern matching"
+      |> example(fn() {
+        assert_equal("Hello, 🌍!", {
+          let assert <<"Hello, 🌍!":utf32>> = <<
+            0, 0, 0, 72, 0, 0, 0, 101, 0, 0, 0, 108, 0, 0, 0, 108, 0, 0, 0, 111,
+            0, 0, 0, 44, 0, 0, 0, 32, 0, 1, 243, 13, 0, 0, 0, 33,
+          >>
+          "Hello, 🌍!"
+        })
+      }),
+    "UTF-16 bytes little endian"
+      |> example(fn() {
+        assert_equal(<<"Hello, 🌍!":utf16-little>>, <<
+          72, 0, 101, 0, 108, 0, 108, 0, 111, 0, 44, 0, 32, 0, 60, 216, 13, 223,
+          33, 0,
+        >>)
+      }),
+    "UTF-32 bytes little endian"
+      |> example(fn() {
+        assert_equal(<<"Hello, 🌍!":utf32-little>>, <<
+          72, 0, 0, 0, 101, 0, 0, 0, 108, 0, 0, 0, 108, 0, 0, 0, 111, 0, 0, 0,
+          44, 0, 0, 0, 32, 0, 0, 0, 13, 243, 1, 0, 33, 0, 0, 0,
+        >>)
+      }),
+    "UTF-16 pattern matching little endian"
+      |> example(fn() {
+        assert_equal("Hello, 🌍!", {
+          let assert <<"Hello, 🌍!":utf16-little>> = <<
+            72, 0, 101, 0, 108, 0, 108, 0, 111, 0, 44, 0, 32, 0, 60, 216, 13,
+            223, 33, 0,
+          >>
+          "Hello, 🌍!"
+        })
+      }),
+    "UTF-32 pattern matching little endian"
+      |> example(fn() {
+        assert_equal("Hello, 🌍!", {
+          let assert <<"Hello, 🌍!":utf32-little>> = <<
+            72, 0, 0, 0, 101, 0, 0, 0, 108, 0, 0, 0, 108, 0, 0, 0, 111, 0, 0, 0,
+            44, 0, 0, 0, 32, 0, 0, 0, 13, 243, 1, 0, 33, 0, 0, 0,
+          >>
+          "Hello, 🌍!"
         })
       }),
   ]

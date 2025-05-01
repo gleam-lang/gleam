@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\nfn codepoint() -> UtfCodepoint { todo }\n\npub fn main() {\n  let my_codepoint = codepoint()\n  <<my_codepoint:utf32_codepoint>>\n}\n"
+---
+----- SOURCE CODE
+
+fn codepoint() -> UtfCodepoint { todo }
+
+pub fn main() {
+  let my_codepoint = codepoint()
+  <<my_codepoint:utf32_codepoint>>
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError, toBitArray, codepointToUtf32 } from "../gleam.mjs";
+
+function codepoint() {
+  throw makeError(
+    "todo",
+    "my/mod",
+    2,
+    "codepoint",
+    "`todo` expression evaluated. This code has not yet been implemented.",
+    {}
+  )
+}
+
+export function main() {
+  let my_codepoint = codepoint();
+  return toBitArray([codepointToUtf32(my_codepoint, true)]);
+}
