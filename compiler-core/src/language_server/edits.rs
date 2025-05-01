@@ -47,7 +47,7 @@ pub fn add_newlines_after_import(
     src: &str,
 ) -> Newlines {
     let import_start_cursor =
-        line_numbers.byte_index(import_location.line, import_location.character);
+        line_numbers.byte_index(import_location.line + 1, import_location.character + 1);
     let is_new_line = src
         .chars()
         .nth(import_start_cursor as usize)

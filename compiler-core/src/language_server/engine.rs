@@ -266,7 +266,7 @@ where
             let completer = Completer::new(&src, &params, &this.compiler, module);
             let byte_index = completer
                 .module_line_numbers
-                .byte_index(params.position.line, params.position.character);
+                .byte_index(params.position.line + 1, params.position.character + 1);
 
             // If in comment context, do not provide completions
             if module.extra.is_within_comment(byte_index) {
@@ -629,7 +629,8 @@ where
                 )))
             };
 
-            let byte_index = lines.byte_index(params.position.line, params.position.character);
+            let byte_index =
+                lines.byte_index(params.position.line + 1, params.position.character + 1);
 
             Ok(match reference_for_ast_node(found, &current_module.name) {
                 Some(Referenced::LocalVariable {
@@ -762,7 +763,8 @@ where
                 return Ok(None);
             };
 
-            let byte_index = lines.byte_index(position.position.line, position.position.character);
+            let byte_index =
+                lines.byte_index(position.position.line + 1, position.position.character + 1);
 
             Ok(match reference_for_ast_node(found, &module.name) {
                 Some(Referenced::LocalVariable {
@@ -996,7 +998,8 @@ Unused labelled fields:
         module: &'a Module,
     ) -> Option<(LineNumbers, Located<'a>)> {
         let line_numbers = LineNumbers::new(&module.code);
-        let byte_index = line_numbers.byte_index(params.position.line, params.position.character);
+        let byte_index =
+            line_numbers.byte_index(params.position.line + 1, params.position.character + 1);
         let node = module.find_node(byte_index);
         let node = node?;
         Some((line_numbers, node))
