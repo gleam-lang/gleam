@@ -831,11 +831,13 @@ pub fn apply_code_edit(src: &str, mut change: Vec<lsp_types::TextEdit>) -> Strin
 
     change.sort_by_key(|edit| (edit.range.start.line, edit.range.start.character));
     for edit in change {
-        let start = line_numbers.byte_index(edit.range.start.line, edit.range.start.character)
+        let start = line_numbers
+            .byte_index(edit.range.start.line + 1, edit.range.start.character + 1)
             as i32
             - offset;
-        let end =
-            line_numbers.byte_index(edit.range.end.line, edit.range.end.character) as i32 - offset;
+        let end = line_numbers.byte_index(edit.range.end.line + 1, edit.range.end.character + 1)
+            as i32
+            - offset;
         let range = (start as usize)..(end as usize);
         offset += end - start;
         offset -= edit.new_text.len() as i32;
