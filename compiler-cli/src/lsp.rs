@@ -12,8 +12,9 @@ use gleam_core::{
 pub fn main() -> Result<()> {
     tracing::info!("language_server_starting");
 
-    eprintln!(
-        "Hello human!
+    if std::io::IsTerminal::is_terminal(&std::io::stdin()) {
+        eprintln!(
+            "Hello human!
 
 This command is intended to be run by language server clients such
 as a text editor rather than being run directly in the console.
@@ -22,13 +23,11 @@ Many editors will automatically start the language server for you
 when you open a Gleam project. If yours does not you may need to
 look up how to configure your editor to use a language server.
 
-If you are seeing this in the logs of your editor you can safely
-ignore this message.
-
 If you have run `gleam lsp` yourself in your terminal then exit
 this program by pressing ctrl+c.
 "
-    );
+        );
+    }
 
     // Create the transport. Includes the stdio (stdin and stdout) versions but this could
     // also be implemented to use sockets or HTTP.
