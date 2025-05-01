@@ -6,7 +6,7 @@ expression: "./cases/erlang_app_generation"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/main.cache_meta
-<49 byte binary>
+<57 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/main.erl
 -module(main).

@@ -6,7 +6,7 @@ expression: "./cases/erlang_nested_qualified_constant"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache_meta
-<57 byte binary>
+<65 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@two.erl
 -module(one@two).
@@ -23,7 +23,7 @@ expression: "./cases/erlang_nested_qualified_constant"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<100 byte binary>
+<108 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).

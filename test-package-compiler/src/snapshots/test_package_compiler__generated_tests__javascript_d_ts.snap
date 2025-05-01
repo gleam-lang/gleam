@@ -6,7 +6,7 @@ expression: "./cases/javascript_d_ts"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/hello.cache_meta
-<73 byte binary>
+<81 byte binary>
 
 //// /out/lib/the_package/gleam.d.mts
 export * from "../prelude.mjs";
