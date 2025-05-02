@@ -213,11 +213,12 @@
   deprecated environment variables.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- When generating documentation, the build tool now prints correct type variable
-  names for function signatures. For example, this code:
+- When generating documentation, the build tool now prints type variable using
+  the same names as were used in the code for function signatures. For example,
+  this code:
 
   ```gleam
-  pub fn to_list(list: List(#(key, value))) -> Dict(key, value) {
+  pub fn to_list(entries: List(#(key, value))) -> Dict(key, value) {
     ...
   }
   ```
@@ -225,13 +226,13 @@
   Previously would have been printed as:
 
   ```gleam
-  pub fn to_list(list: List(#(a, b))) -> Dict(a, b)
+  pub fn to_list(entries: List(#(a, b))) -> Dict(a, b)
   ```
 
   But now is rendered as the following:
 
   ```gleam
-  pub fn to_list(list: List(#(key, value))) -> Dict(key, value)
+  pub fn to_list(entries: List(#(key, value))) -> Dict(key, value)
   ```
 
   ([Surya Rose](https://github.com/GearsDatapacks))

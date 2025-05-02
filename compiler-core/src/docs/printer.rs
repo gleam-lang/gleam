@@ -127,7 +127,6 @@ impl Printer<'_> {
                 source_url: source_links.url(*location),
                 opaque: *opaque,
             }),
-
             Definition::TypeAlias(TypeAlias {
                 publicity: Publicity::Public,
                 location,
@@ -150,8 +149,11 @@ impl Printer<'_> {
                 },
                 opaque: false,
             }),
-
-            _ => None,
+            Definition::TypeAlias(_)
+            | Definition::CustomType(_)
+            | Definition::Function(_)
+            | Definition::Import(_)
+            | Definition::ModuleConstant(_) => None,
         }
     }
 
@@ -208,7 +210,11 @@ impl Printer<'_> {
                 },
             }),
 
-            _ => None,
+            Definition::TypeAlias(_)
+            | Definition::CustomType(_)
+            | Definition::Function(_)
+            | Definition::Import(_)
+            | Definition::ModuleConstant(_) => None,
         }
     }
 
@@ -436,7 +442,7 @@ impl Printer<'_> {
 
         loop {
             n = rest % alphabet_length;
-            rest /= alphabet_length;
+            rest = rest / alphabet_length;
             chars.push((n as u8 + char_offset) as char);
 
             if rest == 0 {

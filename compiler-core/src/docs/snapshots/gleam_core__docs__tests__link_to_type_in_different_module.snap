@@ -2,6 +2,17 @@
 source: compiler-core/src/docs/tests.rs
 expression: output
 ---
+---- SOURCE CODE
+-- gleam/dict.gleam
+pub type Dict(a, b)
+
+-- main.gleam
+
+import gleam/dict
+
+pub fn make_dict() -> dict.Dict(a, b) { todo }
+
+
 ---- VALUES
 
 --- make_dict

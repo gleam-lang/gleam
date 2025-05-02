@@ -264,7 +264,7 @@ expression: "compile(config, modules)"
       
     </div>
 
-    <pre><code class="hljs gleam hljs-ignore"><span class="hljs-keyword">pub fn </span><span class="hljs-title">one</span>(<span class="hljs-variable">arg</span>: <span class="hljs-variable">a</span>) -> <span class="hljs-title">Int</span></code></pre>
+    <pre><code class="hljs hljs-ignore"><span class="hljs-keyword">pub fn </span><span class="hljs-title">one</span>(<span class="hljs-variable">arg</span>: <span class="hljs-variable">a</span>) -> <span class="hljs-title">Int</span></code></pre>
     
     <div class="rendered-markdown"></div>
   </div>

@@ -137,7 +137,7 @@ fn compile_documentation(
     modules: Vec<(&str, &str, &str)>,
     options: PrintOptions,
 ) -> EcoString {
-    let module = type_::tests::compile_module("main", main_module, None, modules)
+    let module = type_::tests::compile_module("main", main_module, None, modules.clone())
         .expect("Module should compile successfully");
 
     let mut config = PackageConfig::default();
@@ -181,8 +181,15 @@ fn compile_documentation(
 
     let mut output = EcoString::new();
 
+    output.push_str("---- SOURCE CODE\n");
+    for (_package, name, src) in modules {
+        output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
+    }
+    output.push_str("-- main.gleam\n");
+    output.push_str(main_module);
+
     if !types.is_empty() {
-        output.push_str("---- TYPES");
+        output.push_str("\n\n---- TYPES");
     }
     for type_ in types {
         output.push_str("\n\n--- ");

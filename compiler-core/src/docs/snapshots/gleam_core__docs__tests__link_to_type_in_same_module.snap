@@ -2,6 +2,14 @@
 source: compiler-core/src/docs/tests.rs
 expression: output
 ---
+---- SOURCE CODE
+-- main.gleam
+
+pub type Dict(a, b)
+
+pub fn new() -> Dict(a, b) { todo }
+
+
 ---- TYPES
 
 --- Dict
