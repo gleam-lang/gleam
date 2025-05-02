@@ -16,7 +16,9 @@ use crate::{
         maybe_escape_property,
     },
     pretty::{Document, Documentable, break_, join, line, nil},
-    strings::{convert_string_escape_chars, string_to_utf16_bytes, string_to_utf32_bytes},
+    strings::{
+        convert_string_escape_chars, length_utf16, string_to_utf16_bytes, string_to_utf32_bytes,
+    },
 };
 use ecow::{EcoString, eco_format};
 use itertools::Itertools;
@@ -1634,5 +1636,5 @@ fn let_doc(variable_name: EcoString, value: Document<'_>) -> Document<'_> {
 /// Calculates the length of str as utf16 without escape characters.
 ///
 fn utf16_no_escape_len(str: &EcoString) -> usize {
-    convert_string_escape_chars(str).encode_utf16().count()
+    length_utf16(&convert_string_escape_chars(str))
 }
