@@ -1183,7 +1183,6 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "spdx",
- "strsim",
  "strum",
  "tar",
  "termcolor",

@@ -10,8 +10,6 @@ license-file = "LICENCE"
 codespan-reporting = "0"
 # Graph data structures
 petgraph = "0"
-# Levenshtein string distance for typo suggestions
-strsim = "0"
 # Cap'n Proto binary format runtime
 capnp = "0"
 # Template rendering
