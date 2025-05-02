@@ -2221,7 +2221,11 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
             layer,
             ..
         } = &self.unqualified_constructor;
-        if layer.is_value() && wanted_constructor.used_name() == name {
+
+        if layer.is_value()
+            && wanted_constructor.used_name() == name
+            && !constructor.is_local_variable()
+        {
             self.add_module_qualifier(*location);
         }
         ast::visit::visit_typed_expr_var(self, location, constructor, name);
