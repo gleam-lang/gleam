@@ -1698,6 +1698,22 @@ fn non_utf8_string_bit_array_tests() -> List(Test) {
           message
         })
       }),
+    "UTF-16 codepoint"
+      |> example(fn() {
+        assert_equal(<<216, 60, 223, 13>>, {
+          // 🌍
+          let codepoint = ffi.utf_codepoint(127_757)
+          <<codepoint:utf16_codepoint>>
+        })
+      }),
+    "UTF-32 codepoint"
+      |> example(fn() {
+        assert_equal(<<0, 1, 243, 13>>, {
+          // 🌍
+          let codepoint = ffi.utf_codepoint(127_757)
+          <<codepoint:utf32_codepoint>>
+        })
+      }),
   ]
 }
 
