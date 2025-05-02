@@ -288,3 +288,75 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn bit_array_assignment_utf16() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  let assert <<"Hello" as m:utf16>> = <<"Hello":utf16>>
+  m
+}
+"#
+    );
+}
+
+#[test]
+fn bit_array_assignment_utf32() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  let assert <<"Hello" as m:utf32>> = <<"Hello":utf32>>
+  m
+}
+"#
+    );
+}
+
+#[test]
+fn bit_array_assignment_utf16_little_endian() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  let assert <<"Hello" as m:utf16-little>> = <<"Hello":utf16-little>>
+  m
+}
+"#
+    );
+}
+
+#[test]
+fn bit_array_assignment_utf32_little_endian() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  let assert <<"Hello" as m:utf32-little>> = <<"Hello":utf32-little>>
+  m
+}
+"#
+    );
+}
+
+#[test]
+fn bit_array_assignment_utf16_native_endian() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  let assert <<"Hello" as m:utf16-native>> = <<"Hello":utf16-native>>
+  m
+}
+"#
+    );
+}
+
+#[test]
+fn bit_array_assignment_utf32_native_endian() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  let assert <<"Hello" as m:utf32-native>> = <<"Hello":utf32-native>>
+  m
+}
+"#
+    );
+}
