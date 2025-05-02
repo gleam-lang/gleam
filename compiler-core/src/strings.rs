@@ -110,15 +110,3 @@ pub fn to_upper_camel_case(string: &str) -> EcoString {
 
     pascal_case
 }
-
-pub fn uppercase_first_letter(string: &str) -> EcoString {
-    let mut uppercased = EcoString::with_capacity(string.len());
-    let mut chars = string.chars();
-    if let Some(first) = chars.next() {
-        uppercased.push(first.to_ascii_uppercase());
-    }
-    for char in chars {
-        uppercased.push(char);
-    }
-    uppercased
-}

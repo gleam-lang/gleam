@@ -690,16 +690,16 @@ pub enum Named {
 impl Named {
     pub fn as_str(self) -> &'static str {
         match self {
-            Named::Type => "type",
-            Named::TypeAlias => "type alias",
-            Named::TypeVariable => "type variable",
-            Named::CustomTypeVariant => "type variant",
-            Named::Variable => "variable",
-            Named::Argument => "argument",
-            Named::Label => "label",
-            Named::Constant => "constant",
-            Named::Function => "function",
-            Named::Discard => "discard",
+            Named::Type => "Type",
+            Named::TypeAlias => "Type alias",
+            Named::TypeVariable => "Type variable",
+            Named::CustomTypeVariant => "Type variant",
+            Named::Variable => "Variable",
+            Named::Argument => "Argument",
+            Named::Label => "Label",
+            Named::Constant => "Constant",
+            Named::Function => "Function",
+            Named::Discard => "Discard",
         }
     }
 }
