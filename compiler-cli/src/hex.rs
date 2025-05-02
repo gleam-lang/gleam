@@ -128,7 +128,7 @@ pub(crate) fn deauthenticate() -> Result<()> {
     let previous = auth.read_stored_api_key()?;
 
     if previous.is_none() {
-        println!("You must authentihate first");
+        println!("You must authenticate first");
         return Ok(());
     }
 
