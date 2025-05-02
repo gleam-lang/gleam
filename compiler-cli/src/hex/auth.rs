@@ -156,7 +156,7 @@ encrypt your Hex API key.
     ///
     ///  - Error: operation failed
     ///  - Ok(None): operation successfull but there was no key stored, eg. wrong file format
-    ///  - Ok(Some(String)): operation successfull, plus the name of key
+    ///  - Ok(Some(String)): operation successful, plus the name of key
     pub fn remove_stored_api_key(&mut self) -> Result<Option<String>> {
         let path = global_hexpm_credentials_path();
 
