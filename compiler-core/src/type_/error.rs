@@ -982,7 +982,7 @@ pub enum Warning {
 
     /// Top-level definition should not shadow an imported one.
     /// This includes type imports and function imports.
-    FunctionDefinitionShadowsImport {
+    TopLevelDefinitionShadowsImport {
         location: SrcSpan,
         name: EcoString,
     },
@@ -1209,7 +1209,7 @@ impl Warning {
             | Warning::FeatureRequiresHigherGleamVersion { location, .. }
             | Warning::JavaScriptIntUnsafe { location, .. }
             | Warning::AssertLiteralValue { location, .. }
-            | Warning::FunctionDefinitionShadowsImport { location, .. }
+            | Warning::TopLevelDefinitionShadowsImport { location, .. }
             | Warning::BitArraySegmentTruncatedValue { location, .. } => *location,
         }
     }

@@ -247,12 +247,22 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             self.register_type_alias(t, &mut env);
         }
 
+        for c in &statements.constants {
+            if env.unqualified_imported_names.contains_key(&c.name) {
+                self.problems
+                    .warning(Warning::TopLevelDefinitionShadowsImport {
+                        location: c.location,
+                        name: c.name.clone(),
+                    })
+            }
+        }
+
         for f in &statements.functions {
-            let (name_location, name) = f.name.clone().expect("A module's function must be named");
+            let (_name_location, name) = f.name.clone().expect("A module's function must be named");
             if env.unqualified_imported_names.contains_key(&name) {
                 self.problems
-                    .warning(Warning::FunctionDefinitionShadowsImport {
-                        location: name_location,
+                    .warning(Warning::TopLevelDefinitionShadowsImport {
+                        location: f.location,
                         name,
                     });
             }

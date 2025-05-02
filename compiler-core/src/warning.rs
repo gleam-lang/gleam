@@ -1276,7 +1276,7 @@ can already tell whether it will be true or false.",
                         extra_labels: Vec::new(),
                     }),
                 },
-                type_::Warning::FunctionDefinitionShadowsImport { location, name } => Diagnostic {
+                type_::Warning::TopLevelDefinitionShadowsImport { location, name } => Diagnostic {
                     title: format!("Definition of \"{name}\" shadows an imported value"),
                     text: wrap("The imported value could not be used anyway."),
                     hint: Some("You could remove the imported value.".into()),

@@ -474,6 +474,18 @@ pub fn main() {
     );
 }
 
+#[test]
+fn shadow_imported_variable() {
+    assert_warning!(
+        ("thepackage", "one", "pub const x = 10"),
+        "
+import one.{x}
+
+const x = 9
+"
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/2050
 #[test]
 fn double_unary_integer_literal() {

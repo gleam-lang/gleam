@@ -22,3 +22,13 @@ warning: Unused imported module alias
 Hint: You can safely remove it.
 
     import gleam/wibble as _
+
+
+warning: Definition of "one" shadows an imported value
+  ┌─ /src/warning/wrn.gleam:3:13
+  │
+3 │             pub const one = one
+  │             ^^^^^^^^^^^^^
+
+The imported value could not be used anyway.
+Hint: You could remove the imported value.

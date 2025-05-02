@@ -1,0 +1,40 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\nimport one.{x}\n\nconst x = 9\n"
+---
+----- SOURCE CODE
+-- one.gleam
+pub const x = 10
+
+-- main.gleam
+
+import one.{x}
+
+const x = 9
+
+
+----- WARNING
+warning: Unused imported value
+  ┌─ /src/warning/wrn.gleam:2:13
+  │
+2 │ import one.{x}
+  │             ^ This imported value is never used
+
+Hint: You can safely remove it.
+
+warning: Definition of "x" shadows an imported value
+  ┌─ /src/warning/wrn.gleam:4:1
+  │
+4 │ const x = 9
+  │ ^^^^^^^
+
+The imported value could not be used anyway.
+Hint: You could remove the imported value.
+
+warning: Unused private constant
+  ┌─ /src/warning/wrn.gleam:4:1
+  │
+4 │ const x = 9
+  │ ^^^^^^^ This private constant is never used
+
+Hint: You can safely remove it.
