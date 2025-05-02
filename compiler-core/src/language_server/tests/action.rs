@@ -3582,6 +3582,37 @@ pub fn main() {
             .select_until(find_position_of("(1)")),
     );
 }
+
+#[test]
+fn test_unqualified_to_qualified_import_variable_shadowing() {
+    let src = r#"
+
+import wibble.{wobble}
+
+pub fn example() {
+  echo wobble
+
+  let wobble = 1
+
+  echo wobble
+
+  let _ = fn(wobble) {
+    echo wobble
+  }
+
+  todo
+}
+"#;
+
+    assert_code_action!(
+        "Qualify wobble as wibble.wobble",
+        TestProject::for_source(src).add_hex_module("wibble", "pub fn wobble() { todo }"),
+        find_position_of("wob")
+            .nth_occurrence(2)
+            .select_until(find_position_of("ble").nth_occurrence(3))
+    );
+}
+
 /* TODO: implement qualified unused location
 #[test]
 fn test_remove_unused_qualified_action() {

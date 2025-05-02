@@ -411,3 +411,8 @@
 - Only print the user-friendly LSP message when stdin is a terminal to avoid
   emitting redundant logs.
   ([Ariel Parker](https://github.com/arielherself))
+
+- Fixed a bug where the language server would wrongly override local variables
+  if they were shadowing an unqualified module function.
+  ([Samuel Cristobal](https://github.com/scristobal))
+
