@@ -1,0 +1,39 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\npub fn main() {\n  case <<\"Hello\":utf16-little>> {\n    <<\"Hello\" as m:utf16-little>> -> m\n    _ -> \"\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  case <<"Hello":utf16-little>> {
+    <<"Hello" as m:utf16-little>> -> m
+    _ -> ""
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { toBitArray, stringToUtf16 } from "../gleam.mjs";
+
+export function main() {
+  let $ = toBitArray([stringToUtf16("Hello", false)]);
+  if ($.bitSize === 80) {
+    if ($.byteAt(0) === 72 &&
+      $.byteAt(1) === 0 &&
+      $.byteAt(2) === 101 &&
+      $.byteAt(3) === 0 &&
+      $.byteAt(4) === 108 &&
+      $.byteAt(5) === 0 &&
+      $.byteAt(6) === 108 &&
+      $.byteAt(7) === 0 &&
+      $.byteAt(8) === 111 &&
+      $.byteAt(9) === 0) {
+      let m = "Hello";
+      return m;
+    } else {
+      return "";
+    }
+  } else {
+    return "";
+  }
+}
