@@ -1,0 +1,49 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\npub fn main() {\n  case <<\"Hello\":utf32-little>> {\n    <<\"Hello\" as m:utf32-little>> -> m\n    _ -> \"\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  case <<"Hello":utf32-little>> {
+    <<"Hello" as m:utf32-little>> -> m
+    _ -> ""
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { toBitArray, stringToUtf32 } from "../gleam.mjs";
+
+export function main() {
+  let $ = toBitArray([stringToUtf32("Hello", false)]);
+  if ($.bitSize === 160) {
+    if ($.byteAt(0) === 72 &&
+      $.byteAt(1) === 0 &&
+      $.byteAt(2) === 0 &&
+      $.byteAt(3) === 0 &&
+      $.byteAt(4) === 101 &&
+      $.byteAt(5) === 0 &&
+      $.byteAt(6) === 0 &&
+      $.byteAt(7) === 0 &&
+      $.byteAt(8) === 108 &&
+      $.byteAt(9) === 0 &&
+      $.byteAt(10) === 0 &&
+      $.byteAt(11) === 0 &&
+      $.byteAt(12) === 108 &&
+      $.byteAt(13) === 0 &&
+      $.byteAt(14) === 0 &&
+      $.byteAt(15) === 0 &&
+      $.byteAt(16) === 111 &&
+      $.byteAt(17) === 0 &&
+      $.byteAt(18) === 0 &&
+      $.byteAt(19) === 0) {
+      let m = "Hello";
+      return m;
+    } else {
+      return "";
+    }
+  } else {
+    return "";
+  }
+}
