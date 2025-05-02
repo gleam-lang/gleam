@@ -132,7 +132,7 @@ pub(crate) fn deauthenticate() -> Result<()> {
         return Ok(());
     }
 
-    let question = "This will delelete and revoke your existing Hex API key. The operation han not be undone. Do you want to proceed?";
+    let question = "This will delete and revoke your existing Hex API key. The operation cannot be undone. Do you want to proceed?";
 
     if !cli::confirm(question)? {
         return Ok(());
