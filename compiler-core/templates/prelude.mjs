@@ -1385,7 +1385,7 @@ export function stringToUtf16(string, isBigEndian) {
  * @param {boolean} isBigEndian
  * @returns {Uint8Array}
  */
-export function codePointToUtf16(codepoint, isBigEndian) {
+export function codepointToUtf16(codepoint, isBigEndian) {
   return stringToUtf16(String.fromCodePoint(codepoint.value), isBigEndian);
 }
 
@@ -1426,7 +1426,7 @@ export function stringToUtf32(string, isBigEndian) {
  * @param {boolean} isBigEndian
  * @returns {Uint8Array}
  */
-export function codePointToUtf32(codepoint, isBigEndian) {
+export function codepointToUtf32(codepoint, isBigEndian) {
   return stringToUtf32(String.fromCodePoint(codepoint.value), isBigEndian);
 }
 
