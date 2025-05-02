@@ -1,6 +1,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 use crate::build::{Origin, Outcome, Runtime, Target};
 use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
+use crate::strings::{to_snake_case, to_upper_camel_case, uppercase_first_letter};
 use crate::type_::collapse_links;
 use crate::type_::error::{
     InvalidImportKind, MissingAnnotation, ModuleValueUsageContext, Named, UnknownField,
@@ -11,7 +12,6 @@ use crate::type_::{FieldAccessUsage, error::PatternMatchKind};
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
 use crate::{bit_array, diagnostic::Level, javascript, type_::UnifyErrorSituation};
 use ecow::EcoString;
-use heck::{ToSnakeCase, ToTitleCase, ToUpperCamelCase};
 use hexpm::version::ResolutionError;
 use itertools::Itertools;
 use pubgrub::package::Package;
@@ -3519,7 +3519,7 @@ See: https://tour.gleam.run/advanced-features/use/");
                         Named::CustomTypeVariant => wrap_format!("Hint: {} names start with an uppercase \
 letter and contain only lowercase letters, numbers, \
 and uppercase letters.
-Try: {}", kind_str.to_title_case(), name.to_upper_camel_case()),
+Try: {}", uppercase_first_letter(kind_str), to_upper_camel_case(name)),
                         Named::Variable |
                         Named::TypeVariable |
                         Named::Argument |
@@ -3527,10 +3527,10 @@ Try: {}", kind_str.to_title_case(), name.to_upper_camel_case()),
                         Named::Constant  |
                         Named::Function => wrap_format!("Hint: {} names start with a lowercase letter \
 and contain a-z, 0-9, or _.
-Try: {}", kind_str.to_title_case(), name.to_snake_case()),
+Try: {}", uppercase_first_letter(kind_str), to_snake_case(name)),
                         Named::Discard => wrap_format!("Hint: {} names start with _ and contain \
 a-z, 0-9, or _.
-Try: _{}", kind_str.to_title_case(), name.to_snake_case()),
+Try: _{}", uppercase_first_letter(kind_str), to_snake_case(name)),
                     };
 
                     Diagnostic {

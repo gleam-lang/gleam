@@ -64,3 +64,61 @@ pub fn convert_string_escape_chars(str: &EcoString) -> EcoString {
     }
     filtered_str
 }
+
+pub fn to_snake_case(string: &str) -> EcoString {
+    let mut snake_case = EcoString::with_capacity(string.len());
+    let mut is_word_boundary = true;
+
+    for char in string.chars() {
+        match char {
+            '_' | ' ' => {
+                is_word_boundary = true;
+                continue;
+            }
+            _ if char.is_uppercase() => {
+                is_word_boundary = true;
+            }
+            _ => {}
+        }
+
+        if is_word_boundary {
+            // We don't want to push an underscore at the start of the string,
+            // even if it starts with a capital letter or other delimiter.
+            if !snake_case.is_empty() {
+                snake_case.push('_');
+            }
+            is_word_boundary = false;
+        }
+        snake_case.push(char.to_ascii_lowercase());
+    }
+
+    snake_case
+}
+
+pub fn to_upper_camel_case(string: &str) -> EcoString {
+    let mut pascal_case = EcoString::with_capacity(string.len());
+    let mut chars = string.chars();
+
+    while let Some(char) = chars.next() {
+        if char == '_' {
+            let Some(next) = chars.next() else { break };
+            pascal_case.push(next.to_ascii_uppercase());
+        } else {
+            pascal_case.push(char);
+        }
+    }
+
+    pascal_case
+}
+
+pub fn uppercase_first_letter(string: &str) -> EcoString {
+    let mut uppercased = EcoString::with_capacity(string.len());
+    let mut chars = string.chars();
+    if let Some(first) = chars.next() {
+        uppercased.push(first.to_ascii_uppercase());
+    }
+    for char in chars {
+        uppercased.push(char);
+    }
+    uppercased
+}

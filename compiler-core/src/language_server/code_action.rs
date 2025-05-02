@@ -16,6 +16,7 @@ use crate::{
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
     parse::{extra::ModuleExtra, lexer::str_to_keyword},
+    strings::to_snake_case,
     type_::{
         self, FieldMap, ModuleValueConstructor, Type, TypeVar, TypedCallArg, ValueConstructor,
         error::{ModuleSuggestion, VariableOrigin},
@@ -23,7 +24,6 @@ use crate::{
     },
 };
 use ecow::{EcoString, eco_format};
-use heck::ToSnakeCase;
 use im::HashMap;
 use itertools::Itertools;
 use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, Position, Range, TextEdit, Url};
@@ -3750,7 +3750,7 @@ impl<'a> GenerateDynamicDecoder<'a> {
         let mut branches = Vec::with_capacity(constructors_size);
         for constructor in iter::once(first).chain(rest) {
             let body = self.constructor_decoder(mode, custom_type, constructor, 4)?;
-            let name = constructor.name.to_snake_case();
+            let name = to_snake_case(&constructor.name);
             branches.push(eco_format!(r#"    "{name}" -> {body}"#));
         }
 
@@ -3833,7 +3833,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast> {
             return;
         }
 
-        let name = eco_format!("{}_decoder", custom_type.name.to_snake_case());
+        let name = eco_format!("{}_decoder", to_snake_case(&custom_type.name));
         let Some(function_body) = self.custom_type_decoder_body(custom_type) else {
             return;
         };
@@ -4033,7 +4033,7 @@ impl<'a> DecoderPrinter<'a> {
                         Some((module, name, _))
                             if module == self.type_module && name == self.type_name =>
                         {
-                            eco_format!("{}_decoder()", name.to_snake_case())
+                            eco_format!("{}_decoder()", to_snake_case(name))
                         }
                         _ => eco_format!(
                             r#"todo as "Decoder for {}""#,
@@ -4193,7 +4193,7 @@ impl<'a> GenerateJsonEncoder<'a> {
         nesting: usize,
     ) -> Option<EcoString> {
         let json_module = self.printer.print_module(JSON_MODULE);
-        let tag = constructor.name.to_snake_case();
+        let tag = to_snake_case(&constructor.name);
         let indent = " ".repeat(nesting);
 
         // If the variant is encoded as a simple json string we just call the
@@ -4241,7 +4241,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast> {
             return;
         }
 
-        let record_name = EcoString::from(custom_type.name.to_snake_case());
+        let record_name = to_snake_case(&custom_type.name);
         let name = eco_format!("{record_name}_to_json");
         let Some(encoder) = self.custom_type_encoder_body(record_name.clone(), custom_type) else {
             return;
@@ -4416,7 +4416,7 @@ impl<'a> JsonEncoderPrinter<'a> {
                         Some((module, name, _))
                             if module == self.type_module && name == self.type_name =>
                         {
-                            maybe_capture(eco_format!("{}_to_json", name.to_snake_case()))
+                            maybe_capture(eco_format!("{}_to_json", to_snake_case(name)))
                         }
                         _ => eco_format!(
                             r#"todo as "Encoder for {}""#,
@@ -5216,7 +5216,7 @@ impl NameGenerator {
         let type_to_base_name = |type_: &Arc<Type>| {
             type_
                 .named_type_name()
-                .map(|(_type_module, type_name)| EcoString::from(type_name.to_snake_case()))
+                .map(|(_type_module, type_name)| to_snake_case(&type_name))
                 .filter(|name| is_valid_lowercase_name(name))
                 .unwrap_or(EcoString::from("value"))
         };

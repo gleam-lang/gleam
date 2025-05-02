@@ -118,7 +118,7 @@ impl<'a> ErlangApp<'a> {
             .chain(native_modules)
             .unique()
             .sorted()
-            .map(|m| escape_atom_string(m.clone().into()))
+            .map(escape_atom_string)
             .join(",\n               ");
 
         // TODO: When precompiling for production (i.e. as a precompiled hex
