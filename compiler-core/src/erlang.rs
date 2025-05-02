@@ -1232,7 +1232,8 @@ fn let_assert<'a>(
     };
 
     let mut guards = vec![];
-    let pattern_document = pattern::to_doc(pattern, &mut vars, env, &mut guards);
+    let mut assignments = vec![];
+    let pattern_document = pattern::to_doc(pattern, &mut vars, env, &mut guards, &mut assignments);
     let clause_guard = optional_clause_guard(None, guards, env);
 
     let message = match message {
@@ -1240,14 +1241,40 @@ fn let_assert<'a>(
         None => string("Pattern match failed, no pattern matched the value."),
     };
 
+    let mut variable_value = |name| {
+        for assignment in assignments.iter() {
+            // If we are compiling a pattern match such as the following:
+            // ```gleam
+            // let assert <<"Hello" as m:utf16>> = x
+            // ```
+            //
+            // We could do the same thing as we do in `case` expressions:
+            // ```erlang
+            // M@2 = case X of
+            //   <<M:10/binary>> when M =:= <<"Hello"/utf16>> ->
+            //     M@1 = <<"Hello"/utf8>>,
+            //     M@1;
+            //   _ -> erlang:error(...)
+            // end
+            // ```
+            //
+            // However, since we are always immediately returning the value
+            // assigned to this temporary variable, it is simpler to just return
+            // the value itself, rather then assigning then returning.
+            //
+            if assignment.variable == name {
+                return assignment.value.clone();
+            }
+        }
+        env.local_var_name(name)
+    };
+
     let value = match vars.as_slice() {
         _ if is_tail => subject.clone(),
         [] => "nil".to_doc(),
-        [variable] => env.local_var_name(variable),
+        [variable] => variable_value(variable),
         variables => {
-            let variables = variables
-                .iter()
-                .map(|variable| env.local_var_name(variable));
+            let variables = variables.iter().map(|name| variable_value(name));
             docvec![
                 break_("{", "{"),
                 join(variables, break_(",", ", ")).nest(INDENT),
@@ -1311,7 +1338,10 @@ fn let_assert<'a>(
 fn let_<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a> {
     let body = maybe_block_expr(value, env).group();
     let mut guards = vec![];
-    pattern(pat, env, &mut guards).append(" = ").append(body)
+    let mut assignments = vec![];
+    pattern(pat, env, &mut guards, &mut assignments)
+        .append(" = ")
+        .append(body)
 }
 
 fn float<'a>(value: &str) -> Document<'a> {
@@ -1518,30 +1548,46 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
             .chain(alternative_patterns)
             .map(|patterns| {
                 let mut additional_guards = vec![];
+                let mut assignments = vec![];
                 env.erl_function_scope_vars = initial_erlang_vars.clone();
 
                 let patterns_doc = if patterns.len() == 1 {
                     let p = patterns.first().expect("Single pattern clause printing");
-                    pattern(p, env, &mut additional_guards)
+                    pattern(p, env, &mut additional_guards, &mut assignments)
                 } else {
                     tuple(
                         patterns
                             .iter()
-                            .map(|p| pattern(p, env, &mut additional_guards)),
+                            .map(|p| pattern(p, env, &mut additional_guards, &mut assignments)),
                     )
                 };
 
                 let guard = optional_clause_guard(guard.as_ref(), additional_guards, env);
+
+                let assignments = assignments
+                    .into_iter()
+                    .map(|assignment| {
+                        docvec![
+                            line(),
+                            env.next_local_var_name(assignment.variable),
+                            " = ",
+                            assignment.value,
+                            ","
+                        ]
+                        .nest(INDENT)
+                    })
+                    .collect_vec();
+
                 if then_doc.is_none() {
                     then_doc = Some(clause_consequence(then, env));
                     end_erlang_vars = env.erl_function_scope_vars.clone();
                 }
 
-                patterns_doc.append(
-                    guard
-                        .append(" ->")
-                        .append(line().append(then_doc.clone()).nest(INDENT).group()),
-                )
+                patterns_doc
+                    .append(guard)
+                    .append(" ->")
+                    .append(assignments)
+                    .append(line().append(then_doc.clone()).nest(INDENT).group())
             }),
         ";".to_doc().append(lines(2)),
     );

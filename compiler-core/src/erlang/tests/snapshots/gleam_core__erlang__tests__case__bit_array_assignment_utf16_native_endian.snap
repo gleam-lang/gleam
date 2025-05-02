@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/erlang/tests/case.rs
+expression: "\npub fn main() {\n  case <<\"Hello\":utf16-native>> {\n    <<\"Hello\" as m:utf16-native>> -> m\n    _ -> \"\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  case <<"Hello":utf16-native>> {
+    <<"Hello" as m:utf16-native>> -> m
+    _ -> ""
+  }
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec main() -> binary().
+main() ->
+    case <<"Hello"/utf16-native>> of
+        <<M:10/binary-native>> when M =:= <<"Hello"/utf16-native>> ->
+            M@1 = <<"Hello"/utf8>>,
+            M@1;
+
+        _ ->
+            <<""/utf8>>
+    end.

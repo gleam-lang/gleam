@@ -101,3 +101,87 @@ pub fn main() {
 "#,
     );
 }
+
+#[test]
+fn bit_array_assignment_utf16() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  case <<"Hello":utf16>> {
+    <<"Hello" as m:utf16>> -> m
+    _ -> ""
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn bit_array_assignment_utf32() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  case <<"Hello":utf32>> {
+    <<"Hello" as m:utf32>> -> m
+    _ -> ""
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn bit_array_assignment_utf16_little_endian() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  case <<"Hello":utf16-little>> {
+    <<"Hello" as m:utf16-little>> -> m
+    _ -> ""
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn bit_array_assignment_utf32_little_endian() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  case <<"Hello":utf32-little>> {
+    <<"Hello" as m:utf32-little>> -> m
+    _ -> ""
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn bit_array_assignment_utf16_native_endian() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  case <<"Hello":utf16-native>> {
+    <<"Hello" as m:utf16-native>> -> m
+    _ -> ""
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn bit_array_assignment_utf32_native_endian() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  case <<"Hello":utf32-native>> {
+    <<"Hello" as m:utf32-native>> -> m
+    _ -> ""
+  }
+}
+"#
+    );
+}
