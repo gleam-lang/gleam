@@ -23,3 +23,7 @@ pub fn halt(a: Int) -> Nil
 @external(erlang, "ffi_erlang", "to_dynamic")
 @external(javascript, "./ffi_javascript.mjs", "toDynamic")
 pub fn to_dynamic(a: x) -> Dynamic
+
+@external(erlang, "ffi_erlang", "to_codepoint")
+@external(javascript, "./ffi_javascript.mjs", "toCodepoint")
+pub fn utf_codepoint(a: Int) -> UtfCodepoint
