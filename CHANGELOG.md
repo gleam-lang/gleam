@@ -185,8 +185,8 @@
 - The compiler will not generate needless code for unused pattern variables.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The compiler will now emit a warning when a function definition shadows
-  an imported function with the same name.
+- The compiler will now emit a warning when a top-level function/constant definition shadows
+  an imported value with the same name.
 
   ```gleam
   import module.{fun}
