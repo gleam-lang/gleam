@@ -85,10 +85,7 @@ mod missing_patterns;
 pub mod printer;
 
 use crate::{
-    ast::{
-        self, AssignName, BitArrayOption, Endianness, TypedClause, TypedPattern,
-        TypedPatternBitArraySegment,
-    },
+    ast::{self, AssignName, Endianness, TypedClause, TypedPattern, TypedPatternBitArraySegment},
     strings::{convert_string_escape_chars, length_utf16, length_utf32},
     type_::{
         Environment, Type, TypeValueConstructor, TypeValueConstructorField, TypeVar,
@@ -2789,7 +2786,7 @@ impl CaseToCompile {
 
         let segments_count = segments.len();
         for (i, segment) in segments.iter().enumerate() {
-            let segment_size = segment_size(segment, &pattern_variables);
+            let segment_size = segment_size(segment, &pattern_variables, None);
 
             // If we're reading a variable number of bits we need to make sure
             // that that variable is positive!
@@ -2831,7 +2828,7 @@ impl CaseToCompile {
 
             // Each segment is also turned into a match test, checking the
             // selected bits match with the pattern's value.
-            let value = segment_matched_value(&segment.value, &segment.options);
+            let value = segment_matched_value(segment, None);
 
             let type_ = match &segment.type_ {
                 type_ if type_.is_int() => ReadType::Int,
@@ -2873,27 +2870,22 @@ impl CaseToCompile {
 }
 
 fn segment_matched_value(
-    pattern: &TypedPattern,
-    options: &[BitArrayOption<TypedPattern>],
+    segment: &TypedPatternBitArraySegment,
+    // Override for the segment pattern, if we need to determine the value of
+    // an assignment segment.
+    pattern: Option<&TypedPattern>,
 ) -> BitArrayMatchedValue {
+    let pattern = pattern.unwrap_or(&segment.value);
     match pattern {
         ast::Pattern::Int { int_value, .. } => BitArrayMatchedValue::LiteralInt(int_value.clone()),
         ast::Pattern::Float { value, .. } => BitArrayMatchedValue::LiteralFloat(value.clone()),
-        ast::Pattern::String { value, .. }
-            if options
-                .iter()
-                .any(|x| matches!(x, BitArrayOption::Utf16 { .. })) =>
-        {
+        ast::Pattern::String { value, .. } if segment.has_utf16_option() => {
             BitArrayMatchedValue::LiteralString {
                 value: value.clone(),
                 encoding: StringEncoding::Utf16,
             }
         }
-        ast::Pattern::String { value, .. }
-            if options
-                .iter()
-                .any(|x| matches!(x, BitArrayOption::Utf32 { .. })) =>
-        {
+        ast::Pattern::String { value, .. } if segment.has_utf32_option() => {
             BitArrayMatchedValue::LiteralString {
                 value: value.clone(),
                 encoding: StringEncoding::Utf32,
@@ -2907,7 +2899,7 @@ fn segment_matched_value(
         ast::Pattern::Discard { name, .. } => BitArrayMatchedValue::Discard(name.clone()),
         ast::Pattern::Assign { name, pattern, .. } => BitArrayMatchedValue::Assign {
             name: name.clone(),
-            value: Box::new(segment_matched_value(pattern, options)),
+            value: Box::new(segment_matched_value(segment, Some(pattern))),
         },
         x => panic!("unexpected segment value pattern {:?}", x),
     }
@@ -2916,7 +2908,12 @@ fn segment_matched_value(
 fn segment_size(
     segment: &TypedPatternBitArraySegment,
     pattern_variables: &HashMap<EcoString, ReadAction>,
+    // Override for the segment pattern, if we need to determine the size of an
+    // assignment segment.
+    pattern: Option<&TypedPattern>,
 ) -> ReadSize {
+    let pattern = pattern.unwrap_or(&segment.value);
+
     match segment.size() {
         // Size could either be a constant or a variable usage. In either case
         // we need to take the segment's unit into account!
@@ -2946,7 +2943,11 @@ fn segment_size(
         // If there's no size option we go for a default: 8 bits for int
         // segments, and 64 for anything else.
         None if segment.type_.is_int() => ReadSize::ConstantBits(8.into()),
-        None => match segment.value.as_ref() {
+        None => match pattern {
+            ast::Pattern::Assign { pattern, .. } => {
+                segment_size(segment, pattern_variables, Some(pattern))
+            }
+
             ast::Pattern::String { value, .. } if segment.has_utf16_option() => {
                 ReadSize::ConstantBits(
                     // Each utf16 code unit is 16 bits
