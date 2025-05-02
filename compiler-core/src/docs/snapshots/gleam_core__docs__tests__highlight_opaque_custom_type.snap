@@ -2,6 +2,15 @@
 source: compiler-core/src/docs/tests.rs
 expression: output
 ---
+---- SOURCE CODE
+-- main.gleam
+
+pub opaque type Wibble(a, b) {
+  Wibble(a, i: Int)
+  Wobble(b: b, c: String)
+}
+
+
 ---- TYPES
 
 --- Wibble

@@ -272,7 +272,7 @@ expression: "compile(config, modules)"
     
     <div class="custom-type-constructors">
       <div class="rendered-markdown"></div>
-      <pre><code class="hljs gleam hljs-ignore"><span class="hljs-keyword">pub type </span><span class="hljs-title">Wibble</span> {
+      <pre><code class="hljs hljs-ignore"><span class="hljs-keyword">pub type </span><span class="hljs-title">Wibble</span> {
   <span class="hljs-title">Wobble</span>(<span class="hljs-variable">wabble</span>: <span class="hljs-title">Int</span>)
 }</code></pre>
       
@@ -284,7 +284,7 @@ expression: "compile(config, modules)"
         <li class="constructor-item">
           <div class="constructor-row">
             <svg class="icon icon-star"><use xlink:href="#icon-star"></use></svg>
-            <pre class="constructor-name"><code class="hljs gleam hljs-ignore"><span class="hljs-title">Wobble</span>(<span class="hljs-variable">wabble</span>: <span class="hljs-title">Int</span>)</code></pre>
+            <pre class="constructor-name"><code class="hljs hljs-ignore"><span class="hljs-title">Wobble</span>(<span class="hljs-variable">wabble</span>: <span class="hljs-title">Int</span>)</code></pre>
           </div>
 
           <div class="constructor-item-docs">
@@ -335,7 +335,7 @@ expression: "compile(config, modules)"
       
     </div>
 
-    <pre><code class="hljs gleam hljs-ignore"><span class="hljs-keyword">pub fn </span><span class="hljs-title">main</span>() -> <span class="hljs-variable">a</span></code></pre>
+    <pre><code class="hljs hljs-ignore"><span class="hljs-keyword">pub fn </span><span class="hljs-title">main</span>() -> <span class="hljs-variable">a</span></code></pre>
     
     <div class="rendered-markdown"></div>
   </div>

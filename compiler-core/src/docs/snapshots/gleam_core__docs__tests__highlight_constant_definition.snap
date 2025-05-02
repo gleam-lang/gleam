@@ -2,6 +2,12 @@
 source: compiler-core/src/docs/tests.rs
 expression: output
 ---
+---- SOURCE CODE
+-- main.gleam
+
+pub const x = 22
+
+
 ---- VALUES
 
 --- x

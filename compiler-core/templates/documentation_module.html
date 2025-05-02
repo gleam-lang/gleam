@@ -55,7 +55,7 @@
     {% endif %}
     <div class="custom-type-constructors">
       <div class="rendered-markdown">{{ typ.documentation|safe }}</div>
-      <pre><code class="hljs gleam hljs-ignore">{{ typ.definition|safe }}</code></pre>
+      <pre><code class="hljs hljs-ignore">{{ typ.definition|safe }}</code></pre>
       {% if !typ.constructors.is_empty() %}
       <h3>
         Constructors
@@ -65,7 +65,7 @@
         <li class="constructor-item">
           <div class="constructor-row">
             <svg class="icon icon-star"><use xlink:href="#icon-star"></use></svg>
-            <pre class="constructor-name"><code class="hljs gleam hljs-ignore">{{ constructor.definition|safe }}</code></pre>
+            <pre class="constructor-name"><code class="hljs hljs-ignore">{{ constructor.definition|safe }}</code></pre>
           </div>
 
           <div class="constructor-item-docs">
@@ -119,7 +119,7 @@
       {% endif %}
     </div>
 
-    <pre><code class="hljs gleam hljs-ignore">{{ value.definition|safe }}</code></pre>
+    <pre><code class="hljs hljs-ignore">{{ value.definition|safe }}</code></pre>
     {% if !value.deprecation_message.is_empty() %}
     <p>
       <b>Deprecated:</b> {{ value.deprecation_message }}

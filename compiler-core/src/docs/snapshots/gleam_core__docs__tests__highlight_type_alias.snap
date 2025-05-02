@@ -2,6 +2,12 @@
 source: compiler-core/src/docs/tests.rs
 expression: output
 ---
+---- SOURCE CODE
+-- main.gleam
+
+pub type Option(a) = Result(a, Nil)
+
+
 ---- TYPES
 
 --- Option

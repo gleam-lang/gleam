@@ -584,7 +584,7 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
       
     </div>
 
-    <pre><code class="hljs gleam hljs-ignore"><span class="hljs-keyword">pub fn </span><span class="hljs-title">one</span>() -> <span class="hljs-title">Int</span></code></pre>
+    <pre><code class="hljs hljs-ignore"><span class="hljs-keyword">pub fn </span><span class="hljs-title">one</span>() -> <span class="hljs-title">Int</span></code></pre>
     
     <div class="rendered-markdown"><p>Here is some documentation</p>
 </div>
@@ -944,7 +944,7 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
       
     </div>
 
-    <pre><code class="hljs gleam hljs-ignore"><span class="hljs-keyword">pub fn </span><span class="hljs-title">one</span>() -> <span class="hljs-title">Int</span></code></pre>
+    <pre><code class="hljs hljs-ignore"><span class="hljs-keyword">pub fn </span><span class="hljs-title">one</span>() -> <span class="hljs-title">Int</span></code></pre>
     
     <div class="rendered-markdown"><p>Here is some documentation</p>
 </div>

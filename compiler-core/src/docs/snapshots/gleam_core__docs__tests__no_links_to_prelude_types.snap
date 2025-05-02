@@ -2,6 +2,12 @@
 source: compiler-core/src/docs/tests.rs
 expression: output
 ---
+---- SOURCE CODE
+-- main.gleam
+
+pub fn int_to_string(i: Int) -> String { todo }
+
+
 ---- VALUES
 
 --- int_to_string
