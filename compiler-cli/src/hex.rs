@@ -139,7 +139,7 @@ pub(crate) fn deauthenticate() -> Result<()> {
     };
 
     if let Some(name) = auth.remove_stored_api_key()? {
-        println!("The Hex API key `{name}` was been removed succesfully.")
+        println!("The Hex API key `{name}` was been removed successfully.")
     }
 
     Ok(())
