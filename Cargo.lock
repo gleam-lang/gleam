@@ -1161,7 +1161,6 @@ dependencies = [
  "flate2",
  "futures",
  "globset",
- "heck",
  "hexpm",
  "http",
  "id-arena",

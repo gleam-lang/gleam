@@ -8,8 +8,6 @@ license-file = "LICENCE"
 [dependencies]
 # Error message and warning formatting
 codespan-reporting = "0"
-# String case conversion
-heck = "0"
 # Graph data structures
 petgraph = "0"
 # Levenshtein string distance for typo suggestions
