@@ -189,6 +189,11 @@
   continue to occur if a function references invalid type in its signature.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- When an import with unqualified types and values is unused the compiler will
+  now raise a single warning for the entire import rather than warning for each
+  individual item.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Build tool
 
 - The build tool now supports placing modules in a directory called `dev`,
@@ -324,7 +329,7 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- The language server can now also remove unused imported values and types:
+- The language server can now remove unused imported values and types:
 
   ```gleam
   import a_module.{type Unused, unused, used}
