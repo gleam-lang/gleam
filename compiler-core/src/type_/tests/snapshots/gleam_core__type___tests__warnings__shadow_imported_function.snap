@@ -32,5 +32,4 @@ warning: Definition of "foo" shadows an imported value
 3 │ fn foo(x) {
   │ ^^^^^^^^^
 
-The imported value could not be used anyway.
-Hint: You could remove the imported value.
+The imported value could not be used in functions anyway.

@@ -1278,8 +1278,8 @@ can already tell whether it will be true or false.",
                 },
                 type_::Warning::TopLevelDefinitionShadowsImport { location, name } => Diagnostic {
                     title: format!("Definition of \"{name}\" shadows an imported value"),
-                    text: wrap("The imported value could not be used anyway."),
-                    hint: Some("You could remove the imported value.".into()),
+                    text: wrap("The imported value could not be used in functions anyway."),
+                    hint: None,
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         src: src.clone(),
