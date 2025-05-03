@@ -13,7 +13,9 @@ use crate::{
 };
 
 use super::{
-    TextEdits, compiler::ModuleSourceInformation, reference::find_variable_references,
+    TextEdits,
+    compiler::ModuleSourceInformation,
+    reference::{VariableReferenceKind, find_variable_references},
     url_from_path,
 };
 
@@ -28,17 +30,12 @@ fn workspace_edit(uri: Url, edits: Vec<TextEdit>) -> WorkspaceEdit {
     }
 }
 
-pub enum VariableRenameKind {
-    Variable,
-    LabelShorthand,
-}
-
 pub fn rename_local_variable(
     module: &Module,
     line_numbers: &LineNumbers,
     params: &RenameParams,
     definition_location: SrcSpan,
-    kind: VariableRenameKind,
+    kind: VariableReferenceKind,
 ) -> Option<WorkspaceEdit> {
     if name::check_name_case(
         Default::default(),
@@ -56,14 +53,23 @@ pub fn rename_local_variable(
     let references = find_variable_references(&module.ast, definition_location);
 
     match kind {
-        VariableRenameKind::Variable => edits.replace(definition_location, params.new_name.clone()),
-        VariableRenameKind::LabelShorthand => {
+        VariableReferenceKind::Variable => {
+            edits.replace(definition_location, params.new_name.clone())
+        }
+        VariableReferenceKind::LabelShorthand => {
             edits.insert(definition_location.end, format!(" {}", params.new_name))
         }
     }
 
-    for location in references {
-        edits.replace(location, params.new_name.clone());
+    for reference in references {
+        match reference.kind {
+            VariableReferenceKind::Variable => {
+                edits.replace(reference.location, params.new_name.clone())
+            }
+            VariableReferenceKind::LabelShorthand => {
+                edits.insert(reference.location.end, format!(" {}", params.new_name))
+            }
+        }
     }
 
     Some(workspace_edit(uri, edits.edits))

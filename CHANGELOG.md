@@ -416,3 +416,6 @@
   if they were shadowing an unqualified module function.
   ([Samuel Cristobal](https://github.com/scristobal))
 
+- Fixed a bug where renaming a local variable which is used in combination with
+  label shorthand syntax would produce invalid code.
+  ([Surya Rose](https://github.com/GearsDatapacks))

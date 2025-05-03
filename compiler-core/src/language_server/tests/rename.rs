@@ -1331,3 +1331,22 @@ pub type Wobble {
         find_position_of("Wibble")
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4553
+#[test]
+fn rename_local_variable_with_label_shorthand() {
+    assert_rename!(
+        "
+pub type Wibble {
+  Wibble(first: Int, second: Int)
+}
+
+pub fn main() {
+  let second = 2
+  Wibble(first: 1, second:)
+}
+",
+        "something",
+        find_position_of("second =")
+    );
+}

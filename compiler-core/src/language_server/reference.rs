@@ -329,10 +329,20 @@ fn find_references_in_module(
     }
 }
 
+pub struct VariableReference {
+    pub location: SrcSpan,
+    pub kind: VariableReferenceKind,
+}
+
+pub enum VariableReferenceKind {
+    Variable,
+    LabelShorthand,
+}
+
 pub fn find_variable_references(
     module: &TypedModule,
     definition_location: SrcSpan,
-) -> Vec<SrcSpan> {
+) -> Vec<VariableReference> {
     let mut finder = FindVariableReferences {
         references: Vec::new(),
         definition_location,
@@ -342,7 +352,7 @@ pub fn find_variable_references(
 }
 
 struct FindVariableReferences {
-    references: Vec<SrcSpan>,
+    references: Vec<VariableReference>,
     definition_location: SrcSpan,
 }
 
@@ -363,7 +373,12 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
             ValueConstructorVariant::LocalVariable {
                 location: definition_location,
                 ..
-            } if definition_location == self.definition_location => self.references.push(*location),
+            } if definition_location == self.definition_location => {
+                self.references.push(VariableReference {
+                    location: *location,
+                    kind: VariableReferenceKind::Variable,
+                })
+            }
             _ => {}
         }
     }
@@ -376,7 +391,10 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
         definition_location: &'ast SrcSpan,
     ) {
         if *definition_location == self.definition_location {
-            self.references.push(*location)
+            self.references.push(VariableReference {
+                location: *location,
+                kind: VariableReferenceKind::Variable,
+            })
         }
     }
 
@@ -396,9 +414,39 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
                 location: definition_location,
                 ..
             } if *definition_location == self.definition_location => {
-                self.references.push(*location)
+                self.references.push(VariableReference {
+                    location: *location,
+                    kind: VariableReferenceKind::Variable,
+                })
             }
             _ => {}
         }
+    }
+
+    fn visit_typed_call_arg(&mut self, arg: &'ast crate::type_::TypedCallArg) {
+        if let TypedExpr::Var {
+            location,
+            constructor,
+            ..
+        } = &arg.value
+        {
+            match &constructor.variant {
+                ValueConstructorVariant::LocalVariable {
+                    location: definition_location,
+                    ..
+                } if arg.uses_label_shorthand()
+                    && *definition_location == self.definition_location =>
+                {
+                    self.references.push(VariableReference {
+                        location: *location,
+                        kind: VariableReferenceKind::LabelShorthand,
+                    });
+                    return;
+                }
+                _ => {}
+            }
+        }
+
+        ast::visit::visit_typed_call_arg(self, arg);
     }
 }
