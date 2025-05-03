@@ -104,7 +104,7 @@ pub struct ProjectCompiler<IO> {
     pub(crate) config: PackageConfig,
     pub(crate) packages: HashMap<String, ManifestPackage>,
     importable_modules: im::HashMap<EcoString, type_::ModuleInterface>,
-    defined_modules: im::HashMap<EcoString, Utf8PathBuf>,
+    pub(crate) defined_modules: im::HashMap<EcoString, Utf8PathBuf>,
     stale_modules: StaleTracker,
     /// The set of modules that have had partial compilation done since the last
     /// successful compilation.

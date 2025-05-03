@@ -542,6 +542,10 @@ pub trait Visit<'ast> {
         );
     }
 
+    fn visit_typed_pattern_invalid(&mut self, location: &'ast SrcSpan, type_: &'ast Arc<Type>) {
+        visit_typed_pattern_invalid(self, location, type_);
+    }
+
     fn visit_type_ast(&mut self, node: &'ast TypeAst) {
         visit_type_ast(self, node);
     }
@@ -1720,6 +1724,12 @@ pub fn visit_typed_pattern_string_prefix<'a, V>(
     _left_side_string: &'a EcoString,
     _right_side_assignment: &'a AssignName,
 ) where
+    V: Visit<'a> + ?Sized,
+{
+}
+
+pub fn visit_typed_pattern_invalid<'a, V>(_v: &mut V, _location: &'a SrcSpan, _type_: &'a Arc<Type>)
+where
     V: Visit<'a> + ?Sized,
 {
 }
