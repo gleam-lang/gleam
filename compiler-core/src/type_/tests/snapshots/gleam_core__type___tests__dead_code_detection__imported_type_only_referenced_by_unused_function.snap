@@ -18,11 +18,11 @@ fn unused() -> Wibble {
 
 
 ----- WARNING
-warning: Unused imported type
-  ┌─ /src/warning/wrn.gleam:2:16
+warning: Unused imported module
+  ┌─ /src/warning/wrn.gleam:2:1
   │
 2 │ import wibble.{type Wibble}
-  │                ^^^^^^^^^^^ This imported type is never used
+  │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^ This imported module is never used
 
 Hint: You can safely remove it.
 

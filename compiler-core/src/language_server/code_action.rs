@@ -7112,7 +7112,7 @@ impl<'a> RemoveUnusedImports<'a> {
                 // When an entire module is unused we can delete its entire location
                 // in the source code.
                 UnusedImport::Module(location) | UnusedImport::ModuleAlias(location) => {
-                    if self.edits.line_numbers.spans_entire_line(&location) {
+                    if self.edits.line_numbers.spans_entire_line(location) {
                         // If the unused module spans over the entire line then
                         // we also take care of removing the following newline
                         // characther!
@@ -7130,7 +7130,7 @@ impl<'a> RemoveUnusedImports<'a> {
                 // comma that we also need to remove!
                 UnusedImport::ValueOrType(location) => {
                     let imported = self.imported_values(*location);
-                    let unused_index = imported.binary_search(&location);
+                    let unused_index = imported.binary_search(location);
                     let is_last = unused_index.is_ok_and(|index| index == imported.len() - 1);
                     let next_value = unused_index
                         .ok()

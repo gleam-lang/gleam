@@ -1173,7 +1173,7 @@ impl Warning {
         }
     }
 
-    fn location(&self) -> SrcSpan {
+    pub(crate) fn location(&self) -> SrcSpan {
         match self {
             Warning::Todo { location, .. }
             | Warning::ImplicitlyDiscardedResult { location, .. }
