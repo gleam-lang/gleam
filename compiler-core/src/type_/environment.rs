@@ -645,6 +645,22 @@ impl Environment<'_> {
             .expect("Expected a bottom level of entity usages.");
         self.handle_unused_variables(unused, problems);
 
+        // We have to handle unused imported entites a bit differently when
+        // emitting warning: when an import list is unused all its items and
+        // the import itself are unused:
+        //
+        // ```
+        // import wibble.{unused, also_unused}
+        //        ^^^^^^  ^^^^^^  ^^^^^^^^^^^ Everything is unused here
+        // ```
+        //
+        // But instead of emitting three warnings, what we really want is to
+        // emit just a single warning encompassing the entire line! So we have
+        // to hold on all unused imported entities and emit a warning for those
+        // only if the module they come from is not also unused.
+        let mut unused_modules = HashSet::new();
+        let mut unused_imported_items = vec![];
+
         for (entity, info) in self.references.unused() {
             let name = entity.name;
             let location = info.origin;
@@ -657,37 +673,61 @@ impl Environment<'_> {
                     name,
                     imported: false,
                 },
-                EntityKind::ImportedType => Warning::UnusedType {
-                    name,
-                    imported: true,
-                    location,
-                },
-                EntityKind::ImportedConstructor => Warning::UnusedConstructor {
-                    name,
-                    imported: true,
-                    location,
-                },
                 EntityKind::Type => Warning::UnusedType {
                     name,
                     imported: false,
                     location,
                 },
-                EntityKind::ImportedValue => Warning::UnusedImportedValue { name, location },
-                EntityKind::ImportedModule => Warning::UnusedImportedModule { name, location },
-                EntityKind::ModuleAlias => {
-                    let module_name = match self.imported_modules.get(&name) {
-                        Some((_, module)) => module.name.clone(),
-                        None => name.clone(),
-                    };
-                    Warning::UnusedImportedModuleAlias {
-                        module_name,
-                        alias: name,
-                        location,
-                    }
+                EntityKind::ImportedModule { full_name } => {
+                    let _ = unused_modules.insert(full_name.clone());
+                    Warning::UnusedImportedModule { name, location }
+                }
+                EntityKind::ImportedType { module } => {
+                    unused_imported_items.push((
+                        module,
+                        Warning::UnusedType {
+                            name,
+                            imported: true,
+                            location,
+                        },
+                    ));
+                    continue;
+                }
+                EntityKind::ImportedConstructor { module } => {
+                    unused_imported_items.push((
+                        module,
+                        Warning::UnusedConstructor {
+                            name,
+                            imported: true,
+                            location,
+                        },
+                    ));
+                    continue;
+                }
+                EntityKind::ImportedValue { module } => {
+                    unused_imported_items
+                        .push((module, Warning::UnusedImportedValue { name, location }));
+                    continue;
+                }
+                EntityKind::ModuleAlias { module } => {
+                    unused_imported_items.push((
+                        module.clone(),
+                        Warning::UnusedImportedModuleAlias {
+                            module_name: module.clone(),
+                            alias: name,
+                            location,
+                        },
+                    ));
+                    continue;
                 }
             };
             problems.warning(warning);
         }
+
+        unused_imported_items
+            .into_iter()
+            .filter(|(module, _)| !unused_modules.contains(module))
+            .for_each(|(_, warning)| problems.warning(warning));
     }
 
     fn handle_unused_variables(

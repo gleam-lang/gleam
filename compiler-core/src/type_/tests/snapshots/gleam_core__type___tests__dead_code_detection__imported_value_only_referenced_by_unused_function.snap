@@ -20,11 +20,11 @@ fn unused() {
 
 
 ----- WARNING
-warning: Unused imported item
-  ┌─ /src/warning/wrn.gleam:2:16
+warning: Unused imported module
+  ┌─ /src/warning/wrn.gleam:2:1
   │
 2 │ import wibble.{Wibble}
-  │                ^^^^^^ This imported constructor is never used
+  │ ^^^^^^^^^^^^^^^^^^^^^^ This imported module is never used
 
 Hint: You can safely remove it.
 
