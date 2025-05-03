@@ -188,7 +188,8 @@ where
         // verify that this version is appropriate.
         self.check_gleam_version()?;
 
-        // Check if JavaScript configuration has changed
+        // Checks if JavaScript configuration has changed since the last build (particularly TypeScript declarations)
+        // and rebuilds the project if necessary to ensure consistent compilation with current settings
         self.rebuild_if_javascript_config_changed()?;
 
         // The JavaScript target requires a prelude module to be written.
