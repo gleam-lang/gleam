@@ -33,6 +33,7 @@ Parsed {
                                     end: 25,
                                 },
                                 name: "Wibble",
+                                type_name: "Wibble",
                                 arguments: [
                                     RecordConstructorArg {
                                         label: Some(

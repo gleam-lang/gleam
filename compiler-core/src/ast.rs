@@ -255,6 +255,7 @@ pub struct RecordConstructor<T> {
     pub location: SrcSpan,
     pub name_location: SrcSpan,
     pub name: EcoString,
+    pub type_name: EcoString,
     pub arguments: Vec<RecordConstructorArg<T>>,
     pub documentation: Option<(u32, EcoString)>,
     pub deprecation: Deprecation,

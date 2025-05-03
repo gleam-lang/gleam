@@ -16,6 +16,6 @@ type Wibble {
 ----- Hover content -----
 Scalar(
     String(
-        "```gleam\nWobble(Int)\n```\n The most exciting documentation",
+        "```gleam\nfn(Int) -> Wibble\n```\n The most exciting documentation",
     ),
 )

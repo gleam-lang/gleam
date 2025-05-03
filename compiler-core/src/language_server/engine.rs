@@ -1351,17 +1351,13 @@ fn hover_for_constructor(
     line_numbers: LineNumbers,
     module: &Module,
 ) -> Hover {
-    let name = &constructor.name;
+    let type_name = &constructor.type_name;
     let mut arguments = Vec::with_capacity(constructor.arguments.len());
     let mut printer = Printer::new(&module.ast.names);
 
-    for argument in &constructor.arguments {
+    for argument in constructor.arguments.iter() {
         let type_ = printer.print_type(&argument.type_);
-        let arg = match argument.label.as_ref() {
-            Some((_, label)) => format!("{label}: {type_}"),
-            None => format!("{type_}"),
-        };
-        arguments.push(arg);
+        arguments.push(type_);
     }
 
     let arguments = arguments.join(", ");
@@ -1371,7 +1367,7 @@ fn hover_for_constructor(
         .as_ref()
         .map(|(_, doc)| doc)
         .unwrap_or(&empty_str);
-    let contents = format!("```gleam\n{name}({arguments})\n```\n{documentation}");
+    let contents = format!("```gleam\nfn({arguments}) -> {type_name}\n```\n{documentation}");
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(constructor.location, &line_numbers)),
