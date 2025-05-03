@@ -189,7 +189,7 @@ where
         self.check_gleam_version()?;
 
         // Check if JavaScript configuration has changed
-        self.check_javascript_config()?;
+        self.rebuild_if_javascript_config_changed()?;
 
         // The JavaScript target requires a prelude module to be written.
         self.write_prelude()?;
@@ -264,9 +264,10 @@ where
             })
     }
 
-    /// Checks if the TypeScript declarations setting has changed since the last build.
-    /// If it has changed, we clear the build directory to make sure it generates TypeScript definitions.
-    pub fn check_javascript_config(&self) -> Result<(), Error> {
+    /// Checks if JavaScript configuration has changed since the last build.
+    /// If it has changed (e.g., TypeScript declarations setting), we clear the build directory
+    /// to ensure a clean rebuild with the new settings.
+    pub fn rebuild_if_javascript_config_changed(&self) -> Result<(), Error> {
         if !self.target().is_javascript() {
             return Ok(());
         }
