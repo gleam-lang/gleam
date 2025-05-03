@@ -40,7 +40,7 @@ use super::{
         ConvertToUse, ExpandFunctionCapture, ExtractConstant, ExtractVariable,
         FillInMissingLabelledArgs, FillUnusedFields, FixBinaryOperation,
         FixTruncatedBitArraySegment, GenerateDynamicDecoder, GenerateFunction, GenerateJsonEncoder,
-        InlineVariable, InterpolateString, LetAssertToCase, PatternMatchOnValue,
+        GenerateVariant, InlineVariable, InterpolateString, LetAssertToCase, PatternMatchOnValue,
         RedundantTupleInCaseSubject, RemoveEchos, UseLabelShorthandSyntax, WrapInBlock,
         code_action_add_missing_patterns, code_action_convert_qualified_constructor_to_unqualified,
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
@@ -422,6 +422,9 @@ where
             actions.extend(ExtractVariable::new(module, &lines, &params).code_actions());
             actions.extend(ExtractConstant::new(module, &lines, &params).code_actions());
             actions.extend(GenerateFunction::new(module, &lines, &params).code_actions());
+            actions.extend(
+                GenerateVariant::new(module, &this.compiler, &lines, &params).code_actions(),
+            );
             actions.extend(ConvertToPipe::new(module, &lines, &params).code_actions());
             actions.extend(ConvertToFunctionCall::new(module, &lines, &params).code_actions());
             actions.extend(

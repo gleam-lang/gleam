@@ -1327,6 +1327,7 @@ pub struct TypeConstructor {
     pub deprecation: Deprecation,
     pub documentation: Option<EcoString>,
 }
+
 impl TypeConstructor {
     pub(crate) fn with_location(mut self, location: SrcSpan) -> Self {
         self.origin = location;

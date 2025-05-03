@@ -83,6 +83,7 @@ const INTERPOLATE_STRING: &str = "Interpolate string";
 const FILL_UNUSED_FIELDS: &str = "Fill unused fields";
 const REMOVE_ALL_ECHOS_FROM_THIS_MODULE: &str = "Remove all `echo`s from this module";
 const WRAP_IN_BLOCK: &str = "Wrap in block";
+const GENERATE_VARIANT: &str = "Generate variant";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -142,6 +143,114 @@ pub fn main() {
   <<1, 1024:size(10)>>
 }"#,
         find_position_of("size").to_selection()
+    );
+}
+
+#[test]
+fn generate_variant_with_fields_in_same_module() {
+    assert_code_action!(
+        GENERATE_VARIANT,
+        r#"
+pub type Wibble {
+  Wibble
+}
+
+pub fn main() -> Wibble {
+  Wobble(1)
+}"#,
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
+fn generate_variant_with_no_fields_in_same_module() {
+    assert_code_action!(
+        GENERATE_VARIANT,
+        r#"
+pub type Wibble {
+  Wibble
+}
+
+pub fn main() -> Wibble {
+  Wobble
+}"#,
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
+fn generate_variant_with_labels_in_same_module() {
+    assert_code_action!(
+        GENERATE_VARIANT,
+        r#"
+pub type Wibble {
+  Wibble
+}
+
+pub fn main() -> Wibble {
+  Wobble("hello", label: 1)
+}"#,
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
+fn generate_variant_from_pattern_with_fields() {
+    assert_code_action!(
+        GENERATE_VARIANT,
+        r#"
+pub type Wibble {
+  Wibble
+}
+
+pub fn new() { Wibble }
+
+pub fn main() -> Wibble {
+  let assert Wobble(1) = new()
+}
+
+"#,
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
+fn generate_variant_from_pattern_with_labelled_fields() {
+    assert_code_action!(
+        GENERATE_VARIANT,
+        r#"
+pub type Wibble {
+  Wibble
+}
+
+pub fn new() { Wibble }
+
+pub fn main() -> Wibble {
+  let assert Wobble("hello", label: 1) = new()
+}
+
+"#,
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
+fn generate_variant_from_pattern_with_no_fields() {
+    assert_code_action!(
+        GENERATE_VARIANT,
+        r#"
+pub type Wibble {
+  Wibble
+}
+
+pub fn new() { Wibble }
+
+pub fn main() -> Wibble {
+  let assert Wobble = new()
+}
+
+"#,
+        find_position_of("Wobble").to_selection()
     );
 }
 
