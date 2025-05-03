@@ -268,7 +268,7 @@ where
     /// If it has changed (e.g., TypeScript declarations setting), we clear the build directory
     /// to ensure a clean rebuild with the new settings.
     pub fn rebuild_if_javascript_config_changed(&self) -> Result<(), Error> {
-        if !self.target().is_javascript() {
+        if !self.target().is_javascript() || !self.options.codegen.should_codegen(true) {
             return Ok(());
         }
 
