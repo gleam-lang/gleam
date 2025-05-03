@@ -461,14 +461,14 @@ pub const make_two = one.Two
 #[test]
 fn shadow_imported_function() {
     assert_warning!(
-        ("thepackage", "one", "pub fn foo(x) { let _ = x }"),
+        ("thepackage", "one", "pub fn fun(x) { let _ = x }"),
         "
-import one.{foo}
-fn foo(x) {
+import one.{fun}
+fn fun(x) {
     let _ = x + 1
 }
 pub fn main() {
-    let _ = foo(1)
+    let _ = fun(1)
 }
 "
     );
