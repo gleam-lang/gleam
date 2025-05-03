@@ -5487,7 +5487,7 @@ impl<'a> InlineVariable<'a> {
     fn maybe_inline(&mut self, location: SrcSpan) {
         let variable_location =
             match find_variable_references(&self.module.ast, location).as_slice() {
-                [only_reference] => *only_reference,
+                [only_reference] => only_reference.location,
                 _ => return,
             };
 

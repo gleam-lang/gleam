@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\npub type Wibble {\n  Wibble(first: Int, second: Int)\n}\n\npub fn main() {\n  let second = 2\n  Wibble(first: 1, second:)\n}\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+pub type Wibble {
+  Wibble(first: Int, second: Int)
+}
+
+pub fn main() {
+  let second = 2
+      ↑▔▔▔▔▔    
+  Wibble(first: 1, second:)
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+
+pub type Wibble {
+  Wibble(first: Int, second: Int)
+}
+
+pub fn main() {
+  let something = 2
+  Wibble(first: 1, second: something)
+}

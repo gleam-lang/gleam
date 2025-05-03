@@ -48,11 +48,10 @@ use super::{
     },
     completer::Completer,
     reference::{
-        Referenced, find_module_references, find_variable_references, reference_for_ast_node,
+        Referenced, VariableReferenceKind, find_module_references, find_variable_references,
+        reference_for_ast_node,
     },
-    rename::{
-        RenameTarget, Renamed, VariableRenameKind, rename_local_variable, rename_module_entity,
-    },
+    rename::{RenameTarget, Renamed, rename_local_variable, rename_module_entity},
     signature_help, src_span_to_lsp_range,
 };
 
@@ -693,10 +692,10 @@ where
                     let rename_kind = match origin {
                         Some(VariableOrigin::Generated) => return Ok(None),
                         Some(VariableOrigin::LabelShorthand(_)) => {
-                            VariableRenameKind::LabelShorthand
+                            VariableReferenceKind::LabelShorthand
                         }
                         Some(VariableOrigin::AssignmentPattern | VariableOrigin::Variable(_))
-                        | None => VariableRenameKind::Variable,
+                        | None => VariableReferenceKind::Variable,
                     };
                     rename_local_variable(module, &lines, &params, definition_location, rename_kind)
                 }
@@ -774,16 +773,26 @@ where
                         | VariableOrigin::AssignmentPattern
                         | VariableOrigin::Variable(_),
                     )
-                    | None => Some(
-                        find_variable_references(&module.ast, definition_location)
-                            .into_iter()
-                            .chain(std::iter::once(definition_location))
-                            .map(|location| lsp::Location {
+                    | None => {
+                        let variable_references =
+                            find_variable_references(&module.ast, definition_location);
+
+                        let mut reference_locations =
+                            Vec::with_capacity(variable_references.len() + 1);
+                        reference_locations.push(lsp::Location {
+                            uri: uri.clone(),
+                            range: src_span_to_lsp_range(definition_location, &lines),
+                        });
+
+                        for reference in variable_references {
+                            reference_locations.push(lsp::Location {
                                 uri: uri.clone(),
-                                range: src_span_to_lsp_range(location, &lines),
+                                range: src_span_to_lsp_range(reference.location, &lines),
                             })
-                            .collect(),
-                    ),
+                        }
+
+                        Some(reference_locations)
+                    }
                 },
                 Some(Referenced::ModuleValue {
                     module,
