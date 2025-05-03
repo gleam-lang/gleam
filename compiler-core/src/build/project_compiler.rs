@@ -275,50 +275,35 @@ where
         let build_path = self
             .paths
             .build_directory_for_target(self.mode(), self.target());
-        let config_path = build_path.join("gleam-toml.lock");
 
-        let current_setting = format!(
-            "[javascript]\ntypescript_declarations = {}\n",
-            self.config.javascript.typescript_declarations
-        );
+        let ts_indicator_path = build_path.join("typescript-declarations.lock");
+        let ts_enabled = self.config.javascript.typescript_declarations;
 
-        // Skip rebuild if file exists and configs match
-        if self.io.is_file(&config_path) {
-            let stored_setting = self.io.read(&config_path)?;
+        let needs_rebuild = if ts_enabled {
+            !self.io.is_file(&ts_indicator_path)
+        } else {
+            self.io.is_file(&ts_indicator_path)
+        };
 
-            let stored_result = toml::from_str::<toml::Value>(&stored_setting);
-            let current_result = toml::from_str::<toml::Value>(&current_setting);
+        if needs_rebuild {
+            tracing::info!("removing_build_state_due_to_javascript_config_change");
+            self.io.delete_directory(&build_path)?;
 
-            if let (Ok(stored_toml), Ok(current_toml)) = (&stored_result, &current_result) {
-                if stored_toml.get("javascript") == current_toml.get("javascript") {
-                    return Ok(());
-                }
+            self.io.mkdir(&build_path)?;
 
-                if let (Some(stored_js), Some(current_js)) = (
-                    stored_toml.get("javascript"),
-                    current_toml.get("javascript"),
-                ) {
-                    tracing::debug!(
-                        "javascript_config_changed from: {:?} to: {:?}",
-                        stored_js,
-                        current_js
-                    );
-                }
+            if ts_enabled {
+                self.io
+                    .write(&ts_indicator_path, "")
+                    .map_err(|e| Error::FileIo {
+                        action: FileIoAction::WriteTo,
+                        kind: FileKind::File,
+                        path: ts_indicator_path,
+                        err: Some(e.to_string()),
+                    })?;
             }
         }
 
-        tracing::info!("removing_build_state_due_to_javascript_config_change");
-        self.io.delete_directory(&build_path)?;
-
-        self.io.mkdir(&build_path)?;
-        self.io
-            .write(&config_path, &current_setting)
-            .map_err(|e| Error::FileIo {
-                action: FileIoAction::WriteTo,
-                kind: FileKind::File,
-                path: config_path,
-                err: Some(e.to_string()),
-            })
+        Ok(())
     }
 
     pub fn compile_dependencies(&mut self) -> Result<Vec<Module>, Error> {
