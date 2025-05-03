@@ -203,8 +203,7 @@
   3 │ fn fun() {}
     │    ^^^
 
-  The imported value could not be used anyway.
-  Hint: You could remove the imported value.
+  The imported value could not be used in functions anyway.
   ```
 
   ([Ariel Parker](https://github.com/arielherself))
