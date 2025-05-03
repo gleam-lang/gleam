@@ -7,7 +7,7 @@ mod tests;
 use crate::{
     GLEAM_CORE_PACKAGE_NAME,
     ast::{
-        self, Arg, BitArrayOption, CustomType, Definition, DefinitionLocation, Function,
+        self, Arg, BitArrayOption, Constant, CustomType, Definition, DefinitionLocation, Function,
         GroupedStatements, Import, ModuleConstant, Publicity, RecordConstructor,
         RecordConstructorArg, SrcSpan, Statement, TypeAlias, TypeAst, TypeAstConstructor,
         TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, TypedDefinition, TypedExpr,
@@ -248,6 +248,20 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
 
         for c in &statements.constants {
+            // don't warn if the definition is a re-export.
+            if let Constant::<(), ()>::Var {
+                location: _,
+                module: _,
+                name,
+                constructor: _,
+                type_: _,
+            } = &*c.value
+            {
+                if name == &c.name {
+                    continue;
+                }
+            }
+
             if env.unqualified_imported_names.contains_key(&c.name) {
                 self.problems
                     .warning(Warning::TopLevelDefinitionShadowsImport {
