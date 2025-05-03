@@ -25,7 +25,7 @@ pub struct Reference {
 
 pub type ReferenceMap = HashMap<(EcoString, EcoString), Vec<Reference>>;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct EntityInformation {
     pub origin: SrcSpan,
     pub kind: EntityKind,
@@ -33,17 +33,17 @@ pub struct EntityInformation {
 
 /// Information about an "Entity". This determines how we warn about an entity
 /// being unused.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum EntityKind {
     Function,
     Constant,
     Constructor,
     Type,
-    ImportedConstructor,
-    ImportedType,
-    ImportedValue,
-    ImportedModule,
-    ModuleAlias,
+    ImportedModule { full_name: EcoString },
+    ModuleAlias { module: EcoString },
+    ImportedConstructor { module: EcoString },
+    ImportedType { module: EcoString },
+    ImportedValue { module: EcoString },
 }
 
 /// Like `ast::Layer`, this type differentiates between different scopes. For example,
@@ -93,6 +93,26 @@ pub struct ReferenceTracker {
     /// The locations of the references to each type in this module, used for
     /// renaming and go-to reference.
     pub type_references: ReferenceMap,
+
+    /// This map is used to access the nodes of modules that were not
+    /// aliased, given their full name.
+    /// We need this to keep track of references made to imports by unqualified
+    /// values/types: when an unqualified item is used we want to add an edge
+    /// pointing to the import it comes from, so that if the item is used the
+    /// import won't be marked as unused:
+    ///
+    /// ```gleam
+    /// import wibble/wobble.{used}
+    ///
+    /// pub fn main() {
+    ///   used
+    /// }
+    /// ```
+    ///
+    /// And each imported entity carries around the _full name of the module_
+    /// (here it would be `wibble/wobble` and not just `wobble`).
+    ///
+    full_name_to_node: HashMap<EcoString, NodeIndex>,
 }
 
 impl ReferenceTracker {
@@ -136,7 +156,9 @@ impl ReferenceTracker {
                 // To do this, we keep track of a "Shadowed" entity in `entity_information`.
                 if let Some(information) = self.entity_information.get(&entity) {
                     entity.layer = EntityLayer::Shadowed;
-                    _ = self.entity_information.insert(entity.clone(), *information);
+                    _ = self
+                        .entity_information
+                        .insert(entity.clone(), information.clone());
                     _ = self.entities.insert(entity, index);
                 }
             }
@@ -193,6 +215,8 @@ impl ReferenceTracker {
         publicity: Publicity,
     ) {
         self.current_node = self.create_node(name.clone(), EntityLayer::Value);
+        self.register_module_reference_from_imported_entity(&kind);
+
         let entity = Entity {
             name,
             layer: EntityLayer::Value,
@@ -225,6 +249,8 @@ impl ReferenceTracker {
         publicity: Publicity,
     ) {
         self.current_node = self.create_node(name.clone(), EntityLayer::Type);
+        self.register_module_reference_from_imported_entity(&kind);
+
         let entity = Entity {
             name,
             layer: EntityLayer::Type,
@@ -245,20 +271,80 @@ impl ReferenceTracker {
         );
     }
 
-    pub fn register_module(&mut self, name: EcoString, kind: EntityKind, location: SrcSpan) {
-        self.current_node = self.create_node(name.clone(), EntityLayer::Module);
+    pub fn register_aliased_module(
+        &mut self,
+        used_name: EcoString,
+        full_name: EcoString,
+        alias_location: SrcSpan,
+        import_location: SrcSpan,
+    ) {
+        // We first record a node for the module being aliased. We use its entire
+        // name to identify it in this case and keep track of the node it's
+        // associated with.
+        self.register_module(full_name.clone(), full_name.clone(), import_location);
+
+        // Then we create a node for the alias, as the alias itself might be
+        // unused!
+        self.current_node = self.create_node(used_name.clone(), EntityLayer::Module);
+        // Also we want to register the fact that if this alias is used then the
+        // import is used: so we add a reference from the alias to the full import
+        // we've just added.
+        self.register_module_reference(full_name.clone());
+
+        // Finally we can add information for this alias:
         let entity = Entity {
-            name,
+            name: used_name,
+            layer: EntityLayer::Module,
+        };
+        _ = self.entity_information.insert(
+            entity,
+            EntityInformation {
+                kind: EntityKind::ModuleAlias { module: full_name },
+                origin: alias_location,
+            },
+        );
+    }
+
+    pub fn register_module(
+        &mut self,
+        used_name: EcoString,
+        full_name: EcoString,
+        location: SrcSpan,
+    ) {
+        self.current_node = self.create_node(used_name.clone(), EntityLayer::Module);
+        let _ = self
+            .full_name_to_node
+            .insert(full_name.clone(), self.current_node);
+
+        let entity = Entity {
+            name: used_name,
             layer: EntityLayer::Module,
         };
 
         _ = self.entity_information.insert(
             entity,
             EntityInformation {
-                kind,
+                kind: EntityKind::ImportedModule { full_name },
                 origin: location,
             },
         );
+    }
+
+    fn register_module_reference_from_imported_entity(&mut self, entity_kind: &EntityKind) {
+        match entity_kind {
+            EntityKind::Function
+            | EntityKind::Constant
+            | EntityKind::Constructor
+            | EntityKind::Type
+            | EntityKind::ImportedModule { .. }
+            | EntityKind::ModuleAlias { .. } => (),
+
+            EntityKind::ImportedConstructor { module }
+            | EntityKind::ImportedType { module }
+            | EntityKind::ImportedValue { module } => {
+                self.register_module_reference(module.clone())
+            }
+        }
     }
 
     pub fn register_value_reference(
@@ -316,7 +402,10 @@ impl ReferenceTracker {
     }
 
     pub fn register_module_reference(&mut self, name: EcoString) {
-        let target = self.get_or_create_node(name, EntityLayer::Module);
+        let target = match self.full_name_to_node.get(&name) {
+            Some(target) => *target,
+            None => self.get_or_create_node(name, EntityLayer::Module),
+        };
         _ = self.graph.add_edge(self.current_node, target, ());
     }
 
@@ -324,7 +413,7 @@ impl ReferenceTracker {
         let mut unused_values = HashMap::with_capacity(self.entities.len());
 
         for (entity, information) in self.entity_information.iter() {
-            _ = unused_values.insert(entity.clone(), *information);
+            _ = unused_values.insert(entity.clone(), information.clone());
         }
         for entity in self.public_entities.iter() {
             if let Some(index) = self.entities.get_by_left(entity) {

@@ -70,15 +70,21 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         }
 
         // Insert unqualified imports into scope
+        let module_full_name = module_info.name.clone();
         for type_ in &import.unqualified_types {
-            self.register_unqualified_type(type_, module_info);
+            self.register_unqualified_type(type_, module_full_name.clone(), module_info);
         }
         for value in &import.unqualified_values {
-            self.register_unqualified_value(value, module_info);
+            self.register_unqualified_value(value, module_full_name.clone(), module_info);
         }
     }
 
-    fn register_unqualified_type(&mut self, import: &UnqualifiedImport, module: &ModuleInterface) {
+    fn register_unqualified_type(
+        &mut self,
+        import: &UnqualifiedImport,
+        module_full_name: EcoString,
+        module: &ModuleInterface,
+    ) {
         let imported_name = import.as_name.as_ref().unwrap_or(&import.name);
 
         // Register the unqualified import if it is a type constructor
@@ -104,7 +110,9 @@ impl<'context, 'problems> Importer<'context, 'problems> {
 
         self.environment.references.register_type(
             imported_name.clone(),
-            EntityKind::ImportedType,
+            EntityKind::ImportedType {
+                module: module_full_name,
+            },
             import.location,
             Publicity::Private,
         );
@@ -125,7 +133,12 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         }
     }
 
-    fn register_unqualified_value(&mut self, import: &UnqualifiedImport, module: &ModuleInterface) {
+    fn register_unqualified_value(
+        &mut self,
+        import: &UnqualifiedImport,
+        module_full_name: EcoString,
+        module: &ModuleInterface,
+    ) {
         let import_name = &import.name;
         let location = import.location;
         let used_name = import.as_name.as_ref().unwrap_or(&import.name);
@@ -175,7 +188,9 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                 );
                 self.environment.references.register_value(
                     used_name.clone(),
-                    EntityKind::ImportedConstructor,
+                    EntityKind::ImportedConstructor {
+                        module: module_full_name,
+                    },
                     location,
                     Publicity::Private,
                 );
@@ -192,7 +207,9 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             | ValueConstructorVariant::ModuleFn { module, .. } => {
                 self.environment.references.register_value(
                     used_name.clone(),
-                    EntityKind::ImportedValue,
+                    EntityKind::ImportedValue {
+                        module: module_full_name,
+                    },
                     location,
                     Publicity::Private,
                 );
@@ -257,20 +274,18 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         if let Some(used_name) = import.used_name() {
             self.check_not_a_duplicate_import(&used_name, import.location)?;
 
-            if import.unqualified_types.is_empty() && import.unqualified_values.is_empty() {
-                // When the module has no unqualified imports, we track its usage
-                // so we can warn if not used by the end of the type checking
-
-                self.environment.references.register_module(
+            if let Some(alias_location) = import.alias_location() {
+                self.environment.references.register_aliased_module(
                     used_name.clone(),
-                    EntityKind::ImportedModule,
+                    import.module.clone(),
+                    alias_location,
                     import.location,
                 );
-            } else if let Some(alias_location) = import.alias_location() {
+            } else {
                 self.environment.references.register_module(
                     used_name.clone(),
-                    EntityKind::ModuleAlias,
-                    alias_location,
+                    import.module.clone(),
+                    import.location,
                 );
             }
 
