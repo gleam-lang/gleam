@@ -22,5 +22,4 @@ warning: Definition of "wibble" shadows an imported value
 4 │ pub const wibble = wibble
   │ ^^^^^^^^^^^^^^^^
 
-The imported value could not be used anyway.
-Hint: You could remove the imported value.
+The imported value could not be used in functions anyway.
