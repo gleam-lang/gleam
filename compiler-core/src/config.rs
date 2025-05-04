@@ -769,27 +769,32 @@ pub enum Repository {
         user: String,
         repo: String,
         path: Option<String>,
+        tag_prefix: Option<String>,
     },
     GitLab {
         user: String,
         repo: String,
         path: Option<String>,
+        tag_prefix: Option<String>,
     },
     BitBucket {
         user: String,
         repo: String,
         path: Option<String>,
+        tag_prefix: Option<String>,
     },
     Codeberg {
         user: String,
         repo: String,
         path: Option<String>,
+        tag_prefix: Option<String>,
     },
     #[serde(alias = "forgejo")]
     Gitea {
         user: String,
         repo: String,
         path: Option<String>,
+        tag_prefix: Option<String>,
         #[serde(
             serialize_with = "uri_serde::serialize",
             deserialize_with = "uri_serde_default_https::deserialize"
@@ -800,6 +805,7 @@ pub enum Repository {
         user: String,
         repo: String,
         path: Option<String>,
+        tag_prefix: Option<String>,
     },
     Custom {
         url: String,
@@ -847,6 +853,24 @@ impl Repository {
             | Repository::Gitea { path, .. } => path.as_ref(),
 
             Repository::Custom { .. } | Repository::None => None,
+        }
+    }
+
+    pub fn tag_for_version(&self, version: &Version) -> String {
+        let prefix = match self {
+            Repository::GitHub { tag_prefix, .. }
+            | Repository::GitLab { tag_prefix, .. }
+            | Repository::BitBucket { tag_prefix, .. }
+            | Repository::Codeberg { tag_prefix, .. }
+            | Repository::SourceHut { tag_prefix, .. }
+            | Repository::Gitea { tag_prefix, .. } => tag_prefix.as_ref(),
+
+            Repository::Custom { .. } | Repository::None => None,
+        };
+
+        match prefix {
+            Some(prefix) => format!("{prefix}v{version}"),
+            None => format!("v{version}"),
         }
     }
 }

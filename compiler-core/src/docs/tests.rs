@@ -622,6 +622,7 @@ fn source_link_for_github_repository() {
         user: "wibble".to_string(),
         repo: "wobble".to_string(),
         path: None,
+        tag_prefix: None,
     };
 
     let modules = vec![("app.gleam", "pub type Wibble = Int")];
@@ -632,21 +633,20 @@ fn source_link_for_github_repository() {
 }
 
 #[test]
-fn source_link_for_github_repository_with_path() {
+fn source_link_for_github_repository_with_path_and_tag_prefix() {
     let mut config = PackageConfig::default();
     config.name = EcoString::from("test_project_name");
     config.repository = Repository::GitHub {
         user: "wibble".to_string(),
         repo: "wobble".to_string(),
         path: Some("path/to/package".to_string()),
+        tag_prefix: Some("subdir-".into()),
     };
 
     let modules = vec![("app.gleam", "pub type Wibble = Int")];
-    assert!(
-        compile(config, modules).contains(
-            "https://github.com/wibble/wobble/blob/v0.1.0/path/to/package/src/app.gleam#L1"
-        )
-    );
+    assert!(compile(config, modules).contains(
+        "https://github.com/wibble/wobble/blob/subdir-v0.1.0/path/to/package/src/app.gleam#L1"
+    ));
 }
 
 #[test]
