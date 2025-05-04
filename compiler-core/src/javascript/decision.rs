@@ -1243,16 +1243,16 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         // We need to have this vector here so that we don't run into lifetime
         // issues when calling `.as_slice` on the local vectors created when this
         // isn't a UTF-8 string.
-        let mut _bytes_vec = Vec::new();
+        let bytes_vec;
         let bytes = match encoding {
             StringEncoding::Utf8 => escaped.as_bytes(),
             StringEncoding::Utf16 => {
-                _bytes_vec = string_to_utf16_bytes(&escaped, read_action.endianness);
-                _bytes_vec.as_slice()
+                bytes_vec = string_to_utf16_bytes(&escaped, read_action.endianness);
+                bytes_vec.as_slice()
             }
             StringEncoding::Utf32 => {
-                _bytes_vec = string_to_utf32_bytes(&escaped, read_action.endianness);
-                _bytes_vec.as_slice()
+                bytes_vec = string_to_utf32_bytes(&escaped, read_action.endianness);
+                bytes_vec.as_slice()
             }
         };
 
