@@ -20,7 +20,7 @@ pub fn main() {
 -spec main() -> binary().
 main() ->
     M@1 = case <<"Hello"/utf16-little>> of
-        <<M:10/binary-little>> when M =:= <<"Hello"/utf16-little>> -> <<"Hello"/utf8>>;
+        <<"Hello"/utf16-little>> -> <<"Hello"/utf8>>;
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,

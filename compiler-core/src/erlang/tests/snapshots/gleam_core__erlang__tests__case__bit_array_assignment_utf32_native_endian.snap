@@ -22,7 +22,7 @@ pub fn main() {
 -spec main() -> binary().
 main() ->
     case <<"Hello"/utf32-native>> of
-        <<M:20/binary-native>> when M =:= <<"Hello"/utf32-native>> ->
+        <<"Hello"/utf32-native>> ->
             M@1 = <<"Hello"/utf8>>,
             M@1;
 
