@@ -20,8 +20,8 @@ use crate::{
 };
 
 use super::{
-    DocsValues, TypeConstructor, TypeConstructorArg, TypeDefinition, markdown_documentation,
-    source_links::SourceLinker, text_documentation,
+    Dependency, DependencyKind, DocsValues, TypeConstructor, TypeConstructorArg, TypeDefinition,
+    markdown_documentation, source_links::SourceLinker, text_documentation,
 };
 
 #[derive(Clone, Copy)]
@@ -55,10 +55,17 @@ pub struct Printer<'a> {
     /// An incrementing number used to generate the next type variable name.
     /// `0` becomes `a`, `1` becomes `b`, etc.
     next_type_variable_id: u64,
+
+    dependencies: &'a HashMap<EcoString, Dependency>,
 }
 
 impl Printer<'_> {
-    pub fn new(package: EcoString, module: EcoString, names: &Names) -> Printer<'_> {
+    pub fn new<'a>(
+        package: EcoString,
+        module: EcoString,
+        names: &'a Names,
+        dependencies: &'a HashMap<EcoString, Dependency>,
+    ) -> Printer<'a> {
         Printer {
             options: PrintOptions::all(),
             names,
@@ -67,6 +74,7 @@ impl Printer<'_> {
             printed_type_variables: HashMap::new(),
             printed_type_variable_names: HashSet::new(),
             next_type_variable_id: 0,
+            dependencies,
         }
     }
 
@@ -521,11 +529,19 @@ impl Printer<'_> {
             ];
             let title = eco_format!("{module}.{{type {name}}}");
 
-            self.link(
-                eco_format!("https://hexdocs.pm/{package}/{module}.html#{name}"),
-                qualified_name,
-                Some(title),
-            )
+            // We can't reliably link to documentation if the type is from a path
+            // or git dependency
+            match self.dependencies.get(package) {
+                Some(Dependency {
+                    kind: DependencyKind::Hex,
+                    version,
+                }) => self.link(
+                    eco_format!("https://hexdocs.pm/{package}/{version}/{module}.html#{name}"),
+                    qualified_name,
+                    Some(title),
+                ),
+                Some(_) | None => self.span_with_title(qualified_name, title),
+            }
         }
     }
 
@@ -624,6 +640,17 @@ impl Printer<'_> {
         name.to_doc().surround(
             zero_width_string(opening_tag),
             zero_width_string("</a>".into()),
+        )
+    }
+
+    fn span_with_title<'a>(&self, name: impl Documentable<'a>, title: EcoString) -> Document<'a> {
+        if !self.options.print_links {
+            return name.to_doc();
+        }
+
+        name.to_doc().surround(
+            zero_width_string(eco_format!(r#"<span title="{title}">"#)),
+            zero_width_string("</span>".into()),
         )
     }
 }

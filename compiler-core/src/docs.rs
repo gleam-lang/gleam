@@ -3,9 +3,10 @@ mod source_links;
 #[cfg(test)]
 mod tests;
 
-use std::time::SystemTime;
+use std::{collections::HashMap, time::SystemTime};
 
 use camino::Utf8PathBuf;
+use hexpm::version::Version;
 use printer::Printer;
 
 use crate::{
@@ -36,9 +37,25 @@ pub struct PackageInformation {
     package_config: PackageConfig,
 }
 
+/// Like `ManifestPackage`, but lighter and cheaper to clone as it is all that
+/// we need for printing documentation.
+#[derive(Debug, Clone)]
+pub struct Dependency {
+    pub version: Version,
+    pub kind: DependencyKind,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum DependencyKind {
+    Hex,
+    Path,
+    Git,
+}
+
 pub fn generate_html<IO: FileSystemReader>(
     paths: &ProjectPaths,
     config: &PackageConfig,
+    dependencies: HashMap<EcoString, Dependency>,
     analysed: &[Module],
     docs_pages: &[DocsPage],
     fs: IO,
@@ -174,6 +191,7 @@ pub fn generate_html<IO: FileSystemReader>(
             module.ast.type_info.package.clone(),
             module.name.clone(),
             &module.ast.names,
+            &dependencies,
         );
 
         let types: Vec<TypeDefinition<'_>> = module

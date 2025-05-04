@@ -1,7 +1,10 @@
-use std::{collections::HashSet, time::SystemTime};
+use std::{
+    collections::{HashMap, HashSet},
+    time::SystemTime,
+};
 
 use super::{
-    SearchData, SearchItem, SearchItemType, SearchProgrammingLanguage,
+    Dependency, DependencyKind, SearchData, SearchItem, SearchItemType, SearchProgrammingLanguage,
     printer::{PrintOptions, Printer},
     source_links::SourceLinker,
 };
@@ -21,6 +24,7 @@ use crate::{
 };
 use camino::Utf8PathBuf;
 use ecow::EcoString;
+use hexpm::version::Version;
 use itertools::Itertools;
 use serde_json::to_string as serde_to_string;
 
@@ -96,6 +100,7 @@ fn compile_with_markdown_pages(
     super::generate_html(
         &paths,
         &config,
+        HashMap::new(),
         &modules,
         &docs_pages,
         pages_fs,
@@ -136,6 +141,7 @@ fn compile_documentation(
     module_name: &str,
     module_src: &str,
     modules: Vec<(&str, &str, &str)>,
+    dependency_kind: DependencyKind,
     options: PrintOptions,
 ) -> EcoString {
     let module = type_::tests::compile_module(module_name, module_src, None, modules.clone())
@@ -158,11 +164,24 @@ fn compile_documentation(
     let source_links = SourceLinker::new(&paths, &config, &build_module);
 
     let module = build_module.ast;
+    let dependencies = modules
+        .iter()
+        .map(|(package, _, _)| {
+            (
+                EcoString::from(*package),
+                Dependency {
+                    version: Version::new(1, 0, 0),
+                    kind: dependency_kind,
+                },
+            )
+        })
+        .collect();
 
     let mut printer = Printer::new(
         module.type_info.package.clone(),
         module.name.clone(),
         &module.names,
+        &dependencies,
     );
     printer.set_options(options);
 
@@ -251,32 +270,84 @@ macro_rules! assert_documentation {
     };
 
     ($src:literal, $options:expr $(,)?) => {
-        let output = compile_documentation("main", $src, Vec::new(), $options);
+        let output = compile_documentation("main", $src, Vec::new(), DependencyKind::Hex, $options);
         insta::assert_snapshot!(output);
     };
 
     ($(($name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
-        let output = compile_documentation("main", $src, vec![$(("thepackage", $name, $module_src)),*], PrintOptions::all());
+        let output = compile_documentation(
+            "main",
+            $src,
+            vec![$(("thepackage", $name, $module_src)),*],
+            DependencyKind::Hex,
+            PrintOptions::all(),
+        );
         insta::assert_snapshot!(output);
     };
 
     ($(($name:expr, $module_src:literal)),+, $src:literal, $options:expr $(,)?) => {
-        let output = compile_documentation("main", $src, vec![$(("thepackage", $name, $module_src)),*], $options);
+        let output = compile_documentation(
+            "main",
+            $src,
+            vec![$(("thepackage", $name, $module_src)),*],
+            DependencyKind::Hex,
+            $options,
+        );
         insta::assert_snapshot!(output);
     };
 
     ($(($name:expr, $module_src:literal)),+, $main_module:literal, $src:literal, $options:expr $(,)?) => {
-        let output = compile_documentation($main_module, $src, vec![$(("thepackage", $name, $module_src)),*], $options);
+        let output = compile_documentation(
+            $main_module,
+            $src,
+            vec![$(("thepackage", $name, $module_src)),*],
+            DependencyKind::Hex,
+            $options,
+        );
         insta::assert_snapshot!(output);
     };
 
     ($(($package:expr, $name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
-        let output = compile_documentation("main", $src, vec![$(($package, $name, $module_src)),*], PrintOptions::all());
+        let output = compile_documentation(
+            "main",
+            $src,
+            vec![$(($package, $name, $module_src)),*],
+            DependencyKind::Hex,
+            PrintOptions::all(),
+        );
         insta::assert_snapshot!(output);
     };
 
     ($(($package:expr, $name:expr, $module_src:literal)),+, $src:literal, $options:expr $(,)?) => {
-        let output = compile_documentation("main", $src, vec![$(($package, $name, $module_src)),*], $options);
+        let output = compile_documentation(
+            "main",
+            $src,
+            vec![$(($package, $name, $module_src)),*],
+            DependencyKind::Hex,
+            $options,
+        );
+        insta::assert_snapshot!(output);
+    };
+
+    (git: $(($package:expr, $name:expr, $module_src:literal)),+, $src:literal, $options:expr $(,)?) => {
+        let output = compile_documentation(
+            "main",
+            $src,
+            vec![$(($package, $name, $module_src)),*],
+            DependencyKind::Git,
+            $options,
+        );
+        insta::assert_snapshot!(output);
+    };
+
+    (path: $(($package:expr, $name:expr, $module_src:literal)),+, $src:literal, $options:expr $(,)?) => {
+        let output = compile_documentation(
+            "main",
+            $src,
+            vec![$(($package, $name, $module_src)),*],
+            DependencyKind::Path,
+            $options,
+        );
         insta::assert_snapshot!(output);
     };
 }
@@ -882,6 +953,32 @@ pub type Dynamic = dynamic.Dynamic
 fn link_to_type_in_different_package() {
     assert_documentation!(
         ("gleam_stdlib", "gleam/dict", "pub type Dict(a, b)"),
+        "
+import gleam/dict
+
+pub fn make_dict() -> dict.Dict(a, b) { todo }
+",
+        ONLY_LINKS
+    );
+}
+
+#[test]
+fn no_link_to_type_in_git_dependency() {
+    assert_documentation!(
+        git: ("gleam_stdlib", "gleam/dict", "pub type Dict(a, b)"),
+        "
+import gleam/dict
+
+pub fn make_dict() -> dict.Dict(a, b) { todo }
+",
+        ONLY_LINKS
+    );
+}
+
+#[test]
+fn no_link_to_type_in_path_dependency() {
+    assert_documentation!(
+        path: ("gleam_stdlib", "gleam/dict", "pub type Dict(a, b)"),
         "
 import gleam/dict
 
