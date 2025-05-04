@@ -52,16 +52,30 @@ pub enum DependencyKind {
     Git,
 }
 
+#[derive(Debug)]
+pub struct DocumentationConfig<'a> {
+    pub package_config: &'a PackageConfig,
+    pub dependencies: HashMap<EcoString, Dependency>,
+    pub analysed: &'a [Module],
+    pub docs_pages: &'a [DocsPage],
+    pub rendering_timestamp: SystemTime,
+    pub context: DocContext,
+}
+
 pub fn generate_html<IO: FileSystemReader>(
     paths: &ProjectPaths,
-    config: &PackageConfig,
-    dependencies: HashMap<EcoString, Dependency>,
-    analysed: &[Module],
-    docs_pages: &[DocsPage],
+    config: DocumentationConfig<'_>,
     fs: IO,
-    rendering_timestamp: SystemTime,
-    is_hex_publish: DocContext,
 ) -> Vec<OutputFile> {
+    let DocumentationConfig {
+        package_config: config,
+        dependencies,
+        analysed,
+        docs_pages,
+        rendering_timestamp,
+        context: is_hex_publish,
+    } = config;
+
     let modules = analysed
         .iter()
         .filter(|module| module.origin.is_src())

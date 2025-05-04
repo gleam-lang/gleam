@@ -4,7 +4,8 @@ use std::{
 };
 
 use super::{
-    Dependency, DependencyKind, SearchData, SearchItem, SearchItemType, SearchProgrammingLanguage,
+    Dependency, DependencyKind, DocumentationConfig, SearchData, SearchItem, SearchItemType,
+    SearchProgrammingLanguage,
     printer::{PrintOptions, Printer},
     source_links::SourceLinker,
 };
@@ -99,17 +100,19 @@ fn compile_with_markdown_pages(
 
     super::generate_html(
         &paths,
-        &config,
-        HashMap::new(),
-        &modules,
-        &docs_pages,
-        pages_fs,
-        SystemTime::UNIX_EPOCH,
-        if let Some(doc_context) = opts.hex_publish {
-            doc_context
-        } else {
-            DocContext::HexPublish
+        DocumentationConfig {
+            package_config: &config,
+            dependencies: HashMap::new(),
+            analysed: &modules,
+            docs_pages: &docs_pages,
+            rendering_timestamp: SystemTime::UNIX_EPOCH,
+            context: if let Some(doc_context) = opts.hex_publish {
+                doc_context
+            } else {
+                DocContext::HexPublish
+            },
         },
+        pages_fs,
     )
     .into_iter()
     .filter(|file| file.path.extension() == Some("html"))

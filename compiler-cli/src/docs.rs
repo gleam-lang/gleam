@@ -146,13 +146,15 @@ pub(crate) fn build_documentation(
     pages.extend(config.documentation.pages.iter().cloned());
     let mut outputs = gleam_core::docs::generate_html(
         paths,
-        config,
-        dependencies,
-        compiled.modules.as_slice(),
-        &pages,
+        gleam_core::docs::DocumentationConfig {
+            package_config: config,
+            dependencies,
+            analysed: compiled.modules.as_slice(),
+            docs_pages: &pages,
+            rendering_timestamp: SystemTime::now(),
+            context: is_hex_publish,
+        },
         ProjectIO::new(),
-        SystemTime::now(),
-        is_hex_publish,
     );
 
     outputs.push(gleam_core::docs::generate_json_package_interface(
