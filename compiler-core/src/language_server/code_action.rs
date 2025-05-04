@@ -5001,7 +5001,12 @@ pub struct GenerateFunction<'a> {
 
 struct FunctionToGenerate<'a> {
     name: &'a str,
-    arguments: Vec<(Option<EcoString>, Arc<Type>)>,
+    arguments_types: Vec<Arc<Type>>,
+
+    /// The arguments actually supplied as input to the function, if any.
+    /// A function to generate might as well be just a name passed as an argument
+    /// `list.map([1, 2, 3], to_generate)` so it's not guaranteed to actually
+    /// have any actual arguments!
     given_arguments: Option<&'a [TypedCallArg]>,
     return_type: Arc<Type>,
     previous_function_end: Option<u32>,
@@ -5027,7 +5032,7 @@ impl<'a> GenerateFunction<'a> {
 
         let Some(FunctionToGenerate {
             name,
-            arguments,
+            arguments_types,
             given_arguments,
             previous_function_end: Some(insert_at),
             return_type,
@@ -5041,28 +5046,19 @@ impl<'a> GenerateFunction<'a> {
         let mut label_names = NameGenerator::new();
         let mut argument_names = NameGenerator::new();
         let mut printer = Printer::new(&self.module.ast.names);
-        let args = arguments
+        let arguments = arguments_types
             .iter()
             .enumerate()
-            .map(|(index, (arg_label, arg_type))| {
-                let arg_name = given_arguments
-                    .and_then(|arguments| arguments.get(index))
-                    .map(|argument| &argument.value)
-                    // We always favour a name derived from the expression (for example if
-                    // the argument is a variable)
-                    .and_then(|value| argument_names.generate_name_from_expression(value))
-                    // If we don't have such a name and there's a label we use that name.
-                    .or_else(|| Some(argument_names.rename_to_avoid_shadowing(arg_label.clone()?)))
-                    // If all else fails we fallback to using a name derived from the
-                    // argument's type.
-                    .unwrap_or_else(|| argument_names.generate_name_from_type(arg_type));
-
-                let pretty_type = printer.print_type(arg_type);
-                if let Some(arg_label) = arg_label {
-                    let arg_label = label_names.rename_to_avoid_shadowing(arg_label.clone());
-                    format!("{arg_label} {arg_name}: {pretty_type}")
+            .map(|(index, argument_type)| {
+                let call_argument = given_arguments.and_then(|arguments| arguments.get(index));
+                let (label, name) =
+                    argument_names.generate_label_and_name(call_argument, argument_type);
+                let pretty_type = printer.print_type(argument_type);
+                if let Some(label) = label {
+                    let label = label_names.rename_to_avoid_shadowing(label.clone());
+                    format!("{label} {name}: {pretty_type}")
                 } else {
-                    format!("{arg_name}: {pretty_type}")
+                    format!("{name}: {pretty_type}")
                 }
             })
             .join(", ");
@@ -5071,7 +5067,7 @@ impl<'a> GenerateFunction<'a> {
 
         self.edits.insert(
             insert_at,
-            format!("\n\nfn {name}({args}) -> {return_type} {{\n  todo\n}}"),
+            format!("\n\nfn {name}({arguments}) -> {return_type} {{\n  todo\n}}"),
         );
 
         let mut action = Vec::with_capacity(1);
@@ -5087,7 +5083,6 @@ impl<'a> GenerateFunction<'a> {
         &mut self,
         function_name_location: SrcSpan,
         function_type: &Arc<Type>,
-        labels: HashMap<usize, EcoString>,
         given_arguments: Option<&'a [TypedCallArg]>,
     ) {
         let name_range = function_name_location.start as usize..function_name_location.end as usize;
@@ -5096,15 +5091,9 @@ impl<'a> GenerateFunction<'a> {
             (None, _) | (_, None) => (),
             (Some(name), _) if !is_valid_lowercase_name(name) => (),
             (Some(name), Some((arguments_types, return_type))) => {
-                let arguments = arguments_types
-                    .iter()
-                    .enumerate()
-                    .map(|(i, arg)| (labels.get(&i).cloned(), arg.clone()))
-                    .collect_vec();
-
                 self.function_to_generate = Some(FunctionToGenerate {
                     name,
-                    arguments,
+                    arguments_types,
                     given_arguments,
                     return_type,
                     previous_function_end: self.last_visited_function_end,
@@ -5123,7 +5112,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
     fn visit_typed_expr_invalid(&mut self, location: &'ast SrcSpan, type_: &'ast Arc<Type>) {
         let invalid_range = self.edits.src_span_to_lsp_range(*location);
         if within(self.params.range, invalid_range) {
-            self.try_save_function_to_generate(*location, type_, HashMap::new(), None);
+            self.try_save_function_to_generate(*location, type_, None);
         }
 
         ast::visit::visit_typed_expr_invalid(self, location, type_);
@@ -5142,18 +5131,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
 
         if within(self.params.range, fun_range) && fun.is_invalid() {
             if labels_are_correct(args) {
-                let labels = args
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(i, arg)| arg.label.as_ref().map(|label| (i, label.clone())))
-                    .collect();
-
-                self.try_save_function_to_generate(
-                    fun.location(),
-                    &fun.type_(),
-                    labels,
-                    Some(args),
-                );
+                self.try_save_function_to_generate(fun.location(), &fun.type_(), Some(args));
             }
         } else {
             ast::visit::visit_typed_expr_call(self, location, type_, fun, args);
@@ -5164,7 +5142,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
 #[must_use]
 /// Checks the labels in the given arguments are correct: that is there's no
 /// duplicate labels and all labelled arguments come after the unlabelled ones.
-fn labels_are_correct(args: &[TypedCallArg]) -> bool {
+fn labels_are_correct<A>(args: &[CallArg<A>]) -> bool {
     let mut labelled_arg_found = false;
     let mut used_labels = HashSet::new();
 
@@ -5212,6 +5190,28 @@ impl NameGenerator {
         }
     }
 
+    /// Given an argument type and the actual call argument (if any), comes up
+    /// with a label and a name to use for that argument when generating a
+    /// function.
+    ///
+    pub fn generate_label_and_name(
+        &mut self,
+        call_argument: Option<&CallArg<TypedExpr>>,
+        argument_type: &Arc<Type>,
+    ) -> (Option<EcoString>, EcoString) {
+        let label = call_argument.and_then(|argument| argument.label.clone());
+        let argument_name = call_argument
+            // We always favour a name derived from the expression (for example if
+            // the argument is a variable)
+            .and_then(|argument| self.generate_name_from_expression(&argument.value))
+            // If we don't have such a name and there's a label we use that name.
+            .or_else(|| Some(self.rename_to_avoid_shadowing(label.clone()?)))
+            // If all else fails we fallback to using a name derived from the
+            // argument's type.
+            .unwrap_or_else(|| self.generate_name_from_type(argument_type));
+
+        (label, argument_name)
+    }
     pub fn generate_name_from_type(&mut self, type_: &Arc<Type>) -> EcoString {
         let type_to_base_name = |type_: &Arc<Type>| {
             type_
