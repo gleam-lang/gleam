@@ -39,7 +39,20 @@ pub fn case<'a>(
     let mut variables = Variables::new(expression_generator);
     let assignments = variables.assign_case_subjects(compiled_case, subjects)?;
     let decision = CasePrinter { clauses, variables }.decision(&compiled_case.tree)?;
-    Ok(docvec![assignments_to_doc(assignments), decision].force_break())
+    Ok(docvec![assignments_to_doc(assignments), decision.into_doc()].force_break())
+}
+
+enum CaseBody<'a> {
+    If(Document<'a>),
+    Statements(Document<'a>),
+}
+
+impl<'a> CaseBody<'a> {
+    fn into_doc(self) -> Document<'a> {
+        match self {
+            CaseBody::If(document) | CaseBody::Statements(document) => document,
+        }
+    }
 }
 
 struct CasePrinter<'module, 'generator, 'a> {
@@ -101,7 +114,7 @@ struct CasePrinter<'module, 'generator, 'a> {
 ///
 /// So, as we're generating code for each check and move further down the decision
 /// tree, we will have to keep track of all the variables that we've discovered
-/// after each successfull check.
+/// after each successful check.
 ///
 /// In order to do that we'll be using a `Variables` data structure to hold all
 /// this information about the current scope. This also allows us to reuse a lot
@@ -109,13 +122,13 @@ struct CasePrinter<'module, 'generator, 'a> {
 /// the decision tree of let expressions!
 ///
 impl<'a> CasePrinter<'_, '_, 'a> {
-    fn decision(&mut self, decision: &'a Decision) -> Output<'a> {
+    fn decision(&mut self, decision: &'a Decision) -> Result<CaseBody<'a>, Error> {
         match decision {
             Decision::Fail => unreachable!("Invalid decision tree reached code generation"),
             Decision::Run { body } => {
                 let bindings = self.variables.bindings_doc(&body.bindings);
                 let body = self.body_expression(body.clause_index)?;
-                Ok(join_with_line(bindings, body))
+                Ok(CaseBody::Statements(join_with_line(bindings, body)))
             }
             Decision::Switch {
                 var,
@@ -149,7 +162,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         choices: &'a [(RuntimeCheck, Box<Decision>)],
         fallback: &'a Decision,
         fallback_check: &'a FallbackCheck,
-    ) -> Output<'a> {
+    ) -> Result<CaseBody<'a>, Error> {
         // If there's just a single choice we can just generate the code for
         // it: no need to do any checking, we know it must match!
         if choices.is_empty() {
@@ -200,7 +213,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             } else {
                 docvec![" else if (", check_doc, ") "]
             };
-            if_ = if_.append(docvec![branch, break_block(body?)]);
+            if_ = if_.append(docvec![branch, break_block(body?.into_doc())]);
         }
 
         // In case there's some new variables we can extract after the
@@ -212,11 +225,26 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         }
 
         let body = self.inside_new_scope(|this| this.decision(fallback))?;
+        let (body, wrap_body_in_block) = match body {
+            CaseBody::If(document) => (document, false),
+            CaseBody::Statements(document) => (document, true),
+        };
+
+        let has_assignments = !assignments.is_empty();
+
         let if_ = join_with_line(join(assignments, line()), if_);
-        Ok(if body.is_empty() {
+        let document = if body.is_empty() {
             if_
-        } else {
+        } else if wrap_body_in_block {
             docvec![if_, " else ", break_block(body)]
+        } else {
+            docvec![if_, " else ", body]
+        };
+
+        Ok(if has_assignments {
+            CaseBody::Statements(document)
+        } else {
+            CaseBody::If(document)
         })
     }
 
@@ -245,7 +273,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         guard: usize,
         if_true: &'a Body,
         if_false: &'a Decision,
-    ) -> Output<'a> {
+    ) -> Result<CaseBody<'a>, Error> {
         let guard = self
             .clauses
             .get(guard)
@@ -272,17 +300,26 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             let if_true_body = this.body_expression(if_true.clause_index)?;
             Ok(join_with_line(if_true_bindings, if_true_body))
         })?;
-        let if_false = self.inside_new_scope(|this| this.decision(if_false))?;
+        let if_false = self
+            .inside_new_scope(|this| this.decision(if_false))?
+            .into_doc();
 
         // We can now piece everything together into a single document!
         let if_ = docvec!["if (", check, ") ", break_block(if_true)];
+        let has_assignments = !check_bindings.is_empty();
+
         let if_ = join_with_line(check_bindings, if_);
-        if if_false.is_empty() {
-            Ok(docvec![if_])
+        let document = if if_false.is_empty() {
+            if_
         } else {
             let else_ = docvec![" else ", break_block(if_false)];
-            Ok(docvec![if_, else_])
-        }
+            docvec![if_, else_]
+        };
+        Ok(if has_assignments {
+            CaseBody::Statements(document)
+        } else {
+            CaseBody::If(document)
+        })
     }
 }
 

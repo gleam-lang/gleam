@@ -413,3 +413,33 @@ pub fn go(x) {
 "
     );
 }
+
+#[test]
+fn list_with_guard() {
+    assert_js!(
+        "
+pub fn go(x) {
+  case x {
+    [] -> 0
+    [first, ..] if first < 10 -> first * 2
+    [first, ..] -> first
+  }
+}
+"
+    );
+}
+
+#[test]
+fn list_with_guard_no_binding() {
+    assert_js!(
+        "
+pub fn go(x) {
+  case x {
+    [] -> 0
+    [first, ..] if 1 < 10 -> first * 2
+    [first, ..] -> first
+  }
+}
+"
+    );
+}

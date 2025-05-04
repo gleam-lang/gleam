@@ -23,32 +23,28 @@ export function go(x) {
       x.byteAt(4) === 111) {
       let message = "Hello";
       return message;
-    } else {
-      if (x.byteAt(0) === 74 && x.byteAt(1) === 97 && x.byteAt(2) === 107) {
-        if ((x.bitSize - 24) % 8 === 0) {
-          let message = "Jak";
-          return message;
-        } else {
-          return "wibble";
-        }
-      } else {
-        return "wibble";
-      }
-    }
-  } else {
-    if (x.bitSize >= 24) {
-      if (x.byteAt(0) === 74 && x.byteAt(1) === 97 && x.byteAt(2) === 107) {
-        if ((x.bitSize - 24) % 8 === 0) {
-          let message = "Jak";
-          return message;
-        } else {
-          return "wibble";
-        }
+    } else if (x.byteAt(0) === 74 && x.byteAt(1) === 97 && x.byteAt(2) === 107) {
+      if ((x.bitSize - 24) % 8 === 0) {
+        let message = "Jak";
+        return message;
       } else {
         return "wibble";
       }
     } else {
       return "wibble";
     }
+  } else if (x.bitSize >= 24) {
+    if (x.byteAt(0) === 74 && x.byteAt(1) === 97 && x.byteAt(2) === 107) {
+      if ((x.bitSize - 24) % 8 === 0) {
+        let message = "Jak";
+        return message;
+      } else {
+        return "wibble";
+      }
+    } else {
+      return "wibble";
+    }
+  } else {
+    return "wibble";
   }
 }
