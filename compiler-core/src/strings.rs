@@ -161,8 +161,7 @@ pub fn length_utf16(string: &str) -> usize {
     length
 }
 
-/// Gets the number of UTF-32 codepoints in a string (also known as the number of
-/// characters).
+/// Gets the number of UTF-32 codepoints in a string
 pub fn length_utf32(string: &str) -> usize {
     string.chars().count()
 }

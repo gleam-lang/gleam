@@ -2871,8 +2871,10 @@ impl CaseToCompile {
 
 fn segment_matched_value(
     segment: &TypedPatternBitArraySegment,
-    // Override for the segment pattern, if we need to determine the value of
-    // an assignment segment.
+    // If we are compiling an assignment pattern, we still need access to the
+    // `type_` and `options` fields of the `segment`, so we must still pass that
+    // in above. However, we need to check the correct sub-pattern of the original
+    // pattern, so if they are different we set this argument to `Some`.
     pattern: Option<&TypedPattern>,
 ) -> BitArrayMatchedValue {
     let pattern = pattern.unwrap_or(&segment.value);
@@ -2908,8 +2910,10 @@ fn segment_matched_value(
 fn segment_size(
     segment: &TypedPatternBitArraySegment,
     pattern_variables: &HashMap<EcoString, ReadAction>,
-    // Override for the segment pattern, if we need to determine the size of an
-    // assignment segment.
+    // If we are compiling an assignment pattern, we still need access to the
+    // `type_` and `options` fields of the `segment`, so we must still pass that
+    // in above. However, we need to check the correct sub-pattern of the original
+    // pattern, so if they are different we set this argument to `Some`.
     pattern: Option<&TypedPattern>,
 ) -> ReadSize {
     let pattern = pattern.unwrap_or(&segment.value);
@@ -2955,7 +2959,7 @@ fn segment_size(
                 )
             }
             ast::Pattern::String { value, .. } if segment.has_utf32_option() => {
-                // Each utf32 codepoint is 32 bits
+                // Each utf32 code unit is 32 bits
                 ReadSize::ConstantBits(
                     length_utf32(&convert_string_escape_chars(value)) * BigInt::from(32),
                 )
