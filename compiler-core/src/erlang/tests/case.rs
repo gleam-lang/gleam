@@ -185,3 +185,18 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn bit_array_assignment_different_string_encodings() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  case <<>> {
+    <<"wibble" as m:utf16, _:bits>>
+    | <<"wobble" as m:utf32, 1, _:bits>> -> m
+    _ -> ""
+  }
+}
+"#
+    );
+}

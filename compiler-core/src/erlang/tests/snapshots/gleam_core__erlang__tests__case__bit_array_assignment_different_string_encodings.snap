@@ -1,0 +1,36 @@
+---
+source: compiler-core/src/erlang/tests/case.rs
+expression: "\npub fn main() {\n  case <<>> {\n    <<\"wibble\" as m:utf16, _:bits>>\n    | <<\"wobble\" as m:utf32, 1, _:bits>> -> m\n    _ -> \"\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  case <<>> {
+    <<"wibble" as m:utf16, _:bits>>
+    | <<"wobble" as m:utf32, 1, _:bits>> -> m
+    _ -> ""
+  }
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec main() -> binary().
+main() ->
+    case <<>> of
+        <<"wibble"/utf16, _/bitstring>> ->
+            M@1 = <<"wibble"/utf8>>,
+            M@1;
+
+        <<"wobble"/utf32, 1, _/bitstring>> ->
+            M@1 = <<"wobble"/utf8>>,
+            M@1;
+
+        _ ->
+            <<""/utf8>>
+    end.
