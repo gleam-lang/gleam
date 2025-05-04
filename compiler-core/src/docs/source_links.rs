@@ -32,40 +32,29 @@ impl SourceLinker {
         }
         .unwrap_or_default();
 
+        let tag = project_config
+            .repository
+            .tag_for_version(&project_config.version);
+
         let url_pattern = match &project_config.repository {
             Repository::GitHub { user, repo, .. } => Some((
-                format!(
-                    "https://github.com/{}/{}/blob/v{}/{}#L",
-                    user, repo, project_config.version, path_in_repo
-                ),
+                format!("https://github.com/{user}/{repo}/blob/{tag}/{path_in_repo}#L"),
                 "-L".into(),
             )),
             Repository::GitLab { user, repo, .. } => Some((
-                format!(
-                    "https://gitlab.com/{}/{}/-/blob/v{}/{}#L",
-                    user, repo, project_config.version, path_in_repo
-                ),
+                format!("https://gitlab.com/{user}/{repo}/-/blob/{tag}/{path_in_repo}#L"),
                 "-".into(),
             )),
             Repository::BitBucket { user, repo, .. } => Some((
-                format!(
-                    "https://bitbucket.com/{}/{}/src/v{}/{}#lines-",
-                    user, repo, project_config.version, path_in_repo
-                ),
+                format!("https://bitbucket.com/{user}/{repo}/src/{tag}/{path_in_repo}#lines-"),
                 ":".into(),
             )),
             Repository::Codeberg { user, repo, .. } => Some((
-                format!(
-                    "https://codeberg.org/{}/{}/src/tag/v{}/{}#L",
-                    user, repo, project_config.version, path_in_repo
-                ),
+                format!("https://codeberg.org/{user}/{repo}/src/tag/{tag}/{path_in_repo}#L"),
                 "-".into(),
             )),
             Repository::SourceHut { user, repo, .. } => Some((
-                format!(
-                    "https://git.sr.ht/~{}/{}/tree/v{}/item/{}#L",
-                    user, repo, project_config.version, path_in_repo
-                ),
+                format!("https://git.sr.ht/~{user}/{repo}/tree/{tag}/item/{path_in_repo}#L"),
                 "-".into(),
             )),
             Repository::Gitea {
@@ -74,10 +63,7 @@ impl SourceLinker {
                 let string_host = host.to_string();
                 let cleaned_host = string_host.trim_end_matches('/');
                 Some((
-                    format!(
-                        "{cleaned_host}/{user}/{repo}/src/tag/v{}/{}#L",
-                        project_config.version, path_in_repo
-                    ),
+                    format!("{cleaned_host}/{user}/{repo}/src/tag/{tag}/{path_in_repo}#L",),
                     "-".into(),
                 ))
             }

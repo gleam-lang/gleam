@@ -77,7 +77,8 @@ allow_read = ["./database.sqlite"]
     "type": "github",
     "user": "example",
     "repo": "my_dep",
-    "path": null
+    "path": null,
+    "tag_prefix": null
   },
   "links": [
     {
