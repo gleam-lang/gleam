@@ -133,11 +133,12 @@ pub fn compile(config: PackageConfig, modules: Vec<(&str, &str)>) -> EcoString {
 }
 
 fn compile_documentation(
-    main_module: &str,
+    module_name: &str,
+    module_src: &str,
     modules: Vec<(&str, &str, &str)>,
     options: PrintOptions,
 ) -> EcoString {
-    let module = type_::tests::compile_module("main", main_module, None, modules.clone())
+    let module = type_::tests::compile_module(module_name, module_src, None, modules.clone())
         .expect("Module should compile successfully");
 
     let mut config = PackageConfig::default();
@@ -145,7 +146,7 @@ fn compile_documentation(
     let paths = ProjectPaths::new("/".into());
     let build_module = build::Module {
         name: "main".into(),
-        code: main_module.into(),
+        code: module_src.into(),
         mtime: SystemTime::now(),
         input_path: "/".into(),
         origin: Origin::Src,
@@ -168,7 +169,14 @@ fn compile_documentation(
     let types = module
         .definitions
         .iter()
-        .filter_map(|statement| printer.type_definition(&source_links, statement))
+        .filter_map(
+            |statement: &crate::ast::Definition<
+                std::sync::Arc<type_::Type>,
+                crate::ast::TypedExpr,
+                EcoString,
+                EcoString,
+            >| printer.type_definition(&source_links, statement),
+        )
         .sorted()
         .collect_vec();
 
@@ -185,8 +193,10 @@ fn compile_documentation(
     for (_package, name, src) in modules {
         output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
     }
-    output.push_str("-- main.gleam\n");
-    output.push_str(main_module);
+    output.push_str("-- ");
+    output.push_str(module_name);
+    output.push_str(".gleam\n");
+    output.push_str(module_src);
 
     if !types.is_empty() {
         output.push_str("\n\n---- TYPES");
@@ -241,27 +251,32 @@ macro_rules! assert_documentation {
     };
 
     ($src:literal, $options:expr $(,)?) => {
-        let output = compile_documentation($src, Vec::new(), $options);
+        let output = compile_documentation("main", $src, Vec::new(), $options);
         insta::assert_snapshot!(output);
     };
 
     ($(($name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
-        let output = compile_documentation($src, vec![$(("thepackage", $name, $module_src)),*], PrintOptions::all());
+        let output = compile_documentation("main", $src, vec![$(("thepackage", $name, $module_src)),*], PrintOptions::all());
         insta::assert_snapshot!(output);
     };
 
     ($(($name:expr, $module_src:literal)),+, $src:literal, $options:expr $(,)?) => {
-        let output = compile_documentation($src, vec![$(("thepackage", $name, $module_src)),*], $options);
+        let output = compile_documentation("main", $src, vec![$(("thepackage", $name, $module_src)),*], $options);
+        insta::assert_snapshot!(output);
+    };
+
+    ($(($name:expr, $module_src:literal)),+, $main_module:literal, $src:literal, $options:expr $(,)?) => {
+        let output = compile_documentation($main_module, $src, vec![$(("thepackage", $name, $module_src)),*], $options);
         insta::assert_snapshot!(output);
     };
 
     ($(($package:expr, $name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
-        let output = compile_documentation($src, vec![$(($package, $name, $module_src)),*], PrintOptions::all());
+        let output = compile_documentation("main", $src, vec![$(($package, $name, $module_src)),*], PrintOptions::all());
         insta::assert_snapshot!(output);
     };
 
     ($(($package:expr, $name:expr, $module_src:literal)),+, $src:literal, $options:expr $(,)?) => {
-        let output = compile_documentation($src, vec![$(($package, $name, $module_src)),*], $options);
+        let output = compile_documentation("main", $src, vec![$(($package, $name, $module_src)),*], $options);
         insta::assert_snapshot!(output);
     };
 }
@@ -829,6 +844,34 @@ fn link_to_type_in_different_module() {
 import gleam/dict
 
 pub fn make_dict() -> dict.Dict(a, b) { todo }
+",
+        ONLY_LINKS
+    );
+}
+
+#[test]
+fn link_to_type_in_different_module_from_nested_module() {
+    assert_documentation!(
+        ("gleam/dict", "pub type Dict(a, b)"),
+        "gleam/dynamic/decode",
+        "
+import gleam/dict
+
+pub fn decode_dict() -> dict.Dict(a, b) { todo }
+",
+        ONLY_LINKS
+    );
+}
+
+#[test]
+fn link_to_type_in_different_module_from_nested_module_with_shared_path() {
+    assert_documentation!(
+        ("gleam/dynamic", "pub type Dynamic"),
+        "gleam/dynamic/decode",
+        "
+import gleam/dynamic
+
+pub type Dynamic = dynamic.Dynamic
 ",
         ONLY_LINKS
     );
