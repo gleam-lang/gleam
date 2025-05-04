@@ -6,9 +6,10 @@ use gleam_core::{
     analyse::TargetSupport,
     build::{Codegen, Compile, Mode, Options, Package, Target},
     config::{GleamVersion, PackageConfig, SpdxLicense},
-    docs::DocContext,
+    docs::{Dependency, DependencyKind, DocContext},
     error::{SmallVersion, wrap},
     hex,
+    manifest::ManifestPackageSource,
     paths::{self, ProjectPaths},
     requirement::Requirement,
     type_,
@@ -16,7 +17,7 @@ use gleam_core::{
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
 use sha2::Digest;
-use std::{io::Write, path::PathBuf, time::Instant};
+use std::{collections::HashMap, io::Write, path::PathBuf, time::Instant};
 
 use crate::{build, cli, docs, fs, http::HttpClient};
 
@@ -38,6 +39,7 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
         data: package_tarball,
         src_files_added,
         generated_files_added,
+        dependencies,
     } = do_build_hex_tarball(paths, &mut config)?;
 
     check_for_name_squatting(&compile_result)?;
@@ -47,6 +49,7 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
     let docs_tarball = fs::create_tar_archive(docs::build_documentation(
         paths,
         &config,
+        dependencies,
         &mut compile_result,
         DocContext::HexPublish,
         &cached_modules,
@@ -271,6 +274,7 @@ struct Tarball {
     data: Vec<u8>,
     src_files_added: Vec<Utf8PathBuf>,
     generated_files_added: Vec<(Utf8PathBuf, String)>,
+    dependencies: HashMap<EcoString, Dependency>,
 }
 
 pub fn build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Result<Vec<u8>> {
@@ -285,6 +289,25 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
     // Reset the build directory so we know the state of the project
     fs::delete_directory(&paths.build_directory_for_target(Mode::Prod, target))?;
 
+    let manifest = build::download_dependencies(paths, cli::Reporter::new())?;
+    let dependencies = manifest
+        .packages
+        .iter()
+        .map(|package| {
+            (
+                package.name.clone(),
+                Dependency {
+                    version: package.version.clone(),
+                    kind: match &package.source {
+                        ManifestPackageSource::Hex { .. } => DependencyKind::Hex,
+                        ManifestPackageSource::Git { .. } => DependencyKind::Git,
+                        ManifestPackageSource::Local { .. } => DependencyKind::Path,
+                    },
+                },
+            )
+        })
+        .collect();
+
     // Build the project to check that it is valid
     let built = build::main(
         paths,
@@ -297,7 +320,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
             compile: Compile::All,
             no_print_progress: false,
         },
-        build::download_dependencies(paths, cli::Reporter::new())?,
+        manifest,
     )?;
 
     let minimum_required_version = built.minimum_required_version();
@@ -399,6 +422,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
         data: tarball,
         src_files_added: src_files,
         generated_files_added: generated_files,
+        dependencies,
     })
 }
 

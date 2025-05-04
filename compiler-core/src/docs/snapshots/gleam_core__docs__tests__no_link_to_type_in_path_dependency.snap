@@ -16,4 +16,4 @@ pub fn make_dict() -> dict.Dict(a, b) { todo }
 ---- VALUES
 
 --- make_dict
-<pre><code>pub fn make_dict() -> <a href="https://hexdocs.pm/gleam_stdlib/1.0.0/gleam/dict.html#Dict" title="gleam/dict.{type Dict}">dict.Dict</a>(a, b)</code></pre>
+<pre><code>pub fn make_dict() -> <span title="gleam/dict.{type Dict}">dict.Dict</span>(a, b)</code></pre>
