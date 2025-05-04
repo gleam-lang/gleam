@@ -17,11 +17,9 @@ fn go(x, y) {
 function go(x, y) {
   if (x) {
     return 1;
+  } else if (y) {
+    return 2;
   } else {
-    if (y) {
-      return 2;
-    } else {
-      return 0;
-    }
+    return 0;
   }
 }
