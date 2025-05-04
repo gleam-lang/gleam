@@ -460,6 +460,58 @@ impl Printer<'_> {
             self.title(name)
         } else if package == self.package && module == self.module {
             self.link(eco_format!("#{name}"), self.title(name), None)
+        } else if package == self.package {
+            // If we are linking to the current package, we might be viewing the
+            // documentation locally and so we need to generate a relative link.
+
+            let mut module_path = module.split('/').peekable();
+            let mut current_module = self.module.split('/');
+
+            // The documentation page for the final segment of the module is just
+            // an html file by itself, so it doesn't form part of the path and doesn't
+            // need to be backtracked using `..`.
+            let module_name = module_path.next_back().unwrap_or(module);
+            _ = current_module.next_back();
+
+            // The two modules might have some sharer part of the path, which we
+            // don't need to traverse back through. However, if the two modules are
+            // something like `gleam/a/wibble/wobble` and `gleam/b/wibble/wobble`,
+            // the `wibble` folders are two different folders despite being at the
+            // same position with the same name.
+            let mut encountered_different_path = false;
+            let mut path = Vec::new();
+
+            // Calculate how far backwards in the directory tree we need to walk
+            for segment in current_module {
+                // If this is still part of the shared path, we can just skip it:
+                // no need to go back and forth through the same directory in the
+                // path!
+                if !encountered_different_path && module_path.peek() == Some(&segment) {
+                    _ = module_path.next();
+                } else {
+                    encountered_different_path = true;
+                    path.push("..");
+                }
+            }
+
+            // Once we have walked backwards, we walk forwards again to the correct
+            // page.
+            path.extend(module_path);
+            path.push(module_name);
+
+            let qualified_name = docvec![
+                self.variable(EcoString::from(module_name)),
+                ".",
+                self.title(name)
+            ];
+
+            let title = eco_format!("{module}.{{type {name}}}");
+
+            self.link(
+                eco_format!("{path}.html#{name}", path = path.join("/")),
+                qualified_name,
+                Some(title),
+            )
         } else {
             let module_name = module.split('/').next_back().unwrap_or(module);
             let qualified_name = docvec![
