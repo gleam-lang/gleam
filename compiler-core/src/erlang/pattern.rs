@@ -2,10 +2,7 @@ use std::cell::RefCell;
 
 use ecow::eco_format;
 
-use crate::{
-    analyse::Inferred,
-    strings::{length_utf16, length_utf32},
-};
+use crate::analyse::Inferred;
 
 use super::*;
 
@@ -193,7 +190,21 @@ fn pattern_segment<'a>(
 ) -> Document<'a> {
     let value = segment.value.as_ref();
 
-    let pattern_is_a_string_literal = matches!(value, Pattern::String { .. });
+    let pattern_is_a_string_literal = match value {
+        Pattern::String { .. } => true,
+        Pattern::Assign { pattern, .. } => pattern.is_string(),
+        Pattern::Int { .. }
+        | Pattern::Float { .. }
+        | Pattern::Variable { .. }
+        | Pattern::VarUsage { .. }
+        | Pattern::Discard { .. }
+        | Pattern::List { .. }
+        | Pattern::Constructor { .. }
+        | Pattern::Tuple { .. }
+        | Pattern::BitArray { .. }
+        | Pattern::StringPrefix { .. }
+        | Pattern::Invalid { .. } => false,
+    };
     let pattern_is_a_discard = matches!(value, Pattern::Discard { .. });
 
     let vars = RefCell::new(vars);
@@ -233,57 +244,24 @@ fn pattern_segment<'a>(
                     variable_name
                 }
 
-                // Here we do the same as for floats and ints, but we must calculate the size of
-                // the string first, so we can correctly match the bit array segment then compare
-                // it afterwards.
+                // If we are assigning to a string which is UTF-16 or UTF-32, we cannot simply use
+                // variable patterns and guards like we do with other segments. Gleam strings are
+                // UTF-8 so we must anyway bind the correct value to the variable. We generate code
+                // that looks like this:
+                //
+                // ```erlang
+                // case X of
+                //   <<"Hello"/utf16>> ->
+                //     Message = <<"Hello"/utf8>>,
+                //     <clause body>
+                // end.
+                // ```
                 Pattern::String { value, .. } => {
-                    let escaped = convert_string_escape_chars(value);
-                    let (utf_option, string_length) = if segment.has_utf16_option() {
-                        assignments.borrow_mut().push(PatternAssignment {
-                            variable: name,
-                            value: string(value),
-                        });
-
-                        let option = if segment.has_native_option() {
-                            "utf16-native"
-                        } else if segment.endianness().is_big() {
-                            "utf16"
-                        } else {
-                            "utf16-little"
-                        };
-
-                        // Each UTF-16 codepoint is 2 bytes
-                        (option, length_utf16(&escaped) * 2)
-                    } else if segment.has_utf32_option() {
-                        assignments.borrow_mut().push(PatternAssignment {
-                            variable: name,
-                            value: string(value),
-                        });
-
-                        let option = if segment.has_native_option() {
-                            "utf32-native"
-                        } else if segment.endianness().is_big() {
-                            "utf32"
-                        } else {
-                            "utf32-little"
-                        };
-
-                        // Each UTF-32 codepoint is 4 bytes
-                        (option, length_utf32(&escaped) * 4)
-                    } else {
-                        ("utf8", escaped.len())
-                    };
-
-                    guards.borrow_mut().push(docvec![
-                        variable_name.clone(),
-                        " =:= ",
-                        "<<\"",
-                        string_inner(value),
-                        "\"/",
-                        utf_option,
-                        ">>",
-                    ]);
-                    docvec![variable_name, ":", string_length]
+                    assignments.borrow_mut().push(PatternAssignment {
+                        variable: name,
+                        value: string(value),
+                    });
+                    value.to_doc().surround("\"", "\"")
                 }
 
                 // Doing a pattern such as `<<_ as a>>` is the same as just `<<a>>`, so we treat it

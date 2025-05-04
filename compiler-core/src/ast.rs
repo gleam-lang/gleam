@@ -2122,6 +2122,11 @@ impl<A> Pattern<A> {
             _ => false,
         }
     }
+
+    #[must_use]
+    pub fn is_string(&self) -> bool {
+        matches!(self, Self::String { .. })
+    }
 }
 
 impl TypedPattern {
