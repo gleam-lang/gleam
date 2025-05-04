@@ -856,7 +856,7 @@ impl Repository {
         };
 
         match prefix {
-            Some(prefix) => format!("{prefix}v{version}"),
+            Some(prefix) => format!("{prefix}{version}"),
             None => format!("v{version}"),
         }
     }
