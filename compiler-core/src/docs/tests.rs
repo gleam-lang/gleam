@@ -640,7 +640,7 @@ fn source_link_for_github_repository_with_path_and_tag_prefix() {
         user: "wibble".to_string(),
         repo: "wobble".to_string(),
         path: Some("path/to/package".to_string()),
-        tag_prefix: Some("subdir-".into()),
+        tag_prefix: Some("subdir-v".into()),
     };
 
     let modules = vec![("app.gleam", "pub type Wibble = Int")];
