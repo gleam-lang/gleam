@@ -204,6 +204,13 @@
   deprecated environment variables.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The `repository` section in `gleam.toml` now allows specifying the
+  `tag_prefix` property, which overrides the default `v`.
+  This makes it possible to have multiple packages with different versions in
+  the same repository (together with `path`), without breaking links to source
+  code in documentation.
+  ([Sakari Bergen](https://github.com/sbergen))
+
 ### Language server
 
 - The code action to add missing labels to function now also works in patterns:
