@@ -329,6 +329,34 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The language server now provides a code action to automatically generate a new
+  variant from incorrect code:
+
+  ```gleam
+  pub type Msg {
+    ServerSentResponse(Json)
+  }
+
+  pub fn view() -> Element(Msg) {
+    div([], [
+      button([on_click(UserPressedButton)], [text("Press me!")])
+  //                   ^^^^^^^^^^^^^^^^^ This doesn't exist yet!
+    ])
+  }
+  ```
+
+  Triggering the code action on the `UserPressedButton` will add it to the `Msg`
+  type:
+
+  ```gleam
+  pub type Msg {
+    ServerSentResponse(Json)
+    UserPressedButton
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Installation
