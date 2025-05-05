@@ -419,3 +419,8 @@
 - Fixed a bug where renaming a local variable which is used in combination with
   label shorthand syntax would produce invalid code.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where enabling `typescript_declarations = true` wouldn't generate
+  TypeScript declarations unless the build directory was manually deleted. The
+  compiler now automatically rebuilds the project when this configuration changes.
+  ([daniellionel01](https://github.com/daniellionel01))
