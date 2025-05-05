@@ -6,7 +6,7 @@ use lsp_types::{
 
 use super::*;
 
-fn code_actions(tester: TestProject<'_>, range: Range) -> Option<Vec<lsp_types::CodeAction>> {
+fn code_actions(tester: &TestProject<'_>, range: Range) -> Option<Vec<lsp_types::CodeAction>> {
     let position = Position {
         line: 0,
         character: 0,
@@ -26,7 +26,7 @@ fn code_actions(tester: TestProject<'_>, range: Range) -> Option<Vec<lsp_types::
 
 fn actions_with_title(
     titles: Vec<&str>,
-    tester: TestProject<'_>,
+    tester: &TestProject<'_>,
     range: Range,
 ) -> Vec<lsp_types::CodeAction> {
     code_actions(tester, range)
@@ -36,25 +36,71 @@ fn actions_with_title(
         .collect_vec()
 }
 
+fn owned_actions_with_title(
+    titles: Vec<&str>,
+    tester: TestProject<'_>,
+    range: Range,
+) -> Vec<lsp_types::CodeAction> {
+    actions_with_title(titles, &tester, range)
+}
+
 fn apply_code_action(title: &str, tester: TestProject<'_>, range: Range) -> String {
-    let src = tester.src;
     let titles = vec![title];
-    let changes = actions_with_title(titles, tester, range)
+    let changes = actions_with_title(titles, &tester, range)
         .pop()
         .expect("No action with the given title")
         .edit
         .expect("No workspace edit found")
         .changes
         .expect("No text edit found");
-    apply_code_edit(src, changes)
+    apply_code_edit(tester, changes)
 }
 
-fn apply_code_edit(src: &str, changes: HashMap<Url, Vec<lsp_types::TextEdit>>) -> String {
-    let mut result = src.to_string();
-    for (_, change) in changes {
-        result = super::apply_code_edit(result.as_str(), change);
+fn apply_code_edit(
+    tester: TestProject<'_>,
+    changes: HashMap<Url, Vec<lsp_types::TextEdit>>,
+) -> String {
+    let mut changed_files: HashMap<Url, String> = HashMap::new();
+    for (uri, change) in changes {
+        let code = match changed_files.get(&uri) {
+            Some(code) => code,
+            None => tester
+                .src_from_module_url(&uri)
+                .expect(&format!("no src for url {:?}", uri)),
+        };
+        let code = super::apply_code_edit(code, change);
+        let _ = changed_files.insert(uri, code);
     }
-    result.to_string()
+
+    show_code_edits(tester, changed_files)
+}
+
+fn show_code_edits(tester: TestProject<'_>, changed_files: HashMap<Url, String>) -> String {
+    let format_code = |url: &Url, code: &String| {
+        format!(
+            "// --- Edits applied to module '{}'\n{}",
+            tester.module_name_from_url(url).expect("a module"),
+            code
+        )
+    };
+
+    // If the file that changed is the main one we just show its code.
+    if changed_files.len() == 1 {
+        let mut changed = changed_files.iter().peekable();
+        let (url, code) = changed.peek().unwrap();
+        if tester.module_name_from_url(url) == Some("app".into()) {
+            code.to_string()
+        } else {
+            format_code(url, code)
+        }
+    } else {
+        // If more than a single file changed we want to add the name of the
+        // file before each!
+        changed_files
+            .iter()
+            .map(|(url, code)| format_code(url, code))
+            .join("\n")
+    }
 }
 
 const REMOVE_UNUSED_IMPORTS: &str = "Remove unused imports";
@@ -115,7 +161,7 @@ macro_rules! assert_no_code_actions {
         let range = $range.find_range(src);
         let all_titles = vec![$title $(, $titles)*];
         let expected: Vec<lsp_types::CodeAction> = vec![];
-        let result = actions_with_title(all_titles, $project, range);
+        let result = owned_actions_with_title(all_titles, $project, range);
         assert_eq!(expected, result);
     };
 }
@@ -250,6 +296,98 @@ pub fn main() -> Wibble {
 }
 
 "#,
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
+fn generate_unqualified_variant_in_other_module() {
+    let src = r#"
+import other
+
+pub fn main() -> other.Wibble {
+  let assert Wobble = new()
+}
+
+pub fn new() -> other.Wibble { todo }
+"#;
+
+    assert_code_action!(
+        GENERATE_VARIANT,
+        TestProject::for_source(src).add_module("other", "pub type Wibble"),
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
+fn generate_qualified_variant_in_other_module() {
+    let src = r#"
+import other
+
+pub fn main() -> other.Wibble {
+  let assert other.Wobble = new()
+}
+
+pub fn new() -> other.Wibble { todo }
+"#;
+    assert_code_action!(
+        GENERATE_VARIANT,
+        TestProject::for_source(src).add_module("other", "pub type Wibble"),
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
+fn do_not_generate_variant_if_one_with_the_same_name_exists() {
+    assert_no_code_actions!(
+        GENERATE_VARIANT,
+        r#"
+pub fn main() -> Wibble {
+  let assert Wobble = new()
+}
+
+pub type Wibble {
+  Wobble(n: Int)
+}
+
+pub fn new() -> Wibble { todo }
+"#,
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
+fn do_not_generate_variant_if_one_with_the_same_name_exists_in_other_module() {
+    let src = r#"
+import other.{type Wibble}
+
+pub fn main() -> Wibble {
+  let assert Wobble = new()
+}
+
+pub fn new() -> Wibble { todo }
+"#;
+    assert_no_code_actions!(
+        GENERATE_VARIANT,
+        TestProject::for_source(src).add_module("other", "pub type Wibble { Wobble(String) }"),
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
+fn do_not_generate_qualified_variant_if_one_with_the_same_name_exists_in_other_module() {
+    let src = r#"
+import other.{type Wibble}
+
+pub fn main() -> Wibble {
+  let assert other.Wobble = new()
+}
+
+pub fn new() -> Wibble { todo }
+"#;
+    assert_no_code_actions!(
+        GENERATE_VARIANT,
+        TestProject::for_source(src).add_module("other", "pub type Wibble { Wobble(String) }"),
         find_position_of("Wobble").to_selection()
     );
 }
