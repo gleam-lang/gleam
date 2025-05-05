@@ -39,7 +39,7 @@ pub enum EntityKind {
     Constant,
     Constructor,
     Type,
-    ImportedModule { full_name: EcoString },
+    ImportedModule { module_name: EcoString },
     ModuleAlias { module: EcoString },
     ImportedConstructor { module: EcoString },
     ImportedType { module: EcoString },
@@ -109,10 +109,10 @@ pub struct ReferenceTracker {
     /// }
     /// ```
     ///
-    /// And each imported entity carries around the _full name of the module_
-    /// (here it would be `wibble/wobble` and not just `wobble`).
+    /// And each imported entity carries around the _name of the module_ and not
+    /// just the alias (here it would be `wibble/wobble` and not just `wobble`).
     ///
-    full_name_to_node: HashMap<EcoString, NodeIndex>,
+    module_name_to_node: HashMap<EcoString, NodeIndex>,
 }
 
 impl ReferenceTracker {
@@ -274,14 +274,14 @@ impl ReferenceTracker {
     pub fn register_aliased_module(
         &mut self,
         used_name: EcoString,
-        full_name: EcoString,
+        module_name: EcoString,
         alias_location: SrcSpan,
         import_location: SrcSpan,
     ) {
         // We first record a node for the module being aliased. We use its entire
         // name to identify it in this case and keep track of the node it's
         // associated with.
-        self.register_module(full_name.clone(), full_name.clone(), import_location);
+        self.register_module(module_name.clone(), module_name.clone(), import_location);
 
         // Then we create a node for the alias, as the alias itself might be
         // unused!
@@ -289,7 +289,7 @@ impl ReferenceTracker {
         // Also we want to register the fact that if this alias is used then the
         // import is used: so we add a reference from the alias to the full import
         // we've just added.
-        self.register_module_reference(full_name.clone());
+        self.register_module_reference(module_name.clone());
 
         // Finally we can add information for this alias:
         let entity = Entity {
@@ -299,7 +299,9 @@ impl ReferenceTracker {
         _ = self.entity_information.insert(
             entity,
             EntityInformation {
-                kind: EntityKind::ModuleAlias { module: full_name },
+                kind: EntityKind::ModuleAlias {
+                    module: module_name,
+                },
                 origin: alias_location,
             },
         );
@@ -308,13 +310,13 @@ impl ReferenceTracker {
     pub fn register_module(
         &mut self,
         used_name: EcoString,
-        full_name: EcoString,
+        module_name: EcoString,
         location: SrcSpan,
     ) {
         self.current_node = self.create_node(used_name.clone(), EntityLayer::Module);
         let _ = self
-            .full_name_to_node
-            .insert(full_name.clone(), self.current_node);
+            .module_name_to_node
+            .insert(module_name.clone(), self.current_node);
 
         let entity = Entity {
             name: used_name,
@@ -324,7 +326,7 @@ impl ReferenceTracker {
         _ = self.entity_information.insert(
             entity,
             EntityInformation {
-                kind: EntityKind::ImportedModule { full_name },
+                kind: EntityKind::ImportedModule { module_name },
                 origin: location,
             },
         );
@@ -402,7 +404,7 @@ impl ReferenceTracker {
     }
 
     pub fn register_module_reference(&mut self, name: EcoString) {
-        let target = match self.full_name_to_node.get(&name) {
+        let target = match self.module_name_to_node.get(&name) {
             Some(target) => *target,
             None => self.get_or_create_node(name, EntityLayer::Module),
         };

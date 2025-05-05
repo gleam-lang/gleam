@@ -70,19 +70,19 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         }
 
         // Insert unqualified imports into scope
-        let module_full_name = module_info.name.clone();
+        let module_name = module_info.name.clone();
         for type_ in &import.unqualified_types {
-            self.register_unqualified_type(type_, module_full_name.clone(), module_info);
+            self.register_unqualified_type(type_, module_name.clone(), module_info);
         }
         for value in &import.unqualified_values {
-            self.register_unqualified_value(value, module_full_name.clone(), module_info);
+            self.register_unqualified_value(value, module_name.clone(), module_info);
         }
     }
 
     fn register_unqualified_type(
         &mut self,
         import: &UnqualifiedImport,
-        module_full_name: EcoString,
+        module_name: EcoString,
         module: &ModuleInterface,
     ) {
         let imported_name = import.as_name.as_ref().unwrap_or(&import.name);
@@ -111,7 +111,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         self.environment.references.register_type(
             imported_name.clone(),
             EntityKind::ImportedType {
-                module: module_full_name,
+                module: module_name,
             },
             import.location,
             Publicity::Private,
