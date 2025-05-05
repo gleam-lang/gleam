@@ -1,7 +1,7 @@
 use std::{collections::HashSet, iter, sync::Arc};
 
 use crate::{
-    Error, STDLIB_PACKAGE_NAME,
+    Error, STDLIB_PACKAGE_NAME, analyse,
     ast::{
         self, AssignName, AssignmentKind, BitArraySegmentTruncation, CallArg, CustomType,
         FunctionLiteralKind, ImplicitCallArgOrigin, PIPE_PRECEDENCE, Pattern,
@@ -34,8 +34,9 @@ use super::{
     compiler::LspProjectCompiler,
     edits::{add_newlines_after_import, get_import_edit, position_of_first_definition_if_import},
     engine::{overlaps, within},
+    files::FileSystemProxy,
     reference::find_variable_references,
-    src_span_to_lsp_range,
+    src_span_to_lsp_range, url_from_path,
 };
 
 #[derive(Debug)]
@@ -867,7 +868,7 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
         name: &'ast EcoString,
         arguments: &'ast Vec<CallArg<TypedPattern>>,
         module: &'ast Option<(EcoString, SrcSpan)>,
-        constructor: &'ast crate::analyse::Inferred<type_::PatternConstructor>,
+        constructor: &'ast analyse::Inferred<type_::PatternConstructor>,
         spread: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
     ) {
@@ -1496,14 +1497,14 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
         name: &'ast EcoString,
         arguments: &'ast Vec<CallArg<TypedPattern>>,
         module: &'ast Option<(EcoString, SrcSpan)>,
-        constructor: &'ast crate::analyse::Inferred<type_::PatternConstructor>,
+        constructor: &'ast analyse::Inferred<type_::PatternConstructor>,
         spread: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
     ) {
         let range = src_span_to_lsp_range(*location, self.line_numbers);
         if overlaps(self.params.range, range) {
             if let Some((module_alias, _)) = module {
-                if let crate::analyse::Inferred::Known(constructor) = constructor {
+                if let analyse::Inferred::Known(constructor) = constructor {
                     if let Some(import) =
                         self.get_module_import(&constructor.module, name, ast::Layer::Value)
                     {
@@ -1809,12 +1810,12 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
         name: &'ast EcoString,
         arguments: &'ast Vec<CallArg<TypedPattern>>,
         module: &'ast Option<(EcoString, SrcSpan)>,
-        constructor: &'ast crate::analyse::Inferred<type_::PatternConstructor>,
+        constructor: &'ast analyse::Inferred<type_::PatternConstructor>,
         spread: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
     ) {
         if let Some((module_alias, _)) = module {
-            if let crate::analyse::Inferred::Known(_) = constructor {
+            if let analyse::Inferred::Known(_) = constructor {
                 let QualifiedConstructor {
                     used_name,
                     constructor,
@@ -2030,7 +2031,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
         name: &'ast EcoString,
         arguments: &'ast Vec<CallArg<TypedPattern>>,
         module: &'ast Option<(EcoString, SrcSpan)>,
-        constructor: &'ast crate::analyse::Inferred<type_::PatternConstructor>,
+        constructor: &'ast analyse::Inferred<type_::PatternConstructor>,
         spread: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
     ) {
@@ -2040,7 +2041,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
                 src_span_to_lsp_range(*location, self.line_numbers),
             )
         {
-            if let crate::analyse::Inferred::Known(constructor) = constructor {
+            if let analyse::Inferred::Known(constructor) = constructor {
                 self.get_module_import_from_value_constructor(&constructor.module, name);
             }
         }
@@ -2238,7 +2239,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
         name: &'ast EcoString,
         arguments: &'ast Vec<CallArg<TypedPattern>>,
         module: &'ast Option<(EcoString, SrcSpan)>,
-        constructor: &'ast crate::analyse::Inferred<type_::PatternConstructor>,
+        constructor: &'ast analyse::Inferred<type_::PatternConstructor>,
         spread: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
     ) {
@@ -5139,6 +5140,374 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
     }
 }
 
+/// Builder for the TODO
+/// TODO:
+/// - [X] Pop up when putting stuff in another module
+/// - [X] Variant with no fields is not caught up as it is not a function
+/// - [X] Generate from patterns as well!
+/// - [X] Generate for module select as well!
+/// - [ ] Qualify it or not!
+/// - [X] Never generate the same variant twice! If the variant is already there it should propose to qualify it!
+///
+pub struct GenerateVariant<'a, IO> {
+    module: &'a Module,
+    compiler: &'a LspProjectCompiler<FileSystemProxy<IO>>,
+    params: &'a CodeActionParams,
+    line_numbers: &'a LineNumbers,
+    variant_to_generate: Option<VariantToGenerate<'a>>,
+}
+
+struct VariantToGenerate<'a> {
+    name: &'a str,
+    end_position: u32,
+    arguments_types: Vec<Arc<Type>>,
+
+    /// Wether the type we're adding the variant to is written with braces or
+    /// not. We need this information to add braces when missing.
+    ///
+    type_braces: TypeBraces,
+
+    /// The module this variant will be added to.
+    ///
+    module_name: EcoString,
+
+    /// The arguments actually supplied as input to the variant, if any.
+    /// A variant to generate might as well be just a name passed as an argument
+    /// `list.map([1, 2, 3], ToGenerate)` so it's not guaranteed to actually
+    /// have any actual arguments!
+    ///
+    given_arguments: Option<Arguments<'a>>,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum TypeBraces {
+    /// If the type is written like this: `pub type Wibble`
+    HasBraces,
+    /// If the type is written like this: `pub type Wibble {}`
+    NoBraces,
+}
+
+/// The arguments to an invalid call or pattern we can use to generate a variant.
+///
+enum Arguments<'a> {
+    /// These are the arguments provided to the invalid variant constructor
+    /// when it's used as a function: `let a = Wibble(1, 2)`.
+    ///
+    Expressions(&'a [TypedCallArg]),
+    /// These are the arguments provided to the invalid variant constructor when
+    /// it's used in a pattern: `let assert Wibble(1, 2) = a`
+    ///
+    Patterns(&'a [CallArg<TypedPattern>]),
+}
+
+/// An invalid variant might be used both as a pattern in a case expression or
+/// as a regular value in an expression. We want to generate the variant in both
+/// cases, so we use this enum to tell apart the two cases and be able to reuse
+/// most of the code for both as they are very similar.
+///
+enum Argument<'a> {
+    Expression(&'a TypedCallArg),
+    Pattern(&'a CallArg<TypedPattern>),
+}
+
+impl<'a> Arguments<'a> {
+    fn get(&self, index: usize) -> Option<Argument<'a>> {
+        match self {
+            Arguments::Patterns(call_args) => call_args.get(index).map(Argument::Pattern),
+            Arguments::Expressions(call_args) => call_args.get(index).map(Argument::Expression),
+        }
+    }
+
+    fn types(&self) -> Vec<Arc<Type>> {
+        match self {
+            Arguments::Expressions(call_args) => call_args
+                .iter()
+                .map(|argument| argument.value.type_())
+                .collect_vec(),
+
+            Arguments::Patterns(call_args) => call_args
+                .iter()
+                .map(|argument| argument.value.type_())
+                .collect_vec(),
+        }
+    }
+}
+
+impl<'a> Argument<'a> {
+    fn label(&self) -> Option<EcoString> {
+        match self {
+            Argument::Expression(call_arg) => call_arg.label.clone(),
+            Argument::Pattern(call_arg) => call_arg.label.clone(),
+        }
+    }
+}
+
+impl<'a, IO> GenerateVariant<'a, IO>
+where
+    IO: FileSystemReader + FileSystemWriter + BeamCompiler + CommandExecutor + Clone,
+{
+    pub fn new(
+        module: &'a Module,
+        compiler: &'a LspProjectCompiler<FileSystemProxy<IO>>,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            compiler,
+            line_numbers,
+            variant_to_generate: None,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let Some(VariantToGenerate {
+            name,
+            arguments_types,
+            given_arguments,
+            module_name,
+            end_position,
+            type_braces,
+        }) = &self.variant_to_generate
+        else {
+            return vec![];
+        };
+
+        let Some((variant_module, variant_edits)) = self.edits_to_create_variant(
+            name,
+            arguments_types,
+            given_arguments,
+            &module_name,
+            *end_position,
+            *type_braces,
+        ) else {
+            return vec![];
+        };
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Generate variant")
+            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .changes(variant_module, variant_edits)
+            .preferred(false)
+            .push_to(&mut action);
+        action
+    }
+
+    /// Returns the edits needed to add this new variant to the given module.
+    /// It also returns the uri of the module the edits should be applied to.
+    ///
+    fn edits_to_create_variant(
+        &self,
+        variant_name: &str,
+        arguments_types: &[Arc<Type>],
+        given_arguments: &Option<Arguments<'_>>,
+        module_name: &EcoString,
+        end_position: u32,
+        type_braces: TypeBraces,
+    ) -> Option<(Url, Vec<TextEdit>)> {
+        let mut label_names = NameGenerator::new();
+        let mut printer = Printer::new(&self.module.ast.names);
+        let arguments = arguments_types
+            .iter()
+            .enumerate()
+            .map(|(index, argument_type)| {
+                let label = given_arguments
+                    .as_ref()
+                    .and_then(|arguments| arguments.get(index)?.label())
+                    .map(|label| label_names.rename_to_avoid_shadowing(label));
+
+                let pretty_type = printer.print_type(argument_type);
+                if let Some(arg_label) = label {
+                    format!("{arg_label}: {pretty_type}")
+                } else {
+                    format!("{pretty_type}")
+                }
+            })
+            .join(", ");
+
+        let variant = if arguments.is_empty() {
+            format!("{variant_name}")
+        } else {
+            format!("{variant_name}({arguments})")
+        };
+
+        let (new_text, insert_at) = match type_braces {
+            TypeBraces::HasBraces => (format!("  {variant}\n"), end_position - 1),
+            TypeBraces::NoBraces => (format!(" {{\n  {variant}\n}}"), end_position),
+        };
+
+        if *module_name == self.module.name {
+            // If we're editing the current module we can use the line numbers that
+            // were already computed before-hand without wasting any time to add the
+            // new edit.
+            let mut edits = TextEdits::new(&self.line_numbers);
+            edits.insert(insert_at, new_text);
+            Some((self.params.text_document.uri.clone(), edits.edits))
+        } else {
+            // Otherwise we're changing a different module and we need to get its
+            // code and line numbers to properly apply the new edit.
+            let module = self
+                .compiler
+                .modules
+                .get(module_name)
+                .expect("module to exist");
+            let line_numbers = LineNumbers::new(&module.code);
+            let mut edits = TextEdits::new(&line_numbers);
+            edits.insert(insert_at, new_text);
+            Some((url_from_path(module.input_path.as_str())?, edits.edits))
+        }
+    }
+
+    fn try_save_variant_to_generate(
+        &mut self,
+        function_name_location: SrcSpan,
+        function_type: &Arc<Type>,
+        given_arguments: Option<Arguments<'a>>,
+    ) {
+        let variant_to_generate =
+            self.variant_to_generate(function_name_location, function_type, given_arguments);
+        if variant_to_generate.is_some() {
+            self.variant_to_generate = variant_to_generate;
+        }
+    }
+
+    fn variant_to_generate(
+        &mut self,
+        function_name_location: SrcSpan,
+        type_: &Arc<Type>,
+        given_arguments: Option<Arguments<'a>>,
+    ) -> Option<VariantToGenerate<'a>> {
+        let name_range = function_name_location.start as usize..function_name_location.end as usize;
+        let name = self.module.code.get(name_range).expect("valid code range");
+        if !is_valid_uppercase_name(name) {
+            return None;
+        }
+
+        let (arguments_types, custom_type) = match (type_.fn_types(), &given_arguments) {
+            (Some(result), _) => result,
+            (None, Some(arguments)) => (arguments.types(), type_.clone()),
+            (None, None) => (vec![], type_.clone()),
+        };
+
+        let (module_name, type_name, _) = custom_type.named_type_information()?;
+        let module = self.compiler.modules.get(&module_name)?;
+        let (end_position, type_braces) =
+            (module.ast.definitions.iter()).find_map(|definition| match definition {
+                ast::Definition::CustomType(custom_type) if custom_type.name == type_name => {
+                    // If there's already a variant with this name then we definitely
+                    // don't want to generate a new variant with the same name!
+                    let variant_with_this_name_already_exists = custom_type
+                        .constructors
+                        .iter()
+                        .map(|constructor| &constructor.name)
+                        .any(|existing_constructor_name| existing_constructor_name == name);
+                    if variant_with_this_name_already_exists {
+                        return None;
+                    }
+                    let type_braces = if custom_type.end_position == custom_type.location.end {
+                        TypeBraces::NoBraces
+                    } else {
+                        TypeBraces::HasBraces
+                    };
+                    Some((custom_type.end_position, type_braces))
+                }
+                _ => None,
+            })?;
+
+        Some(VariantToGenerate {
+            name,
+            arguments_types,
+            given_arguments,
+            module_name,
+            end_position,
+            type_braces,
+        })
+    }
+}
+
+impl<'ast, IO> ast::visit::Visit<'ast> for GenerateVariant<'ast, IO>
+where
+    IO: FileSystemReader + FileSystemWriter + BeamCompiler + CommandExecutor + Clone,
+{
+    fn visit_typed_expr_invalid(&mut self, location: &'ast SrcSpan, type_: &'ast Arc<Type>) {
+        let invalid_range = src_span_to_lsp_range(*location, self.line_numbers);
+        if within(self.params.range, invalid_range) {
+            self.try_save_variant_to_generate(*location, type_, None);
+        }
+        ast::visit::visit_typed_expr_invalid(self, location, type_);
+    }
+
+    fn visit_typed_expr_call(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        fun: &'ast TypedExpr,
+        args: &'ast [TypedCallArg],
+    ) {
+        // If the function being called is invalid we need to generate a
+        // function that has the proper labels.
+        let fun_range = src_span_to_lsp_range(fun.location(), self.line_numbers);
+        if within(self.params.range, fun_range) && fun.is_invalid() {
+            if labels_are_correct(args) {
+                self.try_save_variant_to_generate(
+                    fun.location(),
+                    &fun.type_(),
+                    Some(Arguments::Expressions(args)),
+                );
+            }
+        } else {
+            ast::visit::visit_typed_expr_call(self, location, type_, fun, args);
+        }
+    }
+
+    fn visit_typed_pattern_invalid(&mut self, location: &'ast SrcSpan, type_: &'ast Arc<Type>) {
+        let invalid_range = src_span_to_lsp_range(*location, self.line_numbers);
+        if within(self.params.range, invalid_range) {
+            self.try_save_variant_to_generate(*location, type_, None);
+        }
+        ast::visit::visit_typed_pattern_invalid(self, location, type_);
+    }
+
+    fn visit_typed_pattern_constructor(
+        &mut self,
+        location: &'ast SrcSpan,
+        name_location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        arguments: &'ast Vec<CallArg<TypedPattern>>,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        constructor: &'ast analyse::Inferred<type_::PatternConstructor>,
+        spread: &'ast Option<SrcSpan>,
+        type_: &'ast Arc<Type>,
+    ) {
+        let pattern_range = src_span_to_lsp_range(*location, self.line_numbers);
+        // TODO)) Solo se il pattern non è valido!!!!!
+        if within(self.params.range, pattern_range) {
+            if labels_are_correct(arguments) {
+                self.try_save_variant_to_generate(
+                    *name_location,
+                    type_,
+                    Some(Arguments::Patterns(arguments)),
+                );
+            }
+        } else {
+            ast::visit::visit_typed_pattern_constructor(
+                self,
+                location,
+                name_location,
+                name,
+                arguments,
+                module,
+                constructor,
+                spread,
+                type_,
+            );
+        }
+    }
+}
+
 #[must_use]
 /// Checks the labels in the given arguments are correct: that is there's no
 /// duplicate labels and all labelled arguments come after the unlabelled ones.
@@ -5212,6 +5581,7 @@ impl NameGenerator {
 
         (label, argument_name)
     }
+
     pub fn generate_name_from_type(&mut self, type_: &Arc<Type>) -> EcoString {
         let type_to_base_name = |type_: &Arc<Type>| {
             type_
@@ -5290,6 +5660,21 @@ fn is_valid_lowercase_name(name: &str) -> bool {
     }
 
     str_to_keyword(name).is_none()
+}
+
+#[must_use]
+fn is_valid_uppercase_name(name: &str) -> bool {
+    if !name.starts_with(|char: char| char.is_ascii_uppercase()) {
+        return false;
+    }
+
+    for char in name.chars() {
+        if !char.is_ascii_alphanumeric() {
+            return false;
+        }
+    }
+
+    true
 }
 
 /// Code action to rewrite a single-step pipeline into a regular function call.

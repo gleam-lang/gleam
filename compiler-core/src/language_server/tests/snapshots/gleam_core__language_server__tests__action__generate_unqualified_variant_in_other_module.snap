@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport other\n\npub fn main() -> other.Wibble {\n  let assert Wobble = new()\n}\n\npub fn new() -> other.Wibble { todo }\n"
+---
+----- BEFORE ACTION
+
+import other
+
+pub fn main() -> other.Wibble {
+  let assert Wobble = new()
+             ↑             
+}
+
+pub fn new() -> other.Wibble { todo }
+
+
+----- AFTER ACTION
+// --- Edits applied to module 'other'
+pub type Wibble {
+  Wobble
+}

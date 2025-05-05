@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub type Wibble {\n  Wibble\n}\n\npub fn new() { Wibble }\n\npub fn main() -> Wibble {\n  let assert Wobble(1) = new()\n}\n\n"
+---
+----- BEFORE ACTION
+
+pub type Wibble {
+  Wibble
+}
+
+pub fn new() { Wibble }
+
+pub fn main() -> Wibble {
+  let assert Wobble(1) = new()
+             ↑                
+}
+
+
+
+----- AFTER ACTION
+
+pub type Wibble {
+  Wibble
+  Wobble(Int)
+}
+
+pub fn new() { Wibble }
+
+pub fn main() -> Wibble {
+  let assert Wobble(1) = new()
+}
