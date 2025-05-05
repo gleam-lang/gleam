@@ -448,6 +448,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     location,
                 }
             }
+
             Pattern::Invalid { location, .. } => Pattern::Invalid { type_, location },
 
             Pattern::Variable {
@@ -730,7 +731,15 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             location,
                             module.as_ref().map(|(_, location)| *location),
                         ));
-                        return Pattern::Invalid { location, type_ };
+                        return self.infer_invalid_constructor_pattern(
+                            pattern_args,
+                            location,
+                            name_location,
+                            name,
+                            module,
+                            spread,
+                            type_,
+                        );
                     }
                 };
 
@@ -945,38 +954,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             });
                         }
 
-                        let pattern_args = pattern_args
-                            .into_iter()
-                            .enumerate()
-                            .map(|(index, arg)| {
-                                if !arg.is_implicit() && arg.uses_label_shorthand() {
-                                    self.track_feature_usage(
-                                        FeatureKind::LabelShorthandSyntax,
-                                        arg.location,
-                                    );
-                                }
-
-                                let CallArg {
-                                    value,
-                                    location,
-                                    implicit,
-                                    label,
-                                } = arg;
-
-                                let type_ = args
-                                    .get(index)
-                                    .cloned()
-                                    .unwrap_or_else(|| self.environment.new_unbound_var());
-
-                                let value = self.unify(value, type_, None);
-                                CallArg {
-                                    value,
-                                    location,
-                                    implicit,
-                                    label,
-                                }
-                            })
-                            .collect();
+                        let pattern_args = self.infer_pattern_call_args(pattern_args, args);
 
                         Pattern::Constructor {
                             location,
@@ -1025,6 +1003,64 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 }
             }
         }
+    }
+
+    fn infer_invalid_constructor_pattern(
+        &mut self,
+        untyped_args: Vec<CallArg<UntypedPattern>>,
+        location: SrcSpan,
+        name_location: SrcSpan,
+        name: EcoString,
+        module: Option<(EcoString, SrcSpan)>,
+        spread: Option<SrcSpan>,
+        expected_type: Arc<Type>,
+    ) -> TypedPattern {
+        Pattern::Constructor {
+            location,
+            name_location,
+            name,
+            arguments: self.infer_pattern_call_args(untyped_args, &vec![]),
+            module,
+            constructor: Inferred::Unknown,
+            spread,
+            type_: expected_type,
+        }
+    }
+
+    fn infer_pattern_call_args(
+        &mut self,
+        pattern_args: Vec<CallArg<UntypedPattern>>,
+        expected_types: &Vec<Arc<Type>>,
+    ) -> Vec<CallArg<TypedPattern>> {
+        pattern_args
+            .into_iter()
+            .enumerate()
+            .map(|(index, arg)| {
+                if !arg.is_implicit() && arg.uses_label_shorthand() {
+                    self.track_feature_usage(FeatureKind::LabelShorthandSyntax, arg.location);
+                }
+
+                let CallArg {
+                    value,
+                    location,
+                    implicit,
+                    label,
+                } = arg;
+
+                let type_ = expected_types
+                    .get(index)
+                    .cloned()
+                    .unwrap_or_else(|| self.environment.new_unbound_var());
+
+                let value = self.unify(value, type_, None);
+                CallArg {
+                    value,
+                    location,
+                    implicit,
+                    label,
+                }
+            })
+            .collect()
     }
 
     fn check_name_case(&mut self, location: SrcSpan, name: &EcoString, kind: Named) {
