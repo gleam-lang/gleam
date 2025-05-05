@@ -70,7 +70,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         }
 
         // Insert unqualified imports into scope
-        let module_name = module_info.name.clone();
+        let module_name = &module_info.name;
         for type_ in &import.unqualified_types {
             self.register_unqualified_type(type_, module_name.clone(), module_info);
         }
