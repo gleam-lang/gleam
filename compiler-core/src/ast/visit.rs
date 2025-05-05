@@ -1544,7 +1544,7 @@ where
             left_side_string,
             right_side_assignment,
         ),
-        Pattern::Invalid { location, type_ } => v.visit_typed_expr_invalid(location, type_),
+        Pattern::Invalid { location, type_ } => v.visit_typed_pattern_invalid(location, type_),
     }
 }
 
