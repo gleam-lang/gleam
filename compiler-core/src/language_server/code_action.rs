@@ -5233,7 +5233,7 @@ impl<'a> Arguments<'a> {
     }
 }
 
-impl<'a> Argument<'a> {
+impl Argument<'_> {
     fn label(&self) -> Option<EcoString> {
         match self {
             Argument::Expression(call_arg) => call_arg.label.clone(),
@@ -5280,7 +5280,7 @@ where
             name,
             arguments_types,
             given_arguments,
-            &module_name,
+            module_name,
             *end_position,
             *type_braces,
         ) else {
@@ -5329,7 +5329,7 @@ where
             .join(", ");
 
         let variant = if arguments.is_empty() {
-            format!("{variant_name}")
+            variant_name.to_string()
         } else {
             format!("{variant_name}({arguments})")
         };
@@ -5343,7 +5343,7 @@ where
             // If we're editing the current module we can use the line numbers that
             // were already computed before-hand without wasting any time to add the
             // new edit.
-            let mut edits = TextEdits::new(&self.line_numbers);
+            let mut edits = TextEdits::new(self.line_numbers);
             edits.insert(insert_at, new_text);
             Some((self.params.text_document.uri.clone(), edits.edits))
         } else {
