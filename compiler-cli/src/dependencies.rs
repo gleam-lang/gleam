@@ -631,6 +631,66 @@ fn is_same_requirements(
         }
     }
 
+    // For path dependencies, we need to check if their manifest.toml files have changed,
+    // which indicates that their dependencies have changed
+    for (key, requirement2) in requirements2 {
+        if let Requirement::Path { path } = requirement2 {
+            let dep_manifest_path = root_path.join(path).join("manifest.toml");
+
+            // Check if we have a cached hash for this path dependency's manifest.toml
+            // Use the dependency name instead of the path for the manifest hash file
+            let cached_hash_path = root_path
+                .join("build")
+                .join("packages")
+                .join(format!("{}.manifest_hash", key));
+
+            if !dep_manifest_path.exists() {
+                tracing::debug!("path_dependency_manifest_not_found_forcing_rebuild");
+                return Ok(false);
+            }
+
+            let manifest_content = match fs::read(&dep_manifest_path) {
+                Ok(content) => content,
+                Err(_) => {
+                    tracing::debug!("cannot_read_path_dependency_manifest_forcing_rebuild");
+                    return Ok(false);
+                }
+            };
+
+            let mut hasher = std::hash::DefaultHasher::new();
+            std::hash::Hash::hash(&manifest_content, &mut hasher);
+            let current_hash = std::hash::Hasher::finish(&hasher).to_string();
+
+            // If cached hash file doesn't exist, this is the first time we're checking this dependency
+            if !cached_hash_path.exists() {
+                // Save the current hash for future comparisons
+                if let Err(e) = fs::write(&cached_hash_path, &current_hash) {
+                    tracing::debug!("failed_to_write_dependency_manifest_hash: {}", e);
+                }
+                tracing::debug!("no_cached_manifest_hash_for_path_dependency_forcing_rebuild");
+                return Ok(false);
+            }
+
+            let cached_hash = match std::fs::read_to_string(&cached_hash_path) {
+                Ok(content) => content,
+                Err(_) => {
+                    tracing::debug!("cannot_read_cached_manifest_hash_forcing_rebuild");
+                    return Ok(false);
+                }
+            };
+
+            if cached_hash != current_hash {
+                tracing::debug!("path_dependency_manifest_changed_forcing_rebuild");
+                if let Err(e) = fs::write(&cached_hash_path, &current_hash) {
+                    tracing::debug!("failed_to_update_dependency_manifest_hash: {}", e);
+                }
+                return Ok(false);
+            }
+
+            tracing::debug!("path_dependency_manifest_unchanged_no_rebuild_needed");
+        }
+    }
+
     Ok(true)
 }
 
@@ -772,6 +832,11 @@ fn provide_local_package(
     } else {
         fs::canonicalise(&parent_path.join(package_path))?
     };
+
+    // We used to always force clean artifacts for path dependencies,
+    // but now we use the gleam.toml hash tracking in is_same_requirements
+    // to determine when path dependency dependencies have changed
+
     let package_source = ProvidedPackageSource::Local {
         path: package_path.clone(),
     };
