@@ -678,8 +678,8 @@ impl Environment<'_> {
                     imported: false,
                     location,
                 },
-                EntityKind::ImportedModule { full_name } => {
-                    let _ = unused_modules.insert(full_name.clone());
+                EntityKind::ImportedModule { module_name } => {
+                    let _ = unused_modules.insert(module_name.clone());
                     Warning::UnusedImportedModule { name, location }
                 }
                 EntityKind::ImportedType { module } => {
