@@ -189,6 +189,11 @@
   continue to occur if a function references invalid type in its signature.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The compiler is now fault tolerant when analysing patterns for custom types,
+  meaning it won't stop at the first error it encounters (for example if a
+  constructor is wrong).
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Build tool
 
 - The build tool now supports placing modules in a directory called `dev`,
