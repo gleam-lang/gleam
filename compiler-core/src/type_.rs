@@ -166,13 +166,6 @@ impl Type {
         }
     }
 
-    pub fn is_type_variable(&self) -> bool {
-        match self {
-            Self::Var { type_ } => type_.borrow().is_variable(),
-            _ => false,
-        }
-    }
-
     pub fn return_type(&self) -> Option<Arc<Self>> {
         match self {
             Self::Fn { return_, .. } => Some(return_.clone()),
@@ -1185,7 +1178,7 @@ impl TypeVar {
     pub fn is_variable(&self) -> bool {
         match self {
             Self::Unbound { .. } | Self::Generic { .. } => true,
-            Self::Link { type_ } => type_.is_type_variable(),
+            Self::Link { type_ } => type_.is_variable(),
         }
     }
 
