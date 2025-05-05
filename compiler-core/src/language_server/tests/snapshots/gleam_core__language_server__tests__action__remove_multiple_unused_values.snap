@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "\n// test\nimport result.{type Unused, used, unused, unused_again, type Used, used_again}\n\npub fn main(x: Used) {\n  used\n  used_again\n  todo\n}\n"
+expression: "\n// test\nimport result.{type Unused, used, unused, unused_again, type Used, used_again}\n\npub fn main(x: Used) {\n  #(used, used_again)\n}\n"
 ---
 ----- BEFORE ACTION
 
@@ -11,9 +11,7 @@ import result.{type Unused, used, unused, unused_again, type Used, used_again}
 
 pub fn main(x: Used) {
 ↑                     
-  used
-  used_again
-  todo
+  #(used, used_again)
 }
 
 
@@ -23,7 +21,5 @@ pub fn main(x: Used) {
 import result.{used, type Used, used_again}
 
 pub fn main(x: Used) {
-  used
-  used_again
-  todo
+  #(used, used_again)
 }
