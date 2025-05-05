@@ -565,9 +565,7 @@ fn test_remove_multiple_unused_values() {
 import result.{type Unused, used, unused, unused_again, type Used, used_again}
 
 pub fn main(x: Used) {
-  used
-  used_again
-  todo
+  #(used, used_again)
 }
 ";
     assert_code_action!(
@@ -595,7 +593,6 @@ import result.{type Unused, used, unused, type Used, unused_again}
 
 pub fn main(x: Used) {
   used
-  todo
 }
 ";
     assert_code_action!(
