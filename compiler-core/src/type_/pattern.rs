@@ -731,15 +731,19 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             location,
                             module.as_ref().map(|(_, location)| *location),
                         ));
-                        return self.infer_invalid_constructor_pattern(
-                            pattern_args,
+
+                        // If there's no constructor we still try and infer all
+                        // the pattern arguments and produce an unknown constructor.
+                        return Pattern::Constructor {
                             location,
                             name_location,
                             name,
+                            arguments: self.infer_pattern_call_args(pattern_args, &[]),
                             module,
+                            constructor: Inferred::Unknown,
                             spread,
                             type_,
-                        );
+                        };
                     }
                 };
 
@@ -1005,32 +1009,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         }
     }
 
-    fn infer_invalid_constructor_pattern(
-        &mut self,
-        untyped_args: Vec<CallArg<UntypedPattern>>,
-        location: SrcSpan,
-        name_location: SrcSpan,
-        name: EcoString,
-        module: Option<(EcoString, SrcSpan)>,
-        spread: Option<SrcSpan>,
-        expected_type: Arc<Type>,
-    ) -> TypedPattern {
-        Pattern::Constructor {
-            location,
-            name_location,
-            name,
-            arguments: self.infer_pattern_call_args(untyped_args, &vec![]),
-            module,
-            constructor: Inferred::Unknown,
-            spread,
-            type_: expected_type,
-        }
-    }
-
     fn infer_pattern_call_args(
         &mut self,
         pattern_args: Vec<CallArg<UntypedPattern>>,
-        expected_types: &Vec<Arc<Type>>,
+        expected_types: &[Arc<Type>],
     ) -> Vec<CallArg<TypedPattern>> {
         pattern_args
             .into_iter()
