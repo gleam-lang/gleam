@@ -423,6 +423,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             }
         }
 
+        let has_non_utf8_string_option = segment.has_utf16_option() || segment.has_utf32_option();
+
         let options: Vec<_> = segment
             .options
             .into_iter()
@@ -514,6 +516,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 // reason to ever need to do this anyway, we simply emit an error
                 // here.
                 self.error(Error::DoubleVariableAssignmentInBitArray {
+                    location: *location,
+                });
+            }
+            Pattern::Assign { location, .. } if has_non_utf8_string_option => {
+                self.error(Error::NonUtf8StringAssignmentInBitArray {
                     location: *location,
                 });
             }
