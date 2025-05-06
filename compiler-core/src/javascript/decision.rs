@@ -43,14 +43,34 @@ pub fn case<'a>(
 }
 
 enum CaseBody<'a> {
-    If(Document<'a>),
+    If {
+        check: Document<'a>,
+        body: Document<'a>,
+    },
     Statements(Document<'a>),
+    IfElse(Document<'a>),
 }
 
 impl<'a> CaseBody<'a> {
     fn into_doc(self) -> Document<'a> {
         match self {
-            CaseBody::If(document) | CaseBody::Statements(document) => document,
+            CaseBody::If { check, body } => docvec!["if (", check, ") ", break_block(body)],
+            CaseBody::Statements(document) | CaseBody::IfElse(document) => document,
+        }
+    }
+
+    fn document_after_else(self) -> Document<'a> {
+        match self {
+            CaseBody::If { .. } => self.into_doc(),
+            CaseBody::IfElse(document) => document,
+            CaseBody::Statements(document) => break_block(document),
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        match self {
+            CaseBody::If { .. } => false,
+            CaseBody::Statements(document) | CaseBody::IfElse(document) => document.is_empty(),
         }
     }
 }
@@ -189,7 +209,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             assignments.push(let_doc(name, value.to_doc()))
         };
 
-        let mut if_ = nil();
+        let mut if_ = CaseBody::Statements(nil());
         for (i, (check, decision)) in choices.iter().enumerate() {
             self.variables.record_check_assignments(var, check);
 
@@ -208,12 +228,37 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             })?;
             assignments.append(&mut segment_assignments);
 
-            let branch = if i == 0 {
-                docvec!["if (", check_doc, ") "]
-            } else {
-                docvec![" else if (", check_doc, ") "]
+            let (check_doc, body) = match body? {
+                CaseBody::If { check, body } => {
+                    (docvec!["(", check_doc, ") && (", check, ")"], body)
+                }
+                CaseBody::Statements(document) | CaseBody::IfElse(document) => {
+                    (check_doc, document)
+                }
             };
-            if_ = if_.append(docvec![branch, break_block(body?.into_doc())]);
+
+            if_ = match if_ {
+                _ if i == 0 => CaseBody::If {
+                    check: check_doc,
+                    body,
+                },
+                CaseBody::If { .. } => CaseBody::IfElse(docvec![
+                    if_.into_doc(),
+                    " else if (",
+                    check_doc,
+                    ") ",
+                    break_block(body),
+                ]),
+                CaseBody::IfElse(document) | CaseBody::Statements(document) => {
+                    CaseBody::IfElse(docvec![
+                        document,
+                        " else if (",
+                        check_doc,
+                        ") ",
+                        break_block(body)
+                    ])
+                }
+            };
         }
 
         // In case there's some new variables we can extract after the
@@ -225,26 +270,23 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         }
 
         let body = self.inside_new_scope(|this| this.decision(fallback))?;
-        let (body, wrap_body_in_block) = match body {
-            CaseBody::If(document) => (document, false),
-            CaseBody::Statements(document) => (document, true),
-        };
-
-        let has_assignments = !assignments.is_empty();
-
-        let if_ = join_with_line(join(assignments, line()), if_);
         let document = if body.is_empty() {
             if_
-        } else if wrap_body_in_block {
-            docvec![if_, " else ", break_block(body)]
         } else {
-            docvec![if_, " else ", body]
+            CaseBody::IfElse(docvec![
+                if_.into_doc(),
+                " else ",
+                body.document_after_else()
+            ])
         };
 
-        Ok(if has_assignments {
-            CaseBody::Statements(document)
+        Ok(if assignments.is_empty() {
+            document
         } else {
-            CaseBody::If(document)
+            CaseBody::Statements(join_with_line(
+                join(assignments, line()),
+                document.into_doc(),
+            ))
         })
     }
 
@@ -305,20 +347,25 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             .into_doc();
 
         // We can now piece everything together into a single document!
-        let if_ = docvec!["if (", check, ") ", break_block(if_true)];
-        let has_assignments = !check_bindings.is_empty();
+        let if_ = CaseBody::If {
+            check,
+            body: if_true,
+        };
 
-        let if_ = join_with_line(check_bindings, if_);
-        let document = if if_false.is_empty() {
+        let if_ = if if_false.is_empty() {
             if_
         } else {
-            let else_ = docvec![" else ", break_block(if_false)];
-            docvec![if_, else_]
+            CaseBody::IfElse(
+                if_.into_doc()
+                    .append(" else ")
+                    .append(break_block(if_false)),
+            )
         };
-        Ok(if has_assignments {
-            CaseBody::Statements(document)
+
+        Ok(if check_bindings.is_empty() {
+            if_
         } else {
-            CaseBody::If(document)
+            CaseBody::Statements(join_with_line(check_bindings, if_.into_doc()))
         })
     }
 }
