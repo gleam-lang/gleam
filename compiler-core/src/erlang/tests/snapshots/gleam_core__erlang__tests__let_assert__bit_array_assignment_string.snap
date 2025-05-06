@@ -20,7 +20,7 @@ pub fn main() {
 -spec main() -> binary().
 main() ->
     Message@1 = case <<"Hello, world!"/utf8>> of
-        <<"Hello, world!"/utf8>> -> <<"Hello, world!"/utf8>>;
+        <<Message:13/binary>> when Message =:= <<"Hello, world!"/utf8>> -> Message;
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,

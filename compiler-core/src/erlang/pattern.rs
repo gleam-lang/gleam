@@ -6,19 +6,13 @@ use crate::analyse::Inferred;
 
 use super::*;
 
-pub(super) struct PatternAssignment<'a> {
-    pub variable: &'a EcoString,
-    pub value: Document<'a>,
-}
-
 pub(super) fn pattern<'a>(
     p: &'a TypedPattern,
     env: &mut Env<'a>,
     guards: &mut Vec<Document<'a>>,
-    assignments: &mut Vec<PatternAssignment<'a>>,
 ) -> Document<'a> {
     let mut vars = vec![];
-    to_doc(p, &mut vars, env, guards, assignments)
+    to_doc(p, &mut vars, env, guards)
 }
 
 fn print<'a>(
@@ -26,20 +20,19 @@ fn print<'a>(
     vars: &mut Vec<&'a str>,
     env: &mut Env<'a>,
     guards: &mut Vec<Document<'a>>,
-    assignments: &mut Vec<PatternAssignment<'a>>,
 ) -> Document<'a> {
     match p {
         Pattern::Assign {
             name, pattern: p, ..
         } => {
             vars.push(name);
-            print(p, vars, env, guards, assignments)
+            print(p, vars, env, guards)
                 .append(" = ")
                 .append(env.next_local_var_name(name))
         }
 
         Pattern::List { elements, tail, .. } => {
-            pattern_list(elements, tail.as_deref(), vars, env, guards, assignments)
+            pattern_list(elements, tail.as_deref(), vars, env, guards)
         }
 
         Pattern::Discard { .. } => "_".to_doc(),
@@ -74,7 +67,7 @@ fn print<'a>(
             arguments: args,
             constructor: Inferred::Known(PatternConstructor { name, .. }),
             ..
-        } => tag_tuple_pattern(name, args, vars, env, guards, assignments),
+        } => tag_tuple_pattern(name, args, vars, env, guards),
 
         Pattern::Constructor {
             constructor: Inferred::Unknown,
@@ -83,16 +76,14 @@ fn print<'a>(
             panic!("Erlang generation performed with uninferred pattern constructor")
         }
 
-        Pattern::Tuple { elements, .. } => tuple(
-            elements
-                .iter()
-                .map(|p| print(p, vars, env, guards, assignments)),
-        ),
+        Pattern::Tuple { elements, .. } => {
+            tuple(elements.iter().map(|p| print(p, vars, env, guards)))
+        }
 
         Pattern::BitArray { segments, .. } => bit_array(
             segments
                 .iter()
-                .map(|s| pattern_segment(s, vars, env, guards, assignments)),
+                .map(|s| pattern_segment(&s.value, &s.options, vars, env, guards)),
         ),
 
         Pattern::StringPrefix {
@@ -156,9 +147,8 @@ pub(super) fn to_doc<'a>(
     vars: &mut Vec<&'a str>,
     env: &mut Env<'a>,
     guards: &mut Vec<Document<'a>>,
-    assignments: &mut Vec<PatternAssignment<'a>>,
 ) -> Document<'a> {
-    print(p, vars, env, guards, assignments)
+    print(p, vars, env, guards)
 }
 
 fn tag_tuple_pattern<'a>(
@@ -167,62 +157,39 @@ fn tag_tuple_pattern<'a>(
     vars: &mut Vec<&'a str>,
     env: &mut Env<'a>,
     guards: &mut Vec<Document<'a>>,
-    assignments: &mut Vec<PatternAssignment<'a>>,
 ) -> Document<'a> {
     if args.is_empty() {
         atom_string(to_snake_case(name))
     } else {
         tuple(
-            [atom_string(to_snake_case(name))].into_iter().chain(
-                args.iter()
-                    .map(|p| print(&p.value, vars, env, guards, assignments)),
-            ),
+            [atom_string(to_snake_case(name))]
+                .into_iter()
+                .chain(args.iter().map(|p| print(&p.value, vars, env, guards))),
         )
     }
 }
 
 fn pattern_segment<'a>(
-    segment: &'a TypedPatternBitArraySegment,
+    value: &'a TypedPattern,
+    options: &'a [BitArrayOption<TypedPattern>],
     vars: &mut Vec<&'a str>,
     env: &mut Env<'a>,
     guards: &mut Vec<Document<'a>>,
-    assignments: &mut Vec<PatternAssignment<'a>>,
 ) -> Document<'a> {
-    let value = segment.value.as_ref();
-
-    let pattern_is_a_string_literal = match value {
-        Pattern::String { .. } => true,
-        Pattern::Assign { pattern, .. } => pattern.is_string(),
-        Pattern::Int { .. }
-        | Pattern::Float { .. }
-        | Pattern::Variable { .. }
-        | Pattern::VarUsage { .. }
-        | Pattern::Discard { .. }
-        | Pattern::List { .. }
-        | Pattern::Constructor { .. }
-        | Pattern::Tuple { .. }
-        | Pattern::BitArray { .. }
-        | Pattern::StringPrefix { .. }
-        | Pattern::Invalid { .. } => false,
-    };
+    let pattern_is_a_string_literal = matches!(value, Pattern::String { .. });
     let pattern_is_a_discard = matches!(value, Pattern::Discard { .. });
 
     let vars = RefCell::new(vars);
     let guards = RefCell::new(guards);
-    let assignments = RefCell::new(assignments);
 
     let create_document = |env: &mut Env<'a>| match value {
         Pattern::String { value, .. } => value.to_doc().surround("\"", "\""),
         Pattern::Discard { .. }
         | Pattern::Variable { .. }
         | Pattern::Int { .. }
-        | Pattern::Float { .. } => print(
-            value,
-            &mut vars.borrow_mut(),
-            env,
-            &mut guards.borrow_mut(),
-            &mut assignments.borrow_mut(),
-        ),
+        | Pattern::Float { .. } => {
+            print(value, &mut vars.borrow_mut(), env, &mut guards.borrow_mut())
+        }
 
         Pattern::Assign { name, pattern, .. } => {
             vars.borrow_mut().push(name);
@@ -244,24 +211,16 @@ fn pattern_segment<'a>(
                     variable_name
                 }
 
-                // If we are assigning to a string which is UTF-16 or UTF-32, we cannot simply use
-                // variable patterns and guards like we do with other segments. Gleam strings are
-                // UTF-8 so we must anyway bind the correct value to the variable. We generate code
-                // that looks like this:
-                //
-                // ```erlang
-                // case X of
-                //   <<"Hello"/utf16>> ->
-                //     Message = <<"Hello"/utf8>>,
-                //     <clause body>
-                // end.
-                // ```
+                // Here we do the same as for floats and ints, but we must calculate the size of
+                // the string first, so we can correctly match the bit array segment then compare
+                // it afterwards.
                 Pattern::String { value, .. } => {
-                    assignments.borrow_mut().push(PatternAssignment {
-                        variable: name,
-                        value: string(value),
-                    });
-                    value.to_doc().surround("\"", "\"")
+                    guards.borrow_mut().push(docvec![
+                        variable_name.clone(),
+                        " =:= ",
+                        string(value)
+                    ]);
+                    docvec![variable_name, ":", string_length_utf8_bytes(value)]
                 }
 
                 // Doing a pattern such as `<<_ as a>>` is the same as just `<<a>>`, so we treat it
@@ -283,7 +242,6 @@ fn pattern_segment<'a>(
             &mut vars.borrow_mut(),
             env,
             &mut guards.borrow_mut(),
-            &mut assignments.borrow_mut(),
         )))
     };
 
@@ -291,7 +249,7 @@ fn pattern_segment<'a>(
 
     bit_array_segment(
         create_document,
-        &segment.options,
+        options,
         size,
         unit,
         pattern_is_a_string_literal,
@@ -306,14 +264,13 @@ fn pattern_list<'a>(
     vars: &mut Vec<&'a str>,
     env: &mut Env<'a>,
     guards: &mut Vec<Document<'a>>,
-    assignments: &mut Vec<PatternAssignment<'a>>,
 ) -> Document<'a> {
     let elements = join(
         elements
             .iter()
-            .map(|element| print(element, vars, env, guards, assignments)),
+            .map(|element| print(element, vars, env, guards)),
         break_(",", ", "),
     );
-    let tail = tail.map(|tail| print(tail, vars, env, guards, assignments));
+    let tail = tail.map(|tail| print(tail, vars, env, guards));
     list(elements, tail)
 }
