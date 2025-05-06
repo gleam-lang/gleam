@@ -3120,3 +3120,8 @@ fn bit_array_using_pattern_variables() {
 fn bit_array_using_pattern_variables_from_other_bit_array() {
     assert_error!("let assert #(<<a>>, <<b:size(a)>>) = #(<<2>>, <<2:2>>)");
 }
+
+#[test]
+fn non_utf8_string_assignment() {
+    assert_error!(r#"let assert <<"Hello" as message:utf16>> = <<>>"#);
+}

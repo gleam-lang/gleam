@@ -3684,6 +3684,25 @@ at once, which is not possible in bit arrays."),
                         extra_labels: vec![],
                     }),
                 },
+
+                TypeError::NonUtf8StringAssignmentInBitArray { location } => Diagnostic {
+                    title: "Non UTF-8 string assignment".to_string(),
+                    text:wrap("This pattern assigns a non UTF-8 string to a \
+variable in a bit array. This is planned to be supported in the future, but we are \
+unsure of the desired behaviour. Please go to https://github.com/gleam-lang/gleam/issues/4566 \
+and explain your usecase for this pattern, and how you would expect it to behave."),
+                    hint: None,
+                    level: Level::Error,
+                    location: Some(Location {
+                        label: Label {
+                            text: None,
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
             }
         }).collect_vec(),
 

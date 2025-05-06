@@ -2401,7 +2401,7 @@ impl<Type> BitArraySegment<Pattern<Type>, Type> {
     }
 }
 
-impl<Value> BitArraySegment<Value, Arc<Type>> {
+impl<Value, Type> BitArraySegment<Value, Type> {
     #[must_use]
     pub fn has_native_option(&self) -> bool {
         self.options
