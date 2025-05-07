@@ -324,6 +324,10 @@ where
             self.io
                 .write_bytes(&cache_files.meta_path, &info.to_binary())?;
 
+            let cache_inline = bincode::serialize(&module.ast.type_info.inline_functions)
+                .expect("Failed to serialise inline functions");
+            self.io.write_bytes(&cache_files.inline_path, &cache_inline);
+
             // Write warnings.
             // Dependency packages don't get warnings persisted as the
             // programmer doesn't want to be told every time about warnings they

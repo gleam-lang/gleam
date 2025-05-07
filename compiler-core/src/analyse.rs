@@ -17,7 +17,7 @@ use crate::{
     build::{Origin, Outcome, Target},
     call_graph::{CallGraphNode, into_dependency_order},
     config::PackageConfig,
-    dep_tree,
+    dep_tree, inline,
     line_numbers::LineNumbers,
     parse::SpannedString,
     reference::{EntityKind, ReferenceKind},
@@ -174,6 +174,7 @@ impl<A> ModuleAnalyzerConstructor<'_, A> {
             value_names: HashMap::with_capacity(module.definitions.len()),
             hydrators: HashMap::with_capacity(module.definitions.len()),
             module_name: module.name.clone(),
+            inline_functions: HashMap::new(),
             minimum_required_version: Version::new(0, 1, 0),
         }
         .infer_module(module)
@@ -195,6 +196,8 @@ struct ModuleAnalyzer<'a, A> {
     value_names: HashMap<EcoString, SrcSpan>,
     hydrators: HashMap<EcoString, Hydrator>,
     module_name: EcoString,
+
+    inline_functions: HashMap<EcoString, inline::Function>,
 
     /// The minimum Gleam version required to compile the analysed module.
     minimum_required_version: Version,
@@ -372,6 +375,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     value_references: env.references.value_references,
                     type_references: env.references.type_references,
                 },
+                inline_functions: self.inline_functions,
             },
         };
 

@@ -840,7 +840,8 @@ fn infer_module_type_retention_test() {
             type_aliases: HashMap::new(),
             documentation: Vec::new(),
             contains_echo: false,
-            references: References::default()
+            references: References::default(),
+            inline_functions: HashMap::new(),
         }
     );
 }
