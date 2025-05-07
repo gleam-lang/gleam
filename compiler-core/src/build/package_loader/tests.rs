@@ -67,6 +67,7 @@ fn write_cache(
         documentation: Default::default(),
         contains_echo: false,
         references: Default::default(),
+        inline_functions: Default::default(),
     };
     let path = Utf8Path::new("/artefact").join(format!("{artefact_name}.cache"));
     fs.write_bytes(
