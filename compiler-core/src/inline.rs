@@ -1,14 +1,16 @@
 use std::sync::Arc;
 
+use ecow::EcoString;
+
 use crate::{
     ast::{
-        Assert, Assignment, AssignmentKind, BitArrayOption, BitArraySegment, CallArg, Clause,
-        Definition, PipelineAssignmentKind, SrcSpan, Statement, TypedAssert, TypedAssignment,
-        TypedClause, TypedDefinition, TypedExpr, TypedExprBitArraySegment, TypedFunction,
-        TypedModule, TypedPipelineAssignment, TypedStatement, TypedUse,
+        Assert, Assignment, AssignmentKind, BitArrayOption, BitArraySegment, Definition,
+        PipelineAssignmentKind, SrcSpan, Statement, TypedAssert, TypedAssignment, TypedClause,
+        TypedDefinition, TypedExpr, TypedExprBitArraySegment, TypedFunction, TypedModule,
+        TypedPipelineAssignment, TypedStatement, TypedUse,
     },
     exhaustiveness::CompiledCase,
-    type_::Type,
+    type_::{Type, TypedCallArg},
 };
 
 pub fn module(mut module: TypedModule) -> TypedModule {
@@ -272,18 +274,18 @@ fn call(
     location: SrcSpan,
     type_: Arc<Type>,
     function: Box<TypedExpr>,
-    arguments: Vec<CallArg<TypedExpr>>,
+    arguments: Vec<TypedCallArg>,
 ) -> TypedExpr {
     let function = boxed_expression(function);
     let arguments = arguments
         .into_iter()
         .map(
-            |CallArg {
+            |TypedCallArg {
                  label,
                  location,
                  value,
                  implicit,
-             }| CallArg {
+             }| TypedCallArg {
                 label,
                 location,
                 value: expression(value),
@@ -407,13 +409,13 @@ fn case(
     let clauses = clauses
         .into_iter()
         .map(
-            |Clause {
+            |TypedClause {
                  location,
                  pattern,
                  alternative_patterns,
                  guard,
                  then,
-             }| Clause {
+             }| TypedClause {
                 location,
                 pattern,
                 alternative_patterns,
@@ -430,4 +432,65 @@ fn case(
         clauses,
         compiled_case,
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct Function {
+    pub arguments: Vec<Parameter>,
+    pub body: Vec<Ast>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum Ast {
+    Case {
+        subjects: Vec<Ast>,
+        clauses: Vec<Clause>,
+    },
+
+    Variable {
+        name: EcoString,
+        constructor: ValueConstructor,
+    },
+
+    Call {
+        function: Box<Ast>,
+        arguments: Vec<Argument<Ast>>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct Clause {
+    pub pattern: Pattern,
+    pub body: Ast,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum Pattern {
+    Constructor {
+        name: EcoString,
+        module: EcoString,
+        arguments: Vec<Argument<Pattern>>,
+    },
+
+    Variable {
+        name: EcoString,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum ValueConstructor {
+    LocalVariable,
+    Record { name: EcoString, module: EcoString },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct Argument<T> {
+    pub label: Option<EcoString>,
+    pub value: T,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct Parameter {
+    pub label: Option<EcoString>,
+    pub name: EcoString,
 }
