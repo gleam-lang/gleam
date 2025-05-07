@@ -688,10 +688,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             ReferenceKind::Definition,
         );
 
-        Definition::Function(Function {
+        let function = Function {
             documentation: doc,
             location,
-            name: Some((name_location, name)),
+            name: Some((name_location, name.clone())),
             publicity,
             deprecation,
             arguments: typed_args,
@@ -705,7 +705,17 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             external_javascript,
             implementations,
             purity,
-        })
+        };
+
+        if let Some(inline_function) = inline::inline_function(
+            &environment.current_package,
+            &environment.current_module,
+            &function,
+        ) {
+            _ = self.inline_functions.insert(name, inline_function);
+        }
+
+        Definition::Function(function)
     }
 
     fn assert_valid_javascript_external(
