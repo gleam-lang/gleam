@@ -80,6 +80,7 @@ use dependencies::UseManifest;
 use fs::{get_current_directory, get_project_root};
 pub use gleam_core::error::{Error, Result};
 
+use camino::Utf8PathBuf;
 use gleam_core::{
     analyse::TargetSupport,
     build::{Codegen, Compile, Mode, NullTelemetry, Options, Runtime, Target},
@@ -87,15 +88,16 @@ use gleam_core::{
     paths::ProjectPaths,
     version::COMPILER_VERSION,
 };
+use std::env;
 use std::str::FromStr;
 
-use camino::Utf8PathBuf;
-
 use clap::{
+    builder::{styling, PossibleValuesParser, Styles, TypedValueParser},
     Args, Parser, Subcommand,
-    builder::{PossibleValuesParser, Styles, TypedValueParser, styling},
 };
 use strum::VariantNames;
+
+const COMMIT_HASH: &str = env!("GIT_COMMIT_HASH");
 
 #[derive(Args, Debug, Clone)]
 struct UpdateOptions {
@@ -125,23 +127,31 @@ struct TreeOptions {
     )]
     invert: Option<String>,
 }
-
 #[derive(Parser, Debug)]
 #[command(
-    version,
     name = "gleam",
-    next_display_order = None,
-    help_template = "\
-{before-help}{name} {version}
-
-{usage-heading} {usage}
-
-{all-args}{after-help}",
+    version = COMPILER_VERSION,
+    disable_help_flag = false,
+    disable_version_flag = true,
     styles = Styles::styled()
         .header(styling::AnsiColor::Yellow.on_default())
         .usage(styling::AnsiColor::Yellow.on_default())
         .literal(styling::AnsiColor::Green.on_default())
 )]
+struct Cli {
+    /// Print the compiler version
+    #[arg(long)]
+    version: bool,
+
+    /// Show commit hash when used with --version
+    #[arg(long)]
+    verbose: bool,
+
+    #[command(subcommand)]
+    command: Option<Command>,
+}
+
+#[derive(Subcommand, Debug)]
 enum Command {
     /// Build the project
     Build {
@@ -510,191 +520,207 @@ pub fn main() {
 }
 
 fn parse_and_run_command() -> Result<(), Error> {
-    match Command::parse() {
-        Command::Build {
-            target,
-            warnings_as_errors,
-            no_print_progress,
-        } => {
-            let paths = find_project_paths()?;
-            command_build(&paths, target, warnings_as_errors, no_print_progress)
+    let cli = Cli::parse();
+
+    if cli.version {
+        if cli.verbose {
+            println!("gleam {} (commit {})", COMPILER_VERSION, COMMIT_HASH);
+        } else {
+            println!("gleam {}", COMPILER_VERSION);
         }
-
-        Command::Check { target } => {
-            let paths = find_project_paths()?;
-            command_check(&paths, target)
-        }
-
-        Command::Docs(Docs::Build { open, target }) => {
-            let paths = find_project_paths()?;
-            docs::build(&paths, docs::BuildOptions { open, target })
-        }
-
-        Command::Docs(Docs::Publish) => {
-            let paths = find_project_paths()?;
-            docs::publish(&paths)
-        }
-
-        Command::Docs(Docs::Remove { package, version }) => docs::remove(package, version),
-
-        Command::Format {
-            stdin,
-            files,
-            check,
-        } => format::run(stdin, check, files),
-
-        Command::Fix => {
-            let paths = find_project_paths()?;
-            fix::run(&paths)
-        }
-
-        Command::Deps(Dependencies::List) => {
-            let paths = find_project_paths()?;
-            dependencies::list(&paths)
-        }
-
-        Command::Deps(Dependencies::Download) => {
-            let paths = find_project_paths()?;
-            download_dependencies(&paths)
-        }
-
-        Command::Deps(Dependencies::Update(options)) => {
-            let paths = find_project_paths()?;
-            dependencies::update(&paths, options.packages)
-        }
-
-        Command::Deps(Dependencies::Tree(options)) => {
-            let paths = find_project_paths()?;
-            dependencies::tree(&paths, options)
-        }
-
-        Command::Hex(Hex::Authenticate) => hex::authenticate(),
-
-        Command::New(options) => new::create(options, COMPILER_VERSION),
-
-        Command::Shell => {
-            let paths = find_project_paths()?;
-            shell::command(&paths)
-        }
-
-        Command::Run {
-            target,
-            arguments,
-            runtime,
-            module,
-            no_print_progress,
-        } => {
-            let paths = find_project_paths()?;
-            run::command(
-                &paths,
-                arguments,
+        return Ok(());
+    }
+    match cli.command {
+        Some(command) => match command {
+            Command::Build {
                 target,
+                warnings_as_errors,
+                no_print_progress,
+            } => {
+                let paths = find_project_paths()?;
+                command_build(&paths, target, warnings_as_errors, no_print_progress)
+            }
+
+            Command::Check { target } => {
+                let paths = find_project_paths()?;
+                command_check(&paths, target)
+            }
+
+            Command::Docs(Docs::Build { open, target }) => {
+                let paths = find_project_paths()?;
+                docs::build(&paths, docs::BuildOptions { open, target })
+            }
+
+            Command::Docs(Docs::Publish) => {
+                let paths = find_project_paths()?;
+                docs::publish(&paths)
+            }
+
+            Command::Docs(Docs::Remove { package, version }) => docs::remove(package, version),
+
+            Command::Format {
+                stdin,
+                files,
+                check,
+            } => format::run(stdin, check, files),
+
+            Command::Fix => {
+                let paths = find_project_paths()?;
+                fix::run(&paths)
+            }
+
+            Command::Deps(Dependencies::List) => {
+                let paths = find_project_paths()?;
+                dependencies::list(&paths)
+            }
+
+            Command::Deps(Dependencies::Download) => {
+                let paths = find_project_paths()?;
+                download_dependencies(&paths)
+            }
+
+            Command::Deps(Dependencies::Update(options)) => {
+                let paths = find_project_paths()?;
+                dependencies::update(&paths, options.packages)
+            }
+
+            Command::Deps(Dependencies::Tree(options)) => {
+                let paths = find_project_paths()?;
+                dependencies::tree(&paths, options)
+            }
+
+            Command::Hex(Hex::Authenticate) => hex::authenticate(),
+
+            Command::New(options) => new::create(options, COMPILER_VERSION),
+
+            Command::Shell => {
+                let paths = find_project_paths()?;
+                shell::command(&paths)
+            }
+
+            Command::Run {
+                target,
+                arguments,
                 runtime,
                 module,
-                run::Which::Src,
                 no_print_progress,
-            )
-        }
+            } => {
+                let paths = find_project_paths()?;
+                run::command(
+                    &paths,
+                    arguments,
+                    target,
+                    runtime,
+                    module,
+                    run::Which::Src,
+                    no_print_progress,
+                )
+            }
 
-        Command::Test {
-            target,
-            arguments,
-            runtime,
-        } => {
-            let paths = find_project_paths()?;
-            run::command(
-                &paths,
-                arguments,
+            Command::Test {
                 target,
-                runtime,
-                None,
-                run::Which::Test,
-                false,
-            )
-        }
-
-        Command::Dev {
-            target,
-            arguments,
-            runtime,
-        } => {
-            let paths = find_project_paths()?;
-            run::command(
-                &paths,
                 arguments,
-                target,
                 runtime,
-                None,
-                run::Which::Dev,
-                false,
-            )
-        }
+            } => {
+                let paths = find_project_paths()?;
+                run::command(
+                    &paths,
+                    arguments,
+                    target,
+                    runtime,
+                    None,
+                    run::Which::Test,
+                    false,
+                )
+            }
 
-        Command::CompilePackage(opts) => compile_package::command(opts),
+            Command::Dev {
+                target,
+                arguments,
+                runtime,
+            } => {
+                let paths = find_project_paths()?;
+                run::command(
+                    &paths,
+                    arguments,
+                    target,
+                    runtime,
+                    None,
+                    run::Which::Dev,
+                    false,
+                )
+            }
 
-        Command::Publish { replace, yes } => {
-            let paths = find_project_paths()?;
-            publish::command(&paths, replace, yes)
-        }
+            Command::CompilePackage(opts) => compile_package::command(opts),
 
-        Command::PrintConfig => {
-            let paths = find_project_paths()?;
-            print_config(&paths)
-        }
+            Command::Publish { replace, yes } => {
+                let paths = find_project_paths()?;
+                publish::command(&paths, replace, yes)
+            }
 
-        Command::Hex(Hex::Retire {
-            package,
-            version,
-            reason,
-            message,
-        }) => hex::retire(package, version, reason, message),
+            Command::PrintConfig => {
+                let paths = find_project_paths()?;
+                print_config(&paths)
+            }
 
-        Command::Hex(Hex::Unretire { package, version }) => hex::unretire(package, version),
+            Command::Hex(Hex::Retire {
+                package,
+                version,
+                reason,
+                message,
+            }) => hex::retire(package, version, reason, message),
 
-        Command::Hex(Hex::Revert { package, version }) => {
-            let paths = find_project_paths()?;
-            hex::revert(&paths, package, version)
-        }
+            Command::Hex(Hex::Unretire { package, version }) => hex::unretire(package, version),
 
-        Command::Add { packages, dev } => {
-            let paths = find_project_paths()?;
-            add::command(&paths, packages, dev)
-        }
+            Command::Hex(Hex::Revert { package, version }) => {
+                let paths = find_project_paths()?;
+                hex::revert(&paths, package, version)
+            }
 
-        Command::Remove { packages } => {
-            let paths = find_project_paths()?;
-            remove::command(&paths, packages)
-        }
+            Command::Add { packages, dev } => {
+                let paths = find_project_paths()?;
+                add::command(&paths, packages, dev)
+            }
 
-        Command::Update(options) => {
-            let paths = find_project_paths()?;
-            dependencies::update(&paths, options.packages)
-        }
+            Command::Remove { packages } => {
+                let paths = find_project_paths()?;
+                remove::command(&paths, packages)
+            }
 
-        Command::Clean => {
-            let paths = find_project_paths()?;
-            clean(&paths)
-        }
+            Command::Update(options) => {
+                let paths = find_project_paths()?;
+                dependencies::update(&paths, options.packages)
+            }
 
-        Command::LanguageServer => lsp::main(),
+            Command::Clean => {
+                let paths = find_project_paths()?;
+                clean(&paths)
+            }
 
-        Command::Export(ExportTarget::ErlangShipment) => {
-            let paths = find_project_paths()?;
-            export::erlang_shipment(&paths)
-        }
-        Command::Export(ExportTarget::HexTarball) => {
-            let paths = find_project_paths()?;
-            export::hex_tarball(&paths)
-        }
-        Command::Export(ExportTarget::JavascriptPrelude) => export::javascript_prelude(),
-        Command::Export(ExportTarget::TypescriptPrelude) => export::typescript_prelude(),
-        Command::Export(ExportTarget::PackageInterface { output }) => {
-            let paths = find_project_paths()?;
-            export::package_interface(&paths, output)
-        }
-        Command::Export(ExportTarget::PackageInformation { output }) => {
-            let paths = find_project_paths()?;
-            export::package_information(&paths, output)
+            Command::LanguageServer => lsp::main(),
+
+            Command::Export(ExportTarget::ErlangShipment) => {
+                let paths = find_project_paths()?;
+                export::erlang_shipment(&paths)
+            }
+            Command::Export(ExportTarget::HexTarball) => {
+                let paths = find_project_paths()?;
+                export::hex_tarball(&paths)
+            }
+            Command::Export(ExportTarget::JavascriptPrelude) => export::javascript_prelude(),
+            Command::Export(ExportTarget::TypescriptPrelude) => export::typescript_prelude(),
+            Command::Export(ExportTarget::PackageInterface { output }) => {
+                let paths = find_project_paths()?;
+                export::package_interface(&paths, output)
+            }
+            Command::Export(ExportTarget::PackageInformation { output }) => {
+                let paths = find_project_paths()?;
+                export::package_information(&paths, output)
+            }
+        },
+        None => {
+            println!("Use `gleam --help` to see available commands.");
+            Ok(())
         }
     }
 }
@@ -754,10 +780,10 @@ fn clean(paths: &ProjectPaths) -> Result<()> {
 }
 
 fn initialise_logger() {
-    let enable_colours = std::env::var("GLEAM_LOG_NOCOLOUR").is_err();
+    let enable_colours = env::var("GLEAM_LOG_NOCOLOUR").is_err();
     tracing_subscriber::fmt()
         .with_writer(std::io::stderr)
-        .with_env_filter(std::env::var("GLEAM_LOG").unwrap_or_else(|_| "off".into()))
+        .with_env_filter(env::var("GLEAM_LOG").unwrap_or_else(|_| "off".into()))
         .with_target(false)
         .with_ansi(enable_colours)
         .without_time()
