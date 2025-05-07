@@ -3,14 +3,15 @@ use std::sync::Arc;
 use ecow::EcoString;
 
 use crate::{
+    STDLIB_PACKAGE_NAME,
     ast::{
-        Assert, Assignment, AssignmentKind, BitArrayOption, BitArraySegment, Definition,
+        ArgNames, Assert, Assignment, AssignmentKind, BitArrayOption, BitArraySegment, Definition,
         PipelineAssignmentKind, SrcSpan, Statement, TypedAssert, TypedAssignment, TypedClause,
         TypedDefinition, TypedExpr, TypedExprBitArraySegment, TypedFunction, TypedModule,
-        TypedPipelineAssignment, TypedStatement, TypedUse,
+        TypedPattern, TypedPipelineAssignment, TypedStatement, TypedUse,
     },
     exhaustiveness::CompiledCase,
-    type_::{Type, TypedCallArg},
+    type_::{self, Type, TypedCallArg, ValueConstructorVariant},
 };
 
 pub fn module(mut module: TypedModule) -> TypedModule {
@@ -434,9 +435,189 @@ fn case(
     }
 }
 
+pub fn inline_function(package: &str, module: &str, function: &TypedFunction) -> Option<Function> {
+    // For now we only offer inlining of standard library functions
+    if package != STDLIB_PACKAGE_NAME {
+        return None;
+    }
+
+    let (_, name) = function.name.as_ref()?;
+
+    match (module, name.as_str()) {
+        // These are the functions which we currently inline
+        ("gleam/bool", "guard") => {}
+        ("gleam/bool", "lazy_guard") => {}
+        ("gleam/result", "try") => {}
+        ("gleam/result", "then") => {}
+        ("gleam/result", "map") => {}
+        _ => return None,
+    }
+
+    let parameters = function
+        .arguments
+        .iter()
+        .map(|argument| match &argument.names {
+            ArgNames::Discard { name, .. } | ArgNames::Named { name, .. } => Parameter {
+                label: None,
+                name: name.clone(),
+            },
+            ArgNames::LabelledDiscard { label, name, .. } => Parameter {
+                label: Some(label.clone()),
+                name: name.clone(),
+            },
+            ArgNames::NamedLabelled { label, name, .. } => Parameter {
+                label: Some(label.clone()),
+                name: name.clone(),
+            },
+        })
+        .collect();
+
+    let body = function
+        .body
+        .iter()
+        .map(ast_to_inline)
+        .collect::<Option<_>>()?;
+
+    Some(Function { parameters, body })
+}
+
+fn ast_to_inline(statement: &TypedStatement) -> Option<Ast> {
+    match statement {
+        Statement::Expression(expression) => expression_to_inline(expression),
+        Statement::Assignment(_) | Statement::Use(_) | Statement::Assert(_) => None,
+    }
+}
+
+fn expression_to_inline(expression: &TypedExpr) -> Option<Ast> {
+    match expression {
+        TypedExpr::Case {
+            subjects, clauses, ..
+        } => {
+            let subjects = subjects
+                .iter()
+                .map(expression_to_inline)
+                .collect::<Option<_>>()?;
+            let clauses = clauses
+                .iter()
+                .map(clause_to_inline)
+                .collect::<Option<_>>()?;
+
+            Some(Ast::Case { subjects, clauses })
+        }
+        TypedExpr::Var {
+            constructor, name, ..
+        } => Some(Ast::Variable {
+            name: name.clone(),
+            constructor: value_constructor(constructor)?,
+        }),
+        TypedExpr::Call { fun, args, .. } => {
+            let function = expression_to_inline(fun)?;
+            let arguments = args
+                .iter()
+                .map(|argument| {
+                    Some(Argument {
+                        label: argument.label.clone(),
+                        value: expression_to_inline(&argument.value)?,
+                    })
+                })
+                .collect::<Option<_>>()?;
+
+            Some(Ast::Call {
+                function: Box::new(function),
+                arguments,
+            })
+        }
+
+        TypedExpr::Int { .. }
+        | TypedExpr::Float { .. }
+        | TypedExpr::String { .. }
+        | TypedExpr::Block { .. }
+        | TypedExpr::Pipeline { .. }
+        | TypedExpr::Fn { .. }
+        | TypedExpr::List { .. }
+        | TypedExpr::BinOp { .. }
+        | TypedExpr::RecordAccess { .. }
+        | TypedExpr::ModuleSelect { .. }
+        | TypedExpr::Tuple { .. }
+        | TypedExpr::TupleIndex { .. }
+        | TypedExpr::Todo { .. }
+        | TypedExpr::Panic { .. }
+        | TypedExpr::Echo { .. }
+        | TypedExpr::BitArray { .. }
+        | TypedExpr::RecordUpdate { .. }
+        | TypedExpr::NegateBool { .. }
+        | TypedExpr::NegateInt { .. }
+        | TypedExpr::Invalid { .. } => None,
+    }
+}
+
+fn value_constructor(constructor: &type_::ValueConstructor) -> Option<ValueConstructor> {
+    match &constructor.variant {
+        ValueConstructorVariant::LocalVariable { .. } => Some(ValueConstructor::LocalVariable),
+        ValueConstructorVariant::ModuleConstant { .. }
+        | ValueConstructorVariant::LocalConstant { .. } => None,
+        ValueConstructorVariant::ModuleFn { name, module, .. } => {
+            Some(ValueConstructor::Function {
+                name: name.clone(),
+                module: module.clone(),
+            })
+        }
+        ValueConstructorVariant::Record { name, module, .. } => Some(ValueConstructor::Record {
+            name: name.clone(),
+            module: module.clone(),
+        }),
+    }
+}
+
+fn clause_to_inline(clause: &TypedClause) -> Option<Clause> {
+    let pattern = clause
+        .pattern
+        .iter()
+        .map(pattern_to_inline)
+        .collect::<Option<_>>()?;
+    let body = expression_to_inline(&clause.then)?;
+    Some(Clause { pattern, body })
+}
+
+fn pattern_to_inline(pattern: &TypedPattern) -> Option<Pattern> {
+    match pattern {
+        TypedPattern::Variable { name, .. } => Some(Pattern::Variable { name: name.clone() }),
+        TypedPattern::Constructor {
+            name, arguments, ..
+        } => {
+            let arguments = arguments
+                .iter()
+                .map(|argument| {
+                    Some(Argument {
+                        label: argument.label.clone(),
+                        value: pattern_to_inline(&argument.value)?,
+                    })
+                })
+                .collect::<Option<_>>()?;
+
+            Some(Pattern::Constructor {
+                name: name.clone(),
+                arguments,
+            })
+        }
+
+        TypedPattern::Int { .. }
+        | TypedPattern::Float { .. }
+        | TypedPattern::String { .. }
+        | TypedPattern::VarUsage { .. }
+        | TypedPattern::Assign { .. }
+        | TypedPattern::Discard { .. }
+        | TypedPattern::List { .. }
+        | TypedPattern::Tuple { .. }
+        | TypedPattern::BitArray { .. }
+        | TypedPattern::StringPrefix { .. }
+        | TypedPattern::Invalid { .. } => None,
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Function {
-    pub arguments: Vec<Parameter>,
+    pub parameters: Vec<Parameter>,
     pub body: Vec<Ast>,
 }
 
@@ -460,7 +641,7 @@ pub enum Ast {
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Clause {
-    pub pattern: Pattern,
+    pub pattern: Vec<Pattern>,
     pub body: Ast,
 }
 
@@ -468,7 +649,6 @@ pub struct Clause {
 pub enum Pattern {
     Constructor {
         name: EcoString,
-        module: EcoString,
         arguments: Vec<Argument<Pattern>>,
     },
 
@@ -480,6 +660,7 @@ pub enum Pattern {
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ValueConstructor {
     LocalVariable,
+    Function { name: EcoString, module: EcoString },
     Record { name: EcoString, module: EcoString },
 }
 
