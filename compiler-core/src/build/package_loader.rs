@@ -186,6 +186,16 @@ where
         let bytes = self.io.read_bytes(&cache_files.cache_path)?;
         let mut module = metadata::ModuleDecoder::new(self.ids.clone()).read(bytes.as_slice())?;
 
+        if self.io.exists(&cache_files.inline_path) {
+            let bytes = self.io.read_bytes(&cache_files.inline_path)?;
+            module.inline_functions = bincode::deserialize(&bytes).map_err(|e| Error::FileIo {
+                kind: FileKind::File,
+                action: FileIoAction::Parse,
+                path: cache_files.inline_path,
+                err: Some(e.to_string()),
+            })?;
+        }
+
         // Load warnings
         if self.cached_warnings.should_use() {
             let path = cache_files.warnings_path;
@@ -1785,6 +1795,7 @@ pub struct CacheFiles {
     pub cache_path: Utf8PathBuf,
     pub meta_path: Utf8PathBuf,
     pub warnings_path: Utf8PathBuf,
+    pub inline_path: Utf8PathBuf,
 }
 
 impl CacheFiles {
@@ -1799,18 +1810,23 @@ impl CacheFiles {
         let warnings_path = artefact_directory
             .join(file_name.as_str())
             .with_extension("cache_warnings");
+        let inline_path = artefact_directory
+            .join(file_name.as_str())
+            .with_extension("cache_inline");
 
         Self {
             cache_path,
             meta_path,
             warnings_path,
+            inline_path,
         }
     }
 
     pub fn delete(&self, io: &dyn io::FileSystemWriter) -> Result<()> {
         io.delete_file(&self.cache_path)?;
         io.delete_file(&self.meta_path)?;
-        io.delete_file(&self.warnings_path)
+        io.delete_file(&self.warnings_path)?;
+        io.delete_file(&self.inline_path)
     }
 
     /// Iterates over `.cache_meta` files in the given directory,
