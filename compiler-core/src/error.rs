@@ -298,6 +298,12 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     )]
     CannotPublishLeakedInternalType { unfinished: Vec<EcoString> },
 
+    #[error("The module imports a dev dependency")]
+    CannotPublishLeakedDevDependency {
+        module: EcoString,
+        package: EcoString,
+    },
+
     #[error("Publishing packages to reserve names is not permitted")]
     HexPackageSquatting,
 
@@ -1082,6 +1088,17 @@ Please make sure internal types do not appear in public functions and try again.
                 hint: None,
                 location: None,
             }],
+
+            Error::CannotPublishLeakedDevDependency { module, package } => {
+                let text = &format!("The module `{module}` is being imported from `{package}`, but package is not a direct dependency of your project.\nRun this command to add it to your dependencies:\n\tgleam add {package}");
+                vec![Diagnostic {
+                    title: "Developer dependency imported".into(),
+                    text: text.to_string(),
+                    hint: None,
+                    level: Level::Error,
+                    location: None
+                }]
+            }
 
             Error::UnableToFindProjectRoot { path } => {
                 let text = wrap_format!(
