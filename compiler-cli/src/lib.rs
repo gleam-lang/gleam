@@ -92,8 +92,8 @@ use std::env;
 use std::str::FromStr;
 
 use clap::{
-    builder::{styling, PossibleValuesParser, Styles, TypedValueParser},
     Args, Parser, Subcommand,
+    builder::{PossibleValuesParser, Styles, TypedValueParser, styling},
 };
 use strum::VariantNames;
 
