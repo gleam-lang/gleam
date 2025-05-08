@@ -7,7 +7,7 @@ mod tests;
 use crate::{
     GLEAM_CORE_PACKAGE_NAME,
     ast::{
-        self, Arg, BitArrayOption, CustomType, Definition, DefinitionLocation, Function,
+        self, Arg, BitArrayOption, Constant, CustomType, Definition, DefinitionLocation, Function,
         GroupedStatements, Import, ModuleConstant, Publicity, RecordConstructor,
         RecordConstructorArg, SrcSpan, Statement, TypeAlias, TypeAst, TypeAstConstructor,
         TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, TypedDefinition, TypedExpr,
@@ -394,6 +394,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             ..
         } = c;
         self.check_name_case(name_location, &name, Named::Constant);
+
+        if environment.unqualified_imported_names.contains_key(&name) {
+            self.problems
+                .warning(Warning::TopLevelDefinitionShadowsImport {
+                    location: c.location,
+                    name: name.clone(),
+                })
+        }
 
         environment.references.begin_constant();
 
@@ -1423,6 +1431,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let (name_location, name) = name.as_ref().expect("A module's function must be named");
 
         self.check_name_case(*name_location, name, Named::Function);
+
+        if environment.unqualified_imported_names.contains_key(name) {
+            self.problems
+                .warning(Warning::TopLevelDefinitionShadowsImport {
+                    location: f.location,
+                    name: name.clone(),
+                });
+        }
 
         environment.references.register_value(
             name.clone(),

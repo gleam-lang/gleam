@@ -979,6 +979,13 @@ pub enum Warning {
         truncation: BitArraySegmentTruncation,
         location: SrcSpan,
     },
+
+    /// Top-level definition should not shadow an imported one.
+    /// This includes type imports and function imports.
+    TopLevelDefinitionShadowsImport {
+        location: SrcSpan,
+        name: EcoString,
+    },
 }
 
 #[derive(Debug, Eq, Copy, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
@@ -1202,6 +1209,7 @@ impl Warning {
             | Warning::FeatureRequiresHigherGleamVersion { location, .. }
             | Warning::JavaScriptIntUnsafe { location, .. }
             | Warning::AssertLiteralValue { location, .. }
+            | Warning::TopLevelDefinitionShadowsImport { location, .. }
             | Warning::BitArraySegmentTruncatedValue { location, .. } => *location,
         }
     }

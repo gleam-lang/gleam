@@ -185,6 +185,29 @@
 - The compiler will not generate needless code for unused pattern variables.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler will now emit a warning when a top-level function/constant definition shadows
+  an imported value with the same name.
+
+  ```gleam
+  import module.{fun}
+
+  fn fun() {}
+  ```
+
+  Will produce the following warning:
+
+  ```
+  warning: Definition of "fun" shadows an imported value
+    ┌─ /src/main.gleam:3:4
+    │
+  3 │ fn fun() {}
+    │    ^^^
+
+  The imported value could not be used in functions anyway.
+  ```
+
+  ([Ariel Parker](https://github.com/arielherself))
+
 ### Build tool
 
 - The build tool now supports placing modules in a directory called `dev`,
