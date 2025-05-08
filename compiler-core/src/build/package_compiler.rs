@@ -218,7 +218,7 @@ where
             modules
                 .into_iter()
                 .map(|mut module| {
-                    module.ast = inline::module(module.ast);
+                    module.ast = inline::module(module.ast, &existing_modules);
                     module
                 })
                 .collect()
