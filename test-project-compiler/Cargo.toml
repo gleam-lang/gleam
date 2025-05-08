@@ -11,7 +11,6 @@ test-helpers-rs = { path = "../test-helpers-rs" }
 toml.workspace = true
 im.workspace = true
 itertools.workspace = true
-walkdir.workspace = true
 regex.workspace = true
 camino.workspace = true
 
