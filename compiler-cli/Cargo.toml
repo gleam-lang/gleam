@@ -41,7 +41,6 @@ pubgrub = "0"
 camino = { workspace = true, features = ["serde1"] }
 async-trait.workspace = true
 base16.workspace = true
-bytes.workspace = true
 debug-ignore.workspace = true
 ecow.workspace = true
 flate2.workspace = true

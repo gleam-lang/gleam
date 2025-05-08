@@ -34,8 +34,6 @@ hexpm = "3.3"
 tar = "0"
 # gzip compression
 flate2 = "1"
-# Byte array data type
-bytes = "1"
 # Logging
 tracing = "0"
 # Macro to work around Rust's traits not working with async. Sigh.
