@@ -340,7 +340,6 @@ impl Inliner<'_> {
         function: TypedExpr,
         arguments: Vec<TypedCallArg>,
     ) -> TypedExpr {
-        let mut changed_function = false;
         let function = self.expression(function);
 
         let function = match function {
@@ -350,13 +349,17 @@ impl Inliner<'_> {
                 ..
             } => match &constructor.variant {
                 ValueConstructorVariant::ModuleFn { module, .. } => {
-                    if let Some(inline) = self
+                    if let Some(TypedExpr::Fn {
+                        args: parameters,
+                        body,
+                        ..
+                    }) = self
                         .modules
                         .get(module)
                         .and_then(|module| module.inline_functions.get(name))
+                        .map(Function::to_anonymous_function)
                     {
-                        changed_function = true;
-                        inline.to_anonymous_function()
+                        return self.inline_anonymous_function_call(&parameters, arguments, body);
                     } else {
                         function
                     }
@@ -373,13 +376,17 @@ impl Inliner<'_> {
                 ..
             } => match constructor {
                 ModuleValueConstructor::Fn { .. } => {
-                    if let Some(inline) = self
+                    if let Some(TypedExpr::Fn {
+                        args: parameters,
+                        body,
+                        ..
+                    }) = self
                         .modules
                         .get(module_name)
                         .and_then(|module| module.inline_functions.get(name))
+                        .map(Function::to_anonymous_function)
                     {
-                        changed_function = true;
-                        inline.to_anonymous_function()
+                        return self.inline_anonymous_function_call(&parameters, arguments, body);
                     } else {
                         function
                     }
@@ -393,11 +400,7 @@ impl Inliner<'_> {
                 body,
                 ..
             } => {
-                return self.expression(self.inline_anonymous_function_call(
-                    &parameters,
-                    arguments,
-                    body,
-                ));
+                return self.inline_anonymous_function_call(&parameters, arguments, body);
             }
             TypedExpr::Int { .. }
             | TypedExpr::Float { .. }
@@ -421,15 +424,11 @@ impl Inliner<'_> {
             | TypedExpr::Invalid { .. } => function,
         };
 
-        if changed_function {
-            self.called_function(location, type_, function, arguments)
-        } else {
-            TypedExpr::Call {
-                location,
-                type_,
-                fun: Box::new(function),
-                args: arguments,
-            }
+        TypedExpr::Call {
+            location,
+            type_,
+            fun: Box::new(function),
+            args: arguments,
         }
     }
 
@@ -460,7 +459,9 @@ impl Inliner<'_> {
                 })
             });
 
-        let statements = assignments.chain(body.into_iter()).collect_vec();
+        let statements = assignments
+            .chain(body.into_iter().map(|statement| self.statement(statement)))
+            .collect_vec();
 
         TypedExpr::Block {
             location: BLANK_LOCATION,
