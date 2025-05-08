@@ -3107,3 +3107,14 @@ pub type Bad {
 "
     );
 }
+
+#[test]
+fn function_parameter_errors_do_not_stop_inference() {
+    assert_module_error!(
+        "
+pub fn wibble(x: NonExistent) {
+  1 + False
+}
+"
+    );
+}

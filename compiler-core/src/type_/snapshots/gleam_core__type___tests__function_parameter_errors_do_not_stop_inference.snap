@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "\npub fn wibble(x: NonExistent) {\n  1 + False\n}\n"
+---
+----- SOURCE CODE
+
+pub fn wibble(x: NonExistent) {
+  1 + False
+}
+
+
+----- ERROR
+error: Unknown type
+  ┌─ /src/one/two.gleam:2:18
+  │
+2 │ pub fn wibble(x: NonExistent) {
+  │                  ^^^^^^^^^^^
+
+The type `NonExistent` is not defined or imported in this module.
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:7
+  │
+3 │   1 + False
+  │       ^^^^^
+
+The + operator expects arguments of this type:
+
+    Int
+
+But this argument has this type:
+
+    Bool
