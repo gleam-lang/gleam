@@ -1929,6 +1929,7 @@ impl TypedClauseGuard {
     Copy,
     serde::Serialize,
     serde::Deserialize,
+    Hash,
 )]
 pub struct SrcSpan {
     pub start: u32,
