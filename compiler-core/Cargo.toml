@@ -49,7 +49,6 @@ radix_trie = "0.2.1"
 
 async-trait.workspace = true
 base16.workspace = true
-bytes.workspace = true
 camino = { workspace = true, features = ["serde1"] }
 debug-ignore.workspace = true
 ecow = { workspace = true, features = ["serde"] }
