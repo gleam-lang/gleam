@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 use ecow::EcoString;
 use itertools::Itertools;
@@ -451,11 +451,11 @@ impl Inliner<'_> {
                     pattern: TypedPattern::Variable {
                         location: BLANK_LOCATION,
                         name: name.clone(),
-                        type_: type_::nil(),
+                        type_: NIL.clone(),
                         origin: VariableOrigin::Generated,
                     },
                     kind: AssignmentKind::Generated,
-                    compiled_case: CompiledCase::simple_variable_assignment(name, type_::nil()),
+                    compiled_case: CompiledCase::simple_variable_assignment(name, NIL.clone()),
                     annotation: None,
                 })
             });
@@ -812,6 +812,7 @@ pub struct Function {
 }
 
 const BLANK_LOCATION: SrcSpan = SrcSpan { start: 0, end: 0 };
+const NIL: LazyLock<Arc<Type>> = LazyLock::new(type_::nil);
 
 impl Function {
     fn to_anonymous_function(&self) -> TypedExpr {
@@ -847,7 +848,7 @@ impl Function {
                     names,
                     location: BLANK_LOCATION,
                     annotation: None,
-                    type_: type_::nil(),
+                    type_: NIL.clone(),
                 }
             })
             .collect();
@@ -860,7 +861,7 @@ impl Function {
 
         TypedExpr::Fn {
             location: BLANK_LOCATION,
-            type_: type_::nil(),
+            type_: NIL.clone(),
             kind: FunctionLiteralKind::Anonymous {
                 head: BLANK_LOCATION,
             },
@@ -902,7 +903,7 @@ impl Ast {
                 compiled_case,
             } => TypedExpr::Case {
                 location: BLANK_LOCATION,
-                type_: type_::nil(),
+                type_: NIL.clone(),
                 subjects: subjects
                     .iter()
                     .map(|subject| subject.to_expression())
@@ -923,7 +924,7 @@ impl Ast {
                 arguments,
             } => TypedExpr::Call {
                 location: BLANK_LOCATION,
-                type_: type_::nil(),
+                type_: NIL.clone(),
                 fun: Box::new(function.to_expression()),
                 args: arguments
                     .iter()
@@ -994,12 +995,12 @@ impl Pattern {
                     constructor_index: 0,
                 }),
                 spread: None,
-                type_: type_::nil(),
+                type_: NIL.clone(),
             },
             Pattern::Variable { name } => TypedPattern::Variable {
                 location: BLANK_LOCATION,
                 name: name.clone(),
-                type_: type_::nil(),
+                type_: NIL.clone(),
                 origin: VariableOrigin::Generated,
             },
         }
@@ -1047,7 +1048,7 @@ impl ValueConstructor {
             publicity: Publicity::Private,
             deprecation: Deprecation::NotDeprecated,
             variant,
-            type_: type_::nil(),
+            type_: NIL.clone(),
         }
     }
 }
