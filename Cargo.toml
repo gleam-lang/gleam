@@ -26,7 +26,6 @@ serde = { version = "1", features = ["derive", "rc"] }
 serde_json = "1"
 # toml config file parsing
 toml = "0"
-walkdir = "2"
 # Enum trait impl macros
 strum = { version = "0", features = ["derive"] }
 # Hex package manager client

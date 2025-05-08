@@ -60,7 +60,6 @@ tar.workspace = true
 termcolor.workspace = true
 toml.workspace = true
 tracing.workspace = true
-walkdir.workspace = true
 
 [dev-dependencies]
 # Creation of temporary directories

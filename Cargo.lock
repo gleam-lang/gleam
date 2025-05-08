@@ -1137,7 +1137,6 @@ dependencies = [
  "toml_edit",
  "tracing",
  "tracing-subscriber 0.2.25",
- "walkdir",
 ]
 
 [[package]]
@@ -3113,7 +3112,6 @@ dependencies = [
  "regex",
  "test-helpers-rs",
  "toml",
- "walkdir",
 ]
 
 [[package]]
@@ -3128,7 +3126,6 @@ dependencies = [
  "regex",
  "test-helpers-rs",
  "toml",
- "walkdir",
 ]
 
 [[package]]
