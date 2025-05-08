@@ -1,4 +1,7 @@
-use std::sync::{Arc, LazyLock};
+use std::{
+    collections::HashMap,
+    sync::{Arc, LazyLock},
+};
 
 use ecow::EcoString;
 use itertools::Itertools;
@@ -27,7 +30,7 @@ pub fn module(
     mut module: TypedModule,
     modules: &im::HashMap<EcoString, ModuleInterface>,
 ) -> TypedModule {
-    let inliner = Inliner::new(modules);
+    let mut inliner = Inliner::new(modules);
 
     module.definitions = module
         .definitions
@@ -39,14 +42,18 @@ pub fn module(
 
 struct Inliner<'a> {
     modules: &'a im::HashMap<EcoString, ModuleInterface>,
+    inline_variables: HashMap<EcoString, TypedExpr>,
 }
 
 impl Inliner<'_> {
     fn new(modules: &im::HashMap<EcoString, ModuleInterface>) -> Inliner<'_> {
-        Inliner { modules }
+        Inliner {
+            modules,
+            inline_variables: HashMap::new(),
+        }
     }
 
-    fn definition(&self, definition: TypedDefinition) -> TypedDefinition {
+    fn definition(&mut self, definition: TypedDefinition) -> TypedDefinition {
         match definition {
             Definition::Function(function_ast) => Definition::Function(self.function(function_ast)),
             Definition::TypeAlias(_)
@@ -56,12 +63,12 @@ impl Inliner<'_> {
         }
     }
 
-    fn function(&self, mut function: TypedFunction) -> TypedFunction {
+    fn function(&mut self, mut function: TypedFunction) -> TypedFunction {
         function.body = function.body.mapped(|statement| self.statement(statement));
         function
     }
 
-    fn statement(&self, statement: TypedStatement) -> TypedStatement {
+    fn statement(&mut self, statement: TypedStatement) -> TypedStatement {
         match statement {
             Statement::Expression(expression_ast) => {
                 Statement::Expression(self.expression(expression_ast))
@@ -74,7 +81,7 @@ impl Inliner<'_> {
         }
     }
 
-    fn assert(&self, assert: TypedAssert) -> TypedAssert {
+    fn assert(&mut self, assert: TypedAssert) -> TypedAssert {
         let Assert {
             location,
             value,
@@ -88,12 +95,12 @@ impl Inliner<'_> {
         }
     }
 
-    fn use_(&self, mut use_: TypedUse) -> TypedUse {
+    fn use_(&mut self, mut use_: TypedUse) -> TypedUse {
         use_.call = self.boxed_expression(use_.call);
         use_
     }
 
-    fn assignment(&self, assignment: TypedAssignment) -> TypedAssignment {
+    fn assignment(&mut self, assignment: TypedAssignment) -> TypedAssignment {
         let Assignment {
             location,
             value,
@@ -113,7 +120,7 @@ impl Inliner<'_> {
         }
     }
 
-    fn assignment_kind(&self, kind: AssignmentKind<TypedExpr>) -> AssignmentKind<TypedExpr> {
+    fn assignment_kind(&mut self, kind: AssignmentKind<TypedExpr>) -> AssignmentKind<TypedExpr> {
         match kind {
             AssignmentKind::Let | AssignmentKind::Generated => kind,
             AssignmentKind::Assert { location, message } => AssignmentKind::Assert {
@@ -123,26 +130,42 @@ impl Inliner<'_> {
         }
     }
 
-    fn boxed_expression(&self, boxed: Box<TypedExpr>) -> Box<TypedExpr> {
+    fn boxed_expression(&mut self, boxed: Box<TypedExpr>) -> Box<TypedExpr> {
         Box::new(self.expression(*boxed))
     }
 
-    fn expressions(&self, expressions: Vec<TypedExpr>) -> Vec<TypedExpr> {
+    fn expressions(&mut self, expressions: Vec<TypedExpr>) -> Vec<TypedExpr> {
         expressions
             .into_iter()
             .map(|expression| self.expression(expression))
             .collect()
     }
 
-    fn expression(&self, expression: TypedExpr) -> TypedExpr {
+    fn expression(&mut self, expression: TypedExpr) -> TypedExpr {
         match expression {
             TypedExpr::Int { .. }
             | TypedExpr::Float { .. }
             | TypedExpr::String { .. }
             | TypedExpr::Fn { .. }
-            | TypedExpr::Var { .. }
             | TypedExpr::ModuleSelect { .. }
             | TypedExpr::Invalid { .. } => expression,
+
+            TypedExpr::Var {
+                ref constructor,
+                ref name,
+                ..
+            } => match &constructor.variant {
+                ValueConstructorVariant::LocalVariable { .. } => {
+                    match self.inline_variables.remove(name) {
+                        Some(expression) => expression,
+                        None => expression,
+                    }
+                }
+                ValueConstructorVariant::ModuleConstant { .. }
+                | ValueConstructorVariant::LocalConstant { .. }
+                | ValueConstructorVariant::ModuleFn { .. }
+                | ValueConstructorVariant::Record { .. } => expression,
+            },
 
             TypedExpr::Block {
                 location,
@@ -307,7 +330,7 @@ impl Inliner<'_> {
     }
 
     fn call(
-        &self,
+        &mut self,
         location: SrcSpan,
         type_: Arc<Type>,
         function: Box<TypedExpr>,
@@ -334,7 +357,7 @@ impl Inliner<'_> {
     }
 
     fn called_function(
-        &self,
+        &mut self,
         location: SrcSpan,
         type_: Arc<Type>,
         function: TypedExpr,
@@ -349,17 +372,25 @@ impl Inliner<'_> {
                 ..
             } => match &constructor.variant {
                 ValueConstructorVariant::ModuleFn { module, .. } => {
-                    if let Some(TypedExpr::Fn {
-                        args: parameters,
-                        body,
-                        ..
-                    }) = self
+                    if let Some(function) = self
                         .modules
                         .get(module)
                         .and_then(|module| module.inline_functions.get(name))
-                        .map(Function::to_anonymous_function)
                     {
-                        return self.inline_anonymous_function_call(&parameters, arguments, body);
+                        let TypedExpr::Fn {
+                            args: parameters,
+                            body,
+                            ..
+                        } = function.to_anonymous_function()
+                        else {
+                            unreachable!("to_anonymous_function always returns TypedExpr::fn");
+                        };
+                        return self.inline_anonymous_function_call(
+                            &parameters,
+                            arguments,
+                            body,
+                            &function.inlinable_parameters,
+                        );
                     } else {
                         function
                     }
@@ -376,17 +407,25 @@ impl Inliner<'_> {
                 ..
             } => match constructor {
                 ModuleValueConstructor::Fn { .. } => {
-                    if let Some(TypedExpr::Fn {
-                        args: parameters,
-                        body,
-                        ..
-                    }) = self
+                    if let Some(function) = self
                         .modules
                         .get(module_name)
                         .and_then(|module| module.inline_functions.get(name))
-                        .map(Function::to_anonymous_function)
                     {
-                        return self.inline_anonymous_function_call(&parameters, arguments, body);
+                        let TypedExpr::Fn {
+                            args: parameters,
+                            body,
+                            ..
+                        } = function.to_anonymous_function()
+                        else {
+                            unreachable!("to_anonymous_function always returns TypedExpr::fn");
+                        };
+                        return self.inline_anonymous_function_call(
+                            &parameters,
+                            arguments,
+                            body,
+                            &function.inlinable_parameters,
+                        );
                     } else {
                         function
                     }
@@ -400,7 +439,7 @@ impl Inliner<'_> {
                 body,
                 ..
             } => {
-                return self.inline_anonymous_function_call(&parameters, arguments, body);
+                return self.inline_anonymous_function_call(&parameters, arguments, body, &[]);
             }
             TypedExpr::Int { .. }
             | TypedExpr::Float { .. }
@@ -433,18 +472,28 @@ impl Inliner<'_> {
     }
 
     fn inline_anonymous_function_call(
-        &self,
+        &mut self,
         parameters: &[TypedArg],
         arguments: Vec<TypedCallArg>,
         body: Vec1<TypedStatement>,
+        inlinable_parameters: &[EcoString],
     ) -> TypedExpr {
-        let assignments = parameters
+        let mut inline = HashMap::new();
+
+        let mut statements = parameters
             .iter()
             .zip(arguments)
-            .map(|(parameter, argument)| {
+            .filter_map(|(parameter, argument)| {
                 let name = parameter.get_variable_name().cloned().unwrap_or("_".into());
 
-                Statement::Assignment(Assignment {
+                if inlinable_parameters.contains(&name)
+                    && argument.value.is_pure_value_constructor()
+                {
+                    _ = inline.insert(name, argument.value);
+                    return None;
+                }
+
+                Some(Statement::Assignment(Assignment {
                     location: BLANK_LOCATION,
                     value: argument.value,
                     pattern: TypedPattern::Variable {
@@ -456,12 +505,15 @@ impl Inliner<'_> {
                     kind: AssignmentKind::Generated,
                     compiled_case: CompiledCase::simple_variable_assignment(name, NIL.clone()),
                     annotation: None,
-                })
-            });
-
-        let statements = assignments
-            .chain(body.into_iter().map(|statement| self.statement(statement)))
+                }))
+            })
             .collect_vec();
+
+        let inline_variables = std::mem::replace(&mut self.inline_variables, inline);
+
+        statements.extend(body.into_iter().map(|statement| self.statement(statement)));
+
+        self.inline_variables = inline_variables;
 
         TypedExpr::Block {
             location: BLANK_LOCATION,
@@ -472,7 +524,7 @@ impl Inliner<'_> {
     }
 
     fn pipeline(
-        &self,
+        &mut self,
         location: SrcSpan,
         first_value: TypedPipelineAssignment,
         assignments: Vec<(TypedPipelineAssignment, PipelineAssignmentKind)>,
@@ -495,7 +547,10 @@ impl Inliner<'_> {
         }
     }
 
-    fn pipeline_assignment(&self, assignment: TypedPipelineAssignment) -> TypedPipelineAssignment {
+    fn pipeline_assignment(
+        &mut self,
+        assignment: TypedPipelineAssignment,
+    ) -> TypedPipelineAssignment {
         let TypedPipelineAssignment {
             location,
             name,
@@ -510,7 +565,7 @@ impl Inliner<'_> {
     }
 
     fn bit_array(
-        &self,
+        &mut self,
         location: SrcSpan,
         type_: Arc<Type>,
         segments: Vec<TypedExprBitArraySegment>,
@@ -542,7 +597,7 @@ impl Inliner<'_> {
         }
     }
 
-    fn bit_array_option(&self, option: BitArrayOption<TypedExpr>) -> BitArrayOption<TypedExpr> {
+    fn bit_array_option(&mut self, option: BitArrayOption<TypedExpr>) -> BitArrayOption<TypedExpr> {
         match option {
             BitArrayOption::Bytes { .. }
             | BitArrayOption::Int { .. }
@@ -573,7 +628,7 @@ impl Inliner<'_> {
     }
 
     fn case(
-        &self,
+        &mut self,
         location: SrcSpan,
         type_: Arc<Type>,
         subjects: Vec<TypedExpr>,
@@ -636,173 +691,235 @@ pub fn inline_function(package: &str, module: &str, function: &TypedFunction) ->
                 label: None,
                 name: name.clone(),
             },
-            ArgNames::LabelledDiscard { label, name, .. } => Parameter {
-                label: Some(label.clone()),
-                name: name.clone(),
-            },
-            ArgNames::NamedLabelled { label, name, .. } => Parameter {
+            ArgNames::LabelledDiscard { label, name, .. }
+            | ArgNames::NamedLabelled { label, name, .. } => Parameter {
                 label: Some(label.clone()),
                 name: name.clone(),
             },
         })
         .collect();
 
+    let mut inliner = FunctionInliner::new(&function.arguments);
+
     let body = function
         .body
         .iter()
-        .map(ast_to_inline)
+        .map(|ast| inliner.ast_to_inline(ast))
         .collect::<Option<_>>()?;
 
-    Some(Function { parameters, body })
+    let inlinable_parameters = inliner
+        .parameter_references
+        .into_iter()
+        .filter_map(|((name, _), used)| used.then_some(name))
+        .collect();
+
+    Some(Function {
+        parameters,
+        body,
+        inlinable_parameters,
+    })
 }
 
-fn ast_to_inline(statement: &TypedStatement) -> Option<Ast> {
-    match statement {
-        Statement::Expression(expression) => expression_to_inline(expression),
-        Statement::Assignment(_) | Statement::Use(_) | Statement::Assert(_) => None,
+struct FunctionInliner {
+    parameter_references: HashMap<(EcoString, SrcSpan), bool>,
+}
+
+impl FunctionInliner {
+    fn new(arguments: &[TypedArg]) -> Self {
+        let parameter_references = arguments
+            .iter()
+            .filter_map(|argument| {
+                let (name, location) = match &argument.names {
+                    ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => return None,
+                    ArgNames::Named { name, location } => (name.clone(), *location),
+                    ArgNames::NamedLabelled {
+                        name,
+                        name_location,
+                        ..
+                    } => (name.clone(), *name_location),
+                };
+
+                Some(((name, location), false))
+            })
+            .collect();
+
+        Self {
+            parameter_references,
+        }
     }
-}
 
-fn expression_to_inline(expression: &TypedExpr) -> Option<Ast> {
-    match expression {
-        TypedExpr::Case {
-            subjects,
-            clauses,
-            compiled_case,
-            ..
-        } => {
-            let subjects = subjects
-                .iter()
-                .map(expression_to_inline)
-                .collect::<Option<_>>()?;
-            let clauses = clauses
-                .iter()
-                .map(clause_to_inline)
-                .collect::<Option<_>>()?;
+    fn ast_to_inline(&mut self, statement: &TypedStatement) -> Option<Ast> {
+        match statement {
+            Statement::Expression(expression) => self.expression_to_inline(expression),
+            Statement::Assignment(_) | Statement::Use(_) | Statement::Assert(_) => None,
+        }
+    }
 
-            Some(Ast::Case {
+    fn expression_to_inline(&mut self, expression: &TypedExpr) -> Option<Ast> {
+        match expression {
+            TypedExpr::Case {
                 subjects,
                 clauses,
-                compiled_case: compiled_case.clone(),
-            })
-        }
-        TypedExpr::Var {
-            constructor, name, ..
-        } => Some(Ast::Variable {
-            name: name.clone(),
-            constructor: value_constructor(constructor)?,
-        }),
-        TypedExpr::Call { fun, args, .. } => {
-            let function = expression_to_inline(fun)?;
-            let arguments = args
-                .iter()
-                .map(|argument| {
-                    Some(Argument {
-                        label: argument.label.clone(),
-                        value: expression_to_inline(&argument.value)?,
-                    })
+                compiled_case,
+                ..
+            } => {
+                let subjects = subjects
+                    .iter()
+                    .map(|expression| self.expression_to_inline(expression))
+                    .collect::<Option<_>>()?;
+                let clauses = clauses
+                    .iter()
+                    .map(|clause| self.clause_to_inline(clause))
+                    .collect::<Option<_>>()?;
+
+                Some(Ast::Case {
+                    subjects,
+                    clauses,
+                    compiled_case: compiled_case.clone(),
                 })
-                .collect::<Option<_>>()?;
+            }
+            TypedExpr::Var {
+                constructor, name, ..
+            } => {
+                match &constructor.variant {
+                    ValueConstructorVariant::LocalVariable { location, .. } => {
+                        let key = (name.clone(), *location);
+                        match self.parameter_references.get_mut(&key) {
+                            Some(true) => {
+                                _ = self.parameter_references.remove(&key);
+                            }
+                            Some(usage) => *usage = true,
+                            None => {}
+                        }
+                    }
+                    ValueConstructorVariant::ModuleConstant { .. }
+                    | ValueConstructorVariant::LocalConstant { .. }
+                    | ValueConstructorVariant::ModuleFn { .. }
+                    | ValueConstructorVariant::Record { .. } => {}
+                }
 
-            Some(Ast::Call {
-                function: Box::new(function),
-                arguments,
-            })
-        }
-
-        TypedExpr::Int { .. }
-        | TypedExpr::Float { .. }
-        | TypedExpr::String { .. }
-        | TypedExpr::Block { .. }
-        | TypedExpr::Pipeline { .. }
-        | TypedExpr::Fn { .. }
-        | TypedExpr::List { .. }
-        | TypedExpr::BinOp { .. }
-        | TypedExpr::RecordAccess { .. }
-        | TypedExpr::ModuleSelect { .. }
-        | TypedExpr::Tuple { .. }
-        | TypedExpr::TupleIndex { .. }
-        | TypedExpr::Todo { .. }
-        | TypedExpr::Panic { .. }
-        | TypedExpr::Echo { .. }
-        | TypedExpr::BitArray { .. }
-        | TypedExpr::RecordUpdate { .. }
-        | TypedExpr::NegateBool { .. }
-        | TypedExpr::NegateInt { .. }
-        | TypedExpr::Invalid { .. } => None,
-    }
-}
-
-fn value_constructor(constructor: &type_::ValueConstructor) -> Option<ValueConstructor> {
-    match &constructor.variant {
-        ValueConstructorVariant::LocalVariable { .. } => Some(ValueConstructor::LocalVariable),
-        ValueConstructorVariant::ModuleConstant { .. }
-        | ValueConstructorVariant::LocalConstant { .. } => None,
-        ValueConstructorVariant::ModuleFn { name, module, .. } => {
-            Some(ValueConstructor::Function {
-                name: name.clone(),
-                module: module.clone(),
-            })
-        }
-        ValueConstructorVariant::Record { name, module, .. } => Some(ValueConstructor::Record {
-            name: name.clone(),
-            module: module.clone(),
-        }),
-    }
-}
-
-fn clause_to_inline(clause: &TypedClause) -> Option<Clause> {
-    let pattern = clause
-        .pattern
-        .iter()
-        .map(pattern_to_inline)
-        .collect::<Option<_>>()?;
-    let body = expression_to_inline(&clause.then)?;
-    Some(Clause { pattern, body })
-}
-
-fn pattern_to_inline(pattern: &TypedPattern) -> Option<Pattern> {
-    match pattern {
-        TypedPattern::Variable { name, .. } => Some(Pattern::Variable { name: name.clone() }),
-        TypedPattern::Constructor {
-            name,
-            arguments,
-            constructor: Inferred::Known(inferred),
-            ..
-        } => {
-            let arguments = arguments
-                .iter()
-                .map(|argument| {
-                    Some(Argument {
-                        label: argument.label.clone(),
-                        value: pattern_to_inline(&argument.value)?,
-                    })
+                Some(Ast::Variable {
+                    name: name.clone(),
+                    constructor: self.value_constructor(constructor)?,
                 })
-                .collect::<Option<_>>()?;
+            }
+            TypedExpr::Call { fun, args, .. } => {
+                let function = self.expression_to_inline(fun)?;
+                let arguments = args
+                    .iter()
+                    .map(|argument| {
+                        Some(Argument {
+                            label: argument.label.clone(),
+                            value: self.expression_to_inline(&argument.value)?,
+                        })
+                    })
+                    .collect::<Option<_>>()?;
 
-            Some(Pattern::Constructor {
-                name: name.clone(),
-                module: inferred.module.clone(),
-                arguments,
-            })
+                Some(Ast::Call {
+                    function: Box::new(function),
+                    arguments,
+                })
+            }
+
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => None,
         }
+    }
 
-        TypedPattern::Constructor {
-            constructor: Inferred::Unknown,
-            ..
-        } => None,
+    fn value_constructor(
+        &mut self,
+        constructor: &type_::ValueConstructor,
+    ) -> Option<ValueConstructor> {
+        match &constructor.variant {
+            ValueConstructorVariant::LocalVariable { .. } => Some(ValueConstructor::LocalVariable),
+            ValueConstructorVariant::ModuleConstant { .. }
+            | ValueConstructorVariant::LocalConstant { .. } => None,
+            ValueConstructorVariant::ModuleFn { name, module, .. } => {
+                Some(ValueConstructor::Function {
+                    name: name.clone(),
+                    module: module.clone(),
+                })
+            }
+            ValueConstructorVariant::Record { name, module, .. } => {
+                Some(ValueConstructor::Record {
+                    name: name.clone(),
+                    module: module.clone(),
+                })
+            }
+        }
+    }
 
-        TypedPattern::Int { .. }
-        | TypedPattern::Float { .. }
-        | TypedPattern::String { .. }
-        | TypedPattern::VarUsage { .. }
-        | TypedPattern::Assign { .. }
-        | TypedPattern::Discard { .. }
-        | TypedPattern::List { .. }
-        | TypedPattern::Tuple { .. }
-        | TypedPattern::BitArray { .. }
-        | TypedPattern::StringPrefix { .. }
-        | TypedPattern::Invalid { .. } => None,
+    fn clause_to_inline(&mut self, clause: &TypedClause) -> Option<Clause> {
+        let pattern = clause
+            .pattern
+            .iter()
+            .map(|pattern| self.pattern_to_inline(pattern))
+            .collect::<Option<_>>()?;
+        let body = self.expression_to_inline(&clause.then)?;
+        Some(Clause { pattern, body })
+    }
+
+    fn pattern_to_inline(&mut self, pattern: &TypedPattern) -> Option<Pattern> {
+        match pattern {
+            TypedPattern::Variable { name, .. } => Some(Pattern::Variable { name: name.clone() }),
+            TypedPattern::Constructor {
+                name,
+                arguments,
+                constructor: Inferred::Known(inferred),
+                ..
+            } => {
+                let arguments = arguments
+                    .iter()
+                    .map(|argument| {
+                        Some(Argument {
+                            label: argument.label.clone(),
+                            value: self.pattern_to_inline(&argument.value)?,
+                        })
+                    })
+                    .collect::<Option<_>>()?;
+
+                Some(Pattern::Constructor {
+                    name: name.clone(),
+                    module: inferred.module.clone(),
+                    arguments,
+                })
+            }
+
+            TypedPattern::Constructor {
+                constructor: Inferred::Unknown,
+                ..
+            } => None,
+
+            TypedPattern::Int { .. }
+            | TypedPattern::Float { .. }
+            | TypedPattern::String { .. }
+            | TypedPattern::VarUsage { .. }
+            | TypedPattern::Assign { .. }
+            | TypedPattern::Discard { .. }
+            | TypedPattern::List { .. }
+            | TypedPattern::Tuple { .. }
+            | TypedPattern::BitArray { .. }
+            | TypedPattern::StringPrefix { .. }
+            | TypedPattern::Invalid { .. } => None,
+        }
     }
 }
 
@@ -810,6 +927,7 @@ fn pattern_to_inline(pattern: &TypedPattern) -> Option<Pattern> {
 pub struct Function {
     pub parameters: Vec<Parameter>,
     pub body: Vec<Ast>,
+    pub inlinable_parameters: Vec<EcoString>,
 }
 
 const BLANK_LOCATION: SrcSpan = SrcSpan { start: 0, end: 0 };
