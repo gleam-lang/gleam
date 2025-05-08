@@ -1,132 +1,462 @@
 use std::sync::Arc;
 
 use ecow::EcoString;
+use itertools::Itertools;
 
 use crate::{
     STDLIB_PACKAGE_NAME,
+    analyse::Inferred,
     ast::{
-        ArgNames, Assert, Assignment, AssignmentKind, BitArrayOption, BitArraySegment, Definition,
-        PipelineAssignmentKind, SrcSpan, Statement, TypedAssert, TypedAssignment, TypedClause,
-        TypedDefinition, TypedExpr, TypedExprBitArraySegment, TypedFunction, TypedModule,
-        TypedPattern, TypedPipelineAssignment, TypedStatement, TypedUse,
+        ArgNames, Assert, Assignment, AssignmentKind, BitArrayOption, BitArraySegment, CallArg,
+        Definition, FunctionLiteralKind, PipelineAssignmentKind, Publicity, SrcSpan, Statement,
+        TypedArg, TypedAssert, TypedAssignment, TypedClause, TypedDefinition, TypedExpr,
+        TypedExprBitArraySegment, TypedFunction, TypedModule, TypedPattern,
+        TypedPipelineAssignment, TypedStatement, TypedUse,
     },
     exhaustiveness::CompiledCase,
-    type_::{self, Type, TypedCallArg, ValueConstructorVariant},
+    type_::{
+        self, Deprecation, ModuleInterface, ModuleValueConstructor, PatternConstructor, Type,
+        TypedCallArg, ValueConstructorVariant,
+        error::VariableOrigin,
+        expression::{Implementations, Purity},
+    },
 };
 
-pub fn module(mut module: TypedModule) -> TypedModule {
-    module.definitions = module.definitions.into_iter().map(definition).collect();
+pub fn module(
+    mut module: TypedModule,
+    modules: &im::HashMap<EcoString, ModuleInterface>,
+) -> TypedModule {
+    let inliner = Inliner::new(modules);
+
+    module.definitions = module
+        .definitions
+        .into_iter()
+        .map(|definition| inliner.definition(definition))
+        .collect();
     module
 }
 
-fn definition(definition: TypedDefinition) -> TypedDefinition {
-    match definition {
-        Definition::Function(function_ast) => Definition::Function(function(function_ast)),
-        Definition::TypeAlias(_)
-        | Definition::CustomType(_)
-        | Definition::Import(_)
-        | Definition::ModuleConstant(_) => definition,
+struct Inliner<'a> {
+    modules: &'a im::HashMap<EcoString, ModuleInterface>,
+}
+
+impl Inliner<'_> {
+    fn new(modules: &im::HashMap<EcoString, ModuleInterface>) -> Inliner<'_> {
+        Inliner { modules }
     }
-}
 
-fn function(mut function: TypedFunction) -> TypedFunction {
-    function.body = function.body.mapped(statement);
-    function
-}
-
-fn statement(statement: TypedStatement) -> TypedStatement {
-    match statement {
-        Statement::Expression(expression_ast) => Statement::Expression(expression(expression_ast)),
-        Statement::Assignment(assignment_ast) => Statement::Assignment(assignment(assignment_ast)),
-        Statement::Use(use_ast) => Statement::Use(use_(use_ast)),
-        Statement::Assert(assert_ast) => Statement::Assert(assert(assert_ast)),
+    fn definition(&self, definition: TypedDefinition) -> TypedDefinition {
+        match definition {
+            Definition::Function(function_ast) => Definition::Function(self.function(function_ast)),
+            Definition::TypeAlias(_)
+            | Definition::CustomType(_)
+            | Definition::Import(_)
+            | Definition::ModuleConstant(_) => definition,
+        }
     }
-}
 
-fn assert(assert: TypedAssert) -> TypedAssert {
-    let Assert {
-        location,
-        value,
-        message,
-    } = assert;
-
-    Assert {
-        location,
-        value: expression(value),
-        message: message.map(expression),
+    fn function(&self, mut function: TypedFunction) -> TypedFunction {
+        function.body = function.body.mapped(|statement| self.statement(statement));
+        function
     }
-}
 
-fn use_(mut use_: TypedUse) -> TypedUse {
-    use_.call = boxed_expression(use_.call);
-    use_
-}
-
-fn assignment(assignment: TypedAssignment) -> TypedAssignment {
-    let Assignment {
-        location,
-        value,
-        pattern,
-        kind,
-        annotation,
-        compiled_case,
-    } = assignment;
-
-    Assignment {
-        location,
-        value: expression(value),
-        pattern,
-        kind: assignment_kind(kind),
-        annotation,
-        compiled_case,
+    fn statement(&self, statement: TypedStatement) -> TypedStatement {
+        match statement {
+            Statement::Expression(expression_ast) => {
+                Statement::Expression(self.expression(expression_ast))
+            }
+            Statement::Assignment(assignment_ast) => {
+                Statement::Assignment(self.assignment(assignment_ast))
+            }
+            Statement::Use(use_ast) => Statement::Use(self.use_(use_ast)),
+            Statement::Assert(assert_ast) => Statement::Assert(self.assert(assert_ast)),
+        }
     }
-}
 
-fn assignment_kind(kind: AssignmentKind<TypedExpr>) -> AssignmentKind<TypedExpr> {
-    match kind {
-        AssignmentKind::Let | AssignmentKind::Generated => kind,
-        AssignmentKind::Assert { location, message } => AssignmentKind::Assert {
+    fn assert(&self, assert: TypedAssert) -> TypedAssert {
+        let Assert {
             location,
-            message: message.map(expression),
-        },
+            value,
+            message,
+        } = assert;
+
+        Assert {
+            location,
+            value: self.expression(value),
+            message: message.map(|expression| self.expression(expression)),
+        }
     }
-}
 
-fn boxed_expression(boxed: Box<TypedExpr>) -> Box<TypedExpr> {
-    Box::new(expression(*boxed))
-}
+    fn use_(&self, mut use_: TypedUse) -> TypedUse {
+        use_.call = self.boxed_expression(use_.call);
+        use_
+    }
 
-fn expressions(expressions: Vec<TypedExpr>) -> Vec<TypedExpr> {
-    expressions.into_iter().map(expression).collect()
-}
-
-fn expression(expression_ast: TypedExpr) -> TypedExpr {
-    match expression_ast {
-        TypedExpr::Int { .. }
-        | TypedExpr::Float { .. }
-        | TypedExpr::String { .. }
-        | TypedExpr::Fn { .. }
-        | TypedExpr::Var { .. }
-        | TypedExpr::ModuleSelect { .. }
-        | TypedExpr::Invalid { .. } => expression_ast,
-
-        TypedExpr::Block {
+    fn assignment(&self, assignment: TypedAssignment) -> TypedAssignment {
+        let Assignment {
             location,
-            statements,
-        } => TypedExpr::Block {
-            location,
-            statements: statements.mapped(statement),
-        },
+            value,
+            pattern,
+            kind,
+            annotation,
+            compiled_case,
+        } = assignment;
 
-        TypedExpr::NegateBool { location, value } => TypedExpr::NegateBool {
+        Assignment {
             location,
-            value: boxed_expression(value),
-        },
+            value: self.expression(value),
+            pattern,
+            kind: self.assignment_kind(kind),
+            annotation,
+            compiled_case,
+        }
+    }
 
-        TypedExpr::NegateInt { location, value } => TypedExpr::NegateInt {
+    fn assignment_kind(&self, kind: AssignmentKind<TypedExpr>) -> AssignmentKind<TypedExpr> {
+        match kind {
+            AssignmentKind::Let | AssignmentKind::Generated => kind,
+            AssignmentKind::Assert { location, message } => AssignmentKind::Assert {
+                location,
+                message: message.map(|expression| self.expression(expression)),
+            },
+        }
+    }
+
+    fn boxed_expression(&self, boxed: Box<TypedExpr>) -> Box<TypedExpr> {
+        Box::new(self.expression(*boxed))
+    }
+
+    fn expressions(&self, expressions: Vec<TypedExpr>) -> Vec<TypedExpr> {
+        expressions
+            .into_iter()
+            .map(|expression| self.expression(expression))
+            .collect()
+    }
+
+    fn expression(&self, expression: TypedExpr) -> TypedExpr {
+        match expression {
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Invalid { .. } => expression,
+
+            TypedExpr::Block {
+                location,
+                statements,
+            } => TypedExpr::Block {
+                location,
+                statements: statements.mapped(|statement| self.statement(statement)),
+            },
+
+            TypedExpr::NegateBool { location, value } => TypedExpr::NegateBool {
+                location,
+                value: self.boxed_expression(value),
+            },
+
+            TypedExpr::NegateInt { location, value } => TypedExpr::NegateInt {
+                location,
+                value: self.boxed_expression(value),
+            },
+
+            TypedExpr::Pipeline {
+                location,
+                first_value,
+                assignments,
+                finally,
+                finally_kind,
+            } => self.pipeline(location, first_value, assignments, finally, finally_kind),
+
+            TypedExpr::List {
+                location,
+                type_,
+                elements,
+                tail,
+            } => TypedExpr::List {
+                location,
+                type_,
+                elements: self.expressions(elements),
+                tail: tail.map(|boxed_expression| self.boxed_expression(boxed_expression)),
+            },
+
+            TypedExpr::Call {
+                location,
+                type_,
+                fun,
+                args,
+            } => self.call(location, type_, fun, args),
+
+            TypedExpr::BinOp {
+                location,
+                type_,
+                name,
+                name_location,
+                left,
+                right,
+            } => TypedExpr::BinOp {
+                location,
+                type_,
+                name,
+                name_location,
+                left: self.boxed_expression(left),
+                right: self.boxed_expression(right),
+            },
+
+            TypedExpr::Case {
+                location,
+                type_,
+                subjects,
+                clauses,
+                compiled_case,
+            } => self.case(location, type_, subjects, clauses, compiled_case),
+
+            TypedExpr::RecordAccess {
+                location,
+                field_start,
+                type_,
+                label,
+                index,
+                record,
+            } => TypedExpr::RecordAccess {
+                location,
+                field_start,
+                type_,
+                label,
+                index,
+                record: self.boxed_expression(record),
+            },
+
+            TypedExpr::Tuple {
+                location,
+                type_,
+                elements,
+            } => TypedExpr::Tuple {
+                location,
+                type_,
+                elements: self.expressions(elements),
+            },
+
+            TypedExpr::TupleIndex {
+                location,
+                type_,
+                index,
+                tuple,
+            } => TypedExpr::TupleIndex {
+                location,
+                type_,
+                index,
+                tuple: self.boxed_expression(tuple),
+            },
+
+            TypedExpr::Todo {
+                location,
+                message,
+                kind,
+                type_,
+            } => TypedExpr::Todo {
+                location,
+                message: message.map(|boxed_expression| self.boxed_expression(boxed_expression)),
+                kind,
+                type_,
+            },
+
+            TypedExpr::Panic {
+                location,
+                message,
+                type_,
+            } => TypedExpr::Panic {
+                location,
+                message: message.map(|boxed_expression| self.boxed_expression(boxed_expression)),
+                type_,
+            },
+
+            TypedExpr::Echo {
+                location,
+                type_,
+                expression,
+            } => TypedExpr::Echo {
+                location,
+                expression: expression
+                    .map(|boxed_expression| self.boxed_expression(boxed_expression)),
+                type_,
+            },
+
+            TypedExpr::BitArray {
+                location,
+                type_,
+                segments,
+            } => self.bit_array(location, type_, segments),
+
+            TypedExpr::RecordUpdate {
+                location,
+                type_,
+                record,
+                constructor,
+                args,
+            } => TypedExpr::RecordUpdate {
+                location,
+                type_,
+                record: Box::new(self.assignment(*record)),
+                constructor: self.boxed_expression(constructor),
+                args,
+            },
+        }
+    }
+
+    fn call(
+        &self,
+        location: SrcSpan,
+        type_: Arc<Type>,
+        function: Box<TypedExpr>,
+        arguments: Vec<TypedCallArg>,
+    ) -> TypedExpr {
+        let function = self.expression(*function);
+        let arguments = arguments
+            .into_iter()
+            .map(
+                |TypedCallArg {
+                     label,
+                     location,
+                     value,
+                     implicit,
+                 }| TypedCallArg {
+                    label,
+                    location,
+                    value: self.expression(value),
+                    implicit,
+                },
+            )
+            .collect();
+
+        let function = match function {
+            TypedExpr::Var {
+                ref constructor,
+                ref name,
+                ..
+            } => match &constructor.variant {
+                ValueConstructorVariant::ModuleFn { module, .. } => {
+                    if let Some(inline) = self
+                        .modules
+                        .get(module)
+                        .and_then(|module| module.inline_functions.get(name))
+                    {
+                        inline.to_anonymous_function()
+                    } else {
+                        function
+                    }
+                }
+                ValueConstructorVariant::LocalVariable { .. }
+                | ValueConstructorVariant::ModuleConstant { .. }
+                | ValueConstructorVariant::LocalConstant { .. }
+                | ValueConstructorVariant::Record { .. } => function,
+            },
+            TypedExpr::ModuleSelect {
+                ref constructor,
+                label: ref name,
+                ref module_name,
+                ..
+            } => match constructor {
+                ModuleValueConstructor::Fn { .. } => {
+                    if let Some(inline) = self
+                        .modules
+                        .get(module_name)
+                        .and_then(|module| module.inline_functions.get(name))
+                    {
+                        inline.to_anonymous_function()
+                    } else {
+                        function
+                    }
+                }
+                ModuleValueConstructor::Record { .. } | ModuleValueConstructor::Constant { .. } => {
+                    function
+                }
+            },
+            TypedExpr::Fn { .. } => function,
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => function,
+        };
+
+        TypedExpr::Call {
             location,
-            value: boxed_expression(value),
-        },
+            type_,
+            fun: Box::new(function),
+            args: arguments,
+        }
+    }
+
+    // fn inline_function_reference_as_fn(&self, inline: &Function) -> _ {
+    //     let type_ = constructor.type_;
+
+    //     let assignments = inline.parameters.iter().zip(arguments).map(
+    //         |(parameter, argument): (&Parameter, TypedCallArg)| {
+    //             Statement::Assignment(Assignment {
+    //                 location: BLANK_LOCATION,
+    //                 value: argument.value,
+    //                 pattern: TypedPattern::Variable {
+    //                     location,
+    //                     name: parameter.name.clone(),
+    //                     type_: type_.clone(),
+    //                     origin: VariableOrigin::Generated,
+    //                 },
+    //                 kind: AssignmentKind::Generated,
+    //                 compiled_case: CompiledCase::simple_variable_assignment(
+    //                     parameter.name.clone(),
+    //                     type_.clone(),
+    //                 ),
+    //                 annotation: None,
+    //             })
+    //         },
+    //     );
+
+    //     let statements = assignments
+    //         .chain(
+    //             inline
+    //                 .body
+    //                 .iter()
+    //                 .map(|ast| Statement::Expression(ast.to_expression())),
+    //         )
+    //         .collect_vec();
+
+    //     TypedExpr::Block {
+    //         location,
+    //         statements,
+    //     }
+    // }
+
+    fn pipeline(
+        &self,
+        location: SrcSpan,
+        first_value: TypedPipelineAssignment,
+        assignments: Vec<(TypedPipelineAssignment, PipelineAssignmentKind)>,
+        finally: Box<TypedExpr>,
+        finally_kind: PipelineAssignmentKind,
+    ) -> TypedExpr {
+        let first_value = self.pipeline_assignment(first_value);
+        let assignments = assignments
+            .into_iter()
+            .map(|(assignment, kind)| (self.pipeline_assignment(assignment), kind))
+            .collect();
+        let finally = self.boxed_expression(finally);
 
         TypedExpr::Pipeline {
             location,
@@ -134,42 +464,113 @@ fn expression(expression_ast: TypedExpr) -> TypedExpr {
             assignments,
             finally,
             finally_kind,
-        } => pipeline(location, first_value, assignments, finally, finally_kind),
+        }
+    }
 
-        TypedExpr::List {
+    fn pipeline_assignment(&self, assignment: TypedPipelineAssignment) -> TypedPipelineAssignment {
+        let TypedPipelineAssignment {
             location,
-            type_,
-            elements,
-            tail,
-        } => TypedExpr::List {
-            location,
-            type_,
-            elements: expressions(elements),
-            tail: tail.map(boxed_expression),
-        },
-
-        TypedExpr::Call {
-            location,
-            type_,
-            fun,
-            args,
-        } => call(location, type_, fun, args),
-
-        TypedExpr::BinOp {
-            location,
-            type_,
             name,
-            name_location,
-            left,
-            right,
-        } => TypedExpr::BinOp {
+            value,
+        } = assignment;
+
+        TypedPipelineAssignment {
+            location,
+            name,
+            value: self.boxed_expression(value),
+        }
+    }
+
+    fn bit_array(
+        &self,
+        location: SrcSpan,
+        type_: Arc<Type>,
+        segments: Vec<TypedExprBitArraySegment>,
+    ) -> TypedExpr {
+        let segments = segments
+            .into_iter()
+            .map(
+                |BitArraySegment {
+                     location,
+                     value,
+                     options,
+                     type_,
+                 }| BitArraySegment {
+                    location,
+                    value: self.boxed_expression(value),
+                    options: options
+                        .into_iter()
+                        .map(|bit_array_option| self.bit_array_option(bit_array_option))
+                        .collect(),
+                    type_,
+                },
+            )
+            .collect();
+
+        TypedExpr::BitArray {
             location,
             type_,
-            name,
-            name_location,
-            left: boxed_expression(left),
-            right: boxed_expression(right),
-        },
+            segments,
+        }
+    }
+
+    fn bit_array_option(&self, option: BitArrayOption<TypedExpr>) -> BitArrayOption<TypedExpr> {
+        match option {
+            BitArrayOption::Bytes { .. }
+            | BitArrayOption::Int { .. }
+            | BitArrayOption::Float { .. }
+            | BitArrayOption::Bits { .. }
+            | BitArrayOption::Utf8 { .. }
+            | BitArrayOption::Utf16 { .. }
+            | BitArrayOption::Utf32 { .. }
+            | BitArrayOption::Utf8Codepoint { .. }
+            | BitArrayOption::Utf16Codepoint { .. }
+            | BitArrayOption::Utf32Codepoint { .. }
+            | BitArrayOption::Signed { .. }
+            | BitArrayOption::Unsigned { .. }
+            | BitArrayOption::Big { .. }
+            | BitArrayOption::Little { .. }
+            | BitArrayOption::Native { .. }
+            | BitArrayOption::Unit { .. } => option,
+            BitArrayOption::Size {
+                location,
+                value,
+                short_form,
+            } => BitArrayOption::Size {
+                location,
+                value: self.boxed_expression(value),
+                short_form,
+            },
+        }
+    }
+
+    fn case(
+        &self,
+        location: SrcSpan,
+        type_: Arc<Type>,
+        subjects: Vec<TypedExpr>,
+        clauses: Vec<TypedClause>,
+        compiled_case: CompiledCase,
+    ) -> TypedExpr {
+        let subjects = self.expressions(subjects);
+        let clauses = clauses
+            .into_iter()
+            .map(
+                |TypedClause {
+                     location,
+                     pattern,
+                     alternative_patterns,
+                     guard,
+                     then,
+                 }| TypedClause {
+                    location,
+                    pattern,
+                    alternative_patterns,
+                    guard,
+                    then: self.expression(then),
+                },
+            )
+            .collect();
 
         TypedExpr::Case {
             location,
@@ -177,261 +578,7 @@ fn expression(expression_ast: TypedExpr) -> TypedExpr {
             subjects,
             clauses,
             compiled_case,
-        } => case(location, type_, subjects, clauses, compiled_case),
-
-        TypedExpr::RecordAccess {
-            location,
-            field_start,
-            type_,
-            label,
-            index,
-            record,
-        } => TypedExpr::RecordAccess {
-            location,
-            field_start,
-            type_,
-            label,
-            index,
-            record: boxed_expression(record),
-        },
-
-        TypedExpr::Tuple {
-            location,
-            type_,
-            elements,
-        } => TypedExpr::Tuple {
-            location,
-            type_,
-            elements: expressions(elements),
-        },
-
-        TypedExpr::TupleIndex {
-            location,
-            type_,
-            index,
-            tuple,
-        } => TypedExpr::TupleIndex {
-            location,
-            type_,
-            index,
-            tuple: boxed_expression(tuple),
-        },
-
-        TypedExpr::Todo {
-            location,
-            message,
-            kind,
-            type_,
-        } => TypedExpr::Todo {
-            location,
-            message: message.map(boxed_expression),
-            kind,
-            type_,
-        },
-
-        TypedExpr::Panic {
-            location,
-            message,
-            type_,
-        } => TypedExpr::Panic {
-            location,
-            message: message.map(boxed_expression),
-            type_,
-        },
-
-        TypedExpr::Echo {
-            location,
-            type_,
-            expression,
-        } => TypedExpr::Echo {
-            location,
-            expression: expression.map(boxed_expression),
-            type_,
-        },
-
-        TypedExpr::BitArray {
-            location,
-            type_,
-            segments,
-        } => bit_array(location, type_, segments),
-
-        TypedExpr::RecordUpdate {
-            location,
-            type_,
-            record,
-            constructor,
-            args,
-        } => TypedExpr::RecordUpdate {
-            location,
-            type_,
-            record: Box::new(assignment(*record)),
-            constructor: boxed_expression(constructor),
-            args,
-        },
-    }
-}
-
-fn call(
-    location: SrcSpan,
-    type_: Arc<Type>,
-    function: Box<TypedExpr>,
-    arguments: Vec<TypedCallArg>,
-) -> TypedExpr {
-    let function = boxed_expression(function);
-    let arguments = arguments
-        .into_iter()
-        .map(
-            |TypedCallArg {
-                 label,
-                 location,
-                 value,
-                 implicit,
-             }| TypedCallArg {
-                label,
-                location,
-                value: expression(value),
-                implicit,
-            },
-        )
-        .collect();
-
-    TypedExpr::Call {
-        location,
-        type_,
-        fun: function,
-        args: arguments,
-    }
-}
-
-fn pipeline(
-    location: SrcSpan,
-    first_value: TypedPipelineAssignment,
-    assignments: Vec<(TypedPipelineAssignment, PipelineAssignmentKind)>,
-    finally: Box<TypedExpr>,
-    finally_kind: PipelineAssignmentKind,
-) -> TypedExpr {
-    let first_value = pipeline_assignment(first_value);
-    let assignments = assignments
-        .into_iter()
-        .map(|(assignment, kind)| (pipeline_assignment(assignment), kind))
-        .collect();
-    let finally = boxed_expression(finally);
-
-    TypedExpr::Pipeline {
-        location,
-        first_value,
-        assignments,
-        finally,
-        finally_kind,
-    }
-}
-
-fn pipeline_assignment(assignment: TypedPipelineAssignment) -> TypedPipelineAssignment {
-    let TypedPipelineAssignment {
-        location,
-        name,
-        value,
-    } = assignment;
-
-    TypedPipelineAssignment {
-        location,
-        name,
-        value: boxed_expression(value),
-    }
-}
-
-fn bit_array(
-    location: SrcSpan,
-    type_: Arc<Type>,
-    segments: Vec<TypedExprBitArraySegment>,
-) -> TypedExpr {
-    let segments = segments
-        .into_iter()
-        .map(
-            |BitArraySegment {
-                 location,
-                 value,
-                 options,
-                 type_,
-             }| BitArraySegment {
-                location,
-                value: boxed_expression(value),
-                options: options.into_iter().map(bit_array_option).collect(),
-                type_,
-            },
-        )
-        .collect();
-
-    TypedExpr::BitArray {
-        location,
-        type_,
-        segments,
-    }
-}
-
-fn bit_array_option(option: BitArrayOption<TypedExpr>) -> BitArrayOption<TypedExpr> {
-    match option {
-        BitArrayOption::Bytes { .. }
-        | BitArrayOption::Int { .. }
-        | BitArrayOption::Float { .. }
-        | BitArrayOption::Bits { .. }
-        | BitArrayOption::Utf8 { .. }
-        | BitArrayOption::Utf16 { .. }
-        | BitArrayOption::Utf32 { .. }
-        | BitArrayOption::Utf8Codepoint { .. }
-        | BitArrayOption::Utf16Codepoint { .. }
-        | BitArrayOption::Utf32Codepoint { .. }
-        | BitArrayOption::Signed { .. }
-        | BitArrayOption::Unsigned { .. }
-        | BitArrayOption::Big { .. }
-        | BitArrayOption::Little { .. }
-        | BitArrayOption::Native { .. }
-        | BitArrayOption::Unit { .. } => option,
-        BitArrayOption::Size {
-            location,
-            value,
-            short_form,
-        } => BitArrayOption::Size {
-            location,
-            value: boxed_expression(value),
-            short_form,
-        },
-    }
-}
-
-fn case(
-    location: SrcSpan,
-    type_: Arc<Type>,
-    subjects: Vec<TypedExpr>,
-    clauses: Vec<TypedClause>,
-    compiled_case: CompiledCase,
-) -> TypedExpr {
-    let subjects = expressions(subjects);
-    let clauses = clauses
-        .into_iter()
-        .map(
-            |TypedClause {
-                 location,
-                 pattern,
-                 alternative_patterns,
-                 guard,
-                 then,
-             }| TypedClause {
-                location,
-                pattern,
-                alternative_patterns,
-                guard,
-                then: expression(then),
-            },
-        )
-        .collect();
-
-    TypedExpr::Case {
-        location,
-        type_,
-        subjects,
-        clauses,
-        compiled_case,
+        }
     }
 }
 
@@ -491,7 +638,10 @@ fn ast_to_inline(statement: &TypedStatement) -> Option<Ast> {
 fn expression_to_inline(expression: &TypedExpr) -> Option<Ast> {
     match expression {
         TypedExpr::Case {
-            subjects, clauses, ..
+            subjects,
+            clauses,
+            compiled_case,
+            ..
         } => {
             let subjects = subjects
                 .iter()
@@ -502,7 +652,11 @@ fn expression_to_inline(expression: &TypedExpr) -> Option<Ast> {
                 .map(clause_to_inline)
                 .collect::<Option<_>>()?;
 
-            Some(Ast::Case { subjects, clauses })
+            Some(Ast::Case {
+                subjects,
+                clauses,
+                compiled_case: compiled_case.clone(),
+            })
         }
         TypedExpr::Var {
             constructor, name, ..
@@ -583,7 +737,10 @@ fn pattern_to_inline(pattern: &TypedPattern) -> Option<Pattern> {
     match pattern {
         TypedPattern::Variable { name, .. } => Some(Pattern::Variable { name: name.clone() }),
         TypedPattern::Constructor {
-            name, arguments, ..
+            name,
+            arguments,
+            constructor: Inferred::Known(inferred),
+            ..
         } => {
             let arguments = arguments
                 .iter()
@@ -597,9 +754,15 @@ fn pattern_to_inline(pattern: &TypedPattern) -> Option<Pattern> {
 
             Some(Pattern::Constructor {
                 name: name.clone(),
+                module: inferred.module.clone(),
                 arguments,
             })
         }
+
+        TypedPattern::Constructor {
+            constructor: Inferred::Unknown,
+            ..
+        } => None,
 
         TypedPattern::Int { .. }
         | TypedPattern::Float { .. }
@@ -621,11 +784,75 @@ pub struct Function {
     pub body: Vec<Ast>,
 }
 
+const BLANK_LOCATION: SrcSpan = SrcSpan { start: 0, end: 0 };
+
+impl Function {
+    fn to_anonymous_function(&self) -> TypedExpr {
+        let parameters = self
+            .parameters
+            .iter()
+            .map(|parameter| {
+                let is_discard = parameter.name.starts_with('_');
+                let names = match &parameter.label {
+                    Some(label) if is_discard => ArgNames::LabelledDiscard {
+                        label: label.clone(),
+                        label_location: BLANK_LOCATION,
+                        name: parameter.name.clone(),
+                        name_location: BLANK_LOCATION,
+                    },
+                    Some(label) => ArgNames::NamedLabelled {
+                        label: label.clone(),
+                        label_location: BLANK_LOCATION,
+                        name: parameter.name.clone(),
+                        name_location: BLANK_LOCATION,
+                    },
+                    None if is_discard => ArgNames::Discard {
+                        name: parameter.name.clone(),
+                        location: BLANK_LOCATION,
+                    },
+                    None => ArgNames::Named {
+                        name: parameter.name.clone(),
+                        location: BLANK_LOCATION,
+                    },
+                };
+
+                TypedArg {
+                    names,
+                    location: BLANK_LOCATION,
+                    annotation: None,
+                    type_: type_::nil(),
+                }
+            })
+            .collect();
+
+        let body = self
+            .body
+            .iter()
+            .map(|ast| Statement::Expression(ast.to_expression()))
+            .collect_vec();
+
+        TypedExpr::Fn {
+            location: BLANK_LOCATION,
+            type_: type_::nil(),
+            kind: FunctionLiteralKind::Anonymous {
+                head: BLANK_LOCATION,
+            },
+            args: parameters,
+            body: body
+                .try_into()
+                .expect("Type-checking ensured that the body has at least 1 statement"),
+            return_annotation: None,
+            purity: Purity::Unknown,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Ast {
     Case {
         subjects: Vec<Ast>,
         clauses: Vec<Clause>,
+        compiled_case: CompiledCase,
     },
 
     Variable {
@@ -639,22 +866,117 @@ pub enum Ast {
     },
 }
 
+impl Ast {
+    fn to_expression(&self) -> TypedExpr {
+        match self {
+            Ast::Case {
+                subjects,
+                clauses,
+                compiled_case,
+            } => TypedExpr::Case {
+                location: BLANK_LOCATION,
+                type_: type_::nil(),
+                subjects: subjects
+                    .iter()
+                    .map(|subject| subject.to_expression())
+                    .collect(),
+                clauses: clauses
+                    .iter()
+                    .map(|clause| clause.to_typed_clause())
+                    .collect(),
+                compiled_case: compiled_case.clone(),
+            },
+            Ast::Variable { name, constructor } => TypedExpr::Var {
+                location: BLANK_LOCATION,
+                constructor: constructor.to_value_constructor(),
+                name: name.clone(),
+            },
+            Ast::Call {
+                function,
+                arguments,
+            } => TypedExpr::Call {
+                location: BLANK_LOCATION,
+                type_: type_::nil(),
+                fun: Box::new(function.to_expression()),
+                args: arguments
+                    .iter()
+                    .map(|argument| argument.to_call_arg(Self::to_expression))
+                    .collect(),
+            },
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Clause {
     pub pattern: Vec<Pattern>,
     pub body: Ast,
 }
 
+impl Clause {
+    fn to_typed_clause(&self) -> TypedClause {
+        TypedClause {
+            location: BLANK_LOCATION,
+            pattern: self
+                .pattern
+                .iter()
+                .map(|pattern| pattern.to_typed_pattern())
+                .collect(),
+            alternative_patterns: Vec::new(),
+            guard: None,
+            then: self.body.to_expression(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Pattern {
     Constructor {
         name: EcoString,
+        module: EcoString,
         arguments: Vec<Argument<Pattern>>,
     },
 
     Variable {
         name: EcoString,
     },
+}
+
+impl Pattern {
+    fn to_typed_pattern(&self) -> TypedPattern {
+        match self {
+            Pattern::Constructor {
+                name,
+                module,
+                arguments,
+            } => TypedPattern::Constructor {
+                location: BLANK_LOCATION,
+                name_location: BLANK_LOCATION,
+                name: name.clone(),
+                arguments: arguments
+                    .iter()
+                    .map(|argument| argument.to_call_arg(Self::to_typed_pattern))
+                    .collect(),
+                module: None,
+                constructor: Inferred::Known(PatternConstructor {
+                    name: name.clone(),
+                    field_map: None,
+                    documentation: None,
+                    module: module.clone(),
+                    location: BLANK_LOCATION,
+                    constructor_index: 0,
+                }),
+                spread: None,
+                type_: type_::nil(),
+            },
+            Pattern::Variable { name } => TypedPattern::Variable {
+                location: BLANK_LOCATION,
+                name: name.clone(),
+                type_: type_::nil(),
+                origin: VariableOrigin::Generated,
+            },
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -664,10 +986,63 @@ pub enum ValueConstructor {
     Record { name: EcoString, module: EcoString },
 }
 
+impl ValueConstructor {
+    fn to_value_constructor(&self) -> type_::ValueConstructor {
+        let variant = match self {
+            ValueConstructor::LocalVariable => ValueConstructorVariant::LocalVariable {
+                location: BLANK_LOCATION,
+                origin: VariableOrigin::Generated,
+            },
+            ValueConstructor::Function { name, module } => ValueConstructorVariant::ModuleFn {
+                name: name.clone(),
+                field_map: None,
+                module: module.clone(),
+                arity: 0,
+                location: BLANK_LOCATION,
+                documentation: None,
+                implementations: Implementations::supporting_all(),
+                external_erlang: None,
+                external_javascript: None,
+                purity: Purity::Unknown,
+            },
+            ValueConstructor::Record { name, module } => ValueConstructorVariant::Record {
+                name: name.clone(),
+                arity: 0,
+                field_map: None,
+                location: BLANK_LOCATION,
+                module: module.clone(),
+                variants_count: 0,
+                variant_index: 0,
+                documentation: None,
+            },
+        };
+        type_::ValueConstructor {
+            publicity: Publicity::Private,
+            deprecation: Deprecation::NotDeprecated,
+            variant,
+            type_: type_::nil(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Argument<T> {
     pub label: Option<EcoString>,
     pub value: T,
+}
+
+impl<T> Argument<T> {
+    fn to_call_arg<U, F>(&self, convert_value: F) -> CallArg<U>
+    where
+        F: FnOnce(&T) -> U,
+    {
+        CallArg {
+            label: self.label.clone(),
+            location: BLANK_LOCATION,
+            value: convert_value(&self.value),
+            implicit: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
