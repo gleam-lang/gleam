@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use ecow::EcoString;
 use itertools::Itertools;
+use vec1::Vec1;
 
 use crate::{
     STDLIB_PACKAGE_NAME,
@@ -312,7 +313,6 @@ impl Inliner<'_> {
         function: Box<TypedExpr>,
         arguments: Vec<TypedCallArg>,
     ) -> TypedExpr {
-        let function = self.expression(*function);
         let arguments = arguments
             .into_iter()
             .map(
@@ -330,6 +330,19 @@ impl Inliner<'_> {
             )
             .collect();
 
+        self.called_function(location, type_, *function, arguments)
+    }
+
+    fn called_function(
+        &self,
+        location: SrcSpan,
+        type_: Arc<Type>,
+        function: TypedExpr,
+        arguments: Vec<TypedCallArg>,
+    ) -> TypedExpr {
+        let mut changed_function = false;
+        let function = self.expression(function);
+
         let function = match function {
             TypedExpr::Var {
                 ref constructor,
@@ -342,6 +355,7 @@ impl Inliner<'_> {
                         .get(module)
                         .and_then(|module| module.inline_functions.get(name))
                     {
+                        changed_function = true;
                         inline.to_anonymous_function()
                     } else {
                         function
@@ -364,6 +378,7 @@ impl Inliner<'_> {
                         .get(module_name)
                         .and_then(|module| module.inline_functions.get(name))
                     {
+                        changed_function = true;
                         inline.to_anonymous_function()
                     } else {
                         function
@@ -373,7 +388,17 @@ impl Inliner<'_> {
                     function
                 }
             },
-            TypedExpr::Fn { .. } => function,
+            TypedExpr::Fn {
+                args: parameters,
+                body,
+                ..
+            } => {
+                return self.expression(self.inline_anonymous_function_call(
+                    &parameters,
+                    arguments,
+                    body,
+                ));
+            }
             TypedExpr::Int { .. }
             | TypedExpr::Float { .. }
             | TypedExpr::String { .. }
@@ -396,52 +421,54 @@ impl Inliner<'_> {
             | TypedExpr::Invalid { .. } => function,
         };
 
-        TypedExpr::Call {
-            location,
-            type_,
-            fun: Box::new(function),
-            args: arguments,
+        if changed_function {
+            self.called_function(location, type_, function, arguments)
+        } else {
+            TypedExpr::Call {
+                location,
+                type_,
+                fun: Box::new(function),
+                args: arguments,
+            }
         }
     }
 
-    // fn inline_function_reference_as_fn(&self, inline: &Function) -> _ {
-    //     let type_ = constructor.type_;
+    fn inline_anonymous_function_call(
+        &self,
+        parameters: &[TypedArg],
+        arguments: Vec<TypedCallArg>,
+        body: Vec1<TypedStatement>,
+    ) -> TypedExpr {
+        let assignments = parameters
+            .iter()
+            .zip(arguments)
+            .map(|(parameter, argument)| {
+                let name = parameter.get_variable_name().cloned().unwrap_or("_".into());
 
-    //     let assignments = inline.parameters.iter().zip(arguments).map(
-    //         |(parameter, argument): (&Parameter, TypedCallArg)| {
-    //             Statement::Assignment(Assignment {
-    //                 location: BLANK_LOCATION,
-    //                 value: argument.value,
-    //                 pattern: TypedPattern::Variable {
-    //                     location,
-    //                     name: parameter.name.clone(),
-    //                     type_: type_.clone(),
-    //                     origin: VariableOrigin::Generated,
-    //                 },
-    //                 kind: AssignmentKind::Generated,
-    //                 compiled_case: CompiledCase::simple_variable_assignment(
-    //                     parameter.name.clone(),
-    //                     type_.clone(),
-    //                 ),
-    //                 annotation: None,
-    //             })
-    //         },
-    //     );
+                Statement::Assignment(Assignment {
+                    location: BLANK_LOCATION,
+                    value: argument.value,
+                    pattern: TypedPattern::Variable {
+                        location: BLANK_LOCATION,
+                        name: name.clone(),
+                        type_: type_::nil(),
+                        origin: VariableOrigin::Generated,
+                    },
+                    kind: AssignmentKind::Generated,
+                    compiled_case: CompiledCase::simple_variable_assignment(name, type_::nil()),
+                    annotation: None,
+                })
+            });
 
-    //     let statements = assignments
-    //         .chain(
-    //             inline
-    //                 .body
-    //                 .iter()
-    //                 .map(|ast| Statement::Expression(ast.to_expression())),
-    //         )
-    //         .collect_vec();
+        let statements = assignments.chain(body.into_iter()).collect_vec();
 
-    //     TypedExpr::Block {
-    //         location,
-    //         statements,
-    //     }
-    // }
+        TypedExpr::Block {
+            location: BLANK_LOCATION,
+            statements: statements
+                .try_into()
+                .expect("Type checking ensures there is at least one statement"),
+        }
+    }
 
     fn pipeline(
         &self,
