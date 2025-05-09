@@ -63,7 +63,7 @@ pub struct PackageCompiler<'a, IO> {
     pub compile_beam_bytecode: bool,
     pub subprocess_stdio: Stdio,
     pub target_support: TargetSupport,
-    pub cached_warnings: CachedWarnings,
+    pub package_kind: PackageKind,
 }
 
 impl<'a, IO> PackageCompiler<'a, IO>
@@ -97,7 +97,7 @@ where
             compile_beam_bytecode: true,
             subprocess_stdio: Stdio::Inherit,
             target_support: TargetSupport::NotEnforced,
-            cached_warnings: CachedWarnings::Ignore,
+            package_kind: PackageKind::Dependency,
         }
     }
 
@@ -134,7 +134,7 @@ where
             self.ids.clone(),
             self.mode,
             self.root,
-            self.cached_warnings,
+            self.package_kind,
             warnings,
             codegen_required,
             &artefact_directory,
@@ -256,7 +256,12 @@ where
             self.io.symlink_dir(&priv_source, &priv_build)?;
         }
 
-        let copier = NativeFileCopier::new(self.io.clone(), self.root.clone(), destination_dir);
+        let copier = NativeFileCopier::new(
+            self.io.clone(),
+            self.root.clone(),
+            destination_dir,
+            self.package_kind,
+        );
         let copied = copier.run()?;
 
         to_compile_modules.extend(copied.to_compile.into_iter());
@@ -308,7 +313,7 @@ where
             // Dependency packages don't get warnings persisted as the
             // programmer doesn't want to be told every time about warnings they
             // cannot fix directly.
-            if self.cached_warnings.should_use() {
+            if self.package_kind.cache_warnings() {
                 let warnings = &module.ast.type_info.warnings;
                 let data = bincode::serialize(warnings).expect("Serialise warnings");
                 self.io.write_bytes(&cache_files.warnings_path, &data)?;
@@ -698,15 +703,22 @@ struct ErlangEntrypointModule<'a> {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum CachedWarnings {
-    Use,
-    Ignore,
+pub enum PackageKind {
+    Root,
+    Dependency,
 }
-impl CachedWarnings {
-    pub(crate) fn should_use(&self) -> bool {
+impl PackageKind {
+    pub(crate) fn cache_warnings(&self) -> bool {
         match self {
-            CachedWarnings::Use => true,
-            CachedWarnings::Ignore => false,
+            PackageKind::Root => true,
+            PackageKind::Dependency => false,
+        }
+    }
+
+    pub(crate) fn is_root(&self) -> bool {
+        match self {
+            PackageKind::Root => true,
+            PackageKind::Dependency => false,
         }
     }
 }

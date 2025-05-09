@@ -38,7 +38,7 @@ use std::{
 use super::{
     Codegen, Compile, ErlangAppCodegenConfiguration, Outcome,
     elixir_libraries::ElixirLibraries,
-    package_compiler::{CachedWarnings, Compiled},
+    package_compiler::{Compiled, PackageKind},
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -613,10 +613,10 @@ where
             // unaccessible so long as they are not used by the root package.
             TargetSupport::NotEnforced
         };
-        compiler.cached_warnings = if is_root {
-            CachedWarnings::Use
+        compiler.package_kind = if is_root {
+            PackageKind::Root
         } else {
-            CachedWarnings::Ignore
+            PackageKind::Dependency
         };
 
         // Compile project to Erlang or JavaScript source code
