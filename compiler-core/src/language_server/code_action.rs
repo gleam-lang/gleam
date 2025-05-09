@@ -5140,14 +5140,21 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
     }
 }
 
-/// Builder for the TODO
-/// TODO:
-/// - [X] Pop up when putting stuff in another module
-/// - [X] Variant with no fields is not caught up as it is not a function
-/// - [X] Generate from patterns as well!
-/// - [X] Generate for module select as well!
-/// - [ ] Qualify it or not!
-/// - [X] Never generate the same variant twice! If the variant is already there it should propose to qualify it!
+/// Builder for the "generate variant" code action. This will generate a variant
+/// for a type if it can tell the type it should come from. It will work with
+/// non-existing variants both used as expressions
+///
+/// ```gleam
+/// let a = IDoNotExist(1)
+/// //      ^^^^^^^^^^^ It would generate this variant here
+/// ```
+///
+/// And as patterns:
+///
+/// ```gleam
+/// let assert IDoNotExist(1) = todo
+///            ^^^^^^^^^^^ It would generate this variant here
+/// ```
 ///
 pub struct GenerateVariant<'a, IO> {
     module: &'a Module,
