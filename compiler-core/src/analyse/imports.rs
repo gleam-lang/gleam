@@ -136,7 +136,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
     fn register_unqualified_value(
         &mut self,
         import: &UnqualifiedImport,
-        module_full_name: EcoString,
+        module_name: EcoString,
         module: &ModuleInterface,
     ) {
         let import_name = &import.name;
@@ -189,7 +189,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                 self.environment.references.register_value(
                     used_name.clone(),
                     EntityKind::ImportedConstructor {
-                        module: module_full_name,
+                        module: module_name,
                     },
                     location,
                     Publicity::Private,
@@ -208,7 +208,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                 self.environment.references.register_value(
                     used_name.clone(),
                     EntityKind::ImportedValue {
-                        module: module_full_name,
+                        module: module_name,
                     },
                     location,
                     Publicity::Private,
