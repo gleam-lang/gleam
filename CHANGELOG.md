@@ -267,6 +267,10 @@
   link to their corresponding documentation pages.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The build tool will now emit an error when compiling a package if the package
+  has a Gleam and Erlang file which would collide.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Language server
 
 - The code action to add missing labels to function now also works in patterns:
