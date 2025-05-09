@@ -848,16 +848,21 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             end: sequence_location.end,
         };
 
-        let call = self.infer_call(
-            *call.function,
-            call.arguments,
-            call_location,
-            CallKind::Use {
-                call_location: use_call_location,
-                assignments_location: use_.assignments_location,
-                last_statement_location,
-            },
-        );
+        // We use `stacker` to prevent overflowing the stack when many `use`
+        // expressions are chained. See https://github.com/gleam-lang/gleam/issues/4287
+        let infer_call = || {
+            self.infer_call(
+                *call.function,
+                call.arguments,
+                call_location,
+                CallKind::Use {
+                    call_location: use_call_location,
+                    assignments_location: use_.assignments_location,
+                    last_statement_location,
+                },
+            )
+        };
+        let call = stacker::maybe_grow(32 * 1024, 1024 * 1024, infer_call);
 
         // After typing the call we know that the last argument must be an
         // anonymous function and the first assignments in its body are the
