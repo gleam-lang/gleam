@@ -159,10 +159,10 @@ fn tag_tuple_pattern<'a>(
     guards: &mut Vec<Document<'a>>,
 ) -> Document<'a> {
     if args.is_empty() {
-        atom_string(name.to_snake_case())
+        atom_string(to_snake_case(name))
     } else {
         tuple(
-            [atom_string(name.to_snake_case())]
+            [atom_string(to_snake_case(name))]
                 .into_iter()
                 .chain(args.iter().map(|p| print(&p.value, vars, env, guards))),
         )

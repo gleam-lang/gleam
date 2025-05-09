@@ -8,12 +8,8 @@ license-file = "LICENCE"
 [dependencies]
 # Error message and warning formatting
 codespan-reporting = "0"
-# String case conversion
-heck = "0"
 # Graph data structures
 petgraph = "0"
-# Levenshtein string distance for typo suggestions
-strsim = "0"
 # Cap'n Proto binary format runtime
 capnp = "0"
 # Template rendering
@@ -53,7 +49,6 @@ radix_trie = "0.2.1"
 
 async-trait.workspace = true
 base16.workspace = true
-bytes.workspace = true
 camino = { workspace = true, features = ["serde1"] }
 debug-ignore.workspace = true
 ecow = { workspace = true, features = ["serde"] }

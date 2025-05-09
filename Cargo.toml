@@ -26,7 +26,6 @@ serde = { version = "1", features = ["derive", "rc"] }
 serde_json = "1"
 # toml config file parsing
 toml = "0"
-walkdir = "2"
 # Enum trait impl macros
 strum = { version = "0", features = ["derive"] }
 # Hex package manager client
@@ -35,8 +34,6 @@ hexpm = "3.3"
 tar = "0"
 # gzip compression
 flate2 = "1"
-# Byte array data type
-bytes = "1"
 # Logging
 tracing = "0"
 # Macro to work around Rust's traits not working with async. Sigh.

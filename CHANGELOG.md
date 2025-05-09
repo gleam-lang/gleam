@@ -185,6 +185,10 @@
 - The compiler will not generate needless code for unused pattern variables.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Function parameters are now fault tolerant, meaning that type-checking can
+  continue to occur if a function references invalid type in its signature.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - The build tool now supports placing modules in a directory called `dev`,
@@ -405,7 +409,7 @@
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 - Fixed a bug where LSP ranges would be incorrect when a file contained characters
-  that were represented wit more than one byte in UTF-8.
+  that were represented with more than one byte in UTF-8.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 - Only print the user-friendly LSP message when stdin is a terminal to avoid

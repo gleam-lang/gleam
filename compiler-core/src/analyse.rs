@@ -248,9 +248,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
 
         for f in &statements.functions {
-            if let Err(error) = self.register_value_from_function(f, &mut env) {
-                return self.all_errors(error);
-            }
+            self.register_value_from_function(f, &mut env);
         }
 
         // Infer the types of each statement in the module
@@ -1403,7 +1401,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         &mut self,
         f: &UntypedFunction,
         environment: &mut Environment<'_>,
-    ) -> Result<(), Error> {
+    ) {
         let Function {
             name,
             arguments: args,
@@ -1438,7 +1436,9 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         {
             check_argument_names(names, &mut self.problems);
 
-            builder.add(names.get_label(), *location)?;
+            if let Err(error) = builder.add(names.get_label(), *location) {
+                self.problems.error(error);
+            }
         }
         let field_map = builder.finish();
         let mut hydrator = Hydrator::new();
@@ -1450,11 +1450,30 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let arg_types = args
             .iter()
             .map(|arg| {
-                hydrator.type_from_option_ast(&arg.annotation, environment, &mut self.problems)
+                match hydrator.type_from_option_ast(
+                    &arg.annotation,
+                    environment,
+                    &mut self.problems,
+                ) {
+                    Ok(type_) => type_,
+                    Err(error) => {
+                        self.problems.error(error);
+                        environment.new_unbound_var()
+                    }
+                }
             })
-            .try_collect()?;
+            .collect();
+
         let return_type =
-            hydrator.type_from_option_ast(return_annotation, environment, &mut self.problems)?;
+            match hydrator.type_from_option_ast(return_annotation, environment, &mut self.problems)
+            {
+                Ok(type_) => type_,
+                Err(error) => {
+                    self.problems.error(error);
+                    environment.new_unbound_var()
+                }
+            };
+
         let type_ = fn_(arg_types, return_type);
         let _ = self.hydrators.insert(name.clone(), hydrator);
 
@@ -1481,7 +1500,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             *publicity,
             deprecation.clone(),
         );
-        Ok(())
     }
 
     fn check_for_type_leaks(&mut self, value: &ValueConstructor) {
