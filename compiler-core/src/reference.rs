@@ -95,7 +95,7 @@ pub struct ReferenceTracker {
     pub type_references: ReferenceMap,
 
     /// This map is used to access the nodes of modules that were not
-    /// aliased, given their full name.
+    /// aliased, given their name.
     /// We need this to keep track of references made to imports by unqualified
     /// values/types: when an unqualified item is used we want to add an edge
     /// pointing to the import it comes from, so that if the item is used the
@@ -287,7 +287,7 @@ impl ReferenceTracker {
         // unused!
         self.current_node = self.create_node(used_name.clone(), EntityLayer::Module);
         // Also we want to register the fact that if this alias is used then the
-        // import is used: so we add a reference from the alias to the full import
+        // import is used: so we add a reference from the alias to the import
         // we've just added.
         self.register_module_reference(module_name.clone());
 
