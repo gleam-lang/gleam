@@ -185,6 +185,10 @@
 - The compiler will not generate needless code for unused pattern variables.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Function parameters are now fault tolerant, meaning that type-checking can
+  continue to occur if a function references invalid type in its signature.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - The build tool now supports placing modules in a directory called `dev`,
