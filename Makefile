@@ -27,6 +27,18 @@ test: ## Run the compiler unit tests
 	cd test/running_modules && make test
 	cd test/subdir_ffi && make
 
+.PHONY: fmt
+fmt: ## Run rustfmt to format all Rust code
+	cargo fmt
+
+.PHONY: fmt-check
+fmt-check: ## Check that all Rust code is properly formatted
+	cargo fmt -- --check
+
+.PHONY: lint
+lint: ## Run Clippy and treat all warnings as errors
+	cargo clippy -- -D warnings
+
 .PHONY: language-test
 language-test: ## Run the language integration tests for all targets
 	cd test/language && make
