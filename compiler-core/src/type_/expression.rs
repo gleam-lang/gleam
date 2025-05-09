@@ -2724,6 +2724,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_module_access(
         &mut self,
+        // This is the name of the module coming before the `.`: for example
+        // in `result.try` it's `result`.
         module_alias: &EcoString,
         label: EcoString,
         module_location: &SrcSpan,
@@ -2768,10 +2770,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             self.environment
                 .references
                 .register_module_reference(module_alias.clone());
-            let constructor = constructor.clone();
-            let module_name = module.name.clone();
 
-            (module_name, constructor)
+            (module.name.clone(), constructor.clone())
         };
 
         let type_ = self.instantiate(constructor.type_, &mut hashmap![]);

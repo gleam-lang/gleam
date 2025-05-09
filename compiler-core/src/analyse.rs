@@ -938,7 +938,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .collect();
         let typed_parameters = environment
             .get_type_constructor(&None, &name)
-            .expect("Could not find preregistered type constructor ")
+            .expect("Could not find preregistered type constructor")
             .parameters
             .clone();
 

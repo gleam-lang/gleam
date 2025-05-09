@@ -4,7 +4,7 @@ use crate::{
     Error, STDLIB_PACKAGE_NAME,
     ast::{
         self, AssignName, AssignmentKind, BitArraySegmentTruncation, CallArg, CustomType,
-        FunctionLiteralKind, ImplicitCallArgOrigin, PIPE_PRECEDENCE, Pattern,
+        FunctionLiteralKind, ImplicitCallArgOrigin, Import, PIPE_PRECEDENCE, Pattern,
         PatternUnusedArguments, PipelineAssignmentKind, RecordConstructor, SrcSpan, TodoKind,
         TypedArg, TypedAssignment, TypedExpr, TypedModuleConstant, TypedPattern,
         TypedPipelineAssignment, TypedRecordConstructor, TypedStatement, TypedUse,
@@ -1299,7 +1299,7 @@ impl<'a> AddAnnotations<'a> {
 }
 
 pub struct QualifiedConstructor<'a> {
-    import: &'a ast::Import<EcoString>,
+    import: &'a Import<EcoString>,
     module_aliased: bool,
     used_name: EcoString,
     constructor: EcoString,
@@ -1342,7 +1342,7 @@ impl<'a> QualifiedToUnqualifiedImportFirstPass<'a> {
         module_name: &EcoString,
         constructor: &EcoString,
         layer: ast::Layer,
-    ) -> Option<&'a ast::Import<EcoString>> {
+    ) -> Option<&'a Import<EcoString>> {
         let mut matching_import = None;
 
         for def in &self.module.ast.definitions {
@@ -1607,7 +1607,7 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
 
     fn find_last_char_before_closing_brace(&self) -> Option<(usize, char)> {
         let QualifiedConstructor {
-            import: ast::Import { location, .. },
+            import: Import { location, .. },
             ..
         } = self.qualified_constructor;
         let import_code = self.get_import_code();
@@ -1631,7 +1631,7 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
 
     fn get_import_code(&self) -> &str {
         let QualifiedConstructor {
-            import: ast::Import { location, .. },
+            import: Import { location, .. },
             ..
         } = self.qualified_constructor;
         self.module
@@ -1657,7 +1657,7 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
     // Handle inserting into an unbraced import
     fn insert_into_unbraced_import(&self, name: String, module_aliased: bool) -> (u32, String) {
         let QualifiedConstructor {
-            import: ast::Import { location, .. },
+            import: Import { location, .. },
             ..
         } = self.qualified_constructor;
         if !module_aliased {
@@ -1681,7 +1681,7 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
     // Handle inserting into a braced import
     fn insert_into_braced_import(&self, name: String) -> (u32, String) {
         let QualifiedConstructor {
-            import: ast::Import { location, .. },
+            import: Import { location, .. },
             ..
         } = self.qualified_constructor;
         if let Some((pos, c)) = self.find_last_char_before_closing_brace() {
@@ -6614,5 +6614,214 @@ impl<'ast> ast::visit::Visit<'ast> for FixTruncatedBitArraySegment<'ast> {
         }
 
         ast::visit::visit_typed_expr_bit_array_segment(self, segment);
+    }
+}
+
+/// Code action builder to remove unused imports and values.
+///
+pub struct RemoveUnusedImports<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    imports: Vec<&'a Import<EcoString>>,
+    edits: TextEdits<'a>,
+}
+
+#[derive(Debug)]
+enum UnusedImport {
+    ValueOrType(SrcSpan),
+    Module(SrcSpan),
+    ModuleAlias(SrcSpan),
+}
+
+impl UnusedImport {
+    fn location(&self) -> SrcSpan {
+        match self {
+            UnusedImport::ValueOrType(location)
+            | UnusedImport::Module(location)
+            | UnusedImport::ModuleAlias(location) => *location,
+        }
+    }
+}
+
+impl<'a> RemoveUnusedImports<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            imports: vec![],
+        }
+    }
+
+    /// Given an import location, returns a list of the spans of all the
+    /// unqualified values it's importing. Sorted by SrcSpan location.
+    ///
+    fn imported_values(&self, import_location: SrcSpan) -> Vec<SrcSpan> {
+        self.imports
+            .iter()
+            .find(|import| import.location.contains(import_location.start))
+            .map(|import| {
+                let types = import.unqualified_types.iter().map(|type_| type_.location);
+                let values = import.unqualified_values.iter().map(|value| value.location);
+                types
+                    .chain(values)
+                    .sorted_by_key(|location| location.start)
+                    .collect_vec()
+            })
+            .unwrap_or_default()
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        // If there's no import in the module then there can't be any unused
+        // import to remove.
+        self.visit_typed_module(&self.module.ast);
+        if self.imports.is_empty() {
+            return vec![];
+        }
+
+        let unused_imports = (self.module.ast.type_info.warnings.iter())
+            .filter_map(|warning| match warning {
+                type_::Warning::UnusedImportedValue { location, .. } => {
+                    Some(UnusedImport::ValueOrType(*location))
+                }
+                type_::Warning::UnusedType {
+                    location,
+                    imported: true,
+                    ..
+                } => Some(UnusedImport::ValueOrType(*location)),
+                type_::Warning::UnusedImportedModule { location, .. } => {
+                    Some(UnusedImport::Module(*location))
+                }
+                type_::Warning::UnusedImportedModuleAlias { location, .. } => {
+                    Some(UnusedImport::ModuleAlias(*location))
+                }
+                _ => None,
+            })
+            .sorted_by_key(|import| import.location())
+            .collect_vec();
+
+        // If the cursor is not over any of the unused imports then we don't offer
+        // the code action.
+        let hovering_unused_import = unused_imports.iter().any(|import| {
+            let unused_range = self.edits.src_span_to_lsp_range(import.location());
+            overlaps(self.params.range, unused_range)
+        });
+        if !hovering_unused_import {
+            return vec![];
+        }
+
+        // Otherwise we start removing all unused imports:
+        for import in &unused_imports {
+            match import {
+                // When an entire module is unused we can delete its entire location
+                // in the source code.
+                UnusedImport::Module(location) | UnusedImport::ModuleAlias(location) => {
+                    if self.edits.line_numbers.spans_entire_line(location) {
+                        // If the unused module spans over the entire line then
+                        // we also take care of removing the following newline
+                        // characther!
+                        self.edits.delete(SrcSpan {
+                            start: location.start,
+                            end: location.end + 1,
+                        })
+                    } else {
+                        self.edits.delete(*location)
+                    }
+                }
+
+                // When removing unused imported values we have to be a bit more
+                // careful: an unused value might be followed or preceded by a
+                // comma that we also need to remove!
+                UnusedImport::ValueOrType(location) => {
+                    let imported = self.imported_values(*location);
+                    let unused_index = imported.binary_search(location);
+                    let is_last = unused_index.is_ok_and(|index| index == imported.len() - 1);
+                    let next_value = unused_index
+                        .ok()
+                        .and_then(|value_index| imported.get(value_index + 1));
+                    let previous_value = unused_index.ok().and_then(|value_index| {
+                        value_index
+                            .checked_sub(1)
+                            .and_then(|previous_index| imported.get(previous_index))
+                    });
+                    let previous_is_unused = previous_value.is_some_and(|previous| {
+                        unused_imports
+                            .as_slice()
+                            .binary_search_by_key(previous, |import| import.location())
+                            .is_ok()
+                    });
+
+                    match (previous_value, next_value) {
+                        // If there's a value following the unused import we need
+                        // to remove all characters until its start!
+                        //
+                        // ```gleam
+                        // import wibble.{unused,    used}
+                        // //             ^^^^^^^^^^^ We need to remove all of this!
+                        // ```
+                        //
+                        (_, Some(next_value)) => self.edits.delete(SrcSpan {
+                            start: location.start,
+                            end: next_value.start,
+                        }),
+
+                        // If this unused import is the last of the unuqualified
+                        // list and is preceded by another used value then we
+                        // need to do some additional cleanup and remove all
+                        // characters starting from its end.
+                        // (If the previous one is unused as well it will take
+                        // care of removing all the extra space)
+                        //
+                        // ```gleam
+                        // import wibble.{used,     unused}
+                        // //                 ^^^^^^^^^^^^ We need to remove all of this!
+                        // ```
+                        //
+                        (Some(previous_value), _) if is_last && !previous_is_unused => {
+                            self.edits.delete(SrcSpan {
+                                start: previous_value.end,
+                                end: location.end,
+                            })
+                        }
+
+                        // In all other cases it means that this is the only
+                        // item in the import list. We can just remove it.
+                        //
+                        // ```gleam
+                        // import wibble.{unused}
+                        // //             ^^^^^^ We remove this import, the formatter will already
+                        // //                    take care of removing the empty curly braces
+                        // ```
+                        //
+                        (_, _) => self.edits.delete(*location),
+                    }
+                }
+            }
+        }
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Remove unused imports")
+            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(true)
+            .push_to(&mut action);
+        action
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for RemoveUnusedImports<'ast> {
+    fn visit_typed_module(&mut self, module: &'ast ast::TypedModule) {
+        self.imports = module
+            .definitions
+            .iter()
+            .filter_map(|definition| match definition {
+                ast::Definition::Import(import) => Some(import),
+                _ => None,
+            })
+            .collect_vec();
     }
 }
