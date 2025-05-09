@@ -3109,3 +3109,8 @@ fn negative_size_pattern() {
 fn zero_size_pattern() {
     assert_error!("let assert <<1:size(0)>> = <<>>");
 }
+
+#[test]
+fn non_utf8_string_assignment() {
+    assert_error!(r#"let assert <<"Hello" as message:utf16>> = <<>>"#);
+}

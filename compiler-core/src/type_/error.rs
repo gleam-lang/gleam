@@ -633,6 +633,10 @@ pub enum Error {
     DoubleVariableAssignmentInBitArray {
         location: SrcSpan,
     },
+
+    NonUtf8StringAssignmentInBitArray {
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1136,7 +1140,8 @@ impl Error {
             | Error::FloatOperatorOnInts { location, .. }
             | Error::IntOperatorOnFloats { location, .. }
             | Error::StringConcatenationWithAddInt { location }
-            | Error::DoubleVariableAssignmentInBitArray { location } => location.start,
+            | Error::DoubleVariableAssignmentInBitArray { location }
+            | Error::NonUtf8StringAssignmentInBitArray { location } => location.start,
 
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)

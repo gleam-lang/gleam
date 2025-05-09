@@ -2097,3 +2097,137 @@ pub fn go(x) {
 "#
     );
 }
+
+#[test]
+fn utf16() {
+    assert_js!(
+        r#"
+pub fn main() {
+  <<"Hello, world!":utf16>>
+}
+"#
+    );
+}
+
+#[test]
+fn utf16_codepoint() {
+    assert_js!(
+        r#"
+fn codepoint() -> UtfCodepoint { todo }
+
+pub fn main() {
+  let my_codepoint = codepoint()
+  <<my_codepoint:utf16_codepoint>>
+}
+"#
+    );
+}
+
+#[test]
+fn utf32() {
+    assert_js!(
+        r#"
+pub fn main() {
+  <<"Hello, world!":utf32>>
+}
+"#
+    );
+}
+
+#[test]
+fn utf32_codepoint() {
+    assert_js!(
+        r#"
+fn codepoint() -> UtfCodepoint { todo }
+
+pub fn main() {
+  let my_codepoint = codepoint()
+  <<my_codepoint:utf32_codepoint>>
+}
+"#
+    );
+}
+
+#[test]
+fn const_utf16() {
+    assert_js!(
+        r#"
+pub const message = <<"Hello, world!":utf16>>
+"#
+    );
+}
+
+#[test]
+fn const_utf32() {
+    assert_js!(
+        r#"
+pub const message = <<"Hello, world!":utf32>>
+"#
+    );
+}
+
+#[test]
+fn pattern_match_utf16() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  let assert <<"Hello":utf16, _rest:bytes>> = x
+}
+"#
+    );
+}
+
+#[test]
+fn pattern_match_utf32() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  let assert <<"Hello":utf32, _rest:bytes>> = x
+}
+"#
+    );
+}
+
+#[test]
+fn utf16_little_endian() {
+    assert_js!(
+        r#"
+pub fn main() {
+  <<"Hello, world!":utf16-little>>
+}
+"#
+    );
+}
+
+#[test]
+fn utf32_little_endian() {
+    assert_js!(
+        r#"
+pub fn main() {
+  <<"Hello, world!":utf32-little>>
+}
+"#
+    );
+}
+
+#[test]
+fn pattern_match_utf16_little_endian() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  let assert <<"Hello":utf16-little, _rest:bytes>> = x
+}
+"#
+    );
+}
+
+#[test]
+fn pattern_match_utf32_little_endian() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  let assert <<"Hello":utf32-little, _rest:bytes>> = x
+}
+"#
+    );
+}

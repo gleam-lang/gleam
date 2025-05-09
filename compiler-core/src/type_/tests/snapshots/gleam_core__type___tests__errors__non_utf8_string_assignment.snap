@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "let assert <<\"Hello\" as message:utf16>> = <<>>"
+---
+----- SOURCE CODE
+let assert <<"Hello" as message:utf16>> = <<>>
+
+----- ERROR
+error: Non UTF-8 string assignment
+  ┌─ /src/one/two.gleam:1:25
+  │
+1 │ let assert <<"Hello" as message:utf16>> = <<>>
+  │                         ^^^^^^^
+
+This pattern assigns a non UTF-8 string to a variable in a bit array. This
+is planned to be supported in the future, but we are unsure of the desired
+behaviour. Please go to https://github.com/gleam-lang/gleam/issues/4566 and
+explain your usecase for this pattern, and how you would expect it to
+behave.
