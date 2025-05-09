@@ -12,6 +12,8 @@ use crate::{
     paths::ProjectPaths,
 };
 
+use super::package_compiler::PackageKind;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct CopiedNativeFiles {
     pub any_elixir: bool,
@@ -26,13 +28,19 @@ pub(crate) struct NativeFileCopier<'a, IO> {
     seen_modules: HashMap<EcoString, Utf8PathBuf>,
     to_compile: Vec<Utf8PathBuf>,
     elixir_files_copied: bool,
+    package_kind: PackageKind,
 }
 
 impl<'a, IO> NativeFileCopier<'a, IO>
 where
     IO: FileSystemReader + FileSystemWriter + Clone,
 {
-    pub(crate) fn new(io: IO, root: &'a Utf8Path, out: &'a Utf8Path) -> Self {
+    pub(crate) fn new(
+        io: IO,
+        root: &'a Utf8Path,
+        out: &'a Utf8Path,
+        package_kind: PackageKind,
+    ) -> Self {
         Self {
             io,
             paths: ProjectPaths::new(root.into()),
@@ -41,6 +49,7 @@ where
             seen_native_files: HashSet::new(),
             seen_modules: HashMap::new(),
             elixir_files_copied: false,
+            package_kind,
         }
     }
 
@@ -96,6 +105,7 @@ where
         // add a special case for `.gleam`.
         if extension == "gleam" {
             self.check_for_conflicting_javascript_modules(&relative_path)?;
+            self.check_for_conflicting_erlang_modules(&relative_path)?;
 
             return Ok(());
         }
@@ -212,24 +222,45 @@ where
         &mut self,
         relative_path: &Utf8PathBuf,
     ) -> Result<(), Error> {
-        // Ideally we'd check for `.gleam` files here as well. However, it is
-        // actually entirely legitimate to receive precompiled `.erl` files for
-        // each `.gleam` file from Hex, so this would prompt an error for every
-        // package downloaded from Hex, which we do not want.
-        if !matches!(relative_path.extension(), Some("erl")) {
-            return Ok(());
-        }
+        let erlang_module_name = match relative_path.extension() {
+            Some("erl") => {
+                eco_format!("{}", relative_path.file_name().expect("path has file name"))
+            }
+            // We only check for conflicting Gleam files if this is the root
+            // package, since Hex packages are bundled with the Gleam source files
+            // and compiled Erlang files next to each other.
+            Some("gleam") if self.package_kind.is_root() => relative_path
+                .with_extension("erl")
+                .as_str()
+                .replace("/", "@")
+                .into(),
+            _ => return Ok(()),
+        };
 
         // Insert just the `.erl` module filename in `seen_modules` instead of
         // its full relative path, because `.erl` files with the same name
         // cause a conflict when targetting Erlang regardless of subpath.
-        let erl_file = relative_path.file_name().expect("path has file name");
-        let erl_string = eco_format!("{}", erl_file);
+        if let Some(existing) = self
+            .seen_modules
+            .insert(erlang_module_name, relative_path.clone())
+        {
+            let existing_is_gleam = existing.extension() == Some("gleam");
+            if existing_is_gleam || relative_path.extension() == Some("gleam") {
+                let (gleam_file, native_file) = if existing_is_gleam {
+                    (&existing, relative_path)
+                } else {
+                    (relative_path, &existing)
+                };
+                return Err(Error::ClashingGleamModuleAndNativeFileName {
+                    module: eco_format!("{}", gleam_file.with_extension("")),
+                    gleam_file: gleam_file.clone(),
+                    native_file: native_file.clone(),
+                });
+            }
 
-        if let Some(first) = self.seen_modules.insert(erl_string, relative_path.clone()) {
             return Err(Error::DuplicateNativeErlangModule {
                 module: eco_format!("{}", relative_path.file_stem().expect("path has file stem")),
-                first,
+                first: existing,
                 second: relative_path.clone(),
             });
         }

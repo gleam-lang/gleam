@@ -32,9 +32,7 @@ use crate::{
 use super::{
     Mode, Target,
     module_loader::read_source,
-    package_compiler::{
-        CacheMetadata, CachedModule, CachedWarnings, Input, Loaded, UncompiledModule,
-    },
+    package_compiler::{CacheMetadata, CachedModule, Input, Loaded, PackageKind, UncompiledModule},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -67,7 +65,7 @@ pub struct PackageLoader<'a, IO> {
     stale_modules: &'a mut StaleTracker,
     already_defined_modules: &'a mut im::HashMap<EcoString, Utf8PathBuf>,
     incomplete_modules: &'a HashSet<EcoString>,
-    cached_warnings: CachedWarnings,
+    package_kind: PackageKind,
 }
 
 impl<'a, IO> PackageLoader<'a, IO>
@@ -79,7 +77,7 @@ where
         ids: UniqueIdGenerator,
         mode: Mode,
         root: &'a Utf8Path,
-        cached_warnings: CachedWarnings,
+        cached_warnings: PackageKind,
         warnings: &'a WarningEmitter,
         codegen: CodegenRequired,
         artefact_directory: &'a Utf8Path,
@@ -98,7 +96,7 @@ where
             codegen,
             target,
             package_name,
-            cached_warnings,
+            package_kind: cached_warnings,
             artefact_directory,
             stale_modules,
             already_defined_modules,
@@ -187,7 +185,7 @@ where
         let mut module = metadata::ModuleDecoder::new(self.ids.clone()).read(bytes.as_slice())?;
 
         // Load warnings
-        if self.cached_warnings.should_use() {
+        if self.package_kind.cache_warnings() {
             let path = cache_files.warnings_path;
             if self.io.exists(&path) {
                 let bytes = self.io.read_bytes(&path)?;
