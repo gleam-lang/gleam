@@ -1092,7 +1092,7 @@ Please make sure internal types do not appear in public functions and try again.
             Error::CannotPublishLeakedDevDependency { module, package } => {
                 let text = &format!("The module `{module}` is being imported from `{package}`, but package is not a direct dependency of your project.\nRun this command to add it to your dependencies:\n\tgleam add {package}");
                 vec![Diagnostic {
-                    title: "Developer dependency imported".into(),
+                    title: "Development dependency imported".into(),
                     text: text.to_string(),
                     hint: None,
                     level: Level::Error,
