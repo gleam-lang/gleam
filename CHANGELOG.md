@@ -1,5 +1,9 @@
 # Changelog
 
+## v4.0.0 - 2025-05-09
+
+- Removed `version::{pubgrub_report, Version::bump, PackageVersions, resolve_versions, PackageFetcher}`.
+
 ## v3.3.0 - 2025-03-10
 
 - Replaced protobuf dependency with prost to avoid a security vulnerability.
