@@ -357,6 +357,23 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The function signature helper now displays original function definition
+  generic names when arguments are unbound. For example, in this code:
+
+  ```gleam
+  pub fn wibble(x: something, y: fn() -> something, z: anything) { Nil }
+
+  pub fn main() {
+      wibble( )
+          // ↑ triggering signature help here, will produce:
+          //      wibble(something, fn() -> something, anything)
+          // instead of
+          //      wibble(a, fn() -> a, b) -> Nil
+  }
+  ```
+
+  ([Samuel Cristobal](https://github.com/scristobal))
+
 ### Formatter
 
 ### Installation

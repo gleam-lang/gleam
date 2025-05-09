@@ -410,6 +410,35 @@ pub fn main() {
 }
 
 #[test]
+pub fn help_for_use_function_call_uses_generic_names_when_missing_all_arguments() {
+    assert_signature_help!(
+        r#"
+pub fn wibble(x: something, y: fn() -> something, z: anything) { Nil }
+
+pub fn main() {
+    wibble( )
+}
+"#,
+        find_position_of("wibble( ").under_last_char()
+    );
+}
+
+#[test]
+pub fn help_for_use_function_call_uses_concrete_types_when_possible_or_generic_names_when_unbound()
+{
+    assert_signature_help!(
+        r#"
+pub fn wibble(x: something, y: fn() -> something, z: anything) { Nil }
+
+pub fn main() {
+    wibble(1, )
+}
+"#,
+        find_position_of("wibble(1, )").under_last_char()
+    );
+}
+
+#[test]
 pub fn help_for_use_function_shows_next_unlabelled_argument() {
     assert_signature_help!(
         r#"

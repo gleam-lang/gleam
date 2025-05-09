@@ -37,7 +37,7 @@ use crate::{
 };
 use error::*;
 use hydrator::Hydrator;
-use itertools::Itertools;
+use itertools::{Itertools, any};
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
@@ -156,6 +156,18 @@ impl Type {
         match self {
             Self::Var { type_ } => type_.borrow().is_unbound(),
             _ => false,
+        }
+    }
+
+    /// returns true if and only if the type or any type in the tree below is unbound
+    pub fn is_deep_unbound(&self) -> bool {
+        match self {
+            Type::Named { args, .. } => any(args, |arg| arg.is_deep_unbound()),
+            Type::Fn { args, return_ } => {
+                return_.is_deep_unbound() || any(args, |arg| arg.is_deep_unbound())
+            }
+            Type::Var { type_ } => type_.borrow().is_deep_unbound(),
+            Type::Tuple { elements } => any(elements, |e| e.is_deep_unbound()),
         }
     }
 
@@ -1172,6 +1184,15 @@ impl TypeVar {
         match self {
             Self::Unbound { .. } => true,
             Self::Link { .. } | Self::Generic { .. } => false,
+        }
+    }
+
+    /// returns true if and only if the type or any type in the tree below is unbound
+    pub fn is_deep_unbound(&self) -> bool {
+        match self {
+            Self::Unbound { .. } => true,
+            Self::Generic { .. } => false,
+            Self::Link { type_ } => type_.is_deep_unbound(),
         }
     }
 

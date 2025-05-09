@@ -76,6 +76,22 @@ impl TypedModule {
             .iter()
             .find_map(|definition| definition.find_statement(byte_index))
     }
+
+    pub fn find_funtion_definition(&self, name: &str) -> Option<&Function<Arc<Type>, TypedExpr>> {
+        self.definitions
+            .iter()
+            .find_map(|definition| match definition {
+                Definition::Function(funtion) => {
+                    if let Some(function_name) = funtion.name.as_ref() {
+                        if function_name.1 == name {
+                            return Some(funtion);
+                        }
+                    }
+                    None
+                }
+                _ => None,
+            })
+    }
 }
 
 /// The `@target(erlang)` and `@target(javascript)` attributes can be used to
