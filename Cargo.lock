@@ -405,15 +405,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "capnpc"
-version = "0.20.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1aa3d5f01e69ed11656d2c7c47bf34327ea9bfb5c85c7de787fcd7b6c5e45b61"
-dependencies = [
- "capnp",
-]
-
-[[package]]
 name = "cc"
 version = "1.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1135,7 +1126,7 @@ dependencies = [
  "toml",
  "toml_edit",
  "tracing",
- "tracing-subscriber 0.2.25",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -1150,7 +1141,6 @@ dependencies = [
  "bincode",
  "camino",
  "capnp",
- "capnpc",
  "codespan-reporting",
  "debug-ignore",
  "dirs-next",
@@ -1203,10 +1193,8 @@ dependencies = [
  "im",
  "itertools",
  "serde",
- "serde-wasm-bindgen",
  "termcolor",
  "tracing",
- "tracing-wasm",
  "wasm-bindgen",
  "wasm-bindgen-test",
 ]
@@ -2808,17 +2796,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde-wasm-bindgen"
-version = "0.6.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8302e169f0eddcc139c70f139d19d6467353af16f9fce27e8c30158036a1e16b"
-dependencies = [
- "js-sys",
- "serde",
- "wasm-bindgen",
-]
-
-[[package]]
 name = "serde_derive"
 version = "1.0.219"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3080,7 +3057,6 @@ dependencies = [
  "camino",
  "gleam-core",
  "im",
- "insta",
  "itertools",
  "regex",
  "toml",
@@ -3364,28 +3340,6 @@ dependencies = [
  "tracing-core",
  "tracing-log",
  "tracing-serde",
-]
-
-[[package]]
-name = "tracing-subscriber"
-version = "0.3.19"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e8189decb5ac0fa7bc8b96b7cb9b2701d60d48805aca84a238004d665fcc4008"
-dependencies = [
- "sharded-slab",
- "thread_local",
- "tracing-core",
-]
-
-[[package]]
-name = "tracing-wasm"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4575c663a174420fa2d78f4108ff68f65bf2fbb7dd89f33749b6e826b3626e07"
-dependencies = [
- "tracing",
- "tracing-subscriber 0.3.19",
- "wasm-bindgen",
 ]
 
 [[package]]

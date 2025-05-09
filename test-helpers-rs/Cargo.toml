@@ -13,6 +13,3 @@ im.workspace = true
 itertools.workspace = true
 regex.workspace = true
 camino.workspace = true
-
-[dev-dependencies]
-insta.workspace = true

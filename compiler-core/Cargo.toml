@@ -73,8 +73,6 @@ tracing.workspace = true
 [build-dependencies]
 # Data (de)serialisation
 serde_derive = "1"
-# Cap'n Proto binary format codegen
-capnpc = "0"
 
 [dev-dependencies]
 pretty_assertions.workspace = true
