@@ -456,3 +456,7 @@
 - Fixed a bug where renaming a local variable which is used in combination with
   label shorthand syntax would produce invalid code.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where the stack would overflow on Windows when type-checking
+  multiple nested `use` expressions.
+  ([Surya Rose](https://github.com/GearsDatapacks))
