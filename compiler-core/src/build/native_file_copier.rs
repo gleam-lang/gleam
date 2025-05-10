@@ -12,7 +12,7 @@ use crate::{
     paths::ProjectPaths,
 };
 
-use super::package_compiler::PackageKind;
+use super::package_compiler::CheckModuleConflicts;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct CopiedNativeFiles {
@@ -28,7 +28,7 @@ pub(crate) struct NativeFileCopier<'a, IO> {
     seen_modules: HashMap<EcoString, Utf8PathBuf>,
     to_compile: Vec<Utf8PathBuf>,
     elixir_files_copied: bool,
-    package_kind: PackageKind,
+    check_module_conflicts: CheckModuleConflicts,
 }
 
 impl<'a, IO> NativeFileCopier<'a, IO>
@@ -39,7 +39,7 @@ where
         io: IO,
         root: &'a Utf8Path,
         out: &'a Utf8Path,
-        package_kind: PackageKind,
+        check_module_conflicts: CheckModuleConflicts,
     ) -> Self {
         Self {
             io,
@@ -49,7 +49,7 @@ where
             seen_native_files: HashSet::new(),
             seen_modules: HashMap::new(),
             elixir_files_copied: false,
-            package_kind,
+            check_module_conflicts,
         }
     }
 
@@ -226,10 +226,7 @@ where
             Some("erl") => {
                 eco_format!("{}", relative_path.file_name().expect("path has file name"))
             }
-            // We only check for conflicting Gleam files if this is the root
-            // package, since Hex packages are bundled with the Gleam source files
-            // and compiled Erlang files next to each other.
-            Some("gleam") if self.package_kind.is_root() => relative_path
+            Some("gleam") if self.check_module_conflicts.should_check() => relative_path
                 .with_extension("erl")
                 .as_str()
                 .replace("/", "@")
