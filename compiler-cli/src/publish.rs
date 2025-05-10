@@ -4,7 +4,7 @@ use flate2::{Compression, write::GzEncoder};
 use gleam_core::{
     Error, Result,
     analyse::TargetSupport,
-    build::{Codegen, Compile, Mode, Options, Package, Target},
+    build::{Codegen, Compile, Mode, Options, Origin, Package, Target},
     config::{GleamVersion, PackageConfig, SpdxLicense},
     docs::DocContext,
     error::{SmallVersion, wrap},
@@ -338,8 +338,21 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
     // refuse to publish as the package is not yet finished.
     let mut modules_containing_todo = vec![];
     let mut modules_containing_echo = vec![];
+    let dev_dependencies: Vec<&EcoString> = config.dev_dependencies.keys().collect();
 
     for module in built.root_package.modules.iter() {
+        for (imported_module, _) in &module.dependencies {
+            if let Some(import_info) = built.module_interfaces.get(imported_module) {
+                let package = &import_info.package;
+                if dev_dependencies.contains(&package) && module.origin == Origin::Src {
+                    return Err(Error::CannotPublishLeakedDevDependency {
+                        module: module.name.clone(),
+                        package: package.clone(),
+                    });
+                }
+            }
+        }
+
         if module.ast.type_info.contains_todo() {
             modules_containing_todo.push(module.name.clone());
         } else if module.ast.type_info.contains_echo {
