@@ -24,7 +24,7 @@ use crate::{
 use ecow::EcoString;
 use hexpm::version::Version;
 use itertools::Itertools;
-use pubgrub::range::Range;
+use pubgrub::Range;
 use std::{
     cmp,
     collections::{HashMap, HashSet},
