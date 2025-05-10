@@ -3,6 +3,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use gleam_core::{
     Error, Result,
     error::{FileIoAction, FileKind},
+    io::HttpClient as HttpClientTrait,
     paths::ProjectPaths,
 };
 
@@ -10,6 +11,7 @@ use crate::{
     cli,
     dependencies::{UseManifest, parse_gleam_add_specifier},
     fs,
+    http::HttpClient,
 };
 
 pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) -> Result<()> {
@@ -70,6 +72,32 @@ pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) ->
         }
 
         cli::print_added(&format!("{added_package} v{version}"));
+
+        let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+        let hex_config = hexpm::Config::new();
+        let api_key = crate::hex::HexAuthentication::new(&runtime, hex_config.clone())
+            .get_or_create_api_key()?;
+        let http = HttpClient::new();
+        let request = hexpm::get_package_release_request(
+            added_package.as_str(),
+            version.to_string().as_str(),
+            Some(api_key.as_str()),
+            &hex_config,
+        );
+        let response = runtime.block_on(http.send(request))?;
+        let parsed_package =
+            hexpm::get_package_release_response(response).expect("Failed to parse package data");
+
+        if let Some(status) = parsed_package.retirement_status {
+            println!(
+                "Warning: Package {} {}.{}.{} is retired for reason: {}",
+                added_package,
+                version.major,
+                version.minor,
+                version.patch,
+                status.reason.to_str()
+            )
+        }
     }
 
     // Write the updated config
