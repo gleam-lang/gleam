@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/docs/tests.rs
+expression: output
+---
+---- SOURCE CODE
+-- main.gleam
+
+pub type Dict(key, value)
+
+pub fn insert(dict: Dict(key, value), key: key, value: value) -> Dict(key, value) {
+  dict
+}
+
+
+---- TYPES
+
+--- Dict
+<pre><code>pub type Dict(key, value)</code></pre>
+
+---- VALUES
+
+--- insert
+<pre><code>pub fn insert(
+  dict: Dict(key, value),
+  key: key,
+  value: value,
+) -> Dict(key, value)</code></pre>

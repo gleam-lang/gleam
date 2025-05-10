@@ -1,18 +1,31 @@
-use std::{collections::HashSet, time::SystemTime};
+use std::{
+    collections::{HashMap, HashSet},
+    time::SystemTime,
+};
 
-use super::{SearchData, SearchItem, SearchItemType, SearchProgrammingLanguage};
+use super::{
+    Dependency, DependencyKind, DocumentationConfig, SearchData, SearchItem, SearchItemType,
+    SearchProgrammingLanguage,
+    printer::{PrintOptions, Printer},
+    source_links::SourceLinker,
+};
 use crate::{
-    build::{Mode, NullTelemetry, PackageCompiler, StaleTracker, TargetCodegenConfiguration},
+    build::{
+        self, Mode, NullTelemetry, Origin, PackageCompiler, StaleTracker,
+        TargetCodegenConfiguration,
+    },
     config::{DocsPage, PackageConfig, Repository},
     docs::DocContext,
     io::{FileSystemWriter, memory::InMemoryFileSystem},
     paths::ProjectPaths,
+    type_,
     uid::UniqueIdGenerator,
     version::COMPILER_VERSION,
     warning::WarningEmitter,
 };
 use camino::Utf8PathBuf;
 use ecow::EcoString;
+use hexpm::version::Version;
 use itertools::Itertools;
 use serde_json::to_string as serde_to_string;
 
@@ -87,16 +100,19 @@ fn compile_with_markdown_pages(
 
     super::generate_html(
         &paths,
-        &config,
-        &modules,
-        &docs_pages,
-        pages_fs,
-        SystemTime::UNIX_EPOCH,
-        if let Some(doc_context) = opts.hex_publish {
-            doc_context
-        } else {
-            DocContext::HexPublish
+        DocumentationConfig {
+            package_config: &config,
+            dependencies: HashMap::new(),
+            analysed: &modules,
+            docs_pages: &docs_pages,
+            rendering_timestamp: SystemTime::UNIX_EPOCH,
+            context: if let Some(doc_context) = opts.hex_publish {
+                doc_context
+            } else {
+                DocContext::HexPublish
+            },
         },
+        pages_fs,
     )
     .into_iter()
     .filter(|file| file.path.extension() == Some("html"))
@@ -122,6 +138,221 @@ pub fn compile(config: PackageConfig, modules: Vec<(&str, &str)>) -> EcoString {
         vec![],
         CompileWithMarkdownPagesOpts::default(),
     )
+}
+
+fn compile_documentation(
+    module_name: &str,
+    module_src: &str,
+    modules: Vec<(&str, &str, &str)>,
+    dependency_kind: DependencyKind,
+    options: PrintOptions,
+) -> EcoString {
+    let module = type_::tests::compile_module(module_name, module_src, None, modules.clone())
+        .expect("Module should compile successfully");
+
+    let mut config = PackageConfig::default();
+    config.name = "thepackage".into();
+    let paths = ProjectPaths::new("/".into());
+    let build_module = build::Module {
+        name: "main".into(),
+        code: module_src.into(),
+        mtime: SystemTime::now(),
+        input_path: "/".into(),
+        origin: Origin::Src,
+        ast: module,
+        extra: Default::default(),
+        dependencies: Default::default(),
+    };
+
+    let source_links = SourceLinker::new(&paths, &config, &build_module);
+
+    let module = build_module.ast;
+    let dependencies = modules
+        .iter()
+        .map(|(package, _, _)| {
+            (
+                EcoString::from(*package),
+                Dependency {
+                    version: Version::new(1, 0, 0),
+                    kind: dependency_kind,
+                },
+            )
+        })
+        .collect();
+
+    let mut printer = Printer::new(
+        module.type_info.package.clone(),
+        module.name.clone(),
+        &module.names,
+        &dependencies,
+    );
+    printer.set_options(options);
+
+    let types = module
+        .definitions
+        .iter()
+        .filter_map(
+            |statement: &crate::ast::Definition<
+                std::sync::Arc<type_::Type>,
+                crate::ast::TypedExpr,
+                EcoString,
+                EcoString,
+            >| printer.type_definition(&source_links, statement),
+        )
+        .sorted()
+        .collect_vec();
+
+    let values = module
+        .definitions
+        .iter()
+        .filter_map(|statement| printer.value(&source_links, statement))
+        .sorted()
+        .collect_vec();
+
+    let mut output = EcoString::new();
+
+    output.push_str("---- SOURCE CODE\n");
+    for (_package, name, src) in modules {
+        output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
+    }
+    output.push_str("-- ");
+    output.push_str(module_name);
+    output.push_str(".gleam\n");
+    output.push_str(module_src);
+
+    if !types.is_empty() {
+        output.push_str("\n\n---- TYPES");
+    }
+    for type_ in types {
+        output.push_str("\n\n--- ");
+        output.push_str(type_.name);
+        if !type_.documentation.is_empty() {
+            output.push('\n');
+            output.push_str(&type_.documentation);
+        }
+        output.push_str("\n<pre><code>");
+        output.push_str(&type_.definition);
+        output.push_str("</code></pre>");
+
+        if !type_.constructors.is_empty() {
+            output.push_str("\n\n-- CONSTRUCTORS");
+        }
+        for constructor in type_.constructors {
+            output.push_str("\n\n");
+            if !constructor.documentation.is_empty() {
+                output.push_str(&constructor.documentation);
+                output.push('\n');
+            }
+            output.push_str("<pre><code>");
+            output.push_str(&constructor.definition);
+            output.push_str("</code></pre>");
+        }
+    }
+
+    if !values.is_empty() {
+        output.push_str("\n\n---- VALUES");
+    }
+    for value in values {
+        output.push_str("\n\n--- ");
+        output.push_str(value.name);
+        if !value.documentation.is_empty() {
+            output.push('\n');
+            output.push_str(&value.documentation);
+        }
+        output.push_str("\n<pre><code>");
+        output.push_str(&value.definition);
+        output.push_str("</code></pre>");
+    }
+
+    output
+}
+
+macro_rules! assert_documentation {
+    ($src:literal $(,)?) => {
+        assert_documentation!($src, PrintOptions::all());
+    };
+
+    ($src:literal, $options:expr $(,)?) => {
+        let output = compile_documentation("main", $src, Vec::new(), DependencyKind::Hex, $options);
+        insta::assert_snapshot!(output);
+    };
+
+    ($(($name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
+        let output = compile_documentation(
+            "main",
+            $src,
+            vec![$(("thepackage", $name, $module_src)),*],
+            DependencyKind::Hex,
+            PrintOptions::all(),
+        );
+        insta::assert_snapshot!(output);
+    };
+
+    ($(($name:expr, $module_src:literal)),+, $src:literal, $options:expr $(,)?) => {
+        let output = compile_documentation(
+            "main",
+            $src,
+            vec![$(("thepackage", $name, $module_src)),*],
+            DependencyKind::Hex,
+            $options,
+        );
+        insta::assert_snapshot!(output);
+    };
+
+    ($(($name:expr, $module_src:literal)),+, $main_module:literal, $src:literal, $options:expr $(,)?) => {
+        let output = compile_documentation(
+            $main_module,
+            $src,
+            vec![$(("thepackage", $name, $module_src)),*],
+            DependencyKind::Hex,
+            $options,
+        );
+        insta::assert_snapshot!(output);
+    };
+
+    ($(($package:expr, $name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
+        let output = compile_documentation(
+            "main",
+            $src,
+            vec![$(($package, $name, $module_src)),*],
+            DependencyKind::Hex,
+            PrintOptions::all(),
+        );
+        insta::assert_snapshot!(output);
+    };
+
+    ($(($package:expr, $name:expr, $module_src:literal)),+, $src:literal, $options:expr $(,)?) => {
+        let output = compile_documentation(
+            "main",
+            $src,
+            vec![$(($package, $name, $module_src)),*],
+            DependencyKind::Hex,
+            $options,
+        );
+        insta::assert_snapshot!(output);
+    };
+
+    (git: $(($package:expr, $name:expr, $module_src:literal)),+, $src:literal, $options:expr $(,)?) => {
+        let output = compile_documentation(
+            "main",
+            $src,
+            vec![$(($package, $name, $module_src)),*],
+            DependencyKind::Git,
+            $options,
+        );
+        insta::assert_snapshot!(output);
+    };
+
+    (path: $(($package:expr, $name:expr, $module_src:literal)),+, $src:literal, $options:expr $(,)?) => {
+        let output = compile_documentation(
+            "main",
+            $src,
+            vec![$(($package, $name, $module_src)),*],
+            DependencyKind::Path,
+            $options,
+        );
+        insta::assert_snapshot!(output);
+    };
 }
 
 #[test]
@@ -561,4 +792,261 @@ fn output_of_search_data_json() {
     let data = create_sample_search_data();
     let json = serde_to_string(&data).unwrap();
     insta::assert_snapshot!(json);
+}
+
+const ONLY_LINKS: PrintOptions = PrintOptions {
+    print_highlighting: false,
+    print_links: true,
+};
+const NONE: PrintOptions = PrintOptions {
+    print_highlighting: false,
+    print_links: false,
+};
+
+#[test]
+fn highlight_function_definition() {
+    assert_documentation!(
+        "
+pub fn wibble(list: List(Int), generic: a, function: fn(a) -> b) -> #(a, b) { todo }
+"
+    );
+}
+
+#[test]
+fn highlight_constant_definition() {
+    assert_documentation!(
+        "
+pub const x = 22
+"
+    );
+}
+
+#[test]
+fn highlight_type_alias() {
+    assert_documentation!(
+        "
+pub type Option(a) = Result(a, Nil)
+"
+    );
+}
+
+#[test]
+fn highlight_custom_type() {
+    assert_documentation!(
+        "
+pub type Wibble(a, b) {
+  Wibble(a, i: Int)
+  Wobble(b: b, c: String)
+}
+"
+    );
+}
+
+#[test]
+fn highlight_opaque_custom_type() {
+    assert_documentation!(
+        "
+pub opaque type Wibble(a, b) {
+  Wibble(a, i: Int)
+  Wobble(b: b, c: String)
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2629
+#[test]
+fn print_type_variables_in_function_signatures() {
+    assert_documentation!(
+        "
+pub type Dict(key, value)
+
+pub fn insert(dict: Dict(key, value), key: key, value: value) -> Dict(key, value) {
+  dict
+}
+",
+        NONE
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/828
+#[test]
+fn print_qualified_names_from_other_modules() {
+    assert_documentation!(
+        (
+            "gleam/option",
+            "
+pub type Option(t) {
+  Some(t)
+  None
+}
+"
+        ),
+        "
+import gleam/option.{type Option, Some, None}
+
+pub fn from_option(o: Option(t), e: e) -> Result(t, e) {
+  case o {
+    Some(t) -> Ok(t)
+    None -> Error(e)
+  }
+}
+",
+        NONE
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3461
+#[test]
+fn link_to_type_in_same_module() {
+    assert_documentation!(
+        "
+pub type Dict(a, b)
+
+pub fn new() -> Dict(a, b) { todo }
+",
+        ONLY_LINKS
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3461
+#[test]
+fn link_to_type_in_different_module() {
+    assert_documentation!(
+        ("gleam/dict", "pub type Dict(a, b)"),
+        "
+import gleam/dict
+
+pub fn make_dict() -> dict.Dict(a, b) { todo }
+",
+        ONLY_LINKS
+    );
+}
+
+#[test]
+fn link_to_type_in_different_module_from_nested_module() {
+    assert_documentation!(
+        ("gleam/dict", "pub type Dict(a, b)"),
+        "gleam/dynamic/decode",
+        "
+import gleam/dict
+
+pub fn decode_dict() -> dict.Dict(a, b) { todo }
+",
+        ONLY_LINKS
+    );
+}
+
+#[test]
+fn link_to_type_in_different_module_from_nested_module_with_shared_path() {
+    assert_documentation!(
+        ("gleam/dynamic", "pub type Dynamic"),
+        "gleam/dynamic/decode",
+        "
+import gleam/dynamic
+
+pub type Dynamic = dynamic.Dynamic
+",
+        ONLY_LINKS
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3461
+#[test]
+fn link_to_type_in_different_package() {
+    assert_documentation!(
+        ("gleam_stdlib", "gleam/dict", "pub type Dict(a, b)"),
+        "
+import gleam/dict
+
+pub fn make_dict() -> dict.Dict(a, b) { todo }
+",
+        ONLY_LINKS
+    );
+}
+
+#[test]
+fn no_link_to_type_in_git_dependency() {
+    assert_documentation!(
+        git: ("gleam_stdlib", "gleam/dict", "pub type Dict(a, b)"),
+        "
+import gleam/dict
+
+pub fn make_dict() -> dict.Dict(a, b) { todo }
+",
+        ONLY_LINKS
+    );
+}
+
+#[test]
+fn no_link_to_type_in_path_dependency() {
+    assert_documentation!(
+        path: ("gleam_stdlib", "gleam/dict", "pub type Dict(a, b)"),
+        "
+import gleam/dict
+
+pub fn make_dict() -> dict.Dict(a, b) { todo }
+",
+        ONLY_LINKS
+    );
+}
+
+#[test]
+fn no_links_to_prelude_types() {
+    assert_documentation!(
+        "
+pub fn int_to_string(i: Int) -> String { todo }
+",
+        ONLY_LINKS
+    );
+}
+
+#[test]
+fn generated_type_variables() {
+    assert_documentation!(
+        "
+pub fn wibble(_a, _b, _c, _d) {
+  todo
+}
+",
+        NONE
+    );
+}
+
+#[test]
+fn generated_type_variables_mixed_with_existing_variables() {
+    assert_documentation!(
+        "
+pub fn wibble(_a: b, _b: a, _c, _d) {
+  todo
+}
+",
+        NONE
+    );
+}
+
+#[test]
+fn generated_type_variables_with_existing_variables_coming_afterwards() {
+    assert_documentation!(
+        "
+pub fn wibble(_a, _b, _c: b, _d: a) {
+  todo
+}
+",
+        NONE
+    );
+}
+
+#[test]
+fn generated_type_variables_do_not_take_into_account_other_definitions() {
+    assert_documentation!(
+        "
+pub fn wibble(_a: a, _b: b, _c: c) -> d {
+  todo
+}
+
+pub fn identity(x) { x }
+",
+        NONE
+    );
 }

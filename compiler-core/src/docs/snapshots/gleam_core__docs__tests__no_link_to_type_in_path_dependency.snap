@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/docs/tests.rs
+expression: output
+---
+---- SOURCE CODE
+-- gleam/dict.gleam
+pub type Dict(a, b)
+
+-- main.gleam
+
+import gleam/dict
+
+pub fn make_dict() -> dict.Dict(a, b) { todo }
+
+
+---- VALUES
+
+--- make_dict
+<pre><code>pub fn make_dict() -> <span title="gleam/dict.{type Dict}">dict.Dict</span>(a, b)</code></pre>

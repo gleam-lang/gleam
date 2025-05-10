@@ -213,6 +213,60 @@
   deprecated environment variables.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- When generating documentation, the build tool now prints type variable using
+  the same names as were used in the code for function signatures. For example,
+  this code:
+
+  ```gleam
+  pub fn to_list(entries: List(#(key, value))) -> Dict(key, value) {
+    ...
+  }
+  ```
+
+  Previously would have been printed as:
+
+  ```gleam
+  pub fn to_list(entries: List(#(a, b))) -> Dict(a, b)
+  ```
+
+  But now is rendered as the following:
+
+  ```gleam
+  pub fn to_list(entries: List(#(key, value))) -> Dict(key, value)
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- When generating documentation, types from other modules are now rendered with
+  their module qualifiers. Hovering over them shows the full path to their module.
+  For example, this code:
+
+  ```gleam
+  import gleam/dynamic/decode
+
+  pub fn something_decoder() -> decode.Decoder(Something) {
+    ...
+  }
+  ```
+
+  Will now generate the following documentation:
+
+  ```gleam
+  pub fn something_decoder() -> decode.Decoder(Something)
+  ```
+
+  And hovering over the `decode.Decoder` text will show the following:
+
+  ```txt
+  gleam/dynamic/decode.{type Decoder}
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- When generating documentation, types in rendered documentation code will now
+  link to their corresponding documentation pages.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Language server
 
 - The code action to add missing labels to function now also works in patterns:

@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/docs/tests.rs
+expression: output
+---
+---- SOURCE CODE
+-- main.gleam
+
+pub opaque type Wibble(a, b) {
+  Wibble(a, i: Int)
+  Wobble(b: b, c: String)
+}
+
+
+---- TYPES
+
+--- Wibble
+<pre><code><span class="hljs-keyword">pub opaque type </span><span class="hljs-title">Wibble</span>(<span class="hljs-variable">a</span>, <span class="hljs-variable">b</span>)</code></pre>

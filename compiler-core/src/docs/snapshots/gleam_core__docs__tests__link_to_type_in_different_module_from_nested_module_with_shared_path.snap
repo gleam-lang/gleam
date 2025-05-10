@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/docs/tests.rs
+expression: output
+---
+---- SOURCE CODE
+-- gleam/dynamic.gleam
+pub type Dynamic
+
+-- gleam/dynamic/decode.gleam
+
+import gleam/dynamic
+
+pub type Dynamic = dynamic.Dynamic
+
+
+---- TYPES
+
+--- Dynamic
+<pre><code>pub type Dynamic =
+  <a href="../dynamic.html#Dynamic" title="gleam/dynamic.{type Dynamic}">dynamic.Dynamic</a></code></pre>

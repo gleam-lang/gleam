@@ -248,6 +248,10 @@ impl Names {
     pub fn is_imported(&self, module: &str) -> bool {
         self.imported_modules.contains_key(module)
     }
+
+    pub fn get_type_variable(&self, id: u64) -> Option<&EcoString> {
+        self.type_variables.get(&id)
+    }
 }
 
 #[derive(Debug)]
