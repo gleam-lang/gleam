@@ -94,7 +94,7 @@ fn run_loader(fs: InMemoryFileSystem, root: &Utf8Path, artefact: &Utf8Path) -> L
         stale_modules: &mut StaleTracker::default(),
         already_defined_modules: &mut defined,
         incomplete_modules: &mut HashSet::new(),
-        package_kind: PackageKind::Dependency,
+        cached_warnings: CachedWarnings::Ignore,
     };
     let loaded = loader.run().unwrap();
 

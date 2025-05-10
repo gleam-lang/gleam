@@ -63,7 +63,8 @@ pub struct PackageCompiler<'a, IO> {
     pub compile_beam_bytecode: bool,
     pub subprocess_stdio: Stdio,
     pub target_support: TargetSupport,
-    pub package_kind: PackageKind,
+    pub cached_warnings: CachedWarnings,
+    pub check_module_conflicts: CheckModuleConflicts,
 }
 
 impl<'a, IO> PackageCompiler<'a, IO>
@@ -97,7 +98,8 @@ where
             compile_beam_bytecode: true,
             subprocess_stdio: Stdio::Inherit,
             target_support: TargetSupport::NotEnforced,
-            package_kind: PackageKind::Dependency,
+            cached_warnings: CachedWarnings::Ignore,
+            check_module_conflicts: CheckModuleConflicts::DoNotCheck,
         }
     }
 
@@ -134,7 +136,7 @@ where
             self.ids.clone(),
             self.mode,
             self.root,
-            self.package_kind,
+            self.cached_warnings,
             warnings,
             codegen_required,
             &artefact_directory,
@@ -260,7 +262,7 @@ where
             self.io.clone(),
             self.root.clone(),
             destination_dir,
-            self.package_kind,
+            self.check_module_conflicts,
         );
         let copied = copier.run()?;
 
@@ -313,7 +315,7 @@ where
             // Dependency packages don't get warnings persisted as the
             // programmer doesn't want to be told every time about warnings they
             // cannot fix directly.
-            if self.package_kind.cache_warnings() {
+            if self.cached_warnings.should_use() {
                 let warnings = &module.ast.type_info.warnings;
                 let data = bincode::serialize(warnings).expect("Serialise warnings");
                 self.io.write_bytes(&cache_files.warnings_path, &data)?;
@@ -703,22 +705,29 @@ struct ErlangEntrypointModule<'a> {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum PackageKind {
-    Root,
-    Dependency,
+pub enum CachedWarnings {
+    Use,
+    Ignore,
 }
-impl PackageKind {
-    pub(crate) fn cache_warnings(&self) -> bool {
+impl CachedWarnings {
+    pub(crate) fn should_use(&self) -> bool {
         match self {
-            PackageKind::Root => true,
-            PackageKind::Dependency => false,
+            CachedWarnings::Use => true,
+            CachedWarnings::Ignore => false,
         }
     }
+}
 
-    pub(crate) fn is_root(&self) -> bool {
+#[derive(Debug, Clone, Copy)]
+pub enum CheckModuleConflicts {
+    Check,
+    DoNotCheck,
+}
+impl CheckModuleConflicts {
+    pub(crate) fn should_check(&self) -> bool {
         match self {
-            PackageKind::Root => true,
-            PackageKind::Dependency => false,
+            CheckModuleConflicts::Check => true,
+            CheckModuleConflicts::DoNotCheck => false,
         }
     }
 }
