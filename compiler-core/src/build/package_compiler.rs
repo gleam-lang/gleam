@@ -64,6 +64,7 @@ pub struct PackageCompiler<'a, IO> {
     pub subprocess_stdio: Stdio,
     pub target_support: TargetSupport,
     pub cached_warnings: CachedWarnings,
+    pub check_module_conflicts: CheckModuleConflicts,
 }
 
 impl<'a, IO> PackageCompiler<'a, IO>
@@ -98,6 +99,7 @@ where
             subprocess_stdio: Stdio::Inherit,
             target_support: TargetSupport::NotEnforced,
             cached_warnings: CachedWarnings::Ignore,
+            check_module_conflicts: CheckModuleConflicts::DoNotCheck,
         }
     }
 
@@ -256,7 +258,12 @@ where
             self.io.symlink_dir(&priv_source, &priv_build)?;
         }
 
-        let copier = NativeFileCopier::new(self.io.clone(), self.root.clone(), destination_dir);
+        let copier = NativeFileCopier::new(
+            self.io.clone(),
+            self.root.clone(),
+            destination_dir,
+            self.check_module_conflicts,
+        );
         let copied = copier.run()?;
 
         to_compile_modules.extend(copied.to_compile.into_iter());
@@ -707,6 +714,20 @@ impl CachedWarnings {
         match self {
             CachedWarnings::Use => true,
             CachedWarnings::Ignore => false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum CheckModuleConflicts {
+    Check,
+    DoNotCheck,
+}
+impl CheckModuleConflicts {
+    pub(crate) fn should_check(&self) -> bool {
+        match self {
+            CheckModuleConflicts::Check => true,
+            CheckModuleConflicts::DoNotCheck => false,
         }
     }
 }

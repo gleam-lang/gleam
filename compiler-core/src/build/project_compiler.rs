@@ -38,7 +38,7 @@ use std::{
 use super::{
     Codegen, Compile, ErlangAppCodegenConfiguration, Outcome,
     elixir_libraries::ElixirLibraries,
-    package_compiler::{CachedWarnings, Compiled},
+    package_compiler::{CachedWarnings, CheckModuleConflicts, Compiled},
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -613,10 +613,15 @@ where
             // unaccessible so long as they are not used by the root package.
             TargetSupport::NotEnforced
         };
-        compiler.cached_warnings = if is_root {
-            CachedWarnings::Use
+        if is_root {
+            compiler.cached_warnings = CachedWarnings::Use;
+            // We only check for conflicting Gleam files if this is the root
+            // package, since Hex packages are bundled with the Gleam source files
+            // and compiled Erlang files next to each other.
+            compiler.check_module_conflicts = CheckModuleConflicts::Check;
         } else {
-            CachedWarnings::Ignore
+            compiler.cached_warnings = CachedWarnings::Ignore;
+            compiler.check_module_conflicts = CheckModuleConflicts::DoNotCheck;
         };
 
         // Compile project to Erlang or JavaScript source code
