@@ -3118,3 +3118,85 @@ pub fn wibble(x: NonExistent) {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4287
+#[test]
+fn no_stack_overflow_for_nested_use() {
+    assert_module_infer!(
+        (
+            "gleam/dynamic/decode",
+            "
+pub fn string() {
+  Nil
+}
+
+pub fn field(name, decoder, callback) {
+  callback(Nil)
+}
+"
+        ),
+        r#"
+import gleam/dynamic/decode
+
+pub fn main() {
+  use _n1 <- decode.field("n1", decode.string)
+  use _n2 <- decode.field("n2", decode.string)
+  use _n3 <- decode.field("n3", decode.string)
+  use _n4 <- decode.field("n4", decode.string)
+  use _n5 <- decode.field("n5", decode.string)
+  use _n6 <- decode.field("n6", decode.string)
+  use _n7 <- decode.field("n7", decode.string)
+  use _n8 <- decode.field("n8", decode.string)
+  use _n9 <- decode.field("n9", decode.string)
+  use _n10 <- decode.field("n10", decode.string)
+  use _n11 <- decode.field("n11", decode.string)
+  use _n12 <- decode.field("n12", decode.string)
+  use _n13 <- decode.field("n13", decode.string)
+  use _n14 <- decode.field("n14", decode.string)
+  use _n15 <- decode.field("n15", decode.string)
+  use _n16 <- decode.field("n16", decode.string)
+  use _n17 <- decode.field("n17", decode.string)
+  use _n18 <- decode.field("n18", decode.string)
+  use _n19 <- decode.field("n19", decode.string)
+  use _n20 <- decode.field("n20", decode.string)
+  use _n21 <- decode.field("n21", decode.string)
+  use _n22 <- decode.field("n22", decode.string)
+  use _n23 <- decode.field("n23", decode.string)
+  use _n24 <- decode.field("n24", decode.string)
+  use _n25 <- decode.field("n25", decode.string)
+  use _n26 <- decode.field("n26", decode.string)
+  use _n27 <- decode.field("n27", decode.string)
+  use _n28 <- decode.field("n28", decode.string)
+  use _n29 <- decode.field("n29", decode.string)
+  use _n30 <- decode.field("n30", decode.string)
+  use _n31 <- decode.field("n31", decode.string)
+  use _n32 <- decode.field("n32", decode.string)
+  use _n33 <- decode.field("n33", decode.string)
+  use _n34 <- decode.field("n34", decode.string)
+  use _n35 <- decode.field("n35", decode.string)
+  use _n36 <- decode.field("n36", decode.string)
+  use _n37 <- decode.field("n37", decode.string)
+  use _n38 <- decode.field("n38", decode.string)
+  use _n39 <- decode.field("n39", decode.string)
+  use _n40 <- decode.field("n40", decode.string)
+  use _n41 <- decode.field("n41", decode.string)
+  use _n42 <- decode.field("n42", decode.string)
+  use _n43 <- decode.field("n43", decode.string)
+  use _n44 <- decode.field("n44", decode.string)
+  use _n45 <- decode.field("n45", decode.string)
+  use _n46 <- decode.field("n46", decode.string)
+  use _n47 <- decode.field("n47", decode.string)
+  use _n48 <- decode.field("n48", decode.string)
+  use _n49 <- decode.field("n49", decode.string)
+  use _n50 <- decode.field("n50", decode.string)
+  use _n51 <- decode.field("n51", decode.string)
+  use _n52 <- decode.field("n52", decode.string)
+  use _n53 <- decode.field("n53", decode.string)
+  use _n54 <- decode.field("n54", decode.string)
+  use _n55 <- decode.field("n55", decode.string)
+  Nil
+}
+"#,
+        vec![("main", "fn() -> Nil")]
+    );
+}
