@@ -908,7 +908,7 @@ can already tell which branch is going to match with this value.",
                     title: "Unused value".into(),
                     text: wrap(
                         "This expression computes a value without any side \
-effects, but then the value isn't used at all. You might way to assign it to a \
+effects, but then the value isn't used at all. You might want to assign it to a \
 variable, or delete the expression entirely if it's not needed.",
                     ),
                     hint: None,
