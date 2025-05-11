@@ -378,14 +378,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // Process the scope
         let (result, was_successful) = process_scope(self);
 
-        let usage_tracking = if was_successful {
-            UsageTracking::TrackUnused
-        } else {
-            UsageTracking::IgnoreUnused
-        };
         // Close scope, discarding any scope local state
         self.environment
-            .close_scope(environment_reset_data, usage_tracking, self.problems);
+            .close_scope(environment_reset_data, was_successful, self.problems);
         self.hydrator.close_scope(hydrator_reset_data);
         result
     }
