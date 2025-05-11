@@ -378,9 +378,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // Process the scope
         let (result, was_successful) = process_scope(self);
 
+        let usage_tracking = if was_successful {
+            UsageTracking::TrackUnused
+        } else {
+            UsageTracking::IgnoreUnused
+        };
         // Close scope, discarding any scope local state
         self.environment
-            .close_scope(environment_reset_data, was_successful, self.problems);
+            .close_scope(environment_reset_data, usage_tracking, self.problems);
         self.hydrator.close_scope(hydrator_reset_data);
         result
     }
@@ -1762,11 +1767,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             self.problems,
         );
 
-        let value_variable_name = match value {
-            TypedExpr::Var { ref name, .. } => Some(name.clone()),
-            _ => None,
-        };
-        let pattern = pattern_typer.unify(pattern, type_.clone(), value_variable_name);
+        let pattern = pattern_typer.infer_single_pattern(pattern, &value);
 
         let minimum_required_version = pattern_typer.minimum_required_version;
         if minimum_required_version > self.minimum_required_version {
