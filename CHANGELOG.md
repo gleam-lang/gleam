@@ -460,3 +460,7 @@
 - Fixed a bug where the stack would overflow on Windows when type-checking
   multiple nested `use` expressions.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where using a variable from a separate pattern inside a bit array
+  pattern would be allowed but generate invalid Erlang code.
+  ([Surya Rose](https://github.com/GearsDatapacks))
