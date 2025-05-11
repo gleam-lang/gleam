@@ -1359,6 +1359,15 @@ impl Default for Deprecation {
 }
 
 impl ValueConstructor {
+    pub fn local_variable(location: SrcSpan, origin: VariableOrigin, type_: Arc<Type>) -> Self {
+        Self {
+            publicity: Publicity::Private,
+            deprecation: Deprecation::NotDeprecated,
+            variant: ValueConstructorVariant::LocalVariable { location, origin },
+            type_,
+        }
+    }
+
     pub fn is_local_variable(&self) -> bool {
         self.variant.is_local_variable()
     }

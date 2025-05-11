@@ -234,12 +234,7 @@ impl Environment<'_> {
     ) {
         let _ = self.scope.insert(
             name,
-            ValueConstructor {
-                deprecation: Deprecation::NotDeprecated,
-                publicity: Publicity::Private,
-                variant: ValueConstructorVariant::LocalVariable { location, origin },
-                type_,
-            },
+            ValueConstructor::local_variable(location, origin, type_),
         );
     }
 
