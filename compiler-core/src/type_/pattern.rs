@@ -97,7 +97,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         location: SrcSpan,
         origin: VariableOrigin,
     ) {
-        self.check_name_case(location, &name, Named::Variable);
+        self.check_name_case(location, name, Named::Variable);
 
         match &mut self.mode {
             PatternMode::Initial => {
