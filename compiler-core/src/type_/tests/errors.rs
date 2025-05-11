@@ -3109,3 +3109,14 @@ fn negative_size_pattern() {
 fn zero_size_pattern() {
     assert_error!("let assert <<1:size(0)>> = <<>>");
 }
+
+// https://github.com/gleam-lang/gleam/issues/3253
+#[test]
+fn bit_array_using_pattern_variables() {
+    assert_error!("let assert #(a, <<b:size(a)>>) = #(2, <<2:2>>)");
+}
+
+#[test]
+fn bit_array_using_pattern_variables_from_other_bit_array() {
+    assert_error!("let assert #(<<a>>, <<b:size(a)>>) = #(<<2>>, <<2:2>>)");
+}
