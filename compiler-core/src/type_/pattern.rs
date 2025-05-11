@@ -34,7 +34,16 @@ pub struct PatternTyper<'a, 'b> {
 
     pub error_encountered: bool,
 
+    /// Variables which have been assigned in the current pattern. We can't
+    /// register them immediately, because of the limitation described in the
+    /// documentation for `pattern_position`.
     variables: Vec<Variable>,
+    /// Information about the current pattern being type-checked. If we're in
+    /// a bit array, variables that are assigned in the pattern can be used as
+    /// part of the pattern, e.g. `<<a, b:size(a)>>`. However, if we are not in
+    /// a bit array pattern, variables cannot be used within the pattern. This
+    /// is invalid: `#(size, <<a:size(size)>>)`. This is due to a limitation of
+    /// Erlang.
     pattern_position: PatternPosition,
 }
 
@@ -118,6 +127,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     origin: origin.clone(),
                     type_: type_.clone(),
                 });
+
+                // If we are in a bit array, we must register this variable so
+                // it can be used in the bit array pattern itself.
                 match self.pattern_position {
                     PatternPosition::BitArray => {
                         self.environment.init_usage(
@@ -325,6 +337,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         typed_pattern
     }
 
+    /// Register the variables bound in this pattern in the environment
     fn register_variables(&mut self) {
         for variable in std::mem::take(&mut self.variables) {
             let Variable {
@@ -346,6 +359,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         mut segments: Vec<UntypedPatternBitArraySegment>,
         location: SrcSpan,
     ) -> TypedPattern {
+        // We open a new environment scope here because any variables registered
+        // so that they can be used inside the bit array pattern must be removed
+        // for separate bit array patterns. `#(<<a>>, <<b:size(a)>>)` is not a
+        // valid pattern. `a` is scoped to the first bit array pattern, until
+        // after the pattern match is complete.
         let scope_reset_data = self.environment.open_new_scope();
         self.pattern_position = PatternPosition::BitArray;
 
@@ -362,6 +380,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         }
 
         self.pattern_position = PatternPosition::NotBitArray;
+        // We ignore any unused warnings here, as a pattern bound in a bit array
+        // still has opportunities to be used after the pattern match and is not
+        // necessarily unused just because it is not used in the pattern itself.
         self.environment
             .close_scope(scope_reset_data, UsageTracking::IgnoreUnused, self.problems);
 
