@@ -162,7 +162,16 @@ impl Environment<'_> {
         // Process scope
         let result = process_scope(self, problems);
 
-        self.close_scope(initial, result.is_ok(), problems);
+        // We only check for unused entities if the scope was successfully
+        // processed. If it was not then any seemingly unused entities may have
+        // been used beyond the point where the error occurred, so we don't want
+        // to incorrectly warn about them.
+        let usage_tracking = if result.is_ok() {
+            UsageTracking::TrackUnused
+        } else {
+            UsageTracking::IgnoreUnused
+        };
+        self.close_scope(initial, usage_tracking, problems);
 
         // Return result of typing the scope
         result
@@ -177,7 +186,7 @@ impl Environment<'_> {
     pub fn close_scope(
         &mut self,
         data: ScopeResetData,
-        was_successful: bool,
+        usage_tracking: UsageTracking,
         problems: &mut Problems,
     ) {
         let unused = self
@@ -185,11 +194,7 @@ impl Environment<'_> {
             .pop()
             .expect("There was no top entity scope.");
 
-        // We only check for unused entities if the scope was successfully
-        // processed. If it was not then any seemingly unused entities may have
-        // been used beyond the point where the error occurred, so we don't want
-        // to incorrectly warn about them.
-        if was_successful {
+        if let UsageTracking::TrackUnused = usage_tracking {
             self.handle_unused_variables(unused, problems);
         }
         self.scope = data.local_values;
@@ -792,6 +797,12 @@ pub enum Imported {
     Type(EcoString),
     /// An imported value
     Value(EcoString),
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum UsageTracking {
+    TrackUnused,
+    IgnoreUnused,
 }
 
 /// Unify two types that should be the same.
