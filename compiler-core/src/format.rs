@@ -2662,28 +2662,29 @@ impl<'comments> Formatter<'comments> {
             return "echo".to_doc();
         };
 
-        match expression.as_ref() {
-            // When a pipeline gets broken on multiple lines we don't want it to
-            // be on the same line as echo, or it would look confusing; instead
-            // it's nested onto a new line:
-            //
-            // ```gleam
-            // echo first
-            //   |> wobble
-            //   |> wibble
-            // ```
-            //
-            // So it's easier to see echo is printing the whole thing. Otherwise,
-            // it would look like echo is printing just the first item:
-            //
-            // ```gleam
-            // echo first
-            // |> wobble
-            // |> wibble
-            // ```
-            //
-            UntypedExpr::PipeLine { .. } => docvec!["echo ", self.expr(expression).nest(INDENT)],
-            _ => docvec!["echo ", self.expr(expression)],
+        // When a binary expression gets broken on multiple lines we don't want
+        // it to be on the same line as echo, or it would look confusing;
+        // instead it's nested onto a new line:
+        //
+        // ```gleam
+        // echo first
+        //   |> wobble
+        //   |> wibble
+        // ```
+        //
+        // So it's easier to see echo is printing the whole thing. Otherwise,
+        // it would look like echo is printing just the first item:
+        //
+        // ```gleam
+        // echo first
+        // |> wobble
+        // |> wibble
+        // ```
+        //
+        if expression.is_binop() || expression.is_pipeline() {
+            docvec!["echo ", self.expr(expression).nest(INDENT)]
+        } else {
+            docvec!["echo ", self.expr(expression)]
         }
     }
 }
