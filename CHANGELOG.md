@@ -359,6 +359,9 @@
 
 ### Formatter
 
+- Improved the formatting of `echo` when followed by long binary expressions.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Installation
 
 - Windows ARM64 pre-built binaries are now provided.
