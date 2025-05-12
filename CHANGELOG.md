@@ -204,7 +204,7 @@
   ([Hari Mohan](https://github.com/seafoamteal))
 
 - The language server now supports renaming, go to definition, hover, and
-   finding references from expressions in case clause guards.
+  finding references from expressions in case clause guards.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 - The language server now supports `textDocument/foldingRange`, enabling
@@ -226,6 +226,33 @@
   ```
 
   ([Aayush Tripathi](https://github.com/aayush-tripathi))
+
+- The function signature helper now displays original function definition
+  generic names when arguments are unbound. For example, in this code:
+
+  ```gleam
+  pub fn wibble(x: something, y: fn() -> something, z: anything) { Nil }
+
+  pub fn main() {
+      wibble( )
+          // ↑
+  }
+  ```
+
+  will show a signature help
+
+  ```gleam
+  wibble(something, fn() -> something, anything)
+
+  ```
+
+  instead of
+
+  ```gleam
+  wibble(a, fn() -> a, b) -> Nil
+  ```
+
+  ([Samuel Cristobal](https://github.com/scristobal))
 
 ### Formatter
 
