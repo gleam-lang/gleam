@@ -2373,11 +2373,13 @@ impl<'comments> Formatter<'comments> {
                 .append("as ".to_doc().append(self.expr(message).group()))
         });
 
-        let document = "assert "
-            .to_doc()
-            .append(self.expr(&assert.value))
-            .append(message);
+        let expression = if assert.value.is_binop() || assert.value.is_pipeline() {
+            self.expr(&assert.value).nest(INDENT)
+        } else {
+            self.expr(&assert.value)
+        };
 
+        let document = docvec!["assert ", expression, message];
         commented(document, comments)
     }
 
