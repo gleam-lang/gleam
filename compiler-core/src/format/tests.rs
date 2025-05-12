@@ -6610,3 +6610,19 @@ fn echo_with_long_binary_expression() {
     );
 }
 
+#[test]
+fn assert_with_long_binary_expression() {
+    assert_format!(
+        r#"pub fn main() {
+  assert wibble_wobble_wibble_wobble_wibble_wobble_wibble
+    >= wibble_wobble_wibble_wobble_wibble_wobble_wibble
+
+  assert wibble_wobble_wibble_wobble_wibble_wobble_wibble
+    + wibble_wobble_wibble_wobble_wibble_wobble_wibble
+
+  assert wibble_wobble_wibble_wobble_wibble_wobble_wibble
+    == wibble_wobble_wibble_wobble_wibble_wobble_wibble
+}
+"#
+    );
+}
