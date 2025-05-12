@@ -321,6 +321,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
 
     #[error("Failed to decrypt local Hex API key")]
     FailedToDecryptLocalHexApiKey { detail: String },
+
+    #[error("Invalid Credentials file")]
+    InvalidCredentialsFile { path: String },
 }
 
 /// This is to make clippy happy and not make the error variant too big by
@@ -1484,6 +1487,18 @@ The error from the encryption library was:
                     hint: None,
                     level: Level::Error,
                     location: None,
+                }]
+            }
+
+            Error::InvalidCredentialsFile {path}=> {
+                let text = wrap_format!("Your credentials file at {path} is in the wrong format. Try deleting the file and authenticate again.");
+
+                vec![Diagnostic {
+                    title: "Invalid credentials file".into(),
+                    text,
+                    level: Level::Error,
+                    location: None,
+                    hint: None
                 }]
             }
 
