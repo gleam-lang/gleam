@@ -377,6 +377,7 @@ impl<'a> Printer<'a> {
     }
 
     pub fn print_type(&mut self, type_: &Type) -> EcoString {
+        dbg!(type_);
         let mut buffer = EcoString::new();
         self.print(type_, &mut buffer, PrintMode::Normal);
         buffer

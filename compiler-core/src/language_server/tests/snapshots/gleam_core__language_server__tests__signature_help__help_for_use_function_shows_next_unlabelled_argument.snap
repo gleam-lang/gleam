@@ -12,7 +12,7 @@ pub fn main() {
 
 
 ----- Signature help -----
-guard(a: Bool, b: a, c: fn() -> a) -> Float
+guard(a: Bool, b: b, c: fn() -> b) -> Float
       ▔▔▔▔▔▔▔
 
 No documentation
