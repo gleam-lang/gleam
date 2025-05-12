@@ -86,6 +86,13 @@ pub struct Environment<'a> {
 
     pub names: Names,
 
+    /// Deferred type variable aliases: `(source_generic_id, instantiated_type)`.
+    /// During `instantiate`, when a generic type variable is replaced with a new
+    /// unbound var, we record the pair here. After type checking, we resolve
+    /// these by following link chains in the types to find the final unbound var
+    /// IDs and register the original names for them.
+    pub deferred_type_variable_aliases: Vec<(u64, Arc<Type>)>,
+
     /// Wether we ran into an `echo` or not while analysing the current module.
     pub echo_found: bool,
 
@@ -143,6 +150,7 @@ impl<'a> Environment<'a> {
             local_variable_usages: vec![HashMap::new()],
             target_support,
             names,
+            deferred_type_variable_aliases: Vec::new(),
             module_type_aliases: HashMap::new(),
             echo_found: false,
             references: ReferenceTracker::new(),
@@ -256,6 +264,38 @@ impl Environment<'_> {
 
     pub fn previous_uid(&self) -> u64 {
         self.previous_id
+    }
+
+    /// Resolve deferred type variable aliases. During `instantiate`, generic
+    /// type variables are replaced with new unbound vars, but those vars may
+    /// later get linked to other vars during unification. This method follows
+    /// the link chains to find the final unbound var IDs and registers the
+    /// original names for them.
+    pub fn resolve_deferred_type_variable_aliases(&mut self) {
+        for (source_id, type_) in self.deferred_type_variable_aliases.drain(..) {
+            if let Some(alias) = self.names.get_type_variable(source_id).cloned() {
+                let final_id = Self::resolve_type_var_id(&type_);
+                if let Some(id) = final_id {
+                    // Only register if the target doesn't already have a name.
+                    // This avoids overwriting user-provided names (e.g. from
+                    // annotations) with names from instantiated type parameters.
+                    if self.names.get_type_variable(id).is_none() {
+                        self.names.type_variable_in_scope(id, alias);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Follow link chains in a type to find the final unbound or generic var ID.
+    fn resolve_type_var_id(type_: &Type) -> Option<u64> {
+        match type_ {
+            Type::Var { type_ } => match type_.borrow().deref() {
+                TypeVar::Unbound { id } | TypeVar::Generic { id } => Some(*id),
+                TypeVar::Link { type_ } => Self::resolve_type_var_id(type_),
+            },
+            Type::Named { .. } | Type::Fn { .. } | Type::Tuple { .. } => None,
+        }
     }
 
     /// Create a new unbound type that is a specific type, we just don't
@@ -609,6 +649,12 @@ impl Environment<'_> {
                                 // Check this in the hydrator, i.e. is it a created type
                                 let v = self.new_unbound_var();
                                 let _ = ids.insert(*id, v.clone());
+
+                                // Record this pairing so that after type checking
+                                // we can resolve any link chains and register the
+                                // original name for the final unbound variable.
+                                self.deferred_type_variable_aliases.push((*id, v.clone()));
+
                                 return v;
                             }
                         }
