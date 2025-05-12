@@ -346,6 +346,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             self.check_for_type_leaks(value)
         }
 
+        // Resolve deferred type variable aliases now that all unification is
+        // done and link chains are stable.
+        env.resolve_deferred_type_variable_aliases();
+
         let Environment {
             module_types: types,
             module_types_constructors: types_constructors,
