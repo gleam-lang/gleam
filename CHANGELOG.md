@@ -218,7 +218,7 @@
   this code:
 
   ```gleam
-  pub fn to_list(entries: List(#(key, value))) -> Dict(key, value) {
+  pub fn from_list(entries: List(#(key, value))) -> Dict(key, value) {
     ...
   }
   ```
@@ -226,13 +226,13 @@
   Previously would have been printed as:
 
   ```gleam
-  pub fn to_list(entries: List(#(a, b))) -> Dict(a, b)
+  pub fn from_list(entries: List(#(a, b))) -> Dict(a, b)
   ```
 
   But now is rendered as the following:
 
   ```gleam
-  pub fn to_list(entries: List(#(key, value))) -> Dict(key, value)
+  pub fn from_list(entries: List(#(key, value))) -> Dict(key, value)
   ```
 
   ([Surya Rose](https://github.com/GearsDatapacks))
