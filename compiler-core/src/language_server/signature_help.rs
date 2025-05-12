@@ -115,8 +115,6 @@ fn signature_help(
         None => HashMap::new(),
     };
 
-    dbg!(&module.ast.names);
-
     let printer = Printer::new(&module.ast.names);
     let (label, parameters) =
         print_signature_help(printer, fun_name, arguments, return_, &index_to_label);
