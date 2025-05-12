@@ -449,6 +449,9 @@ enum Hex {
 
     /// Authenticate with Hex
     Authenticate,
+
+    /// Deauthenticate from Hex
+    Deauthenticate,
 }
 
 #[derive(Subcommand, Debug)]
@@ -569,6 +572,8 @@ fn parse_and_run_command() -> Result<(), Error> {
         }
 
         Command::Hex(Hex::Authenticate) => hex::authenticate(),
+
+        Command::Hex(Hex::Deauthenticate) => hex::deauthenticate(),
 
         Command::New(options) => new::create(options, COMPILER_VERSION),
 
