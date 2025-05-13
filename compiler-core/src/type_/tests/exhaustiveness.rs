@@ -1740,6 +1740,7 @@ pub fn main() {
     3, 4 | 1, 2 -> False
     _, _ -> panic
   }
+}
 "
     );
 }
