@@ -321,6 +321,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
 
     #[error("Failed to decrypt local Hex API key")]
     FailedToDecryptLocalHexApiKey { detail: String },
+
+    #[error("Cannot add a package with the same name as a dependency")]
+    CannotAddSelfAsDependency { name: EcoString },
 }
 
 /// This is to make clippy happy and not make the error variant too big by
@@ -4191,7 +4194,16 @@ or you can publish it using a different version number"),
                 level: Level::Error,
                 location: None,
                 hint: Some("Please add the --replace flag if you want to replace the release.".into()),
-            }]
+            }],
+
+            Error::CannotAddSelfAsDependency { name } => vec![Diagnostic {
+                title: "Dependency cycle".into(),
+                text: wrap_format!("A package cannot depend on itself, so you cannot \
+add `gleam add {name}` in this project."),
+                level: Level::Error,
+                location: None,
+                hint: None,
+            }],
         }
     }
 }

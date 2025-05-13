@@ -271,6 +271,10 @@
   link to their corresponding documentation pages.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- `gleam add` will now emit an error if you try to add a package as a dependency
+  of itself.
+  ([Louis Pilfold](https://github.com/lpil))
+
 - The build tool will now emit an error when compiling a package if the package
   has a Gleam and Erlang file which would collide.
   ([Surya Rose](https://github.com/GearsDatapacks))
@@ -309,7 +313,6 @@
   now named `$TYPENAME_to_json` instead of `encode_$TYPENAME`. This is to remove
   ambiguity with functions that encode to other formats, and to make the
   function easier to discover by searching.
-
   ([Louis Pilfold](https://github.com/lpil))
 
 - The code action to add missing patterns to a `case` expression now includes
