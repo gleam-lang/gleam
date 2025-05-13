@@ -559,3 +559,7 @@
 - Fixed a bug where using a variable from a separate pattern inside a bit array
   pattern would be allowed but generate invalid Erlang code.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where the compiler would crash if duplicate variables were defined
+  in alternative patterns.
+  ([Surya Rose](https://github.com/GearsDatapacks))
