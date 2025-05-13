@@ -575,6 +575,8 @@ impl Environment<'_> {
                                 // Check this in the hydrator, i.e. is it a created type
                                 let v = self.new_unbound_var();
                                 let _ = ids.insert(*id, v.clone());
+                                let new_id = self.previous_uid();
+                                self.names.map_new_variable(*id, new_id);
                                 return v;
                             }
                         }

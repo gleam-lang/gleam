@@ -11,10 +11,11 @@ use lsp_types::{
 
 use crate::{
     ast::{CallArg, ImplicitCallArgOrigin, TypedExpr},
-    type_::{FieldMap, ModuleValueConstructor, Type, pretty::Printer},
+    build::Module,
+    type_::{FieldMap, ModuleValueConstructor, Type, printer::Printer},
 };
 
-pub fn for_expression(expr: &TypedExpr) -> Option<SignatureHelp> {
+pub fn for_expression(expr: &TypedExpr, module: &Module) -> Option<SignatureHelp> {
     // If we're inside a function call we can provide signature help,
     // otherwise we don't want anything to pop up.
     let TypedExpr::Call { fun, args, .. } = expr else {
@@ -27,7 +28,7 @@ pub fn for_expression(expr: &TypedExpr) -> Option<SignatureHelp> {
         // help.
         TypedExpr::Var {
             constructor, name, ..
-        } => signature_help(name.clone(), fun, args, constructor.field_map()),
+        } => signature_help(name.clone(), fun, args, constructor.field_map(), module),
 
         // If we're making a qualified call to another module's function
         // then we want to show its type, documentation and the exact name
@@ -50,7 +51,7 @@ pub fn for_expression(expr: &TypedExpr) -> Option<SignatureHelp> {
                 | ModuleValueConstructor::Fn { field_map, .. } => field_map.into(),
             };
             let name = format!("{module_alias}.{label}").into();
-            signature_help(name, fun, args, field_map)
+            signature_help(name, fun, args, field_map, module)
         }
 
         // If the function bein called is an invalid node we don't want to
@@ -67,7 +68,7 @@ pub fn for_expression(expr: &TypedExpr) -> Option<SignatureHelp> {
         //                  ^ When the cursor is here we are going to show
         //                    "fn(a: a) -> a" as the help signature.
         //
-        _ => signature_help("fn".into(), fun, args, None),
+        _ => signature_help("fn".into(), fun, args, None, module),
     }
 }
 
@@ -89,6 +90,7 @@ fn signature_help(
     fun: &TypedExpr,
     supplied_args: &[CallArg<TypedExpr>],
     field_map: Option<&FieldMap>,
+    module: &Module,
 ) -> Option<SignatureHelp> {
     let (args, return_) = fun.type_().fn_types()?;
 
@@ -107,7 +109,7 @@ fn signature_help(
         None => HashMap::new(),
     };
 
-    let printer = Printer::new();
+    let printer = Printer::new(&module.ast.names);
     let (label, parameters) =
         print_signature_help(printer, fun_name, args, return_, &index_to_label);
 
@@ -220,7 +222,7 @@ fn active_parameter_index(
 /// `ParameterInformation` for all its arguments.
 ///
 fn print_signature_help(
-    mut printer: Printer,
+    mut printer: Printer<'_>,
     function_name: EcoString,
     args: Vec<Arc<Type>>,
     return_: Arc<Type>,
@@ -236,7 +238,7 @@ fn print_signature_help(
             signature.push_str(label);
             signature.push_str(": ");
         }
-        signature.push_str(&printer.pretty_print(arg, 0));
+        signature.push_str(&printer.print_type(arg));
         let arg_end = signature.len();
         let label = ParameterLabel::LabelOffsets([arg_start as u32, arg_end as u32]);
 
@@ -252,6 +254,6 @@ fn print_signature_help(
     }
 
     signature.push_str(") -> ");
-    signature.push_str(&printer.pretty_print(&return_, 0));
+    signature.push_str(&printer.print_type(&return_));
     (signature, parameter_informations)
 }

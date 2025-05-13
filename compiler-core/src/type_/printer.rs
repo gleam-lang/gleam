@@ -175,6 +175,12 @@ impl Names {
         _ = self.type_variables.insert(id, local_alias.clone());
     }
 
+    pub fn map_new_variable(&mut self, old_id: u64, new_id: u64) {
+        if let Some(alias) = self.type_variables.get(&old_id) {
+            _ = self.type_variables.insert(new_id, alias.clone());
+        }
+    }
+
     /// Record an imported module in this module.
     pub fn imported_module(&mut self, module_name: EcoString, module_alias: EcoString) {
         _ = self.imported_modules.insert(module_name, module_alias)
