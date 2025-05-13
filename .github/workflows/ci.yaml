@@ -275,7 +275,7 @@ jobs:
 
           # Test adding of deps
           gleam add exception    # No specifier
-          gleam add gleam_http@3 # Version specifier
+          gleam add gleam_http@4 # Version specifier
           gleam test
 
           # Test documentation generation
