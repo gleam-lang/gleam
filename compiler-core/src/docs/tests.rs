@@ -1050,3 +1050,59 @@ pub fn identity(x) { x }
         NONE
     );
 }
+
+#[test]
+fn internal_type_reexport_in_same_module_as_parameter() {
+    assert_documentation!(
+        "
+@internal
+pub type Internal
+
+pub type External =
+  List(Internal)
+",
+        ONLY_LINKS
+    );
+}
+
+#[test]
+fn internal_type_reexport_in_same_module() {
+    assert_documentation!(
+        "
+@internal
+pub type Internal
+
+pub type External =
+  Internal
+",
+        ONLY_LINKS
+    );
+}
+
+#[test]
+fn internal_type_reexport_in_different_module() {
+    assert_documentation!(
+        ("other", "@internal pub type Internal"),
+        "
+import other
+
+pub type External =
+  other.Internal
+",
+        ONLY_LINKS
+    );
+}
+
+#[test]
+fn public_type_reexport_in_different_internal_module() {
+    assert_documentation!(
+        ("thepackage/internal/other", "pub type Internal"),
+        "
+import thepackage/internal/other
+
+pub type External =
+  other.Internal
+",
+        ONLY_LINKS
+    );
+}
