@@ -1066,6 +1066,19 @@ pub type External =
 }
 
 #[test]
+fn internal_type_reexport_in_same_module_as_parameter_colours() {
+    assert_documentation!(
+        "
+@internal
+pub type Internal
+
+pub type External =
+  List(Internal)
+",
+    );
+}
+
+#[test]
 fn internal_type_reexport_in_same_module() {
     assert_documentation!(
         "
