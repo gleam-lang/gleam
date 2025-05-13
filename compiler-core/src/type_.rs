@@ -1683,5 +1683,13 @@ fn assert_suitable_main_function(
         });
     }
 
+    // The function must be public, or trying to run it would result in a
+    // runtime crash
+    if !value.publicity.is_importable() {
+        return Err(crate::Error::MainFunctionIsPrivate {
+            module: module_name.clone(),
+        });
+    }
+
     Ok(())
 }
