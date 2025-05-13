@@ -155,6 +155,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 match self.environment.scope.get_mut(name) {
                     // This variable was defined in the Initial multi-pattern
                     Some(initial) if self.initial_pattern_vars.contains(name) => {
+                        if assigned.contains(name) {
+                            self.error(convert_unify_error(
+                                UnifyError::DuplicateVarInPattern { name: name.clone() },
+                                location,
+                            ));
+                            return;
+                        }
+
                         assigned.push(name.clone());
                         let initial_type = initial.type_.clone();
                         match unify(initial_type, type_.clone()) {
@@ -250,7 +258,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         match &self.mode {
             PatternMode::Initial => panic!("Pattern mode switched from Alternative to Initial"),
             PatternMode::Alternative(assigned)
-                if assigned.len() != self.initial_pattern_vars.len() =>
+                if assigned.len() < self.initial_pattern_vars.len() =>
             {
                 for name in assigned {
                     let _ = self.initial_pattern_vars.remove(name);
