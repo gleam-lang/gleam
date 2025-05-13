@@ -480,7 +480,7 @@ impl Printer<'_> {
     ) -> Document<'static> {
         // Don't show where non-private types are defined (internal types!)
         if !publicity.is_public() {
-            return "//internal".to_doc();
+            return self.comment("//internal");
         }
 
         // There's no documentation page for the prelude
@@ -615,34 +615,32 @@ impl Printer<'_> {
     }
 
     fn keyword<'a>(&self, keyword: impl Documentable<'a>) -> Document<'a> {
-        if !self.options.print_highlighting {
-            return keyword.to_doc();
-        }
+        self.colour_span(keyword, "keyword")
+    }
 
-        keyword.to_doc().surround(
-            zero_width_string(r#"<span class="hljs-keyword">"#.into()),
-            zero_width_string("</span>".into()),
-        )
+    fn comment<'a>(&self, name: impl Documentable<'a>) -> Document<'a> {
+        self.colour_span(name, "comment")
     }
 
     fn title<'a>(&self, name: impl Documentable<'a>) -> Document<'a> {
-        if !self.options.print_highlighting {
-            return name.to_doc();
-        }
-
-        name.to_doc().surround(
-            zero_width_string(r#"<span class="hljs-title">"#.into()),
-            zero_width_string("</span>".into()),
-        )
+        self.colour_span(name, "title")
     }
 
     fn variable<'a>(&self, name: impl Documentable<'a>) -> Document<'a> {
+        self.colour_span(name, "variable")
+    }
+
+    fn colour_span<'a>(
+        &self,
+        name: impl Documentable<'a>,
+        colour_class: &'static str,
+    ) -> Document<'a> {
         if !self.options.print_highlighting {
             return name.to_doc();
         }
 
         name.to_doc().surround(
-            zero_width_string(r#"<span class="hljs-variable">"#.into()),
+            zero_width_string(eco_format!(r#"<span class="hljs-{colour_class}">"#)),
             zero_width_string("</span>".into()),
         )
     }
