@@ -42,12 +42,20 @@ pub fn case<'a>(
     Ok(docvec![assignments_to_doc(assignments), decision.into_doc()].force_break())
 }
 
+/// The generated code for a decision tree.
 enum CaseBody<'a> {
+    /// A JavaScript `if`` statement by itself. This can be merged with any
+    /// preceding `else` statements to form an `else if` construct.
     If {
         check: Document<'a>,
         body: Document<'a>,
     },
+    /// A sequence of statements. This must be wrapped as the body of an `if` or
+    /// `else` statement.
     Statements(Document<'a>),
+
+    /// A JavaScript `if` statement followed by one or more `else` clauses. This
+    /// can sometimes be merged with preceding `else` statements.
     IfElse(Document<'a>),
 }
 
@@ -59,10 +67,14 @@ impl<'a> CaseBody<'a> {
         }
     }
 
+    /// Convert this value into the required document to put directly after an
+    /// `else` keyword.
     fn document_after_else(self) -> Document<'a> {
         match self {
+            // `if` and `if-else` statements can come directly after an `else` keyword
             CaseBody::If { .. } => self.into_doc(),
             CaseBody::IfElse(document) => document,
+            // Lists of statements must be wrapped in a block
             CaseBody::Statements(document) => break_block(document),
         }
     }
@@ -229,6 +241,21 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             assignments.append(&mut segment_assignments);
 
             let (check_doc, body) = match body? {
+                // If we have a statement like this:
+                // ```javascript
+                // if (x) {
+                //   if (y) {
+                //     ...
+                //   }
+                // }
+                // ```
+                //
+                // We can transform it into:
+                // ```javascript
+                // if (x && y) {
+                //   ...
+                // }
+                // ```
                 CaseBody::If { check, body } => {
                     (docvec!["(", check_doc, ") && (", check, ")"], body)
                 }
@@ -238,10 +265,12 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             };
 
             if_ = match if_ {
+                // The first statement will always be an `if`
                 _ if i == 0 => CaseBody::If {
                     check: check_doc,
                     body,
                 },
+                // If this is the second check, the `if` becomes `else if`
                 CaseBody::If { .. } => CaseBody::IfElse(docvec![
                     if_.into_doc(),
                     " else if (",
@@ -346,7 +375,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             .inside_new_scope(|this| this.decision(if_false))?
             .into_doc();
 
-        // We can now piece everything together into a single document!
+        // We can now piece everything together into a case body!
         let if_ = CaseBody::If {
             check,
             body: if_true,
