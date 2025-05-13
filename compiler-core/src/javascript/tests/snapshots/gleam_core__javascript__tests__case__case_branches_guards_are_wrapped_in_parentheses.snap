@@ -22,11 +22,9 @@ function anything() {
       
     } else {
       let $1 = $.tail;
-      if ($1 instanceof $Empty) {
-        if (false || true) {
-          let a = $.head;
-          return a;
-        }
+      if (($1 instanceof $Empty) && (false || true)) {
+        let a = $.head;
+        return a;
       }
     }
   }
