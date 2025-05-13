@@ -704,10 +704,15 @@ where
 {
 }
 
-pub fn visit_typed_custom_type<'a, V>(_v: &mut V, _custom_type: &'a TypedCustomType)
+pub fn visit_typed_custom_type<'a, V>(v: &mut V, custom_type: &'a TypedCustomType)
 where
     V: Visit<'a> + ?Sized,
 {
+    for record in &custom_type.constructors {
+        for argument in &record.arguments {
+            v.visit_type_ast(&argument.ast);
+        }
+    }
 }
 
 pub fn visit_typed_expr<'a, V>(v: &mut V, node: &'a TypedExpr)
