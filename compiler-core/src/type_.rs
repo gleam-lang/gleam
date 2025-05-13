@@ -570,6 +570,19 @@ impl Type {
             }
         }
     }
+
+    pub(crate) fn is_non_public_named_type(&self) -> bool {
+        match self {
+            Type::Named { publicity, .. } => match publicity {
+                Publicity::Public => false,
+                Publicity::Private => true,
+                Publicity::Internal { .. } => true,
+            },
+            Type::Fn { .. } => false,
+            Type::Var { .. } => false,
+            Type::Tuple { .. } => false,
+        }
+    }
 }
 
 impl TypeVar {
