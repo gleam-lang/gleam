@@ -1093,16 +1093,13 @@ impl ModuleInterface {
     }
 
     pub fn get_main_function(&self, target: Target) -> Result<ModuleFunction, crate::Error> {
-        let not_found = || crate::Error::ModuleDoesNotHaveMainFunction {
-            module: self.name.clone(),
-            origin: self.origin,
-        };
-
         // Module must have a value with the name "main"
-        let value = self
-            .values
-            .get(&EcoString::from("main"))
-            .ok_or_else(not_found)?;
+        let Some(value) = self.values.get(&EcoString::from("main")) else {
+            return Err(crate::Error::ModuleDoesNotHaveMainFunction {
+                module: self.name.clone(),
+                origin: self.origin,
+            });
+        };
 
         assert_suitable_main_function(value, &self.name, self.origin, target)?;
 
@@ -1657,11 +1654,6 @@ fn assert_suitable_main_function(
     origin: Origin,
     target: Target,
 ) -> Result<(), crate::Error> {
-    let not_found = || crate::Error::ModuleDoesNotHaveMainFunction {
-        module: module_name.clone(),
-        origin,
-    };
-
     // The value must be a module function
     let ValueConstructorVariant::ModuleFn {
         arity,
@@ -1669,7 +1661,10 @@ fn assert_suitable_main_function(
         ..
     } = &value.variant
     else {
-        return Err(not_found());
+        return Err(crate::Error::ModuleDoesNotHaveMainFunction {
+            module: module_name.clone(),
+            origin,
+        });
     };
 
     // The target must be supported
