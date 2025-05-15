@@ -1,6 +1,6 @@
 [package]
 name = "gleam-core"
-version = "1.10.0"
+version = "1.11.0-rc1"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2024"
 license-file = "LICENCE"
@@ -82,4 +82,4 @@ capnpc = "0"
 pretty_assertions.workspace = true
 insta.workspace = true
 # Random value generation
-rand = "0"
+rand = "0.9"
