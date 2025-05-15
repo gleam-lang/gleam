@@ -2246,7 +2246,7 @@ fn assignment<'a>(
             &assignment.value,
             &assignment.pattern,
             env,
-            message.as_deref(),
+            message.as_ref(),
             position,
         ),
     }

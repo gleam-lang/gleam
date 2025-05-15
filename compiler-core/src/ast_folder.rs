@@ -607,7 +607,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         match statement {
             Statement::Expression(expression) => Statement::Expression(expression),
             Statement::Assignment(assignment) => {
-                Statement::Assignment(self.fold_assignment(assignment))
+                Statement::Assignment(Box::new(self.fold_assignment(*assignment)))
             }
             Statement::Use(use_) => Statement::Use(self.fold_use(use_)),
             Statement::Assert(assert) => Statement::Assert(self.fold_assert(assert)),
@@ -619,25 +619,27 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         match statement {
             Statement::Expression(expression) => Statement::Expression(self.fold_expr(expression)),
 
-            Statement::Assignment(Assignment {
-                location,
-                value,
-                pattern,
-                kind,
-                annotation,
-                compiled_case,
-            }) => {
-                let pattern = self.fold_pattern(pattern);
-                let annotation = annotation.map(|type_| self.fold_type(type_));
-                let value = Box::new(self.fold_expr(*value));
-                Statement::Assignment(Assignment {
+            Statement::Assignment(assignment) => {
+                let Assignment {
                     location,
                     value,
                     pattern,
                     kind,
                     annotation,
                     compiled_case,
-                })
+                } = *assignment;
+
+                let pattern = self.fold_pattern(pattern);
+                let annotation = annotation.map(|type_| self.fold_type(type_));
+                let value = self.fold_expr(value);
+                Statement::Assignment(Box::new(Assignment {
+                    location,
+                    value,
+                    pattern,
+                    kind,
+                    annotation,
+                    compiled_case,
+                }))
             }
 
             Statement::Use(Use {

@@ -30,7 +30,7 @@ pub fn pretty(writer: &mut impl Utf8Writer, src: &EcoString, path: &Utf8Path) ->
         .map_err(|error| Error::Parse {
             path: path.to_path_buf(),
             src: src.clone(),
-            error,
+            error: Box::new(error),
         })?;
     let intermediate = Intermediate::from_extra(&parsed.extra, src);
     Formatter::with_comments(&intermediate)
