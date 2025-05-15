@@ -560,7 +560,7 @@ fn analyse(
 
             Outcome::PartialFailure(ast, errors) => {
                 let error = Error::Type {
-                    names: ast.names.clone(),
+                    names: Box::new(ast.names.clone()),
                     path: path.clone(),
                     src: code.clone(),
                     errors,

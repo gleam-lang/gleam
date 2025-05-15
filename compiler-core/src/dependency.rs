@@ -28,8 +28,8 @@ where
 {
     tracing::info!("resolving_versions");
     let root_version = Version::new(0, 0, 0);
-    let requirements =
-        root_dependencies(dependencies, locked).map_err(Error::dependency_resolution_failed)?;
+    let requirements = root_dependencies(dependencies, locked)
+        .map_err(|boxed_error| Error::dependency_resolution_failed(*boxed_error))?;
 
     // Creating a map of all the required packages that have exact versions specified
     let exact_deps = &requirements
@@ -81,7 +81,7 @@ fn parse_exact_version(ver: &str) -> Option<Version> {
 fn root_dependencies<Requirements>(
     base_requirements: Requirements,
     locked: &HashMap<EcoString, Version>,
-) -> Result<HashMap<String, Dependency>, ResolutionError>
+) -> Result<HashMap<String, Dependency>, Box<ResolutionError>>
 where
     Requirements: Iterator<Item = (EcoString, Range)>,
 {
@@ -122,13 +122,17 @@ where
             Some(locked_version) => {
                 let compatible = range
                     .to_pubgrub()
-                    .map_err(|e| ResolutionError::Failure(format!("Failed to parse range {e}")))?
+                    .map_err(|e| {
+                        Box::new(ResolutionError::Failure(format!(
+                            "Failed to parse range {e}"
+                        )))
+                    })?
                     .contains(locked_version);
                 if !compatible {
-                    return Err(ResolutionError::Failure(format!(
+                    return Err(Box::new(ResolutionError::Failure(format!(
                         "{name} is specified with the requirement `{range}`, \
 but it is locked to {locked_version}, which is incompatible.",
-                    )));
+                    ))));
                 }
             }
         };

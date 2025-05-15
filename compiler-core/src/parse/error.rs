@@ -403,7 +403,7 @@ pub enum ParseErrorType {
         public: bool,
         opaque: bool,
         field: EcoString,
-        field_type: Option<TypeAst>,
+        field_type: Option<Box<TypeAst>>,
     },
     CallInClauseGuard, // case x { _ if f() -> 1 }
     IfExpression,

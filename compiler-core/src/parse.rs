@@ -1055,19 +1055,19 @@ where
                     let message_expression =
                         self.expect_expression_unit(ExpressionUnitContext::Other)?;
                     end = message_expression.location().end;
-                    *message = Some(Box::new(message_expression));
+                    *message = Some(message_expression);
                 }
             }
         }
 
-        Ok(Statement::Assignment(Assignment {
+        Ok(Statement::Assignment(Box::new(Assignment {
             location: SrcSpan { start, end },
-            value: Box::new(value),
+            value,
             compiled_case: CompiledCase::failure(),
             pattern,
             annotation,
             kind,
-        }))
+        })))
     }
 
     // An assert statement, with `Assert` already consumed
@@ -3442,7 +3442,7 @@ functions are declared separately from types.";
                         }
                     };
                     let field_type = match self.parse_type_annotation(&Token::Colon) {
-                        Ok(Some(annotation)) => Some(annotation),
+                        Ok(Some(annotation)) => Some(Box::new(annotation)),
                         _ => None,
                     };
                     parse_error(

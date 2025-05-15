@@ -57,7 +57,7 @@ pub fn expect_module_error(src: &str) -> String {
     let error = crate::error::Error::Parse {
         src: src.into(),
         path: Utf8PathBuf::from("/src/parse/error.gleam"),
-        error: result,
+        error: Box::new(result),
     };
     error.pretty_string()
 }
@@ -67,7 +67,7 @@ pub fn expect_error(src: &str) -> String {
     let error = crate::error::Error::Parse {
         src: src.into(),
         path: Utf8PathBuf::from("/src/parse/error.gleam"),
-        error: result,
+        error: Box::new(result),
     };
     error.pretty_string()
 }

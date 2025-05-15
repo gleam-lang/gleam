@@ -770,8 +770,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     statements.push(Statement::Expression(expression));
                 }
                 Statement::Assignment(assignment) => {
-                    let assignment = self.infer_assignment(assignment);
-                    statements.push(Statement::Assignment(assignment));
+                    let assignment = self.infer_assignment(*assignment);
+                    statements.push(Statement::Assignment(Box::new(assignment)));
                 }
                 Statement::Assert(assert) => {
                     let assert = self.infer_assert(assert);
@@ -1749,7 +1749,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             location,
             compiled_case: _,
         } = assignment;
-        let value = self.expr_in_new_scope(|this| this.infer(*value));
+        let value = self.expr_in_new_scope(|this| this.infer(value));
         let type_ = value.type_();
         let kind = self.infer_assignment_kind(kind.clone());
 
@@ -1800,7 +1800,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 kind,
                 compiled_case: CompiledCase::failure(),
                 pattern,
-                value: Box::new(value),
+                value,
             };
         }
 
@@ -1857,7 +1857,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             kind,
             compiled_case: output.compiled_case,
             pattern,
-            value: Box::new(value),
+            value,
         }
     }
 
@@ -1876,7 +1876,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             FeatureKind::LetAssertWithMessage,
                             message.location(),
                         );
-                        let message = self.infer_or_error(*message).unwrap_or_else(|error| {
+                        let message = self.infer_or_error(message).unwrap_or_else(|error| {
                             self.problems.error(error);
                             self.error_expr(location)
                         });
@@ -1885,7 +1885,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             self.problems
                                 .error(convert_unify_error(e, message.location()))
                         });
-                        Some(Box::new(message))
+                        Some(message)
                     }
                     None => None,
                 };
@@ -2978,7 +2978,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             annotation: None,
             compiled_case: CompiledCase::failure(),
             kind: AssignmentKind::Generated,
-            value: Box::new(record),
+            value: record,
         };
 
         let record_var = TypedExpr::Var {
@@ -3004,7 +3004,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         Ok(TypedExpr::RecordUpdate {
             location,
             type_: variant.retn,
-            record: record_assignment,
+            record: Box::new(record_assignment),
             constructor: Box::new(typed_constructor),
             args,
         })
@@ -4686,11 +4686,11 @@ impl UseAssignments {
                         annotation,
                         compiled_case: CompiledCase::failure(),
                         kind: AssignmentKind::Generated,
-                        value: Box::new(UntypedExpr::Var { location, name }),
+                        value: UntypedExpr::Var { location, name },
                     };
                     assignments
                         .body_assignments
-                        .push(Statement::Assignment(assignment))
+                        .push(Statement::Assignment(Box::new(assignment)))
                 }
             }
         }

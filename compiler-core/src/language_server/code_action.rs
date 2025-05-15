@@ -504,14 +504,20 @@ pub fn code_action_inexhaustive_let_to_case(
             return;
         }
 
-        let Some(Located::Statement(TypedStatement::Assignment(TypedAssignment {
+        let Some(Located::Statement(TypedStatement::Assignment(assignment))) =
+            module.find_node(location.start)
+        else {
+            continue;
+        };
+
+        let TypedAssignment {
             value,
             pattern,
             kind: AssignmentKind::Let,
             location,
             compiled_case: _,
             annotation: _,
-        }))) = module.find_node(location.start)
+        } = assignment.as_ref()
         else {
             continue;
         };
@@ -6814,7 +6820,7 @@ impl<'ast> ast::visit::Visit<'ast> for WrapInBlock<'ast> {
         ) {
             return;
         }
-        match assignment.value.as_ref() {
+        match &assignment.value {
             // To avoid wrapping the same expression in multiple, nested blocks.
             TypedExpr::Block { .. } => {}
             TypedExpr::RecordAccess { .. }

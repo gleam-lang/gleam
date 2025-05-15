@@ -276,10 +276,10 @@ mod tests {
         let error = Error::Parse {
             path: file3.clone(),
             src: "blah".into(),
-            error: ParseError {
+            error: Box::new(ParseError {
                 error: ParseErrorType::ConcatPatternVariableLeftHandSide,
                 location: SrcSpan::new(1, 4),
-            },
+            }),
         };
 
         let feedback = book_keeper.build_with_error(
@@ -336,10 +336,10 @@ mod tests {
         let error = Error::Parse {
             path: file1.clone(),
             src: "blah".into(),
-            error: ParseError {
+            error: Box::new(ParseError {
                 error: ParseErrorType::ConcatPatternVariableLeftHandSide,
                 location: SrcSpan::new(1, 4),
-            },
+            }),
         };
 
         let feedback =
@@ -377,10 +377,10 @@ mod tests {
         let error = |file: &camino::Utf8Path| Error::Parse {
             path: file.to_path_buf(),
             src: "blah".into(),
-            error: ParseError {
+            error: Box::new(ParseError {
                 error: ParseErrorType::ConcatPatternVariableLeftHandSide,
                 location: SrcSpan::new(1, 4),
-            },
+            }),
         };
 
         let feedback =
@@ -420,10 +420,10 @@ mod tests {
         let error = Error::Parse {
             path: file1.clone(),
             src: "blah".into(),
-            error: ParseError {
+            error: Box::new(ParseError {
                 error: ParseErrorType::ConcatPatternVariableLeftHandSide,
                 location: SrcSpan::new(1, 4),
-            },
+            }),
         };
 
         let feedback =

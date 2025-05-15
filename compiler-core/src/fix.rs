@@ -12,7 +12,7 @@ pub fn parse_fix_and_format(src: &EcoString, path: &Utf8Path) -> Result<String> 
         .map_err(|error| Error::Parse {
             path: path.to_path_buf(),
             src: src.clone(),
-            error,
+            error: Box::new(error),
         })?;
     let intermediate = Intermediate::from_extra(&parsed.extra, src);
     let module = parsed.module;
