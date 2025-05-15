@@ -64,7 +64,7 @@ pub enum Error {
     Parse {
         path: Utf8PathBuf,
         src: EcoString,
-        error: crate::parse::error::ParseError,
+        error: Box<crate::parse::error::ParseError>,
     },
 
     #[error("type checking failed")]
@@ -72,7 +72,7 @@ pub enum Error {
         path: Utf8PathBuf,
         src: EcoString,
         errors: Vec1<crate::type_::Error>,
-        names: Names,
+        names: Box<Names>,
     },
 
     #[error("unknown import {import}")]

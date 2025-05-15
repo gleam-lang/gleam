@@ -1064,7 +1064,7 @@ impl<A, B, C, E> Definition<A, B, C, E> {
             | Definition::TypeAlias(TypeAlias { documentation, .. })
             | Definition::CustomType(CustomType { documentation, .. })
             | Definition::ModuleConstant(ModuleConstant { documentation, .. }) => {
-                let _ = std::mem::replace(documentation, Some(new_doc));
+                let _ = documentation.replace(new_doc);
             }
         }
     }
@@ -2342,7 +2342,7 @@ pub enum AssignmentKind<Expression> {
         /// let asset Ok(a) = something() as "This will never fail"
         /// //                                ^ Message
         /// ```
-        message: Option<Box<Expression>>,
+        message: Option<Expression>,
     },
 }
 
@@ -2878,7 +2878,7 @@ pub enum Statement<TypeT, ExpressionT> {
     /// A bare expression that is not assigned to any variable.
     Expression(ExpressionT),
     /// Assigning an expression to variables using a pattern.
-    Assignment(Assignment<TypeT, ExpressionT>),
+    Assignment(Box<Assignment<TypeT, ExpressionT>>),
     /// A `use` expression.
     Use(Use<TypeT, ExpressionT>),
     /// A bool assertion.
@@ -3133,7 +3133,7 @@ impl TypedStatement {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Assignment<TypeT, ExpressionT> {
     pub location: SrcSpan,
-    pub value: Box<ExpressionT>,
+    pub value: ExpressionT,
     pub pattern: Pattern<TypeT>,
     pub kind: AssignmentKind<ExpressionT>,
     pub compiled_case: CompiledCase,

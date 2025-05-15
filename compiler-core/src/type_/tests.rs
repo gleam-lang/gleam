@@ -146,7 +146,7 @@ macro_rules! assert_error {
         let (error, names) = $crate::type_::tests::compile_statement_sequence($src)
             .expect_err("should infer an error");
         let error = $crate::error::Error::Type {
-            names,
+            names: Box::new(names),
             src: $src.into(),
             path: camino::Utf8PathBuf::from("/src/one/two.gleam"),
             errors: error,
@@ -547,7 +547,7 @@ pub fn module_error_with_target(
     )
     .expect_err("should infer an error");
     let error = Error::Type {
-        names,
+        names: Box::new(names),
         src: src.into(),
         path: Utf8PathBuf::from("/src/one/two.gleam"),
         errors: Vec1::try_from_vec(error).expect("should have at least one error"),
@@ -575,7 +575,7 @@ pub fn internal_module_error_with_target(
     )
     .expect_err("should infer an error");
     let error = Error::Type {
-        names,
+        names: Box::new(names),
         src: src.into(),
         path: Utf8PathBuf::from("/src/one/two.gleam"),
         errors: Vec1::try_from_vec(error).expect("should have at least one error"),
@@ -590,7 +590,7 @@ pub fn syntax_error(src: &str) -> String {
     let error = Error::Parse {
         src: src.into(),
         path: Utf8PathBuf::from("/src/one/two.gleam"),
-        error,
+        error: Box::new(error),
     };
     error.pretty_string()
 }

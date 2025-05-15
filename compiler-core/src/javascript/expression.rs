@@ -772,7 +772,7 @@ impl<'module, 'a> Generator<'module, 'a> {
 
                 Statement::Assignment(assignment) => match &assignment.kind {
                     AssignmentKind::Let | AssignmentKind::Generated => {
-                        return self.child_expression(assignment.value.as_ref());
+                        return self.child_expression(&assignment.value);
                     }
                     // We can't just return the right-hand side of a `let assert`
                     // assignment; we still need to check that the pattern matches.

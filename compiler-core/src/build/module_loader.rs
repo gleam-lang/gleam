@@ -154,7 +154,7 @@ where
         Error::Parse {
             path: path.clone(),
             src: code.clone(),
-            error,
+            error: Box::new(error),
         }
     })?;
     let mut ast = parsed.module;

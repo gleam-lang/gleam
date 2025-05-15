@@ -164,7 +164,7 @@ pub enum TypedExpr {
     RecordUpdate {
         location: SrcSpan,
         type_: Arc<Type>,
-        record: TypedAssignment,
+        record: Box<TypedAssignment>,
         constructor: Box<Self>,
         args: Vec<CallArg<Self>>,
     },
