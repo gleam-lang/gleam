@@ -420,6 +420,6 @@
   label shorthand syntax would produce invalid code.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- Fixed a bug where the language server would not show the "Unqualify type" code action for record declarations
-  label shorthand syntax would produce invalid code.
+- Fixed a bug where the language server would not show the "Unqualify type" code
+  action for record declarations.
   ([cysabi](https://github.com/cysabi))
