@@ -179,6 +179,9 @@ pub enum Error {
     #[error("{module} does not have a main function")]
     ModuleDoesNotHaveMainFunction { module: EcoString, origin: Origin },
 
+    #[error("{module} does not have a public main function")]
+    MainFunctionIsPrivate { module: EcoString },
+
     #[error("{module}'s main function has the wrong arity so it can not be run")]
     MainFunctionHasWrongArity { module: EcoString, arity: usize },
 
@@ -939,6 +942,18 @@ to `{}/{module}.gleam`.", origin.folder_name()
                 )),
             }],
 
+            Error::MainFunctionIsPrivate { module } => vec![
+                Diagnostic {
+                    title: "Module does not have a public main function".into(),
+                    text: wrap_format!(
+                        "`{module}` has a main function, but it is private, so it cannot be run."
+                    ),
+                    level: Level::Error,
+                    location: None,
+                    hint: Some(wrap_format!("Make the `main` function in the `{module}` module public."))
+                }
+            ],
+
             Error::MainFunctionDoesNotSupportTarget { module, target } => vec![Diagnostic {
                 title: "Target not supported".into(),
                 text: wrap_format!(
@@ -952,7 +967,7 @@ target, so it cannot be run."
 
             Error::MainFunctionHasWrongArity { module, arity } => vec![Diagnostic {
                 title: "Main function has wrong arity".into(),
-                text: format!(
+                text: wrap_format!(
                     "`{module}:main` should have an arity of 0 to be run but its arity is {arity}."
                 ),
                 level: Level::Error,
