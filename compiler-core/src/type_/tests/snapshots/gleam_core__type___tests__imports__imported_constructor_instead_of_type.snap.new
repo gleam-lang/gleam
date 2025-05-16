@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/type_/tests/imports.rs
+assertion_line: 283
+expression: "import module.{Wibble}\n\npub fn main(x: Wibble) {\n  todo\n}"
+snapshot_kind: text
+---
+----- SOURCE CODE
+-- module.gleam
+pub type Wibble { Wibble }
+
+-- main.gleam
+import module.{Wibble}
+
+pub fn main(x: Wibble) {
+  todo
+}
+
+----- ERROR
+error: Unknown type
+  ┌─ /src/one/two.gleam:3:16
+  │
+3 │ pub fn main(x: Wibble) {
+  │                ^^^^^^
+
+The type `Wibble` is not defined or imported in this module.
+There is a value in scope with the name `Wibble`, but no type in scope with
+that name.
+Hint: Did you mean to update the import of `module`?

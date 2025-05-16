@@ -621,6 +621,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                     .module_types
                                     .keys()
                                     .any(|type_| type_ == &name),
+                                suggestions: self.environment.suggest_unqualified_modules(
+                                    &name,
+                                    Layer::Value,
+                                    None,
+                                ),
                             });
                             return Pattern::Invalid { location, type_ };
                         }
@@ -863,7 +868,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
                 let constructor = self
                     .environment
-                    .get_value_constructor(module.as_ref().map(|(module, _)| module), &name);
+                    .get_value_constructor(module.as_ref().map(|(module, _)| module), &name, Some(pattern_args.len()));
 
                 let constructor = match constructor {
                     Ok(constructor) => constructor,

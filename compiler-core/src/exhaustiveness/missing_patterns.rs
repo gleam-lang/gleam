@@ -181,7 +181,7 @@ impl<'a, 'env> MissingPatternsGenerator<'a, 'env> {
 
                 let name = self
                     .environment
-                    .get_constructors_for_type(&module, &name)
+                    .get_constructors_for_type(&module, &name, Some(fields.len()))
                     .expect("Custom type constructor must have custom type kind")
                     .variants
                     .get(*index)
