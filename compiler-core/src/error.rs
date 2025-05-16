@@ -945,7 +945,7 @@ to `{}/{module}.gleam`.", origin.folder_name()
             Error::MainFunctionIsPrivate { module } => vec![
                 Diagnostic {
                     title: "Module does not have a public main function".into(),
-                    text: format!(
+                    text: wrap_format!(
                         "`{module}` has a main function, but it is private, so it cannot be run."
                     ),
                     level: Level::Error,
@@ -967,7 +967,7 @@ target, so it cannot be run."
 
             Error::MainFunctionHasWrongArity { module, arity } => vec![Diagnostic {
                 title: "Main function has wrong arity".into(),
-                text: format!(
+                text: wrap_format!(
                     "`{module}:main` should have an arity of 0 to be run but its arity is {arity}."
                 ),
                 level: Level::Error,
