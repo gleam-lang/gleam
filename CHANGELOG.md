@@ -552,6 +552,10 @@
   label shorthand syntax would produce invalid code.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where the language server would not show the "Unqualify type" code
+  action for record declarations.
+  ([cysabi](https://github.com/cysabi))
+
 - Fixed a bug where the stack would overflow on Windows when type-checking
   multiple nested `use` expressions.
   ([Surya Rose](https://github.com/GearsDatapacks))

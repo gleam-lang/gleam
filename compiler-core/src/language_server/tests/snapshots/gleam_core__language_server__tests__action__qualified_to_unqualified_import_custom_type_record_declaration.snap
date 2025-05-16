@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport wobble\n\npub type Wibble {\n  Wibble(wibble: wobble.Wobble)\n}\n"
+---
+----- BEFORE ACTION
+
+import wobble
+
+pub type Wibble {
+  Wibble(wibble: wobble.Wobble)
+                       ▔↑      
+}
+
+
+----- AFTER ACTION
+
+import wobble.{type Wobble}
+
+pub type Wibble {
+  Wibble(wibble: Wobble)
+}
