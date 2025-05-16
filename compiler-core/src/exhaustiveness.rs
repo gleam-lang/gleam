@@ -86,7 +86,7 @@ pub mod printer;
 
 use crate::{
     ast::{self, AssignName, Endianness, TypedClause, TypedPattern, TypedPatternBitArraySegment},
-    strings::convert_string_escape_chars,
+    strings::{convert_string_escape_chars, length_utf16, length_utf32},
     type_::{
         Environment, Type, TypeValueConstructor, TypeValueConstructorField, TypeVar,
         TypeVariantConstructors, collapse_links, error::UnreachablePatternReason,
@@ -424,7 +424,9 @@ impl Body {
         let value = match value {
             BitArrayMatchedValue::LiteralFloat(value) => BoundValue::LiteralFloat(value.clone()),
             BitArrayMatchedValue::LiteralInt(value) => BoundValue::LiteralInt(value.clone()),
-            BitArrayMatchedValue::LiteralString(value) => BoundValue::LiteralString(value.clone()),
+            BitArrayMatchedValue::LiteralString { value, .. } => {
+                BoundValue::LiteralString(value.clone())
+            }
             BitArrayMatchedValue::Variable(_)
             | BitArrayMatchedValue::Discard(_)
             | BitArrayMatchedValue::Assign { .. } => {
@@ -1003,7 +1005,10 @@ pub struct MatchTest {
 pub enum BitArrayMatchedValue {
     LiteralFloat(EcoString),
     LiteralInt(BigInt),
-    LiteralString(EcoString),
+    LiteralString {
+        value: EcoString,
+        encoding: StringEncoding,
+    },
     Variable(EcoString),
     Discard(EcoString),
     Assign {
@@ -1012,13 +1017,20 @@ pub enum BitArrayMatchedValue {
     },
 }
 
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
+pub enum StringEncoding {
+    Utf8,
+    Utf16,
+    Utf32,
+}
+
 impl BitArrayMatchedValue {
     pub fn is_discard(&self) -> bool {
         match self {
             BitArrayMatchedValue::Discard(_) => true,
             BitArrayMatchedValue::LiteralFloat(_)
             | BitArrayMatchedValue::LiteralInt(_)
-            | BitArrayMatchedValue::LiteralString(_)
+            | BitArrayMatchedValue::LiteralString { .. }
             | BitArrayMatchedValue::Variable(_)
             | BitArrayMatchedValue::Assign { .. } => false,
         }
@@ -2774,7 +2786,7 @@ impl CaseToCompile {
 
         let segments_count = segments.len();
         for (i, segment) in segments.iter().enumerate() {
-            let segment_size = segment_size(segment, &pattern_variables);
+            let segment_size = segment_size(segment, &pattern_variables, None);
 
             // If we're reading a variable number of bits we need to make sure
             // that that variable is positive!
@@ -2816,7 +2828,7 @@ impl CaseToCompile {
 
             // Each segment is also turned into a match test, checking the
             // selected bits match with the pattern's value.
-            let value = segment_matched_value(&segment.value);
+            let value = segment_matched_value(segment, None);
 
             let type_ = match &segment.type_ {
                 type_ if type_.is_int() => ReadType::Int,
@@ -2841,7 +2853,7 @@ impl CaseToCompile {
             match &value {
                 BitArrayMatchedValue::LiteralFloat(_)
                 | BitArrayMatchedValue::LiteralInt(_)
-                | BitArrayMatchedValue::LiteralString(_)
+                | BitArrayMatchedValue::LiteralString { .. }
                 | BitArrayMatchedValue::Discard(_) => {}
                 BitArrayMatchedValue::Variable(name)
                 | BitArrayMatchedValue::Assign { name, .. } => {
@@ -2857,16 +2869,39 @@ impl CaseToCompile {
     }
 }
 
-fn segment_matched_value(pattern: &TypedPattern) -> BitArrayMatchedValue {
+fn segment_matched_value(
+    segment: &TypedPatternBitArraySegment,
+    // If we are compiling an assignment pattern, we still need access to the
+    // `type_` and `options` fields of the `segment`, so we must still pass that
+    // in above. However, we need to check the correct sub-pattern of the original
+    // pattern, so if they are different we set this argument to `Some`.
+    pattern: Option<&TypedPattern>,
+) -> BitArrayMatchedValue {
+    let pattern = pattern.unwrap_or(&segment.value);
     match pattern {
         ast::Pattern::Int { int_value, .. } => BitArrayMatchedValue::LiteralInt(int_value.clone()),
         ast::Pattern::Float { value, .. } => BitArrayMatchedValue::LiteralFloat(value.clone()),
-        ast::Pattern::String { value, .. } => BitArrayMatchedValue::LiteralString(value.clone()),
+        ast::Pattern::String { value, .. } if segment.has_utf16_option() => {
+            BitArrayMatchedValue::LiteralString {
+                value: value.clone(),
+                encoding: StringEncoding::Utf16,
+            }
+        }
+        ast::Pattern::String { value, .. } if segment.has_utf32_option() => {
+            BitArrayMatchedValue::LiteralString {
+                value: value.clone(),
+                encoding: StringEncoding::Utf32,
+            }
+        }
+        ast::Pattern::String { value, .. } => BitArrayMatchedValue::LiteralString {
+            value: value.clone(),
+            encoding: StringEncoding::Utf8,
+        },
         ast::Pattern::Variable { name, .. } => BitArrayMatchedValue::Variable(name.clone()),
         ast::Pattern::Discard { name, .. } => BitArrayMatchedValue::Discard(name.clone()),
         ast::Pattern::Assign { name, pattern, .. } => BitArrayMatchedValue::Assign {
             name: name.clone(),
-            value: Box::new(segment_matched_value(pattern)),
+            value: Box::new(segment_matched_value(segment, Some(pattern))),
         },
         x => panic!("unexpected segment value pattern {:?}", x),
     }
@@ -2875,7 +2910,14 @@ fn segment_matched_value(pattern: &TypedPattern) -> BitArrayMatchedValue {
 fn segment_size(
     segment: &TypedPatternBitArraySegment,
     pattern_variables: &HashMap<EcoString, ReadAction>,
+    // If we are compiling an assignment pattern, we still need access to the
+    // `type_` and `options` fields of the `segment`, so we must still pass that
+    // in above. However, we need to check the correct sub-pattern of the original
+    // pattern, so if they are different we set this argument to `Some`.
+    pattern: Option<&TypedPattern>,
 ) -> ReadSize {
+    let pattern = pattern.unwrap_or(&segment.value);
+
     match segment.size() {
         // Size could either be a constant or a variable usage. In either case
         // we need to take the segment's unit into account!
@@ -2905,11 +2947,22 @@ fn segment_size(
         // If there's no size option we go for a default: 8 bits for int
         // segments, and 64 for anything else.
         None if segment.type_.is_int() => ReadSize::ConstantBits(8.into()),
-        None => match segment.value.as_ref() {
-            ast::Pattern::String { .. }
-                if segment.has_utf16_option() || segment.has_utf32_option() =>
-            {
-                panic!("non utf8 string in bit array pattern on js target")
+        None => match pattern {
+            ast::Pattern::Assign { pattern, .. } => {
+                segment_size(segment, pattern_variables, Some(pattern))
+            }
+
+            ast::Pattern::String { value, .. } if segment.has_utf16_option() => {
+                ReadSize::ConstantBits(
+                    // Each utf16 code unit is 16 bits
+                    length_utf16(&convert_string_escape_chars(value)) * BigInt::from(16),
+                )
+            }
+            ast::Pattern::String { value, .. } if segment.has_utf32_option() => {
+                // Each utf32 code unit is 32 bits
+                ReadSize::ConstantBits(
+                    length_utf32(&convert_string_escape_chars(value)) * BigInt::from(32),
+                )
             }
             // If the segment is a literal string then it has an automatic size
             // given by its number of bytes.

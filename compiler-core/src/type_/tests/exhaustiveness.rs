@@ -1744,3 +1744,15 @@ pub fn main() {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4586
+#[test]
+fn compiler_does_not_crash_when_defining_duplicate_alternative_variables() {
+    assert_error!(
+        "
+case todo {
+  #(a, b) | #(a, a as b) -> todo
+}
+"
+    );
+}

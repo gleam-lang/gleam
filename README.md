@@ -60,9 +60,9 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/bgwdotdev">bgw</a> -
   <a href="https://github.com/bjartelund">Bjarte Aarmo Lund</a> -
   <a href="https://github.com/00bpa">Bjoern Paschen</a> -
-  <a href="https://github.com/borislav-rangelov">Borislav Rangelov</a> -
   <a href="https://github.com/bmehder">Brad Mehder</a> -
   <a href="https://github.com/brendisurfs">Brendan P. </a> -
+  <a href="https://github.com/brettcannon">Brett Cannon</a> -
   <a href="https://github.com/brettkolodny">brettkolodny</a> -
   <a href="https://github.com/brian-dawn">Brian Dawn</a> -
   <a href="https://github.com/bglusman">Brian Glusman</a> -
@@ -82,13 +82,13 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/chrislloyd">Chris Lloyd</a> -
   <a href="https://github.com/utilForever">Chris Ohk</a> -
   <a href="https://github.com/Chriscbr">Chris Rybicki</a> -
+  <a href="https://github.com/cvincent">Chris Vincent</a> -
   <a href="https://github.com/christophershirk">Christopher David Shirk</a> -
   <a href="https://github.com/devries">Christopher De Vries</a> -
   <a href="https://github.com/cdaringe">Christopher Dieringer</a> -
   <a href="https://github.com/christopherhjung">Christopher Jung</a> -
   <a href="https://github.com/christhekeele">Christopher Keele</a> -
   <a href="https://github.com/specialblend">CJ Salem</a> -
-  <a href="https://github.com/clangley">clangley</a> -
   <a href="https://github.com/CliffordAnderson">Clifford Anderson</a> -
   <a href="https://github.com/coder">Coder</a> -
   <a href="https://github.com/colelawrence">Cole Lawrence</a> -
@@ -104,12 +104,11 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/DanielleMaywood">Danielle Maywood</a> -
   <a href="https://github.com/pinnet">Danny Arnold</a> -
   <a href="https://github.com/despairblue">Danny Martini</a> -
-  <a href="https://github.com/davydog187">Dave Lucia</a> -
   <a href="https://github.com/dbernheisel">David Bernheisel</a> -
   <a href="https://github.com/davidcornu">David Cornu</a> -
-  <a href="https://github.com/davesnx">David Sancho</a> -
   <a href="https://github.com/dangdennis">Dennis Dang</a> -
   <a href="https://github.com/dennistruemper">dennistruemper</a> -
+  <a href="https://github.com/devinalvaro">devinalvaro</a> -
   <a href="https://github.com/diemogebhardt">Diemo Gebhardt</a> -
   <a href="https://github.com/dmmulroy">Dillon Mulroy</a> -
   <a href="https://github.com/gothy">Dima Utkin</a> -
@@ -121,6 +120,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/edongashi">Edon Gashi</a> -
   <a href="https://github.com/enoonan">Eileen Noonan</a> -
   <a href="https://github.com/dropwhile">eli</a> -
+  <a href="https://liberapay.com/ijomeli/">elke</a> -
   <a href="https://github.com/Emma-Fuller">Emma</a> -
   <a href="https://github.com/EMRTS">EMR Technical Solutions</a> -
   <a href="https://github.com/yellowsman">Endo Shogo</a> -
@@ -169,13 +169,10 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/losfair">Heyang Zhou</a> -
   <a href="https://github.com/hubertmalkowski">Hubert Małkowski</a> -
   <a href="https://github.com/human154">human154</a> -
-  <a href="https://github.com/hpiaia">Humberto Piaia</a> -
-  <a href="https://github.com/Hunam6">Hunam (Elie TD)</a> -
   <a href="https://github.com/iainh">Iain H</a> -
   <a href="https://github.com/Ian-GL">Ian González</a> -
   <a href="https://github.com/ianmjones">Ian M. Jones</a> -
   <a href="https://github.com/igordsm">Igor Montagner</a> -
-  <a href="https://github.com/irumiha">Igor Rumiha</a> -
   <a href="https://github.com/inoas">inoas</a> -
   <a href="https://github.com/graphiteisaac">Isaac</a> -
   <a href="https://github.com/isaacharrisholt">Isaac Harris-Holt</a> -
@@ -193,6 +190,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/hypirion">Jean Niklas L'orange</a> -
   <a href="https://github.com/MightyGoldenOctopus">Jean-Adrien Ducastaing</a> -
   <a href="https://github.com/jlgeering">Jean-Luc Geering</a> -
+  <a href="https://github.com/jihem">Jean-Marc QUERE</a> -
   <a href="https://github.com/okkdev">Jen Stehlik</a> -
   <a href="https://github.com/shepherdjerred">Jerred Shepherd</a> -
   <a href="https://github.com/jiangplus">jiangplus</a> -
@@ -215,6 +213,8 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/schurhammer">Julian Schurhammer</a> -
   <a href="https://github.com/justinlubin">Justin Lubin</a> -
   <a href="https://github.com/Neofox">Jérôme Schaeffer</a> -
+  <a href="https://github.com/Kamila-P">KamilaP</a> -
+  <a href="https://github.com/withkarann">Karan Rajeshbhai Mungara</a> -
   <a href="https://github.com/jkbrinso">Kemp Brinson</a> -
   <a href="https://github.com/keroami">Kero van Gelder</a> -
   <a href="https://github.com/kevinschweikert">Kevin Schweikert</a> -
@@ -224,16 +224,14 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/krzysztofgb">Krzysztof Gasienica-Bednarz</a> -
   <a href="https://github.com/leostera">Leandro Ostera</a> -
   <a href="https://github.com/leejarvis">Lee Jarvis</a> -
+  <a href="https://github.com/rcoder">Lennon Day-Reynolds</a> -
   <a href="https://github.com/leonqadirie">Leon Qadirie</a> -
   <a href="https://github.com/LeartS">Leonardo Donelli</a> -
   <a href="https://github.com/lexx27">Lexx</a> -
   <a href="https://github.com/defp">lidashuang</a> -
   <a href="https://github.com/LilyRose2798">Lily Rose</a> -
-  <a href="https://github.com/nnuuvv">liv</a> -
-  <a href="https://github.com/wowi42">Loïc Tosser</a> -
   <a href="https://github.com/lucaspellegrinelli">Lucas Pellegrinelli</a> -
   <a href="https://github.com/lbjarre">Lukas Bjarre</a> -
-  <a href="https://github.com/lukasmeihsner">Lukas Meihsner</a> -
   <a href="https://github.com/lamdor">Luke Amdor</a> -
   <a href="https://github.com/2kool4idkwhat">Luna</a> -
   <a href="https://github.com/manuel-rubio">Manuel Rubio</a> -
@@ -243,12 +241,12 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/mariuskalvo">Marius Kalvø</a> -
   <a href="https://github.com/markholmes">Mark Holmes</a> -
   <a href="https://github.com/markmark206">Mark Markaryan</a> -
-  <a href="https://github.com/datayja">Markéta Lisová</a> -
   <a href="https://github.com/foresterre">Martijn Gribnau</a> -
   <a href="https://github.com/Janiczek">Martin Janiczek</a> -
   <a href="https://github.com/poelstra">Martin Poelstra</a> -
   <a href="https://github.com/rechsteiner">Martin Rechsteiner </a> -
   <a href="https://github.com/martonkaufmann">martonkaufmann</a> -
+  <a href="https://github.com/mwarger">Mat Warger</a> -
   <a href="https://github.com/han-tyumi">Matt Champagne</a> -
   <a href="https://github.com/mhheise">Matt Heise</a> -
   <a href="https://github.com/m">Matt Mullenweg</a> -
@@ -287,6 +285,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/OldhamMade">OldhamMade</a> -
   <a href="https://github.com/CanadaHonk">Oliver Medhurst</a> -
   <a href="https://github.com/otosky">Oliver Tosky</a> -
+  <a href="https://github.com/nnuuvv">ollie</a> -
   <a href="https://github.com/optizio">optizio</a> -
   <a href="https://github.com/Davorak">Patrick Wheeler</a> -
   <a href="https://github.com/pguse">Paul Guse</a> -
@@ -299,7 +298,6 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/qdentity">Qdentity</a> -
   <a href="https://github.com/raquentin">Race Williams</a> -
   <a href="https://github.com/stoft">Rasmus</a> -
-  <a href="https://github.com/ray-delossantos">Ray</a> -
   <a href="https://github.com/chouzar">Raúl Chouza </a> -
   <a href="https://github.com/renatillas">re.natillas</a> -
   <a href="https://github.com/redmar">Redmar Kerkhoff</a> -
@@ -326,7 +324,6 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/castletaste">Savva</a> -
   <a href="https://github.com/sasa1977">Saša Jurić</a> -
   <a href="https://github.com/scotttrinh">Scott Trinh</a> -
-  <a href="https://github.com/smweber">Scott Weber</a> -
   <a href="https://github.com/scottwey">Scott Wey</a> -
   <a href="https://github.com/star-szr">Scott Zhu Reeves</a> -
   <a href="https://github.com/seancribbs">Sean Cribbs</a> -
@@ -343,7 +340,6 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/sthagen">Stefan Hagen</a> -
   <a href="https://github.com/steinareliassen">Steinar Eliassen</a> -
   <a href="https://github.com/Qard">Stephen Belanger</a> -
-  <a href="https://github.com/stvpwrs">Steve Powers</a> -
   <a href="https://github.com/Strandinator">Strandinator</a> -
   <a href="https://github.com/slafs">Sławomir Ehlert</a> -
   <a href="https://github.com/Theosaurus-Rex">Theo Harris</a> -
@@ -359,7 +355,6 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/tsloughter">Tristan Sloughter</a> -
   <a href="https://github.com/lucamtudor">Tudor Luca</a> -
   <a href="https://github.com/tymak">tymak</a> -
-  <a href="https://github.com/upsidedownsweetfood">upsidedowncake</a> -
   <a href="https://github.com/vvzen">Valerio Viperino</a> -
   <a href="https://github.com/bondiano">Vassiliy Kuzenkov</a> -
   <a href="https://github.com/sandsower">Vic Valenzuela</a> -
@@ -368,7 +363,6 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/yelps">Volker Rabe</a> -
   <a href="https://github.com/Whoops">Walton Hoops</a> -
   <a href="https://github.com/weizhliu">Weizheng Liu</a> -
-  <a href="https://github.com/enkerewpo">wheatfox</a> -
   <a href="https://github.com/Willyboar">Willyboar</a> -
   <a href="https://github.com/wilsonsilva">Wilson Silva</a> -
   <a href="https://github.com/HymanZHAN">Xucong Zhan</a> -
@@ -377,7 +371,6 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/yoshi-monster">yoshi~ </a> -
   <a href="https://github.com/gasparinzsombor">Zsombor Gasparin</a> -
   <a href="https://github.com/zwubs">ZWubs</a> -
-  <a href="https://liberapay.com/~1814730/">~1814730</a> -
   <a href="https://liberapay.com/~1847917/">~1847917</a> -
   <a href="https://liberapay.com/~1867501/">~1867501</a> -
   <a href="https://github.com/eberfreitas">Éber Freitas Dias</a>

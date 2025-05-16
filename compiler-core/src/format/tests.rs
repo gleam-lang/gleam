@@ -6592,3 +6592,37 @@ fn assert_with_long_expression_and_long_message() {
 "#
     );
 }
+
+#[test]
+fn echo_with_long_binary_expression() {
+    assert_format!(
+        r#"pub fn main() {
+  echo wibble_wobble_wibble_wobble_wibble_wobble_wibble
+    >= wibble_wobble_wibble_wobble_wibble_wobble_wibble
+
+  echo wibble_wobble_wibble_wobble_wibble_wobble_wibble
+    + wibble_wobble_wibble_wobble_wibble_wobble_wibble
+
+  echo wibble_wobble_wibble_wobble_wibble_wobble_wibble
+    == wibble_wobble_wibble_wobble_wibble_wobble_wibble
+}
+"#
+    );
+}
+
+#[test]
+fn assert_with_long_binary_expression() {
+    assert_format!(
+        r#"pub fn main() {
+  assert wibble_wobble_wibble_wobble_wibble_wobble_wibble
+    >= wibble_wobble_wibble_wobble_wibble_wobble_wibble
+
+  assert wibble_wobble_wibble_wobble_wibble_wobble_wibble
+    + wibble_wobble_wibble_wobble_wibble_wobble_wibble
+
+  assert wibble_wobble_wibble_wobble_wibble_wobble_wibble
+    == wibble_wobble_wibble_wobble_wibble_wobble_wibble
+}
+"#
+    );
+}

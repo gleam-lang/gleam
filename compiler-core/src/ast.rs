@@ -1908,7 +1908,18 @@ impl TypedClauseGuard {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Default, Clone, Copy, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Default,
+    Clone,
+    Copy,
+    serde::Serialize,
+    serde::Deserialize,
+)]
 pub struct SrcSpan {
     pub start: u32,
     pub end: u32,
@@ -2121,6 +2132,11 @@ impl<A> Pattern<A> {
             Pattern::Variable { .. } => true,
             _ => false,
         }
+    }
+
+    #[must_use]
+    pub fn is_string(&self) -> bool {
+        matches!(self, Self::String { .. })
     }
 }
 
@@ -2396,7 +2412,7 @@ impl<Type> BitArraySegment<Pattern<Type>, Type> {
     }
 }
 
-impl<Value> BitArraySegment<Value, Arc<Type>> {
+impl<Value, Type> BitArraySegment<Value, Type> {
     #[must_use]
     pub fn has_native_option(&self) -> bool {
         self.options

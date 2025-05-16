@@ -5,11 +5,11 @@ use regex::Regex;
 
 use crate::{
     ast::{ArgNames, SrcSpan},
+    strings::{to_snake_case, to_upper_camel_case},
     type_::Problems,
 };
 
 use super::{Error, Named};
-use heck::{ToSnakeCase, ToUpperCamelCase};
 
 static VALID_NAME_PATTERN: OnceLock<Regex> = OnceLock::new();
 
@@ -62,16 +62,14 @@ pub fn check_name_case(location: SrcSpan, name: &EcoString, kind: Named) -> Resu
 
 pub fn correct_name_case(name: &EcoString, kind: Named) -> EcoString {
     match kind {
-        Named::Type | Named::TypeAlias | Named::CustomTypeVariant => {
-            name.to_upper_camel_case().into()
-        }
+        Named::Type | Named::TypeAlias | Named::CustomTypeVariant => to_upper_camel_case(name),
         Named::Variable
         | Named::TypeVariable
         | Named::Argument
         | Named::Label
         | Named::Constant
-        | Named::Function => name.to_snake_case().into(),
-        Named::Discard => eco_format!("_{}", name.to_snake_case()),
+        | Named::Function => to_snake_case(name),
+        Named::Discard => eco_format!("_{}", to_snake_case(name)),
     }
 }
 

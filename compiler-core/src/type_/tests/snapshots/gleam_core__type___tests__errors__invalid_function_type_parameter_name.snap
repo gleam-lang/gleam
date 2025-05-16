@@ -12,6 +12,6 @@ error: Invalid type variable name
 1 │ fn identity(value: someType) { value }
   │                    ^^^^^^^^ This is not a valid type variable name
 
-Hint: Type Variable names start with a lowercase letter and contain a-z,
+Hint: Type variable names start with a lowercase letter and contain a-z,
 0-9, or _.
 Try: some_type

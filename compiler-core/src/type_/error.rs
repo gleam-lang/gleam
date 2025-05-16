@@ -633,6 +633,10 @@ pub enum Error {
     DoubleVariableAssignmentInBitArray {
         location: SrcSpan,
     },
+
+    NonUtf8StringAssignmentInBitArray {
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -690,16 +694,16 @@ pub enum Named {
 impl Named {
     pub fn as_str(self) -> &'static str {
         match self {
-            Named::Type => "type",
-            Named::TypeAlias => "type alias",
-            Named::TypeVariable => "type variable",
-            Named::CustomTypeVariant => "type variant",
-            Named::Variable => "variable",
-            Named::Argument => "argument",
-            Named::Label => "label",
-            Named::Constant => "constant",
-            Named::Function => "function",
-            Named::Discard => "discard",
+            Named::Type => "Type",
+            Named::TypeAlias => "Type alias",
+            Named::TypeVariable => "Type variable",
+            Named::CustomTypeVariant => "Type variant",
+            Named::Variable => "Variable",
+            Named::Argument => "Argument",
+            Named::Label => "Label",
+            Named::Constant => "Constant",
+            Named::Function => "Function",
+            Named::Discard => "Discard",
         }
     }
 }
@@ -1136,7 +1140,8 @@ impl Error {
             | Error::FloatOperatorOnInts { location, .. }
             | Error::IntOperatorOnFloats { location, .. }
             | Error::StringConcatenationWithAddInt { location }
-            | Error::DoubleVariableAssignmentInBitArray { location } => location.start,
+            | Error::DoubleVariableAssignmentInBitArray { location }
+            | Error::NonUtf8StringAssignmentInBitArray { location } => location.start,
 
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
@@ -1168,7 +1173,7 @@ impl Warning {
         }
     }
 
-    fn location(&self) -> SrcSpan {
+    pub(crate) fn location(&self) -> SrcSpan {
         match self {
             Warning::Todo { location, .. }
             | Warning::ImplicitlyDiscardedResult { location, .. }

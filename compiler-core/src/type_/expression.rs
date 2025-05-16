@@ -848,16 +848,21 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             end: sequence_location.end,
         };
 
-        let call = self.infer_call(
-            *call.function,
-            call.arguments,
-            call_location,
-            CallKind::Use {
-                call_location: use_call_location,
-                assignments_location: use_.assignments_location,
-                last_statement_location,
-            },
-        );
+        // We use `stacker` to prevent overflowing the stack when many `use`
+        // expressions are chained. See https://github.com/gleam-lang/gleam/issues/4287
+        let infer_call = || {
+            self.infer_call(
+                *call.function,
+                call.arguments,
+                call_location,
+                CallKind::Use {
+                    call_location: use_call_location,
+                    assignments_location: use_.assignments_location,
+                    last_statement_location,
+                },
+            )
+        };
+        let call = stacker::maybe_grow(64 * 1024, 1024 * 1024, infer_call);
 
         // After typing the call we know that the last argument must be an
         // anonymous function and the first assignments in its body are the
@@ -1757,11 +1762,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             self.problems,
         );
 
-        let value_variable_name = match value {
-            TypedExpr::Var { ref name, .. } => Some(name.clone()),
-            _ => None,
-        };
-        let pattern = pattern_typer.unify(pattern, type_.clone(), value_variable_name);
+        let pattern = pattern_typer.infer_single_pattern(pattern, &value);
 
         let minimum_required_version = pattern_typer.minimum_required_version;
         if minimum_required_version > self.minimum_required_version {
@@ -2724,6 +2725,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_module_access(
         &mut self,
+        // This is the name of the module coming before the `.`: for example
+        // in `result.try` it's `result`.
         module_alias: &EcoString,
         label: EcoString,
         module_location: &SrcSpan,
@@ -2768,10 +2771,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             self.environment
                 .references
                 .register_module_reference(module_alias.clone());
-            let constructor = constructor.clone();
-            let module_name = module.name.clone();
 
-            (module_name, constructor)
+            (module.name.clone(), constructor.clone())
         };
 
         let type_ = self.instantiate(constructor.type_, &mut hashmap![]);

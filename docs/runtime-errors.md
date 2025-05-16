@@ -130,7 +130,7 @@ The expression maps have this structure:
 | end    | Int          | Number           | The byte-index of the end of this expression in the source code   |
 
 If the expression is a literal, such as `True` or `15`, it will have the `literal`
-kind. This signals that its value is not runtime dependant, and may not need to
+kind. This signals that its value is not runtime dependent, and may not need to
 be printed.
 
 If the expression is on the right hand side of a short-circuiting operator, like

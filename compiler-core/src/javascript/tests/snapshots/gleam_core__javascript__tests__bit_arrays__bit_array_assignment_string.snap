@@ -16,7 +16,7 @@ import { makeError, toBitArray, stringBits } from "../gleam.mjs";
 export function main() {
   let $ = toBitArray([stringBits("Hello, world!")]);
   if (
-    $.bitSize !== 64 ||
+    $.bitSize !== 104 ||
     $.byteAt(0) !== 72 ||
     $.byteAt(1) !== 101 ||
     $.byteAt(2) !== 108 ||

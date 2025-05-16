@@ -1,6 +1,6 @@
 [package]
 name = "gleam-core"
-version = "1.10.0"
+version = "1.11.0-rc1"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2024"
 license-file = "LICENCE"
@@ -8,12 +8,8 @@ license-file = "LICENCE"
 [dependencies]
 # Error message and warning formatting
 codespan-reporting = "0"
-# String case conversion
-heck = "0"
 # Graph data structures
 petgraph = "0"
-# Levenshtein string distance for typo suggestions
-strsim = "0"
 # Cap'n Proto binary format runtime
 capnp = "0"
 # Template rendering
@@ -50,10 +46,11 @@ num-traits = "0.2.19"
 # Encryption
 age = { version = "0.11", features = ["armor"] }
 radix_trie = "0.2.1"
+# Ensuring recursive type-checking doesn't stack overflow
+stacker = "0.1.21"
 
 async-trait.workspace = true
 base16.workspace = true
-bytes.workspace = true
 camino = { workspace = true, features = ["serde1"] }
 debug-ignore.workspace = true
 ecow = { workspace = true, features = ["serde"] }
@@ -85,4 +82,4 @@ capnpc = "0"
 pretty_assertions.workspace = true
 insta.workspace = true
 # Random value generation
-rand = "0"
+rand = "0.9"

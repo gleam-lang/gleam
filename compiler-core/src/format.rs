@@ -13,12 +13,11 @@ use crate::{
     parse::SpannedString,
     parse::extra::{Comment, ModuleExtra},
     pretty::{self, *},
-    type_::{self, Type},
     warning::WarningEmitter,
 };
 use ecow::{EcoString, eco_format};
 use itertools::Itertools;
-use std::{cmp::Ordering, sync::Arc};
+use std::cmp::Ordering;
 use vec1::Vec1;
 
 use crate::type_::Deprecation;
@@ -665,17 +664,6 @@ impl<'comments> Formatter<'comments> {
                 .append(")")
                 .force_break(),
         }
-    }
-
-    pub fn docs_const_expr<'a>(
-        &mut self,
-        publicity: Publicity,
-        name: &'a str,
-        value: &'a TypedConstant,
-    ) -> Document<'a> {
-        let type_ = type_::pretty::Printer::new().print(&value.type_());
-        let attributes = AttributesPrinter::new().set_internal(publicity);
-        docvec![attributes, pub_(publicity), "const ", name, ": ", type_]
     }
 
     fn documented_definition<'a>(&mut self, s: &'a UntypedDefinition) -> Document<'a> {
@@ -1717,85 +1705,6 @@ impl<'comments> Formatter<'comments> {
         doc.append(inner).append(line()).append("}")
     }
 
-    pub fn docs_opaque_custom_type<'a>(
-        &mut self,
-        publicity: Publicity,
-        name: &'a str,
-        args: &'a [SpannedString],
-        location: &'a SrcSpan,
-    ) -> Document<'a> {
-        let _ = self.pop_empty_lines(location.start);
-        let attributes = AttributesPrinter::new().set_internal(publicity).to_doc();
-
-        attributes
-            .append(pub_(publicity))
-            .append("opaque type ")
-            .append(if args.is_empty() {
-                name.to_doc()
-            } else {
-                let args = args.iter().map(|(_, e)| e.to_doc()).collect_vec();
-                name.to_doc().append(self.wrap_args(args, location.end))
-            })
-    }
-
-    pub fn docs_fn_signature<'a>(
-        &mut self,
-        publicity: Publicity,
-        name: &'a str,
-        args: &'a [TypedArg],
-        return_type: Arc<Type>,
-        location: &SrcSpan,
-    ) -> Document<'a> {
-        let mut printer = type_::pretty::Printer::new();
-        let fn_args = self.docs_fn_args(args, &mut printer, location);
-        let return_type = printer.print(&return_type);
-
-        let attributes = AttributesPrinter::new().set_internal(publicity);
-        docvec![
-            attributes,
-            pub_(publicity),
-            "fn ",
-            name,
-            fn_args,
-            " -> ",
-            return_type
-        ]
-    }
-
-    // Will always print the types, even if they were implicit in the original source
-    fn docs_fn_args<'a>(
-        &mut self,
-        args: &'a [TypedArg],
-        printer: &mut type_::pretty::Printer,
-        location: &SrcSpan,
-    ) -> Document<'a> {
-        let args = args
-            .iter()
-            .map(|arg| {
-                self.docs_fn_arg_name(arg)
-                    .append(": ".to_doc().append(printer.print(&arg.type_)))
-                    .group()
-            })
-            .collect_vec();
-        self.wrap_args(args, location.end)
-    }
-
-    fn docs_fn_arg_name<'a>(&mut self, arg: &'a TypedArg) -> Document<'a> {
-        match &arg.names {
-            ArgNames::Named { name, .. } => name.to_doc(),
-            ArgNames::NamedLabelled { label, name, .. } => docvec![label, " ", name],
-            // We remove the underscore from discarded function arguments since we don't want to
-            // expose this kind of detail: https://github.com/gleam-lang/gleam/issues/2561
-            ArgNames::Discard { name, .. } => match name.strip_prefix('_').unwrap_or(name) {
-                "" => "arg".to_doc(),
-                name => name.to_doc(),
-            },
-            ArgNames::LabelledDiscard { label, name, .. } => {
-                docvec![label, " ", name.strip_prefix('_').unwrap_or(name).to_doc()]
-            }
-        }
-    }
-
     fn call_arg<'a>(&mut self, arg: &'a CallArg<UntypedExpr>, arity: usize) -> Document<'a> {
         self.format_call_arg(arg, expr_call_arg_formatting, |this, value| {
             this.comma_separated_item(value, arity)
@@ -2464,11 +2373,13 @@ impl<'comments> Formatter<'comments> {
                 .append("as ".to_doc().append(self.expr(message).group()))
         });
 
-        let document = "assert "
-            .to_doc()
-            .append(self.expr(&assert.value))
-            .append(message);
+        let expression = if assert.value.is_binop() || assert.value.is_pipeline() {
+            self.expr(&assert.value).nest(INDENT)
+        } else {
+            self.expr(&assert.value)
+        };
 
+        let document = docvec!["assert ", expression, message];
         commented(document, comments)
     }
 
@@ -2753,28 +2664,29 @@ impl<'comments> Formatter<'comments> {
             return "echo".to_doc();
         };
 
-        match expression.as_ref() {
-            // When a pipeline gets broken on multiple lines we don't want it to
-            // be on the same line as echo, or it would look confusing; instead
-            // it's nested onto a new line:
-            //
-            // ```gleam
-            // echo first
-            //   |> wobble
-            //   |> wibble
-            // ```
-            //
-            // So it's easier to see echo is printing the whole thing. Otherwise,
-            // it would look like echo is printing just the first item:
-            //
-            // ```gleam
-            // echo first
-            // |> wobble
-            // |> wibble
-            // ```
-            //
-            UntypedExpr::PipeLine { .. } => docvec!["echo ", self.expr(expression).nest(INDENT)],
-            _ => docvec!["echo ", self.expr(expression)],
+        // When a binary expression gets broken on multiple lines we don't want
+        // it to be on the same line as echo, or it would look confusing;
+        // instead it's nested onto a new line:
+        //
+        // ```gleam
+        // echo first
+        //   |> wobble
+        //   |> wibble
+        // ```
+        //
+        // So it's easier to see echo is printing the whole thing. Otherwise,
+        // it would look like echo is printing just the first item:
+        //
+        // ```gleam
+        // echo first
+        // |> wobble
+        // |> wibble
+        // ```
+        //
+        if expression.is_binop() || expression.is_pipeline() {
+            docvec!["echo ", self.expr(expression).nest(INDENT)]
+        } else {
+            docvec!["echo ", self.expr(expression)]
         }
     }
 }

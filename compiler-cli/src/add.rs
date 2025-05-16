@@ -13,6 +13,13 @@ use crate::{
 };
 
 pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) -> Result<()> {
+    let config = crate::config::root_config(paths)?;
+    if packages_to_add.iter().any(|name| name == &config.name) {
+        return Err(Error::CannotAddSelfAsDependency {
+            name: config.name.clone(),
+        });
+    }
+
     let mut new_package_requirements = Vec::with_capacity(packages_to_add.len());
     for specifier in packages_to_add {
         new_package_requirements.push(parse_gleam_add_specifier(&specifier)?);

@@ -250,15 +250,11 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         TypedExpr::Var {
             location: self.argument_location,
             name: PIPE_VARIABLE.into(),
-            constructor: ValueConstructor {
-                publicity: Publicity::Public,
-                deprecation: Deprecation::NotDeprecated,
-                type_: self.argument_type.clone(),
-                variant: ValueConstructorVariant::LocalVariable {
-                    location: self.argument_location,
-                    origin: VariableOrigin::Generated,
-                },
-            },
+            constructor: ValueConstructor::local_variable(
+                self.argument_location,
+                VariableOrigin::Generated,
+                self.argument_type.clone(),
+            ),
         }
     }
 

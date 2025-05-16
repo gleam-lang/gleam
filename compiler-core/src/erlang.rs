@@ -7,7 +7,7 @@ mod pattern;
 mod tests;
 
 use crate::build::{Target, module_erlang_name};
-use crate::strings::convert_string_escape_chars;
+use crate::strings::{convert_string_escape_chars, to_snake_case};
 use crate::type_::is_prelude_module;
 use crate::{
     Result,
@@ -22,7 +22,6 @@ use crate::{
 };
 use camino::Utf8Path;
 use ecow::{EcoString, eco_format};
-use heck::ToSnakeCase;
 use im::HashSet;
 use itertools::Itertools;
 use pattern::pattern;
@@ -35,7 +34,7 @@ const INDENT: isize = 4;
 const MAX_COLUMNS: isize = 80;
 
 fn module_name_atom(module: &str) -> Document<'static> {
-    atom_string(module.replace('/', "@"))
+    atom_string(module.replace('/', "@").into())
 }
 
 #[derive(Debug, Clone)]
@@ -137,26 +136,19 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
 }
 
 pub fn record_definition(name: &str, fields: &[(&str, Arc<Type>)]) -> String {
-    let name = &name.to_snake_case();
+    let name = to_snake_case(name);
     let type_printer = TypePrinter::new("").var_as_any();
     let fields = fields.iter().map(move |(name, type_)| {
         let type_ = type_printer.print(type_);
-        docvec![atom_string((*name).to_string()), " :: ", type_.group()]
+        docvec![atom_string((*name).into()), " :: ", type_.group()]
     });
     let fields = break_("", "")
         .append(join(fields, break_(",", ", ")))
         .nest(INDENT)
         .append(break_("", ""))
         .group();
-    docvec![
-        "-record(",
-        atom_string(name.to_string()),
-        ", {",
-        fields,
-        "}).",
-        line()
-    ]
-    .to_pretty_string(MAX_COLUMNS)
+    docvec!["-record(", atom_string(name), ", {", fields, "}).", line()]
+        .to_pretty_string(MAX_COLUMNS)
 }
 
 pub fn module<'a>(
@@ -320,7 +312,7 @@ fn register_imports(
             if implementations.supports(Target::Erlang) {
                 let function_name = escape_erlang_existing_name(name);
                 exports.push(
-                    atom_string(function_name.to_string())
+                    atom_string(function_name.into())
                         .append("/")
                         .append(args.len()),
                 )
@@ -364,7 +356,7 @@ fn register_imports(
             };
             // Type Exports
             type_exports.push(
-                erl_safe_type_name(name.to_snake_case())
+                erl_safe_type_name(to_snake_case(name))
                     .to_doc()
                     .append("/")
                     .append(typed_parameters.len()),
@@ -378,7 +370,7 @@ fn register_imports(
                 let constructors = constructors
                     .iter()
                     .map(|c| {
-                        let name = atom_string(c.name.to_snake_case());
+                        let name = atom_string(to_snake_case(&c.name));
                         if c.arguments.is_empty() {
                             name
                         } else {
@@ -398,7 +390,7 @@ fn register_imports(
             );
             let doc = if *opaque { "-opaque " } else { "-type " }
                 .to_doc()
-                .append(erl_safe_type_name(name.to_snake_case()))
+                .append(erl_safe_type_name(to_snake_case(name)))
                 .append("(")
                 .append(params)
                 .append(") :: ")
@@ -526,7 +518,7 @@ fn module_function<'a>(
             attributes,
             line(),
             spec,
-            atom_string(escape_erlang_existing_name(function_name).to_string()),
+            atom_string(escape_erlang_existing_name(function_name).into()),
             arguments,
             " ->",
             line().append(body).nest(INDENT).group(),
@@ -652,7 +644,7 @@ fn fun_spec<'a>(
         .group()
 }
 
-fn atom_string(value: String) -> Document<'static> {
+fn atom_string(value: EcoString) -> Document<'static> {
     escape_atom_string(value).to_doc()
 }
 
@@ -674,13 +666,12 @@ fn atom(value: &str) -> Document<'_> {
     }
 }
 
-pub fn escape_atom_string(value: String) -> EcoString {
+pub fn escape_atom_string(value: EcoString) -> EcoString {
     if is_erlang_reserved_word(&value) {
         // Escape because of keyword collision
         eco_format!("'{value}'")
     } else if atom_pattern().is_match(&value) {
-        // No need to escape
-        EcoString::from(value)
+        value
     } else {
         // Escape because of characters contained
         eco_format!("'{value}'")
@@ -1378,12 +1369,12 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
                     .to_doc()
                     .append(chars.clone())
                     .append(") -> {")
-                    .append(atom_string(record_name.to_snake_case()))
+                    .append(atom_string(to_snake_case(record_name)))
                     .append(", ")
                     .append(chars)
                     .append("} end")
             }
-            _ => atom_string(record_name.to_snake_case()),
+            _ => atom_string(to_snake_case(record_name)),
         },
 
         ValueConstructorVariant::LocalVariable { .. } => env.local_var_name(name),
@@ -1466,12 +1457,12 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
             tag, type_, args, ..
         } if args.is_empty() => match type_.deref() {
             Type::Fn { args, .. } => record_constructor_function(tag, args.len()),
-            _ => atom_string(tag.to_snake_case()),
+            _ => atom_string(to_snake_case(tag)),
         },
 
         Constant::Record { tag, args, .. } => {
             let args = args.iter().map(|a| const_inline(&a.value, env));
-            let tag = atom_string(tag.to_snake_case());
+            let tag = atom_string(to_snake_case(tag));
             tuple(std::iter::once(tag).chain(args))
         }
 
@@ -1499,7 +1490,7 @@ fn record_constructor_function(tag: &EcoString, arity: usize) -> Document<'_> {
         .to_doc()
         .append(chars.clone())
         .append(") -> {")
-        .append(atom_string(tag.to_snake_case()))
+        .append(atom_string(to_snake_case(tag)))
         .append(", ")
         .append(chars)
         .append("} end")
@@ -1799,7 +1790,7 @@ fn module_fn_with_args<'a>(
     if module == env.module {
         atom(name).append(args)
     } else {
-        atom_string(module.replace('/', "@"))
+        atom_string(module.replace('/', "@").into())
             .append(":")
             .append(atom(name))
             .append(args)
@@ -1823,7 +1814,7 @@ fn docs_args_call<'a>(
                     ..
                 },
             ..
-        } => tuple(std::iter::once(atom_string(name.to_snake_case())).chain(args)),
+        } => tuple(std::iter::once(atom_string(to_snake_case(name))).chain(args)),
 
         TypedExpr::Var {
             constructor:
@@ -1889,9 +1880,9 @@ fn docs_args_call<'a>(
             // This also enables an optimisation in the Erlang compiler in which
             // some Erlang BIFs can be replaced with literals if their arguments
             // are literals, such as `binary_to_atom`.
-            atom_string(module_erlang_name(module).to_string())
+            atom_string(module_erlang_name(module))
                 .append(":")
-                .append(atom_string(name.to_string()))
+                .append(atom_string(name.into()))
                 .append(args)
         }
 
@@ -2133,7 +2124,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::Record { name, arity: 0, .. },
             ..
-        } => atom_string(name.to_snake_case()),
+        } => atom_string(to_snake_case(name)),
 
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::Constant { literal, .. },
@@ -2924,7 +2915,7 @@ fn type_var_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
     }
 }
 
-fn erl_safe_type_name(mut name: String) -> EcoString {
+fn erl_safe_type_name(mut name: EcoString) -> EcoString {
     if matches!(
         name.as_str(),
         "any"
@@ -2967,7 +2958,7 @@ fn erl_safe_type_name(mut name: String) -> EcoString {
             | "tuple"
     ) {
         name.push('_');
-        EcoString::from(name)
+        name
     } else {
         escape_atom_string(name)
     }
@@ -3057,7 +3048,7 @@ impl<'a> TypePrinter<'a> {
 
     fn print_type_app(&self, module: &str, name: &str, args: &[Arc<Type>]) -> Document<'static> {
         let args = join(args.iter().map(|a| self.print(a)), ", ".to_doc());
-        let name = erl_safe_type_name(name.to_snake_case()).to_doc();
+        let name = erl_safe_type_name(to_snake_case(name)).to_doc();
         if self.current_module == module {
             docvec![name, "(", args, ")"]
         } else {

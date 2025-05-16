@@ -1,6 +1,6 @@
-use std::collections::HashMap;
-
+use crate::ast::SrcSpan;
 use lsp_types::Position;
+use std::collections::HashMap;
 
 /// A struct which contains information about line numbers of a source file,
 /// and can convert between byte offsets that are used in the compiler and
@@ -135,6 +135,14 @@ impl LineNumbers {
         }
 
         u8_offset
+    }
+
+    /// Checks if the given span spans an entire line (excluding the newline
+    /// character itself).
+    pub fn spans_entire_line(&self, span: &SrcSpan) -> bool {
+        self.line_starts.iter().any(|&line_start| {
+            line_start == span.start && self.line_starts.contains(&(span.end + 1))
+        })
     }
 }
 

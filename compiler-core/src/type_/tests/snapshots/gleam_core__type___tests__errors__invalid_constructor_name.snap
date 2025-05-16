@@ -12,6 +12,6 @@ error: Invalid type variant name
 1 │ type MyType { Int_Value(Int) }
   │               ^^^^^^^^^ This is not a valid type variant name
 
-Hint: Type Variant names start with an uppercase letter and contain only
+Hint: Type variant names start with an uppercase letter and contain only
 lowercase letters, numbers, and uppercase letters.
 Try: IntValue

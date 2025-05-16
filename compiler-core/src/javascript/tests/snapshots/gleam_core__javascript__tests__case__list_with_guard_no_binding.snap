@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\npub fn go(x) {\n  case x {\n    [] -> 0\n    [first, ..] if 1 < 10 -> first * 2\n    [first, ..] -> first\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  case x {
+    [] -> 0
+    [first, ..] if 1 < 10 -> first * 2
+    [first, ..] -> first
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { Empty as $Empty } from "../gleam.mjs";
+
+export function go(x) {
+  if (x instanceof $Empty) {
+    return 0;
+  } else if (1 < 10) {
+    let first = x.head;
+    return first * 2;
+  } else {
+    let first = x.head;
+    return first;
+  }
+}

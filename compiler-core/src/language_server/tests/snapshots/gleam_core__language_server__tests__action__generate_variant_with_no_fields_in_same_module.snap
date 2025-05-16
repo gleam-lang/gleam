@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub type Wibble {\n  Wibble\n}\n\npub fn main() -> Wibble {\n  Wobble\n}"
+---
+----- BEFORE ACTION
+
+pub type Wibble {
+  Wibble
+}
+
+pub fn main() -> Wibble {
+  Wobble
+  ↑     
+}
+
+
+----- AFTER ACTION
+
+pub type Wibble {
+  Wibble
+  Wobble
+}
+
+pub fn main() -> Wibble {
+  Wobble
+}

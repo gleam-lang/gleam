@@ -6,10 +6,11 @@ license = "Apache-2.0"
 
 [dependencies]
 gleam-core = { path = "../compiler-core" }
+walkdir = "2"
+
 toml.workspace = true
 im.workspace = true
 itertools.workspace = true
-walkdir.workspace = true
 regex.workspace = true
 camino.workspace = true
 

@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/type_/tests/exhaustiveness.rs
+expression: "\ncase todo {\n  #(a, b) | #(a, a as b) -> todo\n}\n"
+---
+----- SOURCE CODE
+
+case todo {
+  #(a, b) | #(a, a as b) -> todo
+}
+
+
+----- ERROR
+error: Duplicate variable in pattern
+  ┌─ /src/one/two.gleam:3:18
+  │
+3 │   #(a, b) | #(a, a as b) -> todo
+  │                  ^ This has already been used
+
+Variables can only be used once per pattern. This variable `a` appears
+multiple times.
+If you used the same variable twice deliberately in order to check for
+equality please use a guard clause instead.
+e.g. (x, y) if x == y -> ...

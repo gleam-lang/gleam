@@ -1,10 +1,10 @@
 use std::{collections::HashSet, iter, sync::Arc};
 
 use crate::{
-    Error, STDLIB_PACKAGE_NAME,
+    Error, STDLIB_PACKAGE_NAME, analyse,
     ast::{
         self, AssignName, AssignmentKind, BitArraySegmentTruncation, CallArg, CustomType,
-        FunctionLiteralKind, ImplicitCallArgOrigin, PIPE_PRECEDENCE, Pattern,
+        FunctionLiteralKind, ImplicitCallArgOrigin, Import, PIPE_PRECEDENCE, Pattern,
         PatternUnusedArguments, PipelineAssignmentKind, RecordConstructor, SrcSpan, TodoKind,
         TypedArg, TypedAssignment, TypedExpr, TypedModuleConstant, TypedPattern,
         TypedPipelineAssignment, TypedRecordConstructor, TypedStatement, TypedUse,
@@ -16,6 +16,7 @@ use crate::{
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
     parse::{extra::ModuleExtra, lexer::str_to_keyword},
+    strings::to_snake_case,
     type_::{
         self, FieldMap, ModuleValueConstructor, Type, TypeVar, TypedCallArg, ValueConstructor,
         error::{ModuleSuggestion, VariableOrigin},
@@ -23,7 +24,6 @@ use crate::{
     },
 };
 use ecow::{EcoString, eco_format};
-use heck::ToSnakeCase;
 use im::HashMap;
 use itertools::Itertools;
 use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, Position, Range, TextEdit, Url};
@@ -34,8 +34,9 @@ use super::{
     compiler::LspProjectCompiler,
     edits::{add_newlines_after_import, get_import_edit, position_of_first_definition_if_import},
     engine::{overlaps, within},
+    files::FileSystemProxy,
     reference::find_variable_references,
-    src_span_to_lsp_range,
+    src_span_to_lsp_range, url_from_path,
 };
 
 #[derive(Debug)]
@@ -867,7 +868,7 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
         name: &'ast EcoString,
         arguments: &'ast Vec<CallArg<TypedPattern>>,
         module: &'ast Option<(EcoString, SrcSpan)>,
-        constructor: &'ast crate::analyse::Inferred<type_::PatternConstructor>,
+        constructor: &'ast analyse::Inferred<type_::PatternConstructor>,
         spread: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
     ) {
@@ -1299,7 +1300,7 @@ impl<'a> AddAnnotations<'a> {
 }
 
 pub struct QualifiedConstructor<'a> {
-    import: &'a ast::Import<EcoString>,
+    import: &'a Import<EcoString>,
     module_aliased: bool,
     used_name: EcoString,
     constructor: EcoString,
@@ -1342,7 +1343,7 @@ impl<'a> QualifiedToUnqualifiedImportFirstPass<'a> {
         module_name: &EcoString,
         constructor: &EcoString,
         layer: ast::Layer,
-    ) -> Option<&'a ast::Import<EcoString>> {
+    ) -> Option<&'a Import<EcoString>> {
         let mut matching_import = None;
 
         for def in &self.module.ast.definitions {
@@ -1496,14 +1497,14 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
         name: &'ast EcoString,
         arguments: &'ast Vec<CallArg<TypedPattern>>,
         module: &'ast Option<(EcoString, SrcSpan)>,
-        constructor: &'ast crate::analyse::Inferred<type_::PatternConstructor>,
+        constructor: &'ast analyse::Inferred<type_::PatternConstructor>,
         spread: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
     ) {
         let range = src_span_to_lsp_range(*location, self.line_numbers);
         if overlaps(self.params.range, range) {
             if let Some((module_alias, _)) = module {
-                if let crate::analyse::Inferred::Known(constructor) = constructor {
+                if let analyse::Inferred::Known(constructor) = constructor {
                     if let Some(import) =
                         self.get_module_import(&constructor.module, name, ast::Layer::Value)
                     {
@@ -1607,7 +1608,7 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
 
     fn find_last_char_before_closing_brace(&self) -> Option<(usize, char)> {
         let QualifiedConstructor {
-            import: ast::Import { location, .. },
+            import: Import { location, .. },
             ..
         } = self.qualified_constructor;
         let import_code = self.get_import_code();
@@ -1631,7 +1632,7 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
 
     fn get_import_code(&self) -> &str {
         let QualifiedConstructor {
-            import: ast::Import { location, .. },
+            import: Import { location, .. },
             ..
         } = self.qualified_constructor;
         self.module
@@ -1657,7 +1658,7 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
     // Handle inserting into an unbraced import
     fn insert_into_unbraced_import(&self, name: String, module_aliased: bool) -> (u32, String) {
         let QualifiedConstructor {
-            import: ast::Import { location, .. },
+            import: Import { location, .. },
             ..
         } = self.qualified_constructor;
         if !module_aliased {
@@ -1681,7 +1682,7 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
     // Handle inserting into a braced import
     fn insert_into_braced_import(&self, name: String) -> (u32, String) {
         let QualifiedConstructor {
-            import: ast::Import { location, .. },
+            import: Import { location, .. },
             ..
         } = self.qualified_constructor;
         if let Some((pos, c)) = self.find_last_char_before_closing_brace() {
@@ -1809,12 +1810,12 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
         name: &'ast EcoString,
         arguments: &'ast Vec<CallArg<TypedPattern>>,
         module: &'ast Option<(EcoString, SrcSpan)>,
-        constructor: &'ast crate::analyse::Inferred<type_::PatternConstructor>,
+        constructor: &'ast analyse::Inferred<type_::PatternConstructor>,
         spread: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
     ) {
         if let Some((module_alias, _)) = module {
-            if let crate::analyse::Inferred::Known(_) = constructor {
+            if let analyse::Inferred::Known(_) = constructor {
                 let QualifiedConstructor {
                     used_name,
                     constructor,
@@ -2030,7 +2031,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
         name: &'ast EcoString,
         arguments: &'ast Vec<CallArg<TypedPattern>>,
         module: &'ast Option<(EcoString, SrcSpan)>,
-        constructor: &'ast crate::analyse::Inferred<type_::PatternConstructor>,
+        constructor: &'ast analyse::Inferred<type_::PatternConstructor>,
         spread: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
     ) {
@@ -2040,7 +2041,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
                 src_span_to_lsp_range(*location, self.line_numbers),
             )
         {
-            if let crate::analyse::Inferred::Known(constructor) = constructor {
+            if let analyse::Inferred::Known(constructor) = constructor {
                 self.get_module_import_from_value_constructor(&constructor.module, name);
             }
         }
@@ -2238,7 +2239,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
         name: &'ast EcoString,
         arguments: &'ast Vec<CallArg<TypedPattern>>,
         module: &'ast Option<(EcoString, SrcSpan)>,
-        constructor: &'ast crate::analyse::Inferred<type_::PatternConstructor>,
+        constructor: &'ast analyse::Inferred<type_::PatternConstructor>,
         spread: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
     ) {
@@ -3750,7 +3751,7 @@ impl<'a> GenerateDynamicDecoder<'a> {
         let mut branches = Vec::with_capacity(constructors_size);
         for constructor in iter::once(first).chain(rest) {
             let body = self.constructor_decoder(mode, custom_type, constructor, 4)?;
-            let name = constructor.name.to_snake_case();
+            let name = to_snake_case(&constructor.name);
             branches.push(eco_format!(r#"    "{name}" -> {body}"#));
         }
 
@@ -3833,7 +3834,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast> {
             return;
         }
 
-        let name = eco_format!("{}_decoder", custom_type.name.to_snake_case());
+        let name = eco_format!("{}_decoder", to_snake_case(&custom_type.name));
         let Some(function_body) = self.custom_type_decoder_body(custom_type) else {
             return;
         };
@@ -4033,7 +4034,7 @@ impl<'a> DecoderPrinter<'a> {
                         Some((module, name, _))
                             if module == self.type_module && name == self.type_name =>
                         {
-                            eco_format!("{}_decoder()", name.to_snake_case())
+                            eco_format!("{}_decoder()", to_snake_case(name))
                         }
                         _ => eco_format!(
                             r#"todo as "Decoder for {}""#,
@@ -4193,7 +4194,7 @@ impl<'a> GenerateJsonEncoder<'a> {
         nesting: usize,
     ) -> Option<EcoString> {
         let json_module = self.printer.print_module(JSON_MODULE);
-        let tag = constructor.name.to_snake_case();
+        let tag = to_snake_case(&constructor.name);
         let indent = " ".repeat(nesting);
 
         // If the variant is encoded as a simple json string we just call the
@@ -4241,7 +4242,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast> {
             return;
         }
 
-        let record_name = EcoString::from(custom_type.name.to_snake_case());
+        let record_name = to_snake_case(&custom_type.name);
         let name = eco_format!("{record_name}_to_json");
         let Some(encoder) = self.custom_type_encoder_body(record_name.clone(), custom_type) else {
             return;
@@ -4416,7 +4417,7 @@ impl<'a> JsonEncoderPrinter<'a> {
                         Some((module, name, _))
                             if module == self.type_module && name == self.type_name =>
                         {
-                            maybe_capture(eco_format!("{}_to_json", name.to_snake_case()))
+                            maybe_capture(eco_format!("{}_to_json", to_snake_case(name)))
                         }
                         _ => eco_format!(
                             r#"todo as "Encoder for {}""#,
@@ -5001,7 +5002,12 @@ pub struct GenerateFunction<'a> {
 
 struct FunctionToGenerate<'a> {
     name: &'a str,
-    arguments: Vec<(Option<EcoString>, Arc<Type>)>,
+    arguments_types: Vec<Arc<Type>>,
+
+    /// The arguments actually supplied as input to the function, if any.
+    /// A function to generate might as well be just a name passed as an argument
+    /// `list.map([1, 2, 3], to_generate)` so it's not guaranteed to actually
+    /// have any actual arguments!
     given_arguments: Option<&'a [TypedCallArg]>,
     return_type: Arc<Type>,
     previous_function_end: Option<u32>,
@@ -5027,7 +5033,7 @@ impl<'a> GenerateFunction<'a> {
 
         let Some(FunctionToGenerate {
             name,
-            arguments,
+            arguments_types,
             given_arguments,
             previous_function_end: Some(insert_at),
             return_type,
@@ -5041,28 +5047,19 @@ impl<'a> GenerateFunction<'a> {
         let mut label_names = NameGenerator::new();
         let mut argument_names = NameGenerator::new();
         let mut printer = Printer::new(&self.module.ast.names);
-        let args = arguments
+        let arguments = arguments_types
             .iter()
             .enumerate()
-            .map(|(index, (arg_label, arg_type))| {
-                let arg_name = given_arguments
-                    .and_then(|arguments| arguments.get(index))
-                    .map(|argument| &argument.value)
-                    // We always favour a name derived from the expression (for example if
-                    // the argument is a variable)
-                    .and_then(|value| argument_names.generate_name_from_expression(value))
-                    // If we don't have such a name and there's a label we use that name.
-                    .or_else(|| Some(argument_names.rename_to_avoid_shadowing(arg_label.clone()?)))
-                    // If all else fails we fallback to using a name derived from the
-                    // argument's type.
-                    .unwrap_or_else(|| argument_names.generate_name_from_type(arg_type));
-
-                let pretty_type = printer.print_type(arg_type);
-                if let Some(arg_label) = arg_label {
-                    let arg_label = label_names.rename_to_avoid_shadowing(arg_label.clone());
-                    format!("{arg_label} {arg_name}: {pretty_type}")
+            .map(|(index, argument_type)| {
+                let call_argument = given_arguments.and_then(|arguments| arguments.get(index));
+                let (label, name) =
+                    argument_names.generate_label_and_name(call_argument, argument_type);
+                let pretty_type = printer.print_type(argument_type);
+                if let Some(label) = label {
+                    let label = label_names.rename_to_avoid_shadowing(label.clone());
+                    format!("{label} {name}: {pretty_type}")
                 } else {
-                    format!("{arg_name}: {pretty_type}")
+                    format!("{name}: {pretty_type}")
                 }
             })
             .join(", ");
@@ -5071,7 +5068,7 @@ impl<'a> GenerateFunction<'a> {
 
         self.edits.insert(
             insert_at,
-            format!("\n\nfn {name}({args}) -> {return_type} {{\n  todo\n}}"),
+            format!("\n\nfn {name}({arguments}) -> {return_type} {{\n  todo\n}}"),
         );
 
         let mut action = Vec::with_capacity(1);
@@ -5087,7 +5084,6 @@ impl<'a> GenerateFunction<'a> {
         &mut self,
         function_name_location: SrcSpan,
         function_type: &Arc<Type>,
-        labels: HashMap<usize, EcoString>,
         given_arguments: Option<&'a [TypedCallArg]>,
     ) {
         let name_range = function_name_location.start as usize..function_name_location.end as usize;
@@ -5096,15 +5092,9 @@ impl<'a> GenerateFunction<'a> {
             (None, _) | (_, None) => (),
             (Some(name), _) if !is_valid_lowercase_name(name) => (),
             (Some(name), Some((arguments_types, return_type))) => {
-                let arguments = arguments_types
-                    .iter()
-                    .enumerate()
-                    .map(|(i, arg)| (labels.get(&i).cloned(), arg.clone()))
-                    .collect_vec();
-
                 self.function_to_generate = Some(FunctionToGenerate {
                     name,
-                    arguments,
+                    arguments_types,
                     given_arguments,
                     return_type,
                     previous_function_end: self.last_visited_function_end,
@@ -5123,7 +5113,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
     fn visit_typed_expr_invalid(&mut self, location: &'ast SrcSpan, type_: &'ast Arc<Type>) {
         let invalid_range = self.edits.src_span_to_lsp_range(*location);
         if within(self.params.range, invalid_range) {
-            self.try_save_function_to_generate(*location, type_, HashMap::new(), None);
+            self.try_save_function_to_generate(*location, type_, None);
         }
 
         ast::visit::visit_typed_expr_invalid(self, location, type_);
@@ -5142,18 +5132,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
 
         if within(self.params.range, fun_range) && fun.is_invalid() {
             if labels_are_correct(args) {
-                let labels = args
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(i, arg)| arg.label.as_ref().map(|label| (i, label.clone())))
-                    .collect();
-
-                self.try_save_function_to_generate(
-                    fun.location(),
-                    &fun.type_(),
-                    labels,
-                    Some(args),
-                );
+                self.try_save_function_to_generate(fun.location(), &fun.type_(), Some(args));
             }
         } else {
             ast::visit::visit_typed_expr_call(self, location, type_, fun, args);
@@ -5161,10 +5140,385 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
     }
 }
 
+/// Builder for the "generate variant" code action. This will generate a variant
+/// for a type if it can tell the type it should come from. It will work with
+/// non-existing variants both used as expressions
+///
+/// ```gleam
+/// let a = IDoNotExist(1)
+/// //      ^^^^^^^^^^^ It would generate this variant here
+/// ```
+///
+/// And as patterns:
+///
+/// ```gleam
+/// let assert IDoNotExist(1) = todo
+///            ^^^^^^^^^^^ It would generate this variant here
+/// ```
+///
+pub struct GenerateVariant<'a, IO> {
+    module: &'a Module,
+    compiler: &'a LspProjectCompiler<FileSystemProxy<IO>>,
+    params: &'a CodeActionParams,
+    line_numbers: &'a LineNumbers,
+    variant_to_generate: Option<VariantToGenerate<'a>>,
+}
+
+struct VariantToGenerate<'a> {
+    name: &'a str,
+    end_position: u32,
+    arguments_types: Vec<Arc<Type>>,
+
+    /// Wether the type we're adding the variant to is written with braces or
+    /// not. We need this information to add braces when missing.
+    ///
+    type_braces: TypeBraces,
+
+    /// The module this variant will be added to.
+    ///
+    module_name: EcoString,
+
+    /// The arguments actually supplied as input to the variant, if any.
+    /// A variant to generate might as well be just a name passed as an argument
+    /// `list.map([1, 2, 3], ToGenerate)` so it's not guaranteed to actually
+    /// have any actual arguments!
+    ///
+    given_arguments: Option<Arguments<'a>>,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum TypeBraces {
+    /// If the type is written like this: `pub type Wibble`
+    HasBraces,
+    /// If the type is written like this: `pub type Wibble {}`
+    NoBraces,
+}
+
+/// The arguments to an invalid call or pattern we can use to generate a variant.
+///
+enum Arguments<'a> {
+    /// These are the arguments provided to the invalid variant constructor
+    /// when it's used as a function: `let a = Wibble(1, 2)`.
+    ///
+    Expressions(&'a [TypedCallArg]),
+    /// These are the arguments provided to the invalid variant constructor when
+    /// it's used in a pattern: `let assert Wibble(1, 2) = a`
+    ///
+    Patterns(&'a [CallArg<TypedPattern>]),
+}
+
+/// An invalid variant might be used both as a pattern in a case expression or
+/// as a regular value in an expression. We want to generate the variant in both
+/// cases, so we use this enum to tell apart the two cases and be able to reuse
+/// most of the code for both as they are very similar.
+///
+enum Argument<'a> {
+    Expression(&'a TypedCallArg),
+    Pattern(&'a CallArg<TypedPattern>),
+}
+
+impl<'a> Arguments<'a> {
+    fn get(&self, index: usize) -> Option<Argument<'a>> {
+        match self {
+            Arguments::Patterns(call_args) => call_args.get(index).map(Argument::Pattern),
+            Arguments::Expressions(call_args) => call_args.get(index).map(Argument::Expression),
+        }
+    }
+
+    fn types(&self) -> Vec<Arc<Type>> {
+        match self {
+            Arguments::Expressions(call_args) => call_args
+                .iter()
+                .map(|argument| argument.value.type_())
+                .collect_vec(),
+
+            Arguments::Patterns(call_args) => call_args
+                .iter()
+                .map(|argument| argument.value.type_())
+                .collect_vec(),
+        }
+    }
+}
+
+impl Argument<'_> {
+    fn label(&self) -> Option<EcoString> {
+        match self {
+            Argument::Expression(call_arg) => call_arg.label.clone(),
+            Argument::Pattern(call_arg) => call_arg.label.clone(),
+        }
+    }
+}
+
+impl<'a, IO> GenerateVariant<'a, IO>
+where
+    IO: FileSystemReader + FileSystemWriter + BeamCompiler + CommandExecutor + Clone,
+{
+    pub fn new(
+        module: &'a Module,
+        compiler: &'a LspProjectCompiler<FileSystemProxy<IO>>,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            compiler,
+            line_numbers,
+            variant_to_generate: None,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let Some(VariantToGenerate {
+            name,
+            arguments_types,
+            given_arguments,
+            module_name,
+            end_position,
+            type_braces,
+        }) = &self.variant_to_generate
+        else {
+            return vec![];
+        };
+
+        let Some((variant_module, variant_edits)) = self.edits_to_create_variant(
+            name,
+            arguments_types,
+            given_arguments,
+            module_name,
+            *end_position,
+            *type_braces,
+        ) else {
+            return vec![];
+        };
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Generate variant")
+            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .changes(variant_module, variant_edits)
+            .preferred(false)
+            .push_to(&mut action);
+        action
+    }
+
+    /// Returns the edits needed to add this new variant to the given module.
+    /// It also returns the uri of the module the edits should be applied to.
+    ///
+    fn edits_to_create_variant(
+        &self,
+        variant_name: &str,
+        arguments_types: &[Arc<Type>],
+        given_arguments: &Option<Arguments<'_>>,
+        module_name: &EcoString,
+        end_position: u32,
+        type_braces: TypeBraces,
+    ) -> Option<(Url, Vec<TextEdit>)> {
+        let mut label_names = NameGenerator::new();
+        let mut printer = Printer::new(&self.module.ast.names);
+        let arguments = arguments_types
+            .iter()
+            .enumerate()
+            .map(|(index, argument_type)| {
+                let label = given_arguments
+                    .as_ref()
+                    .and_then(|arguments| arguments.get(index)?.label())
+                    .map(|label| label_names.rename_to_avoid_shadowing(label));
+
+                let pretty_type = printer.print_type(argument_type);
+                if let Some(arg_label) = label {
+                    format!("{arg_label}: {pretty_type}")
+                } else {
+                    format!("{pretty_type}")
+                }
+            })
+            .join(", ");
+
+        let variant = if arguments.is_empty() {
+            variant_name.to_string()
+        } else {
+            format!("{variant_name}({arguments})")
+        };
+
+        let (new_text, insert_at) = match type_braces {
+            TypeBraces::HasBraces => (format!("  {variant}\n"), end_position - 1),
+            TypeBraces::NoBraces => (format!(" {{\n  {variant}\n}}"), end_position),
+        };
+
+        if *module_name == self.module.name {
+            // If we're editing the current module we can use the line numbers that
+            // were already computed before-hand without wasting any time to add the
+            // new edit.
+            let mut edits = TextEdits::new(self.line_numbers);
+            edits.insert(insert_at, new_text);
+            Some((self.params.text_document.uri.clone(), edits.edits))
+        } else {
+            // Otherwise we're changing a different module and we need to get its
+            // code and line numbers to properly apply the new edit.
+            let module = self
+                .compiler
+                .modules
+                .get(module_name)
+                .expect("module to exist");
+            let line_numbers = LineNumbers::new(&module.code);
+            let mut edits = TextEdits::new(&line_numbers);
+            edits.insert(insert_at, new_text);
+            Some((url_from_path(module.input_path.as_str())?, edits.edits))
+        }
+    }
+
+    fn try_save_variant_to_generate(
+        &mut self,
+        function_name_location: SrcSpan,
+        function_type: &Arc<Type>,
+        given_arguments: Option<Arguments<'a>>,
+    ) {
+        let variant_to_generate =
+            self.variant_to_generate(function_name_location, function_type, given_arguments);
+        if variant_to_generate.is_some() {
+            self.variant_to_generate = variant_to_generate;
+        }
+    }
+
+    fn variant_to_generate(
+        &mut self,
+        function_name_location: SrcSpan,
+        type_: &Arc<Type>,
+        given_arguments: Option<Arguments<'a>>,
+    ) -> Option<VariantToGenerate<'a>> {
+        let name_range = function_name_location.start as usize..function_name_location.end as usize;
+        let name = self.module.code.get(name_range).expect("valid code range");
+        if !is_valid_uppercase_name(name) {
+            return None;
+        }
+
+        let (arguments_types, custom_type) = match (type_.fn_types(), &given_arguments) {
+            (Some(result), _) => result,
+            (None, Some(arguments)) => (arguments.types(), type_.clone()),
+            (None, None) => (vec![], type_.clone()),
+        };
+
+        let (module_name, type_name, _) = custom_type.named_type_information()?;
+        let module = self.compiler.modules.get(&module_name)?;
+        let (end_position, type_braces) =
+            (module.ast.definitions.iter()).find_map(|definition| match definition {
+                ast::Definition::CustomType(custom_type) if custom_type.name == type_name => {
+                    // If there's already a variant with this name then we definitely
+                    // don't want to generate a new variant with the same name!
+                    let variant_with_this_name_already_exists = custom_type
+                        .constructors
+                        .iter()
+                        .map(|constructor| &constructor.name)
+                        .any(|existing_constructor_name| existing_constructor_name == name);
+                    if variant_with_this_name_already_exists {
+                        return None;
+                    }
+                    let type_braces = if custom_type.end_position == custom_type.location.end {
+                        TypeBraces::NoBraces
+                    } else {
+                        TypeBraces::HasBraces
+                    };
+                    Some((custom_type.end_position, type_braces))
+                }
+                _ => None,
+            })?;
+
+        Some(VariantToGenerate {
+            name,
+            arguments_types,
+            given_arguments,
+            module_name,
+            end_position,
+            type_braces,
+        })
+    }
+}
+
+impl<'ast, IO> ast::visit::Visit<'ast> for GenerateVariant<'ast, IO>
+where
+    IO: FileSystemReader + FileSystemWriter + BeamCompiler + CommandExecutor + Clone,
+{
+    fn visit_typed_expr_invalid(&mut self, location: &'ast SrcSpan, type_: &'ast Arc<Type>) {
+        let invalid_range = src_span_to_lsp_range(*location, self.line_numbers);
+        if within(self.params.range, invalid_range) {
+            self.try_save_variant_to_generate(*location, type_, None);
+        }
+        ast::visit::visit_typed_expr_invalid(self, location, type_);
+    }
+
+    fn visit_typed_expr_call(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        fun: &'ast TypedExpr,
+        args: &'ast [TypedCallArg],
+    ) {
+        // If the function being called is invalid we need to generate a
+        // function that has the proper labels.
+        let fun_range = src_span_to_lsp_range(fun.location(), self.line_numbers);
+        if within(self.params.range, fun_range) && fun.is_invalid() {
+            if labels_are_correct(args) {
+                self.try_save_variant_to_generate(
+                    fun.location(),
+                    &fun.type_(),
+                    Some(Arguments::Expressions(args)),
+                );
+            }
+        } else {
+            ast::visit::visit_typed_expr_call(self, location, type_, fun, args);
+        }
+    }
+
+    fn visit_typed_pattern_invalid(&mut self, location: &'ast SrcSpan, type_: &'ast Arc<Type>) {
+        let invalid_range = src_span_to_lsp_range(*location, self.line_numbers);
+        if within(self.params.range, invalid_range) {
+            self.try_save_variant_to_generate(*location, type_, None);
+        }
+        ast::visit::visit_typed_pattern_invalid(self, location, type_);
+    }
+
+    fn visit_typed_pattern_constructor(
+        &mut self,
+        location: &'ast SrcSpan,
+        name_location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        arguments: &'ast Vec<CallArg<TypedPattern>>,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        constructor: &'ast analyse::Inferred<type_::PatternConstructor>,
+        spread: &'ast Option<SrcSpan>,
+        type_: &'ast Arc<Type>,
+    ) {
+        let pattern_range = src_span_to_lsp_range(*location, self.line_numbers);
+        // TODO)) Solo se il pattern non è valido!!!!!
+        if within(self.params.range, pattern_range) {
+            if labels_are_correct(arguments) {
+                self.try_save_variant_to_generate(
+                    *name_location,
+                    type_,
+                    Some(Arguments::Patterns(arguments)),
+                );
+            }
+        } else {
+            ast::visit::visit_typed_pattern_constructor(
+                self,
+                location,
+                name_location,
+                name,
+                arguments,
+                module,
+                constructor,
+                spread,
+                type_,
+            );
+        }
+    }
+}
+
 #[must_use]
 /// Checks the labels in the given arguments are correct: that is there's no
 /// duplicate labels and all labelled arguments come after the unlabelled ones.
-fn labels_are_correct(args: &[TypedCallArg]) -> bool {
+fn labels_are_correct<A>(args: &[CallArg<A>]) -> bool {
     let mut labelled_arg_found = false;
     let mut used_labels = HashSet::new();
 
@@ -5212,11 +5566,34 @@ impl NameGenerator {
         }
     }
 
+    /// Given an argument type and the actual call argument (if any), comes up
+    /// with a label and a name to use for that argument when generating a
+    /// function.
+    ///
+    pub fn generate_label_and_name(
+        &mut self,
+        call_argument: Option<&CallArg<TypedExpr>>,
+        argument_type: &Arc<Type>,
+    ) -> (Option<EcoString>, EcoString) {
+        let label = call_argument.and_then(|argument| argument.label.clone());
+        let argument_name = call_argument
+            // We always favour a name derived from the expression (for example if
+            // the argument is a variable)
+            .and_then(|argument| self.generate_name_from_expression(&argument.value))
+            // If we don't have such a name and there's a label we use that name.
+            .or_else(|| Some(self.rename_to_avoid_shadowing(label.clone()?)))
+            // If all else fails we fallback to using a name derived from the
+            // argument's type.
+            .unwrap_or_else(|| self.generate_name_from_type(argument_type));
+
+        (label, argument_name)
+    }
+
     pub fn generate_name_from_type(&mut self, type_: &Arc<Type>) -> EcoString {
         let type_to_base_name = |type_: &Arc<Type>| {
             type_
                 .named_type_name()
-                .map(|(_type_module, type_name)| EcoString::from(type_name.to_snake_case()))
+                .map(|(_type_module, type_name)| to_snake_case(&type_name))
                 .filter(|name| is_valid_lowercase_name(name))
                 .unwrap_or(EcoString::from("value"))
         };
@@ -5290,6 +5667,21 @@ fn is_valid_lowercase_name(name: &str) -> bool {
     }
 
     str_to_keyword(name).is_none()
+}
+
+#[must_use]
+fn is_valid_uppercase_name(name: &str) -> bool {
+    if !name.starts_with(|char: char| char.is_ascii_uppercase()) {
+        return false;
+    }
+
+    for char in name.chars() {
+        if !char.is_ascii_alphanumeric() {
+            return false;
+        }
+    }
+
+    true
 }
 
 /// Code action to rewrite a single-step pipeline into a regular function call.
@@ -6614,5 +7006,214 @@ impl<'ast> ast::visit::Visit<'ast> for FixTruncatedBitArraySegment<'ast> {
         }
 
         ast::visit::visit_typed_expr_bit_array_segment(self, segment);
+    }
+}
+
+/// Code action builder to remove unused imports and values.
+///
+pub struct RemoveUnusedImports<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    imports: Vec<&'a Import<EcoString>>,
+    edits: TextEdits<'a>,
+}
+
+#[derive(Debug)]
+enum UnusedImport {
+    ValueOrType(SrcSpan),
+    Module(SrcSpan),
+    ModuleAlias(SrcSpan),
+}
+
+impl UnusedImport {
+    fn location(&self) -> SrcSpan {
+        match self {
+            UnusedImport::ValueOrType(location)
+            | UnusedImport::Module(location)
+            | UnusedImport::ModuleAlias(location) => *location,
+        }
+    }
+}
+
+impl<'a> RemoveUnusedImports<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            imports: vec![],
+        }
+    }
+
+    /// Given an import location, returns a list of the spans of all the
+    /// unqualified values it's importing. Sorted by SrcSpan location.
+    ///
+    fn imported_values(&self, import_location: SrcSpan) -> Vec<SrcSpan> {
+        self.imports
+            .iter()
+            .find(|import| import.location.contains(import_location.start))
+            .map(|import| {
+                let types = import.unqualified_types.iter().map(|type_| type_.location);
+                let values = import.unqualified_values.iter().map(|value| value.location);
+                types
+                    .chain(values)
+                    .sorted_by_key(|location| location.start)
+                    .collect_vec()
+            })
+            .unwrap_or_default()
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        // If there's no import in the module then there can't be any unused
+        // import to remove.
+        self.visit_typed_module(&self.module.ast);
+        if self.imports.is_empty() {
+            return vec![];
+        }
+
+        let unused_imports = (self.module.ast.type_info.warnings.iter())
+            .filter_map(|warning| match warning {
+                type_::Warning::UnusedImportedValue { location, .. } => {
+                    Some(UnusedImport::ValueOrType(*location))
+                }
+                type_::Warning::UnusedType {
+                    location,
+                    imported: true,
+                    ..
+                } => Some(UnusedImport::ValueOrType(*location)),
+                type_::Warning::UnusedImportedModule { location, .. } => {
+                    Some(UnusedImport::Module(*location))
+                }
+                type_::Warning::UnusedImportedModuleAlias { location, .. } => {
+                    Some(UnusedImport::ModuleAlias(*location))
+                }
+                _ => None,
+            })
+            .sorted_by_key(|import| import.location())
+            .collect_vec();
+
+        // If the cursor is not over any of the unused imports then we don't offer
+        // the code action.
+        let hovering_unused_import = unused_imports.iter().any(|import| {
+            let unused_range = self.edits.src_span_to_lsp_range(import.location());
+            overlaps(self.params.range, unused_range)
+        });
+        if !hovering_unused_import {
+            return vec![];
+        }
+
+        // Otherwise we start removing all unused imports:
+        for import in &unused_imports {
+            match import {
+                // When an entire module is unused we can delete its entire location
+                // in the source code.
+                UnusedImport::Module(location) | UnusedImport::ModuleAlias(location) => {
+                    if self.edits.line_numbers.spans_entire_line(location) {
+                        // If the unused module spans over the entire line then
+                        // we also take care of removing the following newline
+                        // characther!
+                        self.edits.delete(SrcSpan {
+                            start: location.start,
+                            end: location.end + 1,
+                        })
+                    } else {
+                        self.edits.delete(*location)
+                    }
+                }
+
+                // When removing unused imported values we have to be a bit more
+                // careful: an unused value might be followed or preceded by a
+                // comma that we also need to remove!
+                UnusedImport::ValueOrType(location) => {
+                    let imported = self.imported_values(*location);
+                    let unused_index = imported.binary_search(location);
+                    let is_last = unused_index.is_ok_and(|index| index == imported.len() - 1);
+                    let next_value = unused_index
+                        .ok()
+                        .and_then(|value_index| imported.get(value_index + 1));
+                    let previous_value = unused_index.ok().and_then(|value_index| {
+                        value_index
+                            .checked_sub(1)
+                            .and_then(|previous_index| imported.get(previous_index))
+                    });
+                    let previous_is_unused = previous_value.is_some_and(|previous| {
+                        unused_imports
+                            .as_slice()
+                            .binary_search_by_key(previous, |import| import.location())
+                            .is_ok()
+                    });
+
+                    match (previous_value, next_value) {
+                        // If there's a value following the unused import we need
+                        // to remove all characters until its start!
+                        //
+                        // ```gleam
+                        // import wibble.{unused,    used}
+                        // //             ^^^^^^^^^^^ We need to remove all of this!
+                        // ```
+                        //
+                        (_, Some(next_value)) => self.edits.delete(SrcSpan {
+                            start: location.start,
+                            end: next_value.start,
+                        }),
+
+                        // If this unused import is the last of the unuqualified
+                        // list and is preceded by another used value then we
+                        // need to do some additional cleanup and remove all
+                        // characters starting from its end.
+                        // (If the previous one is unused as well it will take
+                        // care of removing all the extra space)
+                        //
+                        // ```gleam
+                        // import wibble.{used,     unused}
+                        // //                 ^^^^^^^^^^^^ We need to remove all of this!
+                        // ```
+                        //
+                        (Some(previous_value), _) if is_last && !previous_is_unused => {
+                            self.edits.delete(SrcSpan {
+                                start: previous_value.end,
+                                end: location.end,
+                            })
+                        }
+
+                        // In all other cases it means that this is the only
+                        // item in the import list. We can just remove it.
+                        //
+                        // ```gleam
+                        // import wibble.{unused}
+                        // //             ^^^^^^ We remove this import, the formatter will already
+                        // //                    take care of removing the empty curly braces
+                        // ```
+                        //
+                        (_, _) => self.edits.delete(*location),
+                    }
+                }
+            }
+        }
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Remove unused imports")
+            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(true)
+            .push_to(&mut action);
+        action
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for RemoveUnusedImports<'ast> {
+    fn visit_typed_module(&mut self, module: &'ast ast::TypedModule) {
+        self.imports = module
+            .definitions
+            .iter()
+            .filter_map(|definition| match definition {
+                ast::Definition::Import(import) => Some(import),
+                _ => None,
+            })
+            .collect_vec();
     }
 }

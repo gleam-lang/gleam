@@ -8,7 +8,7 @@ use crate::{
     exhaustiveness::{
         BitArrayMatchedValue, BitArrayTest, Body, BoundValue, CompiledCase, Decision,
         FallbackCheck, MatchTest, Offset, ReadAction, ReadSize, ReadType, RuntimeCheck,
-        SizeOperator, SizeTest, Variable, VariableUsage,
+        SizeOperator, SizeTest, StringEncoding, Variable, VariableUsage,
     },
     format::break_block,
     javascript::{
@@ -16,7 +16,9 @@ use crate::{
         maybe_escape_property,
     },
     pretty::{Document, Documentable, break_, join, line, nil},
-    strings::convert_string_escape_chars,
+    strings::{
+        convert_string_escape_chars, length_utf16, string_to_utf16_bytes, string_to_utf32_bytes,
+    },
 };
 use ecow::{EcoString, eco_format};
 use itertools::Itertools;
@@ -37,7 +39,52 @@ pub fn case<'a>(
     let mut variables = Variables::new(expression_generator);
     let assignments = variables.assign_case_subjects(compiled_case, subjects)?;
     let decision = CasePrinter { clauses, variables }.decision(&compiled_case.tree)?;
-    Ok(docvec![assignments_to_doc(assignments), decision].force_break())
+    Ok(docvec![assignments_to_doc(assignments), decision.into_doc()].force_break())
+}
+
+/// The generated code for a decision tree.
+enum CaseBody<'a> {
+    /// A JavaScript `if`` statement by itself. This can be merged with any
+    /// preceding `else` statements to form an `else if` construct.
+    If {
+        check: Document<'a>,
+        body: Document<'a>,
+    },
+    /// A sequence of statements. This must be wrapped as the body of an `if` or
+    /// `else` statement.
+    Statements(Document<'a>),
+
+    /// A JavaScript `if` statement followed by one or more `else` clauses. This
+    /// can sometimes be merged with preceding `else` statements.
+    IfElse(Document<'a>),
+}
+
+impl<'a> CaseBody<'a> {
+    fn into_doc(self) -> Document<'a> {
+        match self {
+            CaseBody::If { check, body } => docvec!["if (", check, ") ", break_block(body)],
+            CaseBody::Statements(document) | CaseBody::IfElse(document) => document,
+        }
+    }
+
+    /// Convert this value into the required document to put directly after an
+    /// `else` keyword.
+    fn document_after_else(self) -> Document<'a> {
+        match self {
+            // `if` and `if-else` statements can come directly after an `else` keyword
+            CaseBody::If { .. } => self.into_doc(),
+            CaseBody::IfElse(document) => document,
+            // Lists of statements must be wrapped in a block
+            CaseBody::Statements(document) => break_block(document),
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        match self {
+            CaseBody::If { .. } => false,
+            CaseBody::Statements(document) | CaseBody::IfElse(document) => document.is_empty(),
+        }
+    }
 }
 
 struct CasePrinter<'module, 'generator, 'a> {
@@ -99,7 +146,7 @@ struct CasePrinter<'module, 'generator, 'a> {
 ///
 /// So, as we're generating code for each check and move further down the decision
 /// tree, we will have to keep track of all the variables that we've discovered
-/// after each successfull check.
+/// after each successful check.
 ///
 /// In order to do that we'll be using a `Variables` data structure to hold all
 /// this information about the current scope. This also allows us to reuse a lot
@@ -107,13 +154,13 @@ struct CasePrinter<'module, 'generator, 'a> {
 /// the decision tree of let expressions!
 ///
 impl<'a> CasePrinter<'_, '_, 'a> {
-    fn decision(&mut self, decision: &'a Decision) -> Output<'a> {
+    fn decision(&mut self, decision: &'a Decision) -> Result<CaseBody<'a>, Error> {
         match decision {
             Decision::Fail => unreachable!("Invalid decision tree reached code generation"),
             Decision::Run { body } => {
                 let bindings = self.variables.bindings_doc(&body.bindings);
                 let body = self.body_expression(body.clause_index)?;
-                Ok(join_with_line(bindings, body))
+                Ok(CaseBody::Statements(join_with_line(bindings, body)))
             }
             Decision::Switch {
                 var,
@@ -147,7 +194,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         choices: &'a [(RuntimeCheck, Box<Decision>)],
         fallback: &'a Decision,
         fallback_check: &'a FallbackCheck,
-    ) -> Output<'a> {
+    ) -> Result<CaseBody<'a>, Error> {
         // If there's just a single choice we can just generate the code for
         // it: no need to do any checking, we know it must match!
         if choices.is_empty() {
@@ -174,7 +221,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             assignments.push(let_doc(name, value.to_doc()))
         };
 
-        let mut if_ = nil();
+        let mut if_ = CaseBody::Statements(nil());
         for (i, (check, decision)) in choices.iter().enumerate() {
             self.variables.record_check_assignments(var, check);
 
@@ -193,12 +240,54 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             })?;
             assignments.append(&mut segment_assignments);
 
-            let branch = if i == 0 {
-                docvec!["if (", check_doc, ") "]
-            } else {
-                docvec![" else if (", check_doc, ") "]
+            let (check_doc, body) = match body? {
+                // If we have a statement like this:
+                // ```javascript
+                // if (x) {
+                //   if (y) {
+                //     ...
+                //   }
+                // }
+                // ```
+                //
+                // We can transform it into:
+                // ```javascript
+                // if (x && y) {
+                //   ...
+                // }
+                // ```
+                CaseBody::If { check, body } => {
+                    (docvec!["(", check_doc, ") && (", check, ")"], body)
+                }
+                CaseBody::Statements(document) | CaseBody::IfElse(document) => {
+                    (check_doc, document)
+                }
             };
-            if_ = if_.append(docvec![branch, break_block(body?)]);
+
+            if_ = match if_ {
+                // The first statement will always be an `if`
+                _ if i == 0 => CaseBody::If {
+                    check: check_doc,
+                    body,
+                },
+                // If this is the second check, the `if` becomes `else if`
+                CaseBody::If { .. } => CaseBody::IfElse(docvec![
+                    if_.into_doc(),
+                    " else if (",
+                    check_doc,
+                    ") ",
+                    break_block(body),
+                ]),
+                CaseBody::IfElse(document) | CaseBody::Statements(document) => {
+                    CaseBody::IfElse(docvec![
+                        document,
+                        " else if (",
+                        check_doc,
+                        ") ",
+                        break_block(body)
+                    ])
+                }
+            };
         }
 
         // In case there's some new variables we can extract after the
@@ -210,11 +299,23 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         }
 
         let body = self.inside_new_scope(|this| this.decision(fallback))?;
-        let if_ = join_with_line(join(assignments, line()), if_);
-        Ok(if body.is_empty() {
+        let document = if body.is_empty() {
             if_
         } else {
-            docvec![if_, " else ", break_block(body)]
+            CaseBody::IfElse(docvec![
+                if_.into_doc(),
+                " else ",
+                body.document_after_else()
+            ])
+        };
+
+        Ok(if assignments.is_empty() {
+            document
+        } else {
+            CaseBody::Statements(join_with_line(
+                join(assignments, line()),
+                document.into_doc(),
+            ))
         })
     }
 
@@ -243,7 +344,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         guard: usize,
         if_true: &'a Body,
         if_false: &'a Decision,
-    ) -> Output<'a> {
+    ) -> Result<CaseBody<'a>, Error> {
         let guard = self
             .clauses
             .get(guard)
@@ -270,17 +371,31 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             let if_true_body = this.body_expression(if_true.clause_index)?;
             Ok(join_with_line(if_true_bindings, if_true_body))
         })?;
-        let if_false = self.inside_new_scope(|this| this.decision(if_false))?;
+        let if_false = self
+            .inside_new_scope(|this| this.decision(if_false))?
+            .into_doc();
 
-        // We can now piece everything together into a single document!
-        let if_ = docvec!["if (", check, ") ", break_block(if_true)];
-        let if_ = join_with_line(check_bindings, if_);
-        if if_false.is_empty() {
-            Ok(docvec![if_])
+        // We can now piece everything together into a case body!
+        let if_ = CaseBody::If {
+            check,
+            body: if_true,
+        };
+
+        let if_ = if if_false.is_empty() {
+            if_
         } else {
-            let else_ = docvec![" else ", break_block(if_false)];
-            Ok(docvec![if_, else_])
-        }
+            CaseBody::IfElse(
+                if_.into_doc()
+                    .append(" else ")
+                    .append(break_block(if_false)),
+            )
+        };
+
+        Ok(if check_bindings.is_empty() {
+            if_
+        } else {
+            CaseBody::Statements(join_with_line(check_bindings, if_.into_doc()))
+        })
     }
 }
 
@@ -902,8 +1017,16 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                     value: expected,
                     read_action,
                 }) => match expected {
-                    BitArrayMatchedValue::LiteralString(expected) => self
-                        .literal_string_segment_bytes_check(value, expected, read_action, negation),
+                    BitArrayMatchedValue::LiteralString {
+                        value: expected,
+                        encoding,
+                    } => self.literal_string_segment_bytes_check(
+                        value,
+                        expected,
+                        read_action,
+                        negation,
+                        *encoding,
+                    ),
                     BitArrayMatchedValue::LiteralFloat(expected) => self
                         .literal_float_segment_bytes_check(value, expected, read_action, negation),
                     BitArrayMatchedValue::LiteralInt(expected) => self
@@ -1213,6 +1336,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         literal_string: &EcoString,
         read_action: &ReadAction,
         check_negation: CheckNegation,
+        encoding: StringEncoding,
     ) -> Document<'a> {
         let ReadAction {
             from: start,
@@ -1228,11 +1352,28 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             " === "
         };
 
+        let escaped = convert_string_escape_chars(literal_string);
+        // We need to have this vector here so that we don't run into lifetime
+        // issues when calling `.as_slice` on the local vectors created when this
+        // isn't a UTF-8 string.
+        let bytes_vec;
+        let bytes = match encoding {
+            StringEncoding::Utf8 => escaped.as_bytes(),
+            StringEncoding::Utf16 => {
+                bytes_vec = string_to_utf16_bytes(&escaped, read_action.endianness);
+                bytes_vec.as_slice()
+            }
+            StringEncoding::Utf32 => {
+                bytes_vec = string_to_utf32_bytes(&escaped, read_action.endianness);
+                bytes_vec.as_slice()
+            }
+        };
+
         if let Some(mut from_byte) = start.constant_bytes() {
             // If the string starts at a compile-time known byte, then we can
             // optimise this by reading all the subsequent bytes and checking
             // they have a specific value.
-            for byte in convert_string_escape_chars(literal_string).as_bytes() {
+            for byte in bytes {
                 let byte_access = docvec![bit_array.clone(), ".byteAt(", from_byte.clone(), ")"];
                 checks.push(docvec![byte_access, equality, byte]);
                 from_byte += 1;
@@ -1240,7 +1381,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         } else {
             // If the string doesn't start at a byte aligned offset then we'll
             // have to take slices out of it to check that each byte matches.
-            for byte in convert_string_escape_chars(literal_string).as_bytes() {
+            for byte in bytes {
                 let end = self.offset_to_doc(&start.add_constant(8), false);
                 let from = self.offset_to_doc(start, false);
                 let byte_access =
@@ -1608,5 +1749,5 @@ fn let_doc(variable_name: EcoString, value: Document<'_>) -> Document<'_> {
 /// Calculates the length of str as utf16 without escape characters.
 ///
 fn utf16_no_escape_len(str: &EcoString) -> usize {
-    convert_string_escape_chars(str).encode_utf16().count()
+    length_utf16(&convert_string_escape_chars(str))
 }

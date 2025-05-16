@@ -1,3 +1,5 @@
+import { UtfCodepoint } from "./gleam.mjs";
+
 let fs;
 
 if (!globalThis.Deno) {
@@ -49,4 +51,8 @@ export function halt(code) {
 
 export function toDynamic(a) {
   return a;
+}
+
+export function toCodepoint(x) {
+  return new UtfCodepoint(x);
 }

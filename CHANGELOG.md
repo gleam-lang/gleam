@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.11.0-rc1 - 2025-05-15
 
 ### Compiler
 
@@ -167,7 +167,7 @@
     │   ^^^^^^^^^ This value is never used
 
   This expression computes a value without any side effects, but then the
-  value isn't used at all. You might way to assign it to a variable, or
+  value isn't used at all. You might want to assign it to a variable, or
   delete the expression entirely if it's not needed.
   ```
 
@@ -183,6 +183,24 @@
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - The compiler will not generate needless code for unused pattern variables.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Function parameters are now fault tolerant, meaning that type-checking can
+  continue to occur if a function references invalid type in its signature.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- The compiler is now fault tolerant when analysing patterns for custom types,
+  meaning it won't stop at the first error it encounters (for example if a
+  constructor is wrong).
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- On the JavaScript target, bit arrays now support UTf-16 and UTF-32 string
+  segments.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- When an import with unqualified types and values is unused the compiler will
+  now raise a single warning for the entire import rather than warning for each
+  individual item.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Build tool
@@ -202,6 +220,68 @@
 
 - The build tool now provides additional information when printing warnings for
   deprecated environment variables.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- When generating documentation, the build tool now prints type variable using
+  the same names as were used in the code for function signatures. For example,
+  this code:
+
+  ```gleam
+  pub fn from_list(entries: List(#(key, value))) -> Dict(key, value) {
+    ...
+  }
+  ```
+
+  Previously would have been printed as:
+
+  ```gleam
+  pub fn from_list(entries: List(#(a, b))) -> Dict(a, b)
+  ```
+
+  But now is rendered as the following:
+
+  ```gleam
+  pub fn from_list(entries: List(#(key, value))) -> Dict(key, value)
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- When generating documentation, types from other modules are now rendered with
+  their module qualifiers. Hovering over them shows the full path to their module.
+  For example, this code:
+
+  ```gleam
+  import gleam/dynamic/decode
+
+  pub fn something_decoder() -> decode.Decoder(Something) {
+    ...
+  }
+  ```
+
+  Will now generate the following documentation:
+
+  ```gleam
+  pub fn something_decoder() -> decode.Decoder(Something)
+  ```
+
+  And hovering over the `decode.Decoder` text will show the following:
+
+  ```txt
+  gleam/dynamic/decode.{type Decoder}
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- When generating documentation, types in rendered documentation code will now
+  link to their corresponding documentation pages.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- `gleam add` will now emit an error if you try to add a package as a dependency
+  of itself.
+  ([Louis Pilfold](https://github.com/lpil))
+
+- The build tool will now emit an error when compiling a package if the package
+  has a Gleam and Erlang file which would collide.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 ### Language server
@@ -238,7 +318,6 @@
   now named `$TYPENAME_to_json` instead of `encode_$TYPENAME`. This is to remove
   ambiguity with functions that encode to other formats, and to make the
   function easier to discover by searching.
-
   ([Louis Pilfold](https://github.com/lpil))
 
 - The code action to add missing patterns to a `case` expression now includes
@@ -320,7 +399,60 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The language server now provides a code action to automatically generate a new
+  variant from incorrect code:
+
+  ```gleam
+  pub type Msg {
+    ServerSentResponse(Json)
+  }
+
+  pub fn view() -> Element(Msg) {
+    div([], [
+      button([on_click(UserPressedButton)], [text("Press me!")])
+  //                   ^^^^^^^^^^^^^^^^^ This doesn't exist yet!
+    ])
+  }
+  ```
+
+  Triggering the code action on the `UserPressedButton` will add it to the `Msg`
+  type:
+
+  ```gleam
+  pub type Msg {
+    ServerSentResponse(Json)
+    UserPressedButton
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The language server can now remove unused imported values and types:
+
+  ```gleam
+  import a_module.{type Unused, unused, used}
+
+  pub fn main() {
+    used
+  }
+  ```
+
+  Triggering the code action will remove all unused types and values:
+
+  ```gleam
+  import a_module.{used}
+
+  pub fn main() {
+    used
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
+
+- Improved the formatting of `echo` when followed by long binary expressions.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Installation
 
@@ -405,7 +537,7 @@
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 - Fixed a bug where LSP ranges would be incorrect when a file contained characters
-  that were represented wit more than one byte in UTF-8.
+  that were represented with more than one byte in UTF-8.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 - Only print the user-friendly LSP message when stdin is a terminal to avoid
@@ -423,3 +555,15 @@
 - Fixed a bug where the language server would not show the "Unqualify type" code
   action for record declarations.
   ([cysabi](https://github.com/cysabi))
+
+- Fixed a bug where the stack would overflow on Windows when type-checking
+  multiple nested `use` expressions.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where using a variable from a separate pattern inside a bit array
+  pattern would be allowed but generate invalid Erlang code.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where the compiler would crash if duplicate variables were defined
+  in alternative patterns.
+  ([Surya Rose](https://github.com/GearsDatapacks))

@@ -166,13 +166,6 @@ impl Type {
         }
     }
 
-    pub fn is_type_variable(&self) -> bool {
-        match self {
-            Self::Var { type_ } => type_.borrow().is_variable(),
-            _ => false,
-        }
-    }
-
     pub fn return_type(&self) -> Option<Arc<Self>> {
         match self {
             Self::Fn { return_, .. } => Some(return_.clone()),
@@ -575,6 +568,19 @@ impl Type {
                         .zip(other_elements)
                         .all(|(one, other)| one.same_as(other))
             }
+        }
+    }
+
+    pub(crate) fn is_non_public_named_type(&self) -> bool {
+        match self {
+            Type::Named { publicity, .. } => match publicity {
+                Publicity::Public => false,
+                Publicity::Private => true,
+                Publicity::Internal { .. } => true,
+            },
+            Type::Fn { .. } => false,
+            Type::Var { .. } => false,
+            Type::Tuple { .. } => false,
         }
     }
 }
@@ -1185,7 +1191,7 @@ impl TypeVar {
     pub fn is_variable(&self) -> bool {
         match self {
             Self::Unbound { .. } | Self::Generic { .. } => true,
-            Self::Link { type_ } => type_.is_type_variable(),
+            Self::Link { type_ } => type_.is_variable(),
         }
     }
 
@@ -1327,6 +1333,7 @@ pub struct TypeConstructor {
     pub deprecation: Deprecation,
     pub documentation: Option<EcoString>,
 }
+
 impl TypeConstructor {
     pub(crate) fn with_location(mut self, location: SrcSpan) -> Self {
         self.origin = location;
@@ -1365,6 +1372,15 @@ impl Default for Deprecation {
 }
 
 impl ValueConstructor {
+    pub fn local_variable(location: SrcSpan, origin: VariableOrigin, type_: Arc<Type>) -> Self {
+        Self {
+            publicity: Publicity::Private,
+            deprecation: Deprecation::NotDeprecated,
+            variant: ValueConstructorVariant::LocalVariable { location, origin },
+            type_,
+        }
+    }
+
     pub fn is_local_variable(&self) -> bool {
         self.variant.is_local_variable()
     }
