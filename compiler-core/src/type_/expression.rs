@@ -1273,7 +1273,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         register_reference: ReferenceRegistration,
     ) -> Result<TypedExpr, Error> {
         let constructor =
-            self.do_infer_value_constructor(&None, &name, &location, register_reference)?;
+            self.do_infer_value_constructor(&None, &name, &location, register_reference, None)?;
         self.narrow_implementations(location, &constructor.variant)?;
         Ok(TypedExpr::Var {
             constructor,
@@ -2469,7 +2469,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_clause_guard(&mut self, guard: UntypedClauseGuard) -> Result<TypedClauseGuard, Error> {
         match guard {
             ClauseGuard::Var { location, name, .. } => {
-                let constructor = self.infer_value_constructor(&None, &name, &location)?;
+                let constructor = self.infer_value_constructor(&None, &name, &location, None)?;
 
                 // We cannot support all values in guard expressions as the BEAM does not
                 let definition_location = match &constructor.variant {
@@ -3016,7 +3016,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let value_constructor = self
             .environment
-            .get_value_constructor(module.map(|(module, _)| module), name)
+            .get_value_constructor(
+                module.map(|(module, _)| module),
+                name,
+                typed_constructor
+                    .record_constructor_arity()
+                    .map(|v| v as usize),
+            )
             .map_err(|e| {
                 convert_get_value_constructor_error(
                     e,
@@ -3442,13 +3448,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             module,
             name,
             inferred_variant,
+            arguments,
             ..
         } = record_type.deref()
         else {
             return error(UnknownField::NoFields);
         };
 
-        let all_fields = self.environment.get_type_variants_fields(module, name);
+        let all_fields =
+            self.environment
+                .get_type_variants_fields(module, name, Some(arguments.len()));
 
         if all_fields.is_empty() {
             return error(UnknownField::NoFields);
@@ -3472,8 +3481,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         module: &Option<(EcoString, SrcSpan)>,
         name: &EcoString,
         location: &SrcSpan,
+        arity: Option<usize>,
     ) -> Result<ValueConstructor, Error> {
-        self.do_infer_value_constructor(module, name, location, ReferenceRegistration::Register)
+        self.do_infer_value_constructor(
+            module,
+            name,
+            location,
+            ReferenceRegistration::Register,
+            arity,
+        )
     }
 
     fn do_infer_value_constructor(
@@ -3482,6 +3498,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         name: &EcoString,
         location: &SrcSpan,
         register_reference: ReferenceRegistration,
+        arity: Option<usize>,
     ) -> Result<ValueConstructor, Error> {
         let constructor = match module {
             // Look in the current scope for a binding with this name
@@ -3489,7 +3506,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .environment
                 .get_variable(name)
                 .cloned()
-                .ok_or_else(|| self.report_name_error(name, location))?,
+                .ok_or_else(|| self.report_name_error(name, location, arity))?,
 
             // Look in an imported module for a binding with this name
             Some((module_name, module_location)) => {
@@ -3656,7 +3673,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn report_name_error(&mut self, name: &EcoString, location: &SrcSpan) -> Error {
+    fn report_name_error(
+        &mut self,
+        name: &EcoString,
+        location: &SrcSpan,
+        arity: Option<usize>,
+    ) -> Error {
         // First try to see if this is a module alias:
         // `import gleam/io`
         // `io.debug(io)`
@@ -3681,6 +3703,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     .module_types
                     .keys()
                     .any(|typ| typ == name),
+                suggestions: self.environment.suggest_unqualified_modules(
+                    name,
+                    Layer::Value,
+                    arity,
+                ),
             },
         }
     }
@@ -3990,7 +4017,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } if arguments.is_empty() => {
                 // Type check the record constructor
-                let constructor = match self.infer_value_constructor(&module, &name, &location) {
+                let constructor = match self.infer_value_constructor(
+                    &module,
+                    &name,
+                    &location,
+                    Some(arguments.len()),
+                ) {
                     Ok(constructor) => constructor,
                     Err(error) => {
                         self.problems.error(error);
@@ -4041,7 +4073,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 mut arguments,
                 ..
             } => {
-                let constructor = match self.infer_value_constructor(&module, &name, &location) {
+                let constructor = match self.infer_value_constructor(
+                    &module,
+                    &name,
+                    &location,
+                    Some(arguments.len()),
+                ) {
                     Ok(constructor) => constructor,
                     Err(error) => {
                         self.problems.error(error);
@@ -4217,23 +4254,24 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 // Infer the type of this constant
-                let constructor = match self.infer_value_constructor(&module, &name, &location) {
-                    Ok(constructor) => constructor,
-                    Err(error) => {
-                        self.problems.error(error);
-                        return Constant::Invalid {
-                            location,
-                            type_: self.new_unbound_var(),
-                            extra_information: Some(match module {
-                                Some((module_name, _)) => InvalidExpression::ModuleSelect {
-                                    module_name,
-                                    label: name,
-                                },
-                                None => InvalidExpression::UnknownVariable { name },
-                            }),
-                        };
-                    }
-                };
+                let constructor =
+                    match self.infer_value_constructor(&module, &name, &location, None) {
+                        Ok(constructor) => constructor,
+                        Err(error) => {
+                            self.problems.error(error);
+                            return Constant::Invalid {
+                                location,
+                                type_: self.new_unbound_var(),
+                                extra_information: Some(match module {
+                                    Some((module_name, _)) => InvalidExpression::ModuleSelect {
+                                        module_name,
+                                        label: name,
+                                    },
+                                    None => InvalidExpression::UnknownVariable { name },
+                                }),
+                            };
+                        }
+                    };
 
                 match constructor.variant {
                     ValueConstructorVariant::ModuleConstant { .. }
@@ -4414,7 +4452,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         Ok(self
             .environment
-            .get_value_constructor(module, name)?
+            .get_value_constructor(
+                module,
+                name,
+                constructor.record_constructor_arity().map(|v| v as usize),
+            )?
             .field_map())
     }
 

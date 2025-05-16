@@ -1,4 +1,5 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
+use crate::ast::Layer;
 use crate::bit_array::UnsupportedOption;
 use crate::build::{Origin, Outcome, Runtime, Target};
 use crate::dependency::{PackageFetcher, ResolutionError};
@@ -2484,6 +2485,7 @@ a label or use a record constructor.",
                         location,
                         name,
                         hint,
+                        suggestions
                     } => {
                         let label_text = match hint {
                             UnknownTypeHint::AlternativeTypes(types) => did_you_mean(name, types),
@@ -2506,32 +2508,36 @@ but no type in scope with that name."
                             UnknownTypeHint::AlternativeTypes(_) => {}
                         };
 
-                        Diagnostic {
-                            title: "Unknown type".into(),
-                            text,
-                            hint: None,
-                            level: Level::Error,
-                            location: Some(Location {
-                                label: Label {
-                                    text: label_text,
-                                    span: *location,
-                                },
-                                path: path.clone(),
-                                src: src.clone(),
-                                extra_labels: vec![],
-                            }),
-                        }
+
+                    Diagnostic {
+                        title: "Unknown type".into(),
+                        text,
+                        hint: match label_text {
+                            None => suggestions.first().map(|suggestion| suggestion.suggest_unqualified_import(name, Layer::Type)),
+                            Some(_) => None
+                        },
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: label_text,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
                     }
+                }
 
-                    TypeError::UnknownVariable {
-                        location,
-                        variables,
-                        discarded_location,
-                        name,
-                        type_with_name_in_scope,
-                    } => {
-                        let title = String::from("Unknown variable");
-
+                TypeError::UnknownVariable {
+                    location,
+                    variables,
+                    name,
+                    type_with_name_in_scope,
+                    discarded_location,
+                    suggestions
+                } => {
+                    let title = String::from("Unknown variable");
                         if let Some(ignored_location) = discarded_location {
                             let location = Location {
                                 label: Label {
@@ -2590,7 +2596,7 @@ but no type in scope with that name."
                                 }),
                             }
                         }
-                    }
+                }
 
                     TypeError::PrivateTypeLeak { location, leaked } => {
                         let mut printer = Printer::new(names);
@@ -2607,7 +2613,124 @@ being used by this public export.
     {}
 
 Private types can only be used within the module that defines them.",
-                            printer.print_type(leaked),
+                        printer.print_type(leaked),
+                    );
+                    Diagnostic {
+                        title: "Private type used in public interface".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
+
+                TypeError::UnknownModule {
+                    location,
+                    name,
+                    suggestions
+                } => Diagnostic {
+                    title: "Unknown module".into(),
+                    text: format!("No module has been found with the name `{name}`."),
+                    hint: suggestions.first().map(|suggestion| suggestion.suggest_import(name)),
+                    level: Level::Error,
+                    location: Some(Location {
+                        label: Label {
+                            text: None,
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
+
+                TypeError::UnknownModuleType {
+                    location,
+                    name,
+                    module_name,
+                    type_constructors,
+                    value_with_same_name: imported_type_as_value
+                } => {
+                    let text = if *imported_type_as_value {
+                        format!("`{name}` is only a value, it cannot be imported as a type.")
+                    } else {
+                        format!("The module `{module_name}` does not have a `{name}` type.")
+                    };
+                    Diagnostic {
+                        title: "Unknown module type".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: if *imported_type_as_value {
+                                    Some(format!("Did you mean `{name}`?"))
+                                } else {
+                                    did_you_mean(name, type_constructors)
+                                },
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
+
+                TypeError::UnknownModuleValue {
+                    location,
+                    name,
+                    module_name,
+                    value_constructors,
+                    type_with_same_name: imported_value_as_type,
+                    context,
+                } => {
+                    let text = if *imported_value_as_type {
+                        match context {
+                            ModuleValueUsageContext::UnqualifiedImport =>
+                                wrap_format!("`{name}` is only a type, it cannot be imported as a value."),
+                            ModuleValueUsageContext::ModuleAccess =>
+                                wrap_format!("{module_name}.{name} is a type constructor, it cannot be used as a value"),
+                        }
+                    } else {
+                        wrap_format!("The module `{module_name}` does not have a `{name}` value.")
+                    };
+                    Diagnostic {
+                        title: "Unknown module value".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: if *imported_value_as_type && matches!(context, ModuleValueUsageContext::UnqualifiedImport) {
+                                    Some(format!("Did you mean `type {name}`?"))
+                                } else {
+                                    did_you_mean(name, value_constructors)
+                                },
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
+
+                TypeError::ModuleAliasUsedAsName {
+                    location,
+                    name
+                } => {
+                    let text = wrap(
+"Modules are not values, so you cannot assign them to variables, pass \
+them to functions, or anything else that you would do with a value."
                         );
                         Diagnostic {
                             title: "Private type used in public interface".into(),
@@ -2635,7 +2758,7 @@ Private types can only be used within the module that defines them.",
                         text: format!("No module has been found with the name `{name}`."),
                         hint: suggestions
                             .first()
-                            .map(|suggestion| suggestion.suggestion(name)),
+                            .map(|suggestion| suggestion.suggest_import(name)),
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -4094,6 +4217,7 @@ with no constructors."
                             extra_labels: vec![],
                         }),
                     },
+
                 })
                 .collect_vec(),
 
