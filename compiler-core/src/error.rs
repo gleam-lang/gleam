@@ -950,7 +950,7 @@ to `{}/{module}.gleam`.", origin.folder_name()
                     ),
                     level: Level::Error,
                     location: None,
-                    hint: Some(format!("Make the `main` function in the `{module}` module public."))
+                    hint: Some(wrap_format!("Make the `main` function in the `{module}` module public."))
                 }
             ],
 
