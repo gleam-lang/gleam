@@ -625,6 +625,14 @@ impl<'a> Generator<'a> {
             &mut self.tracker,
             self.module_scope.clone(),
         );
+
+        let function_doc = match &function.documentation {
+            None => nil(),
+            Some((_, documentation)) => {
+                function_doc(documentation, function.publicity).append(line())
+            }
+        };
+
         let head = if function.publicity.is_private() {
             "function "
         } else {
@@ -647,6 +655,7 @@ impl<'a> Generator<'a> {
         };
 
         let document = docvec![
+            function_doc,
             head,
             maybe_escape_identifier(name.as_str()),
             fun_args(function.arguments.as_slice(), generator.tail_recursion_used),
@@ -691,6 +700,25 @@ impl<'a> Generator<'a> {
 
         docvec!["const FILEPATH = ", self.src_path.clone(), ';', lines(2)]
     }
+}
+
+fn function_doc<'a>(documentation: &'a EcoString, publicity: Publicity) -> Document<'a> {
+    let doc_lines = documentation
+        .trim_end()
+        .split('\n')
+        .map(|line| eco_format!(" *{line}").to_doc())
+        .collect_vec();
+
+    // We start with the documentation of the function
+    let doc_body = join(doc_lines, line());
+    let mut doc = docvec!["/**", line(), doc_body, line()];
+    if !publicity.is_public() {
+        // If the function is not public we hide the documentation using
+        // the `@ignore` tag: https://jsdoc.app/tags-ignore
+        doc = docvec![doc, " * ", line(), " * @ignore"];
+    }
+    // And finally we close the doc comment
+    docvec![doc, line(), " */"]
 }
 
 #[derive(Debug)]
