@@ -21,6 +21,7 @@ test: ## Run the compiler unit tests
 	cd test/language && make
 	cd test/javascript_prelude && make test
 	cd test/project_erlang && cargo run clean && cargo run check && cargo run test
+	cd test/delete_gleam_compile_file && ./delete_gleam_compile_file_test.sh
 	cd test/project_javascript && cargo run clean && cargo run check && cargo run test
 	cd test/project_deno && cargo run clean && cargo run check && cargo run test
 	cd test/hextarball && make test
