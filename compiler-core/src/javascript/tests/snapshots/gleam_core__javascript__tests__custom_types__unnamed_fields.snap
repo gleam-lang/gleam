@@ -29,9 +29,9 @@ fn destructure(x) {
 import { CustomType as $CustomType } from "../gleam.mjs";
 
 class Ip extends $CustomType {
-  constructor(x0) {
+  constructor($0) {
     super();
-    this[0] = x0;
+    this[0] = $0;
   }
 }
 

@@ -21,9 +21,9 @@ fn go(cat) {
 import { CustomType as $CustomType } from "../gleam.mjs";
 
 class Cat extends $CustomType {
-  constructor(x0, cuteness) {
+  constructor($0, cuteness) {
     super();
-    this[0] = x0;
+    this[0] = $0;
     this.cuteness = cuteness;
   }
 }
