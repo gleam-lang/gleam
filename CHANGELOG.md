@@ -35,6 +35,11 @@
   ([Amjad Mohamed](https://github.com/andho))
 
 
+- The generated JavaScript functions now include any doc comment as a JSDoc
+  comment, making it easier to use the generated code and browse its
+  documentation from JavaScript.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Language server
 
 ### Formatter

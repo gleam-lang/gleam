@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "\n/// Hello! This is the documentation of the `main`\n/// function, which is internal!\n///\n@internal\npub fn main() { 1 }\n"
+---
+----- SOURCE CODE
+
+/// Hello! This is the documentation of the `main`
+/// function, which is internal!
+///
+@internal
+pub fn main() { 1 }
+
+
+----- COMPILED JAVASCRIPT
+/**
+ * Hello! This is the documentation of the `main`
+ * function, which is internal!
+ * 
+ * @ignore
+ */
+export function main() {
+  return 1;
+}
