@@ -284,6 +284,11 @@
   has a Gleam and Erlang file which would collide.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The generated JavaScript functions now include any doc comment as a JSDoc
+  comment, making it easier to use the generated code and browse its
+  documentation from JavaScript.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Language server
 
 - The code action to add missing labels to function now also works in patterns:
