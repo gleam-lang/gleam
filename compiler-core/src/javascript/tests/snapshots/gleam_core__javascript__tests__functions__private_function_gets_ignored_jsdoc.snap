@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "\n/// Hello! This is the documentation of the `main`\n/// function, which is private!\n///\nfn main() { 1 }\n"
+---
+----- SOURCE CODE
+
+/// Hello! This is the documentation of the `main`
+/// function, which is private!
+///
+fn main() { 1 }
+
+
+----- COMPILED JAVASCRIPT
+/**
+ * Hello! This is the documentation of the `main`
+ * function, which is private!
+ * 
+ * @ignore
+ */
+function main() {
+  return 1;
+}

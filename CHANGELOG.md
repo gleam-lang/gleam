@@ -4,6 +4,11 @@
 
 ### Compiler
 
+- The generated JavaScript functions now include any doc comment as a JSDoc
+  comment, making it easier to use the generated code and browse its
+  documentation from JavaScript.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The code generated for a `case` expression on the JavaScript target is now
   reduced in size in many cases.
   ([Surya Rose](https://github.com/GearsDatapacks))
