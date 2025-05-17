@@ -18,13 +18,13 @@ fn go() {
 import { CustomType as $CustomType } from "../gleam.mjs";
 
 class TypeWithALongNameAndSeveralArguments extends $CustomType {
-  constructor(x0, x1, x2, x3, x4) {
+  constructor($0, $1, $2, $3, $4) {
     super();
-    this[0] = x0;
-    this[1] = x1;
-    this[2] = x2;
-    this[3] = x3;
-    this[4] = x4;
+    this[0] = $0;
+    this[1] = $1;
+    this[2] = $2;
+    this[3] = $3;
+    this[4] = $4;
   }
 }
 

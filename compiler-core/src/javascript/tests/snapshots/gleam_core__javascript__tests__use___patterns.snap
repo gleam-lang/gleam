@@ -22,9 +22,9 @@ fn apply(arg, fun) {
 import { CustomType as $CustomType } from "../gleam.mjs";
 
 class Box extends $CustomType {
-  constructor(x0) {
+  constructor($0) {
     super();
-    this[0] = x0;
+    this[0] = $0;
   }
 }
 

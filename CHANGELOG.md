@@ -36,6 +36,10 @@
   properly in the generated documentation.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where fields name `x0` in records could cause invalid code to be
+  generated on the JavaScript target.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.11.0-rc1 - 2025-05-15
 
 ### Compiler

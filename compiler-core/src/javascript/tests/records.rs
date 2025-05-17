@@ -68,3 +68,15 @@ pub fn get_name(person: Person) { person.name }
 pub fn get_age(person: Person) { person.age }"
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4603
+#[test]
+fn field_named_x0() {
+    assert_js!(
+        "
+pub type Wibble {
+  Wibble(Int, x0: String)
+}
+"
+    );
+}
