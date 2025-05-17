@@ -340,7 +340,7 @@ impl<'a> Generator<'a> {
             arg.label
                 .as_ref()
                 .map(|(_, s)| maybe_escape_identifier(s))
-                .unwrap_or_else(|| eco_format!("x{i}"))
+                .unwrap_or_else(|| eco_format!("${i}"))
                 .to_doc()
         }
 
