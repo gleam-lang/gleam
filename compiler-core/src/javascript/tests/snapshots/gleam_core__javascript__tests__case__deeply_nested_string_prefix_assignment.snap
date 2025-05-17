@@ -27,9 +27,9 @@ pub fn main() {
 import { CustomType as $CustomType, makeError } from "../gleam.mjs";
 
 class Wibble extends $CustomType {
-  constructor(x0) {
+  constructor($0) {
     super();
-    this[0] = x0;
+    this[0] = $0;
   }
 }
 

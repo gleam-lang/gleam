@@ -16,10 +16,10 @@ const y = #(X(1, ["1"]))
 import { toList, CustomType as $CustomType } from "../gleam.mjs";
 
 export class X extends $CustomType {
-  constructor(x0, x1) {
+  constructor($0, $1) {
     super();
-    this[0] = x0;
-    this[1] = x1;
+    this[0] = $0;
+    this[1] = $1;
   }
 }
 
