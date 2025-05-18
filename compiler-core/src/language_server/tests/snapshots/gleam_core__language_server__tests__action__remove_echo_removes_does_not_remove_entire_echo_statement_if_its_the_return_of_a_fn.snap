@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  fn() {\n    echo 1\n  }\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  fn() {
+    echo 1
+    ↑     
+  }
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  fn() {
+    1
+  }
+}

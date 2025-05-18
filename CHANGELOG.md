@@ -457,6 +457,32 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- When using the "remove `echo`" code action, the language server will also
+  remove any literal expression being printed by `echo` statements. For example
+
+  ```gleam
+  pub fn main() {
+    echo "Before"
+    do_complex_stuff()
+    echo "After"
+    do_something_else()
+  }
+  ```
+
+  Will become:
+
+  ```gleam
+  pub fn main() {
+    do_complex_stuff()
+    do_something_else()
+  }
+  ```
+
+  Making it easier to get rid of debug printing messages once they're no longer
+  needed.
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 - Improved the formatting of `echo` when followed by long binary expressions.

@@ -6646,9 +6646,100 @@ impl<'a> RemoveEchos<'a> {
             .push_to(&mut action);
         action
     }
+
+    fn visit_function_statements(&mut self, statements: &'a [TypedStatement]) {
+        for i in 0..statements.len() {
+            let statement = statements.get(i).unwrap();
+            let next_statement = statements.get(i + 1);
+            let is_last = i == statements.len() - 1;
+
+            match statement {
+                // We remove any echo that is used as a standalone statement used
+                // to print a literal value.
+                //
+                // ```gleam
+                // pub fn main() {
+                //   echo "I'm here"
+                //   do_something()
+                //   echo "Safe!"
+                //   do_something_else()
+                // }
+                // ```
+                //
+                // Here we want to remove not just the echo but also the literal
+                // strings they're printing.
+                //
+                // It's safe to do this only if echo is not the last expression
+                // in a function's block (otherwise we might change the function's
+                // return type by removing the entire line) and the value being
+                // printed is a literal expression.
+                //
+                ast::Statement::Expression(TypedExpr::Echo {
+                    location,
+                    expression,
+                    ..
+                }) if !is_last
+                    && expression.as_ref().is_some_and(|expression| {
+                        expression.is_literal() || expression.is_var()
+                    }) =>
+                {
+                    let echo_range = self.edits.src_span_to_lsp_range(*location);
+                    if within(self.params.range, echo_range) {
+                        self.is_hovering_echo = true;
+                    }
+
+                    let end = next_statement
+                        .map(|next| {
+                            let echo_end = location.end;
+                            let next_start = next.location().start;
+                            // We want to remove everything until the start of the
+                            // following statement. However, we have to be careful not to
+                            // delete any comments. So if there's any comment between the
+                            // echo to remove and the next statement, we just delete until
+                            // the comment's start.
+                            self.module
+                                .extra
+                                .first_comment_between(echo_end, next_start)
+                                // For comments we record the start of their content, not of the `//`
+                                // so we're subtracting 2 here to not delete the `//` as well
+                                .map(|comment| comment.start - 2)
+                                .unwrap_or(next_start)
+                        })
+                        .unwrap_or(location.end);
+
+                    self.echo_spans_to_delete.push(SrcSpan {
+                        start: location.start,
+                        end,
+                    });
+                }
+
+                // Otherwise we visit the statement as usual.
+                ast::Statement::Expression(_)
+                | ast::Statement::Assignment(_)
+                | ast::Statement::Use(_)
+                | ast::Statement::Assert(_) => ast::visit::visit_typed_statement(self, statement),
+            }
+        }
+    }
 }
 
 impl<'ast> ast::visit::Visit<'ast> for RemoveEchos<'ast> {
+    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+        self.visit_function_statements(&fun.body);
+    }
+
+    fn visit_typed_expr_fn(
+        &mut self,
+        _location: &'ast SrcSpan,
+        _type_: &'ast Arc<Type>,
+        _kind: &'ast FunctionLiteralKind,
+        _args: &'ast [TypedArg],
+        body: &'ast Vec1<TypedStatement>,
+        _return_annotation: &'ast Option<ast::TypeAst>,
+    ) {
+        self.visit_function_statements(body);
+    }
+
     fn visit_typed_expr_echo(
         &mut self,
         location: &'ast SrcSpan,
