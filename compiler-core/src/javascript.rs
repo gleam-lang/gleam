@@ -345,6 +345,12 @@ impl<'a> Generator<'a> {
                 .to_doc()
         }
 
+        let doc = if let Some((_, documentation)) = &constructor.documentation {
+            jsdoc_comment(&documentation, publicity).append(line())
+        } else {
+            nil()
+        };
+
         let head = if publicity.is_private() || opaque {
             "class "
         } else {
@@ -385,7 +391,7 @@ impl<'a> Generator<'a> {
         ]
         .nest(INDENT);
 
-        docvec![head, class_body, line(), "}"]
+        docvec![doc, head, class_body, line(), "}"]
     }
 
     fn collect_definitions(&mut self) -> Vec<Output<'a>> {

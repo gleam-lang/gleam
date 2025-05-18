@@ -1,0 +1,37 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\npub type Wibble {\n  /// Wibbling!!\n  Wibble(field: Int)\n\n  /// Wobbling!!\n  Wobble(field: Int)\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  /// Wibbling!!
+  Wibble(field: Int)
+
+  /// Wobbling!!
+  Wobble(field: Int)
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+/**
+ * Wibbling!!
+ */
+export class Wibble extends $CustomType {
+  constructor(field) {
+    super();
+    this.field = field;
+  }
+}
+
+/**
+ * Wobbling!!
+ */
+export class Wobble extends $CustomType {
+  constructor(field) {
+    super();
+    this.field = field;
+  }
+}
