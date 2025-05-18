@@ -4,9 +4,9 @@
 
 ### Compiler
 
-- Generated JavaScript functions and constants now include any doc comment as a
-  JSDoc comment, making it easier to use the generated code and browse its
-  documentation from JavaScript.
+- Generated JavaScript functions, constants, and custom type constructors now
+  include any doc comment as a JSDoc comment, making it easier to use the
+  generated code and browse its documentation from JavaScript.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - The code generated for a `case` expression on the JavaScript target is now

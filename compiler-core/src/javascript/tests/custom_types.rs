@@ -672,3 +672,18 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn constructors_get_their_own_jsdoc() {
+    assert_js!(
+        r#"
+pub type Wibble {
+  /// Wibbling!!
+  Wibble(field: Int)
+
+  /// Wobbling!!
+  Wobble(field: Int)
+}
+"#
+    );
+}
