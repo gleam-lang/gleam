@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  echo 1\n\n  // Oh no I hope I'm not deleted by the code action!!\n  Nil\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  echo 1
+  ↑     
+
+  // Oh no I hope I'm not deleted by the code action!!
+  Nil
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  // Oh no I hope I'm not deleted by the code action!!
+  Nil
+}

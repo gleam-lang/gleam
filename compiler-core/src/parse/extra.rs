@@ -36,6 +36,10 @@ impl ModuleExtra {
     }
 
     pub(crate) fn has_comment_between(&self, start: u32, end: u32) -> bool {
+        self.first_comment_between(start, end).is_some()
+    }
+
+    pub(crate) fn first_comment_between(&self, start: u32, end: u32) -> Option<SrcSpan> {
         self.comments
             .binary_search_by(|comment| {
                 if comment.end < start {
@@ -46,7 +50,8 @@ impl ModuleExtra {
                     Ordering::Equal
                 }
             })
-            .is_ok()
+            .map(|index| self.comments.get(index).unwrap().clone())
+            .ok()
     }
 }
 

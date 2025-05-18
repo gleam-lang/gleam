@@ -605,6 +605,111 @@ fn remove_echo_removes_all_echos_1() {
 }
 
 #[test]
+fn remove_echo_removes_entire_echo_statement_used_with_literals() {
+    assert_code_action!(
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
+        "pub fn main() {
+  echo 1
+  Nil
+}",
+        find_position_of("echo").to_selection()
+    );
+}
+
+#[test]
+fn remove_echo_removes_entire_echo_statement_used_with_a_var() {
+    assert_code_action!(
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
+        "pub fn main() {
+  let a = 1
+  echo a
+  Nil
+}",
+        find_position_of("echo").to_selection()
+    );
+}
+
+#[test]
+fn remove_echo_removes_multiple_entire_echo_statement_used_with_literals() {
+    assert_code_action!(
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
+        r#"pub fn main() {
+  echo 1
+  echo "wibble"
+  Nil
+}"#,
+        find_position_of("echo").to_selection()
+    );
+}
+
+#[test]
+fn remove_echo_removes_multiple_entire_echo_statement_used_with_literals_but_stops_at_comments() {
+    assert_code_action!(
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
+        r#"pub fn main() {
+  echo 1
+
+  // Oh no I hope I'm not deleted by the code action!!
+  Nil
+}"#,
+        find_position_of("echo").to_selection()
+    );
+}
+
+#[test]
+fn remove_echo_removes_entire_echo_statement_used_with_literals_in_a_fn() {
+    assert_code_action!(
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
+        "pub fn main() {
+  fn() {
+    echo 1
+    Nil
+  }
+}",
+        find_position_of("echo").to_selection()
+    );
+}
+
+#[test]
+fn remove_echo_removes_multiple_entire_echo_statement_used_with_literals_in_a_fn() {
+    assert_code_action!(
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
+        r#"pub fn main() {
+  fn() {
+    echo 1
+    echo "wibble"
+    Nil
+  }
+}"#,
+        find_position_of("echo").to_selection()
+    );
+}
+
+#[test]
+fn remove_echo_removes_does_not_remove_entire_echo_statement_if_its_the_return() {
+    assert_code_action!(
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
+        "pub fn main() {
+  echo 1
+}",
+        find_position_of("echo").to_selection()
+    );
+}
+
+#[test]
+fn remove_echo_removes_does_not_remove_entire_echo_statement_if_its_the_return_of_a_fn() {
+    assert_code_action!(
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
+        r#"pub fn main() {
+  fn() {
+    echo 1
+  }
+}"#,
+        find_position_of("echo").to_selection()
+    );
+}
+
+#[test]
 fn split_string() {
     assert_code_action!(
         INTERPOLATE_STRING,
