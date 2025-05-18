@@ -286,7 +286,7 @@ impl Printer<'_> {
 
         let arguments = Self::wrap_arguments(arguments);
 
-        docvec![self.title(&constructor.name), arguments]
+        docvec![self.title(&constructor.name), arguments].group()
     }
 
     fn type_alias<'a>(

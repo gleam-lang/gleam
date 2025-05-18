@@ -1119,3 +1119,46 @@ pub type External =
         ONLY_LINKS
     );
 }
+
+#[test]
+fn constructor_with_long_types_and_many_fields() {
+    assert_documentation!(
+        ("option", "pub type Option(a)"),
+        "
+import option
+
+pub type Uri {
+    Uri(
+        scheme: option.Option(String),
+        userinfo: option.Option(String),
+        host: option.Option(String),
+        port: option.Option(Int),
+        path: String,
+        query: option.Option(String),
+        fragment: option.Option(String)
+    )
+}
+",
+        NONE
+    );
+}
+
+#[test]
+fn constructor_with_long_types_and_many_fields_that_need_splitting() {
+    assert_documentation!(
+        ("option", "pub type Option(a)"),
+        "
+import option
+
+pub type TypeWithAVeryLoooooooooooooooooooongName
+
+pub type Wibble {
+    Wibble(
+        wibble: #(TypeWithAVeryLoooooooooooooooooooongName, TypeWithAVeryLoooooooooooooooooooongName),
+        wobble: option.Option(String),
+    )
+}
+",
+        NONE
+    );
+}

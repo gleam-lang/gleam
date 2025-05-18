@@ -1,0 +1,51 @@
+---
+source: compiler-core/src/docs/tests.rs
+expression: output
+---
+---- SOURCE CODE
+-- option.gleam
+pub type Option(a)
+
+-- main.gleam
+
+import option
+
+pub type Uri {
+    Uri(
+        scheme: option.Option(String),
+        userinfo: option.Option(String),
+        host: option.Option(String),
+        port: option.Option(Int),
+        path: String,
+        query: option.Option(String),
+        fragment: option.Option(String)
+    )
+}
+
+
+---- TYPES
+
+--- Uri
+<pre><code>pub type Uri {
+  Uri(
+    scheme: option.Option(String),
+    userinfo: option.Option(String),
+    host: option.Option(String),
+    port: option.Option(Int),
+    path: String,
+    query: option.Option(String),
+    fragment: option.Option(String),
+  )
+}</code></pre>
+
+-- CONSTRUCTORS
+
+<pre><code>Uri(
+  scheme: option.Option(String),
+  userinfo: option.Option(String),
+  host: option.Option(String),
+  port: option.Option(Int),
+  path: String,
+  query: option.Option(String),
+  fragment: option.Option(String),
+)</code></pre>

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Bug fixes
+
+- Fixed a bug where type constructors with many fields would not be formatted
+  properly in the generated documentation.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.11.0-rc1 - 2025-05-15
 
 ### Compiler
