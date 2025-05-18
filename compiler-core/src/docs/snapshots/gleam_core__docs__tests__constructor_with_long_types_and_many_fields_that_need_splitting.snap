@@ -1,0 +1,47 @@
+---
+source: compiler-core/src/docs/tests.rs
+expression: output
+---
+---- SOURCE CODE
+-- option.gleam
+pub type Option(a)
+
+-- main.gleam
+
+import option
+
+pub type TypeWithAVeryLoooooooooooooooooooongName
+
+pub type Wibble {
+    Wibble(
+        wibble: #(TypeWithAVeryLoooooooooooooooooooongName, TypeWithAVeryLoooooooooooooooooooongName),
+        wobble: option.Option(String),
+    )
+}
+
+
+---- TYPES
+
+--- TypeWithAVeryLoooooooooooooooooooongName
+<pre><code>pub type TypeWithAVeryLoooooooooooooooooooongName</code></pre>
+
+--- Wibble
+<pre><code>pub type Wibble {
+  Wibble(
+    wibble: #(
+      TypeWithAVeryLoooooooooooooooooooongName,
+      TypeWithAVeryLoooooooooooooooooooongName,
+    ),
+    wobble: option.Option(String),
+  )
+}</code></pre>
+
+-- CONSTRUCTORS
+
+<pre><code>Wibble(
+  wibble: #(
+    TypeWithAVeryLoooooooooooooooooooongName,
+    TypeWithAVeryLoooooooooooooooooooongName,
+  ),
+  wobble: option.Option(String),
+)</code></pre>
