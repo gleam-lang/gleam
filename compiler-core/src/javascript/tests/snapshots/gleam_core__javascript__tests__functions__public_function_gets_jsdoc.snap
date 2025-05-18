@@ -14,7 +14,6 @@ pub fn main() { 1 }
 /**
  * Hello! This is the documentation of the `main`
  * function.
-
  */
 export function main() {
   return 1;
