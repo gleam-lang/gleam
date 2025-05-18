@@ -291,8 +291,9 @@ impl<'a> Generator<'a> {
                 publicity,
                 name,
                 value,
+                documentation,
                 ..
-            }) => Some(self.module_constant(*publicity, name, value)),
+            }) => Some(self.module_constant(*publicity, name, value, documentation)),
 
             Definition::Function(function) => {
                 // If there's an external JavaScript implementation then it will be imported,
@@ -532,6 +533,7 @@ impl<'a> Generator<'a> {
         publicity: Publicity,
         name: &'a EcoString,
         value: &'a TypedConstant,
+        documentation: &'a Option<(u32, EcoString)>,
     ) -> Output<'a> {
         let head = if publicity.is_private() {
             "const "
@@ -552,7 +554,14 @@ impl<'a> Generator<'a> {
 
         let document = generator.constant_expression(Context::Constant, value)?;
 
+        let jsdoc = if let Some((_, documentation)) = documentation {
+            jsdoc_comment(documentation, publicity).append(line())
+        } else {
+            nil()
+        };
+
         Ok(docvec![
+            jsdoc,
             head,
             maybe_escape_identifier(name),
             " = ",
@@ -589,7 +598,7 @@ impl<'a> Generator<'a> {
         let function_doc = match &function.documentation {
             None => nil(),
             Some((_, documentation)) => {
-                function_doc(documentation, function.publicity).append(line())
+                jsdoc_comment(documentation, function.publicity).append(line())
             }
         };
 
@@ -654,7 +663,7 @@ impl<'a> Generator<'a> {
     }
 }
 
-fn function_doc<'a>(documentation: &'a EcoString, publicity: Publicity) -> Document<'a> {
+fn jsdoc_comment<'a>(documentation: &'a EcoString, publicity: Publicity) -> Document<'a> {
     let doc_lines = documentation
         .trim_end()
         .split('\n')
@@ -667,10 +676,10 @@ fn function_doc<'a>(documentation: &'a EcoString, publicity: Publicity) -> Docum
     if !publicity.is_public() {
         // If the function is not public we hide the documentation using
         // the `@ignore` tag: https://jsdoc.app/tags-ignore
-        doc = docvec![doc, " * ", line(), " * @ignore"];
+        doc = docvec![doc, " * ", line(), " * @ignore", line()];
     }
     // And finally we close the doc comment
-    docvec![doc, line(), " */"]
+    docvec![doc, " */"]
 }
 
 #[derive(Debug)]

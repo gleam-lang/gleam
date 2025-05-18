@@ -284,8 +284,8 @@
   has a Gleam and Erlang file which would collide.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- The generated JavaScript functions now include any doc comment as a JSDoc
-  comment, making it easier to use the generated code and browse its
+- Generated JavaScript functions and constants now include any doc comment as a
+  JSDoc comment, making it easier to use the generated code and browse its
   documentation from JavaScript.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
