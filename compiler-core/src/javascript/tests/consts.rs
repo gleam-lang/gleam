@@ -126,3 +126,13 @@ fn literal_nil_does_not_get_constant_annotation() {
 fn constructor_function_in_constant() {
     assert_js!("pub const a = Ok");
 }
+
+#[test]
+fn constants_get_their_own_jsdoc_comment() {
+    assert_js!(
+        "
+/// 11 is clearly the best number!
+pub const jaks_favourite_number = 11
+"
+    );
+}
