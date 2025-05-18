@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Build tool
+
+- Generated JavaScript functions, constants, and custom type constructors now
+  include any doc comment as a JSDoc comment, making it easier to use the
+  generated code and browse its documentation from JavaScript.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.11.0-rc1 - 2025-05-15
 
 ### Compiler
@@ -283,11 +292,6 @@
 - The build tool will now emit an error when compiling a package if the package
   has a Gleam and Erlang file which would collide.
   ([Surya Rose](https://github.com/GearsDatapacks))
-
-- Generated JavaScript functions, constants, and custom type constructors now
-  include any doc comment as a JSDoc comment, making it easier to use the
-  generated code and browse its documentation from JavaScript.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Language server
 
