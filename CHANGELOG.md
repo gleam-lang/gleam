@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Build tool
+
+- Generated JavaScript functions, constants, and custom type constructors now
+  include any doc comment as a JSDoc comment, making it easier to use the
+  generated code and browse its documentation from JavaScript.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+## v1.11.0-rc1 - 2025-05-15
+
 ### Compiler
 
 - The code generated for a `case` expression on the JavaScript target is now
@@ -33,12 +42,6 @@
   ```
 
   ([Amjad Mohamed](https://github.com/andho))
-
-
-- Generated JavaScript functions, constants, and custom type constructors now
-  include any doc comment as a JSDoc comment, making it easier to use the
-  generated code and browse its documentation from JavaScript.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Language server
 
