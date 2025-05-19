@@ -866,9 +866,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 // Register the value as seen for detection of unused values
                 self.environment.increment_usage(&name);
 
-                let constructor = self
-                    .environment
-                    .get_value_constructor(module.as_ref().map(|(module, _)| module), &name, Some(pattern_args.len()));
+                let constructor = self.environment.get_value_constructor(
+                    module.as_ref().map(|(module, _)| module),
+                    &name,
+                    Some(pattern_args.len()),
+                );
 
                 let constructor = match constructor {
                     Ok(constructor) => constructor,

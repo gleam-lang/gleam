@@ -2950,7 +2950,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let value_constructor = self
             .environment
-            .get_value_constructor(module.map(|(module, _)| module), name, typed_constructor.record_constructor_arity().map(|v| v as usize))
+            .get_value_constructor(
+                module.map(|(module, _)| module),
+                name,
+                typed_constructor
+                    .record_constructor_arity()
+                    .map(|v| v as usize),
+            )
             .map_err(|e| {
                 convert_get_value_constructor_error(
                     e,
@@ -3274,7 +3280,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             return error(UnknownField::NoFields);
         };
 
-        let all_fields = self.environment.get_type_variants_fields(module, name, Some(args.len()));
+        let all_fields = self
+            .environment
+            .get_type_variants_fields(module, name, Some(args.len()));
 
         if all_fields.is_empty() {
             return error(UnknownField::NoFields);
@@ -3305,7 +3313,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             name,
             location,
             ReferenceRegistration::RegisterReferences,
-            arity
+            arity,
         )
     }
 
@@ -3451,7 +3459,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn report_name_error(&mut self, name: &EcoString, location: &SrcSpan, arity: Option<usize>) -> Error {
+    fn report_name_error(
+        &mut self,
+        name: &EcoString,
+        location: &SrcSpan,
+        arity: Option<usize>,
+    ) -> Error {
         // First try to see if this is a module alias:
         // `import gleam/io`
         // `io.debug(io)`
@@ -3534,7 +3547,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } if args.is_empty() => {
                 // Type check the record constructor
-                let constructor = self.infer_value_constructor(&module, &name, &location, Some(args.len()))?;
+                let constructor =
+                    self.infer_value_constructor(&module, &name, &location, Some(args.len()))?;
 
                 let (tag, field_map) = match &constructor.variant {
                     ValueConstructorVariant::Record {
@@ -3573,7 +3587,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // field_map, is always None here because untyped not yet unified
                 ..
             } => {
-                let constructor = self.infer_value_constructor(&module, &name, &location, Some(args.len()))?;
+                let constructor =
+                    self.infer_value_constructor(&module, &name, &location, Some(args.len()))?;
 
                 let (tag, field_map) = match &constructor.variant {
                     ValueConstructorVariant::Record {
@@ -3868,7 +3883,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         Ok(self
             .environment
-            .get_value_constructor(module, name, constructor.record_constructor_arity().map(|v| v as usize))?
+            .get_value_constructor(
+                module,
+                name,
+                constructor.record_constructor_arity().map(|v| v as usize),
+            )?
             .field_map())
     }
 
