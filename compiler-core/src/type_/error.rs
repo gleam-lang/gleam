@@ -1459,14 +1459,14 @@ pub fn convert_get_value_constructor_error(
             name,
             variables,
             type_with_name_in_scope,
-            suggestions
+            suggestions,
         } => Error::UnknownVariable {
             location,
             name,
             variables,
             discarded_location: None,
             type_with_name_in_scope,
-            suggestions
+            suggestions,
         },
 
         UnknownValueConstructorError::Module { name, suggestions } => Error::UnknownModule {
@@ -1548,11 +1548,15 @@ pub fn convert_get_type_constructor_error(
     module_location: Option<SrcSpan>,
 ) -> Error {
     match e {
-        UnknownTypeConstructorError::Type { name, hint, suggestions } => Error::UnknownType {
+        UnknownTypeConstructorError::Type {
+            name,
+            hint,
+            suggestions,
+        } => Error::UnknownType {
             location: *location,
             name,
             hint,
-            suggestions
+            suggestions,
         },
 
         UnknownTypeConstructorError::Module { name, suggestions } => Error::UnknownModule {

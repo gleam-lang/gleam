@@ -2,7 +2,7 @@ use pubgrub::Range;
 
 use crate::{
     analyse::TargetSupport,
-    ast::{Layer, Publicity, PIPE_VARIABLE},
+    ast::{Layer, PIPE_VARIABLE, Publicity},
     build::Target,
     error::edit_distance,
     reference::{EntityKind, ReferenceTracker},
@@ -417,7 +417,7 @@ impl Environment<'_> {
                 .ok_or_else(|| UnknownTypeConstructorError::Type {
                     name: name.clone(),
                     hint: self.unknown_type_hint(name),
-                    suggestions: self.suggest_unqualified_modules(name, Layer::Type, arity)
+                    suggestions: self.suggest_unqualified_modules(name, Layer::Type, arity),
                 }),
 
             Some((module_name, _)) => {
@@ -467,7 +467,7 @@ impl Environment<'_> {
                 UnknownTypeConstructorError::Type {
                     name: name.clone(),
                     hint: self.unknown_type_hint(name),
-                    suggestions: self.suggest_unqualified_modules(name, Layer::Type, arity)
+                    suggestions: self.suggest_unqualified_modules(name, Layer::Type, arity),
                 }
             }),
 
@@ -505,7 +505,7 @@ impl Environment<'_> {
                     name: name.clone(),
                     variables: self.local_value_names(),
                     type_with_name_in_scope,
-                    suggestions: self.suggest_unqualified_modules(name, Layer::Value, arity)
+                    suggestions: self.suggest_unqualified_modules(name, Layer::Value, arity),
                 }
             }),
 
@@ -853,7 +853,7 @@ impl Environment<'_> {
             .collect()
     }
 
-        /// Suggest modules to import or use unqualified
+    /// Suggest modules to import or use unqualified
     pub fn suggest_unqualified_modules(
         &self,
         name: &EcoString,
