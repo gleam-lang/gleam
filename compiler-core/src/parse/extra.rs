@@ -50,8 +50,8 @@ impl ModuleExtra {
                     Ordering::Equal
                 }
             })
-            .map(|index| self.comments.get(index).unwrap().clone())
             .ok()
+            .and_then(|index| self.comments.get(index).copied())
     }
 }
 

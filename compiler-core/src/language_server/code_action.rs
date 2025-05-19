@@ -6655,7 +6655,9 @@ impl<'a> RemoveEchos<'a> {
 
     fn visit_function_statements(&mut self, statements: &'a [TypedStatement]) {
         for i in 0..statements.len() {
-            let statement = statements.get(i).unwrap();
+            let statement = statements
+                .get(i)
+                .expect("Statement must exist in iteration");
             let next_statement = statements.get(i + 1);
             let is_last = i == statements.len() - 1;
 
