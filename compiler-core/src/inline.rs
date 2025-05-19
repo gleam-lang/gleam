@@ -1,3 +1,76 @@
+//! This module implements the function inlining optimisation. This allows
+//! function calls to be inlined at the callsite, and replaced with the contents
+//! of the function which is being called.
+//!
+//! Function inlining is useful for two main reasons:
+//! - It removes the overhead of calling other functions and jumping around
+//!   execution too much
+//! - It removes the barrier of the function call between the code around the
+//!   call, and the code inside the called function.
+//!
+//! For example, the following Gleam code make heavy use of `use` sugar and higher
+//! order functions:
+//!
+//! ```gleam
+//! pub fn try_sum(list: List(Result(String, Nil)), sum: Int) -> Result(Int, Nil) {
+//!   use <- bool.guard(when: sum >= 1000, return: Ok(sum))
+//!   case list {
+//!     [] -> Ok(sum)
+//!     [first, ..rest] -> {
+//!       use number <- result.try(int.parse(first))
+//!       try_sum(rest, sum + number)
+//!     }
+//!   }
+//! }
+//! ```
+//!
+//! This can make the code easier to read, but it normally would have a performance
+//! cost. There are two called functions, and two implicit anonymous functions.
+//! This function is also not tail recursive, as it uses higher order functions
+//! inside its body.
+//!
+//! However, with function inlining, the above code can be optimised to:
+//!
+//! ```gleam
+//! pub fn try_sum(list: List(Result(String, Nil)), sum: Int) -> Result(Int, Nil) {
+//!   case sum >= 1000 {
+//!     True -> Ok(sum)
+//!     False -> case list {
+//!       [] -> Ok(sum)
+//!       [first, ..rest] -> {
+//!         case int.parse(first) {
+//!           Ok(number) -> try_sum(rest, sum + number)
+//!           Error(error) -> Error(error)
+//!         }
+//!       }
+//!     }
+//!   }
+//! }
+//! ```
+//!
+//! Which now has no extra function calls, and is tail recursive!
+//!
+//! The process of function inlining is quite simple really. It is implemented
+//! using an AST folder, which traverses each node of the AST, and potentially
+//! alters it as it goes.
+//!
+//! Every time we encounter a function call, we decide whether or not we can
+//! inline it. For now, the criteria for inlining is very simple, although a
+//! more complex heuristic-based approach will likely be implemented in the
+//! future. For now though, a function can be inlined if:
+//! It is a standard library function within the hardcoded list - which can be
+//! found in the `inline_function` function - or, it is an anonymous function.
+//!
+//! Inlining anonymous functions allows us to:
+//! - Remove calls to parameters of higher-order functions once those higher-
+//!   order functions have been inlined
+//! - Remove calls to anonymous functions in pipelines
+//! - Remove calls to function captures in pipelines
+//!
+//! See documentation of individual functions to explain better how the process
+//! works.
+//!
+
 use std::{
     collections::HashMap,
     sync::{Arc, LazyLock},
@@ -26,6 +99,8 @@ use crate::{
     },
 };
 
+/// Perform function inlining across an entire module, applying it to each
+/// individual function.
 pub fn module(
     mut module: TypedModule,
     modules: &im::HashMap<EcoString, ModuleInterface>,
@@ -41,7 +116,31 @@ pub fn module(
 }
 
 struct Inliner<'a> {
+    /// Importable modules, containing information about functions which can be
+    /// inlined
     modules: &'a im::HashMap<EcoString, ModuleInterface>,
+    /// Any variables which can be inlined. This is used when inlining the body
+    /// of function calls. Let's look at an example inlinable function:
+    /// ```gleam
+    /// pub fn add(a, b) {
+    ///   a + b
+    /// }
+    /// ```
+    /// If it is called - `add(1, 2)` - it can be inlined to the following:
+    /// ```gleam
+    /// {
+    ///   let a = 1
+    ///   let b = 2
+    ///   a + b
+    /// }
+    /// ```
+    ///
+    /// However, this can be inlined further. Since `a` and `b` are only used
+    /// once each in the body, the whole expression can be reduced to `1 + 2`.
+    ///
+    /// In the above example, this variable would contain `{a: 1, b: 2}`,
+    /// indicating the names of the variables to be inlined, as well as the
+    /// values to replace them with.
     inline_variables: HashMap<EcoString, TypedExpr>,
 }
 
@@ -53,6 +152,9 @@ impl Inliner<'_> {
         }
     }
 
+    /// Perform inlining over a single definition. This only does anything for
+    /// function definitions as none of the other definitions can contain call
+    /// expressions to be inlined.
     fn definition(&mut self, definition: TypedDefinition) -> TypedDefinition {
         match definition {
             Definition::Function(function_ast) => Definition::Function(self.function(function_ast)),
@@ -141,6 +243,10 @@ impl Inliner<'_> {
             .collect()
     }
 
+    /// Perform inlining over an expression. This function is recursive, as
+    /// expressions can be deeply nested. Most expressions just recursively
+    /// call this function on each of their component parts, but some have
+    /// special handling.
     fn expression(&mut self, expression: TypedExpr) -> TypedExpr {
         match expression {
             TypedExpr::Int { .. }
@@ -155,7 +261,11 @@ impl Inliner<'_> {
                 ref name,
                 ..
             } => match &constructor.variant {
+                // If this variable can be inlined, replace it with its value.
+                // See the `inline_variables` documentation for an explanation.
                 ValueConstructorVariant::LocalVariable { .. } => {
+                    // We remove the variable as inlined variables can only be
+                    // inlined once.
                     match self.inline_variables.remove(name) {
                         Some(expression) => expression,
                         None => expression,
@@ -329,6 +439,76 @@ impl Inliner<'_> {
         }
     }
 
+    /// Where the magic happens. First, we check the left-hand side of the call
+    /// so see if it's something we can inline. If not, we continue to walk the
+    /// tree like all the other expressions do. If it can be inlined, we follow
+    /// a three-step process:
+    ///
+    /// - Inlining: Here, we replace the reference to the function with an
+    ///   anonymous function with the same contents. If the left-hand side is
+    ///   already an anonymous function, we skip this step.
+    ///
+    /// - Beta reduction: The call to the anonymous function it transformed into
+    ///   a block with assignments for each argument at the beginning
+    ///
+    /// - Optimisation: We then recursively optimise the block. This allows us
+    ///   to, for example, inline anonymous functions passed to higher-order
+    ///   functions.
+    ///
+    /// Here is an example of inlining `result.map`:
+    ///
+    /// Initial code:
+    /// ```gleam
+    /// let x = Ok(10)
+    /// result.map(x, fn(x) {
+    ///   let y = x + 4
+    ///   int.to_string(y)
+    /// })
+    /// ```
+    ///
+    /// After inlining:
+    /// ```gleam
+    /// let x = Ok(10)
+    /// fn(result, function) {
+    ///   case result {
+    ///     Ok(value) -> Ok(function(value))
+    ///     Error(error) -> Error(error)
+    ///   }
+    /// }(x, fn(x) {
+    ///   let y = x + 4
+    ///   int.to_string(y)
+    /// })
+    /// ```
+    ///
+    /// After beta reduction:
+    /// ```gleam
+    /// let x = Ok(10)
+    /// {
+    ///   let result = x
+    ///   let function = fn(x) {
+    ///     let y = x + 4
+    ///     int.to_string(y)
+    ///   }
+    ///   case result {
+    ///     Ok(value) -> Ok(function(value))
+    ///     Error(error) -> Error(error)
+    ///   }
+    /// }
+    /// ```
+    ///
+    /// And finally, after the final optimising pass, where this inlining process
+    /// is repeated:
+    /// ```gleam
+    /// let x = Ok(10)
+    /// case x {
+    ///   Ok(value) -> Ok({
+    ///     let y = x + 4
+    ///     int.to_string(y)
+    ///   })
+    ///   Error(error) -> Error(error)
+    /// }
+    /// ```
+    ///
     fn call(
         &mut self,
         location: SrcSpan,
@@ -353,6 +533,9 @@ impl Inliner<'_> {
             )
             .collect();
 
+        // First, we traverse the left-hand side of this call. If this is called
+        // inside another inlined function, this could potentially inline an
+        // argument, allowing further inlining.
         let function = self.expression(*function);
 
         let function = match function {
@@ -362,11 +545,15 @@ impl Inliner<'_> {
                 ..
             } => match &constructor.variant {
                 ValueConstructorVariant::ModuleFn { module, .. } => {
+                    // If the function is in the list of inlinable functions in
+                    // the module it belongs to, we can inline it!
                     if let Some(function) = self
                         .modules
                         .get(module)
                         .and_then(|module| module.inline_functions.get(name))
                     {
+                        // First, we do the actual inlining, by converting it to
+                        // an anonymous function.
                         let TypedExpr::Fn {
                             args: parameters,
                             body,
@@ -375,6 +562,8 @@ impl Inliner<'_> {
                         else {
                             unreachable!("to_anonymous_function always returns TypedExpr::fn");
                         };
+                        // Then, we perform beta reduction, inlining the call to
+                        // the anonymous function.
                         return self.inline_anonymous_function_call(
                             &parameters,
                             arguments,
@@ -385,6 +574,9 @@ impl Inliner<'_> {
                         function
                     }
                 }
+                // We cannot inline local variables or constants, as we do not
+                // have enough information to inline them. Records are not actually
+                // function calls, so they also cannot be inlined.
                 ValueConstructorVariant::LocalVariable { .. }
                 | ValueConstructorVariant::ModuleConstant { .. }
                 | ValueConstructorVariant::LocalConstant { .. }
@@ -396,6 +588,7 @@ impl Inliner<'_> {
                 ref module_name,
                 ..
             } => match constructor {
+                // We use the same logic here as for `TypedExpr::Var` above.
                 ModuleValueConstructor::Fn { .. } => {
                     if let Some(function) = self
                         .modules
@@ -424,6 +617,7 @@ impl Inliner<'_> {
                     function
                 }
             },
+            // Direct calls to anonymous functions can always be inlined
             TypedExpr::Fn {
                 args: parameters,
                 body,
@@ -461,6 +655,7 @@ impl Inliner<'_> {
         }
     }
 
+    /// Turn a call to an anonymous function into a block with assignments.
     fn inline_anonymous_function_call(
         &mut self,
         parameters: &[TypedArg],
@@ -468,14 +663,22 @@ impl Inliner<'_> {
         body: Vec1<TypedStatement>,
         inlinable_parameters: &[EcoString],
     ) -> TypedExpr {
+        // Arguments to this call that can be inlined, and do not need an assignment.
         let mut inline = HashMap::new();
 
+        // We start by collecting all the assignments for parameters which cannot
+        // be inlined.
         let mut statements = parameters
             .iter()
             .zip(arguments)
             .filter_map(|(parameter, argument)| {
                 let name = parameter.get_variable_name().cloned().unwrap_or("_".into());
 
+                // A function can be inlined if it is only used once (stored in
+                // the `InlineFunction` structure), and it is pure. Sometime impure
+                // arguments can be inlined, but for simplicity we avoid inlining
+                // all impure arguments for now. This heuristic can be improved
+                // later.
                 if inlinable_parameters.contains(&name)
                     && argument.value.is_pure_value_constructor()
                 {
@@ -483,6 +686,8 @@ impl Inliner<'_> {
                     return None;
                 }
 
+                // Otherwise, we make an assignment which assigns the value of
+                // the argument to the correct parameter name.
                 Some(Statement::Assignment(Box::new(Assignment {
                     location: BLANK_LOCATION,
                     value: argument.value,
@@ -499,8 +704,13 @@ impl Inliner<'_> {
             })
             .collect_vec();
 
+        // If we are performing inlining within an already inlined function, there
+        // might be inlinable variables in the outer scope. However, these cannot be
+        // inlined inside a nested function, so they are saved and restored afterwards.
         let inline_variables = std::mem::replace(&mut self.inline_variables, inline);
 
+        // Perform inlining on each of the statements in this function's body,
+        // potentially inlining parameters and function calls inside this function.
         statements.extend(body.into_iter().map(|statement| self.statement(statement)));
 
         self.inline_variables = inline_variables;
