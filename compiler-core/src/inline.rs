@@ -74,7 +74,7 @@ impl Inliner<'_> {
                 Statement::Expression(self.expression(expression_ast))
             }
             Statement::Assignment(assignment_ast) => {
-                Statement::Assignment(self.assignment(assignment_ast))
+                Statement::Assignment(Box::new(self.assignment(*assignment_ast)))
             }
             Statement::Use(use_ast) => Statement::Use(self.use_(use_ast)),
             Statement::Assert(assert_ast) => Statement::Assert(self.assert(assert_ast)),
@@ -493,7 +493,7 @@ impl Inliner<'_> {
                     return None;
                 }
 
-                Some(Statement::Assignment(Assignment {
+                Some(Statement::Assignment(Box::new(Assignment {
                     location: BLANK_LOCATION,
                     value: argument.value,
                     pattern: TypedPattern::Variable {
@@ -505,7 +505,7 @@ impl Inliner<'_> {
                     kind: AssignmentKind::Generated,
                     compiled_case: CompiledCase::simple_variable_assignment(name, NIL.clone()),
                     annotation: None,
-                }))
+                })))
             })
             .collect_vec();
 
