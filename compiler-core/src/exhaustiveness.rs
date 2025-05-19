@@ -1020,7 +1020,7 @@ impl BitArrayMatchedValue {
     }
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, Debug)]
+#[derive(Clone, Copy, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
 pub enum StringEncoding {
     Utf8,
     Utf16,
