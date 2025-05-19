@@ -353,17 +353,7 @@ impl Inliner<'_> {
             )
             .collect();
 
-        self.called_function(location, type_, *function, arguments)
-    }
-
-    fn called_function(
-        &mut self,
-        location: SrcSpan,
-        type_: Arc<Type>,
-        function: TypedExpr,
-        arguments: Vec<TypedCallArg>,
-    ) -> TypedExpr {
-        let function = self.expression(function);
+        let function = self.expression(*function);
 
         let function = match function {
             TypedExpr::Var {
@@ -464,8 +454,8 @@ impl Inliner<'_> {
         };
 
         TypedExpr::Call {
-            location,
-            type_,
+            location: location,
+            type_: type_,
             fun: Box::new(function),
             args: arguments,
         }
