@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 2048
 expression: "\npub fn main() {\n let assert <<\"Hello, world!\" as message:utf8>> = <<\"Hello, world!\">>\n message\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -37,7 +39,7 @@ export function main() {
       3,
       "main",
       "Pattern match failed, no pattern matched the value.",
-      { value: $ }
+      { value: $, start: 22, pattern_start: 29, pattern_end: 64 }
     )
   }
   let message = "Hello, world!";

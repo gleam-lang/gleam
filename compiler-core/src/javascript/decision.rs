@@ -3,7 +3,7 @@ use super::{
     expression::{self, Generator, Ordering, float, int},
 };
 use crate::{
-    ast::{AssignmentKind, Endianness, TypedClause, TypedExpr},
+    ast::{AssignmentKind, Endianness, SrcSpan, TypedClause, TypedExpr},
     docvec,
     exhaustiveness::{
         BitArrayMatchedValue, BitArrayTest, Body, BoundValue, CompiledCase, Decision,
@@ -400,7 +400,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
 }
 
 /// Prints the code for a let assignment (it could either be a let assert or
-/// just a destructuring let, either cases are handled correctly by the decision
+/// just a let, either cases are handled correctly by the decision
 /// tree!)
 ///
 pub fn let_<'a>(
@@ -408,12 +408,13 @@ pub fn let_<'a>(
     subject: &'a TypedExpr,
     kind: &'a AssignmentKind<TypedExpr>,
     expression_generator: &mut Generator<'_, 'a>,
+    pattern_location: SrcSpan,
 ) -> Output<'a> {
     let scope_position = expression_generator.scope_position.clone();
     let mut variables = Variables::new(expression_generator);
     let assignment = variables.assign_let_subject(compiled_case, subject)?;
     let assignment_name = assignment.name();
-    let decision = LetPrinter::new(variables, kind)
+    let decision = LetPrinter::new(variables, kind, pattern_location)
         .decision(assignment_name.clone().to_doc(), &compiled_case.tree)?;
 
     let doc = docvec![assignments_to_doc(vec![assignment]), decision];
@@ -433,13 +434,14 @@ struct LetPrinter<'generator, 'module, 'a> {
     // directly generate an exception instead of first performing some checks
     // that we know are going to match.
     is_redundant: bool,
+    pattern_location: SrcSpan,
 }
 
 /// Generating code for a let (or let assert) assignment is quite different from
 /// case expressions. A lot of code can be shared between the two but the
 /// generated `if-else` code will look a lot different.
 ///
-/// A destructuring let is always guaranteed by the type system to succeed, and
+/// A let is always guaranteed by the type system to succeed, and
 /// we don't want to generate any redundant checks for those. At the same time
 /// we want to turn a let-assert into a single if statement that looks like this:
 ///
@@ -463,11 +465,13 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
     fn new(
         variables: Variables<'generator, 'module, 'a>,
         kind: &'a AssignmentKind<TypedExpr>,
+        pattern_location: SrcSpan,
     ) -> Self {
         Self {
             variables,
             kind,
             is_redundant: true,
+            pattern_location,
         }
     }
 
@@ -539,7 +543,17 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
                 this.wrap_expression(message)
             })?,
         };
-        Ok(generator.throw_error("let_assert", &message, *location, [("value", subject)]))
+        Ok(generator.throw_error(
+            "let_assert",
+            &message,
+            *location,
+            [
+                ("value", subject),
+                ("start", location.start.to_doc()),
+                ("pattern_start", self.pattern_location.start.to_doc()),
+                ("pattern_end", self.pattern_location.end.to_doc()),
+            ],
+        ))
     }
 
     /// A let decision tree has a very precise structure since it's made of a

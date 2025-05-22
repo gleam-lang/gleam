@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/erlang/tests/assert.rs
+assertion_line: 150
 expression: "\nfn identity(a) {\n  a\n}\n\npub fn main() {\n  assert identity(True) as {\n    let message = identity(\"This shouldn't fail\")\n    message\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -43,7 +45,7 @@ main() ->
                         start => 59,
                         'end' => 63
                         }],
-                assert_start => 43,
+                start => 43,
                 expression_start => 50,
                 expression_end => 64,
                 module => <<"my/mod"/utf8>>,

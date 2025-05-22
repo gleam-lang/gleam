@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/blocks.rs
+assertion_line: 330
 expression: "\nfn side_effects(x) {\n  // Some side effects\n  x\n}\n\npub fn main() {\n  let assert Error(Nil) = side_effects(Ok(10))\n    as {\n    let message = side_effects(\"some message\")\n    message\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -37,7 +39,7 @@ export function main() {
         let message = side_effects("some message");
         return message;
       })(),
-      { value: $ }
+      { value: $, start: 74, pattern_start: 81, pattern_end: 91 }
     )
   }
   return $;

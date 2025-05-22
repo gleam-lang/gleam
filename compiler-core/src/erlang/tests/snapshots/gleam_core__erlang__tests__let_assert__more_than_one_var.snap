@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/erlang/tests/let_assert.rs
+assertion_line: 17
 expression: "pub fn go(x) {\n  let assert [1, a, b, c] = x\n  [a, b, c]\n}"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn go(x) {
@@ -23,6 +25,9 @@ go(X) ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
                         value => _assert_fail,
+                        start => 21,
+                        pattern_start => 28,
+                        pattern_end => 40,
                         module => <<"my/mod"/utf8>>,
                         function => <<"go"/utf8>>,
                         line => 2})

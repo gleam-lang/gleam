@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/erlang/tests/patterns.rs
+assertion_line: 118
 expression: "pub fn a(x) {\n  let assert \"a\" as a <> rest = \"wibble\"\n  a\n}"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn a(x) {
@@ -23,6 +25,9 @@ a(X) ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
                         value => _assert_fail,
+                        start => 20,
+                        pattern_start => 27,
+                        pattern_end => 43,
                         module => <<"my/mod"/utf8>>,
                         function => <<"a"/utf8>>,
                         line => 2})

@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/erlang/tests/assert.rs
+assertion_line: 92
 expression: "\nfn and(x, y) {\n  x && y\n}\n\npub fn main() {\n  assert and(and(True, False), True)\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -42,7 +44,7 @@ main() ->
                         start => 75,
                         'end' => 79
                         }],
-                assert_start => 46,
+                start => 46,
                 expression_start => 53,
                 expression_end => 80,
                 module => <<"my/mod"/utf8>>,

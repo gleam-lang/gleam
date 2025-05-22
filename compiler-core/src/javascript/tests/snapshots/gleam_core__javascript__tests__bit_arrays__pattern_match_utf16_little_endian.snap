@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 2215
 expression: "\npub fn go(x) {\n  let assert <<\"Hello\":utf16-little, _rest:bytes>> = x\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -33,7 +35,7 @@ export function go(x) {
       3,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x }
+      { value: x, start: 22, pattern_start: 29, pattern_end: 66 }
     )
   }
   return x;

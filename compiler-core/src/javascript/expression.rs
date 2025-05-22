@@ -893,7 +893,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             return self.simple_variable_assignment(name, value);
         }
 
-        decision::let_(compiled_case, value, kind, self)
+        decision::let_(compiled_case, value, kind, self, pattern.location())
     }
 
     fn assert(&mut self, assert: &'a TypedAssert) -> Output<'a> {
@@ -1020,7 +1020,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             ),
         };
 
-        fields.push(("assert_start", location.start.to_doc()));
+        fields.push(("start", location.start.to_doc()));
         fields.push(("expression_start", subject.location().start.to_doc()));
         fields.push(("expression_end", subject.location().end.to_doc()));
 
@@ -1087,7 +1087,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                 "right",
                 self.asserted_expression(AssertExpression::Unevaluated, None, right.location()),
             ),
-            ("assert_start", location.start.to_doc()),
+            ("start", location.start.to_doc()),
             ("expression_start", left.location().start.to_doc()),
             ("expression_end", right.location().end.to_doc()),
         ];
@@ -1103,7 +1103,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                 "right",
                 self.asserted_expression(right_kind, Some("false".to_doc()), right.location()),
             ),
-            ("assert_start", location.start.to_doc()),
+            ("start", location.start.to_doc()),
             ("expression_start", left.location().start.to_doc()),
             ("expression_end", right.location().end.to_doc()),
         ];
@@ -1179,7 +1179,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                     right.location(),
                 ),
             ),
-            ("assert_start", location.start.to_doc()),
+            ("start", location.start.to_doc()),
             ("expression_start", left.location().start.to_doc()),
             ("expression_end", right.location().end.to_doc()),
         ];

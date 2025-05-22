@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/assert.rs
+assertion_line: 40
 expression: "\npub fn eq(a, b) {\n  assert a == b\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -25,7 +27,7 @@ export function eq(a, b) {
         operator: "==",
         left: { kind: "expression", value: a, start: 28, end: 29 },
         right: { kind: "expression", value: b, start: 33, end: 34 },
-        assert_start: 21,
+        start: 21,
         expression_start: 28,
         expression_end: 34
       }

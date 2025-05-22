@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/blocks.rs
+assertion_line: 284
 expression: "\npub fn main() {\n  {\n    let assert Ok(1) = Error(Nil)\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -23,7 +25,7 @@ export function main() {
       4,
       "main",
       "Pattern match failed, no pattern matched the value.",
-      { value: $ }
+      { value: $, start: 29, pattern_start: 36, pattern_end: 41 }
     )
     return $;
   }

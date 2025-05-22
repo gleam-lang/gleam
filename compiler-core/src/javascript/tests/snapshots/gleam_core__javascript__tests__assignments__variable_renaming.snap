@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
+assertion_line: 37
 expression: "\n\nfn go(x, wibble) {\n  let a = 1\n  wibble(a)\n  let a = 2\n  wibble(a)\n  let assert #(a, 3) = x\n  let b = a\n  wibble(b)\n  let c = {\n    let a = a\n    #(a, b)\n  }\n  wibble(a)\n  // make sure arguments are counted in initial state\n  let x = c\n  x\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -39,7 +41,7 @@ function go(x, wibble) {
       8,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x }
+      { value: x, start: 75, pattern_start: 82, pattern_end: 89 }
     )
   }
   let a$2 = x[0];

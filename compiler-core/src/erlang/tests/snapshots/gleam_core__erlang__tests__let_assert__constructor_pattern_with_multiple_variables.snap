@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/erlang/tests/let_assert.rs
+assertion_line: 170
 expression: "\npub type Wibble {\n  Wibble(Int, Float)\n}\n\npub fn go() {\n  let assert Wibble(x, 2.0 as y) = Wibble(1, 2.0)\n  x\n}"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -31,6 +33,9 @@ go() ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
                         value => _assert_fail,
+                        start => 63,
+                        pattern_start => 70,
+                        pattern_end => 89,
                         module => <<"my/mod"/utf8>>,
                         function => <<"go"/utf8>>,
                         line => 7})

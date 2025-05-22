@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Compiler
+
+- The format of the `assert` and `let assert` location information has been
+  improved.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ### Language server
 
 - When using the "remove `echo`" code action, the language server will also

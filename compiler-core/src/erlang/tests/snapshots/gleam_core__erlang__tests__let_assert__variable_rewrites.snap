@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/erlang/tests/let_assert.rs
+assertion_line: 39
 expression: "pub fn go() {\n  let assert Ok(y) = Ok(1)\n  let assert Ok(y) = Ok(1)\n  y\n}"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn go() {
@@ -24,6 +26,9 @@ go() ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
                         value => _assert_fail,
+                        start => 20,
+                        pattern_start => 27,
+                        pattern_end => 32,
                         module => <<"my/mod"/utf8>>,
                         function => <<"go"/utf8>>,
                         line => 2})
@@ -34,6 +39,9 @@ go() ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
                         value => _assert_fail@1,
+                        start => 47,
+                        pattern_start => 54,
+                        pattern_end => 59,
                         module => <<"my/mod"/utf8>>,
                         function => <<"go"/utf8>>,
                         line => 3})

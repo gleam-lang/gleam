@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/lists.rs
+assertion_line: 62
 expression: "\nfn go(x, y) {\n  let assert [] = x\n  let assert [a] = x\n  let assert [1, 2] = x\n  let assert [_, #(3, b)] = y\n  let assert [head, ..tail] = y\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -24,7 +26,7 @@ function go(x, y) {
       3,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x }
+      { value: x, start: 21, pattern_start: 28, pattern_end: 30 }
     )
   }
   if (x instanceof $Empty || x.tail instanceof $NonEmpty) {
@@ -34,7 +36,7 @@ function go(x, y) {
       4,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x }
+      { value: x, start: 41, pattern_start: 48, pattern_end: 51 }
     )
   }
   let a = x.head;
@@ -51,7 +53,7 @@ function go(x, y) {
       5,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x }
+      { value: x, start: 62, pattern_start: 69, pattern_end: 75 }
     )
   }
   if (
@@ -66,7 +68,7 @@ function go(x, y) {
       6,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: y }
+      { value: y, start: 86, pattern_start: 93, pattern_end: 105 }
     )
   }
   let b = y.tail.head[1];
@@ -77,7 +79,7 @@ function go(x, y) {
       7,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: y }
+      { value: y, start: 116, pattern_start: 123, pattern_end: 137 }
     )
   }
   let head = y.head;

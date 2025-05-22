@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/assert.rs
+assertion_line: 62
 expression: "\nfn bool() {\n  True\n}\n\npub fn main() {\n  assert bool()\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -31,7 +33,7 @@ export function main() {
       {
         kind: "function_call",
         arguments: [],
-        assert_start: 41,
+        start: 41,
         expression_start: 48,
         expression_end: 54
       }

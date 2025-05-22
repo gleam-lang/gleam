@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/assert.rs
+assertion_line: 51
 expression: "\npub fn assert_answer(x) {\n  assert x == 42\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -26,7 +28,7 @@ export function assert_answer(x) {
         operator: "==",
         left: { kind: "expression", value: x, start: 36, end: 37 },
         right: { kind: "literal", value: $, start: 41, end: 43 },
-        assert_start: 29,
+        start: 29,
         expression_start: 36,
         expression_end: 43
       }

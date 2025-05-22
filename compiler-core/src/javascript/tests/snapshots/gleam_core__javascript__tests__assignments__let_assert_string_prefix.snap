@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
+assertion_line: 179
 expression: "\npub fn main() {\n  let assert \"Game \" <> id = \"Game 1\"\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -21,7 +23,7 @@ export function main() {
       3,
       "main",
       "Pattern match failed, no pattern matched the value.",
-      { value: $ }
+      { value: $, start: 23, pattern_start: 30, pattern_end: 43 }
     )
   }
   let id = $.slice(5);

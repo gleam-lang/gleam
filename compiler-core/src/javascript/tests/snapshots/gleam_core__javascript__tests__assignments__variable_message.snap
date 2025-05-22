@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
+assertion_line: 243
 expression: "\npub fn expect(value, message) {\n  let assert Ok(inner) = value as message\n  inner\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -21,7 +23,7 @@ export function expect(value, message) {
       3,
       "expect",
       message,
-      { value: value }
+      { value: value, start: 39, pattern_start: 46, pattern_end: 55 }
     )
   }
   let inner = value[0];

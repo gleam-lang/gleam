@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 2076
 expression: "\npub fn main() {\n let assert <<_ as number>> = <<10>>\n number\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -22,7 +24,7 @@ export function main() {
       3,
       "main",
       "Pattern match failed, no pattern matched the value.",
-      { value: $ }
+      { value: $, start: 22, pattern_start: 29, pattern_end: 44 }
     )
   }
   let number = $.byteAt(0);

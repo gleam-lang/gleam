@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/erlang/tests/assert.rs
+assertion_line: 77
 expression: "\nfn and(a, b) {\n  a && b\n}\n\npub fn go(x) {\n  assert and(True, x)\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -41,7 +43,7 @@ go(X) ->
                         start => 62,
                         'end' => 63
                         }],
-                assert_start => 45,
+                start => 45,
                 expression_start => 52,
                 expression_end => 64,
                 module => <<"my/mod"/utf8>>,

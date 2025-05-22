@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
+assertion_line: 308
 expression: "\nfn main(x) {\n  let assert 09_179.1 = x\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -20,7 +22,7 @@ function main(x) {
       3,
       "main",
       "Pattern match failed, no pattern matched the value.",
-      { value: x }
+      { value: x, start: 20, pattern_start: 27, pattern_end: 35 }
     )
   }
   return x;

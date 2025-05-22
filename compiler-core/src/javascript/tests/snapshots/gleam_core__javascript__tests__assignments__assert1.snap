@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
+assertion_line: 21
 expression: "fn go(x) { let assert #(1, 2) = x }"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 fn go(x) { let assert #(1, 2) = x }
@@ -16,7 +18,7 @@ function go(x) {
       1,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x }
+      { value: x, start: 15, pattern_start: 22, pattern_end: 29 }
     )
   }
   return x;
