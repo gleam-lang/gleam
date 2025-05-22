@@ -41,7 +41,7 @@ function go(x, wibble) {
       8,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x, start: 75, pattern_start: 82, pattern_end: 89 }
+      { value: x, start: 71, pattern_start: 82, pattern_end: 89 }
     )
   }
   let a$2 = x[0];

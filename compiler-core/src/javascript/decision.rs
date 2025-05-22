@@ -532,7 +532,10 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
     }
 
     fn assignment_no_match(&mut self, subject: Document<'a>) -> Output<'a> {
-        let AssignmentKind::Assert { location, message } = self.kind else {
+        let AssignmentKind::Assert {
+            location, message, ..
+        } = self.kind
+        else {
             unreachable!("inexhaustive let made it to code generation");
         };
 

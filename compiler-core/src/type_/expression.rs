@@ -1819,11 +1819,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             // If we're asserting but the pattern already covers all cases then the
             // `assert` is redundant and can be safely removed.
-            (AssignmentKind::Assert { location, .. }, Ok(_)) => {
-                self.problems.warning(Warning::RedundantAssertAssignment {
-                    location: *location,
-                })
-            }
+            (
+                AssignmentKind::Assert {
+                    location,
+                    assert_keyword_start,
+                    ..
+                },
+                Ok(_),
+            ) => self.problems.warning(Warning::RedundantAssertAssignment {
+                location: SrcSpan::new(*assert_keyword_start, location.end),
+            }),
 
             // Otherwise, if the pattern is never reachable (through variant inference),
             // we can warn the user about this.
@@ -1840,15 +1845,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     | Reachability::Unreachable(UnreachablePatternReason::DuplicatePattern) => {}
                 }
             }
-        };
-
-        // If the pattern is a let assert we want to include the compiled case
-        // we got from the analysis so that it can be used for code generation!
-        let kind = match kind {
-            AssignmentKind::Let | AssignmentKind::Generated => kind,
-            AssignmentKind::Assert {
-                location, message, ..
-            } => AssignmentKind::Assert { location, message },
         };
 
         Assignment {
@@ -1868,7 +1864,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         match kind {
             AssignmentKind::Let => AssignmentKind::Let,
             AssignmentKind::Generated => AssignmentKind::Generated,
-            AssignmentKind::Assert { location, message } => {
+            AssignmentKind::Assert {
+                location,
+                message,
+                assert_keyword_start,
+            } => {
                 self.purity = Purity::Impure;
                 let message = match message {
                     Some(message) => {
@@ -1889,7 +1889,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     }
                     None => None,
                 };
-                AssignmentKind::Assert { location, message }
+                AssignmentKind::Assert {
+                    location,
+                    message,
+                    assert_keyword_start,
+                }
             }
         }
     }

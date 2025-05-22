@@ -22,7 +22,7 @@ function main(x) {
       3,
       "main",
       "Pattern match failed, no pattern matched the value.",
-      { value: x, start: 20, pattern_start: 27, pattern_end: 35 }
+      { value: x, start: 16, pattern_start: 27, pattern_end: 35 }
     )
   }
   return x;

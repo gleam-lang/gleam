@@ -24,7 +24,7 @@ export function main() {
       3,
       "main",
       "Pattern match failed, no pattern matched the value.",
-      { value: $, start: 22, pattern_start: 29, pattern_end: 39 }
+      { value: $, start: 18, pattern_start: 29, pattern_end: 39 }
     )
   }
   let a = 1;

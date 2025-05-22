@@ -25,7 +25,7 @@ export function main() {
       4,
       "main",
       "Pattern match failed, no pattern matched the value.",
-      { value: $, start: 29, pattern_start: 36, pattern_end: 41 }
+      { value: $, start: 25, pattern_start: 36, pattern_end: 41 }
     )
     return $;
   }

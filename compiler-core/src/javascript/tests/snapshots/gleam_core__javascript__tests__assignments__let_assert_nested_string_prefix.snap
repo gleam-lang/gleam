@@ -35,7 +35,7 @@ export function main() {
       7,
       "main",
       "Pattern match failed, no pattern matched the value.",
-      { value: $, start: 65, pattern_start: 72, pattern_end: 109 }
+      { value: $, start: 61, pattern_start: 72, pattern_end: 109 }
     )
   }
   let prefix = "w";

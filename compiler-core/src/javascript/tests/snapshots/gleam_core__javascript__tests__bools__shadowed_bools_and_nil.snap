@@ -31,7 +31,7 @@ function go(x, y) {
       4,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x, start: 54, pattern_start: 61, pattern_end: 65 }
+      { value: x, start: 50, pattern_start: 61, pattern_end: 65 }
     )
   }
   throw makeError(
@@ -40,7 +40,7 @@ function go(x, y) {
     5,
     "go",
     "Pattern match failed, no pattern matched the value.",
-    { value: x, start: 76, pattern_start: 83, pattern_end: 88 }
+    { value: x, start: 72, pattern_start: 83, pattern_end: 88 }
   )
   
 }

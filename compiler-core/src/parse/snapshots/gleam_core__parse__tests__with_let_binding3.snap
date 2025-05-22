@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/parse/tests.rs
+assertion_line: 440
 expression: "let assert [x] = [2]"
+snapshot_kind: text
 ---
 [
     Assignment(
@@ -49,9 +51,10 @@ expression: "let assert [x] = [2]"
             },
             kind: Assert {
                 location: SrcSpan {
-                    start: 4,
+                    start: 0,
                     end: 10,
                 },
+                assert_keyword_start: 4,
                 message: None,
             },
             compiled_case: CompiledCase {
