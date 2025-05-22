@@ -31,7 +31,7 @@ go() ->
                 erlang:error(#{gleam_error => let_assert,
                             message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
                             value => _assert_fail,
-                            start => 57,
+                            start => 53,
                             pattern_start => 64,
                             pattern_end => 69,
                             module => <<"my/mod"/utf8>>,

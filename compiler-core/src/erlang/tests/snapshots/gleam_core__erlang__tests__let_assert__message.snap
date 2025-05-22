@@ -27,7 +27,7 @@ unwrap_or_panic(Value) ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Oops, there was an error"/utf8>>,
                         value => _assert_fail,
-                        start => 39,
+                        start => 35,
                         pattern_start => 46,
                         pattern_end => 55,
                         module => <<"my/mod"/utf8>>,

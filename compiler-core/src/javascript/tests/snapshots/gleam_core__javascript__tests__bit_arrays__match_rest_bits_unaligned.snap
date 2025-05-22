@@ -23,7 +23,7 @@ function go(x) {
       3,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: $, start: 18, pattern_start: 25, pattern_end: 40 }
+      { value: $, start: 14, pattern_start: 25, pattern_end: 40 }
     )
   }
   let b = bitArraySlice($, 5);

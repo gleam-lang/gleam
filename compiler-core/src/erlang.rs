@@ -2248,7 +2248,9 @@ fn assignment<'a>(
         AssignmentKind::Let | AssignmentKind::Generated => {
             let_(&assignment.value, &assignment.pattern, env)
         }
-        AssignmentKind::Assert { message, location } => let_assert(
+        AssignmentKind::Assert {
+            message, location, ..
+        } => let_assert(
             &assignment.value,
             &assignment.pattern,
             env,
