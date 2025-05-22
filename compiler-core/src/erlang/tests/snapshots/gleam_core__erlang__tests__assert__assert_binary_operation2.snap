@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/erlang/tests/assert.rs
+assertion_line: 40
 expression: "\npub fn eq(a, b) {\n  assert a == b\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -34,7 +36,7 @@ eq(A, B) ->
                     start => 33,
                     'end' => 34
                     },
-                assert_start => 21,
+                start => 21,
                 expression_start => 28,
                 expression_end => 34,
                 module => <<"my/mod"/utf8>>,

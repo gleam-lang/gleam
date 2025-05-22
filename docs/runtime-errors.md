@@ -60,11 +60,14 @@ An inexhaustive pattern match, erroring if the pattern does not match.
 let assert Ok(x) = something()
 let assert Error(e) = something() as "This should fail"
 ```
-| Key         | Erlang Value        | JavaScript Value    |
-| ---         | ------------        | ----------------    |
-| gleam_error | `let_assert`        | `"let_assert"`      |
-| message     | The given message   | The given message   |
-| value       | The unmatched value | The unmatched value |
+| Key                  | Erlang Value                                               | JavaScript Value                                          |
+| ---                  | ------------                                               | ----------------                                          |
+| gleam_error          | `let_assert`                                               | `"let_assert"`                                            |
+| message              | The given message                                          | The given message                                         |
+| value                | The unmatched value                                        | The unmatched value                                       |
+| start                | The byte-index of the start of the `let assert` statement  | The byte-index of the start of the `let assert` statement |
+| pattern_start        | The byte-index of the start of the asserted pattern        | The byte-index of the start of the asserted pattern       |
+| pattern_end          | The byte-index of the end of the asserted pattern          | The byte-index of the end of the asserted pattern         |
 
 ## Assert
 
@@ -78,7 +81,7 @@ It always has these fields:
 | gleam_error      | `assert`                                               | `"assert"`                                             |
 | message          | The given message                                      | The given message                                      |
 | kind             | The kind of asserted expression                        | The kind of asserted expression                        |
-| assert_start     | The byte-index of the start of the `assert` statement  | The byte-index of the start of the `assert` statement  |
+| start            | The byte-index of the start of the `assert` statement  | The byte-index of the start of the `assert` statement  |
 | expression_start | The byte-index of the start of the asserted expression | The byte-index of the start of the asserted expression |
 | expression_end   | The byte-index of the end of the asserted expression   | The byte-index of the end of the asserted expression   |
 

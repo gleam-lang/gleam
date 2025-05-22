@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 1105
 expression: "\nfn go(x) {\n  let assert <<_:16, _:8>> = x\n  let assert <<_:16-little-signed, _:8>> = x\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -21,7 +23,7 @@ function go(x) {
       3,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x }
+      { value: x, start: 18, pattern_start: 25, pattern_end: 38 }
     )
   }
   if (x.bitSize !== 24) {
@@ -31,7 +33,7 @@ function go(x) {
       4,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x }
+      { value: x, start: 49, pattern_start: 56, pattern_end: 83 }
     )
   }
   return x;

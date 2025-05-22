@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 1360
 expression: "\nfn go(x) {\n  let n = 1\n  let assert <<_:size(n), 1.1, _:bits>> = x\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -26,7 +28,7 @@ function go(x) {
       4,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x }
+      { value: x, start: 30, pattern_start: 37, pattern_end: 63 }
     )
   }
   return x;

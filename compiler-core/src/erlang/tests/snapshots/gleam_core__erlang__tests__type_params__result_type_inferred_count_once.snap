@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/erlang/tests/type_params.rs
+assertion_line: 5
 expression: "\n        fn wibble() {\n            let assert Ok(_) = wobble()\n        }\n\n        type Wobble(a) {\n            Wobble\n        }\n\n        fn wobble() -> Result(a, Wobble(a)) {\n            todo\n        }\n        "
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -44,6 +46,9 @@ wibble() ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
                         value => _assert_fail,
+                        start => 39,
+                        pattern_start => 46,
+                        pattern_end => 51,
                         module => <<"my/mod"/utf8>>,
                         function => <<"wibble"/utf8>>,
                         line => 3})

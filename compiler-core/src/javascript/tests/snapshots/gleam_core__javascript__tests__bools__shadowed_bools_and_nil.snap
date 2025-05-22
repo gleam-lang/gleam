@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
+assertion_line: 67
 expression: "\npub type True { True False Nil }\nfn go(x, y) {\n  let assert True = x\n  let assert False = x\n  let assert Nil = y\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -29,7 +31,7 @@ function go(x, y) {
       4,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x }
+      { value: x, start: 54, pattern_start: 61, pattern_end: 65 }
     )
   }
   throw makeError(
@@ -38,7 +40,7 @@ function go(x, y) {
     5,
     "go",
     "Pattern match failed, no pattern matched the value.",
-    { value: x }
+    { value: x, start: 76, pattern_start: 83, pattern_end: 88 }
   )
   
 }

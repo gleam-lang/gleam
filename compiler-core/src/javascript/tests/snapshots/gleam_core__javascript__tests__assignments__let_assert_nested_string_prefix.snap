@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
+assertion_line: 191
 expression: "\ntype Wibble {\n  Wibble(wibble: String)\n}\n\npub fn main() {\n  let assert Wibble(wibble: \"w\" as prefix <> rest) = Wibble(\"wibble\")\n  prefix <> rest\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -33,7 +35,7 @@ export function main() {
       7,
       "main",
       "Pattern match failed, no pattern matched the value.",
-      { value: $ }
+      { value: $, start: 65, pattern_start: 72, pattern_end: 109 }
     )
   }
   let prefix = "w";

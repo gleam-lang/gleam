@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
+assertion_line: 278
 expression: "\ntype Cat {\n  Cat(name: String, cuteness: Int)\n}\n\nfn go(cat) {\n  let Cat(x, y) = cat\n  let Cat(name: x, ..) = cat\n  let assert Cat(cuteness: 4, name: x) = cat\n  x\n}\n\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -39,7 +41,7 @@ function go(cat) {
       9,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: cat }
+      { value: cat, start: 120, pattern_start: 127, pattern_end: 152 }
     )
   }
   let x$2 = cat.name;

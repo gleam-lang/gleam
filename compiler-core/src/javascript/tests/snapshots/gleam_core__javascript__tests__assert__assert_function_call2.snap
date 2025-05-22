@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/assert.rs
+assertion_line: 77
 expression: "\nfn and(a, b) {\n  a && b\n}\n\npub fn go(x) {\n  assert and(True, x)\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -34,7 +36,7 @@ export function go(x) {
           { kind: "literal", value: true, start: 56, end: 60 },
           { kind: "expression", value: x, start: 62, end: 63 },
         ],
-        assert_start: 45,
+        start: 45,
         expression_start: 52,
         expression_end: 64
       }

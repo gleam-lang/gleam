@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/erlang/tests/bit_arrays.rs
+assertion_line: 58
 expression: "pub fn main() {\n  let a = <<\"test\":utf8>>\n  let assert <<b:utf8_codepoint, \"st\":utf8>> = a\n  b\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn main() {
@@ -26,6 +28,9 @@ main() ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
                         value => _assert_fail,
+                        start => 48,
+                        pattern_start => 55,
+                        pattern_end => 86,
                         module => <<"my/mod"/utf8>>,
                         function => <<"main"/utf8>>,
                         line => 3})

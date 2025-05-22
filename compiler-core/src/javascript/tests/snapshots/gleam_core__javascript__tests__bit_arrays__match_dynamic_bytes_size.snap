@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 1078
 expression: "\nfn go(x) {\n  let n = 3\n  let assert <<a:bytes-size(n)>> = x\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -22,7 +24,7 @@ function go(x) {
       4,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x }
+      { value: x, start: 30, pattern_start: 37, pattern_end: 56 }
     )
   }
   let a = bitArraySlice(x, 0, n * 8);

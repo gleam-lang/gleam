@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/erlang/tests/numbers.rs
+assertion_line: 31
 expression: "\npub fn main() {\n  let assert 100_000 = 1\n  let assert 100_000.00101 = 1.\n  1\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -26,6 +28,9 @@ main() ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
                         value => _assert_fail,
+                        start => 23,
+                        pattern_start => 30,
+                        pattern_end => 37,
                         module => <<"my/mod"/utf8>>,
                         function => <<"main"/utf8>>,
                         line => 3})
@@ -36,6 +41,9 @@ main() ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
                         value => _assert_fail@1,
+                        start => 48,
+                        pattern_start => 55,
+                        pattern_end => 68,
                         module => <<"my/mod"/utf8>>,
                         function => <<"main"/utf8>>,
                         line => 4})

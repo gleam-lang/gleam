@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/assert.rs
+assertion_line: 92
 expression: "\nfn and(x, y) {\n  x && y\n}\n\npub fn main() {\n  assert and(and(True, False), True)\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -35,7 +37,7 @@ export function main() {
           { kind: "expression", value: $, start: 57, end: 73 },
           { kind: "literal", value: true, start: 75, end: 79 },
         ],
-        assert_start: 46,
+        start: 46,
         expression_start: 53,
         expression_end: 80
       }

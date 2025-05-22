@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/assert.rs
+assertion_line: 5
 expression: "\npub fn main() {\n  let x = True\n  assert x\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -25,7 +27,7 @@ export function main() {
       {
         kind: "expression",
         expression: { kind: "expression", value: false, start: 41, end: 42 },
-        assert_start: 34,
+        start: 34,
         expression_start: 41,
         expression_end: 42
       }

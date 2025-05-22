@@ -1164,6 +1164,7 @@ fn let_assert<'a>(
     env: &mut Env<'a>,
     message: Option<&'a TypedExpr>,
     position: Position,
+    location: SrcSpan,
 ) -> Document<'a> {
     // If the pattern will never fail, like a tuple or a simple variable, we
     // simply treat it as if it were a `let` assignment.
@@ -1288,8 +1289,13 @@ fn let_assert<'a>(
             erlang_error(
                 "let_assert",
                 &message,
-                pattern.location(),
-                vec![("value", env.local_var_name(ASSERT_FAIL_VARIABLE))],
+                location,
+                vec![
+                    ("value", env.local_var_name(ASSERT_FAIL_VARIABLE)),
+                    ("start", location.start.to_doc()),
+                    ("pattern_start", pattern.location().start.to_doc()),
+                    ("pattern_end", pattern.location().end.to_doc()),
+                ],
                 env,
             )
             .nest(INDENT)
@@ -2242,12 +2248,13 @@ fn assignment<'a>(
         AssignmentKind::Let | AssignmentKind::Generated => {
             let_(&assignment.value, &assignment.pattern, env)
         }
-        AssignmentKind::Assert { message, .. } => let_assert(
+        AssignmentKind::Assert { message, location } => let_assert(
             &assignment.value,
             &assignment.pattern,
             env,
             message.as_ref(),
             position,
+            *location,
         ),
     }
 }
@@ -2341,7 +2348,7 @@ fn assert<'a>(assert: &'a TypedAssert, env: &mut Env<'a>) -> Document<'a> {
         ),
     };
 
-    fields.push(("assert_start", location.start.to_doc()));
+    fields.push(("start", location.start.to_doc()));
     fields.push(("expression_start", value.location().start.to_doc()));
     fields.push(("expression_end", value.location().end.to_doc()));
 
@@ -2444,7 +2451,7 @@ fn assert_and<'a>(
             "right",
             asserted_expression(AssertExpression::Unevaluated, None, right.location()),
         ),
-        ("assert_start", location.start.to_doc()),
+        ("start", location.start.to_doc()),
         ("expression_start", left.location().start.to_doc()),
         ("expression_end", right.location().end.to_doc()),
     ];
@@ -2460,7 +2467,7 @@ fn assert_and<'a>(
             "right",
             asserted_expression(right_kind, Some("false".to_doc()), right.location()),
         ),
-        ("assert_start", location.start.to_doc()),
+        ("start", location.start.to_doc()),
         ("expression_start", left.location().start.to_doc()),
         ("expression_end", right.location().end.to_doc()),
     ];
@@ -2541,7 +2548,7 @@ fn assert_or<'a>(
                 right.location(),
             ),
         ),
-        ("assert_start", location.start.to_doc()),
+        ("start", location.start.to_doc()),
         ("expression_start", left.location().start.to_doc()),
         ("expression_end", right.location().end.to_doc()),
     ];

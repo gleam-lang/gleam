@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/erlang/tests/assert.rs
+assertion_line: 123
 expression: "\nfn wibble(a, b) {\n  let result = a + b\n  result == 10\n}\n\npub fn go(x) {\n  assert wibble(5, 5) && wibble(4, 6)\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -46,7 +48,7 @@ go(X) ->
                             start => 98,
                             'end' => 110
                             },
-                        assert_start => 75,
+                        start => 75,
                         expression_start => 82,
                         expression_end => 110,
                         module => <<"my/mod"/utf8>>,
@@ -66,7 +68,7 @@ go(X) ->
                     start => 98,
                     'end' => 110
                     },
-                assert_start => 75,
+                start => 75,
                 expression_start => 82,
                 expression_end => 110,
                 module => <<"my/mod"/utf8>>,

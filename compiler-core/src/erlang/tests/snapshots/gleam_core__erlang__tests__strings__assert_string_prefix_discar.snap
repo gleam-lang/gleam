@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
+assertion_line: 433
 expression: "\npub fn main(x) {\n  let assert \"m-\" <> _ = x\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -24,6 +26,9 @@ main(X) ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
                         value => _assert_fail,
+                        start => 24,
+                        pattern_start => 31,
+                        pattern_end => 40,
                         module => <<"my/mod"/utf8>>,
                         function => <<"main"/utf8>>,
                         line => 3})

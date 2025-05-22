@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/erlang/tests.rs
+assertion_line: 548
 expression: "pub fn x(y) {\n  let assert Ok(_) = y\n  1\n}"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn x(y) {
@@ -23,6 +25,9 @@ x(Y) ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
                         value => _assert_fail,
+                        start => 20,
+                        pattern_start => 27,
+                        pattern_end => 32,
                         module => <<"my/mod"/utf8>>,
                         function => <<"x"/utf8>>,
                         line => 2})

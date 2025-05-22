@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 1992
 expression: "\npub fn main() {\n let assert <<1 as a>> = <<1>>\n a\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -22,7 +24,7 @@ export function main() {
       3,
       "main",
       "Pattern match failed, no pattern matched the value.",
-      { value: $ }
+      { value: $, start: 22, pattern_start: 29, pattern_end: 39 }
     )
   }
   let a = 1;

@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/erlang/tests/bit_arrays.rs
+assertion_line: 124
 expression: "pub fn go(x) {\n  let assert <<name_size:8, name:bytes-size(name_size)>> = x\n  name\n}"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn go(x) {
@@ -23,6 +25,9 @@ go(X) ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
                         value => _assert_fail,
+                        start => 21,
+                        pattern_start => 28,
+                        pattern_end => 71,
                         module => <<"my/mod"/utf8>>,
                         function => <<"go"/utf8>>,
                         line => 2})
