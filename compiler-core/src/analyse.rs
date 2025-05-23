@@ -937,7 +937,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             )
             .collect();
         let typed_parameters = environment
-            .get_type_constructor(&None, &name)
+            .get_type_constructor(&None, &name, Some(parameters.len()))
             .expect("Could not find preregistered type constructor")
             .parameters
             .clone();
@@ -1601,7 +1601,7 @@ fn analyse_type_alias(t: UntypedTypeAlias, environment: &mut Environment<'_>) ->
     // analysis aims to be fault tolerant to get the best possible feedback for
     // the programmer in the language server, so the analyser gets here even
     // though there was previously errors.
-    let type_ = match environment.get_type_constructor(&None, &alias) {
+    let type_ = match environment.get_type_constructor(&None, &alias, Some(args.len())) {
         Ok(constructor) => constructor.type_.clone(),
         Err(_) => environment.new_generic_var(),
     };

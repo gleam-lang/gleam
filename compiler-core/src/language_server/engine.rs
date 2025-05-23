@@ -45,6 +45,8 @@ use super::{
         WrapInBlock, code_action_add_missing_patterns,
         code_action_convert_qualified_constructor_to_unqualified,
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
+        code_action_import_qualified_module_for_type_or_value,
+        code_action_import_unqualified_module_for_type_or_value,
         code_action_inexhaustive_let_to_case,
     },
     completer::Completer,
@@ -398,6 +400,20 @@ where
             );
             code_action_fix_names(&lines, &params, &this.error, &mut actions);
             code_action_import_module(module, &lines, &params, &this.error, &mut actions);
+            code_action_import_qualified_module_for_type_or_value(
+                module,
+                &lines,
+                &params,
+                &this.error,
+                &mut actions,
+            );
+            code_action_import_unqualified_module_for_type_or_value(
+                module,
+                &lines,
+                &params,
+                &this.error,
+                &mut actions,
+            );
             code_action_add_missing_patterns(module, &lines, &params, &this.error, &mut actions);
             code_action_inexhaustive_let_to_case(
                 module,
