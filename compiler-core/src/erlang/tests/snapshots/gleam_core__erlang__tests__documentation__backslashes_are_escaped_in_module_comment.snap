@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/erlang/tests/documentation.rs
+assertion_line: 75
 expression: "\n//// \\backslashes!\\\n\npub fn main() { 1 }"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -11,7 +13,7 @@ pub fn main() { 1 }
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 
 -if(?OTP_RELEASE >= 27).

@@ -1,6 +1,8 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
+assertion_line: 118
 expression: "./cases/erlang_import_shadowing_prelude"
+snapshot_kind: text
 ---
 //// /out/lib/the_package/_gleam_artefacts/one.cache
 <.cache binary>
@@ -11,7 +13,7 @@ expression: "./cases/erlang_import_shadowing_prelude"
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-define(FILEPATH, "src/one.gleam").
 -export_type([error/0]).
 
 -type error() :: error.
@@ -28,7 +30,7 @@ expression: "./cases/erlang_import_shadowing_prelude"
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-define(FILEPATH, "src/two.gleam").
 -export([main/0]).
 
 -file("src/two.gleam", 4).

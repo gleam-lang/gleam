@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/erlang/tests/panic.rs
+assertion_line: 54
 expression: "\n     pub fn main() {\n      \"lets\"\n      |> panic as \"pipe\"\n      |> panic as \"other panic\"\n    }\n    "
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -14,7 +16,7 @@ expression: "\n     pub fn main() {\n      \"lets\"\n      |> panic as \"pipe\"\
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 
 -file("project/test/my/mod.gleam", 2).

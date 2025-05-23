@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/erlang/tests/echo.rs
+assertion_line: 52
 expression: "\npub fn main() {\n  echo wibble(1, 2)\n}\n\nfn wibble(n: Int, m: Int) { n + m }\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -14,7 +16,7 @@ fn wibble(n: Int, m: Int) { n + m }
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 
 -file("project/test/my/mod.gleam", 6).
@@ -25,6 +27,6 @@ wibble(N, M) ->
 -file("project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
-    echo(wibble(1, 2), "project/test/my/mod.gleam", 3).
+    echo(wibble(1, 2), 3).
 
 % ...omitted code from `templates/echo.erl`...
