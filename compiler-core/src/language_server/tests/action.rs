@@ -2917,6 +2917,22 @@ pub fn main() {
 }
 
 #[test]
+fn test_qualified_to_unqualified_import_custom_type_record_declaration() {
+    let src = r#"
+import wobble
+
+pub type Wibble {
+  Wibble(wibble: wobble.Wobble)
+}
+"#;
+    assert_code_action!(
+        "Unqualify wobble.Wobble",
+        TestProject::for_source(src).add_hex_module("wobble", "pub type Wobble { Wibble }"),
+        find_position_of(".").select_until(find_position_of("Wobble"))
+    );
+}
+
+#[test]
 fn test_qualified_to_unqualified_import_basic_type_without_argument() {
     let src = r#"
 import wobble
