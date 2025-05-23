@@ -11,6 +11,7 @@ use std::{
     collections::HashSet,
     io::{self, BufRead, BufReader, Write},
     process::{Child, ChildStdin, ChildStdout},
+    thread::JoinHandle,
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -21,6 +22,7 @@ struct BeamCompilerInner {
     process: Child,
     stdin: ChildStdin,
     stdout: BufReader<ChildStdout>,
+    stderr_thread: JoinHandle<()>,
 }
 
 #[derive(Debug, Default)]
@@ -131,11 +133,26 @@ impl BeamCompiler {
 
         let stdin = process.stdin.take().expect("could not get child stdin");
         let stdout = process.stdout.take().expect("could not get child stdout");
+        let stderr = process.stderr.take().expect("could not get child stderr");
+
+        // Spawn a thread forwarding standard error.
+        // We cannot use `Stdio::inherit()` here, since the standard_error process
+        // in OTP-28 wants to initialise some console mode flags on Windows if the
+        // handle is inherited, which fails.
+        let stderr_thread = std::thread::spawn(move || {
+            let mut stderr_reader = BufReader::new(stderr);
+            let mut buf = String::new();
+            while stderr_reader.read_line(&mut buf).unwrap_or(0) > 0 {
+                eprint!("{}", buf);
+                buf.clear();
+            }
+        });
 
         Ok(BeamCompilerInner {
             process,
             stdin,
             stdout: BufReader::new(stdout),
+            stderr_thread,
         })
     }
 }
@@ -146,6 +163,7 @@ impl Drop for BeamCompiler {
             // closing stdin will cause the erlang process to exit.
             drop(inner.stdin);
             let _ = inner.process.wait();
+            let _ = inner.stderr_thread.join();
         }
     }
 }
