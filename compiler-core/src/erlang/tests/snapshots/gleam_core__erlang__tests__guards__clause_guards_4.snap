@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/erlang/tests/guards.rs
+assertion_line: 62
 expression: "\npub fn main() {\n  case 1, 0 {\n    x, y if x >= y -> 1\n    _, _ -> 0\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -15,7 +17,7 @@ pub fn main() {
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 
 -file("project/test/my/mod.gleam", 2).

@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
+assertion_line: 406
 expression: "\nfn id(x) {\n  x\n}\n\npub fn main() {\n  { \"\" |> id } <> { \"\" |> id }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -16,7 +18,7 @@ pub fn main() {
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 
 -file("project/test/my/mod.gleam", 2).

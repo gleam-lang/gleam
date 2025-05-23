@@ -22,7 +22,7 @@ snapshot_kind: text
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-define(FILEPATH, "project/test/my/mod.gleam").
 -export_type([wobble/1]).
 
 -type wobble(I) :: wobble | {gleam_phantom, I}.

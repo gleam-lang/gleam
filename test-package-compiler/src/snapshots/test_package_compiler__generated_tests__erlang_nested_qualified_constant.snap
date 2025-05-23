@@ -1,6 +1,8 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
+assertion_line: 140
 expression: "./cases/erlang_nested_qualified_constant"
+snapshot_kind: text
 ---
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache
 <.cache binary>
@@ -11,7 +13,7 @@ expression: "./cases/erlang_nested_qualified_constant"
 //// /out/lib/the_package/_gleam_artefacts/one@two.erl
 -module(one@two).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-define(FILEPATH, "src/one/two.gleam").
 -export_type([a/0]).
 
 -type a() :: a.
