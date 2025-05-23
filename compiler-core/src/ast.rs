@@ -2337,13 +2337,26 @@ pub enum AssignmentKind<Expression> {
     /// let assert x = ...
     Assert {
         /// The src byte span of the `let assert`
+        ///
+        /// ```gleam
+        /// let assert Wibble = todo
+        /// ^^^^^^^^^^
+        /// ```
         location: SrcSpan,
+
         /// The byte index of the start of `assert`
+        ///
+        /// ```gleam
+        /// let assert Wibble = todo
+        ///     ^
+        /// ```
         assert_keyword_start: u32,
+
         /// The message given to the assertion:
+        ///
         /// ```gleam
         /// let asset Ok(a) = something() as "This will never fail"
-        /// //                                ^ Message
+        ///                                  ^^^^^^^^^^^^^^^^^^^^^^
         /// ```
         message: Option<Expression>,
     },
