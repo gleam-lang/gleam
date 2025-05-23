@@ -46,6 +46,10 @@
   generated on the JavaScript target.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where exceptions on JavaScript could be sometimes missing the
+  function name metadata.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ## v1.11.0-rc1 - 2025-05-15
 
 ### Compiler
