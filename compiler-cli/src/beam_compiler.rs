@@ -116,6 +116,7 @@ impl BeamCompiler {
             .arg(escript_path)
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
             .spawn()
             .map_err(|e| match e.kind() {
                 io::ErrorKind::NotFound => Error::ShellProgramNotFound {
