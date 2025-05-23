@@ -72,3 +72,14 @@ pub fn unimplemented(message) {
 "#
     );
 }
+
+#[test]
+fn inside_fn() {
+    assert_js!(
+        r#"
+pub fn main() {
+  fn() { todo }
+}
+"#
+    );
+}

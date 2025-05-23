@@ -76,14 +76,60 @@ pub enum Ordering {
     Loose,
 }
 
+/// Tracking where the current function is a module function or an anonymous function.
+#[derive(Debug)]
+enum CurrentFunction {
+    /// The current function is a module function
+    ///
+    /// ```gleam
+    /// pub fn main() -> Nil {
+    ///   // we are here
+    /// }
+    /// ```
+    Module,
+
+    /// The current function is a module function, but one of its arguments shadows
+    /// the reference to itself so it cannot recurse.
+    ///
+    /// ```gleam
+    /// pub fn main(main: fn() -> Nil) -> Nil {
+    ///   // we are here
+    /// }
+    /// ```
+    ModuleWithShadowingArgument,
+
+    /// The current function is an anonymous function
+    ///
+    /// ```gleam
+    /// pub fn main() -> Nil {
+    ///   fn() {
+    ///     // we are here
+    ///   }
+    /// }
+    /// ```
+    Anonymous,
+}
+
+impl CurrentFunction {
+    #[inline]
+    fn can_recurse(&self) -> bool {
+        match self {
+            CurrentFunction::Module => true,
+            CurrentFunction::ModuleWithShadowingArgument => false,
+            CurrentFunction::Anonymous => false,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub(crate) struct Generator<'module, 'ast> {
     module_name: EcoString,
     src_path: &'module Utf8Path,
     project_root: &'module Utf8Path,
     line_numbers: &'module LineNumbers,
-    function_name: Option<EcoString>,
+    function_name: EcoString,
     function_arguments: Vec<Option<&'module EcoString>>,
+    current_function: CurrentFunction,
     pub current_scope_vars: im::HashMap<EcoString, usize>,
     pub function_position: Position,
     pub scope_position: Position,
@@ -137,15 +183,15 @@ impl<'module, 'a> Generator<'module, 'a> {
         tracker: &'module mut UsageTracker,
         mut current_scope_vars: im::HashMap<EcoString, usize>,
     ) -> Self {
-        let mut function_name = Some(function_name);
+        let mut current_function = CurrentFunction::Module;
         for &name in function_arguments.iter().flatten() {
             // Initialise the function arguments
             let _ = current_scope_vars.insert(name.clone(), 0);
 
             // If any of the function arguments shadow the current function then
             // recursion is no longer possible.
-            if function_name.as_ref() == Some(name) {
-                function_name = None;
+            if function_name.as_ref() == name {
+                current_function = CurrentFunction::ModuleWithShadowingArgument;
             }
         }
         Self {
@@ -158,6 +204,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             function_arguments,
             tail_recursion_used: false,
             current_scope_vars,
+            current_function,
             function_position: Position::Tail,
             scope_position: Position::Tail,
             statement_level: Vec::new(),
@@ -1307,7 +1354,8 @@ impl<'module, 'a> Generator<'module, 'a> {
             // and we are in tail position we can avoid creating a new stack
             // frame, enabling recursion with constant memory usage.
             TypedExpr::Var { name, .. }
-                if self.function_name.as_ref() == Some(name)
+                if self.function_name == *name
+                    && self.current_function.can_recurse()
                     && self.function_position.is_tail()
                     && self.current_scope_vars.get(name) == Some(&0) =>
             {
@@ -1366,10 +1414,10 @@ impl<'module, 'a> Generator<'module, 'a> {
             let _ = self.current_scope_vars.insert(name.clone(), 0);
         }
 
-        // This is a new function so unset the recorded name so that we don't
+        // This is a new function so track that so that we don't
         // mistakenly trigger tail call optimisation
-        let mut name = None;
-        std::mem::swap(&mut self.function_name, &mut name);
+        let mut current_function = CurrentFunction::Anonymous;
+        std::mem::swap(&mut self.current_function, &mut current_function);
 
         // Generate the function body
         let result = self.statements(body);
@@ -1378,7 +1426,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         self.function_position = function_position;
         self.scope_position = scope_position;
         self.current_scope_vars = scope;
-        std::mem::swap(&mut self.function_name, &mut name);
+        std::mem::swap(&mut self.current_function, &mut current_function);
 
         Ok(docvec![
             docvec![
@@ -1610,12 +1658,7 @@ impl<'module, 'a> Generator<'module, 'a> {
     {
         self.tracker.make_error_used = true;
         let module = self.module_name.clone().to_doc().surround('"', '"');
-        let function = self
-            .function_name
-            .clone()
-            .unwrap_or_default()
-            .to_doc()
-            .surround("\"", "\"");
+        let function = self.function_name.clone().to_doc().surround("\"", "\"");
         let line = self.line_numbers.line_number(location.start).to_doc();
         let fields = wrap_object(fields.into_iter().map(|(k, v)| (k.to_doc(), Some(v))));
 
