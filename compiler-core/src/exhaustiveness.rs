@@ -815,7 +815,7 @@ impl Variable {
                 ..
             } => {
                 let constructors = ConstructorSpecialiser::specialise_constructors(
-                    env.get_constructors_for_type(module, name)
+                    env.get_constructors_for_type(module, name, Some(args.len()))
                         .expect("Custom type variants must exist"),
                     args.as_slice(),
                 );
