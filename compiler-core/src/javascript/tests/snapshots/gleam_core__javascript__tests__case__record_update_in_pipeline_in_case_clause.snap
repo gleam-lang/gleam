@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
+assertion_line: 380
 expression: "\ntype Wibble {\n  Wibble(wibble: Int, wobble: Int)\n}\n\nfn identity(x) {\n  x\n}\n\nfn go(x) {\n  case x {\n    Wibble(1, _) -> Wibble(..x, wibble: 4) |> identity\n    Wibble(_, 3) -> Wibble(..x, wobble: 10) |> identity\n    _ -> panic\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -23,6 +25,8 @@ fn go(x) {
 
 ----- COMPILED JAVASCRIPT
 import { CustomType as $CustomType, makeError } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
 
 class Wibble extends $CustomType {
   constructor(wibble, wobble) {
@@ -55,6 +59,7 @@ function go(x) {
     } else {
       throw makeError(
         "panic",
+        FILEPATH,
         "my/mod",
         14,
         "go",

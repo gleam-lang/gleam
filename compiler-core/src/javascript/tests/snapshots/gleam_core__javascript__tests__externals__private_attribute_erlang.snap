@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/externals.rs
+assertion_line: 190
 expression: "\n@external(erlang, \"one\", \"one_erl\")\nfn one(x: Int) -> Int {\n  todo\n}\n\npub fn main() {\n  one(1)\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -17,9 +19,12 @@ pub fn main() {
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 function one(x) {
   throw makeError(
     "todo",
+    FILEPATH,
     "my/mod",
     4,
     "one",

@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/panic.rs
+assertion_line: 16
 expression: "\nfn go() {\n  let x = \"wibble\"\n  panic as x\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -13,7 +15,9 @@ fn go() {
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 function go() {
   let x = "wibble";
-  throw makeError("panic", "my/mod", 4, "go", x, {})
+  throw makeError("panic", FILEPATH, "my/mod", 4, "go", x, {})
 }

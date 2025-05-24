@@ -15,11 +15,14 @@ pub fn main() {
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 export function main() {
   let x = true;
   if (!x) {
     throw makeError(
       "assert",
+      FILEPATH,
       "my/mod",
       4,
       "main",

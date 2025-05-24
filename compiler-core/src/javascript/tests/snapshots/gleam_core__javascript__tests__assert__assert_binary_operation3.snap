@@ -14,11 +14,14 @@ pub fn assert_answer(x) {
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 export function assert_answer(x) {
   let $ = 42;
   if (!(x === $)) {
     throw makeError(
       "assert",
+      FILEPATH,
       "my/mod",
       3,
       "assert_answer",

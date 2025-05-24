@@ -15,11 +15,14 @@ pub fn main() {
 ----- COMPILED JAVASCRIPT
 import { makeError, toBitArray, bitArraySliceToFloat, sizedFloat } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 export function main() {
   let $ = toBitArray([sizedFloat(3.14, 64, true)]);
   if ($.bitSize !== 64 || bitArraySliceToFloat($, 0, 64, true) !== 3.14) {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       3,
       "main",

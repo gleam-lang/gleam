@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/todo.rs
+assertion_line: 64
 expression: "\npub fn unimplemented(message) {\n  panic as case message {\n    Ok(message) -> message\n    Error(_) -> \"No message provided\"\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -15,6 +17,8 @@ pub fn unimplemented(message) {
 ----- COMPILED JAVASCRIPT
 import { Ok, makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 export function unimplemented(message) {
   let _block;
   if (message instanceof Ok) {
@@ -23,5 +27,5 @@ export function unimplemented(message) {
   } else {
     _block = "No message provided";
   }
-  throw makeError("panic", "my/mod", 3, "unimplemented", _block, {})
+  throw makeError("panic", FILEPATH, "my/mod", 3, "unimplemented", _block, {})
 }

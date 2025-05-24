@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/panic.rs
+assertion_line: 62
 expression: "\nfn go(at_the_disco) {\n  panic\n  at_the_disco\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -13,9 +15,12 @@ fn go(at_the_disco) {
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 function go(at_the_disco) {
   throw makeError(
     "panic",
+    FILEPATH,
     "my/mod",
     3,
     "go",

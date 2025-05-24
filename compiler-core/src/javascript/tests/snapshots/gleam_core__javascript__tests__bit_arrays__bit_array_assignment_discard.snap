@@ -15,11 +15,14 @@ pub fn main() {
 ----- COMPILED JAVASCRIPT
 import { makeError, toBitArray } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 export function main() {
   let $ = toBitArray([10]);
   if ($.bitSize !== 8) {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       3,
       "main",

@@ -10,11 +10,14 @@ fn go(x) { let assert 1 = x + 1 }
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 function go(x) {
   let $ = x + 1;
   if ($ !== 1) {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       1,
       "go",

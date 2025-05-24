@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/echo.rs
+assertion_line: 41
 expression: "\npub fn main() {\n  echo panic\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -21,10 +23,13 @@ import {
   UtfCodepoint as $UtfCodepoint,
 } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 export function main() {
   let _block;
   throw makeError(
     "panic",
+    FILEPATH,
     "my/mod",
     3,
     "main",

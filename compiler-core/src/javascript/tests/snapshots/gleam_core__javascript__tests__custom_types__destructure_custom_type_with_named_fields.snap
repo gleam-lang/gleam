@@ -22,6 +22,8 @@ fn go(cat) {
 ----- COMPILED JAVASCRIPT
 import { CustomType as $CustomType, makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 class Cat extends $CustomType {
   constructor(name, cuteness) {
     super();
@@ -37,6 +39,7 @@ function go(cat) {
   if (!(cat instanceof Cat) || cat.cuteness !== 4) {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       9,
       "go",
