@@ -24,12 +24,13 @@ go(X) ->
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
+                        file => ?FILEPATH,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"go"/utf8>>,
+                        line => 2,
                         value => _assert_fail,
                         start => 17,
                         pattern_start => 28,
-                        pattern_end => 40,
-                        module => <<"my/mod"/utf8>>,
-                        function => <<"go"/utf8>>,
-                        line => 2})
+                        pattern_end => 40})
     end,
     [A@1, B@1, C@1].

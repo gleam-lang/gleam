@@ -32,6 +32,7 @@ snapshot_kind: text
 wobble() ->
     erlang:error(#{gleam_error => todo,
             message => <<"`todo` expression evaluated. This code has not yet been implemented."/utf8>>,
+            file => ?FILEPATH,
             module => <<"my/mod"/utf8>>,
             function => <<"wobble"/utf8>>,
             line => 11}).
@@ -45,11 +46,12 @@ wibble() ->
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
+                        file => ?FILEPATH,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"wibble"/utf8>>,
+                        line => 3,
                         value => _assert_fail,
                         start => 35,
                         pattern_start => 46,
-                        pattern_end => 51,
-                        module => <<"my/mod"/utf8>>,
-                        function => <<"wibble"/utf8>>,
-                        line => 3})
+                        pattern_end => 51})
     end.

@@ -34,6 +34,10 @@ main() ->
         true -> nil;
         false -> erlang:error(#{gleam_error => assert,
                 message => <<"Assertion failed."/utf8>>,
+                file => ?FILEPATH,
+                module => <<"my/mod"/utf8>>,
+                function => <<"main"/utf8>>,
+                line => 7,
                 kind => function_call,
                 arguments => [#{kind => expression,
                         value => _assert_subject,
@@ -46,8 +50,5 @@ main() ->
                         }],
                 start => 46,
                 expression_start => 53,
-                expression_end => 80,
-                module => <<"my/mod"/utf8>>,
-                function => <<"main"/utf8>>,
-                line => 7})
+                expression_end => 80})
     end.

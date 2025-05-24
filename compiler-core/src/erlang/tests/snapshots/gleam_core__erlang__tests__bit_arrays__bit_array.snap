@@ -33,25 +33,27 @@ main() ->
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
+                        file => ?FILEPATH,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"main"/utf8>>,
+                        line => 5,
                         value => _assert_fail,
                         start => 116,
                         pattern_start => 127,
-                        pattern_end => 162,
-                        module => <<"my/mod"/utf8>>,
-                        function => <<"main"/utf8>>,
-                        line => 5})
+                        pattern_end => 162})
     end,
     {C@1, D@1} = case <<1>> of
         <<C:8/unit:1, D:2/binary-unit:2>> -> {C, D};
         _assert_fail@1 ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
+                        file => ?FILEPATH,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"main"/utf8>>,
+                        line => 6,
                         value => _assert_fail@1,
                         start => 173,
                         pattern_start => 184,
-                        pattern_end => 224,
-                        module => <<"my/mod"/utf8>>,
-                        function => <<"main"/utf8>>,
-                        line => 6})
+                        pattern_end => 224})
     end,
     Simple.

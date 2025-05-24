@@ -24,6 +24,10 @@ main() ->
         true -> nil;
         false -> erlang:error(#{gleam_error => assert,
                 message => <<"This shouldn't fail"/utf8>>,
+                file => ?FILEPATH,
+                module => <<"my/mod"/utf8>>,
+                function => <<"main"/utf8>>,
+                line => 3,
                 kind => expression,
                 expression => #{kind => literal,
                     value => false,
@@ -32,8 +36,5 @@ main() ->
                     },
                 start => 19,
                 expression_start => 26,
-                expression_end => 30,
-                module => <<"my/mod"/utf8>>,
-                function => <<"main"/utf8>>,
-                line => 3})
+                expression_end => 30})
     end.

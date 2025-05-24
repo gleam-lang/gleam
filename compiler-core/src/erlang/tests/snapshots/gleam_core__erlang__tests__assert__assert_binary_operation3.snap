@@ -25,6 +25,10 @@ assert_answer(X) ->
         true -> nil;
         false -> erlang:error(#{gleam_error => assert,
                 message => <<"Assertion failed."/utf8>>,
+                file => ?FILEPATH,
+                module => <<"my/mod"/utf8>>,
+                function => <<"assert_answer"/utf8>>,
+                line => 3,
                 kind => binary_operator,
                 operator => '==',
                 left => #{kind => expression,
@@ -39,8 +43,5 @@ assert_answer(X) ->
                     },
                 start => 29,
                 expression_start => 36,
-                expression_end => 43,
-                module => <<"my/mod"/utf8>>,
-                function => <<"assert_answer"/utf8>>,
-                line => 3})
+                expression_end => 43})
     end.

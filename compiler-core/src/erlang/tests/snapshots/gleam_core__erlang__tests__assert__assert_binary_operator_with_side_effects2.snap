@@ -36,6 +36,10 @@ go(X) ->
                 true -> nil;
                 false -> erlang:error(#{gleam_error => assert,
                         message => <<"Assertion failed."/utf8>>,
+                        file => ?FILEPATH,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"go"/utf8>>,
+                        line => 8,
                         kind => binary_operator,
                         operator => '&&',
                         left => #{kind => expression,
@@ -50,13 +54,14 @@ go(X) ->
                             },
                         start => 75,
                         expression_start => 82,
-                        expression_end => 110,
-                        module => <<"my/mod"/utf8>>,
-                        function => <<"go"/utf8>>,
-                        line => 8})
+                        expression_end => 110})
             end;
         false -> erlang:error(#{gleam_error => assert,
                 message => <<"Assertion failed."/utf8>>,
+                file => ?FILEPATH,
+                module => <<"my/mod"/utf8>>,
+                function => <<"go"/utf8>>,
+                line => 8,
                 kind => binary_operator,
                 operator => '&&',
                 left => #{kind => expression,
@@ -70,8 +75,5 @@ go(X) ->
                     },
                 start => 75,
                 expression_start => 82,
-                expression_end => 110,
-                module => <<"my/mod"/utf8>>,
-                function => <<"go"/utf8>>,
-                line => 8})
+                expression_end => 110})
     end.

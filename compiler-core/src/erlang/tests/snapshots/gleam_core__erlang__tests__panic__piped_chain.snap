@@ -25,11 +25,13 @@ main() ->
     _pipe = <<"lets"/utf8>>,
     _pipe@1 = (erlang:error(#{gleam_error => panic,
             message => <<"pipe"/utf8>>,
+            file => ?FILEPATH,
             module => <<"my/mod"/utf8>>,
             function => <<"main"/utf8>>,
             line => 4}))(_pipe),
     (erlang:error(#{gleam_error => panic,
             message => <<"other panic"/utf8>>,
+            file => ?FILEPATH,
             module => <<"my/mod"/utf8>>,
             function => <<"main"/utf8>>,
             line => 5}))(_pipe@1).
