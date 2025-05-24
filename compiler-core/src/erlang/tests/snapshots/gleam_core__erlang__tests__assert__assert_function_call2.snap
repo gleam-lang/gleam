@@ -33,7 +33,7 @@ go(X) ->
         true -> nil;
         false -> erlang:error(#{gleam_error => assert,
                 message => <<"Assertion failed."/utf8>>,
-                file => ?FILEPATH,
+                file => <<?FILEPATH/utf8>>,
                 module => <<"my/mod"/utf8>>,
                 function => <<"go"/utf8>>,
                 line => 7,
