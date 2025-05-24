@@ -17,12 +17,12 @@
 -define(grey, "\e[90m").
 -define(reset_color, "\e[39m").
 
-echo(Value, File, Line) ->
+echo(Value, Line) ->
     StringLine = erlang:integer_to_list(Line),
     StringValue = echo@inspect(Value),
     io:put_chars(
       standard_error,
-      [?grey, File, $:, StringLine, ?reset_color, $\n, StringValue, $\n]
+      [?grey, ?FILEPATH, $:, StringLine, ?reset_color, $\n, StringValue, $\n]
     ),
     Value.
 

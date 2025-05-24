@@ -15,12 +15,15 @@ pub fn main() {
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 export function main() {
   let thingy = (f) => { return f(); };
   return thingy(
     () => {
       throw makeError(
         "todo",
+        FILEPATH,
         "my/mod",
         4,
         "main",

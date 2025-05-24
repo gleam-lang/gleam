@@ -124,8 +124,7 @@ impl CurrentFunction {
 #[derive(Debug)]
 pub(crate) struct Generator<'module, 'ast> {
     module_name: EcoString,
-    src_path: &'module Utf8Path,
-    project_root: &'module Utf8Path,
+    src_path: EcoString,
     line_numbers: &'module LineNumbers,
     function_name: EcoString,
     function_arguments: Vec<Option<&'module EcoString>>,
@@ -175,8 +174,7 @@ impl<'module, 'a> Generator<'module, 'a> {
     #[allow(clippy::too_many_arguments)] // TODO: FIXME
     pub fn new(
         module_name: EcoString,
-        src_path: &'module Utf8Path,
-        project_root: &'module Utf8Path,
+        src_path: EcoString,
         line_numbers: &'module LineNumbers,
         function_name: EcoString,
         function_arguments: Vec<Option<&'module EcoString>>,
@@ -198,7 +196,6 @@ impl<'module, 'a> Generator<'module, 'a> {
             tracker,
             module_name,
             src_path,
-            project_root,
             line_numbers,
             function_name,
             function_arguments,
@@ -1666,6 +1663,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             "throw makeError",
             wrap_args([
                 string(error_name),
+                "FILEPATH".to_doc(),
                 module,
                 line,
                 function,
@@ -1695,18 +1693,9 @@ impl<'module, 'a> Generator<'module, 'a> {
     fn echo(&mut self, expression: Document<'a>, location: &'a SrcSpan) -> Output<'a> {
         self.tracker.echo_used = true;
 
-        let relative_path = self
-            .src_path
-            .strip_prefix(self.project_root)
-            .unwrap_or(self.src_path)
-            .as_str()
-            .replace("\\", "\\\\");
-
-        let relative_path_doc = EcoString::from(relative_path).to_doc();
-
         let echo_argument = call_arguments(vec![
             Ok(expression),
-            Ok(relative_path_doc.surround("\"", "\"")),
+            Ok(self.src_path.clone().to_doc()),
             Ok(self.line_numbers.line_number(location.start).to_doc()),
         ])?;
         Ok(self.wrap_return(docvec!["echo", echo_argument]))

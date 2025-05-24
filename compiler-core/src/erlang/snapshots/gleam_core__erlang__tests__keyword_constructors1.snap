@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/erlang/tests.rs
+assertion_line: 543
 expression: "pub type X { Fun(Int) }"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub type X { Fun(Int) }
@@ -8,7 +10,7 @@ pub type X { Fun(Int) }
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-define(FILEPATH, "project/test/my/mod.gleam").
 -export_type([x/0]).
 
 -type x() :: {'fun', integer()}.

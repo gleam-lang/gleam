@@ -23,6 +23,8 @@ pub fn main() {
 ----- COMPILED JAVASCRIPT
 import { Ok, Error, makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 function side_effects(x) {
   return x;
 }
@@ -32,6 +34,7 @@ export function main() {
   if (!($ instanceof Error)) {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       8,
       "main",

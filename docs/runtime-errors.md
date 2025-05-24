@@ -6,13 +6,14 @@ lists them and their runtime properties.
 On Erlang runtime errors are Erlang maps thrown with `erlang:error/1`, having at
 least these properties:
 
-| Key         | Type   | Value                                 |
-| ---         | ----   | -----                                 |
-| gleam_error | Atom   | See individual errors                 |
-| message     | String | See individual errors                 |
-| module      | String | The module the error occurred in      |
-| function    | String | The function the error occurred in    |
-| line        | Int    | The line number the error occurred on |
+| Key         | Type   | Value                                       |
+| ---         | ----   | -----                                       |
+| gleam_error | Atom   | See individual errors                       |
+| message     | String | See individual errors                       |
+| file        | String | A path to the original source file location |
+| module      | String | The module the error occurred in            |
+| function    | String | The function the error occurred in          |
+| line        | Int    | The line number the error occurred on       |
 
 On JavaScript runtime errors are instances of the JavaScript `Error` class,
 having at least these properties added to them:

@@ -20,6 +20,8 @@ fn go() {
 ----- COMPILED JAVASCRIPT
 import { CustomType as $CustomType, makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 class Wibble extends $CustomType {
   constructor($0) {
     super();
@@ -38,6 +40,7 @@ function go() {
   let $ = new Wibble(1);
   throw makeError(
     "let_assert",
+    FILEPATH,
     "my/mod",
     8,
     "go",

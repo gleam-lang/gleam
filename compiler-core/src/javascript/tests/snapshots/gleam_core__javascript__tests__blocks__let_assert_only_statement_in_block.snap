@@ -16,11 +16,14 @@ pub fn main() {
 ----- COMPILED JAVASCRIPT
 import { Error, makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 export function main() {
   {
     let $ = new Error(undefined);
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       4,
       "main",

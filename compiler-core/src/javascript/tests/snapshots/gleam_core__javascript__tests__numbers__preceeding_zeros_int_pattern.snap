@@ -14,10 +14,13 @@ fn main(x) {
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 function main(x) {
   if (x !== 9_179) {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       3,
       "main",

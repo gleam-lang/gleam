@@ -18,6 +18,8 @@ pub fn main() {
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 function bool() {
   return true;
 }
@@ -26,6 +28,7 @@ export function main() {
   if (!bool()) {
     throw makeError(
       "assert",
+      FILEPATH,
       "my/mod",
       7,
       "main",

@@ -81,7 +81,7 @@ class ListIterator {
   }
 }
 
-export class Empty extends List { }
+export class Empty extends List {}
 
 export class NonEmpty extends List {
   constructor(head, tail) {
@@ -477,7 +477,13 @@ export function bitArraySliceToFloat(bitArray, start, end, isBigEndian) {
  * @param {boolean} isSigned
  * @returns {number}
  */
-export function bitArraySliceToInt(bitArray, start, end, isBigEndian, isSigned) {
+export function bitArraySliceToInt(
+  bitArray,
+  start,
+  end,
+  isBigEndian,
+  isSigned,
+) {
   bitArrayValidateRange(bitArray, start, end);
 
   if (start === end) {
@@ -586,7 +592,7 @@ export function toBitArray(segments) {
       return new BitArray(segment);
     }
 
-    return new BitArray(new Uint8Array(/** @type {number[]} */(segments)));
+    return new BitArray(new Uint8Array(/** @type {number[]} */ (segments)));
   }
 
   // Count the total number of bits and check if all segments are numbers, i.e.
@@ -608,7 +614,7 @@ export function toBitArray(segments) {
   // If all segments are numbers then pass the segments array directly to the
   // Uint8Array constructor
   if (areAllSegmentsNumbers) {
-    return new BitArray(new Uint8Array(/** @type {number[]} */(segments)));
+    return new BitArray(new Uint8Array(/** @type {number[]} */ (segments)));
   }
 
   // Pack the segments into a Uint8Array
@@ -718,8 +724,7 @@ export function toBitArray(segments) {
  */
 export function sizedFloat(value, size, isBigEndian) {
   if (size !== 16 && size !== 32 && size !== 64) {
-    const msg =
-      `Sized floats must be 16-bit, 32-bit or 64-bit, got size of ${size} bits`;
+    const msg = `Sized floats must be 16-bit, 32-bit or 64-bit, got size of ${size} bits`;
     throw new globalThis.Error(msg);
   }
 
@@ -1364,7 +1369,7 @@ export function codepointBits(codepoint) {
  * @param {string} string
  * @param {boolean} isBigEndian
  * @returns {Uint8Array}
-*/
+ */
 export function stringToUtf16(string, isBigEndian) {
   const buffer = new ArrayBuffer(string.length * 2);
   const bufferView = new DataView(buffer);
@@ -1397,7 +1402,7 @@ export function codepointToUtf16(codepoint, isBigEndian) {
  * @param {string} string
  * @param {boolean} isBigEndian
  * @returns {Uint8Array}
-*/
+ */
 export function stringToUtf32(string, isBigEndian) {
   const buffer = new ArrayBuffer(string.length * 4);
   const bufferView = new DataView(buffer);
@@ -1406,10 +1411,10 @@ export function stringToUtf32(string, isBigEndian) {
   for (let i = 0; i < string.length; i++) {
     const codepoint = string.codePointAt(i);
 
-    bufferView.setUint32(length * 4, codepoint, !isBigEndian)
+    bufferView.setUint32(length * 4, codepoint, !isBigEndian);
     length++;
 
-    if (codepoint > 0xFFFF) {
+    if (codepoint > 0xffff) {
       i++;
     }
   }
@@ -1485,7 +1490,7 @@ export function isEqual(x, y) {
       try {
         if (a.equals(b)) continue;
         else return false;
-      } catch { }
+      } catch {}
     }
 
     let [keys, get] = getters(a);
@@ -1575,9 +1580,10 @@ export function divideFloat(a, b) {
 }
 
 // @internal
-export function makeError(variant, module, line, fn, message, extra) {
+export function makeError(variant, file, module, line, fn, message, extra) {
   let error = new globalThis.Error(message);
   error.gleam_error = variant;
+  error.file = file;
   error.module = module;
   error.line = line;
   error.function = fn;

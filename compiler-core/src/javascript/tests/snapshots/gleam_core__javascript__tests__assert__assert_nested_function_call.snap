@@ -18,6 +18,8 @@ pub fn main() {
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 function and(x, y) {
   return x && y;
 }
@@ -27,6 +29,7 @@ export function main() {
   if (!and($, true)) {
     throw makeError(
       "assert",
+      FILEPATH,
       "my/mod",
       7,
       "main",

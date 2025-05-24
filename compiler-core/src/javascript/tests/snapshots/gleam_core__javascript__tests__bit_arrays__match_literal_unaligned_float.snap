@@ -15,6 +15,8 @@ fn go(x) {
 ----- COMPILED JAVASCRIPT
 import { makeError, bitArraySliceToFloat } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 function go(x) {
   let n = 1;
   if (
@@ -24,6 +26,7 @@ function go(x) {
   ) {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       4,
       "go",

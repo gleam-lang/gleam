@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/erlang/tests.rs
+assertion_line: 336
 expression: "\ntype User { User(id: Int, name: String, age: Int) }\nfn create_user(user_id) { User(age: 22, id: user_id, name: \"\") }\n                    "
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -11,7 +13,7 @@ fn create_user(user_id) { User(age: 22, id: user_id, name: "") }
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-define(FILEPATH, "project/test/my/mod.gleam").
 -export_type([user/0]).
 
 -type user() :: {user, integer(), binary(), integer()}.

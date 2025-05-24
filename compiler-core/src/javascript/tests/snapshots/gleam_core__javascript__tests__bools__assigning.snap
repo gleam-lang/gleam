@@ -16,10 +16,13 @@ fn go(x, y) {
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 function go(x, y) {
   if (!x) {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       3,
       "go",
@@ -29,6 +32,7 @@ function go(x, y) {
   }
   throw makeError(
     "let_assert",
+    FILEPATH,
     "my/mod",
     4,
     "go",

@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/todo.rs
+assertion_line: 5
 expression: "\nfn go() {\n    todo\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -12,9 +14,12 @@ fn go() {
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 function go() {
   throw makeError(
     "todo",
+    FILEPATH,
     "my/mod",
     3,
     "go",

@@ -19,6 +19,8 @@ pub fn go(x) {
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 function wibble(a, b) {
   let result = a + b;
   return result === 10;
@@ -29,6 +31,7 @@ export function go(x) {
     if (!wibble(1, 4)) {
       throw makeError(
         "assert",
+        FILEPATH,
         "my/mod",
         8,
         "go",
@@ -47,6 +50,7 @@ export function go(x) {
   } else {
     throw makeError(
       "assert",
+      FILEPATH,
       "my/mod",
       8,
       "go",

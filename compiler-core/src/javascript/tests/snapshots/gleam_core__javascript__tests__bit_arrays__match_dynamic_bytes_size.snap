@@ -15,11 +15,14 @@ fn go(x) {
 ----- COMPILED JAVASCRIPT
 import { makeError, bitArraySlice } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 function go(x) {
   let n = 3;
   if (x.bitSize !== n * 8 || n <= 0) {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       4,
       "go",

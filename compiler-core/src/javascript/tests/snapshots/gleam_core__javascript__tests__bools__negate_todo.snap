@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
+assertion_line: 207
 expression: "pub fn negate(x) {\n  !todo\n}"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn negate(x) {
@@ -10,10 +12,13 @@ pub fn negate(x) {
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 export function negate(x) {
   let _block;
   throw makeError(
     "todo",
+    FILEPATH,
     "my/mod",
     2,
     "negate",

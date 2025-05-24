@@ -14,11 +14,14 @@ pub fn main() {
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 export function main() {
   let $ = "Game 1";
   if (!$.startsWith("Game ")) {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       3,
       "main",

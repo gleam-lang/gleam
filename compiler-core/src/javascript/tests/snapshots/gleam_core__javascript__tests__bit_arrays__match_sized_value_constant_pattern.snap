@@ -14,10 +14,13 @@ fn go(x) {
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 function go(x) {
   if (x.bitSize !== 16 || x.byteAt(0) !== 1 || x.byteAt(1) !== 2) {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       3,
       "go",

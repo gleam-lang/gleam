@@ -14,10 +14,13 @@ pub fn eq(a, b) {
 ----- COMPILED JAVASCRIPT
 import { makeError, isEqual } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 export function eq(a, b) {
   if (!(isEqual(a, b))) {
     throw makeError(
       "assert",
+      FILEPATH,
       "my/mod",
       3,
       "eq",

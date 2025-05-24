@@ -21,6 +21,8 @@ fn go() {
 ----- COMPILED JAVASCRIPT
 import { CustomType as $CustomType, makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 class Wibble extends $CustomType {
   constructor($0) {
     super();
@@ -46,6 +48,7 @@ function go() {
   let _block;
   throw makeError(
     "todo",
+    FILEPATH,
     "my/mod",
     9,
     "go",
@@ -56,6 +59,7 @@ function go() {
   if (!($ instanceof Wobble)) {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       9,
       "go",
