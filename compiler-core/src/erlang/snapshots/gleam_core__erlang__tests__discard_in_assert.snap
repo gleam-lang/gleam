@@ -24,7 +24,7 @@ x(Y) ->
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
-                        file => ?FILEPATH,
+                        file => <<?FILEPATH/utf8>>,
                         module => <<"my/mod"/utf8>>,
                         function => <<"x"/utf8>>,
                         line => 2,

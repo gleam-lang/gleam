@@ -2024,7 +2024,7 @@ fn erlang_error<'a>(
         message.clone(),
         ",",
         line(),
-        "file => ?FILEPATH,",
+        "file => <<?FILEPATH/utf8>>,",
         line(),
         "module => ",
         env.module.to_doc().surround("<<\"", "\"/utf8>>"),
