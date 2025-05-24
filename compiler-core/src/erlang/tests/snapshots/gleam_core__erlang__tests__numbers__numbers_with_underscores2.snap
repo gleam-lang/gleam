@@ -27,25 +27,27 @@ main() ->
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
+                        file => ?FILEPATH,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"main"/utf8>>,
+                        line => 3,
                         value => _assert_fail,
                         start => 19,
                         pattern_start => 30,
-                        pattern_end => 37,
-                        module => <<"my/mod"/utf8>>,
-                        function => <<"main"/utf8>>,
-                        line => 3})
+                        pattern_end => 37})
     end,
     case 1.0 of
         100000.00101 -> nil;
         _assert_fail@1 ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
+                        file => ?FILEPATH,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"main"/utf8>>,
+                        line => 4,
                         value => _assert_fail@1,
                         start => 44,
                         pattern_start => 55,
-                        pattern_end => 68,
-                        module => <<"my/mod"/utf8>>,
-                        function => <<"main"/utf8>>,
-                        line => 4})
+                        pattern_end => 68})
     end,
     1.

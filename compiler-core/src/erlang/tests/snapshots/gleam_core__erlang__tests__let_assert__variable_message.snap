@@ -26,12 +26,13 @@ expect(Value, Message) ->
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => Message,
+                        file => ?FILEPATH,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"expect"/utf8>>,
+                        line => 3,
                         value => _assert_fail,
                         start => 35,
                         pattern_start => 46,
-                        pattern_end => 55,
-                        module => <<"my/mod"/utf8>>,
-                        function => <<"expect"/utf8>>,
-                        line => 3})
+                        pattern_end => 55})
     end,
     Inner@1.

@@ -22,6 +22,7 @@ snapshot_kind: text
 wibble() ->
     erlang:error(#{gleam_error => todo,
             message => <<"`todo` expression evaluated. This code has not yet been implemented."/utf8>>,
+            file => ?FILEPATH,
             module => <<"my/mod"/utf8>>,
             function => <<"wibble"/utf8>>,
             line => 3}).

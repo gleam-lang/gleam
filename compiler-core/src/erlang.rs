@@ -2021,9 +2021,22 @@ fn erlang_error<'a>(
         ",",
         line(),
         "message => ",
-        message.clone()
+        message.clone(),
+        ",",
+        line(),
+        "file => ?FILEPATH,",
+        line(),
+        "module => ",
+        env.module.to_doc().surround("<<\"", "\"/utf8>>"),
+        ",",
+        line(),
+        "function => ",
+        string(env.function),
+        ",",
+        line(),
+        "line => ",
+        env.line_numbers.line_number(location.start),
     ];
-
     for (key, value) in fields {
         fields_doc = fields_doc
             .append(",")
@@ -2032,23 +2045,7 @@ fn erlang_error<'a>(
             .append(" => ")
             .append(value);
     }
-    let fields_doc = fields_doc
-        .append(",")
-        .append(line())
-        .append("module => ")
-        .append(env.module.to_doc().surround("<<\"", "\"/utf8>>"))
-        .append(",")
-        .append(line())
-        .append("function => ")
-        .append(string(env.function))
-        .append(",")
-        .append(line())
-        .append("line => ")
-        .append(env.line_numbers.line_number(location.start));
-    let error = "#{"
-        .to_doc()
-        .append(fields_doc.group().nest(INDENT))
-        .append("}");
+    let error = docvec!["#{", fields_doc.group().nest(INDENT), "}"];
     docvec!["erlang:error", wrap_args([error.group()])]
 }
 

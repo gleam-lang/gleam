@@ -24,6 +24,10 @@ eq(A, B) ->
         true -> nil;
         false -> erlang:error(#{gleam_error => assert,
                 message => <<"Assertion failed."/utf8>>,
+                file => ?FILEPATH,
+                module => <<"my/mod"/utf8>>,
+                function => <<"eq"/utf8>>,
+                line => 3,
                 kind => binary_operator,
                 operator => '==',
                 left => #{kind => expression,
@@ -38,8 +42,5 @@ eq(A, B) ->
                     },
                 start => 21,
                 expression_start => 28,
-                expression_end => 34,
-                module => <<"my/mod"/utf8>>,
-                function => <<"eq"/utf8>>,
-                line => 3})
+                expression_end => 34})
     end.

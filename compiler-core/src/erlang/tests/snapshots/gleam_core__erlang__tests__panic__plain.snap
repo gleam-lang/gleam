@@ -22,6 +22,7 @@ pub fn main() {
 main() ->
     erlang:error(#{gleam_error => panic,
             message => <<"`panic` expression evaluated."/utf8>>,
+            file => ?FILEPATH,
             module => <<"my/mod"/utf8>>,
             function => <<"main"/utf8>>,
             line => 3}).

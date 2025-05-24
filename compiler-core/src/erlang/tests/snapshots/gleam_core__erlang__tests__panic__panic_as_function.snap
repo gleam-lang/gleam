@@ -30,6 +30,7 @@ retstring() ->
 main() ->
     erlang:error(#{gleam_error => panic,
             message => (<<(retstring())/binary, "wobble"/utf8>>),
+            file => ?FILEPATH,
             module => <<"my/mod"/utf8>>,
             function => <<"main"/utf8>>,
             line => 6}).

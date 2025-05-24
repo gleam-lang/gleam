@@ -39,6 +39,10 @@ main() ->
                     Message = identity(<<"This shouldn't fail"/utf8>>),
                     Message
                 end,
+                file => ?FILEPATH,
+                module => <<"my/mod"/utf8>>,
+                function => <<"main"/utf8>>,
+                line => 7,
                 kind => function_call,
                 arguments => [#{kind => literal,
                         value => true,
@@ -47,8 +51,5 @@ main() ->
                         }],
                 start => 43,
                 expression_start => 50,
-                expression_end => 64,
-                module => <<"my/mod"/utf8>>,
-                function => <<"main"/utf8>>,
-                line => 7})
+                expression_end => 64})
     end.
