@@ -21,6 +21,8 @@ pub fn main() {
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 function identity(a) {
   return a;
 }
@@ -29,6 +31,7 @@ export function main() {
   if (!identity(true)) {
     throw makeError(
       "assert",
+      FILEPATH,
       "my/mod",
       7,
       "main",

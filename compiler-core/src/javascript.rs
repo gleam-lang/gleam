@@ -43,13 +43,15 @@ pub enum JavaScriptCodegenTarget {
 pub struct Generator<'a> {
     line_numbers: &'a LineNumbers,
     module: &'a TypedModule,
-    project_root: &'a Utf8Path,
     tracker: UsageTracker,
     module_scope: im::HashMap<EcoString, usize>,
     current_module_name_segments_count: usize,
     target_support: TargetSupport,
     typescript: TypeScriptDeclarations,
     stdlib_package: StdlibPackage,
+    /// Relative path to the module, surrounded in `"`s to make it a string, and with `\`s escaped
+    /// to `\\`.
+    src_path: EcoString,
 }
 
 impl<'a> Generator<'a> {
@@ -66,11 +68,18 @@ impl<'a> Generator<'a> {
         } = config;
         let current_module_name_segments_count = module.name.split('/').count();
 
+        let src_path = &module.type_info.src_path;
+        let src_path = src_path
+            .strip_prefix(project_root)
+            .unwrap_or(src_path)
+            .as_str();
+        let src_path = eco_format!("\"{src_path}\"").replace("\\", "\\\\");
+
         Self {
             current_module_name_segments_count,
             line_numbers,
-            project_root,
             module,
+            src_path,
             tracker: UsageTracker::default(),
             module_scope: Default::default(),
             target_support,
@@ -81,7 +90,7 @@ impl<'a> Generator<'a> {
 
     fn type_reference(&self) -> Document<'a> {
         if self.typescript == TypeScriptDeclarations::None {
-            return "".to_doc();
+            return nil();
         }
 
         // Get the name of the module relative the directory (similar to basename)
@@ -97,8 +106,6 @@ impl<'a> Generator<'a> {
     }
 
     pub fn compile(&mut self) -> Output<'a> {
-        let type_reference = self.type_reference();
-
         // Determine what JavaScript imports we need to generate
         let mut imports = self.collect_imports();
 
@@ -217,50 +224,64 @@ impl<'a> Generator<'a> {
             self.register_prelude_usage(&mut imports, "sizedFloat", None);
         }
 
-        let echo = if self.tracker.echo_used {
-            if StdlibPackage::Present == self.stdlib_package {
-                self.register_import(
-                    &mut imports,
-                    "gleam_stdlib",
-                    "dict",
-                    &Some((
-                        AssignName::Variable("stdlib$dict".into()),
-                        SrcSpan::default(),
-                    )),
-                    &[],
-                );
-            }
-            self.register_prelude_usage(&mut imports, "BitArray", Some("$BitArray"));
-            self.register_prelude_usage(&mut imports, "List", Some("$List"));
-            self.register_prelude_usage(&mut imports, "UtfCodepoint", Some("$UtfCodepoint"));
-            docvec![line(), std::include_str!("../templates/echo.mjs"), line()]
-        } else {
-            nil()
-        };
+        let echo_definition = self.echo_definition(&mut imports);
+        let type_reference = self.type_reference();
+        let filepath_definition = self.filepath_definition();
 
         // Put it all together
 
         if imports.is_empty() && statements.is_empty() {
-            Ok(docvec![type_reference, "export {}", line(), echo])
+            Ok(docvec![
+                type_reference,
+                filepath_definition,
+                "export {}",
+                line(),
+                echo_definition
+            ])
         } else if imports.is_empty() {
             statements.push(line());
-            Ok(docvec![type_reference, statements, echo])
+            Ok(docvec![
+                type_reference,
+                filepath_definition,
+                statements,
+                echo_definition
+            ])
         } else if statements.is_empty() {
             Ok(docvec![
                 type_reference,
                 imports.into_doc(JavaScriptCodegenTarget::JavaScript),
-                echo,
+                filepath_definition,
+                echo_definition,
             ])
         } else {
             Ok(docvec![
                 type_reference,
                 imports.into_doc(JavaScriptCodegenTarget::JavaScript),
                 line(),
+                filepath_definition,
                 statements,
                 line(),
-                echo
+                echo_definition
             ])
         }
+    }
+
+    fn echo_definition(&mut self, imports: &mut Imports<'a>) -> Document<'a> {
+        if !self.tracker.echo_used {
+            return nil();
+        }
+
+        if StdlibPackage::Present == self.stdlib_package {
+            let value = Some((
+                AssignName::Variable("stdlib$dict".into()),
+                SrcSpan::default(),
+            ));
+            self.register_import(imports, "gleam_stdlib", "dict", &value, &[]);
+        }
+        self.register_prelude_usage(imports, "BitArray", Some("$BitArray"));
+        self.register_prelude_usage(imports, "List", Some("$List"));
+        self.register_prelude_usage(imports, "UtfCodepoint", Some("$UtfCodepoint"));
+        docvec![line(), std::include_str!("../templates/echo.mjs"), line()]
     }
 
     fn register_prelude_usage(
@@ -541,8 +562,7 @@ impl<'a> Generator<'a> {
 
         let mut generator = expression::Generator::new(
             self.module.name.clone(),
-            &self.module.type_info.src_path,
-            self.project_root,
+            self.src_path.clone(),
             self.line_numbers,
             "".into(),
             vec![],
@@ -577,8 +597,7 @@ impl<'a> Generator<'a> {
             .collect();
         let mut generator = expression::Generator::new(
             self.module.name.clone(),
-            &self.module.type_info.src_path,
-            self.project_root,
+            self.src_path.clone(),
             self.line_numbers,
             name.clone(),
             argument_names,
@@ -642,6 +661,14 @@ impl<'a> Generator<'a> {
                 | Definition::CustomType(CustomType { .. }) => (),
             }
         }
+    }
+
+    fn filepath_definition(&self) -> Document<'a> {
+        if !self.tracker.make_error_used {
+            return nil();
+        }
+
+        docvec!["const FILEPATH = ", self.src_path.clone(), ';', lines(2)]
     }
 }
 

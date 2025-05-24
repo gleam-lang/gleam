@@ -18,10 +18,13 @@ fn go(x, y) {
 ----- COMPILED JAVASCRIPT
 import { Empty as $Empty, NonEmpty as $NonEmpty, makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 function go(x, y) {
   if (x instanceof $NonEmpty) {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       3,
       "go",
@@ -32,6 +35,7 @@ function go(x, y) {
   if (x instanceof $Empty || x.tail instanceof $NonEmpty) {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       4,
       "go",
@@ -49,6 +53,7 @@ function go(x, y) {
   ) {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       5,
       "go",
@@ -64,6 +69,7 @@ function go(x, y) {
   ) {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       6,
       "go",
@@ -75,6 +81,7 @@ function go(x, y) {
   if (y instanceof $Empty) {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       7,
       "go",

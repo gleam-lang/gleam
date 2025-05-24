@@ -17,6 +17,8 @@ fn go(x, y) {
 ----- COMPILED JAVASCRIPT
 import { CustomType as $CustomType, makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 export class True extends $CustomType {}
 
 export class False extends $CustomType {}
@@ -27,6 +29,7 @@ function go(x, y) {
   if (!(x instanceof True)) {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       4,
       "go",
@@ -36,6 +39,7 @@ function go(x, y) {
   }
   throw makeError(
     "let_assert",
+    FILEPATH,
     "my/mod",
     5,
     "go",
