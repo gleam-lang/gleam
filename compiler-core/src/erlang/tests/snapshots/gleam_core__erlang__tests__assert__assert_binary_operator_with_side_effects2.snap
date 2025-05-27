@@ -53,8 +53,8 @@ go(X) ->
                             'end' => 110
                             },
                         start => 75,
-                        expression_start => 82,
-                        expression_end => 110})
+                        'end' => 110,
+                        expression_start => 82})
             end;
         false -> erlang:error(#{gleam_error => assert,
                 message => <<"Assertion failed."/utf8>>,

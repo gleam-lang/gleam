@@ -42,7 +42,7 @@ export function main() {
       3,
       "main",
       "Pattern match failed, no pattern matched the value.",
-      { value: $, start: 18, pattern_start: 29, pattern_end: 64 }
+      { value: $, start: 18, end: 28, pattern_start: 29, pattern_end: 64 }
     )
   }
   let message = "Hello, world!";

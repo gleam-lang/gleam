@@ -1284,6 +1284,7 @@ fn let_assert<'a>(
                 vec![
                     ("value", env.local_var_name(ASSERT_FAIL_VARIABLE)),
                     ("start", location.start.to_doc()),
+                    ("'end'", location.end.to_doc()),
                     ("pattern_start", pattern.location().start.to_doc()),
                     ("pattern_end", pattern.location().end.to_doc()),
                 ],
@@ -2325,8 +2326,8 @@ fn assert<'a>(assert: &'a TypedAssert, env: &mut Env<'a>) -> Document<'a> {
     };
 
     fields.push(("start", location.start.to_doc()));
+    fields.push(("'end'", value.location().end.to_doc()));
     fields.push(("expression_start", value.location().start.to_doc()));
-    fields.push(("expression_end", value.location().end.to_doc()));
 
     let clauses = docvec![
         line(),
@@ -2444,8 +2445,8 @@ fn assert_and<'a>(
             asserted_expression(right_kind, Some("false".to_doc()), right.location()),
         ),
         ("start", location.start.to_doc()),
+        ("'end'", right.location().end.to_doc()),
         ("expression_start", left.location().start.to_doc()),
-        ("expression_end", right.location().end.to_doc()),
     ];
 
     let right_clauses = docvec![
@@ -2525,8 +2526,8 @@ fn assert_or<'a>(
             ),
         ),
         ("start", location.start.to_doc()),
+        ("'end'", right.location().end.to_doc()),
         ("expression_start", left.location().start.to_doc()),
-        ("expression_end", right.location().end.to_doc()),
     ];
 
     let clauses = docvec![

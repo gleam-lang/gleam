@@ -1065,8 +1065,8 @@ impl<'module, 'a> Generator<'module, 'a> {
         };
 
         fields.push(("start", location.start.to_doc()));
+        fields.push(("end", subject.location().end.to_doc()));
         fields.push(("expression_start", subject.location().start.to_doc()));
-        fields.push(("expression_end", subject.location().end.to_doc()));
 
         Ok(docvec![
             "if (",
@@ -1132,8 +1132,8 @@ impl<'module, 'a> Generator<'module, 'a> {
                 self.asserted_expression(AssertExpression::Unevaluated, None, right.location()),
             ),
             ("start", location.start.to_doc()),
+            ("end", right.location().end.to_doc()),
             ("expression_start", left.location().start.to_doc()),
-            ("expression_end", right.location().end.to_doc()),
         ];
 
         let fields = vec![
@@ -1148,8 +1148,8 @@ impl<'module, 'a> Generator<'module, 'a> {
                 self.asserted_expression(right_kind, Some("false".to_doc()), right.location()),
             ),
             ("start", location.start.to_doc()),
+            ("end", right.location().end.to_doc()),
             ("expression_start", left.location().start.to_doc()),
-            ("expression_end", right.location().end.to_doc()),
         ];
 
         let left_value =
@@ -1224,8 +1224,8 @@ impl<'module, 'a> Generator<'module, 'a> {
                 ),
             ),
             ("start", location.start.to_doc()),
+            ("end", right.location().end.to_doc()),
             ("expression_start", left.location().start.to_doc()),
-            ("expression_end", right.location().end.to_doc()),
         ];
 
         let left_value =

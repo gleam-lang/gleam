@@ -41,6 +41,6 @@ eq(A, B) ->
                     'end' => 34
                     },
                 start => 21,
-                expression_start => 28,
-                expression_end => 34})
+                'end' => 34,
+                expression_start => 28})
     end.

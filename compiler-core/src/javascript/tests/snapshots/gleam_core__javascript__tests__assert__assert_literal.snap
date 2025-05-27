@@ -29,8 +29,8 @@ export function main() {
         kind: "expression",
         expression: { kind: "literal", value: false, start: 26, end: 31 },
         start: 19,
-        expression_start: 26,
-        expression_end: 31
+        end: 31,
+        expression_start: 26
       }
     )
   }

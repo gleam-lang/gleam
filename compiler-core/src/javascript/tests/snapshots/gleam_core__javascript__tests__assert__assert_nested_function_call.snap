@@ -41,8 +41,8 @@ export function main() {
           { kind: "literal", value: true, start: 75, end: 79 },
         ],
         start: 46,
-        expression_start: 53,
-        expression_end: 80
+        end: 80,
+        expression_start: 53
       }
     )
   }

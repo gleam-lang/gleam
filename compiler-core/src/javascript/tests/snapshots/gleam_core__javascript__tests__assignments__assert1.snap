@@ -21,7 +21,7 @@ function go(x) {
       1,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x, start: 11, pattern_start: 22, pattern_end: 29 }
+      { value: x, start: 11, end: 21, pattern_start: 22, pattern_end: 29 }
     )
   }
   return x;

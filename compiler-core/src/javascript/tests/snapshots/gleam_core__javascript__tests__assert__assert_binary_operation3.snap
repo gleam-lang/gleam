@@ -32,8 +32,8 @@ export function assert_answer(x) {
         left: { kind: "expression", value: x, start: 36, end: 37 },
         right: { kind: "literal", value: $, start: 41, end: 43 },
         start: 29,
-        expression_start: 36,
-        expression_end: 43
+        end: 43,
+        expression_start: 36
       }
     )
   }

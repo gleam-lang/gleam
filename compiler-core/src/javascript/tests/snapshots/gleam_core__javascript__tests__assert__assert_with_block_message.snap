@@ -43,8 +43,8 @@ export function main() {
         kind: "function_call",
         arguments: [{ kind: "literal", value: true, start: 59, end: 63 }],
         start: 43,
-        expression_start: 50,
-        expression_end: 64
+        end: 64,
+        expression_start: 50
       }
     )
   }

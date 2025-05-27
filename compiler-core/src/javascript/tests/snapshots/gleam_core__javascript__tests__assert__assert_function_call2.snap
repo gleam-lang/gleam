@@ -40,8 +40,8 @@ export function go(x) {
           { kind: "expression", value: x, start: 62, end: 63 },
         ],
         start: 45,
-        expression_start: 52,
-        expression_end: 64
+        end: 64,
+        expression_start: 52
       }
     )
   }

@@ -67,6 +67,7 @@ let assert Error(e) = something() as "This should fail"
 | message              | The given message                                          | The given message                                         |
 | value                | The unmatched value                                        | The unmatched value                                       |
 | start                | The byte-index of the start of the `let assert` statement  | The byte-index of the start of the `let assert` statement |
+| end                  | The byte-index of the end of the `let assert` statement    | The byte-index of the end of the `let assert` statement   |
 | pattern_start        | The byte-index of the start of the asserted pattern        | The byte-index of the start of the asserted pattern       |
 | pattern_end          | The byte-index of the end of the asserted pattern          | The byte-index of the end of the asserted pattern         |
 
@@ -83,8 +84,8 @@ It always has these fields:
 | message          | The given message                                      | The given message                                      |
 | kind             | The kind of asserted expression                        | The kind of asserted expression                        |
 | start            | The byte-index of the start of the `assert` statement  | The byte-index of the start of the `assert` statement  |
+| end              | The byte-index of the end of the `assert` expression   | The byte-index of the end of the `assert` expression   |
 | expression_start | The byte-index of the start of the asserted expression | The byte-index of the start of the asserted expression |
-| expression_end   | The byte-index of the end of the asserted expression   | The byte-index of the end of the asserted expression   |
 
 But, depending on the expression that was asserted, it contains additional
 information which can be used to diagnose the error.
