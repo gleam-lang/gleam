@@ -64,7 +64,7 @@ function go() {
       9,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: $, start: 75, end: 85, pattern_start: 86, pattern_end: 95 }
+      { value: $, start: 75, end: 102, pattern_start: 86, pattern_end: 95 }
     )
   }
   let n = $[0];

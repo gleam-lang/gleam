@@ -45,7 +45,7 @@ function go() {
     8,
     "go",
     "Pattern match failed, no pattern matched the value.",
-    { value: $, start: 62, end: 72, pattern_start: 73, pattern_end: 82 }
+    { value: $, start: 62, end: 94, pattern_start: 73, pattern_end: 82 }
   )
   
 }

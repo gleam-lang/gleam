@@ -27,7 +27,7 @@ function go(x) {
       4,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x, start: 27, end: 37, pattern_start: 38, pattern_end: 56 }
+      { value: x, start: 27, end: 60, pattern_start: 38, pattern_end: 56 }
     )
   }
   let a = bitArraySlice(x, 0, n);

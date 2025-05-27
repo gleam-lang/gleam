@@ -26,7 +26,7 @@ function go(x) {
       3,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x, start: 14, end: 24, pattern_start: 25, pattern_end: 38 }
+      { value: x, start: 14, end: 42, pattern_start: 25, pattern_end: 38 }
     )
   }
   if (x.bitSize !== 24) {
@@ -37,7 +37,7 @@ function go(x) {
       4,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x, start: 45, end: 55, pattern_start: 56, pattern_end: 83 }
+      { value: x, start: 45, end: 87, pattern_start: 56, pattern_end: 83 }
     )
   }
   return x;

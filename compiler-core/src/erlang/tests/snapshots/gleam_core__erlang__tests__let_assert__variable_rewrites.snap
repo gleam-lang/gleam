@@ -31,7 +31,7 @@ go() ->
                         line => 2,
                         value => _assert_fail,
                         start => 16,
-                        'end' => 26,
+                        'end' => 40,
                         pattern_start => 27,
                         pattern_end => 32})
     end,
@@ -46,7 +46,7 @@ go() ->
                         line => 3,
                         value => _assert_fail@1,
                         start => 43,
-                        'end' => 53,
+                        'end' => 67,
                         pattern_start => 54,
                         pattern_end => 59})
     end,

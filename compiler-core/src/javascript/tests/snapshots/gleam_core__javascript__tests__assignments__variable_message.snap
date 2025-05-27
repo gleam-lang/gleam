@@ -26,7 +26,7 @@ export function expect(value, message) {
       3,
       "expect",
       message,
-      { value: value, start: 35, end: 45, pattern_start: 46, pattern_end: 55 }
+      { value: value, start: 35, end: 63, pattern_start: 46, pattern_end: 55 }
     )
   }
   let inner = value[0];

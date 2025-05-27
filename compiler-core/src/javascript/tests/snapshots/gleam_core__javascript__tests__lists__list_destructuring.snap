@@ -29,7 +29,7 @@ function go(x, y) {
       3,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x, start: 17, end: 27, pattern_start: 28, pattern_end: 30 }
+      { value: x, start: 17, end: 34, pattern_start: 28, pattern_end: 30 }
     )
   }
   if (x instanceof $Empty || x.tail instanceof $NonEmpty) {
@@ -40,7 +40,7 @@ function go(x, y) {
       4,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x, start: 37, end: 47, pattern_start: 48, pattern_end: 51 }
+      { value: x, start: 37, end: 55, pattern_start: 48, pattern_end: 51 }
     )
   }
   let a = x.head;
@@ -58,7 +58,7 @@ function go(x, y) {
       5,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x, start: 58, end: 68, pattern_start: 69, pattern_end: 75 }
+      { value: x, start: 58, end: 79, pattern_start: 69, pattern_end: 75 }
     )
   }
   if (
@@ -74,7 +74,7 @@ function go(x, y) {
       6,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: y, start: 82, end: 92, pattern_start: 93, pattern_end: 105 }
+      { value: y, start: 82, end: 109, pattern_start: 93, pattern_end: 105 }
     )
   }
   let b = y.tail.head[1];
@@ -86,7 +86,7 @@ function go(x, y) {
       7,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: y, start: 112, end: 122, pattern_start: 123, pattern_end: 137 }
+      { value: y, start: 112, end: 141, pattern_start: 123, pattern_end: 137 }
     )
   }
   let head = y.head;

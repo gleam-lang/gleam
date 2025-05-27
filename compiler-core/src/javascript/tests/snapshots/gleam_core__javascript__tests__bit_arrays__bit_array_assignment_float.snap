@@ -27,7 +27,7 @@ export function main() {
       3,
       "main",
       "Pattern match failed, no pattern matched the value.",
-      { value: $, start: 18, end: 28, pattern_start: 29, pattern_end: 49 }
+      { value: $, start: 18, end: 60, pattern_start: 29, pattern_end: 49 }
     )
   }
   let pi = 3.14;

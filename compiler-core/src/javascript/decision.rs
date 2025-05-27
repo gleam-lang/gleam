@@ -414,7 +414,7 @@ pub fn let_<'a>(
     let mut variables = Variables::new(expression_generator);
     let assignment = variables.assign_let_subject(compiled_case, subject)?;
     let assignment_name = assignment.name();
-    let decision = LetPrinter::new(variables, kind, pattern_location)
+    let decision = LetPrinter::new(variables, kind, pattern_location, subject.location())
         .decision(assignment_name.clone().to_doc(), &compiled_case.tree)?;
 
     let doc = docvec![assignments_to_doc(vec![assignment]), decision];
@@ -435,6 +435,7 @@ struct LetPrinter<'generator, 'module, 'a> {
     // that we know are going to match.
     is_redundant: bool,
     pattern_location: SrcSpan,
+    subject_location: SrcSpan,
 }
 
 /// Generating code for a let (or let assert) assignment is quite different from
@@ -466,12 +467,14 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
         variables: Variables<'generator, 'module, 'a>,
         kind: &'a AssignmentKind<TypedExpr>,
         pattern_location: SrcSpan,
+        subject_location: SrcSpan,
     ) -> Self {
         Self {
             variables,
             kind,
             is_redundant: true,
             pattern_location,
+            subject_location,
         }
     }
 
@@ -553,7 +556,7 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
             [
                 ("value", subject),
                 ("start", location.start.to_doc()),
-                ("end", location.end.to_doc()),
+                ("end", self.subject_location.end.to_doc()),
                 ("pattern_start", self.pattern_location.start.to_doc()),
                 ("pattern_end", self.pattern_location.end.to_doc()),
             ],
