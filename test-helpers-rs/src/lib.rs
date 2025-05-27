@@ -44,15 +44,21 @@ impl TestCompileOutput {
                 }
 
                 Content::Text(text) => {
-                    let text = FILE_LINE_REGEX
-                        .replace_all(text, |caps: &regex::Captures| {
-                            let path = caps
-                                .get(1)
-                                .expect("file path")
-                                .as_str()
-                                .replace("\\\\", "/");
-                            let line_number = caps.get(2).expect("line number").as_str();
-                            format!("-file(\"{path}\", {line_number}).")
+                    let format_path = |caps: &regex::Captures| {
+                        caps.get(1)
+                            .expect("file path")
+                            .as_str()
+                            .replace("\\\\", "/")
+                    };
+                    let text = FILE_LINE_REGEX.replace_all(text, |caps: &regex::Captures| {
+                        let path = format_path(caps);
+                        let line_number = caps.get(2).expect("line number").as_str();
+                        format!("-file(\"{path}\", {line_number}).")
+                    });
+                    let text = FILEPATH_MACRO_REGEX
+                        .replace_all(text.to_string().as_str(), |caps: &regex::Captures| {
+                            let path = format_path(caps);
+                            format!("-define(FILEPATH, \"{path}\").")
                         })
                         .replace(COMPILER_VERSION, "<gleam compiler version string>");
                     buffer.push_str(&text)
@@ -94,6 +100,9 @@ pub fn to_in_memory_filesystem(path: &Utf8Path) -> InMemoryFileSystem {
 
 static FILE_LINE_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r#"-file\("([^"]+)", (\d+)\)\."#).expect("Invalid regex"));
+
+static FILEPATH_MACRO_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"-define\(FILEPATH, "([^"]+)"\)\."#).expect("Invalid regex"));
 
 pub fn normalise_diagnostic(text: &str) -> String {
     // There is an extra ^ on Windows in some error messages' code
