@@ -5,7 +5,7 @@
 ### Compiler
 
 - The format of the `assert` and `let assert` location information has been
-  improved.
+  improved, and the file path of the source module has been added.
   ([Louis Pilfold](https://github.com/lpil))
 
 ### Language server
