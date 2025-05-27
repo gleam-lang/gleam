@@ -35,6 +35,6 @@ main() ->
                     'end' => 31
                     },
                 start => 19,
-                expression_start => 26,
-                expression_end => 31})
+                'end' => 31,
+                expression_start => 26})
     end.

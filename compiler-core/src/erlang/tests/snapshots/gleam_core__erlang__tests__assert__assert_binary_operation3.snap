@@ -42,6 +42,6 @@ assert_answer(X) ->
                     'end' => 43
                     },
                 start => 29,
-                expression_start => 36,
-                expression_end => 43})
+                'end' => 43,
+                expression_start => 36})
     end.

@@ -42,8 +42,8 @@ export function go(x) {
           left: { kind: "literal", value: true, start: 82, end: 86 },
           right: { kind: "expression", value: false, start: 90, end: 102 },
           start: 75,
-          expression_start: 82,
-          expression_end: 102
+          end: 102,
+          expression_start: 82
         }
       )
     }
@@ -61,8 +61,8 @@ export function go(x) {
         left: { kind: "literal", value: false, start: 82, end: 86 },
         right: { kind: "unevaluated", start: 90, end: 102 },
         start: 75,
-        expression_start: 82,
-        expression_end: 102
+        end: 102,
+        expression_start: 82
       }
     )
   }

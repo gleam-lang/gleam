@@ -33,6 +33,7 @@ main() ->
                         line => 3,
                         value => _assert_fail,
                         start => 44,
+                        'end' => 54,
                         pattern_start => 55,
                         pattern_end => 86})
     end,

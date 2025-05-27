@@ -26,7 +26,7 @@ export function unwrap_or_panic(value) {
       3,
       "unwrap_or_panic",
       "Oops, there was an error",
-      { value: value, start: 35, pattern_start: 46, pattern_end: 55 }
+      { value: value, start: 35, end: 45, pattern_start: 46, pattern_end: 55 }
     )
   }
   let inner = value[0];

@@ -31,8 +31,8 @@ export function eq(a, b) {
         left: { kind: "expression", value: a, start: 28, end: 29 },
         right: { kind: "expression", value: b, start: 33, end: 34 },
         start: 21,
-        expression_start: 28,
-        expression_end: 34
+        end: 34,
+        expression_start: 28
       }
     )
   }

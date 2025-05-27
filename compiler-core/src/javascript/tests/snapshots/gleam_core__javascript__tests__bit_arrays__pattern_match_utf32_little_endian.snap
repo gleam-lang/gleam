@@ -48,7 +48,7 @@ export function go(x) {
       3,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x, start: 18, pattern_start: 29, pattern_end: 66 }
+      { value: x, start: 18, end: 28, pattern_start: 29, pattern_end: 66 }
     )
   }
   return x;

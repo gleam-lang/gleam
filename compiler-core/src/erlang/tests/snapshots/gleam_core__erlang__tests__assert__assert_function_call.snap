@@ -40,6 +40,6 @@ main() ->
                 kind => function_call,
                 arguments => [],
                 start => 41,
-                expression_start => 48,
-                expression_end => 54})
+                'end' => 54,
+                expression_start => 48})
     end.

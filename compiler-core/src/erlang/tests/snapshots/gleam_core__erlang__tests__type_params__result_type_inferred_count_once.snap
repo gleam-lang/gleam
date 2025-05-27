@@ -52,6 +52,7 @@ wibble() ->
                         line => 3,
                         value => _assert_fail,
                         start => 35,
+                        'end' => 45,
                         pattern_start => 46,
                         pattern_end => 51})
     end.

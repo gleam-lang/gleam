@@ -553,6 +553,7 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
             [
                 ("value", subject),
                 ("start", location.start.to_doc()),
+                ("end", location.end.to_doc()),
                 ("pattern_start", self.pattern_location.start.to_doc()),
                 ("pattern_end", self.pattern_location.end.to_doc()),
             ],
