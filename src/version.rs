@@ -262,9 +262,16 @@ impl From<pubgrub::Range<Version>> for Range {
         Self { spec, range }
     }
 }
+
 impl From<Version> for Range {
     fn from(version: Version) -> Self {
         pubgrub::Range::singleton(version).into()
+    }
+}
+
+impl From<Range> for pubgrub::Range<Version> {
+    fn from(range: Range) -> Self {
+        range.range
     }
 }
 
