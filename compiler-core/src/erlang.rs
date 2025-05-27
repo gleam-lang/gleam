@@ -2429,8 +2429,8 @@ fn assert_and<'a>(
             asserted_expression(AssertExpression::Unevaluated, None, right.location()),
         ),
         ("start", location.start.to_doc()),
+        ("'end'", right.location().end.to_doc()),
         ("expression_start", left.location().start.to_doc()),
-        ("expression_end", right.location().end.to_doc()),
     ];
 
     let fields = vec![

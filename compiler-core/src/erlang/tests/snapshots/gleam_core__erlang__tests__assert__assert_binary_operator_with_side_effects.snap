@@ -74,6 +74,6 @@ go(X) ->
                     'end' => 102
                     },
                 start => 75,
-                expression_start => 82,
-                expression_end => 102})
+                'end' => 102,
+                expression_start => 82})
     end.
