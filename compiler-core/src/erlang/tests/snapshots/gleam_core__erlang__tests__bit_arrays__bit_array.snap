@@ -39,7 +39,7 @@ main() ->
                         line => 5,
                         value => _assert_fail,
                         start => 116,
-                        'end' => 126,
+                        'end' => 170,
                         pattern_start => 127,
                         pattern_end => 162})
     end,
@@ -54,7 +54,7 @@ main() ->
                         line => 6,
                         value => _assert_fail@1,
                         start => 173,
-                        'end' => 183,
+                        'end' => 232,
                         pattern_start => 184,
                         pattern_end => 224})
     end,

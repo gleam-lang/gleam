@@ -30,7 +30,7 @@ go() ->
                         line => 2,
                         value => _assert_fail,
                         start => 16,
-                        'end' => 26,
+                        'end' => 45,
                         pattern_start => 27,
                         pattern_end => 32})
     end,

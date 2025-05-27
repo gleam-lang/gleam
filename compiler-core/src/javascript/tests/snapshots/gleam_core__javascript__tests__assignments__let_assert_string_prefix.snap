@@ -26,7 +26,7 @@ export function main() {
       3,
       "main",
       "Pattern match failed, no pattern matched the value.",
-      { value: $, start: 19, end: 29, pattern_start: 30, pattern_end: 43 }
+      { value: $, start: 19, end: 54, pattern_start: 30, pattern_end: 43 }
     )
   }
   let id = $.slice(5);

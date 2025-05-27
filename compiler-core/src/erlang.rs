@@ -1232,7 +1232,7 @@ fn let_assert<'a>(
         None => string("Pattern match failed, no pattern matched the value."),
     };
 
-    let value = match vars.as_slice() {
+    let value_document = match vars.as_slice() {
         _ if is_tail => subject.clone(),
         [] => "nil".to_doc(),
         [variable] => env.local_var_name(variable),
@@ -1270,7 +1270,7 @@ fn let_assert<'a>(
         pattern_document,
         clause_guard,
         " -> ",
-        value,
+        value_document,
         ";",
         line(),
         env.next_local_var_name(ASSERT_FAIL_VARIABLE),
@@ -1284,7 +1284,7 @@ fn let_assert<'a>(
                 vec![
                     ("value", env.local_var_name(ASSERT_FAIL_VARIABLE)),
                     ("start", location.start.to_doc()),
-                    ("'end'", location.end.to_doc()),
+                    ("'end'", value.location().end.to_doc()),
                     ("pattern_start", pattern.location().start.to_doc()),
                     ("pattern_end", pattern.location().end.to_doc()),
                 ],

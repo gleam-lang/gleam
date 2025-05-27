@@ -44,7 +44,7 @@ function go(cat) {
       9,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: cat, start: 116, end: 126, pattern_start: 127, pattern_end: 152 }
+      { value: cat, start: 116, end: 158, pattern_start: 127, pattern_end: 152 }
     )
   }
   let x$2 = cat.name;

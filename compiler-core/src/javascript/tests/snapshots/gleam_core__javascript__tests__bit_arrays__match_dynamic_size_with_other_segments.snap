@@ -29,7 +29,7 @@ function go(x) {
       5,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x, start: 40, end: 50, pattern_start: 51, pattern_end: 101 }
+      { value: x, start: 40, end: 105, pattern_start: 51, pattern_end: 101 }
     )
   }
   let first = x.byteAt(0);
