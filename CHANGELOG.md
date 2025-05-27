@@ -55,6 +55,11 @@
   in the current module, leading to invalid code.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where the language server would offer completions for local
+  variables where the variables were not in scope, leading to invalid code being
+  produced if the completion was followed.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.11.0-rc1 - 2025-05-15
 
 ### Compiler

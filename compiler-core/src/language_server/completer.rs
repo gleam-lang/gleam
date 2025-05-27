@@ -14,7 +14,7 @@ use crate::{
     Result,
     ast::{
         self, Arg, CallArg, Definition, Function, FunctionLiteralKind, Pattern, Publicity,
-        TypedExpr,
+        TypedExpr, visit::Visit,
     },
     build::{Module, Origin},
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
@@ -1018,14 +1018,8 @@ impl<'a> LocalCompletion<'a> {
 
         // Visit the function body statements
         for statement in &fun.body {
-            // We only want to suggest local variables that are defined before
-            // the cursor
-            if statement.location().start >= self.cursor {
-                continue;
-            }
-
             // Visit the statement to find local variables
-            ast::visit::visit_typed_statement(&mut self, statement);
+            self.visit_typed_statement(statement);
         }
 
         self.completions.into_values().collect_vec()
@@ -1051,7 +1045,16 @@ impl<'a> LocalCompletion<'a> {
     }
 }
 
-impl<'ast> ast::visit::Visit<'ast> for LocalCompletion<'_> {
+impl<'ast> Visit<'ast> for LocalCompletion<'_> {
+    fn visit_typed_statement(&mut self, statement: &'ast ast::TypedStatement) {
+        // We only want to suggest local variables that are defined before
+        // the cursor
+        if statement.location().start >= self.cursor {
+            return;
+        }
+        ast::visit::visit_typed_statement(self, statement);
+    }
+
     /// Visits a typed assignment, selectively processing either the value or the pattern
     /// based on the cursor position.
     /// - If the cursor is within the assignment It visits only the value expression.
@@ -1068,17 +1071,44 @@ impl<'ast> ast::visit::Visit<'ast> for LocalCompletion<'_> {
 
     fn visit_typed_expr_fn(
         &mut self,
-        _: &'ast ast::SrcSpan,
+        location: &'ast ast::SrcSpan,
         _: &'ast Arc<Type>,
         _: &'ast FunctionLiteralKind,
         args: &'ast [ast::TypedArg],
         body: &'ast Vec1<ast::TypedStatement>,
         _: &'ast Option<ast::TypeAst>,
     ) {
+        // If we are completing after the function body, any locally defined
+        // variables are now out of scope so we don't register any.
+        if self.cursor >= location.end {
+            return;
+        }
         self.visit_fn_args(args);
         for statement in body {
             self.visit_typed_statement(statement);
         }
+    }
+
+    fn visit_typed_expr_block(
+        &mut self,
+        location: &'ast ast::SrcSpan,
+        statements: &'ast [ast::TypedStatement],
+    ) {
+        // If we are completing after the block, any locally defined variables
+        // are now out of scope so we don't register any.
+        if self.cursor >= location.end {
+            return;
+        }
+        ast::visit::visit_typed_expr_block(self, location, statements);
+    }
+
+    fn visit_typed_clause(&mut self, clause: &'ast ast::TypedClause) {
+        // Any code which comes before or after a case clause cannot access any
+        // of the variables defined within it, so we ignore this clause if so.
+        if self.cursor < clause.location.start || self.cursor > clause.location.end {
+            return;
+        }
+        ast::visit::visit_typed_clause(self, clause);
     }
 
     fn visit_typed_pattern_variable(

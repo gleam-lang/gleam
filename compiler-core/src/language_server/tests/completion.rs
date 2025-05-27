@@ -2131,3 +2131,110 @@ pub fn main() {
 
     assert_completion!(TestProject::for_source(code), Position::new(6, 11));
 }
+
+// https://github.com/gleam-lang/gleam/issues/4625
+#[test]
+fn no_variable_completions_before_declaration_in_block() {
+    let code = "
+pub fn main() {
+  {
+    s
+    let something = 10
+  }
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(3, 5));
+}
+
+// https://github.com/gleam-lang/gleam/issues/4625
+#[test]
+fn no_variable_completions_before_declaration_in_anonymous_function() {
+    let code = "
+pub fn main() {
+  fn() {
+    s
+    let something = 10
+  }
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(3, 5));
+}
+
+// https://github.com/gleam-lang/gleam/issues/4625
+#[test]
+fn no_variable_completions_after_block_scope() {
+    let code = "
+pub fn main() {
+  {
+    let something = 10
+  }
+  s
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(5, 3));
+}
+
+// https://github.com/gleam-lang/gleam/issues/4625
+#[test]
+fn no_variable_completions_after_anonymous_function_scope() {
+    let code = "
+pub fn main() {
+  fn() {
+    let something = 10
+  }
+  s
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(5, 3));
+}
+
+// https://github.com/gleam-lang/gleam/issues/4625
+#[test]
+fn no_variable_completions_after_case_scope() {
+    let code = "
+pub fn main() {
+  case todo {
+    something -> Nil
+  }
+  s
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(5, 3));
+}
+
+// https://github.com/gleam-lang/gleam/issues/4625
+#[test]
+fn no_variable_completions_after_case_clause_scope() {
+    let code = "
+pub fn main() {
+  case todo {
+    something -> Nil
+    something_else -> s
+  }
+  s
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(4, 23));
+}
+
+// https://github.com/gleam-lang/gleam/issues/4625
+#[test]
+fn no_variable_completions_before_case_clause() {
+    let code = "
+pub fn main() {
+  case todo {
+    something -> s
+    something_else -> Nil
+  }
+  s
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(3, 18));
+}

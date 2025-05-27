@@ -1,0 +1,40 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: "\npub fn main() {\n  {\n    s\n    let something = 10\n  }\n}\n"
+---
+pub fn main() {
+  {
+    s|
+    let something = 10
+  }
+}
+
+
+----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True
+main
+  kind:   Function
+  detail: fn() -> Int
+  sort:   2_main
+  desc:   app
+  edits:
+    [3:4-3:4]: "main"
