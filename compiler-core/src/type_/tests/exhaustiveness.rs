@@ -1774,3 +1774,16 @@ pub fn main(w: mod.Wibble) {
 "
     );
 }
+
+#[test]
+fn correct_missing_patterns_for_opaque_type_in_definition_module() {
+    assert_module_error!(
+        "
+pub opaque type Wibble { Wibble(Int) Wobble(String) }
+
+pub fn main(w: Wibble) {
+  case w {}
+}
+"
+    );
+}
