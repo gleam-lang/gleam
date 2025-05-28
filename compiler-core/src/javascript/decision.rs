@@ -633,7 +633,7 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
                             SizeCheck {
                                 first_occurrence: index - index_offset,
                                 variable: variable.clone(),
-                                check: *check,
+                                check,
                             },
                         )
                     }
