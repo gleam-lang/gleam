@@ -60,6 +60,11 @@
   produced if the completion was followed.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where the compiler would crash when compiling `let assert`
+  statements which contained a bit array pattern inside a tuple pattern on the
+  JavaScript target.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.11.0-rc1 - 2025-05-15
 
 ### Compiler
