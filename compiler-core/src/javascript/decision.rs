@@ -601,7 +601,9 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
         // previous segment then we can remove all the size checks except the last
         // one, as it implies all the other ones!
         let mut most_restrictive_size_check = None;
-        for (variable, check) in &checks {
+        let mut first_size_check_position = None;
+
+        for (index, (variable, check)) in checks.iter().enumerate() {
             if !check.referenced_segment_patterns().is_empty() {
                 // If any of the checks does reference a previous segment then
                 // it's not safe to remove intermediate checks! In that case we
@@ -614,11 +616,15 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
                 test: BitArrayTest::Size(_),
             } = check
             {
-                most_restrictive_size_check = Some((variable.clone(), *check))
+                most_restrictive_size_check = Some((variable.clone(), *check));
+                if first_size_check_position.is_none() {
+                    first_size_check_position = Some(index)
+                };
             }
         }
 
-        let Some(size_check) = most_restrictive_size_check else {
+        let Some((size_check, index)) = most_restrictive_size_check.zip(first_size_check_position)
+        else {
             // If there's no size test at all, then there's no meaningful optimisation
             // we can apply!
             return Some(ChecksAndBindings { checks, bindings });
@@ -635,7 +641,7 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
             }
         });
 
-        checks.push_front(size_check);
+        checks.insert(index, size_check);
         Some(ChecksAndBindings { checks, bindings })
     }
 

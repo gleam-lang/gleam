@@ -2231,3 +2231,30 @@ pub fn go(x) {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4630
+#[test]
+fn tuple_bit_array() {
+    assert_js!(
+        "
+pub fn go(x) {
+  let assert #(<<>>) = x
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4630
+#[test]
+fn tuple_bit_array_case() {
+    assert_js!(
+        "
+pub fn go(x) {
+  case x {
+    #(<<>>) -> 1
+    _ -> 2
+  }
+}
+"
+    );
+}
