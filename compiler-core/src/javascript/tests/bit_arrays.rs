@@ -2258,3 +2258,28 @@ pub fn go(x) {
 "
     );
 }
+
+#[test]
+fn tuple_multiple_bit_arrays() {
+    assert_js!(
+        "
+pub fn go(x) {
+  let assert #(<<>>, <<1>>, <<2, 3>>) = x
+}
+"
+    );
+}
+
+#[test]
+fn tuple_multiple_bit_arrays_case() {
+    assert_js!(
+        "
+pub fn go(x) {
+  case x {
+    #(<<>>, <<1>>, <<2, 3>>) -> True
+    _ -> False
+  }
+}
+"
+    );
+}

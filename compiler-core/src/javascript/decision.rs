@@ -600,8 +600,15 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
         // need to perform. In particular if all size checks do not depend on any
         // previous segment then we can remove all the size checks except the last
         // one, as it implies all the other ones!
-        let mut most_restrictive_size_check = None;
-        let mut first_size_check_position = None;
+
+        // First, we create a map from variable IDs to information about the
+        // size check we need to perform, as different bit array variables must
+        // still be checked separately.
+        let mut size_checks = HashMap::new();
+        // Since we are removing some checks, the check list will get shorter,
+        // shifting all the indices down. This variable keeps track of the current
+        // offset so we can correctly calculate the new index of each check.
+        let mut index_offset = 0;
 
         for (index, (variable, check)) in checks.iter().enumerate() {
             if !check.referenced_segment_patterns().is_empty() {
@@ -616,15 +623,33 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
                 test: BitArrayTest::Size(_),
             } = check
             {
-                most_restrictive_size_check = Some((variable.clone(), *check));
-                if first_size_check_position.is_none() {
-                    first_size_check_position = Some(index)
-                };
+                match size_checks.get_mut(&variable.id) {
+                    // If this is the first occurrence of a size check for this
+                    // variable, we record its position as well as the other
+                    // information.
+                    None => {
+                        _ = size_checks.insert(
+                            variable.id,
+                            SizeCheck {
+                                first_occurrence: index - index_offset,
+                                variable: variable.clone(),
+                                check: *check,
+                            },
+                        )
+                    }
+                    // If another size check has already appeared, we simply replace
+                    // the check itself, as the later one is a more restrictive check.
+                    Some(size_check) => {
+                        size_check.check = *check;
+                        // We also increment the offset as the previous size check will
+                        // be removed, further offsetting any checks that come after this.
+                        index_offset += 1;
+                    }
+                }
             }
         }
 
-        let Some((size_check, index)) = most_restrictive_size_check.zip(first_size_check_position)
-        else {
+        if size_checks.is_empty() {
             // If there's no size test at all, then there's no meaningful optimisation
             // we can apply!
             return Some(ChecksAndBindings { checks, bindings });
@@ -641,7 +666,18 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
             }
         });
 
-        checks.insert(index, size_check);
+        let mut size_checks = size_checks.into_values().collect_vec();
+        // We must insert the size checks in the order they appear, to ensure the
+        // correct ordering of the final checks.
+        size_checks.sort_by_key(|check| check.first_occurrence);
+
+        for size_check in size_checks {
+            checks.insert(
+                size_check.first_occurrence,
+                (size_check.variable, size_check.check),
+            );
+        }
+
         Some(ChecksAndBindings { checks, bindings })
     }
 
@@ -670,7 +706,7 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
                 // see if we can get to a failing node. We will only keep the
                 // results coming from the positive path!
                 for (check, decision) in choices {
-                    if let Some(mut checks) = self.positive_checks_and_bindings(decision) {
+                    if let Some(mut checks) = self.checks_and_bindings_loop(decision) {
                         checks.add_check(var.clone(), check);
                         result = Some(checks);
                     };
@@ -678,7 +714,7 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
 
                 // Important not to forget the fallback check, that's a path we
                 // might have to go down to as well!
-                if let Some(mut checks) = self.positive_checks_and_bindings(fallback) {
+                if let Some(mut checks) = self.checks_and_bindings_loop(fallback) {
                     if let FallbackCheck::RuntimeCheck { check } = fallback_check {
                         checks.add_check(var.clone(), check);
                         result = Some(checks);
@@ -689,6 +725,13 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
             }
         }
     }
+}
+
+#[derive(Debug)]
+struct SizeCheck<'a> {
+    first_occurrence: usize,
+    variable: Variable,
+    check: &'a RuntimeCheck,
 }
 
 /// The result we get from inspecting a `let`'s decision tree: it contains all
