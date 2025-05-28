@@ -1756,3 +1756,21 @@ case todo {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4626
+#[test]
+fn correct_missing_patterns_for_opaque_type() {
+    assert_module_error!(
+        (
+            "mod",
+            "pub opaque type Wibble { Wibble(Int) Wobble(String) }"
+        ),
+        "
+import mod
+
+pub fn main(w: mod.Wibble) {
+  case w {}
+}
+"
+    );
+}

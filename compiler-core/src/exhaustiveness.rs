@@ -88,7 +88,7 @@ use crate::{
     ast::{self, AssignName, Endianness, TypedClause, TypedPattern, TypedPatternBitArraySegment},
     strings::{convert_string_escape_chars, length_utf16, length_utf32},
     type_::{
-        Environment, Type, TypeValueConstructor, TypeValueConstructorField, TypeVar,
+        Environment, Opaque, Type, TypeValueConstructor, TypeValueConstructorField, TypeVar,
         TypeVariantConstructors, collapse_links, error::UnreachablePatternReason,
         is_prelude_module, string,
     },
@@ -818,6 +818,8 @@ impl Variable {
                     env.get_constructors_for_type(module, name)
                         .expect("Custom type variants must exist"),
                     args.as_slice(),
+                    &env.current_module,
+                    module,
                 );
 
                 let inferred_variant = inferred_variant.map(|i| i as usize);
@@ -2454,7 +2456,17 @@ impl ConstructorSpecialiser {
     fn specialise_constructors(
         constructors: &TypeVariantConstructors,
         type_arguments: &[Arc<Type>],
+        current_module: &EcoString,
+        type_module: &EcoString,
     ) -> Vec<TypeValueConstructor> {
+        match constructors.opaque {
+            // If the type is opaque and we are not in the definition module of
+            // that type, we don't have access to any constructors so we treat
+            // it the same as an external type.
+            Opaque::Opaque if current_module != type_module => return Vec::new(),
+            Opaque::Opaque | Opaque::NotOpaque => {}
+        };
+
         let specialiser = Self::new(constructors.type_parameters_ids.as_slice(), type_arguments);
         constructors
             .variants
