@@ -8,7 +8,7 @@ license-file = "LICENCE"
 [dependencies]
 gleam-cli = { path = "../compiler-cli" }
 
-[build-dependencies]
+[target.'cfg(windows)'.build-dependencies]
 # For statically linking the VCRuntime on Windows when
 # using the MSVC toolchain
 static_vcruntime = "2"
