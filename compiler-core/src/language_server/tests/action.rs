@@ -8606,3 +8606,24 @@ fn wibble() {
         find_position_of("case").select_until(find_position_of("True {"))
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4626
+#[test]
+fn add_missing_patterns_opaque_type() {
+    let src = "
+import mod
+
+pub fn main(w: mod.Wibble) {
+  case w {}
+}
+";
+
+    assert_code_action!(
+        ADD_MISSING_PATTERNS,
+        TestProject::for_source(src).add_hex_module(
+            "mod",
+            "pub opaque type Wibble { Wibble(Int) Wobble(String) }"
+        ),
+        find_position_of("{}").to_selection(),
+    );
+}

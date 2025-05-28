@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport mod\n\npub fn main(w: mod.Wibble) {\n  case w {}\n}\n"
+---
+----- BEFORE ACTION
+
+import mod
+
+pub fn main(w: mod.Wibble) {
+  case w {}
+         ↑ 
+}
+
+
+----- AFTER ACTION
+
+import mod
+
+pub fn main(w: mod.Wibble) {
+  case w {
+    _ -> todo
+  }
+}
