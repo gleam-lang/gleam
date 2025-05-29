@@ -3125,3 +3125,80 @@ fn bit_array_using_pattern_variables_from_other_bit_array() {
 fn non_utf8_string_assignment() {
     assert_error!(r#"let assert <<"Hello" as message:utf16>> = <<>>"#);
 }
+
+#[test]
+fn suggest_unqualified_import_for_type_without_existing_import() {
+    assert_module_error!(
+        (
+            "gleam/wibble",
+            "
+            pub type Wobble { Wobble }
+            "
+        ),
+        "
+        pub fn go(wob: Wobble) { 1 }
+        "
+    );
+}
+
+#[test]
+fn suggest_unqualified_import_for_type_with_existing_import() {
+    assert_module_error!(
+        (
+            "gleam/wibble",
+            "
+            pub type Wobble { Wobble }
+            "
+        ),
+        "
+        import gleam/wibble
+        pub fn go(wob: Wobble) { 1 }
+        "
+    );
+}
+
+#[test]
+fn suggest_unqualified_import_for_constructor_without_existing_import() {
+    assert_module_error!(
+        (
+            "gleam/wibble",
+            "
+            pub type Wobble { Wobble }
+            "
+        ),
+        "
+        pub fn go() { Wobble }
+        "
+    );
+}
+
+#[test]
+fn suggest_unqualified_import_for_constructor_with_existing_import() {
+    assert_module_error!(
+        (
+            "gleam/wibble",
+            "
+            pub type Wobble { Wobble }
+            "
+        ),
+        "
+        import gleam/wibble
+        pub fn go() { Wobble }
+        "
+    );
+}
+
+#[test]
+fn dont_suggest_unqualified_import_for_value() {
+    assert_module_error!(
+        (
+            "gleam/wibble",
+            "
+            pub fn wobble() { 1 }
+            "
+        ),
+        "
+        pub fn go() { wobble() }
+        "
+    );
+}
