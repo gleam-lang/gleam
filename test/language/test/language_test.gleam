@@ -1053,6 +1053,17 @@ fn bit_array_tests() -> List(Test) {
           rest
         })
       }),
+    "matching zero length segment"
+      |> example(fn() {
+        let size = 0
+        let data = <<>>
+        assert_equal("ok", {
+          case data {
+            <<_:bytes-size(size), _:bytes>> -> "ok"
+            _ -> "this cause should not be reached"
+          }
+        })
+      }),
   ]
 }
 
