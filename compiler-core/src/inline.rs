@@ -225,8 +225,13 @@ impl Inliner<'_> {
     fn assignment_kind(&mut self, kind: AssignmentKind<TypedExpr>) -> AssignmentKind<TypedExpr> {
         match kind {
             AssignmentKind::Let | AssignmentKind::Generated => kind,
-            AssignmentKind::Assert { location, message } => AssignmentKind::Assert {
+            AssignmentKind::Assert {
                 location,
+                assert_keyword_start,
+                message,
+            } => AssignmentKind::Assert {
+                location,
+                assert_keyword_start,
                 message: message.map(|expression| self.expression(expression)),
             },
         }
