@@ -65,6 +65,10 @@
   JavaScript target.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where a zero-length segment of a bit array would never match
+  in a case expression on the JavaScript target.
+  ([Sakari Bergen](https://github.com/sbergen))
+
 ## v1.11.0-rc1 - 2025-05-15
 
 ### Compiler

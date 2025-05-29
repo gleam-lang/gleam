@@ -17,7 +17,7 @@ const FILEPATH = "src/module.gleam";
 
 function go(x) {
   let n = 3;
-  if (n <= 0 || x.bitSize !== n * 8) {
+  if (n < 0 || x.bitSize !== n * 8) {
     throw makeError(
       "let_assert",
       FILEPATH,
