@@ -19,7 +19,7 @@ const FILEPATH = "src/module.gleam";
 function go(x) {
   let n = 16;
   let n$1 = 5;
-  if (n$1 <= 0 || x.bitSize !== n$1) {
+  if (n$1 < 0 || x.bitSize !== n$1) {
     throw makeError(
       "let_assert",
       FILEPATH,

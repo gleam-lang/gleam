@@ -1061,11 +1061,11 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                     }
                 }
 
-                BitArrayTest::VariableIsPositive { variable } => {
+                BitArrayTest::VariableIsNotNegative { variable } => {
                     if negation.is_negated() {
-                        docvec![self.local_var(variable.name()), " <= 0"]
+                        docvec![self.local_var(variable.name()), " < 0"]
                     } else {
-                        docvec![self.local_var(variable.name()), " > 0"]
+                        docvec![self.local_var(variable.name()), " >= 0"]
                     }
                 }
 

@@ -18,7 +18,7 @@ const FILEPATH = "src/module.gleam";
 function go(x) {
   let n = 1;
   if (
-    n <= 0 ||
+    n < 0 ||
     x.bitSize < 64 + n ||
     bitArraySliceToFloat(x, n, n + 64, true) !== 1.1
   ) {

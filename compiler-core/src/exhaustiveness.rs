@@ -875,7 +875,7 @@ pub enum BitArrayTest {
     CatchAllIsBytes {
         size_so_far: Offset,
     },
-    VariableIsPositive {
+    VariableIsNotNegative {
         variable: VariableUsage,
     },
 }
@@ -893,7 +893,7 @@ impl BitArrayTest {
 
     pub(crate) fn referenced_segment_patterns(&self) -> Vec<(&EcoString, &ReadAction)> {
         match self {
-            BitArrayTest::VariableIsPositive { variable } => match variable {
+            BitArrayTest::VariableIsNotNegative { variable } => match variable {
                 VariableUsage::PatternSegment(segment_value, read_action) => {
                     vec![(segment_value, read_action)]
                 }
@@ -2801,17 +2801,18 @@ impl CaseToCompile {
             let segment_size = segment_size(segment, &pattern_variables, None);
 
             // If we're reading a variable number of bits we need to make sure
-            // that that variable is positive!
+            // that that variable is not negative!
             if let ReadSize::VariableBits { variable, .. } = &segment_size {
                 match variable.as_ref() {
-                    // If the size variable comes from reading an unsigned number
-                    // we know that it must be positive! So we can skip checking it.
+                    // If the size variable comes from reading an unsigned
+                    // number we know that it can't be negative! So we can skip
+                    // checking it.
                     VariableUsage::PatternSegment(_, read_action) if !read_action.signed => (),
 
-                    // Otherwise we must make sure that the variable has a positive
-                    // size.
+                    // Otherwise we must make sure that the read size is not
+                    // negative.
                     VariableUsage::PatternSegment(..) | VariableUsage::OutsideVariable(_) => tests
-                        .push_back(BitArrayTest::VariableIsPositive {
+                        .push_back(BitArrayTest::VariableIsNotNegative {
                             variable: variable.as_ref().clone(),
                         }),
                 }
