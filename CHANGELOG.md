@@ -316,7 +316,7 @@
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 - When generating documentation, types from other modules are now rendered with
-  their module qualifiers. Hovering over them shows the full path to their module.
+  their module qualifiers. Hovering over them shows the module name.
   For example, this code:
 
   ```gleam
