@@ -58,28 +58,6 @@
 //! a decision tree that can be used to perform exhaustiveness checking and code
 //! generation.
 //!
-//! At the moment this tree is not suitable for use in code generation yet as it
-//! is incomplete. The tree is not correctly formed for:
-//! - Bit strings
-//! - String prefixes
-//!
-//! These were not implemented as they are more complex and I've not worked out
-//! a good way to do them yet. The tricky bit is that unlike the others they are
-//! not an exact match and they can overlap with other patterns. Take this
-//! example:
-//!
-//! ```text
-//! case x {
-//!    "1" <> _ -> ...
-//!    "12" <> _ -> ...
-//!    "123" -> ...
-//!    _ -> ...
-//! }
-//! ```
-//!
-//! The decision tree needs to take into account that the first pattern is a
-//! super-pattern of the second, and the second is a super-pattern of the third.
-//!
 
 mod missing_patterns;
 pub mod printer;
