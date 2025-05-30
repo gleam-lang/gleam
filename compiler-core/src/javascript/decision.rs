@@ -1069,6 +1069,32 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                     }
                 }
 
+                BitArrayTest::SegmentIsFiniteFloat {
+                    read_action:
+                        ReadAction {
+                            from: start,
+                            size,
+                            endianness,
+                            ..
+                        },
+                } => {
+                    let start_doc = self.offset_to_doc(start, false);
+                    let end = match (start.constant_bits(), size.constant_bits()) {
+                        (Some(start), _) if start == BigInt::ZERO => self
+                            .read_size_to_doc(size)
+                            .expect("unexpected catch all size"),
+                        (Some(start), Some(end)) => (start + end).to_doc(),
+                        (_, _) => docvec![start_doc.clone(), " + ", self.read_size_to_doc(size)],
+                    };
+                    let check = self.bit_array_slice_to_float(value, start_doc, end, endianness);
+
+                    if negation.is_negated() {
+                        docvec!["!Number.isFinite(", check, ")"]
+                    } else {
+                        docvec!["Number.isFinite(", check, ")"]
+                    }
+                }
+
                 // Here we need to make sure that the bit array has a specific
                 // size.
                 BitArrayTest::Size(SizeTest { operator, size }) => {

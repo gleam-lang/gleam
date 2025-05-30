@@ -1,0 +1,41 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn go(x) {\n  case x {\n    <<_:64-float>> -> \"Float\"\n    <<0x7ff80000:32, 0x00000000:32>> -> \"NaN\"\n    _ -> \"Other\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  case x {
+    <<_:64-float>> -> "Float"
+    <<0x7ff80000:32, 0x00000000:32>> -> "NaN"
+    _ -> "Other"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { bitArraySliceToFloat } from "../gleam.mjs";
+
+export function go(x) {
+  if (x.bitSize === 64) {
+    if (Number.isFinite(bitArraySliceToFloat(x, 0, 64, true))) {
+      return "Float";
+    } else if (x.byteAt(0) === 127 &&
+      x.byteAt(1) === 248 &&
+      x.byteAt(2) === 0 &&
+      x.byteAt(3) === 0) {
+      if (x.byteAt(4) === 0 &&
+        x.byteAt(5) === 0 &&
+        x.byteAt(6) === 0 &&
+        x.byteAt(7) === 0) {
+        return "NaN";
+      } else {
+        return "Other";
+      }
+    } else {
+      return "Other";
+    }
+  } else {
+    return "Other";
+  }
+}
