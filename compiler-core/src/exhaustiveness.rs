@@ -847,13 +847,19 @@ impl Variable {
 pub enum BitArrayTest {
     Size(SizeTest),
     Match(MatchTest),
+
     /// This is a special test to check that the remaining part of a bit array
     /// has a whole number of bytes when using the `:bytes` option.
     ///
     CatchAllIsBytes {
         size_so_far: Offset,
     },
-    VariableIsNotNegative {
+
+    /// This test is made to ensure a given variable is positive: a segment
+    /// pattern where the size is a variable with a negative value will never
+    /// match. So we check this to make sure the test will fail.
+    ///
+    VariableIsPositive {
         variable: VariableUsage,
     },
 }
