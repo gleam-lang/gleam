@@ -859,7 +859,7 @@ pub enum BitArrayTest {
     /// pattern where the size is a variable with a negative value will never
     /// match. So we check this to make sure the test will fail.
     ///
-    VariableIsPositive {
+    VariableIsNotNegative {
         variable: VariableUsage,
     },
 
