@@ -664,12 +664,15 @@ impl TypedExpr {
 
     pub fn is_literal(&self) -> bool {
         match self {
-            Self::Int { .. }
-            | Self::List { .. }
-            | Self::Float { .. }
-            | Self::Tuple { .. }
-            | Self::String { .. }
-            | Self::BitArray { .. } => true,
+            Self::Int { .. } | Self::Float { .. } | Self::String { .. } => true,
+
+            Self::List { elements, .. } | Self::Tuple { elements, .. } => {
+                elements.iter().all(|value| value.is_literal())
+            }
+
+            Self::BitArray { segments, .. } => {
+                segments.iter().all(|segment| segment.value.is_literal())
+            }
 
             // Calls are literals if they are records and all the arguemnts are also literals.
             Self::Call { fun, args, .. } => {
@@ -693,23 +696,13 @@ impl TypedExpr {
 
     pub fn is_known_value(&self) -> bool {
         match self {
-            Self::Int { .. } | Self::Float { .. } | Self::String { .. } => true,
-
-            Self::List { elements, .. } | Self::Tuple { elements, .. } => {
-                elements.iter().all(|value| value.is_known_value())
-            }
-
-            Self::BitArray { segments, .. } => segments
-                .iter()
-                .all(|segment| segment.value.is_known_value()),
             TypedExpr::BinOp { left, right, .. } => left.is_known_value() && right.is_known_value(),
+
             TypedExpr::NegateBool { value, .. } | TypedExpr::NegateInt { value, .. } => {
                 value.is_known_value()
             }
-            TypedExpr::Call { fun, args, .. } if fun.is_record_builder() => {
-                args.iter().all(|argument| argument.value.is_known_value())
-            }
-            expr => expr.is_record_builder(),
+
+            _ => self.is_literal(),
         }
     }
 
