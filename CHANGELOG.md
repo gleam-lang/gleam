@@ -8,6 +8,10 @@
   statement would generate invalid code on the JavaScript target.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where the build tool would try and run a module whose main
+  function is private.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.11.0-rc2 - 2025-05-29
 
 ### Compiler
@@ -636,7 +640,3 @@
 - Fixed a bug where the compiler would crash if duplicate variables were defined
   in alternative patterns.
   ([Surya Rose](https://github.com/GearsDatapacks))
-
-- Fixed a bug where the build tool would try and run a module whose main
-  function is private.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
