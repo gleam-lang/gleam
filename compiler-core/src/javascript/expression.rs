@@ -1012,8 +1012,10 @@ impl<'module, 'a> Generator<'module, 'a> {
                     _ => {}
                 }
 
-                let left_document = self.assign_to_variable(left)?;
-                let right_document = self.not_in_tail_position(Some(Ordering::Strict), |this| {
+                let left_document = self.not_in_tail_position(Some(Ordering::Loose), |this| {
+                    this.assign_to_variable(left)
+                })?;
+                let right_document = self.not_in_tail_position(Some(Ordering::Loose), |this| {
                     this.assign_to_variable(right)
                 })?;
 

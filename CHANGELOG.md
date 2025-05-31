@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Bug fixes
+
+- Fixed a bug where using a pipe operator on the right-hand side of an `assert`
+  statement would generate invalid code on the JavaScript target.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.11.0-rc2 - 2025-05-29
 
 ### Compiler
