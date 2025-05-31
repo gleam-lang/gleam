@@ -8,7 +8,7 @@ use gleam_core::{
 
 use crate::{
     cli,
-    dependencies::{UseManifest, parse_gleam_add_specifier},
+    dependencies::{self, parse_gleam_add_specifier},
     fs,
 };
 
@@ -27,12 +27,15 @@ pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) ->
 
     // Insert the new packages into the manifest and perform dependency
     // resolution to determine suitable versions
-    let manifest = crate::dependencies::download(
+    let manifest = dependencies::download(
         paths,
         cli::Reporter::new(),
         Some((new_package_requirements.clone(), dev)),
         Vec::new(),
-        UseManifest::Yes,
+        dependencies::DependencyManagerConfig {
+            use_manifest: dependencies::UseManifest::Yes,
+            check_major_versions: dependencies::CheckMajorVersions::No,
+        },
     )?;
 
     // Read gleam.toml and manifest.toml so we can insert new deps into it
