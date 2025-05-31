@@ -173,3 +173,17 @@ pub fn go(x: Nil) {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4643
+#[test]
+fn assert_with_pipe_on_right() {
+    assert_js!(
+        "
+fn add(a, b) { a + b }
+
+pub fn main() {
+  assert 3 == 1 |> add(2)
+}
+"
+    );
+}

@@ -1,0 +1,49 @@
+---
+source: compiler-core/src/javascript/tests/assert.rs
+expression: "\nfn add(a, b) { a + b }\n\npub fn main() {\n  assert 3 == 1 |> add(2)\n}\n"
+---
+----- SOURCE CODE
+
+fn add(a, b) { a + b }
+
+pub fn main() {
+  assert 3 == 1 |> add(2)
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+function add(a, b) {
+  return a + b;
+}
+
+export function main() {
+  let _block;
+  let $ = 3;
+  let _pipe = 1;
+  _block = add(_pipe, 2);
+  let $1 = _block;
+  if (!($ === $1)) {
+    throw makeError(
+      "assert",
+      FILEPATH,
+      "my/mod",
+      5,
+      "main",
+      "Assertion failed.",
+      {
+        kind: "binary_operator",
+        operator: "==",
+        left: { kind: "literal", value: $, start: 50, end: 51 },
+        right: { kind: "expression", value: $1, start: 55, end: 66 },
+        start: 43,
+        end: 66,
+        expression_start: 50
+      }
+    )
+  }
+  return undefined;
+}
