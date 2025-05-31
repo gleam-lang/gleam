@@ -115,7 +115,7 @@
   improved to be more efficient and perform as little checks as possible.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The compiler now raises a warning when it can tell that an integer segment
+- The compiler now raises a warning when it can tell that an int segment
   with a literal value is going to be truncated. For example, if you wrote this:
 
   ```gleam
