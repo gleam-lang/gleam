@@ -77,6 +77,10 @@
   in a case expression on the JavaScript target.
   ([Sakari Bergen](https://github.com/sbergen))
 
+- Fixed a bug where a bit array segment matching on a floating point number
+  would match with `NaN` or `Infinity` on the JavaScript target.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.11.0-rc1 - 2025-05-15
 
 ### Compiler

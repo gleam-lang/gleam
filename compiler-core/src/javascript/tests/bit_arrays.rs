@@ -2283,3 +2283,214 @@ pub fn go(x) {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4637
+#[test]
+fn pattern_matching_on_32_float_plus_infinity_still_reachable() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case x {
+    <<_:32-float>> -> "Float"
+    <<0x7f800000:32>> -> "+Infinity"
+    _ -> "Other"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn pattern_matching_on_32_float_plus_infinity_still_reachable_2() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case x {
+    <<_:32-float>> -> "Float"
+    <<0x7f80:16, 0x0000:16>> -> "+Infinity"
+    _ -> "Other"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn pattern_matching_on_32_float_minus_infinity_still_reachable() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case x {
+    <<_:32-float>> -> "Float"
+    <<0xff800000:32>> -> "-Infinity"
+    _ -> "Other"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn pattern_matching_on_32_float_minus_infinity_still_reachable_2() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case x {
+    <<_:32-float>> -> "Float"
+    <<0xff80:16, 0x0000:16>> -> "-Infinity"
+    _ -> "Other"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn pattern_matching_on_32_float_nan_still_reachable() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case x {
+    <<_:32-float>> -> "Float"
+    <<0x7fc00000:32>> -> "NaN"
+    _ -> "Other"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn pattern_matching_on_32_float_nan_still_reachable_2() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case x {
+    <<_:32-float>> -> "Float"
+    <<0x7fc0:16, 0x0000:16>> -> "NaN"
+    _ -> "Other"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn pattern_matching_on_64_float_plus_infinity_still_reachable() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case x {
+    <<_:64-float>> -> "Float"
+    <<0x7ff0000000000000:64>> -> "+Infinity"
+    _ -> "Other"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn pattern_matching_on_64_float_plus_infinity_still_reachable_2() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case x {
+    <<_:64-float>> -> "Float"
+    <<0x7ff00000:32, 0x00000000:32>> -> "+Infinity"
+    _ -> "Other"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn pattern_matching_on_64_float_minus_infinity_still_reachable() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case x {
+    <<_:64-float>> -> "Float"
+    <<0xfff0000000000000:64>> -> "-Infinity"
+    _ -> "Other"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn pattern_matching_on_64_float_minus_infinity_still_reachable_2() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case x {
+    <<_:64-float>> -> "Float"
+    <<0xfff00000:32, 0x00000000:32>> -> "-Infinity"
+    _ -> "Other"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn pattern_matching_on_64_float_nan_still_reachable() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case x {
+    <<_:64-float>> -> "Float"
+    <<0x7ff8000000000000:64>> -> "NaN"
+    _ -> "Other"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn pattern_matching_on_64_float_nan_still_reachable_2() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case x {
+    <<_:64-float>> -> "Float"
+    <<0x7ff80000:32, 0x00000000:32>> -> "NaN"
+    _ -> "Other"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn pattern_matching_on_64_float_int_is_still_reachable() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case x {
+    <<_:64-float>> -> "Float"
+    <<_:64-int>> -> "Int"
+    _ -> "Other"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn pattern_matching_on_64_float_float_is_unreachable() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case x {
+    <<_:64-float>> -> "Float"
+    <<_:64-float>> -> "unreachable"
+    _ -> "Other"
+  }
+}
+"#
+    );
+}

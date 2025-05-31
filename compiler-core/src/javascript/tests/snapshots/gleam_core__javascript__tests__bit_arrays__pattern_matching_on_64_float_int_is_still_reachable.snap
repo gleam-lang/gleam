@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn go(x) {\n  case x {\n    <<_:64-float>> -> \"Float\"\n    <<_:64-int>> -> \"Int\"\n    _ -> \"Other\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  case x {
+    <<_:64-float>> -> "Float"
+    <<_:64-int>> -> "Int"
+    _ -> "Other"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { bitArraySliceToFloat } from "../gleam.mjs";
+
+export function go(x) {
+  if (x.bitSize === 64) {
+    if (Number.isFinite(bitArraySliceToFloat(x, 0, 64, true))) {
+      return "Float";
+    } else {
+      return "Int";
+    }
+  } else {
+    return "Other";
+  }
+}

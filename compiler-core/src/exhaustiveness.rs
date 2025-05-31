@@ -58,28 +58,6 @@
 //! a decision tree that can be used to perform exhaustiveness checking and code
 //! generation.
 //!
-//! At the moment this tree is not suitable for use in code generation yet as it
-//! is incomplete. The tree is not correctly formed for:
-//! - Bit strings
-//! - String prefixes
-//!
-//! These were not implemented as they are more complex and I've not worked out
-//! a good way to do them yet. The tricky bit is that unlike the others they are
-//! not an exact match and they can overlap with other patterns. Take this
-//! example:
-//!
-//! ```text
-//! case x {
-//!    "1" <> _ -> ...
-//!    "12" <> _ -> ...
-//!    "123" -> ...
-//!    _ -> ...
-//! }
-//! ```
-//!
-//! The decision tree needs to take into account that the first pattern is a
-//! super-pattern of the second, and the second is a super-pattern of the third.
-//!
 
 mod missing_patterns;
 pub mod printer;
@@ -869,14 +847,31 @@ impl Variable {
 pub enum BitArrayTest {
     Size(SizeTest),
     Match(MatchTest),
+
     /// This is a special test to check that the remaining part of a bit array
     /// has a whole number of bytes when using the `:bytes` option.
     ///
     CatchAllIsBytes {
         size_so_far: Offset,
     },
+
+    /// This test is made to ensure a given variable is positive: a segment
+    /// pattern where the size is a variable with a negative value will never
+    /// match. So we check this to make sure the test will fail.
+    ///
     VariableIsNotNegative {
         variable: VariableUsage,
+    },
+
+    /// This test checks that the segment read by the given read action is a
+    /// finite Float and not a `NaN` or `Infinity`.
+    ///
+    /// We need this check as `NaN` and `Infinity` will not match with float
+    /// segments (like `<<_:32-float>>`) on the Erlang target and we must
+    /// replicate the same behavious on the JavaScript target as well.
+    ///
+    SegmentIsFiniteFloat {
+        read_action: ReadAction,
     },
 }
 
@@ -905,7 +900,10 @@ impl BitArrayTest {
                 size.referenced_segment_patterns()
             }
 
-            BitArrayTest::Match(MatchTest {
+            BitArrayTest::SegmentIsFiniteFloat {
+                read_action: ReadAction { from, size, .. },
+            }
+            | BitArrayTest::Match(MatchTest {
                 read_action: ReadAction { from, size, .. },
                 ..
             }) => {
@@ -1017,6 +1015,18 @@ pub enum BitArrayMatchedValue {
         name: EcoString,
         value: Box<BitArrayMatchedValue>,
     },
+}
+
+impl BitArrayMatchedValue {
+    pub(crate) fn is_literal(&self) -> bool {
+        match self {
+            BitArrayMatchedValue::LiteralFloat(_)
+            | BitArrayMatchedValue::LiteralInt(_)
+            | BitArrayMatchedValue::LiteralString { .. } => true,
+            BitArrayMatchedValue::Variable(..) | BitArrayMatchedValue::Discard(..) => false,
+            BitArrayMatchedValue::Assign { value, .. } => value.is_literal(),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
@@ -1176,6 +1186,13 @@ impl ReadType {
             ReadType::Float | ReadType::String | ReadType::BitArray | ReadType::UtfCodepoint => {
                 false
             }
+        }
+    }
+
+    pub(crate) fn is_float(&self) -> bool {
+        match self {
+            ReadType::Float => true,
+            ReadType::Int | ReadType::String | ReadType::BitArray | ReadType::UtfCodepoint => false,
         }
     }
 }
@@ -2874,6 +2891,14 @@ impl CaseToCompile {
                 }
             }
 
+            // If we are matching on a float segment that is not a literal we want
+            // to add an additional check to make sure that we won't match with
+            // `NaN` and `Infinity`!
+            if type_.is_float() && !value.is_literal() {
+                tests.push_back(BitArrayTest::SegmentIsFiniteFloat {
+                    read_action: read_action.clone(),
+                });
+            }
             tests.push_back(BitArrayTest::Match(MatchTest { value, read_action }));
 
             previous_end = previous_end.add_size(&segment_size);
