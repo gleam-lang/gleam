@@ -3646,3 +3646,57 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn no_assert_warning_for_bit_array_with_variable() {
+    assert_no_warnings!(
+        r#"
+@external(erlang, "gleam@function", "identity")
+fn codepoint(value: Int) -> UtfCodepoint
+
+pub fn main() {
+  let codepoint = codepoint(32)
+  assert <<codepoint:utf8_codepoint>> == <<" ">>
+}
+"#
+    );
+}
+
+#[test]
+fn no_assert_warning_for_tuple_with_variable() {
+    assert_no_warnings!(
+        r#"
+pub fn main() {
+  let x = 3
+  assert #(1, 2, x) == #(1, 2, 3)
+}
+"#
+    );
+}
+
+#[test]
+fn no_assert_warning_for_list_with_variable() {
+    assert_no_warnings!(
+        r#"
+pub fn main() {
+  let x = 3
+  assert [1, 2, x] == [1, 2, 3]
+}
+"#
+    );
+}
+#[test]
+fn no_assert_warning_for_constructor_with_variable() {
+    assert_no_warnings!(
+        r#"
+type Box(t) {
+  Box(t)
+}
+
+pub fn main() {
+  let x = 42
+  assert Box(x) == Box(42)
+}
+"#
+    );
+}
