@@ -12,6 +12,10 @@
   function is private.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the compiler would sometime warn that an assertion was
+  unnecessary because it only asserted literal values, when that was not the case.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.11.0-rc2 - 2025-05-29
 
 ### Compiler
