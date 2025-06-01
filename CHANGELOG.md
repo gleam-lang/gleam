@@ -21,6 +21,10 @@
   variable names of the compiler.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where the language server would provide completions inside a
+  constant string.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.11.0-rc2 - 2025-05-29
 
 ### Compiler

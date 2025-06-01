@@ -2,8 +2,9 @@ use crate::{
     Error, Result, Warning,
     analyse::name::correct_name_case,
     ast::{
-        self, CustomType, Definition, DefinitionLocation, ModuleConstant, PatternUnusedArguments,
-        SrcSpan, TypedArg, TypedConstant, TypedExpr, TypedFunction, TypedModule, TypedPattern,
+        self, Constant, CustomType, Definition, DefinitionLocation, ModuleConstant,
+        PatternUnusedArguments, SrcSpan, TypedArg, TypedConstant, TypedExpr, TypedFunction,
+        TypedModule, TypedPattern,
     },
     build::{
         ExpressionPosition, Located, Module, UnqualifiedImport, type_constructor_from_modules,
@@ -289,7 +290,8 @@ where
                 Located::Expression {
                     expression: TypedExpr::String { .. },
                     ..
-                } => None,
+                }
+                | Located::Constant(Constant::String { .. }) => None,
                 Located::Expression {
                     expression: TypedExpr::Call { fun, args, .. },
                     ..
