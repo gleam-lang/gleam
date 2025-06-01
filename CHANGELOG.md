@@ -16,6 +16,11 @@
   unnecessary because it only asserted literal values, when that was not the case.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where using the "generate function" code action on a function
+  capture would generate an argument named `_capture`, using the internal
+  variable names of the compiler.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.11.0-rc2 - 2025-05-29
 
 ### Compiler

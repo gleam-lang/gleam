@@ -8627,3 +8627,21 @@ pub fn main(w: mod.Wibble) {
         find_position_of("{}").to_selection(),
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4653
+#[test]
+fn generate_function_capture() {
+    assert_code_action!(
+        GENERATE_FUNCTION,
+        "
+fn map(list: List(a), f: fn(a) -> b) -> List(b) {
+  todo
+}
+
+pub fn main() {
+  map([1, 2, 3], add(_, 1))
+}
+",
+        find_position_of("add").to_selection()
+    );
+}

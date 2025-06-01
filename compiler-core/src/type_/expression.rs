@@ -3,15 +3,15 @@ use crate::{
     STDLIB_PACKAGE_NAME,
     analyse::{infer_bit_array_option, name::check_argument_names},
     ast::{
-        Arg, Assert, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment, CallArg,
-        Clause, ClauseGuard, Constant, FunctionLiteralKind, HasLocation, ImplicitCallArgOrigin,
-        Layer, RECORD_UPDATE_VARIABLE, RecordBeingUpdated, SrcSpan, Statement, TodoKind, TypeAst,
-        TypedArg, TypedAssert, TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant,
-        TypedExpr, TypedMultiPattern, TypedStatement, USE_ASSIGNMENT_VARIABLE, UntypedArg,
-        UntypedAssert, UntypedAssignment, UntypedClause, UntypedClauseGuard, UntypedConstant,
-        UntypedConstantBitArraySegment, UntypedExpr, UntypedExprBitArraySegment,
-        UntypedMultiPattern, UntypedStatement, UntypedUse, UntypedUseAssignment, Use,
-        UseAssignment,
+        Arg, Assert, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment,
+        CAPTURE_VARIABLE, CallArg, Clause, ClauseGuard, Constant, FunctionLiteralKind, HasLocation,
+        ImplicitCallArgOrigin, Layer, RECORD_UPDATE_VARIABLE, RecordBeingUpdated, SrcSpan,
+        Statement, TodoKind, TypeAst, TypedArg, TypedAssert, TypedAssignment, TypedClause,
+        TypedClauseGuard, TypedConstant, TypedExpr, TypedMultiPattern, TypedStatement,
+        USE_ASSIGNMENT_VARIABLE, UntypedArg, UntypedAssert, UntypedAssignment, UntypedClause,
+        UntypedClauseGuard, UntypedConstant, UntypedConstantBitArraySegment, UntypedExpr,
+        UntypedExprBitArraySegment, UntypedMultiPattern, UntypedStatement, UntypedUse,
+        UntypedUseAssignment, Use, UseAssignment,
     },
     build::Target,
     exhaustiveness::{self, CompileCaseResult, CompiledCase, Reachability},
@@ -4266,11 +4266,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             });
                         }
 
+                        let origin = if name == CAPTURE_VARIABLE {
+                            VariableOrigin::Generated
+                        } else {
+                            VariableOrigin::Variable(name.clone())
+                        };
+
                         // Insert a variable for the argument into the environment
                         body_typer.environment.insert_local_variable(
                             name.clone(),
                             *location,
-                            VariableOrigin::Variable(name.clone()),
+                            origin.clone(),
                             arg.type_.clone(),
                         );
 
@@ -4279,7 +4285,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             // can identify if it is unused
                             body_typer.environment.init_usage(
                                 name.clone(),
-                                VariableOrigin::Variable(name.clone()),
+                                origin,
                                 arg.location,
                                 body_typer.problems,
                             );
