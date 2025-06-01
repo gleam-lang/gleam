@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nfn map(list: List(a), f: fn(a) -> b) -> List(b) {\n  todo\n}\n\npub fn main() {\n  map([1, 2, 3], add(_, 1))\n}\n"
+---
+----- BEFORE ACTION
+
+fn map(list: List(a), f: fn(a) -> b) -> List(b) {
+  todo
+}
+
+pub fn main() {
+  map([1, 2, 3], add(_, 1))
+                 ↑         
+}
+
+
+----- AFTER ACTION
+
+fn map(list: List(a), f: fn(a) -> b) -> List(b) {
+  todo
+}
+
+pub fn main() {
+  map([1, 2, 3], add(_, 1))
+}
+
+fn add(int: Int, int_2: Int) -> c {
+  todo
+}
