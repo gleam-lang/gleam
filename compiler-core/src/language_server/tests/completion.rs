@@ -2238,3 +2238,17 @@ pub fn main() {
 
     assert_completion!(TestProject::for_source(code), Position::new(3, 18));
 }
+
+// https://github.com/gleam-lang/gleam/issues/4652
+#[test]
+fn no_completions_in_constant_string() {
+    let code = r#"
+const x = "io."
+"#;
+
+    let completions = completion(
+        TestProject::for_source(code).add_hex_module("gleam/io", "pub fn println() {todo}"),
+        Position::new(1, 14),
+    );
+    assert_eq!(completions, vec![],);
+}
