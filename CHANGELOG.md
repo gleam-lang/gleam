@@ -8,11 +8,11 @@
   statement would generate invalid code on the JavaScript target.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- Fixed a bug where the build tool would try and run a module whose main
+- Fixed a bug where the build tool would try to run a module whose main
   function is private.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- Fixed a bug where the compiler would sometime warn that an assertion was
+- Fixed a bug where the compiler would sometimes warn that an assertion was
   unnecessary because it only asserted literal values, when that was not the case.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
@@ -371,7 +371,7 @@
 
 ### Language server
 
-- The code action to add missing labels to function now also works in patterns:
+- The code action to add missing labels to functions now also works in patterns:
 
   ```gleam
   pub type Person {
