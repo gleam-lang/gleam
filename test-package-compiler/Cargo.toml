@@ -1,6 +1,6 @@
 [package]
 name = "test-package-compiler"
-version = "1.11.0-rc2"
+version = "1.11.0"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2024"
 license = "Apache-2.0"
