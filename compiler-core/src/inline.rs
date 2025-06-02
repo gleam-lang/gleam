@@ -870,66 +870,104 @@ impl Inliner<'_> {
     }
 }
 
-pub fn inline_function(package: &str, module: &str, function: &TypedFunction) -> Option<Function> {
-    // For now we only offer inlining of standard library functions
-    if package != STDLIB_PACKAGE_NAME {
-        return None;
-    }
-
+/// Converts a function from the Gleam AST into a special "inlinable function",
+/// which is a simplified version, containing just enough information for us to
+/// perform inlining, while keeping the cache files to a minimum size.
+///
+/// This function also determines whether a function is inlinable. Currently this
+/// just checks it against a list of stdlib functions we want to prioritise
+/// inlining, but later it will be changed to a more complicated heuristic.
+///
+pub fn function_to_inlinable(
+    package: &str,
+    module: &str,
+    function: &TypedFunction,
+) -> Option<InlinableFunction> {
     let (_, name) = function.name.as_ref()?;
 
-    match (module, name.as_str()) {
-        // These are the functions which we currently inline
-        ("gleam/bool", "guard") => {}
-        ("gleam/bool", "lazy_guard") => {}
-        ("gleam/result", "try") => {}
-        ("gleam/result", "then") => {}
-        ("gleam/result", "map") => {}
-        _ => return None,
+    if !is_inlinable(package, module, name) {
+        return None;
     }
 
     let parameters = function
         .arguments
         .iter()
         .map(|argument| match &argument.names {
-            ArgNames::Discard { name, .. } | ArgNames::Named { name, .. } => Parameter {
+            ArgNames::Discard { name, .. } | ArgNames::Named { name, .. } => InlinableParameter {
                 label: None,
                 name: name.clone(),
             },
             ArgNames::LabelledDiscard { label, name, .. }
-            | ArgNames::NamedLabelled { label, name, .. } => Parameter {
+            | ArgNames::NamedLabelled { label, name, .. } => InlinableParameter {
                 label: Some(label.clone()),
                 name: name.clone(),
             },
         })
         .collect();
 
-    let mut inliner = FunctionInliner::new(&function.arguments);
+    let mut converter = FunctionToInlinable::new(&function.arguments);
 
     let body = function
         .body
         .iter()
-        .map(|ast| inliner.ast_to_inline(ast))
+        .map(|statement| converter.statement(statement))
         .collect::<Option<_>>()?;
 
-    let inlinable_parameters = inliner
+    // Figure out which parameters can be inlined within the body of this function.
+    // When we inline a function, we convert it to a block with assignments for
+    // the parameters. Then, if those parameters contain no side effects and are
+    // only referenced once within the body, they can be inlined into the place
+    // they are referenced.
+    //
+    // This code checks for the parameters which are used exactly once, which
+    // can then be inlined. We can't inline parameters which are never used, as
+    // there is nowhere to inline them to, so it doesn't make sense. We still
+    // need to evaluate them though, as there could be side effects caused by
+    // the values passed to them.
+    let inlinable_parameters = converter
         .parameter_references
         .into_iter()
         .filter_map(|((name, _), used)| used.then_some(name))
         .collect();
 
-    Some(Function {
+    Some(InlinableFunction {
         parameters,
         body,
         inlinable_parameters,
     })
 }
 
-struct FunctionInliner {
+/// The heuristic to determine whether a function is inlinable. For now, this
+/// just checks against a list of standard library functions.
+fn is_inlinable(package: &str, module: &str, name: &str) -> bool {
+    // For now we only offer inlining of standard library functions
+    if package != STDLIB_PACKAGE_NAME {
+        return false;
+    }
+
+    match (module, name) {
+        // These are the functions which we currently inline
+        ("gleam/bool", "guard") => true,
+        ("gleam/bool", "lazy_guard") => true,
+        ("gleam/result", "try") => true,
+        ("gleam/result", "then") => true,
+        ("gleam/result", "map") => true,
+        _ => false,
+    }
+}
+
+/// Holds state for converting a `TypedFunction` into an `InlinableFunction`.
+struct FunctionToInlinable {
+    /// A map of parameters to a boolean of whether they have been used. Since
+    /// Gleam has variable shadowing, we must also store the definition location
+    /// of each parameter to ensure that it is not a variable shadowing the parameter
+    /// name.
+    /// If a parameter is used more than once, it is removed from the map, so it
+    /// is no longer tracked as an inlinable parameter.
     parameter_references: HashMap<(EcoString, SrcSpan), bool>,
 }
 
-impl FunctionInliner {
+impl FunctionToInlinable {
     fn new(arguments: &[TypedArg]) -> Self {
         let parameter_references = arguments
             .iter()
@@ -953,14 +991,18 @@ impl FunctionInliner {
         }
     }
 
-    fn ast_to_inline(&mut self, statement: &TypedStatement) -> Option<Ast> {
+    fn statement(&mut self, statement: &TypedStatement) -> Option<InlinableExpression> {
         match statement {
-            Statement::Expression(expression) => self.expression_to_inline(expression),
+            Statement::Expression(expression) => self.expression(expression),
             Statement::Assignment(_) | Statement::Use(_) | Statement::Assert(_) => None,
         }
     }
 
-    fn expression_to_inline(&mut self, expression: &TypedExpr) -> Option<Ast> {
+    /// Converts an expression to an `InlinableExpression`. We only convert a
+    /// small subset of the AST for now, enough to compile our desired inlinable
+    /// stdlib functions. Anything else returns `None`, indicating a function
+    /// cannot be inlined.
+    fn expression(&mut self, expression: &TypedExpr) -> Option<InlinableExpression> {
         match expression {
             TypedExpr::Case {
                 subjects,
@@ -970,14 +1012,14 @@ impl FunctionInliner {
             } => {
                 let subjects = subjects
                     .iter()
-                    .map(|expression| self.expression_to_inline(expression))
+                    .map(|expression| self.expression(expression))
                     .collect::<Option<_>>()?;
                 let clauses = clauses
                     .iter()
-                    .map(|clause| self.clause_to_inline(clause))
+                    .map(|clause| self.clause(clause))
                     .collect::<Option<_>>()?;
 
-                Some(Ast::Case {
+                Some(InlinableExpression::Case {
                     subjects,
                     clauses,
                     compiled_case: compiled_case.clone(),
@@ -1003,24 +1045,24 @@ impl FunctionInliner {
                     | ValueConstructorVariant::Record { .. } => {}
                 }
 
-                Some(Ast::Variable {
+                Some(InlinableExpression::Variable {
                     name: name.clone(),
                     constructor: self.value_constructor(constructor)?,
                 })
             }
             TypedExpr::Call { fun, args, .. } => {
-                let function = self.expression_to_inline(fun)?;
+                let function = self.expression(fun)?;
                 let arguments = args
                     .iter()
                     .map(|argument| {
-                        Some(Argument {
+                        Some(InlinableArgument {
                             label: argument.label.clone(),
-                            value: self.expression_to_inline(&argument.value)?,
+                            value: self.expression(&argument.value)?,
                         })
                     })
                     .collect::<Option<_>>()?;
 
-                Some(Ast::Call {
+                Some(InlinableExpression::Call {
                     function: Box::new(function),
                     arguments,
                 })
@@ -1052,19 +1094,21 @@ impl FunctionInliner {
     fn value_constructor(
         &mut self,
         constructor: &type_::ValueConstructor,
-    ) -> Option<ValueConstructor> {
+    ) -> Option<InlinableValueConstructor> {
         match &constructor.variant {
-            ValueConstructorVariant::LocalVariable { .. } => Some(ValueConstructor::LocalVariable),
+            ValueConstructorVariant::LocalVariable { .. } => {
+                Some(InlinableValueConstructor::LocalVariable)
+            }
             ValueConstructorVariant::ModuleConstant { .. }
             | ValueConstructorVariant::LocalConstant { .. } => None,
             ValueConstructorVariant::ModuleFn { name, module, .. } => {
-                Some(ValueConstructor::Function {
+                Some(InlinableValueConstructor::Function {
                     name: name.clone(),
                     module: module.clone(),
                 })
             }
             ValueConstructorVariant::Record { name, module, .. } => {
-                Some(ValueConstructor::Record {
+                Some(InlinableValueConstructor::Record {
                     name: name.clone(),
                     module: module.clone(),
                 })
@@ -1072,19 +1116,21 @@ impl FunctionInliner {
         }
     }
 
-    fn clause_to_inline(&mut self, clause: &TypedClause) -> Option<Clause> {
+    fn clause(&mut self, clause: &TypedClause) -> Option<InlinableClause> {
         let pattern = clause
             .pattern
             .iter()
-            .map(|pattern| self.pattern_to_inline(pattern))
+            .map(|pattern| self.pattern(pattern))
             .collect::<Option<_>>()?;
-        let body = self.expression_to_inline(&clause.then)?;
-        Some(Clause { pattern, body })
+        let body = self.expression(&clause.then)?;
+        Some(InlinableClause { pattern, body })
     }
 
-    fn pattern_to_inline(&mut self, pattern: &TypedPattern) -> Option<Pattern> {
+    fn pattern(&mut self, pattern: &TypedPattern) -> Option<InlinablePattern> {
         match pattern {
-            TypedPattern::Variable { name, .. } => Some(Pattern::Variable { name: name.clone() }),
+            TypedPattern::Variable { name, .. } => {
+                Some(InlinablePattern::Variable { name: name.clone() })
+            }
             TypedPattern::Constructor {
                 name,
                 arguments,
@@ -1094,14 +1140,14 @@ impl FunctionInliner {
                 let arguments = arguments
                     .iter()
                     .map(|argument| {
-                        Some(Argument {
+                        Some(InlinableArgument {
                             label: argument.label.clone(),
-                            value: self.pattern_to_inline(&argument.value)?,
+                            value: self.pattern(&argument.value)?,
                         })
                     })
                     .collect::<Option<_>>()?;
 
-                Some(Pattern::Constructor {
+                Some(InlinablePattern::Constructor {
                     name: name.clone(),
                     module: inferred.module.clone(),
                     arguments,
@@ -1128,53 +1174,27 @@ impl FunctionInliner {
     }
 }
 
+/// A simplified version of a `TypedFunction`.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct Function {
-    pub parameters: Vec<Parameter>,
-    pub body: Vec<Ast>,
+pub struct InlinableFunction {
+    pub parameters: Vec<InlinableParameter>,
+    pub body: Vec<InlinableExpression>,
+    /// A list of parameters which are only referenced once and can therefore
+    /// be inlined within the body of this function.
     pub inlinable_parameters: Vec<EcoString>,
 }
 
 const BLANK_LOCATION: SrcSpan = SrcSpan { start: 0, end: 0 };
 const NIL: LazyLock<Arc<Type>> = LazyLock::new(type_::nil);
 
-impl Function {
+impl InlinableFunction {
+    /// Converts an `InlinableFunction` to an anonymous function, which can then
+    /// be inlined within another function.
     fn to_anonymous_function(&self) -> TypedExpr {
         let parameters = self
             .parameters
             .iter()
-            .map(|parameter| {
-                let is_discard = parameter.name.starts_with('_');
-                let names = match &parameter.label {
-                    Some(label) if is_discard => ArgNames::LabelledDiscard {
-                        label: label.clone(),
-                        label_location: BLANK_LOCATION,
-                        name: parameter.name.clone(),
-                        name_location: BLANK_LOCATION,
-                    },
-                    Some(label) => ArgNames::NamedLabelled {
-                        label: label.clone(),
-                        label_location: BLANK_LOCATION,
-                        name: parameter.name.clone(),
-                        name_location: BLANK_LOCATION,
-                    },
-                    None if is_discard => ArgNames::Discard {
-                        name: parameter.name.clone(),
-                        location: BLANK_LOCATION,
-                    },
-                    None => ArgNames::Named {
-                        name: parameter.name.clone(),
-                        location: BLANK_LOCATION,
-                    },
-                };
-
-                TypedArg {
-                    names,
-                    location: BLANK_LOCATION,
-                    annotation: None,
-                    type_: NIL.clone(),
-                }
-            })
+            .map(|parameter| parameter.to_typed_arg())
             .collect();
 
         let body = self
@@ -1200,28 +1220,28 @@ impl Function {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub enum Ast {
+pub enum InlinableExpression {
     Case {
-        subjects: Vec<Ast>,
-        clauses: Vec<Clause>,
+        subjects: Vec<InlinableExpression>,
+        clauses: Vec<InlinableClause>,
         compiled_case: CompiledCase,
     },
 
     Variable {
         name: EcoString,
-        constructor: ValueConstructor,
+        constructor: InlinableValueConstructor,
     },
 
     Call {
-        function: Box<Ast>,
-        arguments: Vec<Argument<Ast>>,
+        function: Box<InlinableExpression>,
+        arguments: Vec<InlinableArgument<InlinableExpression>>,
     },
 }
 
-impl Ast {
+impl InlinableExpression {
     fn to_expression(&self) -> TypedExpr {
         match self {
-            Ast::Case {
+            InlinableExpression::Case {
                 subjects,
                 clauses,
                 compiled_case,
@@ -1238,12 +1258,12 @@ impl Ast {
                     .collect(),
                 compiled_case: compiled_case.clone(),
             },
-            Ast::Variable { name, constructor } => TypedExpr::Var {
+            InlinableExpression::Variable { name, constructor } => TypedExpr::Var {
                 location: BLANK_LOCATION,
                 constructor: constructor.to_value_constructor(),
                 name: name.clone(),
             },
-            Ast::Call {
+            InlinableExpression::Call {
                 function,
                 arguments,
             } => TypedExpr::Call {
@@ -1260,12 +1280,12 @@ impl Ast {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct Clause {
-    pub pattern: Vec<Pattern>,
-    pub body: Ast,
+pub struct InlinableClause {
+    pub pattern: Vec<InlinablePattern>,
+    pub body: InlinableExpression,
 }
 
-impl Clause {
+impl InlinableClause {
     fn to_typed_clause(&self) -> TypedClause {
         TypedClause {
             location: BLANK_LOCATION,
@@ -1282,11 +1302,11 @@ impl Clause {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub enum Pattern {
+pub enum InlinablePattern {
     Constructor {
         name: EcoString,
         module: EcoString,
-        arguments: Vec<Argument<Pattern>>,
+        arguments: Vec<InlinableArgument<InlinablePattern>>,
     },
 
     Variable {
@@ -1294,10 +1314,10 @@ pub enum Pattern {
     },
 }
 
-impl Pattern {
+impl InlinablePattern {
     fn to_typed_pattern(&self) -> TypedPattern {
         match self {
-            Pattern::Constructor {
+            InlinablePattern::Constructor {
                 name,
                 module,
                 arguments,
@@ -1321,7 +1341,7 @@ impl Pattern {
                 spread: None,
                 type_: NIL.clone(),
             },
-            Pattern::Variable { name } => TypedPattern::Variable {
+            InlinablePattern::Variable { name } => TypedPattern::Variable {
                 location: BLANK_LOCATION,
                 name: name.clone(),
                 type_: NIL.clone(),
@@ -1332,32 +1352,34 @@ impl Pattern {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub enum ValueConstructor {
+pub enum InlinableValueConstructor {
     LocalVariable,
     Function { name: EcoString, module: EcoString },
     Record { name: EcoString, module: EcoString },
 }
 
-impl ValueConstructor {
+impl InlinableValueConstructor {
     fn to_value_constructor(&self) -> type_::ValueConstructor {
         let variant = match self {
-            ValueConstructor::LocalVariable => ValueConstructorVariant::LocalVariable {
+            InlinableValueConstructor::LocalVariable => ValueConstructorVariant::LocalVariable {
                 location: BLANK_LOCATION,
                 origin: VariableOrigin::Generated,
             },
-            ValueConstructor::Function { name, module } => ValueConstructorVariant::ModuleFn {
-                name: name.clone(),
-                field_map: None,
-                module: module.clone(),
-                arity: 0,
-                location: BLANK_LOCATION,
-                documentation: None,
-                implementations: Implementations::supporting_all(),
-                external_erlang: None,
-                external_javascript: None,
-                purity: Purity::Unknown,
-            },
-            ValueConstructor::Record { name, module } => ValueConstructorVariant::Record {
+            InlinableValueConstructor::Function { name, module } => {
+                ValueConstructorVariant::ModuleFn {
+                    name: name.clone(),
+                    field_map: None,
+                    module: module.clone(),
+                    arity: 0,
+                    location: BLANK_LOCATION,
+                    documentation: None,
+                    implementations: Implementations::supporting_all(),
+                    external_erlang: None,
+                    external_javascript: None,
+                    purity: Purity::Unknown,
+                }
+            }
+            InlinableValueConstructor::Record { name, module } => ValueConstructorVariant::Record {
                 name: name.clone(),
                 arity: 0,
                 field_map: None,
@@ -1378,12 +1400,12 @@ impl ValueConstructor {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct Argument<T> {
+pub struct InlinableArgument<T> {
     pub label: Option<EcoString>,
     pub value: T,
 }
 
-impl<T> Argument<T> {
+impl<T> InlinableArgument<T> {
     fn to_call_arg<U, F>(&self, convert_value: F) -> CallArg<U>
     where
         F: FnOnce(&T) -> U,
@@ -1398,7 +1420,43 @@ impl<T> Argument<T> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct Parameter {
+pub struct InlinableParameter {
     pub label: Option<EcoString>,
     pub name: EcoString,
+}
+
+impl InlinableParameter {
+    fn to_typed_arg(&self) -> TypedArg {
+        let is_discard = self.name.starts_with('_');
+
+        let names = match &self.label {
+            Some(label) if is_discard => ArgNames::LabelledDiscard {
+                label: label.clone(),
+                label_location: BLANK_LOCATION,
+                name: self.name.clone(),
+                name_location: BLANK_LOCATION,
+            },
+            Some(label) => ArgNames::NamedLabelled {
+                label: label.clone(),
+                label_location: BLANK_LOCATION,
+                name: self.name.clone(),
+                name_location: BLANK_LOCATION,
+            },
+            None if is_discard => ArgNames::Discard {
+                name: self.name.clone(),
+                location: BLANK_LOCATION,
+            },
+            None => ArgNames::Named {
+                name: self.name.clone(),
+                location: BLANK_LOCATION,
+            },
+        };
+
+        TypedArg {
+            names,
+            location: BLANK_LOCATION,
+            annotation: None,
+            type_: NIL.clone(),
+        }
+    }
 }
