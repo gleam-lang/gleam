@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
+assertion_line: 3123
 expression: "\npub fn main() {\n  <<65_537:size(2)-unit(8)>>\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -17,5 +19,4 @@ warning: Truncated bit array segment
   │     ^^^^^^ You can safely replace this with 1
 
 This segment is 2 bytes long, but 65537 doesn't fit in that many bytes. It
-would be truncated by taking its its first 2 bytes, resulting in the value
-1.
+would be truncated by taking its first 2 bytes, resulting in the value 1.

@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
+assertion_line: 3071
 expression: "\npub fn main() {\n  <<12:size(1)>>\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -17,4 +19,4 @@ warning: Truncated bit array segment
   │     ^^ You can safely replace this with 0
 
 This segment is 1 bit long, but 12 doesn't fit in that many bits. It would
-be truncated by taking its its first bit, resulting in the value 0.
+be truncated by taking its first bit, resulting in the value 0.

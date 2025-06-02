@@ -25,6 +25,9 @@
   constant string.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a grammatical error in the bit array truncation warning message.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ## v1.11.0-rc2 - 2025-05-29
 
 ### Compiler
@@ -145,7 +148,7 @@
     │     ^^^ You can safely replace this with 2
 
   This segment is 1 byte long, but 258 doesn't fit in that many bytes. It
-  would be truncated by taking its its first byte, resulting in the value 2.
+  would be truncated by taking its first byte, resulting in the value 2.
   ```
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

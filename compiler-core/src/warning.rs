@@ -1218,18 +1218,18 @@ information.",
                         let bytes = segment_bits / 8;
                         let segment_size = pluralise(format!("{bytes} byte"), bytes);
                         let taken = if bytes == 1 {
-                            "its first byte".into()
+                            "first byte".into()
                         } else {
-                            format!("its first {bytes} bytes")
+                            format!("first {bytes} bytes")
                         };
 
                         ("bytes", segment_size, taken)
                     } else {
                         let segment_size = pluralise(format!("{segment_bits} bit"), *segment_bits);
                         let taken = if *segment_bits == 1 {
-                            "its first bit".into()
+                            "first bit".into()
                         } else {
-                            format!("its first {segment_bits} bits")
+                            format!("first {segment_bits} bits")
                         };
                         ("bits", segment_size, taken)
                     };
