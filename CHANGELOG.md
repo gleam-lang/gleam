@@ -251,7 +251,10 @@
   function without side effects is unused. For example the following code:
 
   ```gleam
-  fn add(a, b) { a + b }
+  pub fn main() {
+    add(1, 2)
+    add(3, 4)
+  }
   ```
 
   Will produce the following warning:
