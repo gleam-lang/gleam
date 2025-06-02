@@ -31,7 +31,7 @@ use crate::{
     },
     bit_array,
     build::{Origin, Target},
-    inline,
+    inline::InlinableFunction,
     line_numbers::LineNumbers,
     reference::ReferenceMap,
     type_::expression::Implementations,
@@ -996,7 +996,7 @@ pub struct ModuleInterface {
     pub contains_echo: bool,
     pub references: References,
     /// Functions which can be inlined
-    pub inline_functions: HashMap<EcoString, inline::Function>,
+    pub inline_functions: HashMap<EcoString, InlinableFunction>,
 }
 
 impl ModuleInterface {

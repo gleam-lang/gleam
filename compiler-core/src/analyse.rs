@@ -17,7 +17,8 @@ use crate::{
     build::{Origin, Outcome, Target},
     call_graph::{CallGraphNode, into_dependency_order},
     config::PackageConfig,
-    dep_tree, inline,
+    dep_tree,
+    inline::{self, InlinableFunction},
     line_numbers::LineNumbers,
     parse::SpannedString,
     reference::{EntityKind, ReferenceKind},
@@ -197,7 +198,7 @@ struct ModuleAnalyzer<'a, A> {
     hydrators: HashMap<EcoString, Hydrator>,
     module_name: EcoString,
 
-    inline_functions: HashMap<EcoString, inline::Function>,
+    inline_functions: HashMap<EcoString, InlinableFunction>,
 
     /// The minimum Gleam version required to compile the analysed module.
     minimum_required_version: Version,
@@ -732,7 +733,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             purity,
         };
 
-        if let Some(inline_function) = inline::inline_function(
+        if let Some(inline_function) = inline::function_to_inlinable(
             &environment.current_package,
             &environment.current_module,
             &function,
