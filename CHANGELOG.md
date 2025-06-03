@@ -1,5 +1,9 @@
 # Changelog
 
+## v4.1.0 - 2025-06-03
+
+- Added `impl From<Range> for pubgrub::Range<Version>`
+
 ## v4.0.0 - 2025-05-09
 
 - Removed `version::{pubgrub_report, Version::bump, PackageVersions, resolve_versions, PackageFetcher}`.
