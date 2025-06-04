@@ -1,19 +1,20 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 336
-expression: "\ntype User { User(id: Int, name: String, age: Int) }\nfn create_user(user_id) { User(age: 22, id: user_id, name: \"\") }\n                    "
+assertion_line: 342
+expression: "\npub type User { User(id: Int, name: String, age: Int) }\npub fn create_user(user_id) { User(age: 22, id: user_id, name: \"\") }\n"
 snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-type User { User(id: Int, name: String, age: Int) }
-fn create_user(user_id) { User(age: 22, id: user_id, name: "") }
-                    
+pub type User { User(id: Int, name: String, age: Int) }
+pub fn create_user(user_id) { User(age: 22, id: user_id, name: "") }
+
 
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 -define(FILEPATH, "project/test/my/mod.gleam").
+-export([create_user/1]).
 -export_type([user/0]).
 
 -type user() :: {user, integer(), binary(), integer()}.

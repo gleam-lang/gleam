@@ -1,16 +1,16 @@
 ---
 source: compiler-core/src/erlang/tests/records.rs
 assertion_line: 158
-expression: "\ntype Triple {\n    Triple(a: Int, b: Int, c: Int)\n}\n\nfn main() {\n  let triple = Triple(1,2,3)\n  let Triple(the_a, ..) = triple\n  the_a\n}\n"
+expression: "\npub type Triple {\n    Triple(a: Int, b: Int, c: Int)\n}\n\npub fn main() {\n  let triple = Triple(1,2,3)\n  let Triple(the_a, ..) = triple\n  the_a\n}\n"
 snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-type Triple {
+pub type Triple {
     Triple(a: Int, b: Int, c: Int)
 }
 
-fn main() {
+pub fn main() {
   let triple = Triple(1,2,3)
   let Triple(the_a, ..) = triple
   the_a
@@ -21,6 +21,7 @@ fn main() {
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 -define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
 -export_type([triple/0]).
 
 -type triple() :: {triple, integer(), integer(), integer()}.

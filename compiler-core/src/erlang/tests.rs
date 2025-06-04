@@ -210,7 +210,7 @@ fn integration_test1() {
 fn integration_test1_1() {
     assert_erl!(
         r#"pub type Money { Pound(Int) }
-                    fn pound(x) { Pound(x) }"#
+pub fn pound(x) { Pound(x) }"#
     );
 }
 
@@ -288,28 +288,34 @@ fn integration_test9() {
 
 #[test]
 fn integration_test10() {
-    assert_erl!(r#"type Null { Null } fn x() { Null }"#);
+    assert_erl!(
+        r#"pub type Null { Null }
+pub fn x() { Null }"#
+    );
 }
 
 #[test]
 fn integration_test3() {
     assert_erl!(
-        r#"type Point { Point(x: Int, y: Int) }
-                fn y() { fn() { Point }()(4, 6) }"#
+        r#"pub type Point { Point(x: Int, y: Int) }
+pub fn y() { fn() { Point }()(4, 6) }"#
     );
 }
 
 #[test]
 fn integration_test11() {
     assert_erl!(
-        r#"type Point { Point(x: Int, y: Int) }
-                fn x() { Point(x: 4, y: 6) Point(y: 1, x: 9) }"#
+        r#"pub type Point { Point(x: Int, y: Int) }
+pub fn x() { Point(x: 4, y: 6) Point(y: 1, x: 9) }"#
     );
 }
 
 #[test]
 fn integration_test12() {
-    assert_erl!(r#"type Point { Point(x: Int, y: Int) } fn x(y) { let Point(a, b) = y a }"#);
+    assert_erl!(
+        r#"pub type Point { Point(x: Int, y: Int) }
+pub fn x(y) { let Point(a, b) = y a }"#
+    );
 }
 //https://github.com/gleam-lang/gleam/issues/1106
 
@@ -335,9 +341,9 @@ fn integration_test17() {
     // https://github.com/gleam-lang/gleam/issues/289
     assert_erl!(
         r#"
-type User { User(id: Int, name: String, age: Int) }
-fn create_user(user_id) { User(age: 22, id: user_id, name: "") }
-                    "#
+pub type User { User(id: Int, name: String, age: Int) }
+pub fn create_user(user_id) { User(age: 22, id: user_id, name: "") }
+"#
     );
 }
 
@@ -349,8 +355,8 @@ fn integration_test18() {
 #[test]
 fn integration_test19() {
     assert_erl!(
-        r#"type X { X(x: Int, y: Float) }
-                    fn x() { X(x: 1, y: 2.) X(y: 3., x: 4) }"#
+        r#"pub type X { X(x: Int, y: Float) }
+pub fn x() { X(x: 1, y: 2.) X(y: 3., x: 4) }"#
     );
 }
 
@@ -438,10 +444,11 @@ fn field_access_function_call() {
     // Parentheses are added when calling functions returned by record access
     assert_erl!(
         r#"
-type FnBox {
+pub type FnBox {
   FnBox(f: fn(Int) -> Int)
 }
-fn main() {
+
+pub fn main() {
     let b = FnBox(f: fn(x) { x })
     b.f(5)
 }

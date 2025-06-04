@@ -1,20 +1,20 @@
 ---
 source: compiler-core/src/erlang/tests/type_params.rs
 assertion_line: 5
-expression: "\n        fn wibble() {\n            let assert Ok(_) = wobble()\n        }\n\n        type Wobble(a) {\n            Wobble\n        }\n\n        fn wobble() -> Result(a, Wobble(a)) {\n            todo\n        }\n        "
+expression: "\n        pub fn wibble() {\n            let assert Ok(_) = wobble()\n        }\n\n        pub type Wobble(a) {\n            Wobble\n        }\n\n        pub fn wobble() -> Result(a, Wobble(a)) {\n            todo\n        }\n        "
 snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-        fn wibble() {
+        pub fn wibble() {
             let assert Ok(_) = wobble()
         }
 
-        type Wobble(a) {
+        pub type Wobble(a) {
             Wobble
         }
 
-        fn wobble() -> Result(a, Wobble(a)) {
+        pub fn wobble() -> Result(a, Wobble(a)) {
             todo
         }
         
@@ -23,6 +23,7 @@ snapshot_kind: text
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 -define(FILEPATH, "project/test/my/mod.gleam").
+-export([wobble/0, wibble/0]).
 -export_type([wobble/1]).
 
 -type wobble(I) :: wobble | {gleam_phantom, I}.
@@ -51,8 +52,8 @@ wibble() ->
                         function => <<"wibble"/utf8>>,
                         line => 3,
                         value => _assert_fail,
-                        start => 35,
-                        'end' => 62,
-                        pattern_start => 46,
-                        pattern_end => 51})
+                        start => 39,
+                        'end' => 66,
+                        pattern_start => 50,
+                        pattern_end => 55})
     end.

@@ -1,21 +1,21 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
 assertion_line: 40
-expression: "\n@external(erlang, \"m\", \"f\")\npub fn go(x x: Int, y y: Int) -> Int\nfn x() { go(x: 1, y: 2) go(y: 3, x: 4) }\n"
+expression: "\n@external(erlang, \"m\", \"f\")\npub fn go(x x: Int, y y: Int) -> Int\npub fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }\n"
 snapshot_kind: text
 ---
 ----- SOURCE CODE
 
 @external(erlang, "m", "f")
 pub fn go(x x: Int, y y: Int) -> Int
-fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }
+pub fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }
 
 
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 -define(FILEPATH, "project/test/my/mod.gleam").
--export([go/2]).
+-export([go/2, x/0]).
 
 -file("project/test/my/mod.gleam", 3).
 -spec go(integer(), integer()) -> integer().
