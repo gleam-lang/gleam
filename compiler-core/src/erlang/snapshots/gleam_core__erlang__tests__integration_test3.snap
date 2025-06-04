@@ -1,17 +1,18 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 296
-expression: "type Point { Point(x: Int, y: Int) }\n                fn y() { fn() { Point }()(4, 6) }"
+assertion_line: 299
+expression: "pub type Point { Point(x: Int, y: Int) }\npub fn y() { fn() { Point }()(4, 6) }"
 snapshot_kind: text
 ---
 ----- SOURCE CODE
-type Point { Point(x: Int, y: Int) }
-                fn y() { fn() { Point }()(4, 6) }
+pub type Point { Point(x: Int, y: Int) }
+pub fn y() { fn() { Point }()(4, 6) }
 
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 -define(FILEPATH, "project/test/my/mod.gleam").
+-export([y/0]).
 -export_type([point/0]).
 
 -type point() :: {point, integer(), integer()}.

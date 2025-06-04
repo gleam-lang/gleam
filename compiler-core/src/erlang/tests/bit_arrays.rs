@@ -31,7 +31,7 @@ fn bit_array_float() {
 fn bit_array1() {
     assert_erl!(
         r#"pub fn x() { 2 }
-fn main() {
+pub fn main() {
   let a = -1
   let b = <<a:unit(2)-size(a * 2), a:size(3 + x())-unit(1)>>
 

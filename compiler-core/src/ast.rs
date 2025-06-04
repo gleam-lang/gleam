@@ -23,10 +23,10 @@ use crate::type_::{
     self, Deprecation, HasType, ModuleValueConstructor, PatternConstructor, Type, TypedCallArg,
     ValueConstructor, nil,
 };
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use ecow::EcoString;
-use im::{HashSet, hashset};
 use num_bigint::{BigInt, Sign};
 use num_traits::{One, ToPrimitive};
 #[cfg(test)]
@@ -56,6 +56,9 @@ pub struct Module<Info, Statements> {
     pub type_info: Info,
     pub definitions: Vec<Statements>,
     pub names: Names,
+    /// The source byte locations of definition that are unused.
+    /// This is used in code generation to know when definitions can be safely omitted.
+    pub unused_definition_positions: HashSet<u32>,
 }
 
 impl<Info, Statements> Module<Info, Statements> {
@@ -1871,15 +1874,15 @@ impl TypedClauseGuard {
         }
     }
 
-    pub(crate) fn referenced_variables(&self) -> HashSet<&EcoString> {
+    pub(crate) fn referenced_variables(&self) -> im::HashSet<&EcoString> {
         match self {
-            ClauseGuard::Var { name, .. } => hashset![name],
+            ClauseGuard::Var { name, .. } => im::hashset![name],
 
             ClauseGuard::Not { expression, .. } => expression.referenced_variables(),
             ClauseGuard::TupleIndex { tuple, .. } => tuple.referenced_variables(),
             ClauseGuard::FieldAccess { container, .. } => container.referenced_variables(),
             ClauseGuard::Constant(constant) => constant.referenced_variables(),
-            ClauseGuard::ModuleSelect { .. } => HashSet::new(),
+            ClauseGuard::ModuleSelect { .. } => im::HashSet::new(),
 
             ClauseGuard::Equals { left, right, .. }
             | ClauseGuard::NotEquals { left, right, .. }
@@ -2762,7 +2765,7 @@ impl<A> BitArrayOption<A> {
 }
 
 impl BitArrayOption<TypedConstant> {
-    fn referenced_variables(&self) -> HashSet<&EcoString> {
+    fn referenced_variables(&self) -> im::HashSet<&EcoString> {
         match self {
             BitArrayOption::Bytes { .. }
             | BitArrayOption::Int { .. }
@@ -2779,7 +2782,7 @@ impl BitArrayOption<TypedConstant> {
             | BitArrayOption::Big { .. }
             | BitArrayOption::Little { .. }
             | BitArrayOption::Unit { .. }
-            | BitArrayOption::Native { .. } => hashset![],
+            | BitArrayOption::Native { .. } => im::hashset![],
 
             BitArrayOption::Size { value, .. } => value.referenced_variables(),
         }

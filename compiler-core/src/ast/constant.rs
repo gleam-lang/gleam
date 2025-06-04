@@ -141,24 +141,24 @@ impl TypedConstant {
         }
     }
 
-    pub(crate) fn referenced_variables(&self) -> HashSet<&EcoString> {
+    pub(crate) fn referenced_variables(&self) -> im::HashSet<&EcoString> {
         match self {
-            Constant::Var { name, .. } => hashset![name],
+            Constant::Var { name, .. } => im::hashset![name],
 
             Constant::Invalid { .. }
             | Constant::Int { .. }
             | Constant::Float { .. }
-            | Constant::String { .. } => hashset![],
+            | Constant::String { .. } => im::hashset![],
 
             Constant::List { elements, .. } | Constant::Tuple { elements, .. } => elements
                 .iter()
                 .map(|element| element.referenced_variables())
-                .fold(hashset![], HashSet::union),
+                .fold(im::hashset![], im::HashSet::union),
 
             Constant::Record { args, .. } => args
                 .iter()
                 .map(|arg| arg.value.referenced_variables())
-                .fold(hashset![], HashSet::union),
+                .fold(im::hashset![], im::HashSet::union),
 
             Constant::BitArray { segments, .. } => segments
                 .iter()
@@ -167,9 +167,9 @@ impl TypedConstant {
                         .options
                         .iter()
                         .map(|option| option.referenced_variables())
-                        .fold(segment.value.referenced_variables(), HashSet::union)
+                        .fold(segment.value.referenced_variables(), im::HashSet::union)
                 })
-                .fold(hashset![], HashSet::union),
+                .fold(im::hashset![], im::HashSet::union),
 
             Constant::StringConcatenation { left, right, .. } => left
                 .referenced_variables()

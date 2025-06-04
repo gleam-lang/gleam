@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/erlang/tests/records.rs
+assertion_line: 406
+expression: "type A { A(inner: Int) }\ntype B { B(String) }\ntype C { C(Int) }\n\npub fn main(x: Int) -> Int {\n  let a = A(x)\n  a.inner\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+type A { A(inner: Int) }
+type B { B(String) }
+type C { C(Int) }
+
+pub fn main(x: Int) -> Int {
+  let a = A(x)
+  a.inner
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/1]).
+-export_type([a/0]).
+
+-type a() :: {a, integer()}.
+
+-file("project/test/my/mod.gleam", 5).
+-spec main(integer()) -> integer().
+main(X) ->
+    A = {a, X},
+    erlang:element(2, A).
