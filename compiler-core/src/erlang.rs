@@ -22,10 +22,10 @@ use crate::{
 };
 use camino::Utf8Path;
 use ecow::{EcoString, eco_format};
-use im::HashSet;
 use itertools::Itertools;
 use pattern::pattern;
 use regex::{Captures, Regex};
+use std::collections::HashSet;
 use std::sync::OnceLock;
 use std::{collections::HashMap, ops::Deref, str::FromStr, sync::Arc};
 use vec1::Vec1;
@@ -95,8 +95,11 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
             Definition::CustomType(CustomType {
                 publicity: Publicity::Public,
                 constructors,
+                location,
                 ..
-            }) => Some(constructors),
+            }) if !module.unused_definition_positions.contains(&location.start) => {
+                Some(constructors)
+            }
             _ => None,
         })
         .flatten()
@@ -171,13 +174,14 @@ fn module_document<'a>(
     let overridden_publicity = find_private_functions_referenced_in_importable_constants(module);
 
     for s in &module.definitions {
-        register_imports(
+        register_imports_and_exports(
             s,
             &mut exports,
             &mut type_exports,
             &mut type_defs,
             &module.name,
             &overridden_publicity,
+            &module.unused_definition_positions,
         );
     }
 
@@ -232,6 +236,7 @@ fn module_document<'a>(
             module.type_info.is_internal,
             line_numbers,
             src_path_relative.clone(),
+            &module.unused_definition_positions,
         ) {
             needs_function_docs = needs_function_docs || env.needs_function_docs;
             echo_used = echo_used || env.echo_used;
@@ -291,14 +296,20 @@ fn module_document<'a>(
     Ok(module.append(line()))
 }
 
-fn register_imports(
+fn register_imports_and_exports(
     s: &TypedDefinition,
     exports: &mut Vec<Document<'_>>,
     type_exports: &mut Vec<Document<'_>>,
     type_defs: &mut Vec<Document<'_>>,
     module_name: &str,
-    overridden_publicity: &HashSet<EcoString>,
+    overridden_publicity: &im::HashSet<EcoString>,
+    unused_definition_positions: &HashSet<u32>,
 ) {
+    // Do not generate any code for unused items
+    if unused_definition_positions.contains(&s.location().start) {
+        return;
+    }
+
     match s {
         Definition::Function(Function {
             publicity,
@@ -412,16 +423,24 @@ fn module_statement<'a>(
     is_internal_module: bool,
     line_numbers: &'a LineNumbers,
     src_path: EcoString,
+    unused_definition_positions: &HashSet<u32>,
 ) -> Option<(Document<'a>, Env<'a>)> {
     match statement {
-        Definition::TypeAlias(TypeAlias { .. })
-        | Definition::CustomType(CustomType { .. })
-        | Definition::Import(Import { .. })
-        | Definition::ModuleConstant(ModuleConstant { .. }) => None,
+        // Do not generate any code for unused items
+        Definition::Function(function)
+            if unused_definition_positions.contains(&function.location.start) =>
+        {
+            None
+        }
 
         Definition::Function(function) => {
             module_function(function, module, is_internal_module, line_numbers, src_path)
         }
+
+        Definition::TypeAlias(TypeAlias { .. })
+        | Definition::CustomType(CustomType { .. })
+        | Definition::Import(Import { .. })
+        | Definition::ModuleConstant(ModuleConstant { .. }) => None,
     }
 }
 
@@ -3060,8 +3079,8 @@ impl<'a> TypePrinter<'a> {
 
 fn find_private_functions_referenced_in_importable_constants(
     module: &TypedModule,
-) -> HashSet<EcoString> {
-    let mut overridden_publicity = HashSet::new();
+) -> im::HashSet<EcoString> {
+    let mut overridden_publicity = im::HashSet::new();
 
     for def in module.definitions.iter() {
         if let Definition::ModuleConstant(c) = def {
@@ -3075,7 +3094,7 @@ fn find_private_functions_referenced_in_importable_constants(
 
 fn find_referenced_private_functions(
     constant: &TypedConstant,
-    already_found: &mut HashSet<EcoString>,
+    already_found: &mut im::HashSet<EcoString>,
 ) {
     match constant {
         Constant::Invalid { .. } => panic!("invalid constants should not reach code generation"),

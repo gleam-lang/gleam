@@ -1,15 +1,16 @@
 ---
 source: compiler-core/src/erlang/tests.rs
 assertion_line: 439
-expression: "\ntype FnBox {\n  FnBox(f: fn(Int) -> Int)\n}\nfn main() {\n    let b = FnBox(f: fn(x) { x })\n    b.f(5)\n}\n"
+expression: "\npub type FnBox {\n  FnBox(f: fn(Int) -> Int)\n}\n\npub fn main() {\n    let b = FnBox(f: fn(x) { x })\n    b.f(5)\n}\n"
 snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-type FnBox {
+pub type FnBox {
   FnBox(f: fn(Int) -> Int)
 }
-fn main() {
+
+pub fn main() {
     let b = FnBox(f: fn(x) { x })
     b.f(5)
 }
@@ -19,11 +20,12 @@ fn main() {
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 -define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
 -export_type([fn_box/0]).
 
 -type fn_box() :: {fn_box, fun((integer()) -> integer())}.
 
--file("project/test/my/mod.gleam", 5).
+-file("project/test/my/mod.gleam", 6).
 -spec main() -> integer().
 main() ->
     B = {fn_box, fun(X) -> X end},

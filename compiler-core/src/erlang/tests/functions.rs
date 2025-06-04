@@ -137,3 +137,30 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn unused_private_functions() {
+    assert_erl!(
+        r#"
+pub fn main() -> Int {
+  used()
+}
+
+fn used() -> Int {
+  123
+}
+
+fn unused1() -> Int {
+  unused2()
+}
+
+fn unused2() -> Int {
+  used()
+}
+
+fn unused3() -> Int {
+  used()
+}
+"#
+    );
+}
