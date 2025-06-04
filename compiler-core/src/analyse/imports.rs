@@ -5,7 +5,7 @@ use crate::{
     build::Origin,
     reference::{EntityKind, ReferenceKind},
     type_::{
-        Environment, Error, ModuleInterface, Problems, ValueConstructorVariant,
+        Environment, Error, ModuleInterface, Problems, ValueConstructorVariant, Warning,
         error::InvalidImportKind,
     },
 };
@@ -271,34 +271,49 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         import: &UntypedImport,
         import_info: &'context ModuleInterface,
     ) -> Result<(), Error> {
-        if let Some(used_name) = import.used_name() {
-            self.check_not_a_duplicate_import(&used_name, import.location)?;
-
-            if let Some(alias_location) = import.alias_location() {
-                self.environment.references.register_aliased_module(
-                    used_name.clone(),
-                    import.module.clone(),
-                    alias_location,
-                    import.location,
-                );
-            } else {
-                self.environment.references.register_module(
-                    used_name.clone(),
-                    import.module.clone(),
-                    import.location,
-                );
-            }
-
-            // Insert imported module into scope
-            let _ = self
-                .environment
-                .imported_modules
-                .insert(used_name.clone(), (import.location, import_info));
-
-            self.environment
-                .names
-                .imported_module(import.module.clone(), used_name);
+        let Some(used_name) = import.used_name() else {
+            return Ok(());
         };
+
+        self.check_not_a_duplicate_import(&used_name, import.location)?;
+
+        if let Some(alias_location) = import.alias_location() {
+            self.environment.references.register_aliased_module(
+                used_name.clone(),
+                import.module.clone(),
+                alias_location,
+                import.location,
+            );
+        } else {
+            self.environment.references.register_module(
+                used_name.clone(),
+                import.module.clone(),
+                import.location,
+            );
+        }
+
+        // Insert imported module into scope
+        let _ = self
+            .environment
+            .imported_modules
+            .insert(used_name.clone(), (import.location, import_info));
+
+        // Register this module as being imported
+        //
+        // Emit a warning if the module had already been imported.
+        // This isn't an error so long as the modules have different local aliases. In Gleam v2
+        // this will likely become an error.
+        if let Some(previous) = self.environment.names.imported_module(
+            import.module.clone(),
+            used_name,
+            import.location,
+        ) {
+            self.problems.warning(Warning::ModuleImportedTwice {
+                name: import.module.clone(),
+                first: previous,
+                second: import.location,
+            });
+        }
 
         Ok(())
     }

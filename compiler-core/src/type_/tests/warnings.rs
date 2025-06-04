@@ -3912,3 +3912,17 @@ pub fn go(x) {
 "#
     );
 }
+
+#[test]
+fn import_module_twice() {
+    assert_warning!(
+        ("gleam/wibble", "pub fn wobble() { 1 }"),
+        "import gleam/wibble as a
+import gleam/wibble as b
+
+pub fn main() {
+  a.wobble() + b.wobble()
+}
+"
+    );
+}
