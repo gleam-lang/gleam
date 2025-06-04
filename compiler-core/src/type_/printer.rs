@@ -3,7 +3,10 @@ use ecow::{EcoString, eco_format};
 use im::HashMap;
 use std::{collections::HashSet, sync::Arc};
 
-use crate::type_::{Type, TypeVar};
+use crate::{
+    ast::SrcSpan,
+    type_::{Type, TypeVar},
+};
 
 /// This class keeps track of what names are used for modules in the current
 /// scope, so they can be printed in errors, etc.
@@ -68,7 +71,7 @@ pub struct Names {
     /// - key:   "mod1"
     /// - value: "mod1"
     ///
-    imported_modules: HashMap<EcoString, EcoString>,
+    imported_modules: HashMap<EcoString, (EcoString, SrcSpan)>,
 
     /// Generic type parameters that have been annotated in the current
     /// function.
@@ -176,8 +179,17 @@ impl Names {
     }
 
     /// Record an imported module in this module.
-    pub fn imported_module(&mut self, module_name: EcoString, module_alias: EcoString) {
-        _ = self.imported_modules.insert(module_name, module_alias)
+    ///
+    /// Returns the location of the previous time this module was imported, if there was one.
+    pub fn imported_module(
+        &mut self,
+        module_name: EcoString,
+        module_alias: EcoString,
+        location: SrcSpan,
+    ) -> Option<SrcSpan> {
+        self.imported_modules
+            .insert(module_name, (module_alias, location))
+            .map(|(_, location)| location)
     }
 
     /// Get the name and optional module qualifier for a named type.
@@ -188,7 +200,7 @@ impl Names {
         print_mode: PrintMode,
     ) -> NameContextInformation<'a> {
         if print_mode == PrintMode::ExpandAliases {
-            if let Some(module) = self.imported_modules.get(module) {
+            if let Some((module, _)) = self.imported_modules.get(module) {
                 return NameContextInformation::Qualified(module, name.as_str());
             };
 
@@ -204,7 +216,7 @@ impl Names {
         }
 
         // This type is from a module that has been imported
-        if let Some(module) = self.imported_modules.get(module) {
+        if let Some((module, _)) = self.imported_modules.get(module) {
             return NameContextInformation::Qualified(module, name.as_str());
         };
 
@@ -238,7 +250,7 @@ impl Names {
         }
 
         // This value is from a module that has been imported
-        if let Some(module) = self.imported_modules.get(module) {
+        if let Some((module, _)) = self.imported_modules.get(module) {
             return NameContextInformation::Qualified(module, name.as_str());
         };
 
@@ -326,7 +338,7 @@ impl<'a> Printer<'a> {
 
     pub fn print_module(&self, module: &str) -> EcoString {
         match self.names.imported_modules.get(module) {
-            Some(module) => module.clone(),
+            Some((module, _)) => module.clone(),
             _ => module.split("/").last().unwrap_or(module).into(),
         }
     }
@@ -617,7 +629,13 @@ fn test_fn_type() {
 #[test]
 fn test_module_alias() {
     let mut names = Names::new();
-    names.imported_module("mod1".into(), "animals".into());
+
+    assert!(
+        names
+            .imported_module("mod1".into(), "animals".into(), SrcSpan::new(50, 63))
+            .is_none()
+    );
+
     let mut printer = Printer::new(&names);
 
     let type_ = Type::Named {
@@ -700,7 +718,11 @@ fn nested_module() {
 fn test_unqualified_import_and_module_alias() {
     let mut names = Names::new();
 
-    names.imported_module("mod1".into(), "animals".into());
+    assert!(
+        names
+            .imported_module("mod1".into(), "animals".into(), SrcSpan::new(76, 93))
+            .is_none()
+    );
 
     let _ = names
         .local_types
@@ -723,7 +745,13 @@ fn test_unqualified_import_and_module_alias() {
 #[test]
 fn test_module_imports() {
     let mut names = Names::new();
-    names.imported_module("mod".into(), "animals".into());
+
+    assert!(
+        names
+            .imported_module("mod".into(), "animals".into(), SrcSpan::new(76, 93))
+            .is_none()
+    );
+
     let _ = names
         .local_types
         .insert(("mod2".into(), "Cat".into()), "Cat".into());

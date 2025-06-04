@@ -193,6 +193,7 @@ mod tests {
     use std::{collections::HashMap, sync::Arc};
 
     use crate::{
+        ast::SrcSpan,
         exhaustiveness::{
             Variable,
             missing_patterns::{Term, VariantField},
@@ -321,7 +322,11 @@ mod tests {
     fn test_module_alias() {
         let mut names = Names::new();
 
-        names.imported_module("mod".into(), "shapes".into());
+        assert!(
+            names
+                .imported_module("mod".into(), "shapes".into(), SrcSpan::new(50, 60))
+                .is_none()
+        );
 
         let printer = Printer::new(&names);
 

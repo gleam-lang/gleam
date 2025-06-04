@@ -4,6 +4,10 @@
 
 ### Compiler
 
+- A warning is now emitted when the same module is imported is imported
+  multiple times into the same module with different aliases.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ### Build tool
 
 ### Language server

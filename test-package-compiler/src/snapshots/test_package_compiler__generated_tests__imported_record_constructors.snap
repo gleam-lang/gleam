@@ -25,6 +25,27 @@ snapshot_kind: text
 
 
 
+//// /out/lib/the_package/_gleam_artefacts/one@two.cache
+<.cache binary>
+
+//// /out/lib/the_package/_gleam_artefacts/one@two.cache_meta
+<97 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/one@two.erl
+-module(one@two).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-define(FILEPATH, "src/one/two.gleam").
+-export_type([a/0, b/0, user/0]).
+
+-type a() :: a.
+
+-type b() :: {b, a(), a()}.
+
+-type user() :: {user, binary(), integer()}.
+
+
+
+
 //// /out/lib/the_package/_gleam_artefacts/two.cache
 <.cache binary>
 
@@ -64,7 +85,7 @@ destructure_qualified(User) ->
     {Name, Score}.
 
 -file("src/two.gleam", 70).
--spec destructure_qualified_aliased(one@one:user()) -> {binary(), integer()}.
+-spec destructure_qualified_aliased(one@two:user()) -> {binary(), integer()}.
 destructure_qualified_aliased(User) ->
     {user, Name, Score} = User,
     {Name, Score}.
@@ -89,7 +110,7 @@ update_qualified(User) ->
     {user, <<"wibble"/utf8>>, erlang:element(3, _record)}.
 
 -file("src/two.gleam", 90).
--spec update_qualified_aliased(one@one:user()) -> one@one:user().
+-spec update_qualified_aliased(one@two:user()) -> one@two:user().
 update_qualified_aliased(User) ->
     _record = User,
     {user, <<"wibble"/utf8>>, erlang:element(3, _record)}.
@@ -117,12 +138,12 @@ qualified_fn_b() ->
     {b, a, a}.
 
 -file("src/two.gleam", 19).
--spec qualified_aliased_fn_a() -> one@one:a().
+-spec qualified_aliased_fn_a() -> one@two:a().
 qualified_aliased_fn_a() ->
     a.
 
 -file("src/two.gleam", 25).
--spec qualified_aliased_fn_b() -> one@one:b().
+-spec qualified_aliased_fn_b() -> one@two:b().
 qualified_aliased_fn_b() ->
     {b, a, a}.
 
@@ -153,10 +174,15 @@ aliased_fn_b() ->
     {applications, []},
     {description, ""},
     {modules, [one@one,
+               one@two,
                two]},
     {registered, []}
 ]}.
 
 
 //// /out/lib/the_package/include/one@one_User.hrl
+-record(user, {name :: binary(), score :: integer()}).
+
+
+//// /out/lib/the_package/include/one@two_User.hrl
 -record(user, {name :: binary(), score :: integer()}).

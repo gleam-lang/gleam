@@ -1,13 +1,13 @@
 import one.{
   escaped_thing, escaped_thing as xescaped_thing, thing, thing as xthing,
 }
-import one as xone
+import three as aliased
 
 // Assigning a function to constants
 
 const const_qualified = one.thing
 
-const const_qualified_aliased = xone.thing
+const const_qualified_aliased = aliased.thing
 
 const const_unqualified = thing
 
@@ -15,7 +15,7 @@ const const_unqualified_aliased = xthing
 
 const escaped_const_qualified = one.escaped_thing
 
-const escaped_const_qualified_aliased = xone.escaped_thing
+const escaped_const_qualified_aliased = aliased.escaped_thing
 
 const escaped_const_unqualified = escaped_thing
 
@@ -47,7 +47,7 @@ pub fn fn_reference_qualified() {
 }
 
 pub fn fn_reference_qualified_aliased() {
-  xone.thing
+  aliased.thing
 }
 
 pub fn fn_reference_unqualified() {
@@ -65,7 +65,7 @@ pub fn fn_call_qualified() {
 }
 
 pub fn fn_call_qualified_aliased() {
-  xone.thing()
+  aliased.thing()
 }
 
 pub fn fn_call_unqualified() {
@@ -83,7 +83,7 @@ pub fn argument_reference_qualified() {
 }
 
 pub fn argument_reference_qualified_aliased() {
-  x(xone.escaped_thing)
+  x(aliased.escaped_thing)
 }
 
 pub fn argument_reference_unqualified() {

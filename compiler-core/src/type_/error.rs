@@ -983,6 +983,14 @@ pub enum Warning {
         truncation: BitArraySegmentTruncation,
         location: SrcSpan,
     },
+
+    /// In Gleam v1 it is possible to import one module twice using different aliases.
+    /// This is deprecated, and likely would be removed in a Gleam v2.
+    ModuleImportedTwice {
+        name: EcoString,
+        first: SrcSpan,
+        second: SrcSpan,
+    },
 }
 
 #[derive(Debug, Eq, Copy, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
@@ -1207,7 +1215,10 @@ impl Warning {
             | Warning::FeatureRequiresHigherGleamVersion { location, .. }
             | Warning::JavaScriptIntUnsafe { location, .. }
             | Warning::AssertLiteralValue { location, .. }
-            | Warning::BitArraySegmentTruncatedValue { location, .. } => *location,
+            | Warning::BitArraySegmentTruncatedValue { location, .. }
+            | Warning::ModuleImportedTwice {
+                second: location, ..
+            } => *location,
         }
     }
 

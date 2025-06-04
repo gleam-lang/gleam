@@ -1,7 +1,7 @@
 use crate::{
     ast::{BitArraySegmentTruncation, SrcSpan, TodoKind},
     build::Target,
-    diagnostic::{self, Diagnostic, Location},
+    diagnostic::{self, Diagnostic, ExtraLabel, Location},
     error::wrap,
     type_::{
         self,
@@ -1274,6 +1274,32 @@ can already tell whether it will be true or false.",
                             span: *location,
                         },
                         extra_labels: Vec::new(),
+                    }),
+                },
+
+                type_::Warning::ModuleImportedTwice {
+                    name,
+                    first,
+                    second,
+                } => Diagnostic {
+                    title: "Duplicate import".into(),
+                    text: format!("The {name} module has been imported twice."),
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        src: src.clone(),
+                        path: path.to_path_buf(),
+                        label: diagnostic::Label {
+                            text: None,
+                            span: *first,
+                        },
+                        extra_labels: vec![ExtraLabel {
+                            src_info: None,
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *second,
+                            },
+                        }],
                     }),
                 },
             },
