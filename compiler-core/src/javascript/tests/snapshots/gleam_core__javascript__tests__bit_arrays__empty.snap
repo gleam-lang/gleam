@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-expression: "\nfn go() {\n  <<>>\n}\n"
+assertion_line: 11
+expression: "\npub fn go() {\n  <<>>\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go() {
+pub fn go() {
   <<>>
 }
 
@@ -12,6 +14,6 @@ fn go() {
 ----- COMPILED JAVASCRIPT
 import { toBitArray } from "../gleam.mjs";
 
-function go() {
+export function go() {
   return toBitArray([]);
 }

@@ -1,12 +1,14 @@
 ---
 source: compiler-core/src/javascript/tests/strings.rs
-expression: "\nconst cute = \"cute\"\nconst cute_bee = cute <> \"bee\"\nconst cute_cute_bee_buzz = cute <> cute_bee <> \"buzz\"\n\npub fn main() {\n  cute_cute_bee_buzz\n}\n"
+assertion_line: 244
+expression: "\npub const cute = \"cute\"\npub const cute_bee = cute <> \"bee\"\npub const cute_cute_bee_buzz = cute <> cute_bee <> \"buzz\"\n\npub fn main() {\n  cute_cute_bee_buzz\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-const cute = "cute"
-const cute_bee = cute <> "bee"
-const cute_cute_bee_buzz = cute <> cute_bee <> "buzz"
+pub const cute = "cute"
+pub const cute_bee = cute <> "bee"
+pub const cute_cute_bee_buzz = cute <> cute_bee <> "buzz"
 
 pub fn main() {
   cute_cute_bee_buzz
@@ -14,11 +16,11 @@ pub fn main() {
 
 
 ----- COMPILED JAVASCRIPT
-const cute = "cute";
+export const cute = "cute";
 
-const cute_bee = cute + "bee";
+export const cute_bee = cute + "bee";
 
-const cute_cute_bee_buzz = cute + cute_bee + "buzz";
+export const cute_cute_bee_buzz = cute + cute_bee + "buzz";
 
 export function main() {
   return cute_cute_bee_buzz;

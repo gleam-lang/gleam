@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-expression: "\nfn go(x) {\n  case x {\n    <<_:5, b:bits>> -> b\n    _ -> x\n  }\n}\n"
+assertion_line: 1573
+expression: "\npub fn go(x) {\n  case x {\n    <<_:5, b:bits>> -> b\n    _ -> x\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(x) {
+pub fn go(x) {
   case x {
     <<_:5, b:bits>> -> b
     _ -> x
@@ -15,7 +17,7 @@ fn go(x) {
 ----- COMPILED JAVASCRIPT
 import { bitArraySlice } from "../gleam.mjs";
 
-function go(x) {
+export function go(x) {
   if (x.bitSize >= 5) {
     let b = bitArraySlice(x, 5);
     return b;

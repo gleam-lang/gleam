@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
-expression: "\ntype Wibble {\n    Wibble(Int)\n    Wobble(Int)\n    Woo(Int)\n}\n\nfn fun(f) { f(Wibble(1)) }\n\nfn go() {\n  use _ <- fun\n  1\n}\n"
+assertion_line: 339
+expression: "\ntype Wibble {\n    Wibble(Int)\n    Wobble(Int)\n    Woo(Int)\n}\n\nfn fun(f) { f(Wibble(1)) }\n\npub fn go() {\n  use _ <- fun\n  1\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -12,7 +14,7 @@ type Wibble {
 
 fn fun(f) { f(Wibble(1)) }
 
-fn go() {
+pub fn go() {
   use _ <- fun
   1
 }
@@ -46,6 +48,6 @@ function fun(f) {
   return f(new Wibble(1));
 }
 
-function go() {
+export function go() {
   return fun((_) => { return 1; });
 }

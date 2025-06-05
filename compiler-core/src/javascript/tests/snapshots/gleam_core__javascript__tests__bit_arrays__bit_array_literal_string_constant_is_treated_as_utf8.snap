@@ -1,14 +1,16 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-expression: "const a = <<\"hello\", \" \", \"world\">>"
+assertion_line: 1742
+expression: "pub const a = <<\"hello\", \" \", \"world\">>"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
-const a = <<"hello", " ", "world">>
+pub const a = <<"hello", " ", "world">>
 
 ----- COMPILED JAVASCRIPT
 import { toBitArray, stringBits } from "../gleam.mjs";
 
-const a = /* @__PURE__ */ toBitArray([
+export const a = /* @__PURE__ */ toBitArray([
   stringBits("hello"),
   stringBits(" "),
   stringBits("world"),

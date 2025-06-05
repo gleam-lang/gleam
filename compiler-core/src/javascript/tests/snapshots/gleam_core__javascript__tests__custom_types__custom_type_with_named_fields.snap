@@ -1,27 +1,29 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-expression: "\ntype Cat {\n  Cat(name: String, cuteness: Int)\n}\n\ntype Box {\n  Box(occupant: Cat)\n}\n\nconst felix = Cat(\"Felix\", 12)\nconst tom = Cat(cuteness: 1, name: \"Tom\")\n\nfn go() {\n  Cat(\"Nubi\", 1)\n  Cat(2, name: \"Nubi\")\n  Cat(cuteness: 3, name: \"Nubi\")\n}\n\nfn update(cat) {\n  Cat(..cat, name: \"Sid\")\n  Cat(..cat, name: \"Bartholemew Wonder Puss the Fourth !!!!!!!!!!!!!!!!\")\n  Cat(..new_cat(), name: \"Molly\")\n  let box = Box(occupant: cat)\n  Cat(..box.occupant, cuteness: box.occupant.cuteness + 1)\n}\n\nfn access(cat: Cat) {\n  cat.cuteness\n}\n\nfn new_cat() {\n  Cat(name: \"Beau\", cuteness: 11)\n}\n"
+assertion_line: 222
+expression: "\npub type Cat {\n  Cat(name: String, cuteness: Int)\n}\n\npub type Box {\n  Box(occupant: Cat)\n}\n\npub const felix = Cat(\"Felix\", 12)\npub const tom = Cat(cuteness: 1, name: \"Tom\")\n\npub fn go() {\n  Cat(\"Nubi\", 1)\n  Cat(2, name: \"Nubi\")\n  Cat(cuteness: 3, name: \"Nubi\")\n}\n\npub fn update(cat) {\n  Cat(..cat, name: \"Sid\")\n  Cat(..cat, name: \"Bartholemew Wonder Puss the Fourth !!!!!!!!!!!!!!!!\")\n  Cat(..new_cat(), name: \"Molly\")\n  let box = Box(occupant: cat)\n  Cat(..box.occupant, cuteness: box.occupant.cuteness + 1)\n}\n\npub fn access(cat: Cat) {\n  cat.cuteness\n}\n\npub fn new_cat() {\n  Cat(name: \"Beau\", cuteness: 11)\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-type Cat {
+pub type Cat {
   Cat(name: String, cuteness: Int)
 }
 
-type Box {
+pub type Box {
   Box(occupant: Cat)
 }
 
-const felix = Cat("Felix", 12)
-const tom = Cat(cuteness: 1, name: "Tom")
+pub const felix = Cat("Felix", 12)
+pub const tom = Cat(cuteness: 1, name: "Tom")
 
-fn go() {
+pub fn go() {
   Cat("Nubi", 1)
   Cat(2, name: "Nubi")
   Cat(cuteness: 3, name: "Nubi")
 }
 
-fn update(cat) {
+pub fn update(cat) {
   Cat(..cat, name: "Sid")
   Cat(..cat, name: "Bartholemew Wonder Puss the Fourth !!!!!!!!!!!!!!!!")
   Cat(..new_cat(), name: "Molly")
@@ -29,11 +31,11 @@ fn update(cat) {
   Cat(..box.occupant, cuteness: box.occupant.cuteness + 1)
 }
 
-fn access(cat: Cat) {
+pub fn access(cat: Cat) {
   cat.cuteness
 }
 
-fn new_cat() {
+pub fn new_cat() {
   Cat(name: "Beau", cuteness: 11)
 }
 
@@ -41,7 +43,7 @@ fn new_cat() {
 ----- COMPILED JAVASCRIPT
 import { CustomType as $CustomType } from "../gleam.mjs";
 
-class Cat extends $CustomType {
+export class Cat extends $CustomType {
   constructor(name, cuteness) {
     super();
     this.name = name;
@@ -49,28 +51,28 @@ class Cat extends $CustomType {
   }
 }
 
-class Box extends $CustomType {
+export class Box extends $CustomType {
   constructor(occupant) {
     super();
     this.occupant = occupant;
   }
 }
 
-function go() {
+export function go() {
   new Cat("Nubi", 1);
   new Cat("Nubi", 2);
   return new Cat("Nubi", 3);
 }
 
-function access(cat) {
+export function access(cat) {
   return cat.cuteness;
 }
 
-function new_cat() {
+export function new_cat() {
   return new Cat("Beau", 11);
 }
 
-function update(cat) {
+export function update(cat) {
   let _record = cat;
   new Cat("Sid", _record.cuteness)
   let _record$1 = cat;
@@ -85,6 +87,6 @@ function update(cat) {
   return new Cat(_record$3.name, box.occupant.cuteness + 1);
 }
 
-const felix = /* @__PURE__ */ new Cat("Felix", 12);
+export const felix = /* @__PURE__ */ new Cat("Felix", 12);
 
-const tom = /* @__PURE__ */ new Cat("Tom", 1);
+export const tom = /* @__PURE__ */ new Cat("Tom", 1);

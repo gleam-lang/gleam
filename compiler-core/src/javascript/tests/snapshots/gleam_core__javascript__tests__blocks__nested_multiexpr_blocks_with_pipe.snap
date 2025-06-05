@@ -1,13 +1,15 @@
 ---
 source: compiler-core/src/javascript/tests/blocks.rs
-expression: "\nfn add1(a) {\n  a + 1\n}\nfn go() {\n  let x = {\n    1\n    {\n      2\n      3 |> add1\n    } |> add1\n  }\n  x\n}\n"
+assertion_line: 54
+expression: "\npub fn add1(a) {\n  a + 1\n}\npub fn go() {\n  let x = {\n    1\n    {\n      2\n      3 |> add1\n    } |> add1\n  }\n  x\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn add1(a) {
+pub fn add1(a) {
   a + 1
 }
-fn go() {
+pub fn go() {
   let x = {
     1
     {
@@ -20,11 +22,11 @@ fn go() {
 
 
 ----- COMPILED JAVASCRIPT
-function add1(a) {
+export function add1(a) {
   return a + 1;
 }
 
-function go() {
+export function go() {
   let _block;
   {
     1;

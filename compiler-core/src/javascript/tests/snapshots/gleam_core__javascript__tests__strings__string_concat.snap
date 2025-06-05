@@ -1,15 +1,17 @@
 ---
 source: compiler-core/src/javascript/tests/strings.rs
-expression: "\nfn go() {\n  \"Hello, \" <> \"Joe\"\n}\n"
+assertion_line: 100
+expression: "\npub fn go() {\n  \"Hello, \" <> \"Joe\"\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go() {
+pub fn go() {
   "Hello, " <> "Joe"
 }
 
 
 ----- COMPILED JAVASCRIPT
-function go() {
+export function go() {
   return "Hello, " + "Joe";
 }

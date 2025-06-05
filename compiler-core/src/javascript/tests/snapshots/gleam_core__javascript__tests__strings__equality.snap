@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/strings.rs
-expression: "\nfn go(a) {\n  a == \"ok\"\n  a != \"ok\"\n  a == a\n}\n"
+assertion_line: 71
+expression: "\npub fn go(a) {\n  a == \"ok\"\n  a != \"ok\"\n  a == a\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(a) {
+pub fn go(a) {
   a == "ok"
   a != "ok"
   a == a
@@ -12,7 +14,7 @@ fn go(a) {
 
 
 ----- COMPILED JAVASCRIPT
-function go(a) {
+export function go(a) {
   a === "ok";
   a !== "ok";
   return a === a;

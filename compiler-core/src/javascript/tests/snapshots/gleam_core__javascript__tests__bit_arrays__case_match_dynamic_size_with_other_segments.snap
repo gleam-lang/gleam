@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-expression: "\nfn go(x) {\n  let n = 16\n  let m = 32\n  case x {\n    <<first:size(8), a:size(n), b:size(m), rest:bits>> -> first + a + b\n    _ -> 1\n  }\n}\n"
+assertion_line: 979
+expression: "\npub fn go(x) {\n  let n = 16\n  let m = 32\n  case x {\n    <<first:size(8), a:size(n), b:size(m), rest:bits>> -> first + a + b\n    _ -> 1\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(x) {
+pub fn go(x) {
   let n = 16
   let m = 32
   case x {
@@ -17,7 +19,7 @@ fn go(x) {
 ----- COMPILED JAVASCRIPT
 import { bitArraySlice, bitArraySliceToInt } from "../gleam.mjs";
 
-function go(x) {
+export function go(x) {
   let n = 16;
   let m = 32;
   if (

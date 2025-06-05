@@ -1,14 +1,16 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-expression: "\ntype Cat {\n  Cat(String, cuteness: Int)\n}\n\nfn go(cat) {\n  let Cat(x, y) = cat\n  let Cat(cuteness: y, ..) = cat\n  let Cat(x, cuteness: y) = cat\n  x\n}\n\n"
+assertion_line: 281
+expression: "\npub type Cat {\n  Cat(String, cuteness: Int)\n}\n\npub fn go(cat) {\n  let Cat(x, y) = cat\n  let Cat(cuteness: y, ..) = cat\n  let Cat(x, cuteness: y) = cat\n  x\n}\n\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-type Cat {
+pub type Cat {
   Cat(String, cuteness: Int)
 }
 
-fn go(cat) {
+pub fn go(cat) {
   let Cat(x, y) = cat
   let Cat(cuteness: y, ..) = cat
   let Cat(x, cuteness: y) = cat
@@ -20,7 +22,7 @@ fn go(cat) {
 ----- COMPILED JAVASCRIPT
 import { CustomType as $CustomType } from "../gleam.mjs";
 
-class Cat extends $CustomType {
+export class Cat extends $CustomType {
   constructor($0, cuteness) {
     super();
     this[0] = $0;
@@ -28,7 +30,7 @@ class Cat extends $CustomType {
   }
 }
 
-function go(cat) {
+export function go(cat) {
   let x = cat[0];
   let y = cat.cuteness;
   let y$1 = cat.cuteness;

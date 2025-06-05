@@ -1,13 +1,13 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
 assertion_line: 67
-expression: "\npub type True { True False Nil }\nfn go(x, y) {\n  let assert True = x\n  let assert False = x\n  let assert Nil = y\n}\n"
+expression: "\npub type True { True False Nil }\npub fn go(x, y) {\n  let assert True = x\n  let assert False = x\n  let assert Nil = y\n}\n"
 snapshot_kind: text
 ---
 ----- SOURCE CODE
 
 pub type True { True False Nil }
-fn go(x, y) {
+pub fn go(x, y) {
   let assert True = x
   let assert False = x
   let assert Nil = y
@@ -25,7 +25,7 @@ export class False extends $CustomType {}
 
 export class Nil extends $CustomType {}
 
-function go(x, y) {
+export function go(x, y) {
   if (!(x instanceof True)) {
     throw makeError(
       "let_assert",
@@ -34,7 +34,7 @@ function go(x, y) {
       4,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x, start: 50, end: 69, pattern_start: 61, pattern_end: 65 }
+      { value: x, start: 54, end: 73, pattern_start: 65, pattern_end: 69 }
     )
   }
   throw makeError(
@@ -44,7 +44,7 @@ function go(x, y) {
     5,
     "go",
     "Pattern match failed, no pattern matched the value.",
-    { value: x, start: 72, end: 92, pattern_start: 83, pattern_end: 88 }
+    { value: x, start: 76, end: 96, pattern_start: 87, pattern_end: 92 }
   )
   
 }

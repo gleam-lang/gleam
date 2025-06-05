@@ -308,6 +308,17 @@ impl<'a> Generator<'a> {
             // Handled in collect_definitions
             Definition::CustomType(CustomType { .. }) => None,
 
+            // If a custom type is unused then we don't need to generate code for it
+            Definition::ModuleConstant(ModuleConstant { location, .. })
+            | Definition::Function(Function { location, .. })
+                if self
+                    .module
+                    .unused_definition_positions
+                    .contains(&location.start) =>
+            {
+                None
+            }
+
             Definition::ModuleConstant(ModuleConstant {
                 publicity,
                 name,
@@ -413,6 +424,16 @@ impl<'a> Generator<'a> {
             .definitions
             .iter()
             .flat_map(|statement| match statement {
+                // If a custom type is unused then we don't need to generate code for it
+                Definition::CustomType(CustomType { location, .. })
+                    if self
+                        .module
+                        .unused_definition_positions
+                        .contains(&location.start) =>
+                {
+                    vec![]
+                }
+
                 Definition::CustomType(CustomType {
                     publicity,
                     constructors,

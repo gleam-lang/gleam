@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/blocks.rs
-expression: "\nfn go() {\n  \"one\"\n  \"two\"\n  \"three\"\n}\n"
+assertion_line: 114
+expression: "\npub fn go() {\n  \"one\"\n  \"two\"\n  \"three\"\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go() {
+pub fn go() {
   "one"
   "two"
   "three"
@@ -12,7 +14,7 @@ fn go() {
 
 
 ----- COMPILED JAVASCRIPT
-function go() {
+export function go() {
   "one";
   "two";
   return "three";

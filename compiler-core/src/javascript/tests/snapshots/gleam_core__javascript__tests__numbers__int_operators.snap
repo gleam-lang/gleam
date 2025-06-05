@@ -1,26 +1,28 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-expression: "\nfn go() {\n    1 + 1 // => 2\n    5 - 1 // => 4\n    5 / 2 // => 2\n    3 * 3 // => 9\n    5 % 2 // => 1\n    2 > 1  // => True\n    2 < 1  // => False\n    2 >= 1 // => True\n    2 <= 1 // => False\n}\n"
+assertion_line: 55
+expression: "\npub fn go() {\n  1 + 1 // => 2\n  5 - 1 // => 4\n  5 / 2 // => 2\n  3 * 3 // => 9\n  5 % 2 // => 1\n  2 > 1  // => True\n  2 < 1  // => False\n  2 >= 1 // => True\n  2 <= 1 // => False\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go() {
-    1 + 1 // => 2
-    5 - 1 // => 4
-    5 / 2 // => 2
-    3 * 3 // => 9
-    5 % 2 // => 1
-    2 > 1  // => True
-    2 < 1  // => False
-    2 >= 1 // => True
-    2 <= 1 // => False
+pub fn go() {
+  1 + 1 // => 2
+  5 - 1 // => 4
+  5 / 2 // => 2
+  3 * 3 // => 9
+  5 % 2 // => 1
+  2 > 1  // => True
+  2 < 1  // => False
+  2 >= 1 // => True
+  2 <= 1 // => False
 }
 
 
 ----- COMPILED JAVASCRIPT
 import { remainderInt, divideInt } from "../gleam.mjs";
 
-function go() {
+export function go() {
   1 + 1;
   5 - 1;
   divideInt(5, 2);
