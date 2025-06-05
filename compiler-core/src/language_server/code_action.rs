@@ -35,7 +35,7 @@ use super::{
     edits::{add_newlines_after_import, get_import_edit, position_of_first_definition_if_import},
     engine::{overlaps, within},
     files::FileSystemProxy,
-    reference::find_variable_references,
+    reference::{VariableReferenceKind, find_variable_references},
     src_span_to_lsp_range, url_from_path,
 };
 
@@ -5883,11 +5883,10 @@ impl<'a> InlineVariable<'a> {
     }
 
     fn maybe_inline(&mut self, location: SrcSpan) {
-        let variable_location =
-            match find_variable_references(&self.module.ast, location).as_slice() {
-                [only_reference] => only_reference.location,
-                _ => return,
-            };
+        let reference = match find_variable_references(&self.module.ast, location).as_slice() {
+            [only_reference] => *only_reference,
+            _ => return,
+        };
 
         let Some(ast::Statement::Assignment(assignment)) =
             self.module.ast.find_statement(location.start)
@@ -5919,7 +5918,15 @@ impl<'a> InlineVariable<'a> {
             .get(value_location.start as usize..value_location.end as usize)
             .expect("Span is valid");
 
-        self.edits.replace(variable_location, value.into());
+        match reference.kind {
+            VariableReferenceKind::Variable => {
+                self.edits.replace(reference.location, value.into());
+            }
+            VariableReferenceKind::LabelShorthand => {
+                self.edits
+                    .insert(reference.location.end, format!(" {value}"));
+            }
+        }
 
         let mut location = assignment.location;
 
