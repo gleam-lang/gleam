@@ -1,15 +1,17 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-expression: "\nfn go() {\n  2.4 *. { 3.5 +. 6.0 }\n}\n"
+assertion_line: 205
+expression: "\npub fn go() {\n  2.4 *. { 3.5 +. 6.0 }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go() {
+pub fn go() {
   2.4 *. { 3.5 +. 6.0 }
 }
 
 
 ----- COMPILED JAVASCRIPT
-function go() {
+export function go() {
   return 2.4 * (3.5 + 6.0);
 }

@@ -1,21 +1,23 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-expression: "\ntype Mine {\n  Mine(a: Int, b: Int)\n}\n\nconst labels = Mine(b: 2, a: 1)\nconst no_labels = Mine(3, 4)\n"
+assertion_line: 140
+expression: "\npub type Mine {\n  Mine(a: Int, b: Int)\n}\n\npub const labels = Mine(b: 2, a: 1)\npub const no_labels = Mine(3, 4)\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-type Mine {
+pub type Mine {
   Mine(a: Int, b: Int)
 }
 
-const labels = Mine(b: 2, a: 1)
-const no_labels = Mine(3, 4)
+pub const labels = Mine(b: 2, a: 1)
+pub const no_labels = Mine(3, 4)
 
 
 ----- COMPILED JAVASCRIPT
 import { CustomType as $CustomType } from "../gleam.mjs";
 
-class Mine extends $CustomType {
+export class Mine extends $CustomType {
   constructor(a, b) {
     super();
     this.a = a;
@@ -23,6 +25,6 @@ class Mine extends $CustomType {
   }
 }
 
-const labels = /* @__PURE__ */ new Mine(1, 2);
+export const labels = /* @__PURE__ */ new Mine(1, 2);
 
-const no_labels = /* @__PURE__ */ new Mine(3, 4);
+export const no_labels = /* @__PURE__ */ new Mine(3, 4);

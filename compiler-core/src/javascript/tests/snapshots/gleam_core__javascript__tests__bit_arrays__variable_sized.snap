@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-expression: "\nfn go(x, y) {\n  <<x:size(y)>>\n}\n"
+assertion_line: 242
+expression: "\npub fn go(x, y) {\n  <<x:size(y)>>\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(x, y) {
+pub fn go(x, y) {
   <<x:size(y)>>
 }
 
@@ -12,6 +14,6 @@ fn go(x, y) {
 ----- COMPILED JAVASCRIPT
 import { toBitArray, sizedInt } from "../gleam.mjs";
 
-function go(x, y) {
+export function go(x, y) {
   return toBitArray([sizedInt(x, y, true)]);
 }

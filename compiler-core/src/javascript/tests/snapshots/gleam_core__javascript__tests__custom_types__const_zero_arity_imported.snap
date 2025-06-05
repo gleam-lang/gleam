@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-expression: "import other\nconst x = other.Two\n"
+assertion_line: 104
+expression: "import other\npub const x = other.Two\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 -- other.gleam
@@ -8,10 +10,10 @@ pub type One { Two }
 
 -- main.gleam
 import other
-const x = other.Two
+pub const x = other.Two
 
 
 ----- COMPILED JAVASCRIPT
 import * as $other from "../other.mjs";
 
-const x = /* @__PURE__ */ new $other.Two();
+export const x = /* @__PURE__ */ new $other.Two();

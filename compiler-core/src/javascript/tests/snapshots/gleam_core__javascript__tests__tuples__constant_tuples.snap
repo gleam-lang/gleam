@@ -1,20 +1,22 @@
 ---
 source: compiler-core/src/javascript/tests/tuples.rs
-expression: "\nconst a = \"Hello\"\nconst b = 1\nconst c = 2.0\nconst e = #(\"bob\", \"dug\")\n        "
+assertion_line: 85
+expression: "\npub const a = \"Hello\"\npub const b = 1\npub const c = 2.0\npub const e = #(\"bob\", \"dug\")\n        "
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-const a = "Hello"
-const b = 1
-const c = 2.0
-const e = #("bob", "dug")
+pub const a = "Hello"
+pub const b = 1
+pub const c = 2.0
+pub const e = #("bob", "dug")
         
 
 ----- COMPILED JAVASCRIPT
-const a = "Hello";
+export const a = "Hello";
 
-const b = 1;
+export const b = 1;
 
-const c = 2.0;
+export const c = 2.0;
 
-const e = ["bob", "dug"];
+export const e = ["bob", "dug"];

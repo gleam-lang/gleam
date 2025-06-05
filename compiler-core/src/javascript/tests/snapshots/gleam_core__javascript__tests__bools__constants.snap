@@ -1,17 +1,19 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
-expression: "\nconst a = True\nconst b = False\nconst c = Nil\n"
+assertion_line: 18
+expression: "\npub const a = True\npub const b = False\npub const c = Nil\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-const a = True
-const b = False
-const c = Nil
+pub const a = True
+pub const b = False
+pub const c = Nil
 
 
 ----- COMPILED JAVASCRIPT
-const a = true;
+export const a = true;
 
-const b = false;
+export const b = false;
 
-const c = undefined;
+export const c = undefined;

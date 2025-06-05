@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
-expression: "\nfn go(a) {\n  case a {\n    True -> 1\n    False -> 0\n  }\n}\n"
+assertion_line: 114
+expression: "\npub fn go(a) {\n  case a {\n    True -> 1\n    False -> 0\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(a) {
+pub fn go(a) {
   case a {
     True -> 1
     False -> 0
@@ -13,7 +15,7 @@ fn go(a) {
 
 
 ----- COMPILED JAVASCRIPT
-function go(a) {
+export function go(a) {
   if (a) {
     return 1;
   } else {

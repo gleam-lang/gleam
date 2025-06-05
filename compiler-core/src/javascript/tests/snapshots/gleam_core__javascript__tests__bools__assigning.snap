@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
 assertion_line: 52
-expression: "\nfn go(x, y) {\n  let assert True = x\n  let assert False = x\n  let assert Nil = y\n}\n"
+expression: "\npub fn go(x, y) {\n  let assert True = x\n  let assert False = x\n  let assert Nil = y\n}\n"
 snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(x, y) {
+pub fn go(x, y) {
   let assert True = x
   let assert False = x
   let assert Nil = y
@@ -18,7 +18,7 @@ import { makeError } from "../gleam.mjs";
 
 const FILEPATH = "src/module.gleam";
 
-function go(x, y) {
+export function go(x, y) {
   if (!x) {
     throw makeError(
       "let_assert",
@@ -27,7 +27,7 @@ function go(x, y) {
       3,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x, start: 17, end: 36, pattern_start: 28, pattern_end: 32 }
+      { value: x, start: 21, end: 40, pattern_start: 32, pattern_end: 36 }
     )
   }
   throw makeError(
@@ -37,7 +37,7 @@ function go(x, y) {
     4,
     "go",
     "Pattern match failed, no pattern matched the value.",
-    { value: x, start: 39, end: 59, pattern_start: 50, pattern_end: 55 }
+    { value: x, start: 43, end: 63, pattern_start: 54, pattern_end: 59 }
   )
   
 }

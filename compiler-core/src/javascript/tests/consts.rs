@@ -48,7 +48,7 @@ pub type X {
 }
 
 pub const x = X(1, ["1"])
-const y = X(1, [])
+pub const y = X(1, [])
         "#
     );
 }
@@ -62,7 +62,7 @@ pub type X {
 }
 
 pub const x = [X(1, ["1"])]
-const y = [X(1, ["1"])]
+pub const y = [X(1, ["1"])]
         "#
     );
 }
@@ -76,7 +76,7 @@ pub type X {
 }
 
 pub const x = #(X(1, ["1"]))
-const y = #(X(1, ["1"]))
+pub const y = #(X(1, ["1"]))
         "#
     );
 }

@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-expression: "\nfn go() {\n  case True, False {\n    True, True -> 1\n    _, _ -> 0\n  }\n}\n"
+assertion_line: 138
+expression: "\npub fn go() {\n  case True, False {\n    True, True -> 1\n    _, _ -> 0\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go() {
+pub fn go() {
   case True, False {
     True, True -> 1
     _, _ -> 0
@@ -13,7 +15,7 @@ fn go() {
 
 
 ----- COMPILED JAVASCRIPT
-function go() {
+export function go() {
   let $ = true;
   let $1 = false;
   return 0;

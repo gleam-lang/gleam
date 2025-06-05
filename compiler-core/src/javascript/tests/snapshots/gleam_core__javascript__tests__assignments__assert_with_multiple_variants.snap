@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
 assertion_line: 321
-expression: "\ntype Wibble {\n    Wibble(Int)\n    Wobble(Int)\n    Woo(Int)\n}\n\nfn go() {\n  let assert Wobble(n) = todo\n  n\n}\n"
+expression: "\ntype Wibble {\n    Wibble(Int)\n    Wobble(Int)\n    Woo(Int)\n}\n\npub fn go() {\n  let assert Wobble(n) = todo\n  n\n}\n"
 snapshot_kind: text
 ---
 ----- SOURCE CODE
@@ -12,7 +12,7 @@ type Wibble {
     Woo(Int)
 }
 
-fn go() {
+pub fn go() {
   let assert Wobble(n) = todo
   n
 }
@@ -44,7 +44,7 @@ class Woo extends $CustomType {
   }
 }
 
-function go() {
+export function go() {
   let _block;
   throw makeError(
     "todo",
@@ -64,7 +64,7 @@ function go() {
       9,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: $, start: 75, end: 102, pattern_start: 86, pattern_end: 95 }
+      { value: $, start: 79, end: 106, pattern_start: 90, pattern_end: 99 }
     )
   }
   let n = $[0];

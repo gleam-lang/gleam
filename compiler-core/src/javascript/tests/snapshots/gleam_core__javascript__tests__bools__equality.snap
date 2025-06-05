@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
-expression: "\nfn go(a, b) {\n  a == True\n  a != True\n  a == False\n  a != False\n  a == a\n  a != a\n  b == Nil\n  b != Nil\n  b == b\n}\n"
+assertion_line: 95
+expression: "\npub fn go(a, b) {\n  a == True\n  a != True\n  a == False\n  a != False\n  a == a\n  a != a\n  b == Nil\n  b != Nil\n  b == b\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(a, b) {
+pub fn go(a, b) {
   a == True
   a != True
   a == False
@@ -18,7 +20,7 @@ fn go(a, b) {
 
 
 ----- COMPILED JAVASCRIPT
-function go(a, b) {
+export function go(a, b) {
   a === true;
   a !== true;
   a === false;

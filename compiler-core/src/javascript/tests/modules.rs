@@ -60,7 +60,7 @@ fn alias_aliased_constant() {
         ("rocket_ship", r#"pub const x = 1"#),
         r#"
 import rocket_ship.{ x as y }
-const z = y
+pub const z = y
 "#,
     );
 }
@@ -71,7 +71,7 @@ fn renamed_module() {
         ("x", r#"pub const v = 1"#),
         r#"
 import x as y
-const z = y.v
+pub const z = y.v
 "#,
     );
 }

@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/modules.rs
-expression: "\nimport rocket_ship.{ x as y }\nconst z = y\n"
+assertion_line: 59
+expression: "\nimport rocket_ship.{ x as y }\npub const z = y\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 -- rocket_ship.gleam
@@ -9,11 +11,11 @@ pub const x = 1
 -- main.gleam
 
 import rocket_ship.{ x as y }
-const z = y
+pub const z = y
 
 
 ----- COMPILED JAVASCRIPT
 import * as $rocket_ship from "../rocket_ship.mjs";
 import { x as y } from "../rocket_ship.mjs";
 
-const z = y;
+export const z = y;

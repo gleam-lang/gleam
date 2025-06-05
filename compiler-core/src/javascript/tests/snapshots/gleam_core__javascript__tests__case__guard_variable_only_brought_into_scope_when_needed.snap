@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-expression: "\nfn go(x) {\n  case x {\n    // We want `a` to be defined before the guard check, and\n    // `b` to be defined only if the predicate on a matches!\n    [a, b] if a == 1 -> a + b\n    _ -> 2\n  }\n}\n"
+assertion_line: 34
+expression: "\npub fn go(x) {\n  case x {\n    // We want `a` to be defined before the guard check, and\n    // `b` to be defined only if the predicate on a matches!\n    [a, b] if a == 1 -> a + b\n    _ -> 2\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(x) {
+pub fn go(x) {
   case x {
     // We want `a` to be defined before the guard check, and
     // `b` to be defined only if the predicate on a matches!
@@ -17,7 +19,7 @@ fn go(x) {
 ----- COMPILED JAVASCRIPT
 import { Empty as $Empty } from "../gleam.mjs";
 
-function go(x) {
+export function go(x) {
   if (x instanceof $Empty) {
     return 2;
   } else {

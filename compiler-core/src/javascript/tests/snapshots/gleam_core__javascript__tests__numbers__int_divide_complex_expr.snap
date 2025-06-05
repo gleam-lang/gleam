@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-expression: "\nfn go() {\n  case 1 >= 0 {\n    True -> 2\n    False -> 4\n  } / 2\n}\n"
+assertion_line: 74
+expression: "\npub fn go() {\n  case 1 >= 0 {\n    True -> 2\n    False -> 4\n  } / 2\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go() {
+pub fn go() {
   case 1 >= 0 {
     True -> 2
     False -> 4
@@ -15,7 +17,7 @@ fn go() {
 ----- COMPILED JAVASCRIPT
 import { divideInt } from "../gleam.mjs";
 
-function go() {
+export function go() {
   return divideInt(
     (() => {
       let $ = 1 >= 0;

@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/strings.rs
-expression: "\nfn go(a) {\n  case a {\n    \"\" -> 0\n    \"one\" -> 1\n    \"two\" -> 2\n    _ -> 3\n  }\n}\n"
+assertion_line: 84
+expression: "\npub fn go(a) {\n  case a {\n    \"\" -> 0\n    \"one\" -> 1\n    \"two\" -> 2\n    _ -> 3\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(a) {
+pub fn go(a) {
   case a {
     "" -> 0
     "one" -> 1
@@ -15,7 +17,7 @@ fn go(a) {
 
 
 ----- COMPILED JAVASCRIPT
-function go(a) {
+export function go(a) {
   if (a === "") {
     return 0;
   } else if (a === "one") {

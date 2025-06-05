@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/consts.rs
-expression: "\npub type X {\n  X(Int, List(String))\n}\n\npub const x = X(1, [\"1\"])\nconst y = X(1, [])\n        "
+assertion_line: 44
+expression: "\npub type X {\n  X(Int, List(String))\n}\n\npub const x = X(1, [\"1\"])\npub const y = X(1, [])\n        "
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -9,7 +11,7 @@ pub type X {
 }
 
 pub const x = X(1, ["1"])
-const y = X(1, [])
+pub const y = X(1, [])
         
 
 ----- COMPILED JAVASCRIPT
@@ -25,4 +27,4 @@ export class X extends $CustomType {
 
 export const x = /* @__PURE__ */ new X(1, /* @__PURE__ */ toList(["1"]));
 
-const y = /* @__PURE__ */ new X(1, /* @__PURE__ */ toList([]));
+export const y = /* @__PURE__ */ new X(1, /* @__PURE__ */ toList([]));

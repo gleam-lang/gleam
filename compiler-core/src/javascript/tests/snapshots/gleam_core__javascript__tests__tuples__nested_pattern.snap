@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/tuples.rs
-expression: "\nfn go(x) {\n  case x {\n    #(2, #(a, b)) -> a + b\n    _ -> 1\n  }\n}\n"
+assertion_line: 137
+expression: "\npub fn go(x) {\n  case x {\n    #(2, #(a, b)) -> a + b\n    _ -> 1\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(x) {
+pub fn go(x) {
   case x {
     #(2, #(a, b)) -> a + b
     _ -> 1
@@ -13,7 +15,7 @@ fn go(x) {
 
 
 ----- COMPILED JAVASCRIPT
-function go(x) {
+export function go(x) {
   let $ = x[0];
   if ($ === 2) {
     let a = x[1][0];

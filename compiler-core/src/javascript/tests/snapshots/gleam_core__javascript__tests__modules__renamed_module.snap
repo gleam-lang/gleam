@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/modules.rs
-expression: "\nimport x as y\nconst z = y.v\n"
+assertion_line: 70
+expression: "\nimport x as y\npub const z = y.v\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 -- x.gleam
@@ -9,10 +11,10 @@ pub const v = 1
 -- main.gleam
 
 import x as y
-const z = y.v
+pub const z = y.v
 
 
 ----- COMPILED JAVASCRIPT
 import * as $y from "../x.mjs";
 
-const z = $y.v;
+export const z = $y.v;

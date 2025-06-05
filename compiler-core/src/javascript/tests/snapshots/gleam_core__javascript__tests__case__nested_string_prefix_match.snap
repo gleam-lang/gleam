@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-expression: "\nfn main() {\n  case Ok([\"a\", \"b c\", \"d\"]) {\n    Ok([\"a\", \"b \" <> _, \"d\"]) -> 1\n    _ -> 1\n  }\n}\n"
+assertion_line: 258
+expression: "\npub fn main() {\n  case Ok([\"a\", \"b c\", \"d\"]) {\n    Ok([\"a\", \"b \" <> _, \"d\"]) -> 1\n    _ -> 1\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn main() {
+pub fn main() {
   case Ok(["a", "b c", "d"]) {
     Ok(["a", "b " <> _, "d"]) -> 1
     _ -> 1
@@ -15,7 +17,7 @@ fn main() {
 ----- COMPILED JAVASCRIPT
 import { Ok, toList, Empty as $Empty } from "../gleam.mjs";
 
-function main() {
+export function main() {
   let $ = new Ok(toList(["a", "b c", "d"]));
   let $1 = $[0];
   if ($1 instanceof $Empty) {

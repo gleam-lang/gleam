@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
 assertion_line: 308
-expression: "\nfn main(x) {\n  let assert 09_179.1 = x\n}\n"
+expression: "\npub fn main(x) {\n  let assert 09_179.1 = x\n}\n"
 snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn main(x) {
+pub fn main(x) {
   let assert 09_179.1 = x
 }
 
@@ -16,7 +16,7 @@ import { makeError } from "../gleam.mjs";
 
 const FILEPATH = "src/module.gleam";
 
-function main(x) {
+export function main(x) {
   if (x !== 9_179.1) {
     throw makeError(
       "let_assert",
@@ -25,7 +25,7 @@ function main(x) {
       3,
       "main",
       "Pattern match failed, no pattern matched the value.",
-      { value: x, start: 16, end: 39, pattern_start: 27, pattern_end: 35 }
+      { value: x, start: 20, end: 43, pattern_start: 31, pattern_end: 39 }
     )
   }
   return x;

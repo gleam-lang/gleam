@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/blocks.rs
-expression: "\nfn b() {\n  {\n    1 + 2\n  }\n}\n"
+assertion_line: 208
+expression: "\npub fn b() {\n  {\n    1 + 2\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn b() {
+pub fn b() {
   {
     1 + 2
   }
@@ -12,6 +14,6 @@ fn b() {
 
 
 ----- COMPILED JAVASCRIPT
-function b() {
+export function b() {
   return 1 + 2;
 }

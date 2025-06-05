@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-expression: "\nfn go(x, y) {\n  case x, y {\n    True, _ | _, True -> 1\n    _, _ -> 0\n  }\n}\n"
+assertion_line: 109
+expression: "\npub fn go(x, y) {\n  case x, y {\n    True, _ | _, True -> 1\n    _, _ -> 0\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(x, y) {
+pub fn go(x, y) {
   case x, y {
     True, _ | _, True -> 1
     _, _ -> 0
@@ -13,7 +15,7 @@ fn go(x, y) {
 
 
 ----- COMPILED JAVASCRIPT
-function go(x, y) {
+export function go(x, y) {
   if (x) {
     return 1;
   } else if (y) {

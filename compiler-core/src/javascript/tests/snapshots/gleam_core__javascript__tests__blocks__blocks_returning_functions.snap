@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/blocks.rs
-expression: "\nfn b() {\n  {\n    fn(cb) { cb(1) }\n  }\n  {\n    fn(cb) { cb(2) }\n  }\n  3\n}\n"
+assertion_line: 172
+expression: "\npub fn b() {\n  {\n    fn(cb) { cb(1) }\n  }\n  {\n    fn(cb) { cb(2) }\n  }\n  3\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn b() {
+pub fn b() {
   {
     fn(cb) { cb(1) }
   }
@@ -16,7 +18,7 @@ fn b() {
 
 
 ----- COMPILED JAVASCRIPT
-function b() {
+export function b() {
   ((cb) => { return cb(1); });
   ((cb) => { return cb(2); });
   return 3;

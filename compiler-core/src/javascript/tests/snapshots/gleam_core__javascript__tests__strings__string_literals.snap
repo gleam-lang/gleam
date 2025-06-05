@@ -1,15 +1,17 @@
 ---
 source: compiler-core/src/javascript/tests/strings.rs
-expression: "\nfn go() {\n  \"Hello, Gleam!\"\n}\n"
+assertion_line: 49
+expression: "\npub fn go() {\n  \"Hello, Gleam!\"\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go() {
+pub fn go() {
   "Hello, Gleam!"
 }
 
 
 ----- COMPILED JAVASCRIPT
-function go() {
+export function go() {
   return "Hello, Gleam!";
 }
