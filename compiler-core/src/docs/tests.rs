@@ -796,11 +796,11 @@ fn output_of_search_data_json() {
 
 const ONLY_LINKS: PrintOptions = PrintOptions {
     print_highlighting: false,
-    print_links: true,
+    print_html: true,
 };
 const NONE: PrintOptions = PrintOptions {
     print_highlighting: false,
-    print_links: false,
+    print_html: false,
 };
 
 #[test]
