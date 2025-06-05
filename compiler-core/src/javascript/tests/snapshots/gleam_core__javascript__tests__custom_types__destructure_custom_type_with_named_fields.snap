@@ -1,16 +1,16 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 278
-expression: "\ntype Cat {\n  Cat(name: String, cuteness: Int)\n}\n\nfn go(cat) {\n  let Cat(x, y) = cat\n  let Cat(name: x, ..) = cat\n  let assert Cat(cuteness: 4, name: x) = cat\n  x\n}\n\n"
+assertion_line: 262
+expression: "\npub type Cat {\n  Cat(name: String, cuteness: Int)\n}\n\npub fn go(cat) {\n  let Cat(x, y) = cat\n  let Cat(name: x, ..) = cat\n  let assert Cat(cuteness: 4, name: x) = cat\n  x\n}\n\n"
 snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-type Cat {
+pub type Cat {
   Cat(name: String, cuteness: Int)
 }
 
-fn go(cat) {
+pub fn go(cat) {
   let Cat(x, y) = cat
   let Cat(name: x, ..) = cat
   let assert Cat(cuteness: 4, name: x) = cat
@@ -24,7 +24,7 @@ import { CustomType as $CustomType, makeError } from "../gleam.mjs";
 
 const FILEPATH = "src/module.gleam";
 
-class Cat extends $CustomType {
+export class Cat extends $CustomType {
   constructor(name, cuteness) {
     super();
     this.name = name;
@@ -32,7 +32,7 @@ class Cat extends $CustomType {
   }
 }
 
-function go(cat) {
+export function go(cat) {
   let x = cat.name;
   let y = cat.cuteness;
   let x$1 = cat.name;
@@ -44,7 +44,7 @@ function go(cat) {
       9,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: cat, start: 116, end: 158, pattern_start: 127, pattern_end: 152 }
+      { value: cat, start: 124, end: 166, pattern_start: 135, pattern_end: 160 }
     )
   }
   let x$2 = cat.name;

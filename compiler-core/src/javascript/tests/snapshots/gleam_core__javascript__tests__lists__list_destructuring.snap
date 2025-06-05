@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/lists.rs
 assertion_line: 62
-expression: "\nfn go(x, y) {\n  let assert [] = x\n  let assert [a] = x\n  let assert [1, 2] = x\n  let assert [_, #(3, b)] = y\n  let assert [head, ..tail] = y\n}\n"
+expression: "\npub fn go(x, y) {\n  let assert [] = x\n  let assert [a] = x\n  let assert [1, 2] = x\n  let assert [_, #(3, b)] = y\n  let assert [head, ..tail] = y\n}\n"
 snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(x, y) {
+pub fn go(x, y) {
   let assert [] = x
   let assert [a] = x
   let assert [1, 2] = x
@@ -20,7 +20,7 @@ import { Empty as $Empty, NonEmpty as $NonEmpty, makeError } from "../gleam.mjs"
 
 const FILEPATH = "src/module.gleam";
 
-function go(x, y) {
+export function go(x, y) {
   if (x instanceof $NonEmpty) {
     throw makeError(
       "let_assert",
@@ -29,7 +29,7 @@ function go(x, y) {
       3,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x, start: 17, end: 34, pattern_start: 28, pattern_end: 30 }
+      { value: x, start: 21, end: 38, pattern_start: 32, pattern_end: 34 }
     )
   }
   if (x instanceof $Empty || x.tail instanceof $NonEmpty) {
@@ -40,7 +40,7 @@ function go(x, y) {
       4,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x, start: 37, end: 55, pattern_start: 48, pattern_end: 51 }
+      { value: x, start: 41, end: 59, pattern_start: 52, pattern_end: 55 }
     )
   }
   let a = x.head;
@@ -58,7 +58,7 @@ function go(x, y) {
       5,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x, start: 58, end: 79, pattern_start: 69, pattern_end: 75 }
+      { value: x, start: 62, end: 83, pattern_start: 73, pattern_end: 79 }
     )
   }
   if (
@@ -74,7 +74,7 @@ function go(x, y) {
       6,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: y, start: 82, end: 109, pattern_start: 93, pattern_end: 105 }
+      { value: y, start: 86, end: 113, pattern_start: 97, pattern_end: 109 }
     )
   }
   let b = y.tail.head[1];
@@ -86,7 +86,7 @@ function go(x, y) {
       7,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: y, start: 112, end: 141, pattern_start: 123, pattern_end: 137 }
+      { value: y, start: 116, end: 145, pattern_start: 127, pattern_end: 141 }
     )
   }
   let head = y.head;

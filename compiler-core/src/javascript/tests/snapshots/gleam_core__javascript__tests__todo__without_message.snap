@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/todo.rs
 assertion_line: 5
-expression: "\nfn go() {\n    todo\n}\n"
+expression: "\npub fn go() {\n    todo\n}\n"
 snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go() {
+pub fn go() {
     todo
 }
 
@@ -16,7 +16,7 @@ import { makeError } from "../gleam.mjs";
 
 const FILEPATH = "src/module.gleam";
 
-function go() {
+export function go() {
   throw makeError(
     "todo",
     FILEPATH,

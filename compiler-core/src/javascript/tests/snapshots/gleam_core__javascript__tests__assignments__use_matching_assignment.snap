@@ -1,12 +1,14 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
-expression: "\nfn fun(f) { f(#(2, 4)) }\n\nfn go() {\n  use #(_, n) <- fun\n  n\n}\n"
+assertion_line: 359
+expression: "\nfn fun(f) { f(#(2, 4)) }\n\npub fn go() {\n  use #(_, n) <- fun\n  n\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
 fn fun(f) { f(#(2, 4)) }
 
-fn go() {
+pub fn go() {
   use #(_, n) <- fun
   n
 }
@@ -17,7 +19,7 @@ function fun(f) {
   return f([2, 4]);
 }
 
-function go() {
+export function go() {
   return fun(
     (_use0) => {
       let n = _use0[1];

@@ -19,7 +19,7 @@ pub fn main() {
 fn tuple_and_guard() {
     assert_js!(
         r#"
-fn go(x) {
+pub fn go(x) {
   case #(1, 2) {
     #(1, a) if a == 2 -> 1
     #(_, _) -> 2
@@ -33,7 +33,7 @@ fn go(x) {
 fn guard_variable_only_brought_into_scope_when_needed() {
     assert_js!(
         r#"
-fn go(x) {
+pub fn go(x) {
   case x {
     // We want `a` to be defined before the guard check, and
     // `b` to be defined only if the predicate on a matches!
@@ -66,7 +66,7 @@ pub fn main() {
 fn pointless() {
     assert_js!(
         r#"
-fn go(x) {
+pub fn go(x) {
   case x {
     _ -> x
   }
@@ -80,7 +80,7 @@ fn go(x) {
 fn following_todo() {
     assert_js!(
         r#"
-fn go(x) {
+pub fn go(x) {
   case x {
     True -> todo
     _ -> 1
@@ -94,7 +94,7 @@ fn go(x) {
 fn multi_subject_catch_all() {
     assert_js!(
         r#"
-fn go(x, y) {
+pub fn go(x, y) {
   case x, y {
     True, True -> 1
     _, _ -> 0
@@ -108,7 +108,7 @@ fn go(x, y) {
 fn multi_subject_or() {
     assert_js!(
         r#"
-fn go(x, y) {
+pub fn go(x, y) {
   case x, y {
     True, _ | _, True -> 1
     _, _ -> 0
@@ -122,7 +122,7 @@ fn go(x, y) {
 fn multi_subject_no_catch_all() {
     assert_js!(
         r#"
-fn go(x, y) {
+pub fn go(x, y) {
   case x, y {
     True, _ -> 1
     _, True -> 2
@@ -137,7 +137,7 @@ fn go(x, y) {
 fn multi_subject_subject_assignments() {
     assert_js!(
         r#"
-fn go() {
+pub fn go() {
   case True, False {
     True, True -> 1
     _, _ -> 0
@@ -151,7 +151,7 @@ fn go() {
 fn assignment() {
     assert_js!(
         r#"
-fn go(x) {
+pub fn go(x) {
   let y = case x {
     True -> 1
     _ -> 0
@@ -166,7 +166,7 @@ fn go(x) {
 fn preassign_assignment() {
     assert_js!(
         r#"
-fn go(x) {
+pub fn go(x) {
   let y = case x() {
     True -> 1
     _ -> 0
@@ -182,7 +182,7 @@ fn go(x) {
 fn pipe() {
     assert_js!(
         r#"
-fn go(x, f) {
+pub fn go(x, f) {
   case x |> f {
     0 -> 1
     _ -> 2
@@ -196,7 +196,7 @@ fn go(x, f) {
 fn result() {
     assert_js!(
         r#"
-fn go(x) {
+pub fn go(x) {
   case x {
     Ok(_) -> 1
     Error(_) -> 0
@@ -211,7 +211,7 @@ fn go(x) {
 fn called_case() {
     assert_js!(
         r#"
-fn go(x, y) {
+pub fn go(x, y) {
   case x {
     0 -> y
     _ -> y
@@ -226,7 +226,7 @@ fn go(x, y) {
 fn case_local_var_in_tuple() {
     assert_js!(
         r#"
-fn go(x, y) {
+pub fn go(x, y) {
   let z = False
   case True {
     x if #(x, z) == #(True, False) -> x
@@ -242,7 +242,7 @@ fn go(x, y) {
 fn case_branches_guards_are_wrapped_in_parentheses() {
     assert_js!(
         r#"
-fn anything() -> a {
+pub fn anything() -> a {
   case [] {
     [a] if False || True -> a
     _ -> anything()
@@ -257,7 +257,7 @@ fn anything() -> a {
 fn nested_string_prefix_match() {
     assert_js!(
         r#"
-fn main() {
+pub fn main() {
   case Ok(["a", "b c", "d"]) {
     Ok(["a", "b " <> _, "d"]) -> 1
     _ -> 1
@@ -272,7 +272,7 @@ fn main() {
 fn nested_string_prefix_match_that_would_crash_on_js() {
     assert_js!(
         r#"
-fn main() {
+pub fn main() {
   case Ok(["b c", "d"]) {
     Ok(["b " <> _, "d"]) -> 1
     _ -> 1
@@ -379,7 +379,7 @@ pub fn main() {
 fn record_update_in_pipeline_in_case_clause() {
     assert_js!(
         "
-type Wibble {
+pub type Wibble {
   Wibble(wibble: Int, wobble: Int)
 }
 
@@ -387,7 +387,7 @@ fn identity(x) {
   x
 }
 
-fn go(x) {
+pub fn go(x) {
   case x {
     Wibble(1, _) -> Wibble(..x, wibble: 4) |> identity
     Wibble(_, 3) -> Wibble(..x, wobble: 10) |> identity

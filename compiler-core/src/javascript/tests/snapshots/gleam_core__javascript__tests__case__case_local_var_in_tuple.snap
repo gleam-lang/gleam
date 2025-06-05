@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-expression: "\nfn go(x, y) {\n  let z = False\n  case True {\n    x if #(x, z) == #(True, False) -> x\n    _ -> False\n  }\n}\n"
+assertion_line: 227
+expression: "\npub fn go(x, y) {\n  let z = False\n  case True {\n    x if #(x, z) == #(True, False) -> x\n    _ -> False\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(x, y) {
+pub fn go(x, y) {
   let z = False
   case True {
     x if #(x, z) == #(True, False) -> x
@@ -16,7 +18,7 @@ fn go(x, y) {
 ----- COMPILED JAVASCRIPT
 import { isEqual } from "../gleam.mjs";
 
-function go(x, y) {
+export function go(x, y) {
   let z = false;
   let $ = true;
   let x$1 = $;

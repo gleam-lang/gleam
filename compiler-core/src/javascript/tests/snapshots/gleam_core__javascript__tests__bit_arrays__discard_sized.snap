@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
 assertion_line: 1105
-expression: "\nfn go(x) {\n  let assert <<_:16, _:8>> = x\n  let assert <<_:16-little-signed, _:8>> = x\n}\n"
+expression: "\npub fn go(x) {\n  let assert <<_:16, _:8>> = x\n  let assert <<_:16-little-signed, _:8>> = x\n}\n"
 snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(x) {
+pub fn go(x) {
   let assert <<_:16, _:8>> = x
   let assert <<_:16-little-signed, _:8>> = x
 }
@@ -17,7 +17,7 @@ import { makeError } from "../gleam.mjs";
 
 const FILEPATH = "src/module.gleam";
 
-function go(x) {
+export function go(x) {
   if (x.bitSize !== 24) {
     throw makeError(
       "let_assert",
@@ -26,7 +26,7 @@ function go(x) {
       3,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x, start: 14, end: 42, pattern_start: 25, pattern_end: 38 }
+      { value: x, start: 18, end: 46, pattern_start: 29, pattern_end: 42 }
     )
   }
   if (x.bitSize !== 24) {
@@ -37,7 +37,7 @@ function go(x) {
       4,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x, start: 45, end: 87, pattern_start: 56, pattern_end: 83 }
+      { value: x, start: 49, end: 91, pattern_start: 60, pattern_end: 87 }
     )
   }
   return x;

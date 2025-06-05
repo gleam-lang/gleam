@@ -1,11 +1,13 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-expression: "\nconst x = 09_179\n"
+assertion_line: 276
+expression: "\npub const x = 09_179\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-const x = 09_179
+pub const x = 09_179
 
 
 ----- COMPILED JAVASCRIPT
-const x = 9_179;
+export const x = 9_179;

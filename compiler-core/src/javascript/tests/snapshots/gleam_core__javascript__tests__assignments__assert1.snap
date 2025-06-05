@@ -1,18 +1,18 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
 assertion_line: 21
-expression: "fn go(x) { let assert #(1, 2) = x }"
+expression: "pub fn go(x) { let assert #(1, 2) = x }"
 snapshot_kind: text
 ---
 ----- SOURCE CODE
-fn go(x) { let assert #(1, 2) = x }
+pub fn go(x) { let assert #(1, 2) = x }
 
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
 const FILEPATH = "src/module.gleam";
 
-function go(x) {
+export function go(x) {
   if (x[1] !== 2 || x[0] !== 1) {
     throw makeError(
       "let_assert",
@@ -21,7 +21,7 @@ function go(x) {
       1,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x, start: 11, end: 33, pattern_start: 22, pattern_end: 29 }
+      { value: x, start: 15, end: 37, pattern_start: 26, pattern_end: 33 }
     )
   }
   return x;

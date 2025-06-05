@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
 assertion_line: 1587
-expression: "\nfn go(x) {\n  let assert <<_, a:2-bytes>> = x\n  let assert <<_, b:bytes-size(2)>> = x\n}\n"
+expression: "\npub fn go(x) {\n  let assert <<_, a:2-bytes>> = x\n  let assert <<_, b:bytes-size(2)>> = x\n}\n"
 snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(x) {
+pub fn go(x) {
   let assert <<_, a:2-bytes>> = x
   let assert <<_, b:bytes-size(2)>> = x
 }
@@ -17,7 +17,7 @@ import { makeError, bitArraySlice } from "../gleam.mjs";
 
 const FILEPATH = "src/module.gleam";
 
-function go(x) {
+export function go(x) {
   if (x.bitSize !== 24) {
     throw makeError(
       "let_assert",
@@ -26,7 +26,7 @@ function go(x) {
       3,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x, start: 14, end: 45, pattern_start: 25, pattern_end: 41 }
+      { value: x, start: 18, end: 49, pattern_start: 29, pattern_end: 45 }
     )
   }
   let a = bitArraySlice(x, 8, 24);
@@ -38,7 +38,7 @@ function go(x) {
       4,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x, start: 48, end: 85, pattern_start: 59, pattern_end: 81 }
+      { value: x, start: 52, end: 89, pattern_start: 63, pattern_end: 85 }
     )
   }
   let b = bitArraySlice(x, 8, 24);

@@ -1,17 +1,19 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-expression: "\nfn go() {\n  1.0 != 2.0\n  1.0 == 2.0\n}\n"
+assertion_line: 181
+expression: "\npub fn go() {\n  1.0 != 2.0\n  1.0 == 2.0\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go() {
+pub fn go() {
   1.0 != 2.0
   1.0 == 2.0
 }
 
 
 ----- COMPILED JAVASCRIPT
-function go() {
+export function go() {
   1.0 !== 2.0;
   return 1.0 === 2.0;
 }
