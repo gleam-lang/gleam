@@ -27,14 +27,14 @@ use super::{
 #[derive(Clone, Copy)]
 pub struct PrintOptions {
     pub print_highlighting: bool,
-    pub print_links: bool,
+    pub print_html: bool,
 }
 
 impl PrintOptions {
     pub fn all() -> Self {
         Self {
             print_highlighting: true,
-            print_links: true,
+            print_html: true,
         }
     }
 }
@@ -478,14 +478,21 @@ impl Printer<'_> {
         module: &str,
         name: &EcoString,
     ) -> Document<'static> {
-        // Don't show where non-private types are defined (internal types!)
-        if !publicity.is_public() {
-            return self.comment("//internal");
-        }
-
         // There's no documentation page for the prelude
         if package == PRELUDE_PACKAGE_NAME && module == PRELUDE_MODULE_NAME {
             return self.title(name);
+        }
+
+        // Internal types don't get linked
+        if !publicity.is_public() {
+            let module = module.rsplit_once('/').unwrap_or(("", module)).1;
+            let qualified_name = docvec![
+                self.variable(EcoString::from(module)),
+                ".",
+                self.title(name)
+            ];
+
+            return self.span_with_title(qualified_name, "internal".into());
         }
 
         // Linking to a type within the same page
@@ -618,10 +625,6 @@ impl Printer<'_> {
         self.colour_span(keyword, "keyword")
     }
 
-    fn comment<'a>(&self, name: impl Documentable<'a>) -> Document<'a> {
-        self.colour_span(name, "comment")
-    }
-
     fn title<'a>(&self, name: impl Documentable<'a>) -> Document<'a> {
         self.colour_span(name, "title")
     }
@@ -651,7 +654,7 @@ impl Printer<'_> {
         name: impl Documentable<'a>,
         title: Option<EcoString>,
     ) -> Document<'a> {
-        if !self.options.print_links {
+        if !self.options.print_html {
             return name.to_doc();
         }
 
@@ -668,7 +671,7 @@ impl Printer<'_> {
     }
 
     fn span_with_title<'a>(&self, name: impl Documentable<'a>, title: EcoString) -> Document<'a> {
-        if !self.options.print_links {
+        if !self.options.print_html {
             return name.to_doc();
         }
 
