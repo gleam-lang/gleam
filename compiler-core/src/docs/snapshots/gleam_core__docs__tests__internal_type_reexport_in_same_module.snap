@@ -18,4 +18,4 @@ pub type External =
 
 --- External
 <pre><code>pub type External =
-  @internal.Internal</code></pre>
+  @internal Internal</code></pre>

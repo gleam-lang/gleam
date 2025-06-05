@@ -18,4 +18,4 @@ pub type External =
 
 --- External
 <pre><code><span class="hljs-keyword">pub type </span><span class="hljs-title">External</span> =
-  <span class="hljs-title">List</span>(<span class="hljs-comment">@internal.</span><span class="hljs-title">Internal</span>)</code></pre>
+  <span class="hljs-title">List</span>(<span class="hljs-comment">@internal </span><span class="hljs-title">Internal</span>)</code></pre>
