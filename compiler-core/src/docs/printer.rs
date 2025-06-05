@@ -480,7 +480,7 @@ impl Printer<'_> {
 
         // Internal types don't get linked
         if !publicity.is_public() {
-            return docvec![self.comment("@internal.".to_doc()), self.title(name)];
+            return docvec![self.comment("@internal ".to_doc()), self.title(name)];
         }
 
         // Linking to a type within the same page
