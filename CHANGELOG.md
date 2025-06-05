@@ -4,18 +4,24 @@
 
 ### Compiler
 
+### Build tool
+
+### Language server
+
+### Formatter
+
+### Bug fixes
+
+## v1.11.1 - 2025-06-05
+
+### Compiler
+
 - The displaying of internal types in HTML documentation has been improved.
   ([Louis Pilfold](https://github.com/lpil))
 
 - A warning is now emitted when the same module is imported
   multiple times into the same module with different aliases.
   ([Louis Pilfold](https://github.com/lpil))
-
-### Build tool
-
-### Language server
-
-### Formatter
 
 ### Bug fixes
 
