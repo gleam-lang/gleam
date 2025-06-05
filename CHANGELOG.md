@@ -4,6 +4,9 @@
 
 ### Compiler
 
+- The displaying of internal types in HTML documentation has been improved.
+  ([Louis Pilfold](https://github.com/lpil))
+
 - A warning is now emitted when the same module is imported
   multiple times into the same module with different aliases.
   ([Louis Pilfold](https://github.com/lpil))

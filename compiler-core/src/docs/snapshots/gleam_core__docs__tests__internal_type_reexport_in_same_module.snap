@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/docs/tests.rs
-assertion_line: 1070
+assertion_line: 1083
 expression: output
 snapshot_kind: text
 ---
@@ -17,4 +17,5 @@ pub type External =
 ---- TYPES
 
 --- External
-<pre><code>pub type External</code></pre>
+<pre><code>pub type External =
+  @internal.Internal</code></pre>

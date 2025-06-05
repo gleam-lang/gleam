@@ -295,11 +295,6 @@ impl Printer<'_> {
         type_: &Type,
         parameters: &[(SrcSpan, EcoString)],
     ) -> Document<'a> {
-        // Do not expose information about non-public types (internal types)
-        if type_.is_non_public_named_type() {
-            return docvec![self.keyword("pub type "), self.title(name)];
-        }
-
         let parameters = if parameters.is_empty() {
             nil()
         } else {
@@ -485,14 +480,7 @@ impl Printer<'_> {
 
         // Internal types don't get linked
         if !publicity.is_public() {
-            let module = module.rsplit_once('/').unwrap_or(("", module)).1;
-            let qualified_name = docvec![
-                self.variable(EcoString::from(module)),
-                ".",
-                self.title(name)
-            ];
-
-            return self.span_with_title(qualified_name, "internal".into());
+            return docvec![self.comment("@internal.".to_doc()), self.title(name)];
         }
 
         // Linking to a type within the same page
@@ -623,6 +611,10 @@ impl Printer<'_> {
 
     fn keyword<'a>(&self, keyword: impl Documentable<'a>) -> Document<'a> {
         self.colour_span(keyword, "keyword")
+    }
+
+    fn comment<'a>(&self, name: impl Documentable<'a>) -> Document<'a> {
+        self.colour_span(name, "comment")
     }
 
     fn title<'a>(&self, name: impl Documentable<'a>) -> Document<'a> {
