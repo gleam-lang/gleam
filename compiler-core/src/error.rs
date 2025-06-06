@@ -1,4 +1,5 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
+use crate::ast::Layer;
 use crate::build::{Origin, Outcome, Runtime, Target};
 use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
 use crate::strings::{to_snake_case, to_upper_camel_case};
@@ -2354,6 +2355,7 @@ Note: If the same type variable is used for multiple fields, all those fields ne
                     location,
                     name,
                     hint,
+                    suggestions
                 } => {
                     let label_text = match hint {
                         UnknownTypeHint::AlternativeTypes(types) => did_you_mean(name, types),
@@ -2378,7 +2380,10 @@ but no type in scope with that name."
                     Diagnostic {
                         title: "Unknown type".into(),
                         text,
-                        hint: None,
+                        hint: match label_text {
+                            None => suggestions.first().map(|suggestion| suggestion.suggest_unqualified_import(name, Layer::Type)),
+                            Some(_) => None
+                        },
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -2397,6 +2402,7 @@ but no type in scope with that name."
                     variables,
                     name,
                     type_with_name_in_scope,
+                    suggestions
                 } => {
                     let text = if *type_with_name_in_scope {
                         wrap_format!("`{name}` is a type, it cannot be used as a value.")
@@ -2412,7 +2418,7 @@ but no type in scope with that name."
                     Diagnostic {
                         title: "Unknown variable".into(),
                         text,
-                        hint: None,
+                        hint: suggestions.first().map(|suggestion| suggestion.suggest_unqualified_import(name, Layer::Value)),
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -2467,7 +2473,7 @@ Private types can only be used within the module that defines them.",
                 } => Diagnostic {
                     title: "Unknown module".into(),
                     text: format!("No module has been found with the name `{name}`."),
-                    hint: suggestions.first().map(|suggestion| suggestion.suggestion(name)),
+                    hint: suggestions.first().map(|suggestion| suggestion.suggest_import(name)),
                     level: Level::Error,
                     location: Some(Location {
                         label: Label {
