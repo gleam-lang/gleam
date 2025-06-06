@@ -712,7 +712,10 @@ impl Named {
 /// The origin of a variable. Used to determine how it can be ignored when unused.
 pub enum VariableOrigin {
     /// A variable that can be ignored by prefixing with an underscore, `_name`
-    Variable(EcoString),
+    Variable {
+        name: EcoString,
+        kind: VariableDeclarationKind,
+    },
     /// A variable from label shorthand syntax, which can be ignored with an underscore: `label: _`
     LabelShorthand(EcoString),
     /// A variable from an assignment pattern, which can be ignored by removing `as name`,
@@ -721,10 +724,19 @@ pub enum VariableOrigin {
     Generated,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum VariableDeclarationKind {
+    LetPattern,
+    UsePattern,
+    ClausePattern,
+    FunctionParameter,
+    Implicit,
+}
+
 impl VariableOrigin {
     pub fn how_to_ignore(&self) -> Option<String> {
         match self {
-            VariableOrigin::Variable(name) => {
+            VariableOrigin::Variable { name, .. } => {
                 Some(format!("You can ignore it with an underscore: `_{name}`."))
             }
             VariableOrigin::LabelShorthand(label) => Some(format!(

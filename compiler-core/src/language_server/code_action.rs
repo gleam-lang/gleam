@@ -19,7 +19,7 @@ use crate::{
     strings::to_snake_case,
     type_::{
         self, FieldMap, ModuleValueConstructor, Type, TypeVar, TypedCallArg, ValueConstructor,
-        error::{ModuleSuggestion, VariableOrigin},
+        error::{ModuleSuggestion, VariableDeclarationKind, VariableOrigin},
         printer::{Names, Printer},
     },
 };
@@ -5969,10 +5969,16 @@ impl<'ast> ast::visit::Visit<'ast> for InlineVariable<'ast> {
         };
 
         // We can only inline it if it comes from a regular variable pattern,
-        // not a complex pattern or generated assignment.
+        // not a complex pattern or generated assignment. We can also only inline
+        // variables assigned by `let` statements, as it doesn't make sense to do
+        // so with any other kind of variable.
         match origin {
-            VariableOrigin::Variable(_) => {}
-            VariableOrigin::LabelShorthand(_)
+            VariableOrigin::Variable {
+                kind: VariableDeclarationKind::LetPattern,
+                ..
+            } => {}
+            VariableOrigin::Variable { .. }
+            | VariableOrigin::LabelShorthand(_)
             | VariableOrigin::AssignmentPattern
             | VariableOrigin::Generated => return,
         }
@@ -5989,8 +5995,12 @@ impl<'ast> ast::visit::Visit<'ast> for InlineVariable<'ast> {
     ) {
         // We can only inline it if it is a regular variable pattern
         match origin {
-            VariableOrigin::Variable(_) => {}
-            VariableOrigin::LabelShorthand(_)
+            VariableOrigin::Variable {
+                kind: VariableDeclarationKind::LetPattern,
+                ..
+            } => {}
+            VariableOrigin::Variable { .. }
+            | VariableOrigin::LabelShorthand(_)
             | VariableOrigin::AssignmentPattern
             | VariableOrigin::Generated => return,
         }

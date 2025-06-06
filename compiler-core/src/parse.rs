@@ -72,7 +72,7 @@ use crate::error::wrap;
 use crate::exhaustiveness::CompiledCase;
 use crate::parse::extra::ModuleExtra;
 use crate::type_::Deprecation;
-use crate::type_::error::VariableOrigin;
+use crate::type_::error::{VariableDeclarationKind, VariableOrigin};
 use crate::type_::expression::{Implementations, Purity};
 use crate::warning::{DeprecatedSyntaxWarning, WarningEmitter};
 use camino::Utf8PathBuf;
@@ -986,10 +986,12 @@ where
     fn parse_use_assignment(&mut self) -> Result<Option<UntypedUseAssignment>, ParseError> {
         let start = self.tok0.as_ref().map(|t| t.0).unwrap_or(0);
 
-        let pattern = self.parse_pattern()?.ok_or_else(|| ParseError {
-            error: ParseErrorType::ExpectedPattern,
-            location: SrcSpan { start, end: start },
-        })?;
+        let pattern = self
+            .parse_pattern(PatternPosition::UsePattern)?
+            .ok_or_else(|| ParseError {
+                error: ParseErrorType::ExpectedPattern,
+                location: SrcSpan { start, end: start },
+            })?;
 
         let annotation = self.parse_type_annotation(&Token::Colon)?;
         let end = match annotation {
@@ -1017,7 +1019,7 @@ where
             }
             _ => AssignmentKind::Let,
         };
-        let pattern = match self.parse_pattern()? {
+        let pattern = match self.parse_pattern(PatternPosition::LetAssignment)? {
             Some(p) => p,
             _ => {
                 // DUPE: 62884
@@ -1174,7 +1176,10 @@ where
     }
 
     // The left side of an "=" or a "->"
-    fn parse_pattern(&mut self) -> Result<Option<UntypedPattern>, ParseError> {
+    fn parse_pattern(
+        &mut self,
+        position: PatternPosition,
+    ) -> Result<Option<UntypedPattern>, ParseError> {
         let pattern = match self.tok0.take() {
             // Pattern::Var or Pattern::Constructor start
             Some((start, Token::Name { name }, end)) => {
@@ -1189,7 +1194,7 @@ where
                     // We're doing this to get a better error message instead of a generic
                     // `I was expecting a type`, you can have a look at this issue to get
                     // a better idea: https://github.com/gleam-lang/gleam/issues/2841.
-                    match self.expect_constructor_pattern(Some((start, name, end))) {
+                    match self.expect_constructor_pattern(Some((start, name, end)), position) {
                         Ok(result) => result,
                         Err(ParseError {
                             location: SrcSpan { end, .. },
@@ -1209,19 +1214,33 @@ where
                                 SrcSpan { start, end },
                             );
                         }
-                        _ => Pattern::Variable {
-                            origin: VariableOrigin::Variable(name.clone()),
-                            location: SrcSpan { start, end },
-                            name,
-                            type_: (),
-                        },
+                        _ => {
+                            let kind = match position {
+                                PatternPosition::LetAssignment => {
+                                    VariableDeclarationKind::LetPattern
+                                }
+                                PatternPosition::CaseClause => {
+                                    VariableDeclarationKind::ClausePattern
+                                }
+                                PatternPosition::UsePattern => VariableDeclarationKind::UsePattern,
+                            };
+                            Pattern::Variable {
+                                origin: VariableOrigin::Variable {
+                                    name: name.clone(),
+                                    kind,
+                                },
+                                location: SrcSpan { start, end },
+                                name,
+                                type_: (),
+                            }
+                        }
                     }
                 }
             }
             // Constructor
             Some((start, tok @ Token::UpName { .. }, end)) => {
                 self.tok0 = Some((start, tok, end));
-                self.expect_constructor_pattern(None)?
+                self.expect_constructor_pattern(None, position)?
             }
 
             Some((start, Token::DiscardName { name }, end)) => {
@@ -1333,8 +1352,11 @@ where
             Some((start, Token::Hash, _)) => {
                 self.advance();
                 let _ = self.expect_one(&Token::LeftParen)?;
-                let elements =
-                    Parser::series_of(self, &Parser::parse_pattern, Some(&Token::Comma))?;
+                let elements = Parser::series_of(
+                    self,
+                    &|this| this.parse_pattern(position),
+                    Some(&Token::Comma),
+                )?;
                 let (_, end) = self.expect_one_following_series(&Token::RightParen, "a pattern")?;
                 Pattern::Tuple {
                     location: SrcSpan { start, end },
@@ -1349,7 +1371,7 @@ where
                     &|s| {
                         Parser::parse_bit_array_segment(
                             s,
-                            &|s| match Parser::parse_pattern(s) {
+                            &|s| match s.parse_pattern(position) {
                                 Ok(Some(Pattern::BitArray { location, .. })) => {
                                     parse_error(ParseErrorType::NestedBitArrayPattern, location)
                                 }
@@ -1372,7 +1394,7 @@ where
             Some((start, Token::LeftSquare, _)) => {
                 self.advance();
                 let (elements, elements_end_with_comma) = self.series_of_has_trailing_separator(
-                    &Parser::parse_pattern,
+                    &|this| this.parse_pattern(position),
                     Some(&Token::Comma),
                 )?;
 
@@ -1392,13 +1414,13 @@ where
                         }
 
                         self.advance();
-                        let pat = self.parse_pattern()?;
+                        let pat = self.parse_pattern(position)?;
                         if self.maybe_one(&Token::Comma).is_some() {
                             // See if there's a list of items after the tail,
                             // like `[..wibble, wobble, wabble]`
                             let elements = Parser::series_of(
                                 self,
-                                &Parser::parse_pattern,
+                                &|this| this.parse_pattern(position),
                                 Some(&Token::Comma),
                             );
                             match elements {
@@ -1501,7 +1523,7 @@ where
     //   pattern, pattern if -> expr
     //   pattern, pattern | pattern, pattern if -> expr
     fn parse_case_clause(&mut self) -> Result<Option<UntypedClause>, ParseError> {
-        let patterns = self.parse_patterns()?;
+        let patterns = self.parse_patterns(PatternPosition::CaseClause)?;
         match &patterns.first() {
             Some(lead) => {
                 let mut alternative_patterns = vec![];
@@ -1509,7 +1531,7 @@ where
                     if self.maybe_one(&Token::Vbar).is_none() {
                         break;
                     }
-                    alternative_patterns.push(self.parse_patterns()?);
+                    alternative_patterns.push(self.parse_patterns(PatternPosition::CaseClause)?);
                 }
                 let guard = self.parse_case_clause_guard(false)?;
                 let (arr_s, arr_e) = self
@@ -1544,8 +1566,15 @@ where
             _ => Ok(None),
         }
     }
-    fn parse_patterns(&mut self) -> Result<Vec<UntypedPattern>, ParseError> {
-        Parser::series_of(self, &Parser::parse_pattern, Some(&Token::Comma))
+    fn parse_patterns(
+        &mut self,
+        position: PatternPosition,
+    ) -> Result<Vec<UntypedPattern>, ParseError> {
+        Parser::series_of(
+            self,
+            &|this| this.parse_pattern(position),
+            Some(&Token::Comma),
+        )
     }
 
     // examples:
@@ -1800,10 +1829,11 @@ where
     fn expect_constructor_pattern(
         &mut self,
         module: Option<(u32, EcoString, u32)>,
+        position: PatternPosition,
     ) -> Result<UntypedPattern, ParseError> {
         let (name_start, name, name_end) = self.expect_upname()?;
         let mut start = name_start;
-        let (args, spread, end) = self.parse_constructor_pattern_args(name_end)?;
+        let (args, spread, end) = self.parse_constructor_pattern_args(name_end, position)?;
         if let Some((s, _, _)) = module {
             start = s;
         }
@@ -1825,10 +1855,11 @@ where
     fn parse_constructor_pattern_args(
         &mut self,
         upname_end: u32,
+        position: PatternPosition,
     ) -> Result<(Vec<CallArg<UntypedPattern>>, Option<SrcSpan>, u32), ParseError> {
         if self.maybe_one(&Token::LeftParen).is_some() {
             let (args, args_end_with_comma) = self.series_of_has_trailing_separator(
-                &Parser::parse_constructor_pattern_arg,
+                &|this| this.parse_constructor_pattern_arg(position),
                 Some(&Token::Comma),
             )?;
 
@@ -1858,13 +1889,14 @@ where
     //   <pattern>
     fn parse_constructor_pattern_arg(
         &mut self,
+        position: PatternPosition,
     ) -> Result<Option<CallArg<UntypedPattern>>, ParseError> {
         match (self.tok0.take(), self.tok1.take()) {
             // named arg
             (Some((start, Token::Name { name }, _)), Some((_, Token::Colon, end))) => {
                 self.advance();
                 self.advance();
-                match self.parse_pattern()? {
+                match self.parse_pattern(position)? {
                     Some(value) => Ok(Some(CallArg {
                         implicit: None,
                         location: SrcSpan {
@@ -1894,7 +1926,7 @@ where
             (t0, t1) => {
                 self.tok0 = t0;
                 self.tok1 = t1;
-                match self.parse_pattern()? {
+                match self.parse_pattern(position)? {
                     Some(value) => Ok(Some(CallArg {
                         implicit: None,
                         location: value.location(),
@@ -4382,4 +4414,11 @@ pub fn parse_int_value(value: &str) -> Option<BigInt> {
 enum ExpressionUnitContext {
     FollowingPipe,
     Other,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum PatternPosition {
+    LetAssignment,
+    CaseClause,
+    UsePattern,
 }
