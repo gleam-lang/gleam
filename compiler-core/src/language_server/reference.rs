@@ -329,11 +329,13 @@ fn find_references_in_module(
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct VariableReference {
     pub location: SrcSpan,
     pub kind: VariableReferenceKind,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum VariableReferenceKind {
     Variable,
     LabelShorthand,

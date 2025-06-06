@@ -23,9 +23,12 @@ expression: "\nlet a = \"inner 'quotes'\"\n"
                 },
                 name: "a",
                 type_: (),
-                origin: Variable(
-                    "a",
-                ),
+                origin: VariableOrigin {
+                    syntax: Variable(
+                        "a",
+                    ),
+                    declaration: LetPattern,
+                },
             },
             kind: Let,
             compiled_case: CompiledCase {

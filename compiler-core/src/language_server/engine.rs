@@ -19,7 +19,7 @@ use crate::{
     type_::{
         self, Deprecation, ModuleInterface, Type, TypeConstructor, ValueConstructor,
         ValueConstructorVariant,
-        error::{Named, VariableOrigin},
+        error::{Named, VariableSyntax},
         printer::Printer,
     },
 };
@@ -637,12 +637,12 @@ where
             Ok(match reference_for_ast_node(found, &current_module.name) {
                 Some(Referenced::LocalVariable {
                     location, origin, ..
-                }) if location.contains(byte_index) => match origin {
-                    Some(VariableOrigin::Generated) => None,
+                }) if location.contains(byte_index) => match origin.map(|origin| origin.syntax) {
+                    Some(VariableSyntax::Generated) => None,
                     Some(
-                        VariableOrigin::Variable(_)
-                        | VariableOrigin::AssignmentPattern
-                        | VariableOrigin::LabelShorthand(_),
+                        VariableSyntax::Variable { .. }
+                        | VariableSyntax::AssignmentPattern
+                        | VariableSyntax::LabelShorthand(_),
                     )
                     | None => success_response(location),
                 },
@@ -695,12 +695,14 @@ where
                     definition_location,
                     ..
                 }) => {
-                    let rename_kind = match origin {
-                        Some(VariableOrigin::Generated) => return Ok(None),
-                        Some(VariableOrigin::LabelShorthand(_)) => {
+                    let rename_kind = match origin.map(|origin| origin.syntax) {
+                        Some(VariableSyntax::Generated) => return Ok(None),
+                        Some(VariableSyntax::LabelShorthand(_)) => {
                             VariableReferenceKind::LabelShorthand
                         }
-                        Some(VariableOrigin::AssignmentPattern | VariableOrigin::Variable(_))
+                        Some(
+                            VariableSyntax::AssignmentPattern | VariableSyntax::Variable { .. },
+                        )
                         | None => VariableReferenceKind::Variable,
                     };
                     rename_local_variable(module, &lines, &params, definition_location, rename_kind)
@@ -772,12 +774,12 @@ where
                     origin,
                     definition_location,
                     location,
-                }) if location.contains(byte_index) => match origin {
-                    Some(VariableOrigin::Generated) => None,
+                }) if location.contains(byte_index) => match origin.map(|origin| origin.syntax) {
+                    Some(VariableSyntax::Generated) => None,
                     Some(
-                        VariableOrigin::LabelShorthand(_)
-                        | VariableOrigin::AssignmentPattern
-                        | VariableOrigin::Variable(_),
+                        VariableSyntax::LabelShorthand(_)
+                        | VariableSyntax::AssignmentPattern
+                        | VariableSyntax::Variable { .. },
                     )
                     | None => {
                         let variable_references =

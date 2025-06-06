@@ -8661,3 +8661,80 @@ pub fn main() {
         find_position_of("add").to_selection()
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4660#issuecomment-2932371619
+#[test]
+fn inline_variable_label_shorthand() {
+    assert_code_action!(
+        INLINE_VARIABLE,
+        "
+pub type Example {
+  Example(sum: Int, nil: Nil)
+}
+
+pub fn main() {
+  let sum = 1 + 1
+
+  Example(Nil, sum:)
+}
+",
+        find_position_of("sum = ").to_selection()
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4660
+#[test]
+fn no_inline_variable_action_for_parameter() {
+    assert_no_code_actions!(
+        INLINE_VARIABLE,
+        "
+pub fn main() {
+  let x = fn(something) {
+    something
+  }
+
+  x
+}
+",
+        find_position_of("something")
+            .nth_occurrence(2)
+            .to_selection()
+    );
+}
+
+#[test]
+fn no_inline_variable_action_for_use_pattern() {
+    assert_no_code_actions!(
+        INLINE_VARIABLE,
+        "
+pub fn main() {
+  let x = {
+    use something <- todo
+    something
+  }
+
+  x
+}
+",
+        find_position_of("something").to_selection()
+    );
+}
+
+#[test]
+fn no_inline_variable_action_for_case_pattern() {
+    assert_no_code_actions!(
+        INLINE_VARIABLE,
+        "
+pub fn main() {
+  let x = case todo {
+    something -> something
+  }
+
+  x
+}
+",
+        find_position_of("something")
+            .nth_occurrence(2)
+            .to_selection()
+    );
+}

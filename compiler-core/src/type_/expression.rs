@@ -15,6 +15,7 @@ use crate::{
     },
     build::Target,
     exhaustiveness::{self, CompileCaseResult, CompiledCase, Reachability},
+    parse::PatternPosition,
     reference::ReferenceKind,
 };
 use hexpm::version::Version;
@@ -1760,6 +1761,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             &self.current_function_definition,
             &self.hydrator,
             self.problems,
+            PatternPosition::LetAssignment,
         );
 
         let pattern = pattern_typer.infer_single_pattern(pattern, &value);
@@ -2111,6 +2113,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             &self.current_function_definition,
             &self.hydrator,
             self.problems,
+            PatternPosition::CaseClause,
         );
 
         let typed_pattern = pattern_typer.infer_multi_pattern(pattern, subjects, location);
@@ -2977,7 +2980,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location: record_location,
                 name: RECORD_UPDATE_VARIABLE.into(),
                 type_: record_type.clone(),
-                origin: VariableOrigin::Generated,
+                origin: VariableOrigin::generated(),
             },
             annotation: None,
             compiled_case: CompiledCase::failure(),
@@ -2993,7 +2996,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 type_: record_type,
                 variant: ValueConstructorVariant::LocalVariable {
                     location: record_location,
-                    origin: VariableOrigin::Generated,
+                    origin: VariableOrigin::generated(),
                 },
             },
             name: RECORD_UPDATE_VARIABLE.into(),
@@ -4266,10 +4269,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             });
                         }
 
-                        let origin = if name == CAPTURE_VARIABLE {
-                            VariableOrigin::Generated
+                        let syntax = if name == CAPTURE_VARIABLE {
+                            VariableSyntax::Generated
                         } else {
-                            VariableOrigin::Variable(name.clone())
+                            VariableSyntax::Variable(name.clone())
+                        };
+
+                        let origin = VariableOrigin {
+                            syntax,
+                            declaration: VariableDeclaration::FunctionParameter,
                         };
 
                         // Insert a variable for the argument into the environment

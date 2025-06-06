@@ -709,8 +709,15 @@ impl Named {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-/// The origin of a variable. Used to determine how it can be ignored when unused.
-pub enum VariableOrigin {
+pub struct VariableOrigin {
+    pub syntax: VariableSyntax,
+    pub declaration: VariableDeclaration,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+/// The syntax used to define a variable. Used to determine how it can be ignored
+/// when unused.
+pub enum VariableSyntax {
     /// A variable that can be ignored by prefixing with an underscore, `_name`
     Variable(EcoString),
     /// A variable from label shorthand syntax, which can be ignored with an underscore: `label: _`
@@ -721,17 +728,34 @@ pub enum VariableOrigin {
     Generated,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+/// The source of a variable, such as a `let` assignment, or function parameter.
+pub enum VariableDeclaration {
+    LetPattern,
+    UsePattern,
+    ClausePattern,
+    FunctionParameter,
+    Generated,
+}
+
 impl VariableOrigin {
     pub fn how_to_ignore(&self) -> Option<String> {
-        match self {
-            VariableOrigin::Variable(name) => {
+        match &self.syntax {
+            VariableSyntax::Variable(name) => {
                 Some(format!("You can ignore it with an underscore: `_{name}`."))
             }
-            VariableOrigin::LabelShorthand(label) => Some(format!(
+            VariableSyntax::LabelShorthand(label) => Some(format!(
                 "You can ignore it with an underscore: `{label}: _`."
             )),
-            VariableOrigin::AssignmentPattern => Some("You can safely remove it.".to_string()),
-            VariableOrigin::Generated => None,
+            VariableSyntax::AssignmentPattern => Some("You can safely remove it.".to_string()),
+            VariableSyntax::Generated => None,
+        }
+    }
+
+    pub fn generated() -> Self {
+        Self {
+            syntax: VariableSyntax::Generated,
+            declaration: VariableDeclaration::Generated,
         }
     }
 }

@@ -12,6 +12,7 @@ use crate::{
     ast::{
         AssignName, BitArrayOption, ImplicitCallArgOrigin, Layer, UntypedPatternBitArraySegment,
     },
+    parse::PatternPosition,
     reference::ReferenceKind,
     type_::expression::FunctionDefinition,
 };
@@ -45,6 +46,9 @@ pub struct PatternTyper<'a, 'b> {
     /// keeps track of whether it is in scope, so that we can correctly detect
     /// valid/invalid uses.
     variables: HashMap<EcoString, LocalVariable>,
+
+    /// What kind of pattern we are typing
+    position: PatternPosition,
 }
 
 #[derive(Debug)]
@@ -96,6 +100,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         current_function: &'a FunctionDefinition,
         hydrator: &'a Hydrator,
         problems: &'a mut Problems,
+        position: PatternPosition,
     ) -> Self {
         Self {
             environment,
@@ -109,6 +114,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             problems,
             error_encountered: false,
             variables: HashMap::new(),
+            position,
         }
     }
 
@@ -209,11 +215,20 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 let _ = self
                     .inferred_variant_variables
                     .insert(name.clone(), variant_index);
+
+                let origin = match &variable.variant {
+                    ValueConstructorVariant::LocalVariable { origin, .. } => origin.clone(),
+                    ValueConstructorVariant::ModuleConstant { .. }
+                    | ValueConstructorVariant::LocalConstant { .. }
+                    | ValueConstructorVariant::ModuleFn { .. }
+                    | ValueConstructorVariant::Record { .. } => VariableOrigin::generated(),
+                };
+
                 // This variable is only inferred in this branch of the case expression
                 self.environment.insert_local_variable(
                     name.clone(),
                     variable.definition_location().span,
-                    VariableOrigin::Variable(name),
+                    origin,
                     type_,
                 );
             }
@@ -660,7 +675,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         left,
                         string(),
                         *left_location,
-                        VariableOrigin::AssignmentPattern,
+                        VariableOrigin {
+                            syntax: VariableSyntax::AssignmentPattern,
+                            declaration: self.position.to_declaration(),
+                        },
                     );
                 }
 
@@ -671,7 +689,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             right,
                             string(),
                             right_location,
-                            VariableOrigin::Variable(right.clone()),
+                            VariableOrigin {
+                                syntax: VariableSyntax::Variable(right.clone()),
+                                declaration: self.position.to_declaration(),
+                            },
                         );
                     }
                     AssignName::Discard(_) => {
@@ -701,7 +722,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     &name,
                     pattern.type_().clone(),
                     location,
-                    VariableOrigin::AssignmentPattern,
+                    VariableOrigin {
+                        syntax: VariableSyntax::AssignmentPattern,
+                        declaration: self.position.to_declaration(),
+                    },
                 );
                 Pattern::Assign {
                     name,
