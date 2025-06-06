@@ -20,6 +20,14 @@
   for record fields in custom type definitions.
   ([cysabi](https://github.com/cysabi))
 
+- Fixed a bug where the "Inline variable" code action would be offered for
+  function parameters and other invalid cases.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where the "Inline variable" code action would not be applied
+  correctly to variables using label shorthand syntax.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.11.1 - 2025-06-05
 
 ### Compiler
