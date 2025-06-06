@@ -213,7 +213,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 self.environment.insert_local_variable(
                     name.clone(),
                     variable.definition_location().span,
-                    VariableOrigin::Variable(name),
+                    VariableOrigin::Variable {
+                        name,
+                        kind: VariableDeclarationKind::Implicit,
+                    },
                     type_,
                 );
             }
@@ -671,7 +674,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             right,
                             string(),
                             right_location,
-                            VariableOrigin::Variable(right.clone()),
+                            VariableOrigin::Variable {
+                                name: right.clone(),
+                                kind: VariableDeclarationKind::ClausePattern,
+                            },
                         );
                     }
                     AssignName::Discard(_) => {

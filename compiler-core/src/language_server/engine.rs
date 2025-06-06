@@ -640,7 +640,7 @@ where
                 }) if location.contains(byte_index) => match origin {
                     Some(VariableOrigin::Generated) => None,
                     Some(
-                        VariableOrigin::Variable(_)
+                        VariableOrigin::Variable { .. }
                         | VariableOrigin::AssignmentPattern
                         | VariableOrigin::LabelShorthand(_),
                     )
@@ -700,7 +700,9 @@ where
                         Some(VariableOrigin::LabelShorthand(_)) => {
                             VariableReferenceKind::LabelShorthand
                         }
-                        Some(VariableOrigin::AssignmentPattern | VariableOrigin::Variable(_))
+                        Some(
+                            VariableOrigin::AssignmentPattern | VariableOrigin::Variable { .. },
+                        )
                         | None => VariableReferenceKind::Variable,
                     };
                     rename_local_variable(module, &lines, &params, definition_location, rename_kind)
@@ -777,7 +779,7 @@ where
                     Some(
                         VariableOrigin::LabelShorthand(_)
                         | VariableOrigin::AssignmentPattern
-                        | VariableOrigin::Variable(_),
+                        | VariableOrigin::Variable { .. },
                     )
                     | None => {
                         let variable_references =

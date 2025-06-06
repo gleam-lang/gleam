@@ -4269,7 +4269,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         let origin = if name == CAPTURE_VARIABLE {
                             VariableOrigin::Generated
                         } else {
-                            VariableOrigin::Variable(name.clone())
+                            VariableOrigin::Variable {
+                                name: name.clone(),
+                                kind: VariableDeclarationKind::FunctionParameter,
+                            }
                         };
 
                         // Insert a variable for the argument into the environment
