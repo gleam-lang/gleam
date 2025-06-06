@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 445
 expression: "let assert [x]: List(Int) = [2]"
-snapshot_kind: text
 ---
 [
     Assignment(
@@ -41,9 +39,12 @@ snapshot_kind: text
                         },
                         name: "x",
                         type_: (),
-                        origin: Variable(
-                            "x",
-                        ),
+                        origin: VariableOrigin {
+                            syntax: Variable(
+                                "x",
+                            ),
+                            declaration: LetPattern,
+                        },
                     },
                 ],
                 tail: None,

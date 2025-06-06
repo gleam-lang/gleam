@@ -252,7 +252,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             name: PIPE_VARIABLE.into(),
             constructor: ValueConstructor::local_variable(
                 self.argument_location,
-                VariableOrigin::Generated,
+                VariableOrigin::generated(),
                 self.argument_type.clone(),
             ),
         }
@@ -443,7 +443,7 @@ fn new_pipeline_assignment(
     expr_typer.environment.insert_local_variable(
         PIPE_VARIABLE.into(),
         location,
-        VariableOrigin::Generated,
+        VariableOrigin::generated(),
         expression.type_(),
     );
     TypedPipelineAssignment {
