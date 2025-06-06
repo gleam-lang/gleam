@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-expression: "\nfn go(x) {\n  case x {\n    Ok(_) -> 1\n    Error(_) -> 0\n  }\n}\n"
+assertion_line: 197
+expression: "\npub fn go(x) {\n  case x {\n    Ok(_) -> 1\n    Error(_) -> 0\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(x) {
+pub fn go(x) {
   case x {
     Ok(_) -> 1
     Error(_) -> 0
@@ -15,7 +17,7 @@ fn go(x) {
 ----- COMPILED JAVASCRIPT
 import { Ok } from "../gleam.mjs";
 
-function go(x) {
+export function go(x) {
   if (x instanceof Ok) {
     return 1;
   } else {

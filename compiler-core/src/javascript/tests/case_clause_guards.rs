@@ -474,7 +474,7 @@ fn custom_type_constructor_imported_and_aliased() {
     assert_js!(
         ("package", "other_module", "pub type T { A }"),
         r#"import other_module.{A as B}
-fn func() {
+pub fn func() {
   case B {
     x if x == B -> True
     _ -> False
@@ -491,7 +491,7 @@ fn imported_aliased_ok() {
 pub type X {
   Ok
 }
-fn func() {
+pub fn func() {
   case Y {
     y if y == Y -> True
     _ -> False
@@ -508,7 +508,7 @@ fn imported_ok() {
 pub type X {
   Ok
 }
-fn func(x) {
+pub fn func(x) {
   case gleam.Ok {
     _ if [] == [ gleam.Ok ] -> True
     _ -> False
@@ -522,7 +522,7 @@ fn func(x) {
 #[test]
 fn constructor_function_in_guard() {
     assert_js!(
-        r#"fn func(x) {
+        r#"pub fn func(x) {
     case [] {
         _ if [] == [ Ok ] -> True
         _ -> False

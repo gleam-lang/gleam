@@ -4,6 +4,10 @@
 
 ### Compiler
 
+- The code generators now perform usage-based dead code elimination. Unused
+  definitions are not longer generated.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ### Build tool
 
 ### Language server

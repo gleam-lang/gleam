@@ -4,7 +4,7 @@ use crate::{assert_js, assert_ts_def};
 fn expressions() {
     assert_js!(
         r#"
-fn go() {
+pub fn go() {
     True
     False
     Nil
@@ -17,9 +17,9 @@ fn go() {
 fn constants() {
     assert_js!(
         r#"
-const a = True
-const b = False
-const c = Nil
+pub const a = True
+pub const b = False
+pub const c = Nil
 "#,
     );
 }
@@ -39,7 +39,7 @@ pub const c = Nil
 fn operators() {
     assert_js!(
         r#"
-fn go() {
+pub fn go() {
     True && True
     False || False
 }
@@ -51,7 +51,7 @@ fn go() {
 fn assigning() {
     assert_js!(
         r#"
-fn go(x, y) {
+pub fn go(x, y) {
   let assert True = x
   let assert False = x
   let assert Nil = y
@@ -67,7 +67,7 @@ fn shadowed_bools_and_nil() {
     assert_js!(
         r#"
 pub type True { True False Nil }
-fn go(x, y) {
+pub fn go(x, y) {
   let assert True = x
   let assert False = x
   let assert Nil = y
@@ -94,7 +94,7 @@ pub fn go(x, y) {
 fn equality() {
     assert_js!(
         r#"
-fn go(a, b) {
+pub fn go(a, b) {
   a == True
   a != True
   a == False
@@ -113,7 +113,7 @@ fn go(a, b) {
 fn case() {
     assert_js!(
         r#"
-fn go(a) {
+pub fn go(a) {
   case a {
     True -> 1
     False -> 0
@@ -127,7 +127,7 @@ fn go(a) {
 fn nil_case() {
     assert_js!(
         r#"
-fn go(a) {
+pub fn go(a) {
   case a {
     Nil -> 0
   }

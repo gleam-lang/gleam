@@ -41,7 +41,7 @@ fn public_local_function_calls() {
         r#"
 @external(erlang, "m", "f")
 pub fn go(x x: Int, y y: Int) -> Int
-fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }
+pub fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }
 "#
     );
 }

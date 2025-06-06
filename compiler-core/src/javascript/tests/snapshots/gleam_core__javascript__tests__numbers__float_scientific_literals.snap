@@ -1,23 +1,25 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-expression: "\nfn go() {\n    0.01e-1\n    0.01e-0\n    -10.01e-1\n    -10.01e-0\n    100.001e523\n    -100.001e-523\n    100.001e123_456_789\n    -100.001e-123_456_789\n}\n"
+assertion_line: 37
+expression: "\npub fn go() {\n  0.01e-1\n  0.01e-0\n  -10.01e-1\n  -10.01e-0\n  100.001e523\n  -100.001e-523\n  100.001e123_456_789\n  -100.001e-123_456_789\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go() {
-    0.01e-1
-    0.01e-0
-    -10.01e-1
-    -10.01e-0
-    100.001e523
-    -100.001e-523
-    100.001e123_456_789
-    -100.001e-123_456_789
+pub fn go() {
+  0.01e-1
+  0.01e-0
+  -10.01e-1
+  -10.01e-0
+  100.001e523
+  -100.001e-523
+  100.001e123_456_789
+  -100.001e-123_456_789
 }
 
 
 ----- COMPILED JAVASCRIPT
-function go() {
+export function go() {
   0.01e-1;
   0.01e-0;
   -10.01e-1;

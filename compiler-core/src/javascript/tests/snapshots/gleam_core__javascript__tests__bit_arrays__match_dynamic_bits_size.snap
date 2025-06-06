@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-expression: "\nfn go(x) {\n  let n = 16\n  let assert <<a:bits-size(n)>> = x\n}\n"
+assertion_line: 1051
+expression: "\npub fn go(x) {\n  let n = 16\n  let assert <<a:bits-size(n)>> = x\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(x) {
+pub fn go(x) {
   let n = 16
   let assert <<a:bits-size(n)>> = x
 }
@@ -15,7 +17,7 @@ import { makeError, bitArraySlice } from "../gleam.mjs";
 
 const FILEPATH = "src/module.gleam";
 
-function go(x) {
+export function go(x) {
   let n = 16;
   if (n < 0 || x.bitSize !== n) {
     throw makeError(
@@ -25,7 +27,7 @@ function go(x) {
       4,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x, start: 27, end: 60, pattern_start: 38, pattern_end: 56 }
+      { value: x, start: 31, end: 64, pattern_start: 42, pattern_end: 60 }
     )
   }
   let a = bitArraySlice(x, 0, n);

@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/todo.rs
 assertion_line: 51
-expression: "\nfn go(f) {\n  let boop = todo as \"I should do this\"\n  f(todo as \"Boom\")\n}\n"
+expression: "\npub fn go(f) {\n  let boop = todo as \"I should do this\"\n  f(todo as \"Boom\")\n}\n"
 snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(f) {
+pub fn go(f) {
   let boop = todo as "I should do this"
   f(todo as "Boom")
 }
@@ -17,7 +17,7 @@ import { makeError } from "../gleam.mjs";
 
 const FILEPATH = "src/module.gleam";
 
-function go(f) {
+export function go(f) {
   let _block;
   throw makeError("todo", FILEPATH, "my/mod", 3, "go", "I should do this", {})
   let boop = _block;

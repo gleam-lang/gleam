@@ -1,17 +1,18 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 351
-expression: "type X { X(x: Int, y: Float) }\n                    fn x() { X(x: 1, y: 2.) X(y: 3., x: 4) }"
+assertion_line: 357
+expression: "pub type X { X(x: Int, y: Float) }\npub fn x() { X(x: 1, y: 2.) X(y: 3., x: 4) }"
 snapshot_kind: text
 ---
 ----- SOURCE CODE
-type X { X(x: Int, y: Float) }
-                    fn x() { X(x: 1, y: 2.) X(y: 3., x: 4) }
+pub type X { X(x: Int, y: Float) }
+pub fn x() { X(x: 1, y: 2.) X(y: 3., x: 4) }
 
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 -define(FILEPATH, "project/test/my/mod.gleam").
+-export([x/0]).
 -export_type([x/0]).
 
 -type x() :: {x, integer(), float()}.

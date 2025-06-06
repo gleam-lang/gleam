@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-expression: "\nfn go() {\n    1.0 +. 1.4 // => 2.4\n    5.0 -. 1.5 // => 3.5\n    5.0 /. 2.0 // => 2.5\n    3.0 *. 3.1 // => 9.3\n\n    2.0 >. 1.0  // => True\n    2.0 <. 1.0  // => False\n    2.0 >=. 1.0 // => True\n    2.0 <=. 1.0 // => False\n}\n"
+assertion_line: 102
+expression: "\npub fn go() {\n    1.0 +. 1.4 // => 2.4\n    5.0 -. 1.5 // => 3.5\n    5.0 /. 2.0 // => 2.5\n    3.0 *. 3.1 // => 9.3\n\n    2.0 >. 1.0  // => True\n    2.0 <. 1.0  // => False\n    2.0 >=. 1.0 // => True\n    2.0 <=. 1.0 // => False\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go() {
+pub fn go() {
     1.0 +. 1.4 // => 2.4
     5.0 -. 1.5 // => 3.5
     5.0 /. 2.0 // => 2.5
@@ -20,7 +22,7 @@ fn go() {
 ----- COMPILED JAVASCRIPT
 import { divideFloat } from "../gleam.mjs";
 
-function go() {
+export function go() {
   1.0 + 1.4;
   5.0 - 1.5;
   divideFloat(5.0, 2.0);

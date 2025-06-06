@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/parse/tests.rs
+assertion_line: 1678
 expression: "\ntype Wibble {\n    @deprecated(\"1\")\n    Wibble1\n    Wibble2\n}\n"
+snapshot_kind: text
 ---
 Parsed {
     module: Module {
@@ -70,6 +72,7 @@ Parsed {
             type_variables: {},
             local_value_constructors: {},
         },
+        unused_definition_positions: {},
     },
     extra: ModuleExtra {
         module_comments: [],

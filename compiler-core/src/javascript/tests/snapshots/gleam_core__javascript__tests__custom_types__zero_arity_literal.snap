@@ -1,15 +1,17 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-expression: "\ntype Mine {\n    This\n    ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant\n}\n\nfn go() {\n    This\n    ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant\n}\n"
+assertion_line: 6
+expression: "\npub type Mine {\n    This\n    ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant\n}\n\npub fn go() {\n    This\n    ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-type Mine {
+pub type Mine {
     This
     ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant
 }
 
-fn go() {
+pub fn go() {
     This
     ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant
 }
@@ -18,11 +20,11 @@ fn go() {
 ----- COMPILED JAVASCRIPT
 import { CustomType as $CustomType } from "../gleam.mjs";
 
-class This extends $CustomType {}
+export class This extends $CustomType {}
 
-class ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant extends $CustomType {}
+export class ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant extends $CustomType {}
 
-function go() {
+export function go() {
   new This();
   return new ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant();
 }

@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-expression: "\nfn go(x) {\n  case x {\n    <<a:unsigned>> -> a\n    _ -> 1\n  }\n}\n"
+assertion_line: 550
+expression: "\npub fn go(x) {\n  case x {\n    <<a:unsigned>> -> a\n    _ -> 1\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(x) {
+pub fn go(x) {
   case x {
     <<a:unsigned>> -> a
     _ -> 1
@@ -13,7 +15,7 @@ fn go(x) {
 
 
 ----- COMPILED JAVASCRIPT
-function go(x) {
+export function go(x) {
   if (x.bitSize === 8) {
     let a = x.byteAt(0);
     return a;

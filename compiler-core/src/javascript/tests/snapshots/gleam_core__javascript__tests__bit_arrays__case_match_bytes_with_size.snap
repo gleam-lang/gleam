@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-expression: "\nfn go(x) {\n  case <<1, 2>> {\n    <<f:bytes-2>> -> f\n    _ -> x\n  }\n}\n"
+assertion_line: 1473
+expression: "\npub fn go(x) {\n  case <<1, 2>> {\n    <<f:bytes-2>> -> f\n    _ -> x\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(x) {
+pub fn go(x) {
   case <<1, 2>> {
     <<f:bytes-2>> -> f
     _ -> x
@@ -15,7 +17,7 @@ fn go(x) {
 ----- COMPILED JAVASCRIPT
 import { toBitArray, bitArraySlice } from "../gleam.mjs";
 
-function go(x) {
+export function go(x) {
   let $ = toBitArray([1, 2]);
   if ($.bitSize === 16) {
     let f = bitArraySlice($, 0, 16);

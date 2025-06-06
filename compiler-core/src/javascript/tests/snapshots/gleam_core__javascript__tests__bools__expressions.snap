@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
-expression: "\nfn go() {\n    True\n    False\n    Nil\n}\n"
+assertion_line: 5
+expression: "\npub fn go() {\n    True\n    False\n    Nil\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go() {
+pub fn go() {
     True
     False
     Nil
@@ -12,7 +14,7 @@ fn go() {
 
 
 ----- COMPILED JAVASCRIPT
-function go() {
+export function go() {
   true;
   false;
   return undefined;

@@ -4,7 +4,7 @@ use crate::assert_js;
 fn block() {
     assert_js!(
         r#"
-fn go() {
+pub fn go() {
   let x = {
     1
     2
@@ -19,7 +19,7 @@ fn go() {
 fn nested_simple_blocks() {
     assert_js!(
         r#"
-fn go() {
+pub fn go() {
   let x = {
     {
       3
@@ -35,7 +35,7 @@ fn go() {
 fn nested_multiexpr_blocks() {
     assert_js!(
         r#"
-fn go() {
+pub fn go() {
   let x = {
     1
     {
@@ -53,10 +53,10 @@ fn go() {
 fn nested_multiexpr_blocks_with_pipe() {
     assert_js!(
         r#"
-fn add1(a) {
+pub fn add1(a) {
   a + 1
 }
-fn go() {
+pub fn go() {
   let x = {
     1
     {
@@ -74,7 +74,7 @@ fn go() {
 fn nested_multiexpr_non_ending_blocks() {
     assert_js!(
         r#"
-fn go() {
+pub fn go() {
   let x = {
     1
     {
@@ -93,7 +93,7 @@ fn go() {
 fn nested_multiexpr_blocks_with_case() {
     assert_js!(
         r#"
-fn go() {
+pub fn go() {
   let x = {
     1
     {
@@ -113,7 +113,7 @@ fn go() {
 fn sequences() {
     assert_js!(
         r#"
-fn go() {
+pub fn go() {
   "one"
   "two"
   "three"
@@ -126,7 +126,7 @@ fn go() {
 fn left_operator_sequence() {
     assert_js!(
         r#"
-fn go() {
+pub fn go() {
   1 == {
     1
     2
@@ -140,7 +140,7 @@ fn go() {
 fn right_operator_sequence() {
     assert_js!(
         r#"
-fn go() {
+pub fn go() {
   {
     1
     2
@@ -154,7 +154,7 @@ fn go() {
 fn concat_blocks() {
     assert_js!(
         r#"
-fn main(f, a, b) {
+pub fn main(f, a, b) {
   {
     a
     |> f
@@ -171,7 +171,7 @@ fn main(f, a, b) {
 fn blocks_returning_functions() {
     assert_js!(
         r#"
-fn b() {
+pub fn b() {
   {
     fn(cb) { cb(1) }
   }
@@ -188,7 +188,7 @@ fn b() {
 fn blocks_returning_use() {
     assert_js!(
         r#"
-fn b() {
+pub fn b() {
   {
     use a <- fn(cb) { cb(1) }
     a
@@ -207,7 +207,7 @@ fn b() {
 fn block_with_parenthesised_expression_returning_from_function() {
     assert_js!(
         r#"
-fn b() {
+pub fn b() {
   {
     1 + 2
   }
@@ -220,7 +220,7 @@ fn b() {
 fn block_in_tail_position_is_not_an_iife() {
     assert_js!(
         r#"
-fn b() {
+pub fn b() {
   let x = 1
   {
     Nil
@@ -235,7 +235,7 @@ fn b() {
 fn block_in_tail_position_shadowing_variables() {
     assert_js!(
         r#"
-fn b() {
+pub fn b() {
   let x = 1
   {
     let x = 2
@@ -250,7 +250,7 @@ fn b() {
 fn block_in_tail_position_with_just_an_assignment() {
     assert_js!(
         r#"
-fn b() {
+pub fn b() {
   let x = 1
   {
     let x = x

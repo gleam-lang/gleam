@@ -1,13 +1,13 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
 assertion_line: 37
-expression: "\n\nfn go(x, wibble) {\n  let a = 1\n  wibble(a)\n  let a = 2\n  wibble(a)\n  let assert #(a, 3) = x\n  let b = a\n  wibble(b)\n  let c = {\n    let a = a\n    #(a, b)\n  }\n  wibble(a)\n  // make sure arguments are counted in initial state\n  let x = c\n  x\n}\n"
+expression: "\n\npub fn go(x, wibble) {\n  let a = 1\n  wibble(a)\n  let a = 2\n  wibble(a)\n  let assert #(a, 3) = x\n  let b = a\n  wibble(b)\n  let c = {\n    let a = a\n    #(a, b)\n  }\n  wibble(a)\n  // make sure arguments are counted in initial state\n  let x = c\n  x\n}\n"
 snapshot_kind: text
 ---
 ----- SOURCE CODE
 
 
-fn go(x, wibble) {
+pub fn go(x, wibble) {
   let a = 1
   wibble(a)
   let a = 2
@@ -31,7 +31,7 @@ import { makeError } from "../gleam.mjs";
 
 const FILEPATH = "src/module.gleam";
 
-function go(x, wibble) {
+export function go(x, wibble) {
   let a = 1;
   wibble(a);
   let a$1 = 2;
@@ -44,7 +44,7 @@ function go(x, wibble) {
       8,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x, start: 71, end: 93, pattern_start: 82, pattern_end: 89 }
+      { value: x, start: 75, end: 97, pattern_start: 86, pattern_end: 93 }
     )
   }
   let a$2 = x[0];

@@ -4,15 +4,15 @@ use crate::assert_erl;
 fn result_type_inferred_count_once() {
     assert_erl!(
         "
-        fn wibble() {
+        pub fn wibble() {
             let assert Ok(_) = wobble()
         }
 
-        type Wobble(a) {
+        pub type Wobble(a) {
             Wobble
         }
 
-        fn wobble() -> Result(a, Wobble(a)) {
+        pub fn wobble() -> Result(a, Wobble(a)) {
             todo
         }
         "

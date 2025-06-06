@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
 assertion_line: 380
-expression: "\ntype Wibble {\n  Wibble(wibble: Int, wobble: Int)\n}\n\nfn identity(x) {\n  x\n}\n\nfn go(x) {\n  case x {\n    Wibble(1, _) -> Wibble(..x, wibble: 4) |> identity\n    Wibble(_, 3) -> Wibble(..x, wobble: 10) |> identity\n    _ -> panic\n  }\n}\n"
+expression: "\npub type Wibble {\n  Wibble(wibble: Int, wobble: Int)\n}\n\nfn identity(x) {\n  x\n}\n\npub fn go(x) {\n  case x {\n    Wibble(1, _) -> Wibble(..x, wibble: 4) |> identity\n    Wibble(_, 3) -> Wibble(..x, wobble: 10) |> identity\n    _ -> panic\n  }\n}\n"
 snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-type Wibble {
+pub type Wibble {
   Wibble(wibble: Int, wobble: Int)
 }
 
@@ -14,7 +14,7 @@ fn identity(x) {
   x
 }
 
-fn go(x) {
+pub fn go(x) {
   case x {
     Wibble(1, _) -> Wibble(..x, wibble: 4) |> identity
     Wibble(_, 3) -> Wibble(..x, wobble: 10) |> identity
@@ -28,7 +28,7 @@ import { CustomType as $CustomType, makeError } from "../gleam.mjs";
 
 const FILEPATH = "src/module.gleam";
 
-class Wibble extends $CustomType {
+export class Wibble extends $CustomType {
   constructor(wibble, wobble) {
     super();
     this.wibble = wibble;
@@ -40,7 +40,7 @@ function identity(x) {
   return x;
 }
 
-function go(x) {
+export function go(x) {
   let $ = x.wibble;
   if ($ === 1) {
     let _block;

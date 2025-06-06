@@ -245,6 +245,7 @@ where
             type_info: (),
             definitions,
             names: Default::default(),
+            unused_definition_positions: Default::default(),
         };
         Ok(Parsed {
             module,

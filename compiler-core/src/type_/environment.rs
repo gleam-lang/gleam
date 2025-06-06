@@ -636,9 +636,12 @@ impl Environment<'_> {
         }
     }
 
-    /// Converts entities with a usage count of 0 to warnings.
-    /// Returns the list of unused imported module location for the removed unused lsp action.
-    pub fn convert_unused_to_warnings(&mut self, problems: &mut Problems) {
+    /// Emit warnings for unused definitions, imports, expressions, etc.
+    ///
+    /// Returns the source byte start positions of all unused definitions.
+    ///
+    pub fn handle_unused(&mut self, problems: &mut Problems) -> HashSet<u32> {
+        let mut unused_positions = HashSet::new();
         let unused = self
             .local_variable_usages
             .pop()
@@ -666,18 +669,27 @@ impl Environment<'_> {
             let location = info.origin;
 
             let warning = match info.kind {
-                EntityKind::Function => Warning::UnusedPrivateFunction { location, name },
-                EntityKind::Constant => Warning::UnusedPrivateModuleConstant { location, name },
+                EntityKind::Function => {
+                    let _ = unused_positions.insert(location.start);
+                    Warning::UnusedPrivateFunction { location, name }
+                }
+                EntityKind::Constant => {
+                    let _ = unused_positions.insert(location.start);
+                    Warning::UnusedPrivateModuleConstant { location, name }
+                }
                 EntityKind::Constructor => Warning::UnusedConstructor {
                     location,
                     name,
                     imported: false,
                 },
-                EntityKind::Type => Warning::UnusedType {
-                    name,
-                    imported: false,
-                    location,
-                },
+                EntityKind::Type => {
+                    let _ = unused_positions.insert(location.start);
+                    Warning::UnusedType {
+                        name,
+                        imported: false,
+                        location,
+                    }
+                }
                 EntityKind::ImportedModule { module_name } => {
                     let _ = unused_modules.insert(module_name.clone());
                     Warning::UnusedImportedModule { name, location }
@@ -728,6 +740,8 @@ impl Environment<'_> {
             .into_iter()
             .filter(|(module, _)| !unused_modules.contains(module))
             .for_each(|(_, warning)| problems.warning(warning));
+
+        unused_positions
     }
 
     fn handle_unused_variables(

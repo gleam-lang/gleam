@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
 assertion_line: 81
-expression: "\nfn go(x) {\n  case x {\n    True -> todo\n    _ -> 1\n  }\n}\n"
+expression: "\npub fn go(x) {\n  case x {\n    True -> todo\n    _ -> 1\n  }\n}\n"
 snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(x) {
+pub fn go(x) {
   case x {
     True -> todo
     _ -> 1
@@ -19,7 +19,7 @@ import { makeError } from "../gleam.mjs";
 
 const FILEPATH = "src/module.gleam";
 
-function go(x) {
+export function go(x) {
   if (x) {
     throw makeError(
       "todo",

@@ -4,11 +4,11 @@ use crate::{assert_js, assert_ts_def};
 fn list_literals() {
     assert_js!(
         r#"
-fn go(x) {
-    []
-    [1]
-    [1, 2]
-    [1, 2, ..x]
+pub fn go(x) {
+  []
+  [1]
+  [1, 2]
+  [1, 2, ..x]
 }
 "#,
     );
@@ -18,7 +18,7 @@ fn go(x) {
 fn long_list_literals() {
     assert_js!(
         r#"
-fn go() {
+pub fn go() {
   [111111111111111111111111111111111111111111111111111111111111111111111111]
   [11111111111111111111111111111111111111111111, 1111111111111111111111111111111111111111111]
 }
@@ -30,7 +30,7 @@ fn go() {
 fn multi_line_list_literals() {
     assert_js!(
         r#"
-fn go(x) {
+pub fn go(x) {
     [{True 1}]
 }
 "#,
@@ -41,8 +41,8 @@ fn go(x) {
 fn list_constants() {
     assert_js!(
         r#"
-const a = []
-const b = [1, 2, 3]
+pub const a = []
+pub const b = [1, 2, 3]
 "#,
     );
 }
@@ -61,7 +61,7 @@ pub const b = [1, 2, 3]
 fn list_destructuring() {
     assert_js!(
         r#"
-fn go(x, y) {
+pub fn go(x, y) {
   let assert [] = x
   let assert [a] = x
   let assert [1, 2] = x
@@ -76,7 +76,7 @@ fn go(x, y) {
 fn equality() {
     assert_js!(
         r#"
-fn go() {
+pub fn go() {
   [] == [1]
   [] != [1]
 }
@@ -88,7 +88,7 @@ fn go() {
 fn case() {
     assert_js!(
         r#"
-fn go(xs) {
+pub fn go(xs) {
   case xs {
     [] -> 0
     [_] -> 1
@@ -105,7 +105,7 @@ fn go(xs) {
 fn tight_empty_list() {
     assert_js!(
         r#"
-fn go(func) {
+pub fn go(func) {
   let huuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuge_variable = []
 }
 "#,

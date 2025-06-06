@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/blocks.rs
-expression: "\nfn main(f, a, b) {\n  {\n    a\n    |> f\n  } <> {\n    b\n    |> f\n  }\n}\n"
+assertion_line: 155
+expression: "\npub fn main(f, a, b) {\n  {\n    a\n    |> f\n  } <> {\n    b\n    |> f\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn main(f, a, b) {
+pub fn main(f, a, b) {
   {
     a
     |> f
@@ -16,7 +18,7 @@ fn main(f, a, b) {
 
 
 ----- COMPILED JAVASCRIPT
-function main(f, a, b) {
+export function main(f, a, b) {
   return (() => {
     let _pipe = a;
     return f(_pipe);

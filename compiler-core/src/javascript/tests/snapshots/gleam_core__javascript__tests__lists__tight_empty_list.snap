@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/lists.rs
-expression: "\nfn go(func) {\n  let huuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuge_variable = []\n}\n"
+assertion_line: 106
+expression: "\npub fn go(func) {\n  let huuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuge_variable = []\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(func) {
+pub fn go(func) {
   let huuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuge_variable = []
 }
 
@@ -12,7 +14,7 @@ fn go(func) {
 ----- COMPILED JAVASCRIPT
 import { toList } from "../gleam.mjs";
 
-function go(func) {
+export function go(func) {
   let huuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuge_variable = toList([]);
   return huuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuge_variable;
 }
