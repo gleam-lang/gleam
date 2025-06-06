@@ -42,9 +42,12 @@ expression: "\ncase 2, 3 {\n    x, y if x + y == 1 -> True\n}"
                                 },
                                 name: "x",
                                 type_: (),
-                                origin: Variable(
-                                    "x",
-                                ),
+                                origin: VariableOrigin {
+                                    syntax: Variable(
+                                        "x",
+                                    ),
+                                    declaration: ClausePattern,
+                                },
                             },
                             Variable {
                                 location: SrcSpan {
@@ -53,9 +56,12 @@ expression: "\ncase 2, 3 {\n    x, y if x + y == 1 -> True\n}"
                                 },
                                 name: "y",
                                 type_: (),
-                                origin: Variable(
-                                    "y",
-                                ),
+                                origin: VariableOrigin {
+                                    syntax: Variable(
+                                        "y",
+                                    ),
+                                    declaration: ClausePattern,
+                                },
                             },
                         ],
                         alternative_patterns: [],

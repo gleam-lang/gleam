@@ -19,7 +19,7 @@ use crate::{
     strings::to_snake_case,
     type_::{
         self, FieldMap, ModuleValueConstructor, Type, TypeVar, TypedCallArg, ValueConstructor,
-        error::{ModuleSuggestion, VariableDeclarationKind, VariableOrigin},
+        error::{ModuleSuggestion, VariableDeclaration, VariableOrigin},
         printer::{Names, Printer},
     },
 };
@@ -5968,19 +5968,14 @@ impl<'ast> ast::visit::Visit<'ast> for InlineVariable<'ast> {
             return;
         };
 
-        // We can only inline it if it comes from a regular variable pattern,
-        // not a complex pattern or generated assignment. We can also only inline
-        // variables assigned by `let` statements, as it doesn't make sense to do
-        // so with any other kind of variable.
-        match origin {
-            VariableOrigin::Variable {
-                kind: VariableDeclarationKind::LetPattern,
-                ..
-            } => {}
-            VariableOrigin::Variable { .. }
-            | VariableOrigin::LabelShorthand(_)
-            | VariableOrigin::AssignmentPattern
-            | VariableOrigin::Generated => return,
+        // We can only inline variables assigned by `let` statements, as it
+        //doesn't make sense to do so with any other kind of variable.
+        match origin.declaration {
+            VariableDeclaration::LetPattern => {}
+            VariableDeclaration::UsePattern
+            | VariableDeclaration::ClausePattern
+            | VariableDeclaration::FunctionParameter
+            | VariableDeclaration::Generated => return,
         }
 
         self.maybe_inline(*location);
@@ -5993,16 +5988,14 @@ impl<'ast> ast::visit::Visit<'ast> for InlineVariable<'ast> {
         _type: &'ast Arc<Type>,
         origin: &'ast VariableOrigin,
     ) {
-        // We can only inline it if it is a regular variable pattern
-        match origin {
-            VariableOrigin::Variable {
-                kind: VariableDeclarationKind::LetPattern,
-                ..
-            } => {}
-            VariableOrigin::Variable { .. }
-            | VariableOrigin::LabelShorthand(_)
-            | VariableOrigin::AssignmentPattern
-            | VariableOrigin::Generated => return,
+        // We can only inline variables assigned by `let` statements, as it
+        //doesn't make sense to do so with any other kind of variable.
+        match origin.declaration {
+            VariableDeclaration::LetPattern => {}
+            VariableDeclaration::UsePattern
+            | VariableDeclaration::ClausePattern
+            | VariableDeclaration::FunctionParameter
+            | VariableDeclaration::Generated => return,
         }
 
         let range = self.edits.src_span_to_lsp_range(*location);

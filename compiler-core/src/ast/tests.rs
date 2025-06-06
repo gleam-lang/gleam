@@ -6,7 +6,7 @@ use crate::analyse::TargetSupport;
 use crate::build::{ExpressionPosition, Origin, Target};
 use crate::config::PackageConfig;
 use crate::line_numbers::LineNumbers;
-use crate::type_::error::{VariableDeclarationKind, VariableOrigin};
+use crate::type_::error::{VariableDeclaration, VariableOrigin, VariableSyntax};
 use crate::type_::expression::{FunctionDefinition, Purity};
 use crate::type_::{Deprecation, PRELUDE_MODULE_NAME, Problems};
 use crate::warning::WarningEmitter;
@@ -327,9 +327,9 @@ wibble}"#,
             publicity: Publicity::Private,
             variant: ValueConstructorVariant::LocalVariable {
                 location: SrcSpan { start: 5, end: 11 },
-                origin: VariableOrigin::Variable {
-                    name: "wibble".into(),
-                    kind: VariableDeclarationKind::LetPattern,
+                origin: VariableOrigin {
+                    syntax: VariableSyntax::Variable("wibble".into()),
+                    declaration: VariableDeclaration::LetPattern,
                 },
             },
             type_: type_::int(),

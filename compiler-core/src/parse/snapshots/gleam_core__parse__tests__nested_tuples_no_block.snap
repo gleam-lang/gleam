@@ -48,9 +48,12 @@ expression: "\nlet tup = #(#(5, 6))\ntup.0.1\n"
                 },
                 name: "tup",
                 type_: (),
-                origin: Variable(
-                    "tup",
-                ),
+                origin: VariableOrigin {
+                    syntax: Variable(
+                        "tup",
+                    ),
+                    declaration: LetPattern,
+                },
             },
             kind: Let,
             compiled_case: CompiledCase {

@@ -789,11 +789,9 @@ impl ValueConstructorVariant {
     #[must_use]
     pub fn is_generated_variable(&self) -> bool {
         match self {
-            ValueConstructorVariant::LocalVariable {
-                origin: VariableOrigin::Generated,
-                ..
-            } => true,
-            ValueConstructorVariant::LocalVariable { .. } => false,
+            ValueConstructorVariant::LocalVariable { origin, .. } => {
+                matches!(origin.syntax, VariableSyntax::Generated)
+            }
             ValueConstructorVariant::ModuleConstant { .. }
             | ValueConstructorVariant::LocalConstant { .. }
             | ValueConstructorVariant::ModuleFn { .. }

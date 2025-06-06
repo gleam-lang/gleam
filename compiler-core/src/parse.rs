@@ -72,7 +72,7 @@ use crate::error::wrap;
 use crate::exhaustiveness::CompiledCase;
 use crate::parse::extra::ModuleExtra;
 use crate::type_::Deprecation;
-use crate::type_::error::{VariableDeclarationKind, VariableOrigin};
+use crate::type_::error::{VariableDeclaration, VariableOrigin, VariableSyntax};
 use crate::type_::expression::{Implementations, Purity};
 use crate::warning::{DeprecatedSyntaxWarning, WarningEmitter};
 use camino::Utf8PathBuf;
@@ -1214,26 +1214,15 @@ where
                                 SrcSpan { start, end },
                             );
                         }
-                        _ => {
-                            let kind = match position {
-                                PatternPosition::LetAssignment => {
-                                    VariableDeclarationKind::LetPattern
-                                }
-                                PatternPosition::CaseClause => {
-                                    VariableDeclarationKind::ClausePattern
-                                }
-                                PatternPosition::UsePattern => VariableDeclarationKind::UsePattern,
-                            };
-                            Pattern::Variable {
-                                origin: VariableOrigin::Variable {
-                                    name: name.clone(),
-                                    kind,
-                                },
-                                location: SrcSpan { start, end },
-                                name,
-                                type_: (),
-                            }
-                        }
+                        _ => Pattern::Variable {
+                            origin: VariableOrigin {
+                                syntax: VariableSyntax::Variable(name.clone()),
+                                declaration: position.to_declaration(),
+                            },
+                            location: SrcSpan { start, end },
+                            name,
+                            type_: (),
+                        },
                     }
                 }
             }
@@ -1913,7 +1902,10 @@ where
                             location: SrcSpan { start, end },
                             label: Some(name.clone()),
                             value: UntypedPattern::Variable {
-                                origin: VariableOrigin::LabelShorthand(name.clone()),
+                                origin: VariableOrigin {
+                                    syntax: VariableSyntax::LabelShorthand(name.clone()),
+                                    declaration: position.to_declaration(),
+                                },
                                 name,
                                 location: SrcSpan { start, end },
                                 type_: (),
@@ -4417,8 +4409,18 @@ enum ExpressionUnitContext {
 }
 
 #[derive(Debug, Clone, Copy)]
-enum PatternPosition {
+pub enum PatternPosition {
     LetAssignment,
     CaseClause,
     UsePattern,
+}
+
+impl PatternPosition {
+    pub fn to_declaration(&self) -> VariableDeclaration {
+        match self {
+            PatternPosition::LetAssignment => VariableDeclaration::LetPattern,
+            PatternPosition::CaseClause => VariableDeclaration::ClausePattern,
+            PatternPosition::UsePattern => VariableDeclaration::UsePattern,
+        }
+    }
 }
