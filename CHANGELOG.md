@@ -28,3 +28,7 @@
 - Fixed a bug where a bit array segment matching on a floating point number
   would match with `NaN` or `Infinity` on the JavaScript target.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the language server would not show the "Unqualify type"
+  code action for record declarations.
+  ([cysabi](https://github.com/cysabi))
