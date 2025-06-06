@@ -872,6 +872,19 @@ pub fn main() -> Nil {
 }
 
 #[test]
+fn list_spread_followed_by_another_spread() {
+    assert_module_error!(
+        r#"
+pub fn main() -> Nil {
+  let xs = [1, 2, 3]
+  let ys = [5, 6, 7]
+  [..xs, 4, ..ys]
+}
+"#
+    );
+}
+
+#[test]
 fn list_spread_as_first_item_followed_by_other_items() {
     assert_module_error!(
         r#"
