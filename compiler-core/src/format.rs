@@ -44,6 +44,7 @@ pub(crate) struct Intermediate<'a> {
     module_comments: Vec<Comment<'a>>,
     empty_lines: &'a [u32],
     new_lines: &'a [u32],
+    trailing_commas: &'a [u32],
 }
 
 impl<'a> Intermediate<'a> {
@@ -66,6 +67,7 @@ impl<'a> Intermediate<'a> {
                 .map(|span| Comment::from((span, src)))
                 .collect(),
             new_lines: &extra.new_lines,
+            trailing_commas: &extra.trailing_commas,
         }
     }
 }
@@ -102,6 +104,7 @@ pub struct Formatter<'a> {
     module_comments: &'a [Comment<'a>],
     empty_lines: &'a [u32],
     new_lines: &'a [u32],
+    trailing_commas: &'a [u32],
 }
 
 impl<'comments> Formatter<'comments> {
@@ -116,6 +119,7 @@ impl<'comments> Formatter<'comments> {
             module_comments: &extra.module_comments,
             empty_lines: extra.empty_lines,
             new_lines: extra.new_lines,
+            trailing_commas: extra.trailing_commas,
         }
     }
 

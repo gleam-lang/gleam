@@ -3668,16 +3668,17 @@ functions are declared separately from types.";
         sep: Option<&Token>,
     ) -> Result<(Vec<A>, bool), ParseError> {
         let mut results = vec![];
-        let mut ends_with_sep = false;
+        let mut final_separator = None;
         while let Some(result) = parser(self)? {
             results.push(result);
             if let Some(sep) = sep {
-                if self.maybe_one(sep).is_none() {
-                    ends_with_sep = false;
-                    break;
+                if let Some(separator) = self.maybe_one(sep) {
+                    final_separator = Some(separator);
                 } else {
-                    ends_with_sep = true;
+                    final_separator = None;
+                    break;
                 }
+
                 // Helpful error if extra separator
                 if let Some((start, end)) = self.maybe_one(sep) {
                     return parse_error(ParseErrorType::ExtraSeparator, SrcSpan { start, end });
@@ -3685,7 +3686,13 @@ functions are declared separately from types.";
             }
         }
 
-        Ok((results, ends_with_sep))
+        // If the sequence ends with a trailing comma we want to keep track of
+        // its position.
+        if let (Some(Token::Comma), Some((_, end))) = (sep, final_separator) {
+            self.extra.trailing_commas.push(end)
+        };
+
+        Ok((results, final_separator.is_some()))
     }
 
     // If next token is a Name, consume it and return relevant info, otherwise, return none
