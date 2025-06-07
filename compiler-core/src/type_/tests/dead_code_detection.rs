@@ -445,7 +445,7 @@ pub const wibble = 2
 
 #[test]
 fn used_shadowed_imported_value() {
-    assert_no_warnings!(
+    assert_warning!(
         (
             "thepackage",
             "wibble",
