@@ -991,6 +991,13 @@ pub enum Warning {
         first: SrcSpan,
         second: SrcSpan,
     },
+
+    /// Top-level definition should not shadow an imported one.
+    /// This includes constant or function imports.
+    TopLevelDefinitionShadowsImport{
+        location: SrcSpan,
+        name: EcoString,
+    },
 }
 
 #[derive(Debug, Eq, Copy, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
@@ -1216,9 +1223,11 @@ impl Warning {
             | Warning::JavaScriptIntUnsafe { location, .. }
             | Warning::AssertLiteralValue { location, .. }
             | Warning::BitArraySegmentTruncatedValue { location, .. }
+            | Warning::TopLevelDefinitionShadowsImport { location, .. }
             | Warning::ModuleImportedTwice {
                 second: location, ..
             } => *location,
+            
         }
     }
 
