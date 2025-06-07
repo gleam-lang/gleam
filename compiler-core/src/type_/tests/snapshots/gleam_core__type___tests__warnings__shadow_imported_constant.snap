@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\nimport module.{foo}\n\npub const foo = 1\n"
+---
+----- SOURCE CODE
+-- module.gleam
+
+pub const foo = 1
+
+
+-- main.gleam
+
+import module.{foo}
+
+pub const foo = 1
+
+
+----- WARNING
+warning: Unused imported module
+  ┌─ /src/warning/wrn.gleam:2:1
+  │
+2 │ import module.{foo}
+  │ ^^^^^^^^^^^^^^^^^^^ This imported module is never used
+
+Hint: You can safely remove it.
+
+warning: `foo` shadows an imported name
+  ┌─ /src/warning/wrn.gleam:4:1
+  │
+4 │ pub const foo = 1
+  │ ^^^^^^^^^^^^^ `foo` is defined here
+
+Definition of `foo` shadows an imported value.
+The imported value could not be used in this module anyway.
+Hint: Either rename `foo` or remove the `import` that brings `foo` into scope.

@@ -393,6 +393,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             ..
         } = c;
         self.check_name_case(name_location, &name, Named::Constant);
+        // If the constant's name matches an unqualified import, emit a warning:
+        if environment.unqualified_imported_names.contains_key(&name) {
+            self.problems.warning(Warning::TopLevelDefinitionShadowsImport {
+            // Use the constant's location span for highlighting
+            location: c.location,
+            name: name.clone(),
+            });
+        }
 
         environment.references.begin_constant();
 
@@ -1422,6 +1430,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let (name_location, name) = name.as_ref().expect("A module's function must be named");
 
         self.check_name_case(*name_location, name, Named::Function);
+        // If the function's name matches an unqualified import, emit a warning:
+        if environment.unqualified_imported_names.contains_key(name) {
+            self.problems.warning(Warning::TopLevelDefinitionShadowsImport {
+            // Use the function's location span for highlighting
+            location: f.location,
+            name: name.clone(),
+            });
+        }
 
         environment.references.register_value(
             name.clone(),
