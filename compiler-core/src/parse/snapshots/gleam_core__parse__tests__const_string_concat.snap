@@ -112,5 +112,6 @@ Parsed {
             20,
             51,
         ],
+        trailing_commas: [],
     },
 }

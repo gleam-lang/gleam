@@ -77,5 +77,6 @@ Parsed {
         comments: [],
         empty_lines: [],
         new_lines: [],
+        trailing_commas: [],
     },
 }
