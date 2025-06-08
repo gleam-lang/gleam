@@ -273,3 +273,93 @@ fn simple_single_line_list_with_no_trailing_comma_is_split_one_item_per_line() {
 "#
     );
 }
+
+#[test]
+fn empty_lines_in_list_are_not_ignored() {
+    assert_format_rewrite!(
+        "pub fn main() {
+  [1, 2,
+
+  3
+  ]
+}
+",
+        "pub fn main() {
+  [
+    1,
+    2,
+
+    3,
+  ]
+}
+"
+    );
+}
+
+#[test]
+fn empty_lines_in_const_list_are_not_ignored() {
+    assert_format_rewrite!(
+        "const list =
+  [1, 2,
+
+  3
+  ]
+",
+        "const list = [
+  1,
+  2,
+
+  3,
+]
+"
+    );
+}
+
+#[test]
+fn lists_with_empty_lines_are_always_broken() {
+    assert_format_rewrite!(
+        "pub fn main() {
+  [
+    1,
+    2,
+
+    3, 4, 5
+  ]
+}
+",
+        "pub fn main() {
+  [
+    1,
+    2,
+
+    3,
+    4,
+    5,
+  ]
+}
+"
+    );
+}
+
+#[test]
+fn const_lists_with_empty_lines_are_always_broken() {
+    assert_format_rewrite!(
+        "const list =
+  [
+    1,
+    2,
+
+    3, 4, 5
+  ]
+",
+        "const list = [
+  1,
+  2,
+
+  3,
+  4,
+  5,
+]
+"
+    );
+}

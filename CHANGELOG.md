@@ -77,6 +77,33 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The formatter no longer removes empty lines between list items. In case an
+  empty line is added between list items they will all be split on multiple
+  lines.
+
+  ```gleam
+  pub fn main() {
+    [
+      "natu", "xatu",
+
+      "chimeco"
+    ]
+  }
+  ```
+
+  Is formatted as:
+
+  ```gleam
+  pub fn main() {
+    [
+      "natu",
+      "xatu",
+
+      "chimeco",
+    ]
+  }
+  ```
+
 ### Compiler
 
 - Generated JavaScript functions, constants, and custom type constructors now
