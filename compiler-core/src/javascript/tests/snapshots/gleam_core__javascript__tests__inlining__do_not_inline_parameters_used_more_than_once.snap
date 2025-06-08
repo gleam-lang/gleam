@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/javascript/tests/inlining.rs
+expression: "\nimport gleam/bool\n\npub fn main() {\n  bool.guard(True)\n}\n"
+---
+----- SOURCE CODE
+
+import gleam/bool
+
+pub fn main() {
+  bool.guard(True)
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $bool from "../../gleam_stdlib/gleam/bool.mjs";
+
+export function main() {
+  {
+    let something = true;
+    if (something) {
+      return something;
+    } else {
+      return something;
+    }
+  }
+}
