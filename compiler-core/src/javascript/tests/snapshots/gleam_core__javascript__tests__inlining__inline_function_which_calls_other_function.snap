@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/javascript/tests/inlining.rs
+expression: "\nimport gleam/result\n\npub fn main() {\n  result.then(Ok(10), Error)\n}\n"
+---
+----- SOURCE CODE
+
+import gleam/result
+
+pub fn main() {
+  result.then(Ok(10), Error)
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $result from "../../gleam_stdlib/gleam/result.mjs";
+import { Ok, Error } from "../gleam.mjs";
+
+export function main() {
+  let $ = new Ok(10);
+  if ($ instanceof Ok) {
+    let value = $[0];
+    return new Error(value);
+  } else {
+    let error = $[0];
+    return new Error(error);
+  }
+}
