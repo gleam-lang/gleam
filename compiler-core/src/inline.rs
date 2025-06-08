@@ -1184,8 +1184,27 @@ pub struct InlinableFunction {
     pub inlinable_parameters: Vec<EcoString>,
 }
 
-const BLANK_LOCATION: SrcSpan = SrcSpan { start: 0, end: 0 };
+/// We discard type information during the inlining process to save cache size,
+/// as code generation mostly doesn't care about the types of values. The AST
+/// data structure still needs type information to exist though, so we just fill
+/// those spaces with a placeholder `Nil` type.
+///
+/// This works fine for now, as we are not supporting inlining any features of
+/// Gleam which require type information to generate code. However, we may need
+/// to revisit this in future if such features become supported (For example,
+/// equality comparisons on the JavaScript target)
+///
+/// We create a `LazyLock` here so we just clone the same `Arc` every time we
+/// need a placeholder type, rather than allocating a new one every time.
 const NIL: LazyLock<Arc<Type>> = LazyLock::new(type_::nil);
+/// Like type information above, location information is also not stored. The
+/// only reason we should need location information is for generating code for
+/// panicking keywords, like `panic` or `todo`.
+///
+/// Those are not supported yet, and when they are they will likely require some
+/// more thought as to how they are implemented, as inlining a function completely
+/// changes its location in the codebase.
+const BLANK_LOCATION: SrcSpan = SrcSpan { start: 0, end: 0 };
 
 impl InlinableFunction {
     /// Converts an `InlinableFunction` to an anonymous function, which can then
