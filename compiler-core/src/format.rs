@@ -587,12 +587,31 @@ impl<'comments> Formatter<'comments> {
             }
         };
 
-        let elements = join(
-            elements.iter().map(|element| self.const_expr(element)),
-            comma,
-        );
+        let mut elements_doc = nil();
+        for element in elements.iter() {
+            let empty_lines = self.pop_empty_lines(element.location().start);
+            let element_doc = self.const_expr(element);
 
-        let doc = break_("[", "[").append(elements).nest(INDENT);
+            elements_doc = if elements_doc.is_empty() {
+                element_doc
+            } else if empty_lines {
+                // If there's empty lines before the list item we want to add an
+                // empty line here. Notice how we're making sure no nesting is
+                // added after the comma, otherwise we would be adding needless
+                // whitespace in the empty line!
+                docvec![
+                    elements_doc,
+                    comma.clone().set_nesting(0),
+                    line(),
+                    element_doc
+                ]
+            } else {
+                docvec![elements_doc, comma.clone(), element_doc]
+            };
+        }
+        elements_doc = elements_doc.next_break_fits(NextBreakFitsMode::Disabled);
+
+        let doc = break_("[", "[").append(elements_doc).nest(INDENT);
 
         // We get all remaining comments that come before the list's closing
         // square bracket.
@@ -1999,15 +2018,31 @@ impl<'comments> Formatter<'comments> {
                 None => 0,
             };
 
-        let elements = join(
-            elements
-                .iter()
-                .map(|e| self.comma_separated_item(e, list_size)),
-            comma,
-        )
-        .next_break_fits(NextBreakFitsMode::Disabled);
+        let mut elements_doc = nil();
+        for element in elements.iter() {
+            let empty_lines = self.pop_empty_lines(element.location().start);
+            let element_doc = self.comma_separated_item(element, list_size);
 
-        let doc = break_("[", "[").append(elements);
+            elements_doc = if elements_doc.is_empty() {
+                element_doc
+            } else if empty_lines {
+                // If there's empty lines before the list item we want to add an
+                // empty line here. Notice how we're making sure no nesting is
+                // added after the comma, otherwise we would be adding needless
+                // whitespace in the empty line!
+                docvec![
+                    elements_doc,
+                    comma.clone().set_nesting(0),
+                    line(),
+                    element_doc
+                ]
+            } else {
+                docvec![elements_doc, comma.clone(), element_doc]
+            };
+        }
+        elements_doc = elements_doc.next_break_fits(NextBreakFitsMode::Disabled);
+
+        let doc = break_("[", "[").append(elements_doc);
         // We need to keep the last break aside and do not add it immediately
         // because in case there's a final comment before the closing square
         // bracket we want to add indentation (to just that break). Otherwise,
@@ -2068,7 +2103,19 @@ impl<'comments> Formatter<'comments> {
         let has_multiple_elements_per_line =
             self.has_items_on_the_same_line(items.iter().chain(tail));
 
-        if !ends_with_trailing_comma {
+        let has_empty_lines_between_elements = match (items.first(), items.last().or(tail)) {
+            (Some(first), Some(last)) => self.empty_lines.first().is_some_and(|empty_line| {
+                *empty_line >= first.location().end && *empty_line < last.location().start
+            }),
+            _ => false,
+        };
+
+        if has_empty_lines_between_elements {
+            // If there's any empty line between elements we want to force each
+            // item onto its own line to preserve the empty lines that were
+            // intentionally added.
+            ListItemsPacking::BreakOnePerLine
+        } else if !ends_with_trailing_comma {
             // If the list doesn't end with a trailing comma we try and pack it in
             // a single line; if we can't we'll put one item per line, no matter
             // the content of the list.
