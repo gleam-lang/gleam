@@ -1500,7 +1500,7 @@ impl<'comments> Formatter<'comments> {
     /// Returns true if there's a trailing comma between `start` and `end`.
     ///
     fn has_trailing_comma(&self, start: u32, end: u32) -> bool {
-        dbg!(self.trailing_commas)
+        self.trailing_commas
             .binary_search_by(|comma| {
                 if *comma < start {
                     Ordering::Less
@@ -2882,6 +2882,7 @@ impl<'a> Documentable<'a> for &'a BinOp {
     }
 }
 
+#[allow(clippy::enum_variant_names)]
 enum ListItemsPacking {
     /// Try and fit everything on a single line; if the items don't fit, break
     /// the list putting each item into its own line.
@@ -2925,6 +2926,7 @@ enum ListItemsPacking {
     ///   3,
     /// ]
     /// ```
+    ///
     BreakOnePerLine,
 }
 
