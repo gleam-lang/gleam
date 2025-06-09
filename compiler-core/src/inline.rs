@@ -1223,9 +1223,9 @@ pub struct InlinableFunction {
     pub inlinable_parameters: Vec<EcoString>,
 }
 
-/// Like type information above, location information is also not stored. The
-/// only reason we should need location information is for generating code for
-/// panicking keywords, like `panic` or `todo`.
+/// Location information is not stored for inlinable functions, to reduce cache
+/// size. The only reason we should need location information is for generating
+/// code for panicking keywords, like `panic` or `todo`.
 ///
 /// Those are not supported yet, and when they are they will likely require some
 /// more thought as to how they are implemented, as inlining a function completely
@@ -1519,7 +1519,6 @@ impl InlinableParameter {
 /// generation needs this type information, as some prelude types are handled
 /// specially in certain cases. Custom type don't matter though, so they all get
 /// reduced into a single value, which decreases cache size.
-
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum InlinableType {
     BitArray,
