@@ -71,10 +71,7 @@
 //! works.
 //!
 
-use std::{
-    collections::HashMap,
-    sync::{Arc, LazyLock},
-};
+use std::{collections::HashMap, sync::Arc};
 
 use ecow::EcoString;
 use itertools::Itertools;
@@ -653,8 +650,8 @@ impl Inliner<'_> {
         };
 
         TypedExpr::Call {
-            location: location,
-            type_: type_,
+            location,
+            type_,
             fun: Box::new(function),
             args: arguments,
         }
@@ -1159,13 +1156,13 @@ impl FunctionToInlinable {
         let pattern = clause
             .pattern
             .iter()
-            .map(|pattern| self.pattern(pattern))
+            .map(Self::pattern)
             .collect::<Option<_>>()?;
         let body = self.expression(&clause.then)?;
         Some(InlinableClause { pattern, body })
     }
 
-    fn pattern(&mut self, pattern: &TypedPattern) -> Option<InlinablePattern> {
+    fn pattern(pattern: &TypedPattern) -> Option<InlinablePattern> {
         match pattern {
             TypedPattern::Variable { name, .. } => {
                 Some(InlinablePattern::Variable { name: name.clone() })
@@ -1181,7 +1178,7 @@ impl FunctionToInlinable {
                     .map(|argument| {
                         Some(InlinableArgument {
                             label: argument.label.clone(),
-                            value: self.pattern(&argument.value)?,
+                            value: Self::pattern(&argument.value)?,
                         })
                     })
                     .collect::<Option<_>>()?;
@@ -1250,7 +1247,7 @@ impl InlinableFunction {
 
         TypedExpr::Fn {
             location: BLANK_LOCATION,
-            type_: UNKNOWN_TYPE.clone(),
+            type_: unknown_type(),
             kind: FunctionLiteralKind::Anonymous {
                 head: BLANK_LOCATION,
             },
@@ -1393,12 +1390,12 @@ impl InlinablePattern {
                     constructor_index: 0,
                 }),
                 spread: None,
-                type_: UNKNOWN_TYPE.clone(),
+                type_: unknown_type(),
             },
             InlinablePattern::Variable { name } => TypedPattern::Variable {
                 location: BLANK_LOCATION,
                 name: name.clone(),
-                type_: UNKNOWN_TYPE.clone(),
+                type_: unknown_type(),
                 origin: VariableOrigin::Generated,
             },
         }
@@ -1510,7 +1507,7 @@ impl InlinableParameter {
             names,
             location: BLANK_LOCATION,
             annotation: None,
-            type_: UNKNOWN_TYPE.clone(),
+            type_: unknown_type(),
         }
     }
 }
@@ -1542,7 +1539,9 @@ pub enum InlinableType {
     Other,
 }
 
-const UNKNOWN_TYPE: LazyLock<Arc<Type>> = LazyLock::new(|| type_::generic_var(0));
+fn unknown_type() -> Arc<Type> {
+    type_::generic_var(0)
+}
 
 impl InlinableType {
     fn to_type(&self) -> Arc<Type> {
@@ -1565,7 +1564,7 @@ impl InlinableType {
             // Code generation doesn't care about custom types at all, only
             // prelude types are handled specially, so we treat custom types as
             // opaque generic type variables.
-            InlinableType::Other => UNKNOWN_TYPE.clone(),
+            InlinableType::Other => unknown_type(),
         }
     }
 }

@@ -232,8 +232,6 @@ impl<'module, 'a> Generator<'module, 'a> {
         body: &'a [TypedStatement],
         args: &'a [TypedArg],
     ) -> Output<'a> {
-        dbg!("HERE");
-
         let body = self.statements(body)?;
         if self.tail_recursion_used {
             self.tail_call_loop(body, args)
@@ -726,7 +724,6 @@ impl<'module, 'a> Generator<'module, 'a> {
     }
 
     fn variable(&mut self, name: &'a EcoString, constructor: &'a ValueConstructor) -> Output<'a> {
-        dbg!(name, constructor);
         match &constructor.variant {
             ValueConstructorVariant::LocalConstant { literal } => {
                 self.constant_expression(Context::Function, literal)
@@ -1342,8 +1339,6 @@ impl<'module, 'a> Generator<'module, 'a> {
                 name,
                 ..
             } => {
-                dbg!(name);
-                dbg!(type_);
                 if type_.is_result_constructor() {
                     if name == "Ok" {
                         self.tracker.ok_used = true;
@@ -2559,8 +2554,6 @@ pub(crate) fn record_constructor<'a>(
     arity: u16,
     tracker: &mut UsageTracker,
 ) -> Document<'a> {
-    dbg!(&type_, name);
-
     if qualifier.is_none() && type_.is_result_constructor() {
         if name == "Ok" {
             tracker.ok_used = true;
