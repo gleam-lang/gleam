@@ -34,25 +34,21 @@ export function main() {
   let var$ = 7;
   if (class$ === while$) {
     return true;
+  } else if (isEqual(toList([class$]), toList([5]))) {
+    return true;
   } else {
-    if (isEqual(toList([class$]), toList([5]))) {
+    let function$1 = var$;
+    if (isEqual([function$1], [5])) {
+      return false;
+    } else if (10 === 5) {
       return true;
     } else {
-      let function$1 = var$;
-      if (isEqual([function$1], [5])) {
+      let while$1 = var$;
+      if (while$1 > 5) {
         return false;
       } else {
-        if (10 === 5) {
-          return true;
-        } else {
-          let while$1 = var$;
-          if (while$1 > 5) {
-            return false;
-          } else {
-            let class$1 = var$;
-            return false;
-          }
-        }
+        let class$1 = var$;
+        return false;
       }
     }
   }

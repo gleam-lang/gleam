@@ -371,9 +371,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             let if_true_body = this.body_expression(if_true.clause_index)?;
             Ok(join_with_line(if_true_bindings, if_true_body))
         })?;
-        let if_false = self
-            .inside_new_scope(|this| this.decision(if_false))?
-            .into_doc();
+        let if_false = self.inside_new_scope(|this| this.decision(if_false))?;
 
         // We can now piece everything together into a case body!
         let if_ = CaseBody::If {
@@ -387,7 +385,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             CaseBody::IfElse(
                 if_.into_doc()
                     .append(" else ")
-                    .append(break_block(if_false)),
+                    .append(if_false.document_after_else()),
             )
         };
 
