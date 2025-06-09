@@ -14,16 +14,8 @@ fn go(x) {
 
 ----- COMPILED JAVASCRIPT
 function go(x) {
-  if (x.bitSize >= 8) {
-    if (x.bitSize >= 16) {
-      if ((x.bitSize - 16) % 8 === 0) {
-        return 1;
-      } else {
-        return 2;
-      }
-    } else {
-      return 2;
-    }
+  if ((x.bitSize >= 8) && ((x.bitSize >= 16) && ((x.bitSize - 16) % 8 === 0))) {
+    return 1;
   } else {
     return 2;
   }

@@ -54,16 +54,38 @@ enum CaseBody<'a> {
     /// `else` statement.
     Statements(Document<'a>),
 
-    /// A JavaScript `if` statement followed by one or more `else` clauses. This
+    /// A JavaScript `if` statement followed by a single `else` clause. This
     /// can sometimes be merged with preceding `else` statements.
-    IfElse(Document<'a>),
+    IfElse {
+        check: Document<'a>,
+        if_body: Document<'a>,
+        else_body: Document<'a>,
+        decision: &'a Decision,
+    },
+
+    /// A JavaScript `if` statement followed by more than one `else` clause. This
+    /// can sometimes be merged with preceding `else` statements.
+    IfElseChain(Document<'a>),
 }
 
 impl<'a> CaseBody<'a> {
     fn into_doc(self) -> Document<'a> {
         match self {
             CaseBody::If { check, body } => docvec!["if (", check, ") ", break_block(body)],
-            CaseBody::Statements(document) | CaseBody::IfElse(document) => document,
+            CaseBody::IfElse {
+                check,
+                if_body,
+                else_body,
+                ..
+            } => docvec![
+                "if (",
+                check,
+                ") ",
+                break_block(if_body),
+                " else ",
+                else_body,
+            ],
+            CaseBody::Statements(document) | CaseBody::IfElseChain(document) => document,
         }
     }
 
@@ -72,8 +94,8 @@ impl<'a> CaseBody<'a> {
     fn document_after_else(self) -> Document<'a> {
         match self {
             // `if` and `if-else` statements can come directly after an `else` keyword
-            CaseBody::If { .. } => self.into_doc(),
-            CaseBody::IfElse(document) => document,
+            CaseBody::If { .. } | CaseBody::IfElse { .. } => self.into_doc(),
+            CaseBody::IfElseChain(document) => document,
             // Lists of statements must be wrapped in a block
             CaseBody::Statements(document) => break_block(document),
         }
@@ -81,8 +103,8 @@ impl<'a> CaseBody<'a> {
 
     fn is_empty(&self) -> bool {
         match self {
-            CaseBody::If { .. } => false,
-            CaseBody::Statements(document) | CaseBody::IfElse(document) => document.is_empty(),
+            CaseBody::If { .. } | CaseBody::IfElse { .. } => false,
+            CaseBody::Statements(document) | CaseBody::IfElseChain(document) => document.is_empty(),
         }
     }
 }
@@ -195,6 +217,8 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         fallback: &'a Decision,
         fallback_check: &'a FallbackCheck,
     ) -> Result<CaseBody<'a>, Error> {
+        dbg!(var, choices, fallback_check, fallback);
+
         // If there's just a single choice we can just generate the code for
         // it: no need to do any checking, we know it must match!
         if choices.is_empty() {
@@ -259,7 +283,19 @@ impl<'a> CasePrinter<'_, '_, 'a> {
                 CaseBody::If { check, body } => {
                     (docvec!["(", check_doc, ") && (", check, ")"], body)
                 }
-                CaseBody::Statements(document) | CaseBody::IfElse(document) => {
+
+                CaseBody::IfElse {
+                    check,
+                    if_body,
+                    decision,
+                    ..
+                } if decision == fallback => {
+                    (docvec!["(", check_doc, ") && (", check, ")"], if_body)
+                }
+
+                if_else @ CaseBody::IfElse { .. } => (check_doc, if_else.into_doc()),
+
+                CaseBody::Statements(document) | CaseBody::IfElseChain(document) => {
                     (check_doc, document)
                 }
             };
@@ -271,15 +307,15 @@ impl<'a> CasePrinter<'_, '_, 'a> {
                     body,
                 },
                 // If this is the second check, the `if` becomes `else if`
-                CaseBody::If { .. } => CaseBody::IfElse(docvec![
+                CaseBody::If { .. } | CaseBody::IfElse { .. } => CaseBody::IfElseChain(docvec![
                     if_.into_doc(),
                     " else if (",
                     check_doc,
                     ") ",
-                    break_block(body),
+                    break_block(body)
                 ]),
-                CaseBody::IfElse(document) | CaseBody::Statements(document) => {
-                    CaseBody::IfElse(docvec![
+                CaseBody::IfElseChain(document) | CaseBody::Statements(document) => {
+                    CaseBody::IfElseChain(docvec![
                         document,
                         " else if (",
                         check_doc,
@@ -298,14 +334,25 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             self.variables.record_check_assignments(var, check);
         }
 
-        let body = self.inside_new_scope(|this| this.decision(fallback))?;
-        let document = if body.is_empty() {
+        let else_body = self.inside_new_scope(|this| this.decision(fallback))?;
+        let document = if else_body.is_empty() {
             if_
+        } else if let CaseBody::If {
+            check,
+            body: if_body,
+        } = if_
+        {
+            CaseBody::IfElse {
+                check,
+                if_body,
+                else_body: else_body.document_after_else(),
+                decision: fallback,
+            }
         } else {
-            CaseBody::IfElse(docvec![
+            CaseBody::IfElseChain(docvec![
                 if_.into_doc(),
                 " else ",
-                body.document_after_else()
+                else_body.document_after_else()
             ])
         };
 
@@ -371,22 +418,21 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             let if_true_body = this.body_expression(if_true.clause_index)?;
             Ok(join_with_line(if_true_bindings, if_true_body))
         })?;
-        let if_false = self.inside_new_scope(|this| this.decision(if_false))?;
+        let if_false_body = self.inside_new_scope(|this| this.decision(if_false))?;
 
         // We can now piece everything together into a case body!
-        let if_ = CaseBody::If {
-            check,
-            body: if_true,
-        };
-
-        let if_ = if if_false.is_empty() {
-            if_
+        let if_ = if if_false_body.is_empty() {
+            CaseBody::If {
+                check,
+                body: if_true,
+            }
         } else {
-            CaseBody::IfElse(
-                if_.into_doc()
-                    .append(" else ")
-                    .append(if_false.document_after_else()),
-            )
+            CaseBody::IfElse {
+                check,
+                if_body: if_true,
+                else_body: if_false_body.document_after_else(),
+                decision: if_false,
+            }
         };
 
         Ok(if check_bindings.is_empty() {

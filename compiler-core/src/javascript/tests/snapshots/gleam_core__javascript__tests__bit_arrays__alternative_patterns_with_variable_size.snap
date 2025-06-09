@@ -17,25 +17,21 @@ fn go(x) {
 import { bitArraySliceToInt } from "../gleam.mjs";
 
 function go(x) {
-  if (x.bitSize >= 8) {
-    if (x.bitSize >= 16) {
-      let n = x.byteAt(1);
+  if ((x.bitSize >= 8) && (x.bitSize >= 16)) {
+    let n = x.byteAt(1);
+    if (x.bitSize === 16 + n) {
+      let n$1 = n;
+      let rest = bitArraySliceToInt(x, 16, 16 + n$1, true, false);
+      return true;
+    } else {
+      let n = x.byteAt(0);
       if (x.bitSize === 16 + n) {
         let n$1 = n;
         let rest = bitArraySliceToInt(x, 16, 16 + n$1, true, false);
         return true;
       } else {
-        let n = x.byteAt(0);
-        if (x.bitSize === 16 + n) {
-          let n$1 = n;
-          let rest = bitArraySliceToInt(x, 16, 16 + n$1, true, false);
-          return true;
-        } else {
-          return false;
-        }
+        return false;
       }
-    } else {
-      return false;
     }
   } else {
     return false;
