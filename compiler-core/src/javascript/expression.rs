@@ -1279,6 +1279,8 @@ impl<'module, 'a> Generator<'module, 'a> {
                 name,
                 ..
             } => {
+                dbg!(name);
+                dbg!(type_);
                 if type_.is_result_constructor() {
                     if name == "Ok" {
                         self.tracker.ok_used = true;
@@ -2520,6 +2522,8 @@ pub(crate) fn record_constructor<'a>(
     arity: u16,
     tracker: &mut UsageTracker,
 ) -> Document<'a> {
+    dbg!(&type_, name);
+
     if qualifier.is_none() && type_.is_result_constructor() {
         if name == "Ok" {
             tracker.ok_used = true;

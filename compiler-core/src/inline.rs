@@ -92,8 +92,8 @@ use crate::{
     },
     exhaustiveness::CompiledCase,
     type_::{
-        self, Deprecation, ModuleInterface, ModuleValueConstructor, PatternConstructor, Type,
-        TypedCallArg, ValueConstructorVariant,
+        self, Deprecation, ModuleInterface, ModuleValueConstructor, PRELUDE_MODULE_NAME,
+        PatternConstructor, Type, TypedCallArg, ValueConstructorVariant, collapse_links,
         error::VariableOrigin,
         expression::{Implementations, Purity},
     },
@@ -679,7 +679,7 @@ impl Inliner<'_> {
             .filter_map(|(parameter, argument)| {
                 let name = parameter.get_variable_name().cloned().unwrap_or("_".into());
 
-                // A function can be inlined if it is only used once (stored in
+                // An argument can be inlined if it is only used once (stored in
                 // the `InlineFunction` structure), and it is pure. Sometime impure
                 // arguments can be inlined, but for simplicity we avoid inlining
                 // all impure arguments for now. This heuristic can be improved
@@ -691,6 +691,8 @@ impl Inliner<'_> {
                     return None;
                 }
 
+                let type_ = argument.value.type_();
+
                 // Otherwise, we make an assignment which assigns the value of
                 // the argument to the correct parameter name.
                 Some(Statement::Assignment(Box::new(Assignment {
@@ -699,11 +701,11 @@ impl Inliner<'_> {
                     pattern: TypedPattern::Variable {
                         location: BLANK_LOCATION,
                         name: name.clone(),
-                        type_: NIL.clone(),
+                        type_: type_.clone(),
                         origin: VariableOrigin::Generated,
                     },
                     kind: AssignmentKind::Generated,
-                    compiled_case: CompiledCase::simple_variable_assignment(name, NIL.clone()),
+                    compiled_case: CompiledCase::simple_variable_assignment(name, type_),
                     annotation: None,
                 })))
             })
@@ -1008,6 +1010,7 @@ impl FunctionToInlinable {
                 subjects,
                 clauses,
                 compiled_case,
+                type_,
                 ..
             } => {
                 let subjects = subjects
@@ -1023,6 +1026,7 @@ impl FunctionToInlinable {
                     subjects,
                     clauses,
                     compiled_case: compiled_case.clone(),
+                    type_: self.type_(type_),
                 })
             }
             TypedExpr::Var {
@@ -1048,9 +1052,12 @@ impl FunctionToInlinable {
                 Some(InlinableExpression::Variable {
                     name: name.clone(),
                     constructor: self.value_constructor(constructor)?,
+                    type_: self.type_(&constructor.type_),
                 })
             }
-            TypedExpr::Call { fun, args, .. } => {
+            TypedExpr::Call {
+                fun, args, type_, ..
+            } => {
                 let function = self.expression(fun)?;
                 let arguments = args
                     .iter()
@@ -1065,6 +1072,7 @@ impl FunctionToInlinable {
                 Some(InlinableExpression::Call {
                     function: Box::new(function),
                     arguments,
+                    type_: self.type_(type_),
                 })
             }
 
@@ -1088,6 +1096,37 @@ impl FunctionToInlinable {
             | TypedExpr::NegateBool { .. }
             | TypedExpr::NegateInt { .. }
             | TypedExpr::Invalid { .. } => None,
+        }
+    }
+
+    fn type_(&self, type_: &Arc<Type>) -> InlinableType {
+        match collapse_links(type_.clone()).as_ref() {
+            Type::Fn { args, return_ } => InlinableType::Function {
+                arguments: args.iter().map(|argument| self.type_(argument)).collect(),
+                return_: Box::new(self.type_(return_)),
+            },
+            Type::Named {
+                module, name, args, ..
+            } if module == PRELUDE_MODULE_NAME => self.prelude_type(name, args),
+            Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => InlinableType::Other,
+        }
+    }
+
+    fn prelude_type(&self, name: &str, arguments: &[Arc<Type>]) -> InlinableType {
+        match (name, arguments) {
+            ("BitArray", _) => InlinableType::BitArray,
+            ("Bool", _) => InlinableType::Bool,
+            ("Float", _) => InlinableType::Float,
+            ("Int", _) => InlinableType::Int,
+            ("List", [element]) => InlinableType::List(Box::new(self.type_(element))),
+            ("Nil", _) => InlinableType::Nil,
+            ("Result", [ok, error]) => InlinableType::Result {
+                ok: Box::new(self.type_(ok)),
+                error: Box::new(self.type_(error)),
+            },
+            ("String", _) => InlinableType::String,
+            ("UtfCodepoint", _) => InlinableType::UtfCodepoint,
+            _ => InlinableType::Other,
         }
     }
 
@@ -1184,19 +1223,6 @@ pub struct InlinableFunction {
     pub inlinable_parameters: Vec<EcoString>,
 }
 
-/// We discard type information during the inlining process to save cache size,
-/// as code generation mostly doesn't care about the types of values. The AST
-/// data structure still needs type information to exist though, so we just fill
-/// those spaces with a placeholder `Nil` type.
-///
-/// This works fine for now, as we are not supporting inlining any features of
-/// Gleam which require type information to generate code. However, we may need
-/// to revisit this in future if such features become supported (For example,
-/// equality comparisons on the JavaScript target)
-///
-/// We create a `LazyLock` here so we just clone the same `Arc` every time we
-/// need a placeholder type, rather than allocating a new one every time.
-const NIL: LazyLock<Arc<Type>> = LazyLock::new(type_::nil);
 /// Like type information above, location information is also not stored. The
 /// only reason we should need location information is for generating code for
 /// panicking keywords, like `panic` or `todo`.
@@ -1224,7 +1250,7 @@ impl InlinableFunction {
 
         TypedExpr::Fn {
             location: BLANK_LOCATION,
-            type_: NIL.clone(),
+            type_: UNKNOWN_TYPE.clone(),
             kind: FunctionLiteralKind::Anonymous {
                 head: BLANK_LOCATION,
             },
@@ -1244,16 +1270,19 @@ pub enum InlinableExpression {
         subjects: Vec<InlinableExpression>,
         clauses: Vec<InlinableClause>,
         compiled_case: CompiledCase,
+        type_: InlinableType,
     },
 
     Variable {
         name: EcoString,
         constructor: InlinableValueConstructor,
+        type_: InlinableType,
     },
 
     Call {
         function: Box<InlinableExpression>,
         arguments: Vec<InlinableArgument<InlinableExpression>>,
+        type_: InlinableType,
     },
 }
 
@@ -1264,9 +1293,10 @@ impl InlinableExpression {
                 subjects,
                 clauses,
                 compiled_case,
+                type_,
             } => TypedExpr::Case {
                 location: BLANK_LOCATION,
-                type_: NIL.clone(),
+                type_: type_.to_type(),
                 subjects: subjects
                     .iter()
                     .map(|subject| subject.to_expression())
@@ -1277,17 +1307,22 @@ impl InlinableExpression {
                     .collect(),
                 compiled_case: compiled_case.clone(),
             },
-            InlinableExpression::Variable { name, constructor } => TypedExpr::Var {
+            InlinableExpression::Variable {
+                name,
+                constructor,
+                type_,
+            } => TypedExpr::Var {
                 location: BLANK_LOCATION,
-                constructor: constructor.to_value_constructor(),
+                constructor: constructor.to_value_constructor(type_.to_type()),
                 name: name.clone(),
             },
             InlinableExpression::Call {
                 function,
                 arguments,
+                type_,
             } => TypedExpr::Call {
                 location: BLANK_LOCATION,
-                type_: NIL.clone(),
+                type_: type_.to_type(),
                 fun: Box::new(function.to_expression()),
                 args: arguments
                     .iter()
@@ -1358,12 +1393,12 @@ impl InlinablePattern {
                     constructor_index: 0,
                 }),
                 spread: None,
-                type_: NIL.clone(),
+                type_: UNKNOWN_TYPE.clone(),
             },
             InlinablePattern::Variable { name } => TypedPattern::Variable {
                 location: BLANK_LOCATION,
                 name: name.clone(),
-                type_: NIL.clone(),
+                type_: UNKNOWN_TYPE.clone(),
                 origin: VariableOrigin::Generated,
             },
         }
@@ -1378,7 +1413,7 @@ pub enum InlinableValueConstructor {
 }
 
 impl InlinableValueConstructor {
-    fn to_value_constructor(&self) -> type_::ValueConstructor {
+    fn to_value_constructor(&self, type_: Arc<Type>) -> type_::ValueConstructor {
         let variant = match self {
             InlinableValueConstructor::LocalVariable => ValueConstructorVariant::LocalVariable {
                 location: BLANK_LOCATION,
@@ -1413,7 +1448,7 @@ impl InlinableValueConstructor {
             publicity: Publicity::Private,
             deprecation: Deprecation::NotDeprecated,
             variant,
-            type_: NIL.clone(),
+            type_,
         }
     }
 }
@@ -1475,7 +1510,63 @@ impl InlinableParameter {
             names,
             location: BLANK_LOCATION,
             annotation: None,
-            type_: NIL.clone(),
+            type_: UNKNOWN_TYPE.clone(),
+        }
+    }
+}
+
+/// A simplified version of `Type`, which only cares about prelude types. Code
+/// generation needs this type information, as some prelude types are handled
+/// specially in certain cases. Custom type don't matter though, so they all get
+/// reduced into a single value, which decreases cache size.
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum InlinableType {
+    BitArray,
+    Bool,
+    Float,
+    Int,
+    List(Box<InlinableType>),
+    Nil,
+    Result {
+        ok: Box<InlinableType>,
+        error: Box<InlinableType>,
+    },
+    String,
+    UtfCodepoint,
+
+    Function {
+        arguments: Vec<InlinableType>,
+        return_: Box<InlinableType>,
+    },
+
+    Other,
+}
+
+const UNKNOWN_TYPE: LazyLock<Arc<Type>> = LazyLock::new(|| type_::generic_var(0));
+
+impl InlinableType {
+    fn to_type(&self) -> Arc<Type> {
+        match self {
+            InlinableType::BitArray => type_::bit_array(),
+            InlinableType::Bool => type_::bool(),
+            InlinableType::Float => type_::float(),
+            InlinableType::Int => type_::int(),
+            InlinableType::List(element) => type_::list(element.to_type()),
+            InlinableType::Nil => type_::nil(),
+            InlinableType::Result { ok, error } => type_::result(ok.to_type(), error.to_type()),
+            InlinableType::String => type_::string(),
+            InlinableType::UtfCodepoint => type_::utf_codepoint(),
+
+            InlinableType::Function { arguments, return_ } => type_::fn_(
+                arguments.iter().map(Self::to_type).collect(),
+                return_.to_type(),
+            ),
+
+            // Code generation doesn't care about custom types at all, only
+            // prelude types are handled specially, so we treat custom types as
+            // opaque generic type variables.
+            InlinableType::Other => UNKNOWN_TYPE.clone(),
         }
     }
 }

@@ -19,7 +19,7 @@ fn do_side_effects() {
 
 ----- COMPILED JAVASCRIPT
 import * as $result from "../../gleam_stdlib/gleam/result.mjs";
-import { Ok, makeError } from "../gleam.mjs";
+import { Ok, Error, makeError } from "../gleam.mjs";
 
 const FILEPATH = "src/module.gleam";
 
