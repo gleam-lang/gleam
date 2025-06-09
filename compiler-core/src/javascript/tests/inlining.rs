@@ -52,7 +52,7 @@ fn inline_higher_order_function() {
 import gleam/result
 
 pub fn main() {
-  result.map(over: Ok(10), apply: double)
+  result.map(over: Ok(10), with: double)
 }
 
 fn double(x) { x + x }
@@ -170,7 +170,7 @@ fn do_not_inline_parameters_used_more_than_once() {
 pub fn guard(something) {
   case something {
     True -> something
-    False -> something
+    False -> False
   }
 }
 "
