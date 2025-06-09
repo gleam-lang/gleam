@@ -16,14 +16,10 @@ fn go(x) {
 import { bitArraySliceToInt } from "../gleam.mjs";
 
 function go(x) {
-  if (x.bitSize >= 16) {
-    if (x.bitSize === 24) {
-      let a = bitArraySliceToInt(x, 0, 16, true, false);
-      let b = x.byteAt(2);
-      return a + b;
-    } else {
-      return 1;
-    }
+  if ((x.bitSize >= 16) && (x.bitSize === 24)) {
+    let a = bitArraySliceToInt(x, 0, 16, true, false);
+    let b = x.byteAt(2);
+    return a + b;
   } else {
     return 1;
   }

@@ -16,24 +16,8 @@ import { toBitArray } from "../gleam.mjs";
 
 export function main() {
   let $ = toBitArray([]);
-  if ($.bitSize >= 8) {
-    if ($.byteAt(0) === 97) {
-      if ($.bitSize >= 16) {
-        if ($.byteAt(1) === 98) {
-          if (($.bitSize - 16) % 8 === 0) {
-            return 1;
-          } else {
-            return 2;
-          }
-        } else {
-          return 2;
-        }
-      } else {
-        return 2;
-      }
-    } else {
-      return 2;
-    }
+  if (($.bitSize >= 8) && (($.byteAt(0) === 97) && (($.bitSize >= 16) && (($.byteAt(1) === 98) && (($.bitSize - 16) % 8 === 0))))) {
+    return 1;
   } else {
     return 2;
   }

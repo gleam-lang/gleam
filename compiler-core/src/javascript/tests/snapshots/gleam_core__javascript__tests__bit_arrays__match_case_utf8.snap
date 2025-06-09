@@ -14,21 +14,17 @@ fn go(x) {
 
 ----- COMPILED JAVASCRIPT
 function go(x) {
-  if (x.bitSize === 80) {
-    if (x.byteAt(0) === 71 &&
-      x.byteAt(1) === 108 &&
-      x.byteAt(2) === 101 &&
-      x.byteAt(3) === 97 &&
-      x.byteAt(4) === 109 &&
-      x.byteAt(5) === 32 &&
-      x.byteAt(6) === 240 &&
-      x.byteAt(7) === 159 &&
-      x.byteAt(8) === 145 &&
-      x.byteAt(9) === 141) {
-      return 1;
-    } else {
-      return 2;
-    }
+  if ((x.bitSize === 80) && (x.byteAt(0) === 71 &&
+    x.byteAt(1) === 108 &&
+    x.byteAt(2) === 101 &&
+    x.byteAt(3) === 97 &&
+    x.byteAt(4) === 109 &&
+    x.byteAt(5) === 32 &&
+    x.byteAt(6) === 240 &&
+    x.byteAt(7) === 159 &&
+    x.byteAt(8) === 145 &&
+    x.byteAt(9) === 141)) {
+    return 1;
   } else {
     return 2;
   }

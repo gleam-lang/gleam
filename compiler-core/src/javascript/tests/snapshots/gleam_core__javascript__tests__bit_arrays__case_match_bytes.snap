@@ -14,17 +14,9 @@ fn go(x) {
 
 ----- COMPILED JAVASCRIPT
 function go(x) {
-  if (x.bitSize >= 8) {
-    if (x.byteAt(0) === 1) {
-      if (x.bitSize === 16) {
-        let y = x.byteAt(1);
-        return y;
-      } else {
-        return 1;
-      }
-    } else {
-      return 1;
-    }
+  if ((x.bitSize >= 8) && ((x.byteAt(0) === 1) && (x.bitSize === 16))) {
+    let y = x.byteAt(1);
+    return y;
   } else {
     return 1;
   }

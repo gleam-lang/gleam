@@ -14,12 +14,8 @@ fn go(x, y) {
 
 ----- COMPILED JAVASCRIPT
 function go(x, y) {
-  if (y) {
-    if (x) {
-      return 1;
-    } else {
-      return 0;
-    }
+  if ((y) && (x)) {
+    return 1;
   } else {
     return 0;
   }

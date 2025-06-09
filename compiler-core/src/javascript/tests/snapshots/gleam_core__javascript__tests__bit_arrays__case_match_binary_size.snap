@@ -21,23 +21,15 @@ fn go(x) {
 import { bitArraySlice } from "../gleam.mjs";
 
 function go(x) {
-  if (x.bitSize >= 8) {
-    if (x.bitSize === 24) {
-      let a = bitArraySlice(x, 8, 24);
-      a
-    } else {
-      x
-    }
+  if ((x.bitSize >= 8) && (x.bitSize === 24)) {
+    let a = bitArraySlice(x, 8, 24);
+    a
   } else {
     x
   }
-  if (x.bitSize >= 8) {
-    if (x.bitSize === 24) {
-      let b = bitArraySlice(x, 8, 24);
-      return b;
-    } else {
-      return x;
-    }
+  if ((x.bitSize >= 8) && (x.bitSize === 24)) {
+    let b = bitArraySlice(x, 8, 24);
+    return b;
   } else {
     return x;
   }
