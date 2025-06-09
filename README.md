@@ -42,6 +42,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/Acepie">Ameen Radwan</a> -
   <a href="https://github.com/abueide">Andrea Bueide</a> -
   <a href="https://github.com/AndreHogberg">AndreHogberg</a> -
+  <a href="https://github.com/andremw">André Mazoni</a> -
   <a href="https://github.com/antharuu">Antharuu</a> -
   <a href="https://github.com/anthony-khong">Anthony Khong</a> -
   <a href="https://github.com/Illbjorn">Anthony Maxwell</a> -
@@ -100,7 +101,9 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/d2718">Dan</a> -
   <a href="https://github.com/ddresselhaus">Dan Dresselhaus</a> -
   <a href="https://github.com/strongoose">Dan Strong</a> -
+  <a href="https://github.com/Daniel-Shunom">Daniel S Jeremiah</a> -
   <a href="https://github.com/DanielleMaywood">Danielle Maywood</a> -
+  <a href="https://github.com/ndan">Daniil Nevdah</a> -
   <a href="https://github.com/pinnet">Danny Arnold</a> -
   <a href="https://github.com/despairblue">Danny Martini</a> -
   <a href="https://github.com/dbernheisel">David Bernheisel</a> -
@@ -109,8 +112,6 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/dennistruemper">dennistruemper</a> -
   <a href="https://github.com/devinalvaro">devinalvaro</a> -
   <a href="https://github.com/diemogebhardt">Diemo Gebhardt</a> -
-  <a href="https://github.com/dmmulroy">Dillon Mulroy</a> -
-  <a href="https://github.com/gothy">Dima Utkin</a> -
   <a href="https://github.com/DoctorCobweb">DoctorCobweb</a> -
   <a href="https://github.com/floodfx">Donnie Flood</a> -
   <a href="https://github.com/dbanty">Dylan Anthony</a> -
@@ -147,7 +148,6 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/allenap">Gavin Panella</a> -
   <a href="https://github.com/gahjelle">Geir Arne Hjelle</a> -
   <a href="https://github.com/brasilikum">Georg Hartmann</a> -
-  <a href="https://github.com/george-grec">George</a> -
   <a href="https://github.com/gmartsenkov">Georgi Martsenkov</a> -
   <a href="https://github.com/ggobbe">ggobbe</a> -
   <a href="https://github.com/giacomocavalieri">Giacomo Cavalieri</a> -
@@ -168,7 +168,6 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/henrysdev">Henry Warren</a> -
   <a href="https://github.com/losfair">Heyang Zhou</a> -
   <a href="https://github.com/hubertmalkowski">Hubert Małkowski</a> -
-  <a href="https://github.com/human154">human154</a> -
   <a href="https://github.com/iainh">Iain H</a> -
   <a href="https://github.com/Ian-GL">Ian González</a> -
   <a href="https://github.com/ianmjones">Ian M. Jones</a> -
@@ -219,7 +218,6 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/kevinschweikert">Kevin Schweikert</a> -
   <a href="https://github.com/hamptokr">Kramer Hampton</a> -
   <a href="https://github.com/Bearfinn">Kritsada Sunthornwutthikrai</a> -
-  <a href="https://github.com/krystofrezac">Kryštof Řezáč</a> -
   <a href="https://github.com/krzysztofgb">Krzysztof Gasienica-Bednarz</a> -
   <a href="https://github.com/leah-u">Leah Ulmschneider</a> -
   <a href="https://github.com/leostera">Leandro Ostera</a> -
@@ -255,6 +253,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/mattvanhorn">Matt Van Horn</a> -
   <a href="https://github.com/matthewj-dev">Matthew Jackson</a> -
   <a href="https://github.com/mwhitworth">Matthew Whitworth</a> -
+  <a href="https://github.com/maxwelldb">Max Bridges</a> -
   <a href="https://github.com/maxmcd">Max McDonnell</a> -
   <a href="https://github.com/metame">metame</a> -
   <a href="https://github.com/metatexx">METATEXX GmbH</a> -
@@ -329,10 +328,8 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/seanjensengrey">Sean Jensen-Grey</a> -
   <a href="https://github.com/SeanRoberts">Sean Roberts</a> -
   <a href="https://github.com/sporto">Sebastian Porto</a> -
-  <a href="https://github.com/sekunho">sekun</a> -
   <a href="https://github.com/tehprofessor">Seve Salazar</a> -
   <a href="https://github.com/codemonkey76">Shane Poppleton</a> -
-  <a href="https://github.com/honsq90">Shuqian Hon</a> -
   <a href="https://github.com/sigmasternchen">Sigma</a> -
   <a href="https://github.com/simonewebdesign">simone</a> -
   <a href="https://github.com/bytesource">Stefan</a> -
