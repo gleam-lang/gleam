@@ -235,8 +235,6 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         fallback: &'a Decision,
         fallback_check: &'a FallbackCheck,
     ) -> Result<CaseBody<'a>, Error> {
-        dbg!(var, choices, fallback_check, fallback);
-
         // If there's just a single choice we can just generate the code for
         // it: no need to do any checking, we know it must match!
         if choices.is_empty() {
