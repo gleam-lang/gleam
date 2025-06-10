@@ -32,10 +32,13 @@ two(A, B) ->
 -spec main() -> integer().
 main() ->
     _pipe = 123,
-    two(
-        begin
-            _pipe@1 = 1,
-            two(_pipe@1, 2)
-        end,
-        _pipe
-    ).
+    begin
+        _capture = _pipe,
+        two(
+            begin
+                _pipe@1 = 1,
+                two(_pipe@1, 2)
+            end,
+            _capture
+        )
+    end.
