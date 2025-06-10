@@ -53,6 +53,10 @@
 
   ([Zij-IT](https://github.com/zij-it))
 
+- The compiler now emits a warning when a top-level constant or function declaration
+  shadows an imported name in the current module.
+  ([Aayush Tripathi](https://github.com/aayush-tripathi))
+
 ### Build tool
 
 - `gleam update`, `gleam deps update`, and `gleam deps download` will now print
