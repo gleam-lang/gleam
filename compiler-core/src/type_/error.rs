@@ -1018,7 +1018,7 @@ pub enum Warning {
 
     /// Top-level definition should not shadow an imported one.
     /// This includes constant or function imports.
-    TopLevelDefinitionShadowsImport{
+    TopLevelDefinitionShadowsImport {
         location: SrcSpan,
         name: EcoString,
     },
@@ -1251,7 +1251,6 @@ impl Warning {
             | Warning::ModuleImportedTwice {
                 second: location, ..
             } => *location,
-            
         }
     }
 
