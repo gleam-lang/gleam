@@ -35,6 +35,8 @@ impl TestCompileOutput {
             buffer.push('\n');
 
             let extension = path.extension();
+            dbg!(extension, &content);
+
             match content {
                 _ if extension == Some("cache") => buffer.push_str("<.cache binary>"),
                 Content::Binary(data) => write!(buffer, "<{} byte binary>", data.len()).unwrap(),
