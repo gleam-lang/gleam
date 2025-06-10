@@ -308,7 +308,7 @@ impl<'a> Generator<'a> {
             // Handled in collect_definitions
             Definition::CustomType(CustomType { .. }) => None,
 
-            // If a custom type is unused then we don't need to generate code for it
+            // If a definition is unused then we don't need to generate code for it
             Definition::ModuleConstant(ModuleConstant { location, .. })
             | Definition::Function(Function { location, .. })
                 if self
