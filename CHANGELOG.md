@@ -14,6 +14,23 @@
 
 ### Build tool
 
+- `gleam update`, `gleam deps update`, and `gleam deps download` will now print
+  a message when there are new major versions of packages available.
+
+  ```text
+   $ gleam update
+    Resolving versions
+
+  The following dependencies have new major versions available:
+
+  gleam_http 1.7.0 -> 4.0.0
+  gleam_json 1.0.1 -> 3.0.1
+  lustre     3.1.4 -> 5.1.1
+  ```
+
+  ([Amjad Mohamed ](https://github.com/andho))
+
+
 ### Language server
 
 ### Formatter
