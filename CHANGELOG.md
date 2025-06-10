@@ -4,6 +4,10 @@
 
 ### Compiler
 
+- The code generated for a `case` expression on the JavaScript target is now
+  reduced in size in many cases.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 ### Language server
