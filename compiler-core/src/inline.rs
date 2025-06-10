@@ -699,7 +699,7 @@ impl Inliner<'_> {
                         location: BLANK_LOCATION,
                         name: name.clone(),
                         type_: type_.clone(),
-                        origin: VariableOrigin::Generated,
+                        origin: VariableOrigin::generated(),
                     },
                     kind: AssignmentKind::Generated,
                     compiled_case: CompiledCase::simple_variable_assignment(name, type_),
@@ -1396,7 +1396,7 @@ impl InlinablePattern {
                 location: BLANK_LOCATION,
                 name: name.clone(),
                 type_: unknown_type(),
-                origin: VariableOrigin::Generated,
+                origin: VariableOrigin::generated(),
             },
         }
     }
@@ -1414,7 +1414,7 @@ impl InlinableValueConstructor {
         let variant = match self {
             InlinableValueConstructor::LocalVariable => ValueConstructorVariant::LocalVariable {
                 location: BLANK_LOCATION,
-                origin: VariableOrigin::Generated,
+                origin: VariableOrigin::generated(),
             },
             InlinableValueConstructor::Function { name, module } => {
                 ValueConstructorVariant::ModuleFn {
