@@ -204,3 +204,40 @@ fn do_side_effects() {
 "#
     );
 }
+
+#[test]
+fn inline_anonymous_function_call() {
+    assert_js!(
+        "
+pub fn main() {
+  fn(a, b) { #(a, b) }(42, False)
+}
+"
+    );
+}
+
+#[test]
+fn inline_anonymous_function_in_pipe() {
+    assert_js!(
+        "
+pub fn main() {
+  1 |> fn(x) { x + 1 } |> fn(y) { y * y }
+}
+"
+    );
+}
+
+#[test]
+fn inline_function_capture_in_pipe() {
+    // The function capture is desugared to an anonymous function, so it should
+    // be turned into a direct call to `add`
+    assert_js!(
+        "
+pub fn main() {
+  1 |> add(4, _)
+}
+
+fn add(a, b) { a + b }
+"
+    );
+}
