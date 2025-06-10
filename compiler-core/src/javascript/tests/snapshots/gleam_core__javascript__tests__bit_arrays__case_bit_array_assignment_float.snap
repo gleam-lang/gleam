@@ -21,13 +21,20 @@ export function go(x) {
     if (bitArraySliceToFloat(x, 0, 64, true) === 3.14) {
       let pi = 3.14;
       return pi;
-    } else if ((bitArraySliceToFloat(x, 0, 64, true) === 1.1) && ((x.bitSize - 64) % 8 === 0)) {
+    } else if (
+      bitArraySliceToFloat(x, 0, 64, true) === 1.1 &&
+      (x.bitSize - 64) % 8 === 0
+    ) {
       let pi = 1.1;
       return pi;
     } else {
       return 1.1;
     }
-  } else if ((x.bitSize >= 64) && ((bitArraySliceToFloat(x, 0, 64, true) === 1.1) && ((x.bitSize - 64) % 8 === 0))) {
+  } else if (
+    x.bitSize >= 64 &&
+    bitArraySliceToFloat(x, 0, 64, true) === 1.1 &&
+    (x.bitSize - 64) % 8 === 0
+  ) {
     let pi = 1.1;
     return pi;
   } else {

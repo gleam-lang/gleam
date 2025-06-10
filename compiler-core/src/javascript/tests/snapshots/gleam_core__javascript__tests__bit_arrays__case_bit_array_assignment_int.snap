@@ -19,13 +19,13 @@ export function go(x) {
     if (x.byteAt(0) === 1) {
       let n = 1;
       return n;
-    } else if ((x.byteAt(0) === 2) && ((x.bitSize - 8) % 8 === 0)) {
+    } else if (x.byteAt(0) === 2 && (x.bitSize - 8) % 8 === 0) {
       let n = 2;
       return n;
     } else {
       return 1;
     }
-  } else if ((x.bitSize >= 8) && ((x.byteAt(0) === 2) && ((x.bitSize - 8) % 8 === 0))) {
+  } else if (x.bitSize >= 8 && x.byteAt(0) === 2 && (x.bitSize - 8) % 8 === 0) {
     let n = 2;
     return n;
   } else {

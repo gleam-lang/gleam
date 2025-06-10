@@ -18,12 +18,12 @@ fn go(x) {
 
 ----- COMPILED JAVASCRIPT
 function go(x) {
-  if ((x.bitSize >= 16) && (x.bitSize === 24)) {
+  if (x.bitSize >= 16 && x.bitSize === 24) {
     1
   } else {
     2
   }
-  if ((x.bitSize >= 16) && (x.bitSize === 24)) {
+  if (x.bitSize >= 16 && x.bitSize === 24) {
     return 1;
   } else {
     return 2;
