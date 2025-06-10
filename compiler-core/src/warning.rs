@@ -1303,25 +1303,28 @@ can already tell whether it will be true or false.",
                     }),
                 },
 
-                type_::Warning::TopLevelDefinitionShadowsImport { 
-                    location,
-                    name
-                } => Diagnostic {
-                    title: format!("`{}` shadows an imported name", name),
-                    text: format!("Definition of `{}` shadows an imported value.\n\
-                                The imported value could not be used in this module anyway.",name),
-                    level: diagnostic::Level::Warning,
-                    location: Some(Location {
+                type_::Warning::TopLevelDefinitionShadowsImport { location, name } => {
+                    let text = format!(
+                        "Definition of {} shadows an imported value.\n\
+                        The imported value could not be used in this module anyway.",
+                        name
+                    );
+                    Diagnostic {
+                        title: "Shadowed Import".into(),
+                        text: wrap(&text),
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
                             path: path.clone(),
                             src: src.clone(),
                             label: diagnostic::Label {
-                                text: Some(format!("`{}` is defined here", name)),
-                                span: *location,  
+                                text: Some(wrap(&format!("`{}` is defined here", name))),
+                                span: *location,
                             },
                             extra_labels: Vec::new(),
-                    }),
-                    hint: Some(format!("Either rename `{name}` or remove the `import` that brings `{name}` into scope.")),
-                },
+                        }),
+                        hint: Some("Either rename the definition or remove its import.".into()),
+                    }
+                }
             },
 
             Warning::DeprecatedEnvironmentVariable { variable } => {
