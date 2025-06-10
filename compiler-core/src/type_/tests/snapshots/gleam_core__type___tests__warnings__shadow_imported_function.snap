@@ -24,12 +24,12 @@ warning: Unused imported module
 
 Hint: You can safely remove it.
 
-warning: `wibble` shadows an imported name
+warning: Shadowed Import
   ┌─ /src/warning/wrn.gleam:4:1
   │
 4 │ pub fn wibble() { Nil }
   │ ^^^^^^^^^^^^^^^ `wibble` is defined here
 
-Definition of `wibble` shadows an imported value.
+Definition of wibble shadows an imported value.
 The imported value could not be used in this module anyway.
-Hint: Either rename `wibble` or remove the `import` that brings `wibble` into scope.
+Hint: Either rename the definition or remove its import.
