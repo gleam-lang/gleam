@@ -20,7 +20,13 @@ import { bitArraySlice, bitArraySliceToInt } from "../gleam.mjs";
 function go(x) {
   let n = 16;
   let m = 32;
-  if ((x.bitSize >= 8) && ((n >= 0) && ((x.bitSize >= 8 + n) && ((m >= 0) && (x.bitSize >= 8 + m + n))))) {
+  if (
+    x.bitSize >= 8 &&
+    n >= 0 &&
+    x.bitSize >= 8 + n &&
+    m >= 0 &&
+    x.bitSize >= 8 + m + n
+  ) {
     let first = x.byteAt(0);
     let a = bitArraySliceToInt(x, 8, 8 + n, true, false);
     let b = bitArraySliceToInt(x, 8 + n, 8 + n + m, true, false);

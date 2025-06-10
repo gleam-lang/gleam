@@ -17,7 +17,7 @@ import { toBitArray, bitArraySlice } from "../gleam.mjs";
 
 function go(x) {
   let $ = toBitArray([1, 2, 3]);
-  if (($.bitSize >= 8) && (($.bitSize - 8) % 8 === 0)) {
+  if ($.bitSize >= 8 && ($.bitSize - 8) % 8 === 0) {
     let b = bitArraySlice($, 8);
     return b;
   } else {

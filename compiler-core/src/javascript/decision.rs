@@ -71,7 +71,16 @@ enum CaseBody<'a> {
 impl<'a> CaseBody<'a> {
     fn into_doc(self) -> Document<'a> {
         match self {
-            CaseBody::If { check, body } => docvec!["if (", check, ") ", break_block(body)],
+            CaseBody::If { check, body } => docvec![
+                "if (",
+                break_("", "")
+                    .append(check)
+                    .nest(INDENT)
+                    .append(break_("", ""))
+                    .group(),
+                ") ",
+                break_block(body)
+            ],
             CaseBody::IfElse {
                 check,
                 if_body,
@@ -79,7 +88,11 @@ impl<'a> CaseBody<'a> {
                 ..
             } => docvec![
                 "if (",
-                check,
+                break_("", "")
+                    .append(check)
+                    .nest(INDENT)
+                    .append(break_("", ""))
+                    .group(),
                 ") ",
                 break_block(if_body),
                 " else ",
@@ -281,7 +294,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
                 // }
                 // ```
                 CaseBody::If { check, body } => {
-                    (docvec!["(", check_doc, ") && (", check, ")"], body)
+                    (docvec![check_doc, break_(" &&", " && "), check], body)
                 }
 
                 CaseBody::IfElse {
@@ -290,7 +303,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
                     decision,
                     ..
                 } if decision == fallback => {
-                    (docvec!["(", check_doc, ") && (", check, ")"], if_body)
+                    (docvec![check_doc, break_(" &&", " && "), check], if_body)
                 }
 
                 if_else @ CaseBody::IfElse { .. } => (check_doc, if_else.into_doc()),
@@ -310,7 +323,11 @@ impl<'a> CasePrinter<'_, '_, 'a> {
                 CaseBody::If { .. } | CaseBody::IfElse { .. } => CaseBody::IfElseChain(docvec![
                     if_.into_doc(),
                     " else if (",
-                    check_doc,
+                    break_("", "")
+                        .append(check_doc)
+                        .nest(INDENT)
+                        .append(break_("", ""))
+                        .group(),
                     ") ",
                     break_block(body)
                 ]),
@@ -318,7 +335,11 @@ impl<'a> CasePrinter<'_, '_, 'a> {
                     CaseBody::IfElseChain(docvec![
                         document,
                         " else if (",
-                        check_doc,
+                        break_("", "")
+                            .append(check_doc)
+                            .nest(INDENT)
+                            .append(break_("", ""))
+                            .group(),
                         ") ",
                         break_block(body)
                     ])

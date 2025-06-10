@@ -14,7 +14,7 @@ fn go(x) {
 
 ----- COMPILED JAVASCRIPT
 function go(x) {
-  if ((x.bitSize === 8) && (x.byteAt(0) === 254)) {
+  if (x.bitSize === 8 && x.byteAt(0) === 254) {
     return 1;
   } else {
     return 2;
