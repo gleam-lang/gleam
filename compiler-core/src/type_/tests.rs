@@ -11,7 +11,7 @@ use crate::{
 };
 use ecow::EcoString;
 use itertools::Itertools;
-use pubgrub::range::Range;
+use pubgrub::Range;
 use std::rc::Rc;
 use vec1::Vec1;
 
