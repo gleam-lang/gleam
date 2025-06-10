@@ -12,6 +12,10 @@
   definitions are not longer generated.
   ([Louis Pilfold](https://github.com/lpil))
 
+- The compiler now emits a warning when a top-level constant or function declaration 
+  shadows an imported name in the current module.
+  ([Aayush Tripathi](https://github.com/aayush-tripathi))
+
 ### Build tool
 
 ### Language server
