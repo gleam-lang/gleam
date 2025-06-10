@@ -3952,14 +3952,13 @@ fn shadow_imported_constant() {
             "thepackage",
             "module",
             r#"
-pub const foo = 1
+pub const value = 1
 "#
         ),
         r#"
-import module.{foo}
+import module.{value}
 
-pub const foo = 1
+pub const value = 1
 "#
     );
 }
-
