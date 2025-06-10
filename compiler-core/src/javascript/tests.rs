@@ -43,7 +43,7 @@ pub static CURRENT_PACKAGE: &str = "thepackage";
 macro_rules! assert_js {
     ($(($name:literal, $module_src:literal)),+, $src:literal $(,)?) => {
         let compiled =
-            $crate::javascript::tests::compile_js($src, vec![$(($crate::javascript::tests::CURRENT_PACKAGE, $name, $module_src)),*], false);
+            $crate::javascript::tests::compile_js($src, vec![$(($crate::javascript::tests::CURRENT_PACKAGE, $name, $module_src)),*]);
             let mut output = String::from("----- SOURCE CODE\n");
             for (name, src) in [$(($name, $module_src)),*] {
                 output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
@@ -54,17 +54,7 @@ macro_rules! assert_js {
 
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
         let compiled =
-            $crate::javascript::tests::compile_js($src, vec![($dep_package, $dep_name, $dep_src)], false);
-        let output = format!(
-            "----- SOURCE CODE\n{}\n\n----- COMPILED JAVASCRIPT\n{}",
-            $src, compiled
-        );
-        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
-    }};
-
-    (@inline ($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
-        let compiled =
-            $crate::javascript::tests::compile_js($src, vec![($dep_package, $dep_name, $dep_src)], true);
+            $crate::javascript::tests::compile_js($src, vec![($dep_package, $dep_name, $dep_src)]);
         let output = format!(
             "----- SOURCE CODE\n{}\n\n----- COMPILED JAVASCRIPT\n{}",
             $src, compiled
@@ -74,13 +64,13 @@ macro_rules! assert_js {
 
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr, $js:expr $(,)?) => {{
         let output =
-            $crate::javascript::tests::compile_js($src, Some(($dep_package, $dep_name, $dep_src)), false);
+            $crate::javascript::tests::compile_js($src, Some(($dep_package, $dep_name, $dep_src)));
         assert_eq!(($src, output), ($src, $js.to_string()));
     }};
 
     ($src:expr $(,)?) => {{
         let compiled =
-            $crate::javascript::tests::compile_js($src, vec![], false);
+            $crate::javascript::tests::compile_js($src, vec![]);
         let output = format!(
             "----- SOURCE CODE\n{}\n\n----- COMPILED JAVASCRIPT\n{}",
             $src, compiled
@@ -90,7 +80,7 @@ macro_rules! assert_js {
 
     ($src:expr, $js:expr $(,)?) => {{
         let output =
-            $crate::javascript::tests::compile_js($src, vec![], false);
+            $crate::javascript::tests::compile_js($src, vec![]);
         assert_eq!(($src, output), ($src, $js.to_string()));
     }};
 }
@@ -132,7 +122,7 @@ macro_rules! assert_ts_def {
     }};
 }
 
-pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>, perform_inlining: bool) -> TypedModule {
+pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
     let mut modules = im::HashMap::new();
     let ids = UniqueIdGenerator::new();
     // DUPE: preludeinsertion
@@ -196,15 +186,11 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>, perform_inlining: bool)
     .infer_module(ast, line_numbers, "src/module.gleam".into())
     .expect("should successfully infer");
 
-    if perform_inlining {
-        inline::module(module, &modules)
-    } else {
-        module
-    }
+    inline::module(module, &modules)
 }
 
-pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>, perform_inlining: bool) -> String {
-    let ast = compile(src, deps, perform_inlining);
+pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
+    let ast = compile(src, deps);
     let line_numbers = LineNumbers::new(src);
     let stdlib_package = StdlibPackage::Present;
     let output = module(ModuleConfig {
@@ -224,6 +210,6 @@ pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>, perform_inlining: bo
 }
 
 pub fn compile_ts(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
-    let ast = compile(src, deps, false);
+    let ast = compile(src, deps);
     ts_declaration(&ast)
 }

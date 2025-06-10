@@ -47,7 +47,6 @@ pub fn map(over result: Result(a, e), with f: fn(a) -> b) -> Result(b, e) {
 #[test]
 fn inline_higher_order_function() {
     assert_js!(
-        @inline
         ("gleam_stdlib", "gleam/result", RESULT_MODULE),
         "
 import gleam/result
@@ -64,7 +63,6 @@ fn double(x) { x + x }
 #[test]
 fn inline_higher_order_function_with_capture() {
     assert_js!(
-        @inline
         ("gleam_stdlib", "gleam/result", RESULT_MODULE),
         "
 import gleam/result
@@ -86,7 +84,6 @@ fn divide(a: Int, b: Int) -> Result(Int, Nil) {
 #[test]
 fn inline_higher_order_function_anonymous() {
     assert_js!(
-        @inline
         ("gleam_stdlib", "gleam/result", RESULT_MODULE),
         "
 import gleam/result
@@ -105,7 +102,6 @@ fn inline_function_which_calls_other_function() {
     // `result.then` calls `result.try`, meaning this must be inlined twice to
     // achieve the desired result.
     assert_js!(
-        @inline
         ("gleam_stdlib", "gleam/result", RESULT_MODULE),
         "
 import gleam/result
@@ -120,7 +116,6 @@ pub fn main() {
 #[test]
 fn inline_function_with_use() {
     assert_js!(
-        @inline
         ("gleam_stdlib", "gleam/bool", BOOL_MODULE),
         "
 import gleam/bool
@@ -136,7 +131,6 @@ pub fn divide(a, b) {
 #[test]
 fn inline_function_with_use_and_anonymous() {
     assert_js!(
-        @inline
         ("gleam_stdlib", "gleam/bool", BOOL_MODULE),
         r#"
 import gleam/bool
@@ -152,7 +146,6 @@ pub fn divide(a, b) {
 #[test]
 fn inline_function_with_use_becomes_tail_recursive() {
     assert_js!(
-        @inline
         ("gleam_stdlib", "gleam/bool", BOOL_MODULE),
         "
 import gleam/bool
@@ -170,7 +163,6 @@ pub fn count(from: Int, to: Int) -> Int {
 fn do_not_inline_parameters_used_more_than_once() {
     // We just use `bool.guard` as the name here because it will be inlined
     assert_js!(
-        @inline
         (
             "gleam_stdlib",
             "gleam/bool",
@@ -196,7 +188,6 @@ pub fn main() {
 #[test]
 fn do_not_inline_parameters_that_have_side_effects() {
     assert_js!(
-        @inline
         ("gleam_stdlib", "gleam/result", RESULT_MODULE),
         r#"
 import gleam/result

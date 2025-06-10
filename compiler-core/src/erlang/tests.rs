@@ -41,12 +41,7 @@ mod type_params;
 mod use_;
 mod variables;
 
-pub fn compile_test_project(
-    src: &str,
-    src_path: &str,
-    dep: Option<(&str, &str, &str)>,
-    perform_inlining: bool,
-) -> String {
+pub fn compile_test_project(src: &str, src_path: &str, dep: Option<(&str, &str, &str)>) -> String {
     let mut modules = im::HashMap::new();
     let ids = UniqueIdGenerator::new();
     // DUPE: preludeinsertion
@@ -107,11 +102,7 @@ pub fn compile_test_project(
     .infer_module(ast, line_numbers, path.clone())
     .expect("should successfully infer root Erlang");
 
-    let ast = if perform_inlining {
-        inline::module(ast, &modules)
-    } else {
-        ast
-    };
+    let ast = inline::module(ast, &modules);
 
     // After building everything we still need to attach the module comments, to
     // do that we're reusing the `attach_doc_and_module_comments` that's used
@@ -146,21 +137,6 @@ macro_rules! assert_erl {
             $src,
             "/root/project/test/my/mod.gleam",
             Some(($dep_package, $dep_name, $dep_src)),
-            false,
-        );
-        let output = format!(
-            "----- SOURCE CODE\n{}\n\n----- COMPILED ERLANG\n{}",
-            $src, compiled
-        );
-        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
-    }};
-
-    (@inline ($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
-        let compiled = $crate::erlang::tests::compile_test_project(
-            $src,
-            "/root/project/test/my/mod.gleam",
-            Some(($dep_package, $dep_name, $dep_src)),
-            true,
         );
         let output = format!(
             "----- SOURCE CODE\n{}\n\n----- COMPILED ERLANG\n{}",
@@ -174,7 +150,6 @@ macro_rules! assert_erl {
             $src,
             "/root/project/test/my/mod.gleam",
             None,
-            false,
         );
         let output = format!(
             "----- SOURCE CODE\n{}\n\n----- COMPILED ERLANG\n{}",
@@ -1013,7 +988,7 @@ pub fn main() {
 fn windows_file_escaping_bug() {
     let src = "pub fn main() { Nil }";
     let path = "C:\\root\\project\\test\\my\\mod.gleam";
-    let output = compile_test_project(src, path, None, false);
+    let output = compile_test_project(src, path, None);
     insta::assert_snapshot!(insta::internals::AutoName, output, src);
 }
 

@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/blocks.rs
-assertion_line: 189
 expression: "\npub fn b() {\n  {\n    use a <- fn(cb) { cb(1) }\n    a\n  }\n  {\n    use b <- fn(cb) { cb(2) }\n    b\n  }\n  3\n}\n    "
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -21,7 +19,17 @@ pub fn b() {
 
 ----- COMPILED JAVASCRIPT
 export function b() {
-  ((cb) => { return cb(1); })((a) => { return a; });
-  ((cb) => { return cb(2); })((b) => { return b; });
+  let _block;
+  {
+    let cb = (a) => { return a; };
+    _block = cb(1);
+  }
+  _block;
+  let _block$1;
+  {
+    let cb = (b) => { return b; };
+    _block$1 = cb(2);
+  }
+  _block$1;
   return 3;
 }
