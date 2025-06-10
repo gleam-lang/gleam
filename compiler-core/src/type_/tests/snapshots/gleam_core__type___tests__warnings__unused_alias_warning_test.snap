@@ -24,12 +24,12 @@ Hint: You can safely remove it.
     import gleam/wibble as _
 
 
-warning: `one` shadows an imported name
+warning: Shadowed Import
   ┌─ /src/warning/wrn.gleam:3:13
   │
 3 │             pub const one = one
   │             ^^^^^^^^^^^^^ `one` is defined here
 
-Definition of `one` shadows an imported value.
+Definition of one shadows an imported value.
 The imported value could not be used in this module anyway.
-Hint: Either rename `one` or remove the `import` that brings `one` into scope.
+Hint: Either rename the definition or remove its import.
