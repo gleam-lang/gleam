@@ -63,9 +63,46 @@
 //!
 //! Inlining anonymous functions allows us to:
 //! - Remove calls to parameters of higher-order functions once those higher-
-//!   order functions have been inlined
-//! - Remove calls to anonymous functions in pipelines
-//! - Remove calls to function captures in pipelines
+//!   order functions have been inlined. For example, the following example using
+//!   `result.map`:
+//!   ```gleam
+//!   result.map(Ok(10), fn(x) { x + 1 })
+//!   ```
+//!
+//!   Without inlining of anonymous function would be turned into:
+//!   ```gleam
+//!   case Ok(10) {
+//!     Ok(value) -> Ok(fn(x) { x + 1 }(value))
+//!     Error(error) -> Error(error)
+//!   }
+//!   ```
+//!
+//!   However if we inline anonymous functions also, we remove every call, and
+//!   so it becomes:
+//!
+//!   ```gleam
+//!   case Ok(10) {
+//!     Ok(value) -> Ok(value + 1)
+//!     Error(error) -> Error(error)
+//!   }
+//!   ```
+//!
+//! - Remove calls to anonymous functions in pipelines. Sometimes, an anonymous
+//!   function is used in a pipeline, which can sometimes be the result of an
+//!   expanded function capture. For example:
+//!
+//!   ```gleam
+//!   "10" |> int.parse |> result.unwrap(0) |> fn(x) { x * x } |> something_else
+//!   ```
+//!
+//!   This can now be desugared to:
+//!   ```gleam
+//!   let _pipe1 = "10"
+//!   let _pipe2 = int.parse(_pipe1)
+//!   let _pipe3 = result.unwrap(_pipe2, 0)
+//!   let _pipe4 = _pipe3 * _pipe3
+//!   something_else(_pipe4)
+//!   ```
 //!
 //! See documentation of individual functions to explain better how the process
 //! works.
