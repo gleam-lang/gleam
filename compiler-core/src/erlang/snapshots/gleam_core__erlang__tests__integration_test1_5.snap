@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 232
 expression: "fn add(x, y) { x + y }\n                    pub fn go() { 1 |> add(_, 1) |> add(2, _) |> add(_, 3) }"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 fn add(x, y) { x + y }
@@ -23,6 +21,15 @@ add(X, Y) ->
 -spec go() -> integer().
 go() ->
     _pipe = 1,
-    _pipe@1 = add(_pipe, 1),
-    _pipe@2 = add(2, _pipe@1),
-    add(_pipe@2, 3).
+    _pipe@1 = begin
+        _capture = _pipe,
+        add(_capture, 1)
+    end,
+    _pipe@2 = begin
+        _capture@1 = _pipe@1,
+        add(2, _capture@1)
+    end,
+    begin
+        _capture@2 = _pipe@2,
+        add(_capture@2, 3)
+    end.
