@@ -10,5 +10,8 @@ pub fn main() {
 
 ----- COMPILED JAVASCRIPT
 export function main() {
-  return ((n) => { return n + 1; })(10);
+  {
+    let n = 10;
+    return n + 1;
+  }
 }
