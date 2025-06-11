@@ -577,6 +577,10 @@ impl Inliner<'_> {
         // argument, allowing further inlining.
         let function = self.expression(*function);
 
+        // If the left-hand side is in a block for some reason, for example
+        // `{ fn(x) { x + 1 } }(10)`, we still want to be able to inline it.
+        let function = expand_block(function);
+
         let function = match function {
             TypedExpr::Var {
                 ref constructor,
@@ -903,6 +907,34 @@ impl Inliner<'_> {
             clauses,
             compiled_case,
         }
+    }
+}
+
+/// Removes any blocks which are acting as brackets (they hold a single expression)
+fn expand_block(expression: TypedExpr) -> TypedExpr {
+    match expression {
+        TypedExpr::Block {
+            location,
+            statements,
+        } if statements.len() == 1 => {
+            let first = statements
+                .into_iter()
+                .next()
+                .expect("Vec1 always has a first element");
+
+            match first {
+                // If this is several blocks inside each other, we want to
+                // expand them all.
+                Statement::Expression(inner) => expand_block(inner),
+                Statement::Assignment(_) | Statement::Use(_) | Statement::Assert(_) => {
+                    TypedExpr::Block {
+                        location,
+                        statements: Vec1::new(first),
+                    }
+                }
+            }
+        }
+        _ => expression,
     }
 }
 
