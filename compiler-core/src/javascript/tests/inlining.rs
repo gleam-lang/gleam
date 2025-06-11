@@ -241,3 +241,29 @@ fn add(a, b) { a + b }
 "
     );
 }
+
+#[test]
+fn inlining_works_through_blocks() {
+    assert_js!(
+        "
+pub fn main() {
+    { fn(x) { Ok(x + 1) } }(41)
+}
+"
+    );
+}
+
+#[test]
+fn blocks_get_preserved_when_needed() {
+    assert_js!(
+        "
+pub fn main() {
+    { 4 |> make_adder }(6)
+}
+
+fn make_adder(a) {
+  fn(b) { a + b }
+}
+"
+    );
+}
