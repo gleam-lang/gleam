@@ -3926,3 +3926,39 @@ pub fn main() {
 "
     );
 }
+//https://github.com/gleam-lang/gleam/issues/4666
+#[test]
+fn shadow_imported_function() {
+    assert_warning!(
+        (
+            "thepackage",
+            "module",
+            r#"
+pub fn wibble() { Nil }
+"#
+        ),
+        r#"
+import module.{wibble}
+
+pub fn wibble() { Nil }
+"#
+    );
+}
+//https://github.com/gleam-lang/gleam/issues/4666
+#[test]
+fn shadow_imported_constant() {
+    assert_warning!(
+        (
+            "thepackage",
+            "module",
+            r#"
+pub const value = 1
+"#
+        ),
+        r#"
+import module.{value}
+
+pub const value = 1
+"#
+    );
+}

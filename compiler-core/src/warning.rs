@@ -1302,6 +1302,29 @@ can already tell whether it will be true or false.",
                         }],
                     }),
                 },
+
+                type_::Warning::TopLevelDefinitionShadowsImport { location, name } => {
+                    let text = format!(
+                        "Definition of {} shadows an imported value.\n\
+                        The imported value could not be used in this module anyway.",
+                        name
+                    );
+                    Diagnostic {
+                        title: "Shadowed Import".into(),
+                        text: wrap(&text),
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            path: path.clone(),
+                            src: src.clone(),
+                            label: diagnostic::Label {
+                                text: Some(wrap(&format!("`{}` is defined here", name))),
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                        hint: Some("Either rename the definition or remove its import.".into()),
+                    }
+                }
             },
 
             Warning::DeprecatedEnvironmentVariable { variable } => {
