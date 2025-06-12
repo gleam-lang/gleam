@@ -26,7 +26,7 @@
   ```
 
   Would previously cause a stack overflow on the JavaScript target for large
-  value. Now it is rewritten to:
+  values. Now it is rewritten to:
 
   ```gleam
   pub fn count(from: Int, to: Int) -> Int {
