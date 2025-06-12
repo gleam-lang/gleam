@@ -980,11 +980,8 @@ impl<'ast> Visit<'ast> for FindInlinableParameters {
         constructor: &'ast ValueConstructor,
         name: &'ast EcoString,
     ) {
-        match constructor.variant {
-            ValueConstructorVariant::LocalVariable { location, .. } => {
-                self.register_reference(name, location);
-            }
-            _ => {}
+        if let ValueConstructorVariant::LocalVariable { location, .. } = constructor.variant {
+            self.register_reference(name, location);
         }
     }
 
@@ -1009,11 +1006,8 @@ impl<'ast> Visit<'ast> for FindInlinableParameters {
             Some(constructor) => &constructor.variant,
             None => return,
         };
-        match variant {
-            ValueConstructorVariant::LocalVariable { location, .. } => {
-                self.register_reference(name, *location);
-            }
-            _ => {}
+        if let ValueConstructorVariant::LocalVariable { location, .. } = variant {
+            self.register_reference(name, *location);
         }
     }
 
