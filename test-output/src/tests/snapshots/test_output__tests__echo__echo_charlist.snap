@@ -1,0 +1,15 @@
+---
+source: test-output/src/tests/echo.rs
+assertion_line: 139
+expression: output
+snapshot_kind: text
+---
+--- main.gleam ----------------------
+pub fn main() {
+  echo [72, 101, 108, 108, 111, 44, 32, 74, 111, 101, 33]
+}
+
+
+--- gleam run output ----------------
+[90msrc/main.gleam:2[39m
+charlist.from_string("Hello, Joe!")
