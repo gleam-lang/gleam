@@ -12,12 +12,7 @@ pub fn main() {
 ----- COMPILED JAVASCRIPT
 export function main() {
   let _pipe = 1;
-  let _block;
-  {
-    let x = _pipe;
-    _block = x + 1;
-  }
-  let _pipe$1 = _block;
+  let _pipe$1 = _pipe + 1;
   {
     let y = _pipe$1;
     return y * y;
