@@ -21,8 +21,7 @@ export function main() {
   let $ = new Ok(10);
   if ($ instanceof Ok) {
     let value = $[0];
-    let value$1 = value;
-    return new Ok((value$1 + 2) * 4);
+    return new Ok((value + 2) * 4);
   } else {
     let error = $[0];
     return new Error(error);

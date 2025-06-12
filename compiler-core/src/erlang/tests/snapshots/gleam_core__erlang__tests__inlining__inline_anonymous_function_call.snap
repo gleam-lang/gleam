@@ -18,8 +18,4 @@ pub fn main() {
 -file("project/test/my/mod.gleam", 2).
 -spec main() -> {integer(), boolean()}.
 main() ->
-    begin
-        A = 42,
-        B = false,
-        {A, B}
-    end.
+    {42, false}.
