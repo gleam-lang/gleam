@@ -1,11 +1,11 @@
 ---
 source: compiler-core/src/erlang/tests/inlining.rs
-expression: "\npub fn main() {\n    { fn(x) { Ok(x + 1) } }(41)\n}\n"
+expression: "\npub fn main() {\n    fn(x) { 1 + x }(2) * 3\n}\n"
 ---
 ----- SOURCE CODE
 
 pub fn main() {
-    { fn(x) { Ok(x + 1) } }(41)
+    fn(x) { 1 + x }(2) * 3
 }
 
 
@@ -16,6 +16,6 @@ pub fn main() {
 -export([main/0]).
 
 -file("project/test/my/mod.gleam", 2).
--spec main() -> {ok, integer()} | {error, any()}.
+-spec main() -> integer().
 main() ->
-    {ok, 41 + 1}.
+    (1 + 2) * 3.
