@@ -19,17 +19,7 @@ pub fn b() {
 
 ----- COMPILED JAVASCRIPT
 export function b() {
-  let _block;
-  {
-    let cb = (a) => { return a; };
-    _block = cb(1);
-  }
-  _block;
-  let _block$1;
-  {
-    let cb = (b) => { return b; };
-    _block$1 = cb(2);
-  }
-  _block$1;
+  1;
+  2;
   return 3;
 }

@@ -26,7 +26,4 @@ add(A, B) ->
 -spec main() -> integer().
 main() ->
     _pipe = 1,
-    begin
-        _capture = _pipe,
-        add(4, _capture)
-    end.
+    add(4, _pipe).
