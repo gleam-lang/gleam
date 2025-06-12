@@ -22,11 +22,10 @@ pub fn main() {
 -file("project/test/my/mod.gleam", 4).
 -spec main() -> {ok, integer()} | {error, any()}.
 main() ->
-    (case {ok, 10} of
+    case {ok, 10} of
         {ok, Value} ->
-            Value@1 = Value,
-            {ok, (Value@1 + 2) * 4};
+            {ok, (Value + 2) * 4};
 
         {error, Error} ->
             {error, Error}
-    end).
+    end.

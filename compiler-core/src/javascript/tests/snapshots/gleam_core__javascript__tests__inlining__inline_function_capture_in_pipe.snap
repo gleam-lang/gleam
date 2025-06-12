@@ -18,8 +18,5 @@ function add(a, b) {
 
 export function main() {
   let _pipe = 1;
-  {
-    let _capture = _pipe;
-    return add(4, _capture);
-  }
+  return add(4, _pipe);
 }

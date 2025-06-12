@@ -13,8 +13,5 @@ pub fn main() {
 import { Ok } from "../gleam.mjs";
 
 export function main() {
-  {
-    let x = 41;
-    return new Ok(x + 1);
-  }
+  return new Ok(41 + 1);
 }

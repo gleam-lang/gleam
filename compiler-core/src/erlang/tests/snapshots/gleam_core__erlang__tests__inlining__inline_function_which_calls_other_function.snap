@@ -20,10 +20,10 @@ pub fn main() {
 -file("project/test/my/mod.gleam", 4).
 -spec main() -> {ok, any()} | {error, integer()}.
 main() ->
-    ((case {ok, 10} of
+    case {ok, 10} of
         {ok, Value} ->
             {error, Value};
 
         {error, Error} ->
             {error, Error}
-    end)).
+    end.

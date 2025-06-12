@@ -35,8 +35,7 @@ export function main() {
   let $ = new Ok(10);
   if ($ instanceof Ok) {
     let value = $[0];
-    let _capture = value;
-    return divide(_capture, 2);
+    return divide(value, 2);
   } else {
     let error = $[0];
     return new Error(error);

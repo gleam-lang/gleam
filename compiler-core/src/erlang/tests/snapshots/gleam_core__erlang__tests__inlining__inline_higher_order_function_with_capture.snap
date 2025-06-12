@@ -44,11 +44,10 @@ divide(A, B) ->
 -file("project/test/my/mod.gleam", 4).
 -spec main() -> {ok, integer()} | {error, nil}.
 main() ->
-    (case {ok, 10} of
+    case {ok, 10} of
         {ok, Value} ->
-            _capture = Value,
-            divide(_capture, 2);
+            divide(Value, 2);
 
         {error, Error} ->
             {error, Error}
-    end).
+    end.

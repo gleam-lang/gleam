@@ -267,3 +267,14 @@ fn make_adder(a) {
 "
     );
 }
+
+#[test]
+fn blocks_get_preserved_when_needed2() {
+    assert_erl!(
+        "
+pub fn main() {
+    fn(x) { 1 + x }(2) * 3
+}
+"
+    );
+}

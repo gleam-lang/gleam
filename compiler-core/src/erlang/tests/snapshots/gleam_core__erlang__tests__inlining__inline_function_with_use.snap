@@ -21,7 +21,7 @@ pub fn divide(a, b) {
 -file("project/test/my/mod.gleam", 4).
 -spec divide(integer(), integer()) -> integer().
 divide(A, B) ->
-    (case B =:= 0 of
+    case B =:= 0 of
         true ->
             0;
 
@@ -30,4 +30,4 @@ divide(A, B) ->
                 0 -> 0;
                 Gleam@denominator -> A div Gleam@denominator
             end
-    end).
+    end.
