@@ -135,6 +135,11 @@ fn echo_bool() {
 }
 
 #[test]
+fn echo_charlist() {
+    assert_echo!("echo_charlist");
+}
+
+#[test]
 fn echo_custom_type() {
     assert_echo!(Target::Erlang, "echo_custom_type");
     assert_echo!(Target::JavaScript, "echo_custom_type");

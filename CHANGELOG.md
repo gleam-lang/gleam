@@ -12,6 +12,10 @@
   definitions are not longer generated.
   ([Louis Pilfold](https://github.com/lpil))
 
+- `echo` now has better support for character lists, JavaScript errors, and
+  JavaScript circular references.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ### Build tool
 
 - `gleam update`, `gleam deps update`, and `gleam deps download` will now print
@@ -28,7 +32,7 @@
   lustre     3.1.4 -> 5.1.1
   ```
 
-  ([Amjad Mohamed ](https://github.com/andho))
+  ([Amjad Mohamed](https://github.com/andho))
 
 
 ### Language server

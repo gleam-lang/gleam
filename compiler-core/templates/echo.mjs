@@ -93,26 +93,66 @@ function echo$inspect(v) {
   if (v === undefined) return "Nil";
   if (t === "string") return echo$inspectString(v);
   if (t === "bigint" || t === "number") return v.toString();
-  if (globalThis.Array.isArray(v))
-    return `#(${v.map(echo$inspect).join(", ")})`;
-  if (v instanceof $List)
-    return `[${v.toArray().map(echo$inspect).join(", ")}]`;
   if (v instanceof $UtfCodepoint)
     return `//utfcodepoint(${String.fromCodePoint(v.value)})`;
   if (v instanceof $BitArray) return echo$inspectBitArray(v);
-  if (v instanceof $CustomType) return echo$inspectCustomType(v);
-  if (echo$isDict(v)) return echo$inspectDict(v);
-  if (v instanceof Set)
-    return `//js(Set(${[...v].map(echo$inspect).join(", ")}))`;
   if (v instanceof RegExp) return `//js(${v})`;
   if (v instanceof Date) return `//js(Date("${v.toISOString()}"))`;
+  if (v instanceof globalThis.Error) return `//js(${v.toString()})`;
   if (v instanceof Function) {
     const args = [];
     for (const i of Array(v.length).keys())
       args.push(String.fromCharCode(i + 97));
     return `//fn(${args.join(", ")}) { ... }`;
   }
-  return echo$inspectObject(v);
+
+  try {
+    if (globalThis.Array.isArray(v))
+      return `#(${v.map(echo$inspect).join(", ")})`;
+    if (v instanceof $List) return echo$inspectList(v);
+    if (v instanceof $CustomType) return echo$inspectCustomType(v);
+    if (echo$isDict(v)) return echo$inspectDict(v);
+    if (v instanceof Set)
+      return `//js(Set(${[...v].map(echo$inspect).join(", ")}))`;
+    return echo$inspectObject(v);
+  } catch (e) {
+    if (e instanceof RangeError) return "//js(circular)";
+    throw e;
+  }
+}
+
+export function echo$inspectList(list) {
+  if (list instanceof $Empty) {
+    return "[]";
+  }
+
+  let char_out = 'charlist.from_string("';
+  let list_out = "[";
+
+  let current = list;
+  while (current instanceof $NonEmpty) {
+    let element = current.head;
+    current = current.tail;
+
+    if (list_out !== "[") {
+      list_out += ", ";
+    }
+    list_out += echo$inspect(element);
+
+    if (char_out) {
+      if (Number.isInteger(element) && element >= 32 && element <= 126) {
+        char_out += String.fromCharCode(element);
+      } else {
+        char_out = null;
+      }
+    }
+  }
+
+  if (char_out) {
+    return char_out + '")';
+  } else {
+    return list_out + "]";
+  }
 }
 
 function echo$inspectBitArray(bitArray) {
