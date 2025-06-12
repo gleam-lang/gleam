@@ -118,16 +118,17 @@ use crate::{
     STDLIB_PACKAGE_NAME,
     analyse::Inferred,
     ast::{
-        ArgNames, Assert, Assignment, AssignmentKind, BitArrayOption, BitArraySegment, CallArg,
-        Definition, FunctionLiteralKind, PipelineAssignmentKind, Publicity, SrcSpan, Statement,
-        TypedArg, TypedAssert, TypedAssignment, TypedClause, TypedDefinition, TypedExpr,
+        self, ArgNames, Assert, Assignment, AssignmentKind, BitArrayOption, BitArraySegment,
+        CallArg, Definition, FunctionLiteralKind, PipelineAssignmentKind, Publicity, SrcSpan,
+        Statement, TypedArg, TypedAssert, TypedAssignment, TypedClause, TypedDefinition, TypedExpr,
         TypedExprBitArraySegment, TypedFunction, TypedModule, TypedPattern,
-        TypedPipelineAssignment, TypedStatement, TypedUse,
+        TypedPipelineAssignment, TypedStatement, TypedUse, visit::Visit,
     },
     exhaustiveness::CompiledCase,
     type_::{
         self, Deprecation, ModuleInterface, ModuleValueConstructor, PRELUDE_MODULE_NAME,
-        PatternConstructor, Type, TypedCallArg, ValueConstructorVariant, collapse_links,
+        PatternConstructor, Type, TypedCallArg, ValueConstructor, ValueConstructorVariant,
+        collapse_links,
         error::VariableOrigin,
         expression::{Implementations, Purity},
     },
@@ -666,7 +667,13 @@ impl Inliner<'_> {
                 body,
                 ..
             } => {
-                return self.inline_anonymous_function_call(&parameters, arguments, body, &[]);
+                let inlinable_parameters = find_inlinable_parameters(&parameters, &body);
+                return self.inline_anonymous_function_call(
+                    &parameters,
+                    arguments,
+                    body,
+                    &inlinable_parameters,
+                );
             }
             TypedExpr::Int { .. }
             | TypedExpr::Float { .. }
@@ -760,12 +767,14 @@ impl Inliner<'_> {
 
         self.inline_variables = inline_variables;
 
-        TypedExpr::Block {
+        // We try to expand this block, so a function which is inlined as a
+        // single expression does not get wrapped unnecessarily
+        expand_block(TypedExpr::Block {
             location: BLANK_LOCATION,
             statements: statements
                 .try_into()
                 .expect("Type checking ensures there is at least one statement"),
-        }
+        })
     }
 
     fn pipeline(
@@ -907,6 +916,124 @@ impl Inliner<'_> {
             clauses,
             compiled_case,
         }
+    }
+}
+
+fn find_inlinable_parameters(parameters: &[TypedArg], body: &[TypedStatement]) -> Vec<EcoString> {
+    let mut parameter_map = HashMap::new();
+    for parameter in parameters {
+        let (name, location) = match &parameter.names {
+            ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => continue,
+            ArgNames::Named { name, location }
+            | ArgNames::NamedLabelled {
+                name,
+                name_location: location,
+                ..
+            } => (name, location),
+        };
+        _ = parameter_map.insert((name.clone(), *location), false);
+    }
+
+    let mut finder = FindInlinableParameters {
+        parameters: parameter_map,
+    };
+    for statement in body {
+        finder.visit_typed_statement(statement);
+    }
+
+    // Inlinable parameters are those that are used exactly once. Any parameters
+    // used more than once will be removed from this map and so will not be
+    // considered inlinable.
+    finder
+        .parameters
+        .into_iter()
+        .filter_map(|((name, _), used)| used.then_some(name))
+        .collect()
+}
+
+/// A struct for finding the inlinable parameters of an anonymous function. Since
+/// we want to inline all anonymous functions, not just a subset of them like we
+/// do with regular functions, this must be implemented slightly differently, but
+/// it means we can take advantage of the AST visitor, since we don't need to
+/// transform the anonymous function into an intermediate representation.
+struct FindInlinableParameters {
+    parameters: HashMap<(EcoString, SrcSpan), bool>,
+}
+
+impl FindInlinableParameters {
+    fn register_reference(&mut self, name: &EcoString, location: SrcSpan) {
+        let key = (name.clone(), location);
+        match self.parameters.get_mut(&key) {
+            Some(true) => _ = self.parameters.remove(&key),
+            Some(used @ false) => {
+                *used = true;
+            }
+            None => {}
+        }
+    }
+}
+
+impl<'ast> Visit<'ast> for FindInlinableParameters {
+    fn visit_typed_expr_var(
+        &mut self,
+        _location: &'ast SrcSpan,
+        constructor: &'ast ValueConstructor,
+        name: &'ast EcoString,
+    ) {
+        match constructor.variant {
+            ValueConstructorVariant::LocalVariable { location, .. } => {
+                self.register_reference(name, location);
+            }
+            _ => {}
+        }
+    }
+
+    fn visit_typed_clause_guard_var(
+        &mut self,
+        _location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        _type_: &'ast Arc<Type>,
+        location: &'ast SrcSpan,
+    ) {
+        self.register_reference(name, *location);
+    }
+
+    fn visit_typed_pattern_var_usage(
+        &mut self,
+        _location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        constructor: &'ast Option<ValueConstructor>,
+        _type_: &'ast Arc<Type>,
+    ) {
+        let variant = match constructor {
+            Some(constructor) => &constructor.variant,
+            None => return,
+        };
+        match variant {
+            ValueConstructorVariant::LocalVariable { location, .. } => {
+                self.register_reference(name, *location);
+            }
+            _ => {}
+        }
+    }
+
+    fn visit_typed_call_arg(&mut self, arg: &'ast TypedCallArg) {
+        if let TypedExpr::Var {
+            name, constructor, ..
+        } = &arg.value
+        {
+            match &constructor.variant {
+                ValueConstructorVariant::LocalVariable { location, .. }
+                    if arg.uses_label_shorthand() =>
+                {
+                    self.register_reference(name, *location);
+                    return;
+                }
+                _ => {}
+            }
+        }
+
+        ast::visit::visit_typed_call_arg(self, arg);
     }
 }
 
@@ -1198,7 +1325,7 @@ impl FunctionToInlinable {
 
     fn value_constructor(
         &mut self,
-        constructor: &type_::ValueConstructor,
+        constructor: &ValueConstructor,
     ) -> Option<InlinableValueConstructor> {
         match &constructor.variant {
             ValueConstructorVariant::LocalVariable { .. } => {
@@ -1479,7 +1606,7 @@ pub enum InlinableValueConstructor {
 }
 
 impl InlinableValueConstructor {
-    fn to_value_constructor(&self, type_: Arc<Type>) -> type_::ValueConstructor {
+    fn to_value_constructor(&self, type_: Arc<Type>) -> ValueConstructor {
         let variant = match self {
             InlinableValueConstructor::LocalVariable => ValueConstructorVariant::LocalVariable {
                 location: BLANK_LOCATION,
@@ -1510,7 +1637,7 @@ impl InlinableValueConstructor {
                 documentation: None,
             },
         };
-        type_::ValueConstructor {
+        ValueConstructor {
             publicity: Publicity::Private,
             deprecation: Deprecation::NotDeprecated,
             variant,

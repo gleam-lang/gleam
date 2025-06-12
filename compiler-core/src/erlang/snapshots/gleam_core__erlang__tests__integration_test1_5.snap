@@ -21,15 +21,6 @@ add(X, Y) ->
 -spec go() -> integer().
 go() ->
     _pipe = 1,
-    _pipe@1 = begin
-        _capture = _pipe,
-        add(_capture, 1)
-    end,
-    _pipe@2 = begin
-        _capture@1 = _pipe@1,
-        add(2, _capture@1)
-    end,
-    begin
-        _capture@2 = _pipe@2,
-        add(_capture@2, 3)
-    end.
+    _pipe@1 = add(_pipe, 1),
+    _pipe@2 = add(2, _pipe@1),
+    add(_pipe@2, 3).

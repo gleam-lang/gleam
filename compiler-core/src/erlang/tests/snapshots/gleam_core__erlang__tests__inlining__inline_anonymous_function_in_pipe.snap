@@ -19,10 +19,7 @@ pub fn main() {
 -spec main() -> integer().
 main() ->
     _pipe = 1,
-    _pipe@1 = begin
-        X = _pipe,
-        X + 1
-    end,
+    _pipe@1 = _pipe + 1,
     begin
         Y = _pipe@1,
         Y * Y
