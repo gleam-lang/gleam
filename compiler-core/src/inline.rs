@@ -479,7 +479,7 @@ impl Inliner<'_> {
     }
 
     /// Where the magic happens. First, we check the left-hand side of the call
-    /// so see if it's something we can inline. If not, we continue to walk the
+    /// to see if it's something we can inline. If not, we continue to walk the
     /// tree like all the other expressions do. If it can be inlined, we follow
     /// a three-step process:
     ///
