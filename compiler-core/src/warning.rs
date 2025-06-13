@@ -438,6 +438,7 @@ A use expression must always be followed by at least one expression.",
                         hint: None,
                     }
                 }
+
                 type_::Warning::ImplicitlyDiscardedResult { location } => Diagnostic {
                     title: "Unused result value".into(),
                     text: "".into(),
@@ -455,6 +456,7 @@ A use expression must always be followed by at least one expression.",
                         extra_labels: Vec::new(),
                     }),
                 },
+
                 type_::Warning::UnusedLiteral { location } => Diagnostic {
                     title: "Unused literal".into(),
                     text: "".into(),
@@ -470,6 +472,7 @@ A use expression must always be followed by at least one expression.",
                         extra_labels: Vec::new(),
                     }),
                 },
+
                 type_::Warning::NoFieldsRecordUpdate { location } => Diagnostic {
                     title: "Fieldless record update".into(),
                     text: "".into(),
@@ -487,6 +490,7 @@ A use expression must always be followed by at least one expression.",
                         extra_labels: Vec::new(),
                     }),
                 },
+
                 type_::Warning::AllFieldsRecordUpdate { location } => Diagnostic {
                     title: "Redundant record update".into(),
                     text: "".into(),
@@ -502,6 +506,7 @@ A use expression must always be followed by at least one expression.",
                         extra_labels: Vec::new(),
                     }),
                 },
+
                 type_::Warning::UnusedType {
                     location, imported, ..
                 } => {
@@ -531,6 +536,7 @@ A use expression must always be followed by at least one expression.",
                         }),
                     }
                 }
+
                 type_::Warning::UnusedConstructor {
                     location, imported, ..
                 } => {
@@ -560,6 +566,7 @@ A use expression must always be followed by at least one expression.",
                         }),
                     }
                 }
+
                 type_::Warning::UnusedImportedModule { location, .. } => Diagnostic {
                     title: "Unused imported module".into(),
                     text: "".into(),
@@ -575,6 +582,7 @@ A use expression must always be followed by at least one expression.",
                         extra_labels: Vec::new(),
                     }),
                 },
+
                 type_::Warning::UnusedImportedModuleAlias {
                     location,
                     module_name,
@@ -603,6 +611,7 @@ Hint: You can safely remove it.
                         }),
                     }
                 }
+
                 type_::Warning::UnusedImportedValue { location, .. } => Diagnostic {
                     title: "Unused imported value".into(),
                     text: "".into(),
@@ -618,6 +627,7 @@ Hint: You can safely remove it.
                         extra_labels: Vec::new(),
                     }),
                 },
+
                 type_::Warning::UnusedPrivateModuleConstant { location, .. } => Diagnostic {
                     title: "Unused private constant".into(),
                     text: "".into(),
@@ -633,6 +643,7 @@ Hint: You can safely remove it.
                         extra_labels: Vec::new(),
                     }),
                 },
+
                 type_::Warning::UnusedPrivateFunction { location, .. } => Diagnostic {
                     title: "Unused private function".into(),
                     text: "".into(),
@@ -648,6 +659,7 @@ Hint: You can safely remove it.
                         extra_labels: Vec::new(),
                     }),
                 },
+
                 type_::Warning::UnusedVariable { location, origin } => Diagnostic {
                     title: "Unused variable".into(),
                     text: "".into(),
@@ -723,6 +735,7 @@ need to know if the list is empty or not.
                         }),
                     }
                 }
+
                 type_::Warning::TransitiveDependencyImported {
                     location,
                     module,
@@ -755,6 +768,7 @@ Run this command to add it to your dependencies:
                         }),
                     }
                 }
+
                 type_::Warning::DeprecatedItem {
                     location,
                     message,
@@ -789,6 +803,7 @@ Run this command to add it to your dependencies:
                         }),
                     }
                 }
+
                 type_::Warning::UnreachableCasePattern { location, reason } => {
                     let text: String = match reason {
                         UnreachablePatternReason::DuplicatePattern => wrap(
@@ -816,6 +831,7 @@ a variant of a type which is never present.\n",
                         }),
                     }
                 }
+
                 type_::Warning::CaseMatchOnLiteralCollection { kind, location } => {
                     let kind = match kind {
                         LiteralCollectionKind::List => "list",
@@ -852,6 +868,7 @@ See: https://tour.gleam.run/flow-control/multiple-subjects/"
                         }),
                     }
                 }
+
                 type_::Warning::CaseMatchOnLiteralValue { location } => Diagnostic {
                     title: "Match on a literal value".into(),
                     text: wrap(
@@ -870,6 +887,7 @@ can already tell which branch is going to match with this value.",
                         extra_labels: Vec::new(),
                     }),
                 },
+
                 type_::Warning::OpaqueExternalType { location } => Diagnostic {
                     title: "Opaque external type".into(),
                     text: "This type has no constructors so making it opaque is redundant.".into(),
@@ -885,6 +903,7 @@ can already tell which branch is going to match with this value.",
                         extra_labels: Vec::new(),
                     }),
                 },
+
                 type_::Warning::UnusedValue { location } => Diagnostic {
                     title: "Unused value".into(),
                     text: wrap(
@@ -904,6 +923,7 @@ variable, or delete the expression entirely if it's not needed.",
                         extra_labels: Vec::new(),
                     }),
                 },
+
                 type_::Warning::InternalTypeLeak { location, leaked } => {
                     let mut printer = Printer::new();
 
@@ -953,6 +973,7 @@ hidden from the package's documentation.",
                         extra_labels: vec![],
                     }),
                 },
+
                 type_::Warning::AssertAssignmentOnInferredVariant { location } => Diagnostic {
                     title: "Assertion that will always fail".into(),
                     text: wrap(
@@ -973,6 +994,7 @@ Either change the pattern or use `panic` to unconditionally fail.",
                         extra_labels: vec![],
                     }),
                 },
+
                 type_::Warning::TodoOrPanicUsedAsFunction {
                     kind,
                     location,
@@ -1029,6 +1051,7 @@ See: https://tour.gleam.run/advanced-features/{name}/"
                         }),
                     }
                 }
+
                 type_::Warning::UnreachableCodeAfterPanic {
                     location,
                     panic_position: unreachable_code_kind,
@@ -1067,6 +1090,7 @@ should be printing always panics."
                         }),
                     }
                 }
+
                 type_::Warning::RedundantPipeFunctionCapture { location } => Diagnostic {
                     title: "Redundant function capture".into(),
                     text: wrap(
@@ -1131,31 +1155,32 @@ See: https://tour.gleam.run/functions/pipelines/",
                     };
 
                     Diagnostic {
-                                    title: "Incompatible gleam version range".into(),
-                                    text: wrap(&format!(
-                                    "{feature} introduced in version v{minimum_required_version}. But the Gleam version range \
+                        title: "Incompatible gleam version range".into(),
+                        text: wrap(&format!(
+                        "{feature} introduced in version v{minimum_required_version}. But the Gleam version range \
                         specified in your `gleam.toml` would allow this code to run on an earlier \
                         version like v{wrongfully_allowed_version}, resulting in compilation errors!",
-                                )),
-                                    hint: Some(format!(
-                                        "Remove the version constraint from your `gleam.toml` or update it to be:
+                    )),
+                        hint: Some(format!(
+                            "Remove the version constraint from your `gleam.toml` or update it to be:
 
     gleam = \">= {minimum_required_version}\""
-                                    )),
-                                    level: diagnostic::Level::Warning,
-                                    location: Some(Location {
-                                        label: diagnostic::Label {
-                                            text: Some(format!(
-                                                "This requires a Gleam version >= {minimum_required_version}"
-                                            )),
-                                            span: *location,
-                                        },
-                                        path: path.clone(),
-                                        src: src.clone(),
-                                        extra_labels: vec![],
-                                    }),
-                                }
+                        )),
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            label: diagnostic::Label {
+                                text: Some(format!(
+                                    "This requires a Gleam version >= {minimum_required_version}"
+                                )),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 }
+
                 type_::Warning::JavaScriptIntUnsafe { location } => Diagnostic {
                     title: "Int is outside JavaScript's safe integer range".into(),
                     text: wrap(
@@ -1178,6 +1203,7 @@ information.",
                         extra_labels: Vec::new(),
                     }),
                 },
+
                 type_::Warning::BitArraySegmentTruncatedValue {
                     location: _,
                     truncation:
@@ -1231,6 +1257,7 @@ doesn't fit in that many {unit}. It would be truncated by taking its {taken}, re
                         }),
                     }
                 }
+
                 type_::Warning::AssertLiteralValue { location } => Diagnostic {
                     title: "Assertion of a literal value".into(),
                     text: wrap(
@@ -1249,6 +1276,7 @@ can already tell whether it will be true or false.",
                         extra_labels: Vec::new(),
                     }),
                 },
+
                 type_::Warning::ModuleImportedTwice {
                     name,
                     first,
@@ -1274,6 +1302,7 @@ can already tell whether it will be true or false.",
                         }],
                     }),
                 },
+
                 type_::Warning::UnusedDiscardPattern { location, name } => Diagnostic {
                     title: "Unused discard pattern".into(),
                     text: format!("_ as {name} can be written more concisely as {name}"),
