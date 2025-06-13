@@ -417,7 +417,7 @@ impl Environment<'_> {
                 .ok_or_else(|| UnknownTypeConstructorError::Type {
                     name: name.clone(),
                     hint: self.unknown_type_hint(name),
-                    suggestions: self.suggest_unqualified_modules(name, Layer::Type, arity),
+                    suggestions: self.suggest_modules_for_type_or_value(name, Layer::Type, arity),
                 }),
 
             Some((module_name, _)) => {
@@ -467,7 +467,7 @@ impl Environment<'_> {
                 UnknownTypeConstructorError::Type {
                     name: name.clone(),
                     hint: self.unknown_type_hint(name),
-                    suggestions: self.suggest_unqualified_modules(name, Layer::Type, arity),
+                    suggestions: self.suggest_modules_for_type_or_value(name, Layer::Type, arity),
                 }
             }),
 
@@ -505,7 +505,7 @@ impl Environment<'_> {
                     name: name.clone(),
                     variables: self.local_value_names(),
                     type_with_name_in_scope,
-                    suggestions: self.suggest_unqualified_modules(name, Layer::Value, arity),
+                    suggestions: self.suggest_modules_for_type_or_value(name, Layer::Value, arity),
                 }
             }),
 
@@ -854,17 +854,12 @@ impl Environment<'_> {
     }
 
     /// Suggest modules to import or use unqualified
-    pub fn suggest_unqualified_modules(
+    pub fn suggest_modules_for_type_or_value(
         &self,
         name: &EcoString,
         layer: Layer,
         arity: Option<usize>,
     ) -> Vec<ModuleSuggestion> {
-        // Don't suggest unqualified imports for values which aren't record constructors.
-        if layer.is_value() && name.chars().next().is_none_or(|c| c.is_lowercase()) {
-            return vec![];
-        }
-
         let suggestions = match layer {
             Layer::Type => self.suggest_modules_for_type(name, arity),
             Layer::Value => self.suggest_modules_for_value(name, arity),
@@ -881,52 +876,48 @@ impl Environment<'_> {
     ) -> Vec<ModuleSuggestion> {
         let mut imported_modules = HashSet::new();
 
-        let mut suggestions = self
-            .imported_modules
+        self.imported_modules
             .iter()
-            .filter_map(|(_, (_, module_info))| {
+            .map(|(_, (_, module_info))| (&module_info.name, *module_info, true))
+            .chain(
+                self.importable_modules
+                    .iter()
+                    .map(|(module_name, module_info)| (module_name, module_info, false)),
+            )
+            .filter_map(|(module_name, module_info, is_imported)| {
+                // If the module was already registered as imported, ignore it.
+                if !is_imported && imported_modules.contains(module_name) {
+                    return None;
+                }
+                // If the module doesn't have this type, ignore it.
                 let Some(type_) = module_info.get_public_type(name) else {
                     return None;
                 };
-                // If we couldn't find the arity of the type, consider all modules.
-                let Some(arity) = arity else {
-                    // Should be impossible to exist already
-                    let _ = imported_modules.insert(module_info.name.clone());
-                    return Some(ModuleSuggestion::Imported(module_info.name.clone()));
-                };
-                // Make sure the arities match.
-                if type_.parameters.len() == arity {
-                    // Should be impossible to exist already
-                    let _ = imported_modules.insert(module_info.name.clone());
-                    Some(ModuleSuggestion::Imported(module_info.name.clone()))
-                } else {
-                    None
+                match arity {
+                    // If we couldn't find the arity of the type, consider all modules.
+                    None => {
+                        if is_imported {
+                            // Should be impossible to exist already
+                            let _ = imported_modules.insert(module_name.clone());
+                            Some(ModuleSuggestion::Imported(module_name.clone()))
+                        } else {
+                            Some(ModuleSuggestion::Importable(module_name.clone()))
+                        }
+                    }
+                    // Make sure the arities match.
+                    Some(arity) if arity == type_.parameters.len() => {
+                        if is_imported {
+                            // Should be impossible to exist already
+                            let _ = imported_modules.insert(module_name.clone());
+                            Some(ModuleSuggestion::Imported(module_name.clone()))
+                        } else {
+                            Some(ModuleSuggestion::Importable(module_name.clone()))
+                        }
+                    }
+                    Some(_) => None,
                 }
             })
-            .collect_vec();
-
-        suggestions.extend(self.importable_modules.iter().filter_map(
-            |(importable, module_info)| {
-                if imported_modules.contains(importable) {
-                    return None;
-                }
-                let Some(type_) = module_info.get_public_type(name) else {
-                    return None;
-                };
-                // If we couldn't find the arity of the type, consider all modules.
-                let Some(arity) = arity else {
-                    return Some(ModuleSuggestion::Importable(importable.clone()));
-                };
-                // Make sure the arities match.
-                if type_.parameters.len() == arity {
-                    Some(ModuleSuggestion::Importable(importable.clone()))
-                } else {
-                    None
-                }
-            },
-        ));
-
-        suggestions
+            .collect_vec()
     }
 
     fn suggest_modules_for_value(
@@ -934,54 +925,54 @@ impl Environment<'_> {
         name: &EcoString,
         arity: Option<usize>,
     ) -> Vec<ModuleSuggestion> {
+        // Don't suggest unqualified imports for values which aren't record constructors.
+        if name.chars().next().is_none_or(|c| c.is_lowercase()) {
+            return vec![];
+        }
+
         let mut imported_modules = HashSet::new();
 
-        let mut suggestions = self
-            .imported_modules
+        self.imported_modules
             .iter()
-            .filter_map(|(_, (_, module_info))| {
+            .map(|(_, (_, module_info))| (&module_info.name, *module_info, true))
+            .chain(
+                self.importable_modules
+                    .iter()
+                    .map(|(module_name, module_info)| (module_name, module_info, false)),
+            )
+            .filter_map(|(module_name, module_info, is_imported)| {
+                // If the module was already registered as imported, ignore it.
+                if !is_imported && imported_modules.contains(module_name) {
+                    return None;
+                }
+                // If the module doesn't have this value, ignore it.
                 let Some(value) = module_info.get_public_value(name) else {
                     return None;
                 };
                 // If we couldn't find the arity of the value, consider all modules.
                 if arity == None {
-                    // Should be impossible to exist already
-                    let _ = imported_modules.insert(module_info.name.clone());
-                    return Some(ModuleSuggestion::Imported(module_info.name.clone()));
+                    if is_imported {
+                        // Should be impossible to exist already
+                        let _ = imported_modules.insert(module_name.clone());
+                        return Some(ModuleSuggestion::Imported(module_name.clone()));
+                    } else {
+                        return Some(ModuleSuggestion::Importable(module_name.clone()));
+                    }
                 }
                 // Make sure the arities match.
-                if value.type_.fn_arity() == arity {
-                    // Should be impossible to exist already
-                    let _ = imported_modules.insert(module_info.name.clone());
-                    Some(ModuleSuggestion::Imported(module_info.name.clone()))
+                if arity == value.type_.fn_arity() {
+                    if is_imported {
+                        // Should be impossible to exist already
+                        let _ = imported_modules.insert(module_name.clone());
+                        Some(ModuleSuggestion::Imported(module_name.clone()))
+                    } else {
+                        Some(ModuleSuggestion::Importable(module_name.clone()))
+                    }
                 } else {
                     None
                 }
             })
-            .collect_vec();
-
-        suggestions.extend(self.importable_modules.iter().filter_map(
-            |(importable, module_info)| {
-                if imported_modules.contains(importable) {
-                    return None;
-                }
-                let Some(value) = module_info.get_public_value(name) else {
-                    return None;
-                };
-                // If we couldn't find the arity of the value, consider all modules.
-                if arity == None {
-                    return Some(ModuleSuggestion::Importable(module_info.name.clone()));
-                }
-                // Make sure the arities match.
-                if value.type_.fn_arity() == arity {
-                    Some(ModuleSuggestion::Importable(module_info.name.clone()))
-                } else {
-                    None
-                }
-            },
-        ));
-
-        suggestions
+            .collect_vec()
     }
 
     /// Suggest modules to import or use, for an unknown module

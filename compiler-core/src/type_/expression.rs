@@ -3703,7 +3703,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     .module_types
                     .keys()
                     .any(|typ| typ == name),
-                suggestions: self.environment.suggest_unqualified_modules(
+                suggestions: self.environment.suggest_modules_for_type_or_value(
                     name,
                     Layer::Value,
                     arity,

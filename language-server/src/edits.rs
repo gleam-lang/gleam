@@ -105,9 +105,9 @@ pub fn insert_unqualified_import(
     }
 }
 
-pub fn get_unqualified_import_edit(
-    import_location: Position,
-    module_full_name: &str,
+pub fn add_import_with_unqualified(
+    import_position: Position,
+    module_name: &str,
     name_to_import: &str,
     layer: Layer,
     insert_newlines: &Newlines,
@@ -122,12 +122,12 @@ pub fn get_unqualified_import_edit(
     };
     TextEdit {
         range: Range {
-            start: import_location,
-            end: import_location,
+            start: import_position,
+            end: import_position,
         },
         new_text: [
             "import ",
-            module_full_name,
+            module_name,
             ".{",
             prefix,
             name_to_import,
@@ -175,7 +175,13 @@ fn get_import_code<'a>(module: &'a Module, import: &'a Import<EcoString>) -> &'a
     module
         .code
         .get(import.location.start as usize..import.location.end as usize)
-        .expect("import not found")
+        .expect(
+            format!(
+                "The code of the import of {} couldn't be found in the module {}",
+                import.module, module.name,
+            )
+            .as_str(),
+        )
 }
 
 // // Handle inserting into an unbraced import
