@@ -118,9 +118,9 @@ use crate::{
     STDLIB_PACKAGE_NAME,
     analyse::Inferred,
     ast::{
-        ArgNames, Assert, Assignment, AssignmentKind, BitArrayOption, BitArraySegment, CallArg,
-        Definition, FunctionLiteralKind, PipelineAssignmentKind, Publicity, SrcSpan, Statement,
-        TypedArg, TypedAssert, TypedAssignment, TypedClause, TypedDefinition, TypedExpr,
+        self, ArgNames, Assert, Assignment, AssignmentKind, BitArrayOption, BitArraySegment,
+        CallArg, Definition, FunctionLiteralKind, PipelineAssignmentKind, Publicity, SrcSpan,
+        Statement, TypedArg, TypedAssert, TypedAssignment, TypedClause, TypedDefinition, TypedExpr,
         TypedExprBitArraySegment, TypedFunction, TypedModule, TypedPattern,
         TypedPipelineAssignment, TypedStatement, TypedUse, visit::Visit,
     },
@@ -759,28 +759,13 @@ impl Inliner<'_> {
         // If we are performing inlining within an already inlined function, there
         // might be inlinable variables in the outer scope. However, these cannot be
         // inlined inside a nested function, so they are saved and restored afterwards.
-
-        // If we are performing inlining within an already inlined function,
-        // We might have something like this:
-        //
-        // ```gleam
-        // pub fn add(a) {
-        //   fn(b) { a + b }
-        // }
-        // ```
-        //
-        // Here, both the `a` and `b` parameters are inlined in the same scope,
-        // although they come from different functions.
-        //
-        // We extend the inlinable parameters, meaning any nested scopes have
-        // access to the outer parameters as well. Since each inlinable parameter
-        // is used exactly once, they will all be removed from the map by the
-        // time inlining of the outer function resumes.
-        self.inline_variables.extend(inline);
+        let inline_variables = std::mem::replace(&mut self.inline_variables, inline);
 
         // Perform inlining on each of the statements in this function's body,
         // potentially inlining parameters and function calls inside this function.
         statements.extend(body.into_iter().map(|statement| self.statement(statement)));
+
+        self.inline_variables = inline_variables;
 
         // We try to expand this block, so a function which is inlined as a
         // single expression does not get wrapped unnecessarily
@@ -951,6 +936,7 @@ fn find_inlinable_parameters(parameters: &[TypedArg], body: &[TypedStatement]) -
 
     let mut finder = FindInlinableParameters {
         parameters: parameter_map,
+        position: FunctionPosition::Body,
     };
     for statement in body {
         finder.visit_typed_statement(statement);
@@ -973,11 +959,31 @@ fn find_inlinable_parameters(parameters: &[TypedArg], body: &[TypedStatement]) -
 /// transform the anonymous function into an intermediate representation.
 struct FindInlinableParameters {
     parameters: HashMap<(EcoString, SrcSpan), bool>,
+    position: FunctionPosition,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum FunctionPosition {
+    Body,
+    NestedFunction,
 }
 
 impl FindInlinableParameters {
     fn register_reference(&mut self, name: &EcoString, location: SrcSpan) {
         let key = (name.clone(), location);
+
+        match self.position {
+            FunctionPosition::Body => {}
+            // We don't inline any parameters which are referenced in nested
+            // anonymous function, as our system for inlining parameters cannot
+            // properly handle that case; it requires more complex rewriting of
+            // the code in some cases.
+            FunctionPosition::NestedFunction => {
+                _ = self.parameters.remove(&key);
+                return;
+            }
+        }
+
         match self.parameters.get_mut(&key) {
             Some(true) => _ = self.parameters.remove(&key),
             Some(used @ false) => {
@@ -1024,6 +1030,23 @@ impl<'ast> Visit<'ast> for FindInlinableParameters {
         if let ValueConstructorVariant::LocalVariable { location, .. } = variant {
             self.register_reference(name, *location);
         }
+    }
+
+    fn visit_typed_expr_fn(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        kind: &'ast FunctionLiteralKind,
+        args: &'ast [TypedArg],
+        body: &'ast Vec1<TypedStatement>,
+        return_annotation: &'ast Option<ast::TypeAst>,
+    ) {
+        let previous_position = self.position;
+        self.position = FunctionPosition::NestedFunction;
+
+        ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
+
+        self.position = previous_position;
     }
 }
 
