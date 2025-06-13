@@ -140,11 +140,11 @@ impl<'a> Generator<'a> {
             self.register_prelude_usage(&mut imports, "toList", None);
         };
 
-        if self.tracker.list_empty_class_used {
+        if self.tracker.list_empty_class_used || self.tracker.echo_used {
             self.register_prelude_usage(&mut imports, "Empty", Some("$Empty"));
         };
 
-        if self.tracker.list_non_empty_class_used {
+        if self.tracker.list_non_empty_class_used || self.tracker.echo_used {
             self.register_prelude_usage(&mut imports, "NonEmpty", Some("$NonEmpty"));
         };
 

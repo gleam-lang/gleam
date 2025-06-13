@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/echo.rs
+assertion_line: 65
 expression: "\npub fn main() {\n  echo {\n    Nil\n    1\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -15,6 +17,8 @@ pub fn main() {
 ----- COMPILED JAVASCRIPT
 import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
 import {
+  Empty as $Empty,
+  NonEmpty as $NonEmpty,
   CustomType as $CustomType,
   bitArraySlice,
   bitArraySliceToInt,
