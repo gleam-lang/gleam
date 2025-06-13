@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/javascript/tests/inlining.rs
+expression: "\npub fn main() {\n  1 |> add(4, _)\n}\n\nfn add(a, b) { a + b }\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  1 |> add(4, _)
+}
+
+fn add(a, b) { a + b }
+
+
+----- COMPILED JAVASCRIPT
+function add(a, b) {
+  return a + b;
+}
+
+export function main() {
+  let _pipe = 1;
+  return add(4, _pipe);
+}

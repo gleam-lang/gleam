@@ -3,10 +3,10 @@ use std::time::SystemTime;
 use camino::Utf8PathBuf;
 
 use crate::analyse::TargetSupport;
-use crate::build;
 use crate::config::PackageConfig;
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::warning::WarningEmitter;
+use crate::{build, inline};
 use crate::{
     build::{Origin, Target},
     erlang::module,
@@ -27,6 +27,7 @@ mod echo;
 mod external_fn;
 mod functions;
 mod guards;
+mod inlining;
 mod let_assert;
 mod numbers;
 mod panic;
@@ -101,6 +102,8 @@ pub fn compile_test_project(src: &str, src_path: &str, dep: Option<(&str, &str, 
     .infer_module(ast, line_numbers, path.clone())
     .expect("should successfully infer root Erlang");
 
+    let ast = inline::module(ast, &modules);
+
     // After building everything we still need to attach the module comments, to
     // do that we're reusing the `attach_doc_and_module_comments` that's used
     // for the real thing. We just have to make a placeholder module wrapping
@@ -150,7 +153,7 @@ macro_rules! assert_erl {
         );
         let output = format!(
             "----- SOURCE CODE\n{}\n\n----- COMPILED ERLANG\n{}",
-            $src, compiled
+            $src, compiled,
         );
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
