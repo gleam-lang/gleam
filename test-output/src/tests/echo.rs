@@ -195,3 +195,8 @@ fn echo_tuple() {
 fn echo_non_record_atom_tag() {
     assert_echo!(Target::Erlang, "echo_non_record_atom_tag");
 }
+
+#[test]
+fn echo_circular_reference() {
+    assert_echo!(Target::JavaScript, "echo_circular_reference");
+}
