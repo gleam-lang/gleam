@@ -31,6 +31,13 @@
   ([Amjad Mohamed ](https://github.com/andho))
 
 
+- The `repository` section in `gleam.toml` now allows specifying the
+  `tag_prefix` property, which overrides the default `v`.
+  This makes it possible to have multiple packages with different versions in
+  the same repository (together with `path`), without breaking links to source
+  code in documentation.
+  ([Sakari Bergen](https://github.com/sbergen))
+
 ### Language server
 
 ### Formatter
