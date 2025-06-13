@@ -1,11 +1,11 @@
 use super::{
-    FieldAccessUsage,
     expression::{ArgumentKind, CallKind},
+    FieldAccessUsage,
 };
 use crate::{
     ast::{BinOp, BitArraySegmentTruncation, Layer, SrcSpan, TodoKind},
     build::Target,
-    type_::{Type, expression::ComparisonOutcome},
+    type_::{expression::ComparisonOutcome, Type},
 };
 
 use camino::Utf8PathBuf;
@@ -870,6 +870,11 @@ pub enum Warning {
         reason: UnreachablePatternReason,
     },
 
+    UnusedDiscardPattern {
+        location: SrcSpan,
+        name: EcoString,
+    },
+
     /// This happens when someone tries to write a case expression where one of
     /// the subjects is a literal tuple, list or bit array for example:
     ///
@@ -1272,6 +1277,7 @@ impl Warning {
             | Warning::AssertLiteralBool { location, .. }
             | Warning::BitArraySegmentTruncatedValue { location, .. }
             | Warning::TopLevelDefinitionShadowsImport { location, .. }
+            | Warning::UnusedDiscardPattern { location, .. }
             | Warning::ModuleImportedTwice {
                 second: location, ..
             }
