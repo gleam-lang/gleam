@@ -200,3 +200,8 @@ fn echo_non_record_atom_tag() {
 fn echo_circular_reference() {
     assert_echo!(Target::JavaScript, "echo_circular_reference");
 }
+
+#[test]
+fn echo_singleton() {
+    assert_echo!("echo_singleton");
+}

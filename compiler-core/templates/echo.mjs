@@ -80,14 +80,22 @@ class Echo$Inspector {
       return "//js(circular reference)";
     }
 
-    if (Array.isArray(v))
-      return `#(${v.map((v) => this.inspect(v)).join(", ")})`;
-    if (v instanceof $List) return this.#list(v);
-    if (v instanceof $CustomType) return this.#customType(v);
-    if (this.#isDict(v)) return this.#dict(v);
-    if (v instanceof Set)
+    let printed;
+    if (Array.isArray(v)) {
+      printed = `#(${v.map((v) => this.inspect(v)).join(", ")})`;
+    } else if (v instanceof $List) {
+      printed = this.#list(v);
+    } else if (v instanceof $CustomType) {
+      printed = this.#customType(v);
+    } else if (this.#isDict(v)) {
+      printed = this.#dict(v);
+    } else if (v instanceof Set) {
       return `//js(Set(${[...v].map((v) => this.inspect(v)).join(", ")}))`;
-    return this.#object(v);
+    } else {
+      printed = this.#object(v);
+    }
+    this.#references.delete(v);
+    return printed;
   }
 
   #object(v) {
