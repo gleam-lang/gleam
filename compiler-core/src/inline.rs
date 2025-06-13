@@ -759,13 +759,28 @@ impl Inliner<'_> {
         // If we are performing inlining within an already inlined function, there
         // might be inlinable variables in the outer scope. However, these cannot be
         // inlined inside a nested function, so they are saved and restored afterwards.
-        let inline_variables = std::mem::replace(&mut self.inline_variables, inline);
+
+        // If we are performing inlining within an already inlined function,
+        // We might have something like this:
+        //
+        // ```gleam
+        // pub fn add(a) {
+        //   fn(b) { a + b }
+        // }
+        // ```
+        //
+        // Here, both the `a` and `b` parameters are inlined in the same scope,
+        // although they come from different functions.
+        //
+        // We extend the inlinable parameters, meaning any nested scopes have
+        // access to the outer parameters as well. Since each inlinable parameter
+        // is used exactly once, they will all be removed from the map by the
+        // time inlining of the outer function resumes.
+        self.inline_variables.extend(inline);
 
         // Perform inlining on each of the statements in this function's body,
         // potentially inlining parameters and function calls inside this function.
         statements.extend(body.into_iter().map(|statement| self.statement(statement)));
-
-        self.inline_variables = inline_variables;
 
         // We try to expand this block, so a function which is inlined as a
         // single expression does not get wrapped unnecessarily
