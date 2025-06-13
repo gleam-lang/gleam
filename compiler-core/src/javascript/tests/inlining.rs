@@ -278,3 +278,28 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn parameters_from_nested_functions_are_correctly_inlined() {
+    assert_js!(
+        ("gleam_stdlib", "gleam/result", RESULT_MODULE),
+        "
+import gleam/result
+
+pub fn halve_all(a, b, c) {
+  use x <- result.try(divide(a, 2))
+  use y <- result.try(divide(b, 2))
+  use z <- result.map(divide(c, 2))
+
+  #(x, y, z)
+}
+
+fn divide(a, b) {
+  case a % b {
+    0 -> Ok(a / b)
+    _ -> Error(Nil)
+  }
+}
+"
+    );
+}
