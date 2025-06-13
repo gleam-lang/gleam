@@ -31,6 +31,9 @@
   ([Amjad Mohamed ](https://github.com/andho))
 
 
+- Added `gleam hex deauthenticate` command.
+  ([Samuel Cristobal](https://github.com/scristobal))
+
 ### Language server
 
 ### Formatter
