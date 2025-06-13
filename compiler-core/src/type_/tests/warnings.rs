@@ -4198,6 +4198,7 @@ fn unused_discard_pattern() {
   let _ = case a {
     _ as b -> b
   }
-}"
+}
+"
     );
 }
