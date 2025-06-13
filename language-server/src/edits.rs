@@ -105,9 +105,9 @@ pub fn insert_unqualified_import(
     }
 }
 
-pub fn get_unqualified_import_edit(
-    import_location: Position,
-    module_full_name: &str,
+pub fn add_import_with_unqualified(
+    import_position: Position,
+    module_name: &str,
     name_to_import: &str,
     layer: Layer,
     insert_newlines: &Newlines,
@@ -122,12 +122,12 @@ pub fn get_unqualified_import_edit(
     };
     TextEdit {
         range: Range {
-            start: import_location,
-            end: import_location,
+            start: import_position,
+            end: import_position,
         },
         new_text: [
             "import ",
-            module_full_name,
+            module_name,
             ".{",
             prefix,
             name_to_import,
@@ -175,31 +175,13 @@ fn get_import_code<'a>(module: &'a Module, import: &'a Import<EcoString>) -> &'a
     module
         .code
         .get(import.location.start as usize..import.location.end as usize)
-        .expect("import not found")
+        .unwrap_or_else(|| {
+            panic!(
+                "The code of the import of {} couldn't be found in the module {}",
+                import.module, module.name
+            )
+        })
 }
-
-// // Handle inserting into an unbraced import
-// fn insert_into_unbraced_import(
-//     module: &Module,
-//     name: &EcoString,
-//     import: &Import<EcoString>,
-// ) -> (u32, String) {
-//     let location = import.location;
-//     match import.alias_location() {
-//         // Case: import module
-//         None => (location.end, format!(".{{{}}}", name)),
-//         Some(as_pos) => {
-//             // Case: import module as alias
-//             let import_code = &get_import_code(module, import);
-//             let before_as_pos = import_code
-//                 .get(..(as_pos.start as usize))
-//                 .and_then(|s| s.rfind(|c: char| !c.is_whitespace()))
-//                 .map(|pos| location.start as usize + pos + 1)
-//                 .expect("Expected non-whitespace character before ' as '");
-//             (before_as_pos as u32, format!(".{{{}}}", name))
-//         }
-//     }
-// }
 
 // Handle inserting into an unbraced import
 fn insert_into_unbraced_import(
