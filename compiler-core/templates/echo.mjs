@@ -2,7 +2,8 @@ function echo(value, file, line) {
   const grey = "\u001b[90m";
   const reset_color = "\u001b[39m";
   const file_line = `${file}:${line}`;
-  const string_value = new Echo$Inspector.inspect(value);
+  const inspector = new Echo$Inspector();
+  const string_value = inspector.inspect(value);
 
   if (globalThis.process?.stderr?.write) {
     // If we're in Node.js, use `stderr`
@@ -25,6 +26,35 @@ function echo(value, file, line) {
 class Echo$Inspector {
   #references = new Set();
 
+  #isDict(value) {
+    try {
+      // We can only check if an object is a stdlib Dict if it is one of the
+      // project's dependencies.
+      // The `Dict` class is the default export of `stdlib/dict.mjs`
+      // that we import as `$stdlib$dict`.
+      return value instanceof $stdlib$dict.default;
+    } catch {
+      // If stdlib is not one of the project's dependencies then `$stdlib$dict`
+      // will not have been imported and the check will throw an exception meaning
+      // we can't check if something is actually a `Dict`.
+      return false;
+    }
+  }
+
+  #float(float) {
+    const string = float.toString().replace("+", "");
+    if (string.indexOf(".") >= 0) {
+      return string;
+    } else {
+      const index = string.indexOf("e");
+      if (index >= 0) {
+        return string.slice(0, index) + ".0" + string.slice(index);
+      } else {
+        return string + ".0";
+      }
+    }
+  }
+
   inspect(v) {
     const t = typeof v;
     if (v === true) return "True";
@@ -33,9 +63,9 @@ class Echo$Inspector {
     if (v === undefined) return "Nil";
     if (t === "string") return this.#string(v);
     if (t === "bigint" || Number.isInteger(v)) return v.toString();
-    if (t === "number") return float_to_string(v);
-    if (v instanceof UtfCodepoint) return this.#utfCodepoint(v);
-    if (v instanceof BitArray) return this.#bit_array(v);
+    if (t === "number") return this.#float(v);
+    if (v instanceof $UtfCodepoint) return this.#utfCodepoint(v);
+    if (v instanceof $BitArray) return this.#bit_array(v);
     if (v instanceof RegExp) return `//js(${v})`;
     if (v instanceof Date) return `//js(Date("${v.toISOString()}"))`;
     if (v instanceof globalThis.Error) return `//js(${v.toString()})`;
@@ -52,9 +82,9 @@ class Echo$Inspector {
 
     if (Array.isArray(v))
       return `#(${v.map((v) => this.inspect(v)).join(", ")})`;
-    if (v instanceof List) return this.#list(v);
-    if (v instanceof CustomType) return this.#customType(v);
-    if (v instanceof Dict) return this.#dict(v);
+    if (v instanceof $List) return this.#list(v);
+    if (v instanceof $CustomType) return this.#customType(v);
+    if (this.#isDict(v)) return this.#dict(v);
     if (v instanceof Set)
       return `//js(Set(${[...v].map((v) => this.inspect(v)).join(", ")}))`;
     return this.#object(v);
@@ -74,7 +104,13 @@ class Echo$Inspector {
   #dict(map) {
     let body = "dict.from_list([";
     let first = true;
+
+    let key_value_pairs = [];
     map.forEach((value, key) => {
+      key_value_pairs.push([key, value]);
+    });
+    key_value_pairs.sort();
+    key_value_pairs.forEach(([key, value]) => {
       if (!first) body = body + ", ";
       body = body + "#(" + this.inspect(key) + ", " + this.inspect(value) + ")";
       first = false;
@@ -95,7 +131,7 @@ class Echo$Inspector {
   }
 
   #list(list) {
-    if (list instanceof Empty) {
+    if (list instanceof $Empty) {
       return "[]";
     }
 
@@ -103,7 +139,7 @@ class Echo$Inspector {
     let list_out = "[";
 
     let current = list;
-    while (current instanceof NonEmpty) {
+    while (current instanceof $NonEmpty) {
       let element = current.head;
       current = current.tail;
 
@@ -171,10 +207,11 @@ class Echo$Inspector {
   }
 
   #bit_array(bits) {
-    let acc = "<<";
     if (bits.bitSize === 0) {
-      return acc;
+      return "<<>>";
     }
+
+    let acc = "<<";
 
     for (let i = 0; i < bits.byteSize - 1; i++) {
       acc += bits.byteAt(i).toString();
