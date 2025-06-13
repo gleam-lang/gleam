@@ -118,9 +118,9 @@ use crate::{
     STDLIB_PACKAGE_NAME,
     analyse::Inferred,
     ast::{
-        self, ArgNames, Assert, Assignment, AssignmentKind, BitArrayOption, BitArraySegment,
-        CallArg, Definition, FunctionLiteralKind, PipelineAssignmentKind, Publicity, SrcSpan,
-        Statement, TypedArg, TypedAssert, TypedAssignment, TypedClause, TypedDefinition, TypedExpr,
+        ArgNames, Assert, Assignment, AssignmentKind, BitArrayOption, BitArraySegment, CallArg,
+        Definition, FunctionLiteralKind, PipelineAssignmentKind, Publicity, SrcSpan, Statement,
+        TypedArg, TypedAssert, TypedAssignment, TypedClause, TypedDefinition, TypedExpr,
         TypedExprBitArraySegment, TypedFunction, TypedModule, TypedPattern,
         TypedPipelineAssignment, TypedStatement, TypedUse, visit::Visit,
     },
@@ -1009,25 +1009,6 @@ impl<'ast> Visit<'ast> for FindInlinableParameters {
         if let ValueConstructorVariant::LocalVariable { location, .. } = variant {
             self.register_reference(name, *location);
         }
-    }
-
-    fn visit_typed_call_arg(&mut self, arg: &'ast TypedCallArg) {
-        if let TypedExpr::Var {
-            name, constructor, ..
-        } = &arg.value
-        {
-            match &constructor.variant {
-                ValueConstructorVariant::LocalVariable { location, .. }
-                    if arg.uses_label_shorthand() =>
-                {
-                    self.register_reference(name, *location);
-                    return;
-                }
-                _ => {}
-            }
-        }
-
-        ast::visit::visit_typed_call_arg(self, arg);
     }
 }
 
