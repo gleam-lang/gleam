@@ -212,6 +212,8 @@
   ```
 
   ([Louis Pilfold](https://github.com/lpil))
+- A warning is now emitted when the now deprecated `_ as x` pattern is used.
+  ([eutampieri](https://github.com/eutampieri))
 
 - The compiler now allows using bit array options to specify endianness when
   construction or pattern matching on bit arrays.
@@ -495,9 +497,6 @@
 - A warning is now emitted when the same module is imported
   multiple times into the same module with different aliases.
   ([Louis Pilfold](https://github.com/lpil))
-
-- A warning is now emitted when the now deprecated `_ as x` pattern is used.
-  ([eutampieri](https://github.com/eutampieri))
 
 ### Bug fixes
 
