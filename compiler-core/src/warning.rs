@@ -1302,6 +1302,22 @@ can already tell whether it will be true or false.",
                         }],
                     }),
                 },
+
+                type_::Warning::UnusedDiscardPattern { location, name } => Diagnostic {
+                    title: "Unused discard pattern".into(),
+                    text: format!("_ as {name} can be written more concisely as {name}"),
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        src: src.clone(),
+                        path: path.to_path_buf(),
+                        label: diagnostic::Label {
+                            text: None,
+                            span: *location,
+                        },
+                        extra_labels: vec![],
+                    }),
+                    hint: Some(format!("Replace with {name}")),
+                },
             },
 
             Warning::DeprecatedEnvironmentVariable { variable } => {

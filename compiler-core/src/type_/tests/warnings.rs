@@ -3926,3 +3926,16 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn unused_discard_pattern() {
+    assert_warning!(
+        "pub fn main() {
+  let a = 10
+  let _ = case a {
+    _ as b -> b
+  }
+}
+"
+    );
+}

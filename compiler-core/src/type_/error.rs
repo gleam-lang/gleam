@@ -860,6 +860,11 @@ pub enum Warning {
         reason: UnreachablePatternReason,
     },
 
+    UnusedDiscardPattern {
+        location: SrcSpan,
+        name: EcoString,
+    },
+
     /// This happens when someone tries to write a case expression where one of
     /// the subjects is a literal tuple, list or bit array for example:
     ///
@@ -1240,6 +1245,7 @@ impl Warning {
             | Warning::JavaScriptIntUnsafe { location, .. }
             | Warning::AssertLiteralValue { location, .. }
             | Warning::BitArraySegmentTruncatedValue { location, .. }
+            | Warning::UnusedDiscardPattern { location, .. }
             | Warning::ModuleImportedTwice {
                 second: location, ..
             } => *location,

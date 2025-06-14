@@ -2073,7 +2073,11 @@ impl<'comments> Formatter<'comments> {
             Pattern::VarUsage { name, .. } => name.to_doc(),
 
             Pattern::Assign { name, pattern, .. } => {
-                self.pattern(pattern).append(" as ").append(name.as_str())
+                if pattern.is_discard() {
+                    name.to_doc()
+                } else {
+                    self.pattern(pattern).append(" as ").append(name.as_str())
+                }
             }
 
             Pattern::Discard { name, .. } => name.to_doc(),
