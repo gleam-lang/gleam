@@ -12,6 +12,7 @@ mod external_types;
 mod function;
 mod guards;
 mod imports;
+mod lists;
 mod pipeline;
 mod record_update;
 mod tuple;
@@ -5992,9 +5993,11 @@ fn const_concat_long_including_list() {
         r#"const x = "some long string 1"
   <> "some long string 2"
   <> [
-    "here is a list", "with several elements",
+    "here is a list",
+    "with several elements",
     "in order to make it be too long to fit on one line",
-    "so we can see how it breaks", "onto multiple lines",
+    "so we can see how it breaks",
+    "onto multiple lines",
   ]
   <> "and a last string"
 "#,

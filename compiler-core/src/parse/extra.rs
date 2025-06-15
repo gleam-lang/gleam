@@ -11,6 +11,7 @@ pub struct ModuleExtra {
     pub comments: Vec<SrcSpan>,
     pub empty_lines: Vec<u32>,
     pub new_lines: Vec<u32>,
+    pub trailing_commas: Vec<u32>,
 }
 
 impl ModuleExtra {
