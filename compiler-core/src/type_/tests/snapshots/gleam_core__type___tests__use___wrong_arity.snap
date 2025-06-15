@@ -11,10 +11,10 @@ use <- f
 
 ----- ERROR
 error: Incorrect arity
-  ┌─ /src/one/two.gleam:3:1
+  ┌─ /src/one/two.gleam:3:8
   │
 3 │ use <- f
-  │ ^^^    ^
+  │ ---    ^
   │ │       
   │ Expected 2 arguments, got 0
 

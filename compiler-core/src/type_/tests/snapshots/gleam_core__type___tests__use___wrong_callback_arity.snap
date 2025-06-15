@@ -11,10 +11,10 @@ use _ <- x()
 
 ----- ERROR
 error: Incorrect arity
-  ┌─ /src/one/two.gleam:3:5
+  ┌─ /src/one/two.gleam:3:10
   │
 3 │ use _ <- x()
-  │     ^    ^^^
+  │     -    ^^^
   │     │     
   │     Expected no arguments, got 1
 

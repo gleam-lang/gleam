@@ -20,10 +20,10 @@ pub fn wobble() { 1 }
 
 ----- ERROR
 error: Duplicate import
-  ┌─ /src/one/two.gleam:2:9
+  ┌─ /src/one/two.gleam:3:9
   │
 2 │         import wibble/sub
-  │         ^^^^^^^^^^^^^^^^^ First imported here
+  │         ----------------- First imported here
 3 │         import wibble2/sub.{wobble}
   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Reimported here
 

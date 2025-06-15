@@ -18,10 +18,10 @@ expression: "\n        import gleam/wibble.{wobble}\n        import gleam/wibble
 
 ----- ERROR
 error: Duplicate import
-  ┌─ /src/one/two.gleam:2:9
+  ┌─ /src/one/two.gleam:3:9
   │
 2 │         import gleam/wibble.{wobble}
-  │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ First imported here
+  │         ---------------------------- First imported here
 3 │         import gleam/wibble.{zoo}
   │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Reimported here
 
