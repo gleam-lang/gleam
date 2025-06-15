@@ -378,7 +378,7 @@ impl<'a> Generator<'a> {
         }
 
         let doc = if let Some((_, documentation)) = &constructor.documentation {
-            jsdoc_comment(&documentation, publicity).append(line())
+            jsdoc_comment(documentation, publicity).append(line())
         } else {
             nil()
         };
