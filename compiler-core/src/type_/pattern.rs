@@ -1,4 +1,4 @@
-use hexpm::version::Version;
+use hexpm::version::{LowestVersion, Version};
 use im::hashmap;
 use itertools::Itertools;
 use num_bigint::BigInt;

@@ -1,5 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 use crate::build::{Origin, Outcome, Runtime, Target};
+use crate::dependency::{PackageFetcher, ResolutionError};
 use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
 use crate::strings::{to_snake_case, to_upper_camel_case};
 use crate::type_::collapse_links;
@@ -12,11 +13,9 @@ use crate::type_::{FieldAccessUsage, error::PatternMatchKind};
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
 use crate::{bit_array, diagnostic::Level, javascript, type_::UnifyErrorSituation};
 use ecow::EcoString;
-use hexpm::version::ResolutionError;
 use itertools::Itertools;
-use pubgrub::package::Package;
-use pubgrub::report::DerivationTree;
-use pubgrub::version::Version;
+use pubgrub::Package;
+use pubgrub::{DerivationTree, VersionSet};
 use std::borrow::Cow;
 use std::collections::HashSet;
 use std::fmt::{Debug, Display};
@@ -190,6 +189,9 @@ pub enum Error {
 
     #[error("{input} is not a valid version. {error}")]
     InvalidVersionFormat { input: String, error: String },
+
+    #[error("incompatible locked version. {error}")]
+    IncompatibleLockedVersion { error: String },
 
     #[error("project root already exists")]
     ProjectRootAlreadyExist { path: String },
@@ -431,23 +433,28 @@ impl Error {
         Self::TarFinish(error.to_string())
     }
 
-    pub fn dependency_resolution_failed(error: ResolutionError) -> Error {
-        fn collect_conflicting_packages<'dt, P: Package, V: Version>(
-            derivation_tree: &'dt DerivationTree<P, V>,
+    pub fn dependency_resolution_failed<T: PackageFetcher>(error: ResolutionError<'_, T>) -> Error {
+        fn collect_conflicting_packages<
+            'dt,
+            P: Package,
+            VS: VersionSet,
+            M: Clone + Display + Debug + Eq,
+        >(
+            derivation_tree: &'dt DerivationTree<P, VS, M>,
             conflicting_packages: &mut HashSet<&'dt P>,
         ) {
             match derivation_tree {
                 DerivationTree::External(external) => match external {
-                    pubgrub::report::External::NotRoot(package, _) => {
+                    pubgrub::External::NotRoot(package, _) => {
                         let _ = conflicting_packages.insert(package);
                     }
-                    pubgrub::report::External::NoVersions(package, _) => {
+                    pubgrub::External::NoVersions(package, _) => {
                         let _ = conflicting_packages.insert(package);
                     }
-                    pubgrub::report::External::UnavailableDependencies(package, _) => {
+                    pubgrub::External::Custom(package, _, _) => {
                         let _ = conflicting_packages.insert(package);
                     }
-                    pubgrub::report::External::FromDependencyOf(package, _, dep_package, _) => {
+                    pubgrub::External::FromDependencyOf(package, _, dep_package, _) => {
                         let _ = conflicting_packages.insert(package);
                         let _ = conflicting_packages.insert(dep_package);
                     }
@@ -488,26 +495,12 @@ The conflicting packages are:
                 "An error occurred while trying to retrieve dependencies of {package}@{version}: {source}",
             ),
 
-            ResolutionError::DependencyOnTheEmptySet {
-                package,
-                version,
-                dependent,
-            } => format!("{package}@{version} has an impossible dependency on {dependent}",),
-
-            ResolutionError::SelfDependency { package, version } => {
-                format!("{package}@{version} somehow depends on itself.")
-            }
-
-            ResolutionError::ErrorChoosingPackageVersion(err) => {
-                format!("Unable to determine package versions: {err}")
+            ResolutionError::ErrorChoosingVersion { package, source } => {
+                format!("An error occured while chosing the version of {package}: {source}",)
             }
 
             ResolutionError::ErrorInShouldCancel(err) => {
                 format!("Dependency resolution was cancelled. {err}")
-            }
-
-            ResolutionError::Failure(err) => {
-                format!("An unrecoverable error happened while solving dependencies: {err}")
             }
         })
     }
@@ -3958,6 +3951,22 @@ The error from the parser was:
                 );
                 vec![Diagnostic {
                     title: "Invalid version format".into(),
+                    text,
+                    hint: None,
+                    location: None,
+                    level: Level::Error,
+                }]
+            }
+
+            Error::IncompatibleLockedVersion {  error } => {
+                let text = format!(
+                "There is an incompatiblity between a version specified in
+manifest.toml and a version range specified in gleam.toml:
+
+    {error}"
+                );
+                vec![Diagnostic {
+                    title: "Incompatible locked version".into(),
                     text,
                     hint: None,
                     location: None,
