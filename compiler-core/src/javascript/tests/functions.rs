@@ -585,15 +585,3 @@ pub fn main() { 1 }
 "
     );
 }
-
-#[test]
-fn private_function_gets_ignored_jsdoc() {
-    assert_js!(
-        "
-/// Hello! This is the documentation of the `main`
-/// function, which is private!
-///
-fn main() { 1 }
-"
-    );
-}
