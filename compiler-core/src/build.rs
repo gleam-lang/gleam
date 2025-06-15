@@ -272,26 +272,26 @@ impl Module {
 
         self.ast.type_info.documentation = self.ast.documentation.clone();
 
-        // Order statements to avoid misassociating doc comments after the
+        // Order definitions to avoid misassociating doc comments after the
         // order has changed during compilation.
-        let mut statements: Vec<_> = self.ast.definitions.iter_mut().collect();
-        statements.sort_by(|a, b| a.location().start.cmp(&b.location().start));
+        let mut definitions: Vec<_> = self.ast.definitions.iter_mut().collect();
+        definitions.sort_by(|a, b| a.location().start.cmp(&b.location().start));
 
         // Doc Comments
         let mut doc_comments = self.extra.doc_comments.iter().peekable();
-        for statement in &mut statements {
+        for definition in &mut definitions {
             let (docs_start, docs): (u32, Vec<&str>) = doc_comments_before(
                 &mut doc_comments,
                 &self.extra,
-                statement.location().start,
+                definition.location().start,
                 &self.code,
             );
             if !docs.is_empty() {
                 let doc = docs.join("\n").into();
-                statement.put_doc((docs_start, doc));
+                definition.put_doc((docs_start, doc));
             }
 
-            if let Definition::CustomType(CustomType { constructors, .. }) = statement {
+            if let Definition::CustomType(CustomType { constructors, .. }) = definition {
                 for constructor in constructors {
                     let (docs_start, docs): (u32, Vec<&str>) = doc_comments_before(
                         &mut doc_comments,
