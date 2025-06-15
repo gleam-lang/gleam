@@ -22,51 +22,53 @@ use crate::{
 #[allow(dead_code)]
 pub trait UntypedModuleFolder: TypeAstFolder + UntypedExprFolder {
     /// You probably don't want to override this method.
-    fn fold_module(&mut self, mut m: UntypedModule) -> UntypedModule {
-        m.definitions = m
+    fn fold_module(&mut self, mut module: UntypedModule) -> UntypedModule {
+        module.definitions = module
             .definitions
             .into_iter()
-            .map(|d| {
-                let TargetedDefinition { definition, target } = d;
+            .map(|definition| {
+                let TargetedDefinition { definition, target } = definition;
                 match definition {
-                    Definition::Function(f) => {
-                        let f = self.fold_function_definition(f, target);
-                        let definition = self.walk_function_definition(f);
+                    Definition::Function(function) => {
+                        let function = self.fold_function_definition(function, target);
+                        let definition = self.walk_function_definition(function);
                         TargetedDefinition { definition, target }
                     }
 
-                    Definition::TypeAlias(a) => {
-                        let a = self.fold_type_alias(a, target);
-                        let definition = self.walk_type_alias(a);
+                    Definition::TypeAlias(type_alias) => {
+                        let type_alias = self.fold_type_alias(type_alias, target);
+                        let definition = self.walk_type_alias(type_alias);
                         TargetedDefinition { definition, target }
                     }
 
-                    Definition::CustomType(t) => {
-                        let t = self.fold_custom_type(t, target);
-                        let definition = self.walk_custom_type(t);
+                    Definition::CustomType(custom_type) => {
+                        let custom_type = self.fold_custom_type(custom_type, target);
+                        let definition = self.walk_custom_type(custom_type);
                         TargetedDefinition { definition, target }
                     }
 
-                    Definition::Import(i) => {
-                        let i = self.fold_import(i, target);
-                        let definition = self.walk_import(i);
+                    Definition::Import(import) => {
+                        let import = self.fold_import(import, target);
+                        let definition = self.walk_import(import);
                         TargetedDefinition { definition, target }
                     }
 
-                    Definition::ModuleConstant(c) => {
-                        let c = self.fold_module_constant(c, target);
-                        let definition = self.walk_module_constant(c);
+                    Definition::ModuleConstant(constant) => {
+                        let constant = self.fold_module_constant(constant, target);
+                        let definition = self.walk_module_constant(constant);
                         TargetedDefinition { definition, target }
                     }
                 }
             })
             .collect();
-        m
+        module
     }
 
     /// You probably don't want to override this method.
     fn walk_function_definition(&mut self, mut function: UntypedFunction) -> UntypedDefinition {
-        function.body = function.body.mapped(|s| self.fold_statement(s));
+        function.body = function
+            .body
+            .mapped(|statement| self.fold_statement(statement));
         function.return_annotation = function
             .return_annotation
             .map(|type_| self.fold_type(type_));

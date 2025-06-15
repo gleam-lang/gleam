@@ -119,7 +119,7 @@ impl<'a> Generator<'a> {
             self.module
                 .definitions
                 .iter()
-                .flat_map(|s| self.statement(s)),
+                .flat_map(|definition| self.definition(definition)),
         );
 
         // Two lines between each statement
@@ -298,8 +298,8 @@ impl<'a> Generator<'a> {
         imports.register_module(path, [], [member]);
     }
 
-    pub fn statement(&mut self, statement: &'a TypedDefinition) -> Option<Output<'a>> {
-        match statement {
+    pub fn definition(&mut self, definition: &'a TypedDefinition) -> Option<Output<'a>> {
+        match definition {
             Definition::TypeAlias(TypeAlias { .. }) => None,
 
             // Handled in collect_imports
@@ -423,7 +423,7 @@ impl<'a> Generator<'a> {
         self.module
             .definitions
             .iter()
-            .flat_map(|statement| match statement {
+            .flat_map(|definition| match definition {
                 // If a custom type is unused then we don't need to generate code for it
                 Definition::CustomType(CustomType { location, .. })
                     if self
@@ -452,8 +452,8 @@ impl<'a> Generator<'a> {
     fn collect_imports(&mut self) -> Imports<'a> {
         let mut imports = Imports::new();
 
-        for statement in &self.module.definitions {
-            match statement {
+        for definition in &self.module.definitions {
+            match definition {
                 Definition::Import(Import {
                     module,
                     as_name,
@@ -659,8 +659,8 @@ impl<'a> Generator<'a> {
     }
 
     fn register_module_definitions_in_scope(&mut self) {
-        for statement in self.module.definitions.iter() {
-            match statement {
+        for definition in self.module.definitions.iter() {
+            match definition {
                 Definition::ModuleConstant(ModuleConstant { name, .. }) => {
                     self.register_in_scope(name)
                 }

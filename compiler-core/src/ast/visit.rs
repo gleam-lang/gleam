@@ -587,8 +587,8 @@ pub fn visit_typed_module<'a, V>(v: &mut V, module: &'a TypedModule)
 where
     V: Visit<'a> + ?Sized,
 {
-    for def in &module.definitions {
-        v.visit_typed_definition(def);
+    for definition in &module.definitions {
+        v.visit_typed_definition(definition);
     }
 }
 

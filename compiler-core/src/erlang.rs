@@ -91,7 +91,7 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
     module
         .definitions
         .iter()
-        .filter_map(|s| match s {
+        .filter_map(|definition| match definition {
             Definition::CustomType(CustomType {
                 publicity: Publicity::Public,
                 constructors,
@@ -173,9 +173,9 @@ fn module_document<'a>(
     // would result in an error as it tries to reference this private function.
     let overridden_publicity = find_private_functions_referenced_in_importable_constants(module);
 
-    for s in &module.definitions {
+    for definition in &module.definitions {
         register_imports_and_exports(
-            s,
+            definition,
             &mut exports,
             &mut type_exports,
             &mut type_defs,
@@ -297,7 +297,7 @@ fn module_document<'a>(
 }
 
 fn register_imports_and_exports(
-    s: &TypedDefinition,
+    definition: &TypedDefinition,
     exports: &mut Vec<Document<'_>>,
     type_exports: &mut Vec<Document<'_>>,
     type_defs: &mut Vec<Document<'_>>,
@@ -306,11 +306,11 @@ fn register_imports_and_exports(
     unused_definition_positions: &HashSet<u32>,
 ) {
     // Do not generate any code for unused items
-    if unused_definition_positions.contains(&s.location().start) {
+    if unused_definition_positions.contains(&definition.location().start) {
         return;
     }
 
-    match s {
+    match definition {
         Definition::Function(Function {
             publicity,
             name: Some((_, name)),
@@ -379,13 +379,16 @@ fn register_imports_and_exports(
             } else {
                 let constructors = constructors
                     .iter()
-                    .map(|c| {
-                        let name = atom_string(to_snake_case(&c.name));
-                        if c.arguments.is_empty() {
+                    .map(|constructor| {
+                        let name = atom_string(to_snake_case(&constructor.name));
+                        if constructor.arguments.is_empty() {
                             name
                         } else {
                             let type_printer = TypePrinter::new(module_name);
-                            let args = c.arguments.iter().map(|a| type_printer.print(&a.type_));
+                            let args = constructor
+                                .arguments
+                                .iter()
+                                .map(|argument| type_printer.print(&argument.type_));
                             tuple(std::iter::once(name).chain(args))
                         }
                     })
@@ -395,7 +398,9 @@ fn register_imports_and_exports(
             .nest(INDENT);
             let type_printer = TypePrinter::new(module_name);
             let params = join(
-                typed_parameters.iter().map(|a| type_printer.print(a)),
+                typed_parameters
+                    .iter()
+                    .map(|type_| type_printer.print(type_)),
                 ", ".to_doc(),
             );
             let doc = if *opaque { "-opaque " } else { "-type " }
@@ -3082,10 +3087,10 @@ fn find_private_functions_referenced_in_importable_constants(
 ) -> im::HashSet<EcoString> {
     let mut overridden_publicity = im::HashSet::new();
 
-    for def in module.definitions.iter() {
-        if let Definition::ModuleConstant(c) = def {
-            if c.publicity.is_importable() {
-                find_referenced_private_functions(&c.value, &mut overridden_publicity)
+    for definition in module.definitions.iter() {
+        if let Definition::ModuleConstant(constant) = definition {
+            if constant.publicity.is_importable() {
+                find_referenced_private_functions(&constant.value, &mut overridden_publicity)
             }
         }
     }

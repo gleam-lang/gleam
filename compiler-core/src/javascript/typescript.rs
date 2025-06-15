@@ -197,7 +197,7 @@ impl<'a> TypeScriptGenerator<'a> {
             .module
             .definitions
             .iter()
-            .flat_map(|s| self.statement(s));
+            .flat_map(|definition| self.definition(definition));
 
         // Two lines between each statement
         let mut statements: Vec<_> =
@@ -364,8 +364,8 @@ impl<'a> TypeScriptGenerator<'a> {
         }
     }
 
-    fn statement(&mut self, statement: &'a TypedDefinition) -> Vec<Output<'a>> {
-        match statement {
+    fn definition(&mut self, definition: &'a TypedDefinition) -> Vec<Output<'a>> {
+        match definition {
             Definition::TypeAlias(TypeAlias {
                 alias,
                 publicity,
