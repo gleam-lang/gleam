@@ -11,10 +11,10 @@ import wibble.{type A} type A { C }
 
 ----- ERROR
 error: Duplicate type definition
-  ┌─ /src/one/two.gleam:1:16
+  ┌─ /src/one/two.gleam:1:24
   │
 1 │ import wibble.{type A} type A { C }
-  │                ^^^^^^  ^^^^^^ Redefined here
+  │                ------  ^^^^^^ Redefined here
   │                │        
   │                First defined here
 

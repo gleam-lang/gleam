@@ -8,10 +8,10 @@ type Boxy { Box(Int) }
 
 ----- ERROR
 error: Duplicate definition
-  ┌─ /src/one/two.gleam:1:12
+  ┌─ /src/one/two.gleam:2:13
   │
 1 │ type Box { Box(x: Int) }
-  │            ^^^^^^^^^^^ First defined here
+  │            ----------- First defined here
 2 │ type Boxy { Box(Int) }
   │             ^^^^^^^^ Redefined here
 
