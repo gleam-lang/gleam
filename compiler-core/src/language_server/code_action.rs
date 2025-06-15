@@ -1352,8 +1352,8 @@ impl<'a> QualifiedToUnqualifiedImportFirstPass<'a> {
     ) -> Option<&'a Import<EcoString>> {
         let mut matching_import = None;
 
-        for def in &self.module.ast.definitions {
-            if let ast::Definition::Import(import) = def {
+        for definition in &self.module.ast.definitions {
+            if let ast::Definition::Import(import) = definition {
                 let imported = if layer.is_value() {
                     &import.unqualified_values
                 } else {
@@ -1906,7 +1906,7 @@ impl<'a> UnqualifiedToQualifiedImportFirstPass<'a> {
                 .ast
                 .definitions
                 .iter()
-                .find_map(|def| match def {
+                .find_map(|definition| match definition {
                     ast::Definition::Import(import) if import.module == *module_name => import
                         .unqualified_values
                         .iter()
@@ -1928,7 +1928,7 @@ impl<'a> UnqualifiedToQualifiedImportFirstPass<'a> {
                 .ast
                 .definitions
                 .iter()
-                .find_map(|def| match def {
+                .find_map(|definition| match definition {
                     ast::Definition::Import(import) => {
                         if let Some(ty) = import
                             .unqualified_types

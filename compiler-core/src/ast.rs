@@ -50,18 +50,18 @@ pub type TypedModule = Module<type_::ModuleInterface, TypedDefinition>;
 pub type UntypedModule = Module<(), TargetedDefinition>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Module<Info, Statements> {
+pub struct Module<Info, Definitions> {
     pub name: EcoString,
     pub documentation: Vec<EcoString>,
     pub type_info: Info,
-    pub definitions: Vec<Statements>,
+    pub definitions: Vec<Definitions>,
     pub names: Names,
     /// The source byte locations of definition that are unused.
     /// This is used in code generation to know when definitions can be safely omitted.
     pub unused_definition_positions: HashSet<u32>,
 }
 
-impl<Info, Statements> Module<Info, Statements> {
+impl<Info, Definitions> Module<Info, Definitions> {
     pub fn erlang_name(&self) -> EcoString {
         module_erlang_name(&self.name)
     }
@@ -71,7 +71,7 @@ impl TypedModule {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         self.definitions
             .iter()
-            .find_map(|statement| statement.find_node(byte_index))
+            .find_map(|definition| definition.find_node(byte_index))
     }
 
     pub fn find_statement(&self, byte_index: u32) -> Option<&TypedStatement> {
@@ -105,8 +105,8 @@ impl TargetedDefinition {
 
 impl UntypedModule {
     pub fn dependencies(&self, target: Target) -> Vec<(EcoString, SrcSpan)> {
-        self.iter_statements(target)
-            .flat_map(|s| match s {
+        self.iter_definitions(target)
+            .flat_map(|definition| match definition {
                 Definition::Import(Import {
                     module, location, ..
                 }) => Some((module.clone(), *location)),
@@ -115,18 +115,18 @@ impl UntypedModule {
             .collect()
     }
 
-    pub fn iter_statements(&self, target: Target) -> impl Iterator<Item = &UntypedDefinition> {
+    pub fn iter_definitions(&self, target: Target) -> impl Iterator<Item = &UntypedDefinition> {
         self.definitions
             .iter()
-            .filter(move |def| def.is_for(target))
-            .map(|def| &def.definition)
+            .filter(move |definition| definition.is_for(target))
+            .map(|definition| &definition.definition)
     }
 
-    pub fn into_iter_statements(self, target: Target) -> impl Iterator<Item = UntypedDefinition> {
+    pub fn into_iter_definitions(self, target: Target) -> impl Iterator<Item = UntypedDefinition> {
         self.definitions
             .into_iter()
-            .filter(move |def| def.is_for(target))
-            .map(|def| def.definition)
+            .filter(move |definition| definition.is_for(target))
+            .map(|definition| definition.definition)
     }
 }
 
@@ -2846,7 +2846,7 @@ pub enum TodoKind {
 }
 
 #[derive(Debug, Default)]
-pub struct GroupedStatements {
+pub struct GroupedDefinitions {
     pub functions: Vec<UntypedFunction>,
     pub constants: Vec<UntypedModuleConstant>,
     pub custom_types: Vec<UntypedCustomType>,
@@ -2854,12 +2854,12 @@ pub struct GroupedStatements {
     pub type_aliases: Vec<UntypedTypeAlias>,
 }
 
-impl GroupedStatements {
-    pub fn new(statements: impl IntoIterator<Item = UntypedDefinition>) -> Self {
+impl GroupedDefinitions {
+    pub fn new(definitions: impl IntoIterator<Item = UntypedDefinition>) -> Self {
         let mut this = Self::default();
 
-        for statement in statements {
-            this.add(statement)
+        for definition in definitions {
+            this.add(definition)
         }
 
         this
@@ -2882,11 +2882,11 @@ impl GroupedStatements {
 
     fn add(&mut self, statement: UntypedDefinition) {
         match statement {
-            Definition::Import(i) => self.imports.push(i),
-            Definition::Function(f) => self.functions.push(f),
-            Definition::TypeAlias(t) => self.type_aliases.push(t),
-            Definition::CustomType(c) => self.custom_types.push(c),
-            Definition::ModuleConstant(c) => self.constants.push(c),
+            Definition::Import(import) => self.imports.push(import),
+            Definition::Function(function) => self.functions.push(function),
+            Definition::TypeAlias(type_alias) => self.type_aliases.push(type_alias),
+            Definition::CustomType(custom_type) => self.custom_types.push(custom_type),
+            Definition::ModuleConstant(constant) => self.constants.push(constant),
         }
     }
 }

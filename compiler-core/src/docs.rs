@@ -212,7 +212,7 @@ pub fn generate_html<IO: FileSystemReader>(
             .ast
             .definitions
             .iter()
-            .filter_map(|statement| printer.type_definition(&source_links, statement))
+            .filter_map(|definition| printer.type_definition(&source_links, definition))
             .sorted()
             .collect();
 
@@ -220,7 +220,7 @@ pub fn generate_html<IO: FileSystemReader>(
             .ast
             .definitions
             .iter()
-            .filter_map(|statement| printer.value(&source_links, statement))
+            .filter_map(|definition| printer.value(&source_links, definition))
             .sorted()
             .collect();
 
