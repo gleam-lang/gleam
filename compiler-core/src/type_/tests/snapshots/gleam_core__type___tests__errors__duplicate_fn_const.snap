@@ -8,10 +8,10 @@ const wibble = 2
 
 ----- ERROR
 error: Duplicate definition
-  ┌─ /src/one/two.gleam:1:1
+  ┌─ /src/one/two.gleam:2:1
   │
 1 │ fn wibble() { 1 }
-  │ ^^^^^^^^^^^ First defined here
+  │ ----------- First defined here
 2 │ const wibble = 2
   │ ^^^^^^^^^^^^ Redefined here
 

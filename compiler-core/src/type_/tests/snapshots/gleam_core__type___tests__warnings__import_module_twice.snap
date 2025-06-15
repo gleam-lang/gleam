@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 3918
 expression: "import gleam/wibble as a\nimport gleam/wibble as b\n\npub fn main() {\n  a.wobble() + b.wobble()\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 -- gleam/wibble.gleam
@@ -19,11 +17,11 @@ pub fn main() {
 
 ----- WARNING
 warning: Duplicate import
-  ┌─ /src/warning/wrn.gleam:1:1
+  ┌─ /src/warning/wrn.gleam:2:1
   │
 1 │ import gleam/wibble as a
-  │ ^^^^^^^^^^^^^^^^^^^^^^^^
+  │ ------------------------ First imported here
 2 │ import gleam/wibble as b
-  │ ^^^^^^^^^^^^^^^^^^^^^^^^
+  │ ^^^^^^^^^^^^^^^^^^^^^^^^ Reimported here
 
 The gleam/wibble module has been imported twice.

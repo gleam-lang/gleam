@@ -21,10 +21,10 @@ expression: "\n        import one.{fn1}\n        import two.{fn2} as one\n      
 
 ----- ERROR
 error: Duplicate import
-  ┌─ /src/one/two.gleam:2:9
+  ┌─ /src/one/two.gleam:3:9
   │
 2 │         import one.{fn1}
-  │         ^^^^^^^^^^^^^^^^ First imported here
+  │         ---------------- First imported here
 3 │         import two.{fn2} as one
   │         ^^^^^^^^^^^^^^^^^^^^^^^ Reimported here
 

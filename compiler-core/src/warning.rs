@@ -1290,14 +1290,14 @@ can already tell whether it will be true or false.",
                         src: src.clone(),
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
-                            text: None,
-                            span: *first,
+                            text: Some("Reimported here".into()),
+                            span: *second,
                         },
                         extra_labels: vec![ExtraLabel {
                             src_info: None,
                             label: diagnostic::Label {
-                                text: None,
-                                span: *second,
+                                text: Some("First imported here".into()),
+                                span: *first,
                             },
                         }],
                     }),

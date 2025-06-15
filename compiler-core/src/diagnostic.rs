@@ -22,9 +22,9 @@ pub struct Label {
 }
 
 impl Label {
-    fn to_codespan_label(&self, fileid: usize) -> CodespanLabel<usize> {
+    fn to_codespan_label(&self, fileid: usize, style: LabelStyle) -> CodespanLabel<usize> {
         let label = CodespanLabel::new(
-            LabelStyle::Primary,
+            style,
             fileid,
             (self.span.start as usize)..(self.span.end as usize),
         );
@@ -85,13 +85,17 @@ impl Diagnostic {
         let main_file_id = files.add(main_location_path, main_location_src);
         let _ = file_map.insert(main_location_path, main_file_id);
 
-        let mut labels = vec![location.label.to_codespan_label(main_file_id)];
+        let mut labels = vec![
+            location
+                .label
+                .to_codespan_label(main_file_id, LabelStyle::Primary),
+        ];
 
         location
             .extra_labels
             .iter()
-            .map(|l| {
-                let (location_src, location_path) = match &l.src_info {
+            .map(|label| {
+                let (location_src, location_path) = match &label.src_info {
                     Some(info) => (info.0.as_str(), info.1.as_str()),
                     _ => (main_location_src, main_location_path),
                 };
@@ -99,12 +103,14 @@ impl Diagnostic {
                     None => {
                         let file_id = files.add(location_path, location_src);
                         let _ = file_map.insert(location_path, file_id);
-                        l.label.to_codespan_label(file_id)
+                        label
+                            .label
+                            .to_codespan_label(file_id, LabelStyle::Secondary)
                     }
-                    Some(i) => l.label.to_codespan_label(*i),
+                    Some(i) => label.label.to_codespan_label(*i, LabelStyle::Secondary),
                 }
             })
-            .for_each(|l| labels.push(l));
+            .for_each(|label| labels.push(label));
 
         let severity = match self.level {
             Level::Error => Severity::Error,

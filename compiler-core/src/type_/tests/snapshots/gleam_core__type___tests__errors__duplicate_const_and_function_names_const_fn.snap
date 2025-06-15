@@ -8,10 +8,10 @@ fn duplicate() { 2 }
 
 ----- ERROR
 error: Duplicate definition
-  ┌─ /src/one/two.gleam:1:1
+  ┌─ /src/one/two.gleam:2:1
   │
 1 │ const duplicate = 1
-  │ ^^^^^^^^^^^^^^^ First defined here
+  │ --------------- First defined here
 2 │ fn duplicate() { 2 }
   │ ^^^^^^^^^^^^^^ Redefined here
 

@@ -11,10 +11,10 @@ fn dupe() { 1 }
 
 ----- ERROR
 error: Duplicate definition
-  ┌─ /src/one/two.gleam:3:1
+  ┌─ /src/one/two.gleam:4:1
   │
 3 │ fn dupe(x) -> x
-  │ ^^^^^^^^^^ First defined here
+  │ ---------- First defined here
 4 │ fn dupe() { 1 }
   │ ^^^^^^^^^ Redefined here
 

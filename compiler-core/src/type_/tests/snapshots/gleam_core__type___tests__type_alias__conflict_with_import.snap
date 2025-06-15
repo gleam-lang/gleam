@@ -11,10 +11,10 @@ import wibble.{type Wobble} type Wobble = Int
 
 ----- ERROR
 error: Duplicate type definition
-  ┌─ /src/one/two.gleam:1:16
+  ┌─ /src/one/two.gleam:1:29
   │
 1 │ import wibble.{type Wobble} type Wobble = Int
-  │                ^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^ Redefined here
+  │                -----------  ^^^^^^^^^^^^^^^^^ Redefined here
   │                │             
   │                First defined here
 

@@ -16,6 +16,11 @@
   JavaScript circular references.
   ([Louis Pilfold](https://github.com/lpil))
 
+- The look of errors and warnings has been improved. Additional labels providing
+  context for the error message are no longer highlighted with the same style as
+  the source of the problem.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Build tool
 
 - `gleam update`, `gleam deps update`, and `gleam deps download` will now print
@@ -33,7 +38,6 @@
   ```
 
   ([Amjad Mohamed](https://github.com/andho))
-
 
 ### Language server
 

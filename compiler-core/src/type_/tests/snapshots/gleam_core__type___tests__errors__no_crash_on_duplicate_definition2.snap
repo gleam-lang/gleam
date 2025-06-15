@@ -23,10 +23,10 @@ pub fn main() {
 
 ----- ERROR
 error: Duplicate definition
-  ┌─ /src/one/two.gleam:4:3
+  ┌─ /src/one/two.gleam:5:3
   │
 4 │   Wobble
-  │   ^^^^^^ First defined here
+  │   ------ First defined here
 5 │   Wobble
   │   ^^^^^^ Redefined here
 
