@@ -323,8 +323,9 @@ impl<'a> Generator<'a> {
                 publicity,
                 name,
                 value,
+                documentation,
                 ..
-            }) => Some(self.module_constant(*publicity, name, value)),
+            }) => Some(self.module_constant(*publicity, name, value, documentation)),
 
             Definition::Function(function) => {
                 // If there's an external JavaScript implementation then it will be imported,
@@ -376,6 +377,12 @@ impl<'a> Generator<'a> {
                 .to_doc()
         }
 
+        let doc = if let Some((_, documentation)) = &constructor.documentation {
+            jsdoc_comment(documentation, publicity).append(line())
+        } else {
+            nil()
+        };
+
         let head = if publicity.is_private() || opaque {
             "class "
         } else {
@@ -416,7 +423,7 @@ impl<'a> Generator<'a> {
         ]
         .nest(INDENT);
 
-        docvec![head, class_body, line(), "}"]
+        docvec![doc, head, class_body, line(), "}"]
     }
 
     fn collect_definitions(&mut self) -> Vec<Output<'a>> {
@@ -574,6 +581,7 @@ impl<'a> Generator<'a> {
         publicity: Publicity,
         name: &'a EcoString,
         value: &'a TypedConstant,
+        documentation: &'a Option<(u32, EcoString)>,
     ) -> Output<'a> {
         let head = if publicity.is_private() {
             "const "
@@ -593,7 +601,14 @@ impl<'a> Generator<'a> {
 
         let document = generator.constant_expression(Context::Constant, value)?;
 
+        let jsdoc = if let Some((_, documentation)) = documentation {
+            jsdoc_comment(documentation, publicity).append(line())
+        } else {
+            nil()
+        };
+
         Ok(docvec![
+            jsdoc,
             head,
             maybe_escape_identifier(name),
             " = ",
@@ -625,6 +640,14 @@ impl<'a> Generator<'a> {
             &mut self.tracker,
             self.module_scope.clone(),
         );
+
+        let function_doc = match &function.documentation {
+            None => nil(),
+            Some((_, documentation)) => {
+                jsdoc_comment(documentation, function.publicity).append(line())
+            }
+        };
+
         let head = if function.publicity.is_private() {
             "function "
         } else {
@@ -647,6 +670,7 @@ impl<'a> Generator<'a> {
         };
 
         let document = docvec![
+            function_doc,
             head,
             maybe_escape_identifier(name.as_str()),
             fun_args(function.arguments.as_slice(), generator.tail_recursion_used),
@@ -691,6 +715,25 @@ impl<'a> Generator<'a> {
 
         docvec!["const FILEPATH = ", self.src_path.clone(), ';', lines(2)]
     }
+}
+
+fn jsdoc_comment<'a>(documentation: &'a EcoString, publicity: Publicity) -> Document<'a> {
+    let doc_lines = documentation
+        .trim_end()
+        .split('\n')
+        .map(|line| eco_format!(" *{line}").to_doc())
+        .collect_vec();
+
+    // We start with the documentation of the function
+    let doc_body = join(doc_lines, line());
+    let mut doc = docvec!["/**", line(), doc_body, line()];
+    if !publicity.is_public() {
+        // If the function is not public we hide the documentation using
+        // the `@ignore` tag: https://jsdoc.app/tags-ignore
+        doc = docvec![doc, " * ", line(), " * @ignore", line()];
+    }
+    // And finally we close the doc comment
+    docvec![doc, " */"]
 }
 
 #[derive(Debug)]

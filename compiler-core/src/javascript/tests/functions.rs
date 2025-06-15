@@ -560,3 +560,28 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn public_function_gets_jsdoc() {
+    assert_js!(
+        "
+/// Hello! This is the documentation of the `main`
+/// function.
+///
+pub fn main() { 1 }
+"
+    );
+}
+
+#[test]
+fn internal_function_gets_ignored_jsdoc() {
+    assert_js!(
+        "
+/// Hello! This is the documentation of the `main`
+/// function, which is internal!
+///
+@internal
+pub fn main() { 1 }
+"
+    );
+}
