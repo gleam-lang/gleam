@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
+assertion_line: 3932
 expression: "\nimport module.{wibble}\n\npub fn wibble() { Nil }\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 -- module.gleam
@@ -32,4 +34,4 @@ warning: Shadowed Import
 
 Definition of wibble shadows an imported value.
 The imported value could not be used in this module anyway.
-Hint: Either rename the definition or remove its import.
+Hint: Either rename the definition or remove the import.

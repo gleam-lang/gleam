@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
+assertion_line: 974
 expression: "\n            import gleam/wibble.{one} as wobble\n            pub const one = one\n        "
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 -- gleam/wibble.gleam
@@ -32,4 +34,4 @@ warning: Shadowed Import
 
 Definition of one shadows an imported value.
 The imported value could not be used in this module anyway.
-Hint: Either rename the definition or remove its import.
+Hint: Either rename the definition or remove the import.

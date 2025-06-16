@@ -1305,8 +1305,8 @@ can already tell whether it will be true or false.",
 
                 type_::Warning::TopLevelDefinitionShadowsImport { location, name } => {
                     let text = format!(
-                        "Definition of {} shadows an imported value.\n\
-                        The imported value could not be used in this module anyway.",
+                        "Definition of {} shadows an imported value.
+The imported value could not be used in this module anyway.",
                         name
                     );
                     Diagnostic {
@@ -1322,7 +1322,7 @@ can already tell whether it will be true or false.",
                             },
                             extra_labels: Vec::new(),
                         }),
-                        hint: Some("Either rename the definition or remove its import.".into()),
+                        hint: Some("Either rename the definition or remove the import.".into()),
                     }
                 }
             },
