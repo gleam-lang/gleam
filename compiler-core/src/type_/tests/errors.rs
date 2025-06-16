@@ -3125,3 +3125,70 @@ fn bit_array_using_pattern_variables_from_other_bit_array() {
 fn non_utf8_string_assignment() {
     assert_error!(r#"let assert <<"Hello" as message:utf16>> = <<>>"#);
 }
+
+#[test]
+fn shadowed_function_argument() {
+    assert_module_error!(
+        "
+pub fn go(_x) {
+  x + 1
+}
+"
+    );
+}
+
+#[test]
+fn shadowed_fn_argument() {
+    assert_module_error!(
+        "
+pub fn go(x) {
+  fn(_y) {
+    y + x
+  }
+}
+"
+    );
+}
+
+#[test]
+fn shadowed_let_variable() {
+    assert_module_error!(
+        "
+pub fn go() {
+  let _x = 1
+  x + 1
+}
+"
+    );
+}
+
+#[test]
+fn shadowed_pattern_variable() {
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble(Int)
+}
+
+pub fn go(x) {
+  case x {
+    Wibble(_y) -> y + 1
+  }
+}
+"
+    );
+}
+
+#[test]
+fn do_not_suggest_ignored_variable_outside_of_current_scope() {
+    assert_module_error!(
+        "
+pub fn go() {
+  let _ = {
+    let _y = 1 // <- this shouldn't be highlighted!
+  }
+  y
+}
+"
+    );
+}

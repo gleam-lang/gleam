@@ -586,6 +586,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         match pattern {
             Pattern::Discard { name, location, .. } => {
                 self.check_name_case(location, &name, Named::Discard);
+                let _ = self
+                    .environment
+                    .ignored_names
+                    .insert(name.clone(), location);
                 Pattern::Discard {
                     type_,
                     name,
@@ -613,8 +617,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
             Pattern::VarUsage { name, location, .. } => {
                 let constructor = match self.variables.get_mut(&name) {
-                    // If we've bound a variable in the current bit array pattern, we
-                    // want to use that.
+                    // If we've bound a variable in the current bit array pattern,
+                    // we want to use that.
                     Some(variable) if variable.in_scope() => {
                         variable.usage = Usage::UsedInPattern;
                         ValueConstructor::local_variable(
@@ -631,6 +635,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                 location,
                                 name: name.clone(),
                                 variables: self.environment.local_value_names(),
+                                ignored_variables: self.environment.ignored_names.clone(),
                                 type_with_name_in_scope: self
                                     .environment
                                     .module_types
@@ -695,10 +700,12 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             },
                         );
                     }
-                    AssignName::Discard(_) => {
-                        if let AssignName::Discard(right) = &right_side_assignment {
-                            self.check_name_case(right_location, right, Named::Discard);
-                        }
+                    AssignName::Discard(right) => {
+                        let _ = self
+                            .environment
+                            .ignored_names
+                            .insert(right.clone(), right_location);
+                        self.check_name_case(right_location, right, Named::Discard);
                     }
                 };
 

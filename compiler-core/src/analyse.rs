@@ -550,11 +550,23 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             has_javascript_external: external_javascript.is_some(),
         };
 
-        let typed_args = arguments
-            .into_iter()
-            .zip(&prereg_args_types)
-            .map(|(a, t)| a.set_type(t.clone()))
-            .collect_vec();
+        let mut typed_args = Vec::with_capacity(arguments.len());
+        for (argument, type_) in arguments.into_iter().zip(&prereg_args_types) {
+            let argument = argument.set_type(type_.clone());
+            match &argument.names {
+                ast::ArgNames::Named { .. } | ast::ArgNames::NamedLabelled { .. } => (),
+                ast::ArgNames::Discard { name, location }
+                | ast::ArgNames::LabelledDiscard {
+                    name,
+                    name_location: location,
+                    ..
+                } => {
+                    let _ = environment.ignored_names.insert(name.clone(), *location);
+                }
+            }
+
+            typed_args.push(argument);
+        }
 
         // We have already registered the function in the `register_value_from_function`
         // method, but here we must set this as the current function again, so that anything
