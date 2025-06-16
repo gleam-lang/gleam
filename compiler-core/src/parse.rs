@@ -2706,7 +2706,7 @@ where
     fn parse_import(&mut self, import_start: u32) -> Result<Option<UntypedDefinition>, ParseError> {
         let mut start = 0;
         let mut end;
-        let mut module = String::new();
+        let mut module = EcoString::new();
         // Gather module names
         loop {
             let (s, name, e) = self.expect_name()?;
@@ -2742,11 +2742,11 @@ where
         let mut unqualified_types = vec![];
 
         if let Some((dot_start, dot_end)) = self.maybe_one(&Token::Dot) {
-            let _ = self.expect_one(&Token::LeftBrace).map_err(|e| {
+            if let Err(e) = self.expect_one(&Token::LeftBrace) {
                 // If the module does contain a '/', then it's unlikely that the user
                 // intended for the import to be pythonic, so skip this.
                 if module.contains('/') {
-                    return e;
+                    return Err(e);
                 }
 
                 // Catch `import gleam.io` and provide a more helpful error...
@@ -2755,17 +2755,17 @@ where
                     ..
                 } = &e.error
                 else {
-                    return e;
+                    return Err(e);
                 };
 
-                ParseError {
-                    error: ParseErrorType::PythonicImport {
-                        module: module.as_str().into(),
+                return Err(ParseError {
+                    error: ParseErrorType::IncorrectImportModuleSeparator {
+                        module,
                         item: name.clone(),
                     },
                     location: SrcSpan::new(dot_start, dot_end),
-                }
-            })?;
+                });
+            };
 
             let parsed = self.parse_unqualified_imports()?;
             unqualified_types = parsed.types;
@@ -2797,7 +2797,7 @@ where
             },
             unqualified_values,
             unqualified_types,
-            module: module.into(),
+            module,
             as_name,
             package: (),
         })))

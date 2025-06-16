@@ -1793,6 +1793,11 @@ fn special_error_for_pythonic_import() {
 }
 
 #[test]
+fn special_error_for_pythonic_neste_import() {
+    assert_module_error!("import one.two.three");
+}
+
+#[test]
 fn doesnt_issue_special_error_for_pythonic_import_if_slash() {
     assert_module_error!("import one/two.three");
 }

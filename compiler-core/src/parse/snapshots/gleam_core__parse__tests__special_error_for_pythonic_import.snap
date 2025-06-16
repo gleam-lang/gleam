@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/parse/tests.rs
+assertion_line: 1792
 expression: import gleam.io
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 import gleam.io
@@ -12,6 +14,7 @@ error: Syntax error
 1 │ import gleam.io
   │             ^ I was expecting either `/` or `.{` here.
 
-This syntax for an import is incorrect. Perhaps you meant:
- - `import gleam/io` to import the `io` module from the `gleam` namespace
- - `import gleam.{io}` to import the `io` module from the `gleam` module
+Perhaps you meant one of:
+
+    import gleam/io
+    import gleam.{item}
