@@ -14,7 +14,7 @@ warning: Assertion of a literal value
   ┌─ /src/warning/wrn.gleam:3:10
   │
 3 │   assert !False
-  │          ^^^^^^ This is always the same
+  │          ^^^^^^
 
-Asserting that a literal value is redundant since you can already tell
-whether it will be true or false.
+Asserting on a literal Boolean is redundant since you can already tell
+whether it will be True or False.

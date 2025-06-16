@@ -694,14 +694,12 @@ impl TypedExpr {
         }
     }
 
-    pub fn is_known_value(&self) -> bool {
+    pub fn is_known_bool(&self) -> bool {
         match self {
-            TypedExpr::BinOp { left, right, .. } => left.is_known_value() && right.is_known_value(),
-
-            TypedExpr::NegateBool { value, .. } | TypedExpr::NegateInt { value, .. } => {
-                value.is_known_value()
-            }
-
+            TypedExpr::BinOp {
+                left, right, name, ..
+            } if name.is_bool_operator() => left.is_known_bool() && right.is_known_bool(),
+            TypedExpr::NegateBool { value, .. } => value.is_known_bool(),
             _ => self.is_literal(),
         }
     }
@@ -1050,6 +1048,15 @@ impl TypedExpr {
     pub(crate) fn is_invalid(&self) -> bool {
         match self {
             TypedExpr::Invalid { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub(crate) fn is_literal_bool(&self) -> bool {
+        match self {
+            TypedExpr::Var {
+                constructor, name, ..
+            } if name == "True" || name == "False" => constructor.type_.is_bool(),
             _ => false,
         }
     }

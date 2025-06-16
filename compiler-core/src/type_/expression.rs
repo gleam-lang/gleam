@@ -1612,6 +1612,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }
 
                 self.check_for_inefficient_empty_list_check(name, &left, &right, location);
+                self.check_for_redundant_comparison(name, &left, &right, location);
 
                 return TypedExpr::BinOp {
                     location,
@@ -1686,6 +1687,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         self.check_for_inefficient_empty_list_check(name, &left, &right, location);
+        self.check_for_redundant_comparison(name, &left, &right, location);
 
         TypedExpr::BinOp {
             location,
@@ -1750,6 +1752,155 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // If we've gotten this far, go ahead and emit the warning.
         self.problems
             .warning(Warning::InefficientEmptyListCheck { location, kind });
+    }
+
+    fn check_for_redundant_comparison(
+        &mut self,
+        binop: BinOp,
+        left: &TypedExpr,
+        right: &TypedExpr,
+        location: SrcSpan,
+    ) {
+        let outcome = match (left, right) {
+            // Numbers are a bit trickier as we might have more kinds of
+            // comparisons that we can tell are never right.
+            (TypedExpr::Int { int_value: n, .. }, TypedExpr::Int { int_value: m, .. }) => {
+                match binop {
+                    BinOp::Eq if n == m => Some(ComparisonOutcome::AlwaysSucceeds),
+                    BinOp::Eq => Some(ComparisonOutcome::AlwaysFails),
+
+                    BinOp::NotEq if n != m => Some(ComparisonOutcome::AlwaysSucceeds),
+                    BinOp::NotEq => Some(ComparisonOutcome::AlwaysFails),
+
+                    BinOp::LtInt if n < m => Some(ComparisonOutcome::AlwaysSucceeds),
+                    BinOp::LtInt => Some(ComparisonOutcome::AlwaysFails),
+
+                    BinOp::LtEqInt if n <= m => Some(ComparisonOutcome::AlwaysSucceeds),
+                    BinOp::LtEqInt => Some(ComparisonOutcome::AlwaysFails),
+
+                    BinOp::GtInt if n > m => Some(ComparisonOutcome::AlwaysSucceeds),
+                    BinOp::GtInt => Some(ComparisonOutcome::AlwaysFails),
+
+                    BinOp::GtEqInt if n >= m => Some(ComparisonOutcome::AlwaysSucceeds),
+                    BinOp::GtEqInt => Some(ComparisonOutcome::AlwaysFails),
+
+                    _ => None,
+                }
+            }
+
+            // For other types of simple values we can only check for redundant
+            // equality checks.
+            (TypedExpr::String { value: one, .. }, TypedExpr::String { value: other, .. }) => {
+                match binop {
+                    BinOp::Eq if one == other => Some(ComparisonOutcome::AlwaysSucceeds),
+                    BinOp::Eq => Some(ComparisonOutcome::AlwaysFails),
+                    BinOp::NotEq if one != other => Some(ComparisonOutcome::AlwaysSucceeds),
+                    BinOp::NotEq => Some(ComparisonOutcome::AlwaysFails),
+                    _ => None,
+                }
+            }
+
+            // If two variables are the same then we know that the comparison
+            // will always succeed, but the opposite is not true: if the two
+            // variables are different we can't be sure the comparison will
+            // always fail.
+            (TypedExpr::Var { name: one, .. }, TypedExpr::Var { name: other, .. }) => {
+                if left.is_literal_bool() && right.is_literal_bool() {
+                    match binop {
+                        BinOp::Eq if one == other => Some(ComparisonOutcome::AlwaysSucceeds),
+                        BinOp::Eq => Some(ComparisonOutcome::AlwaysFails),
+                        BinOp::NotEq if one != other => Some(ComparisonOutcome::AlwaysSucceeds),
+                        BinOp::NotEq => Some(ComparisonOutcome::AlwaysFails),
+                        _ => None,
+                    }
+                } else {
+                    match binop {
+                        BinOp::Eq if one == other => Some(ComparisonOutcome::AlwaysSucceeds),
+                        BinOp::NotEq if one == other => Some(ComparisonOutcome::AlwaysFails),
+                        _ => None,
+                    }
+                }
+            }
+
+            (
+                TypedExpr::ModuleSelect {
+                    constructor: constructor_one,
+                    module_name: module_name_one,
+                    ..
+                },
+                TypedExpr::ModuleSelect {
+                    constructor: constructor_other,
+                    module_name: module_name_other,
+                    ..
+                },
+            ) => {
+                let equals =
+                    module_name_one == module_name_other && constructor_one == constructor_other;
+                match binop {
+                    BinOp::Eq if equals => Some(ComparisonOutcome::AlwaysSucceeds),
+                    BinOp::NotEq if equals => Some(ComparisonOutcome::AlwaysFails),
+                    _ => None,
+                }
+            }
+
+            // We can only compare two record selects if the selected record is
+            // exactly the same and is not obtained through a function call (that
+            // might be producing different records each time it's invoked).
+            //
+            // For example:
+            // ```gleam
+            // Wibble(1).wibble == Wibble(1).wibble
+            // // We can tell this always succeeds
+            //
+            // one.wibble != one.wibble
+            // // We can tell this always fails
+            //
+            // new().wibble == new().wibble
+            // // We're not sure if this will always succeed or fail
+            // ```
+            //
+            (
+                TypedExpr::RecordAccess {
+                    record: record_one,
+                    label: label_one,
+                    ..
+                },
+                TypedExpr::RecordAccess {
+                    record: record_other,
+                    label: label_other,
+                    ..
+                },
+            ) if label_one == label_other => {
+                match (binop, record_one.as_ref(), record_other.as_ref()) {
+                    (
+                        BinOp::Eq,
+                        TypedExpr::Var { name: one, .. },
+                        TypedExpr::Var { name: other, .. },
+                    ) if one == other => Some(ComparisonOutcome::AlwaysSucceeds),
+                    (
+                        BinOp::NotEq,
+                        TypedExpr::Var { name: one, .. },
+                        TypedExpr::Var { name: other, .. },
+                    ) if one == other => Some(ComparisonOutcome::AlwaysFails),
+                    _ => None,
+                }
+            }
+
+            // All other values we can't really compare them at compile time to
+            // make sure they're always the same or not.
+            //
+            // TODO: we could actualy do this for a wider range of expressions
+            // if we did constant folding! For example we could tell that
+            // `3 + 3 < 10` always succeeds.
+            _ => None,
+        };
+
+        let Some(outcome) = outcome else {
+            return;
+        };
+
+        self.problems
+            .warning(Warning::RedundantComparison { location, outcome });
     }
 
     fn infer_assignment(&mut self, assignment: UntypedAssignment) -> TypedAssignment {
@@ -1923,8 +2074,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         self.purity = Purity::Impure;
 
-        if value.is_known_value() {
-            self.problems.warning(Warning::AssertLiteralValue {
+        if value.is_known_bool() {
+            self.problems.warning(Warning::AssertLiteralBool {
                 location: value_location,
             });
         }
@@ -4767,4 +4918,10 @@ impl RecordUpdateVariant<'_> {
 enum PanicKind {
     Panic,
     Placeholder,
+}
+
+#[derive(Debug, Eq, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
+pub enum ComparisonOutcome {
+    AlwaysFails,
+    AlwaysSucceeds,
 }
