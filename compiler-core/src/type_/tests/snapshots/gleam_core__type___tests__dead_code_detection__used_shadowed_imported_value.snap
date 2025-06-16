@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/type_/tests/dead_code_detection.rs
+assertion_line: 448
 expression: "\nimport wibble.{wibble}\n\npub const wibble = wibble\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 -- wibble.gleam
@@ -24,4 +26,4 @@ warning: Shadowed Import
 
 Definition of wibble shadows an imported value.
 The imported value could not be used in this module anyway.
-Hint: Either rename the definition or remove its import.
+Hint: Either rename the definition or remove the import.
