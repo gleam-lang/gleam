@@ -21,6 +21,10 @@
   the source of the problem.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Gleam will now issue a help message when attempting to import modules using
+  incorrect non-`/` separators.
+  ([Zij-IT](https://github.com/zij-it))
+
 ### Build tool
 
 - `gleam update`, `gleam deps update`, and `gleam deps download` will now print
