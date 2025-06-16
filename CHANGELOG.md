@@ -75,6 +75,30 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler now raises a warning when performing a redundant comparison that
+  it can tell is always going to succeed or fail. For example, this piece of
+  code:
+
+  ```gleam
+  pub fn find_line(lines) {
+    list.find(lines, fn(x) { x == x })
+  }
+  ```
+
+  Would result in the following warning:
+
+  ```
+  warning: Redundant comparison
+    ┌─ /src/warning.gleam:2:17
+    │
+  1 │   list.find(lines, fn(x) { x == x })
+    │                            ^^^^^^ This is always `True`
+
+  This comparison is redundant since it always succeeds.
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - When using two spreads, trying to concatenate lists, the compiler will now
   show a nicer error message. For example, this snippet of code:
 
