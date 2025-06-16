@@ -5,7 +5,7 @@ use super::{
 use crate::{
     ast::{BinOp, BitArraySegmentTruncation, Layer, SrcSpan, TodoKind},
     build::Target,
-    type_::Type,
+    type_::{Type, expression::ComparisonOutcome},
 };
 
 use camino::Utf8PathBuf;
@@ -1001,12 +1001,12 @@ pub enum Warning {
         location: SrcSpan,
     },
 
-    /// When we are trying to use bool assert on a literal value. For example:
+    /// When we are trying to use bool assert on a literal boolean. For example:
     /// ```gleam
     /// assert True
     ///        ^ The programmer knows this will never panic, so it's useless
     /// ```
-    AssertLiteralValue {
+    AssertLiteralBool {
         location: SrcSpan,
     },
 
@@ -1031,6 +1031,20 @@ pub enum Warning {
     TopLevelDefinitionShadowsImport {
         location: SrcSpan,
         name: EcoString,
+    },
+
+    /// This warning is raised when we perform a comparison that the compiler
+    /// can tell is always going to succeed or fail. For example:
+    ///
+    /// ```gleam
+    /// 1 == 1 // This always succeeds
+    /// 2 != 2 // This always fails
+    /// 1 > 10 // This always fails
+    /// a == a // This always succeeds
+    /// ```
+    RedundantComparison {
+        location: SrcSpan,
+        outcome: ComparisonOutcome,
     },
 }
 
@@ -1255,12 +1269,13 @@ impl Warning {
             | Warning::RedundantPipeFunctionCapture { location, .. }
             | Warning::FeatureRequiresHigherGleamVersion { location, .. }
             | Warning::JavaScriptIntUnsafe { location, .. }
-            | Warning::AssertLiteralValue { location, .. }
+            | Warning::AssertLiteralBool { location, .. }
             | Warning::BitArraySegmentTruncatedValue { location, .. }
             | Warning::TopLevelDefinitionShadowsImport { location, .. }
             | Warning::ModuleImportedTwice {
                 second: location, ..
-            } => *location,
+            }
+            | Warning::RedundantComparison { location, .. } => *location,
         }
     }
 

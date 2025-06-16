@@ -9,6 +9,7 @@ use crate::{
             FeatureKind, LiteralCollectionKind, PanicPosition, TodoOrPanic,
             UnreachablePatternReason,
         },
+        expression::ComparisonOutcome,
         pretty::Printer,
     },
 };
@@ -1258,11 +1259,11 @@ doesn't fit in that many {unit}. It would be truncated by taking its {taken}, re
                     }
                 }
 
-                type_::Warning::AssertLiteralValue { location } => Diagnostic {
+                type_::Warning::AssertLiteralBool { location } => Diagnostic {
                     title: "Assertion of a literal value".into(),
                     text: wrap(
-                        "Asserting that a literal value is redundant since you \
-can already tell whether it will be true or false.",
+                        "Asserting on a literal Boolean is redundant since you \
+can already tell whether it will be True or False.",
                     ),
                     hint: None,
                     level: diagnostic::Level::Warning,
@@ -1270,7 +1271,7 @@ can already tell whether it will be true or false.",
                         src: src.clone(),
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
-                            text: Some("This is always the same".into()),
+                            text: None,
                             span: *location,
                         },
                         extra_labels: Vec::new(),
@@ -1325,6 +1326,34 @@ The imported value could not be used in this module anyway.",
                         hint: Some("Either rename the definition or remove the import.".into()),
                     }
                 }
+
+                type_::Warning::RedundantComparison { location, outcome } => Diagnostic {
+                    title: "Redundant comparison".into(),
+                    text: format!(
+                        "This comparison is redundant since it always {}.",
+                        match outcome {
+                            ComparisonOutcome::AlwaysSucceeds => "succeeds",
+                            ComparisonOutcome::AlwaysFails => "fails",
+                        }
+                    ),
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        label: diagnostic::Label {
+                            text: Some(format!(
+                                "This is always `{}`",
+                                match outcome {
+                                    ComparisonOutcome::AlwaysSucceeds => "True",
+                                    ComparisonOutcome::AlwaysFails => "False",
+                                }
+                            )),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
             },
 
             Warning::DeprecatedEnvironmentVariable { variable } => {

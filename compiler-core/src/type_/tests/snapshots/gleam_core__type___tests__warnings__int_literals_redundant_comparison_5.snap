@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "pub fn main() { 1 > 2 }"
+---
+----- SOURCE CODE
+pub fn main() { 1 > 2 }
+
+----- WARNING
+warning: Redundant comparison
+  ┌─ /src/warning/wrn.gleam:1:17
+  │
+1 │ pub fn main() { 1 > 2 }
+  │                 ^^^^^ This is always `False`
+
+This comparison is redundant since it always fails.

@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "pub fn main() { \"wibble\" != \"wobble\" }"
+---
+----- SOURCE CODE
+pub fn main() { "wibble" != "wobble" }
+
+----- WARNING
+warning: Redundant comparison
+  ┌─ /src/warning/wrn.gleam:1:17
+  │
+1 │ pub fn main() { "wibble" != "wobble" }
+  │                 ^^^^^^^^^^^^^^^^^^^^ This is always `True`
+
+This comparison is redundant since it always succeeds.
