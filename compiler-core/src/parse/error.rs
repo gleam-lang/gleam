@@ -338,14 +338,13 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 "This attribute cannot be used on a variant.",
                 vec!["Hint: Did you mean `@deprecated`?".into()],
             ),
-            ParseErrorType::PythonicImport { module, item } => (
+            ParseErrorType::IncorrectImportModuleSeparator { module, item } => (
                 "I was expecting either `/` or `.{` here.",
                 vec![
-                    "This syntax for an import is incorrect. Perhaps you meant:".into(),
-                    format!(" - `import {module}/{item}` to import the `{item}` \
-module from the `{module}` namespace"),
-                    format!(" - `import {module}.{{{item}}}` to import the \
-`{item}` value from the `{module}` module"),
+                    "Perhaps you meant one of:".into(),
+                    "".into(),
+                    format!("    import {module}/{item}"),
+                    format!("    import {module}.{{item}}"),
                 ]
             )
         }
@@ -422,7 +421,7 @@ pub enum ParseErrorType {
     TypeDefinitionNoArguments,            // pub type Wibble() { ... }
     UnknownAttributeRecordVariant, // an attribute was used that is not know for a custom type variant
     // a Python-like import was written, such as `import gleam.io`, instead of `import gleam/io`
-    PythonicImport {
+    IncorrectImportModuleSeparator {
         module: EcoString,
         item: EcoString,
     },

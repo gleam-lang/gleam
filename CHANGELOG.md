@@ -21,8 +21,22 @@
   the source of the problem.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- Gleam will now issue a help message when attempting to import modules using
-  incorrect non-`/` separators.
+- Gleam will now emit a helpful message when attempting to import modules using
+  `.` instead of `/`.
+
+  ```gleam
+  error: Syntax error
+    ┌─ /src/parse/error.gleam:1:11
+    │
+  1 │ import one.two.three
+    │           ^ I was expecting either `/` or `.{` here.
+
+  Perhaps you meant one of:
+
+      import one/two
+      import one.{item}
+  ```
+
   ([Zij-IT](https://github.com/zij-it))
 
 ### Build tool
