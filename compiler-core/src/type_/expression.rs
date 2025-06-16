@@ -1008,6 +1008,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .map(|type_| self.type_from_ast(&type_))
             .unwrap_or_else(|| Ok(self.new_unbound_var()))?;
 
+        match &names {
+            ArgNames::Named { .. } | ArgNames::NamedLabelled { .. } => (),
+            ArgNames::Discard { name, .. } | ArgNames::LabelledDiscard { name, .. } => {
+                let _ = self
+                    .environment
+                    .ignored_names
+                    .insert(name.clone(), location);
+            }
+        }
+
         // If we know the expected type of the argument from its contextual
         // usage then unify the newly constructed type with the expected type.
         // We do this here because then there is more type information for the
@@ -3469,6 +3479,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location: *location,
                 name: name.clone(),
                 variables: self.environment.local_value_names(),
+                ignored_variables: self.environment.ignored_names.clone(),
                 type_with_name_in_scope: self
                     .environment
                     .module_types

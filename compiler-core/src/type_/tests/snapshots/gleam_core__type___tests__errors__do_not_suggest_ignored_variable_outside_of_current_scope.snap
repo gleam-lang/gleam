@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn go() {\n  let _ = {\n    let _y = 1 // <- this shouldn't be highlighted!\n  }\n  y\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go() {
+  let _ = {
+    let _y = 1 // <- this shouldn't be highlighted!
+  }
+  y
+}
+
+
+----- ERROR
+error: Unknown variable
+  ┌─ /src/one/two.gleam:6:3
+  │
+6 │   y
+  │   ^
+
+The name `y` is not in scope here.

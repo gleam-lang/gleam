@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn go(x) {\n  fn(_y) {\n    y + x\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  fn(_y) {
+    y + x
+  }
+}
+
+
+----- ERROR
+error: Unknown variable
+  ┌─ /src/one/two.gleam:4:5
+  │
+3 │   fn(_y) {
+  │      -- Did you mean to use this ignored variable?
+4 │     y + x
+  │     ^
+
+The name `y` is not in scope here.

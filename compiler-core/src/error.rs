@@ -12,7 +12,7 @@ use crate::type_::printer::{Names, Printer};
 use crate::type_::{FieldAccessUsage, error::PatternMatchKind};
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
 use crate::{bit_array, diagnostic::Level, javascript, type_::UnifyErrorSituation};
-use ecow::EcoString;
+use ecow::{EcoString, eco_format};
 use itertools::Itertools;
 use pubgrub::Package;
 use pubgrub::{DerivationTree, VersionSet};
@@ -2388,6 +2388,7 @@ but no type in scope with that name."
                 TypeError::UnknownVariable {
                     location,
                     variables,
+                    ignored_variables,
                     name,
                     type_with_name_in_scope,
                 } => {
@@ -2402,12 +2403,28 @@ but no type in scope with that name."
                             wrap_format!("The name `{name}` is not in scope here.")
                         }
                     };
-                    Diagnostic {
-                        title: "Unknown variable".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
+
+                    let ignored_variable = ignored_variables.get(&eco_format!("_{name}"));
+                    let location = if let Some(ignored_location) = ignored_variable {
+                        Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![
+                                ExtraLabel {
+                                    src_info: None,
+                                    label: Label {
+                                        text: Some("Did you mean to use this ignored variable?".into()),
+                                        span: *ignored_location,
+                                    }
+                                }
+                            ],
+                        }
+                    } else {
+                        Location {
                             label: Label {
                                 text: did_you_mean(name, variables),
                                 span: *location,
@@ -2415,7 +2432,15 @@ but no type in scope with that name."
                             path: path.clone(),
                             src: src.clone(),
                             extra_labels: vec![],
-                        }),
+                        }
+                    };
+
+                    Diagnostic {
+                        title: "Unknown variable".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(location),
                     }
                 }
 
