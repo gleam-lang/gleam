@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\n        pub fn go() { wobble() }\n        "
+---
+----- SOURCE CODE
+-- gleam/wibble.gleam
+
+            pub fn wobble() { 1 }
+            
+
+-- main.gleam
+
+        pub fn go() { wobble() }
+        
+
+----- ERROR
+error: Unknown variable
+  ┌─ /src/one/two.gleam:2:23
+  │
+2 │         pub fn go() { wobble() }
+  │                       ^^^^^^
+
+The name `wobble` is not in scope here.

@@ -133,7 +133,7 @@ impl Hydrator {
                     deprecation,
                     ..
                 } = environment
-                    .get_type_constructor(module, name)
+                    .get_type_constructor(module, name, Some(args.len()))
                     .map_err(|e| {
                         convert_get_type_constructor_error(
                             e,
@@ -273,6 +273,11 @@ impl Hydrator {
                             name: name.clone(),
                             location: *location,
                             hint,
+                            suggestions: environment.suggest_unqualified_modules(
+                                name,
+                                Layer::Type,
+                                None,
+                            ),
                         })
                     }
                 }
