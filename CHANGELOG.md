@@ -48,6 +48,33 @@
   shadows an imported name in the current module.
   ([Aayush Tripathi](https://github.com/aayush-tripathi))
 
+- The compiler can now tell when an unknown variable might be referring to an
+  ignored variable and provide an helpful error message highlighting it. For
+  example, this piece of code:
+
+  ```gleam
+  pub fn go() {
+    let _x = 1
+    x + 1
+  }
+  ```
+
+  Now results in the following error:
+
+  ```
+  error: Unknown variable
+    ┌─ /src/one/two.gleam:4:3
+    │
+  3 │   let _x = 1
+    │       -- Did you mean to use this ignored variable?
+  4 │   x + 1
+    │   ^
+
+  The name `x` is not in scope here.
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Build tool
 
 - `gleam update`, `gleam deps update`, and `gleam deps download` will now print
