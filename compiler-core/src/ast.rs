@@ -1291,6 +1291,13 @@ impl BinOp {
         }
     }
 
+    fn is_bool_operator(&self) -> bool {
+        match self {
+            BinOp::And | BinOp::Or => true,
+            _ => false,
+        }
+    }
+
     pub(crate) fn is_int_operator(&self) -> bool {
         match self {
             BinOp::LtInt
