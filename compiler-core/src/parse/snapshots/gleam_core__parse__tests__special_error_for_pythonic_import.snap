@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 1792
 expression: import gleam.io
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 import gleam.io
