@@ -633,9 +633,17 @@ where
                         // Give a better error when there is two consecutive spreads
                         // like `[..wibble, ..wabble, woo]`. However, if there's other
                         // elements after the tail of the list
+                        println!("{:#?}", self.tok0);
+                        println!("{:#?}", elements_after_tail);
+
                         if let Some((second_start, second_end)) = self.maybe_one(&Token::DotDot) {
                             let _second_tail = self.parse_expression();
-                            if elements_after_tail.is_none() {
+
+                            if elements_after_tail.is_none()
+                                || elements_after_tail
+                                    .as_ref()
+                                    .is_some_and(|vec| vec.is_empty())
+                            {
                                 return parse_error(
                                     ParseErrorType::ListSpreadWithAnotherSpread {
                                         first_spread_location: SrcSpan { start, end },
