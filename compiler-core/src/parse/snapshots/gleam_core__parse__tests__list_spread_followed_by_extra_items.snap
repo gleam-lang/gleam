@@ -21,4 +21,4 @@ Lists are immutable and singly-linked, so to append items to them
 all the elements of a list would need to be copied into a new list.
 This would be slow, so there is no built-in syntax for it.
 
-Hint: prepend items to the list and then reverse it once you are done.
+Hint: Prepend items to the list and then reverse it once you are done.
