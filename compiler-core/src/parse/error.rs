@@ -49,7 +49,6 @@ impl ParseError {
             ),
             ParseErrorType::ExpectedUpName => ("I was expecting a type name here", vec![]),
             ParseErrorType::ExpectedValue => ("I was expecting a value after this", vec![]),
-            ParseErrorType::ExpectedStatement => ("I was expecting a statement after this", vec![]),
             ParseErrorType::ExpectedDefinition => {
                 ("I was expecting a definition after this", vec![])
             }
@@ -122,10 +121,6 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
             ParseErrorType::NotConstType => (
                 "This type is not allowed in module constants",
                 vec!["See: https://tour.gleam.run/basics/constants/".into()],
-            ),
-            ParseErrorType::NoExpression => (
-                "There must be an expression in here",
-                vec!["Hint: Put an expression in there or remove the brackets.".into()],
             ),
             ParseErrorType::NoLetBinding => (
                 "There must be a 'let' to bind variable to value",
@@ -231,7 +226,6 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
 
                 ("I was not expecting this", messages)
             }
-            ParseErrorType::ExpectedBoolean => ("Did you mean to negate a boolean?", vec![]),
             ParseErrorType::ConcatPatternVariableLeftHandSide => (
                 "This must be a string literal",
                 vec![
@@ -368,7 +362,6 @@ pub enum ParseErrorType {
     ExpectedType,               // after ':' or '->' where a type annotation is expected
     ExpectedUpName,             // any token used when a UpName was expected
     ExpectedValue,              // no value after "="
-    ExpectedStatement,          // no statement after "@<name>"
     ExpectedDefinition,         // after attributes
     ExpectedDeprecationMessage, // after "deprecated"
     ExpectedFunctionDefinition, // after function-only attributes
@@ -385,7 +378,6 @@ pub enum ParseErrorType {
         error: LexicalError,
     },
     NestedBitArrayPattern,        // <<<<1>>, 2>>, <<1>> is not allowed in there
-    NoExpression, // between "{" and "}" in expression position, there must be an expression
     NoLetBinding, // Bindings and rebinds always require let and must always bind to a value.
     NoValueAfterEqual, // = <something other than a value>
     NotConstType, // :fn(), name, _  are not valid const types
@@ -407,7 +399,6 @@ pub enum ParseErrorType {
         expected: Vec<EcoString>,
         hint: Option<EcoString>,
     },
-    ExpectedBoolean,
     UnexpectedFunction, // a function was used called outside of another function
     // A variable was assigned or discarded on the left hand side of a <> pattern
     ConcatPatternVariableLeftHandSide,
