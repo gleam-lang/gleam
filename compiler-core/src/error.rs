@@ -4274,7 +4274,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                         ParseErrorType::ListSpreadWithAnotherSpread { first_spread_location, second_spread_location } =>
                             Diagnostic {
                                 title,
-                                text: vec![
+                                text: [
                                     "Lists are immutable and singly-linked, so to join two or more lists",
                                     "all the elements of the lists would need to be copied into a new list.",
                                     "This would be slow, so there is no built-in syntax for it.",
@@ -4303,7 +4303,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                         ParseErrorType::ListSpreadFollowedByElements =>
                             Diagnostic {
                                 title,
-                                text: vec![
+                                text: [
                                     "Lists are immutable and singly-linked, so to append items to them",
                                     "all the elements of a list would need to be copied into a new list.",
                                     "This would be slow, so there is no built-in syntax for it.",
@@ -4326,7 +4326,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                         ParseErrorType::ListPatternSpreadFollowedByElements =>
                             Diagnostic {
                                 title,
-                                text: vec![
+                                text: [
                                     "Lists are immutable and singly-linked, so to match on the end",
                                     "of a list would require the whole list to be traversed. This",
                                     "would be slow, so there is no built-in syntax for it. Pattern",
@@ -4442,7 +4442,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                         ParseErrorType::ConcatPatternVariableLeftHandSide =>
                             Diagnostic {
                                 title,
-                                text: vec![
+                                text: [
                                     "We can't tell what size this prefix should be so we don't know",
                                     "how to handle this pattern.",
                                     "",
@@ -4584,7 +4584,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                         ParseErrorType::InvalidModuleTypePattern =>
                             Diagnostic {
                                 title,
-                                text: vec![
+                                text: [
                                     "I'm expecting a pattern here",
                                     "Hint: A pattern can be a constructor name, a literal value",
                                     "or a variable to bind a value to, etc.",
@@ -4624,7 +4624,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
 
                             Diagnostic {
                                 title,
-                                text: vec![
+                                text: [
                                     "Each custom type variant must have a constructor:\n".into(),
                                     format!("{accessor}{opaque}type {name} {{"),
                                     format!("  {name}("),
@@ -4666,7 +4666,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                         ParseErrorType::IfExpression =>
                             Diagnostic {
                                 title,
-                                text: vec![
+                                text: [
                                     "If you want to write a conditional expression you can use a `case`:",
                                     "",
                                     "    case condition {",
@@ -4760,7 +4760,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                         ParseErrorType::IncorrectImportModuleSeparator { module, item } =>
                             Diagnostic {
                                 title,
-                                text: vec![
+                                text: [
                                     "Perhaps you meant one of:".into(),
                                     "".into(),
                                     format!("    import {module}/{item}"),
