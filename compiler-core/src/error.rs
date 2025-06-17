@@ -12,7 +12,7 @@ use crate::type_::printer::{Names, Printer};
 use crate::type_::{FieldAccessUsage, error::PatternMatchKind};
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
 use crate::{bit_array, diagnostic::Level, javascript, type_::UnifyErrorSituation};
-use ecow::{EcoString, eco_format};
+use ecow::EcoString;
 use itertools::Itertools;
 use pubgrub::Package;
 use pubgrub::{DerivationTree, VersionSet};
@@ -2388,7 +2388,7 @@ but no type in scope with that name."
                 TypeError::UnknownVariable {
                     location,
                     variables,
-                    ignored_variables,
+                    discarded_location,
                     name,
                     type_with_name_in_scope,
                 } => {
@@ -2404,8 +2404,7 @@ but no type in scope with that name."
                         }
                     };
 
-                    let ignored_variable = ignored_variables.get(&eco_format!("_{name}"));
-                    let location = if let Some(ignored_location) = ignored_variable {
+                    let location = if let Some(ignored_location) = discarded_location {
                         Location {
                             label: Label {
                                 text: None,

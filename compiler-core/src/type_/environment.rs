@@ -58,7 +58,7 @@ pub struct Environment<'a> {
 
     // The names of all the ignored variables and arguments in scope:
     // `let _var = 10` `pub fn main(_var) { todo }`.
-    pub ignored_names: HashMap<EcoString, SrcSpan>,
+    pub discarded_names: im::HashMap<EcoString, SrcSpan>,
 
     /// Types defined in the current module (or the prelude)
     pub module_types: HashMap<EcoString, TypeConstructor>,
@@ -137,7 +137,7 @@ impl<'a> Environment<'a> {
             unqualified_imported_types: HashMap::new(),
             accessors: prelude.accessors.clone(),
             scope: prelude.values.clone().into(),
-            ignored_names: HashMap::new(),
+            discarded_names: im::HashMap::new(),
             importable_modules,
             current_module,
             local_variable_usages: vec![HashMap::new()],
@@ -153,7 +153,7 @@ impl<'a> Environment<'a> {
 #[derive(Debug)]
 pub struct ScopeResetData {
     local_values: im::HashMap<EcoString, ValueConstructor>,
-    ignored_names: HashMap<EcoString, SrcSpan>,
+    discarded_names: im::HashMap<EcoString, SrcSpan>,
 }
 
 impl Environment<'_> {
@@ -176,11 +176,11 @@ impl Environment<'_> {
 
     pub fn open_new_scope(&mut self) -> ScopeResetData {
         let local_values = self.scope.clone();
-        let ignored_names = self.ignored_names.clone();
+        let discarded_names = self.discarded_names.clone();
         self.local_variable_usages.push(HashMap::new());
         ScopeResetData {
             local_values,
-            ignored_names,
+            discarded_names,
         }
     }
 
@@ -192,7 +192,7 @@ impl Environment<'_> {
     ) {
         let ScopeResetData {
             local_values,
-            ignored_names,
+            discarded_names,
         } = data;
 
         let unused = self
@@ -208,7 +208,7 @@ impl Environment<'_> {
             self.handle_unused_variables(unused, problems);
         }
         self.scope = local_values;
-        self.ignored_names = ignored_names;
+        self.discarded_names = discarded_names;
     }
 
     pub fn next_uid(&mut self) -> u64 {
