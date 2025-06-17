@@ -17,6 +17,8 @@ pub fn count(from: Int, to: Int) -> Int {
 import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
 import * as $bool from "../../gleam_stdlib/gleam/bool.mjs";
 import {
+  Empty as $Empty,
+  NonEmpty as $NonEmpty,
   CustomType as $CustomType,
   bitArraySlice,
   bitArraySliceToInt,
