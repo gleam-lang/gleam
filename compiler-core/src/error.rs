@@ -2,6 +2,7 @@
 use crate::build::{Origin, Outcome, Runtime, Target};
 use crate::dependency::{PackageFetcher, ResolutionError};
 use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
+use crate::parse::Token;
 use crate::strings::{to_snake_case, to_upper_camel_case};
 use crate::type_::collapse_links;
 use crate::type_::error::{
@@ -3752,10 +3753,7 @@ and explain your usecase for this pattern, and how you would expect it to behave
 
 
             Error::Parse { path, src, error } => {
-                let (label, extra) = error.details();
-                let text = extra.join("\n");
-
-                let adjusted_location = if error.error == ParseErrorType::UnexpectedEof {
+                let location = if error.error == ParseErrorType::UnexpectedEof {
                     crate::ast::SrcSpan {
                         start: (src.len() - 1) as u32,
                         end: (src.len() - 1) as u32,
@@ -3764,21 +3762,1020 @@ and explain your usecase for this pattern, and how you would expect it to behave
                     error.location
                 };
 
-                vec![Diagnostic {
-                    title: "Syntax error".into(),
-                    text,
-                    hint: None,
-                    level: Level::Error,
-                    location: Some(Location {
-                        label: Label {
-                            text: Some(label.to_string()),
-                            span: adjusted_location,
+                let title = String::from("Syntax error");
+                let diagnostic =
+                    match &error.error {
+                        ParseErrorType::ExpectedEqual =>
+                            Diagnostic {
+                                title,
+                                text: "".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("I was expecting a '=' after this".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::ExpectedExpr =>
+                            Diagnostic {
+                                title,
+                                text: "".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("I was expecting an expression after this".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::ExpectedName =>
+                            Diagnostic {
+                                title,
+                                text: "".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("I was expecting a name here".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::ExpectedPattern =>
+                            Diagnostic {
+                                title,
+                                text: "".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("I was expecting a pattern after this".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::ExpectedType =>
+                            Diagnostic {
+                                title,
+                                text: "See: https://tour.gleam.run/basics/assignments/".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("I was expecting a type after this".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::ExpectedUpName =>
+                            Diagnostic {
+                                title,
+                                text: "".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("I was expecting a type name here".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::ExpectedValue =>
+                            Diagnostic {
+                                title,
+                                text: "".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("I was expecting a value after this".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::ExpectedDefinition =>
+                            Diagnostic {
+                                title,
+                                text: "".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("I was expecting a definition after this".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::ExpectedDeprecationMessage =>
+                            Diagnostic {
+                                title,
+                                text: "".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("A deprecation attribute must have a string message.".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::ExpectedFunctionDefinition =>
+                            Diagnostic {
+                                title,
+                                text: "".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("I was expecting a function definition after this".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::ExpectedTargetName =>
+                            Diagnostic {
+                                title,
+                                text: "Try `erlang`, `javascript`.".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("I was expecting a target name after this".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::ExtraSeparator =>
+                            Diagnostic {
+                                title,
+                                text: "".into(),
+                                hint: Some("Try removing it?".into()),
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("This is an extra delimiter".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::ExprLparStart =>
+                            Diagnostic {
+                                title,
+                                text: "".into(),
+                                hint: Some("To group expressions in Gleam, use \"{\" and \"}\"; tuples are created with `#(` and `)`.".into()),
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("This parenthesis cannot be understood here".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::IncorrectName =>
+                            Diagnostic {
+                                title,
+                                text: "".into(),
+                                hint: Some(wrap("Variable and module names start with a lowercase letter, \
+and can contain a-z, 0-9, or _.")),
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("I'm expecting a lowercase name here".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::IncorrectUpName =>
+                            Diagnostic {
+                                title,
+                                text: "".into(),
+                                hint: Some(wrap("Type names start with a uppercase letter, and can \
+contain a-z, A-Z, or 0-9.")),
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("I'm expecting a type name here".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::InvalidBitArraySegment =>
+                            Diagnostic {
+                                title,
+                                text: "See: https://tour.gleam.run/data-types/bit-arrays/".into(),
+                                hint: Some(format!("Valid BitArray segment options are:\n{}", wrap(
+                                    "bits, bytes, int, float, utf8, utf16, utf32, utf8_codepoint, \
+utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, unit.",
+                                ))),
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("This is not a valid BitArray segment option".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::InvalidBitArrayUnit =>
+                            Diagnostic {
+                                title,
+                                text: "See: https://tour.gleam.run/data-types/bit-arrays/".into(),
+                                hint: Some("Unit must be an integer literal >= 1 and <= 256.".into()),
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("This is not a valid BitArray unit value".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::InvalidTailPattern =>
+                            Diagnostic {
+                                title,
+                                text: "".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("This part of a list pattern can only be a name or a discard".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::InvalidTupleAccess =>
+                            Diagnostic {
+                                title,
+                                text: "".into(),
+                                hint: Some("Only non negative integer literals like 0, or 1_000 can be used.".into()),
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("This integer is not valid for tuple access".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::LexError { error: lex_err } => {
+                            let (label_text, text_lines) = lex_err.to_parse_error_info();
+                            let text = text_lines.join("\n");
+                            Diagnostic {
+                                title,
+                                text,
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some(label_text.into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            }
                         },
-                        path: path.clone(),
-                        src: src.clone(),
-                        extra_labels: vec![],
-                    }),
-                }]
+
+                        ParseErrorType::NestedBitArrayPattern =>
+                            Diagnostic {
+                                title,
+                                text: "".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("BitArray patterns cannot be nested".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::NotConstType =>
+                            Diagnostic {
+                                title,
+                                text: "See: https://tour.gleam.run/basics/constants/".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("This type is not allowed in module constants".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::NoLetBinding =>
+                            Diagnostic {
+                                title,
+                                text: "See: https://tour.gleam.run/basics/assignments/".into(),
+                                hint: Some("Use let for binding.".into()),
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("There must be a 'let' to bind variable to value".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::NoValueAfterEqual =>
+                            Diagnostic {
+                                title,
+                                text: "".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("I was expecting to see a value after this equals sign".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::OpaqueTypeAlias =>
+                            Diagnostic {
+                                title,
+                                text: "See: https://tour.gleam.run/basics/type-aliases/".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("Type Aliases cannot be opaque".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::OpNakedRight =>
+                            Diagnostic {
+                                title,
+                                text: "".into(),
+                                hint: Some("Remove it or put a value after it.".into()),
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("This operator has no value on its right side".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::TooManyArgHoles =>
+                            Diagnostic {
+                                title,
+                                text: "See: https://tour.gleam.run/functions/functions/".into(),
+                                hint: Some("Function calls can have at most one argument hole.".into()),
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("There is more than 1 argument hole in this function call".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::UnexpectedEof =>
+                            Diagnostic {
+                                title,
+                                text: "".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("The module ended unexpectedly".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::ListSpreadWithoutElements =>
+                            Diagnostic {
+                                title,
+                                text: "See: https://tour.gleam.run/basics/lists/".into(),
+                                hint: Some("Try prepending some elements [1, 2, ..list].".into()),
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("This spread does nothing".into()),
+                                        span: location
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::ListSpreadWithAnotherSpread { first_spread_location, second_spread_location } =>
+                            Diagnostic {
+                                title,
+                                text: vec![
+                                    "Lists are immutable and singly-linked, so to join two or more lists",
+                                    "all the elements of the lists would need to be copied into a new list.",
+                                    "This would be slow, so there is no built-in syntax for it.",
+                                ].join("\n"),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("I wasn't expecting a second spread here".into()),
+                                        span: *second_spread_location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![
+                                        ExtraLabel {
+                                            src_info: None,
+                                            label: Label {
+                                                text: Some("You're using a spread here".into()),
+                                                span: *first_spread_location,
+                                            }
+                                        }
+                                    ],
+                                }),
+                            },
+
+                        ParseErrorType::ListSpreadFollowedByElements =>
+                            Diagnostic {
+                                title,
+                                text: vec![
+                                    "Lists are immutable and singly-linked, so to append items to them",
+                                    "all the elements of a list would need to be copied into a new list.",
+                                    "This would be slow, so there is no built-in syntax for it.",
+                                    "",
+                                ].join("\n"),
+                                hint: Some("Prepend items to the list and then reverse it once you are done.".into()),
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("I wasn't expecting elements after this".into()),
+                                        span: location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+
+                        ParseErrorType::ListPatternSpreadFollowedByElements =>
+                            Diagnostic {
+                                title,
+                                text: vec![
+                                    "Lists are immutable and singly-linked, so to match on the end",
+                                    "of a list would require the whole list to be traversed. This",
+                                    "would be slow, so there is no built-in syntax for it. Pattern",
+                                    "match on the start of the list instead.",
+                                ].join("\n"),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("I wasn't expecting elements after this".into()),
+                                        span: location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::UnexpectedReservedWord =>
+                            Diagnostic {
+                                title,
+                                text: "".into(),
+                                hint: Some("I was expecting to see a name here.".into()),
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("This is a reserved word".into()),
+                                        span: location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::LowcaseBooleanPattern =>
+                            Diagnostic {
+                                title,
+                                text: "See: https://tour.gleam.run/basics/bools/".into(),
+                                hint: Some("In Gleam boolean literals are `True` and `False`.".into()),
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("Did you want a Bool instead of a variable?".into()),
+                                        span: location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::UnexpectedLabel =>
+                            Diagnostic {
+                                title,
+                                text: "Please remove the argument label.".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("Argument labels are not allowed for anonymous functions".into()),
+                                        span: location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::UnexpectedToken {
+                            token,
+                            expected,
+                            hint,
+                        } => {
+                            let found = match token {
+                                Token::Int { .. } => "an Int".to_string(),
+                                Token::Float { .. } => "a Float".to_string(),
+                                Token::String { .. } => "a String".to_string(),
+                                Token::CommentDoc { .. } => "a comment".to_string(),
+                                Token::DiscardName { .. } => "a discard name".to_string(),
+                                Token::Name { .. } | Token::UpName { .. } => "a name".to_string(),
+                                _ if token.is_reserved_word() => format!("the keyword {token}"),
+                                _ => token.to_string(),
+                            };
+
+                            let messages = std::iter::once(format!("Found {found}, expected one of: "))
+                                .chain(expected.iter().map(|s| format!("- {s}")));
+
+                            let messages = match hint {
+                                Some(hint_text) => messages
+                                    .chain(std::iter::once(format!("Hint: {hint_text}")))
+                                    .collect_vec(),
+                                _ => messages.collect(),
+                            };
+
+                            Diagnostic {
+                                title,
+                                text: messages.join("\n"),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("I was not expecting this".into()),
+                                        span: location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            }
+                        }
+
+                        ParseErrorType::ConcatPatternVariableLeftHandSide =>
+                            Diagnostic {
+                                title,
+                                text: vec![
+                                    "We can't tell what size this prefix should be so we don't know",
+                                    "how to handle this pattern.",
+                                    "",
+                                    "If you want to match one character consider using `pop_grapheme`",
+                                    "from the stdlib's `gleam/string` module.",
+                                ].join("\n"),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("This must be a string literal".into()),
+                                        span: location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::UnexpectedFunction =>
+                            Diagnostic {
+                                title,
+                                text: "".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("Functions can only be called within other functions".into()),
+                                        span: location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::ListSpreadWithoutTail =>
+                            Diagnostic {
+                                title,
+                                text: "If a list expression has a spread then a tail must also be given.".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("I was expecting a value after this spread".into()),
+                                        span: location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::UnknownAttribute =>
+                            Diagnostic {
+                                title,
+                                text: "".into(),
+                                hint: Some("Try `deprecated`, `external` or `target` instead.".into()),
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("I don't recognise this attribute".into()),
+                                        span: location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::DuplicateAttribute =>
+                            Diagnostic {
+                                title,
+                                text: "This attribute has already been given.".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("Duplicate attribute".into()),
+                                        span: location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::UnknownTarget =>
+                            Diagnostic {
+                                title,
+                                text: "Try `erlang`, `javascript`.".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("I don't recognise this target".into()),
+                                        span: location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::ExpectedFunctionBody =>
+                            Diagnostic {
+                                title,
+                                text: "".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("This function does not have a body".into()),
+                                        span: location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::RedundantInternalAttribute =>
+                            Diagnostic {
+                                title,
+                                text: "Only a public definition can be annotated as internal.".into(),
+                                hint: Some("Remove the `@internal` annotation.".into()),
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("Redundant internal attribute".into()),
+                                        span: location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::InvalidModuleTypePattern =>
+                            Diagnostic {
+                                title,
+                                text: vec![
+                                    "I'm expecting a pattern here",
+                                    "Hint: A pattern can be a constructor name, a literal value",
+                                    "or a variable to bind a value to, etc.",
+                                    "See: https://tour.gleam.run/flow-control/case-expressions/",
+                                ].join("\n"),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("Invalid pattern".into()),
+                                        span: location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::ExpectedRecordConstructor {
+                            name,
+                            public,
+                            opaque,
+                            field,
+                            field_type,
+                        } => {
+                            let (accessor, opaque) = match *public {
+                                true if *opaque => ("pub ", "opaque "),
+                                true => ("pub ", ""),
+                                false => ("", ""),
+                            };
+
+                            let mut annotation = EcoString::new();
+                            match field_type {
+                                Some(t) => t.print(&mut annotation),
+                                None => annotation.push_str("Type"),
+                            };
+
+                            Diagnostic {
+                                title,
+                                text: vec![
+                                    "Each custom type variant must have a constructor:\n".into(),
+                                    format!("{accessor}{opaque}type {name} {{"),
+                                    format!("  {name}("),
+                                    format!("    {field}: {annotation},"),
+                                    "  )".into(),
+                                    "}".into(),
+                                ].join("\n"),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("I was not expecting this".into()),
+                                        span: location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            }
+                        }
+
+                        ParseErrorType::CallInClauseGuard =>
+                            Diagnostic {
+                                title,
+                                text: "Functions cannot be called in clause guards.".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("Unsupported expression".into()),
+                                        span: location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::IfExpression =>
+                            Diagnostic {
+                                title,
+                                text: vec![
+                                    "If you want to write a conditional expression you can use a `case`:",
+                                    "",
+                                    "    case condition {",
+                                    "      True -> todo",
+                                    "      False -> todo",
+                                    "    }",
+                                    "",
+                                    "See: https://tour.gleam.run/flow-control/case-expressions/",
+                                ].join("\n"),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("Gleam doesn't have if expressions".into()),
+                                        span: location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::ConstantRecordConstructorNoArguments =>
+                            Diagnostic {
+                                title,
+                                text: "A record must be passed arguments when constructed.".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("I was expecting arguments here".into()),
+                                        span: location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::TypeConstructorNoArguments =>
+                            Diagnostic {
+                                title,
+                                text: "A type constructor must be passed arguments.".into(),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("I was expecting arguments here".into()),
+                                        span: location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::TypeDefinitionNoArguments =>
+                            Diagnostic {
+                                title,
+                                text: "A generic type must have at least a generic parameter.".into(),
+                                hint: Some("If a type is not generic you should omit the `()`.".into()),
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("I was expecting generic parameters here".into()),
+                                        span: location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::UnknownAttributeRecordVariant =>
+                            Diagnostic {
+                                title,
+                                text: "".into(),
+                                hint: Some("Did you mean `@deprecated`?".into()),
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("This attribute cannot be used on a variant.".into()),
+                                        span: location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+
+                        ParseErrorType::IncorrectImportModuleSeparator { module, item } =>
+                            Diagnostic {
+                                title,
+                                text: vec![
+                                    "Perhaps you meant one of:".into(),
+                                    "".into(),
+                                    format!("    import {module}/{item}"),
+                                    format!("    import {module}.{{item}}"),
+                                ].join("\n"),
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: Some("I was expecting either `/` or `.{` here.".into()),
+                                        span: location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            },
+                    };
+
+                vec![diagnostic]
             }
 
             Error::ImportCycle { modules } => {

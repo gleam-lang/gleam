@@ -12,5 +12,5 @@ error: Syntax error
 1 │ wibble:Int = 4
   │       ^ There must be a 'let' to bind variable to value
 
-Hint: Use let for binding.
 See: https://tour.gleam.run/basics/assignments/
+Hint: Use let for binding.
