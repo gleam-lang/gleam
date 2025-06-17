@@ -66,11 +66,11 @@
     ┌─ /src/one/two.gleam:4:3
     │
   3 │   let _x = 1
-    │       -- Did you mean to use this ignored variable?
+    │       -- This value is discarded
   4 │   x + 1
-    │   ^
+    │   ^ So it is not in scope here.
 
-  The name `x` is not in scope here.
+  Hint: Change `_x` to `x` or reference another variable
   ```
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

@@ -16,8 +16,8 @@ error: Unknown variable
   ┌─ /src/one/two.gleam:4:5
   │
 3 │   fn(_y) {
-  │      -- Did you mean to use this ignored variable?
+  │      -- This value is discarded
 4 │     y + x
-  │     ^
+  │     ^ So this is not in scope
 
-The name `y` is not in scope here.
+Hint: Change `_y` to `y` or reference another variable

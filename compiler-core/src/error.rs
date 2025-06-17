@@ -2392,22 +2392,12 @@ but no type in scope with that name."
                     name,
                     type_with_name_in_scope,
                 } => {
-                    let text = if *type_with_name_in_scope {
-                        wrap_format!("`{name}` is a type, it cannot be used as a value.")
-                    } else {
-                        let is_first_char_uppercase = name.chars().next().is_some_and(char::is_uppercase);
+                    let title = String::from("Unknown variable");
 
-                        if is_first_char_uppercase {
-                            wrap_format!("The custom type variant constructor `{name}` is not in scope here.")
-                        } else {
-                            wrap_format!("The name `{name}` is not in scope here.")
-                        }
-                    };
-
-                    let location = if let Some(ignored_location) = discarded_location {
-                        Location {
+                    if let Some(ignored_location) = discarded_location {
+                        let location = Location {
                             label: Label {
-                                text: None,
+                                text: Some("So this is not in scope".into()),
                                 span: *location,
                             },
                             path: path.clone(),
@@ -2416,30 +2406,49 @@ but no type in scope with that name."
                                 ExtraLabel {
                                     src_info: None,
                                     label: Label {
-                                        text: Some("Did you mean to use this ignored variable?".into()),
+                                        text: Some("This value is discarded".into()),
                                         span: *ignored_location,
                                     }
                                 }
                             ],
+                        };
+                        Diagnostic {
+                            title,
+                            text: "".into(),
+                            hint: Some(wrap_format!(
+                                "Change `_{name}` to `{name}` or reference another variable",
+                            )),
+                            level: Level::Error,
+                            location: Some(location),
                         }
                     } else {
-                        Location {
-                            label: Label {
-                                text: did_you_mean(name, variables),
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }
-                    };
+                        let text = if *type_with_name_in_scope {
+                            wrap_format!("`{name}` is a type, it cannot be used as a value.")
+                        } else {
+                            let is_first_char_uppercase = name.chars().next().is_some_and(char::is_uppercase);
 
-                    Diagnostic {
-                        title: "Unknown variable".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(location),
+                            if is_first_char_uppercase {
+                                wrap_format!("The custom type variant constructor `{name}` is not in scope here.")
+                            } else {
+                                wrap_format!("The name `{name}` is not in scope here.")
+                            }
+                        };
+
+                        Diagnostic {
+                            title,
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: did_you_mean(name, variables),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
                 }
 
