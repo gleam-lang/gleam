@@ -14,8 +14,8 @@ error: Unknown variable
   ┌─ /src/one/two.gleam:3:3
   │
 2 │ pub fn go(_x) {
-  │           -- Did you mean to use this ignored variable?
+  │           -- This value is discarded
 3 │   x + 1
-  │   ^
+  │   ^ So this is not in scope
 
-The name `x` is not in scope here.
+Hint: Change `_x` to `x` or reference another variable

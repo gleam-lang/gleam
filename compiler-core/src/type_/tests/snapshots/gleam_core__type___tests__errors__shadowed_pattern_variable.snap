@@ -20,8 +20,8 @@ error: Unknown variable
   ┌─ /src/one/two.gleam:8:19
   │
 8 │     Wibble(_y) -> y + 1
-  │            --     ^
+  │            --     ^ So this is not in scope
   │            │       
-  │            Did you mean to use this ignored variable?
+  │            This value is discarded
 
-The name `y` is not in scope here.
+Hint: Change `_y` to `y` or reference another variable

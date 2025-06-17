@@ -15,8 +15,8 @@ error: Unknown variable
   ┌─ /src/one/two.gleam:4:3
   │
 3 │   let _x = 1
-  │       -- Did you mean to use this ignored variable?
+  │       -- This value is discarded
 4 │   x + 1
-  │   ^
+  │   ^ So this is not in scope
 
-The name `x` is not in scope here.
+Hint: Change `_x` to `x` or reference another variable
