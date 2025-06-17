@@ -561,7 +561,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     name_location: location,
                     ..
                 } => {
-                    let _ = environment.ignored_names.insert(name.clone(), *location);
+                    let _ = environment.discarded_names.insert(name.clone(), *location);
                 }
             }
 

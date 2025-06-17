@@ -1,3 +1,4 @@
+use ecow::eco_format;
 use hexpm::version::{LowestVersion, Version};
 use im::hashmap;
 use itertools::Itertools;
@@ -588,7 +589,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 self.check_name_case(location, &name, Named::Discard);
                 let _ = self
                     .environment
-                    .ignored_names
+                    .discarded_names
                     .insert(name.clone(), location);
                 Pattern::Discard {
                     type_,
@@ -635,7 +636,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                 location,
                                 name: name.clone(),
                                 variables: self.environment.local_value_names(),
-                                ignored_variables: self.environment.ignored_names.clone(),
+                                discarded_location: self
+                                    .environment
+                                    .discarded_names
+                                    .get(&eco_format!("_{name}"))
+                                    .cloned(),
                                 type_with_name_in_scope: self
                                     .environment
                                     .module_types
@@ -703,7 +708,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     AssignName::Discard(right) => {
                         let _ = self
                             .environment
-                            .ignored_names
+                            .discarded_names
                             .insert(right.clone(), right_location);
                         self.check_name_case(right_location, right, Named::Discard);
                     }

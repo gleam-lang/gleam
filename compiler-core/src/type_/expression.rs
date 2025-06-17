@@ -18,6 +18,7 @@ use crate::{
     parse::PatternPosition,
     reference::ReferenceKind,
 };
+use ecow::eco_format;
 use hexpm::version::{LowestVersion, Version};
 use im::hashmap;
 use itertools::Itertools;
@@ -1013,7 +1014,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             ArgNames::Discard { name, .. } | ArgNames::LabelledDiscard { name, .. } => {
                 let _ = self
                     .environment
-                    .ignored_names
+                    .discarded_names
                     .insert(name.clone(), location);
             }
         }
@@ -3479,7 +3480,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location: *location,
                 name: name.clone(),
                 variables: self.environment.local_value_names(),
-                ignored_variables: self.environment.ignored_names.clone(),
+                discarded_location: self
+                    .environment
+                    .discarded_names
+                    .get(&eco_format!("_{name}"))
+                    .cloned(),
                 type_with_name_in_scope: self
                     .environment
                     .module_types

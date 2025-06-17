@@ -14,7 +14,7 @@ use hexpm::version::Version;
 use num_bigint::BigInt;
 #[cfg(test)]
 use pretty_assertions::assert_eq;
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 /// Errors and warnings discovered when compiling a module.
 ///
@@ -167,7 +167,9 @@ pub enum Error {
         location: SrcSpan,
         name: EcoString,
         variables: Vec<EcoString>,
-        ignored_variables: HashMap<EcoString, SrcSpan>,
+        /// If there's a discarded variable with the same name in the same scope
+        /// this will contain its location.
+        discarded_location: Option<SrcSpan>,
         type_with_name_in_scope: bool,
     },
 
@@ -1298,7 +1300,7 @@ pub fn convert_get_value_constructor_error(
             location,
             name,
             variables,
-            ignored_variables: HashMap::new(),
+            discarded_location: None,
             type_with_name_in_scope,
         },
 
