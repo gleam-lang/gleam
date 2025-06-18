@@ -224,6 +224,7 @@ pub enum Error {
     IncorrectArity {
         location: SrcSpan,
         expected: usize,
+        context: IncorrectArityContext,
         given: usize,
         labels: Vec<EcoString>,
     },
@@ -671,6 +672,12 @@ pub enum LiteralCollectionKind {
     List,
     Tuple,
     Record,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IncorrectArityContext {
+    Pattern,
+    Function,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1431,6 +1438,7 @@ pub fn convert_not_fun_error(
         ) => Error::IncorrectArity {
             labels: vec![],
             location: call_location,
+            context: IncorrectArityContext::Function,
             expected,
             given,
         },

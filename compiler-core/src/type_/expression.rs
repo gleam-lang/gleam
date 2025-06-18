@@ -3659,7 +3659,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     .map_err(|e| convert_get_value_constructor_error(e, location, None))?
                 {
                     // The fun has a field map so labelled arguments may be present and need to be reordered.
-                    Some(field_map) => field_map.reorder(&mut args, location)?,
+                    Some(field_map) => {
+                        field_map.reorder(&mut args, location, IncorrectArityContext::Function)?
+                    }
 
                     // The fun has no field map and so we error if arguments have been labelled
                     None => assert_no_labelled_arguments(&args)?,
@@ -3975,7 +3977,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 match field_map {
                     // The fun has a field map so labelled arguments may be
                     // present and need to be reordered.
-                    Some(field_map) => field_map.reorder(&mut args, location),
+                    Some(field_map) => {
+                        field_map.reorder(&mut args, location, IncorrectArityContext::Function)
+                    }
 
                     // The fun has no field map and so we error if arguments
                     // have been labelled.
@@ -3995,6 +3999,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 Error::IncorrectArity {
                     expected,
                     given,
+                    context,
                     labels,
                     location,
                 } => {
@@ -4002,6 +4007,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     self.problems.error(Error::IncorrectArity {
                         expected,
                         given,
+                        context,
                         labels,
                         location,
                     });
