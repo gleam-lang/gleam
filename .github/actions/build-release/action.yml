@@ -17,6 +17,21 @@ inputs:
     description: "Expected Binary Architecture"
     required: false
     default: ""
+  azure-tenant-id:
+    description: "Azure Tenant ID for Windows Code Signing"
+    required: false
+  azure-subscription-id:
+    description: "Azure Subscription ID for Windows Code Signing"
+    required: false
+  azure-client-id:
+    description: "Azure Client ID for Windows Code Signing"
+    required: false
+  azure-trusted-signing-account-name:
+    description: "Azure Trusted Signing Account Name for Windows Code Signing"
+    required: false
+  azure-certificate-profile-name:
+    description: "Azure Certificate Profile Name for Windows Code Signing"
+    required: false
 
 outputs:
   archive:
@@ -82,6 +97,38 @@ runs:
           exit 1
         fi
         echo "ok: Architecture match"
+
+    # We use Azure Trusted Signing to sign the Windows binaries.
+    # This is done to ensure that the binaries are trusted and can be
+    # verified by users and systems that require signed code.
+    #
+    # Why is this helpful?
+    # * It provides a way to verify the authenticity and integrity of the
+    #   binaries distributed by Gleam.
+    # * It helps prevent tampering with the binaries, ensuring that users
+    #   can trust the code they are running.
+    #
+    # For more information, see:
+    # * https://github.com/Azure/trusted-signing-action
+    # * https://azure.microsoft.com/en-us/products/trusted-signing
+    - name: Log in to Azure
+      if: ${{ contains(inputs.target, '-windows-') && inputs.azure-tenant-id && inputs.azure-subscription-id && inputs.azure-client-id && inputs.azure-trusted-signing-account-name && inputs.azure-certificate-profile-name }}
+      uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2.3.0
+      with:
+        client-id: ${{ inputs.azure-client-id }}
+        tenant-id: ${{ inputs.azure-tenant-id }}
+        subscription-id: ${{ inputs.azure-subscription-id }}
+    - name: Windows Code Signing
+      if: ${{ contains(inputs.target, '-windows-') && inputs.azure-tenant-id && inputs.azure-subscription-id && inputs.azure-client-id && inputs.azure-trusted-signing-account-name && inputs.azure-certificate-profile-name }}
+      uses: azure/trusted-signing-action@0d74250c661747df006298d0fb49944c10f16e03 # v0.5.1
+      with:
+        endpoint: https://eus.codesigning.azure.net/
+        trusted-signing-account-name: ${{ inputs.azure-trusted-signing-account-name }}
+        certificate-profile-name: ${{ inputs.azure-certificate-profile-name }}
+        files: ${{ github.workspace }}\target\${{ inputs.target }}\release\gleam.exe
+        file-digest: SHA256
+        timestamp-rfc3161: http://timestamp.acs.microsoft.com
+        timestamp-digest: SHA256
 
     - name: Build archive
       id: build
