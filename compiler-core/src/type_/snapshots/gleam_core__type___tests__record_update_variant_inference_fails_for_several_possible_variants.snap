@@ -24,7 +24,6 @@ error: Unsafe record update
 10 │       Vector2(..vector, y: y +. increase)
    │                 ^^^^^^ I'm not sure this is always a `Vector2`
 
-
 This value cannot be used to build an updated `Vector2` as it could be some
 other variant.
 
