@@ -192,12 +192,12 @@ fn compile_documentation(
         .definitions
         .iter()
         .filter_map(
-            |statement: &crate::ast::Definition<
+            |definition: &crate::ast::Definition<
                 std::sync::Arc<type_::Type>,
                 crate::ast::TypedExpr,
                 EcoString,
                 EcoString,
-            >| printer.type_definition(&source_links, statement),
+            >| printer.type_definition(&source_links, definition),
         )
         .sorted()
         .collect_vec();
@@ -205,7 +205,7 @@ fn compile_documentation(
     let values = module
         .definitions
         .iter()
-        .filter_map(|statement| printer.value(&source_links, statement))
+        .filter_map(|definition| printer.value(&source_links, definition))
         .sorted()
         .collect_vec();
 

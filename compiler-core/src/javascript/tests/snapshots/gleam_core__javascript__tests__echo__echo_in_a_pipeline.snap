@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/echo.rs
+assertion_line: 79
 expression: "\npub fn main() {\n  [1, 2, 3]\n  |> echo\n  |> wibble\n}\n\npub fn wibble(n) { n }\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -17,6 +19,8 @@ pub fn wibble(n) { n }
 import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
 import {
   toList,
+  Empty as $Empty,
+  NonEmpty as $NonEmpty,
   CustomType as $CustomType,
   bitArraySlice,
   bitArraySliceToInt,

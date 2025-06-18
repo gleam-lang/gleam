@@ -872,6 +872,32 @@ pub fn main() -> Nil {
 }
 
 #[test]
+fn list_spread_followed_by_extra_item_and_another_spread() {
+    assert_module_error!(
+        r#"
+pub fn main() -> Nil {
+  let xs = [1, 2, 3]
+  let ys = [5, 6, 7]
+  [..xs, 4, ..ys]
+}
+"#
+    );
+}
+
+#[test]
+fn list_spread_followed_by_other_spread() {
+    assert_module_error!(
+        r#"
+pub fn main() -> Nil {
+  let xs = [1, 2, 3]
+  let ys = [5, 6, 7]
+  [1, ..xs, ..ys]
+}
+"#
+    );
+}
+
+#[test]
 fn list_spread_as_first_item_followed_by_other_items() {
     assert_module_error!(
         r#"
@@ -1785,4 +1811,19 @@ fn assert_statement_without_expression() {
 #[test]
 fn assert_statement_followed_by_statement() {
     assert_error!("assert let a = 10");
+}
+
+#[test]
+fn special_error_for_pythonic_import() {
+    assert_module_error!("import gleam.io");
+}
+
+#[test]
+fn special_error_for_pythonic_neste_import() {
+    assert_module_error!("import one.two.three");
+}
+
+#[test]
+fn doesnt_issue_special_error_for_pythonic_import_if_slash() {
+    assert_module_error!("import one/two.three");
 }

@@ -1,0 +1,21 @@
+---
+source: test-output/src/tests/echo.rs
+assertion_line: 201
+expression: output
+snapshot_kind: text
+---
+--- main.gleam ----------------------
+pub fn main() {
+  echo circular_reference()
+  Nil
+}
+
+type Thing
+
+@external(javascript, "./main_ffi.mjs", "circular_reference")
+fn circular_reference() -> Thing
+
+
+--- gleam run output ----------------
+[90msrc/main.gleam:2[39m
+#(//js(circular reference))

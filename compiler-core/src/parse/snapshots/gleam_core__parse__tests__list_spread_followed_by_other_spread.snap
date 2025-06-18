@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\npub fn main() -> Nil {\n  let xs = [1, 2, 3]\n  let ys = [5, 6, 7]\n  [1, ..xs, ..ys]\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() -> Nil {
+  let xs = [1, 2, 3]
+  let ys = [5, 6, 7]
+  [1, ..xs, ..ys]
+}
+
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:5:13
+  │
+5 │   [1, ..xs, ..ys]
+  │       --    ^^ I wasn't expecting a second spread here
+  │       │      
+  │       You're using a spread here
+
+Lists are immutable and singly-linked, so to join two or more lists
+all the elements of the lists would need to be copied into a new list.
+This would be slow, so there is no built-in syntax for it.

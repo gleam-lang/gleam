@@ -167,6 +167,9 @@ pub enum Error {
         location: SrcSpan,
         name: EcoString,
         variables: Vec<EcoString>,
+        /// If there's a discarded variable with the same name in the same scope
+        /// this will contain its location.
+        discarded_location: Option<SrcSpan>,
         type_with_name_in_scope: bool,
     },
 
@@ -221,6 +224,7 @@ pub enum Error {
     IncorrectArity {
         location: SrcSpan,
         expected: usize,
+        context: IncorrectArityContext,
         given: usize,
         labels: Vec<EcoString>,
     },
@@ -671,6 +675,12 @@ pub enum LiteralCollectionKind {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IncorrectArityContext {
+    Pattern,
+    Function,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InvalidImportKind {
     SrcImportingTest,
     SrcImportingDev,
@@ -1020,6 +1030,13 @@ pub enum Warning {
         first: SrcSpan,
         second: SrcSpan,
     },
+
+    /// Top-level definition should not shadow an imported one.
+    /// This includes constant or function imports.
+    TopLevelDefinitionShadowsImport {
+        location: SrcSpan,
+        name: EcoString,
+    },
 }
 
 #[derive(Debug, Eq, Copy, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
@@ -1246,6 +1263,7 @@ impl Warning {
             | Warning::AssertLiteralValue { location, .. }
             | Warning::BitArraySegmentTruncatedValue { location, .. }
             | Warning::UnusedDiscardPattern { location, .. }
+            | Warning::TopLevelDefinitionShadowsImport { location, .. }
             | Warning::ModuleImportedTwice {
                 second: location, ..
             } => *location,
@@ -1295,6 +1313,7 @@ pub fn convert_get_value_constructor_error(
             location,
             name,
             variables,
+            discarded_location: None,
             type_with_name_in_scope,
         },
 
@@ -1425,6 +1444,7 @@ pub fn convert_not_fun_error(
         ) => Error::IncorrectArity {
             labels: vec![],
             location: call_location,
+            context: IncorrectArityContext::Function,
             expected,
             given,
         },

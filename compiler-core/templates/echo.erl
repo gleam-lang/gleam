@@ -1,6 +1,15 @@
--define(is_lowercase_char(X), (X > 96 andalso X < 123)).
--define(is_underscore_char(X), (X == 95)).
--define(is_digit_char(X), (X > 47 andalso X < 58)).
+-define(is_lowercase_char(X),
+    (X > 96 andalso X < 123)).
+
+-define(is_underscore_char(X),
+    (X == 95)).
+
+-define(is_digit_char(X),
+    (X > 47 andalso X < 58)).
+
+-define(is_ascii_character(X),
+    (erlang:is_integer(X) andalso X >= 32 andalso X =< 126)).
+
 -define(could_be_record(Tuple),
     erlang:is_tuple(Tuple) andalso
         erlang:is_atom(erlang:element(1, Tuple)) andalso
@@ -80,7 +89,8 @@ inspect@atom(Atom) ->
     end.
 
 inspect@list(List) ->
-    case inspect@proper_or_improper_list(List) of
+    case inspect@list_loop(List, true) of
+        {charlist, _} -> ["charlist.from_string(\"", erlang:list_to_binary(List), "\")"];
         {proper, Elements} -> ["[", Elements, "]"];
         {improper, Elements} -> ["//erl([", Elements, "])"]
     end.
@@ -141,14 +151,17 @@ inspect@escape_grapheme(Char) ->
 inspect@convert_to_u(Code) ->
     erlang:list_to_binary(io_lib:format("\\u{~4.16.0B}", [Code])).
 
-inspect@proper_or_improper_list(List) ->
+inspect@list_loop(List, Ascii) ->
     case List of
         [] ->
             {proper, []};
+        [First] when Ascii andalso ?is_ascii_character(First) ->
+            {charlist, nil};
         [First] ->
             {proper, [echo@inspect(First)]};
         [First | Rest] when erlang:is_list(Rest) ->
-            {Kind, Inspected} = inspect@proper_or_improper_list(Rest),
+            StillAscii = Ascii andalso ?is_ascii_character(First),
+            {Kind, Inspected} = inspect@list_loop(Rest, StillAscii),
             {Kind, [echo@inspect(First), ", " | Inspected]};
         [First | ImproperRest] ->
             {improper, [echo@inspect(First), " | ", echo@inspect(ImproperRest)]}

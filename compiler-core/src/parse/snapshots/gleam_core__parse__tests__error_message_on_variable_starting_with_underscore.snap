@@ -15,5 +15,5 @@ error: Syntax error
 3 │     let val = _func_starting_with_underscore(1)
   │               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ I'm expecting a lowercase name here
 
-Hint: Variable and module names start with a lowercase letter, and can
-contain a-z, 0-9, or _.
+Hint: Variable and module names start with a lowercase letter, and can contain
+a-z, 0-9, or _.

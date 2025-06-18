@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
+assertion_line: 974
 expression: "\n            import gleam/wibble.{one} as wobble\n            pub const one = one\n        "
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 -- gleam/wibble.gleam
@@ -22,3 +24,14 @@ warning: Unused imported module alias
 Hint: You can safely remove it.
 
     import gleam/wibble as _
+
+
+warning: Shadowed Import
+  ┌─ /src/warning/wrn.gleam:3:13
+  │
+3 │             pub const one = one
+  │             ^^^^^^^^^^^^^ `one` is defined here
+
+Definition of one shadows an imported value.
+The imported value could not be used in this module anyway.
+Hint: Either rename the definition or remove the import.

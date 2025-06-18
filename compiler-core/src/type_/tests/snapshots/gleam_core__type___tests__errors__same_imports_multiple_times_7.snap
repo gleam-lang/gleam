@@ -25,12 +25,12 @@ expression: "\n        import one.{\n          fn1\n        } as x\n        impo
 
 ----- ERROR
 error: Duplicate import
-  ┌─ /src/one/two.gleam:2:9
+  ┌─ /src/one/two.gleam:5:9
   │    
 2 │   ╭         import one.{
 3 │   │           fn1
 4 │   │         } as x
-  │   ╰──────────────^ First imported here
+  │   ╰──────────────' First imported here
 5 │ ╭           import two.{
 6 │ │             fn2
 7 │ │           } as x

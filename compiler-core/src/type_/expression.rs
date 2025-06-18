@@ -18,7 +18,8 @@ use crate::{
     parse::PatternPosition,
     reference::ReferenceKind,
 };
-use hexpm::version::Version;
+use ecow::eco_format;
+use hexpm::version::{LowestVersion, Version};
 use im::hashmap;
 use itertools::Itertools;
 use num_bigint::BigInt;
@@ -1007,6 +1008,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .clone()
             .map(|type_| self.type_from_ast(&type_))
             .unwrap_or_else(|| Ok(self.new_unbound_var()))?;
+
+        match &names {
+            ArgNames::Named { .. } | ArgNames::NamedLabelled { .. } => (),
+            ArgNames::Discard { name, .. } | ArgNames::LabelledDiscard { name, .. } => {
+                let _ = self
+                    .environment
+                    .discarded_names
+                    .insert(name.clone(), location);
+            }
+        }
 
         // If we know the expected type of the argument from its contextual
         // usage then unify the newly constructed type with the expected type.
@@ -3469,6 +3480,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location: *location,
                 name: name.clone(),
                 variables: self.environment.local_value_names(),
+                discarded_location: self
+                    .environment
+                    .discarded_names
+                    .get(&eco_format!("_{name}"))
+                    .cloned(),
                 type_with_name_in_scope: self
                     .environment
                     .module_types
@@ -3643,7 +3659,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     .map_err(|e| convert_get_value_constructor_error(e, location, None))?
                 {
                     // The fun has a field map so labelled arguments may be present and need to be reordered.
-                    Some(field_map) => field_map.reorder(&mut args, location)?,
+                    Some(field_map) => {
+                        field_map.reorder(&mut args, location, IncorrectArityContext::Function)?
+                    }
 
                     // The fun has no field map and so we error if arguments have been labelled
                     None => assert_no_labelled_arguments(&args)?,
@@ -3959,7 +3977,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 match field_map {
                     // The fun has a field map so labelled arguments may be
                     // present and need to be reordered.
-                    Some(field_map) => field_map.reorder(&mut args, location),
+                    Some(field_map) => {
+                        field_map.reorder(&mut args, location, IncorrectArityContext::Function)
+                    }
 
                     // The fun has no field map and so we error if arguments
                     // have been labelled.
@@ -3979,6 +3999,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 Error::IncorrectArity {
                     expected,
                     given,
+                    context,
                     labels,
                     location,
                 } => {
@@ -3986,6 +4007,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     self.problems.error(Error::IncorrectArity {
                         expected,
                         given,
+                        context,
                         labels,
                         location,
                     });

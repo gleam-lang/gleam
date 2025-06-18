@@ -1,0 +1,23 @@
+---
+source: test-output/src/tests/echo.rs
+assertion_line: 206
+expression: output
+snapshot_kind: text
+---
+--- main.gleam ----------------------
+import thing
+
+pub fn main() {
+  echo #(1, singleton(), singleton())
+  Nil
+}
+
+@external(javascript, "./main_ffi.mjs", "singleton")
+fn singleton() -> thing.Thing {
+  thing.Thing
+}
+
+
+--- gleam run output ----------------
+[90msrc/main.gleam:4[39m
+#(1, Thing, Thing)

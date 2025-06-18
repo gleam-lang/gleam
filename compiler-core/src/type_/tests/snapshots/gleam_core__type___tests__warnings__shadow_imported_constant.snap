@@ -1,0 +1,37 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+assertion_line: 3950
+expression: "\nimport module.{value}\n\npub const value = 1\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+-- module.gleam
+
+pub const value = 1
+
+
+-- main.gleam
+
+import module.{value}
+
+pub const value = 1
+
+
+----- WARNING
+warning: Unused imported module
+  ┌─ /src/warning/wrn.gleam:2:1
+  │
+2 │ import module.{value}
+  │ ^^^^^^^^^^^^^^^^^^^^^ This imported module is never used
+
+Hint: You can safely remove it.
+
+warning: Shadowed Import
+  ┌─ /src/warning/wrn.gleam:4:1
+  │
+4 │ pub const value = 1
+  │ ^^^^^^^^^^^^^^^ `value` is defined here
+
+Definition of value shadows an imported value.
+The imported value could not be used in this module anyway.
+Hint: Either rename the definition or remove the import.

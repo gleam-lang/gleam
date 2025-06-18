@@ -1,4 +1,4 @@
-use pubgrub::range::Range;
+use pubgrub::Range;
 
 use crate::{
     analyse::TargetSupport,
@@ -55,6 +55,10 @@ pub struct Environment<'a> {
 
     /// Values defined in the current function (or the prelude)
     pub scope: im::HashMap<EcoString, ValueConstructor>,
+
+    // The names of all the ignored variables and arguments in scope:
+    // `let _var = 10` `pub fn main(_var) { todo }`.
+    pub discarded_names: im::HashMap<EcoString, SrcSpan>,
 
     /// Types defined in the current module (or the prelude)
     pub module_types: HashMap<EcoString, TypeConstructor>,
@@ -133,6 +137,7 @@ impl<'a> Environment<'a> {
             unqualified_imported_types: HashMap::new(),
             accessors: prelude.accessors.clone(),
             scope: prelude.values.clone().into(),
+            discarded_names: im::HashMap::new(),
             importable_modules,
             current_module,
             local_variable_usages: vec![HashMap::new()],
@@ -148,6 +153,7 @@ impl<'a> Environment<'a> {
 #[derive(Debug)]
 pub struct ScopeResetData {
     local_values: im::HashMap<EcoString, ValueConstructor>,
+    discarded_names: im::HashMap<EcoString, SrcSpan>,
 }
 
 impl Environment<'_> {
@@ -170,8 +176,12 @@ impl Environment<'_> {
 
     pub fn open_new_scope(&mut self) -> ScopeResetData {
         let local_values = self.scope.clone();
+        let discarded_names = self.discarded_names.clone();
         self.local_variable_usages.push(HashMap::new());
-        ScopeResetData { local_values }
+        ScopeResetData {
+            local_values,
+            discarded_names,
+        }
     }
 
     pub fn close_scope(
@@ -180,6 +190,11 @@ impl Environment<'_> {
         was_successful: bool,
         problems: &mut Problems,
     ) {
+        let ScopeResetData {
+            local_values,
+            discarded_names,
+        } = data;
+
         let unused = self
             .local_variable_usages
             .pop()
@@ -192,7 +207,8 @@ impl Environment<'_> {
         if was_successful {
             self.handle_unused_variables(unused, problems);
         }
-        self.scope = data.local_values;
+        self.scope = local_values;
+        self.discarded_names = discarded_names;
     }
 
     pub fn next_uid(&mut self) -> u64 {

@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type Wibble {\n  Wibble(Int)\n}\n\npub fn go(x) {\n  case x {\n    Wibble(_y) -> y + 1\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(Int)
+}
+
+pub fn go(x) {
+  case x {
+    Wibble(_y) -> y + 1
+  }
+}
+
+
+----- ERROR
+error: Unknown variable
+  ┌─ /src/one/two.gleam:8:19
+  │
+8 │     Wibble(_y) -> y + 1
+  │            --     ^ So this is not in scope
+  │            │       
+  │            This value is discarded
+
+Hint: Change `_y` to `y` or reference another variable

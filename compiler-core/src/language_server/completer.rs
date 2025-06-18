@@ -565,12 +565,22 @@ where
 
             // Find the function that the cursor is in and push completions for
             // its arguments and local variables.
-            if let Some(fun) = self.module.ast.definitions.iter().find_map(|d| match d {
-                Definition::Function(f) if f.full_location().contains(cursor) => Some(f),
-                _ => None,
-            }) {
+            if let Some(function) =
+                self.module
+                    .ast
+                    .definitions
+                    .iter()
+                    .find_map(|definition| match definition {
+                        Definition::Function(function)
+                            if function.full_location().contains(cursor) =>
+                        {
+                            Some(function)
+                        }
+                        _ => None,
+                    })
+            {
                 completions.extend(
-                    LocalCompletion::new(mod_name, insert_range, cursor).fn_completions(fun),
+                    LocalCompletion::new(mod_name, insert_range, cursor).fn_completions(function),
                 );
             }
 

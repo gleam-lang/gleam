@@ -8,7 +8,7 @@ use crate::{
     GLEAM_CORE_PACKAGE_NAME,
     ast::{
         self, Arg, BitArrayOption, CustomType, Definition, DefinitionLocation, Function,
-        GroupedStatements, Import, ModuleConstant, Publicity, RecordConstructor,
+        GroupedDefinitions, Import, ModuleConstant, Publicity, RecordConstructor,
         RecordConstructorArg, SrcSpan, Statement, TypeAlias, TypeAst, TypeAstConstructor,
         TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, TypedDefinition, TypedExpr,
         TypedFunction, TypedModule, UntypedArg, UntypedCustomType, UntypedFunction, UntypedImport,
@@ -214,7 +214,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 .package_config
                 .gleam_version
                 .clone()
-                .map(|version| version.as_pubgrub()),
+                .map(|version| version.into()),
             current_module: self.module_name.clone(),
             target: self.target,
             importable_modules: self.importable_modules,
@@ -223,71 +223,80 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
         .build();
 
-        let statements = GroupedStatements::new(module.into_iter_statements(self.target));
-        let statements_count = statements.len();
+        let definitions = GroupedDefinitions::new(module.into_iter_definitions(self.target));
+        let definitions_count = definitions.len();
 
         // Register any modules, types, and values being imported
         // We process imports first so that anything imported can be referenced
         // anywhere in the module.
-        let mut env = Importer::run(self.origin, env, &statements.imports, &mut self.problems);
+        let mut env = Importer::run(self.origin, env, &definitions.imports, &mut self.problems);
 
         // Register types so they can be used in constructors and functions
         // earlier in the module.
-        for t in &statements.custom_types {
-            if let Err(error) = self.register_types_from_custom_type(t, &mut env) {
+        for type_ in &definitions.custom_types {
+            if let Err(error) = self.register_types_from_custom_type(type_, &mut env) {
                 return self.all_errors(error);
             }
         }
 
-        let sorted_aliases = match sorted_type_aliases(&statements.type_aliases) {
-            Ok(it) => it,
+        let sorted_aliases = match sorted_type_aliases(&definitions.type_aliases) {
+            Ok(sorted_aliases) => sorted_aliases,
             Err(error) => return self.all_errors(error),
         };
-        for t in sorted_aliases {
-            self.register_type_alias(t, &mut env);
+        for type_alias in sorted_aliases {
+            self.register_type_alias(type_alias, &mut env);
         }
 
-        for f in &statements.functions {
-            self.register_value_from_function(f, &mut env);
+        for function in &definitions.functions {
+            self.register_value_from_function(function, &mut env);
         }
 
         // Infer the types of each statement in the module
-        let mut typed_statements = Vec::with_capacity(statements_count);
-        for i in statements.imports {
-            optionally_push(&mut typed_statements, self.analyse_import(i, &env));
+        let mut typed_definitions = Vec::with_capacity(definitions_count);
+        for import in definitions.imports {
+            optionally_push(&mut typed_definitions, self.analyse_import(import, &env));
         }
-        for t in statements.custom_types {
-            optionally_push(&mut typed_statements, self.analyse_custom_type(t, &mut env));
+        for type_ in definitions.custom_types {
+            optionally_push(
+                &mut typed_definitions,
+                self.analyse_custom_type(type_, &mut env),
+            );
         }
-        for t in statements.type_aliases {
-            typed_statements.push(analyse_type_alias(t, &mut env));
+        for type_alias in definitions.type_aliases {
+            typed_definitions.push(analyse_type_alias(type_alias, &mut env));
         }
 
-        // Sort functions and constants into dependency order for inference. Definitions that do
-        // not depend on other definitions are inferred first, then ones that depend
-        // on those, etc.
+        // Sort functions and constants into dependency order for inference.
+        // Definitions that do not depend on other definitions are inferred
+        // first, then ones that depend on those, etc.
         let definition_groups =
-            match into_dependency_order(statements.functions, statements.constants) {
-                Ok(it) => it,
+            match into_dependency_order(definitions.functions, definitions.constants) {
+                Ok(definition_groups) => definition_groups,
                 Err(error) => return self.all_errors(error),
             };
         let mut working_group = vec![];
 
         for group in definition_groups {
-            // A group may have multiple functions that depend on each other through
-            // mutual recursion.
+            // A group may have multiple functions that depend on each other
+            // through mutual recursion.
 
             for definition in group {
-                let def = match definition {
-                    CallGraphNode::Function(f) => self.infer_function(f, &mut env),
-                    CallGraphNode::ModuleConstant(c) => self.infer_module_constant(c, &mut env),
+                let definition = match definition {
+                    CallGraphNode::Function(function) => self.infer_function(function, &mut env),
+                    CallGraphNode::ModuleConstant(constant) => {
+                        self.infer_module_constant(constant, &mut env)
+                    }
                 };
-                working_group.push(def);
+                working_group.push(definition);
             }
 
             // Now that the entire group has been inferred, generalise their types.
             for inferred in working_group.drain(..) {
-                typed_statements.push(generalise_statement(inferred, &self.module_name, &mut env));
+                typed_definitions.push(generalise_definition(
+                    inferred,
+                    &self.module_name,
+                    &mut env,
+                ));
             }
         }
 
@@ -335,7 +344,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let module = ast::Module {
             documentation: documentation.clone(),
             name: self.module_name.clone(),
-            definitions: typed_statements,
+            definitions: typed_definitions,
             names: type_names,
             unused_definition_positions,
             type_info: ModuleInterface {
@@ -393,6 +402,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             ..
         } = c;
         self.check_name_case(name_location, &name, Named::Constant);
+        // If the constant's name matches an unqualified import, emit a warning:
+        self.check_shadow_import(&name, c.location, environment);
 
         environment.references.begin_constant();
 
@@ -539,11 +550,23 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             has_javascript_external: external_javascript.is_some(),
         };
 
-        let typed_args = arguments
-            .into_iter()
-            .zip(&prereg_args_types)
-            .map(|(a, t)| a.set_type(t.clone()))
-            .collect_vec();
+        let mut typed_args = Vec::with_capacity(arguments.len());
+        for (argument, type_) in arguments.into_iter().zip(&prereg_args_types) {
+            let argument = argument.set_type(type_.clone());
+            match &argument.names {
+                ast::ArgNames::Named { .. } | ast::ArgNames::NamedLabelled { .. } => (),
+                ast::ArgNames::Discard { name, location }
+                | ast::ArgNames::LabelledDiscard {
+                    name,
+                    name_location: location,
+                    ..
+                } => {
+                    let _ = environment.discarded_names.insert(name.clone(), *location);
+                }
+            }
+
+            typed_args.push(argument);
+        }
 
         // We have already registered the function in the `register_value_from_function`
         // method, but here we must set this as the current function again, so that anything
@@ -1422,6 +1445,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let (name_location, name) = name.as_ref().expect("A module's function must be named");
 
         self.check_name_case(*name_location, name, Named::Function);
+        // If the function's name matches an unqualified import, emit a warning:
+        self.check_shadow_import(name, f.location, environment);
 
         environment.references.register_value(
             name.clone(),
@@ -1551,6 +1576,21 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             self.minimum_required_version = minimum_required_version;
         }
     }
+
+    fn check_shadow_import(
+        &mut self,
+        name: &EcoString,
+        location: SrcSpan,
+        environment: &mut Environment<'_>,
+    ) {
+        if environment.unqualified_imported_names.contains_key(name) {
+            self.problems
+                .warning(Warning::TopLevelDefinitionShadowsImport {
+                    location,
+                    name: name.clone(),
+                });
+        }
+    }
 }
 
 fn optionally_push<T>(vector: &mut Vec<T>, item: Option<T>) {
@@ -1667,19 +1707,19 @@ where
     }
 }
 
-fn generalise_statement(
-    s: TypedDefinition,
+fn generalise_definition(
+    definition: TypedDefinition,
     module_name: &EcoString,
     environment: &mut Environment<'_>,
 ) -> TypedDefinition {
-    match s {
+    match definition {
         Definition::Function(function) => generalise_function(function, environment, module_name),
         Definition::ModuleConstant(constant) => {
             generalise_module_constant(constant, environment, module_name)
         }
-        statement @ (Definition::TypeAlias(TypeAlias { .. })
+        definition @ (Definition::TypeAlias(TypeAlias { .. })
         | Definition::CustomType(CustomType { .. })
-        | Definition::Import(Import { .. })) => statement,
+        | Definition::Import(Import { .. })) => definition,
     }
 }
 

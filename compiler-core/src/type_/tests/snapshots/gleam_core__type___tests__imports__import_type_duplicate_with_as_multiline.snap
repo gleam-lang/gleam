@@ -17,10 +17,10 @@ pub type X = One
 
 ----- ERROR
 error: Duplicate type definition
-  ┌─ /src/one/two.gleam:2:11
+  ┌─ /src/one/two.gleam:3:11
   │
 2 │           type One as MyOne,
-  │           ^^^^^^^^^^^^^^^^^ First defined here
+  │           ----------------- First defined here
 3 │           type One as MyOne
   │           ^^^^^^^^^^^^^^^^^ Redefined here
 

@@ -1,22 +1,22 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 use crate::build::{Origin, Outcome, Runtime, Target};
+use crate::dependency::{PackageFetcher, ResolutionError};
 use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
+use crate::parse::error::ParseErrorDetails;
 use crate::strings::{to_snake_case, to_upper_camel_case};
 use crate::type_::collapse_links;
 use crate::type_::error::{
-    InvalidImportKind, MissingAnnotation, ModuleValueUsageContext, Named, UnknownField,
-    UnknownTypeHint, UnsafeRecordUpdateReason,
+    IncorrectArityContext, InvalidImportKind, MissingAnnotation, ModuleValueUsageContext, Named,
+    UnknownField, UnknownTypeHint, UnsafeRecordUpdateReason,
 };
 use crate::type_::printer::{Names, Printer};
 use crate::type_::{FieldAccessUsage, error::PatternMatchKind};
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
 use crate::{bit_array, diagnostic::Level, javascript, type_::UnifyErrorSituation};
 use ecow::EcoString;
-use hexpm::version::ResolutionError;
 use itertools::Itertools;
-use pubgrub::package::Package;
-use pubgrub::report::DerivationTree;
-use pubgrub::version::Version;
+use pubgrub::Package;
+use pubgrub::{DerivationTree, VersionSet};
 use std::borrow::Cow;
 use std::collections::HashSet;
 use std::fmt::{Debug, Display};
@@ -190,6 +190,9 @@ pub enum Error {
 
     #[error("{input} is not a valid version. {error}")]
     InvalidVersionFormat { input: String, error: String },
+
+    #[error("incompatible locked version. {error}")]
+    IncompatibleLockedVersion { error: String },
 
     #[error("project root already exists")]
     ProjectRootAlreadyExist { path: String },
@@ -431,23 +434,28 @@ impl Error {
         Self::TarFinish(error.to_string())
     }
 
-    pub fn dependency_resolution_failed(error: ResolutionError) -> Error {
-        fn collect_conflicting_packages<'dt, P: Package, V: Version>(
-            derivation_tree: &'dt DerivationTree<P, V>,
+    pub fn dependency_resolution_failed<T: PackageFetcher>(error: ResolutionError<'_, T>) -> Error {
+        fn collect_conflicting_packages<
+            'dt,
+            P: Package,
+            VS: VersionSet,
+            M: Clone + Display + Debug + Eq,
+        >(
+            derivation_tree: &'dt DerivationTree<P, VS, M>,
             conflicting_packages: &mut HashSet<&'dt P>,
         ) {
             match derivation_tree {
                 DerivationTree::External(external) => match external {
-                    pubgrub::report::External::NotRoot(package, _) => {
+                    pubgrub::External::NotRoot(package, _) => {
                         let _ = conflicting_packages.insert(package);
                     }
-                    pubgrub::report::External::NoVersions(package, _) => {
+                    pubgrub::External::NoVersions(package, _) => {
                         let _ = conflicting_packages.insert(package);
                     }
-                    pubgrub::report::External::UnavailableDependencies(package, _) => {
+                    pubgrub::External::Custom(package, _, _) => {
                         let _ = conflicting_packages.insert(package);
                     }
-                    pubgrub::report::External::FromDependencyOf(package, _, dep_package, _) => {
+                    pubgrub::External::FromDependencyOf(package, _, dep_package, _) => {
                         let _ = conflicting_packages.insert(package);
                         let _ = conflicting_packages.insert(dep_package);
                     }
@@ -488,26 +496,12 @@ The conflicting packages are:
                 "An error occurred while trying to retrieve dependencies of {package}@{version}: {source}",
             ),
 
-            ResolutionError::DependencyOnTheEmptySet {
-                package,
-                version,
-                dependent,
-            } => format!("{package}@{version} has an impossible dependency on {dependent}",),
-
-            ResolutionError::SelfDependency { package, version } => {
-                format!("{package}@{version} somehow depends on itself.")
-            }
-
-            ResolutionError::ErrorChoosingPackageVersion(err) => {
-                format!("Unable to determine package versions: {err}")
+            ResolutionError::ErrorChoosingVersion { package, source } => {
+                format!("An error occured while chosing the version of {package}: {source}",)
             }
 
             ResolutionError::ErrorInShouldCancel(err) => {
                 format!("Dependency resolution was cancelled. {err}")
-            }
-
-            ResolutionError::Failure(err) => {
-                format!("An unrecoverable error happened while solving dependencies: {err}")
             }
         })
     }
@@ -2215,18 +2209,23 @@ but {given} where provided.");
                 TypeError::IncorrectArity {
                     labels,
                     location,
+                    context,
                     expected,
                     given,
                 } => {
                     let text = if labels.is_empty() {
                         "".into()
                     } else {
+                        let subject = match context {
+                            IncorrectArityContext::Pattern => "pattern",
+                            IncorrectArityContext::Function => "call",
+                        };
                         let labels = labels
                             .iter()
                             .map(|p| format!("  - {p}"))
                             .sorted()
                             .join("\n");
-                        format!("This call accepts these additional labelled arguments:\n\n{labels}",)
+                        format!("This {subject} accepts these additional labelled arguments:\n\n{labels}",)
                     };
                     let expected = match expected {
                         0 => "no arguments".into(),
@@ -2395,34 +2394,67 @@ but no type in scope with that name."
                 TypeError::UnknownVariable {
                     location,
                     variables,
+                    discarded_location,
                     name,
                     type_with_name_in_scope,
                 } => {
-                    let text = if *type_with_name_in_scope {
-                        wrap_format!("`{name}` is a type, it cannot be used as a value.")
-                    } else {
-                        let is_first_char_uppercase = name.chars().next().is_some_and(char::is_uppercase);
+                    let title = String::from("Unknown variable");
 
-                        if is_first_char_uppercase {
-                            wrap_format!("The custom type variant constructor `{name}` is not in scope here.")
-                        } else {
-                            wrap_format!("The name `{name}` is not in scope here.")
-                        }
-                    };
-                    Diagnostic {
-                        title: "Unknown variable".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
+                    if let Some(ignored_location) = discarded_location {
+                        let location = Location {
                             label: Label {
-                                text: did_you_mean(name, variables),
+                                text: Some("So this is not in scope".into()),
                                 span: *location,
                             },
                             path: path.clone(),
                             src: src.clone(),
-                            extra_labels: vec![],
-                        }),
+                            extra_labels: vec![
+                                ExtraLabel {
+                                    src_info: None,
+                                    label: Label {
+                                        text: Some("This value is discarded".into()),
+                                        span: *ignored_location,
+                                    }
+                                }
+                            ],
+                        };
+                        Diagnostic {
+                            title,
+                            text: "".into(),
+                            hint: Some(wrap_format!(
+                                "Change `_{name}` to `{name}` or reference another variable",
+                            )),
+                            level: Level::Error,
+                            location: Some(location),
+                        }
+                    } else {
+                        let text = if *type_with_name_in_scope {
+                            wrap_format!("`{name}` is a type, it cannot be used as a value.")
+                        } else {
+                            let is_first_char_uppercase = name.chars().next().is_some_and(char::is_uppercase);
+
+                            if is_first_char_uppercase {
+                                wrap_format!("The custom type variant constructor `{name}` is not in scope here.")
+                            } else {
+                                wrap_format!("The name `{name}` is not in scope here.")
+                            }
+                        };
+
+                        Diagnostic {
+                            title,
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: did_you_mean(name, variables),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
                 }
 
@@ -3726,10 +3758,7 @@ and explain your usecase for this pattern, and how you would expect it to behave
 
 
             Error::Parse { path, src, error } => {
-                let (label, extra) = error.details();
-                let text = extra.join("\n");
-
-                let adjusted_location = if error.error == ParseErrorType::UnexpectedEof {
+                let location = if error.error == ParseErrorType::UnexpectedEof {
                     crate::ast::SrcSpan {
                         start: (src.len() - 1) as u32,
                         end: (src.len() - 1) as u32,
@@ -3738,20 +3767,22 @@ and explain your usecase for this pattern, and how you would expect it to behave
                     error.location
                 };
 
-                vec![Diagnostic {
-                    title: "Syntax error".into(),
+                let title = String::from("Syntax error");
+                let ParseErrorDetails{ text, label_text, extra_labels, hint  } = error.error.details();
+                vec![Diagnostic{
+                    title,
                     text,
-                    hint: None,
                     level: Level::Error,
                     location: Some(Location {
-                        label: Label {
-                            text: Some(label.to_string()),
-                            span: adjusted_location,
-                        },
-                        path: path.clone(),
                         src: src.clone(),
-                        extra_labels: vec![],
+                        path: path.clone(),
+                        label: Label {
+                            text: Some(label_text.into()),
+                            span: location
+                        },
+                        extra_labels
                     }),
+                    hint,
                 }]
             }
 
@@ -3958,6 +3989,22 @@ The error from the parser was:
                 );
                 vec![Diagnostic {
                     title: "Invalid version format".into(),
+                    text,
+                    hint: None,
+                    location: None,
+                    level: Level::Error,
+                }]
+            }
+
+            Error::IncompatibleLockedVersion {  error } => {
+                let text = format!(
+                "There is an incompatiblity between a version specified in
+manifest.toml and a version range specified in gleam.toml:
+
+    {error}"
+                );
+                vec![Diagnostic {
+                    title: "Incompatible locked version".into(),
                     text,
                     hint: None,
                     location: None,

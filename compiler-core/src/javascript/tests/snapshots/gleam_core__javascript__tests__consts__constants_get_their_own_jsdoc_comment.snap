@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/javascript/tests/consts.rs
+expression: "\n/// 11 is clearly the best number!\npub const jaks_favourite_number = 11\n"
+---
+----- SOURCE CODE
+
+/// 11 is clearly the best number!
+pub const jaks_favourite_number = 11
+
+
+----- COMPILED JAVASCRIPT
+/**
+ * 11 is clearly the best number!
+ */
+export const jaks_favourite_number = 11;

@@ -1290,14 +1290,14 @@ can already tell whether it will be true or false.",
                         src: src.clone(),
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
-                            text: None,
-                            span: *first,
+                            text: Some("Reimported here".into()),
+                            span: *second,
                         },
                         extra_labels: vec![ExtraLabel {
                             src_info: None,
                             label: diagnostic::Label {
-                                text: None,
-                                span: *second,
+                                text: Some("First imported here".into()),
+                                span: *first,
                             },
                         }],
                     }),
@@ -1318,6 +1318,29 @@ can already tell whether it will be true or false.",
                     }),
                     hint: Some(format!("Replace with {name}")),
                 },
+
+                type_::Warning::TopLevelDefinitionShadowsImport { location, name } => {
+                    let text = format!(
+                        "Definition of {} shadows an imported value.
+The imported value could not be used in this module anyway.",
+                        name
+                    );
+                    Diagnostic {
+                        title: "Shadowed Import".into(),
+                        text: wrap(&text),
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            path: path.clone(),
+                            src: src.clone(),
+                            label: diagnostic::Label {
+                                text: Some(wrap(&format!("`{}` is defined here", name))),
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                        hint: Some("Either rename the definition or remove the import.".into()),
+                    }
+                }
             },
 
             Warning::DeprecatedEnvironmentVariable { variable } => {

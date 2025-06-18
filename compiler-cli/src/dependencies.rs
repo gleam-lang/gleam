@@ -15,7 +15,7 @@ use gleam_core::{
     Error, Result,
     build::{Mode, Target, Telemetry},
     config::PackageConfig,
-    dependency,
+    dependency::{self, PackageFetchError},
     error::{FileIoAction, FileKind, ShellCommandFailureReason, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
     io::{HttpClient as _, TarUnpacker, WrappedReader},
@@ -314,7 +314,10 @@ fn remove_extra_requirements(config: &PackageConfig, manifest: &mut Manifest) ->
 pub fn parse_gleam_add_specifier(package: &str) -> Result<(EcoString, Requirement)> {
     let Some((package, version)) = package.split_once('@') else {
         // Default to the latest version available.
-        return Ok((package.into(), Requirement::hex(">= 0.0.0")));
+        return Ok((
+            package.into(),
+            Requirement::hex(">= 0.0.0").expect("'>= 0.0.0' should be a valid pubgrub range"),
+        ));
     };
 
     // Parse the major and minor from the provided semantic version.
@@ -357,7 +360,7 @@ pub fn parse_gleam_add_specifier(package: &str) -> Result<(EcoString, Requiremen
                 ),
             });
         }
-    };
+    }?;
 
     Ok((package.into(), requirement))
 }
@@ -958,7 +961,8 @@ fn provide_package(
     match provided.get(&package_name) {
         Some(package) if package.source == package_source => {
             // This package has already been provided from this source, return the version
-            let version = hexpm::version::Range::new(format!("== {}", &package.version));
+            let version = hexpm::version::Range::new(format!("== {}", &package.version))
+                .expect("== {version} should be a valid range");
             return Ok(version);
         }
         Some(package) => {
@@ -1006,7 +1010,8 @@ fn provide_package(
     }
     let _ = parents.pop();
     // Add the package to the provided packages dictionary
-    let version = hexpm::version::Range::new(format!("== {}", &config.version));
+    let version = hexpm::version::Range::new(format!("== {}", &config.version))
+        .expect("== {version} should be a valid range");
     let _ = provided.insert(
         config.name,
         ProvidedPackage {
@@ -1160,10 +1165,7 @@ impl TarUnpacker for Untar {
 }
 
 impl dependency::PackageFetcher for PackageFetcher {
-    fn get_dependencies(
-        &self,
-        package: &str,
-    ) -> Result<Rc<hexpm::Package>, Box<dyn std::error::Error>> {
+    fn get_dependencies(&self, package: &str) -> Result<Rc<hexpm::Package>, PackageFetchError> {
         {
             let runtime_cache = self.runtime_cache.borrow();
             let result = runtime_cache.get(package);
@@ -1179,21 +1181,13 @@ impl dependency::PackageFetcher for PackageFetcher {
         let response = self
             .runtime
             .block_on(self.http.send(request))
-            .map_err(Box::new)?;
+            .map_err(PackageFetchError::fetch_error)?;
 
-        match hexpm::get_package_response(response, HEXPM_PUBLIC_KEY) {
-            Ok(pkg) => {
-                let pkg = Rc::new(pkg);
-                let pkg_ref = Rc::clone(&pkg);
-                self.cache_package(package, pkg);
-                Ok(pkg_ref)
-            }
-            Err(e) => match e {
-                hexpm::ApiError::NotFound => {
-                    Err(format!("I couldn't find a package called `{}`", package).into())
-                }
-                _ => Err(e.into()),
-            },
-        }
+        let pkg = hexpm::get_package_response(response, HEXPM_PUBLIC_KEY)
+            .map_err(PackageFetchError::from)?;
+        let pkg = Rc::new(pkg);
+        let pkg_ref = Rc::clone(&pkg);
+        self.cache_package(package, pkg);
+        Ok(pkg_ref)
     }
 }

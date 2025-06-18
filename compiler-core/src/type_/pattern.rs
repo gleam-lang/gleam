@@ -1,4 +1,5 @@
-use hexpm::version::Version;
+use ecow::eco_format;
+use hexpm::version::{LowestVersion, Version};
 use im::hashmap;
 use itertools::Itertools;
 use num_bigint::BigInt;
@@ -586,6 +587,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         match pattern {
             Pattern::Discard { name, location, .. } => {
                 self.check_name_case(location, &name, Named::Discard);
+                let _ = self
+                    .environment
+                    .discarded_names
+                    .insert(name.clone(), location);
                 Pattern::Discard {
                     type_,
                     name,
@@ -613,8 +618,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
             Pattern::VarUsage { name, location, .. } => {
                 let constructor = match self.variables.get_mut(&name) {
-                    // If we've bound a variable in the current bit array pattern, we
-                    // want to use that.
+                    // If we've bound a variable in the current bit array pattern,
+                    // we want to use that.
                     Some(variable) if variable.in_scope() => {
                         variable.usage = Usage::UsedInPattern;
                         ValueConstructor::local_variable(
@@ -631,6 +636,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                 location,
                                 name: name.clone(),
                                 variables: self.environment.local_value_names(),
+                                discarded_location: self
+                                    .environment
+                                    .discarded_names
+                                    .get(&eco_format!("_{name}"))
+                                    .cloned(),
                                 type_with_name_in_scope: self
                                     .environment
                                     .module_types
@@ -695,10 +705,12 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             },
                         );
                     }
-                    AssignName::Discard(_) => {
-                        if let AssignName::Discard(right) = &right_side_assignment {
-                            self.check_name_case(right_location, right, Named::Discard);
-                        }
+                    AssignName::Discard(right) => {
+                        let _ = self
+                            .environment
+                            .discarded_names
+                            .insert(right.clone(), right_location);
+                        self.check_name_case(right_location, right, Named::Discard);
                     }
                 };
 
@@ -833,6 +845,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         self.error(Error::IncorrectArity {
                             labels: vec![],
                             location,
+                            context: IncorrectArityContext::Pattern,
                             expected: type_elements.len(),
                             given: elements.len(),
                         });
@@ -920,6 +933,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     }
                 };
 
+                let mut incorrect_arity_error = false;
                 match constructor.field_map() {
                     // The fun has a field map so labelled arguments may be present and need to be reordered.
                     Some(field_map) => {
@@ -1009,11 +1023,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             }
                         }
 
-                        if let Err(error) = field_map.reorder(&mut pattern_args, location) {
-                            {
-                                self.problems.error(error);
-                                self.error_encountered = true;
-                            };
+                        if let Err(error) = field_map.reorder(
+                            &mut pattern_args,
+                            location,
+                            IncorrectArityContext::Pattern,
+                        ) {
+                            incorrect_arity_error = true;
+                            self.problems.error(error);
+                            self.error_encountered = true;
                         }
                     }
 
@@ -1122,10 +1139,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             self.set_subject_variable_variant(variable_to_infer, inferred_variant);
                         }
 
-                        if args.len() != pattern_args.len() {
+                        // We're emitting the incorrect arity error only if we haven't emitted
+                        // one already. This might happen when we can't reorder the field map
+                        // of a constructor because there's not enough labels.
+                        if args.len() != pattern_args.len() && !incorrect_arity_error {
                             self.error(Error::IncorrectArity {
                                 labels: vec![],
                                 location,
+                                context: IncorrectArityContext::Pattern,
                                 expected: args.len(),
                                 given: pattern_args.len(),
                             });
@@ -1160,6 +1181,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             self.error(Error::IncorrectArity {
                                 labels: vec![],
                                 location,
+                                context: IncorrectArityContext::Pattern,
                                 expected: 0,
                                 given: pattern_args.len(),
                             });

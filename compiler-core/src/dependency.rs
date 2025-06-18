@@ -1,20 +1,18 @@
-use std::{borrow::Borrow, cell::RefCell, collections::HashMap, error::Error as StdError, rc::Rc};
+use std::{cell::RefCell, cmp::Reverse, collections::HashMap, rc::Rc};
 
 use crate::{Error, Result, manifest};
 
 use ecow::EcoString;
 use hexpm::{
     Dependency, Release,
-    version::{Range, ResolutionError, Version},
+    version::{Range, Version},
 };
-use pubgrub::{
-    solver::{Dependencies, choose_package_with_fewest_versions},
-    type_aliases::Map,
-};
+use pubgrub::{Dependencies, Map};
+use thiserror::Error;
 
 pub type PackageVersions = HashMap<String, Version>;
 
-type PubgrubRange = pubgrub::range::Range<Version>;
+type PubgrubRange = pubgrub::Range<Version>;
 
 pub fn resolve_versions<Requirements>(
     package_fetcher: &impl PackageFetcher,
@@ -28,8 +26,7 @@ where
 {
     tracing::info!("resolving_versions");
     let root_version = Version::new(0, 0, 0);
-    let requirements = root_dependencies(dependencies, locked)
-        .map_err(|boxed_error| Error::dependency_resolution_failed(*boxed_error))?;
+    let requirements = root_dependencies(dependencies, locked)?;
 
     // Creating a map of all the required packages that have exact versions specified
     let exact_deps = &requirements
@@ -50,7 +47,7 @@ where
         }],
     };
 
-    let packages = pubgrub::solver::resolve(
+    let packages = pubgrub::resolve(
         &DependencyProvider::new(package_fetcher, provided_packages, root, locked, exact_deps),
         root_name.as_str().into(),
         root_version,
@@ -136,7 +133,7 @@ fn parse_exact_version(ver: &str) -> Option<Version> {
 fn root_dependencies<Requirements>(
     base_requirements: Requirements,
     locked: &HashMap<EcoString, Version>,
-) -> Result<HashMap<String, Dependency>, Box<ResolutionError>>
+) -> Result<HashMap<String, Dependency>, Error>
 where
     Requirements: Iterator<Item = (EcoString, Range)>,
 {
@@ -150,7 +147,7 @@ where
                     app: None,
                     optional: false,
                     repository: None,
-                    requirement: Range::new(version.to_string()),
+                    requirement: version.clone().into(),
                 },
             )
         })
@@ -175,19 +172,14 @@ where
             // If the version was locked we verify that the requirement is
             // compatible with the locked version.
             Some(locked_version) => {
-                let compatible = range
-                    .to_pubgrub()
-                    .map_err(|e| {
-                        Box::new(ResolutionError::Failure(format!(
-                            "Failed to parse range {e}"
-                        )))
-                    })?
-                    .contains(locked_version);
+                let compatible = range.to_pubgrub().contains(locked_version);
                 if !compatible {
-                    return Err(Box::new(ResolutionError::Failure(format!(
-                        "{name} is specified with the requirement `{range}`, \
+                    return Err(Error::IncompatibleLockedVersion {
+                        error: format!(
+                            "{name} is specified with the requirement `{range}`, \
 but it is locked to {locked_version}, which is incompatible.",
-                    ))));
+                        ),
+                    });
                 }
             }
         };
@@ -197,10 +189,29 @@ but it is locked to {locked_version}, which is incompatible.",
 }
 
 pub trait PackageFetcher {
-    fn get_dependencies(&self, package: &str) -> Result<Rc<hexpm::Package>, Box<dyn StdError>>;
+    fn get_dependencies(&self, package: &str) -> Result<Rc<hexpm::Package>, PackageFetchError>;
 }
 
-struct DependencyProvider<'a, T: PackageFetcher> {
+#[derive(Debug, Error)]
+pub enum PackageFetchError {
+    #[error("{0}")]
+    ApiError(hexpm::ApiError),
+    #[error("{0}")]
+    FetchError(String),
+}
+impl From<hexpm::ApiError> for PackageFetchError {
+    fn from(api_error: hexpm::ApiError) -> Self {
+        Self::ApiError(api_error)
+    }
+}
+impl PackageFetchError {
+    pub fn fetch_error<T: std::error::Error>(err: T) -> Self {
+        Self::FetchError(err.to_string())
+    }
+}
+
+#[derive(Debug)]
+pub struct DependencyProvider<'a, T: PackageFetcher> {
     packages: RefCell<HashMap<EcoString, hexpm::Package>>,
     remote: &'a T,
     locked: &'a HashMap<EcoString, Version>,
@@ -208,7 +219,7 @@ struct DependencyProvider<'a, T: PackageFetcher> {
     // We need this because by default pubgrub checks exact version by checking if a version is between the exact
     // and the version 1 bump ahead. That default breaks on prerelease builds since a bump includes the whole patch
     exact_only: &'a HashMap<String, Version>,
-    optional_dependencies: RefCell<HashMap<EcoString, pubgrub::range::Range<Version>>>,
+    optional_dependencies: RefCell<HashMap<EcoString, pubgrub::Range<Version>>>,
 }
 
 impl<'a, T> DependencyProvider<'a, T>
@@ -244,7 +255,7 @@ where
         // `&self` with interop mutability.
         &self,
         name: &str,
-    ) -> Result<(), Box<dyn StdError>> {
+    ) -> Result<(), PackageFetchError> {
         let mut packages = self.packages.borrow_mut();
         if packages.get(name).is_none() {
             let package = self.remote.get_dependencies(name)?;
@@ -266,71 +277,43 @@ where
 }
 
 type PackageName = String;
+pub type ResolutionError<'a, T> = pubgrub::PubGrubError<DependencyProvider<'a, T>>;
 
-impl<T> pubgrub::solver::DependencyProvider<PackageName, Version> for DependencyProvider<'_, T>
+impl<T> pubgrub::DependencyProvider for DependencyProvider<'_, T>
 where
     T: PackageFetcher,
 {
-    fn choose_package_version<Name: Borrow<PackageName>, Ver: Borrow<PubgrubRange>>(
-        &self,
-        potential_packages: impl Iterator<Item = (Name, Ver)>,
-    ) -> Result<(Name, Option<Version>), Box<dyn StdError>> {
-        let potential_packages: Vec<_> = potential_packages
-            .map::<Result<_, Box<dyn StdError>>, _>(|pair| {
-                self.ensure_package_fetched(pair.0.borrow())?;
-                Ok(pair)
-            })
-            .collect::<Result<_, _>>()?;
-        let list_available_versions = |name: &PackageName| {
-            let name = name.as_str();
-            let exact_package = self.exact_only.get(name);
-            self.packages
-                .borrow()
-                .get(name)
-                .cloned()
-                .into_iter()
-                .flat_map(move |p| {
-                    p.releases
-                        .into_iter()
-                        // if an exact version of a package is specified then we only want to allow that version as available
-                        .filter(move |release| match exact_package {
-                            Some(ver) => ver == &release.version,
-                            _ => true,
-                        })
-                })
-                .map(|p| p.version)
-        };
-        Ok(choose_package_with_fewest_versions(
-            list_available_versions,
-            potential_packages.into_iter(),
-        ))
-    }
-
     fn get_dependencies(
         &self,
-        name: &PackageName,
-        version: &Version,
-    ) -> Result<Dependencies<PackageName, Version>, Box<dyn StdError>> {
-        self.ensure_package_fetched(name)?;
+        package: &Self::P,
+        version: &Self::V,
+    ) -> Result<Dependencies<Self::P, Self::VS, Self::M>, Self::Err> {
+        self.ensure_package_fetched(package)?;
         let packages = self.packages.borrow();
         let release = match packages
-            .get(name.as_str())
+            .get(package.as_str())
             .into_iter()
             .flat_map(|p| p.releases.iter())
             .find(|r| &r.version == version)
         {
             Some(release) => release,
-            None => return Ok(Dependencies::Unknown),
+            None => {
+                return Ok(Dependencies::Unavailable(format!(
+                    "{package}@{version} is not available"
+                )));
+            }
         };
 
         // Only use retired versions if they have been locked
-        if release.is_retired() && self.locked.get(name.as_str()) != Some(version) {
-            return Ok(Dependencies::Unknown);
+        if release.is_retired() && self.locked.get(package.as_str()) != Some(version) {
+            return Ok(Dependencies::Unavailable(format!(
+                "{package}@{version} is retired"
+            )));
         }
 
         let mut deps: Map<PackageName, PubgrubRange> = Default::default();
         for (name, d) in &release.requirements {
-            let mut range = d.requirement.to_pubgrub()?;
+            let mut range = d.requirement.to_pubgrub().clone();
             let mut opt_deps = self.optional_dependencies.borrow_mut();
             // if it's optional and it was not provided yet, store and skip
             if d.optional && !packages.contains_key(name.as_str()) {
@@ -350,8 +333,67 @@ where
 
             let _ = deps.insert(name.clone(), range);
         }
-        Ok(Dependencies::Known(deps))
+        Ok(Dependencies::Available(deps))
     }
+
+    fn prioritize(
+        &self,
+        package: &Self::P,
+        range: &Self::VS,
+        _package_conflicts_counts: &pubgrub::PackageResolutionStatistics,
+    ) -> Self::Priority {
+        Reverse(
+            self.packages
+                .borrow()
+                .get(package.as_str())
+                .cloned()
+                .into_iter()
+                .flat_map(|p| {
+                    p.releases
+                        .into_iter()
+                        .filter(|r| range.contains(&r.version))
+                })
+                .count(),
+        )
+    }
+
+    fn choose_version(
+        &self,
+        package: &Self::P,
+        range: &Self::VS,
+    ) -> std::result::Result<Option<Self::V>, Self::Err> {
+        self.ensure_package_fetched(package)?;
+
+        let exact_package = self.exact_only.get(package);
+        let potential_versions = self
+            .packages
+            .borrow()
+            .get(package.as_str())
+            .cloned()
+            .into_iter()
+            .flat_map(move |p| {
+                p.releases
+                    .into_iter()
+                    // if an exact version of a package is specified then we only want to allow that version as available
+                    .filter_map(move |release| match exact_package {
+                        Some(ver) => (ver == &release.version).then_some(release.version),
+                        _ => Some(release.version),
+                    })
+            })
+            .filter(|v| range.contains(v));
+        match potential_versions.clone().filter(|v| !v.is_pre()).max() {
+            // Don't resolve to a pre-releaase package unless we *have* to
+            Some(v) => Ok(Some(v)),
+            None => Ok(potential_versions.max()),
+        }
+    }
+
+    type P = PackageName;
+    type V = Version;
+    type VS = PubgrubRange;
+    type Priority = Reverse<usize>;
+    type M = String;
+    type Err = PackageFetchError;
 }
 
 #[cfg(test)]
@@ -368,11 +410,11 @@ mod tests {
     }
 
     impl PackageFetcher for Remote {
-        fn get_dependencies(&self, package: &str) -> Result<Rc<hexpm::Package>, Box<dyn StdError>> {
+        fn get_dependencies(&self, package: &str) -> Result<Rc<hexpm::Package>, PackageFetchError> {
             self.deps
                 .get(package)
                 .map(Rc::clone)
-                .ok_or(Box::new(hexpm::ApiError::NotFound))
+                .ok_or(hexpm::ApiError::NotFound.into())
         }
     }
 
@@ -430,7 +472,7 @@ mod tests {
                                 app: None,
                                 optional: false,
                                 repository: None,
-                                requirement: Range::new(">= 0.1.0".into()),
+                                requirement: Range::new(">= 0.1.0".into()).unwrap(),
                             },
                         )]
                         .into(),
@@ -446,7 +488,7 @@ mod tests {
                                 app: None,
                                 optional: false,
                                 repository: None,
-                                requirement: Range::new(">= 0.1.0".into()),
+                                requirement: Range::new(">= 0.1.0".into()).unwrap(),
                             },
                         )]
                         .into(),
@@ -462,7 +504,7 @@ mod tests {
                                 app: None,
                                 optional: false,
                                 repository: None,
-                                requirement: Range::new(">= 0.1.0".into()),
+                                requirement: Range::new(">= 0.1.0".into()).unwrap(),
                             },
                         )]
                         .into(),
@@ -478,7 +520,7 @@ mod tests {
                                 app: None,
                                 optional: false,
                                 repository: None,
-                                requirement: Range::new(">= 0.1.0".into()),
+                                requirement: Range::new(">= 0.1.0".into()).unwrap(),
                             },
                         )]
                         .into(),
@@ -531,7 +573,7 @@ mod tests {
                             app: None,
                             optional: true,
                             repository: None,
-                            requirement: Range::new(">= 0.1.0 and < 0.3.0".into()),
+                            requirement: Range::new(">= 0.1.0 and < 0.3.0".into()).unwrap(),
                         },
                     )]
                     .into(),
@@ -604,7 +646,7 @@ mod tests {
                                             app: None,
                                             optional: true,
                                             repository: None,
-                                            requirement: Range::new(range.into()),
+                                            requirement: Range::new(range.into()).unwrap(),
                                         },
                                     )
                                 })
@@ -627,7 +669,7 @@ mod tests {
             &make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("gleam_stdlib".into(), Range::new("~> 0.1".into()))].into_iter(),
+            vec![("gleam_stdlib".into(), Range::new("~> 0.1".into()).unwrap())].into_iter(),
             &vec![locked_stdlib].into_iter().collect(),
         )
         .unwrap();
@@ -658,7 +700,7 @@ mod tests {
             &make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("gleam_stdlib".into(), Range::new("~> 0.1".into()))].into_iter(),
+            vec![("gleam_stdlib".into(), Range::new("~> 0.1".into()).unwrap())].into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap();
@@ -676,7 +718,7 @@ mod tests {
             &make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("gleam_otp".into(), Range::new("~> 0.1".into()))].into_iter(),
+            vec![("gleam_otp".into(), Range::new("~> 0.1".into()).unwrap())].into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap();
@@ -697,7 +739,11 @@ mod tests {
             &make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("package_with_optional".into(), Range::new("~> 0.1".into()))].into_iter(),
+            vec![(
+                "package_with_optional".into(),
+                Range::new("~> 0.1".into()).unwrap(),
+            )]
+            .into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap();
@@ -719,8 +765,11 @@ mod tests {
             HashMap::new(),
             "app".into(),
             vec![
-                ("package_with_optional".into(), Range::new("~> 0.1".into())),
-                ("gleam_stdlib".into(), Range::new("~> 0.1".into())),
+                (
+                    "package_with_optional".into(),
+                    Range::new("~> 0.1".into()).unwrap(),
+                ),
+                ("gleam_stdlib".into(), Range::new("~> 0.1".into()).unwrap()),
             ]
             .into_iter(),
             &vec![].into_iter().collect(),
@@ -747,8 +796,11 @@ mod tests {
             HashMap::new(),
             "app".into(),
             vec![
-                ("package_with_optional".into(), Range::new("~> 0.1".into())),
-                ("gleam_stdlib".into(), Range::new("~> 0.3".into())),
+                (
+                    "package_with_optional".into(),
+                    Range::new("~> 0.1".into()).unwrap(),
+                ),
+                ("gleam_stdlib".into(), Range::new("~> 0.3".into()).unwrap()),
             ]
             .into_iter(),
             &vec![].into_iter().collect(),
@@ -763,8 +815,11 @@ mod tests {
             HashMap::new(),
             "app".into(),
             vec![
-                ("package_with_optional".into(), Range::new("~> 0.1".into())),
-                ("gleam_otp".into(), Range::new("~> 0.1".into())),
+                (
+                    "package_with_optional".into(),
+                    Range::new("~> 0.1".into()).unwrap(),
+                ),
+                ("gleam_otp".into(), Range::new("~> 0.1".into()).unwrap()),
             ]
             .into_iter(),
             &vec![].into_iter().collect(),
@@ -794,7 +849,7 @@ mod tests {
             &make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("gleam_otp".into(), Range::new("~> 0.1.0".into()))].into_iter(),
+            vec![("gleam_otp".into(), Range::new("~> 0.1.0".into()).unwrap())].into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap();
@@ -815,7 +870,11 @@ mod tests {
             &make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("package_with_retired".into(), Range::new("> 0.0.0".into()))].into_iter(),
+            vec![(
+                "package_with_retired".into(),
+                Range::new("> 0.0.0".into()).unwrap(),
+            )]
+            .into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap();
@@ -837,7 +896,11 @@ mod tests {
             &make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("package_with_retired".into(), Range::new("> 0.0.0".into()))].into_iter(),
+            vec![(
+                "package_with_retired".into(),
+                Range::new("> 0.0.0".into()).unwrap(),
+            )]
+            .into_iter(),
             &vec![("package_with_retired".into(), Version::new(0, 2, 0))]
                 .into_iter()
                 .collect(),
@@ -861,7 +924,11 @@ mod tests {
             &make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("gleam_otp".into(), Range::new("~> 0.3.0-rc1".into()))].into_iter(),
+            vec![(
+                "gleam_otp".into(),
+                Range::new("~> 0.3.0-rc1".into()).unwrap(),
+            )]
+            .into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap();
@@ -882,7 +949,7 @@ mod tests {
             &make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("gleam_otp".into(), Range::new("0.3.0-rc1".into()))].into_iter(),
+            vec![("gleam_otp".into(), Range::new("0.3.0-rc1".into()).unwrap())].into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap();
@@ -903,7 +970,7 @@ mod tests {
             &make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("unknown".into(), Range::new("~> 0.1".into()))].into_iter(),
+            vec![("unknown".into(), Range::new("~> 0.1".into()).unwrap())].into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap_err();
@@ -915,7 +982,7 @@ mod tests {
             &make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("gleam_stdlib".into(), Range::new("~> 99.0".into()))].into_iter(),
+            vec![("gleam_stdlib".into(), Range::new("~> 99.0".into()).unwrap())].into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap_err();
@@ -927,7 +994,11 @@ mod tests {
             &make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("gleam_stdlib".into(), Range::new("~> 0.1.0".into()))].into_iter(),
+            vec![(
+                "gleam_stdlib".into(),
+                Range::new("~> 0.1.0".into()).unwrap(),
+            )]
+            .into_iter(),
             &vec![("gleam_stdlib".into(), Version::new(0, 2, 0))]
                 .into_iter()
                 .collect(),
@@ -935,9 +1006,9 @@ mod tests {
         .unwrap_err();
 
         match err {
-            Error::DependencyResolutionFailed(msg) => assert_eq!(
-                msg,
-                "An unrecoverable error happened while solving dependencies: gleam_stdlib is specified with the requirement `~> 0.1.0`, but it is locked to 0.2.0, which is incompatible."
+            Error::IncompatibleLockedVersion { error } => assert_eq!(
+                error,
+                "gleam_stdlib is specified with the requirement `~> 0.1.0`, but it is locked to 0.2.0, which is incompatible."
             ),
             _ => panic!("wrong error: {err}"),
         }
@@ -949,7 +1020,7 @@ mod tests {
             &make_remote(),
             HashMap::new(),
             "app".into(),
-            vec![("gleam_stdlib".into(), Range::new("0.1.0".into()))].into_iter(),
+            vec![("gleam_stdlib".into(), Range::new("0.1.0".into()).unwrap())].into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap();
@@ -986,19 +1057,19 @@ mod tests {
                 (
                     EcoString::from("package_depends_on_indirect_pkg"),
                     requirement::Requirement::Hex {
-                        version: Range::new("> 0.1.0 and <= 1.0.0".into()),
+                        version: Range::new("> 0.1.0 and <= 1.0.0".into()).unwrap(),
                     },
                 ),
                 (
                     EcoString::from("direct_pkg_with_major_version"),
                     requirement::Requirement::Hex {
-                        version: Range::new("> 0.1.0 and <= 2.0.0".into()),
+                        version: Range::new("> 0.1.0 and <= 2.0.0".into()).unwrap(),
                     },
                 ),
                 (
                     EcoString::from("depends_on_old_version_of_direct_pkg"),
                     requirement::Requirement::Hex {
-                        version: Range::new("> 0.1.0 and <= 1.0.0".into()),
+                        version: Range::new("> 0.1.0 and <= 1.0.0".into()).unwrap(),
                     },
                 ),
             ]

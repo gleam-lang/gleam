@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/echo.rs
+assertion_line: 112
 expression: "\nimport other/inspect\n\npub fn main() {\n  echo inspect.x\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -15,6 +17,8 @@ pub fn main() {
 import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
 import * as $inspect from "../../other/other/inspect.mjs";
 import {
+  Empty as $Empty,
+  NonEmpty as $NonEmpty,
   CustomType as $CustomType,
   bitArraySlice,
   bitArraySliceToInt,

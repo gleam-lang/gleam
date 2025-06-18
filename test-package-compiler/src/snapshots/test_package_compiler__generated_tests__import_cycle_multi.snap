@@ -11,12 +11,12 @@ error: Import cycle
   ┌─ src/two.gleam:1:1
   │
 1 │ import three
-  │ ^ Imported here
+  │ ------------ Imported here
   │
   ┌─ src/one.gleam:1:1
   │
 1 │ import two
-  │ ^ Imported here
+  │ ---------- Imported here
 
 The import statements for these modules form a cycle:
 

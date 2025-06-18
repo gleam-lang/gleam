@@ -83,7 +83,7 @@ use num_bigint::BigInt;
 use std::cmp::Ordering;
 use std::collections::VecDeque;
 use std::str::FromStr;
-use token::Token;
+pub use token::Token;
 use vec1::{Vec1, vec1};
 
 #[cfg(test)]
@@ -622,11 +622,36 @@ where
                         };
                     };
 
-                    if tail.is_some() && !elements_end_with_comma {
-                        self.warnings
-                            .push(DeprecatedSyntaxWarning::DeprecatedListPrepend {
-                                location: SrcSpan { start, end },
-                            });
+                    if tail.is_some() {
+                        if !elements_end_with_comma {
+                            self.warnings
+                                .push(DeprecatedSyntaxWarning::DeprecatedListPrepend {
+                                    location: SrcSpan { start, end },
+                                });
+                        }
+
+                        // Give a better error when there is two consecutive spreads
+                        // like `[..wibble, ..wabble, woo]`. However, if there's other
+                        // elements after the tail of the list
+                        if let Some((second_start, second_end)) = self.maybe_one(&Token::DotDot) {
+                            let _second_tail = self.parse_expression();
+
+                            if elements_after_tail.is_none()
+                                || elements_after_tail
+                                    .as_ref()
+                                    .is_some_and(|vec| vec.is_empty())
+                            {
+                                return parse_error(
+                                    ParseErrorType::ListSpreadWithAnotherSpread {
+                                        first_spread_location: SrcSpan { start, end },
+                                    },
+                                    SrcSpan {
+                                        start: second_start,
+                                        end: second_end,
+                                    },
+                                );
+                            }
+                        }
                     }
                 }
 
@@ -2706,7 +2731,7 @@ where
     fn parse_import(&mut self, import_start: u32) -> Result<Option<UntypedDefinition>, ParseError> {
         let mut start = 0;
         let mut end;
-        let mut module = String::new();
+        let mut module = EcoString::new();
         // Gather module names
         loop {
             let (s, name, e) = self.expect_name()?;
@@ -2741,8 +2766,32 @@ where
         let mut unqualified_values = vec![];
         let mut unqualified_types = vec![];
 
-        if self.maybe_one(&Token::Dot).is_some() {
-            let _ = self.expect_one(&Token::LeftBrace)?;
+        if let Some((dot_start, dot_end)) = self.maybe_one(&Token::Dot) {
+            if let Err(e) = self.expect_one(&Token::LeftBrace) {
+                // If the module does contain a '/', then it's unlikely that the user
+                // intended for the import to be pythonic, so skip this.
+                if module.contains('/') {
+                    return Err(e);
+                }
+
+                // Catch `import gleam.io` and provide a more helpful error...
+                let ParseErrorType::UnexpectedToken {
+                    token: Token::Name { name } | Token::UpName { name },
+                    ..
+                } = &e.error
+                else {
+                    return Err(e);
+                };
+
+                return Err(ParseError {
+                    error: ParseErrorType::IncorrectImportModuleSeparator {
+                        module,
+                        item: name.clone(),
+                    },
+                    location: SrcSpan::new(dot_start, dot_end),
+                });
+            };
+
             let parsed = self.parse_unqualified_imports()?;
             unqualified_types = parsed.types;
             unqualified_values = parsed.values;
@@ -2773,7 +2822,7 @@ where
             },
             unqualified_values,
             unqualified_types,
-            module: module.into(),
+            module,
             as_name,
             package: (),
         })))
