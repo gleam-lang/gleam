@@ -1305,7 +1305,7 @@ can already tell whether it will be true or false.",
 
                 type_::Warning::UnusedDiscardPattern { location, name } => Diagnostic {
                     title: "Unused discard pattern".into(),
-                    text: format!("_ as {name} can be written more concisely as {name}"),
+                    text: format!("`_ as {name}` can be written more concisely as `{name}`"),
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         src: src.clone(),
