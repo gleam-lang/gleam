@@ -83,7 +83,7 @@ impl Implementations {
 /// this current implementation will not be sufficient for anything beyond a
 /// warning message to help people out in certain cases.
 ///
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Purity {
     /// The function is in pure Gleam, and does not reference any language
     /// feature that can cause side effects, such as `panic`, `assert` or `echo`.

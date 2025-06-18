@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/javascript/tests/inlining.rs
+expression: "\npub fn main() {\n    { fn(x) { Ok(x + 1) } }(41)\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+    { fn(x) { Ok(x + 1) } }(41)
+}
+
+
+----- COMPILED JAVASCRIPT
+import { Ok } from "../gleam.mjs";
+
+export function main() {
+  return new Ok(41 + 1);
+}

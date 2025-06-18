@@ -5,6 +5,9 @@ expression: "./cases/not_overwriting_erlang_module"
 //// /out/lib/the_package/_gleam_artefacts/app@code.cache
 <.cache binary>
 
+//// /out/lib/the_package/_gleam_artefacts/app@code.cache_inline
+<8 byte binary>
+
 //// /out/lib/the_package/_gleam_artefacts/app@code.cache_meta
 <73 byte binary>
 
