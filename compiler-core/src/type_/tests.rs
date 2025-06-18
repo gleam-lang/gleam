@@ -619,7 +619,10 @@ fn field_map_reorder_test() {
                 fields: self.fields,
             };
             let location = SrcSpan { start: 0, end: 0 };
-            assert_eq!(self.expected_result, fm.reorder(&mut args, location));
+            assert_eq!(
+                self.expected_result,
+                fm.reorder(&mut args, location, IncorrectArityContext::Function)
+            );
             assert_eq!(self.expected_args, args);
         }
     }

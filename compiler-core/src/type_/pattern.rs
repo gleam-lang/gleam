@@ -838,6 +838,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         self.error(Error::IncorrectArity {
                             labels: vec![],
                             location,
+                            context: IncorrectArityContext::Pattern,
                             expected: type_elements.len(),
                             given: elements.len(),
                         });
@@ -1014,7 +1015,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             }
                         }
 
-                        if let Err(error) = field_map.reorder(&mut pattern_args, location) {
+                        if let Err(error) = field_map.reorder(
+                            &mut pattern_args,
+                            location,
+                            IncorrectArityContext::Pattern,
+                        ) {
                             {
                                 self.problems.error(error);
                                 self.error_encountered = true;
@@ -1131,6 +1136,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             self.error(Error::IncorrectArity {
                                 labels: vec![],
                                 location,
+                                context: IncorrectArityContext::Pattern,
                                 expected: args.len(),
                                 given: pattern_args.len(),
                             });
@@ -1165,6 +1171,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             self.error(Error::IncorrectArity {
                                 labels: vec![],
                                 location,
+                                context: IncorrectArityContext::Pattern,
                                 expected: 0,
                                 given: pattern_args.len(),
                             });

@@ -1,5 +1,8 @@
 use super::Error;
-use crate::ast::{CallArg, SrcSpan};
+use crate::{
+    ast::{CallArg, SrcSpan},
+    type_::error::IncorrectArityContext,
+};
 use ecow::EcoString;
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
@@ -39,7 +42,12 @@ impl FieldMap {
     /// Reorder an argument list so that labelled fields supplied out-of-order are
     /// in the correct order.
     ///
-    pub fn reorder<A>(&self, args: &mut Vec<CallArg<A>>, location: SrcSpan) -> Result<(), Error> {
+    pub fn reorder<A>(
+        &self,
+        args: &mut Vec<CallArg<A>>,
+        location: SrcSpan,
+        context: IncorrectArityContext,
+    ) -> Result<(), Error> {
         let mut labelled_arguments_given = false;
         let mut seen_labels = HashSet::new();
         let mut unknown_labels = Vec::new();
@@ -49,6 +57,7 @@ impl FieldMap {
             return Err(Error::IncorrectArity {
                 labels: self.incorrect_arity_labels(args),
                 location,
+                context,
                 expected: self.arity as usize,
                 given: args.len(),
             });

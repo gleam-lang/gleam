@@ -5,8 +5,8 @@ use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
 use crate::strings::{to_snake_case, to_upper_camel_case};
 use crate::type_::collapse_links;
 use crate::type_::error::{
-    InvalidImportKind, MissingAnnotation, ModuleValueUsageContext, Named, UnknownField,
-    UnknownTypeHint, UnsafeRecordUpdateReason,
+    IncorrectArityContext, InvalidImportKind, MissingAnnotation, ModuleValueUsageContext, Named,
+    UnknownField, UnknownTypeHint, UnsafeRecordUpdateReason,
 };
 use crate::type_::printer::{Names, Printer};
 use crate::type_::{FieldAccessUsage, error::PatternMatchKind};
@@ -2208,18 +2208,23 @@ but {given} where provided.");
                 TypeError::IncorrectArity {
                     labels,
                     location,
+                    context,
                     expected,
                     given,
                 } => {
                     let text = if labels.is_empty() {
                         "".into()
                     } else {
+                        let subject = match context {
+                            IncorrectArityContext::Pattern => "pattern",
+                            IncorrectArityContext::Function => "call",
+                        };
                         let labels = labels
                             .iter()
                             .map(|p| format!("  - {p}"))
                             .sorted()
                             .join("\n");
-                        format!("This call accepts these additional labelled arguments:\n\n{labels}",)
+                        format!("This {subject} accepts these additional labelled arguments:\n\n{labels}",)
                     };
                     let expected = match expected {
                         0 => "no arguments".into(),
