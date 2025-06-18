@@ -1,6 +1,9 @@
 use crate::ast::{SrcSpan, TypeAst};
+use crate::diagnostic::{ExtraLabel, Label};
+use crate::error::wrap;
 use crate::parse::Token;
 use ecow::EcoString;
+use itertools::Itertools;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct LexicalError {
@@ -73,7 +76,6 @@ pub enum ParseErrorType {
     ListSpreadFollowedByElements, // trying to append something after the spread: `[..xs, x]`
     ListSpreadWithAnotherSpread {
         first_spread_location: SrcSpan,
-        second_spread_location: SrcSpan,
     }, // trying to use multiple spreads: `[..xs, ..ys]`
     LowcaseBooleanPattern, // most likely user meant True or False in patterns
     UnexpectedLabel, // argument labels were provided, but are not supported in this context
@@ -110,6 +112,523 @@ pub enum ParseErrorType {
         module: EcoString,
         item: EcoString,
     },
+}
+
+pub(crate) struct ParseErrorDetails {
+    pub text: String,
+    pub label_text: EcoString,
+    pub extra_labels: Vec<ExtraLabel>,
+    pub hint: Option<String>,
+}
+
+impl ParseErrorType {
+    pub(crate) fn details(&self) -> ParseErrorDetails {
+        match self {
+            ParseErrorType::ExpectedEqual => ParseErrorDetails {
+                text: "".into(),
+                hint: None,
+                label_text: "I was expecting a '=' after this".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::ExpectedExpr => ParseErrorDetails {
+                text: "".into(),
+                hint: None,
+                label_text: "I was expecting an expression after this".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::ExpectedName => ParseErrorDetails {
+                text: "".into(),
+                hint: None,
+                label_text: "I was expecting a name here".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::ExpectedPattern => ParseErrorDetails {
+                text: "".into(),
+                hint: None,
+                label_text: "I was expecting a pattern after this".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::ExpectedType => ParseErrorDetails {
+                text: "See: https://tour.gleam.run/basics/assignments/".into(),
+                hint: None,
+                label_text: "I was expecting a type after this".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::ExpectedUpName => ParseErrorDetails {
+                text: "".into(),
+                hint: None,
+                label_text: "I was expecting a type name here".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::ExpectedValue => ParseErrorDetails {
+                text: "".into(),
+                hint: None,
+                label_text: "I was expecting a value after this".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::ExpectedDefinition => ParseErrorDetails {
+                text: "".into(),
+                hint: None,
+                label_text: "I was expecting a definition after this".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::ExpectedDeprecationMessage => ParseErrorDetails {
+                text: "".into(),
+                hint: None,
+                label_text: "A deprecation attribute must have a string message.".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::ExpectedFunctionDefinition => ParseErrorDetails {
+                text: "".into(),
+                hint: None,
+                label_text: "I was expecting a function definition after this".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::ExpectedTargetName => ParseErrorDetails {
+                text: "Try `erlang`, `javascript`.".into(),
+                hint: None,
+                label_text: "I was expecting a target name after this".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::ExtraSeparator => ParseErrorDetails {
+                text: "".into(),
+                hint: Some("Try removing it?".into()),
+                label_text: "This is an extra delimiter".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::ExprLparStart => ParseErrorDetails {
+                text: "".into(),
+                hint: Some(
+                    "To group expressions in Gleam, use \"{\" and \"}\"; \
+tuples are created with `#(` and `)`."
+                        .into(),
+                ),
+                label_text: "This parenthesis cannot be understood here".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::IncorrectName => ParseErrorDetails {
+                text: "".into(),
+                hint: Some(wrap(
+                    "Variable and module names start with a lowercase letter, \
+and can contain a-z, 0-9, or _.",
+                )),
+                label_text: "I'm expecting a lowercase name here".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::IncorrectUpName => ParseErrorDetails {
+                text: "".into(),
+                hint: Some(wrap(
+                    "Type names start with a uppercase letter, and can \
+contain a-z, A-Z, or 0-9.",
+                )),
+                label_text: "I'm expecting a type name here".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::InvalidBitArraySegment => ParseErrorDetails {
+                text: "See: https://tour.gleam.run/data-types/bit-arrays/".into(),
+                hint: Some(format!(
+                    "Valid BitArray segment options are:\n{}",
+                    wrap(
+                        "bits, bytes, int, float, utf8, utf16, utf32, utf8_codepoint, \
+utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, unit.",
+                    )
+                )),
+                label_text: "This is not a valid BitArray segment option".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::InvalidBitArrayUnit => ParseErrorDetails {
+                text: "See: https://tour.gleam.run/data-types/bit-arrays/".into(),
+                hint: Some("Unit must be an integer literal >= 1 and <= 256.".into()),
+                label_text: "This is not a valid BitArray unit value".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::InvalidTailPattern => ParseErrorDetails {
+                text: "".into(),
+                hint: None,
+                label_text: "This part of a list pattern can only be a name or a discard".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::InvalidTupleAccess => ParseErrorDetails {
+                text: "".into(),
+                hint: Some(
+                    "Only non negative integer literals like 0, or 1_000 can be used.".into(),
+                ),
+                label_text: "This integer is not valid for tuple access".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::LexError { error: lex_err } => {
+                let (label_text, text_lines) = lex_err.to_parse_error_info();
+                let text = text_lines.join("\n");
+                ParseErrorDetails {
+                    text,
+                    hint: None,
+                    label_text: label_text.into(),
+                    extra_labels: vec![],
+                }
+            }
+
+            ParseErrorType::NestedBitArrayPattern => ParseErrorDetails {
+                text: "".into(),
+                hint: None,
+                label_text: "BitArray patterns cannot be nested".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::NotConstType => ParseErrorDetails {
+                text: "See: https://tour.gleam.run/basics/constants/".into(),
+                hint: None,
+                label_text: "This type is not allowed in module constants".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::NoLetBinding => ParseErrorDetails {
+                text: "See: https://tour.gleam.run/basics/assignments/".into(),
+                hint: Some("Use let for binding.".into()),
+                label_text: "There must be a 'let' to bind variable to value".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::NoValueAfterEqual => ParseErrorDetails {
+                text: "".into(),
+                hint: None,
+                label_text: "I was expecting to see a value after this equals sign".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::OpaqueTypeAlias => ParseErrorDetails {
+                text: "See: https://tour.gleam.run/basics/type-aliases/".into(),
+                hint: None,
+                label_text: "Type Aliases cannot be opaque".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::OpNakedRight => ParseErrorDetails {
+                text: "".into(),
+                hint: Some("Remove it or put a value after it.".into()),
+                label_text: "This operator has no value on its right side".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::TooManyArgHoles => ParseErrorDetails {
+                text: "See: https://tour.gleam.run/functions/functions/".into(),
+                hint: Some("Function calls can have at most one argument hole.".into()),
+                label_text: "There is more than 1 argument hole in this function call".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::UnexpectedEof => ParseErrorDetails {
+                text: "".into(),
+                hint: None,
+                label_text: "The module ended unexpectedly".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::ListSpreadWithoutElements => ParseErrorDetails {
+                text: "See: https://tour.gleam.run/basics/lists/".into(),
+                hint: Some("Try prepending some elements [1, 2, ..list].".into()),
+                label_text: "This spread does nothing".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::ListSpreadWithAnotherSpread {
+                first_spread_location,
+            } => ParseErrorDetails {
+                text: [
+                    "Lists are immutable and singly-linked, so to join two or more lists",
+                    "all the elements of the lists would need to be copied into a new list.",
+                    "This would be slow, so there is no built-in syntax for it.",
+                ]
+                .join("\n"),
+                hint: None,
+                label_text: "I wasn't expecting a second spread here".into(),
+                extra_labels: vec![ExtraLabel {
+                    src_info: None,
+                    label: Label {
+                        text: Some("You're using a spread here".into()),
+                        span: *first_spread_location,
+                    },
+                }],
+            },
+
+            ParseErrorType::ListSpreadFollowedByElements => ParseErrorDetails {
+                text: [
+                    "Lists are immutable and singly-linked, so to append items to them",
+                    "all the elements of a list would need to be copied into a new list.",
+                    "This would be slow, so there is no built-in syntax for it.",
+                    "",
+                ]
+                .join("\n"),
+                hint: Some(
+                    "Prepend items to the list and then reverse it once you are done.".into(),
+                ),
+                label_text: "I wasn't expecting elements after this".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::ListPatternSpreadFollowedByElements => ParseErrorDetails {
+                text: [
+                    "Lists are immutable and singly-linked, so to match on the end",
+                    "of a list would require the whole list to be traversed. This",
+                    "would be slow, so there is no built-in syntax for it. Pattern",
+                    "match on the start of the list instead.",
+                ]
+                .join("\n"),
+                hint: None,
+                label_text: "I wasn't expecting elements after this".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::UnexpectedReservedWord => ParseErrorDetails {
+                text: "".into(),
+                hint: Some("I was expecting to see a name here.".into()),
+                label_text: "This is a reserved word".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::LowcaseBooleanPattern => ParseErrorDetails {
+                text: "See: https://tour.gleam.run/basics/bools/".into(),
+                hint: Some("In Gleam boolean literals are `True` and `False`.".into()),
+                label_text: "Did you want a Bool instead of a variable?".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::UnexpectedLabel => ParseErrorDetails {
+                text: "Please remove the argument label.".into(),
+                hint: None,
+                label_text: "Argument labels are not allowed for anonymous functions".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::UnexpectedToken {
+                token,
+                expected,
+                hint,
+            } => {
+                let found = match token {
+                    Token::Int { .. } => "an Int".to_string(),
+                    Token::Float { .. } => "a Float".to_string(),
+                    Token::String { .. } => "a String".to_string(),
+                    Token::CommentDoc { .. } => "a comment".to_string(),
+                    Token::DiscardName { .. } => "a discard name".to_string(),
+                    Token::Name { .. } | Token::UpName { .. } => "a name".to_string(),
+                    _ if token.is_reserved_word() => format!("the keyword {token}"),
+                    _ => token.to_string(),
+                };
+
+                let messages = std::iter::once(format!("Found {found}, expected one of: "))
+                    .chain(expected.iter().map(|s| format!("- {s}")));
+
+                let messages = match hint {
+                    Some(hint_text) => messages
+                        .chain(std::iter::once(format!("Hint: {hint_text}")))
+                        .collect_vec(),
+                    _ => messages.collect(),
+                };
+
+                ParseErrorDetails {
+                    text: messages.join("\n"),
+                    hint: None,
+                    label_text: "I was not expecting this".into(),
+                    extra_labels: vec![],
+                }
+            }
+
+            ParseErrorType::ConcatPatternVariableLeftHandSide => ParseErrorDetails {
+                text: [
+                    "We can't tell what size this prefix should be so we don't know",
+                    "how to handle this pattern.",
+                    "",
+                    "If you want to match one character consider using `pop_grapheme`",
+                    "from the stdlib's `gleam/string` module.",
+                ]
+                .join("\n"),
+                hint: None,
+                label_text: "This must be a string literal".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::UnexpectedFunction => ParseErrorDetails {
+                text: "".into(),
+                hint: None,
+                label_text: "Functions can only be called within other functions".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::ListSpreadWithoutTail => ParseErrorDetails {
+                text: "If a list expression has a spread then a tail must also be given.".into(),
+                hint: None,
+                label_text: "I was expecting a value after this spread".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::UnknownAttribute => ParseErrorDetails {
+                text: "".into(),
+                hint: Some("Try `deprecated`, `external` or `target` instead.".into()),
+                label_text: "I don't recognise this attribute".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::DuplicateAttribute => ParseErrorDetails {
+                text: "This attribute has already been given.".into(),
+                hint: None,
+                label_text: "Duplicate attribute".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::UnknownTarget => ParseErrorDetails {
+                text: "Try `erlang`, `javascript`.".into(),
+                hint: None,
+                label_text: "I don't recognise this target".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::ExpectedFunctionBody => ParseErrorDetails {
+                text: "".into(),
+                hint: None,
+                label_text: "This function does not have a body".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::RedundantInternalAttribute => ParseErrorDetails {
+                text: "Only a public definition can be annotated as internal.".into(),
+                hint: Some("Remove the `@internal` annotation.".into()),
+                label_text: "Redundant internal attribute".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::InvalidModuleTypePattern => ParseErrorDetails {
+                text: [
+                    "I'm expecting a pattern here",
+                    "Hint: A pattern can be a constructor name, a literal value",
+                    "or a variable to bind a value to, etc.",
+                    "See: https://tour.gleam.run/flow-control/case-expressions/",
+                ]
+                .join("\n"),
+                hint: None,
+                label_text: "Invalid pattern".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::ExpectedRecordConstructor {
+                name,
+                public,
+                opaque,
+                field,
+                field_type,
+            } => {
+                let (accessor, opaque) = match *public {
+                    true if *opaque => ("pub ", "opaque "),
+                    true => ("pub ", ""),
+                    false => ("", ""),
+                };
+
+                let mut annotation = EcoString::new();
+                match field_type {
+                    Some(t) => t.print(&mut annotation),
+                    None => annotation.push_str("Type"),
+                };
+
+                ParseErrorDetails {
+                    text: [
+                        "Each custom type variant must have a constructor:\n".into(),
+                        format!("{accessor}{opaque}type {name} {{"),
+                        format!("  {name}("),
+                        format!("    {field}: {annotation},"),
+                        "  )".into(),
+                        "}".into(),
+                    ]
+                    .join("\n"),
+                    hint: None,
+                    label_text: "I was not expecting this".into(),
+                    extra_labels: vec![],
+                }
+            }
+
+            ParseErrorType::CallInClauseGuard => ParseErrorDetails {
+                text: "Functions cannot be called in clause guards.".into(),
+                hint: None,
+                label_text: "Unsupported expression".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::IfExpression => ParseErrorDetails {
+                text: [
+                    "If you want to write a conditional expression you can use a `case`:",
+                    "",
+                    "    case condition {",
+                    "      True -> todo",
+                    "      False -> todo",
+                    "    }",
+                    "",
+                    "See: https://tour.gleam.run/flow-control/case-expressions/",
+                ]
+                .join("\n"),
+                hint: None,
+                label_text: "Gleam doesn't have if expressions".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::ConstantRecordConstructorNoArguments => ParseErrorDetails {
+                text: "A record must be passed arguments when constructed.".into(),
+                hint: None,
+                label_text: "I was expecting arguments here".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::TypeConstructorNoArguments => ParseErrorDetails {
+                text: "A type constructor must be passed arguments.".into(),
+                hint: None,
+                label_text: "I was expecting arguments here".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::TypeDefinitionNoArguments => ParseErrorDetails {
+                text: "A generic type must have at least a generic parameter.".into(),
+                hint: Some("If a type is not generic you should omit the `()`.".into()),
+                label_text: "I was expecting generic parameters here".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::UnknownAttributeRecordVariant => ParseErrorDetails {
+                text: "".into(),
+                hint: Some("Did you mean `@deprecated`?".into()),
+                label_text: "This attribute cannot be used on a variant.".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::IncorrectImportModuleSeparator { module, item } => ParseErrorDetails {
+                text: [
+                    "Perhaps you meant one of:".into(),
+                    "".into(),
+                    format!("    import {module}/{item}"),
+                    format!("    import {module}.{{item}}"),
+                ]
+                .join("\n"),
+                hint: None,
+                label_text: "I was expecting either `/` or `.{` here.".into(),
+                extra_labels: vec![],
+            },
+        }
+    }
 }
 
 impl LexicalError {

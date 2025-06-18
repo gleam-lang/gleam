@@ -644,12 +644,11 @@ where
                                 return parse_error(
                                     ParseErrorType::ListSpreadWithAnotherSpread {
                                         first_spread_location: SrcSpan { start, end },
-                                        second_spread_location: SrcSpan {
-                                            start: second_start,
-                                            end: second_end,
-                                        },
                                     },
-                                    SrcSpan { start, end },
+                                    SrcSpan {
+                                        start: second_start,
+                                        end: second_end,
+                                    },
                                 );
                             }
                         }
