@@ -188,5 +188,6 @@ Parsed {
             73,
             75,
         ],
+        trailing_commas: [],
     },
 }

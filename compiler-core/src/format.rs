@@ -44,6 +44,7 @@ pub(crate) struct Intermediate<'a> {
     module_comments: Vec<Comment<'a>>,
     empty_lines: &'a [u32],
     new_lines: &'a [u32],
+    trailing_commas: &'a [u32],
 }
 
 impl<'a> Intermediate<'a> {
@@ -66,6 +67,7 @@ impl<'a> Intermediate<'a> {
                 .map(|span| Comment::from((span, src)))
                 .collect(),
             new_lines: &extra.new_lines,
+            trailing_commas: &extra.trailing_commas,
         }
     }
 }
@@ -102,6 +104,7 @@ pub struct Formatter<'a> {
     module_comments: &'a [Comment<'a>],
     empty_lines: &'a [u32],
     new_lines: &'a [u32],
+    trailing_commas: &'a [u32],
 }
 
 impl<'comments> Formatter<'comments> {
@@ -116,6 +119,7 @@ impl<'comments> Formatter<'comments> {
             module_comments: &extra.module_comments,
             empty_lines: extra.empty_lines,
             new_lines: extra.new_lines,
+            trailing_commas: extra.trailing_commas,
         }
     }
 
@@ -574,36 +578,40 @@ impl<'comments> Formatter<'comments> {
             };
         }
 
-        let comma = match elements.first() {
-            // If the list is made of non-simple constants and it gets too long we want to
-            // have each record on its own line instead of trying to fit as much
-            // as possible in each line. For example:
-            //
-            //    [
-            //       Some("wibble wobble"),
-            //       None,
-            //       Some("wobble wibble"),
-            //    ]
-            //
-            Some(el) if !el.is_simple() => break_(",", ", "),
-            // For simple constants(String, Int, Float), if we have to break the list we still try to
-            // fit as much as possible into a single line instead of putting
-            // each item on its own separate line. For example:
-            //
-            //   [
-            //     1, 2, 3, 4,
-            //     5, 6, 7,
-            //   ]
-            //
-            Some(_) | None => flex_break(",", ", "),
+        let list_packing =
+            self.list_items_packing(elements, None, |element| element.is_simple(), *location);
+        let comma = match list_packing {
+            ListItemsPacking::FitMultiplePerLine => flex_break(",", ", "),
+            ListItemsPacking::FitOnePerLine | ListItemsPacking::BreakOnePerLine => {
+                break_(",", ", ")
+            }
         };
 
-        let elements = join(
-            elements.iter().map(|element| self.const_expr(element)),
-            comma,
-        );
+        let mut elements_doc = nil();
+        for element in elements.iter() {
+            let empty_lines = self.pop_empty_lines(element.location().start);
+            let element_doc = self.const_expr(element);
 
-        let doc = break_("[", "[").append(elements).nest(INDENT);
+            elements_doc = if elements_doc.is_empty() {
+                element_doc
+            } else if empty_lines {
+                // If there's empty lines before the list item we want to add an
+                // empty line here. Notice how we're making sure no nesting is
+                // added after the comma, otherwise we would be adding needless
+                // whitespace in the empty line!
+                docvec![
+                    elements_doc,
+                    comma.clone().set_nesting(0),
+                    line(),
+                    element_doc
+                ]
+            } else {
+                docvec![elements_doc, comma.clone(), element_doc]
+            };
+        }
+        elements_doc = elements_doc.next_break_fits(NextBreakFitsMode::Disabled);
+
+        let doc = break_("[", "[").append(elements_doc).nest(INDENT);
 
         // We get all remaining comments that come before the list's closing
         // square bracket.
@@ -611,8 +619,8 @@ impl<'comments> Formatter<'comments> {
         // of moving those out of the list.
         // Otherwise those would be moved out of the list.
         let comments = self.pop_comments(location.end);
-        match printed_comments(comments, false) {
-            None => doc.append(break_(",", "")).append("]").group(),
+        let doc = match printed_comments(comments, false) {
+            None => doc.append(break_(",", "")).append("]"),
             Some(comment) => doc
                 .append(break_(",", "").nest(INDENT))
                 // ^ See how here we're adding the missing indentation to the
@@ -622,6 +630,11 @@ impl<'comments> Formatter<'comments> {
                 .append(line())
                 .append("]")
                 .force_break(),
+        };
+
+        match list_packing {
+            ListItemsPacking::FitOnePerLine | ListItemsPacking::FitMultiplePerLine => doc.group(),
+            ListItemsPacking::BreakOnePerLine => doc.force_break(),
         }
     }
 
@@ -1484,6 +1497,22 @@ impl<'comments> Formatter<'comments> {
             .is_ok()
     }
 
+    /// Returns true if there's a trailing comma between `start` and `end`.
+    ///
+    fn has_trailing_comma(&self, start: u32, end: u32) -> bool {
+        self.trailing_commas
+            .binary_search_by(|comma| {
+                if *comma < start {
+                    Ordering::Less
+                } else if *comma > end {
+                    Ordering::Greater
+                } else {
+                    Ordering::Equal
+                }
+            })
+            .is_ok()
+    }
+
     fn pipeline<'a>(
         &mut self,
         expressions: &'a Vec1<UntypedExpr>,
@@ -1973,10 +2002,14 @@ impl<'comments> Formatter<'comments> {
             };
         }
 
-        let comma = if tail.is_none() && elements.iter().all(UntypedExpr::is_simple_constant) {
-            flex_break(",", ", ")
-        } else {
-            break_(",", ", ")
+        let list_packing =
+            self.list_items_packing(elements, tail, UntypedExpr::is_simple_constant, *location);
+
+        let comma = match list_packing {
+            ListItemsPacking::FitMultiplePerLine => flex_break(",", ", "),
+            ListItemsPacking::FitOnePerLine | ListItemsPacking::BreakOnePerLine => {
+                break_(",", ", ")
+            }
         };
 
         let list_size = elements.len()
@@ -1985,15 +2018,31 @@ impl<'comments> Formatter<'comments> {
                 None => 0,
             };
 
-        let elements = join(
-            elements
-                .iter()
-                .map(|e| self.comma_separated_item(e, list_size)),
-            comma,
-        )
-        .next_break_fits(NextBreakFitsMode::Disabled);
+        let mut elements_doc = nil();
+        for element in elements.iter() {
+            let empty_lines = self.pop_empty_lines(element.location().start);
+            let element_doc = self.comma_separated_item(element, list_size);
 
-        let doc = break_("[", "[").append(elements);
+            elements_doc = if elements_doc.is_empty() {
+                element_doc
+            } else if empty_lines {
+                // If there's empty lines before the list item we want to add an
+                // empty line here. Notice how we're making sure no nesting is
+                // added after the comma, otherwise we would be adding needless
+                // whitespace in the empty line!
+                docvec![
+                    elements_doc,
+                    comma.clone().set_nesting(0),
+                    line(),
+                    element_doc
+                ]
+            } else {
+                docvec![elements_doc, comma.clone(), element_doc]
+            };
+        }
+        elements_doc = elements_doc.next_break_fits(NextBreakFitsMode::Disabled);
+
+        let doc = break_("[", "[").append(elements_doc);
         // We need to keep the last break aside and do not add it immediately
         // because in case there's a final comment before the closing square
         // bracket we want to add indentation (to just that break). Otherwise,
@@ -2017,8 +2066,8 @@ impl<'comments> Formatter<'comments> {
         // of moving those out of the list.
         // Otherwise those would be moved out of the list.
         let comments = self.pop_comments(location.end);
-        match printed_comments(comments, false) {
-            None => doc.append(last_break).append("]").group(),
+        let doc = match printed_comments(comments, false) {
+            None => doc.append(last_break).append("]"),
             Some(comment) => doc
                 .append(last_break.nest(INDENT))
                 // ^ See how here we're adding the missing indentation to the
@@ -2028,7 +2077,81 @@ impl<'comments> Formatter<'comments> {
                 .append(line())
                 .append("]")
                 .force_break(),
+        };
+
+        match list_packing {
+            ListItemsPacking::FitOnePerLine | ListItemsPacking::FitMultiplePerLine => doc.group(),
+            ListItemsPacking::BreakOnePerLine => doc.force_break(),
         }
+    }
+
+    fn list_items_packing<'a, T: HasLocation>(
+        &self,
+        items: &'a [T],
+        tail: Option<&'a T>,
+        is_simple_constant: impl Fn(&'a T) -> bool,
+        list_location: SrcSpan,
+    ) -> ListItemsPacking {
+        let ends_with_trailing_comma = tail
+            .map(|tail| tail.location().end)
+            .or_else(|| items.last().map(|last| last.location().end))
+            .is_some_and(|last_element_end| {
+                self.has_trailing_comma(last_element_end, list_location.end)
+            });
+
+        let is_simple_constant_list = tail.is_none() && items.iter().all(is_simple_constant);
+        let has_multiple_elements_per_line =
+            self.has_items_on_the_same_line(items.iter().chain(tail));
+
+        let has_empty_lines_between_elements = match (items.first(), items.last().or(tail)) {
+            (Some(first), Some(last)) => self.empty_lines.first().is_some_and(|empty_line| {
+                *empty_line >= first.location().end && *empty_line < last.location().start
+            }),
+            _ => false,
+        };
+
+        if has_empty_lines_between_elements {
+            // If there's any empty line between elements we want to force each
+            // item onto its own line to preserve the empty lines that were
+            // intentionally added.
+            ListItemsPacking::BreakOnePerLine
+        } else if !ends_with_trailing_comma {
+            // If the list doesn't end with a trailing comma we try and pack it in
+            // a single line; if we can't we'll put one item per line, no matter
+            // the content of the list.
+            ListItemsPacking::FitOnePerLine
+        } else if is_simple_constant_list
+            && has_multiple_elements_per_line
+            && self.spans_multiple_lines(list_location.start, list_location.end)
+        {
+            // If there's a trailing comma, the list is only made of simple
+            // constants and there's already multiple items per line, we try
+            // and pack as many items as possible on each line.
+            ListItemsPacking::FitMultiplePerLine
+        } else {
+            // If it ends with a trailing comma we will force the list on
+            // multiple lines, with one item per line.
+            ListItemsPacking::BreakOnePerLine
+        }
+    }
+
+    fn has_items_on_the_same_line<'a, L: HasLocation + 'a, T: Iterator<Item = &'a L>>(
+        &self,
+        items: T,
+    ) -> bool {
+        let mut previous: Option<SrcSpan> = None;
+        for item in items {
+            let item_location = item.location();
+            // A list has multiple items on the same line if two consecutive
+            // ones do not span multiple lines.
+            if let Some(previous) = previous {
+                if !self.spans_multiple_lines(previous.end, item_location.start) {
+                    return true;
+                }
+            }
+            previous = Some(item_location);
+        }
+        false
     }
 
     /// Pretty prints an expression to be used in a comma separated list; for
@@ -2757,6 +2880,54 @@ impl<'a> Documentable<'a> for &'a BinOp {
         }
         .to_doc()
     }
+}
+
+#[allow(clippy::enum_variant_names)]
+enum ListItemsPacking {
+    /// Try and fit everything on a single line; if the items don't fit, break
+    /// the list putting each item into its own line.
+    ///
+    /// ```gleam
+    /// // unbroken
+    /// [1, 2, 3]
+    ///
+    /// // broken
+    /// [
+    ///   1,
+    ///   2,
+    ///   3,
+    /// ]
+    /// ```
+    ///
+    FitOnePerLine,
+
+    /// Try and fit everything on a single line; if the items don't fit, break
+    /// the list putting as many items as possible in a single line.
+    ///
+    /// ```gleam
+    /// // unbroken
+    /// [1, 2, 3]
+    ///
+    /// // broken
+    /// [
+    ///   1, 2, 3, ...
+    ///   4, 100,
+    /// ]
+    /// ```
+    ///
+    FitMultiplePerLine,
+
+    /// Always break the list, putting each item into its own line:
+    ///
+    /// ```gleam
+    /// [
+    ///   1,
+    ///   2,
+    ///   3,
+    /// ]
+    /// ```
+    ///
+    BreakOnePerLine,
 }
 
 pub fn break_block(doc: Document<'_>) -> Document<'_> {
