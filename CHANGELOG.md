@@ -145,6 +145,10 @@
   with the wrong number of labels.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the language server would generate invalid code when the
+  "Extract variable" code action was used on a `use` expression.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.11.1 - 2025-06-05
 
 ### Compiler

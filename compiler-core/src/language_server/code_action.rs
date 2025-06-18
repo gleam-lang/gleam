@@ -3012,21 +3012,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
                 | ExtractVariablePosition::InsideCaseClause
                 | ExtractVariablePosition::CallArg,
             )
-            | None => {
-                match expr {
-                    // We don't extract variables, they're already good.
-                    // And we don't extract module selects by themselves but always
-                    // want to consider those as part of a function call.
-                    TypedExpr::Var { .. } | TypedExpr::ModuleSelect { .. } => (),
-                    _ => {
-                        self.selected_expression = Some((expr_location, expr.type_()));
-
-                        if !matches!(self.position, Some(ExtractVariablePosition::CallArg)) {
-                            self.statement_before_selected_expression = self.latest_statement;
-                        }
-                    }
-                }
-            }
+            | None => {}
         }
 
         match expr {
