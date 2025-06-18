@@ -111,6 +111,10 @@
   correctly to variables using label shorthand syntax.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where the compiler would emit the same error twice for patterns
+  with the wrong number of labels.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.11.1 - 2025-06-05
 
 ### Compiler
