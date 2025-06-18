@@ -109,16 +109,16 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
     // Prompt the user to make a git tag if they have not.
     let has_repo = config.repository.url().is_some();
     let git = PathBuf::from(".git");
-    let version = format!("v{}", &config.version);
-    let git_tag = git.join("refs").join("tags").join(&version);
+    let tag_name = config.repository.tag_for_version(&config.version);
+    let git_tag = git.join("refs").join("tags").join(&tag_name);
     if has_repo && git.exists() && !git_tag.exists() {
         println!(
             "
 Please push a git tag for this release so source code links in the
 HTML documentation will work:
 
-    git tag {version}
-    git push origin {version}
+    git tag {tag_name}
+    git push origin {tag_name}
 "
         )
     }
