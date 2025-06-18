@@ -3926,6 +3926,20 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn unused_discard_pattern() {
+    assert_warning!(
+        "pub fn main() {
+  let a = 10
+  let _ = case a {
+    _ as b -> b
+  }
+}
+"
+    );
+}
+
 //https://github.com/gleam-lang/gleam/issues/4666
 #[test]
 fn shadow_imported_function() {
