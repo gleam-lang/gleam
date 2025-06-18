@@ -105,6 +105,9 @@
   ([Carl Bordum Hansen](https://github.com/carlbordum)) and
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- A warning is now emitted when the now deprecated `_ as x` pattern is used.
+  ([eutampieri](https://github.com/eutampieri))
+
 ### Build tool
 
 - `gleam update`, `gleam deps update`, and `gleam deps download` will now print
@@ -126,6 +129,9 @@
 ### Language server
 
 ### Formatter
+
+- Implememted rewrite of `_ as x` patterns to `x`.
+  ([eutampieri](https://github.com/eutampieri))
 
 ### Bug fixes
 
