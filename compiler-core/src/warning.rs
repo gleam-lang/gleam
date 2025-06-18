@@ -1304,6 +1304,22 @@ can already tell whether it will be `True` or `False`.",
                     }),
                 },
 
+                type_::Warning::UnusedDiscardPattern { location, name } => Diagnostic {
+                    title: "Unused discard pattern".into(),
+                    text: format!("`_ as {name}` can be written more concisely as `{name}`"),
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        src: src.clone(),
+                        path: path.to_path_buf(),
+                        label: diagnostic::Label {
+                            text: None,
+                            span: *location,
+                        },
+                        extra_labels: vec![],
+                    }),
+                    hint: Some(format!("Replace with {name}")),
+                },
+
                 type_::Warning::TopLevelDefinitionShadowsImport { location, name } => {
                     let text = format!(
                         "Definition of {name} shadows an imported value.
