@@ -21,7 +21,6 @@ error: Unsafe record update
 8 │   Wibble(..value, wubble: True)
   │            ^^^^^ I'm not sure this is always a `Wibble`
 
-
 This value cannot be used to build an updated `Wibble` as it could be some
 other variant.
 

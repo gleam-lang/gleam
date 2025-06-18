@@ -26,7 +26,6 @@ error: Unsafe record update
 13 │   Left(..func(), value: 10)
    │          ^^^^^^ I'm not sure this is always a `Left`
 
-
 This value cannot be used to build an updated `Left` as it could be some
 other variant.
 
