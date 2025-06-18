@@ -926,6 +926,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     }
                 };
 
+                let mut incorrect_arity_error = false;
                 match constructor.field_map() {
                     // The fun has a field map so labelled arguments may be present and need to be reordered.
                     Some(field_map) => {
@@ -1020,10 +1021,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             location,
                             IncorrectArityContext::Pattern,
                         ) {
-                            {
-                                self.problems.error(error);
-                                self.error_encountered = true;
-                            };
+                            incorrect_arity_error = true;
+                            self.problems.error(error);
+                            self.error_encountered = true;
                         }
                     }
 
@@ -1132,7 +1132,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             self.set_subject_variable_variant(variable_to_infer, inferred_variant);
                         }
 
-                        if args.len() != pattern_args.len() {
+                        // We're emitting the incorrect arity error only if we haven't emitted
+                        // one already. This might happen when we can't reorder the field map
+                        // of a constructor because there's not enough labels.
+                        if args.len() != pattern_args.len() && !incorrect_arity_error {
                             self.error(Error::IncorrectArity {
                                 labels: vec![],
                                 location,

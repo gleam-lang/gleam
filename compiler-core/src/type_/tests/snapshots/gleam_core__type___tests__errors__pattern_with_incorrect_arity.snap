@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type Pokemon { Pokemon(name: String, id: Int) }\n\npub fn main() {\n  case todo {\n    Pokemon(name:) -> todo\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub type Pokemon { Pokemon(name: String, id: Int) }
+
+pub fn main() {
+  case todo {
+    Pokemon(name:) -> todo
+  }
+}
+
+
+----- ERROR
+error: Incorrect arity
+  ┌─ /src/one/two.gleam:6:5
+  │
+6 │     Pokemon(name:) -> todo
+  │     ^^^^^^^^^^^^^^ Expected 2 arguments, got 1
+
+This pattern accepts these additional labelled arguments:
+
+  - id

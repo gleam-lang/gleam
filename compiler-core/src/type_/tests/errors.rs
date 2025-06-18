@@ -3192,3 +3192,19 @@ pub fn go() {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4693
+#[test]
+fn pattern_with_incorrect_arity() {
+    assert_module_error!(
+        "
+pub type Pokemon { Pokemon(name: String, id: Int) }
+
+pub fn main() {
+  case todo {
+    Pokemon(name:) -> todo
+  }
+}
+"
+    );
+}
