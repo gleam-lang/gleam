@@ -8738,3 +8738,20 @@ pub fn main() {
             .to_selection()
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4675
+#[test]
+fn extract_variable_use() {
+    assert_no_code_actions!(
+        EXTRACT_VARIABLE,
+        "
+pub fn main() {
+  #({
+    use <- todo
+    todo
+  })
+}
+  ",
+        find_position_of("use").to_selection()
+    );
+}
