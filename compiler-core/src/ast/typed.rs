@@ -694,14 +694,12 @@ impl TypedExpr {
         }
     }
 
-    pub fn is_known_value(&self) -> bool {
+    pub fn is_known_bool(&self) -> bool {
         match self {
-            TypedExpr::BinOp { left, right, .. } => left.is_known_value() && right.is_known_value(),
-
-            TypedExpr::NegateBool { value, .. } | TypedExpr::NegateInt { value, .. } => {
-                value.is_known_value()
-            }
-
+            TypedExpr::BinOp {
+                left, right, name, ..
+            } if name.is_bool_operator() => left.is_known_bool() && right.is_known_bool(),
+            TypedExpr::NegateBool { value, .. } => value.is_known_bool(),
             _ => self.is_literal(),
         }
     }
@@ -915,6 +913,7 @@ impl TypedExpr {
     }
 
     #[must_use]
+    // TODO)) is this the same as is_record_builder
     pub fn is_record_constructor(&self) -> bool {
         match self {
             TypedExpr::Var {

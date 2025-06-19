@@ -10,11 +10,10 @@ pub fn main() {
 
 
 ----- WARNING
-warning: Assertion of a literal value
+warning: Redundant comparison
   ┌─ /src/warning/wrn.gleam:3:10
   │
 3 │   assert 1 == 2
-  │          ^^^^^^ This is always the same
+  │          ^^^^^^ This is always `False`
 
-Asserting that a literal value is redundant since you can already tell
-whether it will be true or false.
+This comparison is redundant since it always fails.
