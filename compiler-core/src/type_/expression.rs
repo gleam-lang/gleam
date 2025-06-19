@@ -4760,7 +4760,7 @@ impl UseAssignments {
                 pattern @ (Pattern::Int { .. }
                 | Pattern::Float { .. }
                 | Pattern::String { .. }
-                | Pattern::VarUsage { .. }
+                | Pattern::BitArraySize { .. }
                 | Pattern::Assign { .. }
                 | Pattern::List { .. }
                 | Pattern::Constructor { .. }

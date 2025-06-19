@@ -6,7 +6,7 @@ use lsp_types::Location;
 use crate::{
     analyse,
     ast::{
-        self, ArgNames, CustomType, Definition, Function, ModuleConstant, Pattern,
+        self, ArgNames, BitArraySize, CustomType, Definition, Function, ModuleConstant, Pattern,
         RecordConstructor, SrcSpan, TypedExpr, TypedModule, visit::Visit,
     },
     build::Located,
@@ -74,11 +74,11 @@ pub fn reference_for_ast_node(
             location: *location,
             origin: Some(origin.clone()),
         }),
-        Located::Pattern(Pattern::VarUsage {
+        Located::Pattern(Pattern::BitArraySize(BitArraySize::Variable {
             constructor,
             location,
             ..
-        }) => constructor
+        })) => constructor
             .as_ref()
             .and_then(|constructor| match &constructor.variant {
                 ValueConstructorVariant::LocalVariable {
@@ -400,7 +400,7 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
         }
     }
 
-    fn visit_typed_pattern_var_usage(
+    fn visit_typed_bit_array_size_variable(
         &mut self,
         location: &'ast SrcSpan,
         _name: &'ast EcoString,

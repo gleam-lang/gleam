@@ -2231,7 +2231,7 @@ impl<'comments> Formatter<'comments> {
 
             Pattern::Variable { name, .. } => name.to_doc(),
 
-            Pattern::VarUsage { name, .. } => name.to_doc(),
+            Pattern::BitArraySize(size) => self.bit_array_size(size),
 
             Pattern::Assign { name, pattern, .. } => {
                 self.pattern(pattern).append(" as ").append(name.as_str())
@@ -2293,6 +2293,13 @@ impl<'comments> Formatter<'comments> {
             Pattern::Invalid { .. } => panic!("invalid patterns can not be in an untyped ast"),
         };
         commented(doc, comments)
+    }
+
+    fn bit_array_size<'a>(&mut self, size: &'a BitArraySize<()>) -> Document<'a> {
+        match size {
+            BitArraySize::Int { value, .. } => self.int(value),
+            BitArraySize::Variable { name, .. } => name.to_doc(),
+        }
     }
 
     fn list_pattern<'a>(
