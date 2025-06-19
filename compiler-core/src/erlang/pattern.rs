@@ -37,20 +37,7 @@ fn print<'a>(
 
         Pattern::Discard { .. } => "_".to_doc(),
 
-        Pattern::VarUsage {
-            name, constructor, ..
-        } => {
-            let v = &constructor
-                .as_ref()
-                .expect("Constructor not found for variable usage")
-                .variant;
-            match v {
-                ValueConstructorVariant::ModuleConstant { literal, .. } => {
-                    const_inline(literal, env)
-                }
-                _ => env.local_var_name(name),
-            }
-        }
+        Pattern::BitArraySize(size) => bit_array_size(size, env),
 
         Pattern::Variable { name, .. } => {
             vars.push(name);
@@ -139,6 +126,27 @@ fn print<'a>(
         }
 
         Pattern::Invalid { .. } => panic!("invalid patterns should not reach code generation"),
+    }
+}
+
+fn bit_array_size<'a>(size: &'a TypedBitArraySize, env: &mut Env<'a>) -> Document<'a> {
+    match size {
+        BitArraySize::Int { value, .. } => int(value),
+
+        BitArraySize::Variable {
+            name, constructor, ..
+        } => {
+            let v = &constructor
+                .as_ref()
+                .expect("Constructor not found for variable usage")
+                .variant;
+            match v {
+                ValueConstructorVariant::ModuleConstant { literal, .. } => {
+                    const_inline(literal, env)
+                }
+                _ => env.local_var_name(name),
+            }
+        }
     }
 }
 

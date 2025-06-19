@@ -63,7 +63,10 @@ mod missing_patterns;
 pub mod printer;
 
 use crate::{
-    ast::{self, AssignName, Endianness, TypedClause, TypedPattern, TypedPatternBitArraySegment},
+    ast::{
+        self, AssignName, BitArraySize, Endianness, TypedBitArraySize, TypedClause, TypedPattern,
+        TypedPatternBitArraySegment,
+    },
     strings::{convert_string_escape_chars, length_utf16, length_utf32},
     type_::{
         Environment, Opaque, Type, TypeValueConstructor, TypeValueConstructorField, TypeVar,
@@ -2784,8 +2787,8 @@ impl CaseToCompile {
                 })
             }
 
-            TypedPattern::VarUsage { .. } => {
-                unreachable!("Cannot convert VarUsage to exhaustiveness pattern")
+            TypedPattern::BitArraySize { .. } => {
+                unreachable!("Cannot convert BitArraySize to exhaustiveness pattern")
             }
         }
     }
@@ -2957,23 +2960,8 @@ fn segment_size(
     let pattern = pattern.unwrap_or(&segment.value);
 
     match segment.size() {
-        // Size could either be a constant or a variable usage. In either case
-        // we need to take the segment's unit into account!
-        Some(ast::Pattern::Int { int_value, .. }) => {
-            ReadSize::ConstantBits(int_value * segment.unit())
-        }
-        Some(ast::Pattern::VarUsage { name, .. }) => {
-            let variable = match pattern_variables.get(name) {
-                Some(read_action) => {
-                    VariableUsage::PatternSegment(name.clone(), read_action.clone())
-                }
-                None => VariableUsage::OutsideVariable(name.clone()),
-            };
-            ReadSize::VariableBits {
-                variable: Box::new(variable),
-                unit: segment.unit(),
-            }
-        }
+        // The size of a segment must be a `BitArraySize` pattern.
+        Some(ast::Pattern::BitArraySize(size)) => bit_array_size(segment, pattern_variables, size),
         Some(x) => panic!("invalid pattern size made it to code generation {x:?}"),
 
         // If a segment has the `bits`/`bytes` option and has no size, that
@@ -3010,6 +2998,28 @@ fn segment_size(
             // In all other cases the segment is considered to be 64 bits.
             _ => ReadSize::ConstantBits(64.into()),
         },
+    }
+}
+
+fn bit_array_size(
+    segment: &TypedPatternBitArraySegment,
+    pattern_variables: &HashMap<EcoString, ReadAction>,
+    size: &TypedBitArraySize,
+) -> ReadSize {
+    match size {
+        BitArraySize::Int { int_value, .. } => ReadSize::ConstantBits(int_value * segment.unit()),
+        BitArraySize::Variable { name, .. } => {
+            let variable = match pattern_variables.get(name) {
+                Some(read_action) => {
+                    VariableUsage::PatternSegment(name.clone(), read_action.clone())
+                }
+                None => VariableUsage::OutsideVariable(name.clone()),
+            };
+            ReadSize::VariableBits {
+                variable: Box::new(variable),
+                unit: segment.unit(),
+            }
+        }
     }
 }
 
