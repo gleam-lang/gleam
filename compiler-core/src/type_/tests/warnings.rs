@@ -4014,6 +4014,41 @@ fn bool_literals_redundant_comparison_1() {
 }
 
 #[test]
+fn list_literals_redundant_comparison() {
+    assert_warning!("pub fn main(a, b) { [1] == [a, b(1)] }");
+}
+
+#[test]
+fn list_literals_redundant_comparison_2() {
+    assert_warning!("pub fn main(a, b) { [1] != [a, b(1)] }");
+}
+
+#[test]
+fn list_literals_redundant_comparison_3() {
+    assert_warning!("pub fn main() { [1] != [1] }");
+}
+
+#[test]
+fn list_literals_redundant_comparison_4() {
+    assert_warning!("pub fn main(a) { [1, ..[1, a]] == [1, ..[1, a]] }");
+}
+
+#[test]
+fn list_literals_redundant_comparison_5() {
+    assert_warning!("pub fn main(a) { [1, ..a] == [1, ..a] }");
+}
+
+#[test]
+fn list_literals_redundant_comparison_6() {
+    assert_no_warnings!("pub fn main(a) { [a(1)] == [a(1)] }");
+}
+
+#[test]
+fn list_literals_redundant_comparison_7() {
+    assert_warning!("pub fn main(a) { [a(1), 2] == [a(1), 3] }");
+}
+
+#[test]
 fn string_literals_redundant_comparison() {
     assert_warning!("pub fn main() { \"wibble\" == \"wobble\" }");
 }

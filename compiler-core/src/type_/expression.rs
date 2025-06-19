@@ -1761,142 +1761,36 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         right: &TypedExpr,
         location: SrcSpan,
     ) {
-        let outcome = match (left, right) {
-            // Numbers are a bit trickier as we might have more kinds of
-            // comparisons that we can tell are never right.
-            (TypedExpr::Int { int_value: n, .. }, TypedExpr::Int { int_value: m, .. }) => {
-                match binop {
-                    BinOp::Eq if n == m => Some(ComparisonOutcome::AlwaysSucceeds),
-                    BinOp::Eq => Some(ComparisonOutcome::AlwaysFails),
+        let outcome = match (left, binop, right) {
+            (left, BinOp::Eq, right) => match static_compare(left, right) {
+                StaticComparison::CertainlyEqual => ComparisonOutcome::AlwaysSucceeds,
+                StaticComparison::CertainlyDifferent => ComparisonOutcome::AlwaysFails,
+                StaticComparison::CantTell => return,
+            },
 
-                    BinOp::NotEq if n != m => Some(ComparisonOutcome::AlwaysSucceeds),
-                    BinOp::NotEq => Some(ComparisonOutcome::AlwaysFails),
+            (left, BinOp::NotEq, right) => match static_compare(left, right) {
+                StaticComparison::CertainlyEqual => ComparisonOutcome::AlwaysFails,
+                StaticComparison::CertainlyDifferent => ComparisonOutcome::AlwaysSucceeds,
+                StaticComparison::CantTell => return,
+            },
 
-                    BinOp::LtInt if n < m => Some(ComparisonOutcome::AlwaysSucceeds),
-                    BinOp::LtInt => Some(ComparisonOutcome::AlwaysFails),
-
-                    BinOp::LtEqInt if n <= m => Some(ComparisonOutcome::AlwaysSucceeds),
-                    BinOp::LtEqInt => Some(ComparisonOutcome::AlwaysFails),
-
-                    BinOp::GtInt if n > m => Some(ComparisonOutcome::AlwaysSucceeds),
-                    BinOp::GtInt => Some(ComparisonOutcome::AlwaysFails),
-
-                    BinOp::GtEqInt if n >= m => Some(ComparisonOutcome::AlwaysSucceeds),
-                    BinOp::GtEqInt => Some(ComparisonOutcome::AlwaysFails),
-
-                    _ => None,
+            // We special handle int literals as there's other comparisons we
+            // might want to perform
+            (TypedExpr::Int { int_value: n, .. }, op, TypedExpr::Int { int_value: m, .. }) => {
+                match op {
+                    BinOp::LtInt if n < m => ComparisonOutcome::AlwaysSucceeds,
+                    BinOp::LtInt => ComparisonOutcome::AlwaysFails,
+                    BinOp::LtEqInt if n <= m => ComparisonOutcome::AlwaysSucceeds,
+                    BinOp::LtEqInt => ComparisonOutcome::AlwaysFails,
+                    BinOp::GtInt if n > m => ComparisonOutcome::AlwaysSucceeds,
+                    BinOp::GtInt => ComparisonOutcome::AlwaysFails,
+                    BinOp::GtEqInt if n >= m => ComparisonOutcome::AlwaysSucceeds,
+                    BinOp::GtEqInt => ComparisonOutcome::AlwaysFails,
+                    _ => return,
                 }
             }
 
-            // For other types of simple values we can only check for redundant
-            // equality checks.
-            (TypedExpr::String { value: one, .. }, TypedExpr::String { value: other, .. }) => {
-                match binop {
-                    BinOp::Eq if one == other => Some(ComparisonOutcome::AlwaysSucceeds),
-                    BinOp::Eq => Some(ComparisonOutcome::AlwaysFails),
-                    BinOp::NotEq if one != other => Some(ComparisonOutcome::AlwaysSucceeds),
-                    BinOp::NotEq => Some(ComparisonOutcome::AlwaysFails),
-                    _ => None,
-                }
-            }
-
-            // If two variables are the same then we know that the comparison
-            // will always succeed, but the opposite is not true: if the two
-            // variables are different we can't be sure the comparison will
-            // always fail.
-            (TypedExpr::Var { name: one, .. }, TypedExpr::Var { name: other, .. }) => {
-                if left.is_literal_bool() && right.is_literal_bool() {
-                    match binop {
-                        BinOp::Eq if one == other => Some(ComparisonOutcome::AlwaysSucceeds),
-                        BinOp::Eq => Some(ComparisonOutcome::AlwaysFails),
-                        BinOp::NotEq if one != other => Some(ComparisonOutcome::AlwaysSucceeds),
-                        BinOp::NotEq => Some(ComparisonOutcome::AlwaysFails),
-                        _ => None,
-                    }
-                } else {
-                    match binop {
-                        BinOp::Eq if one == other => Some(ComparisonOutcome::AlwaysSucceeds),
-                        BinOp::NotEq if one == other => Some(ComparisonOutcome::AlwaysFails),
-                        _ => None,
-                    }
-                }
-            }
-
-            (
-                TypedExpr::ModuleSelect {
-                    constructor: constructor_one,
-                    module_name: module_name_one,
-                    ..
-                },
-                TypedExpr::ModuleSelect {
-                    constructor: constructor_other,
-                    module_name: module_name_other,
-                    ..
-                },
-            ) => {
-                let equals =
-                    module_name_one == module_name_other && constructor_one == constructor_other;
-                match binop {
-                    BinOp::Eq if equals => Some(ComparisonOutcome::AlwaysSucceeds),
-                    BinOp::NotEq if equals => Some(ComparisonOutcome::AlwaysFails),
-                    _ => None,
-                }
-            }
-
-            // We can only compare two record selects if the selected record is
-            // exactly the same and is not obtained through a function call (that
-            // might be producing different records each time it's invoked).
-            //
-            // For example:
-            // ```gleam
-            // Wibble(1).wibble == Wibble(1).wibble
-            // // We can tell this always succeeds
-            //
-            // one.wibble != one.wibble
-            // // We can tell this always fails
-            //
-            // new().wibble == new().wibble
-            // // We're not sure if this will always succeed or fail
-            // ```
-            //
-            (
-                TypedExpr::RecordAccess {
-                    record: record_one,
-                    label: label_one,
-                    ..
-                },
-                TypedExpr::RecordAccess {
-                    record: record_other,
-                    label: label_other,
-                    ..
-                },
-            ) if label_one == label_other => {
-                match (binop, record_one.as_ref(), record_other.as_ref()) {
-                    (
-                        BinOp::Eq,
-                        TypedExpr::Var { name: one, .. },
-                        TypedExpr::Var { name: other, .. },
-                    ) if one == other => Some(ComparisonOutcome::AlwaysSucceeds),
-                    (
-                        BinOp::NotEq,
-                        TypedExpr::Var { name: one, .. },
-                        TypedExpr::Var { name: other, .. },
-                    ) if one == other => Some(ComparisonOutcome::AlwaysFails),
-                    _ => None,
-                }
-            }
-
-            // All other values we can't really compare them at compile time to
-            // make sure they're always the same or not.
-            //
-            // TODO: we could actualy do this for a wider range of expressions
-            // if we did constant folding! For example we could tell that
-            // `3 + 3 < 10` always succeeds.
-            _ => None,
-        };
-
-        let Some(outcome) = outcome else {
-            return;
+            _ => return,
         };
 
         self.problems
@@ -4924,4 +4818,238 @@ enum PanicKind {
 pub enum ComparisonOutcome {
     AlwaysFails,
     AlwaysSucceeds,
+}
+
+enum StaticComparison {
+    /// When we can statically tell that two values are going to be exactly the
+    /// same.
+    CertainlyEqual,
+    /// When we can statically tell that two values are not going to be the
+    /// same.
+    CertainlyDifferent,
+    /// When it's impossible to statically tell if two values are the same.
+    CantTell,
+}
+
+fn static_compare(one: &TypedExpr, other: &TypedExpr) -> StaticComparison {
+    match (one, other) {
+        (
+            TypedExpr::Var {
+                name: one,
+                constructor: constructor_one,
+                ..
+            },
+            TypedExpr::Var {
+                name: other,
+                constructor: constructor_other,
+                ..
+            },
+        ) => match (&constructor_one.variant, &constructor_other.variant) {
+            (
+                ValueConstructorVariant::LocalVariable { .. },
+                ValueConstructorVariant::LocalVariable { .. },
+            )
+            | (
+                ValueConstructorVariant::ModuleConstant { .. },
+                ValueConstructorVariant::ModuleConstant { .. },
+            )
+            | (
+                ValueConstructorVariant::LocalConstant { .. },
+                ValueConstructorVariant::LocalConstant { .. },
+            )
+            | (ValueConstructorVariant::Record { .. }, ValueConstructorVariant::Record { .. })
+                if one == other =>
+            {
+                StaticComparison::CertainlyEqual
+            }
+
+            (
+                ValueConstructorVariant::Record {
+                    variant_index: index_one,
+                    ..
+                },
+                ValueConstructorVariant::Record {
+                    variant_index: index_other,
+                    ..
+                },
+            ) if index_one != index_other => StaticComparison::CertainlyDifferent,
+
+            (
+                ValueConstructorVariant::LocalVariable { .. }
+                | ValueConstructorVariant::ModuleConstant { .. }
+                | ValueConstructorVariant::LocalConstant { .. }
+                | ValueConstructorVariant::ModuleFn { .. }
+                | ValueConstructorVariant::Record { .. },
+                _,
+            ) => StaticComparison::CantTell,
+        },
+
+        (TypedExpr::Int { int_value: n, .. }, TypedExpr::Int { int_value: m, .. }) => {
+            if n == m {
+                StaticComparison::CertainlyEqual
+            } else {
+                StaticComparison::CertainlyDifferent
+            }
+        }
+
+        (TypedExpr::Float { value: n, .. }, TypedExpr::Float { value: m, .. }) => {
+            if n == m {
+                StaticComparison::CertainlyEqual
+            } else {
+                StaticComparison::CertainlyDifferent
+            }
+        }
+
+        (TypedExpr::String { value: one, .. }, TypedExpr::String { value: other, .. }) => {
+            if one == other {
+                StaticComparison::CertainlyEqual
+            } else {
+                StaticComparison::CertainlyDifferent
+            }
+        }
+
+        (TypedExpr::NegateInt { value: one, .. }, TypedExpr::NegateInt { value: other, .. })
+        | (TypedExpr::NegateBool { value: one, .. }, TypedExpr::NegateBool { value: other, .. }) => {
+            static_compare(one, other)
+        }
+
+        (
+            TypedExpr::List {
+                elements: elements_one,
+                tail: tail_one,
+                ..
+            },
+            TypedExpr::List {
+                elements: elements_other,
+                tail: tail_other,
+                ..
+            },
+        ) => {
+            match (tail_one, tail_other) {
+                (Some(one_tail), Some(other_tail)) => match static_compare(one_tail, other_tail) {
+                    StaticComparison::CertainlyDifferent => {
+                        return StaticComparison::CertainlyDifferent;
+                    }
+                    StaticComparison::CantTell => return StaticComparison::CantTell,
+                    StaticComparison::CertainlyEqual => (),
+                },
+                (None, Some(_)) | (Some(_), None) => return StaticComparison::CantTell,
+                (None, None) => (),
+            };
+
+            // If we can tell the two lists have a different number of items
+            // then we know it's never going to match.
+            if elements_one.len() != elements_other.len() {
+                return StaticComparison::CertainlyDifferent;
+            }
+
+            let mut comparison = StaticComparison::CertainlyEqual;
+            for (one, other) in elements_one.iter().zip(elements_other.iter()) {
+                match static_compare(one, other) {
+                    StaticComparison::CertainlyEqual => (),
+                    StaticComparison::CertainlyDifferent => {
+                        return StaticComparison::CertainlyDifferent;
+                    }
+                    StaticComparison::CantTell => comparison = StaticComparison::CantTell,
+                }
+            }
+            comparison
+        }
+
+        (
+            TypedExpr::Tuple {
+                elements: elements_one,
+                ..
+            },
+            TypedExpr::Tuple {
+                elements: elements_other,
+                ..
+            },
+        ) => {
+            let mut comparison = StaticComparison::CertainlyEqual;
+            for (one, other) in elements_one.iter().zip(elements_other.iter()) {
+                match static_compare(one, other) {
+                    StaticComparison::CertainlyEqual => (),
+                    StaticComparison::CertainlyDifferent => {
+                        return StaticComparison::CertainlyDifferent;
+                    }
+                    StaticComparison::CantTell => comparison = StaticComparison::CantTell,
+                }
+            }
+            comparison
+        }
+
+        (
+            TypedExpr::ModuleSelect {
+                constructor: constructor_one,
+                module_name: module_name_one,
+                ..
+            },
+            TypedExpr::ModuleSelect {
+                constructor: constructor_other,
+                module_name: module_name_other,
+                ..
+            },
+        ) => {
+            if module_name_one == module_name_other && constructor_one == constructor_other {
+                StaticComparison::CertainlyEqual
+            } else {
+                StaticComparison::CantTell
+            }
+        }
+
+        (
+            TypedExpr::Call {
+                fun: fun_one,
+                args: args_one,
+                ..
+            },
+            TypedExpr::Call {
+                fun: fun_other,
+                args: args_other,
+                ..
+            },
+        ) => {
+            if fun_one.is_record_builder() && fun_other.is_record_builder() {
+                let mut comparison = StaticComparison::CertainlyEqual;
+                for (one, other) in args_one.iter().zip(args_other.iter()) {
+                    match static_compare(&one.value, &other.value) {
+                        StaticComparison::CertainlyEqual => (),
+                        StaticComparison::CertainlyDifferent => {
+                            return StaticComparison::CertainlyDifferent;
+                        }
+                        StaticComparison::CantTell => comparison = StaticComparison::CantTell,
+                    }
+                }
+                comparison
+            } else {
+                StaticComparison::CantTell
+            }
+        }
+
+        (
+            TypedExpr::RecordAccess {
+                index: index_one,
+                record: record_one,
+                ..
+            },
+            TypedExpr::RecordAccess {
+                index: index_other,
+                record: record_other,
+                ..
+            },
+        ) => match static_compare(record_one, record_other) {
+            StaticComparison::CertainlyEqual if index_one == index_other => {
+                StaticComparison::CertainlyEqual
+            }
+            StaticComparison::CertainlyEqual
+            | StaticComparison::CertainlyDifferent
+            | StaticComparison::CantTell => StaticComparison::CantTell,
+        },
+
+        // TODO: For complex expressions we just give up, maybe in future we
+        // could be smarter and perform further comparisons but it sounds like
+        // there's no huge value in this.
+        (_, _) => StaticComparison::CantTell,
+    }
 }
