@@ -58,14 +58,14 @@ use crate::Warning;
 use crate::analyse::Inferred;
 use crate::ast::{
     Arg, ArgNames, Assert, AssignName, Assignment, AssignmentKind, BinOp, BitArrayOption,
-    BitArraySegment, CAPTURE_VARIABLE, CallArg, Clause, ClauseGuard, Constant, CustomType,
-    Definition, Function, FunctionLiteralKind, HasLocation, Import, Module, ModuleConstant,
-    Pattern, Publicity, RecordBeingUpdated, RecordConstructor, RecordConstructorArg, SrcSpan,
-    Statement, TargetedDefinition, TodoKind, TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn,
-    TypeAstHole, TypeAstTuple, TypeAstVar, UnqualifiedImport, UntypedArg, UntypedClause,
-    UntypedClauseGuard, UntypedConstant, UntypedDefinition, UntypedExpr, UntypedModule,
-    UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, UntypedUseAssignment, Use,
-    UseAssignment,
+    BitArraySegment, BitArraySize, CAPTURE_VARIABLE, CallArg, Clause, ClauseGuard, Constant,
+    CustomType, Definition, Function, FunctionLiteralKind, HasLocation, Import, Module,
+    ModuleConstant, Pattern, Publicity, RecordBeingUpdated, RecordConstructor,
+    RecordConstructorArg, SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAlias, TypeAst,
+    TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UnqualifiedImport,
+    UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedDefinition, UntypedExpr,
+    UntypedModule, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, UntypedUseAssignment,
+    Use, UseAssignment,
 };
 use crate::build::Target;
 use crate::error::wrap;
@@ -1406,7 +1406,7 @@ where
                                 x => x,
                             },
                             &Parser::expect_bit_array_pattern_segment_arg,
-                            &bit_array_pattern_int,
+                            &bit_array_size_int,
                         )
                     },
                     Some(&Token::Comma),
@@ -3415,20 +3415,22 @@ where
     }
 
     fn expect_bit_array_pattern_segment_arg(&mut self) -> Result<UntypedPattern, ParseError> {
-        match self.next_tok() {
-            Some((start, Token::Name { name }, end)) => Ok(Pattern::VarUsage {
+        let size = match self.next_tok() {
+            Some((start, Token::Name { name }, end)) => BitArraySize::Variable {
                 location: SrcSpan { start, end },
                 name,
                 constructor: None,
                 type_: (),
-            }),
-            Some((start, Token::Int { value, int_value }, end)) => Ok(Pattern::Int {
+            },
+            Some((start, Token::Int { value, int_value }, end)) => BitArraySize::Int {
                 location: SrcSpan { start, end },
                 value,
                 int_value,
-            }),
-            _ => self.next_tok_unexpected(vec!["A variable name or an integer".into()]),
-        }
+            },
+            _ => return self.next_tok_unexpected(vec!["A variable name or an integer".into()]),
+        };
+
+        Ok(Pattern::BitArraySize(size))
     }
 
     fn expect_const_int(&mut self) -> Result<UntypedConstant, ParseError> {
@@ -4289,17 +4291,12 @@ fn clause_guard_reduction(
 // BitArrays in patterns, guards, and expressions have a very similar structure
 // but need specific types. These are helpers for that. There is probably a
 // rustier way to do this :)
-fn bit_array_pattern_int(
-    value: EcoString,
-    int_value: BigInt,
-    start: u32,
-    end: u32,
-) -> UntypedPattern {
-    Pattern::Int {
+fn bit_array_size_int(value: EcoString, int_value: BigInt, start: u32, end: u32) -> UntypedPattern {
+    Pattern::BitArraySize(BitArraySize::Int {
         location: SrcSpan { start, end },
         value,
         int_value,
-    }
+    })
 }
 
 fn bit_array_expr_int(value: EcoString, int_value: BigInt, start: u32, end: u32) -> UntypedExpr {

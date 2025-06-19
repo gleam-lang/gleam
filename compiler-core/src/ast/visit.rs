@@ -40,6 +40,7 @@
 
 use crate::{
     analyse::Inferred,
+    ast::{BitArraySize, TypedBitArraySize},
     exhaustiveness::CompiledCase,
     type_::{
         ModuleValueConstructor, PatternConstructor, TypedCallArg, ValueConstructor,
@@ -436,14 +437,22 @@ pub trait Visit<'ast> {
         visit_typed_pattern_variable(self, location, name, type_, origin);
     }
 
-    fn visit_typed_pattern_var_usage(
+    fn visit_typed_pattern_bit_array_size(&mut self, size: &'ast TypedBitArraySize) {
+        visit_typed_pattern_bit_array_size(self, size);
+    }
+
+    fn visit_typed_bit_array_size_int(&mut self, location: &'ast SrcSpan, value: &'ast EcoString) {
+        visit_typed_bit_array_size_int(self, location, value)
+    }
+
+    fn visit_typed_bit_array_size_variable(
         &mut self,
         location: &'ast SrcSpan,
         name: &'ast EcoString,
         constructor: &'ast Option<ValueConstructor>,
         type_: &'ast Arc<Type>,
     ) {
-        visit_typed_pattern_var_usage(self, location, name, constructor, type_);
+        visit_typed_bit_array_size_variable(self, location, name, constructor, type_)
     }
 
     fn visit_typed_pattern_assign(
@@ -1499,12 +1508,7 @@ where
             type_,
             origin,
         } => v.visit_typed_pattern_variable(location, name, type_, origin),
-        Pattern::VarUsage {
-            location,
-            name,
-            constructor,
-            type_,
-        } => v.visit_typed_pattern_var_usage(location, name, constructor, type_),
+        Pattern::BitArraySize(size) => v.visit_typed_pattern_bit_array_size(size),
         Pattern::Assign {
             location,
             name,
@@ -1592,12 +1596,40 @@ pub fn visit_typed_pattern_variable<'a, V>(
 {
 }
 
-pub fn visit_typed_pattern_var_usage<'a, V>(
+pub fn visit_typed_pattern_bit_array_size<'a, V>(v: &mut V, size: &'a TypedBitArraySize)
+where
+    V: Visit<'a> + ?Sized,
+{
+    match size {
+        BitArraySize::Int {
+            location,
+            value,
+            int_value: _,
+        } => v.visit_typed_bit_array_size_int(location, value),
+        BitArraySize::Variable {
+            location,
+            name,
+            constructor,
+            type_,
+        } => v.visit_typed_bit_array_size_variable(location, name, constructor, type_),
+    }
+}
+
+pub fn visit_typed_bit_array_size_int<'a, V>(
+    _v: &mut V,
+    _location: &'a SrcSpan,
+    _value: &'a EcoString,
+) where
+    V: Visit<'a> + ?Sized,
+{
+}
+
+pub fn visit_typed_bit_array_size_variable<'a, V>(
     _v: &mut V,
     _location: &'a SrcSpan,
     _name: &'a EcoString,
     _constructor: &'a Option<ValueConstructor>,
-    _type: &'a Arc<Type>,
+    _type_: &'a Arc<Type>,
 ) where
     V: Visit<'a> + ?Sized,
 {
