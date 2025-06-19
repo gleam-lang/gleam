@@ -913,6 +913,7 @@ impl TypedExpr {
     }
 
     #[must_use]
+    // TODO)) is this the same as is_record_builder
     pub fn is_record_constructor(&self) -> bool {
         match self {
             TypedExpr::Var {
@@ -1048,15 +1049,6 @@ impl TypedExpr {
     pub(crate) fn is_invalid(&self) -> bool {
         match self {
             TypedExpr::Invalid { .. } => true,
-            _ => false,
-        }
-    }
-
-    pub(crate) fn is_literal_bool(&self) -> bool {
-        match self {
-            TypedExpr::Var {
-                constructor, name, ..
-            } if name == "True" || name == "False" => constructor.type_.is_bool(),
             _ => false,
         }
     }
