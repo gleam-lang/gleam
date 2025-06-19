@@ -344,10 +344,12 @@ pub trait GetLiteralValue {
 
 impl GetLiteralValue for ast::TypedPattern {
     fn as_int_literal(&self) -> Option<BigInt> {
-        if let ast::Pattern::Int { int_value, .. } = self {
-            Some(int_value.clone())
-        } else {
-            None
+        match self {
+            ast::Pattern::Int { int_value, .. }
+            | ast::Pattern::BitArraySize(ast::BitArraySize::Int { int_value, .. }) => {
+                Some(int_value.clone())
+            }
+            _ => None,
         }
     }
 }
