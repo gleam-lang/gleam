@@ -11,7 +11,7 @@ use super::*;
 use crate::{
     analyse::{self, Inferred, name::check_name_case},
     ast::{
-        AssignName, BitArrayOption, BitArraySize, ImplicitCallArgOrigin, Layer,
+        AssignName, BitArrayOption, BitArraySize, ImplicitCallArgOrigin, Layer, TypedBitArraySize,
         UntypedPatternBitArraySegment,
     },
     parse::PatternPosition,
@@ -621,7 +621,16 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 }
             }
 
-            Pattern::BitArraySize(size) => self.bit_array_size(size, type_),
+            Pattern::BitArraySize(size) => {
+                let location = size.location();
+                match self.bit_array_size(size, type_.clone()) {
+                    Ok(size) => Pattern::BitArraySize(size),
+                    Err(error) => {
+                        self.error(error);
+                        Pattern::Invalid { location, type_ }
+                    }
+                }
+            }
 
             Pattern::StringPrefix {
                 location,
@@ -1188,7 +1197,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             .collect()
     }
 
-    fn bit_array_size(&mut self, size: BitArraySize<()>, type_: Arc<Type>) -> TypedPattern {
+    fn bit_array_size(
+        &mut self,
+        size: BitArraySize<()>,
+        type_: Arc<Type>,
+    ) -> Result<TypedBitArraySize, Error> {
         let typed_size = match size {
             BitArraySize::Int {
                 location,
@@ -1209,7 +1222,6 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     int_value,
                 }
             }
-
             BitArraySize::Variable { name, location, .. } => {
                 let constructor = match self.variables.get_mut(&name) {
                     // If we've bound a variable in the current bit array pattern,
@@ -1226,7 +1238,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     Some(_) | None => match self.environment.get_variable(&name) {
                         Some(constructor) => constructor.clone(),
                         None => {
-                            self.error(Error::UnknownVariable {
+                            return Err(Error::UnknownVariable {
                                 location,
                                 name: name.clone(),
                                 variables: self.environment.local_value_names(),
@@ -1241,7 +1253,6 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                     .keys()
                                     .any(|type_| type_ == &name),
                             });
-                            return Pattern::Invalid { location, type_ };
                         }
                     },
                 };
@@ -1261,9 +1272,21 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     type_,
                 }
             }
+
+            BitArraySize::BinaryOperator {
+                location,
+                operator,
+                left,
+                right,
+            } => BitArraySize::BinaryOperator {
+                location,
+                operator,
+                left: Box::new(self.bit_array_size(*left, type_.clone())?),
+                right: Box::new(self.bit_array_size(*right, type_)?),
+            },
         };
 
-        Pattern::BitArraySize(typed_size)
+        Ok(typed_size)
     }
 
     fn check_name_case(&mut self, location: SrcSpan, name: &EcoString, kind: Named) {

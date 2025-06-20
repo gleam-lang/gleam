@@ -132,7 +132,6 @@ fn print<'a>(
 fn bit_array_size<'a>(size: &'a TypedBitArraySize, env: &mut Env<'a>) -> Document<'a> {
     match size {
         BitArraySize::Int { value, .. } => int(value),
-
         BitArraySize::Variable {
             name, constructor, ..
         } => {
@@ -146,6 +145,28 @@ fn bit_array_size<'a>(size: &'a TypedBitArraySize, env: &mut Env<'a>) -> Documen
                 }
                 _ => env.local_var_name(name),
             }
+        }
+
+        BitArraySize::BinaryOperator {
+            operator,
+            left,
+            right,
+            ..
+        } => {
+            let operator = match operator {
+                IntegerOperator::Add => " + ",
+                IntegerOperator::Subtract => " - ",
+                IntegerOperator::Multiply => " * ",
+                // IntegerOperator::Divide => return int_div(left, right, "div", env),
+                // IntegerOperator::Remainder => return int_div(left, right, "rem", env),
+                _ => todo!(),
+            };
+
+            docvec![
+                bit_array_size(left, env),
+                operator,
+                bit_array_size(right, env)
+            ]
         }
     }
 }

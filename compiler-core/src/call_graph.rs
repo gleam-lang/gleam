@@ -384,6 +384,10 @@ impl<'a> CallGraphBuilder<'a> {
         match size {
             BitArraySize::Int { .. } => {}
             BitArraySize::Variable { name, .. } => self.referenced(name),
+            BitArraySize::BinaryOperator { left, right, .. } => {
+                self.bit_array_size(left);
+                self.bit_array_size(right);
+            }
         }
     }
 
