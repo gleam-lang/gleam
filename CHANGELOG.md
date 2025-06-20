@@ -145,6 +145,10 @@
   with the wrong number of labels.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where `==` and `!=` would return incorrect output for some
+  JavaScript objects.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ## v1.11.1 - 2025-06-05
 
 ### Compiler
