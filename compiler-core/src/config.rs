@@ -827,7 +827,11 @@ impl Repository {
             }
             Repository::Gitea {
                 repo, user, host, ..
-            } => Some(format!("{host}/{user}/{repo}")),
+            } => {
+                let string_host = host.to_string();
+                let cleaned_host = string_host.trim_end_matches('/');
+                Some(format!("{cleaned_host}/{user}/{repo}"))
+            }
             Repository::Custom { url } => Some(url.clone()),
             Repository::None => None,
         }
