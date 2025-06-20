@@ -1494,7 +1494,10 @@ export function isEqual(x, y) {
     }
 
     let [keys, get] = getters(a);
-    for (let k of keys(a)) {
+    const ka = keys(a);
+    const kb = keys(b);
+    if (ka.length !== kb.length) return false;
+    for (let k of ka) {
       values.push(get(a, k), get(b, k));
     }
   }
