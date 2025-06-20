@@ -3020,6 +3020,7 @@ fn bit_array_size(
                 unit: segment.unit(),
             }
         }
+        _ => todo!(),
     }
 }
 

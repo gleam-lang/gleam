@@ -1827,3 +1827,13 @@ fn special_error_for_pythonic_neste_import() {
 fn doesnt_issue_special_error_for_pythonic_import_if_slash() {
     assert_module_error!("import one/two.three");
 }
+
+#[test]
+fn operator_in_pattern_size() {
+    assert_parse!("let assert <<size, payload:size(size - 1)>> = <<>>");
+}
+
+#[test]
+fn correct_precedence_in_pattern_size() {
+    assert_parse!("let assert <<size, payload:size(size + 2 * 8)>> = <<>>");
+}
