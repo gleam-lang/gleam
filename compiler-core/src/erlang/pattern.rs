@@ -157,9 +157,10 @@ fn bit_array_size<'a>(size: &'a TypedBitArraySize, env: &mut Env<'a>) -> Documen
                 IntegerOperator::Add => " + ",
                 IntegerOperator::Subtract => " - ",
                 IntegerOperator::Multiply => " * ",
-                // IntegerOperator::Divide => return int_div(left, right, "div", env),
-                // IntegerOperator::Remainder => return int_div(left, right, "rem", env),
-                _ => todo!(),
+                IntegerOperator::Divide => return bit_array_size_divide(left, right, "div", env),
+                IntegerOperator::Remainder => {
+                    return bit_array_size_divide(left, right, "rem", env);
+                }
             };
 
             docvec![
@@ -169,6 +170,47 @@ fn bit_array_size<'a>(size: &'a TypedBitArraySize, env: &mut Env<'a>) -> Documen
             ]
         }
     }
+}
+
+fn bit_array_size_divide<'a>(
+    left: &'a TypedBitArraySize,
+    right: &'a TypedBitArraySize,
+    operator: &'static str,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    if right.non_zero_compile_time_number() {
+        return bit_array_size_operator(left, operator, right, env);
+    }
+
+    let left = bit_array_size(left, env);
+    let right = bit_array_size(right, env);
+    let denominator = env.next_local_var_name("gleam@denominator");
+    let clauses = docvec![
+        line(),
+        "0 -> 0;",
+        line(),
+        denominator.clone(),
+        " -> ",
+        binop_documents(left, operator, denominator)
+    ];
+    docvec!["case ", right, " of", clauses.nest(INDENT), line(), "end"]
+}
+
+fn bit_array_size_operator<'a>(
+    left: &'a TypedBitArraySize,
+    operator: &'static str,
+    right: &'a TypedBitArraySize,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    let left = match left {
+        BitArraySize::BinaryOperator { .. } => bit_array_size(left, env).surround("(", ")"),
+        _ => bit_array_size(left, env),
+    };
+    let right = match right {
+        BitArraySize::BinaryOperator { .. } => bit_array_size(right, env).surround("(", ")"),
+        _ => bit_array_size(right, env),
+    };
+    binop_documents(left, operator, right)
 }
 
 pub(super) fn to_doc<'a>(
