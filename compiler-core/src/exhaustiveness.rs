@@ -64,11 +64,14 @@ pub mod printer;
 
 use crate::{
     ast::{
-        self, AssignName, BitArraySize, Endianness, TypedBitArraySize, TypedClause, TypedPattern, TypedPatternBitArraySegment
+        self, AssignName, BitArraySize, Endianness, TypedBitArraySize, TypedClause, TypedPattern,
+        TypedPatternBitArraySegment,
     },
     strings::{convert_string_escape_chars, length_utf16, length_utf32},
     type_::{
-        collapse_links, error::UnreachablePatternReason, is_prelude_module, string, Environment, Opaque, Type, TypeValueConstructor, TypeValueConstructorField, TypeVar, TypeVariantConstructors
+        Environment, Opaque, Type, TypeValueConstructor, TypeValueConstructorField, TypeVar,
+        TypeVariantConstructors, collapse_links, error::UnreachablePatternReason,
+        is_prelude_module, string,
     },
 };
 use ecow::EcoString;
@@ -3017,6 +3020,7 @@ fn bit_array_size(
                 unit: segment.unit(),
             }
         }
+        _ => todo!(),
     }
 }
 
