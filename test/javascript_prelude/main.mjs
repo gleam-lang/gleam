@@ -422,6 +422,8 @@ assertEqual(
   new Map([["a", new Map([["a", []]])]]),
 );
 
+assertNotEqual(new Map([]), new Map([["b", 1]]));
+
 // Sets are compared structurally
 let set = new Set(["a", 1]);
 assertEqual(set, set);
@@ -531,6 +533,18 @@ assertNotEqual(new HasCustomEquals(1, 1), new HasCustomEquals(2, 1));
 // custom equals defined on object instead of prototype, don't use it
 assertEqual(hasEqualsField, { ...hasEqualsField });
 assertNotEqual(hasEqualsField, hasEqualsField2);
+
+// Objects
+assertEqual({ a: 1 }, { a: 1 });
+assertEqual({ a: 1, b: 2 }, { b: 2, a: 1 });
+
+assertEqual({ a: {} }, { a: {} });
+assertEqual({ a: 1, b: { c: 3 } }, { a: 1, b: { c: 3 } });
+
+assertNotEqual({ a: 1 }, {});
+assertNotEqual({ a: 1, b: 2 }, { b: 2 });
+assertNotEqual({}, { a: 1 });
+assertNotEqual({ b: 2 }, { a: 1, b: 2 });
 
 // BitArray
 
