@@ -23,6 +23,7 @@ use crate::type_::{
     self, Deprecation, HasType, ModuleValueConstructor, PatternConstructor, Type, TypedCallArg,
     ValueConstructor, nil,
 };
+use num_traits::Zero;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -2134,6 +2135,13 @@ impl<T> BitArraySize<T> {
             BitArraySize::Int { location, .. }
             | BitArraySize::Variable { location, .. }
             | BitArraySize::BinaryOperator { location, .. } => *location,
+        }
+    }
+
+    pub fn non_zero_compile_time_number(&self) -> bool {
+        match self {
+            BitArraySize::Int { int_value, .. } => !int_value.is_zero(),
+            BitArraySize::Variable { .. } | BitArraySize::BinaryOperator { .. } => false,
         }
     }
 }
