@@ -717,7 +717,7 @@ impl<'a> Generator<'a> {
     }
 }
 
-fn jsdoc_comment<'a>(documentation: &'a EcoString, publicity: Publicity) -> Document<'a> {
+fn jsdoc_comment(documentation: &EcoString, publicity: Publicity) -> Document<'_> {
     let doc_lines = documentation
         .trim_end()
         .split('\n')
