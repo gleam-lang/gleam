@@ -70,13 +70,17 @@ impl SourceLinker {
             )),
             Repository::Gitea {
                 user, repo, host, ..
-            } => Some((
-                format!(
-                    "{host}/{user}/{repo}/src/tag/v{}/{}#L",
-                    project_config.version, path_in_repo
-                ),
-                "-".into(),
-            )),
+            } => {
+                let string_host = host.to_string();
+                let cleaned_host = string_host.trim_end_matches('/');
+                Some((
+                    format!(
+                        "{cleaned_host}/{user}/{repo}/src/tag/v{}/{}#L",
+                        project_config.version, path_in_repo
+                    ),
+                    "-".into(),
+                ))
+            }
             Repository::Custom { .. } | Repository::None => None,
         };
 
@@ -90,7 +94,11 @@ impl SourceLinker {
             Some((base, line_sep)) => {
                 let start_line = self.line_numbers.line_number(span.start);
                 let end_line = self.line_numbers.line_number(span.end);
-                format!("{base}{start_line}{line_sep}{end_line}")
+                if start_line == end_line {
+                    format!("{base}{start_line}")
+                } else {
+                    format!("{base}{start_line}{line_sep}{end_line}")
+                }
             }
 
             None => "".into(),
