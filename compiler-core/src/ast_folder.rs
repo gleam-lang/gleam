@@ -1317,6 +1317,17 @@ pub trait PatternFolder {
             BitArraySize::Variable { location, name, .. } => {
                 self.fold_bit_array_size_variable(location, name)
             }
+            BitArraySize::BinaryOperator {
+                location,
+                operator,
+                left,
+                right,
+            } => BitArraySize::BinaryOperator {
+                location,
+                operator,
+                left: Box::new(self.fold_bit_array_size(*left)),
+                right: Box::new(self.fold_bit_array_size(*right)),
+            },
         }
     }
 

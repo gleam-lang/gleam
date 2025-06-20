@@ -2100,14 +2100,40 @@ pub enum BitArraySize<Type> {
         constructor: Option<ValueConstructor>,
         type_: Type,
     },
+
+    BinaryOperator {
+        location: SrcSpan,
+        operator: IntegerOperator,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IntegerOperator {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Remainder,
+}
+
+impl IntegerOperator {
+    pub fn precedence(&self) -> u8 {
+        match self {
+            Self::Add | Self::Subtract => 7,
+
+            Self::Multiply | Self::Divide | Self::Remainder => 8,
+        }
+    }
 }
 
 impl<T> BitArraySize<T> {
     pub fn location(&self) -> SrcSpan {
         match self {
-            BitArraySize::Int { location, .. } | BitArraySize::Variable { location, .. } => {
-                *location
-            }
+            BitArraySize::Int { location, .. }
+            | BitArraySize::Variable { location, .. }
+            | BitArraySize::BinaryOperator { location, .. } => *location,
         }
     }
 }

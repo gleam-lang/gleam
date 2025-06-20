@@ -2294,6 +2294,26 @@ impl<'comments> Formatter<'comments> {
         match size {
             BitArraySize::Int { value, .. } => self.int(value),
             BitArraySize::Variable { name, .. } => name.to_doc(),
+            BitArraySize::BinaryOperator {
+                left,
+                right,
+                operator,
+                ..
+            } => {
+                let operator = match operator {
+                    IntegerOperator::Add => " + ",
+                    IntegerOperator::Subtract => " - ",
+                    IntegerOperator::Multiply => " * ",
+                    IntegerOperator::Divide => " / ",
+                    IntegerOperator::Remainder => " % ",
+                };
+
+                docvec![
+                    self.bit_array_size(left),
+                    operator,
+                    self.bit_array_size(right)
+                ]
+            }
         }
     }
 
