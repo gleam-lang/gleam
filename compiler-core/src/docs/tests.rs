@@ -26,6 +26,7 @@ use crate::{
 use camino::Utf8PathBuf;
 use ecow::EcoString;
 use hexpm::version::Version;
+use http::Uri;
 use itertools::Itertools;
 use serde_json::to_string as serde_to_string;
 
@@ -626,7 +627,7 @@ fn source_link_for_github_repository() {
     let modules = vec![("app.gleam", "pub type Wibble = Int")];
     assert!(
         compile(config, modules)
-            .contains("https://github.com/wibble/wobble/blob/v0.1.0/src/app.gleam#L1-L1")
+            .contains("https://github.com/wibble/wobble/blob/v0.1.0/src/app.gleam#L1")
     );
 }
 
@@ -641,9 +642,11 @@ fn source_link_for_github_repository_with_path() {
     };
 
     let modules = vec![("app.gleam", "pub type Wibble = Int")];
-    assert!(compile(config, modules).contains(
-        "https://github.com/wibble/wobble/blob/v0.1.0/path/to/package/src/app.gleam#L1-L1"
-    ));
+    assert!(
+        compile(config, modules).contains(
+            "https://github.com/wibble/wobble/blob/v0.1.0/path/to/package/src/app.gleam#L1"
+        )
+    );
 }
 
 #[test]
@@ -1160,5 +1163,19 @@ pub type Wibble {
 }
 ",
         NONE
+    );
+}
+#[test]
+fn gitea_repository_url_has_no_double_slash() {
+    let repo = Repository::Gitea {
+        host: "https://code.example.org/".parse::<Uri>().unwrap(),
+        user: "person".into(),
+        repo: "forgejo_bug".into(),
+        path: None,
+    };
+
+    assert_eq!(
+        repo.url().unwrap(),
+        "https://code.example.org/person/forgejo_bug"
     );
 }
