@@ -64,8 +64,8 @@ pub mod printer;
 
 use crate::{
     ast::{
-        self, AssignName, BitArraySize, Endianness, TypedBitArraySize, TypedClause, TypedPattern,
-        TypedPatternBitArraySegment,
+        self, AssignName, BitArraySize, Endianness, IntegerOperator, TypedBitArraySize,
+        TypedClause, TypedPattern, TypedPatternBitArraySegment,
     },
     strings::{convert_string_escape_chars, length_utf16, length_utf32},
     type_::{
@@ -912,18 +912,7 @@ impl BitArrayTest {
             }) => {
                 let mut references = vec![];
                 references.append(&mut from.referenced_segment_patterns());
-                match size {
-                    ReadSize::VariableBits { variable, unit: _ } => match variable.as_ref() {
-                        VariableUsage::PatternSegment(segment_value, read_action) => {
-                            references.push((segment_value, read_action))
-                        }
-                        VariableUsage::OutsideVariable(..) => (),
-                    },
-
-                    ReadSize::ConstantBits(..)
-                    | ReadSize::RemainingBits
-                    | ReadSize::RemainingBytes => (),
-                };
+                size.referenced_segment_patterns(&mut references);
 
                 references
             }
@@ -1225,7 +1214,15 @@ impl Confidence {
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub struct Offset {
     pub constant: BigInt,
-    pub variables: im::HashMap<VariableUsage, usize>,
+    pub variables: im::HashMap<VariableUsage, isize>,
+    pub complex_operands: im::Vector<ComplexOperand>,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
+pub struct ComplexOperand {
+    pub left: Offset,
+    pub right: Offset,
+    pub operator: IntegerOperator,
 }
 
 impl Offset {
@@ -1233,7 +1230,12 @@ impl Offset {
         Self {
             constant: value.into(),
             variables: im::HashMap::new(),
+            complex_operands: im::Vector::new(),
         }
+    }
+
+    fn from_size(size: &ReadSize) -> Self {
+        Self::constant(0).add_size(size)
     }
 
     fn add_size(self, size: &ReadSize) -> Offset {
@@ -1241,25 +1243,46 @@ impl Offset {
             ReadSize::ConstantBits(value) => Self {
                 constant: self.constant + value,
                 variables: self.variables,
+                complex_operands: self.complex_operands,
             },
             ReadSize::VariableBits { variable, unit } => Self {
                 constant: self.constant,
                 variables: self.variables.alter(
                     |value| match value {
-                        Some(value) => Some(value + (*unit as usize)),
-                        None => Some(*unit as usize),
+                        Some(value) => Some(value + (*unit as isize)),
+                        None => Some(*unit as isize),
                     },
                     variable.as_ref().clone(),
                 ),
+                complex_operands: self.complex_operands,
             },
             ReadSize::RemainingBits | ReadSize::RemainingBytes => self,
+
+            ReadSize::BinaryOperator {
+                left,
+                right,
+                operator,
+            } => match operator {
+                IntegerOperator::Add => self.add_size(left).add_size(right),
+                _ => self.add_complex(ComplexOperand {
+                    left: Self::from_size(left),
+                    right: Self::from_size(right),
+                    operator: *operator,
+                }),
+            },
         }
+    }
+
+    fn add_complex(mut self, complex: ComplexOperand) -> Self {
+        self.complex_operands.push_back(complex);
+        self
     }
 
     pub fn add_constant(&self, constant: impl Into<BigInt>) -> Offset {
         Offset {
             constant: self.constant.clone() + constant.into(),
             variables: self.variables.clone(),
+            complex_operands: self.complex_operands.clone(),
         }
     }
 
@@ -1267,7 +1290,10 @@ impl Offset {
     /// another one.
     ///
     fn greater(&self, other: &Offset) -> Confidence {
-        if self.constant > other.constant && superset(&self.variables, &other.variables) {
+        if self.constant > other.constant
+            && self.complex_operands.is_empty()
+            && superset(&self.variables, &other.variables)
+        {
             Confidence::Certain
         } else {
             Confidence::Uncertain
@@ -1279,7 +1305,9 @@ impl Offset {
     ///
     fn greater_equal(&self, other: &Offset) -> Confidence {
         if self == other
-            || (self.constant >= other.constant && superset(&self.variables, &other.variables))
+            || (self.constant >= other.constant
+                && self.complex_operands.is_empty()
+                && superset(&self.variables, &other.variables))
         {
             Confidence::Certain
         } else {
@@ -1295,13 +1323,15 @@ impl Offset {
     }
 
     pub(crate) fn is_zero(&self) -> bool {
-        self.constant == BigInt::ZERO && self.variables.is_empty()
+        self.constant == BigInt::ZERO
+            && self.variables.is_empty()
+            && self.complex_operands.is_empty()
     }
 
     /// If this offset has a constant size, returns its size in bits.
     ///
     pub(crate) fn constant_bits(&self) -> Option<BigInt> {
-        if self.variables.is_empty() {
+        if self.variables.is_empty() && self.complex_operands.is_empty() {
             Some(self.constant.clone())
         } else {
             None
@@ -1329,6 +1359,13 @@ impl Offset {
                 }
                 VariableUsage::OutsideVariable(..) => None,
             })
+            .chain(self.complex_operands.iter().flat_map(|operand| {
+                operand
+                    .left
+                    .referenced_segment_patterns()
+                    .into_iter()
+                    .chain(operand.right.referenced_segment_patterns().into_iter())
+            }))
             .collect_vec()
     }
 }
@@ -1357,8 +1394,23 @@ pub enum ReadSize {
     ///
     VariableBits {
         variable: Box<VariableUsage>,
-        unit: u8,
+        unit: i8,
     },
+
+    /// A maths expression calculating the read size from one or more variables.
+    ///
+    /// ```txt
+    /// <<len, payload:size(len * 8)>>
+    ///        ─┬───────────────────
+    ///         ╰─ Here we have to calculate the length by performing the
+    ///            multiplication at runtime
+    /// ```
+    BinaryOperator {
+        left: Box<ReadSize>,
+        right: Box<ReadSize>,
+        operator: IntegerOperator,
+    },
+
     /// Read all the remaining bits in the bit array when using a catch all
     /// pattern.
     ///
@@ -1377,9 +1429,10 @@ impl ReadSize {
     pub(crate) fn constant_bits(&self) -> Option<BigInt> {
         match self {
             ReadSize::ConstantBits(value) => Some(value.clone()),
-            ReadSize::VariableBits { .. } | ReadSize::RemainingBits | ReadSize::RemainingBytes => {
-                None
-            }
+            ReadSize::VariableBits { .. }
+            | ReadSize::BinaryOperator { .. }
+            | ReadSize::RemainingBits
+            | ReadSize::RemainingBytes => None,
         }
     }
 
@@ -1391,6 +1444,27 @@ impl ReadSize {
         } else {
             None
         }
+    }
+
+    fn referenced_segment_patterns<'a>(
+        &'a self,
+        references: &mut Vec<(&'a EcoString, &'a ReadAction)>,
+    ) {
+        match self {
+            ReadSize::VariableBits { variable, unit: _ } => match variable.as_ref() {
+                VariableUsage::PatternSegment(segment_value, read_action) => {
+                    references.push((segment_value, read_action));
+                }
+                VariableUsage::OutsideVariable(..) => (),
+            },
+
+            ReadSize::BinaryOperator { left, right, .. } => {
+                left.referenced_segment_patterns(references);
+                right.referenced_segment_patterns(references);
+            }
+
+            ReadSize::ConstantBits(..) | ReadSize::RemainingBits | ReadSize::RemainingBytes => (),
+        };
     }
 }
 
@@ -3017,10 +3091,19 @@ fn bit_array_size(
             };
             ReadSize::VariableBits {
                 variable: Box::new(variable),
-                unit: segment.unit(),
+                unit: segment.unit() as i8,
             }
         }
-        _ => todo!(),
+        BitArraySize::BinaryOperator {
+            operator,
+            left,
+            right,
+            ..
+        } => ReadSize::BinaryOperator {
+            left: Box::new(bit_array_size(segment, pattern_variables, left)),
+            right: Box::new(bit_array_size(segment, pattern_variables, right)),
+            operator: *operator,
+        },
     }
 }
 
@@ -3029,8 +3112,8 @@ fn bit_array_size(
 ///
 #[must_use]
 fn superset(
-    one: &im::HashMap<VariableUsage, usize>,
-    other: &im::HashMap<VariableUsage, usize>,
+    one: &im::HashMap<VariableUsage, isize>,
+    other: &im::HashMap<VariableUsage, isize>,
 ) -> bool {
     other
         .iter()
