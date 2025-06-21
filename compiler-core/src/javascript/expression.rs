@@ -1526,7 +1526,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         docvec![left, " ", op, " ", right]
     }
 
-    fn bin_op_with_doc_operands(
+    pub(super) fn bin_op_with_doc_operands(
         &mut self,
         name: BinOp,
         left: Document<'a>,

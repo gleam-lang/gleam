@@ -2110,7 +2110,7 @@ pub enum BitArraySize<Type> {
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum IntegerOperator {
     Add,
     Subtract,
@@ -2125,6 +2125,16 @@ impl IntegerOperator {
             Self::Add | Self::Subtract => 7,
 
             Self::Multiply | Self::Divide | Self::Remainder => 8,
+        }
+    }
+
+    pub fn to_bin_op(&self) -> BinOp {
+        match self {
+            IntegerOperator::Add => BinOp::AddInt,
+            IntegerOperator::Subtract => BinOp::SubInt,
+            IntegerOperator::Multiply => BinOp::MultInt,
+            IntegerOperator::Divide => BinOp::DivInt,
+            IntegerOperator::Remainder => BinOp::RemainderInt,
         }
     }
 }
