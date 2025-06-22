@@ -1318,6 +1318,10 @@ pub trait PatternFolder {
                 left: Box::new(self.fold_bit_array_size(*left)),
                 right: Box::new(self.fold_bit_array_size(*right)),
             },
+            BitArraySize::Block { location, inner } => BitArraySize::Block {
+                location,
+                inner: Box::new(self.fold_bit_array_size(*inner)),
+            },
         }
     }
 

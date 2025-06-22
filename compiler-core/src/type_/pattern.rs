@@ -1272,7 +1272,6 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     type_,
                 }
             }
-
             BitArraySize::BinaryOperator {
                 location,
                 operator,
@@ -1283,6 +1282,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 operator,
                 left: Box::new(self.bit_array_size(*left, type_.clone())?),
                 right: Box::new(self.bit_array_size(*right, type_)?),
+            },
+            BitArraySize::Block { location, inner } => BitArraySize::Block {
+                location,
+                inner: Box::new(self.bit_array_size(*inner, type_)?),
             },
         };
 

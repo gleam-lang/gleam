@@ -3132,6 +3132,7 @@ fn bit_array_size(
                 }
             }
         }
+        BitArraySize::Block { inner, .. } => bit_array_size(unit, pattern_variables, inner),
     }
 }
 
