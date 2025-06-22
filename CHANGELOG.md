@@ -123,7 +123,10 @@
 
   ([Amjad Mohamed](https://github.com/andho))
 
-- Docs generator now strips trailing slashes from Gitea/Forgejo hosts so sidebar "Repository" and "View Source" links never include `//`, and single-line “View Source” anchors emit `#Lx` instead of `#Lx-x`. ([Aayush Tripathi](https://github.com/aayush-tripathi))
+- Docs generator now strips trailing slashes from Gitea/Forgejo hosts so
+  sidebar "Repository" and "View Source" links never include `//`, and
+  single-line “View Source” anchors emit `#Lx` instead of `#Lx-x`.
+  ([Aayush Tripathi](https://github.com/aayush-tripathi))
 
 ### Language server
 
