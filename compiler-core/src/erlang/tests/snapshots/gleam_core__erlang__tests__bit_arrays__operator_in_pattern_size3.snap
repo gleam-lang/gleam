@@ -1,0 +1,38 @@
+---
+source: compiler-core/src/erlang/tests/bit_arrays.rs
+expression: "\npub fn main() {\n  let additional = 10\n  let assert <<len, payload:size(len + additional * 8)>> = <<>>\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let additional = 10
+  let assert <<len, payload:size(len + additional * 8)>> = <<>>
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec main() -> bitstring().
+main() ->
+    Additional = 10,
+    _assert_subject = <<>>,
+    case _assert_subject of
+        <<Len, Payload:(Len + Additional * 8)>> -> _assert_subject;
+        _assert_fail ->
+            erlang:error(#{gleam_error => let_assert,
+                        message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
+                        file => <<?FILEPATH/utf8>>,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"main"/utf8>>,
+                        line => 4,
+                        value => _assert_fail,
+                        start => 41,
+                        'end' => 102,
+                        pattern_start => 52,
+                        pattern_end => 95})
+    end.
