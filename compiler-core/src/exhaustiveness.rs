@@ -3035,7 +3035,9 @@ fn segment_size(
 
     match segment.size() {
         // The size of a segment must be a `BitArraySize` pattern.
-        Some(ast::Pattern::BitArraySize(size)) => bit_array_size(segment, pattern_variables, size),
+        Some(ast::Pattern::BitArraySize(size)) => {
+            bit_array_size(segment.unit(), pattern_variables, size)
+        }
         Some(x) => panic!("invalid pattern size made it to code generation {x:?}"),
 
         // If a segment has the `bits`/`bytes` option and has no size, that
@@ -3076,12 +3078,12 @@ fn segment_size(
 }
 
 fn bit_array_size(
-    segment: &TypedPatternBitArraySegment,
+    unit: u8,
     pattern_variables: &HashMap<EcoString, ReadAction>,
     size: &TypedBitArraySize,
 ) -> ReadSize {
     match size {
-        BitArraySize::Int { int_value, .. } => ReadSize::ConstantBits(int_value * segment.unit()),
+        BitArraySize::Int { int_value, .. } => ReadSize::ConstantBits(int_value * unit),
         BitArraySize::Variable { name, .. } => {
             let variable = match pattern_variables.get(name) {
                 Some(read_action) => {
@@ -3091,7 +3093,7 @@ fn bit_array_size(
             };
             ReadSize::VariableBits {
                 variable: Box::new(variable),
-                unit: segment.unit(),
+                unit,
             }
         }
         BitArraySize::BinaryOperator {
@@ -3099,11 +3101,23 @@ fn bit_array_size(
             left,
             right,
             ..
-        } => ReadSize::BinaryOperator {
-            left: Box::new(bit_array_size(segment, pattern_variables, left)),
-            right: Box::new(bit_array_size(segment, pattern_variables, right)),
-            operator: *operator,
-        },
+        } => {
+            let size = ReadSize::BinaryOperator {
+                left: Box::new(bit_array_size(1, pattern_variables, left)),
+                right: Box::new(bit_array_size(1, pattern_variables, right)),
+                operator: *operator,
+            };
+
+            if unit == 1 {
+                size
+            } else {
+                ReadSize::BinaryOperator {
+                    left: Box::new(size),
+                    right: Box::new(ReadSize::ConstantBits(unit.into())),
+                    operator: IntegerOperator::Multiply,
+                }
+            }
+        }
     }
 }
 
