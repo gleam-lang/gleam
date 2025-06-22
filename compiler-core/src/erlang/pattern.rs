@@ -37,7 +37,10 @@ fn print<'a>(
 
         Pattern::Discard { .. } => "_".to_doc(),
 
-        Pattern::BitArraySize(size) => bit_array_size(size, env),
+        Pattern::BitArraySize(size) => match size {
+            BitArraySize::Int { .. } | BitArraySize::Variable { .. } => bit_array_size(size, env),
+            BitArraySize::BinaryOperator { .. } => bit_array_size(size, env).surround("(", ")"),
+        },
 
         Pattern::Variable { name, .. } => {
             vars.push(name);
