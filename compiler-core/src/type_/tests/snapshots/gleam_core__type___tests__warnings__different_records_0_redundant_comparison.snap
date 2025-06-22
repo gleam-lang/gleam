@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+assertion_line: 4131
+expression: "\npub type Either {\n  Left\n  Right\n}\n\npub fn main() -> Bool {\n  Left == Right\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub type Either {
+  Left
+  Right
+}
+
+pub fn main() -> Bool {
+  Left == Right
+}
+
+
+----- WARNING
+warning: Redundant comparison
+  ┌─ /src/warning/wrn.gleam:8:3
+  │
+8 │   Left == Right
+  │   ^^^^^^^^^^^^^ This is always `False`
+
+This comparison is redundant since it always fails.
