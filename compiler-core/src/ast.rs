@@ -2108,6 +2108,11 @@ pub enum BitArraySize<Type> {
         left: Box<Self>,
         right: Box<Self>,
     },
+
+    Block {
+        location: SrcSpan,
+        inner: Box<Self>,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -2144,13 +2149,15 @@ impl<T> BitArraySize<T> {
         match self {
             BitArraySize::Int { location, .. }
             | BitArraySize::Variable { location, .. }
-            | BitArraySize::BinaryOperator { location, .. } => *location,
+            | BitArraySize::BinaryOperator { location, .. }
+            | BitArraySize::Block { location, .. } => *location,
         }
     }
 
     pub fn non_zero_compile_time_number(&self) -> bool {
         match self {
             BitArraySize::Int { int_value, .. } => !int_value.is_zero(),
+            BitArraySize::Block { inner, .. } => inner.non_zero_compile_time_number(),
             BitArraySize::Variable { .. } | BitArraySize::BinaryOperator { .. } => false,
         }
     }

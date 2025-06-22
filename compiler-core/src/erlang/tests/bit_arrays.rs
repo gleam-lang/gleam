@@ -289,3 +289,14 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn block_in_pattern_size() {
+    assert_erl!(
+        "
+pub fn main() {
+  let assert <<len, payload:size({ len - 1 } * 8)>> = <<>>
+}
+"
+    );
+}

@@ -1240,6 +1240,15 @@ fn sized_bit_array_tests() -> List(Test) {
           payload
         })
       }),
+    "let assert <<len, payload:bits-size({ len + 1 } * 8)>>"
+      |> example(fn() {
+        assert_equal(<<1, 2, 3, 4>>, {
+          let assert <<len, payload:bits-size({ len + 1 } * 8)>> = <<
+            3, 1, 2, 3, 4,
+          >>
+          payload
+        })
+      }),
   ]
 }
 

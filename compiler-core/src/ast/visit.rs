@@ -1616,6 +1616,7 @@ where
             v.visit_typed_pattern_bit_array_size(left);
             v.visit_typed_pattern_bit_array_size(right);
         }
+        BitArraySize::Block { inner, .. } => v.visit_typed_pattern_bit_array_size(inner),
     }
 }
 

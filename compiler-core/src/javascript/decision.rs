@@ -1207,12 +1207,19 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         for calculation in offset.calculations.iter() {
             let left = self.offset_to_doc(&calculation.left, true);
             let right = self.offset_to_doc(&calculation.right, true);
-            pieces.push(self.expression_generator.bin_op_with_doc_operands(
+
+            let calculation = self.expression_generator.bin_op_with_doc_operands(
                 calculation.operator.to_bin_op(),
                 left,
                 right,
                 &crate::type_::int(),
-            ))
+            );
+
+            if parenthesise {
+                pieces.push(calculation.surround("(", ")"))
+            } else {
+                pieces.push(calculation)
+            }
         }
 
         if pieces.len() > 1 && parenthesise {

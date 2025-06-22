@@ -3431,6 +3431,15 @@ where
                 value,
                 int_value,
             },
+            Some((start, Token::LeftBrace, _)) => {
+                let inner = self.expect_bit_array_size()?;
+                let (_, end) = self.expect_one(&Token::RightBrace)?;
+
+                BitArraySize::Block {
+                    location: SrcSpan { start, end },
+                    inner: Box::new(inner),
+                }
+            }
             _ => return self.next_tok_unexpected(vec!["A variable name or an integer".into()]),
         };
 
@@ -3512,7 +3521,9 @@ where
         operator: IntegerOperator,
     ) -> BitArraySize<()> {
         match right {
-            BitArraySize::Int { .. } | BitArraySize::Variable { .. } => {
+            BitArraySize::Int { .. }
+            | BitArraySize::Variable { .. }
+            | BitArraySize::Block { .. } => {
                 self.bit_array_size_binary_operator(left, right, operator)
             }
             BitArraySize::BinaryOperator {

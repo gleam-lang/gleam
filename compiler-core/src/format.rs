@@ -2314,6 +2314,7 @@ impl<'comments> Formatter<'comments> {
                     self.bit_array_size(right)
                 ]
             }
+            BitArraySize::Block { inner, .. } => self.bit_array_size(inner).surround("{ ", " }"),
         }
     }
 
