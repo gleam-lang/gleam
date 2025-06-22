@@ -1214,7 +1214,7 @@ impl Confidence {
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub struct Offset {
     pub constant: BigInt,
-    pub variables: im::HashMap<VariableUsage, isize>,
+    pub variables: im::HashMap<VariableUsage, usize>,
     pub complex_operands: im::Vector<ComplexOperand>,
 }
 
@@ -1249,8 +1249,8 @@ impl Offset {
                 constant: self.constant,
                 variables: self.variables.alter(
                     |value| match value {
-                        Some(value) => Some(value + (*unit as isize)),
-                        None => Some(*unit as isize),
+                        Some(value) => Some(value + (*unit as usize)),
+                        None => Some(*unit as usize),
                     },
                     variable.as_ref().clone(),
                 ),
@@ -1394,7 +1394,7 @@ pub enum ReadSize {
     ///
     VariableBits {
         variable: Box<VariableUsage>,
-        unit: i8,
+        unit: u8,
     },
 
     /// A maths expression calculating the read size from one or more variables.
@@ -3091,7 +3091,7 @@ fn bit_array_size(
             };
             ReadSize::VariableBits {
                 variable: Box::new(variable),
-                unit: segment.unit() as i8,
+                unit: segment.unit(),
             }
         }
         BitArraySize::BinaryOperator {
@@ -3112,8 +3112,8 @@ fn bit_array_size(
 ///
 #[must_use]
 fn superset(
-    one: &im::HashMap<VariableUsage, isize>,
-    other: &im::HashMap<VariableUsage, isize>,
+    one: &im::HashMap<VariableUsage, usize>,
+    other: &im::HashMap<VariableUsage, usize>,
 ) -> bool {
     other
         .iter()
