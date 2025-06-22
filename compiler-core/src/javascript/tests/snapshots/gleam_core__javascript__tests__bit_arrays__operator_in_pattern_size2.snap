@@ -16,7 +16,7 @@ const FILEPATH = "src/module.gleam";
 
 export function main() {
   let $ = toBitArray([]);
-  if ($.bitSize < 8 || $.bitSize !== 8 + divideInt($.byteAt(0), 8) - 1) {
+  if ($.bitSize < 8 || $.bitSize !== 8 + (divideInt($.byteAt(0), 8)) - 1) {
     throw makeError(
       "let_assert",
       FILEPATH,
