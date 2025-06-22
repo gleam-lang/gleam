@@ -3526,15 +3526,19 @@ where
             | BitArraySize::Block { .. } => {
                 self.bit_array_size_binary_operator(left, right, operator)
             }
+            // This operator has the highest precedence of the possible operators
+            // for bit array size patterns. So, `a * b + c` should be parsed as
+            // `(a * b) + c`. If the right-hand side of this operator is another
+            // operator, we rearrange it to ensure correct precedence.
             BitArraySize::BinaryOperator {
-                operator: o2,
-                left: right_left,
+                operator: right_operator,
+                left: middle,
                 right,
                 ..
             } => self.bit_array_size_binary_operator(
-                self.bit_array_size_binary_operator(left, *right_left, operator),
+                self.bit_array_size_binary_operator(left, *middle, operator),
                 *right,
-                o2,
+                right_operator,
             ),
         }
     }
