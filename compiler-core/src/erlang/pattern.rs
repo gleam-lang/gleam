@@ -38,7 +38,9 @@ fn print<'a>(
         Pattern::Discard { .. } => "_".to_doc(),
 
         Pattern::BitArraySize(size) => match size {
-            BitArraySize::Int { .. } | BitArraySize::Variable { .. } => bit_array_size(size, env),
+            BitArraySize::Int { .. }
+            | BitArraySize::Variable { .. }
+            | BitArraySize::Block { .. } => bit_array_size(size, env),
             BitArraySize::BinaryOperator { .. } => bit_array_size(size, env).surround("(", ")"),
         },
 
@@ -149,7 +151,6 @@ fn bit_array_size<'a>(size: &'a TypedBitArraySize, env: &mut Env<'a>) -> Documen
                 _ => env.local_var_name(name),
             }
         }
-
         BitArraySize::BinaryOperator {
             operator,
             left,
@@ -172,6 +173,7 @@ fn bit_array_size<'a>(size: &'a TypedBitArraySize, env: &mut Env<'a>) -> Documen
                 bit_array_size(right, env)
             ]
         }
+        BitArraySize::Block { inner, .. } => bit_array_size(inner, env).surround("(", ")"),
     }
 }
 

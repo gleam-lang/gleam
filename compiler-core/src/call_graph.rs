@@ -388,6 +388,7 @@ impl<'a> CallGraphBuilder<'a> {
                 self.bit_array_size(left);
                 self.bit_array_size(right);
             }
+            BitArraySize::Block { inner, .. } => self.bit_array_size(inner),
         }
     }
 
