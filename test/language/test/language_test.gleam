@@ -1212,6 +1212,34 @@ fn sized_bit_array_tests() -> List(Test) {
         let size = 5
         assert_equal(True, <<405:size(size)-unit(2)>> == <<101, 1:2>>)
       }),
+    "let assert <<len, payload:bits-size(len * 8 - 4)>>"
+      |> example(fn() {
+        assert_equal(<<1, 2, 3, 4:4>>, {
+          let assert <<len, payload:bits-size(len * 8 - 4)>> = <<
+            4, 1, 2, 3, 4:4,
+          >>
+          payload
+        })
+      }),
+    "let assert <<len, payload:bytes-size(len / 8 + 2)>>"
+      |> example(fn() {
+        assert_equal(<<1, 2, 3, 4, 5, 6>>, {
+          let assert <<len, payload:bytes-size(len / 8 + 2)>> = <<
+            32, 1, 2, 3, 4, 5, 6,
+          >>
+          payload
+        })
+      }),
+    "let additional = 5\nlet assert <<len, payload:bits-size(len + additional * 8)>>"
+      |> example(fn() {
+        assert_equal(<<1, 2, 3, 4, 5, 6>>, {
+          let additional = 5
+          let assert <<len, payload:bits-size(len + additional * 8)>> = <<
+            8, 1, 2, 3, 4, 5, 6,
+          >>
+          payload
+        })
+      }),
   ]
 }
 

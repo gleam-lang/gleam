@@ -1549,11 +1549,11 @@ impl<'module, 'a> Generator<'module, 'a> {
                 docvec!["remainderInt", wrap_args([left, right])]
             }
             BinOp::DivInt => {
-                self.tracker.int_remainder_used = true;
+                self.tracker.int_division_used = true;
                 docvec!["divideInt", wrap_args([left, right])]
             }
             BinOp::DivFloat => {
-                self.tracker.int_remainder_used = true;
+                self.tracker.float_division_used = true;
                 docvec!["divideFloat", wrap_args([left, right])]
             }
         }
