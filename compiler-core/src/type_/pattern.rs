@@ -1268,7 +1268,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 BitArraySize::Variable {
                     name,
                     location,
-                    constructor: Some(constructor),
+                    constructor: Some(Box::new(constructor)),
                     type_,
                 }
             }

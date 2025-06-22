@@ -481,7 +481,7 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
         &mut self,
         location: &'ast SrcSpan,
         _name: &'ast EcoString,
-        constructor: &'ast Option<ValueConstructor>,
+        constructor: &'ast Option<Box<ValueConstructor>>,
         _type_: &'ast std::sync::Arc<Type>,
     ) {
         let variant = match constructor {
