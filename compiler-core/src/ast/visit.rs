@@ -448,7 +448,7 @@ pub trait Visit<'ast> {
         &mut self,
         location: &'ast SrcSpan,
         name: &'ast EcoString,
-        constructor: &'ast Option<ValueConstructor>,
+        constructor: &'ast Option<Box<ValueConstructor>>,
         type_: &'ast Arc<Type>,
     ) {
         visit_typed_bit_array_size_variable(self, location, name, constructor, type_)
@@ -1627,7 +1627,7 @@ pub fn visit_typed_bit_array_size_variable<'a, V>(
     _v: &mut V,
     _location: &'a SrcSpan,
     _name: &'a EcoString,
-    _constructor: &'a Option<ValueConstructor>,
+    _constructor: &'a Option<Box<ValueConstructor>>,
     _type_: &'a Arc<Type>,
 ) where
     V: Visit<'a> + ?Sized,
