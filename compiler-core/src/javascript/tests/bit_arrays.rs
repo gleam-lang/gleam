@@ -2500,7 +2500,7 @@ fn unit_with_bits_option() {
     assert_js!(
         "
 pub fn go(x) {
-  <<x:bits-size(4)-unit(8)>>
+  <<x:bits-size(4)-unit(8)>
 }
 "
     );
@@ -2512,6 +2512,7 @@ fn unit_with_bits_option_constant() {
         "
 pub const bits = <<1, 2, 3>>
 pub const more_bits = <<bits:bits-size(3)-unit(8)>>
+}
 "
     );
 }
@@ -2535,6 +2536,40 @@ fn multiple_variable_size_segments() {
 pub fn main() {
   let assert <<a, b:size(a), c:size(b)>> = <<1, 2, 3, 4>>
   a + b + c
+}
+"
+    );
+}
+
+#[test]
+fn operator_in_pattern_size() {
+    assert_js!(
+        "
+pub fn main() {
+  let assert <<len, payload:size(len * 8)>> = <<>>
+}
+"
+    );
+}
+
+#[test]
+fn operator_in_pattern_size2() {
+    assert_js!(
+        "
+pub fn main() {
+  let assert <<len, payload:size(len / 8 - 1)>> = <<>>
+}
+"
+    );
+}
+
+#[test]
+fn operator_in_pattern_size3() {
+    assert_js!(
+        "
+pub fn main() {
+  let additional = 10
+  let assert <<len, payload:size(len + additional * 8)>> = <<>>
 }
 "
     );
