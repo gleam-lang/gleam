@@ -161,7 +161,7 @@ impl<'a> Generator<'a> {
             self.register_prelude_usage(&mut imports, "divideFloat", None);
         };
 
-        if dbg!(self.tracker.int_division_used) {
+        if self.tracker.int_division_used {
             self.register_prelude_usage(&mut imports, "divideInt", None);
         };
 
