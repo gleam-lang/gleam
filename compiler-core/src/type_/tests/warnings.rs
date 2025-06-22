@@ -4125,3 +4125,51 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn different_records_0_redundant_comparison() {
+    assert_warning!(
+        "
+pub type Either {
+  Left
+  Right
+}
+
+pub fn main() -> Bool {
+  Left == Right
+}
+"
+    );
+}
+
+#[test]
+fn different_records_1_redundant_comparison() {
+    assert_warning!(
+        "
+pub type Either {
+  Left(Int)
+  Right
+}
+
+pub fn main() -> Bool {
+  Left(1) == Right
+}
+"
+    );
+}
+
+#[test]
+fn different_records_2_redundant_comparison() {
+    assert_warning!(
+        "
+pub type Either {
+  Left(Int)
+  Right(Int)
+}
+
+pub fn main() -> Bool {
+  Left(1) == Right(1)
+}
+"
+    );
+}
