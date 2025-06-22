@@ -1204,11 +1204,11 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             pieces.push(variable.to_doc())
         }
 
-        for operand in offset.complex_operands.iter() {
-            let left = self.offset_to_doc(&operand.left, true);
-            let right = self.offset_to_doc(&operand.right, true);
+        for calculation in offset.calculations.iter() {
+            let left = self.offset_to_doc(&calculation.left, true);
+            let right = self.offset_to_doc(&calculation.right, true);
             pieces.push(self.expression_generator.bin_op_with_doc_operands(
-                operand.operator.to_bin_op(),
+                calculation.operator.to_bin_op(),
                 left,
                 right,
                 &crate::type_::int(),

@@ -1211,15 +1211,29 @@ impl Confidence {
     }
 }
 
+/// An offset, in bits, into a bit array. An offset contains three parts. For
+/// example, in the following pattern:
+/// ```txt
+/// <<a, b:size(a), c:size(b - 1), payload:size(c)>>
+/// ```
+///
+/// The start of the `payload` segment is the sum of the length of `a` (which we
+/// know is 1 byte), plus the size of `b`, which is the value of `a`, plus the
+/// size of `c`, which is 1 less than the value of `b`.
+///
+/// Here, `constant` would be `8`; `variables` would map `a` to `1`, because it
+/// is referenced once, in a segment with unit `1`; `calculations` would contain
+/// `b - 1`.
+///
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub struct Offset {
     pub constant: BigInt,
     pub variables: im::HashMap<VariableUsage, usize>,
-    pub complex_operands: im::Vector<ComplexOperand>,
+    pub calculations: im::Vector<OffsetCalculation>,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
-pub struct ComplexOperand {
+pub struct OffsetCalculation {
     pub left: Offset,
     pub right: Offset,
     pub operator: IntegerOperator,
@@ -1230,7 +1244,7 @@ impl Offset {
         Self {
             constant: value.into(),
             variables: im::HashMap::new(),
-            complex_operands: im::Vector::new(),
+            calculations: im::Vector::new(),
         }
     }
 
@@ -1238,12 +1252,12 @@ impl Offset {
         Self::constant(0).add_size(size)
     }
 
-    fn add_size(self, size: &ReadSize) -> Offset {
+    fn add_size(mut self, size: &ReadSize) -> Offset {
         match size {
             ReadSize::ConstantBits(value) => Self {
                 constant: self.constant + value,
                 variables: self.variables,
-                complex_operands: self.complex_operands,
+                calculations: self.calculations,
             },
             ReadSize::VariableBits { variable, unit } => Self {
                 constant: self.constant,
@@ -1254,7 +1268,7 @@ impl Offset {
                     },
                     variable.as_ref().clone(),
                 ),
-                complex_operands: self.complex_operands,
+                calculations: self.calculations,
             },
             ReadSize::RemainingBits | ReadSize::RemainingBytes => self,
 
@@ -1264,25 +1278,23 @@ impl Offset {
                 operator,
             } => match operator {
                 IntegerOperator::Add => self.add_size(left).add_size(right),
-                _ => self.add_complex(ComplexOperand {
-                    left: Self::from_size(left),
-                    right: Self::from_size(right),
-                    operator: *operator,
-                }),
+                _ => {
+                    self.calculations.push_back(OffsetCalculation {
+                        left: Self::from_size(left),
+                        right: Self::from_size(right),
+                        operator: *operator,
+                    });
+                    self
+                }
             },
         }
-    }
-
-    fn add_complex(mut self, complex: ComplexOperand) -> Self {
-        self.complex_operands.push_back(complex);
-        self
     }
 
     pub fn add_constant(&self, constant: impl Into<BigInt>) -> Offset {
         Offset {
             constant: self.constant.clone() + constant.into(),
             variables: self.variables.clone(),
-            complex_operands: self.complex_operands.clone(),
+            calculations: self.calculations.clone(),
         }
     }
 
@@ -1290,8 +1302,10 @@ impl Offset {
     /// another one.
     ///
     fn greater(&self, other: &Offset) -> Confidence {
+        // We can't easily tell if one calculation is greater than another, so
+        // we can only be certain about one being greater if there are no calculations
         if self.constant > other.constant
-            && self.complex_operands.is_empty()
+            && self.calculations.is_empty()
             && superset(&self.variables, &other.variables)
         {
             Confidence::Certain
@@ -1304,9 +1318,10 @@ impl Offset {
     /// to another one.
     ///
     fn greater_equal(&self, other: &Offset) -> Confidence {
+        // Like `greater`, we can only be certain if there are no calculations
         if self == other
             || (self.constant >= other.constant
-                && self.complex_operands.is_empty()
+                && self.calculations.is_empty()
                 && superset(&self.variables, &other.variables))
         {
             Confidence::Certain
@@ -1323,15 +1338,13 @@ impl Offset {
     }
 
     pub(crate) fn is_zero(&self) -> bool {
-        self.constant == BigInt::ZERO
-            && self.variables.is_empty()
-            && self.complex_operands.is_empty()
+        self.constant == BigInt::ZERO && self.variables.is_empty() && self.calculations.is_empty()
     }
 
     /// If this offset has a constant size, returns its size in bits.
     ///
     pub(crate) fn constant_bits(&self) -> Option<BigInt> {
-        if self.variables.is_empty() && self.complex_operands.is_empty() {
+        if self.variables.is_empty() && self.calculations.is_empty() {
             Some(self.constant.clone())
         } else {
             None
@@ -1351,22 +1364,23 @@ impl Offset {
     }
 
     fn referenced_segment_patterns(&self) -> Vec<(&EcoString, &ReadAction)> {
-        self.variables
-            .keys()
-            .filter_map(|variable_usage| match variable_usage {
+        let mut references = Vec::new();
+
+        for variable_usage in self.variables.keys() {
+            match variable_usage {
                 VariableUsage::PatternSegment(segment_name, read_action) => {
-                    Some((segment_name, read_action))
+                    references.push((segment_name, read_action));
                 }
-                VariableUsage::OutsideVariable(..) => None,
-            })
-            .chain(self.complex_operands.iter().flat_map(|operand| {
-                operand
-                    .left
-                    .referenced_segment_patterns()
-                    .into_iter()
-                    .chain(operand.right.referenced_segment_patterns().into_iter())
-            }))
-            .collect_vec()
+                VariableUsage::OutsideVariable(..) => {}
+            }
+        }
+
+        for calculation in self.calculations.iter() {
+            references.extend(calculation.left.referenced_segment_patterns());
+            references.extend(calculation.right.referenced_segment_patterns());
+        }
+
+        references
     }
 }
 
