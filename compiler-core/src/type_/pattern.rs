@@ -460,7 +460,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             .try_collect()
             .expect("The function always returns Ok");
 
-        let segment_type = match bit_array::type_options_for_pattern(&options, !is_last_segment) {
+        let segment_type = match bit_array::type_options_for_pattern(
+            &options,
+            !is_last_segment,
+            self.environment.target,
+        ) {
             Ok(type_) => type_,
             Err(error) => {
                 self.error(Error::BitArraySegmentError {

@@ -1,4 +1,5 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
+use crate::bit_array::UnsupportedOption;
 use crate::build::{Origin, Outcome, Runtime, Target};
 use crate::dependency::{PackageFetcher, ResolutionError};
 use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
@@ -3017,6 +3018,24 @@ a size are only allowed at the end of a bin pattern.",
                             bit_array::ErrorType::ConstantSizeNotPositive => {
                                 ("A constant size must be a positive number", vec![])
                             }
+                            bit_array::ErrorType::OptionNotSupportedForTarget {
+                                target,
+                                option: UnsupportedOption::NativeEndianness,
+                            } => (
+                                "Unsupported endianness",
+                                vec![
+                                    wrap_format!("The {target} target does not support the `native` endianness option.")
+                                ],
+                            ),
+                            bit_array::ErrorType::OptionNotSupportedForTarget {
+                                target,
+                                option: UnsupportedOption::UtfCodepointPattern,
+                            } => (
+                                "UTF-codepoint pattern matching is not supported",
+                                vec![
+                                    wrap_format!("The {target} target does not support UTF-codepoint pattern matching.")
+                                ],
+                            ),
                         };
                         extra.push("See: https://tour.gleam.run/data-types/bit-arrays/".into());
                         let text = extra.join("\n");

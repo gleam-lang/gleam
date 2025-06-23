@@ -184,6 +184,10 @@
   "Extract variable" code action was used on a `use` expression.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where the compiler would crash when using the `utf8_codepoint`
+  bit array segment on the JavaScript target.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.11.1 - 2025-06-05
 
 ### Compiler
