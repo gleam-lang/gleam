@@ -2,6 +2,7 @@ use ecow::EcoString;
 use num_bigint::BigInt;
 
 use crate::ast::{self, BitArrayOption, SrcSpan};
+use crate::build::Target;
 use crate::type_::Type;
 use std::sync::Arc;
 
@@ -11,21 +12,28 @@ use std::sync::Arc;
 
 pub fn type_options_for_value<TypedValue>(
     input_options: &[BitArrayOption<TypedValue>],
+    target: Target,
 ) -> Result<Arc<Type>, Error>
 where
     TypedValue: GetLiteralValue,
 {
-    type_options(input_options, TypeOptionsMode::Expression, false)
+    type_options(input_options, TypeOptionsMode::Expression, false, target)
 }
 
 pub fn type_options_for_pattern<TypedValue>(
     input_options: &[BitArrayOption<TypedValue>],
     must_have_size: bool,
+    target: Target,
 ) -> Result<Arc<Type>, Error>
 where
     TypedValue: GetLiteralValue,
 {
-    type_options(input_options, TypeOptionsMode::Pattern, must_have_size)
+    type_options(
+        input_options,
+        TypeOptionsMode::Pattern,
+        must_have_size,
+        target,
+    )
 }
 
 struct SegmentOptionCategories<'a, T> {
@@ -86,6 +94,7 @@ fn type_options<TypedValue>(
     input_options: &[BitArrayOption<TypedValue>],
     mode: TypeOptionsMode,
     must_have_size: bool,
+    target: Target,
 ) -> Result<Arc<Type>, Error>
 where
     TypedValue: GetLiteralValue,
@@ -96,6 +105,18 @@ where
     // Basic category checking
     for option in input_options {
         match option {
+            Utf8Codepoint { .. } | Utf16Codepoint { .. } | Utf32Codepoint { .. }
+                if mode == TypeOptionsMode::Pattern && target == Target::JavaScript =>
+            {
+                return err(
+                    ErrorType::OptionNotSupportedForTarget {
+                        target,
+                        option: UnsupportedOption::UtfCodepointPattern,
+                    },
+                    option.location(),
+                );
+            }
+
             Bytes { .. }
             | Int { .. }
             | Float { .. }
@@ -129,6 +150,16 @@ where
                 } else {
                     categories.signed = Some(option);
                 }
+            }
+
+            Native { .. } if target == Target::JavaScript => {
+                return err(
+                    ErrorType::OptionNotSupportedForTarget {
+                        target,
+                        option: UnsupportedOption::NativeEndianness,
+                    },
+                    option.location(),
+                );
             }
 
             Big { .. } | Little { .. } | Native { .. } => {
@@ -337,19 +368,41 @@ pub struct Error {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ErrorType {
-    ConflictingEndiannessOptions { existing_endianness: EcoString },
-    ConflictingSignednessOptions { existing_signed: EcoString },
+    ConflictingEndiannessOptions {
+        existing_endianness: EcoString,
+    },
+    ConflictingSignednessOptions {
+        existing_signed: EcoString,
+    },
     ConflictingSizeOptions,
-    ConflictingTypeOptions { existing_type: EcoString },
+    ConflictingTypeOptions {
+        existing_type: EcoString,
+    },
     ConflictingUnitOptions,
     FloatWithSize,
     InvalidEndianness,
     OptionNotAllowedInValue,
     SegmentMustHaveSize,
-    SignednessUsedOnNonInt { type_: EcoString },
-    TypeDoesNotAllowSize { type_: EcoString },
-    TypeDoesNotAllowUnit { type_: EcoString },
+    SignednessUsedOnNonInt {
+        type_: EcoString,
+    },
+    TypeDoesNotAllowSize {
+        type_: EcoString,
+    },
+    TypeDoesNotAllowUnit {
+        type_: EcoString,
+    },
     UnitMustHaveSize,
     VariableUtfSegmentInPattern,
     ConstantSizeNotPositive,
+    OptionNotSupportedForTarget {
+        target: Target,
+        option: UnsupportedOption,
+    },
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum UnsupportedOption {
+    UtfCodepointPattern,
+    NativeEndianness,
 }

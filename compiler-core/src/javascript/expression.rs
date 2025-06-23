@@ -395,13 +395,6 @@ impl<'module, 'a> Generator<'module, 'a> {
                 this.wrap_expression(&segment.value)
             })?;
 
-            if segment.has_native_option() {
-                return Err(Error::Unsupported {
-                    feature: "This bit array segment option".into(),
-                    location: segment.location,
-                });
-            }
-
             match segment.options.as_slice() {
                 // Int segment
                 _ if segment.type_.is_int() => {
@@ -1826,13 +1819,6 @@ impl<'module, 'a> Generator<'module, 'a> {
         self.tracker.bit_array_literal_used = true;
         let segments_array = array(segments.iter().map(|segment| {
             let value = self.constant_expression(Context::Constant, &segment.value)?;
-
-            if segment.has_native_option() {
-                return Err(Error::Unsupported {
-                    feature: "This bit array segment option".into(),
-                    location: segment.location,
-                });
-            }
 
             match segment.options.as_slice() {
                 // Int segment

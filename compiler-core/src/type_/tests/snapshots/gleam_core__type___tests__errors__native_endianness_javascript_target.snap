@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn main() {\n  let assert <<a:native>> = <<10>>\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let assert <<a:native>> = <<10>>
+}
+
+
+----- ERROR
+error: Invalid bit array segment
+  ┌─ /src/one/two.gleam:3:18
+  │
+3 │   let assert <<a:native>> = <<10>>
+  │                  ^^^^^^ Unsupported endianness
+
+The javascript target does not support the `native` endianness option.
+See: https://tour.gleam.run/data-types/bit-arrays/

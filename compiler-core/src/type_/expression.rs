@@ -1518,12 +1518,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let options: Vec<_> = options.into_iter().map(infer_option).try_collect()?;
 
-        let type_ = bit_array::type_options_for_value(&options).map_err(|error| {
-            Error::BitArraySegmentError {
+        let type_ = bit_array::type_options_for_value(&options, self.environment.target).map_err(
+            |error| Error::BitArraySegmentError {
                 error: error.error,
                 location: error.location,
-            }
-        })?;
+            },
+        )?;
 
         // Track usage of the unaligned bit arrays feature on JavaScript so that
         // warnings can be emitted if the Gleam version constraint is too low
