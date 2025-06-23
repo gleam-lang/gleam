@@ -2301,11 +2301,11 @@ impl<'comments> Formatter<'comments> {
                 ..
             } => {
                 let operator = match operator {
-                    IntegerOperator::Add => " + ",
-                    IntegerOperator::Subtract => " - ",
-                    IntegerOperator::Multiply => " * ",
-                    IntegerOperator::Divide => " / ",
-                    IntegerOperator::Remainder => " % ",
+                    IntOperator::Add => " + ",
+                    IntOperator::Subtract => " - ",
+                    IntOperator::Multiply => " * ",
+                    IntOperator::Divide => " / ",
+                    IntOperator::Remainder => " % ",
                 };
 
                 docvec![

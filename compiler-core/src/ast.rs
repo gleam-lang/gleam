@@ -2104,7 +2104,7 @@ pub enum BitArraySize<Type> {
 
     BinaryOperator {
         location: SrcSpan,
-        operator: IntegerOperator,
+        operator: IntOperator,
         left: Box<Self>,
         right: Box<Self>,
     },
@@ -2116,7 +2116,7 @@ pub enum BitArraySize<Type> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum IntegerOperator {
+pub enum IntOperator {
     Add,
     Subtract,
     Multiply,
@@ -2124,7 +2124,7 @@ pub enum IntegerOperator {
     Remainder,
 }
 
-impl IntegerOperator {
+impl IntOperator {
     pub fn precedence(&self) -> u8 {
         match self {
             Self::Add | Self::Subtract => 7,
@@ -2135,11 +2135,11 @@ impl IntegerOperator {
 
     pub fn to_bin_op(&self) -> BinOp {
         match self {
-            IntegerOperator::Add => BinOp::AddInt,
-            IntegerOperator::Subtract => BinOp::SubInt,
-            IntegerOperator::Multiply => BinOp::MultInt,
-            IntegerOperator::Divide => BinOp::DivInt,
-            IntegerOperator::Remainder => BinOp::RemainderInt,
+            IntOperator::Add => BinOp::AddInt,
+            IntOperator::Subtract => BinOp::SubInt,
+            IntOperator::Multiply => BinOp::MultInt,
+            IntOperator::Divide => BinOp::DivInt,
+            IntOperator::Remainder => BinOp::RemainderInt,
         }
     }
 }
