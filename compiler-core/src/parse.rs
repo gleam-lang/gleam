@@ -563,6 +563,7 @@ where
                     UntypedExpr::Echo {
                         location: SrcSpan { start, end },
                         expression: None,
+                        message: todo!(),
                     }
                 } else {
                     // Otherwise it must be followed by an expression.
@@ -576,6 +577,7 @@ where
                     UntypedExpr::Echo {
                         location: SrcSpan { start, end },
                         expression: expression.map(Box::new),
+                        message: todo!(),
                     }
                 }
             }

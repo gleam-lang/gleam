@@ -331,7 +331,8 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
             UntypedExpr::Echo {
                 location,
                 expression,
-            } => self.fold_echo(location, expression),
+                message,
+            } => self.fold_echo(location, expression, message),
 
             UntypedExpr::Panic { location, message } => self.fold_panic(location, message),
 
@@ -381,9 +382,11 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
             UntypedExpr::Echo {
                 location,
                 expression,
+                message,
             } => UntypedExpr::Echo {
                 location,
                 expression: expression.map(|expression| Box::new(self.fold_expr(*expression))),
+                message: message.map(|message| Box::new(self.fold_expr(*message))),
             },
 
             UntypedExpr::Block {
@@ -855,10 +858,12 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         &mut self,
         location: SrcSpan,
         expression: Option<Box<UntypedExpr>>,
+        message: Option<Box<UntypedExpr>>,
     ) -> UntypedExpr {
         UntypedExpr::Echo {
             location,
             expression,
+            message,
         }
     }
 

@@ -31,10 +31,13 @@ expression: echo echo echo 1
                                     int_value: 1,
                                 },
                             ),
+                            message: None,
                         },
                     ),
+                    message: None,
                 },
             ),
+            message: None,
         },
     ),
 ]

@@ -37,6 +37,7 @@ expression: echo 1 |> wibble |> wobble
                     ],
                 },
             ),
+            message: None,
         },
     ),
 ]

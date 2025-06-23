@@ -18,6 +18,7 @@ expression: echo wibble
                     name: "wibble",
                 },
             ),
+            message: None,
         },
     ),
 ]

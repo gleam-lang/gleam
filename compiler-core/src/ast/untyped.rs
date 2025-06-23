@@ -112,6 +112,7 @@ pub enum UntypedExpr {
     Echo {
         location: SrcSpan,
         expression: Option<Box<Self>>,
+        message: Option<Box<Self>>,
     },
 
     BitArray {
