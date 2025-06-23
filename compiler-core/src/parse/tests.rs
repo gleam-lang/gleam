@@ -474,8 +474,28 @@ fn echo_followed_by_expression_ends_where_expression_ends() {
 }
 
 #[test]
+fn echo_with_simple_expression_1() {
+    assert_parse!("echo wibble as message");
+}
+
+#[test]
+fn echo_with_simple_expression_2() {
+    assert_parse!("echo wibble as \"message\"");
+}
+
+#[test]
+fn echo_with_complex_expression() {
+    assert_parse!("echo wibble as { this <> complex }");
+}
+
+#[test]
 fn echo_with_no_expressions_after_it() {
     assert_parse!("echo");
+}
+
+#[test]
+fn echo_with_no_expressions_after_it_but_a_message() {
+    assert_parse!("echo as message");
 }
 
 #[test]
@@ -510,8 +530,58 @@ fn panic_with_echo() {
 }
 
 #[test]
+fn panic_with_echo_and_message() {
+    assert_parse!("panic as echo wibble as message");
+}
+
+#[test]
 fn echo_with_panic() {
     assert_parse!("echo panic as \"a\"");
+}
+
+#[test]
+fn echo_with_panic_and_message() {
+    assert_parse!("echo panic as \"a\"");
+}
+
+#[test]
+fn echo_with_panic_and_messages() {
+    assert_parse!("echo panic as \"a\" as \"b\"");
+}
+
+#[test]
+fn echo_with_assert_and_message_1() {
+    assert_parse!("assert 1 == echo 2 as this_belongs_to_echo");
+}
+
+#[test]
+fn echo_with_assert_and_message_2() {
+    assert_parse!("assert echo True as this_belongs_to_echo");
+}
+
+#[test]
+fn echo_with_assert_and_messages_1() {
+    assert_parse!("assert 1 == echo 2 as this_belongs_to_echo as this_belongs_to_assert");
+}
+
+#[test]
+fn echo_with_assert_and_messages_2() {
+    assert_parse!("assert echo True as this_belongs_to_echo as this_belongs_to_assert");
+}
+
+#[test]
+fn echo_with_assert_and_messages_3() {
+    assert_parse!("assert echo 1 == 2 as this_belongs_to_echo as this_belongs_to_assert");
+}
+
+#[test]
+fn echo_with_let_assert_and_message() {
+    assert_parse!("let assert 1 = echo 2 as this_belongs_to_echo");
+}
+
+#[test]
+fn echo_with_let_assert_and_messages() {
+    assert_parse!("let assert 1 = echo 1 as this_belongs_to_echo as this_belongs_to_assert");
 }
 
 #[test]
