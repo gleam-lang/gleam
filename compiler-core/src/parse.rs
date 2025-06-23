@@ -526,14 +526,10 @@ where
                 }
             }
 
-            Some((start, Token::Todo, mut end)) => {
+            Some((start, Token::Todo, end)) => {
                 self.advance();
-                let mut message = None;
-                if self.maybe_one(&Token::As).is_some() {
-                    let msg_expr = self.expect_expression_unit(ExpressionUnitContext::Other)?;
-                    end = msg_expr.location().end;
-                    message = Some(Box::new(msg_expr));
-                }
+                let message = self.maybe_parse_as_message()?;
+                let end = message.as_ref().map_or(end, |m| m.location().end);
                 UntypedExpr::Todo {
                     location: SrcSpan { start, end },
                     kind: TodoKind::Keyword,
@@ -541,17 +537,13 @@ where
                 }
             }
 
-            Some((start, Token::Panic, mut end)) => {
+            Some((start, Token::Panic, end)) => {
                 self.advance();
-                let mut label = None;
-                if self.maybe_one(&Token::As).is_some() {
-                    let msg_expr = self.expect_expression_unit(ExpressionUnitContext::Other)?;
-                    end = msg_expr.location().end;
-                    label = Some(Box::new(msg_expr));
-                }
+                let message = self.maybe_parse_as_message()?;
+                let end = message.as_ref().map_or(end, |m| m.location().end);
                 UntypedExpr::Panic {
                     location: SrcSpan { start, end },
-                    message: label,
+                    message,
                 }
             }
 
@@ -560,10 +552,12 @@ where
                 if context == ExpressionUnitContext::FollowingPipe {
                     // If an echo is used as a step in a pipeline (`|> echo`)
                     // then it cannot be followed by an expression.
+                    let message = self.maybe_parse_as_message()?;
+                    let end = message.as_ref().map_or(end, |m| m.location().end);
                     UntypedExpr::Echo {
                         location: SrcSpan { start, end },
                         expression: None,
-                        message: todo!(),
+                        message,
                     }
                 } else {
                     // Otherwise it must be followed by an expression.
@@ -574,10 +568,14 @@ where
                     // tolerant like everything else.
                     let expression = self.parse_expression()?;
                     let end = expression.as_ref().map_or(end, |e| e.location().end);
+
+                    let message = self.maybe_parse_as_message()?;
+                    let end = message.as_ref().map_or(end, |m| m.location().end);
+
                     UntypedExpr::Echo {
                         location: SrcSpan { start, end },
                         expression: expression.map(Box::new),
-                        message: todo!(),
+                        message,
                     }
                 }
             }
@@ -1032,6 +1030,17 @@ where
             pattern,
             annotation,
         }))
+    }
+
+    fn maybe_parse_as_message(&mut self) -> Result<Option<Box<UntypedExpr>>, ParseError> {
+        let message = if self.maybe_one(&Token::As).is_some() {
+            let expression = self.expect_expression_unit(ExpressionUnitContext::Other)?;
+            Some(Box::new(expression))
+        } else {
+            None
+        };
+
+        Ok(message)
     }
 
     // An assignment, with `Let` already consumed
