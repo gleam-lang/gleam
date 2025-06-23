@@ -59,7 +59,7 @@ use crate::analyse::Inferred;
 use crate::ast::{
     Arg, ArgNames, Assert, AssignName, Assignment, AssignmentKind, BinOp, BitArrayOption,
     BitArraySegment, BitArraySize, CAPTURE_VARIABLE, CallArg, Clause, ClauseGuard, Constant,
-    CustomType, Definition, Function, FunctionLiteralKind, HasLocation, Import, IntegerOperator,
+    CustomType, Definition, Function, FunctionLiteralKind, HasLocation, Import, IntOperator,
     Module, ModuleConstant, Pattern, Publicity, RecordBeingUpdated, RecordConstructor,
     RecordConstructorArg, SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAlias, TypeAst,
     TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UnqualifiedImport,
@@ -3439,33 +3439,31 @@ where
                 _ = self.next_tok();
                 let right = self.expect_bit_array_size()?;
 
-                Ok(self.bit_array_size_binary_operator(left, right, IntegerOperator::Add))
+                Ok(self.bit_array_size_binary_operator(left, right, IntOperator::Add))
             }
             Token::Minus => {
                 _ = self.next_tok();
                 let right = self.expect_bit_array_size()?;
 
-                Ok(self.bit_array_size_binary_operator(left, right, IntegerOperator::Subtract))
+                Ok(self.bit_array_size_binary_operator(left, right, IntOperator::Subtract))
             }
             Token::Star => {
                 _ = self.next_tok();
                 let right = self.expect_bit_array_size()?;
 
-                Ok(self.bit_array_size_high_precedence_operator(
-                    left,
-                    right,
-                    IntegerOperator::Multiply,
-                ))
+                Ok(
+                    self.bit_array_size_high_precedence_operator(
+                        left,
+                        right,
+                        IntOperator::Multiply,
+                    ),
+                )
             }
             Token::Slash => {
                 _ = self.next_tok();
                 let right = self.expect_bit_array_size()?;
 
-                Ok(self.bit_array_size_high_precedence_operator(
-                    left,
-                    right,
-                    IntegerOperator::Divide,
-                ))
+                Ok(self.bit_array_size_high_precedence_operator(left, right, IntOperator::Divide))
             }
             Token::Percent => {
                 _ = self.next_tok();
@@ -3474,7 +3472,7 @@ where
                 Ok(self.bit_array_size_high_precedence_operator(
                     left,
                     right,
-                    IntegerOperator::Remainder,
+                    IntOperator::Remainder,
                 ))
             }
             _ => {
@@ -3488,7 +3486,7 @@ where
         &self,
         left: BitArraySize<()>,
         right: BitArraySize<()>,
-        operator: IntegerOperator,
+        operator: IntOperator,
     ) -> BitArraySize<()> {
         let start = left.location().start;
         let end = right.location().end;
@@ -3505,7 +3503,7 @@ where
         &self,
         left: BitArraySize<()>,
         right: BitArraySize<()>,
-        operator: IntegerOperator,
+        operator: IntOperator,
     ) -> BitArraySize<()> {
         match right {
             BitArraySize::Int { .. }
