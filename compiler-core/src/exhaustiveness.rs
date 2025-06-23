@@ -64,8 +64,8 @@ pub mod printer;
 
 use crate::{
     ast::{
-        self, AssignName, BitArraySize, Endianness, IntOperator, TypedBitArraySize,
-        TypedClause, TypedPattern, TypedPatternBitArraySegment,
+        self, AssignName, BitArraySize, Endianness, IntOperator, TypedBitArraySize, TypedClause,
+        TypedPattern, TypedPatternBitArraySegment,
     },
     strings::{convert_string_escape_chars, length_utf16, length_utf32},
     type_::{
