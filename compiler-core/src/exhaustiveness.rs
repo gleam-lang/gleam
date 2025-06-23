@@ -64,7 +64,7 @@ pub mod printer;
 
 use crate::{
     ast::{
-        self, AssignName, BitArraySize, Endianness, IntegerOperator, TypedBitArraySize,
+        self, AssignName, BitArraySize, Endianness, IntOperator, TypedBitArraySize,
         TypedClause, TypedPattern, TypedPatternBitArraySegment,
     },
     strings::{convert_string_escape_chars, length_utf16, length_utf32},
@@ -1236,7 +1236,7 @@ pub struct Offset {
 pub struct OffsetCalculation {
     pub left: Offset,
     pub right: Offset,
-    pub operator: IntegerOperator,
+    pub operator: IntOperator,
 }
 
 impl Offset {
@@ -1277,7 +1277,7 @@ impl Offset {
                 right,
                 operator,
             } => match operator {
-                IntegerOperator::Add => self.add_size(left).add_size(right),
+                IntOperator::Add => self.add_size(left).add_size(right),
                 _ => {
                     self.calculations.push_back(OffsetCalculation {
                         left: Self::from_size(left),
@@ -1422,7 +1422,7 @@ pub enum ReadSize {
     BinaryOperator {
         left: Box<ReadSize>,
         right: Box<ReadSize>,
-        operator: IntegerOperator,
+        operator: IntOperator,
     },
 
     /// Read all the remaining bits in the bit array when using a catch all
@@ -3128,7 +3128,7 @@ fn bit_array_size(
                 ReadSize::BinaryOperator {
                     left: Box::new(size),
                     right: Box::new(ReadSize::ConstantBits(unit.into())),
-                    operator: IntegerOperator::Multiply,
+                    operator: IntOperator::Multiply,
                 }
             }
         }

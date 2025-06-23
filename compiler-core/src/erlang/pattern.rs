@@ -158,11 +158,11 @@ fn bit_array_size<'a>(size: &'a TypedBitArraySize, env: &mut Env<'a>) -> Documen
             ..
         } => {
             let operator = match operator {
-                IntegerOperator::Add => " + ",
-                IntegerOperator::Subtract => " - ",
-                IntegerOperator::Multiply => " * ",
-                IntegerOperator::Divide => return bit_array_size_divide(left, right, "div", env),
-                IntegerOperator::Remainder => {
+                IntOperator::Add => " + ",
+                IntOperator::Subtract => " - ",
+                IntOperator::Multiply => " * ",
+                IntOperator::Divide => return bit_array_size_divide(left, right, "div", env),
+                IntOperator::Remainder => {
                     return bit_array_size_divide(left, right, "rem", env);
                 }
             };
