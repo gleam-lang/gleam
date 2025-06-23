@@ -708,9 +708,11 @@ impl ValueConstructorVariant {
                 field_map,
                 location,
                 documentation,
+                variant_index,
                 ..
             } => ModuleValueConstructor::Record {
                 name: name.clone(),
+                variant_index: *variant_index,
                 field_map: field_map.clone(),
                 arity: *arity,
                 type_,
@@ -850,6 +852,7 @@ impl ValueConstructorVariant {
 pub enum ModuleValueConstructor {
     Record {
         name: EcoString,
+        variant_index: u16,
         arity: u16,
         type_: Arc<Type>,
         field_map: Option<FieldMap>,

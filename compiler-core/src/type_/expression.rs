@@ -3634,10 +3634,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } => {
                 let constructor = self.infer_value_constructor(&module, &name, &location)?;
 
-                let (tag, field_map) = match &constructor.variant {
+                let (tag, field_map, variant_index) = match &constructor.variant {
                     ValueConstructorVariant::Record {
-                        name, field_map, ..
-                    } => (name.clone(), field_map.clone()),
+                        name,
+                        field_map,
+                        variant_index,
+                        ..
+                    } => (name.clone(), field_map.clone(), *variant_index),
 
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable { .. } => {
@@ -3670,6 +3673,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             .clone();
                         let module_value_constructor = ModuleValueConstructor::Record {
                             name: name.clone(),
+                            variant_index,
                             field_map: field_map.clone(),
                             arity: args.len() as u16,
                             type_: Arc::clone(&type_),
@@ -5009,23 +5013,40 @@ fn static_compare(one: &TypedExpr, other: &TypedExpr) -> StaticComparison {
                 args: args_other,
                 ..
             },
-        ) => {
-            if fun_one.is_record_builder() && fun_other.is_record_builder() {
+        ) => match (fun_one.variant_index(), fun_other.variant_index()) {
+            // Both have to be literal record builders, otherwise we can't really tell
+            // anything at compile time!
+            (None, None) | (None, Some(_)) | (Some(_), None) => StaticComparison::CantTell,
+
+            // If they're both literal record builders and are building different
+            // variants, then we know they'll always be different.
+            (Some(index_one), Some(index_other)) if index_one != index_other => {
+                StaticComparison::CertainlyDifferent
+            }
+
+            // Otherwise we need to check their arguments pairwise:
+            (Some(_), Some(_)) => {
                 let mut comparison = StaticComparison::CertainlyEqual;
                 for (one, other) in args_one.iter().zip(args_other.iter()) {
                     match static_compare(&one.value, &other.value) {
                         StaticComparison::CertainlyEqual => (),
+                        // If we can tell any of the arguments are never going to
+                        // be the same then we can short circuit and be sure
+                        // that the two variants are not the same as well!
                         StaticComparison::CertainlyDifferent => {
                             return StaticComparison::CertainlyDifferent;
                         }
+                        // If we can't compare two of the arguments then there's
+                        // nothing we can tell at compile time. Notice how we
+                        // don't short circuit here: we still want to go over all
+                        // the other arguments because we might find two that are
+                        // certainly going to be different!
                         StaticComparison::CantTell => comparison = StaticComparison::CantTell,
                     }
                 }
                 comparison
-            } else {
-                StaticComparison::CantTell
             }
-        }
+        },
 
         (
             TypedExpr::RecordAccess {

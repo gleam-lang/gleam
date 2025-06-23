@@ -912,6 +912,9 @@ impl TypedExpr {
     }
 
     #[must_use]
+    /// Returns true if the value is a literal record builder like
+    /// `Wibble(1, 2)`, `module.Wobble("a")`
+    ///
     pub fn is_record_builder(&self) -> bool {
         match self {
             TypedExpr::Call { fun, .. } => fun.is_record_builder(),
@@ -921,6 +924,28 @@ impl TypedExpr {
                 ..
             } => true,
             _ => false,
+        }
+    }
+
+    /// If the given expression is a literal record builder, this will return
+    /// index of the variant being built.
+    ///
+    pub fn variant_index(&self) -> Option<u16> {
+        match self {
+            TypedExpr::Call { fun, .. } => fun.variant_index(),
+            TypedExpr::Var {
+                constructor:
+                    ValueConstructor {
+                        variant: ValueConstructorVariant::Record { variant_index, .. },
+                        ..
+                    },
+                ..
+            }
+            | TypedExpr::ModuleSelect {
+                constructor: ModuleValueConstructor::Record { variant_index, .. },
+                ..
+            } => Some(*variant_index),
+            _ => None,
         }
     }
 
