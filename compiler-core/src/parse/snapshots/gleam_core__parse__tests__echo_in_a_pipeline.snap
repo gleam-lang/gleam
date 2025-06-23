@@ -20,6 +20,7 @@ expression: "[] |> echo |> wibble"
                         end: 10,
                     },
                     expression: None,
+                    message: None,
                 },
                 Var {
                     location: SrcSpan {

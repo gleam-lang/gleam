@@ -987,7 +987,8 @@ impl<'comments> Formatter<'comments> {
             UntypedExpr::Echo {
                 expression,
                 location: _,
-            } => self.echo(expression),
+                message,
+            } => self.echo(expression, message),
 
             UntypedExpr::PipeLine { expressions, .. } => self.pipeline(expressions, false),
 
@@ -2820,7 +2821,11 @@ impl<'comments> Formatter<'comments> {
         Some(doc.force_break())
     }
 
-    fn echo<'a>(&mut self, expression: &'a Option<Box<UntypedExpr>>) -> Document<'a> {
+    fn echo<'a>(
+        &mut self,
+        expression: &'a Option<Box<UntypedExpr>>,
+        message: &'a Option<Box<UntypedExpr>>,
+    ) -> Document<'a> {
         let Some(expression) = expression else {
             return "echo".to_doc();
         };

@@ -183,6 +183,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 UntypedExpr::Echo {
                     location,
                     expression: None,
+                    message,
                 } => {
                     self.expr_typer.environment.echo_found = true;
                     self.expr_typer.purity = Purity::Impure;

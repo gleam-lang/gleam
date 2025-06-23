@@ -428,7 +428,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             UntypedExpr::Echo {
                 location,
                 expression,
-            } => Ok(self.infer_echo(location, expression)),
+                message,
+            } => Ok(self.infer_echo(location, expression, message)),
 
             UntypedExpr::Var { location, name, .. } => {
                 self.infer_var(name, location, ReferenceRegistration::RegisterReferences)
@@ -633,7 +634,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn infer_echo(&mut self, location: SrcSpan, expression: Option<Box<UntypedExpr>>) -> TypedExpr {
+    fn infer_echo(
+        &mut self,
+        location: SrcSpan,
+        expression: Option<Box<UntypedExpr>>,
+        message: Option<Box<UntypedExpr>>,
+    ) -> TypedExpr {
         self.environment.echo_found = true;
         self.purity = Purity::Impure;
 
