@@ -5016,7 +5016,7 @@ fn static_compare(one: &TypedExpr, other: &TypedExpr) -> StaticComparison {
         ) => match (fun_one.variant_index(), fun_other.variant_index()) {
             // Both have to be literal record builders, otherwise we can't really tell
             // anything at compile time!
-            (None, None) | (None, Some(_)) | (Some(_), None) => StaticComparison::CantTell,
+            (None, _) | (_, None) => StaticComparison::CantTell,
 
             // If they're both literal record builders and are building different
             // variants, then we know they'll always be different.
