@@ -2607,3 +2607,17 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn non_byte_aligned_size_calculation() {
+    assert_js!(
+        "
+pub fn main() {
+  case <<>> {
+    <<a:1, b:3, c:size(b - 2)>> -> c + b
+    _ -> 1
+  }
+}
+"
+    );
+}
