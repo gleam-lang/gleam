@@ -1262,8 +1262,8 @@ doesn't fit in that many {unit}. It would be truncated by taking its {taken}, re
                 type_::Warning::AssertLiteralBool { location } => Diagnostic {
                     title: "Assertion of a literal value".into(),
                     text: wrap(
-                        "Asserting on a literal Boolean is redundant since you \
-can already tell whether it will be True or False.",
+                        "Asserting on a literal bool is redundant since you \
+can already tell whether it will be `True` or `False`.",
                     ),
                     hint: None,
                     level: diagnostic::Level::Warning,

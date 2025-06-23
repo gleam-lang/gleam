@@ -16,5 +16,5 @@ warning: Assertion of a literal value
 3 │   assert True
   │          ^^^^
 
-Asserting on a literal Boolean is redundant since you can already tell
-whether it will be True or False.
+Asserting on a literal bool is redundant since you can already tell whether
+it will be `True` or `False`.
