@@ -202,11 +202,35 @@ impl UntypedExpr {
         }
     }
 
-    pub fn is_simple_constant(&self) -> bool {
-        matches!(
-            self,
-            Self::String { .. } | Self::Int { .. } | Self::Float { .. }
-        )
+    pub fn can_have_multiple_per_line(&self) -> bool {
+        match self {
+            UntypedExpr::Int { .. }
+            | UntypedExpr::Float { .. }
+            | UntypedExpr::String { .. }
+            | UntypedExpr::Var { .. } => true,
+
+            UntypedExpr::NegateBool { value, .. }
+            | UntypedExpr::NegateInt { value, .. }
+            | UntypedExpr::FieldAccess {
+                container: value, ..
+            } => value.can_have_multiple_per_line(),
+
+            UntypedExpr::Block { .. }
+            | UntypedExpr::Fn { .. }
+            | UntypedExpr::List { .. }
+            | UntypedExpr::Call { .. }
+            | UntypedExpr::BinOp { .. }
+            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::Case { .. }
+            | UntypedExpr::Tuple { .. }
+            | UntypedExpr::TupleIndex { .. }
+            | UntypedExpr::Todo { .. }
+            | UntypedExpr::Panic { .. }
+            | UntypedExpr::Echo { .. }
+            | UntypedExpr::BitArray { .. }
+            | UntypedExpr::RecordUpdate { .. }
+            | UntypedExpr::Placeholder { .. } => false,
+        }
     }
 
     pub fn is_tuple(&self) -> bool {

@@ -483,7 +483,9 @@ impl<'comments> Formatter<'comments> {
 
                 self.bit_array(
                     segment_docs,
-                    segments.iter().all(|s| s.value.is_simple()),
+                    segments
+                        .iter()
+                        .all(|s| s.value.can_have_multiple_per_line()),
                     location,
                 )
             }
@@ -578,8 +580,12 @@ impl<'comments> Formatter<'comments> {
             };
         }
 
-        let list_packing =
-            self.list_items_packing(elements, None, |element| element.is_simple(), *location);
+        let list_packing = self.list_items_packing(
+            elements,
+            None,
+            |element| element.can_have_multiple_per_line(),
+            *location,
+        );
         let comma = match list_packing {
             ListItemsPacking::FitMultiplePerLine => flex_break(",", ", "),
             ListItemsPacking::FitOnePerLine | ListItemsPacking::BreakOnePerLine => {
@@ -1071,7 +1077,9 @@ impl<'comments> Formatter<'comments> {
 
                 self.bit_array(
                     segment_docs,
-                    segments.iter().all(|s| s.value.is_simple_constant()),
+                    segments
+                        .iter()
+                        .all(|s| s.value.can_have_multiple_per_line()),
                     location,
                 )
             }
@@ -2002,8 +2010,12 @@ impl<'comments> Formatter<'comments> {
             };
         }
 
-        let list_packing =
-            self.list_items_packing(elements, tail, UntypedExpr::is_simple_constant, *location);
+        let list_packing = self.list_items_packing(
+            elements,
+            tail,
+            UntypedExpr::can_have_multiple_per_line,
+            *location,
+        );
 
         let comma = match list_packing {
             ListItemsPacking::FitMultiplePerLine => flex_break(",", ", "),
@@ -2089,7 +2101,7 @@ impl<'comments> Formatter<'comments> {
         &self,
         items: &'a [T],
         tail: Option<&'a T>,
-        is_simple_constant: impl Fn(&'a T) -> bool,
+        can_have_multiple_per_line: impl Fn(&'a T) -> bool,
         list_location: SrcSpan,
     ) -> ListItemsPacking {
         let ends_with_trailing_comma = tail
@@ -2099,7 +2111,6 @@ impl<'comments> Formatter<'comments> {
                 self.has_trailing_comma(last_element_end, list_location.end)
             });
 
-        let is_simple_constant_list = tail.is_none() && items.iter().all(is_simple_constant);
         let has_multiple_elements_per_line =
             self.has_items_on_the_same_line(items.iter().chain(tail));
 
@@ -2120,13 +2131,40 @@ impl<'comments> Formatter<'comments> {
             // a single line; if we can't we'll put one item per line, no matter
             // the content of the list.
             ListItemsPacking::FitOnePerLine
-        } else if is_simple_constant_list
+        } else if tail.is_none()
+            && items.iter().all(can_have_multiple_per_line)
             && has_multiple_elements_per_line
             && self.spans_multiple_lines(list_location.start, list_location.end)
         {
-            // If there's a trailing comma, the list is only made of simple
-            // constants and there's already multiple items per line, we try
-            // and pack as many items as possible on each line.
+            // If there's a trailing comma, we can have multiple items per line,
+            // and there's already multiple items per line, we try and pack as
+            // many items as possible on each line.
+            //
+            // Note how we only ever try and pack lists where all items are
+            // unbreakable primitives. To pack a list we need to use put
+            // `flex_break`s between each item.
+            // If the items themselves had breaks we could end up in a situation
+            // where an item gets broken making it span multiple lines and the
+            // spaces are not, for example:
+            //
+            // ```gleam
+            // [Constructor("wibble", "lorem ipsum dolor sit amet something something"), Other(1)]
+            // ```
+            //
+            // If we used flex breaks here the list would be formatted as:
+            //
+            // ```gleam
+            // [
+            //   Constructor(
+            //     "wibble",
+            //     "lorem ipsum dolor sit amet something something",
+            //   ), Other(1)
+            // ]
+            // ```
+            //
+            // The first item is broken, meaning that once we get to the flex
+            // space separating it from the following one the formatter is not
+            // going to break it since there's enough space in the current line!
             ListItemsPacking::FitMultiplePerLine
         } else {
             // If it ends with a trailing comma we will force the list on
@@ -2509,7 +2547,7 @@ impl<'comments> Formatter<'comments> {
     fn bit_array<'a>(
         &mut self,
         segments: Vec<Document<'a>>,
-        is_simple: bool,
+        can_have_multiple_per_line: bool,
         location: &SrcSpan,
     ) -> Document<'a> {
         let comments = self.pop_comments(location.end);
@@ -2535,7 +2573,7 @@ impl<'comments> Formatter<'comments> {
                     .force_break(),
             };
         }
-        let comma = if is_simple {
+        let comma = if can_have_multiple_per_line {
             flex_break(",", ", ")
         } else {
             break_(",", ", ")

@@ -200,11 +200,21 @@ impl<A, B> Constant<A, B> {
         }
     }
 
-    pub fn is_simple(&self) -> bool {
-        matches!(
-            self,
-            Self::Int { .. } | Self::Float { .. } | Self::String { .. }
-        )
+    #[must_use]
+    pub fn can_have_multiple_per_line(&self) -> bool {
+        match self {
+            Constant::Int { .. }
+            | Constant::Float { .. }
+            | Constant::String { .. }
+            | Constant::Var { .. } => true,
+
+            Constant::Tuple { .. }
+            | Constant::List { .. }
+            | Constant::Record { .. }
+            | Constant::BitArray { .. }
+            | Constant::StringConcatenation { .. }
+            | Constant::Invalid { .. } => false,
+        }
     }
 }
 

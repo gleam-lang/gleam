@@ -49,10 +49,9 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The formatter now allows more control over how lists made up of simple
-  constants are formatted. If a list is split with multiple elements on the same
-  line, removing the trailing comma will make sure the formatter keeps each item
-  on its own line:
+- The formatter now allows more control over how lists are formatted.
+  If a list is split with multiple elements on the same line, removing the
+  trailing comma will make sure the formatter keeps each item on its own line:
 
   ```gleam
   pub fn my_favourite_pokemon() -> List(String) {
@@ -79,7 +78,7 @@
 
 - The formatter no longer removes empty lines between list items. In case an
   empty line is added between list items they will all be split on multiple
-  lines.
+  lines. For example:
 
   ```gleam
   pub fn main() {
@@ -103,6 +102,8 @@
     ]
   }
   ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Compiler
 
