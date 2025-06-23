@@ -3208,3 +3208,19 @@ pub fn main() {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3884
+#[test]
+fn show_only_missing_labels() {
+    assert_module_error!(
+        "
+fn wibble(a a: Int, b b: Float, c c: String) {
+    todo
+}
+
+pub fn wobble() {
+    wibble(1, 2.0)
+}
+"
+    );
+}

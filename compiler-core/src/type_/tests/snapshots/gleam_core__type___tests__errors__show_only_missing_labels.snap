@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nfn wibble(a a: Int, b b: Float, c c: String) {\n    todo\n}\n\npub fn wobble() {\n    wibble(1, 2.0)\n}\n"
+---
+----- SOURCE CODE
+
+fn wibble(a a: Int, b b: Float, c c: String) {
+    todo
+}
+
+pub fn wobble() {
+    wibble(1, 2.0)
+}
+
+
+----- ERROR
+error: Incorrect arity
+  ┌─ /src/one/two.gleam:7:5
+  │
+7 │     wibble(1, 2.0)
+  │     ^^^^^^^^^^^^^^ Expected 3 arguments, got 2
+
+This call accepts these additional labelled arguments:
+
+  - c

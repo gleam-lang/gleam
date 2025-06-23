@@ -55,7 +55,7 @@ impl FieldMap {
 
         if self.arity as usize != args.len() {
             return Err(Error::IncorrectArity {
-                labels: self.incorrect_arity_labels(args),
+                labels: self.missing_labels(args),
                 location,
                 context,
                 expected: self.arity as usize,
@@ -145,17 +145,6 @@ impl FieldMap {
         }
     }
 
-    pub fn incorrect_arity_labels<A>(&self, args: &[CallArg<A>]) -> Vec<EcoString> {
-        let given: HashSet<_> = args.iter().filter_map(|arg| arg.label.as_ref()).collect();
-
-        self.fields
-            .keys()
-            .filter(|f| !given.contains(f))
-            .cloned()
-            .sorted()
-            .collect()
-    }
-
     /// This returns an array of the labels that are unused given an argument
     /// list.
     /// The unused labels are in the order they are expected to be passed in
@@ -169,7 +158,7 @@ impl FieldMap {
     /// wibble(1, label3: 2) // -> unused labels: [label2]
     /// ```
     ///
-    pub fn missing_labels<A: std::fmt::Debug>(&self, args: &[CallArg<A>]) -> Vec<EcoString> {
+    pub fn missing_labels<A>(&self, args: &[CallArg<A>]) -> Vec<EcoString> {
         // We need to know how many positional arguments are in the function
         // arguments. That's given by the position of the first labelled
         // argument; if the first label argument is third, then we know the
