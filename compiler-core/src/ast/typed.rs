@@ -676,8 +676,7 @@ impl TypedExpr {
 
             // Calls are literals if they are records and all the arguemnts are also literals.
             Self::Call { fun, args, .. } => {
-                fun.is_record_constructor()
-                    && args.iter().all(|argument| argument.value.is_literal())
+                fun.is_record_builder() && args.iter().all(|argument| argument.value.is_literal())
             }
 
             // Variables are literals if they are record constructors that take no arguments.
@@ -909,22 +908,6 @@ impl TypedExpr {
             | TypedExpr::NegateBool { .. }
             | TypedExpr::NegateInt { .. }
             | TypedExpr::Invalid { .. } => Purity::Unknown,
-        }
-    }
-
-    #[must_use]
-    // TODO)) is this the same as is_record_builder
-    pub fn is_record_constructor(&self) -> bool {
-        match self {
-            TypedExpr::Var {
-                constructor:
-                    ValueConstructor {
-                        variant: ValueConstructorVariant::Record { .. },
-                        ..
-                    },
-                ..
-            } => true,
-            _ => false,
         }
     }
 

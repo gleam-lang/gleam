@@ -17,12 +17,10 @@ pub fn main() {
 
 
 ----- WARNING
-warning: Unused value
+warning: Unused literal
   ┌─ /src/warning/wrn.gleam:5:3
   │
 5 │   wibble.Wibble(1)
   │   ^^^^^^^^^^^^^^^^ This value is never used
 
-This expression computes a value without any side effects, but then the
-value isn't used at all. You might want to assign it to a variable, or
-delete the expression entirely if it's not needed.
+Hint: You can safely remove it.
