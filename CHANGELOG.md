@@ -105,6 +105,36 @@
   ([Carl Bordum Hansen](https://github.com/carlbordum)) and
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The error message one gets when calling a function with the wrong number of
+  arguments has been improved and now only suggests the relevant missing labels.
+  For example, this piece of code:
+
+  ```gleam
+  pub type Pokemon {
+    Pokemon(id: Int, name: String, moves: List(String))
+  }
+
+  pub fn best_pokemon() {
+    Pokemon(198, name: "murkrow")
+  }
+  ```
+
+  Would result in the following error, suggesting the missing labels:
+
+  ```txt
+  error: Incorrect arity
+    ┌─ /src/main.gleam:6:3
+    │
+  6 │   Pokemon(198, name: "murkrow")
+    │   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Expected 3 arguments, got 2
+
+  This call accepts these additional labelled arguments:
+
+    - moves
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Build tool
 
 - `gleam update`, `gleam deps update`, and `gleam deps download` will now print
@@ -125,7 +155,7 @@
 
 - Docs generator now strips trailing slashes from Gitea/Forgejo hosts so
   sidebar "Repository" and "View Source" links never include `//`, and
-  single-line “View Source” anchors emit `#Lx` instead of `#Lx-x`.
+  single-line "View Source" anchors emit `#Lx` instead of `#Lx-x`.
   ([Aayush Tripathi](https://github.com/aayush-tripathi))
 
 ### Language server
