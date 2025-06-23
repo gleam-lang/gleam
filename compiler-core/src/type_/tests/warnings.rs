@@ -4173,3 +4173,19 @@ pub fn main() -> Bool {
 "
     );
 }
+
+#[test]
+fn different_records_3_redundant_comparison() {
+    assert_warning!(
+        "
+pub type Either {
+  Left
+  Right(Int)
+}
+
+pub fn main() -> Bool {
+  Left == Right(1)
+}
+"
+    );
+}
