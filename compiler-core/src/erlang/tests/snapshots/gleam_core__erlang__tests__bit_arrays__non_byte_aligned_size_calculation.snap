@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/erlang/tests/bit_arrays.rs
+expression: "\npub fn main() {\n  case <<>> {\n    <<a:1, b:3, c:size(b - 2)>> -> c + b\n    _ -> 1\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  case <<>> {
+    <<a:1, b:3, c:size(b - 2)>> -> c + b
+    _ -> 1
+  }
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec main() -> integer().
+main() ->
+    case <<>> of
+        <<A:1, B:3, C:(B - 2)>> ->
+            C + B;
+
+        _ ->
+            1
+    end.
