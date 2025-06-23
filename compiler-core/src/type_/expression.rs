@@ -1609,10 +1609,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 if let Err(error) = unify(left.type_(), right.type_()) {
                     self.problems
                         .error(convert_unify_error(error, right.location()));
+                } else {
+                    // We only want to warn for redundant comparisons if it
+                    // makes sense to compare the two values.
+                    // That is, their types should match!
+                    self.check_for_redundant_comparison(name, &left, &right, location);
                 }
 
                 self.check_for_inefficient_empty_list_check(name, &left, &right, location);
-                self.check_for_redundant_comparison(name, &left, &right, location);
 
                 return TypedExpr::BinOp {
                     location,
@@ -1649,6 +1653,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let right = self.infer(right);
         let unify_left = unify(input_type.clone(), left.type_());
         let unify_right = unify(input_type.clone(), right.type_());
+
+        if unify_left.is_ok() && unify_right.is_ok() {
+            // We only want to warn for redundant comparisons if it makes sense
+            // to compare the two values. That is, their types should match!
+            self.check_for_redundant_comparison(name, &left, &right, location);
+        }
 
         // There's some common cases in which we can provide nicer error messages:
         // - if we're using a float operator on int values
@@ -1687,7 +1697,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         self.check_for_inefficient_empty_list_check(name, &left, &right, location);
-        self.check_for_redundant_comparison(name, &left, &right, location);
 
         TypedExpr::BinOp {
             location,
@@ -5048,6 +5057,16 @@ fn static_compare(one: &TypedExpr, other: &TypedExpr) -> StaticComparison {
             }
         },
 
+        // If we're building two variants with a different index then we can
+        // tell for sure they're going to be different.
+        (one, other)
+            if one
+                .variant_index()
+                .is_some_and(|one| other.variant_index().is_some_and(|other| one != other)) =>
+        {
+            StaticComparison::CertainlyDifferent
+        }
+
         (
             TypedExpr::RecordAccess {
                 index: index_one,
@@ -5071,6 +5090,7 @@ fn static_compare(one: &TypedExpr, other: &TypedExpr) -> StaticComparison {
         // TODO: For complex expressions we just give up, maybe in future we
         // could be smarter and perform further comparisons but it sounds like
         // there's no huge value in this.
+        //
         (_, _) => StaticComparison::CantTell,
     }
 }
