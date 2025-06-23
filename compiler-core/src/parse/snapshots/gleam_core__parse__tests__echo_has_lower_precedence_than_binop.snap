@@ -38,6 +38,7 @@ expression: echo 1 + 1
                     },
                 },
             ),
+            message: None,
         },
     ),
 ]
