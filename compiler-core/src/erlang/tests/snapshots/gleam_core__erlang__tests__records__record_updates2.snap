@@ -29,7 +29,6 @@ pub fn main() {
 main() ->
     P = {person, <<"Quinn"/utf8>>, 27},
     New_p = begin
-        _record = P,
         {person, <<"Riley"/utf8>>, 28}
     end,
     New_p.

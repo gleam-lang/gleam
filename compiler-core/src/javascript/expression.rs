@@ -312,7 +312,7 @@ impl<'module, 'a> Generator<'module, 'a> {
 
             TypedExpr::RecordAccess { record, label, .. } => self.record_access(record, label),
             TypedExpr::RecordUpdate {
-                record,
+                record_assignment: record,
                 constructor,
                 args,
                 ..
@@ -1443,15 +1443,18 @@ impl<'module, 'a> Generator<'module, 'a> {
 
     fn record_update(
         &mut self,
-        record: &'a TypedAssignment,
+        record: &'a Option<Box<TypedAssignment>>,
         constructor: &'a TypedExpr,
         args: &'a [TypedCallArg],
     ) -> Output<'a> {
-        Ok(docvec![
-            self.not_in_tail_position(None, |this| this.assignment(record))?,
-            line(),
-            self.call(constructor, args)?,
-        ])
+        match record.as_ref() {
+            Some(record) => Ok(docvec![
+                self.not_in_tail_position(None, |this| this.assignment(record))?,
+                line(),
+                self.call(constructor, args)?,
+            ]),
+            None => self.call(constructor, args),
+        }
     }
 
     fn tuple_index(&mut self, tuple: &'a TypedExpr, index: u64) -> Output<'a> {

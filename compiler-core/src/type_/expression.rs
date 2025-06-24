@@ -3037,34 +3037,39 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let record_location = record.location();
         let record_type = record.type_();
 
-        // We create an Assignment for the old record expression and will use a Var expression
-        // to refer back to it while constructing the arguments.
-        let record_assignment = Assignment {
-            location: record_location,
-            pattern: Pattern::Variable {
+        let (record_var, record_assignment) = if record.is_var() {
+            (record, None)
+        } else {
+            // We create an Assignment for the old record expression and will use a Var expression
+            // to refer back to it while constructing the arguments.
+            let record_assignment = Assignment {
                 location: record_location,
-                name: RECORD_UPDATE_VARIABLE.into(),
-                type_: record_type.clone(),
-                origin: VariableOrigin::generated(),
-            },
-            annotation: None,
-            compiled_case: CompiledCase::failure(),
-            kind: AssignmentKind::Generated,
-            value: record,
-        };
-
-        let record_var = TypedExpr::Var {
-            location: record_location,
-            constructor: ValueConstructor {
-                publicity: Publicity::Private,
-                deprecation: Deprecation::NotDeprecated,
-                type_: record_type,
-                variant: ValueConstructorVariant::LocalVariable {
+                pattern: Pattern::Variable {
                     location: record_location,
+                    name: RECORD_UPDATE_VARIABLE.into(),
+                    type_: record_type.clone(),
                     origin: VariableOrigin::generated(),
                 },
-            },
-            name: RECORD_UPDATE_VARIABLE.into(),
+                annotation: None,
+                compiled_case: CompiledCase::failure(),
+                kind: AssignmentKind::Generated,
+                value: record,
+            };
+
+            let record_var = TypedExpr::Var {
+                location: record_location,
+                constructor: ValueConstructor {
+                    publicity: Publicity::Private,
+                    deprecation: Deprecation::NotDeprecated,
+                    type_: record_type,
+                    variant: ValueConstructorVariant::LocalVariable {
+                        location: record_location,
+                        origin: VariableOrigin::generated(),
+                    },
+                },
+                name: RECORD_UPDATE_VARIABLE.into(),
+            };
+            (record_var, Some(Box::new(record_assignment)))
         };
 
         // infer the fields of the variant we want to update
@@ -3076,7 +3081,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         Ok(TypedExpr::RecordUpdate {
             location,
             type_: variant.retn,
-            record: Box::new(record_assignment),
+            record_assignment,
             constructor: Box::new(typed_constructor),
             args,
         })

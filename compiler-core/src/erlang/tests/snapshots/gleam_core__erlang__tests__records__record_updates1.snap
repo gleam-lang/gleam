@@ -29,7 +29,6 @@ pub fn main() {
 main() ->
     P = {person, <<"Quinn"/utf8>>, 27},
     New_p = begin
-        _record = P,
-        {person, erlang:element(2, _record), erlang:element(3, P) + 1}
+        {person, erlang:element(2, P), erlang:element(3, P) + 1}
     end,
     New_p.

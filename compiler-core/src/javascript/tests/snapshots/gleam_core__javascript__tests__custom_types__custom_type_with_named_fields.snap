@@ -73,18 +73,13 @@ export function new_cat() {
 }
 
 export function update(cat) {
-  let _record = cat;
-  new Cat("Sid", _record.cuteness)
-  let _record$1 = cat;
-  new Cat(
-    "Bartholemew Wonder Puss the Fourth !!!!!!!!!!!!!!!!",
-    _record$1.cuteness,
-  )
-  let _record$2 = new_cat();
-  new Cat("Molly", _record$2.cuteness)
+  new Cat("Sid", cat.cuteness)
+  new Cat("Bartholemew Wonder Puss the Fourth !!!!!!!!!!!!!!!!", cat.cuteness)
+  let _record = new_cat();
+  new Cat("Molly", _record.cuteness)
   let box = new Box(cat);
-  let _record$3 = box.occupant;
-  return new Cat(_record$3.name, box.occupant.cuteness + 1);
+  let _record$1 = box.occupant;
+  return new Cat(_record$1.name, box.occupant.cuteness + 1);
 }
 
 export const felix = /* @__PURE__ */ new Cat("Felix", 12);

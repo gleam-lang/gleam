@@ -33,11 +33,10 @@ pub fn main() {
 -spec main() -> wibble().
 main() ->
     Base = {wibble, 1, {wobble, 2, 3}, 4},
-    _record = Base,
     {wibble,
-        erlang:element(2, _record),
+        erlang:element(2, Base),
         begin
-            _record@1 = erlang:element(3, Base),
-            {wobble, erlang:element(2, _record@1), 5}
+            _record = erlang:element(3, Base),
+            {wobble, erlang:element(2, _record), 5}
         end,
-        erlang:element(4, _record)}.
+        erlang:element(4, Base)}.

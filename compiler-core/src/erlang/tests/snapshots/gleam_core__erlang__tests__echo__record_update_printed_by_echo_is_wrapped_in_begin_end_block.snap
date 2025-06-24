@@ -29,8 +29,7 @@ main() ->
     Wobble = {wobble, 1, <<"wobble"/utf8>>},
     echo(
         begin
-            _record = Wobble,
-            {wobble, 1, erlang:element(3, _record)}
+            {wobble, 1, erlang:element(3, Wobble)}
         end,
         6
     ).
