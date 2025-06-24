@@ -843,10 +843,12 @@ where
         TypedExpr::RecordUpdate {
             location,
             type_,
-            record_assignment: record,
+            record_assignment,
             constructor,
             args,
-        } => v.visit_typed_expr_record_update(location, type_, record, constructor, args),
+        } => {
+            v.visit_typed_expr_record_update(location, type_, record_assignment, constructor, args)
+        }
         TypedExpr::NegateBool { location, value } => {
             v.visit_typed_expr_negate_bool(location, value)
         }
