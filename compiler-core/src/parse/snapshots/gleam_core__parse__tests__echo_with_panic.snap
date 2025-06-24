@@ -9,6 +9,7 @@ expression: "echo panic as \"a\""
                 start: 0,
                 end: 17,
             },
+            keyword_end: 4,
             expression: Some(
                 Panic {
                     location: SrcSpan {

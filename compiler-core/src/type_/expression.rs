@@ -427,9 +427,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             UntypedExpr::Echo {
                 location,
+                keyword_end,
                 expression,
                 message,
-            } => Ok(self.infer_echo(location, expression, message)),
+            } => Ok(self.infer_echo(location, keyword_end, expression, message)),
 
             UntypedExpr::Var { location, name, .. } => {
                 self.infer_var(name, location, ReferenceRegistration::RegisterReferences)
@@ -581,16 +582,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         self.purity = Purity::Impure;
 
-        let message = message.map(|message| {
-            // If there is a message expression then it must be a string.
-            let message = self.infer(*message);
-            if let Err(error) = unify(string(), message.type_()) {
-                self.problems
-                    .error(convert_unify_error(error, message.location()));
-            }
-            Box::new(message)
-        });
-
+        let message = message.map(|message| Box::new(self.infer_and_unify(*message, string())));
         TypedExpr::Todo {
             location,
             type_,
@@ -615,17 +607,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             PanicKind::Placeholder => {}
         }
 
-        let message = match message {
-            None => None,
-            Some(message) => {
-                let message = self.infer(*message);
-                if let Err(error) = unify(string(), message.type_()) {
-                    self.problems
-                        .error(convert_unify_error(error, message.location()))
-                }
-                Some(Box::new(message))
-            }
-        };
+        let message = message.map(|message| Box::new(self.infer_and_unify(*message, string())));
         self.previous_panics = true;
         TypedExpr::Panic {
             location,
@@ -637,26 +619,34 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_echo(
         &mut self,
         location: SrcSpan,
+        keyword_end: u32,
         expression: Option<Box<UntypedExpr>>,
         message: Option<Box<UntypedExpr>>,
     ) -> TypedExpr {
         self.environment.echo_found = true;
         self.purity = Purity::Impure;
 
-        if let Some(expression) = expression {
+        let expression = if let Some(expression) = expression {
             let expression = self.infer(*expression);
             if self.previous_panics {
                 self.warn_for_unreachable_code(location, PanicPosition::EchoExpression);
             }
-            TypedExpr::Echo {
-                location,
-                type_: expression.type_(),
-                expression: Some(Box::new(expression)),
-            }
+            expression
         } else {
+            let location = SrcSpan {
+                start: location.start,
+                end: keyword_end,
+            };
             self.problems
                 .error(Error::EchoWithNoFollowingExpression { location });
             self.error_expr(location)
+        };
+
+        TypedExpr::Echo {
+            location,
+            type_: expression.type_(),
+            expression: Some(Box::new(expression)),
+            message: message.map(|message| Box::new(self.infer_and_unify(*message, string()))),
         }
     }
 
@@ -1589,7 +1579,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     /// Same as `self.infer_or_error` but instead of returning a `Result` with an error,
     /// records the error and returns an invalid expression.
     ///
-    fn infer(&mut self, expression: UntypedExpr) -> TypedExpr {
+    pub fn infer(&mut self, expression: UntypedExpr) -> TypedExpr {
         let location = expression.location();
         match self.infer_or_error(expression) {
             Ok(result) => result,
@@ -1598,6 +1588,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 self.error_expr(location)
             }
         }
+    }
+
+    /// Infers the type of the given function and tries to unify it with the
+    /// given type, recording any unification error that might take place.
+    /// The typed expression is returned in any case.
+    ///
+    pub fn infer_and_unify(&mut self, expression: UntypedExpr, type_: Arc<Type>) -> TypedExpr {
+        let expression = self.infer(expression);
+        if let Err(error) = unify(type_, expression.type_()) {
+            self.problems
+                .error(convert_unify_error(error, expression.location()))
+        }
+        expression
     }
 
     fn infer_binop(
@@ -1949,16 +1952,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             FeatureKind::LetAssertWithMessage,
                             message.location(),
                         );
-                        let message = self.infer_or_error(message).unwrap_or_else(|error| {
-                            self.problems.error(error);
-                            self.error_expr(location)
-                        });
-
-                        let _ = unify(string(), message.type_()).map_err(|e| {
-                            self.problems
-                                .error(convert_unify_error(e, message.location()))
-                        });
-                        Some(message)
+                        Some(self.infer_and_unify(message, string()))
                     }
                     None => None,
                 };
@@ -1996,17 +1990,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .error(convert_unify_error(error, value_location)),
         }
 
-        let message = message.map(|message| {
-            let message_location = message.location();
-            match self.infer_assert_message(message) {
-                Ok(value) => value,
-                Err(error) => {
-                    self.problems.error(error);
-                    self.error_expr(message_location)
-                }
-            }
-        });
-
+        let message = message.map(|message| self.infer_and_unify(message, string()));
         self.track_feature_usage(FeatureKind::BoolAssert, location);
 
         Assert {
@@ -2014,20 +1998,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             value,
             message,
         }
-    }
-
-    fn infer_assert_message(&mut self, message: UntypedExpr) -> Result<TypedExpr, Error> {
-        let message_location = message.location();
-        let message = self.infer(message);
-
-        match unify(string(), message.type_()) {
-            Ok(()) => {}
-            Err(error) => self
-                .problems
-                .error(convert_unify_error(error, message_location)),
-        }
-
-        Ok(message)
     }
 
     fn infer_case(

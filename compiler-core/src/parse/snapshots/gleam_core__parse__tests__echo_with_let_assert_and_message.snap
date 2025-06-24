@@ -14,6 +14,7 @@ expression: let assert 1 = echo 2 as this_belongs_to_echo
                     start: 15,
                     end: 45,
                 },
+                keyword_end: 19,
                 expression: Some(
                     Int {
                         location: SrcSpan {

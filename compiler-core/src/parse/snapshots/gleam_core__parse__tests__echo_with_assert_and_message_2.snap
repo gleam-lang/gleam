@@ -14,6 +14,7 @@ expression: assert echo True as this_belongs_to_echo
                     start: 7,
                     end: 40,
                 },
+                keyword_end: 11,
                 expression: Some(
                     Var {
                         location: SrcSpan {

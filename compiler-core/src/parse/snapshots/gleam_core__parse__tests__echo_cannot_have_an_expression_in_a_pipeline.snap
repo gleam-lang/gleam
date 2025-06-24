@@ -19,6 +19,7 @@ expression: "[] |> echo fun |> wibble"
                         start: 6,
                         end: 10,
                     },
+                    keyword_end: 10,
                     expression: None,
                     message: None,
                 },

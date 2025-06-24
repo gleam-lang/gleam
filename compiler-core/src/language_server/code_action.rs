@@ -6801,6 +6801,7 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveEchos<'ast> {
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         expression: &'ast Option<Box<TypedExpr>>,
+        message: &'ast Option<Box<TypedExpr>>,
     ) {
         // We also want to trigger the action if we're hovering over the expression
         // being printed. So we create a unique span starting from the start of echo
@@ -6841,7 +6842,7 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveEchos<'ast> {
             }
         }
 
-        ast::visit::visit_typed_expr_echo(self, location, type_, expression);
+        ast::visit::visit_typed_expr_echo(self, location, type_, expression, message);
     }
 
     fn visit_typed_pipeline_assignment(&mut self, assignment: &'ast TypedPipelineAssignment) {

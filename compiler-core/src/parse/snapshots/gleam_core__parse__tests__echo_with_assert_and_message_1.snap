@@ -32,6 +32,7 @@ expression: assert 1 == echo 2 as this_belongs_to_echo
                         start: 12,
                         end: 42,
                     },
+                    keyword_end: 16,
                     expression: Some(
                         Int {
                             location: SrcSpan {

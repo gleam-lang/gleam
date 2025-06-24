@@ -197,6 +197,7 @@ impl<'a> CallGraphBuilder<'a> {
             UntypedExpr::Echo {
                 expression,
                 location: _,
+                keyword_end: _,
                 message,
             } => {
                 if let Some(expression) = expression {

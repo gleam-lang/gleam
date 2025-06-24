@@ -9,6 +9,7 @@ expression: echo as message
                 start: 0,
                 end: 15,
             },
+            keyword_end: 4,
             expression: None,
             message: Some(
                 Var {
