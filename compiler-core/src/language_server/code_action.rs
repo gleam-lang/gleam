@@ -3,7 +3,7 @@ use std::{collections::HashSet, iter, sync::Arc};
 use crate::{
     Error, STDLIB_PACKAGE_NAME, analyse,
     ast::{
-        self, AssignName, AssignmentKind, BitArraySegmentTruncation, CallArg, CustomType,
+        self, ArgNames, AssignName, AssignmentKind, BitArraySegmentTruncation, CallArg, CustomType,
         FunctionLiteralKind, ImplicitCallArgOrigin, Import, PIPE_PRECEDENCE, Pattern,
         PatternUnusedArguments, PipelineAssignmentKind, RecordConstructor, SrcSpan, TodoKind,
         TypedArg, TypedAssignment, TypedExpr, TypedModuleConstant, TypedPattern,
@@ -4498,6 +4498,14 @@ pub enum PatternMatchedValue<'a> {
         ///
         assignment_location: SrcSpan,
     },
+    UseVariable {
+        variable_name: &'a EcoString,
+        variable_type: &'a Arc<Type>,
+        /// The location of the entire use expression the variable is part of,
+        /// so that we can add the pattern matching _after_ it.
+        ///
+        use_location: SrcSpan,
+    },
 }
 
 impl<'a, IO> PatternMatchOnValue<'a, IO>
@@ -4534,9 +4542,14 @@ where
             Some(PatternMatchedValue::LetVariable {
                 variable_name,
                 variable_type,
-                assignment_location,
+                assignment_location: location,
+            })
+            | Some(PatternMatchedValue::UseVariable {
+                variable_name,
+                variable_type,
+                use_location: location,
             }) => {
-                self.match_on_let_variable(variable_name, variable_type, assignment_location);
+                self.match_on_let_variable(variable_name, variable_type, location);
                 "Pattern match on variable"
             }
             None => return vec![],
@@ -4877,6 +4890,43 @@ where
         }
 
         ast::visit::visit_typed_assignment(self, assignment);
+    }
+
+    fn visit_typed_use(&mut self, use_: &'ast TypedUse) {
+        if let Some(assignments) = use_.callback_arguments() {
+            for variable in assignments {
+                let ast::Arg {
+                    names: ArgNames::Named { name, .. },
+                    location: variable_location,
+                    type_,
+                    ..
+                } = variable
+                else {
+                    continue;
+                };
+
+                // If we use a pattern in a use assignment, that will end up
+                // being called `_use` something. We don't want to offer the
+                // action when hovering a pattern so we ignore those.
+                if name.starts_with("_use") {
+                    continue;
+                }
+
+                let variable_range = self.edits.src_span_to_lsp_range(*variable_location);
+                if within(self.params.range, variable_range) {
+                    self.selected_value = Some(PatternMatchedValue::UseVariable {
+                        variable_name: name,
+                        variable_type: type_,
+                        use_location: use_.location,
+                    });
+                    // If we've found the variable to pattern match on, there's no
+                    // point in keeping traversing the AST.
+                    return;
+                }
+            }
+        }
+
+        ast::visit::visit_typed_use(self, use_);
     }
 }
 
