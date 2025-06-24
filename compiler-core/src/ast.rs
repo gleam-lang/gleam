@@ -2983,7 +2983,7 @@ impl TypedUse {
         self.call.find_node(byte_index)
     }
 
-    pub fn callback_arguments<'a>(&'a self) -> Option<&'a Vec<TypedArg>> {
+    pub fn callback_arguments(&self) -> Option<&Vec<TypedArg>> {
         let TypedExpr::Call { args, .. } = self.call.as_ref() else {
             return None;
         };
