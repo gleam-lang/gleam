@@ -1986,7 +1986,12 @@ fn maybe_block_expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Documen
 
 fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
     match expression {
-        TypedExpr::RecordUpdate { .. } | TypedExpr::Pipeline { .. } => true,
+        // Record updates are 1 expression if there's no assignment, multiple otherwise.
+        TypedExpr::RecordUpdate {
+            record_assignment, ..
+        } => record_assignment.is_some(),
+
+        TypedExpr::Pipeline { .. } => true,
 
         TypedExpr::Int { .. }
         | TypedExpr::Float { .. }

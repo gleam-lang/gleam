@@ -621,7 +621,10 @@ impl<'module, 'a> Generator<'module, 'a> {
                 | TypedExpr::Todo { .. }
                 | TypedExpr::Case { .. }
                 | TypedExpr::Pipeline { .. }
-                | TypedExpr::RecordUpdate { .. },
+                | TypedExpr::RecordUpdate {
+                    record_assignment: Some(_),
+                    ..
+                },
                 Position::NotTail(Ordering::Loose),
             ) => self.wrap_block(|this| this.expression(expression)),
             (
@@ -629,7 +632,10 @@ impl<'module, 'a> Generator<'module, 'a> {
                 | TypedExpr::Todo { .. }
                 | TypedExpr::Case { .. }
                 | TypedExpr::Pipeline { .. }
-                | TypedExpr::RecordUpdate { .. },
+                | TypedExpr::RecordUpdate {
+                    record_assignment: Some(_),
+                    ..
+                },
                 Position::NotTail(Ordering::Strict),
             ) => self.immediately_invoked_function_expression(expression, |this, expr| {
                 this.expression(expr)

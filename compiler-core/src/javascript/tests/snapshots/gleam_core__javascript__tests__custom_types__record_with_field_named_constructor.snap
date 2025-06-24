@@ -29,8 +29,6 @@ export class Thing extends $CustomType {
 
 export function main() {
   let a = new Thing(undefined);
-  let _block;
-  _block = new Thing(undefined);
-  let b = _block;
+  let b = new Thing(undefined);
   return b.constructor$;
 }
