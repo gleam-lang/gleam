@@ -578,6 +578,8 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
     }
 
     fn decision(&mut self, subject: Document<'a>, decision: &'a Decision) -> Output<'a> {
+        dbg!(decision);
+
         let Some(ChecksAndBindings { checks, bindings }) =
             self.positive_checks_and_bindings(decision)
         else {
@@ -1160,11 +1162,11 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                     }
                 }
 
-                BitArrayTest::VariableIsNotNegative { variable } => {
+                BitArrayTest::ReadSizeIsNotNegative { size } => {
                     if negation.is_negated() {
-                        docvec![self.local_var(variable.name()), " < 0"]
+                        docvec![self.read_size_to_doc(size), " < 0"]
                     } else {
-                        docvec![self.local_var(variable.name()), " >= 0"]
+                        docvec![self.read_size_to_doc(size), " >= 0"]
                     }
                 }
 
@@ -1435,6 +1437,8 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     /// remaining bits/bytes") this returns a document representing that size.
     ///
     fn read_size_to_doc(&mut self, size: &ReadSize) -> Option<Document<'a>> {
+        dbg!(size);
+
         match size {
             ReadSize::ConstantBits(value) => Some(value.clone().to_doc()),
             ReadSize::VariableBits { variable, unit } => {

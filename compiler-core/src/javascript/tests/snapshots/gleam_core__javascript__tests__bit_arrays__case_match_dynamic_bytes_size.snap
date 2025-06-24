@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 1090
 expression: "\npub fn go(x) {\n  let n = 3\n  case x {\n    <<a:bytes-size(n)>> -> a\n    _ -> x\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -20,7 +18,7 @@ import { bitArraySlice } from "../gleam.mjs";
 
 export function go(x) {
   let n = 3;
-  if (n >= 0 && x.bitSize === n * 8) {
+  if (n * 8 >= 0 && x.bitSize === n * 8) {
     let a = bitArraySlice(x, 0, n * 8);
     return a;
   } else {

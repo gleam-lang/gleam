@@ -862,8 +862,8 @@ pub enum BitArrayTest {
     /// pattern where the size is a variable with a negative value will never
     /// match. So we check this to make sure the test will fail.
     ///
-    VariableIsNotNegative {
-        variable: VariableUsage,
+    ReadSizeIsNotNegative {
+        size: ReadSize,
     },
 
     /// This test checks that the segment read by the given read action is a
@@ -871,7 +871,7 @@ pub enum BitArrayTest {
     ///
     /// We need this check as `NaN` and `Infinity` will not match with float
     /// segments (like `<<_:32-float>>`) on the Erlang target and we must
-    /// replicate the same behavious on the JavaScript target as well.
+    /// replicate the same behaviours on the JavaScript target as well.
     ///
     SegmentIsFiniteFloat {
         read_action: ReadAction,
@@ -891,12 +891,11 @@ impl BitArrayTest {
 
     pub(crate) fn referenced_segment_patterns(&self) -> Vec<(&EcoString, &ReadAction)> {
         match self {
-            BitArrayTest::VariableIsNotNegative { variable } => match variable {
-                VariableUsage::PatternSegment(segment_value, read_action) => {
-                    vec![(segment_value, read_action)]
-                }
-                VariableUsage::OutsideVariable(..) => vec![],
-            },
+            BitArrayTest::ReadSizeIsNotNegative { size } => {
+                let mut references = Vec::new();
+                size.referenced_segment_patterns(&mut references);
+                references
+            }
 
             BitArrayTest::Size(SizeTest { operator: _, size })
             | BitArrayTest::CatchAllIsBytes { size_so_far: size } => {
@@ -1479,6 +1478,26 @@ impl ReadSize {
 
             ReadSize::ConstantBits(..) | ReadSize::RemainingBits | ReadSize::RemainingBytes => (),
         };
+    }
+
+    fn can_be_negative(&self) -> bool {
+        match self {
+            ReadSize::ConstantBits(value) => *value < BigInt::ZERO,
+            ReadSize::VariableBits { variable, .. } => match variable.as_ref() {
+                VariableUsage::PatternSegment(_, read_action) => read_action.signed,
+                VariableUsage::OutsideVariable(_) => true,
+            },
+            ReadSize::BinaryOperator {
+                left,
+                right,
+                operator,
+            } => {
+                *operator == IntOperator::Subtract
+                    || left.can_be_negative()
+                    || right.can_be_negative()
+            }
+            ReadSize::RemainingBits | ReadSize::RemainingBytes => false,
+        }
     }
 }
 
@@ -2910,20 +2929,10 @@ impl CaseToCompile {
 
             // If we're reading a variable number of bits we need to make sure
             // that that variable is not negative!
-            if let ReadSize::VariableBits { variable, .. } = &segment_size {
-                match variable.as_ref() {
-                    // If the size variable comes from reading an unsigned
-                    // number we know that it can't be negative! So we can skip
-                    // checking it.
-                    VariableUsage::PatternSegment(_, read_action) if !read_action.signed => (),
-
-                    // Otherwise we must make sure that the read size is not
-                    // negative.
-                    VariableUsage::PatternSegment(..) | VariableUsage::OutsideVariable(_) => tests
-                        .push_back(BitArrayTest::VariableIsNotNegative {
-                            variable: variable.as_ref().clone(),
-                        }),
-                }
+            if segment_size.can_be_negative() {
+                tests.push_back(BitArrayTest::ReadSizeIsNotNegative {
+                    size: segment_size.clone(),
+                });
             }
 
             // All segments but the last will require the original bit array to
