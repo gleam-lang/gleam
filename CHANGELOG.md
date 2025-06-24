@@ -349,6 +349,19 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- It is now possible to trigger the "Add type annotation" code action anywhere
+  between the start of a function definition and the start of its body. For
+  example the action can trigger here while it previously wouldn't:
+
+  ```gleam
+  pub fn my_lucky_number() {
+    //                    ^^ The action can trigger here as well!
+    11
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 - The formatter now allows more control over how lists are split. By adding a
