@@ -312,11 +312,11 @@ impl<'module, 'a> Generator<'module, 'a> {
 
             TypedExpr::RecordAccess { record, label, .. } => self.record_access(record, label),
             TypedExpr::RecordUpdate {
-                record_assignment: record,
+                record_assignment,
                 constructor,
                 args,
                 ..
-            } => self.record_update(record, constructor, args),
+            } => self.record_update(record_assignment, constructor, args),
 
             TypedExpr::Var {
                 name, constructor, ..

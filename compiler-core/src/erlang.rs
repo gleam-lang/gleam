@@ -2163,11 +2163,11 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::RecordAccess { record, index, .. } => tuple_index(record, index + 1, env),
 
         TypedExpr::RecordUpdate {
-            record_assignment: record,
+            record_assignment,
             constructor,
             args,
             ..
-        } => record_update(record, constructor, args, env),
+        } => record_update(record_assignment, constructor, args, env),
 
         TypedExpr::Case {
             subjects, clauses, ..

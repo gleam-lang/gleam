@@ -373,7 +373,7 @@ impl TypedExpr {
                 .or_else(|| self.self_if_contains_location(byte_index)),
 
             Self::RecordUpdate {
-                record_assignment: record,
+                record_assignment,
                 constructor,
                 args,
                 ..
@@ -381,7 +381,11 @@ impl TypedExpr {
                 .iter()
                 .filter(|arg| arg.implicit.is_none())
                 .find_map(|arg| arg.find_node(byte_index, constructor, args))
-                .or_else(|| record.as_ref().and_then(|r| r.find_node(byte_index)))
+                .or_else(|| {
+                    record_assignment
+                        .as_ref()
+                        .and_then(|r| r.find_node(byte_index))
+                })
                 .or_else(|| self.self_if_contains_location(byte_index)),
         }
     }
@@ -512,7 +516,7 @@ impl TypedExpr {
                 .find_map(|arg| arg.value.find_statement(byte_index)),
 
             Self::RecordUpdate {
-                record_assignment: record,
+                record_assignment,
                 args,
                 ..
             } => args
@@ -520,7 +524,7 @@ impl TypedExpr {
                 .filter(|arg| arg.implicit.is_none())
                 .find_map(|arg| arg.find_statement(byte_index))
                 .or_else(|| {
-                    record
+                    record_assignment
                         .as_ref()
                         .and_then(|r| r.value.find_statement(byte_index))
                 }),
