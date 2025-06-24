@@ -2049,7 +2049,7 @@ where
             self.expect_one_following_series(&Token::RightParen, "a function parameter")?;
         let return_annotation = self.parse_type_annotation(&Token::RArrow)?;
 
-        let (body, end, end_position) = match self.maybe_one(&Token::LeftBrace) {
+        let (body_start, body, end, end_position) = match self.maybe_one(&Token::LeftBrace) {
             Some((left_brace_start, _)) => {
                 let some_body = self.parse_statement_seq()?;
                 let (_, right_brace_end) = self.expect_one(&Token::RightBrace)?;
@@ -2071,7 +2071,7 @@ where
                     Some((body, _)) => body,
                 };
 
-                (body, end, right_brace_end)
+                (Some(left_brace_start), body, end, right_brace_end)
             }
 
             None if is_anon => {
@@ -2085,7 +2085,7 @@ where
                 let body = vec1![Statement::Expression(UntypedExpr::Placeholder {
                     location: SrcSpan::new(start, rpar_e)
                 })];
-                (body, rpar_e, rpar_e)
+                (None, body, rpar_e, rpar_e)
             }
         };
 
@@ -2093,6 +2093,7 @@ where
             documentation,
             location: SrcSpan { start, end },
             end_position,
+            body_start,
             publicity: self.publicity(public, attributes.internal)?,
             name,
             arguments,
