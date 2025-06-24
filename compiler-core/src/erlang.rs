@@ -1948,19 +1948,22 @@ fn docs_args_call<'a>(
 }
 
 fn record_update<'a>(
-    record: &'a TypedAssignment,
+    record: &'a Option<Box<TypedAssignment>>,
     constructor: &'a TypedExpr,
     args: &'a [TypedCallArg],
     env: &mut Env<'a>,
 ) -> Document<'a> {
     let vars = env.current_scope_vars.clone();
 
-    let document = docvec![
-        assignment(record, env, Position::NotTail),
-        ",",
-        line(),
-        call(constructor, args, env)
-    ];
+    let document = match record.as_ref() {
+        Some(record) => docvec![
+            assignment(record, env, Position::NotTail),
+            ",",
+            line(),
+            call(constructor, args, env)
+        ],
+        None => call(constructor, args, env),
+    };
 
     env.current_scope_vars = vars;
 
@@ -2155,7 +2158,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::RecordAccess { record, index, .. } => tuple_index(record, index + 1, env),
 
         TypedExpr::RecordUpdate {
-            record,
+            record_assignment: record,
             constructor,
             args,
             ..

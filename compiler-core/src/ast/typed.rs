@@ -164,7 +164,9 @@ pub enum TypedExpr {
     RecordUpdate {
         location: SrcSpan,
         type_: Arc<Type>,
-        record: Box<TypedAssignment>,
+        /// If the record is an expression that is not a variable we will need to assign to a
+        /// variable so it can be referred multiple times.
+        record_assignment: Option<Box<TypedAssignment>>,
         constructor: Box<Self>,
         args: Vec<CallArg<Self>>,
     },
@@ -371,7 +373,7 @@ impl TypedExpr {
                 .or_else(|| self.self_if_contains_location(byte_index)),
 
             Self::RecordUpdate {
-                record,
+                record_assignment: record,
                 constructor,
                 args,
                 ..
@@ -379,7 +381,7 @@ impl TypedExpr {
                 .iter()
                 .filter(|arg| arg.implicit.is_none())
                 .find_map(|arg| arg.find_node(byte_index, constructor, args))
-                .or_else(|| record.find_node(byte_index))
+                .or_else(|| record.as_ref().and_then(|r| r.find_node(byte_index)))
                 .or_else(|| self.self_if_contains_location(byte_index)),
         }
     }
@@ -509,11 +511,19 @@ impl TypedExpr {
                 .iter()
                 .find_map(|arg| arg.value.find_statement(byte_index)),
 
-            Self::RecordUpdate { record, args, .. } => args
+            Self::RecordUpdate {
+                record_assignment: record,
+                args,
+                ..
+            } => args
                 .iter()
                 .filter(|arg| arg.implicit.is_none())
                 .find_map(|arg| arg.find_statement(byte_index))
-                .or_else(|| record.value.find_statement(byte_index)),
+                .or_else(|| {
+                    record
+                        .as_ref()
+                        .and_then(|r| r.value.find_statement(byte_index))
+                }),
         }
     }
 

@@ -33,13 +33,12 @@ pub fn main(a: A) {
 -file("project/test/my/mod.gleam", 5).
 -spec main(a()) -> a().
 main(A) ->
-    _record = A,
     {a,
         begin
-            _record@1 = erlang:element(2, A),
+            _record = erlang:element(2, A),
             {b,
                 begin
-                    _record@2 = erlang:element(2, erlang:element(2, A)),
+                    _record@1 = erlang:element(2, erlang:element(2, A)),
                     {c, 0}
                 end}
         end}.

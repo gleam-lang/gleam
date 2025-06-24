@@ -299,7 +299,7 @@ pub trait Visit<'ast> {
         &mut self,
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
-        record: &'ast TypedAssignment,
+        record: &'ast Option<Box<TypedAssignment>>,
         constructor: &'ast TypedExpr,
         args: &'ast [TypedCallArg],
     ) {
@@ -843,7 +843,7 @@ where
         TypedExpr::RecordUpdate {
             location,
             type_,
-            record,
+            record_assignment: record,
             constructor,
             args,
         } => v.visit_typed_expr_record_update(location, type_, record, constructor, args),
@@ -1133,14 +1133,16 @@ pub fn visit_typed_expr_record_update<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
     _type: &'a Arc<Type>,
-    record: &'a TypedAssignment,
+    record: &'a Option<Box<TypedAssignment>>,
     constructor: &'a TypedExpr,
     args: &'a [TypedCallArg],
 ) where
     V: Visit<'a> + ?Sized,
 {
     v.visit_typed_expr(constructor);
-    v.visit_typed_assignment(record);
+    if let Some(record) = record {
+        v.visit_typed_assignment(record);
+    }
     for arg in args {
         v.visit_typed_call_arg(arg);
     }
