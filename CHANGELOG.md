@@ -159,6 +159,43 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Code generators now reuse existing variables when possible for the record
+  update syntax, reducing the size of the generated code and number of
+  variables defined for both Erlang and JavaScript.
+
+  ```gleam
+  pub fn main() -> Nil {
+    let trainer = Trainer(name: "Ash", badges: 0)
+    battle(Wobble(..trainer, badges: 1))
+  }
+  ```
+
+  Previously this Gleam code would generate this Erlang code:
+
+  ```erlang
+  -spec main() -> nil.
+  main() ->
+      Trainer = {trainer, 0, <<"Ash"/utf8>>},
+      battle(
+          begin
+              _record = Trainer,
+              {trainer, 1, erlang:element(3, _record)}
+          end
+      ).
+  ```
+
+
+  Now this code will be generated instead:
+
+  ```erlang
+  -spec main() -> nil.
+  main() ->
+      Trainer = {trainer, 0, <<"Ash"/utf8>>},
+      battle({trainer, 1, erlang:element(3, Trainer)}).
+  ```
+
+  ([Louis Pilfold](https://github.com/lpil))
+
 ### Build tool
 
 - `gleam update`, `gleam deps update`, and `gleam deps download` will now print
