@@ -106,26 +106,22 @@ destructure_aliased(User) ->
 ?DOC(" For these statements we use update the record\n").
 -spec update_qualified(one@one:user()) -> one@one:user().
 update_qualified(User) ->
-    _record = User,
-    {user, <<"wibble"/utf8>>, erlang:element(3, _record)}.
+    {user, <<"wibble"/utf8>>, erlang:element(3, User)}.
 
 -file("src/two.gleam", 90).
 -spec update_qualified_aliased(one@two:user()) -> one@two:user().
 update_qualified_aliased(User) ->
-    _record = User,
-    {user, <<"wibble"/utf8>>, erlang:element(3, _record)}.
+    {user, <<"wibble"/utf8>>, erlang:element(3, User)}.
 
 -file("src/two.gleam", 94).
 -spec update_unqualified(one@one:user()) -> one@one:user().
 update_unqualified(User) ->
-    _record = User,
-    {user, <<"wibble"/utf8>>, erlang:element(3, _record)}.
+    {user, <<"wibble"/utf8>>, erlang:element(3, User)}.
 
 -file("src/two.gleam", 98).
 -spec update_aliased(one@one:user()) -> one@one:user().
 update_aliased(User) ->
-    _record = User,
-    {user, <<"wibble"/utf8>>, erlang:element(3, _record)}.
+    {user, <<"wibble"/utf8>>, erlang:element(3, User)}.
 
 -file("src/two.gleam", 7).
 -spec qualified_fn_a() -> one@one:a().
