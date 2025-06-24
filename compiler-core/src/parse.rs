@@ -547,15 +547,16 @@ where
                 }
             }
 
-            Some((start, Token::Echo, end)) => {
+            Some((start, Token::Echo, echo_end)) => {
                 self.advance();
                 if context == ExpressionUnitContext::FollowingPipe {
                     // If an echo is used as a step in a pipeline (`|> echo`)
                     // then it cannot be followed by an expression.
                     let message = self.maybe_parse_as_message()?;
-                    let end = message.as_ref().map_or(end, |m| m.location().end);
+                    let end = message.as_ref().map_or(echo_end, |m| m.location().end);
                     UntypedExpr::Echo {
                         location: SrcSpan { start, end },
+                        keyword_end: echo_end,
                         expression: None,
                         message,
                     }
@@ -567,13 +568,14 @@ where
                     // stop analysis from happening everywhere and be fault
                     // tolerant like everything else.
                     let expression = self.parse_expression()?;
-                    let end = expression.as_ref().map_or(end, |e| e.location().end);
+                    let end = expression.as_ref().map_or(echo_end, |e| e.location().end);
 
                     let message = self.maybe_parse_as_message()?;
                     let end = message.as_ref().map_or(end, |m| m.location().end);
 
                     UntypedExpr::Echo {
                         location: SrcSpan { start, end },
+                        keyword_end: echo_end,
                         expression: expression.map(Box::new),
                         message,
                     }

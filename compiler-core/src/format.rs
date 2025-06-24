@@ -980,6 +980,7 @@ impl<'comments> Formatter<'comments> {
             UntypedExpr::Echo {
                 expression,
                 location: _,
+                keyword_end: _,
                 message,
             } => self.echo(expression, message),
 

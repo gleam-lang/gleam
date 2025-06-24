@@ -144,6 +144,7 @@ pub enum TypedExpr {
         location: SrcSpan,
         type_: Arc<Type>,
         expression: Option<Box<Self>>,
+        message: Option<Box<Self>>,
     },
 
     BitArray {
@@ -242,9 +243,18 @@ impl TypedExpr {
                 }
             }
 
-            Self::Echo { expression, .. } => expression
+            Self::Echo {
+                expression,
+                message,
+                ..
+            } => expression
                 .as_ref()
                 .and_then(|expression| expression.find_node(byte_index))
+                .or_else(|| {
+                    message
+                        .as_ref()
+                        .and_then(|message| message.find_node(byte_index))
+                })
                 .or_else(|| self.self_if_contains_location(byte_index)),
 
             Self::Todo { kind, .. } => match kind {
@@ -507,9 +517,18 @@ impl TypedExpr {
                 tuple: expression, ..
             } => expression.find_statement(byte_index),
 
-            Self::Echo { expression, .. } => expression
+            Self::Echo {
+                expression,
+                message,
+                ..
+            } => expression
                 .as_ref()
-                .and_then(|expression| expression.find_statement(byte_index)),
+                .and_then(|expression| expression.find_statement(byte_index))
+                .or_else(|| {
+                    message
+                        .as_ref()
+                        .and_then(|message| message.find_statement(byte_index))
+                }),
 
             Self::BitArray { segments, .. } => segments
                 .iter()

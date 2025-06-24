@@ -15,6 +15,7 @@ expression: panic as echo wibble as message
                         start: 9,
                         end: 31,
                     },
+                    keyword_end: 13,
                     expression: Some(
                         Var {
                             location: SrcSpan {

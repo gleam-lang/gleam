@@ -182,6 +182,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
 
                 UntypedExpr::Echo {
                     location,
+                    keyword_end: _,
                     expression: None,
                     message,
                 } => {
@@ -198,6 +199,9 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                             location,
                             expression: None,
                             type_: self.argument_type.clone(),
+                            message: message.map(|message| {
+                                Box::new(self.expr_typer.infer_and_unify(*message, string()))
+                            }),
                         },
                     )
                 }

@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "echo as \"wibble\""
+---
+----- SOURCE CODE
+echo as "wibble"
+
+----- ERROR
+error: Invalid echo use
+  ┌─ /src/one/two.gleam:1:1
+  │
+1 │ echo as "wibble"
+  │ ^^^^ I was expecting a value after this
+
+The `echo` keyword should be followed by a value to print.
