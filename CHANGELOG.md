@@ -160,6 +160,37 @@
 
 ### Language server
 
+- It is now possible to use the "Pattern match on variable" code action on
+  variables on the left hand side of a `use`. For example:
+
+  ```gleam
+  pub type User {
+    User(id: Int, name: String)
+  }
+
+  pub fn main() {
+    use user <- result.try(load_user())
+    //  ^^^^ Triggering the code action here
+    todo
+  }
+  ```
+
+  Would result in the following code:
+
+  ```gleam
+  pub type User {
+    User(id: Int, name: String)
+  }
+
+  pub fn main() {
+    use user <- result.try(load_user())
+    let User(id:, name:) = user
+    todo
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 - The formatter now allows more control over how lists are split. By adding a

@@ -6988,6 +6988,56 @@ pub fn main() {
 }
 
 #[test]
+fn pattern_match_on_use_assignment() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "
+pub fn main() {
+  use var <- f
+}
+
+fn f(g) { g(#(1, 2)) }
+",
+        find_position_of("var").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_use_assignment_with_multiple_constructors() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "
+pub type Wibble {
+  Wobble
+  Woo
+}
+
+pub fn main() {
+  use var <- f
+}
+
+fn f(g) { g(Wobble) }
+",
+        find_position_of("var").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_pattern_use_assignment() {
+    assert_no_code_actions!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "
+pub fn main() {
+  use #(a, b) <- f
+}
+
+fn f(g) { g(#(1, 2)) }
+",
+        find_position_of("#").to_selection()
+    );
+}
+
+#[test]
 fn pattern_match_on_argument_works_on_fn_arguments() {
     assert_code_action!(
         PATTERN_MATCH_ON_ARGUMENT,

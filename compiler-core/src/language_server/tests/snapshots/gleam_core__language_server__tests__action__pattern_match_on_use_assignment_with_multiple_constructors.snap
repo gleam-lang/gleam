@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub type Wibble {\n  Wobble\n  Woo\n}\n\npub fn main() {\n  use var <- f\n}\n\nfn f(g) { g(Wobble) }\n"
+---
+----- BEFORE ACTION
+
+pub type Wibble {
+  Wobble
+  Woo
+}
+
+pub fn main() {
+  use var <- f
+      ↑       
+}
+
+fn f(g) { g(Wobble) }
+
+
+----- AFTER ACTION
+
+pub type Wibble {
+  Wobble
+  Woo
+}
+
+pub fn main() {
+  use var <- f
+  case var {
+    Wobble -> todo
+    Woo -> todo
+  }
+}
+
+fn f(g) { g(Wobble) }

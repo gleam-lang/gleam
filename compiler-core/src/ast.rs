@@ -2982,6 +2982,18 @@ impl TypedUse {
         }
         self.call.find_node(byte_index)
     }
+
+    pub fn callback_arguments<'a>(&'a self) -> Option<&'a Vec<TypedArg>> {
+        let TypedExpr::Call { args, .. } = self.call.as_ref() else {
+            return None;
+        };
+        let callback = args.iter().last()?;
+        let TypedExpr::Fn { args, .. } = &callback.value else {
+            // The expression might be invalid so we have to return a None here
+            return None;
+        };
+        Some(args)
+    }
 }
 
 pub type TypedStatement = Statement<Arc<Type>, TypedExpr>;

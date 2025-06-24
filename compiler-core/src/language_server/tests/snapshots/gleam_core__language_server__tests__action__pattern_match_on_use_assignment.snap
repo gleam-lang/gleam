@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  use var <- f\n}\n\nfn f(g) { g(#(1, 2)) }\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  use var <- f
+      ↑       
+}
+
+fn f(g) { g(#(1, 2)) }
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  use var <- f
+  let #(value_0, value_1) = var
+}
+
+fn f(g) { g(#(1, 2)) }
