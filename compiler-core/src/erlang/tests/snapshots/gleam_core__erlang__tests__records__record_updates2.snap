@@ -28,7 +28,5 @@ pub fn main() {
 -spec main() -> person().
 main() ->
     P = {person, <<"Quinn"/utf8>>, 27},
-    New_p = begin
-        {person, <<"Riley"/utf8>>, 28}
-    end,
+    New_p = {person, <<"Riley"/utf8>>, 28},
     New_p.

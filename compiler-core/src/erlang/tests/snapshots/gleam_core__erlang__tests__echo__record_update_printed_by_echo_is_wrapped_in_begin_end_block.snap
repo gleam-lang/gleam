@@ -27,11 +27,6 @@ pub fn main() {
 -spec main() -> wobble().
 main() ->
     Wobble = {wobble, 1, <<"wobble"/utf8>>},
-    echo(
-        begin
-            {wobble, 1, erlang:element(3, Wobble)}
-        end,
-        6
-    ).
+    echo({wobble, 1, erlang:element(3, Wobble)}, 6).
 
 % ...omitted code from `templates/echo.erl`...
