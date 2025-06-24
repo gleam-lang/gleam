@@ -87,6 +87,9 @@ Parsed {
                             start: 45,
                             end: 56,
                         },
+                        body_start: Some(
+                            57,
+                        ),
                         end_position: 75,
                         name: Some(
                             (

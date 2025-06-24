@@ -2951,6 +2951,24 @@ pub fn main() {
 }
 
 #[test]
+fn add_annotation_triggers_on_function_curly_brace() {
+    assert_code_action!(
+        ADD_ANNOTATION,
+        "pub fn main() { 1 }",
+        find_position_of("{").to_selection(),
+    );
+}
+
+#[test]
+fn add_annotation_triggers_on_empty_space_before_function_curly_brace() {
+    assert_code_action!(
+        ADD_ANNOTATION,
+        "pub fn main() { 1 }",
+        find_position_of(" ").nth_occurrence(3).to_selection(),
+    );
+}
+
+#[test]
 fn adding_annotations_prints_contextual_types4() {
     let src = r#"
 import wibble as wobble
