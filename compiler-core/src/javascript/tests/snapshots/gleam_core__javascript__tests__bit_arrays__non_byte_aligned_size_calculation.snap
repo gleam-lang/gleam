@@ -19,7 +19,7 @@ export function main() {
   let $ = toBitArray([]);
   if ($.bitSize >= 1 && $.bitSize >= 4) {
     let b = bitArraySliceToInt($, 1, 4, true, false);
-    if ($.bitSize === 4 + b - 2) {
+    if (b - 2 >= 0 && $.bitSize === 4 + b - 2) {
       let a = bitArraySliceToInt($, 0, 1, true, false);
       let b$1 = b;
       let c = bitArraySliceToInt($, 4, 4 + b$1 - 2, true, false);
