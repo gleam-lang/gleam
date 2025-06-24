@@ -29,7 +29,7 @@
 - Gleam will now emit a helpful message when attempting to import modules using
   `.` instead of `/`.
 
-  ```gleam
+  ```txt
   error: Syntax error
     ┌─ /src/parse/error.gleam:1:11
     │
