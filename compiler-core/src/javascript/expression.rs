@@ -622,6 +622,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                 | TypedExpr::Case { .. }
                 | TypedExpr::Pipeline { .. }
                 | TypedExpr::RecordUpdate {
+                    // Record updates that assign a variable generate multiple statements
                     record_assignment: Some(_),
                     ..
                 },
@@ -633,6 +634,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                 | TypedExpr::Case { .. }
                 | TypedExpr::Pipeline { .. }
                 | TypedExpr::RecordUpdate {
+                    // Record updates that assign a variable generate multiple statements
                     record_assignment: Some(_),
                     ..
                 },
