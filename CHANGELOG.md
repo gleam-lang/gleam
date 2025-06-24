@@ -2,109 +2,6 @@
 
 ## Unreleased
 
-### Formatter
-
-- The formatter now allows more control over how lists are split. By adding a
-  trailing comma at the end of a list that can fit on a single line, the list
-  will be split on multiple lines:
-
-  ```gleam
-  pub fn my_favourite_pokemon() -> List(String) {
-    ["natu", "chimecho", "milotic",]
-  }
-  ```
-
-  Will be formatted as:
-
-  ```gleam
-  pub fn my_favourite_pokemon() -> List(String) {
-    [
-      "natu",
-      "chimecho",
-      "milotic",
-    ]
-  }
-  ```
-
-  By removing the trailing comma, the formatter will try and fit the list on a
-  single line again:
-
-  ```gleam
-  pub fn my_favourite_pokemon() -> List(String) {
-    [
-      "natu",
-      "chimecho",
-      "milotic"
-    ]
-  }
-  ```
-
-  Will be formatted back to a single line:
-
-  ```gleam
-  pub fn my_favourite_pokemon() -> List(String) {
-    ["natu", "chimecho", "milotic"]
-  }
-  ```
-
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
-- The formatter now allows more control over how lists are formatted.
-  If a list is split with multiple elements on the same line, removing the
-  trailing comma will make sure the formatter keeps each item on its own line:
-
-  ```gleam
-  pub fn my_favourite_pokemon() -> List(String) {
-    [
-      "This list was formatted", "keeping multiple elements on the same line",
-      "notice how the formatting changes by removing the trailing comma ->"
-    ]
-  }
-  ```
-
-  Is formatted as:
-
-  ```gleam
-  pub fn my_favourite_pokemon() -> List(String) {
-    [
-      "This list was formatted",
-      "keeping multiple elements on the same line",
-      "notice how the formatting changes by removing the trailing comma ->",
-    ]
-  }
-  ```
-
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
-- The formatter no longer removes empty lines between list items. In case an
-  empty line is added between list items they will all be split on multiple
-  lines. For example:
-
-  ```gleam
-  pub fn main() {
-    [
-      "natu", "xatu",
-
-      "chimeco"
-    ]
-  }
-  ```
-
-  Is formatted as:
-
-  ```gleam
-  pub fn main() {
-    [
-      "natu",
-      "xatu",
-
-      "chimeco",
-    ]
-  }
-  ```
-
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
 ### Compiler
 
 - Generated JavaScript functions, constants, and custom type constructors now
@@ -264,6 +161,107 @@
 ### Language server
 
 ### Formatter
+
+- The formatter now allows more control over how lists are split. By adding a
+  trailing comma at the end of a list that can fit on a single line, the list
+  will be split on multiple lines:
+
+  ```gleam
+  pub fn my_favourite_pokemon() -> List(String) {
+    ["natu", "chimecho", "milotic",]
+  }
+  ```
+
+  Will be formatted as:
+
+  ```gleam
+  pub fn my_favourite_pokemon() -> List(String) {
+    [
+      "natu",
+      "chimecho",
+      "milotic",
+    ]
+  }
+  ```
+
+  By removing the trailing comma, the formatter will try and fit the list on a
+  single line again:
+
+  ```gleam
+  pub fn my_favourite_pokemon() -> List(String) {
+    [
+      "natu",
+      "chimecho",
+      "milotic"
+    ]
+  }
+  ```
+
+  Will be formatted back to a single line:
+
+  ```gleam
+  pub fn my_favourite_pokemon() -> List(String) {
+    ["natu", "chimecho", "milotic"]
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The formatter now allows more control over how lists are formatted.
+  If a list is split with multiple elements on the same line, removing the
+  trailing comma will make sure the formatter keeps each item on its own line:
+
+  ```gleam
+  pub fn my_favourite_pokemon() -> List(String) {
+    [
+      "This list was formatted", "keeping multiple elements on the same line",
+      "notice how the formatting changes by removing the trailing comma ->"
+    ]
+  }
+  ```
+
+  Is formatted as:
+
+  ```gleam
+  pub fn my_favourite_pokemon() -> List(String) {
+    [
+      "This list was formatted",
+      "keeping multiple elements on the same line",
+      "notice how the formatting changes by removing the trailing comma ->",
+    ]
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The formatter no longer removes empty lines between list items. In case an
+  empty line is added between list items they will all be split on multiple
+  lines. For example:
+
+  ```gleam
+  pub fn main() {
+    [
+      "natu", "xatu",
+
+      "chimeco"
+    ]
+  }
+  ```
+
+  Is formatted as:
+
+  ```gleam
+  pub fn main() {
+    [
+      "natu",
+      "xatu",
+
+      "chimeco",
+    ]
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Bug fixes
 
