@@ -4539,16 +4539,18 @@ where
                 self.match_on_function_argument(arg, function_body, function_range);
                 "Pattern match on argument"
             }
-            Some(PatternMatchedValue::LetVariable {
-                variable_name,
-                variable_type,
-                assignment_location: location,
-            })
-            | Some(PatternMatchedValue::UseVariable {
-                variable_name,
-                variable_type,
-                use_location: location,
-            }) => {
+            Some(
+                PatternMatchedValue::LetVariable {
+                    variable_name,
+                    variable_type,
+                    assignment_location: location,
+                }
+                | PatternMatchedValue::UseVariable {
+                    variable_name,
+                    variable_type,
+                    use_location: location,
+                },
+            ) => {
                 self.match_on_let_variable(variable_name, variable_type, location);
                 "Pattern match on variable"
             }
