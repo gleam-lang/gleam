@@ -5,6 +5,9 @@ expression: "./cases/imported_record_constructors"
 //// /out/lib/the_package/_gleam_artefacts/one@one.cache
 <.cache binary>
 
+//// /out/lib/the_package/_gleam_artefacts/one@one.cache_inline
+<8 byte binary>
+
 //// /out/lib/the_package/_gleam_artefacts/one@one.cache_meta
 <97 byte binary>
 
@@ -26,6 +29,9 @@ expression: "./cases/imported_record_constructors"
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache
 <.cache binary>
 
+//// /out/lib/the_package/_gleam_artefacts/one@two.cache_inline
+<8 byte binary>
+
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache_meta
 <97 byte binary>
 
@@ -46,6 +52,9 @@ expression: "./cases/imported_record_constructors"
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache
 <.cache binary>
+
+//// /out/lib/the_package/_gleam_artefacts/two.cache_inline
+<8 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
 <499 byte binary>
