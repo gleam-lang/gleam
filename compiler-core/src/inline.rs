@@ -466,13 +466,14 @@ impl Inliner<'_> {
             TypedExpr::RecordUpdate {
                 location,
                 type_,
-                record,
+                record_assignment,
                 constructor,
                 args,
             } => TypedExpr::RecordUpdate {
                 location,
                 type_,
-                record: Box::new(self.assignment(*record)),
+                record_assignment: record_assignment
+                    .map(|assignment| Box::new(self.assignment(*assignment))),
                 constructor: self.boxed_expression(constructor),
                 args,
             },
