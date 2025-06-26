@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/echo.rs
-assertion_line: 94
 expression: "\npub fn main() {\n  [1, 2, 3]\n  |> echo\n  |> wibble\n  |> echo\n  |> wibble\n  |> echo\n}\n\npub fn wibble(n) { n }\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -38,11 +36,11 @@ export function wibble(n) {
 
 export function main() {
   let _pipe = toList([1, 2, 3]);
-  echo(_pipe, "src/module.gleam", 4)
+  echo(_pipe, undefined, "src/module.gleam", 4)
   let _pipe$1 = wibble(_pipe);
-  echo(_pipe$1, "src/module.gleam", 6)
+  echo(_pipe$1, undefined, "src/module.gleam", 6)
   let _pipe$2 = wibble(_pipe$1);
-  return echo(_pipe$2, "src/module.gleam", 8);
+  return echo(_pipe$2, undefined, "src/module.gleam", 8);
 }
 
 // ...omitted code from `templates/echo.mjs`...
