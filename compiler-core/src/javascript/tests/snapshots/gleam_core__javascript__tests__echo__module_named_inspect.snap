@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/echo.rs
-assertion_line: 112
 expression: "\nimport other/inspect\n\npub fn main() {\n  echo inspect.x\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -28,7 +26,7 @@ import {
 } from "../gleam.mjs";
 
 export function main() {
-  return echo($inspect.x, "src/module.gleam", 5);
+  return echo($inspect.x, undefined, "src/module.gleam", 5);
 }
 
 // ...omitted code from `templates/echo.mjs`...

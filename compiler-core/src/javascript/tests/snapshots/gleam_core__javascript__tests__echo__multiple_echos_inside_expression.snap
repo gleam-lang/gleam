@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/echo.rs
-assertion_line: 16
 expression: "\npub fn main() {\n  echo 1\n  echo 2\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -26,8 +24,8 @@ import {
 } from "../gleam.mjs";
 
 export function main() {
-  echo(1, "src/module.gleam", 3);
-  return echo(2, "src/module.gleam", 4);
+  echo(1, undefined, "src/module.gleam", 3);
+  return echo(2, undefined, "src/module.gleam", 4);
 }
 
 // ...omitted code from `templates/echo.mjs`...

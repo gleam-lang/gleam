@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/echo.rs
-assertion_line: 28
 expression: "\npub fn main() {\n  echo case 1 {\n    _ -> 2\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -30,7 +28,7 @@ export function main() {
   let _block;
   let $ = 1;
   _block = 2;
-  return echo(_block, "src/module.gleam", 3);
+  return echo(_block, undefined, "src/module.gleam", 3);
 }
 
 // ...omitted code from `templates/echo.mjs`...
