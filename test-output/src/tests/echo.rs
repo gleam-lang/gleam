@@ -205,3 +205,8 @@ fn echo_circular_reference() {
 fn echo_singleton() {
     assert_echo!("echo_singleton");
 }
+
+#[test]
+fn echo_with_message() {
+    assert_echo!("echo_with_message");
+}
