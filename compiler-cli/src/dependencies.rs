@@ -631,8 +631,6 @@ fn is_same_requirements(
         }
     }
 
-    // For path dependencies, we need to check if their manifest.toml files have changed,
-    // which indicates that their dependencies have changed
     for (key, requirement2) in requirements2 {
         if let Requirement::Path { path } = requirement2 {
             let dep_manifest_path = root_path.join(path).join("manifest.toml");
