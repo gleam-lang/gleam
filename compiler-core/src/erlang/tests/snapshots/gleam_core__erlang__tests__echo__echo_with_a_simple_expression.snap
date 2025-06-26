@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/echo.rs
-assertion_line: 5
 expression: "\npub fn main() {\n  echo 1\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -20,6 +18,6 @@ pub fn main() {
 -file("project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
-    echo(1, 3).
+    echo(1, nil, 3).
 
 % ...omitted code from `templates/echo.erl`...

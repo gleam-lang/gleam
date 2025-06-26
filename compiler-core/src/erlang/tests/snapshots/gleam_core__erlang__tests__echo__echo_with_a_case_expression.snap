@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/echo.rs
-assertion_line: 28
 expression: "\npub fn main() {\n  echo case 1 {\n    _ -> 2\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -25,6 +23,6 @@ main() ->
     echo(case 1 of
             _ ->
                 2
-        end, 3).
+        end, nil, 3).
 
 % ...omitted code from `templates/echo.erl`...
