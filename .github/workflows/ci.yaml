@@ -97,7 +97,7 @@ jobs:
         uses: erlef/setup-beam@v1
         with:
           otp-version: "28.0.1"
-          elixir-version: "1.16.1"
+          elixir-version: "1.18"
           rebar3-version: "3"
 
       - name: Setup Node
