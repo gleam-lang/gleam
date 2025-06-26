@@ -32,10 +32,6 @@ pub fn try(result: Result(a, e), apply f: fn(a) -> Result(b, e)) -> Result(b, e)
   }
 }
 
-pub fn then(result: Result(a, e), apply f: fn(a) -> Result(b, e)) -> Result(b, e) {
-  try(result, f)
-}
-
 pub fn map(over result: Result(a, e), with f: fn(a) -> b) -> Result(b, e) {
   case result {
     Ok(value) -> Ok(f(value))
@@ -99,15 +95,26 @@ pub fn main() {
 
 #[test]
 fn inline_function_which_calls_other_function() {
-    // `result.then` calls `result.try`, meaning this must be inlined twice to
+    // This function calls `result.try`, meaning this must be inlined twice to
     // achieve the desired result.
     assert_js!(
         ("gleam_stdlib", "gleam/result", RESULT_MODULE),
+        (
+            "gleam_stdlib",
+            "testing",
+            "
+import gleam/result.{try}
+
+pub fn always_inline(result, f) -> Result(b, e) {
+  try(result, f)
+}
+"
+        ),
         "
-import gleam/result
+import testing
 
 pub fn main() {
-  result.then(Ok(10), Error)
+  testing.always_inline(Ok(10), Error)
 }
 "
     );
@@ -161,13 +168,15 @@ pub fn count(from: Int, to: Int) -> Int {
 
 #[test]
 fn do_not_inline_parameters_used_more_than_once() {
-    // We just use `bool.guard` as the name here because it will be inlined
+    // Since the `something` parameter is used more than once in the body of the
+    // function, it should not be inlined, and should be assigned once at the
+    // beginning of the function.
     assert_js!(
         (
             "gleam_stdlib",
-            "gleam/bool",
+            "testing",
             "
-pub fn guard(something) {
+pub fn always_inline(something) {
   case something {
     True -> something
     False -> False
@@ -176,10 +185,10 @@ pub fn guard(something) {
 "
         ),
         "
-import gleam/bool
+import testing
 
 pub fn main() {
-  bool.guard(True)
+  testing.always_inline(True)
 }
 "
     );

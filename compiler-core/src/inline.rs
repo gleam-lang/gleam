@@ -1159,8 +1159,12 @@ fn is_inlinable(package: &str, module: &str, name: &str) -> bool {
         ("gleam/bool", "guard") => true,
         ("gleam/bool", "lazy_guard") => true,
         ("gleam/result", "try") => true,
-        ("gleam/result", "then") => true,
         ("gleam/result", "map") => true,
+        // For testing purposes it's useful to have a function which will always
+        // be inlined, which we can define however we want. We only inline this
+        // when we are in test mode though, because we wouldn't want this detail
+        // leaking out into real-world code and causing unexpected behaviour.
+        ("testing", "always_inline") => cfg!(test),
         _ => false,
     }
 }

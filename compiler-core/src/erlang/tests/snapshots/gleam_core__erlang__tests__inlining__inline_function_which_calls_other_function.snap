@@ -1,13 +1,13 @@
 ---
 source: compiler-core/src/erlang/tests/inlining.rs
-expression: "\nimport gleam/result\n\npub fn main() {\n  result.then(Ok(10), Error)\n}\n"
+expression: "\nimport testing\n\npub fn main() {\n  testing.always_inline(Ok(10), Error)\n}\n"
 ---
 ----- SOURCE CODE
 
-import gleam/result
+import testing
 
 pub fn main() {
-  result.then(Ok(10), Error)
+  testing.always_inline(Ok(10), Error)
 }
 
 
