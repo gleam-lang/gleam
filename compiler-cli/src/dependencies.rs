@@ -833,10 +833,6 @@ fn provide_local_package(
         fs::canonicalise(&parent_path.join(package_path))?
     };
 
-    // We used to always force clean artifacts for path dependencies,
-    // but now we use the gleam.toml hash tracking in is_same_requirements
-    // to determine when path dependency dependencies have changed
-
     let package_source = ProvidedPackageSource::Local {
         path: package_path.clone(),
     };
