@@ -2043,7 +2043,7 @@ fn echo<'a>(
 
     let message = message
         .as_ref()
-        .map(|message| maybe_block_expr(&message, env))
+        .map(|message| maybe_block_expr(message, env))
         .unwrap_or("nil".to_doc());
 
     "echo".to_doc().append(wrap_args(vec![
