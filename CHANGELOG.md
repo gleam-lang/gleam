@@ -4,6 +4,24 @@
 
 ### Compiler
 
+- It is now possible to add a custom message to be printed by `echo`, making it
+  easier to include additional context to be printed at runtime:
+
+  ```gleam
+  pub fn main() {
+    echo 11 as "lucky number"
+  }
+  ```
+
+  Will output to stderr:
+
+  ```txt
+  /src/module.gleam:2 lucky number
+  11
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Generated JavaScript functions, constants, and custom type constructors now
   include any doc comment as a JSDoc comment, making it easier to use the
   generated code and browse its documentation from JavaScript.
