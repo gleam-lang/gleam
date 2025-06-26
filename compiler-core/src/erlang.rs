@@ -2228,6 +2228,8 @@ fn pipeline<'a>(
         echo(name, message, location, env)
     };
 
+    let vars = env.current_scope_vars.clone();
+
     let mut prev_local_var_name = None;
     for a in all_assignments {
         match a.value.as_ref() {
@@ -2271,6 +2273,8 @@ fn pipeline<'a>(
         )),
         _ => documents.push(expr(finally, env)),
     }
+
+    env.current_scope_vars = vars;
 
     documents.to_doc()
 }
