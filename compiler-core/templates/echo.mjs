@@ -1,17 +1,18 @@
-function echo(value, file, line) {
+function echo(value, message, file, line) {
   const grey = "\u001b[90m";
   const reset_color = "\u001b[39m";
   const file_line = `${file}:${line}`;
   const inspector = new Echo$Inspector();
   const string_value = inspector.inspect(value);
+  const string_message = message === undefined ? "" : " " + message;
 
   if (globalThis.process?.stderr?.write) {
     // If we're in Node.js, use `stderr`
-    const string = `${grey}${file_line}${reset_color}\n${string_value}\n`;
+    const string = `${grey}${file_line}${reset_color}${string_message}\n${string_value}\n`;
     process.stderr.write(string);
   } else if (globalThis.Deno) {
     // If we're in Deno, use `stderr`
-    const string = `${grey}${file_line}${reset_color}\n${string_value}\n`;
+    const string = `${grey}${file_line}${reset_color}${string_message}\n${string_value}\n`;
     globalThis.Deno.stderr.writeSync(new TextEncoder().encode(string));
   } else {
     // Otherwise, use `console.log`

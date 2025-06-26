@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/echo.rs
-assertion_line: 65
 expression: "\npub fn main() {\n  echo {\n    Nil\n    1\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -33,7 +31,7 @@ export function main() {
     undefined;
     _block = 1;
   }
-  return echo(_block, "src/module.gleam", 3);
+  return echo(_block, undefined, "src/module.gleam", 3);
 }
 
 // ...omitted code from `templates/echo.mjs`...

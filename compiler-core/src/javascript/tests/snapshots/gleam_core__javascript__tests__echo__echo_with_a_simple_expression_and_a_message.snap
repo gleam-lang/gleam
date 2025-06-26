@@ -1,14 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/echo.rs
-expression: "\npub fn main() {\n  echo wibble(1, 2)\n}\n\nfn wibble(n: Int, m: Int) { n + m }\n"
+expression: "\npub fn main() {\n  echo 1 as \"hello!\"\n}\n"
 ---
 ----- SOURCE CODE
 
 pub fn main() {
-  echo wibble(1, 2)
+  echo 1 as "hello!"
 }
-
-fn wibble(n: Int, m: Int) { n + m }
 
 
 ----- COMPILED JAVASCRIPT
@@ -24,12 +22,8 @@ import {
   UtfCodepoint as $UtfCodepoint,
 } from "../gleam.mjs";
 
-function wibble(n, m) {
-  return n + m;
-}
-
 export function main() {
-  return echo(wibble(1, 2), undefined, "src/module.gleam", 3);
+  return echo(1, "hello!", "src/module.gleam", 3);
 }
 
 // ...omitted code from `templates/echo.mjs`...
