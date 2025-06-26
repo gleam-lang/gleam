@@ -93,19 +93,12 @@ jobs:
           toolchain: ${{ matrix.toolchain }}
           target: ${{ matrix.target }}
 
-      - name: Install Erlang (non-macos)
+      - name: Install Erlang
         uses: erlef/setup-beam@v1
         with:
-          otp-version: "26.1"
+          otp-version: "28.0.1"
           elixir-version: "1.16.1"
           rebar3-version: "3"
-        if: ${{ runner.os != 'macOS' }} # setup-beam does not support macOS
-
-      - name: Install Erlang (macos)
-        run: |
-          brew install erlang rebar3 elixir
-          mix local.hex --force
-        if: ${{ runner.os == 'macOS' }} # setup-beam does not support macOS
 
       - name: Setup Node
         uses: actions/setup-node@v4
