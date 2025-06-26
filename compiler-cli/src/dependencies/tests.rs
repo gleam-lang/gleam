@@ -867,7 +867,7 @@ fn test_path_dependency_manifest_hash_change() {
     )]);
     
     let project_paths = ProjectPaths::new(root_path.clone());
-    let first_check = are_path_dependency_manifests_unchanged(&requirements, &root_path, &project_paths)
+    let first_check = check_and_update_path_dependency_manifests(&requirements, &root_path, &project_paths)
         .expect("First check should succeed");
     assert!(
         !first_check,
@@ -877,7 +877,7 @@ fn test_path_dependency_manifest_hash_change() {
     let hash_path = build_packages_dir.join("dep.manifest_hash");
     assert!(hash_path.exists(), "Hash file should have been created");
 
-    let second_check = are_path_dependency_manifests_unchanged(&requirements, &root_path, &project_paths)
+    let second_check = check_and_update_path_dependency_manifests(&requirements, &root_path, &project_paths)
         .expect("Second check should succeed");
     assert!(
         second_check,
@@ -896,14 +896,14 @@ fn test_path_dependency_manifest_hash_change() {
     )
     .expect("Failed to set manifest file mtime");
 
-    let third_check = are_path_dependency_manifests_unchanged(&requirements, &root_path, &project_paths)
+    let third_check = check_and_update_path_dependency_manifests(&requirements, &root_path, &project_paths)
         .expect("Third check should succeed");
     assert!(
         !third_check,
         "Third check should be false as manifest has changed"
     );
 
-    let fourth_check = are_path_dependency_manifests_unchanged(&requirements, &root_path, &project_paths)
+    let fourth_check = check_and_update_path_dependency_manifests(&requirements, &root_path, &project_paths)
         .expect("Fourth check should succeed");
     assert!(
         fourth_check,
@@ -932,7 +932,7 @@ fn test_path_dependency_with_missing_manifest() {
     )]);
 
     let project_paths = ProjectPaths::new(root_path.clone());
-    let check = are_path_dependency_manifests_unchanged(&requirements, &root_path, &project_paths)
+    let check = check_and_update_path_dependency_manifests(&requirements, &root_path, &project_paths)
         .expect("Check should succeed");
     assert!(check, "Check should be true when manifest is missing");
 
@@ -967,7 +967,7 @@ fn test_path_dependency_manifest_mtime_optimization() {
     )]);
     
     let project_paths = ProjectPaths::new(root_path.clone());
-    let first_check = are_path_dependency_manifests_unchanged(&requirements, &root_path, &project_paths)
+    let first_check = check_and_update_path_dependency_manifests(&requirements, &root_path, &project_paths)
         .expect("First check should succeed");
     assert!(
         !first_check,
@@ -995,7 +995,7 @@ fn test_path_dependency_manifest_mtime_optimization() {
     )
     .expect("Failed to set hash file mtime");
 
-    let check = are_path_dependency_manifests_unchanged(&requirements, &root_path, &project_paths)
+    let check = check_and_update_path_dependency_manifests(&requirements, &root_path, &project_paths)
         .expect("Check should succeed");
     assert!(
         check,
@@ -1045,7 +1045,7 @@ gleam_stdlib = "~> 0.29"
     )]);
     
     let project_paths = ProjectPaths::new(root_path.clone());
-    let first_check = are_path_dependency_manifests_unchanged(&requirements, &root_path, &project_paths)
+    let first_check = check_and_update_path_dependency_manifests(&requirements, &root_path, &project_paths)
         .expect("First check should succeed");
     assert!(
         !first_check,
@@ -1055,7 +1055,7 @@ gleam_stdlib = "~> 0.29"
     let hash_path = build_packages_dir.join("bar.manifest_hash");
     assert!(hash_path.exists(), "Hash file should have been created");
 
-    let second_check = are_path_dependency_manifests_unchanged(&requirements, &root_path, &project_paths)
+    let second_check = check_and_update_path_dependency_manifests(&requirements, &root_path, &project_paths)
         .expect("Second check should succeed");
     assert!(
         second_check,
@@ -1082,14 +1082,14 @@ some_other_package = "1.2.3"
     )
     .expect("Failed to set manifest file mtime");
 
-    let third_check = are_path_dependency_manifests_unchanged(&requirements, &root_path, &project_paths)
+    let third_check = check_and_update_path_dependency_manifests(&requirements, &root_path, &project_paths)
         .expect("Third check should succeed");
     assert!(
         !third_check,
         "Third check should be false as manifest has changed with new dependency"
     );
 
-    let fourth_check = are_path_dependency_manifests_unchanged(&requirements, &root_path, &project_paths)
+    let fourth_check = check_and_update_path_dependency_manifests(&requirements, &root_path, &project_paths)
         .expect("Fourth check should succeed");
     assert!(
         fourth_check,
