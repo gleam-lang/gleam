@@ -682,11 +682,16 @@ fn is_same_requirements(
             // If cached hash file doesn't exist, this is the first time we're checking this dependency
             if !cached_hash_path.exists() {
                 // Save the current hash for future comparisons
-                if let Err(e) = fs::write(&cached_hash_path, &current_hash) {
-                    tracing::debug!("failed_to_write_dependency_manifest_hash: {}", e);
+                match fs::write(&cached_hash_path, &current_hash) {
+                    Ok(_) => {
+                        tracing::debug!("no_cached_manifest_hash_for_path_dependency_forcing_rebuild");
+                        return Ok(false);
+                    },
+                    Err(e) => {
+                        tracing::debug!("failed_to_write_dependency_manifest_hash: {}", e);
+                        return Err(e);
+                    }
                 }
-                tracing::debug!("no_cached_manifest_hash_for_path_dependency_forcing_rebuild");
-                return Ok(false);
             }
 
             let cached_hash = match std::fs::read_to_string(&cached_hash_path) {
@@ -699,10 +704,15 @@ fn is_same_requirements(
 
             if cached_hash != current_hash {
                 tracing::debug!("path_dependency_manifest_changed_forcing_rebuild");
-                if let Err(e) = fs::write(&cached_hash_path, &current_hash) {
-                    tracing::debug!("failed_to_update_dependency_manifest_hash: {}", e);
+                match fs::write(&cached_hash_path, &current_hash) {
+                    Ok(_) => {
+                        return Ok(false);
+                    },
+                    Err(e) => {
+                        tracing::debug!("failed_to_update_dependency_manifest_hash: {}", e);
+                        return Err(e);
+                    }
                 }
-                return Ok(false);
             }
 
             tracing::debug!("path_dependency_manifest_unchanged_no_rebuild_needed");
