@@ -290,7 +290,9 @@ impl FileSystemReader for InMemoryFileSystem {
         let read_dir = ReadDir::from_iter(
             self.files
                 .deref()
-                .borrow().keys().map(|file_path| file_path.to_path_buf())
+                .borrow()
+                .keys()
+                .map(|file_path| file_path.to_path_buf())
                 .filter(|file_path| file_path.parent().is_some_and(|parent| path == parent))
                 .map(DirEntry::from_pathbuf)
                 .map(Ok),
