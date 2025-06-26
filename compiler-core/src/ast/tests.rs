@@ -193,6 +193,12 @@ fn find_node_todo() {
 fn find_node_todo_with_string() {
     let statement = compile_expression(r#" todo as "ok" "#);
     let expr = get_bare_expression(&statement);
+    let message = TypedExpr::String {
+        location: SrcSpan { start: 9, end: 13 },
+        type_: type_::string(),
+        value: "ok".into(),
+    };
+
     assert_eq!(expr.find_node(0), None);
     assert_eq!(
         expr.find_node(1),
@@ -204,14 +210,14 @@ fn find_node_todo_with_string() {
     assert_eq!(
         expr.find_node(12),
         Some(Located::Expression {
-            expression: expr,
+            expression: &message,
             position: ExpressionPosition::Expression
         })
     );
     assert_eq!(
         expr.find_node(13),
         Some(Located::Expression {
-            expression: expr,
+            expression: &message,
             position: ExpressionPosition::Expression
         })
     );
