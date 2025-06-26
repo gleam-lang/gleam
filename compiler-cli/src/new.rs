@@ -374,12 +374,12 @@ fn suggest_valid_name(invalid_name: &str, reason: &InvalidProjectNameReason) -> 
             }
             _ => None,
         },
-        InvalidProjectNameReason::ErlangReservedWord => Some(format!("{}_app", invalid_name)),
+        InvalidProjectNameReason::ErlangReservedWord => Some(format!("{invalid_name}_app")),
         InvalidProjectNameReason::ErlangStandardLibraryModule => {
-            Some(format!("{}_app", invalid_name))
+            Some(format!("{invalid_name}_app"))
         }
-        InvalidProjectNameReason::GleamReservedWord => Some(format!("{}_app", invalid_name)),
-        InvalidProjectNameReason::GleamReservedModule => Some(format!("{}_app", invalid_name)),
+        InvalidProjectNameReason::GleamReservedWord => Some(format!("{invalid_name}_app")),
+        InvalidProjectNameReason::GleamReservedModule => Some(format!("{invalid_name}_app")),
         InvalidProjectNameReason::FormatNotLowercase => Some(invalid_name.to_lowercase()),
         InvalidProjectNameReason::Format => {
             let suggestion = regex::Regex::new(r"[^a-z0-9]")

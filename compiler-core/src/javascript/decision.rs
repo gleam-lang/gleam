@@ -1373,8 +1373,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             ReadType::Float => self.bit_array_slice_to_float(bit_array, start, end, endianness),
             ReadType::BitArray => self.bit_array_slice_with_end(bit_array, from, end),
             _ => panic!(
-                "invalid slice type made it to code generation: {:#?}",
-                type_
+                "invalid slice type made it to code generation: {type_:#?}"
             ),
         }
     }

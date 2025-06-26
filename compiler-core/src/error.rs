@@ -779,7 +779,7 @@ fn edit_distance_with_substrings(a: &str, b: &str, limit: usize) -> Option<usize
     // Check one isn't less than half the length of the other. If this is true then there is a
     // big difference in length.
     let big_len_diff = (n * 2) < m || (m * 2) < n;
-    let len_diff = if n < m { m - n } else { n - m };
+    let len_diff = m.abs_diff(n);
     let distance = edit_distance(a, b, limit + len_diff)?;
 
     // This is the crux, subtracting length difference means exact substring matches will now be 0
@@ -1135,8 +1135,7 @@ your app.src file \"{app_ver}\"."
                     OS::MacOS => {
                         fn brew_install(name: &str, pkg: &str) -> String {
                             format!(
-                                "\n\nYou can install {} via homebrew: brew install {}",
-                                name, pkg
+                                "\n\nYou can install {name} via homebrew: brew install {pkg}",
                             )
                         }
                         match program.as_str() {
@@ -1155,8 +1154,7 @@ your app.src file \"{app_ver}\"."
                     OS::Linux(distro) => {
                         fn apt_install(name: &str, pkg: &str) -> String {
                             format!(
-                                "\n\nYou can install {} via apt: sudo apt install {}",
-                                name, pkg
+                                "\n\nYou can install {name} via apt: sudo apt install {pkg}"
                             )
                         }
                         match distro {
@@ -1263,12 +1261,11 @@ The error from the shell command library was:
                 reason: ShellCommandFailureReason::ShellCommandError(err),
             } => {
                 let text = format!(
-                    "There was a problem when running the shell command `{}`.
+                    "There was a problem when running the shell command `{command}`.
 
 The error from the shell command was:
 
-    {}",
-                    command, err
+    {err}"
                 );
                 vec![Diagnostic {
                     title: "Shell command failure".into(),

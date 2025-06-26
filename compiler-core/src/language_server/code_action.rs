@@ -1669,7 +1669,7 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
         } = self.qualified_constructor;
         if !module_aliased {
             // Case: import module
-            (location.end, format!(".{{{}}}", name))
+            (location.end, format!(".{{{name}}}"))
         } else {
             // Case: import module as alias
             let import_code = &self.get_import_code();
@@ -1681,7 +1681,7 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
                 .and_then(|s| s.rfind(|c: char| !c.is_whitespace()))
                 .map(|pos| location.start as usize + pos + 1)
                 .expect("Expected non-whitespace character before ' as '");
-            (before_as_pos as u32, format!(".{{{}}}", name))
+            (before_as_pos as u32, format!(".{{{name}}}"))
         }
     }
 
@@ -1694,10 +1694,10 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
         if let Some((pos, c)) = self.find_last_char_before_closing_brace() {
             // Case: import module.{Existing, } (as alias)
             if c == ',' {
-                (pos as u32 + 1, format!(" {}", name))
+                (pos as u32 + 1, format!(" {name}"))
             } else {
                 // Case: import module.{Existing} (as alias)
-                (pos as u32 + 1, format!(", {}", name))
+                (pos as u32 + 1, format!(", {name}"))
             }
         } else {
             // Case: import module.{} (as alias)
@@ -2452,7 +2452,7 @@ impl<'a> ConvertFromUse<'a> {
             //                  ^ No parentheses
             //
             self.edits
-                .insert(use_line_end, format!("(fn({}) {{", assignments))
+                .insert(use_line_end, format!("(fn({assignments}) {{"))
         };
 
         // Then we have to increase indentation for all the lines of the use
@@ -7132,7 +7132,7 @@ impl<'a> FixTruncatedBitArraySegment<'a> {
             .replace(truncation.value_location, replacement.clone());
 
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new(&format!("Replace with `{}`", replacement))
+        CodeActionBuilder::new(&format!("Replace with `{replacement}`"))
             .kind(CodeActionKind::REFACTOR_REWRITE)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(true)
