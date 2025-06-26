@@ -636,7 +636,7 @@ fn get_manifest<Telem: Telemetry>(
     let config_dependencies = config.all_direct_dependencies()?;
     if packages_to_update.is_empty()
         && is_same_requirements(&manifest.requirements, &config_dependencies, paths.root())?
-        && are_path_dependency_manifests_unchanged(&config_dependencies, paths.root())?
+        && are_path_dependency_manifests_unchanged(&config_dependencies, paths.root(), paths)?
     {
         tracing::debug!("manifest_up_to_date");
         Ok((false, manifest))
@@ -677,16 +677,14 @@ fn is_same_requirements(
 /// Checks if path dependencies' manifest files have changed since the last build.
 fn are_path_dependency_manifests_unchanged(
     requirements: &HashMap<EcoString, Requirement>,
-    root_path: &Utf8Path,
+    _root_path: &Utf8Path,
+    paths: &ProjectPaths,
 ) -> Result<bool> {
     for (key, requirement) in requirements {
         if let Requirement::Path { path } = requirement {
-            let dep_manifest_path = root_path.join(path).join("manifest.toml");
+            let dep_manifest_path = paths.dependency_manifest_path(path);
 
-            let cached_hash_path = root_path
-                .join("build")
-                .join("packages")
-                .join(format!("{}.manifest_hash", key));
+            let cached_hash_path = paths.dependency_manifest_hash_path(key.as_str());
 
             // Skip dependencies without a manifest file
             if !dep_manifest_path.exists() {
