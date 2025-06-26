@@ -642,13 +642,14 @@ fn is_same_requirements(
                 .join("packages")
                 .join(format!("{}.manifest_hash", key));
 
+            // Skip dependencies without a manifest file
             if !dep_manifest_path.exists() {
-                tracing::debug!("path_dependency_manifest_not_found_forcing_rebuild");
-                return Ok(false);
+                tracing::debug!("path_dependency_manifest_not_found_skipping_check");
+                continue;
             }
 
             // Check mtimes before hashing, to avoid extra work
-            if dep_manifest_path.exists() && cached_hash_path.exists() {
+            if cached_hash_path.exists() {
                 let manifest_time = match std::fs::metadata(&dep_manifest_path).and_then(|m| m.modified()) {
                     Ok(time) => time,
                     Err(_) => {
