@@ -636,7 +636,7 @@ fn get_manifest<Telem: Telemetry>(
     let config_dependencies = config.all_direct_dependencies()?;
     if packages_to_update.is_empty()
         && is_same_requirements(&manifest.requirements, &config_dependencies, paths.root())?
-        && are_path_dependency_manifests_unchanged(&config_dependencies, paths.root(), paths)?
+        && check_and_update_path_dependency_manifests(&config_dependencies, paths.root(), paths)?
     {
         tracing::debug!("manifest_up_to_date");
         Ok((false, manifest))
@@ -674,8 +674,9 @@ fn is_same_requirements(
     Ok(true)
 }
 
-/// Checks if path dependencies' manifest files have changed since the last build.
-fn are_path_dependency_manifests_unchanged(
+/// Checks and updates hashes for path dependencies' manifest files.
+/// Returns whether all path dependency manifests are unchanged since the last build.
+fn check_and_update_path_dependency_manifests(
     requirements: &HashMap<EcoString, Requirement>,
     _root_path: &Utf8Path,
     paths: &ProjectPaths,
