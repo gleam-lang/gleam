@@ -655,9 +655,7 @@ fn is_same_requirements(
                 }
             };
 
-            let mut hasher = std::hash::DefaultHasher::new();
-            std::hash::Hash::hash(&manifest_content, &mut hasher);
-            let current_hash = std::hash::Hasher::finish(&hasher).to_string();
+            let current_hash = xxhash_rust::xxh3::xxh3_64(manifest_content.as_bytes()).to_string();
 
             // If cached hash file doesn't exist, this is the first time we're checking this dependency
             if !cached_hash_path.exists() {
