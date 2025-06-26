@@ -647,6 +647,28 @@ fn is_same_requirements(
                 return Ok(false);
             }
 
+            // Check mtimes before hashing, to avoid extra work
+            if dep_manifest_path.exists() && cached_hash_path.exists() {
+                let manifest_time = match std::fs::metadata(&dep_manifest_path).and_then(|m| m.modified()) {
+                    Ok(time) => time,
+                    Err(_) => {
+                        tracing::debug!(?dep_manifest_path, "cannot_read_manifest_mtime_forcing_rebuild");
+                        return Ok(false);
+                    }
+                };
+                let hash_time = match std::fs::metadata(&cached_hash_path).and_then(|m| m.modified()) {
+                    Ok(time) => time,
+                    Err(_) => {
+                        tracing::debug!(?cached_hash_path, "cannot_read_hash_mtime_forcing_rebuild");
+                        return Ok(false);
+                    }
+                };
+                if manifest_time <= hash_time {
+                    tracing::debug!(?dep_manifest_path, "path_dependency_manifest_unchanged_since_last_hash");
+                    return Ok(true);
+                }
+            };
+
             let manifest_content = match fs::read(&dep_manifest_path) {
                 Ok(content) => content,
                 Err(_) => {
