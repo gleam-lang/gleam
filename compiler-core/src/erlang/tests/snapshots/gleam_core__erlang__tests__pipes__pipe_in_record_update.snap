@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/pipes.rs
-expression: "pub type X {\n  X(a: Int, b: Int)\n}\n\nfn id(x) {\n  x\n}\n        \npub fn main(x) {\n  X(..x, a: 1 |> id)\n}"
+expression: "pub type X {\n  X(a: Int, b: Int)\n}\n\nfn id(x) {\n  x\n}\n\npub fn main(x) {\n  X(..x, a: 1 |> id)\n}"
 ---
 ----- SOURCE CODE
 pub type X {
@@ -10,7 +10,7 @@ pub type X {
 fn id(x) {
   x
 }
-        
+
 pub fn main(x) {
   X(..x, a: 1 |> id)
 }

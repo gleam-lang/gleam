@@ -37,5 +37,5 @@ main() ->
             _pipe@1 = 1,
             two(_pipe@1, 2)
         end,
-        _pipe@1
+        _pipe
     ).
