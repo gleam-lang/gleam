@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/echo.rs
-assertion_line: 94
 expression: "\npub fn main() {\n  [1, 2, 3]\n  |> echo\n  |> wibble\n  |> echo\n  |> wibble\n  |> echo\n}\n\npub fn wibble(n) { n }\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -33,10 +31,10 @@ wibble(N) ->
 -spec main() -> list(integer()).
 main() ->
     _pipe = [1, 2, 3],
-    echo(_pipe, 4),
+    echo(_pipe, nil, 4),
     _pipe@1 = wibble(_pipe),
-    echo(_pipe@1, 6),
+    echo(_pipe@1, nil, 6),
     _pipe@2 = wibble(_pipe@1),
-    echo(_pipe@2, 8).
+    echo(_pipe@2, nil, 8).
 
 % ...omitted code from `templates/echo.erl`...

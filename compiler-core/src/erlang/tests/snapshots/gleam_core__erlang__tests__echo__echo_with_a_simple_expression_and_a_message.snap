@@ -1,14 +1,11 @@
 ---
 source: compiler-core/src/erlang/tests/echo.rs
-expression: "\npub fn main() {\n  echo {\n    Nil\n    1\n  }\n}\n"
+expression: "\npub fn main() {\n  echo 1 as \"hello!\"\n}\n"
 ---
 ----- SOURCE CODE
 
 pub fn main() {
-  echo {
-    Nil
-    1
-  }
+  echo 1 as "hello!"
 }
 
 
@@ -21,13 +18,6 @@ pub fn main() {
 -file("project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
-    echo(
-        begin
-            nil,
-            1
-        end,
-        nil,
-        3
-    ).
+    echo(1, <<"hello!"/utf8>>, 3).
 
 % ...omitted code from `templates/echo.erl`...

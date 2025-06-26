@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/echo.rs
-assertion_line: 41
 expression: "\npub fn main() {\n  echo panic\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -25,6 +23,6 @@ main() ->
                 file => <<?FILEPATH/utf8>>,
                 module => <<"my/mod"/utf8>>,
                 function => <<"main"/utf8>>,
-                line => 3}), 3).
+                line => 3}), nil, 3).
 
 % ...omitted code from `templates/echo.erl`...
