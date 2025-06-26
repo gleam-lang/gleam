@@ -841,6 +841,257 @@ fn verified_requirements_equality_with_canonicalized_paths() {
     );
 }
 
+#[test]
+fn test_path_dependency_manifest_hash_change() {
+    let temp_dir = tempfile::tempdir().expect("Failed to create a temp directory");
+    let root_path = Utf8PathBuf::from_path_buf(temp_dir.path().to_path_buf())
+        .expect("Path should be valid UTF-8");
+
+    let dep_path = root_path.join("dep");
+    std::fs::create_dir_all(&dep_path).expect("Failed to create dependency directory");
+
+    let build_packages_dir = root_path.join("build").join("packages");
+    std::fs::create_dir_all(&build_packages_dir)
+        .expect("Failed to create build/packages directory");
+
+    let dep_manifest_path = dep_path.join("manifest.toml");
+    fs::write(&dep_manifest_path, "# Initial manifest content")
+        .expect("Failed to write to manifest file");
+
+    let requirements = HashMap::from([(
+        EcoString::from("dep"),
+        Requirement::Path {
+            path: Utf8PathBuf::from("dep"),
+        },
+    )]);
+
+    let first_check = are_path_dependency_manifests_unchanged(&requirements, &root_path)
+        .expect("First check should succeed");
+    assert!(
+        !first_check,
+        "First check should be false as no hash exists yet"
+    );
+
+    let hash_path = build_packages_dir.join("dep.manifest_hash");
+    assert!(hash_path.exists(), "Hash file should have been created");
+
+    let second_check = are_path_dependency_manifests_unchanged(&requirements, &root_path)
+        .expect("Second check should succeed");
+    assert!(
+        second_check,
+        "Second check should be true as manifest hasn't changed"
+    );
+
+    std::thread::sleep(std::time::Duration::from_millis(100));
+
+    fs::write(&dep_manifest_path, "# Modified manifest content\nname = \"dep\"\nversion = \"0.1.0\"\n\n[dependencies]\nsome_package = \"1.0.0\"")
+        .expect("Failed to update manifest file");
+
+    let future_time = std::time::SystemTime::now() + std::time::Duration::from_secs(10);
+    filetime::set_file_mtime(
+        &dep_manifest_path,
+        filetime::FileTime::from_system_time(future_time),
+    )
+    .expect("Failed to set manifest file mtime");
+
+    let third_check = are_path_dependency_manifests_unchanged(&requirements, &root_path)
+        .expect("Third check should succeed");
+    assert!(
+        !third_check,
+        "Third check should be false as manifest has changed"
+    );
+
+    let fourth_check = are_path_dependency_manifests_unchanged(&requirements, &root_path)
+        .expect("Fourth check should succeed");
+    assert!(
+        fourth_check,
+        "Fourth check should be true as hash has been updated"
+    );
+}
+
+#[test]
+fn test_path_dependency_with_missing_manifest() {
+    let temp_dir = tempfile::tempdir().expect("Failed to create a temp directory");
+    let root_path = Utf8PathBuf::from_path_buf(temp_dir.path().to_path_buf())
+        .expect("Path should be valid UTF-8");
+
+    let dep_path = root_path.join("dep");
+    std::fs::create_dir_all(&dep_path).expect("Failed to create dependency directory");
+
+    let build_packages_dir = root_path.join("build").join("packages");
+    std::fs::create_dir_all(&build_packages_dir)
+        .expect("Failed to create build/packages directory");
+
+    let requirements = HashMap::from([(
+        EcoString::from("dep"),
+        Requirement::Path {
+            path: Utf8PathBuf::from("dep"),
+        },
+    )]);
+
+    let check = are_path_dependency_manifests_unchanged(&requirements, &root_path)
+        .expect("Check should succeed");
+    assert!(check, "Check should be true when manifest is missing");
+
+    let hash_path = build_packages_dir.join("dep.manifest_hash");
+    assert!(
+        !hash_path.exists(),
+        "Hash file should not be created when manifest is missing"
+    );
+}
+
+#[test]
+fn test_path_dependency_manifest_mtime_optimization() {
+    let temp_dir = tempfile::tempdir().expect("Failed to create a temp directory");
+    let root_path = Utf8PathBuf::from_path_buf(temp_dir.path().to_path_buf())
+        .expect("Path should be valid UTF-8");
+
+    let dep_path = root_path.join("dep");
+    std::fs::create_dir_all(&dep_path).expect("Failed to create dependency directory");
+
+    let build_packages_dir = root_path.join("build").join("packages");
+    std::fs::create_dir_all(&build_packages_dir)
+        .expect("Failed to create build/packages directory");
+
+    let dep_manifest_path = dep_path.join("manifest.toml");
+    fs::write(&dep_manifest_path, "# Initial manifest content")
+        .expect("Failed to write to manifest file");
+    let requirements = HashMap::from([(
+        EcoString::from("dep"),
+        Requirement::Path {
+            path: Utf8PathBuf::from("dep"),
+        },
+    )]);
+
+    let first_check = are_path_dependency_manifests_unchanged(&requirements, &root_path)
+        .expect("First check should succeed");
+    assert!(
+        !first_check,
+        "First check should be false as no hash exists yet"
+    );
+
+    let hash_path = build_packages_dir.join("dep.manifest_hash");
+    assert!(hash_path.exists(), "Hash file should have been created");
+
+    let manifest_metadata =
+        std::fs::metadata(&dep_manifest_path).expect("Should get manifest metadata");
+    let manifest_mtime = manifest_metadata
+        .modified()
+        .expect("Should get manifest mtime");
+
+    std::thread::sleep(std::time::Duration::from_millis(10));
+
+    let original_hash =
+        std::fs::read_to_string(&hash_path).expect("Should be able to read hash file");
+    fs::write(&hash_path, "deliberately wrong hash").expect("Failed to update hash file");
+    let future_time = manifest_mtime + std::time::Duration::from_secs(10);
+    filetime::set_file_mtime(
+        &hash_path,
+        filetime::FileTime::from_system_time(future_time),
+    )
+    .expect("Failed to set hash file mtime");
+
+    let check = are_path_dependency_manifests_unchanged(&requirements, &root_path)
+        .expect("Check should succeed");
+    assert!(
+        check,
+        "Check should be true when hash file mtime is newer than manifest mtime"
+    );
+
+    let current_hash =
+        std::fs::read_to_string(&hash_path).expect("Should be able to read hash file");
+    assert_ne!(
+        original_hash, current_hash,
+        "Hash content should not have been updated"
+    );
+    assert_eq!(
+        current_hash, "deliberately wrong hash",
+        "Hash should not have been recalculated"
+    );
+}
+
+#[test]
+fn test_adding_dependency_to_path_dependency_manifest() {
+    let temp_dir = tempfile::tempdir().expect("Failed to create a temp directory");
+    let root_path = Utf8PathBuf::from_path_buf(temp_dir.path().to_path_buf())
+        .expect("Path should be valid UTF-8");
+
+    let bar_path = root_path.join("bar");
+    std::fs::create_dir_all(&bar_path).expect("Failed to create bar directory");
+
+    let bar_manifest_path = bar_path.join("manifest.toml");
+    let initial_bar_manifest = r#"name = "bar"
+version = "0.1.0"
+
+[dependencies]
+gleam_stdlib = "~> 0.29"
+"#;
+
+    fs::write(&bar_manifest_path, initial_bar_manifest)
+        .expect("Failed to write initial bar manifest file");
+
+    let build_packages_dir = root_path.join("build").join("packages");
+    std::fs::create_dir_all(&build_packages_dir)
+        .expect("Failed to create build/packages directory");
+    let requirements = HashMap::from([(
+        EcoString::from("bar"),
+        Requirement::Path {
+            path: Utf8PathBuf::from("bar"),
+        },
+    )]);
+
+    let first_check = are_path_dependency_manifests_unchanged(&requirements, &root_path)
+        .expect("First check should succeed");
+    assert!(
+        !first_check,
+        "First check should be false as no hash exists yet"
+    );
+
+    let hash_path = build_packages_dir.join("bar.manifest_hash");
+    assert!(hash_path.exists(), "Hash file should have been created");
+
+    let second_check = are_path_dependency_manifests_unchanged(&requirements, &root_path)
+        .expect("Second check should succeed");
+    assert!(
+        second_check,
+        "Second check should be true as manifest hasn't changed"
+    );
+
+    std::thread::sleep(std::time::Duration::from_millis(100));
+    let updated_bar_manifest = r#"name = "bar"
+version = "0.1.0"
+
+[dependencies]
+gleam_stdlib = "~> 0.29"
+simplifile = "~> 0.1"
+some_other_package = "1.2.3"
+"#;
+
+    fs::write(&bar_manifest_path, updated_bar_manifest)
+        .expect("Failed to update bar manifest file");
+
+    let future_time = std::time::SystemTime::now() + std::time::Duration::from_secs(10);
+    filetime::set_file_mtime(
+        &bar_manifest_path,
+        filetime::FileTime::from_system_time(future_time),
+    )
+    .expect("Failed to set manifest file mtime");
+
+    let third_check = are_path_dependency_manifests_unchanged(&requirements, &root_path)
+        .expect("Third check should succeed");
+    assert!(
+        !third_check,
+        "Third check should be false as manifest has changed with new dependency"
+    );
+
+    let fourth_check = are_path_dependency_manifests_unchanged(&requirements, &root_path)
+        .expect("Fourth check should succeed");
+    assert!(
+        fourth_check,
+        "Fourth check should be true as hash has been updated"
+    );
+}
+
 fn create_testable_unlock_manifest(
     packages: Vec<(EcoString, Version, Vec<EcoString>)>,
     requirements: Vec<(EcoString, EcoString)>,

@@ -65,5 +65,7 @@ pubgrub.workspace = true
 [dev-dependencies]
 # Creation of temporary directories
 tempfile = "3"
+# Setting file modification times for tests
+filetime = "0.2"
 pretty_assertions.workspace = true
 insta.workspace = true
