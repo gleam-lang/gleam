@@ -277,7 +277,7 @@ where
             .paths
             .build_directory_for_target(self.mode(), self.target());
 
-        let ts_indicator_path = build_path.join("typescript-declarations.lock");
+        let ts_indicator_path = build_path.join("typescript-declarations");
         let ts_enabled = self.config.javascript.typescript_declarations;
 
         let needs_rebuild = if ts_enabled {
