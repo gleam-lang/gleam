@@ -1,14 +1,13 @@
 ---
 source: compiler-core/src/erlang/tests/echo.rs
-expression: "\npub fn main() {\n  echo\n    123\n    |> wibble\n    |> wibble\n}\n\npub fn wibble(n) { n }\n"
+expression: "\npub fn main() {\n  [1, 2, 3]\n  |> echo as \"message!!\"\n  |> wibble\n}\n\npub fn wibble(n) { n }\n"
 ---
 ----- SOURCE CODE
 
 pub fn main() {
-  echo
-    123
-    |> wibble
-    |> wibble
+  [1, 2, 3]
+  |> echo as "message!!"
+  |> wibble
 }
 
 pub fn wibble(n) { n }
@@ -20,22 +19,16 @@ pub fn wibble(n) { n }
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([wibble/1, main/0]).
 
--file("project/test/my/mod.gleam", 9).
+-file("project/test/my/mod.gleam", 8).
 -spec wibble(J) -> J.
 wibble(N) ->
     N.
 
 -file("project/test/my/mod.gleam", 2).
--spec main() -> integer().
+-spec main() -> list(integer()).
 main() ->
-    echo(
-        begin
-            _pipe = 123,
-            _pipe@1 = wibble(_pipe),
-            wibble(_pipe@1)
-        end,
-        nil,
-        3
-    ).
+    _pipe = [1, 2, 3],
+    echo(_pipe, <<"message!!"/utf8>>, 4),
+    wibble(_pipe).
 
 % ...omitted code from `templates/echo.erl`...

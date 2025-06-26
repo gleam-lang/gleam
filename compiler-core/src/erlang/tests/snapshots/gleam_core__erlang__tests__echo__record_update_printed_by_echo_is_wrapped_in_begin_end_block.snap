@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/echo.rs
-assertion_line: 128
 expression: "\npub type Wobble { Wobble(id: Int, name: String) }\n\npub fn main() {\n  let wobble = Wobble(1, \"wobble\")\n  echo Wobble(..wobble, id: 1)\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -27,6 +25,6 @@ pub fn main() {
 -spec main() -> wobble().
 main() ->
     Wobble = {wobble, 1, <<"wobble"/utf8>>},
-    echo({wobble, 1, erlang:element(3, Wobble)}, 6).
+    echo({wobble, 1, erlang:element(3, Wobble)}, nil, 6).
 
 % ...omitted code from `templates/echo.erl`...
