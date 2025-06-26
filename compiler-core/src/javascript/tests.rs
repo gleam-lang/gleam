@@ -52,9 +52,9 @@ macro_rules! assert_js {
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 
-    (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
+    ($(($dep_package:expr, $dep_name:expr, $dep_src:expr)),+, $src:literal $(,)?) => {{
         let compiled =
-            $crate::javascript::tests::compile_js($src, vec![($dep_package, $dep_name, $dep_src)]);
+            $crate::javascript::tests::compile_js($src, vec![$(($dep_package, $dep_name, $dep_src)),*]);
         let output = format!(
             "----- SOURCE CODE\n{}\n\n----- COMPILED JAVASCRIPT\n{}",
             $src, compiled
