@@ -631,16 +631,20 @@ fn is_same_requirements(
         }
     }
 
-    for (key, requirement2) in requirements2 {
-        if let Requirement::Path { path } = requirement2 {
-            let dep_manifest_path = root_path.join(path).join("manifest.toml");
+    Ok(true)
+}
 
-            // Check if we have a cached hash for this path dependency's manifest.toml
-            // Use the dependency name instead of the path for the manifest hash file
-            let cached_hash_path = root_path
-                .join("build")
-                .join("packages")
-                .join(format!("{}.manifest_hash", key));
+/// Checks if path dependencies' manifest files have changed since the last build.
+fn are_path_dependency_manifests_unchanged(
+    requirements: &HashMap<EcoString, Requirement>,
+    _root_path: &Utf8Path,
+    paths: &ProjectPaths,
+) -> Result<bool> {
+    for (key, requirement) in requirements {
+        if let Requirement::Path { path } = requirement {
+            let dep_manifest_path = paths.dependency_manifest_path(path);
+
+            let cached_hash_path = paths.dependency_manifest_hash_path(key.as_str());
 
             // Skip dependencies without a manifest file
             if !dep_manifest_path.exists() {
@@ -666,7 +670,7 @@ fn is_same_requirements(
                 };
                 if manifest_time <= hash_time {
                     tracing::debug!(?dep_manifest_path, "path_dependency_manifest_unchanged_since_last_hash");
-                    return Ok(true);
+                    continue;
                 }
             };
 
