@@ -58,7 +58,7 @@ impl BeamCompiler {
 
         tracing::debug!(args=?args, "call_beam_compiler");
 
-        writeln!(inner.stdin, "{}.", args).map_err(|e| Error::ShellCommand {
+        writeln!(inner.stdin, "{args}.").map_err(|e| Error::ShellCommand {
             program: "escript".into(),
             reason: ShellCommandFailureReason::IoError(e.kind()),
         })?;
@@ -83,7 +83,7 @@ impl BeamCompiler {
                     }
                 }
                 _ => match stdio {
-                    Stdio::Inherit => print!("{}", buf),
+                    Stdio::Inherit => print!("{buf}"),
                     Stdio::Null => {}
                 },
             }

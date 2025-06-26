@@ -408,7 +408,7 @@ impl Body {
             BitArrayMatchedValue::Variable(_)
             | BitArrayMatchedValue::Discard(_)
             | BitArrayMatchedValue::Assign { .. } => {
-                panic!("aliased non constant value: {:#?}", value)
+                panic!("aliased non constant value: {value:#?}")
             }
         };
 
@@ -2866,7 +2866,7 @@ impl CaseToCompile {
                 type_ if type_.is_string() => ReadType::String,
                 type_ if type_.is_bit_array() => ReadType::BitArray,
                 type_ if type_.is_utf_codepoint() => ReadType::UtfCodepoint,
-                x => panic!("invalid segment type in exhaustiveness {:?}", x),
+                x => panic!("invalid segment type in exhaustiveness {x:?}"),
             };
 
             let read_action = ReadAction {
@@ -2941,7 +2941,7 @@ fn segment_matched_value(
             name: name.clone(),
             value: Box::new(segment_matched_value(segment, Some(pattern))),
         },
-        x => panic!("unexpected segment value pattern {:?}", x),
+        x => panic!("unexpected segment value pattern {x:?}"),
     }
 }
 
@@ -2974,7 +2974,7 @@ fn segment_size(
                 unit: segment.unit(),
             }
         }
-        Some(x) => panic!("invalid pattern size made it to code generation {:?}", x),
+        Some(x) => panic!("invalid pattern size made it to code generation {x:?}"),
 
         // If a segment has the `bits`/`bytes` option and has no size, that
         // means it's the final catch all segment: we'll have to read any number

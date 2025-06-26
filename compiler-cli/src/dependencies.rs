@@ -147,7 +147,7 @@ fn list_package_and_dependencies_tree<W: std::io::Write>(
         );
 
         tree.iter()
-            .try_for_each(|line| writeln!(buffer, "{}", line))
+            .try_for_each(|line| writeln!(buffer, "{line}"))
             .map_err(|e| Error::StandardIo {
                 action: StandardIoAction::Write,
                 err: Some(e.kind()),

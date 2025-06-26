@@ -1306,9 +1306,8 @@ can already tell whether it will be `True` or `False`.",
 
                 type_::Warning::TopLevelDefinitionShadowsImport { location, name } => {
                     let text = format!(
-                        "Definition of {} shadows an imported value.
-The imported value could not be used in this module anyway.",
-                        name
+                        "Definition of {name} shadows an imported value.
+The imported value could not be used in this module anyway."
                     );
                     Diagnostic {
                         title: "Shadowed Import".into(),
@@ -1318,7 +1317,7 @@ The imported value could not be used in this module anyway.",
                             path: path.clone(),
                             src: src.clone(),
                             label: diagnostic::Label {
-                                text: Some(wrap(&format!("`{}` is defined here", name))),
+                                text: Some(wrap(&format!("`{name}` is defined here"))),
                                 span: *location,
                             },
                             extra_labels: Vec::new(),
