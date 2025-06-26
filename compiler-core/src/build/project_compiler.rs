@@ -293,14 +293,7 @@ where
             self.io.mkdir(&build_path)?;
 
             if ts_enabled {
-                self.io
-                    .write(&ts_indicator_path, "")
-                    .map_err(|e| Error::FileIo {
-                        action: FileIoAction::WriteTo,
-                        kind: FileKind::File,
-                        path: ts_indicator_path,
-                        err: Some(e.to_string()),
-                    })?;
+                self.io.write(&ts_indicator_path, "")?;
             }
         }
 
