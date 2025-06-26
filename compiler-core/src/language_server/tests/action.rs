@@ -488,6 +488,17 @@ fn remove_echo() {
 }
 
 #[test]
+fn remove_echo_with_message() {
+    assert_code_action!(
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
+        r#"pub fn main() {
+  echo 1 + 2 as "message"
+}"#,
+        find_position_of("echo").to_selection()
+    );
+}
+
+#[test]
 fn remove_echo_selecting_expression() {
     assert_code_action!(
         REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
@@ -495,6 +506,17 @@ fn remove_echo_selecting_expression() {
   echo 1 + 2
 }",
         find_position_of("1").select_until(find_position_of("2"))
+    );
+}
+
+#[test]
+fn remove_echo_selecting_message() {
+    assert_code_action!(
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
+        r#"pub fn main() {
+  echo 1 + 2 as "message"
+}"#,
+        find_position_of("message").to_selection()
     );
 }
 
@@ -523,12 +545,36 @@ fn remove_echo_in_pipeline_step() {
 }
 
 #[test]
+fn remove_echo_in_pipeline_step_with_message() {
+    assert_code_action!(
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
+        r#"pub fn main() {
+  [1, 2, 3]
+  |> echo as message
+  |> wibble
+}"#,
+        find_position_of("echo").to_selection()
+    );
+}
+
+#[test]
 fn remove_echo_in_single_line_pipeline_step() {
     assert_code_action!(
         REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
         "pub fn main() {
   [1, 2, 3] |> echo |> wibble
 }",
+        find_position_of("echo").to_selection()
+    );
+}
+
+#[test]
+fn remove_echo_in_single_line_pipeline_step_with_message() {
+    assert_code_action!(
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
+        r#"pub fn main() {
+  [1, 2, 3] |> echo as "message" |> wibble
+}"#,
         find_position_of("echo").to_selection()
     );
 }
@@ -547,6 +593,19 @@ fn remove_echo_last_in_long_pipeline_step() {
 }
 
 #[test]
+fn remove_echo_last_in_long_pipeline_step_with_message() {
+    assert_code_action!(
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
+        r#"pub fn main() {
+  [1, 2, 3]
+  |> wibble
+  |> echo as "message"
+}"#,
+        find_position_of("echo").to_selection()
+    );
+}
+
+#[test]
 fn remove_echo_last_in_short_pipeline_step() {
     assert_code_action!(
         REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
@@ -554,6 +613,18 @@ fn remove_echo_last_in_short_pipeline_step() {
   [1, 2, 3]
   |> echo
 }",
+        find_position_of("echo").to_selection()
+    );
+}
+
+#[test]
+fn remove_echo_last_in_short_pipeline_step_with_message() {
+    assert_code_action!(
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
+        r#"pub fn main() {
+  [1, 2, 3]
+  |> echo as "message"
+}"#,
         find_position_of("echo").to_selection()
     );
 }
@@ -612,6 +683,18 @@ fn remove_echo_removes_entire_echo_statement_used_with_literals() {
   echo 1
   Nil
 }",
+        find_position_of("echo").to_selection()
+    );
+}
+
+#[test]
+fn remove_echo_removes_entire_echo_statement_used_with_literals_and_message() {
+    assert_code_action!(
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
+        r#"pub fn main() {
+  echo 1 as "message"
+  Nil
+}"#,
         find_position_of("echo").to_selection()
     );
 }
@@ -692,6 +775,17 @@ fn remove_echo_removes_does_not_remove_entire_echo_statement_if_its_the_return()
         "pub fn main() {
   echo 1
 }",
+        find_position_of("echo").to_selection()
+    );
+}
+
+#[test]
+fn remove_echo_with_message_removes_does_not_remove_entire_echo_statement_if_its_the_return() {
+    assert_code_action!(
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
+        r#"pub fn main() {
+  echo 1 as "message"
+}"#,
         find_position_of("echo").to_selection()
     );
 }

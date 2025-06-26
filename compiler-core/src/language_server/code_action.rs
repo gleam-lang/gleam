@@ -6722,6 +6722,17 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveEchos<'ast> {
             self.is_hovering_echo = true;
         }
 
+        // We also want to remove the echo message!
+        if message.is_some() {
+            let start = expression
+                .as_ref()
+                .map(|expression| expression.location().end)
+                .unwrap_or(location.start + 4);
+
+            self.echo_spans_to_delete
+                .push(SrcSpan::new(start, location.end));
+        }
+
         if let Some(expression) = expression {
             // If there's an expression we delete everything we find until its
             // start (excluded).
