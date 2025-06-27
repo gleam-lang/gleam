@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/assert.rs
-assertion_line: 51
 expression: "\npub fn assert_answer(x) {\n  assert x == 42\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -13,7 +11,7 @@ pub fn assert_answer(x) {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([assert_answer/1]).
 

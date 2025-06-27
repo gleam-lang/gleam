@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
-assertion_line: 360
 expression: "\nfn x() {\n  \"\"\n}\n\npub fn go() {\n  x() <> x()\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -17,7 +15,7 @@ pub fn go() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([go/0]).
 

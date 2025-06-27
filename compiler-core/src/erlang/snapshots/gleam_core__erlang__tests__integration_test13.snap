@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 318
 expression: "pub type State{ Start(Int) End(Int) }\n            pub fn build(constructor : fn(Int) -> a) -> a { constructor(1) }\n            pub fn main() { build(End) }"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub type State{ Start(Int) End(Int) }
@@ -11,7 +9,7 @@ pub type State{ Start(Int) End(Int) }
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([build/1, main/0]).
 -export_type([state/0]).

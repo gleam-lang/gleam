@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 232
 expression: "fn add(x, y) { x + y }\n                    pub fn go() { 1 |> add(_, 1) |> add(2, _) |> add(_, 3) }"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 fn add(x, y) { x + y }
@@ -10,7 +8,7 @@ fn add(x, y) { x + y }
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([go/0]).
 

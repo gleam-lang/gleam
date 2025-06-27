@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/type_params.rs
-assertion_line: 61
 expression: "\n        pub fn wibble() -> #(a, b) {\n            todo\n        }\n        "
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -13,7 +11,7 @@ snapshot_kind: text
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([wibble/0]).
 

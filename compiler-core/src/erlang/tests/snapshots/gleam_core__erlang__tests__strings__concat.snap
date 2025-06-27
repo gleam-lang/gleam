@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
-assertion_line: 117
 expression: "\npub fn go(x, y) {\n  x <> y\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -13,7 +11,7 @@ pub fn go(x, y) {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([go/2]).
 

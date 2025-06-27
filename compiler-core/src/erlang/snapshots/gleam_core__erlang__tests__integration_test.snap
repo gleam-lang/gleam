@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 161
 expression: "pub fn go() {\nlet x = #(100000000000000000, #(2000000000, 3000000000000, 40000000000), 50000, 6000000000)\n  x\n}"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn go() {
@@ -12,7 +10,7 @@ let x = #(100000000000000000, #(2000000000, 3000000000000, 40000000000), 50000, 
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([go/0]).
 

@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/pipes.rs
-assertion_line: 26
 expression: "fn id(a) { a }\npub fn main() {\n  {\n    let x = 1\n    x\n  }\n  |> id\n}"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 fn id(a) { a }
@@ -16,7 +14,7 @@ pub fn main() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 

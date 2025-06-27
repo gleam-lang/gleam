@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
-assertion_line: 303
 expression: "\n@external(erlang, \"Elixir.String\", \"main\")\npub fn do() -> Int\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -12,7 +10,7 @@ pub fn do() -> Int
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([do/0]).
 

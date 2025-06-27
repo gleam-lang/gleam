@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
-assertion_line: 484
 expression: "\nconst cute_bee = \"cute\" <> \"bee\"\nconst cute_cute_bee_buzz = cute_bee <> \"buzz\"\n\npub fn main() {\n  cute_cute_bee_buzz\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -16,7 +14,7 @@ pub fn main() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 

@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/records.rs
-assertion_line: 101
 expression: "\npub type Person {\n    Teacher(name: String, title: String)\n    Student(name: String, age: Int)\n}\npub fn get_name(person: Person) { person.name }"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -14,7 +12,7 @@ pub fn get_name(person: Person) { person.name }
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([get_name/1]).
 -export_type([person/0]).

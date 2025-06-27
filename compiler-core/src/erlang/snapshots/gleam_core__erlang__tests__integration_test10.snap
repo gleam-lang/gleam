@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 291
 expression: "pub type Null { Null }\npub fn x() { Null }"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub type Null { Null }
@@ -10,7 +8,7 @@ pub fn x() { Null }
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([x/0]).
 -export_type([null/0]).

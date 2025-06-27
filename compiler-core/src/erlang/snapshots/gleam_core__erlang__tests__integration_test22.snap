@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 386
 expression: "\npub fn factory(f, i) {\n  f(i)\n}\n\npub type Box {\n  Box(i: Int)\n}\n\npub fn main() {\n  factory(Box, 0)\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -21,7 +19,7 @@ pub fn main() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([factory/2, main/0]).
 -export_type([box/0]).

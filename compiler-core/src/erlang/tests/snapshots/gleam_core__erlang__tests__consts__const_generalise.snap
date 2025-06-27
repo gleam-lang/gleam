@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/consts.rs
-assertion_line: 53
 expression: "\nfn identity(a: a) -> a {\na\n}\n\nconst id  = identity\n\npub fn main(){\n  let num  = id(1)\n  let word = id(\"Word\")\n}"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -19,7 +17,7 @@ pub fn main(){
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 

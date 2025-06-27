@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/functions.rs
-assertion_line: 143
 expression: "\npub fn main() -> Int {\n  used()\n}\n\nfn used() -> Int {\n  123\n}\n\nfn unused1() -> Int {\n  unused2()\n}\n\nfn unused2() -> Int {\n  used()\n}\n\nfn unused3() -> Int {\n  used()\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -29,7 +27,7 @@ fn unused3() -> Int {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 

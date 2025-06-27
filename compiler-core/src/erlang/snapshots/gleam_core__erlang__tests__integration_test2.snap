@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 251
 expression: "pub fn second(list) { case list { [x, y] -> y z -> 1 } }\npub fn tail(list) { case list { [x, ..xs] -> xs z -> list } }\n            "
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn second(list) { case list { [x, y] -> y z -> 1 } }
@@ -11,7 +9,7 @@ pub fn tail(list) { case list { [x, ..xs] -> xs z -> list } }
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([second/1, tail/1]).
 

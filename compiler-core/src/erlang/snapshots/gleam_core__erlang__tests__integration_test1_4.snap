@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 224
 expression: "fn inc(x) { x + 1 }\n                    pub fn go() { 1 |> inc |> inc |> inc }"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 fn inc(x) { x + 1 }
@@ -10,7 +8,7 @@ fn inc(x) { x + 1 }
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([go/0]).
 
