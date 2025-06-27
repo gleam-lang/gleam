@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/bit_arrays.rs
-assertion_line: 146
 expression: "\n    pub fn main() {\n        let arr = <<\"\\u{1F600}\":utf8>>\n}"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -12,7 +10,7 @@ snapshot_kind: text
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 

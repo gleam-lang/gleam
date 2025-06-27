@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/documentation.rs
-assertion_line: 34
 expression: "\n/// \\hello\\\npub fn documented() { 1 }"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -11,7 +9,7 @@ pub fn documented() { 1 }
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([documented/0]).
 

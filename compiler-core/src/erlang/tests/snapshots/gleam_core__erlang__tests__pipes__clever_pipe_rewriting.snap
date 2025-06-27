@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/pipes.rs
-assertion_line: 6
 expression: "\npub fn apply(f: fn(a) -> b, a: a) { a |> f }\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -11,7 +9,7 @@ pub fn apply(f: fn(a) -> b, a: a) { a |> f }
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([apply/2]).
 

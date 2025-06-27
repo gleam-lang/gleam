@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/pipes.rs
-assertion_line: 74
 expression: "pub type X {\n  X(a: Int, b: Int)\n}\n\nfn id(x) {\n  x\n}\n        \npub fn main(x) {\n  X(..x, a: 1 |> id)\n}"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub type X {
@@ -19,7 +17,7 @@ pub fn main(x) {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/1]).
 -export_type([x/0]).

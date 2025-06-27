@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/let_assert.rs
-assertion_line: 205
 expression: "pub fn go() {\n  let assert \"Hello \" as greeting <> name = \"Hello John\"\n  #(greeting, name)\n}"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn go() {
@@ -12,7 +10,7 @@ pub fn go() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([go/0]).
 

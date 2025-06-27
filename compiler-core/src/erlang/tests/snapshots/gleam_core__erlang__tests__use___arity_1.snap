@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/use_.rs
-assertion_line: 5
 expression: "\npub fn main() {\n  use <- pair()\n  123\n}\n\nfn pair(f) {\n  let x = f()\n  #(x, x)\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -19,7 +17,7 @@ fn pair(f) {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 

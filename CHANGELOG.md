@@ -184,7 +184,6 @@
       ).
   ```
 
-
   Now this code will be generated instead:
 
   ```erlang
@@ -195,6 +194,10 @@
   ```
 
   ([Louis Pilfold](https://github.com/lpil))
+
+- On the Erlang target each generated module enables inlining from the Erlang
+  compiler.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Build tool
 

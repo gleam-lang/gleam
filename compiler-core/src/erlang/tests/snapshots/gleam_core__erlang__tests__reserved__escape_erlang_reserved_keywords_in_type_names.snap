@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/reserved.rs
-assertion_line: 12
 expression: "pub type After { TestAfter }\npub type And { TestAnd }\npub type Andalso { TestAndAlso }\npub type Band { TestBAnd }\npub type Begin { TestBegin }\npub type Bnot { TestBNot }\npub type Bor { TestBOr }\npub type Bsl { TestBsl }\npub type Bsr { TestBsr }\npub type Bxor { TestBXor }\npub type Case { TestCase }\npub type Catch { TestCatch }\npub type Cond { TestCond }\npub type Div { TestDiv }\npub type End { TestEnd }\npub type Fun { TestFun }\npub type If { TestIf }\npub type Let { TestLet }\npub type Maybe { TestMaybe }\npub type Not { TestNot }\npub type Of { TestOf }\npub type Or { TestOr }\npub type Orelse { TestOrElse }\npub type Query { TestQuery }\npub type Receive { TestReceive }\npub type Rem { TestRem }\npub type Try { TestTry }\npub type When { TestWhen }\npub type Xor { TestXor }"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub type After { TestAfter }
@@ -37,7 +35,7 @@ pub type Xor { TestXor }
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export_type(['after'/0, 'and'/0, 'andalso'/0, 'band'/0, 'begin'/0, 'bnot'/0, 'bor'/0, 'bsl'/0, 'bsr'/0, 'bxor'/0, 'case'/0, 'catch'/0, 'cond'/0, 'div'/0, 'end'/0, 'fun'/0, 'if'/0, 'let'/0, 'maybe'/0, 'not'/0, 'of'/0, 'or'/0, 'orelse'/0, 'query'/0, 'receive'/0, 'rem'/0, 'try'/0, 'when'/0, 'xor'/0]).
 

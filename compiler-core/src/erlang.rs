@@ -272,7 +272,7 @@ fn module_document<'a>(
 
     let module = docvec![
         header,
-        "-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).",
+        "-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).",
         line(),
         "-define(FILEPATH, \"",
         src_path_relative,

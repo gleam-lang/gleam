@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/bit_arrays.rs
-assertion_line: 32
 expression: "pub fn x() { 2 }\npub fn main() {\n  let a = -1\n  let b = <<a:unit(2)-size(a * 2), a:size(3 + x())-unit(1)>>\n\n  b\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn x() { 2 }
@@ -16,7 +14,7 @@ pub fn main() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([x/0, main/0]).
 
