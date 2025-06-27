@@ -1,8 +1,6 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 195
 expression: "./cases/imported_constants"
-snapshot_kind: text
 ---
 //// /out/lib/the_package/_gleam_artefacts/one.cache
 <.cache binary>
@@ -12,7 +10,7 @@ snapshot_kind: text
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "src/one.gleam").
 -export_type([a/0, b/0, user/0]).
 
@@ -33,7 +31,7 @@ snapshot_kind: text
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "src/two.gleam").
 -export([accessors/1, destructure_qualified/1, destructure_unqualified/1, destructure_aliased/1, qualified_fn_a/0, qualified_fn_b/0, unqualified_fn_a/0, unqualified_fn_b/0, aliased_fn_a/0, aliased_fn_b/0]).
 
