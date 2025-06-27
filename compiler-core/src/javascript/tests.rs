@@ -41,7 +41,7 @@ pub static CURRENT_PACKAGE: &str = "thepackage";
 macro_rules! assert_js {
     ($(($name:literal, $module_src:literal)),+, $src:literal $(,)?) => {
         let compiled =
-            $crate::javascript::tests::compile_js($src, vec![$(($crate::javascript::tests::CURRENT_PACKAGE, $name, $module_src)),*]).expect("compilation failed");
+            $crate::javascript::tests::compile_js($src, vec![$(($crate::javascript::tests::CURRENT_PACKAGE, $name, $module_src)),*]);
             let mut output = String::from("----- SOURCE CODE\n");
             for (name, src) in [$(($name, $module_src)),*] {
                 output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
@@ -52,8 +52,7 @@ macro_rules! assert_js {
 
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
         let compiled =
-            $crate::javascript::tests::compile_js($src, vec![($dep_package, $dep_name, $dep_src)])
-                .expect("compilation failed");
+            $crate::javascript::tests::compile_js($src, vec![($dep_package, $dep_name, $dep_src)]);
         let output = format!(
             "----- SOURCE CODE\n{}\n\n----- COMPILED JAVASCRIPT\n{}",
             $src, compiled
@@ -63,14 +62,13 @@ macro_rules! assert_js {
 
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr, $js:expr $(,)?) => {{
         let output =
-            $crate::javascript::tests::compile_js($src, Some(($dep_package, $dep_name, $dep_src)))
-                .expect("compilation failed");
+            $crate::javascript::tests::compile_js($src, Some(($dep_package, $dep_name, $dep_src)));
         assert_eq!(($src, output), ($src, $js.to_string()));
     }};
 
     ($src:expr $(,)?) => {{
         let compiled =
-            $crate::javascript::tests::compile_js($src, vec![]).expect("compilation failed");
+            $crate::javascript::tests::compile_js($src, vec![]);
         let output = format!(
             "----- SOURCE CODE\n{}\n\n----- COMPILED JAVASCRIPT\n{}",
             $src, compiled
@@ -80,7 +78,7 @@ macro_rules! assert_js {
 
     ($src:expr, $js:expr $(,)?) => {{
         let output =
-            $crate::javascript::tests::compile_js($src, vec![]).expect("compilation failed");
+            $crate::javascript::tests::compile_js($src, vec![]);
         assert_eq!(($src, output), ($src, $js.to_string()));
     }};
 }
@@ -94,8 +92,7 @@ macro_rules! assert_ts_def {
                 ($dep_1_package, $dep_1_name, $dep_1_src),
                 ($dep_2_package, $dep_2_name, $dep_2_src),
             ],
-        )
-        .expect("compilation failed");
+        );
         let output = format!(
             "----- SOURCE CODE\n{}\n\n----- TYPESCRIPT DEFINITIONS\n{}",
             $src, compiled
@@ -105,8 +102,7 @@ macro_rules! assert_ts_def {
 
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
         let compiled =
-            $crate::javascript::tests::compile_ts($src, vec![($dep_package, $dep_name, $dep_src)])
-                .expect("compilation failed");
+            $crate::javascript::tests::compile_ts($src, vec![($dep_package, $dep_name, $dep_src)]);
         let output = format!(
             "----- SOURCE CODE\n{}\n\n----- TYPESCRIPT DEFINITIONS\n{}",
             $src, compiled
@@ -115,8 +111,7 @@ macro_rules! assert_ts_def {
     }};
 
     ($src:expr $(,)?) => {{
-        let compiled =
-            $crate::javascript::tests::compile_ts($src, vec![]).expect("compilation failed");
+        let compiled = $crate::javascript::tests::compile_ts($src, vec![]);
         let output = format!(
             "----- SOURCE CODE\n{}\n\n----- TYPESCRIPT DEFINITIONS\n{}",
             $src, compiled
@@ -190,7 +185,7 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
     .expect("should successfully infer")
 }
 
-pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> Result<String, crate::Error> {
+pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
     let ast = compile(src, deps);
     let line_numbers = LineNumbers::new(src);
     let stdlib_package = StdlibPackage::Present;
@@ -198,20 +193,19 @@ pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> Result<String, cr
         module: &ast,
         line_numbers: &line_numbers,
         src: &"".into(),
-        target_support: TargetSupport::Enforced,
         typescript: TypeScriptDeclarations::None,
         stdlib_package,
         path: Utf8Path::new("src/module.gleam"),
         project_root: "project/root".into(),
-    })?;
+    });
 
-    Ok(output.replace(
+    output.replace(
         std::include_str!("../../templates/echo.mjs"),
         "// ...omitted code from `templates/echo.mjs`...",
-    ))
+    )
 }
 
-pub fn compile_ts(src: &str, deps: Vec<(&str, &str, &str)>) -> Result<String, crate::Error> {
+pub fn compile_ts(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
     let ast = compile(src, deps);
-    ts_declaration(&ast, Utf8Path::new(""), &src.into())
+    ts_declaration(&ast)
 }

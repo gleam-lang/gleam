@@ -1,6 +1,5 @@
 use crate::{
     Result,
-    analyse::TargetSupport,
     build::{
         ErlangAppCodegenConfiguration, Module, module_erlang_name, package_compiler::StdlibPackage,
     },
@@ -171,7 +170,6 @@ pub struct JavaScript<'a> {
     prelude_location: &'a Utf8Path,
     project_root: &'a Utf8Path,
     typescript: TypeScriptDeclarations,
-    target_support: TargetSupport,
 }
 
 impl<'a> JavaScript<'a> {
@@ -180,12 +178,10 @@ impl<'a> JavaScript<'a> {
         typescript: TypeScriptDeclarations,
         prelude_location: &'a Utf8Path,
         project_root: &'a Utf8Path,
-        target_support: TargetSupport,
     ) -> Self {
         Self {
             prelude_location,
             output_directory,
-            target_support,
             project_root,
             typescript,
         }
@@ -243,9 +239,9 @@ impl<'a> JavaScript<'a> {
     ) -> Result<()> {
         let name = format!("{js_name}.d.mts");
         let path = self.output_directory.join(name);
-        let output = javascript::ts_declaration(&module.ast, &module.input_path, &module.code);
+        let output = javascript::ts_declaration(&module.ast);
         tracing::debug!(name = ?js_name, "Generated TS declaration");
-        writer.write(&path, &output?)
+        writer.write(&path, &output)
     }
 
     fn js_module(
@@ -264,11 +260,10 @@ impl<'a> JavaScript<'a> {
             path: &module.input_path,
             project_root: self.project_root,
             src: &module.code,
-            target_support: self.target_support,
             typescript: self.typescript,
             stdlib_package,
         });
         tracing::debug!(name = ?js_name, "Generated js module");
-        writer.write(&path, &output?)
+        writer.write(&path, &output)
     }
 }
