@@ -33,6 +33,7 @@ fn parse_and_order(
                 .collect_vec(),
             body: crate::parse::parse_statement_sequence(src).expect("syntax error"),
             location: Default::default(),
+            body_start: None,
             return_annotation: None,
             publicity: Publicity::Public,
             deprecation: Deprecation::NotDeprecated,
