@@ -219,6 +219,15 @@
   single-line "View Source" anchors emit `#Lx` instead of `#Lx-x`.
   ([Aayush Tripathi](https://github.com/aayush-tripathi))
 
+- Calculations are now allowed in the size options of bit array patterns. For
+  example, the following code is now valid:
+
+  ```gleam
+  let assert <<size, data:bytes-size(size / 8 - 1)>> = some_bit_array
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Language server
 
 - It is now possible to use the "Pattern match on variable" code action on

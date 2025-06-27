@@ -1,0 +1,120 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "let assert <<size, payload:size(size - 1)>> = <<>>"
+---
+[
+    Assignment(
+        Assignment {
+            location: SrcSpan {
+                start: 0,
+                end: 50,
+            },
+            value: BitArray {
+                location: SrcSpan {
+                    start: 46,
+                    end: 50,
+                },
+                segments: [],
+            },
+            pattern: BitArray {
+                location: SrcSpan {
+                    start: 11,
+                    end: 43,
+                },
+                segments: [
+                    BitArraySegment {
+                        location: SrcSpan {
+                            start: 13,
+                            end: 17,
+                        },
+                        value: Variable {
+                            location: SrcSpan {
+                                start: 13,
+                                end: 17,
+                            },
+                            name: "size",
+                            type_: (),
+                            origin: VariableOrigin {
+                                syntax: Variable(
+                                    "size",
+                                ),
+                                declaration: LetPattern,
+                            },
+                        },
+                        options: [],
+                        type_: (),
+                    },
+                    BitArraySegment {
+                        location: SrcSpan {
+                            start: 19,
+                            end: 41,
+                        },
+                        value: Variable {
+                            location: SrcSpan {
+                                start: 19,
+                                end: 26,
+                            },
+                            name: "payload",
+                            type_: (),
+                            origin: VariableOrigin {
+                                syntax: Variable(
+                                    "payload",
+                                ),
+                                declaration: LetPattern,
+                            },
+                        },
+                        options: [
+                            Size {
+                                location: SrcSpan {
+                                    start: 27,
+                                    end: 41,
+                                },
+                                value: BitArraySize(
+                                    BinaryOperator {
+                                        location: SrcSpan {
+                                            start: 32,
+                                            end: 40,
+                                        },
+                                        operator: Subtract,
+                                        left: Variable {
+                                            location: SrcSpan {
+                                                start: 32,
+                                                end: 36,
+                                            },
+                                            name: "size",
+                                            constructor: None,
+                                            type_: (),
+                                        },
+                                        right: Int {
+                                            location: SrcSpan {
+                                                start: 39,
+                                                end: 40,
+                                            },
+                                            value: "1",
+                                            int_value: 1,
+                                        },
+                                    },
+                                ),
+                                short_form: false,
+                            },
+                        ],
+                        type_: (),
+                    },
+                ],
+            },
+            kind: Assert {
+                location: SrcSpan {
+                    start: 0,
+                    end: 10,
+                },
+                assert_keyword_start: 4,
+                message: None,
+            },
+            compiled_case: CompiledCase {
+                tree: Fail,
+                subject_variables: [],
+            },
+            annotation: None,
+        },
+    ),
+]

@@ -37,20 +37,12 @@ fn print<'a>(
 
         Pattern::Discard { .. } => "_".to_doc(),
 
-        Pattern::VarUsage {
-            name, constructor, ..
-        } => {
-            let v = &constructor
-                .as_ref()
-                .expect("Constructor not found for variable usage")
-                .variant;
-            match v {
-                ValueConstructorVariant::ModuleConstant { literal, .. } => {
-                    const_inline(literal, env)
-                }
-                _ => env.local_var_name(name),
-            }
-        }
+        Pattern::BitArraySize(size) => match size {
+            BitArraySize::Int { .. }
+            | BitArraySize::Variable { .. }
+            | BitArraySize::Block { .. } => bit_array_size(size, env),
+            BitArraySize::BinaryOperator { .. } => bit_array_size(size, env).surround("(", ")"),
+        },
 
         Pattern::Variable { name, .. } => {
             vars.push(name);
@@ -140,6 +132,90 @@ fn print<'a>(
 
         Pattern::Invalid { .. } => panic!("invalid patterns should not reach code generation"),
     }
+}
+
+fn bit_array_size<'a>(size: &'a TypedBitArraySize, env: &mut Env<'a>) -> Document<'a> {
+    match size {
+        BitArraySize::Int { value, .. } => int(value),
+        BitArraySize::Variable {
+            name, constructor, ..
+        } => {
+            let v = &constructor
+                .as_ref()
+                .expect("Constructor not found for variable usage")
+                .variant;
+            match v {
+                ValueConstructorVariant::ModuleConstant { literal, .. } => {
+                    const_inline(literal, env)
+                }
+                _ => env.local_var_name(name),
+            }
+        }
+        BitArraySize::BinaryOperator {
+            operator,
+            left,
+            right,
+            ..
+        } => {
+            let operator = match operator {
+                IntOperator::Add => " + ",
+                IntOperator::Subtract => " - ",
+                IntOperator::Multiply => " * ",
+                IntOperator::Divide => return bit_array_size_divide(left, right, "div", env),
+                IntOperator::Remainder => {
+                    return bit_array_size_divide(left, right, "rem", env);
+                }
+            };
+
+            docvec![
+                bit_array_size(left, env),
+                operator,
+                bit_array_size(right, env)
+            ]
+        }
+        BitArraySize::Block { inner, .. } => bit_array_size(inner, env).surround("(", ")"),
+    }
+}
+
+fn bit_array_size_divide<'a>(
+    left: &'a TypedBitArraySize,
+    right: &'a TypedBitArraySize,
+    operator: &'static str,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    if right.non_zero_compile_time_number() {
+        return bit_array_size_operator(left, operator, right, env);
+    }
+
+    let left = bit_array_size(left, env);
+    let right = bit_array_size(right, env);
+    let denominator = env.next_local_var_name("gleam@denominator");
+    let clauses = docvec![
+        line(),
+        "0 -> 0;",
+        line(),
+        denominator.clone(),
+        " -> ",
+        binop_documents(left, operator, denominator)
+    ];
+    docvec!["case ", right, " of", clauses.nest(INDENT), line(), "end"]
+}
+
+fn bit_array_size_operator<'a>(
+    left: &'a TypedBitArraySize,
+    operator: &'static str,
+    right: &'a TypedBitArraySize,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    let left = match left {
+        BitArraySize::BinaryOperator { .. } => bit_array_size(left, env).surround("(", ")"),
+        _ => bit_array_size(left, env),
+    };
+    let right = match right {
+        BitArraySize::BinaryOperator { .. } => bit_array_size(right, env).surround("(", ")"),
+        _ => bit_array_size(right, env),
+    };
+    binop_documents(left, operator, right)
 }
 
 pub(super) fn to_doc<'a>(

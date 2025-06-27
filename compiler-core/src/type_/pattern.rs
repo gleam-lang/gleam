@@ -11,7 +11,8 @@ use super::*;
 use crate::{
     analyse::{self, Inferred, name::check_name_case},
     ast::{
-        AssignName, BitArrayOption, ImplicitCallArgOrigin, Layer, UntypedPatternBitArraySegment,
+        AssignName, BitArrayOption, BitArraySize, ImplicitCallArgOrigin, Layer, TypedBitArraySize,
+        UntypedPatternBitArraySegment,
     },
     parse::PatternPosition,
     reference::ReferenceKind,
@@ -493,11 +494,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     // Int segments that aren't a whole number of bytes
                     BitArrayOption::<TypedPattern>::Size { value, .. } if segment_type.is_int() => {
                         match &**value {
-                            Pattern::<_>::Int {
+                            Pattern::BitArraySize(BitArraySize::Int {
                                 location,
                                 int_value,
                                 ..
-                            } if int_value % 8 != BigInt::ZERO => {
+                            }) if int_value % 8 != BigInt::ZERO => {
                                 self.track_feature_usage(
                                     FeatureKind::JavaScriptUnalignedBitArray,
                                     *location,
@@ -620,55 +621,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 }
             }
 
-            Pattern::VarUsage { name, location, .. } => {
-                let constructor = match self.variables.get_mut(&name) {
-                    // If we've bound a variable in the current bit array pattern,
-                    // we want to use that.
-                    Some(variable) if variable.in_scope() => {
-                        variable.usage = Usage::UsedInPattern;
-                        ValueConstructor::local_variable(
-                            variable.location,
-                            variable.origin.clone(),
-                            variable.type_.clone(),
-                        )
+            Pattern::BitArraySize(size) => {
+                let location = size.location();
+                match self.bit_array_size(size, type_.clone()) {
+                    Ok(size) => Pattern::BitArraySize(size),
+                    Err(error) => {
+                        self.error(error);
+                        Pattern::Invalid { location, type_ }
                     }
-                    // Otherwise, we check the local scope.
-                    Some(_) | None => match self.environment.get_variable(&name) {
-                        Some(constructor) => constructor.clone(),
-                        None => {
-                            self.error(Error::UnknownVariable {
-                                location,
-                                name: name.clone(),
-                                variables: self.environment.local_value_names(),
-                                discarded_location: self
-                                    .environment
-                                    .discarded_names
-                                    .get(&eco_format!("_{name}"))
-                                    .cloned(),
-                                type_with_name_in_scope: self
-                                    .environment
-                                    .module_types
-                                    .keys()
-                                    .any(|type_| type_ == &name),
-                            });
-                            return Pattern::Invalid { location, type_ };
-                        }
-                    },
-                };
-
-                self.environment.increment_usage(&name);
-                let type_ = self.environment.instantiate(
-                    constructor.type_.clone(),
-                    &mut hashmap![],
-                    self.hydrator,
-                );
-                self.unify_types(int(), type_.clone(), location);
-
-                Pattern::VarUsage {
-                    name,
-                    location,
-                    constructor: Some(constructor),
-                    type_,
                 }
             }
 
@@ -1235,6 +1195,101 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 }
             })
             .collect()
+    }
+
+    fn bit_array_size(
+        &mut self,
+        size: BitArraySize<()>,
+        type_: Arc<Type>,
+    ) -> Result<TypedBitArraySize, Error> {
+        let typed_size = match size {
+            BitArraySize::Int {
+                location,
+                value,
+                int_value,
+            } => {
+                self.unify_types(type_, int(), location);
+
+                if self.environment.target == Target::JavaScript
+                    && !self.current_function.has_javascript_external
+                {
+                    check_javascript_int_safety(&int_value, location, self.problems);
+                }
+
+                BitArraySize::Int {
+                    location,
+                    value,
+                    int_value,
+                }
+            }
+            BitArraySize::Variable { name, location, .. } => {
+                let constructor = match self.variables.get_mut(&name) {
+                    // If we've bound a variable in the current bit array pattern,
+                    // we want to use that.
+                    Some(variable) if variable.in_scope() => {
+                        variable.usage = Usage::UsedInPattern;
+                        ValueConstructor::local_variable(
+                            variable.location,
+                            variable.origin.clone(),
+                            variable.type_.clone(),
+                        )
+                    }
+                    // Otherwise, we check the local scope.
+                    Some(_) | None => match self.environment.get_variable(&name) {
+                        Some(constructor) => constructor.clone(),
+                        None => {
+                            return Err(Error::UnknownVariable {
+                                location,
+                                name: name.clone(),
+                                variables: self.environment.local_value_names(),
+                                discarded_location: self
+                                    .environment
+                                    .discarded_names
+                                    .get(&eco_format!("_{name}"))
+                                    .cloned(),
+                                type_with_name_in_scope: self
+                                    .environment
+                                    .module_types
+                                    .keys()
+                                    .any(|type_| type_ == &name),
+                            });
+                        }
+                    },
+                };
+
+                self.environment.increment_usage(&name);
+                let type_ = self.environment.instantiate(
+                    constructor.type_.clone(),
+                    &mut hashmap![],
+                    self.hydrator,
+                );
+                self.unify_types(int(), type_.clone(), location);
+
+                BitArraySize::Variable {
+                    name,
+                    location,
+                    constructor: Some(Box::new(constructor)),
+                    type_,
+                }
+            }
+            BitArraySize::BinaryOperator {
+                location,
+                operator,
+                left,
+                right,
+            } => BitArraySize::BinaryOperator {
+                location,
+                operator,
+                left: Box::new(self.bit_array_size(*left, type_.clone())?),
+                right: Box::new(self.bit_array_size(*right, type_)?),
+            },
+            BitArraySize::Block { location, inner } => BitArraySize::Block {
+                location,
+                inner: Box::new(self.bit_array_size(*inner, type_)?),
+            },
+        };
+
+        Ok(typed_size)
     }
 
     fn check_name_case(&mut self, location: SrcSpan, name: &EcoString, kind: Named) {

@@ -578,6 +578,8 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
     }
 
     fn decision(&mut self, subject: Document<'a>, decision: &'a Decision) -> Output<'a> {
+        dbg!(decision);
+
         let Some(ChecksAndBindings { checks, bindings }) =
             self.positive_checks_and_bindings(decision)
         else {
@@ -1160,11 +1162,11 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                     }
                 }
 
-                BitArrayTest::VariableIsNotNegative { variable } => {
+                BitArrayTest::ReadSizeIsNotNegative { size } => {
                     if negation.is_negated() {
-                        docvec![self.local_var(variable.name()), " < 0"]
+                        docvec![self.read_size_to_doc(size), " < 0"]
                     } else {
-                        docvec![self.local_var(variable.name()), " >= 0"]
+                        docvec![self.read_size_to_doc(size), " >= 0"]
                     }
                 }
 
@@ -1403,6 +1405,24 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             pieces.push(variable.to_doc())
         }
 
+        for calculation in offset.calculations.iter() {
+            let left = self.offset_to_doc(&calculation.left, true);
+            let right = self.offset_to_doc(&calculation.right, true);
+
+            let calculation = self.expression_generator.bin_op_with_doc_operands(
+                calculation.operator.to_bin_op(),
+                left,
+                right,
+                &crate::type_::int(),
+            );
+
+            if parenthesise {
+                pieces.push(calculation.surround("(", ")"))
+            } else {
+                pieces.push(calculation)
+            }
+        }
+
         if pieces.len() > 1 && parenthesise {
             docvec!["(", join(pieces, " + ".to_doc()), ")"]
         } else {
@@ -1414,6 +1434,8 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     /// remaining bits/bytes") this returns a document representing that size.
     ///
     fn read_size_to_doc(&mut self, size: &ReadSize) -> Option<Document<'a>> {
+        dbg!(size);
+
         match size {
             ReadSize::ConstantBits(value) => Some(value.clone().to_doc()),
             ReadSize::VariableBits { variable, unit } => {
@@ -1421,10 +1443,43 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                 Some(if *unit == 1 {
                     variable.to_doc()
                 } else {
-                    docvec![variable, " * ", unit]
+                    docvec![variable, " * ", *unit as i64]
                 })
             }
             ReadSize::RemainingBits | ReadSize::RemainingBytes => None,
+
+            ReadSize::BinaryOperator {
+                left,
+                right,
+                operator,
+            } => {
+                let left = if self.read_size_must_be_wrapped(left) {
+                    self.read_size_to_doc(left)?.surround("(", ")")
+                } else {
+                    self.read_size_to_doc(left)?
+                };
+                let right = if self.read_size_must_be_wrapped(right) {
+                    self.read_size_to_doc(right)?.surround("(", ")")
+                } else {
+                    self.read_size_to_doc(right)?
+                };
+
+                Some(self.expression_generator.bin_op_with_doc_operands(
+                    operator.to_bin_op(),
+                    left,
+                    right,
+                    &crate::type_::int(),
+                ))
+            }
+        }
+    }
+
+    fn read_size_must_be_wrapped(&self, size: &ReadSize) -> bool {
+        match size {
+            ReadSize::ConstantBits(_) | ReadSize::RemainingBits | ReadSize::RemainingBytes => false,
+
+            ReadSize::VariableBits { unit, .. } => *unit != 1,
+            ReadSize::BinaryOperator { .. } => true,
         }
     }
 

@@ -2494,3 +2494,62 @@ pub fn go(x) {
 "#
     );
 }
+
+#[test]
+fn operator_in_pattern_size() {
+    assert_js!(
+        "
+pub fn main() {
+  let assert <<len, payload:size(len * 8)>> = <<>>
+}
+"
+    );
+}
+
+#[test]
+fn operator_in_pattern_size2() {
+    assert_js!(
+        "
+pub fn main() {
+  let assert <<len, payload:size(len / 8 - 1)>> = <<>>
+}
+"
+    );
+}
+
+#[test]
+fn operator_in_pattern_size3() {
+    assert_js!(
+        "
+pub fn main() {
+  let additional = 10
+  let assert <<len, payload:size(len + additional * 8)>> = <<>>
+}
+"
+    );
+}
+
+#[test]
+fn block_in_pattern_size() {
+    assert_js!(
+        "
+pub fn main() {
+  let assert <<len, payload:size({ len - 1 } * 8)>> = <<>>
+}
+"
+    );
+}
+
+#[test]
+fn non_byte_aligned_size_calculation() {
+    assert_js!(
+        "
+pub fn main() {
+  case <<>> {
+    <<a:1, b:3, c:size(b - 2)>> -> c + b
+    _ -> 1
+  }
+}
+"
+    );
+}
