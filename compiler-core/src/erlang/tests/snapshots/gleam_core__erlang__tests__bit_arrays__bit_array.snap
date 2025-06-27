@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/bit_arrays.rs
-assertion_line: 5
 expression: "pub fn main() {\n  let a = 1\n  let simple = <<1, a>>\n  let complex = <<4:int-big, 5.0:little-float, 6:native-int>>\n  let assert <<7:2, 8:size(3), b:bytes-size(4)>> = <<1>>\n  let assert <<c:8-unit(1), d:bytes-size(2)-unit(2)>> = <<1>>\n\n  simple\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn main() {
@@ -18,7 +16,7 @@ pub fn main() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 

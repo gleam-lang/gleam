@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/numbers.rs
-assertion_line: 44
 expression: "\nconst i = 100.001e223\nconst j = -100.001e-223\n\npub fn main() {\n  i\n  j\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -17,7 +15,7 @@ pub fn main() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 

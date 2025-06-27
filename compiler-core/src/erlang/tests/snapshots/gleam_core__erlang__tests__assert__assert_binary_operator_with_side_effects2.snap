@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/assert.rs
-assertion_line: 123
 expression: "\nfn wibble(a, b) {\n  let result = a + b\n  result == 10\n}\n\npub fn go(x) {\n  assert wibble(5, 5) && wibble(4, 6)\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -18,7 +16,7 @@ pub fn go(x) {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([go/1]).
 

@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/use_.rs
-assertion_line: 69
 expression: "\npub fn main() {\n  use <- 1 |> add\n  1\n}\n\npub fn add(x) {\n  fn(f) { f() + x }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -18,7 +16,7 @@ pub fn add(x) {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([add/1, main/0]).
 

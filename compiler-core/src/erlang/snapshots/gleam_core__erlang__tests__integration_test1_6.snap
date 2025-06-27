@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 240
 expression: "pub fn and(x, y) { x && y }\npub fn or(x, y) { x || y }\npub fn remainder(x, y) { x % y }\npub fn fdiv(x, y) { x /. y }\n            "
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn and(x, y) { x && y }
@@ -13,7 +11,7 @@ pub fn fdiv(x, y) { x /. y }
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export(['and'/2, 'or'/2, remainder/2, fdiv/2]).
 

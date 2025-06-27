@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/guards.rs
-assertion_line: 351
 expression: "\npub const string_value = \"constant value\"\npub const float_value = 3.14\npub const int_value = 42\npub const tuple_value = #(1, 2.0, \"3\")\npub const list_value = [1, 2, 3]\n\npub fn main(arg) {\n  let _ = list_value\n  case arg {\n    #(w, x, y, z) if w == tuple_value && x == string_value && y >. float_value && z == int_value -> 1\n    _ -> 0\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -23,7 +21,7 @@ pub fn main(arg) {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/1]).
 

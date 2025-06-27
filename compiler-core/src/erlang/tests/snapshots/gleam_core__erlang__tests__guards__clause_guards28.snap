@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/guards.rs
-assertion_line: 289
 expression: "\n    type Test { Test(x: Int, y: Float) }\n    pub fn main() {\n      let x = Test(1, 3.0)\n      case x {\n        _ if x == Test(1, 1.0) -> 1\n        _ if x == Test(y: 2.0, x: 2) -> 2\n        _ if x != Test(2, 3.0) -> 2\n        _ -> 0\n      }\n    }\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -20,7 +18,7 @@ snapshot_kind: text
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 -export_type([test/0]).

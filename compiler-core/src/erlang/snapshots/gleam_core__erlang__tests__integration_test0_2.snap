@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 183
 expression: "pub fn go() {\n    let fifteen = 0xF\n    let nine = 0o11\n    let ten = 0b1010\n  fifteen\n}"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn go() {
@@ -14,7 +12,7 @@ pub fn go() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([go/0]).
 

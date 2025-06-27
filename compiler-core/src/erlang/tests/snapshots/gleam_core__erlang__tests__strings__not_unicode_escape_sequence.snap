@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
-assertion_line: 62
 expression: "\npub fn not_unicode_escape_sequence() -> String {\n  \"\\\\u{03a9}\"\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -13,7 +11,7 @@ pub fn not_unicode_escape_sequence() -> String {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([not_unicode_escape_sequence/0]).
 

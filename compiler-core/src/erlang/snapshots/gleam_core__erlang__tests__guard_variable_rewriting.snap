@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 612
 expression: "pub fn main() {\n  case 1.0 {\n    a if a <. 0.0 -> {\n      let a = a\n      a\n    }\n    _ -> 0.0\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn main() {
@@ -18,7 +16,7 @@ pub fn main() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 

@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/variables.rs
-assertion_line: 83
 expression: "const int = 42\nconst int_alias = int\npub fn use_int_alias() { int_alias }\n\nfn int_identity(i: Int) { i }\nconst int_identity_alias: fn(Int) -> Int = int_identity\npub fn use_int_identity_alias() { int_identity_alias(42) }\n\nconst compound: #(Int, fn(Int) -> Int, fn(Int) -> Int) = #(int, int_identity, int_identity_alias)\npub fn use_compound() { compound.1(compound.0) }\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 const int = 42
@@ -19,7 +17,7 @@ pub fn use_compound() { compound.1(compound.0) }
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([use_int_alias/0, use_int_identity_alias/0, use_compound/0]).
 

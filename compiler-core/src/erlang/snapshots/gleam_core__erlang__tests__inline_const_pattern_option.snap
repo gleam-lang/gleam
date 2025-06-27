@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 650
 expression: "pub fn main() {\n            let fifteen = 15\n            let x = <<5:size(sixteen)>>\n            case x {\n              <<5:size(sixteen)>> -> <<5:size(sixteen)>>\n              <<6:size(fifteen)>> -> <<5:size(fifteen)>>\n              _ -> <<>>\n            }\n          }\n\n          pub const sixteen = 16"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn main() {
@@ -19,7 +17,7 @@ pub fn main() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 

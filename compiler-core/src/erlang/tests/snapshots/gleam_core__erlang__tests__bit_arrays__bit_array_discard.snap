@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/bit_arrays.rs
-assertion_line: 96
 expression: "\npub fn bit_array_discard(x) -> Bool {\n case x {\n  <<_:utf8, rest:bytes>> -> True\n   _ -> False\n }\n}\n                    "
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -16,7 +14,7 @@ pub fn bit_array_discard(x) -> Bool {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([bit_array_discard/1]).
 

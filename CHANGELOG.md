@@ -226,6 +226,10 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- On the Erlang target each generated module enables inlining from the Erlang
+  compiler.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Build tool
 
 - `gleam update`, `gleam deps update`, and `gleam deps download` will now print

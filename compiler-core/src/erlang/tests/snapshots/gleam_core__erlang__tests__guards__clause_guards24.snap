@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/guards.rs
-assertion_line: 223
 expression: "\npub fn main() {\n  let x = #(1, 2, 3)\n  case x {\n    _ if x == #(1, 2, 3) -> 1\n    _ if x == #(2, 3, 4) -> 2\n    _ -> 0\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -18,7 +16,7 @@ pub fn main() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 

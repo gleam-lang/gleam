@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/guards.rs
-assertion_line: 452
 expression: "\n        pub type Person {\n          Person(username: String, name: String, age: Int)\n        }\n        \n        pub fn main() {\n          let given_name = \"jack\"\n          let raiden = Person(\"raiden\", \"jack\", 31)\n        \n          case given_name {\n            name if name == raiden.name -> \"It's jack\"\n            _ -> \"It's not jack\"\n          }\n        }\n        "
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -23,7 +21,7 @@ snapshot_kind: text
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 -export_type([person/0]).

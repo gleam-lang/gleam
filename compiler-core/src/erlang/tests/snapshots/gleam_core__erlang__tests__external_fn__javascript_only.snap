@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
-assertion_line: 313
 expression: "\npub fn should_be_generated(x: Int) -> Int {\n  x\n}\n\n@external(javascript, \"one\", \"one\")\npub fn should_not_be_generated(x: Int) -> Int\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -16,7 +14,7 @@ pub fn should_not_be_generated(x: Int) -> Int
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([should_be_generated/1]).
 
