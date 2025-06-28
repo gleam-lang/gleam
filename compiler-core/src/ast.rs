@@ -2447,6 +2447,20 @@ impl<Value, Type> BitArraySegment<Value, Type> {
     }
 
     #[must_use]
+    pub fn has_utf16_codepoint_option(&self) -> bool {
+        self.options
+            .iter()
+            .any(|x| matches!(x, BitArrayOption::Utf16Codepoint { .. }))
+    }
+
+    #[must_use]
+    pub fn has_utf32_codepoint_option(&self) -> bool {
+        self.options
+            .iter()
+            .any(|x| matches!(x, BitArrayOption::Utf32Codepoint { .. }))
+    }
+
+    #[must_use]
     pub fn has_utf16_option(&self) -> bool {
         self.options
             .iter()

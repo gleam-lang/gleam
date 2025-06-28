@@ -4,6 +4,7 @@ use vec1::Vec1;
 use super::{decision::ASSIGNMENT_VAR, *};
 use crate::{
     ast::*,
+    exhaustiveness::StringEncoding,
     line_numbers::LineNumbers,
     pretty::*,
     type_::{
@@ -385,8 +386,6 @@ impl<'module, 'a> Generator<'module, 'a> {
     }
 
     fn bit_array(&mut self, segments: &'a [TypedExprBitArraySegment]) -> Output<'a> {
-        use BitArrayOption as Opt;
-
         self.tracker.bit_array_literal_used = true;
 
         // Collect all the values used in segments.
@@ -395,161 +394,88 @@ impl<'module, 'a> Generator<'module, 'a> {
                 this.wrap_expression(&segment.value)
             })?;
 
-            match segment.options.as_slice() {
-                // Int segment
-                _ if segment.type_.is_int() => {
-                    let details = self.sized_bit_array_segment_details(segment)?;
-                    match (details.size_value, segment.value.as_ref()) {
-                        (Some(size_value), TypedExpr::Int { int_value, .. })
-                            if size_value <= SAFE_INT_SEGMENT_MAX_SIZE.into()
-                                && (&size_value % BigInt::from(8) == BigInt::ZERO) =>
-                        {
-                            let bytes = bit_array_segment_int_value_to_bytes(
-                                int_value.clone(),
-                                size_value,
-                                segment.endianness(),
-                            )?;
+            let details = self.bit_array_segment_details(segment)?;
 
-                            Ok(u8_slice(&bytes))
-                        }
-
-                        (Some(size_value), _) if size_value == 8.into() => Ok(value),
-
-                        (Some(size_value), _) if size_value <= 0.into() => Ok(nil()),
-
-                        _ => {
-                            self.tracker.sized_integer_segment_used = true;
-                            let size = details.size;
-                            let is_big = bool(segment.endianness().is_big());
-                            Ok(docvec!["sizedInt(", value, ", ", size, ", ", is_big, ")"])
-                        }
-                    }
-                }
-
-                // Float segment
-                _ if segment.type_.is_float() => {
-                    self.tracker.float_bit_array_segment_used = true;
-                    let details = self.sized_bit_array_segment_details(segment)?;
-                    let size = details.size;
-                    let is_big = bool(segment.endianness().is_big());
-                    Ok(docvec!["sizedFloat(", value, ", ", size, ", ", is_big, ")"])
-                }
-
-                // UTF8 strings
-                [Opt::Utf8 { .. }] => {
-                    self.tracker.string_bit_array_segment_used = true;
-                    Ok(docvec!["stringBits(", value, ")"])
-                }
-
-                // UTF8 codepoints
-                [Opt::Utf8Codepoint { .. }] => {
-                    self.tracker.codepoint_bit_array_segment_used = true;
-                    Ok(docvec!["codepointBits(", value, ")"])
-                }
-
-                // UTF16 strings
-                [Opt::Utf16 { .. }]
-                | [Opt::Utf16 { .. }, Opt::Big { .. }]
-                | [Opt::Big { .. }, Opt::Utf16 { .. }] => {
-                    self.tracker.string_utf16_bit_array_segment_used = true;
-                    let is_big = "true".to_doc();
-                    Ok(docvec!["stringToUtf16(", value, ", ", is_big, ")"])
-                }
-
-                [Opt::Utf16 { .. }, Opt::Little { .. }]
-                | [Opt::Little { .. }, Opt::Utf16 { .. }] => {
-                    self.tracker.string_utf16_bit_array_segment_used = true;
-                    let is_big = "false".to_doc();
-                    Ok(docvec!["stringToUtf16(", value, ", ", is_big, ")"])
-                }
-
-                // UTF16 codepoints
-                [Opt::Utf16Codepoint { .. }]
-                | [Opt::Utf16Codepoint { .. }, Opt::Big { .. }]
-                | [Opt::Big { .. }, Opt::Utf16Codepoint { .. }] => {
-                    self.tracker.codepoint_utf16_bit_array_segment_used = true;
-                    let is_big = "true".to_doc();
-                    Ok(docvec!["codepointToUtf16(", value, ", ", is_big, ")"])
-                }
-
-                [Opt::Utf16Codepoint { .. }, Opt::Little { .. }]
-                | [Opt::Little { .. }, Opt::Utf16Codepoint { .. }] => {
-                    self.tracker.codepoint_utf16_bit_array_segment_used = true;
-                    let is_big = "false".to_doc();
-                    Ok(docvec!["codepointToUtf16(", value, ", ", is_big, ")"])
-                }
-
-                // UTF32 strings
-                [Opt::Utf32 { .. }]
-                | [Opt::Utf32 { .. }, Opt::Big { .. }]
-                | [Opt::Big { .. }, Opt::Utf32 { .. }] => {
-                    self.tracker.string_utf32_bit_array_segment_used = true;
-                    let is_big = "true".to_doc();
-                    Ok(docvec!["stringToUtf32(", value, ", ", is_big, ")"])
-                }
-
-                [Opt::Utf32 { .. }, Opt::Little { .. }]
-                | [Opt::Little { .. }, Opt::Utf32 { .. }] => {
-                    self.tracker.string_utf32_bit_array_segment_used = true;
-                    let is_big = "false".to_doc();
-                    Ok(docvec!["stringToUtf32(", value, ", ", is_big, ")"])
-                }
-
-                // UTF32 codepoints
-                [Opt::Utf32Codepoint { .. }]
-                | [Opt::Utf32Codepoint { .. }, Opt::Big { .. }]
-                | [Opt::Big { .. }, Opt::Utf32Codepoint { .. }] => {
-                    self.tracker.codepoint_utf32_bit_array_segment_used = true;
-                    let is_big = "true".to_doc();
-                    Ok(docvec!["codepointToUtf32(", value, ", ", is_big, ")"])
-                }
-
-                [Opt::Utf32Codepoint { .. }, Opt::Little { .. }]
-                | [Opt::Little { .. }, Opt::Utf32Codepoint { .. }] => {
-                    self.tracker.codepoint_utf32_bit_array_segment_used = true;
-                    let is_big = "false".to_doc();
-                    Ok(docvec!["codepointToUtf32(", value, ", ", is_big, ")"])
-                }
-
-                // Bit arrays
-                [Opt::Bits { .. }] => Ok(value),
-
-                // Bit arrays with explicit size. The explicit size slices the bit array to the
-                // specified size. A runtime exception is thrown if the size exceeds the number
-                // of bits in the bit array.
-                [Opt::Bits { .. }, Opt::Size { value: size, .. }]
-                | [Opt::Size { value: size, .. }, Opt::Bits { .. }] => match &**size {
-                    TypedExpr::Int { value: size, .. } => {
+            let segment = match details.type_ {
+                BitArraySegmentType::BitArray => {
+                    if segment.size().is_some() {
                         self.tracker.bit_array_slice_used = true;
-                        Ok(docvec!["bitArraySlice(", value, ", 0, ", size, ")"])
+                        docvec!["bitArraySlice(", value, ", 0, ", details.size, ")"]
+                    } else {
+                        value
+                    }
+                }
+                BitArraySegmentType::Int => match (details.size_value, segment.value.as_ref()) {
+                    (Some(size_value), TypedExpr::Int { int_value, .. })
+                        if size_value <= SAFE_INT_SEGMENT_MAX_SIZE.into()
+                            && (&size_value % BigInt::from(8) == BigInt::ZERO) =>
+                    {
+                        let bytes = bit_array_segment_int_value_to_bytes(
+                            int_value.clone(),
+                            size_value,
+                            segment.endianness(),
+                        )?;
+
+                        u8_slice(&bytes)
                     }
 
-                    TypedExpr::Var { name, .. } => {
-                        self.tracker.bit_array_slice_used = true;
-                        Ok(docvec!["bitArraySlice(", value, ", 0, ", name, ")"])
-                    }
+                    (Some(size_value), _) if size_value == 8.into() => value,
 
-                    _ => Err(Error::Unsupported {
-                        feature: "This bit array segment option".into(),
-                        location: segment.location,
-                    }),
+                    (Some(size_value), _) if size_value <= 0.into() => nil(),
+
+                    _ => {
+                        self.tracker.sized_integer_segment_used = true;
+                        let size = details.size;
+                        let is_big = bool(segment.endianness().is_big());
+                        docvec!["sizedInt(", value, ", ", size, ", ", is_big, ")"]
+                    }
                 },
+                BitArraySegmentType::Float => {
+                    self.tracker.float_bit_array_segment_used = true;
+                    let size = details.size;
+                    let is_big = bool(details.endianness.is_big());
+                    docvec!["sizedFloat(", value, ", ", size, ", ", is_big, ")"]
+                }
+                BitArraySegmentType::String(StringEncoding::Utf8) => {
+                    self.tracker.string_bit_array_segment_used = true;
+                    docvec!["stringBits(", value, ")"]
+                }
+                BitArraySegmentType::String(StringEncoding::Utf16) => {
+                    self.tracker.string_utf16_bit_array_segment_used = true;
+                    let is_big = bool(details.endianness.is_big());
+                    docvec!["stringToUtf16(", value, ", ", is_big, ")"]
+                }
+                BitArraySegmentType::String(StringEncoding::Utf32) => {
+                    self.tracker.string_utf32_bit_array_segment_used = true;
+                    let is_big = bool(details.endianness.is_big());
+                    docvec!["stringToUtf32(", value, ", ", is_big, ")"]
+                }
+                BitArraySegmentType::UtfCodepoint(StringEncoding::Utf8) => {
+                    self.tracker.codepoint_bit_array_segment_used = true;
+                    docvec!["codepointBits(", value, ")"]
+                }
+                BitArraySegmentType::UtfCodepoint(StringEncoding::Utf16) => {
+                    self.tracker.codepoint_utf16_bit_array_segment_used = true;
+                    let is_big = bool(details.endianness.is_big());
+                    docvec!["codepointToUtf16(", value, ", ", is_big, ")"]
+                }
+                BitArraySegmentType::UtfCodepoint(StringEncoding::Utf32) => {
+                    self.tracker.codepoint_utf32_bit_array_segment_used = true;
+                    let is_big = bool(details.endianness.is_big());
+                    docvec!["codepointToUtf32(", value, ", ", is_big, ")"]
+                }
+            };
 
-                // Anything else
-                _ => Err(Error::Unsupported {
-                    feature: "This bit array segment option".into(),
-                    location: segment.location,
-                }),
-            }
+            Ok(segment)
         }))?;
 
         Ok(docvec!["toBitArray(", segments_array, ")"])
     }
 
-    fn sized_bit_array_segment_details(
+    fn bit_array_segment_details(
         &mut self,
         segment: &'a TypedExprBitArraySegment,
-    ) -> Result<SizedBitArraySegmentDetails<'a>, Error> {
+    ) -> Result<BitArraySegmentDetails<'a>, Error> {
         let size = segment.size();
         let unit = segment.unit();
         let (size_value, size) = match size {
@@ -576,7 +502,14 @@ impl<'module, 'a> Generator<'module, 'a> {
             }
         };
 
-        Ok(SizedBitArraySegmentDetails { size, size_value })
+        let type_ = BitArraySegmentType::from_segment(segment);
+
+        Ok(BitArraySegmentDetails {
+            type_,
+            size,
+            size_value,
+            endianness: segment.endianness(),
+        })
     }
 
     pub fn wrap_return(&mut self, document: Document<'a>) -> Document<'a> {
@@ -1793,7 +1726,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             }
 
             Constant::BitArray { segments, .. } => {
-                let bit_array = self.constant_bit_array(segments)?;
+                let bit_array = self.constant_bit_array(segments, context)?;
                 match context {
                     Context::Constant => Ok(docvec!["/* @__PURE__ */ ", bit_array]),
                     Context::Function => Ok(bit_array),
@@ -1824,163 +1757,97 @@ impl<'module, 'a> Generator<'module, 'a> {
         }
     }
 
-    fn constant_bit_array(&mut self, segments: &'a [TypedConstantBitArraySegment]) -> Output<'a> {
-        use BitArrayOption as Opt;
-
+    fn constant_bit_array(
+        &mut self,
+        segments: &'a [TypedConstantBitArraySegment],
+        context: Context,
+    ) -> Output<'a> {
         self.tracker.bit_array_literal_used = true;
         let segments_array = array(segments.iter().map(|segment| {
             let value = self.constant_expression(Context::Constant, &segment.value)?;
 
-            match segment.options.as_slice() {
-                // Int segment
-                _ if segment.type_.is_int() => {
-                    let details = self.constant_sized_bit_array_segment_details(segment)?;
-                    match (details.size_value, segment.value.as_ref()) {
-                        (Some(size_value), Constant::Int { int_value, .. })
-                            if size_value <= SAFE_INT_SEGMENT_MAX_SIZE.into()
-                                && (&size_value % BigInt::from(8) == BigInt::ZERO) =>
-                        {
-                            let bytes = bit_array_segment_int_value_to_bytes(
-                                int_value.clone(),
-                                size_value,
-                                segment.endianness(),
-                            )?;
+            let details = self.constant_bit_array_segment_details(segment, context)?;
 
-                            Ok(u8_slice(&bytes))
-                        }
-
-                        (Some(size_value), _) if size_value == 8.into() => Ok(value),
-
-                        (Some(size_value), _) if size_value <= 0.into() => Ok(nil()),
-
-                        _ => {
-                            self.tracker.sized_integer_segment_used = true;
-                            let size = details.size;
-                            let is_big = bool(segment.endianness().is_big());
-                            Ok(docvec!["sizedInt(", value, ", ", size, ", ", is_big, ")"])
-                        }
-                    }
-                }
-
-                // Float segments
-                _ if segment.type_.is_float() => {
-                    self.tracker.float_bit_array_segment_used = true;
-                    let details = self.constant_sized_bit_array_segment_details(segment)?;
-                    let size = details.size;
-                    let is_big = bool(segment.endianness().is_big());
-                    Ok(docvec!["sizedFloat(", value, ", ", size, ", ", is_big, ")"])
-                }
-
-                // UTF8 strings
-                [Opt::Utf8 { .. }] => {
-                    self.tracker.string_bit_array_segment_used = true;
-                    Ok(docvec!["stringBits(", value, ")"])
-                }
-
-                // UTF8 codepoints
-                [Opt::Utf8Codepoint { .. }] => {
-                    self.tracker.codepoint_bit_array_segment_used = true;
-                    Ok(docvec!["codepointBits(", value, ")"])
-                }
-
-                // UTF16 strings
-                [Opt::Utf16 { .. }]
-                | [Opt::Utf16 { .. }, Opt::Big { .. }]
-                | [Opt::Big { .. }, Opt::Utf16 { .. }] => {
-                    self.tracker.string_utf16_bit_array_segment_used = true;
-                    let is_big = "true".to_doc();
-                    Ok(docvec!["stringToUtf16(", value, ", ", is_big, ")"])
-                }
-
-                [Opt::Utf16 { .. }, Opt::Little { .. }]
-                | [Opt::Little { .. }, Opt::Utf16 { .. }] => {
-                    self.tracker.string_utf16_bit_array_segment_used = true;
-                    let is_big = "false".to_doc();
-                    Ok(docvec!["stringToUtf16(", value, ", ", is_big, ")"])
-                }
-
-                // UTF16 codepoints
-                [Opt::Utf16Codepoint { .. }]
-                | [Opt::Utf16Codepoint { .. }, Opt::Big { .. }]
-                | [Opt::Big { .. }, Opt::Utf16Codepoint { .. }] => {
-                    self.tracker.codepoint_utf16_bit_array_segment_used = true;
-                    let is_big = "true".to_doc();
-                    Ok(docvec!["codepointToUtf16(", value, ", ", is_big, ")"])
-                }
-
-                [Opt::Utf16Codepoint { .. }, Opt::Little { .. }]
-                | [Opt::Little { .. }, Opt::Utf16Codepoint { .. }] => {
-                    self.tracker.codepoint_utf16_bit_array_segment_used = true;
-                    let is_big = "false".to_doc();
-                    Ok(docvec!["codepointToUtf16(", value, ", ", is_big, ")"])
-                }
-
-                // UTF32 strings
-                [Opt::Utf32 { .. }]
-                | [Opt::Utf32 { .. }, Opt::Big { .. }]
-                | [Opt::Big { .. }, Opt::Utf32 { .. }] => {
-                    self.tracker.string_utf32_bit_array_segment_used = true;
-                    let is_big = "true".to_doc();
-                    Ok(docvec!["stringToUtf32(", value, ", ", is_big, ")"])
-                }
-
-                [Opt::Utf32 { .. }, Opt::Little { .. }]
-                | [Opt::Little { .. }, Opt::Utf32 { .. }] => {
-                    self.tracker.string_utf32_bit_array_segment_used = true;
-                    let is_big = "false".to_doc();
-                    Ok(docvec!["stringToUtf32(", value, ", ", is_big, ")"])
-                }
-
-                // UTF32 codepoints
-                [Opt::Utf32Codepoint { .. }]
-                | [Opt::Utf32Codepoint { .. }, Opt::Big { .. }]
-                | [Opt::Big { .. }, Opt::Utf32Codepoint { .. }] => {
-                    self.tracker.codepoint_utf32_bit_array_segment_used = true;
-                    let is_big = "true".to_doc();
-                    Ok(docvec!["codepointToUtf32(", value, ", ", is_big, ")"])
-                }
-
-                [Opt::Utf32Codepoint { .. }, Opt::Little { .. }]
-                | [Opt::Little { .. }, Opt::Utf32Codepoint { .. }] => {
-                    self.tracker.codepoint_utf32_bit_array_segment_used = true;
-                    let is_big = "false".to_doc();
-                    Ok(docvec!["codepointToUtf32(", value, ", ", is_big, ")"])
-                }
-
-                // Bit arrays
-                [Opt::Bits { .. }] => Ok(value),
-
-                // Bit arrays with explicit size. The explicit size slices the bit array to the
-                // specified size. A runtime exception is thrown if the size exceeds the number
-                // of bits in the bit array.
-                [Opt::Bits { .. }, Opt::Size { value: size, .. }]
-                | [Opt::Size { value: size, .. }, Opt::Bits { .. }] => match &**size {
-                    Constant::Int { value: size, .. } => {
+            let document = match details.type_ {
+                BitArraySegmentType::BitArray => {
+                    if segment.size().is_some() {
                         self.tracker.bit_array_slice_used = true;
-                        Ok(docvec!["bitArraySlice(", value, ", 0, ", size, ")"])
+                        docvec!["bitArraySlice(", value, ", 0, ", details.size, ")"]
+                    } else {
+                        value
+                    }
+                }
+                BitArraySegmentType::Int => match (details.size_value, segment.value.as_ref()) {
+                    (Some(size_value), Constant::Int { int_value, .. })
+                        if size_value <= SAFE_INT_SEGMENT_MAX_SIZE.into()
+                            && (&size_value % BigInt::from(8) == BigInt::ZERO) =>
+                    {
+                        let bytes = bit_array_segment_int_value_to_bytes(
+                            int_value.clone(),
+                            size_value,
+                            segment.endianness(),
+                        )?;
+
+                        u8_slice(&bytes)
                     }
 
-                    _ => Err(Error::Unsupported {
-                        feature: "This bit array segment option".into(),
-                        location: segment.location,
-                    }),
-                },
+                    (Some(size_value), _) if size_value == 8.into() => value,
 
-                // Anything else
-                _ => Err(Error::Unsupported {
-                    feature: "This bit array segment option".into(),
-                    location: segment.location,
-                }),
-            }
+                    (Some(size_value), _) if size_value <= 0.into() => nil(),
+
+                    _ => {
+                        self.tracker.sized_integer_segment_used = true;
+                        let size = details.size;
+                        let is_big = bool(segment.endianness().is_big());
+                        docvec!["sizedInt(", value, ", ", size, ", ", is_big, ")"]
+                    }
+                },
+                BitArraySegmentType::Float => {
+                    self.tracker.float_bit_array_segment_used = true;
+                    let size = details.size;
+                    let is_big = bool(details.endianness.is_big());
+                    docvec!["sizedFloat(", value, ", ", size, ", ", is_big, ")"]
+                }
+                BitArraySegmentType::String(StringEncoding::Utf8) => {
+                    self.tracker.string_bit_array_segment_used = true;
+                    docvec!["stringBits(", value, ")"]
+                }
+                BitArraySegmentType::String(StringEncoding::Utf16) => {
+                    self.tracker.string_utf16_bit_array_segment_used = true;
+                    let is_big = bool(details.endianness.is_big());
+                    docvec!["stringToUtf16(", value, ", ", is_big, ")"]
+                }
+                BitArraySegmentType::String(StringEncoding::Utf32) => {
+                    self.tracker.string_utf32_bit_array_segment_used = true;
+                    let is_big = bool(details.endianness.is_big());
+                    docvec!["stringToUtf32(", value, ", ", is_big, ")"]
+                }
+                BitArraySegmentType::UtfCodepoint(StringEncoding::Utf8) => {
+                    self.tracker.codepoint_bit_array_segment_used = true;
+                    docvec!["codepointBits(", value, ")"]
+                }
+                BitArraySegmentType::UtfCodepoint(StringEncoding::Utf16) => {
+                    self.tracker.codepoint_utf16_bit_array_segment_used = true;
+                    let is_big = bool(details.endianness.is_big());
+                    docvec!["codepointToUtf16(", value, ", ", is_big, ")"]
+                }
+                BitArraySegmentType::UtfCodepoint(StringEncoding::Utf32) => {
+                    self.tracker.codepoint_utf32_bit_array_segment_used = true;
+                    let is_big = bool(details.endianness.is_big());
+                    docvec!["codepointToUtf32(", value, ", ", is_big, ")"]
+                }
+            };
+            Ok(document)
         }))?;
 
         Ok(docvec!["toBitArray(", segments_array, ")"])
     }
 
-    fn constant_sized_bit_array_segment_details(
+    fn constant_bit_array_segment_details(
         &mut self,
         segment: &'a TypedConstantBitArraySegment,
-    ) -> Result<SizedBitArraySegmentDetails<'a>, Error> {
+        context: Context,
+    ) -> Result<BitArraySegmentDetails<'a>, Error> {
         let size = segment.size();
         let unit = segment.unit();
         let (size_value, size) = match size {
@@ -1991,7 +1858,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             }
 
             Some(size) => {
-                let mut size = self.constant_expression(Context::Constant, size)?;
+                let mut size = self.constant_expression(context, size)?;
                 if unit != 1 {
                     size = size.group().append(" * ".to_doc().append(unit.to_doc()));
                 }
@@ -2005,7 +1872,14 @@ impl<'module, 'a> Generator<'module, 'a> {
             }
         };
 
-        Ok(SizedBitArraySegmentDetails { size, size_value })
+        let type_ = BitArraySegmentType::from_segment(segment);
+
+        Ok(BitArraySegmentDetails {
+            type_,
+            size,
+            size_value,
+            endianness: segment.endianness(),
+        })
     }
 
     pub(crate) fn guard(&mut self, guard: &'a TypedClauseGuard) -> Output<'a> {
@@ -2238,7 +2112,9 @@ impl<'module, 'a> Generator<'module, 'a> {
                 ))
             }
 
-            Constant::BitArray { segments, .. } => self.constant_bit_array(segments),
+            Constant::BitArray { segments, .. } => {
+                self.constant_bit_array(segments, Context::Function)
+            }
 
             Constant::Var { name, .. } => Ok(self.local_var(name).to_doc()),
 
@@ -2338,11 +2214,57 @@ pub enum Context {
 }
 
 #[derive(Debug)]
-struct SizedBitArraySegmentDetails<'a> {
+struct BitArraySegmentDetails<'a> {
+    type_: BitArraySegmentType,
     size: Document<'a>,
     /// The size of the bit array segment stored as a BigInt.
     /// This has a value when the segment's size is known at compile time.
     size_value: Option<BigInt>,
+    endianness: Endianness,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum BitArraySegmentType {
+    BitArray,
+    Int,
+    Float,
+    String(StringEncoding),
+    UtfCodepoint(StringEncoding),
+}
+
+impl BitArraySegmentType {
+    fn from_segment<Value>(segment: &BitArraySegment<Value, Arc<Type>>) -> Self {
+        if segment.type_.is_int() {
+            BitArraySegmentType::Int
+        } else if segment.type_.is_float() {
+            BitArraySegmentType::Float
+        } else if segment.type_.is_bit_array() {
+            BitArraySegmentType::BitArray
+        } else if segment.type_.is_string() {
+            let encoding = if segment.has_utf16_option() {
+                StringEncoding::Utf16
+            } else if segment.has_utf32_option() {
+                StringEncoding::Utf32
+            } else {
+                StringEncoding::Utf8
+            };
+            BitArraySegmentType::String(encoding)
+        } else if segment.type_.is_utf_codepoint() {
+            let encoding = if segment.has_utf16_codepoint_option() {
+                StringEncoding::Utf16
+            } else if segment.has_utf32_codepoint_option() {
+                StringEncoding::Utf32
+            } else {
+                StringEncoding::Utf8
+            };
+            BitArraySegmentType::UtfCodepoint(encoding)
+        } else {
+            panic!(
+                "Invalid bit array segment type reached code generation: {:?}",
+                segment.type_
+            );
+        }
+    }
 }
 
 pub fn string(value: &str) -> Document<'_> {
