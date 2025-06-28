@@ -389,6 +389,10 @@
   JavaScript objects.
   ([Louis Pilfold](https://github.com/lpil))
 
+- Fixed a bug where specific combinations of options in bit array segments would
+  not be allowed on the JavaScript target.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.11.1 - 2025-06-05
 
 ### Compiler
