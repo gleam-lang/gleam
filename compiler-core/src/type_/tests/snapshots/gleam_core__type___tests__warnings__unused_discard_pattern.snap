@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 3932
+assertion_line: 4195
 expression: "pub fn main() {\n  let a = 10\n  let _ = case a {\n    _ as b -> b\n  }\n}\n"
 snapshot_kind: text
 ---
@@ -20,5 +20,5 @@ warning: Unused discard pattern
 4 │     _ as b -> b
   │          ^
 
-_ as b can be written more concisely as b
+`_ as b` can be written more concisely as `b`
 Hint: Replace with b
