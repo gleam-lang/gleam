@@ -5340,9 +5340,9 @@ where
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Generate variant")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::QUICKFIX)
             .changes(variant_module, variant_edits)
-            .preferred(false)
+            .preferred(true)
             .push_to(&mut action);
         action
     }

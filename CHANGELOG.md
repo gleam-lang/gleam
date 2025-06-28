@@ -252,8 +252,8 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The "generate function" code action is now a quickfix, allowing it to be more
-  easily applied to code which is producing an error.
+- The "generate function" and "generate variant" code actions are now quickfixes,
+  allowing them to be more easily applied to code which is producing an error.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 ### Formatter
