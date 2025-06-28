@@ -252,6 +252,10 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The "generate function" code action is now a quickfix, allowing it to be more
+  easily applied to code which is producing an error.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Formatter
 
 - The formatter now allows more control over how lists are split. By adding a

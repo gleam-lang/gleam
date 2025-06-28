@@ -5117,9 +5117,9 @@ impl<'a> GenerateFunction<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Generate function")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::QUICKFIX)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
-            .preferred(false)
+            .preferred(true)
             .push_to(&mut action);
         action
     }
