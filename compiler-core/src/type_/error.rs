@@ -1,11 +1,11 @@
 use super::{
-    expression::{ArgumentKind, CallKind},
     FieldAccessUsage,
+    expression::{ArgumentKind, CallKind},
 };
 use crate::{
     ast::{BinOp, BitArraySegmentTruncation, Layer, SrcSpan, TodoKind},
     build::Target,
-    type_::{expression::ComparisonOutcome, Type},
+    type_::{Type, expression::ComparisonOutcome},
 };
 
 use camino::Utf8PathBuf;
