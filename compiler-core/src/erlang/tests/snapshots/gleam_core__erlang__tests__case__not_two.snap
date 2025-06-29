@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/case.rs
-assertion_line: 66
 expression: "pub fn main(x, y) {\n  case x {\n    _ if !y && !x -> 0\n    _ -> 1\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn main(x, y) {
@@ -15,7 +13,7 @@ pub fn main(x, y) {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/2]).
 

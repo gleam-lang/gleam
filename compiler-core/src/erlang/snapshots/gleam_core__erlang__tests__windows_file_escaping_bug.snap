@@ -1,11 +1,9 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 982
 expression: "pub fn main() { Nil }"
-snapshot_kind: text
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "C:\\root\\project\\test\\my\\mod.gleam").
 -export([main/0]).
 

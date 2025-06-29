@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
-assertion_line: 126
 expression: "import my_app.{run}\npub fn main() {\n  let x = run\n  id(run)\n}\nfn id(x) { x }\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 import my_app.{run}
@@ -15,7 +13,7 @@ fn id(x) { x }
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 

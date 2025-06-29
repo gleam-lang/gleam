@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/functions.rs
-assertion_line: 116
 expression: "\ntype A { A }\ntype B { B }\ntype C { C }\ntype D { D }\n\nfn wibble(a a: A, b b: B, c c: C, d d: D) {\n  Nil\n}\n\npub fn main() {\n  wibble(A, C, D, b: B)\n  wibble(A, C, D, b: B)\n  wibble(B, C, D, a: A)\n  wibble(B, C, a: A, d: D)\n  wibble(B, C, d: D, a: A)\n  wibble(B, D, a: A, c: C)\n  wibble(B, D, c: C, a: A)\n  wibble(C, D, b: B, a: A)\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -29,7 +27,7 @@ pub fn main() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 -export_type([a/0, b/0, c/0, d/0]).
