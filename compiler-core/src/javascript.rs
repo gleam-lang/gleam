@@ -737,21 +737,6 @@ pub fn ts_declaration(module: &TypedModule) -> String {
     document.to_pretty_string(80)
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Error {
-    Unsupported { feature: String, location: SrcSpan },
-}
-
-impl Error {
-    /// Returns `true` if the error is [`Unsupported`].
-    ///
-    /// [`Unsupported`]: Error::Unsupported
-    #[must_use]
-    pub fn is_unsupported(&self) -> bool {
-        matches!(self, Self::Unsupported { .. })
-    }
-}
-
 fn fun_args(args: &'_ [TypedArg], tail_recursion_used: bool) -> Document<'_> {
     let mut discards = 0;
     wrap_args(args.iter().map(|a| match a.get_variable_name() {
