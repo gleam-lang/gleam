@@ -359,6 +359,7 @@ impl<'module, 'a> Generator<'module, 'a> {
 
             TypedExpr::Echo {
                 expression,
+                message,
                 location,
                 ..
             } => {
@@ -367,7 +368,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                     .expect("echo with no expression outside of pipe");
                 let expresion_doc =
                     self.not_in_tail_position(None, |this| this.wrap_expression(expression))?;
-                self.echo(expresion_doc, location)
+                self.echo(expresion_doc, message.as_deref(), location)
             }
 
             TypedExpr::Invalid { .. } => {
@@ -692,13 +693,14 @@ impl<'module, 'a> Generator<'module, 'a> {
                 // just prints the previous variable assigned in the pipeline.
                 TypedExpr::Echo {
                     expression: None,
+                    message,
                     location,
                     ..
                 } => documents.push(self.not_in_tail_position(Some(Ordering::Strict), |this| {
                     let var = latest_local_var
                         .as_ref()
                         .expect("echo with no previous step in a pipe");
-                    this.echo(var.to_doc(), location)
+                    this.echo(var.to_doc(), message.as_deref(), location)
                 })?),
 
                 // Otherwise we assign the intermediate pipe value to a variable.
@@ -718,11 +720,12 @@ impl<'module, 'a> Generator<'module, 'a> {
         match finally {
             TypedExpr::Echo {
                 expression: None,
+                message,
                 location,
                 ..
             } => {
                 let var = latest_local_var.expect("echo with no previous step in a pipe");
-                documents.push(self.echo(var.to_doc(), location)?);
+                documents.push(self.echo(var.to_doc(), message.as_deref(), location)?);
             }
             _ => {
                 let finally = self.expression(finally)?;
@@ -1629,15 +1632,28 @@ impl<'module, 'a> Generator<'module, 'a> {
         }
     }
 
-    fn echo(&mut self, expression: Document<'a>, location: &'a SrcSpan) -> Output<'a> {
+    fn echo(
+        &mut self,
+        expression: Document<'a>,
+        message: Option<&'a TypedExpr>,
+        location: &'a SrcSpan,
+    ) -> Output<'a> {
         self.tracker.echo_used = true;
 
-        let echo_argument = call_arguments(vec![
+        let message = match message {
+            Some(message) => self.not_in_tail_position(Some(Ordering::Strict), |this| {
+                this.wrap_expression(message)
+            })?,
+            None => "undefined".to_doc(),
+        };
+
+        let echo_arguments = call_arguments(vec![
             Ok(expression),
+            Ok(message),
             Ok(self.src_path.clone().to_doc()),
             Ok(self.line_numbers.line_number(location.start).to_doc()),
         ])?;
-        Ok(self.wrap_return(docvec!["echo", echo_argument]))
+        Ok(self.wrap_return(docvec!["echo", echo_arguments]))
     }
 
     pub(crate) fn constant_expression(

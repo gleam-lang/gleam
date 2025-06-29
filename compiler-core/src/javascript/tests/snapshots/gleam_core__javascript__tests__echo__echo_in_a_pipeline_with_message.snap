@@ -1,0 +1,40 @@
+---
+source: compiler-core/src/javascript/tests/echo.rs
+expression: "\npub fn main() {\n  [1, 2, 3]\n  |> echo as \"message!!\"\n  |> wibble\n}\n\npub fn wibble(n) { n }\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  [1, 2, 3]
+  |> echo as "message!!"
+  |> wibble
+}
+
+pub fn wibble(n) { n }
+
+
+----- COMPILED JAVASCRIPT
+import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
+import {
+  toList,
+  Empty as $Empty,
+  NonEmpty as $NonEmpty,
+  CustomType as $CustomType,
+  bitArraySlice,
+  bitArraySliceToInt,
+  BitArray as $BitArray,
+  List as $List,
+  UtfCodepoint as $UtfCodepoint,
+} from "../gleam.mjs";
+
+export function wibble(n) {
+  return n;
+}
+
+export function main() {
+  let _pipe = toList([1, 2, 3]);
+  echo(_pipe, "message!!", "src/module.gleam", 4)
+  return wibble(_pipe);
+}
+
+// ...omitted code from `templates/echo.mjs`...

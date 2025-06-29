@@ -15,6 +15,7 @@ expression: "panic as echo \"string\""
                         start: 9,
                         end: 22,
                     },
+                    keyword_end: 13,
                     expression: Some(
                         String {
                             location: SrcSpan {
@@ -24,6 +25,7 @@ expression: "panic as echo \"string\""
                             value: "string",
                         },
                     ),
+                    message: None,
                 },
             ),
         },

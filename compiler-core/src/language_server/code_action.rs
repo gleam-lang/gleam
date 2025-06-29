@@ -6801,6 +6801,7 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveEchos<'ast> {
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         expression: &'ast Option<Box<TypedExpr>>,
+        message: &'ast Option<Box<TypedExpr>>,
     ) {
         // We also want to trigger the action if we're hovering over the expression
         // being printed. So we create a unique span starting from the start of echo
@@ -6815,6 +6816,17 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveEchos<'ast> {
         let echo_range = self.edits.src_span_to_lsp_range(*location);
         if within(self.params.range, echo_range) {
             self.is_hovering_echo = true;
+        }
+
+        // We also want to remove the echo message!
+        if message.is_some() {
+            let start = expression
+                .as_ref()
+                .map(|expression| expression.location().end)
+                .unwrap_or(location.start + 4);
+
+            self.echo_spans_to_delete
+                .push(SrcSpan::new(start, location.end));
         }
 
         if let Some(expression) = expression {
@@ -6841,7 +6853,7 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveEchos<'ast> {
             }
         }
 
-        ast::visit::visit_typed_expr_echo(self, location, type_, expression);
+        ast::visit::visit_typed_expr_echo(self, location, type_, expression, message);
     }
 
     fn visit_typed_pipeline_assignment(&mut self, assignment: &'ast TypedPipelineAssignment) {

@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/echo.rs
-assertion_line: 41
 expression: "\npub fn main() {\n  echo panic\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -38,7 +36,7 @@ export function main() {
     "`panic` expression evaluated.",
     {}
   )
-  return echo(_block, "src/module.gleam", 3);
+  return echo(_block, undefined, "src/module.gleam", 3);
 }
 
 // ...omitted code from `templates/echo.mjs`...

@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/echo.rs
-assertion_line: 52
 expression: "\npub fn main() {\n  echo wibble(1, 2)\n}\n\nfn wibble(n: Int, m: Int) { n + m }\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -31,7 +29,7 @@ function wibble(n, m) {
 }
 
 export function main() {
-  return echo(wibble(1, 2), "src/module.gleam", 3);
+  return echo(wibble(1, 2), undefined, "src/module.gleam", 3);
 }
 
 // ...omitted code from `templates/echo.mjs`...

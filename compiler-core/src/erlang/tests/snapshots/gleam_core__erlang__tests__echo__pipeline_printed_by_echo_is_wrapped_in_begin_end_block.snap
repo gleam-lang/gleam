@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/echo.rs
-assertion_line: 112
 expression: "\npub fn main() {\n  echo\n    123\n    |> wibble\n    |> wibble\n}\n\npub fn wibble(n) { n }\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -36,6 +34,7 @@ main() ->
             _pipe@1 = wibble(_pipe),
             wibble(_pipe@1)
         end,
+        nil,
         3
     ).
 

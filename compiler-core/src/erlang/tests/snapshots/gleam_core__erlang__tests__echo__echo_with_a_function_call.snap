@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/echo.rs
-assertion_line: 52
 expression: "\npub fn main() {\n  echo wibble(1, 2)\n}\n\nfn wibble(n: Int, m: Int) { n + m }\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -27,6 +25,6 @@ wibble(N, M) ->
 -file("project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
-    echo(wibble(1, 2), 3).
+    echo(wibble(1, 2), nil, 3).
 
 % ...omitted code from `templates/echo.erl`...

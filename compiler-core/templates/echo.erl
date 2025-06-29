@@ -26,12 +26,21 @@
 -define(grey, "\e[90m").
 -define(reset_color, "\e[39m").
 
-echo(Value, Line) ->
+echo(Value, Message, Line) ->
     StringLine = erlang:integer_to_list(Line),
     StringValue = echo@inspect(Value),
+    StringMessage =
+        case Message of
+            nil -> "";
+            M -> [" ", M]
+        end,
+
     io:put_chars(
       standard_error,
-      [?grey, ?FILEPATH, $:, StringLine, ?reset_color, $\n, StringValue, $\n]
+      [
+        ?grey, ?FILEPATH, $:, StringLine, ?reset_color, StringMessage, $\n,
+        StringValue, $\n
+      ]
     ),
     Value.
 
