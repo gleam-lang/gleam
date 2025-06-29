@@ -1564,9 +1564,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             Some(m) => self.not_in_tail_position(None, |this| this.wrap_expression(m)),
             None => string("`todo` expression evaluated. This code has not yet been implemented."),
         };
-        let doc = self.throw_error("todo", &message, *location, vec![]);
-
-        doc
+        self.throw_error("todo", &message, *location, vec![])
     }
 
     fn panic(&mut self, location: &'a SrcSpan, message: Option<&'a TypedExpr>) -> Document<'a> {
@@ -1574,9 +1572,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             Some(m) => self.not_in_tail_position(None, |this| this.wrap_expression(m)),
             None => string("`panic` expression evaluated."),
         };
-        let doc = self.throw_error("panic", &message, *location, vec![]);
-
-        doc
+        self.throw_error("panic", &message, *location, vec![])
     }
 
     pub(crate) fn throw_error<Fields>(

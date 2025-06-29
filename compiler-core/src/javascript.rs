@@ -649,7 +649,7 @@ impl<'a> Generator<'a> {
 
         let body = generator.function_body(&function.body, function.arguments.as_slice());
 
-        let document = docvec![
+        docvec![
             function_doc,
             head,
             maybe_escape_identifier(name.as_str()),
@@ -658,8 +658,7 @@ impl<'a> Generator<'a> {
             docvec![line(), body].nest(INDENT).group(),
             line(),
             "}",
-        ];
-        document
+        ]
     }
 
     fn register_module_definitions_in_scope(&mut self) {

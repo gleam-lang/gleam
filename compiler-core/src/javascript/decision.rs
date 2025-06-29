@@ -1133,7 +1133,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             " === "
         };
 
-        let result = match runtime_check {
+        match runtime_check {
             RuntimeCheck::String { value: expected } => docvec![value, equality, string(expected)],
             RuntimeCheck::Float { value: expected } => docvec![value, equality, float(expected)],
             RuntimeCheck::Int { value: expected } => docvec![value, equality, int(expected)],
@@ -1296,9 +1296,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                     docvec![value, " instanceof $Empty"]
                 }
             }
-        };
-
-        result
+        }
     }
 
     /// Turns a read action into a document that can be used to extract the
