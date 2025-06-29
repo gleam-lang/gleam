@@ -94,6 +94,7 @@ mod call_graph;
 mod dep_tree;
 mod exhaustiveness;
 pub(crate) mod graph;
+pub(crate) mod inline;
 mod reference;
 
 pub use error::{Error, Result};

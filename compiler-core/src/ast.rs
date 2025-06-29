@@ -1929,6 +1929,7 @@ impl TypedClauseGuard {
     Copy,
     serde::Serialize,
     serde::Deserialize,
+    Hash,
 )]
 pub struct SrcSpan {
     pub start: u32,
@@ -2404,7 +2405,7 @@ pub struct BitArraySegment<Value, Type> {
     pub type_: Type,
 }
 
-#[derive(Debug, PartialEq, Eq, Copy, Clone, Hash)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Hash, serde::Serialize, serde::Deserialize)]
 pub enum Endianness {
     Big,
     Little,
