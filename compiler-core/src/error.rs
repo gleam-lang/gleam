@@ -14,7 +14,7 @@ use crate::type_::error::{
 use crate::type_::printer::{Names, Printer};
 use crate::type_::{FieldAccessUsage, error::PatternMatchKind};
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
-use crate::{bit_array, diagnostic::Level, javascript, type_::UnifyErrorSituation};
+use crate::{bit_array, diagnostic::Level, type_::UnifyErrorSituation};
 use ecow::EcoString;
 use itertools::Itertools;
 use pubgrub::Package;
@@ -217,13 +217,6 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
 
     #[error("warnings are not permitted")]
     ForbiddenWarnings { count: usize },
-
-    #[error("javascript codegen failed")]
-    JavaScript {
-        path: Utf8PathBuf,
-        src: EcoString,
-        error: javascript::Error,
-    },
 
     #[error("Invalid runtime for {target} target: {invalid_runtime}")]
     InvalidRuntime {
@@ -4107,24 +4100,6 @@ Fix the warnings and try again."
                     level: Level::Error,
                 }]
             }
-
-            Error::JavaScript { src, path, error } => match error {
-                javascript::Error::Unsupported { feature, location } => vec![Diagnostic {
-                    title: "Unsupported feature for compilation target".into(),
-                    text: format!("{feature} is not supported for JavaScript compilation."),
-                    hint: None,
-                    level: Level::Error,
-                    location: Some(Location {
-                        label: Label {
-                            text: None,
-                            span: *location,
-                        },
-                        path: path.clone(),
-                        src: src.clone(),
-                        extra_labels: vec![],
-                    }),
-                }],
-            },
 
             Error::DownloadPackageError {
                 package_name,
