@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 1078
 expression: "\npub fn go(x) {\n  let n = 3\n  let assert <<a:bytes-size(n)>> = x\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -19,7 +17,10 @@ const FILEPATH = "src/module.gleam";
 
 export function go(x) {
   let n = 3;
-  if (n < 0 || x.bitSize !== n * 8) {
+  let a;
+  if (n >= 0 && x.bitSize === n * 8) {
+    a = bitArraySlice(x, 0, n * 8);
+  } else {
     throw makeError(
       "let_assert",
       FILEPATH,
@@ -30,6 +31,5 @@ export function go(x) {
       { value: x, start: 30, end: 64, pattern_start: 41, pattern_end: 60 }
     )
   }
-  let a = bitArraySlice(x, 0, n * 8);
   return x;
 }

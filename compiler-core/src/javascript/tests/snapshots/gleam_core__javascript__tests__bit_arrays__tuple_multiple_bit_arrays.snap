@@ -15,14 +15,41 @@ import { makeError } from "../gleam.mjs";
 const FILEPATH = "src/module.gleam";
 
 export function go(x) {
+  let $ = x[2];
   if (
-    x[2].bitSize !== 16 ||
-    x[2].byteAt(0) !== 2 ||
-    x[2].byteAt(1) !== 3 ||
-    x[1].bitSize !== 8 ||
-    x[1].byteAt(0) !== 1 ||
-    x[0].bitSize !== 0
+    $.bitSize >= 8 &&
+    $.byteAt(0) === 2 &&
+    $.bitSize === 16 &&
+    $.byteAt(1) === 3
   ) {
+    let $1 = x[1];
+    if ($1.bitSize === 8 && $1.byteAt(0) === 1) {
+      let $2 = x[0];
+      if ($2.bitSize === 0) {
+        
+      } else {
+        throw makeError(
+          "let_assert",
+          FILEPATH,
+          "my/mod",
+          3,
+          "go",
+          "Pattern match failed, no pattern matched the value.",
+          { value: x, start: 18, end: 57, pattern_start: 29, pattern_end: 53 }
+        )
+      }
+    } else {
+      throw makeError(
+        "let_assert",
+        FILEPATH,
+        "my/mod",
+        3,
+        "go",
+        "Pattern match failed, no pattern matched the value.",
+        { value: x, start: 18, end: 57, pattern_start: 29, pattern_end: 53 }
+      )
+    }
+  } else {
     throw makeError(
       "let_assert",
       FILEPATH,

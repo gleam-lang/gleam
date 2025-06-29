@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 2048
 expression: "\npub fn main() {\n let assert <<\"Hello, world!\" as message:utf8>> = <<\"Hello, world!\">>\n message\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -19,22 +17,25 @@ const FILEPATH = "src/module.gleam";
 
 export function main() {
   let $ = toBitArray([stringBits("Hello, world!")]);
+  let message;
   if (
-    $.bitSize !== 104 ||
-    $.byteAt(0) !== 72 ||
-    $.byteAt(1) !== 101 ||
-    $.byteAt(2) !== 108 ||
-    $.byteAt(3) !== 108 ||
-    $.byteAt(4) !== 111 ||
-    $.byteAt(5) !== 44 ||
-    $.byteAt(6) !== 32 ||
-    $.byteAt(7) !== 119 ||
-    $.byteAt(8) !== 111 ||
-    $.byteAt(9) !== 114 ||
-    $.byteAt(10) !== 108 ||
-    $.byteAt(11) !== 100 ||
-    $.byteAt(12) !== 33
+    $.bitSize === 104 &&
+    $.byteAt(0) === 72 &&
+      $.byteAt(1) === 101 &&
+      $.byteAt(2) === 108 &&
+      $.byteAt(3) === 108 &&
+      $.byteAt(4) === 111 &&
+      $.byteAt(5) === 44 &&
+      $.byteAt(6) === 32 &&
+      $.byteAt(7) === 119 &&
+      $.byteAt(8) === 111 &&
+      $.byteAt(9) === 114 &&
+      $.byteAt(10) === 108 &&
+      $.byteAt(11) === 100 &&
+      $.byteAt(12) === 33
   ) {
+    message = "Hello, world!";
+  } else {
     throw makeError(
       "let_assert",
       FILEPATH,
@@ -45,6 +46,5 @@ export function main() {
       { value: $, start: 18, end: 86, pattern_start: 29, pattern_end: 64 }
     )
   }
-  let message = "Hello, world!";
   return message;
 }

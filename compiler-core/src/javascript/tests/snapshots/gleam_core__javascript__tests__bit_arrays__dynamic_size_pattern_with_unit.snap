@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 1818
 expression: "\npub fn go(x) {\n  let size = 3\n  let assert <<1:size(size)-unit(2)>> = x\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -20,10 +18,12 @@ const FILEPATH = "src/module.gleam";
 export function go(x) {
   let size = 3;
   if (
-    size < 0 ||
-    x.bitSize !== size * 2 ||
-    bitArraySliceToInt(x, 0, size * 2, true, false) !== 1
+    size >= 0 &&
+    x.bitSize === size * 2 &&
+    bitArraySliceToInt(x, 0, size * 2, true, false) === 1
   ) {
+    
+  } else {
     throw makeError(
       "let_assert",
       FILEPATH,

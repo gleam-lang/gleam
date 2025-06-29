@@ -18,8 +18,10 @@ export function main() {
   let _block;
   {
     let b = [1, 2];
-    let x = b[0];
-    let y = b[1];
+    let x;
+    let y;
+    x = b[0];
+    y = b[1];
     _block = b;
   }
   let a = _block;

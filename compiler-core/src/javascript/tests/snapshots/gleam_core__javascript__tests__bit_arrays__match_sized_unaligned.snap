@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 489
 expression: "\npub fn go(x) {\n  let assert <<a:17, b:7>> = x\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -17,7 +15,12 @@ import { makeError, bitArraySliceToInt } from "../gleam.mjs";
 const FILEPATH = "src/module.gleam";
 
 export function go(x) {
-  if (x.bitSize !== 24) {
+  let a;
+  let b;
+  if (x.bitSize >= 17 && x.bitSize === 24) {
+    a = bitArraySliceToInt(x, 0, 17, true, false);
+    b = bitArraySliceToInt(x, 17, 24, true, false);
+  } else {
     throw makeError(
       "let_assert",
       FILEPATH,
@@ -28,7 +31,5 @@ export function go(x) {
       { value: x, start: 18, end: 46, pattern_start: 29, pattern_end: 42 }
     )
   }
-  let a = bitArraySliceToInt(x, 0, 17, true, false);
-  let b = bitArraySliceToInt(x, 17, 24, true, false);
   return x;
 }

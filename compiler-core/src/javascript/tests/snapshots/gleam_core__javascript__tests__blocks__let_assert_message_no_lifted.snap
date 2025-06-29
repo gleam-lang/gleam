@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/blocks.rs
-assertion_line: 330
 expression: "\nfn side_effects(x) {\n  // Some side effects\n  x\n}\n\npub fn main() {\n  let assert Error(Nil) = side_effects(Ok(10))\n    as {\n    let message = side_effects(\"some message\")\n    message\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -31,7 +29,9 @@ function side_effects(x) {
 
 export function main() {
   let $ = side_effects(new Ok(10));
-  if (!($ instanceof Error)) {
+  if ($ instanceof Error) {
+    
+  } else {
     throw makeError(
       "let_assert",
       FILEPATH,

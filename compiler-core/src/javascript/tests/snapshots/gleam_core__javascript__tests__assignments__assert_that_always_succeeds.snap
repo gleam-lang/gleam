@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
-assertion_line: 271
 expression: "\ntype Wibble {\n    Wibble(Int)\n}\n\npub fn go() {\n  let assert Wibble(n) = Wibble(1)\n  n\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -28,6 +26,7 @@ class Wibble extends $CustomType {
 
 export function go() {
   let $ = new Wibble(1);
-  let n = $[0];
+  let n;
+  n = $[0];
   return n;
 }

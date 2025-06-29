@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-assertion_line: 296
 expression: "\npub fn main(x) {\n  let assert 09_179 = x\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -17,7 +15,9 @@ import { makeError } from "../gleam.mjs";
 const FILEPATH = "src/module.gleam";
 
 export function main(x) {
-  if (x !== 9_179) {
+  if (x === 9_179) {
+    
+  } else {
     throw makeError(
       "let_assert",
       FILEPATH,

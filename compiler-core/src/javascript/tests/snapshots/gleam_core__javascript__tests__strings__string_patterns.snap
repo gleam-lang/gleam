@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/strings.rs
-assertion_line: 60
 expression: "\npub fn go(x) {\n  let assert \"Hello\" = x\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -17,7 +15,9 @@ import { makeError } from "../gleam.mjs";
 const FILEPATH = "src/module.gleam";
 
 export function go(x) {
-  if (x !== "Hello") {
+  if (x === "Hello") {
+    
+  } else {
     throw makeError(
       "let_assert",
       FILEPATH,

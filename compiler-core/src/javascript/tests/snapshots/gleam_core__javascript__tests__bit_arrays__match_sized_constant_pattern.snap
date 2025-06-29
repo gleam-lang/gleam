@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 514
 expression: "\npub fn go(x) {\n  let assert <<1234:16, 123:8>> = x\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -18,10 +16,13 @@ const FILEPATH = "src/module.gleam";
 
 export function go(x) {
   if (
-    x.bitSize !== 24 ||
-    x.byteAt(0) !== 4 || x.byteAt(1) !== 210 ||
-    x.byteAt(2) !== 123
+    x.bitSize >= 16 &&
+    x.byteAt(0) === 4 && x.byteAt(1) === 210 &&
+    x.bitSize === 24 &&
+    x.byteAt(2) === 123
   ) {
+    
+  } else {
     throw makeError(
       "let_assert",
       FILEPATH,

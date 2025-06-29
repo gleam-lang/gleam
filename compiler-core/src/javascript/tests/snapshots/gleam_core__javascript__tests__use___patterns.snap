@@ -36,7 +36,8 @@ export function main() {
   return apply(
     new Box(1),
     (_use0) => {
-      let x = _use0[0];
+      let x;
+      x = _use0[0];
       return x;
     },
   );
