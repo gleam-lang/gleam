@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
-assertion_line: 321
 expression: "\ntype Wibble {\n    Wibble(Int)\n    Wobble(Int)\n    Woo(Int)\n}\n\npub fn go() {\n  let assert Wobble(n) = todo\n  n\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -56,7 +54,10 @@ export function go() {
     {}
   )
   let $ = _block;
-  if (!($ instanceof Wobble)) {
+  let n;
+  if ($ instanceof Wobble) {
+    n = $[0];
+  } else {
     throw makeError(
       "let_assert",
       FILEPATH,
@@ -67,6 +68,5 @@ export function go() {
       { value: $, start: 79, end: 106, pattern_start: 90, pattern_end: 99 }
     )
   }
-  let n = $[0];
   return n;
 }

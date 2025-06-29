@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 966
 expression: "\npub fn go(x) {\n  let n = 16\n  let m = 32\n  let assert <<first:size(8), a:size(n), b:size(m), rest:bits>> = x\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -21,7 +19,22 @@ const FILEPATH = "src/module.gleam";
 export function go(x) {
   let n = 16;
   let m = 32;
-  if (x.bitSize < 8 + m + n || n < 0 || m < 0) {
+  let first;
+  let a;
+  let b;
+  let rest;
+  if (
+    x.bitSize >= 8 &&
+    n >= 0 &&
+    x.bitSize >= 8 + n &&
+    m >= 0 &&
+    x.bitSize >= 8 + m + n
+  ) {
+    first = x.byteAt(0);
+    a = bitArraySliceToInt(x, 8, 8 + n, true, false);
+    b = bitArraySliceToInt(x, 8 + n, 8 + n + m, true, false);
+    rest = bitArraySlice(x, 8 + m + n);
+  } else {
     throw makeError(
       "let_assert",
       FILEPATH,
@@ -32,9 +45,5 @@ export function go(x) {
       { value: x, start: 44, end: 109, pattern_start: 55, pattern_end: 105 }
     )
   }
-  let first = x.byteAt(0);
-  let a = bitArraySliceToInt(x, 8, 8 + n, true, false);
-  let b = bitArraySliceToInt(x, 8 + n, 8 + n + m, true, false);
-  let rest = bitArraySlice(x, 8 + m + n);
   return x;
 }

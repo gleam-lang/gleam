@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/lists.rs
-assertion_line: 62
 expression: "\npub fn go(x, y) {\n  let assert [] = x\n  let assert [a] = x\n  let assert [1, 2] = x\n  let assert [_, #(3, b)] = y\n  let assert [head, ..tail] = y\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -16,12 +14,14 @@ pub fn go(x, y) {
 
 
 ----- COMPILED JAVASCRIPT
-import { Empty as $Empty, NonEmpty as $NonEmpty, makeError } from "../gleam.mjs";
+import { Empty as $Empty, makeError } from "../gleam.mjs";
 
 const FILEPATH = "src/module.gleam";
 
 export function go(x, y) {
-  if (x instanceof $NonEmpty) {
+  if (x instanceof $Empty) {
+    
+  } else {
     throw makeError(
       "let_assert",
       FILEPATH,
@@ -32,7 +32,8 @@ export function go(x, y) {
       { value: x, start: 21, end: 38, pattern_start: 32, pattern_end: 34 }
     )
   }
-  if (x instanceof $Empty || x.tail instanceof $NonEmpty) {
+  let a;
+  if (x instanceof $Empty) {
     throw makeError(
       "let_assert",
       FILEPATH,
@@ -42,15 +43,23 @@ export function go(x, y) {
       "Pattern match failed, no pattern matched the value.",
       { value: x, start: 41, end: 59, pattern_start: 52, pattern_end: 55 }
     )
+  } else {
+    let $ = x.tail;
+    if ($ instanceof $Empty) {
+      a = x.head;
+    } else {
+      throw makeError(
+        "let_assert",
+        FILEPATH,
+        "my/mod",
+        4,
+        "go",
+        "Pattern match failed, no pattern matched the value.",
+        { value: x, start: 41, end: 59, pattern_start: 52, pattern_end: 55 }
+      )
+    }
   }
-  let a = x.head;
-  if (
-    x instanceof $Empty ||
-    x.tail instanceof $Empty ||
-    x.tail.tail instanceof $NonEmpty ||
-    x.tail.head !== 2 ||
-    x.head !== 1
-  ) {
+  if (x instanceof $Empty) {
     throw makeError(
       "let_assert",
       FILEPATH,
@@ -60,13 +69,69 @@ export function go(x, y) {
       "Pattern match failed, no pattern matched the value.",
       { value: x, start: 62, end: 83, pattern_start: 73, pattern_end: 79 }
     )
+  } else {
+    let $ = x.tail;
+    if ($ instanceof $Empty) {
+      throw makeError(
+        "let_assert",
+        FILEPATH,
+        "my/mod",
+        5,
+        "go",
+        "Pattern match failed, no pattern matched the value.",
+        { value: x, start: 62, end: 83, pattern_start: 73, pattern_end: 79 }
+      )
+    } else {
+      let $1 = $.tail;
+      if ($1 instanceof $Empty) {
+        let $2 = $.head;
+        if ($2 === 2) {
+          let $3 = x.head;
+          if ($3 === 1) {
+            
+          } else {
+            throw makeError(
+              "let_assert",
+              FILEPATH,
+              "my/mod",
+              5,
+              "go",
+              "Pattern match failed, no pattern matched the value.",
+              {
+                value: x,
+                start: 62,
+                end: 83,
+                pattern_start: 73,
+                pattern_end: 79
+              }
+            )
+          }
+        } else {
+          throw makeError(
+            "let_assert",
+            FILEPATH,
+            "my/mod",
+            5,
+            "go",
+            "Pattern match failed, no pattern matched the value.",
+            { value: x, start: 62, end: 83, pattern_start: 73, pattern_end: 79 }
+          )
+        }
+      } else {
+        throw makeError(
+          "let_assert",
+          FILEPATH,
+          "my/mod",
+          5,
+          "go",
+          "Pattern match failed, no pattern matched the value.",
+          { value: x, start: 62, end: 83, pattern_start: 73, pattern_end: 79 }
+        )
+      }
+    }
   }
-  if (
-    y instanceof $Empty ||
-    y.tail instanceof $Empty ||
-    y.tail.tail instanceof $NonEmpty ||
-    y.tail.head[0] !== 3
-  ) {
+  let b;
+  if (y instanceof $Empty) {
     throw makeError(
       "let_assert",
       FILEPATH,
@@ -76,8 +141,56 @@ export function go(x, y) {
       "Pattern match failed, no pattern matched the value.",
       { value: y, start: 86, end: 113, pattern_start: 97, pattern_end: 109 }
     )
+  } else {
+    let $ = y.tail;
+    if ($ instanceof $Empty) {
+      throw makeError(
+        "let_assert",
+        FILEPATH,
+        "my/mod",
+        6,
+        "go",
+        "Pattern match failed, no pattern matched the value.",
+        { value: y, start: 86, end: 113, pattern_start: 97, pattern_end: 109 }
+      )
+    } else {
+      let $1 = $.tail;
+      if ($1 instanceof $Empty) {
+        let $2 = $.head[0];
+        if ($2 === 3) {
+          b = $.head[1];
+        } else {
+          throw makeError(
+            "let_assert",
+            FILEPATH,
+            "my/mod",
+            6,
+            "go",
+            "Pattern match failed, no pattern matched the value.",
+            {
+              value: y,
+              start: 86,
+              end: 113,
+              pattern_start: 97,
+              pattern_end: 109
+            }
+          )
+        }
+      } else {
+        throw makeError(
+          "let_assert",
+          FILEPATH,
+          "my/mod",
+          6,
+          "go",
+          "Pattern match failed, no pattern matched the value.",
+          { value: y, start: 86, end: 113, pattern_start: 97, pattern_end: 109 }
+        )
+      }
+    }
   }
-  let b = y.tail.head[1];
+  let head;
+  let tail;
   if (y instanceof $Empty) {
     throw makeError(
       "let_assert",
@@ -88,8 +201,9 @@ export function go(x, y) {
       "Pattern match failed, no pattern matched the value.",
       { value: y, start: 116, end: 145, pattern_start: 127, pattern_end: 141 }
     )
+  } else {
+    head = y.head;
+    tail = y.tail;
   }
-  let head = y.head;
-  let tail = y.tail;
   return y;
 }

@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
-assertion_line: 191
 expression: "\ntype Wibble {\n  Wibble(wibble: String)\n}\n\npub fn main() {\n  let assert Wibble(wibble: \"w\" as prefix <> rest) = Wibble(\"wibble\")\n  prefix <> rest\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -30,7 +28,13 @@ class Wibble extends $CustomType {
 
 export function main() {
   let $ = new Wibble("wibble");
-  if (!($ instanceof Wibble) || !$.wibble.startsWith("w")) {
+  let prefix;
+  let rest;
+  let $1 = $.wibble;
+  if ($1.startsWith("w")) {
+    prefix = "w";
+    rest = $1.slice(1);
+  } else {
     throw makeError(
       "let_assert",
       FILEPATH,
@@ -41,7 +45,5 @@ export function main() {
       { value: $, start: 61, end: 128, pattern_start: 72, pattern_end: 109 }
     )
   }
-  let prefix = "w";
-  let rest = $.wibble.slice(1);
   return prefix + rest;
 }

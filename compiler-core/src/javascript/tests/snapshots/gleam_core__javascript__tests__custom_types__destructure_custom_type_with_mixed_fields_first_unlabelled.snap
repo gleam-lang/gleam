@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 281
 expression: "\npub type Cat {\n  Cat(String, cuteness: Int)\n}\n\npub fn go(cat) {\n  let Cat(x, y) = cat\n  let Cat(cuteness: y, ..) = cat\n  let Cat(x, cuteness: y) = cat\n  x\n}\n\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -31,10 +29,15 @@ export class Cat extends $CustomType {
 }
 
 export function go(cat) {
-  let x = cat[0];
-  let y = cat.cuteness;
-  let y$1 = cat.cuteness;
-  let x$1 = cat[0];
-  let y$2 = cat.cuteness;
+  let x;
+  let y;
+  x = cat[0];
+  y = cat.cuteness;
+  let y$1;
+  y$1 = cat.cuteness;
+  let x$1;
+  let y$2;
+  x$1 = cat[0];
+  y$2 = cat.cuteness;
   return x$1;
 }

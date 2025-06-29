@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
-assertion_line: 243
 expression: "\npub fn expect(value, message) {\n  let assert Ok(inner) = value as message\n  inner\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -18,7 +16,10 @@ import { Ok, makeError } from "../gleam.mjs";
 const FILEPATH = "src/module.gleam";
 
 export function expect(value, message) {
-  if (!(value instanceof Ok)) {
+  let inner;
+  if (value instanceof Ok) {
+    inner = value[0];
+  } else {
     throw makeError(
       "let_assert",
       FILEPATH,
@@ -29,6 +30,5 @@ export function expect(value, message) {
       { value: value, start: 35, end: 63, pattern_start: 46, pattern_end: 55 }
     )
   }
-  let inner = value[0];
   return inner;
 }

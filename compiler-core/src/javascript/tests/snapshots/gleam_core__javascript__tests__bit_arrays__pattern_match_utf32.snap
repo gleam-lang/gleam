@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 2182
 expression: "\npub fn go(x) {\n  let assert <<\"Hello\":utf32, _rest:bytes>> = x\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -18,29 +16,31 @@ const FILEPATH = "src/module.gleam";
 
 export function go(x) {
   if (
-    x.bitSize < 160 ||
-    x.byteAt(0) !== 0 ||
-    x.byteAt(1) !== 0 ||
-    x.byteAt(2) !== 0 ||
-    x.byteAt(3) !== 72 ||
-    x.byteAt(4) !== 0 ||
-    x.byteAt(5) !== 0 ||
-    x.byteAt(6) !== 0 ||
-    x.byteAt(7) !== 101 ||
-    x.byteAt(8) !== 0 ||
-    x.byteAt(9) !== 0 ||
-    x.byteAt(10) !== 0 ||
-    x.byteAt(11) !== 108 ||
-    x.byteAt(12) !== 0 ||
-    x.byteAt(13) !== 0 ||
-    x.byteAt(14) !== 0 ||
-    x.byteAt(15) !== 108 ||
-    x.byteAt(16) !== 0 ||
-    x.byteAt(17) !== 0 ||
-    x.byteAt(18) !== 0 ||
-    x.byteAt(19) !== 111 ||
-    (x.bitSize - 160) % 8 !== 0
+    x.bitSize >= 160 &&
+    x.byteAt(0) === 0 &&
+      x.byteAt(1) === 0 &&
+      x.byteAt(2) === 0 &&
+      x.byteAt(3) === 72 &&
+      x.byteAt(4) === 0 &&
+      x.byteAt(5) === 0 &&
+      x.byteAt(6) === 0 &&
+      x.byteAt(7) === 101 &&
+      x.byteAt(8) === 0 &&
+      x.byteAt(9) === 0 &&
+      x.byteAt(10) === 0 &&
+      x.byteAt(11) === 108 &&
+      x.byteAt(12) === 0 &&
+      x.byteAt(13) === 0 &&
+      x.byteAt(14) === 0 &&
+      x.byteAt(15) === 108 &&
+      x.byteAt(16) === 0 &&
+      x.byteAt(17) === 0 &&
+      x.byteAt(18) === 0 &&
+      x.byteAt(19) === 111 &&
+    (x.bitSize - 160) % 8 === 0
   ) {
+    
+  } else {
     throw makeError(
       "let_assert",
       FILEPATH,

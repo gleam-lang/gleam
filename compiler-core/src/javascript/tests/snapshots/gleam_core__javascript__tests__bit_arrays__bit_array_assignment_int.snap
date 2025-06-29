@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 1992
 expression: "\npub fn main() {\n let assert <<1 as a>> = <<1>>\n a\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -19,7 +17,10 @@ const FILEPATH = "src/module.gleam";
 
 export function main() {
   let $ = toBitArray([1]);
-  if ($.bitSize !== 8 || $.byteAt(0) !== 1) {
+  let a;
+  if ($.bitSize === 8 && $.byteAt(0) === 1) {
+    a = 1;
+  } else {
     throw makeError(
       "let_assert",
       FILEPATH,
@@ -30,6 +31,5 @@ export function main() {
       { value: $, start: 18, end: 47, pattern_start: 29, pattern_end: 39 }
     )
   }
-  let a = 1;
   return a;
 }

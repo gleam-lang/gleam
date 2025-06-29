@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
-assertion_line: 83
 expression: "pub fn go(x) { let assert 1 = x + 1 }"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn go(x) { let assert 1 = x + 1 }
@@ -14,7 +12,9 @@ const FILEPATH = "src/module.gleam";
 
 export function go(x) {
   let $ = x + 1;
-  if ($ !== 1) {
+  if ($ === 1) {
+    
+  } else {
     throw makeError(
       "let_assert",
       FILEPATH,

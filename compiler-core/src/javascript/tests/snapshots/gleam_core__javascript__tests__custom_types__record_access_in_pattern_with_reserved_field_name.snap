@@ -31,7 +31,8 @@ export class Thing extends $CustomType {
 
 export function main() {
   let a = new Thing(undefined);
-  let ctor = a.constructor$;
+  let ctor;
+  ctor = a.constructor$;
   let a$1 = a;
   if (a$1.constructor$ === ctor) {
     return undefined;

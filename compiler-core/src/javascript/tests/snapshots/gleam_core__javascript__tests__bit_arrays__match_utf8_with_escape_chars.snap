@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 275
 expression: "\npub fn go(x) {\n  let assert <<\"\\\"\\\\\\r\\n\\t\\f\\u{1f600}\">> = x\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -18,18 +16,20 @@ const FILEPATH = "src/module.gleam";
 
 export function go(x) {
   if (
-    x.bitSize !== 80 ||
-    x.byteAt(0) !== 34 ||
-    x.byteAt(1) !== 92 ||
-    x.byteAt(2) !== 13 ||
-    x.byteAt(3) !== 10 ||
-    x.byteAt(4) !== 9 ||
-    x.byteAt(5) !== 12 ||
-    x.byteAt(6) !== 240 ||
-    x.byteAt(7) !== 159 ||
-    x.byteAt(8) !== 152 ||
-    x.byteAt(9) !== 128
+    x.bitSize === 80 &&
+    x.byteAt(0) === 34 &&
+      x.byteAt(1) === 92 &&
+      x.byteAt(2) === 13 &&
+      x.byteAt(3) === 10 &&
+      x.byteAt(4) === 9 &&
+      x.byteAt(5) === 12 &&
+      x.byteAt(6) === 240 &&
+      x.byteAt(7) === 159 &&
+      x.byteAt(8) === 152 &&
+      x.byteAt(9) === 128
   ) {
+    
+  } else {
     throw makeError(
       "let_assert",
       FILEPATH,

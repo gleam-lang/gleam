@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
-assertion_line: 26
 expression: "\npub fn go(x) {\n  let assert #(a, #(b, c, 2) as t, _, 1) = x\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -17,7 +15,30 @@ import { makeError } from "../gleam.mjs";
 const FILEPATH = "src/module.gleam";
 
 export function go(x) {
-  if (x[3] !== 1 || x[1][2] !== 2) {
+  let a;
+  let t;
+  let b;
+  let c;
+  let $ = x[3];
+  if ($ === 1) {
+    let $1 = x[1][2];
+    if ($1 === 2) {
+      a = x[0];
+      t = x[1];
+      b = x[1][0];
+      c = x[1][1];
+    } else {
+      throw makeError(
+        "let_assert",
+        FILEPATH,
+        "my/mod",
+        3,
+        "go",
+        "Pattern match failed, no pattern matched the value.",
+        { value: x, start: 18, end: 60, pattern_start: 29, pattern_end: 56 }
+      )
+    }
+  } else {
     throw makeError(
       "let_assert",
       FILEPATH,
@@ -28,9 +49,5 @@ export function go(x) {
       { value: x, start: 18, end: 60, pattern_start: 29, pattern_end: 56 }
     )
   }
-  let a = x[0];
-  let t = x[1];
-  let b = x[1][0];
-  let c = x[1][1];
   return x;
 }

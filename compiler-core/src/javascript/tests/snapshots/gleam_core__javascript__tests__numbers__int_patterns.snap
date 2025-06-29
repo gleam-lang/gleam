@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-assertion_line: 146
 expression: "\npub fn go(x) {\n  let assert 4 = x\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -17,7 +15,9 @@ import { makeError } from "../gleam.mjs";
 const FILEPATH = "src/module.gleam";
 
 export function go(x) {
-  if (x !== 4) {
+  if (x === 4) {
+    
+  } else {
     throw makeError(
       "let_assert",
       FILEPATH,

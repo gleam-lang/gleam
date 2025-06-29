@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 286
 expression: "\npub fn go(x) {\n  let assert <<\"Gleam 👍\":utf8>> = x\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -18,18 +16,20 @@ const FILEPATH = "src/module.gleam";
 
 export function go(x) {
   if (
-    x.bitSize !== 80 ||
-    x.byteAt(0) !== 71 ||
-    x.byteAt(1) !== 108 ||
-    x.byteAt(2) !== 101 ||
-    x.byteAt(3) !== 97 ||
-    x.byteAt(4) !== 109 ||
-    x.byteAt(5) !== 32 ||
-    x.byteAt(6) !== 240 ||
-    x.byteAt(7) !== 159 ||
-    x.byteAt(8) !== 145 ||
-    x.byteAt(9) !== 141
+    x.bitSize === 80 &&
+    x.byteAt(0) === 71 &&
+      x.byteAt(1) === 108 &&
+      x.byteAt(2) === 101 &&
+      x.byteAt(3) === 97 &&
+      x.byteAt(4) === 109 &&
+      x.byteAt(5) === 32 &&
+      x.byteAt(6) === 240 &&
+      x.byteAt(7) === 159 &&
+      x.byteAt(8) === 145 &&
+      x.byteAt(9) === 141
   ) {
+    
+  } else {
     throw makeError(
       "let_assert",
       FILEPATH,

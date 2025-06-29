@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
-assertion_line: 287
 expression: "\ntype Wibble {\n    Wibble(Int)\n    Wobble(Int)\n}\n\npub fn go() {\n  let assert Wobble(n) = Wibble(1)\n  n\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -38,6 +36,7 @@ class Wobble extends $CustomType {
 
 export function go() {
   let $ = new Wibble(1);
+  let n;
   throw makeError(
     "let_assert",
     FILEPATH,
@@ -47,5 +46,5 @@ export function go() {
     "Pattern match failed, no pattern matched the value.",
     { value: $, start: 66, end: 98, pattern_start: 77, pattern_end: 86 }
   )
-  
+  return n;
 }

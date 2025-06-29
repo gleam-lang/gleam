@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 2020
 expression: "\npub fn main() {\n let assert <<3.14 as pi:float>> = <<3.14>>\n pi\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -19,7 +17,10 @@ const FILEPATH = "src/module.gleam";
 
 export function main() {
   let $ = toBitArray([sizedFloat(3.14, 64, true)]);
-  if ($.bitSize !== 64 || bitArraySliceToFloat($, 0, 64, true) !== 3.14) {
+  let pi;
+  if ($.bitSize === 64 && bitArraySliceToFloat($, 0, 64, true) === 3.14) {
+    pi = 3.14;
+  } else {
     throw makeError(
       "let_assert",
       FILEPATH,
@@ -30,6 +31,5 @@ export function main() {
       { value: $, start: 18, end: 60, pattern_start: 29, pattern_end: 49 }
     )
   }
-  let pi = 3.14;
   return pi;
 }

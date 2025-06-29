@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
-assertion_line: 179
 expression: "\npub fn main() {\n  let assert \"Game \" <> id = \"Game 1\"\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -18,7 +16,10 @@ const FILEPATH = "src/module.gleam";
 
 export function main() {
   let $ = "Game 1";
-  if (!$.startsWith("Game ")) {
+  let id;
+  if ($.startsWith("Game ")) {
+    id = $.slice(5);
+  } else {
     throw makeError(
       "let_assert",
       FILEPATH,
@@ -29,6 +30,5 @@ export function main() {
       { value: $, start: 19, end: 54, pattern_start: 30, pattern_end: 43 }
     )
   }
-  let id = $.slice(5);
   return $;
 }
