@@ -869,7 +869,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             return self.simple_variable_assignment(name, value);
         }
 
-        decision::let_(compiled_case, value, kind, self, pattern.location())
+        decision::let_(compiled_case, value, kind, self, pattern)
     }
 
     fn assert(&mut self, assert: &'a TypedAssert) -> Document<'a> {
