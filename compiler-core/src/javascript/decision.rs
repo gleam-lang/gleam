@@ -1,5 +1,5 @@
 use super::{
-    Error, INDENT, Output, bit_array_segment_int_value_to_bytes,
+    INDENT, bit_array_segment_int_value_to_bytes,
     expression::{self, Generator, Ordering, float, int},
 };
 use crate::{
@@ -35,11 +35,11 @@ pub fn case<'a>(
     clauses: &'a [TypedClause],
     subjects: &'a [TypedExpr],
     expression_generator: &mut Generator<'_, 'a>,
-) -> Output<'a> {
+) -> Document<'a> {
     let mut variables = Variables::new(expression_generator);
-    let assignments = variables.assign_case_subjects(compiled_case, subjects)?;
-    let decision = CasePrinter { clauses, variables }.decision(&compiled_case.tree)?;
-    Ok(docvec![assignments_to_doc(assignments), decision.into_doc()].force_break())
+    let assignments = variables.assign_case_subjects(compiled_case, subjects);
+    let decision = CasePrinter { clauses, variables }.decision(&compiled_case.tree);
+    docvec![assignments_to_doc(assignments), decision.into_doc()].force_break()
 }
 
 /// The generated code for a decision tree.
@@ -194,13 +194,13 @@ struct CasePrinter<'module, 'generator, 'a> {
 /// the decision tree of let expressions!
 ///
 impl<'a> CasePrinter<'_, '_, 'a> {
-    fn decision(&mut self, decision: &'a Decision) -> Result<CaseBody<'a>, Error> {
+    fn decision(&mut self, decision: &'a Decision) -> CaseBody<'a> {
         match decision {
             Decision::Fail => unreachable!("Invalid decision tree reached code generation"),
             Decision::Run { body } => {
                 let bindings = self.variables.bindings_doc(&body.bindings);
-                let body = self.body_expression(body.clause_index)?;
-                Ok(CaseBody::Statements(join_with_line(bindings, body)))
+                let body = self.body_expression(body.clause_index);
+                CaseBody::Statements(join_with_line(bindings, body))
             }
             Decision::Switch {
                 var,
@@ -216,7 +216,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         }
     }
 
-    fn body_expression(&mut self, clause_index: usize) -> Output<'a> {
+    fn body_expression(&mut self, clause_index: usize) -> Document<'a> {
         let body = &self
             .clauses
             .get(clause_index)
@@ -234,7 +234,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         choices: &'a [(RuntimeCheck, Box<Decision>)],
         fallback: &'a Decision,
         fallback_check: &'a FallbackCheck,
-    ) -> Result<CaseBody<'a>, Error> {
+    ) -> CaseBody<'a> {
         // If there's just a single choice we can just generate the code for
         // it: no need to do any checking, we know it must match!
         if choices.is_empty() {
@@ -272,15 +272,15 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             //   referenced by this check
             let (check_doc, body, mut segment_assignments) = self.inside_new_scope(|this| {
                 let segment_assignments = this.variables.bit_array_segment_assignments(check);
-                let check_doc =
-                    this.variables
-                        .runtime_check(var, check, CheckNegation::NotNegated)?;
+                let check_doc = this
+                    .variables
+                    .runtime_check(var, check, CheckNegation::NotNegated);
                 let body = this.decision(decision);
-                Ok((check_doc, body, segment_assignments))
-            })?;
+                (check_doc, body, segment_assignments)
+            });
             assignments.append(&mut segment_assignments);
 
-            let (check_doc, body) = match body? {
+            let (check_doc, body) = match body {
                 // If we have a statement like this:
                 // ```javascript
                 // if (x) {
@@ -389,7 +389,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             self.variables.record_check_assignments(var, check);
         }
 
-        let else_body = self.inside_new_scope(|this| this.decision(fallback))?;
+        let else_body = self.inside_new_scope(|this| this.decision(fallback));
         let document = if else_body.is_empty() {
             if_
         } else if let CaseBody::If {
@@ -411,14 +411,14 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             ])
         };
 
-        Ok(if assignments.is_empty() {
+        if assignments.is_empty() {
             document
         } else {
             CaseBody::Statements(join_with_line(
                 join(assignments, line()),
                 document.into_doc(),
             ))
-        })
+        }
     }
 
     fn inside_new_scope<A, F>(&mut self, run: F) -> A
@@ -446,7 +446,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         guard: usize,
         if_true: &'a Body,
         if_false: &'a Decision,
-    ) -> Result<CaseBody<'a>, Error> {
+    ) -> CaseBody<'a> {
         let guard = self
             .clauses
             .get(guard)
@@ -465,15 +465,15 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             .partition(|(variable, _)| guard_variables.contains(variable));
 
         let check_bindings = self.variables.bindings_ref_doc(&check_bindings);
-        let check = self.variables.expression_generator.guard(guard)?;
+        let check = self.variables.expression_generator.guard(guard);
         let if_true = self.inside_new_scope(|this| {
             // All the other bindings that are not needed by the guard check will
             // end up directly in the body of the if clause.
             let if_true_bindings = this.variables.bindings_ref_doc(&if_true_bindings);
-            let if_true_body = this.body_expression(if_true.clause_index)?;
-            Ok(join_with_line(if_true_bindings, if_true_body))
-        })?;
-        let if_false_body = self.inside_new_scope(|this| this.decision(if_false))?;
+            let if_true_body = this.body_expression(if_true.clause_index);
+            join_with_line(if_true_bindings, if_true_body)
+        });
+        let if_false_body = self.inside_new_scope(|this| this.decision(if_false));
 
         // We can now piece everything together into a case body!
         let if_ = if if_false_body.is_empty() {
@@ -490,11 +490,11 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             }
         };
 
-        Ok(if check_bindings.is_empty() {
+        if check_bindings.is_empty() {
             if_
         } else {
             CaseBody::Statements(join_with_line(check_bindings, if_.into_doc()))
-        })
+        }
     }
 }
 
@@ -508,22 +508,22 @@ pub fn let_<'a>(
     kind: &'a AssignmentKind<TypedExpr>,
     expression_generator: &mut Generator<'_, 'a>,
     pattern_location: SrcSpan,
-) -> Output<'a> {
+) -> Document<'a> {
     let scope_position = expression_generator.scope_position.clone();
     let mut variables = Variables::new(expression_generator);
-    let assignment = variables.assign_let_subject(compiled_case, subject)?;
+    let assignment = variables.assign_let_subject(compiled_case, subject);
     let assignment_name = assignment.name();
     let decision = LetPrinter::new(variables, kind, pattern_location, subject.location())
-        .decision(assignment_name.clone().to_doc(), &compiled_case.tree)?;
+        .decision(assignment_name.clone().to_doc(), &compiled_case.tree);
 
     let doc = docvec![assignments_to_doc(vec![assignment]), decision];
-    Ok(match scope_position {
+    match scope_position {
         expression::Position::NotTail(_ordering) => doc,
         expression::Position::Tail => docvec![doc, line(), "return ", assignment_name, ";"],
         expression::Position::Assign(variable) => {
             docvec![doc, line(), variable, " = ", assignment_name, ";"]
         }
-    })
+    }
 }
 
 struct LetPrinter<'generator, 'module, 'a> {
@@ -577,7 +577,7 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
         }
     }
 
-    fn decision(&mut self, subject: Document<'a>, decision: &'a Decision) -> Output<'a> {
+    fn decision(&mut self, subject: Document<'a>, decision: &'a Decision) -> Document<'a> {
         let Some(ChecksAndBindings { checks, bindings }) =
             self.positive_checks_and_bindings(decision)
         else {
@@ -606,10 +606,11 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
                     // those altogether here.
                     RuntimeCheck::Tuple { .. } => None,
                     RuntimeCheck::Variant { .. } if variable.type_.is_nil() => None,
-                    _ => self
-                        .variables
-                        .runtime_check(variable, check, CheckNegation::Negated)
-                        .ok(),
+                    _ => Some(self.variables.runtime_check(
+                        variable,
+                        check,
+                        CheckNegation::Negated,
+                    )),
                 }
             });
 
@@ -622,7 +623,7 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
         let doc = if checks.is_empty() {
             nil()
         } else {
-            let exception = self.assignment_no_match(subject)?;
+            let exception = self.assignment_no_match(subject);
             docvec!["if (", checks, ") ", break_block(exception)]
         };
 
@@ -630,10 +631,10 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
             .iter()
             .map(|(name, value)| self.variables.body_binding_doc(name, value));
         let body_bindings = join(body_bindings, line());
-        Ok(join_with_line(doc, body_bindings))
+        join_with_line(doc, body_bindings)
     }
 
-    fn assignment_no_match(&mut self, subject: Document<'a>) -> Output<'a> {
+    fn assignment_no_match(&mut self, subject: Document<'a>) -> Document<'a> {
         let AssignmentKind::Assert {
             location, message, ..
         } = self.kind
@@ -644,11 +645,10 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
         let generator = &mut self.variables.expression_generator;
         let message = match message {
             None => string("Pattern match failed, no pattern matched the value."),
-            Some(message) => generator.not_in_tail_position(Some(Ordering::Strict), |this| {
-                this.wrap_expression(message)
-            })?,
+            Some(message) => generator
+                .not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(message)),
         };
-        Ok(generator.throw_error(
+        generator.throw_error(
             "let_assert",
             &message,
             *location,
@@ -659,7 +659,7 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
                 ("pattern_start", self.pattern_location.start.to_doc()),
                 ("pattern_end", self.pattern_location.end.to_doc()),
             ],
-        ))
+        )
     }
 
     /// A let decision tree has a very precise structure since it's made of a
@@ -947,11 +947,11 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         &mut self,
         compiled_case: &'a CompiledCase,
         subjects: &'a [TypedExpr],
-    ) -> Result<Vec<SubjectAssignment<'a>>, Error> {
-        let assignments: Vec<_> = subjects
+    ) -> Vec<SubjectAssignment<'a>> {
+        let assignments = subjects
             .iter()
             .map(|subject| assign_subject(self.expression_generator, subject, Ordering::Strict))
-            .try_collect()?;
+            .collect_vec();
 
         for (variable, assignment) in compiled_case
             .subject_variables
@@ -964,7 +964,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             self.bind(assignment.name(), variable);
         }
 
-        Ok(assignments)
+        assignments
     }
 
     /// Give a unique name to the subject of a let expression (if it needs one
@@ -975,15 +975,15 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         &mut self,
         compiled_case: &'a CompiledCase,
         subject: &'a TypedExpr,
-    ) -> Result<SubjectAssignment<'a>, Error> {
+    ) -> SubjectAssignment<'a> {
         let variable = compiled_case
             .subject_variables
             .first()
             .expect("decision tree with no subjects");
-        let assignment = assign_subject(self.expression_generator, subject, Ordering::Loose)?;
+        let assignment = assign_subject(self.expression_generator, subject, Ordering::Loose);
         self.set_value(variable, assignment.name());
         self.bind(assignment.name(), variable);
-        Ok(assignment)
+        assignment
     }
 
     fn local_var(&mut self, name: &EcoString) -> EcoString {
@@ -1124,7 +1124,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         variable: &Variable,
         runtime_check: &'a RuntimeCheck,
         negation: CheckNegation,
-    ) -> Output<'a> {
+    ) -> Document<'a> {
         let value = self.get_value(variable);
 
         let equality = if negation.is_negated() {
@@ -1133,7 +1133,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             " === "
         };
 
-        let result = match runtime_check {
+        match runtime_check {
             RuntimeCheck::String { value: expected } => docvec![value, equality, string(expected)],
             RuntimeCheck::Float { value: expected } => docvec![value, equality, float(expected)],
             RuntimeCheck::Int { value: expected } => docvec![value, equality, int(expected)],
@@ -1230,7 +1230,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                             expected.clone(),
                             read_action,
                             negation,
-                        )?,
+                        ),
                     BitArrayMatchedValue::Variable(..)
                     | BitArrayMatchedValue::Discard(..)
                     | BitArrayMatchedValue::Assign { .. } => {
@@ -1296,9 +1296,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                     docvec![value, " instanceof $Empty"]
                 }
             }
-        };
-
-        Ok(result)
+        }
     }
 
     /// Turns a read action into a document that can be used to extract the
@@ -1602,7 +1600,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         literal_int: BigInt,
         read_action: &ReadAction,
         check_negation: CheckNegation,
-    ) -> Output<'a> {
+    ) -> Document<'a> {
         let ReadAction {
             from: start,
             size,
@@ -1622,17 +1620,17 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             // whole number of bytes then we can optimise this by checking that
             // all the bytes starting at the given offset match the int bytes.
             let mut checks = vec![];
-            for byte in bit_array_segment_int_value_to_bytes(literal_int, size * 8, *endianness)? {
+            for byte in bit_array_segment_int_value_to_bytes(literal_int, size * 8, *endianness) {
                 let byte_access = docvec![bit_array.clone(), ".byteAt(", from_byte.clone(), ")"];
                 checks.push(docvec![byte_access, equality, byte]);
                 from_byte += 1;
             }
 
-            Ok(if check_negation.is_negated() {
+            if check_negation.is_negated() {
                 join(checks, break_(" ||", " || ")).group()
             } else {
                 join(checks, break_(" &&", " && ")).nest(INDENT).group()
-            })
+            }
         } else {
             // Otherwise we have to take an int slice out of the bit array and
             // check it matches the expected value.
@@ -1645,7 +1643,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                 (_, _) => docvec![start_doc.clone(), " + ", self.read_size_to_doc(size)],
             };
             let check = self.bit_array_slice_to_int(bit_array, start_doc, end, endianness, *signed);
-            Ok(docvec![check, equality, literal_int])
+            docvec![check, equality, literal_int]
         }
     }
 
@@ -1884,7 +1882,7 @@ fn assign_subject<'a>(
     expression_generator: &mut Generator<'_, 'a>,
     subject: &'a TypedExpr,
     ordering: Ordering,
-) -> Result<SubjectAssignment<'a>, Error> {
+) -> SubjectAssignment<'a> {
     static ASSIGNMENT_VAR_ECO_STR: OnceLock<EcoString> = OnceLock::new();
 
     match subject {
@@ -1893,9 +1891,9 @@ fn assign_subject<'a>(
         // performing computation or side effects multiple times.
         TypedExpr::Var {
             name, constructor, ..
-        } if constructor.is_local_variable() => Ok(SubjectAssignment::AlreadyAVariable {
+        } if constructor.is_local_variable() => SubjectAssignment::AlreadyAVariable {
             name: expression_generator.local_var(name),
-        }),
+        },
 
         // If it's not a variable we need to assign it to a variable
         // to avoid rendering the subject expression multiple times
@@ -1903,9 +1901,9 @@ fn assign_subject<'a>(
             let name = expression_generator
                 .next_local_var(ASSIGNMENT_VAR_ECO_STR.get_or_init(|| ASSIGNMENT_VAR.into()));
             let value = expression_generator
-                .not_in_tail_position(Some(ordering), |this| this.wrap_expression(subject))?;
+                .not_in_tail_position(Some(ordering), |this| this.wrap_expression(subject));
 
-            Ok(SubjectAssignment::BindToVariable { value, name })
+            SubjectAssignment::BindToVariable { value, name }
         }
     }
 }

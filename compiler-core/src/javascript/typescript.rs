@@ -27,7 +27,7 @@ use ecow::{EcoString, eco_format};
 use itertools::Itertools;
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
-use super::{INDENT, Output, import::Imports, join, line, lines, wrap_args};
+use super::{INDENT, import::Imports, join, line, lines, wrap_args};
 
 /// When rendering a type variable to an TypeScript type spec we need all type
 /// variables with the same id to end up with the same name in the generated
@@ -191,7 +191,7 @@ impl<'a> TypeScriptGenerator<'a> {
         }
     }
 
-    pub fn compile(&mut self) -> Output<'a> {
+    pub fn compile(&mut self) -> Document<'a> {
         let mut imports = self.collect_imports();
         let statements = self
             .module
@@ -200,8 +200,7 @@ impl<'a> TypeScriptGenerator<'a> {
             .flat_map(|definition| self.definition(definition));
 
         // Two lines between each statement
-        let mut statements: Vec<_> =
-            Itertools::intersperse(statements, Ok(lines(2))).try_collect()?;
+        let mut statements = Itertools::intersperse(statements, lines(2)).collect_vec();
 
         // Put it all together
 
@@ -211,19 +210,19 @@ impl<'a> TypeScriptGenerator<'a> {
         }
 
         if imports.is_empty() && statements.is_empty() {
-            Ok(docvec!["export {}", line()])
+            docvec!["export {}", line()]
         } else if imports.is_empty() {
             statements.push(line());
-            Ok(statements.to_doc())
+            statements.to_doc()
         } else if statements.is_empty() {
-            Ok(imports.into_doc(JavaScriptCodegenTarget::TypeScriptDeclarations))
+            imports.into_doc(JavaScriptCodegenTarget::TypeScriptDeclarations)
         } else {
-            Ok(docvec![
+            docvec![
                 imports.into_doc(JavaScriptCodegenTarget::TypeScriptDeclarations),
                 line(),
                 statements,
                 line()
-            ])
+            ]
         }
     }
 
@@ -364,7 +363,7 @@ impl<'a> TypeScriptGenerator<'a> {
         }
     }
 
-    fn definition(&mut self, definition: &'a TypedDefinition) -> Vec<Output<'a>> {
+    fn definition(&mut self, definition: &'a TypedDefinition) -> Vec<Document<'a>> {
         match definition {
             Definition::TypeAlias(TypeAlias {
                 alias,
@@ -412,14 +411,14 @@ impl<'a> TypeScriptGenerator<'a> {
         }
     }
 
-    fn type_alias(&mut self, alias: &str, type_: &Type) -> Output<'a> {
-        Ok(docvec![
+    fn type_alias(&mut self, alias: &str, type_: &Type) -> Document<'a> {
+        docvec![
             "export type ",
             ts_safe_type_name(alias.to_string()),
             " = ",
             self.print_type(type_),
             ";"
-        ])
+        ]
     }
 
     /// Converts a Gleam custom type definition into the TypeScript equivalent.
@@ -437,14 +436,14 @@ impl<'a> TypeScriptGenerator<'a> {
         constructors: &'a [TypedRecordConstructor],
         opaque: bool,
         publicity: &Publicity,
-    ) -> Vec<Output<'a>> {
+    ) -> Vec<Document<'a>> {
         // Constructors for opaque and private types are not exported
         let export_constructors = !opaque && publicity.is_importable();
 
-        let mut definitions: Vec<Output<'_>> = constructors
+        let mut definitions = constructors
             .iter()
-            .map(|constructor| Ok(self.record_definition(constructor, export_constructors)))
-            .collect();
+            .map(|constructor| self.record_definition(constructor, export_constructors))
+            .collect_vec();
 
         let definition = if constructors.is_empty() {
             "any".to_doc()
@@ -458,7 +457,7 @@ impl<'a> TypeScriptGenerator<'a> {
             join(constructors, break_("| ", " | "))
         };
 
-        definitions.push(Ok(docvec![
+        definitions.push(docvec![
             if publicity.is_importable() {
                 "export ".to_doc()
             } else {
@@ -469,7 +468,7 @@ impl<'a> TypeScriptGenerator<'a> {
             " = ",
             definition,
             ";",
-        ]));
+        ]);
 
         definitions
     }
@@ -538,14 +537,14 @@ impl<'a> TypeScriptGenerator<'a> {
         docvec![head, class_body, line(), "}"]
     }
 
-    fn module_constant(&mut self, name: &'a EcoString, value: &'a TypedConstant) -> Output<'a> {
-        Ok(docvec![
+    fn module_constant(&mut self, name: &'a EcoString, value: &'a TypedConstant) -> Document<'a> {
+        docvec![
             "export const ",
             super::maybe_escape_identifier(name),
             ": ",
             self.print_type(&value.type_()),
             ";",
-        ])
+        ]
     }
 
     fn module_function(
@@ -553,7 +552,7 @@ impl<'a> TypeScriptGenerator<'a> {
         name: &'a EcoString,
         args: &'a [TypedArg],
         return_type: &'a Arc<Type>,
-    ) -> Output<'a> {
+    ) -> Document<'a> {
         let generic_usages = collect_generic_usages(
             HashMap::new(),
             std::iter::once(return_type).chain(args.iter().map(|a| &a.type_)),
@@ -565,7 +564,7 @@ impl<'a> TypeScriptGenerator<'a> {
             .map(|(id, _use_count)| id_to_type_var(*id))
             .collect();
 
-        Ok(docvec![
+        docvec![
             "export function ",
             super::maybe_escape_identifier(name),
             if generic_names.is_empty() {
@@ -595,7 +594,7 @@ impl<'a> TypeScriptGenerator<'a> {
             ": ",
             self.print_type_with_generic_usages(return_type, &generic_usages),
             ";",
-        ])
+        ]
     }
 
     /// Converts a Gleam type into a TypeScript type string
