@@ -3,7 +3,7 @@ use super::{
     expression::{self, Generator, Ordering, float, int},
 };
 use crate::{
-    ast::{AssignmentKind, Endianness, SrcSpan, TypedClause, TypedExpr},
+    ast::{AssignmentKind, Endianness, SrcSpan, TypedClause, TypedExpr, TypedPattern},
     docvec,
     exhaustiveness::{
         BitArrayMatchedValue, BitArrayTest, Body, BoundValue, CompiledCase, Decision,
@@ -15,7 +15,7 @@ use crate::{
         expression::{eco_string_int, string},
         maybe_escape_property,
     },
-    pretty::{Document, Documentable, break_, join, line, nil},
+    pretty::{Document, Documentable, break_, concat, join, line, nil},
     strings::{
         convert_string_escape_chars, length_utf16, string_to_utf16_bytes, string_to_utf32_bytes,
     },
@@ -23,10 +23,7 @@ use crate::{
 use ecow::{EcoString, eco_format};
 use itertools::Itertools;
 use num_bigint::BigInt;
-use std::{
-    collections::{HashMap, VecDeque},
-    sync::OnceLock,
-};
+use std::{collections::HashMap, sync::OnceLock};
 
 pub static ASSIGNMENT_VAR: &str = "$";
 
@@ -36,9 +33,13 @@ pub fn case<'a>(
     subjects: &'a [TypedExpr],
     expression_generator: &mut Generator<'_, 'a>,
 ) -> Document<'a> {
-    let mut variables = Variables::new(expression_generator);
+    let mut variables = Variables::new(expression_generator, false);
     let assignments = variables.assign_case_subjects(compiled_case, subjects);
-    let decision = CasePrinter { clauses, variables }.decision(&compiled_case.tree);
+    let decision = CasePrinter {
+        variables,
+        kind: DecisionKind::Case { clauses },
+    }
+    .decision(&compiled_case.tree);
     docvec![assignments_to_doc(assignments), decision.into_doc()].force_break()
 }
 
@@ -128,8 +129,20 @@ impl<'a> CaseBody<'a> {
 }
 
 struct CasePrinter<'module, 'generator, 'a> {
-    clauses: &'a [TypedClause],
     variables: Variables<'generator, 'module, 'a>,
+    kind: DecisionKind<'a>,
+}
+
+enum DecisionKind<'a> {
+    Case {
+        clauses: &'a [TypedClause],
+    },
+    LetAssert {
+        kind: &'a AssignmentKind<TypedExpr>,
+        subject_location: SrcSpan,
+        pattern_location: SrcSpan,
+        subject: EcoString,
+    },
 }
 
 /// Code generation for decision trees can look a bit daunting at a first glance
@@ -196,7 +209,24 @@ struct CasePrinter<'module, 'generator, 'a> {
 impl<'a> CasePrinter<'_, '_, 'a> {
     fn decision(&mut self, decision: &'a Decision) -> CaseBody<'a> {
         match decision {
-            Decision::Fail => unreachable!("Invalid decision tree reached code generation"),
+            Decision::Fail => {
+                if let DecisionKind::LetAssert {
+                    kind,
+                    subject_location,
+                    pattern_location,
+                    subject,
+                } = &self.kind
+                {
+                    CaseBody::Statements(self.assignment_no_match(
+                        subject.to_doc(),
+                        kind,
+                        *subject_location,
+                        *pattern_location,
+                    ))
+                } else {
+                    unreachable!("Invalid decision tree reached code generation")
+                }
+            }
             Decision::Run { body } => {
                 let bindings = self.variables.bindings_doc(&body.bindings);
                 let body = self.body_expression(body.clause_index);
@@ -217,8 +247,11 @@ impl<'a> CasePrinter<'_, '_, 'a> {
     }
 
     fn body_expression(&mut self, clause_index: usize) -> Document<'a> {
-        let body = &self
-            .clauses
+        let DecisionKind::Case { clauses } = &self.kind else {
+            return nil();
+        };
+
+        let body = &clauses
             .get(clause_index)
             .expect("invalid clause index")
             .then;
@@ -272,9 +305,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             //   referenced by this check
             let (check_doc, body, mut segment_assignments) = self.inside_new_scope(|this| {
                 let segment_assignments = this.variables.bit_array_segment_assignments(check);
-                let check_doc = this
-                    .variables
-                    .runtime_check(var, check, CheckNegation::NotNegated);
+                let check_doc = this.variables.runtime_check(var, check);
                 let body = this.decision(decision);
                 (check_doc, body, segment_assignments)
             });
@@ -447,8 +478,11 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         if_true: &'a Body,
         if_false: &'a Decision,
     ) -> CaseBody<'a> {
-        let guard = self
-            .clauses
+        let DecisionKind::Case { clauses } = &self.kind else {
+            unreachable!("Guards cannot appear in let assert decision trees")
+        };
+
+        let guard = clauses
             .get(guard)
             .expect("invalid clause index")
             .guard
@@ -496,148 +530,17 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             CaseBody::Statements(join_with_line(check_bindings, if_.into_doc()))
         }
     }
-}
 
-/// Prints the code for a let assignment (it could either be a let assert or
-/// just a let, either cases are handled correctly by the decision
-/// tree!)
-///
-pub fn let_<'a>(
-    compiled_case: &'a CompiledCase,
-    subject: &'a TypedExpr,
-    kind: &'a AssignmentKind<TypedExpr>,
-    expression_generator: &mut Generator<'_, 'a>,
-    pattern_location: SrcSpan,
-) -> Document<'a> {
-    let scope_position = expression_generator.scope_position.clone();
-    let mut variables = Variables::new(expression_generator);
-    let assignment = variables.assign_let_subject(compiled_case, subject);
-    let assignment_name = assignment.name();
-    let decision = LetPrinter::new(variables, kind, pattern_location, subject.location())
-        .decision(assignment_name.clone().to_doc(), &compiled_case.tree);
-
-    let doc = docvec![assignments_to_doc(vec![assignment]), decision];
-    match scope_position {
-        expression::Position::NotTail(_ordering) => doc,
-        expression::Position::Tail => docvec![doc, line(), "return ", assignment_name, ";"],
-        expression::Position::Assign(variable) => {
-            docvec![doc, line(), variable, " = ", assignment_name, ";"]
-        }
-    }
-}
-
-struct LetPrinter<'generator, 'module, 'a> {
-    variables: Variables<'generator, 'module, 'a>,
-    kind: &'a AssignmentKind<TypedExpr>,
-    // If the let assert is always going to fail it is redundant and we can
-    // directly generate an exception instead of first performing some checks
-    // that we know are going to match.
-    is_redundant: bool,
-    pattern_location: SrcSpan,
-    subject_location: SrcSpan,
-}
-
-/// Generating code for a let (or let assert) assignment is quite different from
-/// case expressions. A lot of code can be shared between the two but the
-/// generated `if-else` code will look a lot different.
-///
-/// A let is always guaranteed by the type system to succeed, and
-/// we don't want to generate any redundant checks for those. At the same time
-/// we want to turn a let-assert into a single if statement that looks like this:
-///
-/// ```gleam
-/// let assert Ok(1) = result
-/// ```
-///
-/// ```js
-/// if (!result.isOk() || result[0] !== 1) {
-///   // throw exception
-/// }
-///
-/// // keep going here...
-/// ```
-///
-/// So we have to throw an exception if any of the checks that we need to perform
-/// would fail. Otherwise the let assert is successfull and we can get a hold of
-/// the variables that were bound in the pattern.
-///
-impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
-    fn new(
-        variables: Variables<'generator, 'module, 'a>,
+    fn assignment_no_match(
+        &mut self,
+        subject: Document<'a>,
         kind: &'a AssignmentKind<TypedExpr>,
-        pattern_location: SrcSpan,
         subject_location: SrcSpan,
-    ) -> Self {
-        Self {
-            variables,
-            kind,
-            is_redundant: true,
-            pattern_location,
-            subject_location,
-        }
-    }
-
-    fn decision(&mut self, subject: Document<'a>, decision: &'a Decision) -> Document<'a> {
-        let Some(ChecksAndBindings { checks, bindings }) =
-            self.positive_checks_and_bindings(decision)
-        else {
-            // In case we never reach a body, we know that this let assert will
-            // always throw an exception!
-            self.variables.expression_generator.let_assert_always_panics = true;
-            return self.assignment_no_match(subject);
-        };
-
-        for (variable, check) in checks.iter() {
-            self.variables.record_check_assignments(variable, check);
-        }
-
-        let checks = if self.is_redundant {
-            nil()
-        } else {
-            let checks = checks.iter().filter_map(|(variable, check)| {
-                // Just like with a case expression, we still need to keep track
-                // of all the variables introduced by successful checks.
-                self.variables.record_check_assignments(variable, check);
-                // We then generate a negated version of the runtime check: if
-                // any of these evaluates to false we know we can throw an
-                // exception.
-                match check {
-                    // We never generate runtime checks for tuples, so we skip
-                    // those altogether here.
-                    RuntimeCheck::Tuple { .. } => None,
-                    RuntimeCheck::Variant { .. } if variable.type_.is_nil() => None,
-                    _ => Some(self.variables.runtime_check(
-                        variable,
-                        check,
-                        CheckNegation::Negated,
-                    )),
-                }
-            });
-
-            docvec![break_("", ""), join(checks, break_(" ||", " || "))]
-                .nest(INDENT)
-                .append(break_("", ""))
-                .group()
-        };
-
-        let doc = if checks.is_empty() {
-            nil()
-        } else {
-            let exception = self.assignment_no_match(subject);
-            docvec!["if (", checks, ") ", break_block(exception)]
-        };
-
-        let body_bindings = bindings
-            .iter()
-            .map(|(name, value)| self.variables.body_binding_doc(name, value));
-        let body_bindings = join(body_bindings, line());
-        join_with_line(doc, body_bindings)
-    }
-
-    fn assignment_no_match(&mut self, subject: Document<'a>) -> Document<'a> {
+        pattern_location: SrcSpan,
+    ) -> Document<'a> {
         let AssignmentKind::Assert {
             location, message, ..
-        } = self.kind
+        } = kind
         else {
             unreachable!("inexhaustive let made it to code generation");
         };
@@ -655,203 +558,60 @@ impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
             [
                 ("value", subject),
                 ("start", location.start.to_doc()),
-                ("end", self.subject_location.end.to_doc()),
-                ("pattern_start", self.pattern_location.start.to_doc()),
-                ("pattern_end", self.pattern_location.end.to_doc()),
+                ("end", subject_location.end.to_doc()),
+                ("pattern_start", pattern_location.start.to_doc()),
+                ("pattern_end", pattern_location.end.to_doc()),
             ],
         )
     }
-
-    /// A let decision tree has a very precise structure since it's made of a
-    /// single pattern. It will always be a very narrow tree that has a singe
-    /// success node with a series of checks leading down to it. If any of those
-    /// checks fails it immediately leads to a `Fail` node that has to result
-    /// in an exception. For example:
-    ///
-    /// ```gleam
-    /// let assert [1, 2, ..] = list
-    /// ```
-    ///
-    /// Will have to check that the first item is `1` and the second one is `2`,
-    /// if any of those checks fail the entire assignment fails.
-    ///
-    /// So we can traverse such a decision tree and collect the sequence of checks
-    /// that need to succeed in order for the assignment to succeed. We also return
-    /// all the bindings that we discover in the final `Run` block so they can be
-    /// used by later code generation steps without having to traverse the whole
-    /// decision tree once again!
-    ///
-    /// If there's no `Run` node it means that this pattern will _always_ fail
-    /// and there's no useful data we could ever return.
-    /// This could happen due to variant inference (e.g. `let assert Wibble = Wobble`),
-    /// in that case the assert is redundant.
-    ///
-    fn positive_checks_and_bindings(
-        &mut self,
-        decision: &'a Decision,
-    ) -> Option<ChecksAndBindings<'a>> {
-        let ChecksAndBindings {
-            mut checks,
-            bindings,
-        } = self.checks_and_bindings_loop(decision)?;
-
-        // Now we try and reduce the number of size checks that bit array patterns
-        // need to perform. In particular if all size checks do not depend on any
-        // previous segment then we can remove all the size checks except the last
-        // one, as it implies all the other ones!
-
-        // First, we create a map from variable IDs to information about the
-        // size check we need to perform, as different bit array variables must
-        // still be checked separately.
-        let mut size_checks = HashMap::new();
-        // Since we are removing some checks, the check list will get shorter,
-        // shifting all the indices down. This variable keeps track of the current
-        // offset so we can correctly calculate the new index of each check.
-        let mut index_offset = 0;
-
-        for (index, (variable, check)) in checks.iter().enumerate() {
-            if !check.referenced_segment_patterns().is_empty() {
-                // If any of the checks does reference a previous segment then
-                // it's not safe to remove intermediate checks! In that case we
-                // do not try and perform any optimisation and return all the
-                // checks as they are.
-                return Some(ChecksAndBindings { checks, bindings });
-            }
-
-            if let RuntimeCheck::BitArray {
-                test: BitArrayTest::Size(_),
-            } = check
-            {
-                match size_checks.get_mut(&variable.id) {
-                    // If this is the first occurrence of a size check for this
-                    // variable, we record its position as well as the other
-                    // information.
-                    None => {
-                        _ = size_checks.insert(
-                            variable.id,
-                            SizeCheck {
-                                first_occurrence: index - index_offset,
-                                variable: variable.clone(),
-                                check,
-                            },
-                        )
-                    }
-                    // If another size check has already appeared, we simply replace
-                    // the check itself, as the later one is a more restrictive check.
-                    Some(size_check) => {
-                        size_check.check = *check;
-                        // We also increment the offset as the previous size check will
-                        // be removed, further offsetting any checks that come after this.
-                        index_offset += 1;
-                    }
-                }
-            }
-        }
-
-        if size_checks.is_empty() {
-            // If there's no size test at all, then there's no meaningful optimisation
-            // we can apply!
-            return Some(ChecksAndBindings { checks, bindings });
-        };
-
-        checks.retain(|(_variable, check)| {
-            if let RuntimeCheck::BitArray {
-                test: BitArrayTest::Size(_),
-            } = check
-            {
-                false
-            } else {
-                true
-            }
-        });
-
-        let mut size_checks = size_checks.into_values().collect_vec();
-        // We must insert the size checks in the order they appear, to ensure the
-        // correct ordering of the final checks.
-        size_checks.sort_by_key(|check| check.first_occurrence);
-
-        for size_check in size_checks {
-            checks.insert(
-                size_check.first_occurrence,
-                (size_check.variable, size_check.check),
-            );
-        }
-
-        Some(ChecksAndBindings { checks, bindings })
-    }
-
-    fn checks_and_bindings_loop(
-        &mut self,
-        decision: &'a Decision,
-    ) -> Option<ChecksAndBindings<'a>> {
-        match decision {
-            Decision::Run { body, .. } => Some(ChecksAndBindings::new(&body.bindings)),
-            Decision::Guard { .. } => unreachable!("guard in let assert decision tree"),
-            Decision::Fail => {
-                // If the check could fail it means that the entire let is not
-                // redundant!
-                self.is_redundant = false;
-                None
-            }
-            Decision::Switch {
-                var,
-                choices,
-                fallback,
-                fallback_check,
-            } => {
-                let mut result = None;
-
-                // We go over all the decision to record all the bindings and
-                // see if we can get to a failing node. We will only keep the
-                // results coming from the positive path!
-                for (check, decision) in choices {
-                    if let Some(mut checks) = self.checks_and_bindings_loop(decision) {
-                        checks.add_check(var.clone(), check);
-                        result = Some(checks);
-                    };
-                }
-
-                // Important not to forget the fallback check, that's a path we
-                // might have to go down to as well!
-                if let Some(mut checks) = self.checks_and_bindings_loop(fallback) {
-                    if let FallbackCheck::RuntimeCheck { check } = fallback_check {
-                        checks.add_check(var.clone(), check);
-                        result = Some(checks);
-                    };
-                };
-
-                result
-            }
-        }
-    }
 }
 
-#[derive(Debug)]
-struct SizeCheck<'a> {
-    first_occurrence: usize,
-    variable: Variable,
-    check: &'a RuntimeCheck,
-}
+pub fn let_<'a>(
+    compiled_case: &'a CompiledCase,
+    subject: &'a TypedExpr,
+    kind: &'a AssignmentKind<TypedExpr>,
+    expression_generator: &mut Generator<'_, 'a>,
+    pattern: &'a TypedPattern,
+) -> Document<'a> {
+    let _ = pattern;
+    let scope_position = expression_generator.scope_position.clone();
+    let mut variables = Variables::new(expression_generator, true);
 
-/// The result we get from inspecting a `let`'s decision tree: it contains all
-/// the checks that lead down to the only possible successfull `Body` node and
-/// the bindings found inside it.
-///
-struct ChecksAndBindings<'a> {
-    checks: VecDeque<(Variable, &'a RuntimeCheck)>,
-    bindings: &'a Vec<(EcoString, BoundValue)>,
-}
+    let assignment = variables.assign_let_subject(compiled_case, subject);
+    let assignment_name = assignment.name();
 
-impl<'a> ChecksAndBindings<'a> {
-    fn new(bindings: &'a Vec<(EcoString, BoundValue)>) -> Self {
-        Self {
-            checks: VecDeque::new(),
-            bindings,
-        }
+    let decision = CasePrinter {
+        variables,
+        kind: DecisionKind::LetAssert {
+            kind,
+            subject_location: subject.location(),
+            pattern_location: pattern.location(),
+            subject: assignment_name.clone(),
+        },
     }
+    .decision(&compiled_case.tree);
 
-    fn add_check(&mut self, variable: Variable, check: &'a RuntimeCheck) {
-        self.checks.push_front((variable, check));
+    let beginning_assignments = pattern.bound_variables().into_iter().map(|variable| {
+        docvec![
+            "let ",
+            expression_generator.local_var(&variable),
+            ";",
+            line()
+        ]
+    });
+
+    let doc = docvec![
+        assignments_to_doc(vec![assignment]),
+        concat(beginning_assignments),
+        decision.into_doc()
+    ];
+
+    match scope_position {
+        expression::Position::NotTail(_ordering) => doc,
+        expression::Position::Tail => docvec![doc, line(), "return ", assignment_name, ";"],
+        expression::Position::Assign(variable) => {
+            docvec![doc, line(), variable, " = ", assignment_name, ";"]
+        }
     }
 }
 
@@ -861,6 +621,7 @@ impl<'a> ChecksAndBindings<'a> {
 ///
 struct Variables<'generator, 'module, 'a> {
     expression_generator: &'generator mut Generator<'module, 'a>,
+    use_reassignment: bool,
 
     /// All the pattern variables will be assigned a specific value: being bound
     /// to a constructor field, tuple element and so on. Pattern variables never
@@ -930,9 +691,13 @@ struct Variables<'generator, 'module, 'a> {
 }
 
 impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
-    fn new(expression_generator: &'generator mut Generator<'module, 'a>) -> Self {
+    fn new(
+        expression_generator: &'generator mut Generator<'module, 'a>,
+        use_reassignment: bool,
+    ) -> Self {
         Variables {
             expression_generator,
+            use_reassignment,
             variable_values: HashMap::new(),
             scoped_variable_names: HashMap::new(),
             segment_values: HashMap::new(),
@@ -1113,7 +878,12 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                 .get_segment_value(variable_name)
                 .unwrap_or_else(|| self.read_action_to_doc(bit_array, read_action)),
         };
-        let_doc(local_variable_name.clone(), assigned_value)
+
+        if self.use_reassignment {
+            reassignment_doc(local_variable_name.clone(), assigned_value)
+        } else {
+            let_doc(local_variable_name.clone(), assigned_value)
+        }
     }
 
     /// Generates the document to perform a (possibly negated) runtime check on
@@ -1123,28 +893,17 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         &mut self,
         variable: &Variable,
         runtime_check: &'a RuntimeCheck,
-        negation: CheckNegation,
     ) -> Document<'a> {
         let value = self.get_value(variable);
 
-        let equality = if negation.is_negated() {
-            " !== "
-        } else {
-            " === "
-        };
+        let equality = " === ";
 
         match runtime_check {
             RuntimeCheck::String { value: expected } => docvec![value, equality, string(expected)],
             RuntimeCheck::Float { value: expected } => docvec![value, equality, float(expected)],
             RuntimeCheck::Int { value: expected } => docvec![value, equality, int(expected)],
             RuntimeCheck::StringPrefix { prefix, .. } => {
-                let negation = if negation.is_negated() {
-                    "!".to_doc()
-                } else {
-                    nil()
-                };
-
-                docvec![negation, value, ".startsWith(", string(prefix), ")"]
+                docvec![value, ".startsWith(", string(prefix), ")"]
             }
 
             RuntimeCheck::BitArray { test } => match test {
@@ -1161,11 +920,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                 }
 
                 BitArrayTest::VariableIsNotNegative { variable } => {
-                    if negation.is_negated() {
-                        docvec![self.local_var(variable.name()), " < 0"]
-                    } else {
-                        docvec![self.local_var(variable.name()), " >= 0"]
-                    }
+                    docvec![self.local_var(variable.name()), " >= 0"]
                 }
 
                 BitArrayTest::SegmentIsFiniteFloat {
@@ -1187,18 +942,13 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                     };
                     let check = self.bit_array_slice_to_float(value, start_doc, end, endianness);
 
-                    if negation.is_negated() {
-                        docvec!["!Number.isFinite(", check, ")"]
-                    } else {
-                        docvec!["Number.isFinite(", check, ")"]
-                    }
+                    docvec!["Number.isFinite(", check, ")"]
                 }
 
                 // Here we need to make sure that the bit array has a specific
                 // size.
                 BitArrayTest::Size(SizeTest { operator, size }) => {
                     let operator = match operator {
-                        SizeOperator::GreaterEqual if negation.is_negated() => " < ",
                         SizeOperator::GreaterEqual => " >= ",
                         SizeOperator::Equal => equality,
                     };
@@ -1219,18 +969,14 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                         value,
                         expected,
                         read_action,
-                        negation,
                         *encoding,
                     ),
-                    BitArrayMatchedValue::LiteralFloat(expected) => self
-                        .literal_float_segment_bytes_check(value, expected, read_action, negation),
-                    BitArrayMatchedValue::LiteralInt(expected) => self
-                        .literal_int_segment_bytes_check(
-                            value,
-                            expected.clone(),
-                            read_action,
-                            negation,
-                        ),
+                    BitArrayMatchedValue::LiteralFloat(expected) => {
+                        self.literal_float_segment_bytes_check(value, expected, read_action)
+                    }
+                    BitArrayMatchedValue::LiteralInt(expected) => {
+                        self.literal_int_segment_bytes_check(value, expected.clone(), read_action)
+                    }
                     BitArrayMatchedValue::Variable(..)
                     | BitArrayMatchedValue::Discard(..)
                     | BitArrayMatchedValue::Assign { .. } => {
@@ -1247,11 +993,9 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             // Some variants like `Bool` and `Result` are special cased and checked
             // in a different way from all other variants.
             RuntimeCheck::Variant { match_, .. } if variable.type_.is_bool() => {
-                match (match_.name().as_str(), negation) {
-                    ("True", CheckNegation::NotNegated) => value.to_doc(),
-                    ("True", CheckNegation::Negated) => docvec!["!", value],
-                    (_, CheckNegation::NotNegated) => docvec!["!", value],
-                    (_, CheckNegation::Negated) => value.to_doc(),
+                match match_.name().as_str() {
+                    "True" => value.to_doc(),
+                    _ => docvec!["!", value],
                 }
             }
 
@@ -1269,32 +1013,17 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                     .map(|module| eco_format!("${module}."))
                     .unwrap_or_default();
 
-                let check = docvec![value, " instanceof ", qualification, match_.name()];
-                if negation.is_negated() {
-                    docvec!["!(", check, ")"]
-                } else {
-                    check
-                }
+                docvec![value, " instanceof ", qualification, match_.name()]
             }
 
             RuntimeCheck::NonEmptyList { .. } => {
-                if negation.is_negated() {
-                    self.expression_generator.tracker.list_empty_class_used = true;
-                    docvec![value, " instanceof $Empty"]
-                } else {
-                    self.expression_generator.tracker.list_non_empty_class_used = true;
-                    docvec![value, " instanceof $NonEmpty"]
-                }
+                self.expression_generator.tracker.list_non_empty_class_used = true;
+                docvec![value, " instanceof $NonEmpty"]
             }
 
             RuntimeCheck::EmptyList => {
-                if negation.is_negated() {
-                    self.expression_generator.tracker.list_non_empty_class_used = true;
-                    docvec![value, " instanceof $NonEmpty"]
-                } else {
-                    self.expression_generator.tracker.list_empty_class_used = true;
-                    docvec![value, " instanceof $Empty"]
-                }
+                self.expression_generator.tracker.list_empty_class_used = true;
+                docvec![value, " instanceof $Empty"]
             }
         }
     }
@@ -1525,7 +1254,6 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         bit_array: EcoString,
         literal_string: &EcoString,
         read_action: &ReadAction,
-        check_negation: CheckNegation,
         encoding: StringEncoding,
     ) -> Document<'a> {
         let ReadAction {
@@ -1536,11 +1264,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         } = read_action;
         let mut checks = vec![];
 
-        let equality = if check_negation.is_negated() {
-            " !== "
-        } else {
-            " === "
-        };
+        let equality = " === ";
 
         let escaped = convert_string_escape_chars(literal_string);
         // We need to have this vector here so that we don't run into lifetime
@@ -1580,13 +1304,8 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             }
         }
 
-        if check_negation.is_negated() {
-            // If the check is negated, it fails if any of the byte checks fail.
-            join(checks, break_(" ||", " || ")).group()
-        } else {
-            // Otherwise the check succeeds if all the byte checks succeed.
-            join(checks, break_(" &&", " && ")).nest(INDENT).group()
-        }
+        // Otherwise the check succeeds if all the byte checks succeed.
+        join(checks, break_(" &&", " && ")).nest(INDENT).group()
     }
 
     /// This generates all the checks that need to be performed to make sure a
@@ -1599,7 +1318,6 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         bit_array: EcoString,
         literal_int: BigInt,
         read_action: &ReadAction,
-        check_negation: CheckNegation,
     ) -> Document<'a> {
         let ReadAction {
             from: start,
@@ -1609,11 +1327,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             ..
         } = read_action;
 
-        let equality = if check_negation.is_negated() {
-            " !== "
-        } else {
-            " === "
-        };
+        let equality = " === ";
 
         if let (Some(mut from_byte), Some(size)) = (start.constant_bytes(), size.constant_bytes()) {
             // If the number starts at a byte-aligned offset and is made of a
@@ -1626,11 +1340,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                 from_byte += 1;
             }
 
-            if check_negation.is_negated() {
-                join(checks, break_(" ||", " || ")).group()
-            } else {
-                join(checks, break_(" &&", " && ")).nest(INDENT).group()
-            }
+            join(checks, break_(" &&", " && ")).nest(INDENT).group()
         } else {
             // Otherwise we have to take an int slice out of the bit array and
             // check it matches the expected value.
@@ -1657,7 +1367,6 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         bit_array: EcoString,
         expected: &EcoString,
         read_action: &ReadAction,
-        check_negation: CheckNegation,
     ) -> Document<'a> {
         let ReadAction {
             from: start,
@@ -1666,11 +1375,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             ..
         } = read_action;
 
-        let equality = if check_negation.is_negated() {
-            " !== "
-        } else {
-            " === "
-        };
+        let equality = " === ";
 
         // Unlike literal integers and strings, for now we don't try and apply any
         // optimisation in the way we match on those: we take an entire slice,
@@ -1799,23 +1504,6 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     }
 }
 
-#[derive(Eq, PartialEq)]
-/// Wether a runtime check should be negated or not.
-///
-enum CheckNegation {
-    Negated,
-    NotNegated,
-}
-
-impl CheckNegation {
-    fn is_negated(&self) -> bool {
-        match self {
-            CheckNegation::Negated => true,
-            CheckNegation::NotNegated => false,
-        }
-    }
-}
-
 /// When going over the subjects of a case expression/let we might end up in two
 /// situation: the subject might be a variable or it could be a more complex
 /// expression (like a function call, a complex expression, ...).
@@ -1930,6 +1618,10 @@ fn join_with_line<'a>(one: Document<'a>, other: Document<'a>) -> Document<'a> {
     } else {
         docvec![one, line(), other]
     }
+}
+
+fn reassignment_doc(variable_name: EcoString, value: Document<'_>) -> Document<'_> {
+    docvec![variable_name, " = ", value, ";"]
 }
 
 fn let_doc(variable_name: EcoString, value: Document<'_>) -> Document<'_> {

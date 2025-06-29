@@ -2321,6 +2321,65 @@ impl TypedPattern {
             | Pattern::Invalid { .. } => false,
         }
     }
+
+    pub fn bound_variables(&self) -> Vec<EcoString> {
+        let mut variables = Vec::new();
+        self.collect_bound_variables(&mut variables);
+        variables
+    }
+
+    fn collect_bound_variables(&self, variables: &mut Vec<EcoString>) {
+        match self {
+            Pattern::Int { .. }
+            | Pattern::Float { .. }
+            | Pattern::String { .. }
+            | Pattern::Discard { .. }
+            | Pattern::Invalid { .. } => {}
+
+            Pattern::Variable { name, .. } => variables.push(name.clone()),
+            Pattern::VarUsage { .. } => {}
+            Pattern::Assign { name, pattern, .. } => {
+                variables.push(name.clone());
+                pattern.collect_bound_variables(variables);
+            }
+            Pattern::List { elements, tail, .. } => {
+                for element in elements {
+                    element.collect_bound_variables(variables);
+                }
+                if let Some(tail) = tail {
+                    tail.collect_bound_variables(variables);
+                }
+            }
+            Pattern::Constructor { arguments, .. } => {
+                for argument in arguments {
+                    argument.value.collect_bound_variables(variables);
+                }
+            }
+            Pattern::Tuple { elements, .. } => {
+                for element in elements {
+                    element.collect_bound_variables(variables);
+                }
+            }
+            Pattern::BitArray { segments, .. } => {
+                for segment in segments {
+                    segment.value.collect_bound_variables(variables);
+                }
+            }
+            Pattern::StringPrefix {
+                left_side_assignment,
+                right_side_assignment,
+                ..
+            } => {
+                if let Some((left_variable, _)) = left_side_assignment {
+                    variables.push(left_variable.clone());
+                }
+                match right_side_assignment {
+                    AssignName::Variable(name) => variables.push(name.clone()),
+                    AssignName::Discard(_) => {}
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug, Default)]
