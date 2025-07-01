@@ -15,13 +15,11 @@ import { makeError, bitArraySliceToFloat } from "../gleam.mjs";
 const FILEPATH = "src/module.gleam";
 
 export function go(x) {
-  if (
+  if (!(
     x.bitSize >= 8 &&
     x.bitSize >= 72 &&
     bitArraySliceToFloat(x, 8, 72, true) === 1.1
-  ) {
-    
-  } else {
+  )) {
     throw makeError(
       "let_assert",
       FILEPATH,

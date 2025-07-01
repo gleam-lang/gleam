@@ -29,9 +29,7 @@ function side_effects(x) {
 
 export function main() {
   let $ = side_effects(new Ok(10));
-  if ($ instanceof Error) {
-    
-  } else {
+  if (!($ instanceof Error)) {
     throw makeError(
       "let_assert",
       FILEPATH,

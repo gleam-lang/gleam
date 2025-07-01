@@ -12,9 +12,7 @@ const FILEPATH = "src/module.gleam";
 
 export function go(x) {
   let $ = x + 1;
-  if ($ === 1) {
-    
-  } else {
+  if (!($ === 1)) {
     throw makeError(
       "let_assert",
       FILEPATH,

@@ -17,14 +17,12 @@ const FILEPATH = "src/module.gleam";
 
 export function go(x) {
   let n = 1;
-  if (
+  if (!(
     n >= 0 &&
     x.bitSize >= n &&
     x.bitSize >= 64 + n &&
     bitArraySliceToFloat(x, n, n + 64, true) === 1.1
-  ) {
-    
-  } else {
+  )) {
     throw makeError(
       "let_assert",
       FILEPATH,

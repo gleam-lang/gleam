@@ -15,9 +15,7 @@ import { makeError } from "../gleam.mjs";
 const FILEPATH = "src/module.gleam";
 
 export function go(x) {
-  if (x.bitSize === 0) {
-    
-  } else {
+  if (!(x.bitSize === 0)) {
     throw makeError(
       "let_assert",
       FILEPATH,

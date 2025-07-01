@@ -14,9 +14,7 @@ export function go(x) {
   let $ = x[1];
   if ($ === 2) {
     let $1 = x[0];
-    if ($1 === 1) {
-      
-    } else {
+    if (!($1 === 1)) {
       throw makeError(
         "let_assert",
         FILEPATH,

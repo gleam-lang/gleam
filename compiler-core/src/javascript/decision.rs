@@ -92,6 +92,21 @@ impl<'a> CaseBody<'a> {
                 if_body,
                 else_body,
                 ..
+            } if if_body.is_empty() => docvec![
+                "if (!(",
+                break_("", "")
+                    .append(check)
+                    .nest(INDENT)
+                    .append(break_("", ""))
+                    .group(),
+                ")) ",
+                else_body,
+            ],
+            CaseBody::IfElse {
+                check,
+                if_body,
+                else_body,
+                ..
             } => docvec![
                 "if (",
                 break_("", "")
