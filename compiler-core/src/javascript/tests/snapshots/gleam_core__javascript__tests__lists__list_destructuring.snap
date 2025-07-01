@@ -19,9 +19,7 @@ import { Empty as $Empty, makeError } from "../gleam.mjs";
 const FILEPATH = "src/module.gleam";
 
 export function go(x, y) {
-  if (x instanceof $Empty) {
-    
-  } else {
+  if (!(x instanceof $Empty)) {
     throw makeError(
       "let_assert",
       FILEPATH,
@@ -87,9 +85,7 @@ export function go(x, y) {
         let $2 = $.head;
         if ($2 === 2) {
           let $3 = x.head;
-          if ($3 === 1) {
-            
-          } else {
+          if (!($3 === 1)) {
             throw makeError(
               "let_assert",
               FILEPATH,

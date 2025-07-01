@@ -24,9 +24,7 @@ export class False extends $CustomType {}
 export class Nil extends $CustomType {}
 
 export function go(x, y) {
-  if (x instanceof True) {
-    
-  } else {
+  if (!(x instanceof True)) {
     throw makeError(
       "let_assert",
       FILEPATH,
@@ -46,9 +44,7 @@ export function go(x, y) {
     "Pattern match failed, no pattern matched the value.",
     { value: x, start: 76, end: 96, pattern_start: 87, pattern_end: 92 }
   )
-  if (y instanceof Nil) {
-    
-  } else {
+  if (!(y instanceof Nil)) {
     throw makeError(
       "let_assert",
       FILEPATH,

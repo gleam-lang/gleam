@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-assertion_line: 243
 expression: "\npub fn anything() -> a {\n  case [] {\n    [a] if False || True -> a\n    _ -> anything()\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -20,9 +18,7 @@ import { toList, Empty as $Empty } from "../gleam.mjs";
 export function anything() {
   while (true) {
     let $ = toList([]);
-    if ($ instanceof $Empty) {
-      
-    } else {
+    if (!($ instanceof $Empty)) {
       let $1 = $.tail;
       if ($1 instanceof $Empty && false || true) {
         let a = $.head;

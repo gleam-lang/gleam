@@ -15,9 +15,7 @@ import { makeError } from "../gleam.mjs";
 const FILEPATH = "src/module.gleam";
 
 export function go(x) {
-  if (x === "Hello") {
-    
-  } else {
+  if (!(x === "Hello")) {
     throw makeError(
       "let_assert",
       FILEPATH,

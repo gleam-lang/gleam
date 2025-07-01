@@ -16,9 +16,7 @@ const FILEPATH = "src/module.gleam";
 
 export function go(x) {
   let $ = x[0];
-  if ($.bitSize === 0) {
-    
-  } else {
+  if (!($.bitSize === 0)) {
     throw makeError(
       "let_assert",
       FILEPATH,

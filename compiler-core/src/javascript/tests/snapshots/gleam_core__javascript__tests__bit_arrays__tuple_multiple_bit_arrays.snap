@@ -25,9 +25,7 @@ export function go(x) {
     let $1 = x[1];
     if ($1.bitSize === 8 && $1.byteAt(0) === 1) {
       let $2 = x[0];
-      if ($2.bitSize === 0) {
-        
-      } else {
+      if (!($2.bitSize === 0)) {
         throw makeError(
           "let_assert",
           FILEPATH,
