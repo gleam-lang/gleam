@@ -471,16 +471,29 @@ impl<'a> CasePrinter<'_, '_, 'a> {
     where
         F: Fn(&mut Self) -> A,
     {
-        let old_scope = self
-            .variables
-            .expression_generator
-            .current_scope_vars
-            .clone();
+        // Since we use reassignment for `let assert`, we can't reset the scope
+        // as it loses data about the assigned variables.
+        let old_scope = match &self.kind {
+            DecisionKind::Case { .. } => self
+                .variables
+                .expression_generator
+                .current_scope_vars
+                .clone(),
+            DecisionKind::LetAssert { .. } => Default::default(),
+        };
+
         let old_names = self.variables.scoped_variable_names.clone();
         let old_segments = self.variables.segment_values.clone();
         let old_segment_names = self.variables.scoped_segment_names.clone();
         let output = run(self);
-        self.variables.expression_generator.current_scope_vars = old_scope;
+
+        match &self.kind {
+            DecisionKind::Case { .. } => {
+                self.variables.expression_generator.current_scope_vars = old_scope
+            }
+            DecisionKind::LetAssert { .. } => {}
+        }
+
         self.variables.scoped_variable_names = old_names;
         self.variables.segment_values = old_segments;
         self.variables.scoped_segment_names = old_segment_names;

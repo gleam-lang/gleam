@@ -68,8 +68,8 @@ export function go(x, y) {
       { value: x, start: 62, end: 83, pattern_start: 73, pattern_end: 79 }
     )
   } else {
-    let $ = x.tail;
-    if ($ instanceof $Empty) {
+    let $1 = x.tail;
+    if ($1 instanceof $Empty) {
       throw makeError(
         "let_assert",
         FILEPATH,
@@ -80,12 +80,12 @@ export function go(x, y) {
         { value: x, start: 62, end: 83, pattern_start: 73, pattern_end: 79 }
       )
     } else {
-      let $1 = $.tail;
-      if ($1 instanceof $Empty) {
-        let $2 = $.head;
-        if ($2 === 2) {
-          let $3 = x.head;
-          if (!($3 === 1)) {
+      let $2 = $1.tail;
+      if ($2 instanceof $Empty) {
+        let $3 = $1.head;
+        if ($3 === 2) {
+          let $4 = x.head;
+          if (!($4 === 1)) {
             throw makeError(
               "let_assert",
               FILEPATH,
@@ -138,8 +138,8 @@ export function go(x, y) {
       { value: y, start: 86, end: 113, pattern_start: 97, pattern_end: 109 }
     )
   } else {
-    let $ = y.tail;
-    if ($ instanceof $Empty) {
+    let $5 = y.tail;
+    if ($5 instanceof $Empty) {
       throw makeError(
         "let_assert",
         FILEPATH,
@@ -150,11 +150,11 @@ export function go(x, y) {
         { value: y, start: 86, end: 113, pattern_start: 97, pattern_end: 109 }
       )
     } else {
-      let $1 = $.tail;
-      if ($1 instanceof $Empty) {
-        let $2 = $.head[0];
-        if ($2 === 3) {
-          b = $.head[1];
+      let $6 = $5.tail;
+      if ($6 instanceof $Empty) {
+        let $7 = $5.head[0];
+        if ($7 === 3) {
+          b = $5.head[1];
         } else {
           throw makeError(
             "let_assert",
