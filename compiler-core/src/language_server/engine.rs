@@ -1,5 +1,4 @@
 use crate::{
-    Error, Result, Warning,
     analyse::name::correct_name_case,
     ast::{
         self, Constant, CustomType, Definition, DefinitionLocation, ModuleConstant,
@@ -7,7 +6,7 @@ use crate::{
         TypedModule, TypedPattern,
     },
     build::{
-        ExpressionPosition, Located, Module, UnqualifiedImport, type_constructor_from_modules,
+        type_constructor_from_modules, ExpressionPosition, Located, Module, UnqualifiedImport,
     },
     config::PackageConfig,
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
@@ -17,11 +16,13 @@ use crate::{
     line_numbers::LineNumbers,
     paths::ProjectPaths,
     type_::{
-        self, Deprecation, ModuleInterface, Type, TypeConstructor, ValueConstructor,
-        ValueConstructorVariant,
+        self,
         error::{Named, VariableSyntax},
         printer::Printer,
+        Deprecation, ModuleInterface, Type, TypeConstructor, ValueConstructor,
+        ValueConstructorVariant,
     },
+    Error, Result, Warning,
 };
 use camino::Utf8PathBuf;
 use ecow::EcoString;
@@ -35,26 +36,26 @@ use lsp_types::{
 use std::{collections::HashSet, sync::Arc};
 
 use super::{
-    DownloadDependencies, MakeLocker,
     code_action::{
-        AddAnnotations, CodeActionBuilder, ConvertFromUse, ConvertToFunctionCall, ConvertToPipe,
-        ConvertToUse, ExpandFunctionCapture, ExtractConstant, ExtractVariable,
-        FillInMissingLabelledArgs, FillUnusedFields, FixBinaryOperation,
+        code_action_add_missing_patterns, code_action_convert_qualified_constructor_to_unqualified,
+        code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
+        code_action_inexhaustive_let_to_case, AddAnnotations, CodeActionBuilder, ConvertFromUse,
+        ConvertToFunctionCall, ConvertToPipe, ConvertToUse, ExpandFunctionCapture, ExtractConstant,
+        ExtractVariable, FillInMissingLabelledArgs, FillUnusedFields, FixBinaryOperation,
         FixTruncatedBitArraySegment, GenerateDynamicDecoder, GenerateFunction, GenerateJsonEncoder,
         GenerateVariant, InlineVariable, InterpolateString, LetAssertToCase, PatternMatchOnValue,
         RedundantTupleInCaseSubject, RemoveEchos, RemoveUnusedImports, UseLabelShorthandSyntax,
-        WrapInBlock, code_action_add_missing_patterns,
-        code_action_convert_qualified_constructor_to_unqualified,
-        code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
-        code_action_inexhaustive_let_to_case,
+        WrapInBlock,
     },
     completer::Completer,
     reference::{
-        Referenced, VariableReferenceKind, find_module_references, find_variable_references,
-        reference_for_ast_node,
+        find_module_references, find_variable_references, reference_for_ast_node, Referenced,
+        VariableReferenceKind,
     },
-    rename::{RenameTarget, Renamed, rename_local_variable, rename_module_entity, rename_module_alias},
-    signature_help, src_span_to_lsp_range,
+    rename::{
+        rename_local_variable, rename_module_alias, rename_module_entity, RenameTarget, Renamed,
+    },
+    signature_help, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
 };
 
 #[derive(Debug, PartialEq, Eq)]
@@ -671,10 +672,7 @@ where
                         None
                     }
                 }
-                Some(Referenced::ModuleName {
-                    location,
-                    ..
-                }) => success_response(location),
+                Some(Referenced::ModuleName { location, .. }) => success_response(location),
                 _ => None,
             })
         })
@@ -748,15 +746,9 @@ where
                         layer: ast::Layer::Type,
                     },
                 ),
-                Some(Referenced::ModuleName {
-                    name,
-                    ..
-                }) => rename_module_alias(
-                    module,
-                    &lines,
-                    &params,
-                    &name
-                ),
+                Some(Referenced::ModuleName { name, .. }) => {
+                    rename_module_alias(module, &lines, &params, &name)
+                }
                 None => None,
             })
         })

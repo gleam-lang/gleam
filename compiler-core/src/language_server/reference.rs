@@ -6,11 +6,13 @@ use lsp_types::Location;
 use crate::{
     analyse,
     ast::{
-        self, visit::Visit, ArgNames, CustomType, Definition, Function, Import, ModuleConstant, Pattern, RecordConstructor, SrcSpan, TypedExpr, TypedModule
+        self, visit::Visit, ArgNames, CustomType, Definition, Function, Import, ModuleConstant,
+        Pattern, RecordConstructor, SrcSpan, TypedExpr, TypedModule,
     },
     build::Located,
     type_::{
-        error::{Named, VariableOrigin}, ModuleInterface, ModuleValueConstructor, Type, ValueConstructor, ValueConstructorVariant
+        error::{Named, VariableOrigin},
+        ModuleInterface, ModuleValueConstructor, Type, ValueConstructor, ValueConstructorVariant,
     },
 };
 
@@ -269,24 +271,22 @@ pub fn reference_for_ast_node(
             location: *name_location,
             target_kind: RenameTarget::Definition,
         }),
-        Located::ModuleName {
-            location,
-            name,
-            ..
-        } => Some(Referenced::ModuleName {
+        Located::ModuleName { location, name, .. } => Some(Referenced::ModuleName {
             name: name.clone(),
             location,
         }),
-        Located::ModuleStatement(Definition::Import(import@Import {
-            location,
-            module,
-            as_name,
-            ..
-        })) => match as_name {
+        Located::ModuleStatement(Definition::Import(
+            import @ Import {
+                location,
+                module,
+                as_name,
+                ..
+            },
+        )) => match as_name {
             Some(alias) => Some(Referenced::ModuleName {
                 name: module.clone(),
                 // alias location includes the "as " part
-                location: SrcSpan::new(alias.1.start+3, alias.1.end),
+                location: SrcSpan::new(alias.1.start + 3, alias.1.end),
             }),
             None => {
                 // location includes entire line, only want the final module name
@@ -295,7 +295,7 @@ pub fn reference_for_ast_node(
                     name: module.clone(),
                     location: SrcSpan::new(location.end - (used.len() as u32), location.end),
                 })
-            },
+            }
         },
         _ => None,
     }
@@ -483,7 +483,10 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
     }
 }
 
-pub fn find_module_name_references(module: &TypedModule, module_name: &EcoString) -> Vec<ModuleNameReference> {
+pub fn find_module_name_references(
+    module: &TypedModule,
+    module_name: &EcoString,
+) -> Vec<ModuleNameReference> {
     let mut finder = FindModuleNameReferences {
         references: Vec::new(),
         module_name: module_name.clone(),
@@ -518,15 +521,15 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences {
                 ..
             }) if *module == self.module_name => match as_name {
                 Some(alias) => self.references.push(ModuleNameReference {
-                    location: SrcSpan::new(alias.1.start-1, alias.1.end),
-                    kind: ModuleNameReferenceKind::Alias
+                    location: SrcSpan::new(alias.1.start - 1, alias.1.end),
+                    kind: ModuleNameReferenceKind::Alias,
                 }),
                 None => self.references.push(ModuleNameReference {
                     location: *location,
                     kind: ModuleNameReferenceKind::Import,
                 }),
-            }
-            _ => {},
+            },
+            _ => {}
         }
         ast::visit::visit_typed_definition(self, def);
     }
@@ -543,7 +546,7 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences {
     ) {
         if *module_name == self.module_name {
             self.references.push(ModuleNameReference {
-                location: SrcSpan::new(location.start, field_start-1),
+                location: SrcSpan::new(location.start, field_start - 1),
                 kind: ModuleNameReferenceKind::Name,
             });
         }

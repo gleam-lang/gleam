@@ -13,7 +13,12 @@ use crate::{
 };
 
 use super::{
-    compiler::ModuleSourceInformation, reference::{find_module_name_references, find_variable_references, ModuleNameReferenceKind, VariableReferenceKind}, url_from_path, TextEdits
+    compiler::ModuleSourceInformation,
+    reference::{
+        find_module_name_references, find_variable_references,
+        ModuleNameReferenceKind, VariableReferenceKind,
+    },
+    url_from_path, TextEdits,
 };
 
 fn workspace_edit(uri: Url, edits: Vec<TextEdit>) -> WorkspaceEdit {
@@ -229,13 +234,14 @@ pub fn rename_module_alias(
     current_module: &Module,
     line_numbers: &LineNumbers,
     params: &RenameParams,
-    module_name: &EcoString
+    module_name: &EcoString,
 ) -> Option<WorkspaceEdit> {
     if name::check_name_case(
         SrcSpan::default(),
         &params.new_name.as_str().into(),
-        Named::Variable
-    ).is_err()
+        Named::Variable,
+    )
+    .is_err()
     {
         return None;
     }
@@ -249,10 +255,18 @@ pub fn rename_module_alias(
 
     for reference in references {
         match reference.kind {
-            ModuleNameReferenceKind::Name => edits.replace(reference.location, params.new_name.to_string()),
-            ModuleNameReferenceKind::Import => edits.insert(reference.location.end, format!(" as {}", &params.new_name)),
-            ModuleNameReferenceKind::Alias if params.new_name == final_module => edits.delete(reference.location),
-            ModuleNameReferenceKind::Alias => edits.replace(reference.location, format!(" as {}", &params.new_name)),
+            ModuleNameReferenceKind::Name => {
+                edits.replace(reference.location, params.new_name.to_string())
+            }
+            ModuleNameReferenceKind::Import => {
+                edits.insert(reference.location.end, format!(" as {}", &params.new_name))
+            }
+            ModuleNameReferenceKind::Alias if params.new_name == final_module => {
+                edits.delete(reference.location)
+            }
+            ModuleNameReferenceKind::Alias => {
+                edits.replace(reference.location, format!(" as {}", &params.new_name))
+            }
         }
     }
 

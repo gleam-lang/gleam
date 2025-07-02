@@ -252,6 +252,41 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- It is now possible to rename a module from a ModuleSelect. For example:
+
+  ```gleam
+  html.form(
+    [
+      attribute.method("POST"),
+  //    ^^^^ cursor is here
+      attribute.action("..."),
+      attribute.enctype("..."),
+    ],
+    [...],
+  )
+  ```
+
+  Would result in the following changes:
+
+  ```diff
+  - import lustre/attribute
+  + import lustre/attribute as attr
+
+  html.form(
+    [
+  -   attribute.method("POST"),
+  -   attribute.action("..."),
+  -   attribute.enctype("..."),
+  +   attr.method("POST"),
+  +   attr.action("..."),
+  +   attr.enctype("..."),
+    ],
+    [...],
+  )
+  ```
+
+  ([llpaull](https://github.com/llpaull))
+
 ### Formatter
 
 - The formatter now allows more control over how lists are split. By adding a
