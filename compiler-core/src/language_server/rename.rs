@@ -251,21 +251,22 @@ pub fn rename_module_alias(
 
     let references = find_module_name_references(&current_module.ast, module_name);
 
-    let final_module = module_name.split('/').next_back()?;
+    let original = module_name.split('/').next_back()?;
 
     for reference in references {
         match reference.kind {
-            ModuleNameReferenceKind::Name => {
-                edits.replace(reference.location, params.new_name.to_string())
-            }
             ModuleNameReferenceKind::Import => {
                 edits.insert(reference.location.end, format!(" as {}", &params.new_name))
             }
-            ModuleNameReferenceKind::Alias if params.new_name == final_module => {
+            // If new name is same as original, remove the alias
+            ModuleNameReferenceKind::Alias if params.new_name == original => {
                 edits.delete(reference.location)
             }
             ModuleNameReferenceKind::Alias => {
                 edits.replace(reference.location, format!(" as {}", &params.new_name))
+            }
+            ModuleNameReferenceKind::Name => {
+                edits.replace(reference.location, params.new_name.to_string())
             }
         }
     }

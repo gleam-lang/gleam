@@ -252,7 +252,8 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- It is now possible to rename a module from a ModuleSelect. For example:
+- It is now possible to rename a module when the cursor is placed over its
+  import statement or when placed on its name/alias elsewhere. For example:
 
   ```gleam
   html.form(
