@@ -1350,3 +1350,169 @@ pub fn main() {
         find_position_of("second =")
     );
 }
+
+#[test]
+fn rename_module_alias_from_import() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub fn function() {
+    function()
+}
+
+pub fn other_function() {
+    function()
+}
+"
+        ),
+        "
+import mod
+
+pub fn main() {
+    mod.function()
+    mod.other_function()
+}
+",
+        "module",
+        find_position_of("mod")
+    );
+}
+
+#[test]
+fn rename_module_alias_from_alias() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub fn function() {
+    function()
+}
+
+pub fn other_function() {
+    function()
+}
+"
+        ),
+        "
+import mod as module
+
+pub fn main() {
+    module.function()
+    module.other_function()
+}
+",
+        "module_alias",
+        find_position_of("module")
+    );
+}
+
+#[test]
+fn rename_module_alias_to_orig() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub fn function() {
+    function()
+}
+
+pub fn other_function() {
+    function()
+}
+"
+        ),
+        "
+import mod as module
+
+pub fn main() {
+    module.function()
+    module.other_function()
+}
+",
+        "mod",
+        find_position_of("module")
+    );
+}
+
+#[test]
+fn rename_module_alias_from_select() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub fn function() {
+    function()
+}
+
+pub fn other_function() {
+    function()
+}
+"
+        ),
+        "
+import mod
+
+pub fn main() {
+    mod.function()
+    mod.other_function()
+}
+",
+        "module",
+        find_position_of("mod").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn rename_module_alias_from_alias_select() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub fn function() {
+    function()
+}
+
+pub fn other_function() {
+    function()
+}
+"
+        ),
+        "
+import mod as module
+
+pub fn main() {
+    module.function()
+    module.other_function()
+}
+",
+        "module_alias",
+        find_position_of("module").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn no_rename_module_alias_bad_name() {
+    let src = "
+import mod
+
+pub fn main() {
+    mod.function()
+    mod.other_function()
+}
+";
+
+    assert_no_rename!(
+        &TestProject::for_source(src).add_hex_module("mod", "
+pub fn function() {
+    function()
+}
+
+pub fn other_function() {
+    function()
+}
+"),
+        "Module",
+        find_position_of("mod")
+    );
+}

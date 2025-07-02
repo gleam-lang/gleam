@@ -1,0 +1,49 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+assertion_line: 1412
+expression: "\nimport mod as module\n\npub fn main() {\n    module.function()\n    module.other_function()\n}\n"
+snapshot_kind: text
+---
+----- BEFORE RENAME
+-- mod.gleam
+
+pub fn function() {
+    function()
+}
+
+pub fn other_function() {
+    function()
+}
+
+
+-- app.gleam
+
+import mod as module
+              ↑▔▔▔▔▔
+
+pub fn main() {
+    module.function()
+    module.other_function()
+}
+
+
+----- AFTER RENAME
+-- mod.gleam
+
+pub fn function() {
+    function()
+}
+
+pub fn other_function() {
+    function()
+}
+
+
+-- app.gleam
+
+import mod
+
+pub fn main() {
+    mod.function()
+    mod.other_function()
+}

@@ -9,14 +9,11 @@ use crate::{
     build::Module,
     line_numbers::LineNumbers,
     reference::ReferenceKind,
-    type_::{ModuleInterface, error::Named},
+    type_::{error::Named, ModuleInterface},
 };
 
 use super::{
-    TextEdits,
-    compiler::ModuleSourceInformation,
-    reference::{VariableReferenceKind, find_variable_references},
-    url_from_path,
+    compiler::ModuleSourceInformation, reference::{find_module_name_references, find_variable_references, ModuleNameReferenceKind, VariableReferenceKind}, url_from_path, TextEdits
 };
 
 fn workspace_edit(uri: Url, edits: Vec<TextEdit>) -> WorkspaceEdit {
@@ -226,4 +223,38 @@ fn alias_references_in_module(
         params.text_document_position.text_document.uri.clone(),
         edits.edits,
     ))
+}
+
+pub fn rename_module_alias(
+    current_module: &Module,
+    line_numbers: &LineNumbers,
+    params: &RenameParams,
+    module_name: &EcoString
+) -> Option<WorkspaceEdit> {
+    if name::check_name_case(
+        SrcSpan::default(),
+        &params.new_name.as_str().into(),
+        Named::Variable
+    ).is_err()
+    {
+        return None;
+    }
+
+    let uri = params.text_document_position.text_document.uri.clone();
+    let mut edits = TextEdits::new(line_numbers);
+
+    let references = find_module_name_references(&current_module.ast, module_name);
+
+    let final_module = module_name.split('/').next_back()?;
+
+    for reference in references {
+        match reference.kind {
+            ModuleNameReferenceKind::Name => edits.replace(reference.location, params.new_name.to_string()),
+            ModuleNameReferenceKind::Import => edits.insert(reference.location.end, format!(" as {}", &params.new_name)),
+            ModuleNameReferenceKind::Alias if params.new_name == final_module => edits.delete(reference.location),
+            ModuleNameReferenceKind::Alias => edits.replace(reference.location, format!(" as {}", &params.new_name)),
+        }
+    }
+
+    Some(workspace_edit(uri, edits.edits))
 }

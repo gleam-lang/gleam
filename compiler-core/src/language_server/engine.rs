@@ -53,7 +53,7 @@ use super::{
         Referenced, VariableReferenceKind, find_module_references, find_variable_references,
         reference_for_ast_node,
     },
-    rename::{RenameTarget, Renamed, rename_local_variable, rename_module_entity},
+    rename::{RenameTarget, Renamed, rename_local_variable, rename_module_entity, rename_module_alias},
     signature_help, src_span_to_lsp_range,
 };
 
@@ -671,6 +671,10 @@ where
                         None
                     }
                 }
+                Some(Referenced::ModuleName {
+                    location,
+                    ..
+                }) => success_response(location),
                 _ => None,
             })
         })
@@ -743,6 +747,15 @@ where
                         target_kind,
                         layer: ast::Layer::Type,
                     },
+                ),
+                Some(Referenced::ModuleName {
+                    name,
+                    ..
+                }) => rename_module_alias(
+                    module,
+                    &lines,
+                    &params,
+                    &name
                 ),
                 None => None,
             })
