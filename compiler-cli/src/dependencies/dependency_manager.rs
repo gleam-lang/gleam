@@ -14,6 +14,7 @@ use gleam_core::{
 
 use crate::{
     build_lock::BuildLock,
+    cli,
     dependencies::{pretty_print_major_versions_available, write_manifest_to_disc},
     fs::ProjectIO,
 };
@@ -234,15 +235,50 @@ where
         let provided_hex_packages = provided_packages
             .iter()
             .map(|(name, package)| (name.clone(), package.to_hex_package(name)))
-            .collect();
+            .collect::<HashMap<_, _>>();
 
         let resolved = dependency::resolve_versions(
             &self.package_fetcher,
-            provided_hex_packages,
+            provided_hex_packages.clone(),
             config.name.clone(),
-            root_requirements.into_iter(),
+            root_requirements.clone().into_iter(),
             &locked,
-        )?;
+        );
+
+        let resolved = match resolved {
+            Ok(resolved) => resolved,
+            Err(
+                ref err @ Error::DependencyResolutionFailed {
+                    error: _,
+                    ref locked_conflicts,
+                },
+            ) => {
+                // Do not ask the user to unlock conflicts in CI or if they don't exist
+                if is_ci_env() || locked_conflicts.is_empty() {
+                    return Err(err.clone());
+                }
+
+                if cli::confirm(
+                    "\nSome of these dependencies are locked to specific versions. It may
+            be possible to find a solution if they are unlocked, would you like
+            to unlock and try again?",
+                )? {
+                    unlock_packages(&mut locked, locked_conflicts, manifest)?;
+
+                    dependency::resolve_versions(
+                        &self.package_fetcher,
+                        provided_hex_packages,
+                        config.name.clone(),
+                        root_requirements.into_iter(),
+                        &locked,
+                    )?
+                } else {
+                    return Err(err.clone());
+                }
+            }
+
+            Err(err) => return Err(err),
+        };
 
         // Convert the hex packages and local packages into manifest packages
         let manifest_packages = self.runtime.block_on(future::try_join_all(
@@ -258,4 +294,21 @@ where
 
         Ok(manifest)
     }
+}
+
+/// Estimates whether the CLI is ran in a CI environment for use in silencing
+/// certain CLI dialogues.
+fn is_ci_env() -> bool {
+    let ci_vars = [
+        "CI",
+        "TRAVIS",
+        "CIRCLECI",
+        "GITHUB_ACTIONS",
+        "GITLAB_CI",
+        "JENKINS_URL",
+        "TF_BUILD",
+        "BITBUCKET_COMMIT",
+    ];
+
+    ci_vars.iter().any(|var| std::env::var_os(*var).is_some())
 }
