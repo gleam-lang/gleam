@@ -1602,8 +1602,10 @@ impl TypedClause {
     pub fn pattern_location(&self) -> SrcSpan {
         let start = self.pattern.first().map(|pattern| pattern.location().start);
 
-        let end = if let Some(last_alternative) = self.alternative_patterns.last()
-            && let Some(last_pattern) = last_alternative.last()
+        let end = if let Some(last_pattern) = self
+            .alternative_patterns
+            .last()
+            .and_then(|patterns| patterns.last())
         {
             Some(last_pattern.location().end)
         } else {
