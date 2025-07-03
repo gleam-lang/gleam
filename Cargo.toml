@@ -48,7 +48,7 @@ debug-ignore = "1"
 base16 = "0"
 # Language server protocol server plumbing
 lsp-server = "0"
-lsp-types = "0"
+lsp-types = "=0.95.1"
 # Compact clone-on-write vector & string type
 ecow = "0"
 # Drop in replacement for std::path but with only utf-8

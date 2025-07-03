@@ -3,6 +3,7 @@
 db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
 ignore = [
+    "RUSTSEC-2021-0139"
 ]
 
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
@@ -17,6 +18,7 @@ allow = [
     "Unicode-DFS-2016",
     "BSL-1.0",
     "Unicode-3.0",
+    "Zlib",
 ]
 confidence-threshold = 0.8
 
