@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 2533
 expression: "\npub fn main() {\n  let assert <<a, b:size(a), c:size(b)>> = <<1, 2, 3, 4>>\n  a + b + c\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
