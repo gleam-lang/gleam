@@ -2206,6 +2206,14 @@ fn bit_array_match_tests() {
           i
         })
       }),
+    // https://github.com/gleam-lang/gleam/issues/4712
+    "Multiple variable segments"
+      |> example(fn() {
+        assert_equal(12, {
+          let assert <<a, b:size(a), c:size(b)>> = <<2, 3:2, 7:3>>
+          a + b + c
+        })
+      }),
   ]
 }
 
