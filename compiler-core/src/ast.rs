@@ -1598,6 +1598,22 @@ impl TypedClause {
             .find_map(|p| p.find_node(byte_index))
             .or_else(|| self.then.find_node(byte_index))
     }
+
+    pub fn pattern_location(&self) -> SrcSpan {
+        let start = self.pattern.first().map(|pattern| pattern.location().start);
+
+        let end = if let Some(last_pattern) = self
+            .alternative_patterns
+            .last()
+            .and_then(|patterns| patterns.last())
+        {
+            Some(last_pattern.location().end)
+        } else {
+            self.pattern.last().map(|pattern| pattern.location().end)
+        };
+
+        SrcSpan::new(start.unwrap_or_default(), end.unwrap_or_default())
+    }
 }
 
 pub type UntypedClauseGuard = ClauseGuard<(), ()>;

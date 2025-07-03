@@ -35,6 +35,7 @@ pub fn rename_local_variable(
     line_numbers: &LineNumbers,
     params: &RenameParams,
     definition_location: SrcSpan,
+    name: EcoString,
     kind: VariableReferenceKind,
 ) -> Option<WorkspaceEdit> {
     if name::check_name_case(
@@ -50,7 +51,7 @@ pub fn rename_local_variable(
     let uri = params.text_document_position.text_document.uri.clone();
     let mut edits = TextEdits::new(line_numbers);
 
-    let references = find_variable_references(&module.ast, definition_location);
+    let references = find_variable_references(&module.ast, definition_location, name);
 
     match kind {
         VariableReferenceKind::Variable => {

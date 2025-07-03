@@ -1350,3 +1350,59 @@ pub fn main() {
         find_position_of("second =")
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4748
+#[test]
+fn rename_alternative_pattern() {
+    assert_rename!(
+        "
+pub fn main(x) {
+  case x {
+    #(wibble, [wobble]) | #(wobble, [wibble, _]) | #(_, [wibble, wobble, ..]) ->
+      wibble + wobble
+    _ -> 0
+  }
+}
+",
+        "new_name",
+        find_position_of("wibble")
+    );
+}
+
+#[test]
+fn rename_alternative_pattern_from_usage() {
+    assert_rename!(
+        "
+pub fn main(x) {
+  case x {
+    #(wibble, [wobble]) | #(wobble, [wibble, _]) | #(_, [wibble, wobble, ..]) ->
+      wibble + wobble
+    _ -> 0
+  }
+}
+",
+        "new_name",
+        find_position_of("wibble +")
+    );
+}
+
+#[test]
+fn rename_variable_with_alternative_pattern_with_same_name() {
+    assert_rename!(
+        "
+pub fn main(x) {
+  let some_var = 10
+
+  case x {
+    #(some_var, []) | #(_, [some_var]) ->
+      some_var
+    _ -> 0
+  }
+
+  some_var
+}
+",
+        "new_name",
+        find_position_of("some_var")
+    );
+}
