@@ -693,6 +693,7 @@ where
                 Some(Referenced::LocalVariable {
                     origin,
                     definition_location,
+                    name,
                     ..
                 }) => {
                     let rename_kind = match origin.map(|origin| origin.syntax) {
@@ -705,7 +706,14 @@ where
                         )
                         | None => VariableReferenceKind::Variable,
                     };
-                    rename_local_variable(module, &lines, &params, definition_location, rename_kind)
+                    rename_local_variable(
+                        module,
+                        &lines,
+                        &params,
+                        definition_location,
+                        name,
+                        rename_kind,
+                    )
                 }
                 Some(Referenced::ModuleValue {
                     module: module_name,
@@ -774,6 +782,7 @@ where
                     origin,
                     definition_location,
                     location,
+                    name,
                 }) if location.contains(byte_index) => match origin.map(|origin| origin.syntax) {
                     Some(VariableSyntax::Generated) => None,
                     Some(
@@ -783,7 +792,7 @@ where
                     )
                     | None => {
                         let variable_references =
-                            find_variable_references(&module.ast, definition_location);
+                            find_variable_references(&module.ast, definition_location, name);
 
                         let mut reference_locations =
                             Vec::with_capacity(variable_references.len() + 1);

@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\npub fn main(x) {\n  let some_var = 10\n\n  case x {\n    #(some_var, []) | #(_, [some_var]) ->\n      some_var\n    _ -> 0\n  }\n\n  some_var\n}\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+pub fn main(x) {
+  let some_var = 10
+      ↑▔▔▔▔▔▔▔     
+
+  case x {
+    #(some_var, []) | #(_, [some_var]) ->
+      some_var
+    _ -> 0
+  }
+
+  some_var
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+
+pub fn main(x) {
+  let new_name = 10
+
+  case x {
+    #(some_var, []) | #(_, [some_var]) ->
+      some_var
+    _ -> 0
+  }
+
+  new_name
+}
