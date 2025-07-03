@@ -33,7 +33,7 @@ pub fn case<'a>(
     subjects: &'a [TypedExpr],
     expression_generator: &mut Generator<'_, 'a>,
 ) -> Document<'a> {
-    let mut variables = Variables::new(expression_generator, false);
+    let mut variables = Variables::new(expression_generator, VariableAssignment::Declare);
     let assignments = variables.assign_case_subjects(compiled_case, subjects);
     let decision = CasePrinter {
         variables,
@@ -87,6 +87,24 @@ impl<'a> CaseBody<'a> {
                 ") ",
                 break_block(body)
             ],
+            // If we have some code like the following:
+            // ```javascript
+            // if (some_condition) {
+            //
+            // } else {
+            //   fallback()
+            // }
+            // ```
+            //
+            // Here, the body of the `if` statement is empty. This can happen
+            // sometimes when generating decision trees for `let assert`.
+            //
+            // Instead, we can write this more concisely:
+            // ```javascript
+            // if (!some_condition) {
+            //   fallback()
+            // }
+            // ```
             CaseBody::IfElse {
                 check,
                 if_body,
@@ -148,6 +166,8 @@ struct CasePrinter<'module, 'generator, 'a> {
     kind: DecisionKind<'a>,
 }
 
+/// Information specific to the different kinds of decision trees: `case`
+/// expressions and `let assert` statements.
 enum DecisionKind<'a> {
     Case {
         clauses: &'a [TypedClause],
@@ -217,9 +237,7 @@ enum DecisionKind<'a> {
 /// after each successful check.
 ///
 /// In order to do that we'll be using a `Variables` data structure to hold all
-/// this information about the current scope. This also allows us to reuse a lot
-/// of code between a `CasePrinter` and a `LetPrinter` that can generate code from
-/// the decision tree of let expressions!
+/// this information about the current scope.
 ///
 impl<'a> CasePrinter<'_, '_, 'a> {
     fn decision(&mut self, decision: &'a Decision) -> CaseBody<'a> {
@@ -262,6 +280,9 @@ impl<'a> CasePrinter<'_, '_, 'a> {
     }
 
     fn body_expression(&mut self, clause_index: usize) -> Document<'a> {
+        // If we are not in a `case` expression, there is no additional code to
+        // execute when a branch matches; we only assign variables bound in the
+        // pattern.
         let DecisionKind::Case { clauses } = &self.kind else {
             return nil();
         };
@@ -603,7 +624,7 @@ pub fn let_<'a>(
 ) -> Document<'a> {
     let _ = pattern;
     let scope_position = expression_generator.scope_position.clone();
-    let mut variables = Variables::new(expression_generator, true);
+    let mut variables = Variables::new(expression_generator, VariableAssignment::Reassign);
 
     let assignment = variables.assign_let_subject(compiled_case, subject);
     let assignment_name = assignment.name();
@@ -619,6 +640,22 @@ pub fn let_<'a>(
     }
     .decision(&compiled_case.tree);
 
+    // When we generate `let assert` statements, we want to produce code like
+    // this:
+    // ```javascript
+    // let some_var;
+    // let other_var;
+    // if (condition_to_check_pattern) {
+    //   some_var = x;
+    //   other_var = y;
+    // }
+    // ```
+    // This generates the code for binding the initial variables before the
+    // check so the scoping of them is correct.
+    //
+    // We must generate this after we generate the code for the decision tree
+    // itself as we might be re-binding variables which are used in the checks
+    // to determine whether the pattern matches or not.
     let beginning_assignments = pattern.bound_variables().into_iter().map(|variable| {
         docvec![
             "let ",
@@ -643,13 +680,21 @@ pub fn let_<'a>(
     }
 }
 
+enum VariableAssignment {
+    Declare,
+    Reassign,
+}
+
 /// This is a useful piece of state that is kept separate from the generator
 /// itself so we can reuse it both with `case`s and `let`s without rewriting
 /// everything from scratch.
 ///
 struct Variables<'generator, 'module, 'a> {
     expression_generator: &'generator mut Generator<'module, 'a>,
-    use_reassignment: bool,
+
+    /// Whether to bind variables using `let` as we do in `case` expressions,
+    /// or to reassign them as we do in `let assert` statements.
+    variable_assignment: VariableAssignment,
 
     /// All the pattern variables will be assigned a specific value: being bound
     /// to a constructor field, tuple element and so on. Pattern variables never
@@ -721,11 +766,11 @@ struct Variables<'generator, 'module, 'a> {
 impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     fn new(
         expression_generator: &'generator mut Generator<'module, 'a>,
-        use_reassignment: bool,
+        variable_assignment: VariableAssignment,
     ) -> Self {
         Variables {
             expression_generator,
-            use_reassignment,
+            variable_assignment,
             variable_values: HashMap::new(),
             scoped_variable_names: HashMap::new(),
             segment_values: HashMap::new(),
@@ -907,10 +952,11 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                 .unwrap_or_else(|| self.read_action_to_doc(bit_array, read_action)),
         };
 
-        if self.use_reassignment {
-            reassignment_doc(local_variable_name.clone(), assigned_value)
-        } else {
-            let_doc(local_variable_name.clone(), assigned_value)
+        match self.variable_assignment {
+            VariableAssignment::Declare => let_doc(local_variable_name.clone(), assigned_value),
+            VariableAssignment::Reassign => {
+                reassignment_doc(local_variable_name.clone(), assigned_value)
+            }
         }
     }
 
