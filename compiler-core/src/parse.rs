@@ -58,14 +58,14 @@ use crate::Warning;
 use crate::analyse::Inferred;
 use crate::ast::{
     Arg, ArgNames, Assert, AssignName, Assignment, AssignmentKind, BinOp, BitArrayOption,
-    BitArraySegment, CAPTURE_VARIABLE, CallArg, Clause, ClauseGuard, Constant, CustomType,
-    Definition, Function, FunctionLiteralKind, HasLocation, Import, Module, ModuleConstant,
-    Pattern, Publicity, RecordBeingUpdated, RecordConstructor, RecordConstructorArg, SrcSpan,
-    Statement, TargetedDefinition, TodoKind, TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn,
-    TypeAstHole, TypeAstTuple, TypeAstVar, UnqualifiedImport, UntypedArg, UntypedClause,
-    UntypedClauseGuard, UntypedConstant, UntypedDefinition, UntypedExpr, UntypedModule,
-    UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, UntypedUseAssignment, Use,
-    UseAssignment,
+    BitArraySegment, BitArraySize, CAPTURE_VARIABLE, CallArg, Clause, ClauseGuard, Constant,
+    CustomType, Definition, Function, FunctionLiteralKind, HasLocation, Import, IntOperator,
+    Module, ModuleConstant, Pattern, Publicity, RecordBeingUpdated, RecordConstructor,
+    RecordConstructorArg, SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAlias, TypeAst,
+    TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UnqualifiedImport,
+    UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedDefinition, UntypedExpr,
+    UntypedModule, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, UntypedUseAssignment,
+    Use, UseAssignment,
 };
 use crate::build::Target;
 use crate::error::wrap;
@@ -1393,7 +1393,7 @@ where
                                 x => x,
                             },
                             &Parser::expect_bit_array_pattern_segment_arg,
-                            &bit_array_pattern_int,
+                            &bit_array_size_int,
                         )
                     },
                     Some(&Token::Comma),
@@ -3402,19 +3402,129 @@ where
     }
 
     fn expect_bit_array_pattern_segment_arg(&mut self) -> Result<UntypedPattern, ParseError> {
-        match self.next_tok() {
-            Some((start, Token::Name { name }, end)) => Ok(Pattern::VarUsage {
+        Ok(Pattern::BitArraySize(self.expect_bit_array_size()?))
+    }
+
+    fn expect_bit_array_size(&mut self) -> Result<BitArraySize<()>, ParseError> {
+        let left = match self.next_tok() {
+            Some((start, Token::Name { name }, end)) => BitArraySize::Variable {
                 location: SrcSpan { start, end },
                 name,
                 constructor: None,
                 type_: (),
-            }),
-            Some((start, Token::Int { value, int_value }, end)) => Ok(Pattern::Int {
+            },
+            Some((start, Token::Int { value, int_value }, end)) => BitArraySize::Int {
                 location: SrcSpan { start, end },
                 value,
                 int_value,
-            }),
-            _ => self.next_tok_unexpected(vec!["A variable name or an integer".into()]),
+            },
+            Some((start, Token::LeftBrace, _)) => {
+                let inner = self.expect_bit_array_size()?;
+                let (_, end) = self.expect_one(&Token::RightBrace)?;
+
+                BitArraySize::Block {
+                    location: SrcSpan { start, end },
+                    inner: Box::new(inner),
+                }
+            }
+            _ => return self.next_tok_unexpected(vec!["A variable name or an integer".into()]),
+        };
+
+        let Some((start, token, end)) = self.tok0.take() else {
+            return Ok(left);
+        };
+
+        match token {
+            Token::Plus => {
+                _ = self.next_tok();
+                let right = self.expect_bit_array_size()?;
+
+                Ok(self.bit_array_size_binary_operator(left, right, IntOperator::Add))
+            }
+            Token::Minus => {
+                _ = self.next_tok();
+                let right = self.expect_bit_array_size()?;
+
+                Ok(self.bit_array_size_binary_operator(left, right, IntOperator::Subtract))
+            }
+            Token::Star => {
+                _ = self.next_tok();
+                let right = self.expect_bit_array_size()?;
+
+                Ok(
+                    self.bit_array_size_high_precedence_operator(
+                        left,
+                        right,
+                        IntOperator::Multiply,
+                    ),
+                )
+            }
+            Token::Slash => {
+                _ = self.next_tok();
+                let right = self.expect_bit_array_size()?;
+
+                Ok(self.bit_array_size_high_precedence_operator(left, right, IntOperator::Divide))
+            }
+            Token::Percent => {
+                _ = self.next_tok();
+                let right = self.expect_bit_array_size()?;
+
+                Ok(self.bit_array_size_high_precedence_operator(
+                    left,
+                    right,
+                    IntOperator::Remainder,
+                ))
+            }
+            _ => {
+                self.tok0 = Some((start, token, end));
+                Ok(left)
+            }
+        }
+    }
+
+    fn bit_array_size_binary_operator(
+        &self,
+        left: BitArraySize<()>,
+        right: BitArraySize<()>,
+        operator: IntOperator,
+    ) -> BitArraySize<()> {
+        let start = left.location().start;
+        let end = right.location().end;
+
+        BitArraySize::BinaryOperator {
+            left: Box::new(left),
+            right: Box::new(right),
+            operator,
+            location: SrcSpan { start, end },
+        }
+    }
+
+    fn bit_array_size_high_precedence_operator(
+        &self,
+        left: BitArraySize<()>,
+        right: BitArraySize<()>,
+        operator: IntOperator,
+    ) -> BitArraySize<()> {
+        match right {
+            BitArraySize::Int { .. }
+            | BitArraySize::Variable { .. }
+            | BitArraySize::Block { .. } => {
+                self.bit_array_size_binary_operator(left, right, operator)
+            }
+            // This operator has the highest precedence of the possible operators
+            // for bit array size patterns. So, `a * b + c` should be parsed as
+            // `(a * b) + c`. If the right-hand side of this operator is another
+            // operator, we rearrange it to ensure correct precedence.
+            BitArraySize::BinaryOperator {
+                operator: right_operator,
+                left: middle,
+                right,
+                ..
+            } => self.bit_array_size_binary_operator(
+                self.bit_array_size_binary_operator(left, *middle, operator),
+                *right,
+                right_operator,
+            ),
         }
     }
 
@@ -4276,17 +4386,12 @@ fn clause_guard_reduction(
 // BitArrays in patterns, guards, and expressions have a very similar structure
 // but need specific types. These are helpers for that. There is probably a
 // rustier way to do this :)
-fn bit_array_pattern_int(
-    value: EcoString,
-    int_value: BigInt,
-    start: u32,
-    end: u32,
-) -> UntypedPattern {
-    Pattern::Int {
+fn bit_array_size_int(value: EcoString, int_value: BigInt, start: u32, end: u32) -> UntypedPattern {
+    Pattern::BitArraySize(BitArraySize::Int {
         location: SrcSpan { start, end },
         value,
         int_value,
-    }
+    })
 }
 
 fn bit_array_expr_int(value: EcoString, int_value: BigInt, start: u32, end: u32) -> UntypedExpr {

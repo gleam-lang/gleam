@@ -196,6 +196,15 @@
 
   ([Louis Pilfold](https://github.com/lpil))
 
+- Calculations are now allowed in the size options of bit array patterns. For
+  example, the following code is now valid:
+
+  ```gleam
+  let assert <<size, data:bytes-size(size / 8 - 1)>> = some_bit_array
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - `gleam update`, `gleam deps update`, and `gleam deps download` will now print

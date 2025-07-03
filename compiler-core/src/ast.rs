@@ -23,6 +23,7 @@ use crate::type_::{
     self, Deprecation, HasType, ModuleValueConstructor, PatternConstructor, Type, TypedCallArg,
     ValueConstructor, nil,
 };
+use num_traits::Zero;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -1999,15 +2000,10 @@ pub enum Pattern<Type> {
         origin: VariableOrigin,
     },
 
-    /// A reference to a variable in a bit array. This is always a variable
-    /// being used rather than a new variable being assigned.
-    /// e.g. `assert <<y:size(somevar)>> = x`
-    VarUsage {
-        location: SrcSpan,
-        name: EcoString,
-        constructor: Option<ValueConstructor>,
-        type_: Type,
-    },
+    /// The specified size of a bit array. This can either be a literal integer,
+    /// a reference to a variable, or a maths expression.
+    /// e.g. `let assert <<y:size(somevar)>> = x`
+    BitArraySize(BitArraySize<Type>),
 
     /// A name given to a sub-pattern using the `as` keyword.
     /// e.g. `assert #(1, [_, _] as the_list) = x`
@@ -2073,6 +2069,84 @@ pub enum Pattern<Type> {
     },
 }
 
+pub type TypedBitArraySize = BitArraySize<Arc<Type>>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BitArraySize<Type> {
+    Int {
+        location: SrcSpan,
+        value: EcoString,
+        int_value: BigInt,
+    },
+
+    Variable {
+        location: SrcSpan,
+        name: EcoString,
+        constructor: Option<Box<ValueConstructor>>,
+        type_: Type,
+    },
+
+    BinaryOperator {
+        location: SrcSpan,
+        operator: IntOperator,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    Block {
+        location: SrcSpan,
+        inner: Box<Self>,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum IntOperator {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Remainder,
+}
+
+impl IntOperator {
+    pub fn precedence(&self) -> u8 {
+        match self {
+            Self::Add | Self::Subtract => 7,
+
+            Self::Multiply | Self::Divide | Self::Remainder => 8,
+        }
+    }
+
+    pub fn to_bin_op(&self) -> BinOp {
+        match self {
+            IntOperator::Add => BinOp::AddInt,
+            IntOperator::Subtract => BinOp::SubInt,
+            IntOperator::Multiply => BinOp::MultInt,
+            IntOperator::Divide => BinOp::DivInt,
+            IntOperator::Remainder => BinOp::RemainderInt,
+        }
+    }
+}
+
+impl<T> BitArraySize<T> {
+    pub fn location(&self) -> SrcSpan {
+        match self {
+            BitArraySize::Int { location, .. }
+            | BitArraySize::Variable { location, .. }
+            | BitArraySize::BinaryOperator { location, .. }
+            | BitArraySize::Block { location, .. } => *location,
+        }
+    }
+
+    pub fn non_zero_compile_time_number(&self) -> bool {
+        match self {
+            BitArraySize::Int { int_value, .. } => !int_value.is_zero(),
+            BitArraySize::Block { inner, .. } => inner.non_zero_compile_time_number(),
+            BitArraySize::Variable { .. } | BitArraySize::BinaryOperator { .. } => false,
+        }
+    }
+}
+
 impl Default for Inferred<()> {
     fn default() -> Self {
         Self::Unknown
@@ -2115,7 +2189,6 @@ impl<A> Pattern<A> {
             } => SrcSpan::new(pattern.location().start, location.end),
             Pattern::Int { location, .. }
             | Pattern::Variable { location, .. }
-            | Pattern::VarUsage { location, .. }
             | Pattern::List { location, .. }
             | Pattern::Float { location, .. }
             | Pattern::Discard { location, .. }
@@ -2125,6 +2198,7 @@ impl<A> Pattern<A> {
             | Pattern::StringPrefix { location, .. }
             | Pattern::BitArray { location, .. }
             | Pattern::Invalid { location, .. } => *location,
+            Pattern::BitArraySize(size) => size.location(),
         }
     }
 
@@ -2157,7 +2231,7 @@ impl TypedPattern {
             | Pattern::Float { .. }
             | Pattern::String { .. }
             | Pattern::Variable { .. }
-            | Pattern::VarUsage { .. }
+            | Pattern::BitArraySize { .. }
             | Pattern::Assign { .. }
             | Pattern::Discard { .. }
             | Pattern::List { .. }
@@ -2176,7 +2250,7 @@ impl TypedPattern {
             | Pattern::Float { .. }
             | Pattern::String { .. }
             | Pattern::Variable { .. }
-            | Pattern::VarUsage { .. }
+            | Pattern::BitArraySize { .. }
             | Pattern::Assign { .. }
             | Pattern::Discard { .. }
             | Pattern::List { .. }
@@ -2199,11 +2273,13 @@ impl TypedPattern {
 
             Pattern::Variable { type_, .. }
             | Pattern::List { type_, .. }
-            | Pattern::VarUsage { type_, .. }
             | Pattern::Constructor { type_, .. }
             | Pattern::Invalid { type_, .. } => type_.clone(),
 
             Pattern::Assign { pattern, .. } => pattern.type_(),
+
+            // Bit array sizes should always be integers
+            Pattern::BitArraySize(_) => type_::int(),
 
             Pattern::Discard { type_, .. } => type_.clone(),
 
@@ -2230,7 +2306,7 @@ impl TypedPattern {
             | Pattern::Float { .. }
             | Pattern::String { .. }
             | Pattern::Variable { .. }
-            | Pattern::VarUsage { .. }
+            | Pattern::BitArraySize { .. }
             | Pattern::Assign { .. }
             | Pattern::Discard { .. }
             | Pattern::StringPrefix { .. }
@@ -2313,7 +2389,7 @@ impl TypedPattern {
             Pattern::Int { .. }
             | Pattern::Float { .. }
             | Pattern::String { .. }
-            | Pattern::VarUsage { .. }
+            | Pattern::BitArraySize { .. }
             | Pattern::List { .. }
             | Pattern::Constructor { .. }
             | Pattern::BitArray { .. }
@@ -2337,7 +2413,7 @@ impl TypedPattern {
             | Pattern::Invalid { .. } => {}
 
             Pattern::Variable { name, .. } => variables.push(name.clone()),
-            Pattern::VarUsage { .. } => {}
+            Pattern::BitArraySize { .. } => {}
             Pattern::Assign { name, pattern, .. } => {
                 variables.push(name.clone());
                 pattern.collect_bound_variables(variables);
@@ -2485,7 +2561,7 @@ impl<Type> BitArraySegment<Pattern<Type>, Type> {
             | Pattern::Float { .. }
             | Pattern::String { .. }
             | Pattern::Variable { .. }
-            | Pattern::VarUsage { .. }
+            | Pattern::BitArraySize { .. }
             | Pattern::Discard { .. }
             | Pattern::List { .. }
             | Pattern::Constructor { .. }

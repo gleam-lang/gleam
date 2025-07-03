@@ -63,7 +63,10 @@ mod missing_patterns;
 pub mod printer;
 
 use crate::{
-    ast::{self, AssignName, Endianness, TypedClause, TypedPattern, TypedPatternBitArraySegment},
+    ast::{
+        self, AssignName, BitArraySize, Endianness, IntOperator, TypedBitArraySize, TypedClause,
+        TypedPattern, TypedPatternBitArraySegment,
+    },
     strings::{convert_string_escape_chars, length_utf16, length_utf32},
     type_::{
         Environment, Opaque, Type, TypeValueConstructor, TypeValueConstructorField, TypeVar,
@@ -859,8 +862,8 @@ pub enum BitArrayTest {
     /// pattern where the size is a variable with a negative value will never
     /// match. So we check this to make sure the test will fail.
     ///
-    VariableIsNotNegative {
-        variable: VariableUsage,
+    ReadSizeIsNotNegative {
+        size: ReadSize,
     },
 
     /// This test checks that the segment read by the given read action is a
@@ -868,7 +871,7 @@ pub enum BitArrayTest {
     ///
     /// We need this check as `NaN` and `Infinity` will not match with float
     /// segments (like `<<_:32-float>>`) on the Erlang target and we must
-    /// replicate the same behavious on the JavaScript target as well.
+    /// replicate the same behaviours on the JavaScript target as well.
     ///
     SegmentIsFiniteFloat {
         read_action: ReadAction,
@@ -888,12 +891,11 @@ impl BitArrayTest {
 
     pub(crate) fn referenced_segment_patterns(&self) -> Vec<(&EcoString, &ReadAction)> {
         match self {
-            BitArrayTest::VariableIsNotNegative { variable } => match variable {
-                VariableUsage::PatternSegment(segment_value, read_action) => {
-                    vec![(segment_value, read_action)]
-                }
-                VariableUsage::OutsideVariable(..) => vec![],
-            },
+            BitArrayTest::ReadSizeIsNotNegative { size } => {
+                let mut references = Vec::new();
+                size.referenced_segment_patterns(&mut references);
+                references
+            }
 
             BitArrayTest::Size(SizeTest { operator: _, size })
             | BitArrayTest::CatchAllIsBytes { size_so_far: size } => {
@@ -909,18 +911,7 @@ impl BitArrayTest {
             }) => {
                 let mut references = vec![];
                 references.append(&mut from.referenced_segment_patterns());
-                match size {
-                    ReadSize::VariableBits { variable, unit: _ } => match variable.as_ref() {
-                        VariableUsage::PatternSegment(segment_value, read_action) => {
-                            references.push((segment_value, read_action))
-                        }
-                        VariableUsage::OutsideVariable(..) => (),
-                    },
-
-                    ReadSize::ConstantBits(..)
-                    | ReadSize::RemainingBits
-                    | ReadSize::RemainingBytes => (),
-                };
+                size.referenced_segment_patterns(&mut references);
 
                 references
             }
@@ -1219,10 +1210,32 @@ impl Confidence {
     }
 }
 
+/// An offset, in bits, into a bit array. An offset contains three parts. For
+/// example, in the following pattern:
+/// ```txt
+/// <<a, b:size(a), c:size(b - 1), payload:size(c)>>
+/// ```
+///
+/// The start of the `payload` segment is the sum of the length of `a` (which we
+/// know is 1 byte), plus the size of `b`, which is the value of `a`, plus the
+/// size of `c`, which is 1 less than the value of `b`.
+///
+/// Here, `constant` would be `8`; `variables` would map `a` to `1`, because it
+/// is referenced once, in a segment with unit `1`; `calculations` would contain
+/// `b - 1`.
+///
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub struct Offset {
     pub constant: BigInt,
     pub variables: im::HashMap<VariableUsage, usize>,
+    pub calculations: im::Vector<OffsetCalculation>,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
+pub struct OffsetCalculation {
+    pub left: Offset,
+    pub right: Offset,
+    pub operator: IntOperator,
 }
 
 impl Offset {
@@ -1230,14 +1243,20 @@ impl Offset {
         Self {
             constant: value.into(),
             variables: im::HashMap::new(),
+            calculations: im::Vector::new(),
         }
     }
 
-    fn add_size(self, size: &ReadSize) -> Offset {
+    fn from_size(size: &ReadSize) -> Self {
+        Self::constant(0).add_size(size)
+    }
+
+    fn add_size(mut self, size: &ReadSize) -> Offset {
         match size {
             ReadSize::ConstantBits(value) => Self {
                 constant: self.constant + value,
                 variables: self.variables,
+                calculations: self.calculations,
             },
             ReadSize::VariableBits { variable, unit } => Self {
                 constant: self.constant,
@@ -1248,8 +1267,25 @@ impl Offset {
                     },
                     variable.as_ref().clone(),
                 ),
+                calculations: self.calculations,
             },
             ReadSize::RemainingBits | ReadSize::RemainingBytes => self,
+
+            ReadSize::BinaryOperator {
+                left,
+                right,
+                operator,
+            } => match operator {
+                IntOperator::Add => self.add_size(left).add_size(right),
+                _ => {
+                    self.calculations.push_back(OffsetCalculation {
+                        left: Self::from_size(left),
+                        right: Self::from_size(right),
+                        operator: *operator,
+                    });
+                    self
+                }
+            },
         }
     }
 
@@ -1257,6 +1293,7 @@ impl Offset {
         Offset {
             constant: self.constant.clone() + constant.into(),
             variables: self.variables.clone(),
+            calculations: self.calculations.clone(),
         }
     }
 
@@ -1264,7 +1301,12 @@ impl Offset {
     /// another one.
     ///
     fn greater(&self, other: &Offset) -> Confidence {
-        if self.constant > other.constant && superset(&self.variables, &other.variables) {
+        // We can't easily tell if one calculation is greater than another, so
+        // we can only be certain about one being greater if there are no calculations
+        if self.constant > other.constant
+            && self.calculations.is_empty()
+            && superset(&self.variables, &other.variables)
+        {
             Confidence::Certain
         } else {
             Confidence::Uncertain
@@ -1275,8 +1317,11 @@ impl Offset {
     /// to another one.
     ///
     fn greater_equal(&self, other: &Offset) -> Confidence {
+        // Like `greater`, we can only be certain if there are no calculations
         if self == other
-            || (self.constant >= other.constant && superset(&self.variables, &other.variables))
+            || (self.constant >= other.constant
+                && self.calculations.is_empty()
+                && superset(&self.variables, &other.variables))
         {
             Confidence::Certain
         } else {
@@ -1292,13 +1337,13 @@ impl Offset {
     }
 
     pub(crate) fn is_zero(&self) -> bool {
-        self.constant == BigInt::ZERO && self.variables.is_empty()
+        self.constant == BigInt::ZERO && self.variables.is_empty() && self.calculations.is_empty()
     }
 
     /// If this offset has a constant size, returns its size in bits.
     ///
     pub(crate) fn constant_bits(&self) -> Option<BigInt> {
-        if self.variables.is_empty() {
+        if self.variables.is_empty() && self.calculations.is_empty() {
             Some(self.constant.clone())
         } else {
             None
@@ -1318,15 +1363,23 @@ impl Offset {
     }
 
     fn referenced_segment_patterns(&self) -> Vec<(&EcoString, &ReadAction)> {
-        self.variables
-            .keys()
-            .filter_map(|variable_usage| match variable_usage {
+        let mut references = Vec::new();
+
+        for variable_usage in self.variables.keys() {
+            match variable_usage {
                 VariableUsage::PatternSegment(segment_name, read_action) => {
-                    Some((segment_name, read_action))
+                    references.push((segment_name, read_action));
                 }
-                VariableUsage::OutsideVariable(..) => None,
-            })
-            .collect_vec()
+                VariableUsage::OutsideVariable(..) => {}
+            }
+        }
+
+        for calculation in self.calculations.iter() {
+            references.extend(calculation.left.referenced_segment_patterns());
+            references.extend(calculation.right.referenced_segment_patterns());
+        }
+
+        references
     }
 }
 
@@ -1356,6 +1409,21 @@ pub enum ReadSize {
         variable: Box<VariableUsage>,
         unit: u8,
     },
+
+    /// A maths expression calculating the read size from one or more variables.
+    ///
+    /// ```txt
+    /// <<len, payload:size(len * 8)>>
+    ///        ─┬───────────────────
+    ///         ╰─ Here we have to calculate the length by performing the
+    ///            multiplication at runtime
+    /// ```
+    BinaryOperator {
+        left: Box<ReadSize>,
+        right: Box<ReadSize>,
+        operator: IntOperator,
+    },
+
     /// Read all the remaining bits in the bit array when using a catch all
     /// pattern.
     ///
@@ -1374,9 +1442,10 @@ impl ReadSize {
     pub(crate) fn constant_bits(&self) -> Option<BigInt> {
         match self {
             ReadSize::ConstantBits(value) => Some(value.clone()),
-            ReadSize::VariableBits { .. } | ReadSize::RemainingBits | ReadSize::RemainingBytes => {
-                None
-            }
+            ReadSize::VariableBits { .. }
+            | ReadSize::BinaryOperator { .. }
+            | ReadSize::RemainingBits
+            | ReadSize::RemainingBytes => None,
         }
     }
 
@@ -1387,6 +1456,47 @@ impl ReadSize {
             Some(bits / 8)
         } else {
             None
+        }
+    }
+
+    fn referenced_segment_patterns<'a>(
+        &'a self,
+        references: &mut Vec<(&'a EcoString, &'a ReadAction)>,
+    ) {
+        match self {
+            ReadSize::VariableBits { variable, unit: _ } => match variable.as_ref() {
+                VariableUsage::PatternSegment(segment_value, read_action) => {
+                    references.push((segment_value, read_action));
+                }
+                VariableUsage::OutsideVariable(..) => (),
+            },
+
+            ReadSize::BinaryOperator { left, right, .. } => {
+                left.referenced_segment_patterns(references);
+                right.referenced_segment_patterns(references);
+            }
+
+            ReadSize::ConstantBits(..) | ReadSize::RemainingBits | ReadSize::RemainingBytes => (),
+        };
+    }
+
+    fn can_be_negative(&self) -> bool {
+        match self {
+            ReadSize::ConstantBits(value) => *value < BigInt::ZERO,
+            ReadSize::VariableBits { variable, .. } => match variable.as_ref() {
+                VariableUsage::PatternSegment(_, read_action) => read_action.signed,
+                VariableUsage::OutsideVariable(_) => true,
+            },
+            ReadSize::BinaryOperator {
+                left,
+                right,
+                operator,
+            } => {
+                *operator == IntOperator::Subtract
+                    || left.can_be_negative()
+                    || right.can_be_negative()
+            }
+            ReadSize::RemainingBits | ReadSize::RemainingBytes => false,
         }
     }
 }
@@ -2784,8 +2894,8 @@ impl CaseToCompile {
                 })
             }
 
-            TypedPattern::VarUsage { .. } => {
-                unreachable!("Cannot convert VarUsage to exhaustiveness pattern")
+            TypedPattern::BitArraySize { .. } => {
+                unreachable!("Cannot convert BitArraySize to exhaustiveness pattern")
             }
         }
     }
@@ -2819,20 +2929,10 @@ impl CaseToCompile {
 
             // If we're reading a variable number of bits we need to make sure
             // that that variable is not negative!
-            if let ReadSize::VariableBits { variable, .. } = &segment_size {
-                match variable.as_ref() {
-                    // If the size variable comes from reading an unsigned
-                    // number we know that it can't be negative! So we can skip
-                    // checking it.
-                    VariableUsage::PatternSegment(_, read_action) if !read_action.signed => (),
-
-                    // Otherwise we must make sure that the read size is not
-                    // negative.
-                    VariableUsage::PatternSegment(..) | VariableUsage::OutsideVariable(_) => tests
-                        .push_back(BitArrayTest::VariableIsNotNegative {
-                            variable: variable.as_ref().clone(),
-                        }),
-                }
+            if segment_size.can_be_negative() {
+                tests.push_back(BitArrayTest::ReadSizeIsNotNegative {
+                    size: segment_size.clone(),
+                });
             }
 
             // All segments but the last will require the original bit array to
@@ -2957,22 +3057,9 @@ fn segment_size(
     let pattern = pattern.unwrap_or(&segment.value);
 
     match segment.size() {
-        // Size could either be a constant or a variable usage. In either case
-        // we need to take the segment's unit into account!
-        Some(ast::Pattern::Int { int_value, .. }) => {
-            ReadSize::ConstantBits(int_value * segment.unit())
-        }
-        Some(ast::Pattern::VarUsage { name, .. }) => {
-            let variable = match pattern_variables.get(name) {
-                Some(read_action) => {
-                    VariableUsage::PatternSegment(name.clone(), read_action.clone())
-                }
-                None => VariableUsage::OutsideVariable(name.clone()),
-            };
-            ReadSize::VariableBits {
-                variable: Box::new(variable),
-                unit: segment.unit(),
-            }
+        // The size of a segment must be a `BitArraySize` pattern.
+        Some(ast::Pattern::BitArraySize(size)) => {
+            bit_array_size(segment.unit(), pattern_variables, size)
         }
         Some(x) => panic!("invalid pattern size made it to code generation {x:?}"),
 
@@ -3010,6 +3097,51 @@ fn segment_size(
             // In all other cases the segment is considered to be 64 bits.
             _ => ReadSize::ConstantBits(64.into()),
         },
+    }
+}
+
+fn bit_array_size(
+    unit: u8,
+    pattern_variables: &HashMap<EcoString, ReadAction>,
+    size: &TypedBitArraySize,
+) -> ReadSize {
+    match size {
+        BitArraySize::Int { int_value, .. } => ReadSize::ConstantBits(int_value * unit),
+        BitArraySize::Variable { name, .. } => {
+            let variable = match pattern_variables.get(name) {
+                Some(read_action) => {
+                    VariableUsage::PatternSegment(name.clone(), read_action.clone())
+                }
+                None => VariableUsage::OutsideVariable(name.clone()),
+            };
+            ReadSize::VariableBits {
+                variable: Box::new(variable),
+                unit,
+            }
+        }
+        BitArraySize::BinaryOperator {
+            operator,
+            left,
+            right,
+            ..
+        } => {
+            let size = ReadSize::BinaryOperator {
+                left: Box::new(bit_array_size(1, pattern_variables, left)),
+                right: Box::new(bit_array_size(1, pattern_variables, right)),
+                operator: *operator,
+            };
+
+            if unit == 1 {
+                size
+            } else {
+                ReadSize::BinaryOperator {
+                    left: Box::new(size),
+                    right: Box::new(ReadSize::ConstantBits(unit.into())),
+                    operator: IntOperator::Multiply,
+                }
+            }
+        }
+        BitArraySize::Block { inner, .. } => bit_array_size(unit, pattern_variables, inner),
     }
 }
 
