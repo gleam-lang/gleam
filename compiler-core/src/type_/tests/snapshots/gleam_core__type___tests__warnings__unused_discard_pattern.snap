@@ -18,7 +18,7 @@ warning: Unused discard pattern
   ┌─ /src/warning/wrn.gleam:4:10
   │
 4 │     _ as b -> b
-  │          ^
+  │     ^^^^^^
 
 `_ as b` can be written more concisely as `b`
 Hint: Replace with b
