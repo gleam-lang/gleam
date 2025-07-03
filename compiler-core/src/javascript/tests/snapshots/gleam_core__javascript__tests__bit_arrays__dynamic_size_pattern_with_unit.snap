@@ -18,7 +18,7 @@ const FILEPATH = "src/module.gleam";
 export function go(x) {
   let size = 3;
   if (!(
-    size >= 0 &&
+    size * 2 >= 0 &&
     x.bitSize === size * 2 &&
     bitArraySliceToInt(x, 0, size * 2, true, false) === 1
   )) {
