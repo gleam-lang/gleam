@@ -223,6 +223,11 @@
   Erlang compiler application instead of failing.
   ([Louis Pilfold](https://github.com/lpil))
 
+- The build tool now also supports `.cjs` files placed in the `src`, `dev` or
+  `test` directories.
+
+  ([yoshi](https://github.com/yoshi-monster))
+
 ### Language server
 
 - It is now possible to use the "Pattern match on variable" code action on
