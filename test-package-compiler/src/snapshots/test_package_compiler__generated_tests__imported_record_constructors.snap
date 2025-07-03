@@ -1,8 +1,6 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 217
 expression: "./cases/imported_record_constructors"
-snapshot_kind: text
 ---
 //// /out/lib/the_package/_gleam_artefacts/one@one.cache
 <.cache binary>
@@ -12,7 +10,7 @@ snapshot_kind: text
 
 //// /out/lib/the_package/_gleam_artefacts/one@one.erl
 -module(one@one).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "src/one/one.gleam").
 -export_type([a/0, b/0, user/0]).
 
@@ -33,7 +31,7 @@ snapshot_kind: text
 
 //// /out/lib/the_package/_gleam_artefacts/one@two.erl
 -module(one@two).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "src/one/two.gleam").
 -export_type([a/0, b/0, user/0]).
 
@@ -54,7 +52,7 @@ snapshot_kind: text
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "src/two.gleam").
 -export([accessors/1, destructure_qualified/1, destructure_qualified_aliased/1, destructure_unqualified/1, destructure_aliased/1, update_qualified/1, update_qualified_aliased/1, update_unqualified/1, update_aliased/1, qualified_fn_a/0, qualified_fn_b/0, qualified_aliased_fn_a/0, qualified_aliased_fn_b/0, unqualified_fn_a/0, unqualified_fn_b/0, aliased_fn_a/0, aliased_fn_b/0]).
 

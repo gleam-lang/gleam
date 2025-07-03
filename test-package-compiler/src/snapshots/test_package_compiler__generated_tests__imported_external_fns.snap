@@ -1,8 +1,6 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 206
 expression: "./cases/imported_external_fns"
-snapshot_kind: text
 ---
 //// /out/lib/the_package/_gleam_artefacts/one.cache
 <.cache binary>
@@ -12,7 +10,7 @@ snapshot_kind: text
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "src/one.gleam").
 -export([thing/0, escaped_thing/0]).
 
@@ -35,7 +33,7 @@ escaped_thing() ->
 
 //// /out/lib/the_package/_gleam_artefacts/three.erl
 -module(three).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "src/three.gleam").
 -export([thing/0, escaped_thing/0]).
 
@@ -58,7 +56,7 @@ escaped_thing() ->
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "src/two.gleam").
 -export([fn_reference_qualified/0, fn_reference_qualified_aliased/0, fn_reference_unqualified/0, fn_reference_unqualified_aliased/0, fn_call_qualified/0, fn_call_qualified_aliased/0, fn_call_unqualified/0, fn_call_unqualified_aliased/0, argument_reference_qualified/0, argument_reference_qualified_aliased/0, argument_reference_unqualified/0, argument_reference_unqualified_aliased/0, the_consts/0]).
 

@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/records.rs
-assertion_line: 406
 expression: "type A { A(inner: Int) }\ntype B { B(String) }\ntype C { C(Int) }\n\npub fn main(x: Int) -> Int {\n  let a = A(x)\n  a.inner\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 type A { A(inner: Int) }
@@ -17,7 +15,7 @@ pub fn main(x: Int) -> Int {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/1]).
 -export_type([a/0]).
