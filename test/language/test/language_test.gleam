@@ -1249,6 +1249,15 @@ fn sized_bit_array_tests() -> List(Test) {
           payload
         })
       }),
+    "Pattern match on negative size"
+      |> example(fn() {
+        assert_equal(2, {
+          case <<1, 2, 3, 4>> {
+            <<a, b:size(a - 100_000), _c:size(b)>> -> 1
+            _ -> 2
+          }
+        })
+      }),
   ]
 }
 
