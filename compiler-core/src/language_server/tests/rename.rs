@@ -70,7 +70,7 @@ macro_rules! assert_rename {
         assert_rename!(TestProject::for_source($code), $new_name, $position);
     };
 
-    (($module_name:literal, $module_src:literal), $code:literal, $new_name:literal, $position:expr $(,)?) => {
+    (($module_name:literal, $module_src:literal), $code:expr, $new_name:literal, $position:expr $(,)?) => {
         assert_rename!(
             TestProject::for_source($code).add_module($module_name, $module_src),
             $new_name,
@@ -1351,167 +1351,167 @@ pub fn main() {
     );
 }
 
+const MOCK_MODULE: &'static str =
+"pub fn fn1() { todo }
+pub fn fn2() { todo }
+pub const const1 = Variant1
+pub type Type { Variant1 Variant2(Int) }";
+
+const TEST_MODULE: &'static str =
+"import mod
+
+fn func(arg: mod.Type) {
+  mod.fn1()
+  mod.fn2()
+  let _ = mod.const1
+  case arg {
+    mod.Variant1 -> todo
+    mod.Variant2(..) -> todo
+  }
+}
+
+const c1 = mod.Variant1
+const c2 = mod.const1
+type Type1 { Var(mod.Type) }
+type Type2 = mod.Type";
+
 #[test]
-fn rename_module_alias_from_import() {
+fn rename_module_from_import() {
     assert_rename!(
-        (
-            "mod",
-            "
-pub fn function() {
-    function()
-}
-
-pub fn other_function() {
-    function()
-}
-"
-        ),
-        "
-import mod
-
-pub fn main() {
-    mod.function()
-    mod.other_function()
-}
-",
+        TestProject::for_source(TEST_MODULE).add_hex_module("mod", MOCK_MODULE),
         "module",
-        find_position_of("mod")
+        find_position_of("import mod")
     );
 }
 
 #[test]
-fn rename_module_alias_from_alias() {
+fn rename_module_from_alias() {
+    let test_project = TestProject::for_source(TEST_MODULE).add_hex_module("mod", MOCK_MODULE);
+    let _ = apply_rename(&test_project, "module", find_position_of("import mod").find_position(test_project.src));
     assert_rename!(
-        (
-            "mod",
-            "
-pub fn function() {
-    function()
-}
-
-pub fn other_function() {
-    function()
-}
-"
-        ),
-        "
-import mod as module
-
-pub fn main() {
-    module.function()
-    module.other_function()
-}
-",
+        test_project,
         "module_alias",
-        find_position_of("module")
+        find_position_of("import mod as module")
     );
 }
 
 #[test]
-fn rename_module_alias_to_orig() {
+fn rename_module_to_orig() {
+    let test_project = TestProject::for_source(TEST_MODULE).add_hex_module("mod", MOCK_MODULE);
+    let _ = apply_rename(&test_project, "module", find_position_of("import mod").find_position(test_project.src));
     assert_rename!(
-        (
-            "mod",
-            "
-pub fn function() {
-    function()
-}
-
-pub fn other_function() {
-    function()
-}
-"
-        ),
-        "
-import mod as module
-
-pub fn main() {
-    module.function()
-    module.other_function()
-}
-",
+        test_project,
         "mod",
-        find_position_of("module")
+        find_position_of("import mod as module")
     );
 }
 
 #[test]
-fn rename_module_alias_from_select() {
+fn rename_module_from_function_arg() {
     assert_rename!(
-        (
-            "mod",
-            "
-pub fn function() {
-    function()
-}
-
-pub fn other_function() {
-    function()
-}
-"
-        ),
-        "
-import mod
-
-pub fn main() {
-    mod.function()
-    mod.other_function()
-}
-",
+        TestProject::for_source(TEST_MODULE).add_hex_module("mod", MOCK_MODULE),
         "module",
-        find_position_of("mod").nth_occurrence(2)
+        find_position_of("arg: mod.Type").with_char_offset(6)
     );
 }
 
 #[test]
-fn rename_module_alias_from_alias_select() {
+fn rename_module_from_function_call() {
     assert_rename!(
-        (
-            "mod",
-            "
-pub fn function() {
-    function()
-}
-
-pub fn other_function() {
-    function()
-}
-"
-        ),
-        "
-import mod as module
-
-pub fn main() {
-    module.function()
-    module.other_function()
-}
-",
-        "module_alias",
-        find_position_of("module").nth_occurrence(2)
+        TestProject::for_source(TEST_MODULE).add_hex_module("mod", MOCK_MODULE),
+        "module",
+        find_position_of("mod.fn")
     );
 }
 
 #[test]
-fn no_rename_module_alias_bad_name() {
+fn rename_module_from_var() {
+    assert_rename!(
+        TestProject::for_source(TEST_MODULE).add_hex_module("mod", MOCK_MODULE),
+        "module",
+        find_position_of("let _ = mod.const1").with_char_offset(9)
+    );
+}
+
+#[test]
+fn rename_module_from_pattern() {
+    assert_rename!(
+        TestProject::for_source(TEST_MODULE).add_hex_module("mod", MOCK_MODULE),
+        "module",
+        find_position_of("mod.Variant1 ->")
+    );
+}
+
+#[test]
+fn rename_module_from_pattern_with_spread() {
+    assert_rename!(
+        TestProject::for_source(TEST_MODULE).add_hex_module("mod", MOCK_MODULE),
+        "module",
+        find_position_of("mod.Variant2(..) ->")
+    );
+}
+
+#[test]
+fn rename_module_from_const_record() {
+    assert_rename!(
+        TestProject::for_source(TEST_MODULE).add_hex_module("mod", MOCK_MODULE),
+        "module",
+        find_position_of("const c1 = mod.Variant1").with_char_offset(12)
+    );
+}
+
+#[test]
+fn rename_module_from_const_var() {
+    assert_rename!(
+        TestProject::for_source(TEST_MODULE).add_hex_module("mod", MOCK_MODULE),
+        "module",
+        find_position_of("const c2 = mod.const1").with_char_offset(12)
+    );
+}
+
+#[test]
+fn rename_module_from_custom_type() {
+    assert_rename!(
+        TestProject::for_source(TEST_MODULE).add_hex_module("mod", MOCK_MODULE),
+        "module",
+        find_position_of("type Type1 { Var(mod.Type) }").with_char_offset(18)
+    );
+}
+
+#[test]
+fn rename_module_from_type_alias() {
+    assert_rename!(
+        TestProject::for_source(TEST_MODULE).add_hex_module("mod", MOCK_MODULE),
+        "module",
+        find_position_of("type Type2 = mod.Type").with_char_offset(14)
+    );
+}
+
+#[test]
+fn rename_module_with_unqualified_member() {
     let src = "
-import mod
+import mod.{type Type}
 
-pub fn main() {
-    mod.function()
-    mod.other_function()
-}
+const c = mod.Variant1
 ";
+    let test_project = TestProject::for_source(src).add_hex_module("mod", MOCK_MODULE);
+    let pos = find_position_of("import mod").find_position(test_project.src);
+    let lsp_types::PrepareRenameResponse::Range(range) = test_project.at(pos, |engine, params, _| {
+        let params = TextDocumentPositionParams {
+            text_document: params.text_document,
+            position: pos,
+        };
+        engine.prepare_rename(params).result.unwrap().unwrap()
+    }) else { panic!() };
 
+    assert_eq!(range.start, Position::new(1, 7));
+    assert_eq!(range.end, Position::new(1, 9));
+}
+
+#[test]
+fn no_rename_module_bad_name() {
     assert_no_rename!(
-        &TestProject::for_source(src).add_hex_module("mod", "
-pub fn function() {
-    function()
-}
-
-pub fn other_function() {
-    function()
-}
-"),
+        &TestProject::for_source(TEST_MODULE).add_hex_module("mod", MOCK_MODULE),
         "Module",
         find_position_of("mod")
     );
