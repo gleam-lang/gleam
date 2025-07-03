@@ -2526,3 +2526,16 @@ pub fn go(x) {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4712
+#[test]
+fn multiple_variable_size_segments() {
+    assert_js!(
+        "
+pub fn main() {
+  let assert <<a, b:size(a), c:size(b)>> = <<1, 2, 3, 4>>
+  a + b + c
+}
+"
+    );
+}
