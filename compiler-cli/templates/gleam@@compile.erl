@@ -114,11 +114,9 @@ compile_elixir(Modules, Out) ->
     case Modules of
         [] -> {true, []};
         _ ->
-            log({starting, "compiler.app"}),
-            ok = application:start(compiler),
-            log({starting, "elixir.app"}),
-            case application:start(elixir) of
-                ok -> do_compile_elixir(Modules, Out);
+            log({starting, "compiler.app,elixir.app"}),
+            case application:ensure_all_started([compiler, elixir]) of
+                {ok, _} -> do_compile_elixir(Modules, Out);
                 _ ->
                     io:put_chars(standard_error, [Error, $\n]),
                     {false, []}
