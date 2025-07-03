@@ -1,0 +1,41 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: panic as echo wibble as message
+---
+[
+    Expression(
+        Panic {
+            location: SrcSpan {
+                start: 0,
+                end: 31,
+            },
+            message: Some(
+                Echo {
+                    location: SrcSpan {
+                        start: 9,
+                        end: 31,
+                    },
+                    keyword_end: 13,
+                    expression: Some(
+                        Var {
+                            location: SrcSpan {
+                                start: 14,
+                                end: 20,
+                            },
+                            name: "wibble",
+                        },
+                    ),
+                    message: Some(
+                        Var {
+                            location: SrcSpan {
+                                start: 24,
+                                end: 31,
+                            },
+                            name: "message",
+                        },
+                    ),
+                },
+            ),
+        },
+    ),
+]

@@ -92,8 +92,9 @@ pub trait Visit<'ast> {
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         expression: &'ast Option<Box<TypedExpr>>,
+        message: &'ast Option<Box<TypedExpr>>,
     ) {
-        visit_typed_expr_echo(self, location, type_, expression);
+        visit_typed_expr_echo(self, location, type_, expression, message);
     }
 
     fn visit_typed_expr_int(
@@ -857,8 +858,9 @@ where
         TypedExpr::Echo {
             location,
             expression,
+            message,
             type_,
-        } => v.visit_typed_expr_echo(location, type_, expression),
+        } => v.visit_typed_expr_echo(location, type_, expression, message),
     }
 }
 
@@ -1097,11 +1099,15 @@ pub fn visit_typed_expr_echo<'a, V>(
     _location: &'a SrcSpan,
     _type_: &'a Arc<Type>,
     expression: &'a Option<Box<TypedExpr>>,
+    message: &'a Option<Box<TypedExpr>>,
 ) where
     V: Visit<'a> + ?Sized,
 {
     if let Some(expression) = expression {
         v.visit_typed_expr(expression)
+    }
+    if let Some(message) = message {
+        v.visit_typed_expr(message)
     }
 }
 

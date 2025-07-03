@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  echo 1 + 2 as\n    // Hello!\n    \"message\"\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  echo 1 + 2 as
+  ↑            
+    // Hello!
+    "message"
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  1 + 2
+}

@@ -1,0 +1,40 @@
+---
+source: compiler-core/src/javascript/tests/echo.rs
+expression: "\npub fn main() {\n  echo 1 as {\n    let name = \"Giacomo\"\n    \"Hello, \" <> name\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  echo 1 as {
+    let name = "Giacomo"
+    "Hello, " <> name
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
+import {
+  Empty as $Empty,
+  NonEmpty as $NonEmpty,
+  CustomType as $CustomType,
+  bitArraySlice,
+  bitArraySliceToInt,
+  BitArray as $BitArray,
+  List as $List,
+  UtfCodepoint as $UtfCodepoint,
+} from "../gleam.mjs";
+
+export function main() {
+  return echo(
+    1,
+    (() => {
+      let name = "Giacomo";
+      return "Hello, " + name;
+    })(),
+    "src/module.gleam",
+    3,
+  );
+}
+
+// ...omitted code from `templates/echo.mjs`...

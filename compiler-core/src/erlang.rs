@@ -2033,10 +2033,22 @@ fn panic<'a>(location: SrcSpan, message: Option<&'a TypedExpr>, env: &mut Env<'a
     erlang_error("panic", &message, location, vec![], env)
 }
 
-fn echo<'a>(body: Document<'a>, location: &SrcSpan, env: &mut Env<'a>) -> Document<'a> {
+fn echo<'a>(
+    body: Document<'a>,
+    message: Option<&'a TypedExpr>,
+    location: &SrcSpan,
+    env: &mut Env<'a>,
+) -> Document<'a> {
     env.echo_used = true;
+
+    let message = message
+        .as_ref()
+        .map(|message| maybe_block_expr(message, env))
+        .unwrap_or("nil".to_doc());
+
     "echo".to_doc().append(wrap_args(vec![
         body,
+        message,
         env.line_numbers.line_number(location.start).to_doc(),
     ]))
 }
@@ -2097,12 +2109,14 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::Echo {
             expression,
             location,
+            message,
             ..
         } => {
             let expression = expression
                 .as_ref()
                 .expect("echo with no expression outside of pipe");
-            echo(maybe_block_expr(expression, env), location, env)
+            let expression = maybe_block_expr(expression, env);
+            echo(expression, message.as_deref(), location, env)
         }
 
         TypedExpr::Int { value, .. } => int(value),
@@ -2204,11 +2218,14 @@ fn pipeline<'a>(
     let all_assignments = std::iter::once(first_value)
         .chain(assignments.iter().map(|(assignment, _kind)| assignment));
 
-    let echo_doc = |var_name: &Option<Document<'a>>, location: &SrcSpan, env: &mut Env<'a>| {
+    let echo_doc = |var_name: &Option<Document<'a>>,
+                    message: Option<&'a TypedExpr>,
+                    location: &SrcSpan,
+                    env: &mut Env<'a>| {
         let name = var_name
             .to_owned()
             .expect("echo with no previous step in a pipe");
-        echo(name, location, env)
+        echo(name, message, location, env)
     };
 
     let mut prev_local_var_name = None;
@@ -2218,9 +2235,15 @@ fn pipeline<'a>(
             // just prints the previous variable assigned in the pipeline.
             TypedExpr::Echo {
                 expression: None,
+                message,
                 location,
                 ..
-            } => documents.push(echo_doc(&prev_local_var_name, location, env)),
+            } => documents.push(echo_doc(
+                &prev_local_var_name,
+                message.as_deref(),
+                location,
+                env,
+            )),
 
             // Otherwise we assign the intermediate pipe value to a variable.
             _ => {
@@ -2237,9 +2260,15 @@ fn pipeline<'a>(
     match finally {
         TypedExpr::Echo {
             expression: None,
+            message,
             location,
             ..
-        } => documents.push(echo_doc(&prev_local_var_name, location, env)),
+        } => documents.push(echo_doc(
+            &prev_local_var_name,
+            message.as_deref(),
+            location,
+            env,
+        )),
         _ => documents.push(expr(finally, env)),
     }
 

@@ -111,7 +111,14 @@ pub enum UntypedExpr {
 
     Echo {
         location: SrcSpan,
+        /// This is the position where the echo keyword ends:
+        /// ```gleam
+        /// echo wibble
+        /// // ^ ends here!
+        /// ```
+        keyword_end: u32,
         expression: Option<Box<Self>>,
+        message: Option<Box<Self>>,
     },
 
     BitArray {

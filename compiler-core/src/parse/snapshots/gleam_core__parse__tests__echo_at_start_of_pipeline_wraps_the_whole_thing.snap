@@ -9,6 +9,7 @@ expression: echo 1 |> wibble |> wobble
                 start: 0,
                 end: 26,
             },
+            keyword_end: 4,
             expression: Some(
                 PipeLine {
                     expressions: [
@@ -37,6 +38,7 @@ expression: echo 1 |> wibble |> wobble
                     ],
                 },
             ),
+            message: None,
         },
     ),
 ]

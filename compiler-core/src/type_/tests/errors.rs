@@ -2873,6 +2873,21 @@ fn echo_followed_by_no_expression() {
 }
 
 #[test]
+fn echo_followed_by_no_expression_and_message() {
+    assert_error!("echo as \"wibble\"");
+}
+
+#[test]
+fn echo_followed_by_no_expression_and_invalid_message() {
+    assert_error!("echo as 1");
+}
+
+#[test]
+fn echo_followed_by_invalid_message() {
+    assert_error!("echo 11 as { True || False }");
+}
+
+#[test]
 fn echo_followed_by_no_expression_2() {
     assert_module_error!(
         r#"

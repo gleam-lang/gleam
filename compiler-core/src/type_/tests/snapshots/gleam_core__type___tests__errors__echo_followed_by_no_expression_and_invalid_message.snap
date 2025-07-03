@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: echo as 1
+---
+----- SOURCE CODE
+echo as 1
+
+----- ERROR
+error: Invalid echo use
+  ┌─ /src/one/two.gleam:1:1
+  │
+1 │ echo as 1
+  │ ^^^^ I was expecting a value after this
+
+The `echo` keyword should be followed by a value to print.
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:9
+  │
+1 │ echo as 1
+  │         ^
+
+Expected type:
+
+    String
+
+Found type:
+
+    Int

@@ -144,6 +144,7 @@ pub enum TypedExpr {
         location: SrcSpan,
         type_: Arc<Type>,
         expression: Option<Box<Self>>,
+        message: Option<Box<Self>>,
     },
 
     BitArray {
@@ -208,7 +209,6 @@ impl TypedExpr {
         match self {
             Self::Var { .. }
             | Self::Int { .. }
-            | Self::Panic { .. }
             | Self::Float { .. }
             | Self::String { .. }
             | Self::Invalid { .. } => self.self_if_contains_location(byte_index),
@@ -242,13 +242,30 @@ impl TypedExpr {
                 }
             }
 
-            Self::Echo { expression, .. } => expression
+            Self::Echo {
+                expression,
+                message,
+                ..
+            } => expression
                 .as_ref()
                 .and_then(|expression| expression.find_node(byte_index))
+                .or_else(|| {
+                    message
+                        .as_ref()
+                        .and_then(|message| message.find_node(byte_index))
+                })
                 .or_else(|| self.self_if_contains_location(byte_index)),
 
-            Self::Todo { kind, .. } => match kind {
-                TodoKind::Keyword => self.self_if_contains_location(byte_index),
+            Self::Panic { message, .. } => message
+                .as_ref()
+                .and_then(|message| message.find_node(byte_index))
+                .or_else(|| self.self_if_contains_location(byte_index)),
+
+            Self::Todo { kind, message, .. } => match kind {
+                TodoKind::Keyword => message
+                    .as_ref()
+                    .and_then(|message| message.find_node(byte_index))
+                    .or_else(|| self.self_if_contains_location(byte_index)),
                 // We don't want to match on todos that were implicitly inserted
                 // by the compiler as it would result in confusing suggestions
                 // from the LSP.
@@ -394,12 +411,10 @@ impl TypedExpr {
         match self {
             Self::Var { .. }
             | Self::Int { .. }
-            | Self::Panic { .. }
             | Self::Float { .. }
             | Self::String { .. }
             | Self::ModuleSelect { .. }
-            | Self::Invalid { .. }
-            | Self::Todo { .. } => None,
+            | Self::Invalid { .. } => None,
 
             Self::Pipeline {
                 first_value,
@@ -507,9 +522,31 @@ impl TypedExpr {
                 tuple: expression, ..
             } => expression.find_statement(byte_index),
 
-            Self::Echo { expression, .. } => expression
+            Self::Echo {
+                expression,
+                message,
+                ..
+            } => expression
                 .as_ref()
-                .and_then(|expression| expression.find_statement(byte_index)),
+                .and_then(|expression| expression.find_statement(byte_index))
+                .or_else(|| {
+                    message
+                        .as_ref()
+                        .and_then(|message| message.find_statement(byte_index))
+                }),
+
+            Self::Todo { message, kind, .. } => match kind {
+                TodoKind::EmptyFunction { .. } | TodoKind::IncompleteUse | TodoKind::EmptyBlock => {
+                    None
+                }
+                TodoKind::Keyword => message
+                    .as_ref()
+                    .and_then(|message| message.find_statement(byte_index)),
+            },
+
+            Self::Panic { message, .. } => message
+                .as_ref()
+                .and_then(|message| message.find_statement(byte_index)),
 
             Self::BitArray { segments, .. } => segments
                 .iter()
