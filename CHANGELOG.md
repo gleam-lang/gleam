@@ -419,6 +419,10 @@
   internal modules from other packages.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where the language server would not rename variables defined in
+  alternative patterns.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.11.1 - 2025-06-05
 
 ### Compiler
