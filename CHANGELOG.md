@@ -219,6 +219,10 @@
   single-line "View Source" anchors emit `#Lx` instead of `#Lx-x`.
   ([Aayush Tripathi](https://github.com/aayush-tripathi))
 
+- The build tool can now compile packages that will have already booted the
+  Erlang compiler application instead of failing.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ### Language server
 
 - It is now possible to use the "Pattern match on variable" code action on
