@@ -2500,7 +2500,7 @@ fn unit_with_bits_option() {
     assert_js!(
         "
 pub fn go(x) {
-  <<x:bits-size(4)-unit(8)>
+  <<x:bits-size(4)-unit(8)>>
 }
 "
     );
@@ -2512,7 +2512,6 @@ fn unit_with_bits_option_constant() {
         "
 pub const bits = <<1, 2, 3>>
 pub const more_bits = <<bits:bits-size(3)-unit(8)>>
-}
 "
     );
 }

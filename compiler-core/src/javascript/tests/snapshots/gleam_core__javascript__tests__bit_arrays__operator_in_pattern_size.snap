@@ -16,7 +16,25 @@ const FILEPATH = "src/module.gleam";
 
 export function main() {
   let $ = toBitArray([]);
-  if ($.bitSize < 8 || $.bitSize !== 8 + $.byteAt(0) * 8) {
+  let len$1;
+  let payload;
+  if ($.bitSize >= 8) {
+    let len = $.byteAt(0);
+    if ($.bitSize === 8 + len * 8) {
+      len$1 = len;
+      payload = bitArraySliceToInt($, 8, 8 + len$1 * 8, true, false);
+    } else {
+      throw makeError(
+        "let_assert",
+        FILEPATH,
+        "my/mod",
+        3,
+        "main",
+        "Pattern match failed, no pattern matched the value.",
+        { value: $, start: 19, end: 67, pattern_start: 30, pattern_end: 60 }
+      )
+    }
+  } else {
     throw makeError(
       "let_assert",
       FILEPATH,
@@ -27,7 +45,5 @@ export function main() {
       { value: $, start: 19, end: 67, pattern_start: 30, pattern_end: 60 }
     )
   }
-  let len = $.byteAt(0);
-  let payload = bitArraySliceToInt($, 8, 8 + len * 8, true, false);
   return $;
 }
