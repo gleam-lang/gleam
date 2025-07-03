@@ -5920,8 +5920,9 @@ impl<'a> InlineVariable<'a> {
         self.actions
     }
 
-    fn maybe_inline(&mut self, location: SrcSpan) {
-        let reference = match find_variable_references(&self.module.ast, location).as_slice() {
+    fn maybe_inline(&mut self, location: SrcSpan, name: EcoString) {
+        let reference = match find_variable_references(&self.module.ast, location, name).as_slice()
+        {
             [only_reference] => *only_reference,
             _ => return,
         };
@@ -5992,7 +5993,7 @@ impl<'ast> ast::visit::Visit<'ast> for InlineVariable<'ast> {
         &mut self,
         location: &'ast SrcSpan,
         constructor: &'ast ValueConstructor,
-        _name: &'ast EcoString,
+        name: &'ast EcoString,
     ) {
         let range = self.edits.src_span_to_lsp_range(*location);
 
@@ -6016,13 +6017,13 @@ impl<'ast> ast::visit::Visit<'ast> for InlineVariable<'ast> {
             | VariableDeclaration::Generated => return,
         }
 
-        self.maybe_inline(*location);
+        self.maybe_inline(*location, name.clone());
     }
 
     fn visit_typed_pattern_variable(
         &mut self,
         location: &'ast SrcSpan,
-        _name: &'ast EcoString,
+        name: &'ast EcoString,
         _type: &'ast Arc<Type>,
         origin: &'ast VariableOrigin,
     ) {
@@ -6042,7 +6043,7 @@ impl<'ast> ast::visit::Visit<'ast> for InlineVariable<'ast> {
             return;
         }
 
-        self.maybe_inline(*location);
+        self.maybe_inline(*location, name.clone());
     }
 }
 

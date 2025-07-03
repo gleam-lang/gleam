@@ -25,6 +25,7 @@ pub enum Referenced {
         definition_location: SrcSpan,
         location: SrcSpan,
         origin: Option<VariableOrigin>,
+        name: EcoString,
     },
     ModuleValue {
         module: EcoString,
@@ -59,24 +60,30 @@ pub fn reference_for_ast_node(
                             ..
                         },
                     location,
-                    ..
+                    name,
                 },
             ..
         } => Some(Referenced::LocalVariable {
             definition_location: *definition_location,
             location: *location,
             origin: Some(origin.clone()),
+            name: name.clone(),
         }),
         Located::Pattern(Pattern::Variable {
-            location, origin, ..
+            location,
+            origin,
+            name,
+            ..
         }) => Some(Referenced::LocalVariable {
             definition_location: *location,
             location: *location,
             origin: Some(origin.clone()),
+            name: name.clone(),
         }),
         Located::Pattern(Pattern::VarUsage {
             constructor,
             location,
+            name,
             ..
         }) => constructor
             .as_ref()
@@ -88,23 +95,29 @@ pub fn reference_for_ast_node(
                     definition_location: *definition_location,
                     location: *location,
                     origin: Some(origin.clone()),
+                    name: name.clone(),
                 }),
                 _ => None,
             }),
-        Located::Pattern(Pattern::Assign { location, .. }) => Some(Referenced::LocalVariable {
-            definition_location: *location,
-            location: *location,
-            origin: None,
-        }),
+        Located::Pattern(Pattern::Assign { location, name, .. }) => {
+            Some(Referenced::LocalVariable {
+                definition_location: *location,
+                location: *location,
+                origin: None,
+                name: name.clone(),
+            })
+        }
         Located::Arg(arg) => match &arg.names {
-            ArgNames::Named { location, .. }
+            ArgNames::Named { location, name }
             | ArgNames::NamedLabelled {
                 name_location: location,
+                name,
                 ..
             } => Some(Referenced::LocalVariable {
                 definition_location: *location,
                 location: *location,
                 origin: None,
+                name: name.clone(),
             }),
             ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => None,
         },
@@ -344,18 +357,29 @@ pub enum VariableReferenceKind {
 pub fn find_variable_references(
     module: &TypedModule,
     definition_location: SrcSpan,
+    name: EcoString,
 ) -> Vec<VariableReference> {
     let mut finder = FindVariableReferences {
         references: Vec::new(),
         definition_location,
+        alternative_variable: AlternativeVariable::Ignore,
+        name,
     };
     finder.visit_typed_module(module);
     finder.references
 }
 
+/// How to treat variables defined in alternative patterns
+enum AlternativeVariable {
+    Track,
+    Ignore,
+}
+
 struct FindVariableReferences {
     references: Vec<VariableReference>,
     definition_location: SrcSpan,
+    alternative_variable: AlternativeVariable,
+    name: EcoString,
 }
 
 impl<'ast> Visit<'ast> for FindVariableReferences {
@@ -397,6 +421,59 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
                 location: *location,
                 kind: VariableReferenceKind::Variable,
             })
+        }
+    }
+
+    fn visit_typed_clause(&mut self, clause: &'ast ast::TypedClause) {
+        // If this alternative pattern contains the variable we are finding
+        // references for, we track that so we can find alternative definitions
+        // of the target variable.
+        if clause
+            .pattern_location()
+            .contains(self.definition_location.start)
+        {
+            self.alternative_variable = AlternativeVariable::Track;
+        }
+
+        for pattern in clause.pattern.iter() {
+            self.visit_typed_pattern(pattern);
+        }
+        for patterns in clause.alternative_patterns.iter() {
+            for pattern in patterns {
+                self.visit_typed_pattern(pattern);
+            }
+        }
+
+        self.alternative_variable = AlternativeVariable::Ignore;
+
+        if let Some(guard) = &clause.guard {
+            self.visit_typed_clause_guard(guard);
+        }
+        self.visit_typed_expr(&clause.then);
+    }
+
+    fn visit_typed_pattern_variable(
+        &mut self,
+        location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        _type_: &'ast std::sync::Arc<Type>,
+        _origin: &'ast VariableOrigin,
+    ) {
+        match self.alternative_variable {
+            // If we are inside the same alternative pattern as the target
+            // variable and the name is the same, this is an alternative definition
+            // of the same variable. We don't register the reference if this is
+            // the exact variable though, as that would result in a duplicated
+            // reference.
+            AlternativeVariable::Track
+                if *name == self.name && *location != self.definition_location =>
+            {
+                self.references.push(VariableReference {
+                    location: *location,
+                    kind: VariableReferenceKind::Variable,
+                });
+            }
+            AlternativeVariable::Track | AlternativeVariable::Ignore => {}
         }
     }
 
