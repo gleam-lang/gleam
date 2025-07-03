@@ -2429,7 +2429,7 @@ impl TypedPattern {
             | Pattern::Invalid { .. } => {}
 
             Pattern::Variable { name, .. } => variables.push(name.clone()),
-            Pattern::VarUsage { .. } => {}
+            Pattern::BitArraySize { .. } => {}
             Pattern::Assign { name, pattern, .. } => {
                 variables.push(name.clone());
                 pattern.collect_bound_variables(variables);
