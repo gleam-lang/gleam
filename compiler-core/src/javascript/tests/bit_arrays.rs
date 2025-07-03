@@ -2620,3 +2620,14 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn pattern_match_on_negative_size_calculation() {
+    assert_js!(
+        "
+pub fn main() {
+  let assert <<a, b:size(a - 100000), c:size(b)>> = <<1, 2, 3, 4, 5>>
+}
+"
+    );
+}
