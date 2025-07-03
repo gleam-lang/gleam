@@ -136,6 +136,63 @@ fn mjavascript_files_are_copied_from_dev() {
 }
 
 #[test]
+fn cjavascript_files_are_copied_from_src() {
+    let fs = InMemoryFileSystem::new();
+    fs.write(&Utf8Path::new("/src/wibble.cjs"), "1").unwrap();
+
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copied = copier.run().unwrap();
+
+    assert!(!copied.any_elixir);
+    assert!(copied.to_compile.is_empty());
+    assert_eq!(
+        HashMap::from([
+            (Utf8PathBuf::from("/src/wibble.cjs"), "1".into()),
+            (Utf8PathBuf::from("/out/wibble.cjs"), "1".into())
+        ]),
+        fs.into_contents(),
+    );
+}
+
+#[test]
+fn cjavascript_files_are_copied_from_test() {
+    let fs = InMemoryFileSystem::new();
+    fs.write(&Utf8Path::new("/test/wibble.cjs"), "1").unwrap();
+
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copied = copier.run().unwrap();
+
+    assert!(!copied.any_elixir);
+    assert!(copied.to_compile.is_empty());
+    assert_eq!(
+        HashMap::from([
+            (Utf8PathBuf::from("/test/wibble.cjs"), "1".into()),
+            (Utf8PathBuf::from("/out/wibble.cjs"), "1".into())
+        ]),
+        fs.into_contents(),
+    );
+}
+
+#[test]
+fn cjavascript_files_are_copied_from_dev() {
+    let fs = InMemoryFileSystem::new();
+    fs.write(&Utf8Path::new("/dev/wibble.cjs"), "1").unwrap();
+
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copied = copier.run().unwrap();
+
+    assert!(!copied.any_elixir);
+    assert!(copied.to_compile.is_empty());
+    assert_eq!(
+        HashMap::from([
+            (Utf8PathBuf::from("/dev/wibble.cjs"), "1".into()),
+            (Utf8PathBuf::from("/out/wibble.cjs"), "1".into())
+        ]),
+        fs.into_contents(),
+    );
+}
+
+#[test]
 fn typescript_files_are_copied_from_src() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/src/wibble.ts"), "1").unwrap();
@@ -199,7 +256,9 @@ fn all_javascript_files_are_copied_from_src_subfolders() {
         .unwrap();
     fs.write(&Utf8Path::new("/src/abc/ghi/wibble.js"), "2")
         .unwrap();
-    fs.write(&Utf8Path::new("/src/def/wobble.ts"), "3").unwrap();
+    fs.write(&Utf8Path::new("/src/abc/jkl/wibble.cjs"), "3")
+        .unwrap();
+    fs.write(&Utf8Path::new("/src/def/wobble.ts"), "4").unwrap();
 
     let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
     let copied = copier.run().unwrap();
@@ -212,8 +271,10 @@ fn all_javascript_files_are_copied_from_src_subfolders() {
             (Utf8PathBuf::from("/out/abc/def/wibble.mjs"), "1".into()),
             (Utf8PathBuf::from("/src/abc/ghi/wibble.js"), "2".into()),
             (Utf8PathBuf::from("/out/abc/ghi/wibble.js"), "2".into()),
-            (Utf8PathBuf::from("/src/def/wobble.ts"), "3".into()),
-            (Utf8PathBuf::from("/out/def/wobble.ts"), "3".into())
+            (Utf8PathBuf::from("/src/abc/jkl/wibble.cjs"), "3".into()),
+            (Utf8PathBuf::from("/out/abc/jkl/wibble.cjs"), "3".into()),
+            (Utf8PathBuf::from("/src/def/wobble.ts"), "4".into()),
+            (Utf8PathBuf::from("/out/def/wobble.ts"), "4".into())
         ]),
         fs.into_contents(),
     );
@@ -226,7 +287,9 @@ fn all_javascript_files_are_copied_from_test_subfolders() {
         .unwrap();
     fs.write(&Utf8Path::new("/test/abc/ghi/wibble.js"), "2")
         .unwrap();
-    fs.write(&Utf8Path::new("/test/def/wobble.ts"), "3")
+    fs.write(&Utf8Path::new("/test/abc/jkl/wibble.cjs"), "3")
+        .unwrap();
+    fs.write(&Utf8Path::new("/test/def/wobble.ts"), "4")
         .unwrap();
 
     let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
@@ -240,8 +303,10 @@ fn all_javascript_files_are_copied_from_test_subfolders() {
             (Utf8PathBuf::from("/out/abc/def/wibble.mjs"), "1".into()),
             (Utf8PathBuf::from("/test/abc/ghi/wibble.js"), "2".into()),
             (Utf8PathBuf::from("/out/abc/ghi/wibble.js"), "2".into()),
-            (Utf8PathBuf::from("/test/def/wobble.ts"), "3".into()),
-            (Utf8PathBuf::from("/out/def/wobble.ts"), "3".into())
+            (Utf8PathBuf::from("/test/abc/jkl/wibble.cjs"), "3".into()),
+            (Utf8PathBuf::from("/out/abc/jkl/wibble.cjs"), "3".into()),
+            (Utf8PathBuf::from("/test/def/wobble.ts"), "4".into()),
+            (Utf8PathBuf::from("/out/def/wobble.ts"), "4".into())
         ]),
         fs.into_contents(),
     );
@@ -254,7 +319,9 @@ fn all_javascript_files_are_copied_from_dev_subfolders() {
         .unwrap();
     fs.write(&Utf8Path::new("/dev/abc/ghi/wibble.js"), "2")
         .unwrap();
-    fs.write(&Utf8Path::new("/dev/def/wobble.ts"), "3").unwrap();
+    fs.write(&Utf8Path::new("/dev/abc/jkl/wibble.cjs"), "3")
+        .unwrap();
+    fs.write(&Utf8Path::new("/dev/def/wobble.ts"), "4").unwrap();
 
     let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
     let copied = copier.run().unwrap();
@@ -267,8 +334,10 @@ fn all_javascript_files_are_copied_from_dev_subfolders() {
             (Utf8PathBuf::from("/out/abc/def/wibble.mjs"), "1".into()),
             (Utf8PathBuf::from("/dev/abc/ghi/wibble.js"), "2".into()),
             (Utf8PathBuf::from("/out/abc/ghi/wibble.js"), "2".into()),
-            (Utf8PathBuf::from("/dev/def/wobble.ts"), "3".into()),
-            (Utf8PathBuf::from("/out/def/wobble.ts"), "3".into())
+            (Utf8PathBuf::from("/dev/abc/jkl/wibble.cjs"), "3".into()),
+            (Utf8PathBuf::from("/out/abc/jkl/wibble.cjs"), "3".into()),
+            (Utf8PathBuf::from("/dev/def/wobble.ts"), "4".into()),
+            (Utf8PathBuf::from("/out/def/wobble.ts"), "4".into())
         ]),
         fs.into_contents(),
     );
