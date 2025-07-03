@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/javascript/tests/inlining.rs
+expression: "\nimport gleam/bool\n\npub fn divide(a, b) {\n  use <- bool.guard(when: b == 0, return: 0)\n  a / b\n}\n"
+---
+----- SOURCE CODE
+
+import gleam/bool
+
+pub fn divide(a, b) {
+  use <- bool.guard(when: b == 0, return: 0)
+  a / b
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $bool from "../../gleam_stdlib/gleam/bool.mjs";
+import { divideInt } from "../gleam.mjs";
+
+export function divide(a, b) {
+  let $ = b === 0;
+  if ($) {
+    return 0;
+  } else {
+    return divideInt(a, b);
+  }
+}
