@@ -499,6 +499,47 @@ fn remove_echo_with_message() {
 }
 
 #[test]
+fn remove_echo_with_message_and_comment() {
+    assert_code_action!(
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
+        r#"pub fn main() {
+  echo 1 + 2
+    // Hello!
+    as "message"
+}"#,
+        find_position_of("echo").to_selection()
+    );
+}
+
+#[test]
+fn remove_echo_with_message_and_comment_2() {
+    assert_code_action!(
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
+        r#"pub fn main() {
+  echo 1 + 2 as
+    // Hello!
+    "message"
+}"#,
+        find_position_of("echo").to_selection()
+    );
+}
+
+#[test]
+fn remove_echo_with_message_and_comment_3() {
+    assert_code_action!(
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
+        r#"pub fn main() {
+  echo 1 + 2 as
+    // Hello!
+    "message"
+
+  Nil
+}"#,
+        find_position_of("echo").to_selection()
+    );
+}
+
+#[test]
 fn remove_echo_selecting_expression() {
     assert_code_action!(
         REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
