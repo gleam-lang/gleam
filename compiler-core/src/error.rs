@@ -434,9 +434,7 @@ impl Error {
     ) -> Error {
         Self::DependencyResolutionFailed(match error {
             ResolutionError::NoSolution(derivation_tree) => {
-                DerivationTreePrinter::new(root_package_name, derivation_tree)
-                    .print()
-                    .into()
+                DerivationTreePrinter::new(root_package_name, derivation_tree).print()
             }
 
             ResolutionError::ErrorRetrievingDependencies {
