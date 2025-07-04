@@ -54,12 +54,7 @@ use vec1::Vec1;
 use crate::type_::Type;
 
 use super::{
-    AssignName, BinOp, BitArrayOption, CallArg, Definition, Pattern, PipelineAssignmentKind,
-    SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssert, TypedAssignment, TypedClause,
-    TypedClauseGuard, TypedConstant, TypedCustomType, TypedDefinition, TypedExpr,
-    TypedExprBitArraySegment, TypedFunction, TypedModule, TypedModuleConstant, TypedPattern,
-    TypedPatternBitArraySegment, TypedPipelineAssignment, TypedStatement, TypedUse,
-    untyped::FunctionLiteralKind,
+    untyped::FunctionLiteralKind, AssignName, BinOp, BitArrayOption, CallArg, Constant, Definition, Pattern, PipelineAssignmentKind, SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssert, TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant, TypedCustomType, TypedDefinition, TypedExpr, TypedExprBitArraySegment, TypedFunction, TypedModule, TypedModuleConstant, TypedPattern, TypedPatternBitArraySegment, TypedPipelineAssignment, TypedStatement, TypedUse
 };
 
 pub trait Visit<'ast> {
@@ -77,6 +72,10 @@ pub trait Visit<'ast> {
 
     fn visit_typed_module_constant(&mut self, constant: &'ast TypedModuleConstant) {
         visit_typed_module_constant(self, constant);
+    }
+
+    fn visit_typed_constant(&mut self, constant: &'ast TypedConstant) {
+        visit_typed_constant(self, constant);
     }
 
     fn visit_typed_custom_type(&mut self, custom_type: &'ast TypedCustomType) {
@@ -698,10 +697,28 @@ where
     // No further traversal needed for holes
 }
 
-pub fn visit_typed_module_constant<'a, V>(_v: &mut V, _constant: &'a TypedModuleConstant)
+pub fn visit_typed_module_constant<'a, V>(v: &mut V, constant: &'a TypedModuleConstant)
 where
     V: Visit<'a> + ?Sized,
 {
+    v.visit_typed_constant(&constant.value);
+}
+
+pub fn visit_typed_constant<'a, V>(v: &mut V, constant: &'a TypedConstant)
+where
+    V: Visit<'a> + ?Sized,
+{
+    match constant {
+        Constant::Record { args, .. } => args.iter().for_each(|arg| v.visit_typed_constant(&arg.value)),
+        Constant::Tuple { elements, .. } => elements.iter().for_each(|e| v.visit_typed_constant(e)),
+        Constant::List { elements, .. } => elements.iter().for_each(|e| v.visit_typed_constant(e)),
+        Constant::BitArray { segments, .. } => segments.iter().for_each(|seg| v.visit_typed_constant(&seg.value)),
+        Constant::StringConcatenation { left, right, .. } => {
+            v.visit_typed_constant(left);
+            v.visit_typed_constant(right);
+        },
+        _ => {},
+    }
 }
 
 pub fn visit_typed_custom_type<'a, V>(v: &mut V, custom_type: &'a TypedCustomType)

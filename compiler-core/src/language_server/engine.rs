@@ -613,6 +613,10 @@ where
         }
     }
 
+    // TODO:
+    // - allow rename from const
+    // - allow rename from pattern match
+    // - any others i find
     pub fn prepare_rename(
         &mut self,
         params: lsp::TextDocumentPositionParams,
