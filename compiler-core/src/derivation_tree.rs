@@ -94,7 +94,11 @@ impl DerivationTreePrinter {
                 None,
             );
 
-            let package = self.dependencies.node_weight(unresolvable_node).unwrap();
+            let package = self
+                .dependencies
+                .node_weight(unresolvable_node)
+                .expect("package is in the graph");
+
             let heading = format!("There's no compatible version of `{package}`:");
             let explanation = paths.map(|path| self.pretty_path(path)).join("\n");
             unresolvable.push(format!("{heading}\n{explanation}"));
@@ -108,8 +112,14 @@ impl DerivationTreePrinter {
             _ => panic!("path with less than two nodes"),
         };
 
-        let dependee_name = self.dependencies.node_weight(*dependee).unwrap();
-        let (_, dependee_range) = self.ranges_between(you, dependee).unwrap();
+        let dependee_name = self
+            .dependencies
+            .node_weight(*dependee)
+            .expect("path node is in the graph");
+        let (_, dependee_range) = self
+            .ranges_between(you, dependee)
+            .expect("path edge is in the graph");
+
         let mut message = format!(
             "  - You depend on {dependee_name} {}",
             pretty_range(dependee_range)
@@ -117,9 +127,18 @@ impl DerivationTreePrinter {
 
         let mut previous = dependee;
         for next in rest {
-            let previous_name = self.dependencies.node_weight(*previous).unwrap();
-            let next_name = self.dependencies.node_weight(*next).unwrap();
-            let (_, next_range) = self.ranges_between(previous, next).unwrap();
+            let previous_name = self
+                .dependencies
+                .node_weight(*previous)
+                .expect("path node is in the graph");
+            let next_name = self
+                .dependencies
+                .node_weight(*next)
+                .expect("path node is in the graph");
+            let (_, next_range) = self
+                .ranges_between(previous, next)
+                .expect("path edge is in the graph");
+
             message.push_str(&format!(
                 "\n    - {previous_name} depends on {next_name} {}",
                 pretty_range(next_range)
@@ -207,11 +226,10 @@ fn build_dependencies_graph(
             let edge_weight = match edges.peekable().peek() {
                 Some(edge) => {
                     let (old_range_one, old_range_other) = edge.weight();
-                    let weight = (
+                    (
                         range_one.union(old_range_one),
                         range_other.union(old_range_other),
-                    );
-                    weight
+                    )
                 }
                 None => (range_one.clone(), range_other.clone()),
             };
