@@ -4,6 +4,7 @@ use crate::build::{Origin, Outcome, Runtime, Target};
 use crate::dependency::{PackageFetcher, ResolutionError};
 use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
 
+use crate::derivation_tree::DerivationTreePrinter;
 use crate::parse::error::ParseErrorDetails;
 use crate::strings::{to_snake_case, to_upper_camel_case};
 use crate::type_::collapse_links;
@@ -16,11 +17,9 @@ use crate::type_::{FieldAccessUsage, error::PatternMatchKind};
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
 use crate::{bit_array, diagnostic::Level, type_::UnifyErrorSituation};
 use ecow::EcoString;
+use hexpm::version::Version;
 use itertools::Itertools;
-use pubgrub::Package;
-use pubgrub::{DerivationTree, VersionSet};
 use std::borrow::Cow;
-use std::collections::HashSet;
 use std::fmt::{Debug, Display};
 use std::io::Write;
 use std::path::PathBuf;
@@ -346,7 +345,7 @@ impl Display for SmallVersion {
 }
 
 impl SmallVersion {
-    pub fn from_hexpm(version: hexpm::version::Version) -> Self {
+    pub fn from_hexpm(version: Version) -> Self {
         Self {
             major: version.major as u8,
             minor: version.minor as u8,
@@ -429,58 +428,13 @@ impl Error {
         Self::TarFinish(error.to_string())
     }
 
-    pub fn dependency_resolution_failed<T: PackageFetcher>(error: ResolutionError<'_, T>) -> Error {
-        fn collect_conflicting_packages<
-            'dt,
-            P: Package,
-            VS: VersionSet,
-            M: Clone + Display + Debug + Eq,
-        >(
-            derivation_tree: &'dt DerivationTree<P, VS, M>,
-            conflicting_packages: &mut HashSet<&'dt P>,
-        ) {
-            match derivation_tree {
-                DerivationTree::External(external) => match external {
-                    pubgrub::External::NotRoot(package, _) => {
-                        let _ = conflicting_packages.insert(package);
-                    }
-                    pubgrub::External::NoVersions(package, _) => {
-                        let _ = conflicting_packages.insert(package);
-                    }
-                    pubgrub::External::Custom(package, _, _) => {
-                        let _ = conflicting_packages.insert(package);
-                    }
-                    pubgrub::External::FromDependencyOf(package, _, dep_package, _) => {
-                        let _ = conflicting_packages.insert(package);
-                        let _ = conflicting_packages.insert(dep_package);
-                    }
-                },
-                DerivationTree::Derived(derived) => {
-                    collect_conflicting_packages(&derived.cause1, conflicting_packages);
-                    collect_conflicting_packages(&derived.cause2, conflicting_packages);
-                }
-            }
-        }
-
+    pub fn dependency_resolution_failed<T: PackageFetcher>(
+        error: ResolutionError<'_, T>,
+        root_package_name: EcoString,
+    ) -> Error {
         Self::DependencyResolutionFailed(match error {
-            ResolutionError::NoSolution(mut derivation_tree) => {
-                derivation_tree.collapse_no_versions();
-
-                let mut conflicting_packages = HashSet::new();
-                collect_conflicting_packages(&derivation_tree, &mut conflicting_packages);
-
-                wrap_format!(
-                    "Unable to find compatible versions for \
-the version constraints in your gleam.toml. \
-The conflicting packages are:
-
-{}
-",
-                    conflicting_packages
-                        .into_iter()
-                        .map(|s| format!("- {s}"))
-                        .join("\n")
-                )
+            ResolutionError::NoSolution(derivation_tree) => {
+                DerivationTreePrinter::new(root_package_name, derivation_tree).print()
             }
 
             ResolutionError::ErrorRetrievingDependencies {

@@ -52,7 +52,7 @@ where
         root_name.as_str().into(),
         root_version,
     )
-    .map_err(Error::dependency_resolution_failed)?
+    .map_err(|error| Error::dependency_resolution_failed(error, root_name.clone()))?
     .into_iter()
     .filter(|(name, _)| name.as_str() != root_name.as_str())
     .collect();
@@ -398,6 +398,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use hexpm::RetirementStatus;
+
     use crate::{
         manifest::{Base16Checksum, ManifestPackage, ManifestPackageSource},
         requirement,
@@ -419,191 +421,63 @@ mod tests {
     }
 
     fn make_remote() -> Remote {
-        let mut deps = HashMap::new();
-        let _ = deps.insert(
-            "gleam_stdlib".into(),
-            hexpm::Package {
-                name: "gleam_stdlib".into(),
-                repository: "hexpm".into(),
-                releases: vec![
-                    Release {
-                        version: Version::try_from("0.1.0").unwrap(),
-                        requirements: [].into(),
-                        retirement_status: None,
-                        outer_checksum: vec![1, 2, 3],
-                        meta: (),
-                    },
-                    Release {
-                        version: Version::try_from("0.2.0").unwrap(),
-                        requirements: [].into(),
-                        retirement_status: None,
-                        outer_checksum: vec![1, 2, 3],
-                        meta: (),
-                    },
-                    Release {
-                        version: Version::try_from("0.2.2").unwrap(),
-                        requirements: [].into(),
-                        retirement_status: None,
-                        outer_checksum: vec![1, 2, 3],
-                        meta: (),
-                    },
-                    Release {
-                        version: Version::try_from("0.3.0").unwrap(),
-                        requirements: [].into(),
-                        retirement_status: None,
-                        outer_checksum: vec![1, 2, 3],
-                        meta: (),
-                    },
+        remote(vec![
+            (
+                "gleam_stdlib",
+                vec![
+                    release("0.1.0", vec![]),
+                    release("0.2.0", vec![]),
+                    release("0.2.2", vec![]),
+                    release("0.3.0", vec![]),
                 ],
-            }
-            .into(),
-        );
-        let _ = deps.insert(
-            "gleam_otp".into(),
-            hexpm::Package {
-                name: "gleam_otp".into(),
-                repository: "hexpm".into(),
-                releases: vec![
-                    Release {
-                        version: Version::try_from("0.1.0").unwrap(),
-                        requirements: [(
-                            "gleam_stdlib".into(),
-                            Dependency {
-                                app: None,
-                                optional: false,
-                                repository: None,
-                                requirement: Range::new(">= 0.1.0".into()).unwrap(),
-                            },
-                        )]
-                        .into(),
-                        retirement_status: None,
-                        outer_checksum: vec![1, 2, 3],
-                        meta: (),
-                    },
-                    Release {
-                        version: Version::try_from("0.2.0").unwrap(),
-                        requirements: [(
-                            "gleam_stdlib".into(),
-                            Dependency {
-                                app: None,
-                                optional: false,
-                                repository: None,
-                                requirement: Range::new(">= 0.1.0".into()).unwrap(),
-                            },
-                        )]
-                        .into(),
-                        retirement_status: None,
-                        outer_checksum: vec![1, 2, 3],
-                        meta: (),
-                    },
-                    Release {
-                        version: Version::try_from("0.3.0-rc1").unwrap(),
-                        requirements: [(
-                            "gleam_stdlib".into(),
-                            Dependency {
-                                app: None,
-                                optional: false,
-                                repository: None,
-                                requirement: Range::new(">= 0.1.0".into()).unwrap(),
-                            },
-                        )]
-                        .into(),
-                        retirement_status: None,
-                        outer_checksum: vec![1, 2, 3],
-                        meta: (),
-                    },
-                    Release {
-                        version: Version::try_from("0.3.0-rc2").unwrap(),
-                        requirements: [(
-                            "gleam_stdlib".into(),
-                            Dependency {
-                                app: None,
-                                optional: false,
-                                repository: None,
-                                requirement: Range::new(">= 0.1.0".into()).unwrap(),
-                            },
-                        )]
-                        .into(),
-                        retirement_status: None,
-                        outer_checksum: vec![1, 2, 3],
-                        meta: (),
-                    },
+            ),
+            (
+                "gleam_otp",
+                vec![
+                    release("0.1.0", vec![("gleam_stdlib", ">= 0.1.0")]),
+                    release("0.2.0", vec![("gleam_stdlib", ">= 0.1.0")]),
+                    release("0.3.0-rc1", vec![("gleam_stdlib", ">= 0.1.0")]),
+                    release("0.3.0-rc2", vec![("gleam_stdlib", ">= 0.1.0")]),
                 ],
-            }
-            .into(),
-        );
-        let _ = deps.insert(
-            "package_with_retired".into(),
-            hexpm::Package {
-                name: "package_with_retired".into(),
-                repository: "hexpm".into(),
-                releases: vec![
-                    Release {
-                        version: Version::try_from("0.1.0").unwrap(),
-                        requirements: [].into(),
-                        retirement_status: None,
-                        outer_checksum: vec![1, 2, 3],
-                        meta: (),
-                    },
-                    Release {
-                        version: Version::try_from("0.2.0").unwrap(),
-                        requirements: [].into(),
-                        retirement_status: Some(hexpm::RetirementStatus {
-                            reason: hexpm::RetirementReason::Security,
-                            message: "It's bad".into(),
-                        }),
-                        outer_checksum: vec![1, 2, 3],
-                        meta: (),
-                    },
+            ),
+            (
+                "package_with_retired",
+                vec![
+                    release("0.1.0", vec![]),
+                    retired_release(
+                        "0.2.0",
+                        vec![],
+                        hexpm::RetirementReason::Security,
+                        "it's bad",
+                    ),
                 ],
-            }
-            .into(),
-        );
-
-        let _ = deps.insert(
-            "package_with_optional".into(),
-            hexpm::Package {
-                name: "package_with_optional".into(),
-                repository: "hexpm".into(),
-                releases: vec![Release {
-                    version: Version::try_from("0.1.0").unwrap(),
-                    requirements: [(
-                        "gleam_stdlib".into(),
-                        Dependency {
-                            app: None,
-                            optional: true,
-                            repository: None,
-                            requirement: Range::new(">= 0.1.0 and < 0.3.0".into()).unwrap(),
-                        },
-                    )]
-                    .into(),
-                    retirement_status: None,
-                    outer_checksum: vec![1, 2, 3],
-                    meta: (),
-                }],
-            }
-            .into(),
-        );
-
-        let simple_deps_for_major_version_check = vec![
+            ),
+            (
+                "package_with_optional",
+                vec![release_with_optional(
+                    "0.1.0",
+                    vec![],
+                    vec![("gleam_stdlib", ">= 0.1.0 and < 0.3.0")],
+                )],
+            ),
             (
                 "direct_pkg_with_major_version",
                 vec![
-                    ("0.1.0", vec![("gleam_stdlib", ">= 0.1.0 and < 0.3.0")]),
-                    ("1.0.0", vec![("gleam_stdlib", ">= 0.1.0 and < 0.3.0")]),
-                    ("1.1.0", vec![("gleam_stdlib", ">= 0.1.0 and < 0.3.0")]),
+                    release("0.1.0", vec![("gleam_stdlib", ">= 0.1.0 and < 0.3.0")]),
+                    release("1.0.0", vec![("gleam_stdlib", ">= 0.1.0 and < 0.3.0")]),
+                    release("1.1.0", vec![("gleam_stdlib", ">= 0.1.0 and < 0.3.0")]),
                 ],
             ),
             (
                 "depends_on_old_version_of_direct_pkg",
-                vec![(
+                vec![release(
                     "0.1.0",
                     vec![("direct_pkg_with_major_version", ">= 0.1.0 and < 0.3.0")],
                 )],
             ),
             (
                 "this_pkg_depends_on_indirect_pkg",
-                vec![(
+                vec![release(
                     "0.1.0",
                     vec![("indirect_pkg_with_major_version", ">= 0.1.0 and < 1.0.0")],
                 )],
@@ -611,55 +485,12 @@ mod tests {
             (
                 "indirect_pkg_with_major_version",
                 vec![
-                    ("0.1.0", vec![("gleam_stdlib", ">= 0.1.0 and < 0.3.0")]),
-                    ("1.0.0", vec![("gleam_stdlib", ">= 0.1.0 and < 0.3.0")]),
-                    ("1.1.0", vec![("gleam_stdlib", ">= 0.1.0 and < 0.3.0")]),
+                    release("0.1.0", vec![("gleam_stdlib", ">= 0.1.0 and < 0.3.0")]),
+                    release("1.0.0", vec![("gleam_stdlib", ">= 0.1.0 and < 0.3.0")]),
+                    release("1.1.0", vec![("gleam_stdlib", ">= 0.1.0 and < 0.3.0")]),
                 ],
             ),
-        ];
-
-        insert_simplified_deps(simple_deps_for_major_version_check, &mut deps);
-
-        Remote { deps }
-    }
-
-    fn insert_simplified_deps(
-        simple_deps: Vec<(&str, Vec<(&str, Vec<(&str, &str)>)>)>,
-        deps: &mut HashMap<String, Rc<hexpm::Package>>,
-    ) {
-        for (name, releases) in simple_deps {
-            let _ = deps.insert(
-                name.to_string(),
-                hexpm::Package {
-                    name: name.to_string(),
-                    repository: "hexpm".into(),
-                    releases: releases
-                        .into_iter()
-                        .map(|(version, requirements)| Release {
-                            version: Version::try_from(version).unwrap(),
-                            requirements: requirements
-                                .into_iter()
-                                .map(|(package, range)| {
-                                    (
-                                        package.into(),
-                                        Dependency {
-                                            app: None,
-                                            optional: true,
-                                            repository: None,
-                                            requirement: Range::new(range.into()).unwrap(),
-                                        },
-                                    )
-                                })
-                                .collect(),
-                            retirement_status: None,
-                            outer_checksum: vec![1, 2, 3],
-                            meta: (),
-                        })
-                        .collect(),
-                }
-                .into(),
-            );
-        }
+        ])
     }
 
     #[test]
@@ -1134,5 +965,132 @@ mod tests {
             .into_iter()
             .collect()
         );
+    }
+
+    fn retired_release(
+        version: &str,
+        requirements: Vec<(&str, &str)>,
+        reason: hexpm::RetirementReason,
+        message: &str,
+    ) -> Release<()> {
+        Release {
+            retirement_status: Some(RetirementStatus {
+                reason,
+                message: message.into(),
+            }),
+            ..release(version, requirements)
+        }
+    }
+    fn release(version: &str, requirements: Vec<(&str, &str)>) -> Release<()> {
+        release_with_optional(version, requirements, vec![])
+    }
+
+    fn release_with_optional(
+        version: &str,
+        requirements: Vec<(&str, &str)>,
+        optional_requirements: Vec<(&str, &str)>,
+    ) -> Release<()> {
+        let mut all_requirements = HashMap::new();
+
+        for (name, range) in requirements {
+            let requirement = Range::new(range.to_string()).unwrap();
+            let dependency = Dependency {
+                requirement,
+                optional: false,
+                app: None,
+                repository: None,
+            };
+            let _ = all_requirements.insert(name.to_string(), dependency);
+        }
+
+        for (name, range) in optional_requirements {
+            let requirement = Range::new(range.to_string()).unwrap();
+            let dependency = Dependency {
+                requirement,
+                optional: true,
+                app: None,
+                repository: None,
+            };
+            let _ = all_requirements.insert(name.to_string(), dependency);
+        }
+
+        Release {
+            version: Version::try_from(version).unwrap(),
+            requirements: all_requirements,
+            retirement_status: None,
+            outer_checksum: vec![1, 2, 3],
+            meta: (),
+        }
+    }
+
+    fn remote(dependencies: Vec<(&str, Vec<Release<()>>)>) -> Remote {
+        let mut deps = HashMap::new();
+        for (package, releases) in dependencies {
+            let _ = deps.insert(
+                package.into(),
+                Rc::new(hexpm::Package {
+                    name: package.into(),
+                    repository: "hexpm".into(),
+                    releases,
+                }),
+            );
+        }
+        Remote { deps }
+    }
+
+    #[test]
+    fn resolution_error_message() {
+        let remote = remote(vec![
+            (
+                "wibble",
+                vec![
+                    release("1.2.0", vec![("wobble", ">= 1.0.0 and < 2.0.0")]),
+                    release("1.3.0", vec![("wobble", ">= 2.0.0 and < 3.0.0")]),
+                ],
+            ),
+            (
+                "wobble",
+                vec![
+                    release("1.1.0", vec![("woo", ">= 1.0.0 and < 2.0.0")]),
+                    release("2.0.0", vec![("waa", ">= 1.0.0 and < 2.0.0")]),
+                ],
+            ),
+            (
+                "woo",
+                vec![release("1.0.0", vec![]), release("2.0.0", vec![])],
+            ),
+            (
+                "waa",
+                vec![release("1.0.0", vec![]), release("2.0.0", vec![])],
+            ),
+        ]);
+
+        let result = resolve_versions(
+            &remote,
+            HashMap::new(),
+            "app".into(),
+            vec![
+                (
+                    "wibble".into(),
+                    Range::new(">= 1.0.0 and < 2.0.0".into()).unwrap(),
+                ),
+                (
+                    "woo".into(),
+                    Range::new(">= 2.0.0 and < 3.0.0".into()).unwrap(),
+                ),
+                (
+                    "waa".into(),
+                    Range::new(">= 2.0.0 and < 3.0.0".into()).unwrap(),
+                ),
+            ]
+            .into_iter(),
+            &vec![].into_iter().collect(),
+        );
+
+        if let Err(Error::DependencyResolutionFailed(message)) = result {
+            insta::assert_snapshot!(message)
+        } else {
+            panic!("expected a resolution error message")
+        }
     }
 }
