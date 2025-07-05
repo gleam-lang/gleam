@@ -708,6 +708,7 @@ impl<T, E> Function<T, E> {
 }
 
 pub type UntypedImport = Import<()>;
+pub type TypedImport = Import<EcoString>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// Import another Gleam module so the current module can use the types and
@@ -817,6 +818,7 @@ impl<T> CustomType<T> {
 }
 
 pub type UntypedTypeAlias = TypeAlias<()>;
+pub type TypedTypeAlias = TypeAlias<Arc<Type>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A new name for an existing type
@@ -2245,8 +2247,7 @@ impl TypedPattern {
                         pattern: self,
                     })
                 }
-
-                Some(_) | None => arguments.iter().find_map(|arg| arg.find_node(byte_index)),
+                _ => arguments.iter().find_map(|arg| arg.find_node(byte_index)),
             },
             Pattern::List { elements, tail, .. } => elements
                 .iter()

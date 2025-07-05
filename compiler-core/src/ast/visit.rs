@@ -54,7 +54,7 @@ use vec1::Vec1;
 use crate::type_::Type;
 
 use super::{
-    untyped::FunctionLiteralKind, AssignName, BinOp, BitArrayOption, CallArg, Constant, Definition, Pattern, PipelineAssignmentKind, SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssert, TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant, TypedCustomType, TypedDefinition, TypedExpr, TypedExprBitArraySegment, TypedFunction, TypedModule, TypedModuleConstant, TypedPattern, TypedPatternBitArraySegment, TypedPipelineAssignment, TypedStatement, TypedUse
+    untyped::FunctionLiteralKind, AssignName, BinOp, BitArrayOption, CallArg, Constant, Definition, Pattern, PipelineAssignmentKind, SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssert, TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant, TypedCustomType, TypedDefinition, TypedExpr, TypedExprBitArraySegment, TypedFunction, TypedImport, TypedModule, TypedModuleConstant, TypedPattern, TypedPatternBitArraySegment, TypedPipelineAssignment, TypedStatement, TypedTypeAlias, TypedUse
 };
 
 pub trait Visit<'ast> {
@@ -80,6 +80,14 @@ pub trait Visit<'ast> {
 
     fn visit_typed_custom_type(&mut self, custom_type: &'ast TypedCustomType) {
         visit_typed_custom_type(self, custom_type);
+    }
+
+    fn visit_typed_type_alias(&mut self, type_alias: &'ast TypedTypeAlias) {
+        visit_typed_type_alias(self, type_alias);
+    }
+
+    fn visit_typed_import(&mut self, import: &'ast TypedImport) {
+        visit_typed_import(self, import);
     }
 
     fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
@@ -597,9 +605,9 @@ where
 {
     match def {
         Definition::Function(fun) => v.visit_typed_function(fun),
-        Definition::TypeAlias(_typealias) => { /* TODO */ }
+        Definition::TypeAlias(type_alias) => v.visit_typed_type_alias(type_alias),
         Definition::CustomType(custom_type) => v.visit_typed_custom_type(custom_type),
-        Definition::Import(_import) => { /* TODO */ }
+        Definition::Import(import) => v.visit_typed_import(import),
         Definition::ModuleConstant(constant) => v.visit_typed_module_constant(constant),
     }
 }
@@ -730,6 +738,18 @@ where
             v.visit_type_ast(&argument.ast);
         }
     }
+}
+
+pub fn visit_typed_type_alias<'a, V>(_v: &mut V, _type_alias: &'a TypedTypeAlias)
+where
+    V: Visit<'a> + ?Sized,
+{
+}
+
+pub fn visit_typed_import<'a, V>(_v: &mut V, _import: &'a TypedImport)
+where
+    V: Visit<'a> + ?Sized,
+{
 }
 
 pub fn visit_typed_expr<'a, V>(v: &mut V, node: &'a TypedExpr)

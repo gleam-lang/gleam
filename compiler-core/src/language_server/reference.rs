@@ -6,11 +6,11 @@ use lsp_types::Location;
 use crate::{
     analyse,
     ast::{
-        self, visit::Visit, ArgNames, Constant, CustomType, Definition, Function, Import, ModuleConstant, Pattern, RecordConstructor, SrcSpan, TypedConstant, TypedExpr, TypedModule
+        self, visit::Visit, ArgNames, CallArg, Constant, CustomType, Definition, Function, Import, ModuleConstant, Pattern, RecordConstructor, SrcSpan, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstTuple, TypedConstant, TypedExpr, TypedFunction, TypedModule, TypedPattern
     },
     build::Located,
     type_::{
-        error::{Named, VariableOrigin}, ModuleInterface, ModuleValueConstructor, Type, ValueConstructor, ValueConstructorVariant
+        error::{Named, VariableOrigin}, ModuleInterface, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor, ValueConstructorVariant
     },
 };
 
@@ -237,7 +237,7 @@ pub fn reference_for_ast_node(
         Located::Annotation { ast, type_ } => match type_.named_type_name() {
             Some((module, name)) => {
                 let (target_kind, location) = match ast {
-                    ast::TypeAst::Constructor(constructor) => {
+                    TypeAst::Constructor(constructor) => {
                         let kind = if constructor.module.is_some() {
                             RenameTarget::Qualified
                         } else {
@@ -245,10 +245,10 @@ pub fn reference_for_ast_node(
                         };
                         (kind, constructor.name_location)
                     }
-                    ast::TypeAst::Fn(_)
-                    | ast::TypeAst::Var(_)
-                    | ast::TypeAst::Tuple(_)
-                    | ast::TypeAst::Hole(_) => (RenameTarget::Unqualified, ast.location()),
+                    TypeAst::Fn(_)
+                    | TypeAst::Var(_)
+                    | TypeAst::Tuple(_)
+                    | TypeAst::Hole(_) => (RenameTarget::Unqualified, ast.location()),
                 };
                 Some(Referenced::ModuleType {
                     module,
@@ -371,7 +371,7 @@ struct FindVariableReferences {
 }
 
 impl<'ast> Visit<'ast> for FindVariableReferences {
-    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+    fn visit_typed_function(&mut self, fun: &'ast TypedFunction) {
         if fun.full_location().contains(self.definition_location.start) {
             ast::visit::visit_typed_function(self, fun);
         }
@@ -518,32 +518,56 @@ struct FindModuleNameReferences {
 }
 
 // TODO:
-// - find reference inside function arg
-// - find reference inside custom type
-// - find reference inside type alias
 // - find reference inside type annotation
 // - any other I find
+
+// NOTE:
+// oftentimes, the module field contains the alias instead of the full module name
+// but the full module name is needed as that is used in the ModuleName node and
+// ModuleStatement::Import node
 impl<'ast> Visit<'ast> for FindModuleNameReferences {
-    fn visit_typed_definition(&mut self, def: &'ast ast::TypedDefinition) {
-        match def {
-            Definition::Import(Import {
-                module,
-                location,
-                as_name,
-                ..
-            }) if *module == self.module_name => match as_name {
+
+    fn visit_typed_import(&mut self, import: &'ast ast::TypedImport) {
+        if import.module == self.module_name {
+            match &import.as_name {
                 Some(alias) => self.references.push(ModuleNameReference {
                     location: SrcSpan::new(alias.1.start - 1, alias.1.end),
                     kind: ModuleNameReferenceKind::Alias,
                 }),
                 None => self.references.push(ModuleNameReference {
-                    location: *location,
+                    location: import.location,
                     kind: ModuleNameReferenceKind::Import,
                 }),
-            },
-            _ => {}
+            }
         }
-        ast::visit::visit_typed_definition(self, def);
+
+        ast::visit::visit_typed_import(self, import);
+    }
+
+    fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
+        for constructor in &custom_type.constructors {
+            for arg in &constructor.arguments {
+                self.visit_type_ast(&arg.ast, &arg.type_);
+            }
+        }
+
+        ast::visit::visit_typed_custom_type(self, custom_type);
+    }
+
+    fn visit_typed_type_alias(&mut self, type_alias: &'ast ast::TypedTypeAlias) {
+        self.visit_type_ast(&type_alias.type_ast, &type_alias.type_);
+
+        ast::visit::visit_typed_type_alias(self, type_alias);
+    }
+
+    fn visit_typed_function(&mut self, fun: &'ast TypedFunction) {
+        for arg in &fun.arguments {
+            if let Some(annotation) = &arg.annotation {
+                self.visit_type_ast(annotation, arg.type_.as_ref());
+            }
+        }
+
+        ast::visit::visit_typed_function(self, fun);
     }
 
     fn visit_typed_clause_guard_module_select(
@@ -604,8 +628,6 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences {
     fn visit_typed_constant(&mut self, constant: &'ast TypedConstant) {
         match constant {
             Constant::Record { module, record_constructor: con, .. } | Constant::Var { module, constructor: con, .. } => {
-                // module contains the alias, but the actual module name is needed
-                // so we need to dig a bit
                 if let Some((_, location)) = module {
                     if let Some(con) = con {
                         match &con.variant {
@@ -630,15 +652,14 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences {
         ast::visit::visit_typed_constant(self, constant);
     }
 
-
     fn visit_typed_pattern_constructor(
         &mut self,
         location: &'ast SrcSpan,
         name_location: &'ast SrcSpan,
         name: &'ast EcoString,
-        arguments: &'ast Vec<ast::CallArg<ast::TypedPattern>>,
+        arguments: &'ast Vec<CallArg<TypedPattern>>,
         module: &'ast Option<(EcoString, SrcSpan)>,
-        constructor: &'ast analyse::Inferred<crate::type_::PatternConstructor>,
+        constructor: &'ast analyse::Inferred<PatternConstructor>,
         spread: &'ast Option<SrcSpan>,
         type_: &'ast std::sync::Arc<Type>,
     ) {
@@ -663,5 +684,40 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences {
             spread,
             type_
         );
+    }
+}
+
+impl FindModuleNameReferences {
+    fn visit_type_ast(&mut self, type_ast: &TypeAst, type_: &Type) {
+        match type_ast {
+            TypeAst::Constructor(TypeAstConstructor { module, arguments, .. }) => {
+                // module contains module alias, but we need full module name
+                if let Some((_, module_location)) = module {
+                    if let Some((referenced_module, _)) = type_.named_type_name() {
+                        if referenced_module == self.module_name {
+                            self.references.push(ModuleNameReference {
+                                location: *module_location,
+                                kind: ModuleNameReferenceKind::Name
+                            });
+                        }
+                    }
+                }
+                if let Type::Named { args, .. } = type_ {
+                    arguments.iter().zip(args.iter()).for_each(|(arg, type_)| self.visit_type_ast(arg, type_));
+                }
+            },
+            TypeAst::Tuple(TypeAstTuple { elements, .. }) => {
+                if let Type::Tuple { elements: elements_type } = type_ {
+                    elements.iter().zip(elements_type.iter()).for_each(|(e, type_)| self.visit_type_ast(e, type_));
+                }
+            },
+            TypeAst::Fn(TypeAstFn { arguments, return_, .. }) => {
+                if let Type::Fn { args, return_: ret_type } = type_ {
+                    arguments.iter().zip(args.iter()).for_each(|(arg, type_)| self.visit_type_ast(arg, type_));
+                    self.visit_type_ast(return_, ret_type);
+                }
+            },
+            _ => {},
+        }
     }
 }
