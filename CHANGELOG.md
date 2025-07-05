@@ -415,6 +415,10 @@
   generating code on the JavaScript target.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where the "Import module" code action would suggest importing
+  internal modules from other packages.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.11.1 - 2025-06-05
 
 ### Compiler
