@@ -405,6 +405,11 @@
   cases on the JavaScript target.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where using the prelude `Ok` and `Error` values in a qualified
+  fashion could cause a conflict with user-defined `Ok` and `Error` values when
+  generating code on the JavaScript target.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.11.1 - 2025-06-05
 
 ### Compiler

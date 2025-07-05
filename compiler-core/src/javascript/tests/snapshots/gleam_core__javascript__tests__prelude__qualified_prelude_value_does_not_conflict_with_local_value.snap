@@ -1,0 +1,39 @@
+---
+source: compiler-core/src/javascript/tests/prelude.rs
+expression: "\nimport gleam\n\npub type Result(a, e) {\n  Ok(a)\n  Error(e)\n}\n\npub fn main() {\n  gleam.Ok(10)\n}\n"
+---
+----- SOURCE CODE
+
+import gleam
+
+pub type Result(a, e) {
+  Ok(a)
+  Error(e)
+}
+
+pub fn main() {
+  gleam.Ok(10)
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $gleam from "../gleam.mjs";
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class Ok extends $CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+}
+
+export class Error extends $CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+}
+
+export function main() {
+  return new $gleam.Ok(10);
+}
