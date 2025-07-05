@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/javascript/tests/prelude.rs
+expression: "\nimport gleam\n\npub type Result(a, e) {\n  Ok(a)\n  Error(e)\n}\n\npub const error = gleam.Error(\"Bad\")\n"
+---
+----- SOURCE CODE
+
+import gleam
+
+pub type Result(a, e) {
+  Ok(a)
+  Error(e)
+}
+
+pub const error = gleam.Error("Bad")
+
+
+----- COMPILED JAVASCRIPT
+import * as $gleam from "../gleam.mjs";
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class Ok extends $CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+}
+
+export class Error extends $CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+}
+
+export const error = /* @__PURE__ */ new $gleam.Error("Bad");

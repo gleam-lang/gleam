@@ -1,0 +1,47 @@
+---
+source: compiler-core/src/javascript/tests/prelude.rs
+expression: "\nimport gleam\n\npub type Result(a, e) {\n  Ok(a)\n  Error(e)\n}\n\npub fn go(x) {\n  case x {\n    gleam.Ok(x) -> x\n    gleam.Error(_) -> 0\n  }\n}\n"
+---
+----- SOURCE CODE
+
+import gleam
+
+pub type Result(a, e) {
+  Ok(a)
+  Error(e)
+}
+
+pub fn go(x) {
+  case x {
+    gleam.Ok(x) -> x
+    gleam.Error(_) -> 0
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $gleam from "../gleam.mjs";
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class Ok extends $CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+}
+
+export class Error extends $CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+}
+
+export function go(x) {
+  if (x instanceof $gleam.Ok) {
+    let x$1 = x[0];
+    return x$1;
+  } else {
+    return 0;
+  }
+}
