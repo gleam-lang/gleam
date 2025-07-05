@@ -1678,7 +1678,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                 type_,
                 ..
             } => {
-                if type_.is_result() {
+                if module.is_none() && type_.is_result() {
                     if tag == "Ok" {
                         self.tracker.ok_used = true;
                     } else {
@@ -2059,7 +2059,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                 type_,
                 ..
             } => {
-                if type_.is_result() {
+                if module.is_none() && type_.is_result() {
                     if tag == "Ok" {
                         self.tracker.ok_used = true;
                     } else {

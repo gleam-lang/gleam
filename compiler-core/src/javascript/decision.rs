@@ -1074,7 +1074,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             }
 
             RuntimeCheck::Variant { match_, index, .. } => {
-                if variable.type_.is_result() {
+                if variable.type_.is_result() && match_.module().is_none() {
                     if *index == 0 {
                         self.expression_generator.tracker.ok_used = true;
                     } else {
