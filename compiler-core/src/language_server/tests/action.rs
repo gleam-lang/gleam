@@ -8805,3 +8805,43 @@ pub fn main() {
         find_position_of("use").to_selection()
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4739
+#[test]
+fn do_not_import_internal_modules() {
+    const IMPORT_MODULE: &str = "Import `package/internal`";
+    let code = "
+pub fn main() {
+  internal.some_internal_function()
+}
+";
+
+    assert_no_code_actions!(
+        IMPORT_MODULE,
+        TestProject::for_source(code).add_package_module(
+            "package",
+            "package/internal",
+            "pub fn some_internal_function() { todo }"
+        ),
+        find_position_of("internal").to_selection()
+    );
+}
+
+#[test]
+fn import_internal_module_from_same_package() {
+    let code = "
+pub fn main() {
+  internal.some_internal_function()
+}
+";
+
+    assert_code_action!(
+        "Import `app/internal`",
+        TestProject::for_source(code).add_package_module(
+            "app",
+            "app/internal",
+            "pub fn some_internal_function() { todo }"
+        ),
+        find_position_of("internal").to_selection()
+    );
+}

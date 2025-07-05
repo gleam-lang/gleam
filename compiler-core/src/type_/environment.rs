@@ -786,6 +786,10 @@ impl Environment<'_> {
             .importable_modules
             .iter()
             .filter_map(|(importable, module_info)| {
+                if module_info.is_internal && module_info.package != self.current_package {
+                    return None;
+                }
+
                 match &imported {
                     // Don't suggest importing modules if they are already imported
                     _ if self
