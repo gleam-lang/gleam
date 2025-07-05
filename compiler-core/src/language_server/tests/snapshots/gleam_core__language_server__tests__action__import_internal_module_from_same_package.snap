@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  internal.some_internal_function()\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  internal.some_internal_function()
+  ↑                                
+}
+
+
+----- AFTER ACTION
+import app/internal
+
+pub fn main() {
+  internal.some_internal_function()
+}
