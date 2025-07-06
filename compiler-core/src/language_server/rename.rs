@@ -1,12 +1,15 @@
 use std::collections::HashMap;
 
 use ecow::EcoString;
-use lsp_types::{RenameParams, TextEdit, Url, WorkspaceEdit};
+use lsp_types::{Range, RenameParams, TextEdit, Url, WorkspaceEdit};
 
 use crate::{
     analyse::name,
-    ast::{self, SrcSpan},
+    ast::{self, Definition, SrcSpan},
     build::Module,
+    language_server::edits::{
+        self, Newlines, add_newlines_after_import, position_of_first_definition_if_import,
+    },
     line_numbers::LineNumbers,
     reference::ReferenceKind,
     type_::{ModuleInterface, error::Named},
@@ -209,6 +212,7 @@ fn alias_references_in_module(
     let references = reference_map.get(&(module_name.clone(), name.clone()))?;
 
     let mut edits = TextEdits::new(&module.ast.type_info.line_numbers);
+    let mut found_import = false;
 
     for reference in references {
         match reference.kind {
@@ -217,9 +221,38 @@ fn alias_references_in_module(
                 edits.replace(reference.location, params.new_name.clone())
             }
             ReferenceKind::Import => {
-                edits.insert(reference.location.end, format!(" as {}", params.new_name))
+                edits.insert(reference.location.end, format!(" as {}", params.new_name));
+                found_import = true;
             }
             ReferenceKind::Definition => {}
+        }
+    }
+
+    // If we didn't find the import for the aliased type or value, then this is
+    // a prelude value and we need to add the import so we can alias it.
+    if !found_import {
+        let unqualified_import = match layer {
+            ast::Layer::Value => format!("{name} as {}", params.new_name),
+            ast::Layer::Type => format!("type {name} as {}", params.new_name),
+        };
+
+        let mut import = None;
+        for definition in module.ast.definitions.iter() {
+            match definition {
+                Definition::Import(this_import) if this_import.module == *module_name => {
+                    import = Some(this_import);
+                    break;
+                }
+                _ => {}
+            }
+        }
+
+        if let Some(import) = import {
+            let (position, new_text) =
+                edits::insert_unqualified_import(import, &module.code, unqualified_import);
+            edits.insert(position, new_text);
+        } else {
+            add_import(module, module_name, unqualified_import, &mut edits);
         }
     }
 
@@ -227,4 +260,36 @@ fn alias_references_in_module(
         params.text_document_position.text_document.uri.clone(),
         edits.edits,
     ))
+}
+
+fn add_import(
+    module: &Module,
+    module_name: &EcoString,
+    unqualified_import: String,
+    edits: &mut TextEdits<'_>,
+) {
+    let position_of_first_import_if_present =
+        position_of_first_definition_if_import(module, &module.ast.type_info.line_numbers);
+    let first_is_import = position_of_first_import_if_present.is_some();
+    let import_location = position_of_first_import_if_present.unwrap_or_default();
+
+    let after_import_newlines = add_newlines_after_import(
+        import_location,
+        first_is_import,
+        &module.ast.type_info.line_numbers,
+        &module.code,
+    );
+
+    let newlines = match after_import_newlines {
+        Newlines::Single => "\n",
+        Newlines::Double => "\n\n",
+    };
+
+    edits.edits.push(TextEdit {
+        range: Range {
+            start: import_location,
+            end: import_location,
+        },
+        new_text: format!("import {module_name}.{{{unqualified_import}}}{newlines}",),
+    });
 }
