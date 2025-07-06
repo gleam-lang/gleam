@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/docs/tests.rs
+expression: output
+---
+---- SOURCE CODE
+-- main.gleam
+
+pub fn aaaaaaaaaaaaaaaaaaaaaaaaaaaa() -> aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa {
+  todo
+}
+
+
+---- VALUES
+
+--- aaaaaaaaaaaaaaaaaaaaaaaaaaaa
+<pre><code>pub fn aaaaaaaaaaaaaaaaaaaaaaaaaaaa() -> aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</code></pre>
