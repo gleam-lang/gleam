@@ -1,0 +1,37 @@
+---
+source: compiler-core/src/erlang/tests/bit_arrays.rs
+expression: "\npub fn go(x) {\n  let assert <<codepoint:utf32_codepoint-little>> = x\n  codepoint\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  let assert <<codepoint:utf32_codepoint-little>> = x
+  codepoint
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([go/1]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec go(bitstring()) -> integer().
+go(X) ->
+    Codepoint@1 = case X of
+        <<Codepoint/utf32-little>> -> Codepoint;
+        _assert_fail ->
+            erlang:error(#{gleam_error => let_assert,
+                        message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
+                        file => <<?FILEPATH/utf8>>,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"go"/utf8>>,
+                        line => 3,
+                        value => _assert_fail,
+                        start => 18,
+                        'end' => 69,
+                        pattern_start => 29,
+                        pattern_end => 65})
+    end,
+    Codepoint@1.

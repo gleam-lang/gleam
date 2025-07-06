@@ -1094,6 +1094,20 @@ fn bit_array_target_tests() -> List(Test) {
           h
         })
       }),
+    "pattern-match UTF-16 codepoint little-endian"
+      |> example(fn() {
+        assert_equal(ffi.utf_codepoint(127_757), {
+          let assert <<codepoint:utf16_codepoint-little>> = <<"🌍":utf16-little>>
+          codepoint
+        })
+      }),
+    "pattern-match UTF-32 codepoint little-endian"
+      |> example(fn() {
+        assert_equal(ffi.utf_codepoint(127_757), {
+          let assert <<codepoint:utf32_codepoint-little>> = <<"🌍":utf32-little>>
+          codepoint
+        })
+      }),
   ]
 }
 
@@ -1707,12 +1721,28 @@ fn non_utf8_string_bit_array_tests() -> List(Test) {
           <<codepoint:utf16_codepoint>>
         })
       }),
+    "UTF-16 codepoint little-endian"
+      |> example(fn() {
+        assert_equal(<<60, 216, 13, 223>>, {
+          // 🌍
+          let codepoint = ffi.utf_codepoint(127_757)
+          <<codepoint:utf16_codepoint-little>>
+        })
+      }),
     "UTF-32 codepoint"
       |> example(fn() {
         assert_equal(<<0, 1, 243, 13>>, {
           // 🌍
           let codepoint = ffi.utf_codepoint(127_757)
           <<codepoint:utf32_codepoint>>
+        })
+      }),
+    "UTF-32 codepoint little-endian"
+      |> example(fn() {
+        assert_equal(<<13, 243, 1, 0>>, {
+          // 🌍
+          let codepoint = ffi.utf_codepoint(127_757)
+          <<codepoint:utf32_codepoint-little>>
         })
       }),
   ]

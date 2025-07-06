@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn go(codepoint) {\n  <<codepoint:utf16_codepoint-little>>\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(codepoint) {
+  <<codepoint:utf16_codepoint-little>>
+}
+
+
+----- COMPILED JAVASCRIPT
+import { toBitArray, codepointToUtf16 } from "../gleam.mjs";
+
+export function go(codepoint) {
+  return toBitArray([codepointToUtf16(codepoint, false)]);
+}
