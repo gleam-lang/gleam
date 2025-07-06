@@ -233,3 +233,23 @@ pub const wobble = wobble",
         vec![("wobble", "fn() -> Int")],
     );
 }
+
+#[test]
+fn javascript_mjs() {
+    assert_js_module_infer!(
+        r#"@external(javascript, "one.mjs", "two")
+pub fn main() -> Int
+"#,
+        vec![("main", "fn() -> Int")]
+    );
+}
+
+#[test]
+fn javascript_cjs() {
+    assert_js_module_infer!(
+        r#"@external(javascript, "one.cjs", "two")
+pub fn main() -> Int
+"#,
+        vec![("main", "fn() -> Int")]
+    );
+}
