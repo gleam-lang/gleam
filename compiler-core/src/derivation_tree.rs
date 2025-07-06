@@ -34,7 +34,9 @@ pub struct DerivationTreePrinter {
     /// The graph of dependencies built from the derivation tree. The nodes are
     /// packages and the arcs connecting them represent a dependency:
     ///
-    ///     wibble ---- (range1, range2) ---> wobble
+    /// ```txt
+    /// wibble ---- (range1, range2) ---> wobble
+    /// ```
     ///
     /// Means "package wibble with version `range1` depends on package wobble
     /// with version `range2`".
@@ -100,7 +102,7 @@ impl DerivationTreePrinter {
                 .expect("package is in the graph");
 
             let heading = format!("There's no compatible version of `{package}`:");
-            let explanation = paths.map(|path| self.pretty_path(path)).join("\n");
+            let explanation = paths.sorted().map(|path| self.pretty_path(path)).join("\n");
             unresolvable.push(format!("{heading}\n{explanation}"));
         }
         Some(unresolvable.join("\n\n"))
@@ -157,6 +159,7 @@ impl DerivationTreePrinter {
                     .count()
                     > 1
             })
+            .sorted()
             .collect_vec()
     }
 
