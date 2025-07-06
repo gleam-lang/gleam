@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\npub fn main() {\n  Ok(10)\n}\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+pub fn main() {
+  Ok(10)
+  ↑▔    
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+import gleam.{Ok as Success}
+
+pub fn main() {
+  Success(10)
+}

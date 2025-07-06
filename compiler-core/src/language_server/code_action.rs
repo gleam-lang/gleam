@@ -14,6 +14,7 @@ use crate::{
     config::PackageConfig,
     exhaustiveness::CompiledCase,
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
+    language_server::edits,
     line_numbers::LineNumbers,
     parse::{extra::ModuleExtra, lexer::str_to_keyword},
     strings::to_snake_case,
@@ -1307,7 +1308,6 @@ impl<'a> AddAnnotations<'a> {
 
 pub struct QualifiedConstructor<'a> {
     import: &'a Import<EcoString>,
-    module_aliased: bool,
     used_name: EcoString,
     constructor: EcoString,
     layer: ast::Layer,
@@ -1431,7 +1431,6 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
                 }) {
                     self.qualified_constructor = Some(QualifiedConstructor {
                         import,
-                        module_aliased: import.as_name.is_some(),
                         used_name: module_alias.clone(),
                         constructor: name.clone(),
                         layer: ast::Layer::Type,
@@ -1476,7 +1475,6 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
                 {
                     self.qualified_constructor = Some(QualifiedConstructor {
                         import,
-                        module_aliased: import.as_name.is_some(),
                         used_name: module_alias.clone(),
                         constructor: constructor_name.clone(),
                         layer: ast::Layer::Value,
@@ -1516,7 +1514,6 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
                     {
                         self.qualified_constructor = Some(QualifiedConstructor {
                             import,
-                            module_aliased: import.as_name.is_some(),
                             used_name: module_alias.clone(),
                             constructor: name.clone(),
                             layer: ast::Layer::Value,
@@ -1607,107 +1604,13 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
         if is_imported {
             return;
         }
-        let (insert_pos, new_text) = self.determine_insert_position_and_text();
+        let (insert_pos, new_text) = edits::insert_unqualified_import(
+            import,
+            &self.module.code,
+            self.qualified_constructor.constructor_import(),
+        );
         let span = SrcSpan::new(insert_pos, insert_pos);
         self.edits.replace(span, new_text);
-    }
-
-    fn find_last_char_before_closing_brace(&self) -> Option<(usize, char)> {
-        let QualifiedConstructor {
-            import: Import { location, .. },
-            ..
-        } = self.qualified_constructor;
-        let import_code = self.get_import_code();
-        let closing_brace_pos = import_code.rfind('}')?;
-
-        let bytes = import_code.as_bytes();
-        let mut pos = closing_brace_pos;
-        while pos > 0 {
-            pos -= 1;
-            let c = (*bytes.get(pos)?) as char;
-            if c.is_whitespace() {
-                continue;
-            }
-            if c == '{' {
-                break;
-            }
-            return Some((location.start as usize + pos, c));
-        }
-        None
-    }
-
-    fn get_import_code(&self) -> &str {
-        let QualifiedConstructor {
-            import: Import { location, .. },
-            ..
-        } = self.qualified_constructor;
-        self.module
-            .code
-            .get(location.start as usize..location.end as usize)
-            .expect("import not found")
-    }
-
-    fn determine_insert_position_and_text(&self) -> (u32, String) {
-        let QualifiedConstructor { module_aliased, .. } = &self.qualified_constructor;
-
-        let name = self.qualified_constructor.constructor_import();
-        let import_code = self.get_import_code();
-        let has_brace = import_code.contains('}');
-
-        if has_brace {
-            self.insert_into_braced_import(name)
-        } else {
-            self.insert_into_unbraced_import(name, *module_aliased)
-        }
-    }
-
-    // Handle inserting into an unbraced import
-    fn insert_into_unbraced_import(&self, name: String, module_aliased: bool) -> (u32, String) {
-        let QualifiedConstructor {
-            import: Import { location, .. },
-            ..
-        } = self.qualified_constructor;
-        if !module_aliased {
-            // Case: import module
-            (location.end, format!(".{{{name}}}"))
-        } else {
-            // Case: import module as alias
-            let import_code = &self.get_import_code();
-            let as_pos = import_code
-                .find(" as ")
-                .expect("Expected ' as ' in import statement");
-            let before_as_pos = import_code
-                .get(..as_pos)
-                .and_then(|s| s.rfind(|c: char| !c.is_whitespace()))
-                .map(|pos| location.start as usize + pos + 1)
-                .expect("Expected non-whitespace character before ' as '");
-            (before_as_pos as u32, format!(".{{{name}}}"))
-        }
-    }
-
-    // Handle inserting into a braced import
-    fn insert_into_braced_import(&self, name: String) -> (u32, String) {
-        let QualifiedConstructor {
-            import: Import { location, .. },
-            ..
-        } = self.qualified_constructor;
-        if let Some((pos, c)) = self.find_last_char_before_closing_brace() {
-            // Case: import module.{Existing, } (as alias)
-            if c == ',' {
-                (pos as u32 + 1, format!(" {name}"))
-            } else {
-                // Case: import module.{Existing} (as alias)
-                (pos as u32 + 1, format!(", {name}"))
-            }
-        } else {
-            // Case: import module.{} (as alias)
-            let import_code = self.get_import_code();
-            let left_brace_pos = import_code
-                .find('{')
-                .map(|pos| location.start as usize + pos)
-                .expect("Expected '{' in import statement");
-            (left_brace_pos as u32 + 1, name)
-        }
     }
 }
 

@@ -423,6 +423,10 @@
   alternative patterns.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where trying to rename a type or value from the Gleam prelude would
+  result in invalid code.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.11.1 - 2025-06-05
 
 ### Compiler
