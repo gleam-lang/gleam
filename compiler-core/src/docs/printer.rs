@@ -335,11 +335,14 @@ impl Printer<'_> {
         }
         self.register_local_type_variable_names(return_type);
 
-        let arguments = arguments.iter().map(|argument| {
-            let name = self.variable(self.argument_name(argument));
-            docvec![name, ": ", self.type_(&argument.type_)].group()
-        });
-        let arguments = Self::wrap_arguments(arguments);
+        let arguments = if arguments.is_empty() {
+            "()".to_doc()
+        } else {
+            Self::wrap_arguments(arguments.iter().map(|argument| {
+                let name = self.variable(self.argument_name(argument));
+                docvec![name, ": ", self.type_(&argument.type_)].group()
+            }))
+        };
 
         docvec![
             self.keyword("pub fn "),

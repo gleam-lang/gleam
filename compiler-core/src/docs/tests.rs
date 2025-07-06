@@ -1165,6 +1165,7 @@ pub type Wibble {
         NONE
     );
 }
+
 #[test]
 fn gitea_repository_url_has_no_double_slash() {
     let repo = Repository::Gitea {
@@ -1177,5 +1178,17 @@ fn gitea_repository_url_has_no_double_slash() {
     assert_eq!(
         repo.url().unwrap(),
         "https://code.example.org/person/forgejo_bug"
+    );
+}
+
+#[test]
+fn long_function_with_no_arguments_parentheses_are_not_split() {
+    assert_documentation!(
+        "
+pub fn aaaaaaaaaaaaaaaaaaaaaaaaaaaa() -> aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa {
+  todo
+}
+",
+        NONE
     );
 }
