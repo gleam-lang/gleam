@@ -209,3 +209,49 @@ fn identity(x) {
 "
     );
 }
+
+#[test]
+fn utf16_codepoint_little_endian() {
+    assert_erl!(
+        "
+pub fn go(codepoint) {
+  <<codepoint:utf16_codepoint-little>>
+}
+"
+    );
+}
+
+#[test]
+fn utf32_codepoint_little_endian() {
+    assert_erl!(
+        "
+pub fn go(codepoint) {
+  <<codepoint:utf32_codepoint-little>>
+}
+"
+    );
+}
+
+#[test]
+fn pattern_match_utf16_codepoint_little_endian() {
+    assert_erl!(
+        "
+pub fn go(x) {
+  let assert <<codepoint:utf16_codepoint-little>> = x
+  codepoint
+}
+"
+    );
+}
+
+#[test]
+fn pattern_match_utf32_codepoint_little_endian() {
+    assert_erl!(
+        "
+pub fn go(x) {
+  let assert <<codepoint:utf32_codepoint-little>> = x
+  codepoint
+}
+"
+    );
+}

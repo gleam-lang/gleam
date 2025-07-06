@@ -2539,3 +2539,25 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn utf16_codepoint_little_endian() {
+    assert_js!(
+        "
+pub fn go(codepoint) {
+  <<codepoint:utf16_codepoint-little>>
+}
+"
+    );
+}
+
+#[test]
+fn utf32_codepoint_little_endian() {
+    assert_js!(
+        "
+pub fn go(codepoint) {
+  <<codepoint:utf32_codepoint-little>>
+}
+"
+    );
+}

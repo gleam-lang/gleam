@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/erlang/tests/bit_arrays.rs
+expression: "\npub fn go(codepoint) {\n  <<codepoint:utf16_codepoint-little>>\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(codepoint) {
+  <<codepoint:utf16_codepoint-little>>
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([go/1]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec go(integer()) -> bitstring().
+go(Codepoint) ->
+    <<Codepoint/utf16-little>>.

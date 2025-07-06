@@ -196,6 +196,10 @@
 
   ([Louis Pilfold](https://github.com/lpil))
 
+- The compiler now allows using bit array options to specify endianness when
+  construction or pattern matching on bit arrays.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - `gleam update`, `gleam deps update`, and `gleam deps download` will now print

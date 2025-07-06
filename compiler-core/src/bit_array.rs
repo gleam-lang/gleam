@@ -219,10 +219,20 @@ where
         }
     }
 
-    // Endianness is only valid for int, utf16, utf32 and float
+    // Endianness is only valid for int, utf16, utf16_codepoint, utf32,
+    // utf32_codepoint and float
     match categories {
         SegmentOptionCategories {
-            type_: None | Some(Int { .. } | Utf16 { .. } | Utf32 { .. } | Float { .. }),
+            type_:
+                None
+                | Some(
+                    Int { .. }
+                    | Utf16 { .. }
+                    | Utf32 { .. }
+                    | Utf16Codepoint { .. }
+                    | Utf32Codepoint { .. }
+                    | Float { .. },
+                ),
             ..
         } => {}
 
