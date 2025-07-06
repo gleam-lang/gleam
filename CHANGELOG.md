@@ -244,16 +244,16 @@
   The error from the version resolver library was:
 
   There's no compatible version of `gleam_otp`:
-    - You depend on wisp >= 1.0.0 and < 2.0.0
-      - wisp depends on mist >= 1.2.0 and < 5.0.0
-      - mist depends on gleam_otp >= 0.9.0 and < 1.0.0
-    - You depend on lustre >= 5.2.1 and < 6.0.0
-      - lustre depends on gleam_otp >= 1.0.0 and < 2.0.0
+    - You require wisp >= 1.0.0 and < 2.0.0
+      - wisp requires mist >= 1.2.0 and < 5.0.0
+      - mist requires gleam_otp >= 0.9.0 and < 1.0.0
+    - You require lustre >= 5.2.1 and < 6.0.0
+      - lustre requires gleam_otp >= 1.0.0 and < 2.0.0
 
   There's no compatible version of `gleam_json`:
-    - You depend on wisp >= 1.0.0 and < 2.0.0
-      - wisp depends on gleam_json >= 3.0.0 and < 4.0.0
-    - You depend on gleam_json >= 2.3.0 and < 3.0.0
+    - You require wisp >= 1.0.0 and < 2.0.0
+      - wisp requires gleam_json >= 3.0.0 and < 4.0.0
+    - You require gleam_json >= 2.3.0 and < 3.0.0
   ```
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

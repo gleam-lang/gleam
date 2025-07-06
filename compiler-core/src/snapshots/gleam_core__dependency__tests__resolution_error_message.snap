@@ -5,13 +5,13 @@ expression: message
 snapshot_kind: text
 ---
 There's no compatible version of `woo`:
-  - You depend on woo >= 2.0.0 and < 3.0.0
-  - You depend on wibble >= 1.0.0 and < 2.0.0
-    - wibble depends on wobble >= 1.0.0 and < 3.0.0
-    - wobble depends on woo >= 1.0.0 and < 2.0.0
+  - You require woo >= 2.0.0 and < 3.0.0
+  - You require wibble >= 1.0.0 and < 2.0.0
+    - wibble requires wobble >= 1.0.0 and < 3.0.0
+    - wobble requires woo >= 1.0.0 and < 2.0.0
 
 There's no compatible version of `waa`:
-  - You depend on wibble >= 1.0.0 and < 2.0.0
-    - wibble depends on wobble >= 1.0.0 and < 3.0.0
-    - wobble depends on waa >= 1.0.0 and < 2.0.0
-  - You depend on waa >= 2.0.0 and < 3.0.0
+  - You require wibble >= 1.0.0 and < 2.0.0
+    - wibble requires wobble >= 1.0.0 and < 3.0.0
+    - wobble requires waa >= 1.0.0 and < 2.0.0
+  - You require waa >= 2.0.0 and < 3.0.0

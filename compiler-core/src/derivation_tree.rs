@@ -38,7 +38,7 @@ pub struct DerivationTreePrinter {
     /// wibble ---- (range1, range2) ---> wobble
     /// ```
     ///
-    /// Means "package wibble with version `range1` depends on package wobble
+    /// Means "package wibble with version `range1` requires package wobble
     /// with version `range2`".
     ///
     dependencies: StableGraph<String, (Ranges<Version>, Ranges<Version>)>,
@@ -123,7 +123,7 @@ impl DerivationTreePrinter {
             .expect("path edge is in the graph");
 
         let mut message = format!(
-            "  - You depend on {dependee_name} {}",
+            "  - You require {dependee_name} {}",
             pretty_range(dependee_range)
         );
 
@@ -142,7 +142,7 @@ impl DerivationTreePrinter {
                 .expect("path edge is in the graph");
 
             message.push_str(&format!(
-                "\n    - {previous_name} depends on {next_name} {}",
+                "\n    - {previous_name} requires {next_name} {}",
                 pretty_range(next_range)
             ));
             previous = next;
