@@ -450,10 +450,11 @@ impl Inliner<'_> {
                 location,
                 type_,
                 expression,
+                message,
             } => TypedExpr::Echo {
                 location,
-                expression: expression
-                    .map(|boxed_expression| self.boxed_expression(boxed_expression)),
+                expression: expression.map(|expression| self.boxed_expression(expression)),
+                message: message.map(|message| self.boxed_expression(message)),
                 type_,
             },
 
@@ -1017,11 +1018,11 @@ impl<'ast> Visit<'ast> for FindInlinableParameters {
         self.register_reference(name, *location);
     }
 
-    fn visit_typed_pattern_var_usage(
+    fn visit_typed_bit_array_size_variable(
         &mut self,
         _location: &'ast SrcSpan,
         name: &'ast EcoString,
-        constructor: &'ast Option<ValueConstructor>,
+        constructor: &'ast Option<Box<ValueConstructor>>,
         _type_: &'ast Arc<Type>,
     ) {
         let variant = match constructor {
@@ -1237,7 +1238,7 @@ impl FunctionToInlinable {
                 Some(InlinableExpression::Case {
                     subjects,
                     clauses,
-                    compiled_case: compiled_case.clone(),
+                    compiled_case: Box::new(compiled_case.clone()),
                     type_: self.type_(type_),
                 })
             }
@@ -1413,7 +1414,7 @@ impl FunctionToInlinable {
             TypedPattern::Int { .. }
             | TypedPattern::Float { .. }
             | TypedPattern::String { .. }
-            | TypedPattern::VarUsage { .. }
+            | TypedPattern::BitArraySize { .. }
             | TypedPattern::Assign { .. }
             | TypedPattern::Discard { .. }
             | TypedPattern::List { .. }
@@ -1481,7 +1482,7 @@ pub enum InlinableExpression {
     Case {
         subjects: Vec<InlinableExpression>,
         clauses: Vec<InlinableClause>,
-        compiled_case: CompiledCase,
+        compiled_case: Box<CompiledCase>,
         type_: InlinableType,
     },
 
@@ -1517,7 +1518,7 @@ impl InlinableExpression {
                     .iter()
                     .map(|clause| clause.to_typed_clause())
                     .collect(),
-                compiled_case: compiled_case.clone(),
+                compiled_case: compiled_case.as_ref().clone(),
             },
             InlinableExpression::Variable {
                 name,

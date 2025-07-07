@@ -2116,7 +2116,7 @@ pub enum BitArraySize<Type> {
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum IntOperator {
     Add,
     Subtract,
