@@ -1234,7 +1234,7 @@ pub struct Offset {
     pub calculations: im::Vector<OffsetCalculation>,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, serde::Serialize, serde::Deserialize)]
 pub struct OffsetCalculation {
     pub left: Offset,
     pub right: Offset,

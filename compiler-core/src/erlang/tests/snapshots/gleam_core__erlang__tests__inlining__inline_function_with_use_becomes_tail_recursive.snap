@@ -27,7 +27,7 @@ count(From, To) ->
             From;
 
         false ->
-            echo(From, 6),
+            echo(From, nil, 6),
             count(From + 1, To)
     end.
 
