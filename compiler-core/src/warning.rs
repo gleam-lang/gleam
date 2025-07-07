@@ -1317,7 +1317,7 @@ can already tell whether it will be `True` or `False`.",
                         },
                         extra_labels: vec![],
                     }),
-                    hint: Some(format!("Replace with {name}")),
+                    hint: None,
                 },
 
                 type_::Warning::TopLevelDefinitionShadowsImport { location, name } => {
