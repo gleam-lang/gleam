@@ -1361,53 +1361,57 @@ pub type Type { Variant1 Variant2(Int) }";
 const TEST_MODULE: &'static str =
 "import mod
 
-fn func(arg: mod.Type) {
+fn func(arg: mod.Type, arg2: mod.GenericType(mod.Type), arg3: #(mod.GenericType(mod.Type), mod.Type), arg4: fn(mod.Type) -> mod.Type) {
   mod.fn1()
-  let _ = mod.Variant1
+  arg4(mod.Variant1)
+
+  let _: mod.Type = mod.Variant1
   let _ = mod.const1
   let _ = mod.fn1
-  let _ = fn(arg: List(mod.Type)) -> mod.Type { todo }
-  let _: #(mod.Type, Int) = #(mod.Variant1, mod.const1)
+
+  let _: #(Int, fn() -> a, List(mod.GenericType(mod.Type))) = #(mod.const1, mod.fn1, [mod.Node(mod.Variant1, mod.Leaf)])
+
+  let _: List(mod.GenericType(mod.Type)) = [mod.Node(mod.Variant1, mod.Leaf)]
   let _: List(mod.Type) = [mod.Variant1]
-  let _ = [mod.Variant1]
   let _ = [mod.const1]
   let _ = [mod.fn1]
-  let _ = [mod.fn1()]
-  let _ = <<mod.const2:bits>>
-  let _ = mod.const3 <> \" World!\"
+
+  let _: fn(List(mod.GenericType(mod.Type))) -> List(mod.GenericType(mod.Type)) = fn(_: List(mod.GenericType(mod.Type))) -> List(mod.GenericType(mod.Type)) { todo }
+
+  let _ = <<mod.const2:bits, mod.const2:bits>>
+
+  let _ = mod.const3 <> mod.const3
+
   case arg {
     mod.Variant1 -> todo
     mod.Variant2(3) -> todo
     mod.Variant2(..) -> todo
+    mod.Variant2(_) -> todo
+  }
+  case arg2 {
+    mod.Node(_, mod.Node(_, _)) -> todo
+    mod.Node(_, _) -> todo
+    mod.Leaf -> todo
+  }
+  case arg3 {
+    #(mod.Node(_, mod.Leaf), mod.Variant1) -> todo
+    _ -> todo
   }
 }
 
-const c1 = mod.Variant1
+const c1: mod.Type = mod.Variant1
 const c2 = mod.const1
 const c3 = mod.fn1
 const c4: #(mod.Type, Int, fn() -> a) = #(mod.Variant1, mod.const1, mod.fn1)
 const c5: List(mod.Type) = [mod.Variant1]
 const c6 = [mod.const1]
 const c7 = <<mod.const2:bits>>
-const c8 = mod.const3 <> \" World!\"
+const c8 = mod.const3 <> mod.const3
 type Type1 { Var(mod.Type) }
-type Type2 = mod.Type";
+type Type2 = mod.GenericType(mod.Type)";
 
 // TODO:
-// - function return type
-// - local var record
-// - local var function
-// - local var anonymous function (args + return type)
-// - local var tuple (type annotation + values)
-// - local var list (type annotation + values)
-// - local var list var
-// - local var list record
-// - local var list fn
-// - local var list fn()
-// - local var bit array
-// - local var string concat
-// - const tuple (type annotation + fn value)
-// - any others found later
+// lots
 
 #[test]
 fn rename_module_from_import() {
@@ -1438,6 +1442,26 @@ fn rename_module_to_orig() {
         "mod",
         find_position_of("import mod as module")
     );
+}
+
+#[test]
+fn rename_module_with_unqualified_member() {
+    let src =
+"import mod.{type Type}
+const c1 = mod.Variant1
+type Type1 = Type";
+    let test_project = TestProject::for_source(src).add_hex_module("mod", MOCK_MODULE);
+    let pos = find_position_of("import mod").find_position(test_project.src);
+    let lsp_types::PrepareRenameResponse::Range(range) = test_project.at(pos, |engine, params, _| {
+        let params = TextDocumentPositionParams {
+            text_document: params.text_document,
+            position: pos,
+        };
+        engine.prepare_rename(params).result.unwrap().unwrap()
+    }) else { panic!() };
+
+    assert_eq!(range.start, Position::new(1, 7));
+    assert_eq!(range.end, Position::new(1, 9));
 }
 
 #[test]
@@ -1639,26 +1663,6 @@ fn rename_module_from_type_alias() {
         "module",
         find_position_of("mod.Type")
     );
-}
-
-#[test]
-fn rename_module_with_unqualified_member() {
-    let src =
-"import mod.{type Type}
-const c1 = mod.Variant1
-type Type1 = Type";
-    let test_project = TestProject::for_source(src).add_hex_module("mod", MOCK_MODULE);
-    let pos = find_position_of("import mod").find_position(test_project.src);
-    let lsp_types::PrepareRenameResponse::Range(range) = test_project.at(pos, |engine, params, _| {
-        let params = TextDocumentPositionParams {
-            text_document: params.text_document,
-            position: pos,
-        };
-        engine.prepare_rename(params).result.unwrap().unwrap()
-    }) else { panic!() };
-
-    assert_eq!(range.start, Position::new(1, 7));
-    assert_eq!(range.end, Position::new(1, 9));
 }
 
 #[test]
