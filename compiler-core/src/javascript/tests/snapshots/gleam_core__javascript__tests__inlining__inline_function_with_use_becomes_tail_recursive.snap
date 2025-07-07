@@ -35,7 +35,7 @@ export function count(loop$from, loop$to) {
     if ($) {
       return from;
     } else {
-      echo(from, "src/module.gleam", 6);
+      echo(from, undefined, "src/module.gleam", 6);
       loop$from = from + 1;
       loop$to = to;
     }
