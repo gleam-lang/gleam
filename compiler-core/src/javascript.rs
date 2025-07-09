@@ -700,7 +700,7 @@ fn jsdoc_comment(documentation: &EcoString, publicity: Publicity) -> Document<'_
     let doc_lines = documentation
         .trim_end()
         .split('\n')
-        .map(|line| eco_format!(" *{line}").to_doc())
+        .map(|line| eco_format!(" *{line}", line = line.replace("*/", "*\\/")).to_doc())
         .collect_vec();
 
     // We start with the documentation of the function

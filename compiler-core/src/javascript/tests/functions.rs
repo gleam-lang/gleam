@@ -585,3 +585,14 @@ pub fn main() { 1 }
 "
     );
 }
+
+#[test]
+fn star_slash_in_jsdoc() {
+    assert_js!(
+        "
+/// */
+///
+pub fn main() { 1 }
+"
+    );
+}
