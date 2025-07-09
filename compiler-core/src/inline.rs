@@ -8,8 +8,7 @@
 //! - It removes the barrier of the function call between the code around the
 //!   call, and the code inside the called function.
 //!
-//! For example, the following Gleam code make heavy use of `use` sugar and higher
-//! order functions:
+//! For example, the following Gleam code make heavy use of higher order functions:
 //!
 //! ```gleam
 //! pub fn try_sum(list: List(Result(String, Nil)), sum: Int) -> Result(Int, Nil) {
@@ -24,10 +23,12 @@
 //! }
 //! ```
 //!
-//! This can make the code easier to read, but it normally would have a performance
-//! cost. There are two called functions, and two implicit anonymous functions.
-//! This function is also not tail recursive, as it uses higher order functions
-//! inside its body.
+//! There is a small performance cost to these higher order functions:
+//! There are two called functions, and two implicit anonymous functions.
+//!
+//! Perhaps more importantly: while this code uses tail calls it does not
+//! make _self recursive_ tail calls, so it cannot be tail-call optimised
+//! when compiling to JavaScript.
 //!
 //! However, with function inlining, the above code can be optimised to:
 //!
@@ -48,11 +49,11 @@
 //! }
 //! ```
 //!
-//! Which now has no extra function calls, and is tail recursive!
+//! Which now has no extra function calls, and it can be tail-call optimised when
+//! compiling to JavaScript! In exchange the size of the code has increased slightly.
 //!
-//! The process of function inlining is quite simple really. It is implemented
-//! using an AST folder, which traverses each node of the AST, and potentially
-//! alters it as it goes.
+//! The process of function inlining works is implemented using an AST folder, which traverses each
+//! node of the AST, and potentially alters it as it goes.
 //!
 //! Every time we encounter a function call, we decide whether or not we can
 //! inline it. For now, the criteria for inlining is very simple, although a
