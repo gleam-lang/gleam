@@ -9,7 +9,7 @@ license-file = "LICENCE"
 # Error message and warning formatting
 codespan-reporting = "0"
 # Graph data structures
-petgraph = "0"
+petgraph = "0.8"
 # Cap'n Proto binary format runtime
 capnp = "0"
 # Template rendering
