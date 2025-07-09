@@ -305,9 +305,12 @@ impl Inliner<'_> {
                 // See the `inline_variables` documentation for an explanation.
                 ValueConstructorVariant::LocalVariable { .. } => {
                     // We remove the variable as inlined variables can only be
-                    // inlined once.
+                    // inlined once. `inline_variables` only contains variables
+                    // which we have already checked are possible to inline, as
+                    // we check for variables which are only used once when converting
+                    // to an `InlinableFunction`.
                     match self.inline_variables.remove(name) {
-                        Some(expression) => expression,
+                        Some(inlined_expression) => inlined_expression,
                         None => expression,
                     }
                 }
@@ -600,14 +603,7 @@ impl Inliner<'_> {
                     {
                         // First, we do the actual inlining, by converting it to
                         // an anonymous function.
-                        let TypedExpr::Fn {
-                            args: parameters,
-                            body,
-                            ..
-                        } = function.to_anonymous_function()
-                        else {
-                            unreachable!("to_anonymous_function always returns TypedExpr::fn");
-                        };
+                        let (parameters, body) = function.to_anonymous_function();
                         // Then, we perform beta reduction, inlining the call to
                         // the anonymous function.
                         return self.inline_anonymous_function_call(
@@ -641,14 +637,7 @@ impl Inliner<'_> {
                         .get(module_name)
                         .and_then(|module| module.inline_functions.get(name))
                     {
-                        let TypedExpr::Fn {
-                            args: parameters,
-                            body,
-                            ..
-                        } = function.to_anonymous_function()
-                        else {
-                            unreachable!("to_anonymous_function always returns TypedExpr::fn");
-                        };
+                        let (parameters, body) = function.to_anonymous_function();
                         return self.inline_anonymous_function_call(
                             &parameters,
                             arguments,
@@ -1059,10 +1048,7 @@ fn expand_block(expression: TypedExpr) -> TypedExpr {
             location,
             statements,
         } if statements.len() == 1 => {
-            let first = statements
-                .into_iter()
-                .next()
-                .expect("Vec1 always has a first element");
+            let (first, _rest) = statements.split_off_first();
 
             match first {
                 // If this is several blocks inside each other, we want to
@@ -1448,7 +1434,7 @@ const BLANK_LOCATION: SrcSpan = SrcSpan { start: 0, end: 0 };
 impl InlinableFunction {
     /// Converts an `InlinableFunction` to an anonymous function, which can then
     /// be inlined within another function.
-    fn to_anonymous_function(&self) -> TypedExpr {
+    fn to_anonymous_function(&self) -> (Vec<TypedArg>, Vec1<TypedStatement>) {
         let parameters = self
             .parameters
             .iter()
@@ -1461,19 +1447,11 @@ impl InlinableFunction {
             .map(|ast| Statement::Expression(ast.to_expression()))
             .collect_vec();
 
-        TypedExpr::Fn {
-            location: BLANK_LOCATION,
-            type_: unknown_type(),
-            kind: FunctionLiteralKind::Anonymous {
-                head: BLANK_LOCATION,
-            },
-            args: parameters,
-            body: body
-                .try_into()
+        (
+            parameters,
+            body.try_into()
                 .expect("Type-checking ensured that the body has at least 1 statement"),
-            return_annotation: None,
-            purity: Purity::Unknown,
-        }
+        )
     }
 }
 
