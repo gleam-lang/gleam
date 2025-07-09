@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/javascript/tests/inlining.rs
+expression: "\npub fn main() {\n  1 |> fn(x) { x + 1 } |> fn(y) { y * y }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  1 |> fn(x) { x + 1 } |> fn(y) { y * y }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function main() {
+  let _pipe = 1;
+  let _pipe$1 = _pipe + 1;
+  {
+    let y = _pipe$1;
+    return y * y;
+  }
+}

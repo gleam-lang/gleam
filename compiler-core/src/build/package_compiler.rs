@@ -1,5 +1,6 @@
 use crate::analyse::{ModuleAnalyzerConstructor, TargetSupport};
 use crate::build::package_loader::CacheFiles;
+use crate::inline;
 use crate::io::files_with_extension;
 use crate::line_numbers::{self, LineNumbers};
 use crate::type_::PRELUDE_MODULE_NAME;
@@ -213,6 +214,18 @@ where
 
         tracing::debug!("performing_code_generation");
 
+        let modules = if self.perform_codegen {
+            modules
+                .into_iter()
+                .map(|mut module| {
+                    module.ast = inline::module(module.ast, &existing_modules);
+                    module
+                })
+                .collect()
+        } else {
+            modules
+        };
+
         if let Err(error) = self.perform_codegen(&modules) {
             return error.into();
         }
@@ -310,6 +323,10 @@ where
             };
             self.io
                 .write_bytes(&cache_files.meta_path, &info.to_binary())?;
+
+            let cache_inline = bincode::serialize(&module.ast.type_info.inline_functions)
+                .expect("Failed to serialise inline functions");
+            self.io.write_bytes(&cache_files.inline_path, &cache_inline);
 
             // Write warnings.
             // Dependency packages don't get warnings persisted as the

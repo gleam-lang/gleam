@@ -1,0 +1,45 @@
+---
+source: compiler-core/src/javascript/tests/inlining.rs
+expression: "\nimport gleam/bool\n\npub fn count(from: Int, to: Int) -> Int {\n  use <- bool.guard(when: from >= to, return: from)\n  echo from\n  count(from + 1, to)\n}\n"
+---
+----- SOURCE CODE
+
+import gleam/bool
+
+pub fn count(from: Int, to: Int) -> Int {
+  use <- bool.guard(when: from >= to, return: from)
+  echo from
+  count(from + 1, to)
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
+import * as $bool from "../../gleam_stdlib/gleam/bool.mjs";
+import {
+  Empty as $Empty,
+  NonEmpty as $NonEmpty,
+  CustomType as $CustomType,
+  bitArraySlice,
+  bitArraySliceToInt,
+  BitArray as $BitArray,
+  List as $List,
+  UtfCodepoint as $UtfCodepoint,
+} from "../gleam.mjs";
+
+export function count(loop$from, loop$to) {
+  while (true) {
+    let from = loop$from;
+    let to = loop$to;
+    let $ = from >= to;
+    if ($) {
+      return from;
+    } else {
+      echo(from, undefined, "src/module.gleam", 6);
+      loop$from = from + 1;
+      loop$to = to;
+    }
+  }
+}
+
+// ...omitted code from `templates/echo.mjs`...

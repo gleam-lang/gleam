@@ -79,7 +79,7 @@ fn pipe_in_record_update() {
 fn id(x) {
   x
 }
-        
+
 pub fn main(x) {
   X(..x, a: 1 |> id)
 }"
@@ -93,7 +93,7 @@ fn pipe_in_eq() {
         "fn id(x) {
   x
 }
-        
+
 pub fn main() {
     1 == 1 |> id
 }"
@@ -133,5 +133,19 @@ pub fn two(a, b) {
   a
 }
 "#
+    );
+}
+
+#[test]
+fn multiple_pipes() {
+    assert_erl!(
+        "
+pub fn main() {
+  1 |> x |> x
+  2 |> x |> x
+}
+
+fn x(x) { x }
+"
     );
 }
