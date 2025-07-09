@@ -629,6 +629,7 @@ impl Inliner<'_> {
                 | ValueConstructorVariant::LocalConstant { .. }
                 | ValueConstructorVariant::Record { .. } => function,
             },
+
             TypedExpr::ModuleSelect {
                 ref constructor,
                 label: ref name,
@@ -664,6 +665,7 @@ impl Inliner<'_> {
                     function
                 }
             },
+
             // Direct calls to anonymous functions can always be inlined
             TypedExpr::Fn {
                 args: parameters,
@@ -678,6 +680,7 @@ impl Inliner<'_> {
                     &inlinable_parameters,
                 );
             }
+
             TypedExpr::Int { .. }
             | TypedExpr::Float { .. }
             | TypedExpr::String { .. }
@@ -1163,11 +1166,14 @@ fn is_inlinable(package: &str, module: &str, name: &str) -> bool {
         ("gleam/result", "try") => true,
         ("gleam/result", "map") => true,
         ("gleam/result", "map_error") => true,
+
+        #[cfg(test)]
         // For testing purposes it's useful to have a function which will always
         // be inlined, which we can define however we want. We only inline this
         // when we are in test mode though, because we wouldn't want this detail
         // leaking out into real-world code and causing unexpected behaviour.
-        ("testing", "always_inline") => cfg!(test),
+        ("testing", "always_inline") => true,
+
         _ => false,
     }
 }
