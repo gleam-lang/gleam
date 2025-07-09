@@ -56,6 +56,7 @@ jobs:
   build-release:
     name: build-release
     runs-on: ${{ matrix.os }}
+    environment: release
     outputs:
       release-id: ${{ steps.release.outputs.id }}
     strategy:
@@ -114,6 +115,11 @@ jobs:
           target: ${{ matrix.target }}
           cargo-tool: ${{ matrix.cargo-tool }}
           expected-binary-architecture: ${{ matrix.expected-binary-architecture }}
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-trusted-signing-account-name: ${{ vars.AZURE_TRUSTED_SIGNING_ACCOUNT_NAME }}
+          azure-certificate-profile-name: ${{ vars.AZURE_CERTIFICATE_PROFILE_NAME }}
 
       - name: Upload release archive
         id: release
