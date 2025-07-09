@@ -385,7 +385,7 @@ impl<'comments> Formatter<'comments> {
             Definition::CustomType(ct) => self.custom_type(ct),
 
             Definition::Import(Import {
-                module,
+                module: (module, _),
                 as_name,
                 unqualified_values,
                 unqualified_types,

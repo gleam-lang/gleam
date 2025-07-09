@@ -253,7 +253,7 @@ where
         // Search the ast for import statements
         for import in self.module.ast.definitions.iter().filter_map(get_import) {
             // Find the import that matches the module being imported from
-            if import.module == module_being_imported_from.name {
+            if import.module.0 == module_being_imported_from.name {
                 // Add the values and types that have already been imported
                 for unqualified in &import.unqualified_types {
                     let _ = already_imported_types.insert(&unqualified.name);
@@ -442,7 +442,7 @@ where
         for import in self.module.ast.definitions.iter().filter_map(get_import) {
             // The module may not be known of yet if it has not previously
             // compiled yet in this editor session.
-            let Some(module) = self.compiler.get_module_interface(&import.module) else {
+            let Some(module) = self.compiler.get_module_interface(&import.module.0) else {
                 continue;
             };
 
@@ -637,7 +637,7 @@ where
         for import in self.module.ast.definitions.iter().filter_map(get_import) {
             // The module may not be known of yet if it has not previously
             // compiled yet in this editor session.
-            let Some(module) = self.compiler.get_module_interface(&import.module) else {
+            let Some(module) = self.compiler.get_module_interface(&import.module.0) else {
                 continue;
             };
 

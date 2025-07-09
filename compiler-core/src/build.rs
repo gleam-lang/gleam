@@ -400,7 +400,7 @@ impl<'a> Located<'a> {
             Self::FunctionBody(statement) => None,
             Self::Expression { expression, .. } => expression.definition_location(),
             Self::ModuleStatement(Definition::Import(import)) => Some(DefinitionLocation {
-                module: Some(import.module.clone()),
+                module: Some(import.module.0.clone()),
                 span: SrcSpan { start: 0, end: 0 },
             }),
             Self::ModuleStatement(statement) => Some(DefinitionLocation {

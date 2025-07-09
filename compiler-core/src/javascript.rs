@@ -462,7 +462,7 @@ impl<'a> Generator<'a> {
         for definition in &self.module.definitions {
             match definition {
                 Definition::Import(Import {
-                    module,
+                    module: (module, _),
                     as_name,
                     unqualified_values: unqualified,
                     package,

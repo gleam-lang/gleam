@@ -342,7 +342,7 @@ where
                 // we should try to provide completions for unqualified values
                 Located::ModuleStatement(Definition::Import(import)) => this
                     .compiler
-                    .get_module_interface(import.module.as_str())
+                    .get_module_interface((&import.module.0).as_str())
                     .map(|importing_module| {
                         completer.unqualified_completions_from_module(importing_module, true)
                     }),
@@ -881,7 +881,7 @@ where
                 }
                 Located::Constant(constant) => Some(hover_for_constant(constant, lines, module)),
                 Located::ModuleStatement(Definition::Import(import)) => {
-                    let Some(module) = this.compiler.get_module_interface(&import.module) else {
+                    let Some(module) = this.compiler.get_module_interface(&import.module.0) else {
                         return Ok(None);
                     };
                     Some(hover_for_module(
@@ -1579,7 +1579,7 @@ fn get_hexdocs_link_section(
         .iter()
         .find_map(|definition| match definition {
             Definition::Import(import)
-                if import.module == module_name && hex_deps.contains(&import.package) =>
+                if import.module.0 == module_name && hex_deps.contains(&import.package) =>
             {
                 Some(&import.package)
             }

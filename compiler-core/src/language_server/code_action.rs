@@ -1360,13 +1360,13 @@ impl<'a> QualifiedToUnqualifiedImportFirstPass<'a> {
                     &import.unqualified_types
                 };
 
-                if import.module != *module_name
+                if import.module.0 != *module_name
                     && imported.iter().any(|imp| imp.used_name() == constructor)
                 {
                     return None;
                 }
 
-                if import.module == *module_name {
+                if import.module.0 == *module_name {
                     matching_import = Some(import);
                 }
             }
@@ -1907,7 +1907,7 @@ impl<'a> UnqualifiedToQualifiedImportFirstPass<'a> {
                 .definitions
                 .iter()
                 .find_map(|definition| match definition {
-                    ast::Definition::Import(import) if import.module == *module_name => import
+                    ast::Definition::Import(import) if import.module.0 == *module_name => import
                         .unqualified_values
                         .iter()
                         .find(|value| value.used_name() == constructor_name)

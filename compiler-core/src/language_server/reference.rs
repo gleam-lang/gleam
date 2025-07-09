@@ -1,4 +1,4 @@
-use std::{cell::Ref, collections::HashMap};
+use std::collections::HashMap;
 
 use ecow::EcoString;
 use lsp_types::Location;
@@ -6,7 +6,7 @@ use lsp_types::Location;
 use crate::{
     analyse,
     ast::{
-        self, visit::Visit, ArgNames, CallArg, Constant, CustomType, Definition, Function, Import, ModuleConstant, Pattern, RecordConstructor, SrcSpan, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstTuple, TypeAstVar, TypedConstant, TypedExpr, TypedFunction, TypedModule, TypedPattern
+        self, visit::Visit, ArgNames, AssignName, CallArg, Constant, CustomType, Definition, Function, Import, ModuleConstant, Pattern, RecordConstructor, SrcSpan, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstTuple, TypedConstant, TypedExpr, TypedFunction, TypedModule, TypedPattern
     },
     build::Located,
     type_::{
@@ -274,7 +274,7 @@ pub fn reference_for_ast_node(
         }),
         Located::ModuleStatement(Definition::Import(import @ Import { .. })) => {
             Some(Referenced::ModuleName {
-                name: import.module.clone(),
+                name: import.module.0.clone(),
                 location: get_module_name_span(import),
             })
         }
@@ -464,11 +464,17 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
     }
 }
 
-// TODO: fix span if member of module are imported unqualified
 fn get_module_name_span<T>(import: &Import<T>) -> SrcSpan {
-    let used_name = import.used_name();
-    let len = used_name.map(|str| str.len()).unwrap_or(1) as u32;
-    SrcSpan::new(import.location.end - len, import.location.end)
+    match &import.as_name {
+        Some((AssignName::Variable(name), location)) => SrcSpan::new(location.end-(name.len() as u32), location.end),
+
+        Some((AssignName::Discard(_), location)) => SrcSpan::new(location.end-1, location.end),
+        None => {
+            let used_name = import.module.0.split('/').next_back();
+            let len = used_name.map(|str| str.len()).unwrap_or(0) as u32;
+            SrcSpan::new(import.module.1.end-len, import.module.1.end)
+        }
+    }
 }
 
 pub fn find_module_name_references(
@@ -492,8 +498,8 @@ pub enum ModuleNameReferenceKind {
     // Import of module without an alias
     // location is entire import statement
     //
-    // import lustre/attribute
-    // _______________________
+    // import lustre/attribute.{type ...}
+    // __________________________________
     Import,
 
     // Import of module with alias
@@ -501,7 +507,7 @@ pub enum ModuleNameReferenceKind {
     //
     // import lustre/attribute   as attr
     //                          ________
-    Alias,
+    AliasedImport,
 
     // Use of module
     // location is module name/alias until '.'
@@ -518,11 +524,11 @@ struct FindModuleNameReferences {
 
 impl<'ast> Visit<'ast> for FindModuleNameReferences {
     fn visit_typed_import(&mut self, import: &'ast ast::TypedImport) {
-        if import.module == self.module_name {
+        if import.module.0 == self.module_name {
             match &import.as_name {
                 Some(alias) => self.references.push(ModuleNameReference {
                     location: SrcSpan::new(alias.1.start - 1, alias.1.end),
-                    kind: ModuleNameReferenceKind::Alias,
+                    kind: ModuleNameReferenceKind::AliasedImport,
                 }),
                 None => self.references.push(ModuleNameReference {
                     location: import.location,

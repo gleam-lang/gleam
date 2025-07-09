@@ -259,10 +259,10 @@ pub fn rename_module_alias(
                 edits.insert(reference.location.end, format!(" as {}", &params.new_name))
             }
             // If new name is same as original, remove the alias
-            ModuleNameReferenceKind::Alias if params.new_name == original => {
+            ModuleNameReferenceKind::AliasedImport if params.new_name == original => {
                 edits.delete(reference.location)
             }
-            ModuleNameReferenceKind::Alias => {
+            ModuleNameReferenceKind::AliasedImport => {
                 edits.replace(reference.location, format!(" as {}", &params.new_name))
             }
             ModuleNameReferenceKind::Name => {

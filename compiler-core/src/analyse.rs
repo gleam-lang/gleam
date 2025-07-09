@@ -818,7 +818,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             ..
         } = i;
         // Find imported module
-        let Some(module_info) = environment.importable_modules.get(&module) else {
+        let Some(module_info) = environment.importable_modules.get(&module.0) else {
             // Here the module being imported doesn't exist. We don't emit an
             // error here as the `Importer` that was run earlier will have
             // already emitted an error for this.

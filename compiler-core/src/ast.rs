@@ -109,7 +109,7 @@ impl UntypedModule {
             .flat_map(|definition| match definition {
                 Definition::Import(Import {
                     module, location, ..
-                }) => Some((module.clone(), *location)),
+                }) => Some((module.0.clone(), *location)),
                 _ => None,
             })
             .collect()
@@ -724,7 +724,7 @@ pub type TypedImport = Import<EcoString>;
 pub struct Import<PackageName> {
     pub documentation: Option<EcoString>,
     pub location: SrcSpan,
-    pub module: EcoString,
+    pub module: (EcoString, SrcSpan),
     pub as_name: Option<(AssignName, SrcSpan)>,
     pub unqualified_values: Vec<UnqualifiedImport>,
     pub unqualified_types: Vec<UnqualifiedImport>,
@@ -736,7 +736,7 @@ impl<T> Import<T> {
         match self.as_name.as_ref() {
             Some((AssignName::Variable(name), _)) => Some(name.clone()),
             Some((AssignName::Discard(_), _)) => None,
-            None => self.module.split('/').next_back().map(EcoString::from),
+            None => self.module.0.split('/').next_back().map(EcoString::from),
         }
     }
 
@@ -986,7 +986,7 @@ impl TypedDefinition {
                         return Some(Located::UnqualifiedImport(
                             crate::build::UnqualifiedImport {
                                 name: &unqualified.name,
-                                module: &import.module,
+                                module: &import.module.0,
                                 is_type: false,
                                 location: &unqualified.location,
                             },
@@ -1001,7 +1001,7 @@ impl TypedDefinition {
                         return Some(Located::UnqualifiedImport(
                             crate::build::UnqualifiedImport {
                                 name: &unqualified.name,
-                                module: &import.module,
+                                module: &import.module.0,
                                 is_type: true,
                                 location: &unqualified.location,
                             },
