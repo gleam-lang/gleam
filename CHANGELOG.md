@@ -213,6 +213,9 @@
 
   ([Louis Pilfold](https://github.com/lpil))
 
+- A warning is now emitted when the now deprecated `_ as x` pattern is used.
+  ([eutampieri](https://github.com/eutampieri))
+
 - The compiler now allows using bit array options to specify endianness when
   construction or pattern matching on bit arrays.
   ([Surya Rose](https://github.com/GearsDatapacks))
@@ -424,6 +427,9 @@
   ```
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Implememted rewrite of `_ as x` patterns to `x`.
+  ([eutampieri](https://github.com/eutampieri))
 
 ### Bug fixes
 
