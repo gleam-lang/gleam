@@ -285,6 +285,9 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Added `gleam hex deauthenticate` command.
+  ([Samuel Cristobal](https://github.com/scristobal))
+
 ### Language server
 
 - It is now possible to use the "Pattern match on variable" code action on
