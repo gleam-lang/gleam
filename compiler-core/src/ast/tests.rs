@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use camino::Utf8PathBuf;
+use ecow::EcoString;
 
 use crate::analyse::TargetSupport;
 use crate::build::{ExpressionPosition, Origin, Target};
@@ -893,6 +894,32 @@ fn find_node_record_update() {
     let statement = compile_expression(r#"Cat(..Cat("Nubi", 3), age: 4)"#);
     let update = get_bare_expression(&statement);
 
+    let cat = TypedExpr::Var {
+        location: SrcSpan { start: 0, end: 3 },
+        constructor: ValueConstructor {
+            publicity: Publicity::Public,
+            deprecation: Deprecation::NotDeprecated,
+            variant: ValueConstructorVariant::Record {
+                name: "Cat".into(),
+                arity: 2,
+                field_map: Some(FieldMap {
+                    arity: 2,
+                    fields: [(EcoString::from("age"), 1), (EcoString::from("name"), 0)].into(),
+                }),
+                location: SrcSpan { start: 12, end: 15 },
+                module: "mymod".into(),
+                variants_count: 1,
+                variant_index: 0,
+                documentation: Some("wibble".into()),
+            },
+            type_: type_::fn_(
+                vec![type_::string(), type_::int()],
+                type_::named("mypackage", "mymod", "Cat", Publicity::Public, vec![]),
+            ),
+        },
+        name: "Cat".into(),
+    };
+
     let int = TypedExpr::Int {
         location: SrcSpan { start: 27, end: 28 },
         value: "4".into(),
@@ -903,14 +930,14 @@ fn find_node_record_update() {
     assert_eq!(
         update.find_node(0),
         Some(Located::Expression {
-            expression: update,
+            expression: &cat,
             position: ExpressionPosition::Expression
         })
     );
     assert_eq!(
         update.find_node(3),
         Some(Located::Expression {
-            expression: update,
+            expression: &cat,
             position: ExpressionPosition::Expression
         })
     );

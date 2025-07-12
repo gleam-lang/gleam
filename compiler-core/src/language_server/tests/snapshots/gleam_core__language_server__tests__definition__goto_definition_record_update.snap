@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/definition.rs
+expression: output
+---
+----- Jumping from `src/app.gleam`
+
+pub type Wibble { Wibble(one: Int, two: Int) }
+
+pub fn main() {
+  Wibble(..todo, one: 1)
+  ↑                     
+}
+
+----- Jumped to `src/app.gleam`
+
+pub type Wibble { Wibble(one: Int, two: Int) }
+                  ↑▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔  
+
+pub fn main() {
+  Wibble(..todo, one: 1)
+}
