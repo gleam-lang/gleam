@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/records.rs
-assertion_line: 389
 expression: "pub type A { A(b: B) }\npub type B { B(c: C) }\npub type C { C(val: Int) }\n\npub fn main(a: A) {\n    A(..a, b: {\n        B(..a.b, c: {\n            C(..a.b.c, val: 0)\n        })\n    })\n}"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub type A { A(b: B) }
@@ -19,7 +17,7 @@ pub fn main(a: A) {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/1]).
 -export_type([a/0, b/0, c/0]).

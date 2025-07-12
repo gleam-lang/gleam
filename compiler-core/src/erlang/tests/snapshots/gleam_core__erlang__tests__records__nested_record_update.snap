@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/records.rs
-assertion_line: 371
 expression: "pub type Wibble {\n  Wibble(a: Int, b: Wobble, c: Int)\n}\n\npub type Wobble {\n  Wobble(a: Int, b: Int)\n}\n\npub fn main() {\n  let base = Wibble(1, Wobble(2, 3), 4)\n  Wibble(..base, b: Wobble(..base.b, b: 5))\n}"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub type Wibble {
@@ -20,7 +18,7 @@ pub fn main() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 -export_type([wibble/0, wobble/0]).

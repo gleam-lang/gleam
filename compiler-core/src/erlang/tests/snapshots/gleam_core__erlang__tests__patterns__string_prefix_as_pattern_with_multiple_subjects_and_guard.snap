@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/patterns.rs
-assertion_line: 94
 expression: "pub fn a(x) {\n  case x, x {\n    _, \"a\" as a <> rest if rest == \"a\" -> a\n    _, _ -> \"a\"\n  }\n}"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn a(x) {
@@ -14,7 +12,7 @@ pub fn a(x) {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([a/1]).
 
