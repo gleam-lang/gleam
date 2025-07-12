@@ -480,11 +480,15 @@
   alternative patterns.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- Fixed a bug where trying to rename a type or value from the Gleam prelude would
-  result in invalid code.
+- Fixed a bug where trying to rename a type or value from the Gleam prelude
+  would result in invalid code.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 - Fixed a bug where the generated documentation would not be formatted properly.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the language server wouldn't allow you to jump to the
+  definition of a record from a record update expression.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ## v1.11.1 - 2025-06-05
