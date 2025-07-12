@@ -5185,6 +5185,21 @@ fn extract_variable_does_not_extract_assignment() {
 }
 
 #[test]
+fn extract_variable_does_not_extract_record_variable_in_record_update() {
+    assert_no_code_actions!(
+        EXTRACT_VARIABLE,
+        r#"
+type Wibble { Wibble(one: Int, two: Int) }
+
+pub fn main() {
+  let wibble = todo
+  Wibble(..wibble, one: 1)
+}"#,
+        find_position_of("wibble").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
 fn extract_variable_from_arg_in_pipelined_call() {
     assert_code_action!(
         EXTRACT_VARIABLE,

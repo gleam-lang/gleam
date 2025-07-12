@@ -3119,6 +3119,13 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
             return;
         }
 
+        // An implicit record update arg in inserted by the compiler, we don't
+        // want folks to interact with this since it doesn't translate to
+        // anything in the source code despite having a default position.
+        if let Some(ImplicitCallArgOrigin::RecordUpdate) = arg.implicit {
+            return;
+        }
+
         let position = if arg.is_use_implicit_callback() {
             Some(ExtractVariablePosition::TopLevelStatement)
         } else {
