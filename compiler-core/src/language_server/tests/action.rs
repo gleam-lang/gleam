@@ -5174,6 +5174,17 @@ fn extract_variable_does_not_extract_echo() {
 }
 
 #[test]
+fn extract_variable_does_not_extract_assignment() {
+    assert_no_code_actions!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+  let x = 1
+}"#,
+        find_position_of("x").to_selection()
+    );
+}
+
+#[test]
 fn extract_variable_from_arg_in_pipelined_call() {
     assert_code_action!(
         EXTRACT_VARIABLE,
