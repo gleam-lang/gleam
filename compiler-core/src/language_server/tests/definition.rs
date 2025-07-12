@@ -242,6 +242,19 @@ pub fn main() {
 }
 
 #[test]
+fn goto_definition_record_update() {
+    assert_goto!(
+        "
+pub type Wibble { Wibble(one: Int, two: Int) }
+
+pub fn main() {
+  Wibble(..todo, one: 1)
+}",
+        find_position_of("Wibble").nth_occurrence(3)
+    );
+}
+
+#[test]
 fn goto_definition_same_module_constants() {
     assert_goto!(
         "
