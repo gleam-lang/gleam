@@ -483,6 +483,10 @@
 - Fixed a bug where the generated documentation would not be formatted properly.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where a record pattern with a spread `..` would not be formatted
+  properly.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.11.1 - 2025-06-05
 
 ### Compiler

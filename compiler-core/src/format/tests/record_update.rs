@@ -103,3 +103,21 @@ fn record_update_gets_formatted_like_a_function_call() {
 "#
     );
 }
+
+#[test]
+fn record_with_record_and_spread_field_is_not_needlessly_broken() {
+    assert_format!(
+        "pub fn main() {
+  case todo {
+    Wibble(
+      some_field: Wobble(something: 1, ..),
+      other_field_1:,
+      other_field_2:,
+      other_field_3:,
+      ..,
+    ) -> todo
+  }
+}
+"
+    );
+}
