@@ -400,6 +400,7 @@ impl TypedExpr {
                 .iter()
                 .filter(|argument| argument.implicit.is_none())
                 .find_map(|argument| argument.find_node(byte_index, constructor, arguments))
+                .or_else(|| constructor.find_node(byte_index))
                 .or_else(|| {
                     record_assignment
                         .as_ref()
