@@ -1191,7 +1191,14 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
         ast::visit::visit_typed_function(self, fun);
 
-        let code_action_range = self.edits.src_span_to_lsp_range(fun.location);
+        let code_action_range = self.edits.src_span_to_lsp_range(
+            fun.body_start
+                .map(|body_start| SrcSpan {
+                    start: fun.location.start,
+                    end: body_start,
+                })
+                .unwrap_or(fun.location),
+        );
 
         // Only offer the code action if the cursor is over the statement
         if !overlaps(code_action_range, self.params.range) {

@@ -684,6 +684,7 @@ impl Publicity {
 /// ```
 pub struct Function<T, Expr> {
     pub location: SrcSpan,
+    pub body_start: Option<u32>,
     pub end_position: u32,
     pub name: Option<SpannedString>,
     pub arguments: Vec<Arg<T>>,
