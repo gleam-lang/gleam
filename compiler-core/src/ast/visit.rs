@@ -1136,7 +1136,7 @@ pub fn visit_typed_expr_panic<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
     message: &'a Option<Box<TypedExpr>>,
-    _type: &'a Arc<Type>,
+    _type_: &'a Arc<Type>,
 ) where
     V: Visit<'a> + ?Sized,
 {
@@ -1161,7 +1161,7 @@ pub fn visit_typed_expr_bit_array<'a, V>(
 pub fn visit_typed_expr_record_update<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
-    _type: &'a Arc<Type>,
+    _type_: &'a Arc<Type>,
     record: &'a Option<Box<TypedAssignment>>,
     constructor: &'a TypedExpr,
     arguments: &'a [TypedCallArg],
@@ -1601,7 +1601,7 @@ pub fn visit_typed_pattern_variable<'a, V>(
     _v: &mut V,
     _location: &'a SrcSpan,
     _name: &'a EcoString,
-    _type: &'a Arc<Type>,
+    _type_: &'a Arc<Type>,
     _origin: &'a VariableOrigin,
 ) where
     V: Visit<'a> + ?Sized,
@@ -1667,7 +1667,7 @@ pub fn visit_typed_pattern_discard<'a, V>(
     _v: &mut V,
     _location: &'a SrcSpan,
     _name: &'a EcoString,
-    _type: &'a Arc<Type>,
+    _type_: &'a Arc<Type>,
 ) where
     V: Visit<'a> + ?Sized,
 {
@@ -1678,7 +1678,7 @@ pub fn visit_typed_pattern_list<'a, V>(
     _location: &'a SrcSpan,
     elements: &'a Vec<TypedPattern>,
     tail: &'a Option<Box<TypedPattern>>,
-    _type: &'a Arc<Type>,
+    _type_: &'a Arc<Type>,
 ) where
     V: Visit<'a> + ?Sized,
 {
@@ -1700,7 +1700,7 @@ pub fn visit_typed_pattern_constructor<'a, V>(
     _module: &'a Option<(EcoString, SrcSpan)>,
     _constructor: &'a Inferred<PatternConstructor>,
     _spread: &'a Option<SrcSpan>,
-    _type: &'a Arc<Type>,
+    _type_: &'a Arc<Type>,
 ) where
     V: Visit<'a> + ?Sized,
 {
