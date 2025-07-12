@@ -1226,6 +1226,7 @@ impl<'comments> Formatter<'comments> {
                 .map(|argument| self.pattern_call_arg(argument))
                 .collect_vec();
             name.append(self.wrap_arguments_with_spread(arguments, location.end))
+                .group()
         } else {
             match arguments {
                 [argument] if is_breakable(&argument.value) => name
