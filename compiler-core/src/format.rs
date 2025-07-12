@@ -1210,6 +1210,7 @@ impl<'comments> Formatter<'comments> {
         } else if spread.is_some() {
             let args = args.iter().map(|a| self.pattern_call_arg(a)).collect_vec();
             name.append(self.wrap_args_with_spread(args, location.end))
+                .group()
         } else {
             match args {
                 [arg] if is_breakable(&arg.value) => name
