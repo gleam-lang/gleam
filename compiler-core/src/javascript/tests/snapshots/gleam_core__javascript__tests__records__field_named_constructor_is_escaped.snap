@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/javascript/tests/records.rs
+expression: "\npub type Wibble {\n  Wibble(constructor: fn() -> Wibble)\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(constructor: fn() -> Wibble)
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class Wibble extends $CustomType {
+  constructor(constructor) {
+    super();
+    this.constructor$ = constructor;
+  }
+}

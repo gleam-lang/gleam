@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/javascript/tests/records.rs
+expression: "\npub type Wibble {\n  Wibble(prototype: String)\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(prototype: String)
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class Wibble extends $CustomType {
+  constructor(prototype) {
+    super();
+    this.prototype$ = prototype;
+  }
+}

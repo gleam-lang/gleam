@@ -80,3 +80,36 @@ pub type Wibble {
 "
     );
 }
+
+#[test]
+fn field_named_then_is_escaped() {
+    assert_js!(
+        "
+pub type Wibble {
+  Wibble(then: fn() -> Int)
+}
+"
+    );
+}
+
+#[test]
+fn field_named_constructor_is_escaped() {
+    assert_js!(
+        "
+pub type Wibble {
+  Wibble(constructor: fn() -> Wibble)
+}
+"
+    );
+}
+
+#[test]
+fn field_named_prototype_is_escaped() {
+    assert_js!(
+        "
+pub type Wibble {
+  Wibble(prototype: String)
+}
+"
+    );
+}

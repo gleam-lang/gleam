@@ -868,7 +868,7 @@ fn is_usable_js_property(label: &str) -> bool {
         | "constructor"
         // `prototype` and `__proto__` to avoid unintentionally overriding the
         // prototype chain.
-        | "prototpye" | "__proto__" => false,
+        | "prototype" | "__proto__" => false,
         _ => true
     }
 }

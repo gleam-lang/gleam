@@ -535,6 +535,10 @@
   properly.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where fields of custom types named `prototype` would not be properly
+  escaped on the JavaScript target.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.11.1 - 2025-06-05
 
 ### Compiler
