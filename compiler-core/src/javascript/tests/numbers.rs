@@ -457,3 +457,57 @@ fn complex_division_by_non_zero_float() {
 }"
     )
 }
+
+#[test]
+fn division_by_zero_int() {
+    assert_js!(
+        "pub fn main() {
+  1 / 0
+}"
+    )
+}
+
+#[test]
+fn division_by_non_zero_int() {
+    assert_js!(
+        "pub fn main() {
+  1 / 2
+}"
+    )
+}
+
+#[test]
+fn complex_division_by_non_zero_int() {
+    assert_js!(
+        "pub fn main() {
+  { 1 + 2 } / 3
+}"
+    )
+}
+
+#[test]
+fn remainder_by_zero_int() {
+    assert_js!(
+        "pub fn main() {
+  1 % 0
+}"
+    )
+}
+
+#[test]
+fn remainder_by_non_zero_int() {
+    assert_js!(
+        "pub fn main() {
+  1 % 2
+}"
+    )
+}
+
+#[test]
+fn complex_remainder_by_non_zero_int() {
+    assert_js!(
+        "pub fn main() {
+  { 1 + 2 } % 3
+}"
+    )
+}
