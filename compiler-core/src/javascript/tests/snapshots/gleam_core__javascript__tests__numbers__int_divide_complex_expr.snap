@@ -14,7 +14,7 @@ pub fn go() {
 
 ----- COMPILED JAVASCRIPT
 export function go() {
-  return Math.trunc(
+  return globalThis.Math.trunc(
     (() => {
       let $ = 1 >= 0;
       if ($) {
