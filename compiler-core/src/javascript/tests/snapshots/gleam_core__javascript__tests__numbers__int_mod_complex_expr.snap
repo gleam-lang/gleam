@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-assertion_line: 88
 expression: "\npub fn go() {\n  case 1 >= 0 {\n    True -> 2\n    False -> 4\n  } % 2\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -15,18 +13,13 @@ pub fn go() {
 
 
 ----- COMPILED JAVASCRIPT
-import { remainderInt } from "../gleam.mjs";
-
 export function go() {
-  return remainderInt(
-    (() => {
-      let $ = 1 >= 0;
-      if ($) {
-        return 2;
-      } else {
-        return 4;
-      }
-    })(),
-    2
-  );
+  return (() => {
+    let $ = 1 >= 0;
+    if ($) {
+      return 2;
+    } else {
+      return 4;
+    }
+  })() % 2;
 }

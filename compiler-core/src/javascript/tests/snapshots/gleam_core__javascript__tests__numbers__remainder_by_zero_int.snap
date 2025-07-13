@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/javascript/tests/numbers.rs
+expression: "pub fn main() {\n  1 % 0\n}"
+---
+----- SOURCE CODE
+pub fn main() {
+  1 % 0
+}
+
+----- COMPILED JAVASCRIPT
+import { remainderInt } from "../gleam.mjs";
+
+export function main() {
+  return remainderInt(1, 0);
+}

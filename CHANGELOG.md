@@ -226,12 +226,17 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+<<<<<<< HEAD
 - On the Erlang target each generated module enables inlining from the Erlang
   compiler.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - The code generated for floating point division on the JavaScript target has
   been improved to avoid performing needless checks.
+=======
+- The code generated for division and modulo operators on the JavaScript target
+  has been improved to avoid performing needless checks.
+>>>>>>> 15e8a1280 (improve int division and modulo on js)
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Build tool
