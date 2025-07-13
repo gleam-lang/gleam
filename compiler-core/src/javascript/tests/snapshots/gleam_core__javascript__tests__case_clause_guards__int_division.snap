@@ -16,7 +16,7 @@ pub fn main() {
 import { divideInt } from "../gleam.mjs";
 
 export function main() {
-  let $ = Math.trunc(5 / 2);
+  let $ = globalThis.Math.trunc(5 / 2);
   let x = $;
   if (x === (divideInt(5, 2))) {
     return true;

@@ -1452,7 +1452,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             } else {
                 docvec![left_doc, " / ", right_doc]
             };
-            docvec!["Math.trunc", wrap_args([division])]
+            docvec!["globalThis.Math.trunc", wrap_args([division])]
         } else {
             self.tracker.int_division_used = true;
             docvec!["divideInt", wrap_args([left_doc, right_doc])]
