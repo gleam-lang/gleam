@@ -230,6 +230,10 @@
   compiler.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The code generated for floating point division on the JavaScript target has
+  been improved to avoid performing needless checks.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Build tool
 
 - `gleam update`, `gleam deps update`, and `gleam deps download` will now print

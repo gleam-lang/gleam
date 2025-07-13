@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-assertion_line: 135
 expression: "\npub fn go() {\n  111111111111111111111111111111. /. 22222222222222222222222222222222222.\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -12,11 +10,6 @@ pub fn go() {
 
 
 ----- COMPILED JAVASCRIPT
-import { divideFloat } from "../gleam.mjs";
-
 export function go() {
-  return divideFloat(
-    111111111111111111111111111111.,
-    22222222222222222222222222222222222.
-  );
+  return 111111111111111111111111111111. / 22222222222222222222222222222222222.;
 }

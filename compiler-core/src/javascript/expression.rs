@@ -1455,12 +1455,21 @@ impl<'module, 'a> Generator<'module, 'a> {
     }
 
     fn div_float(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Document<'a> {
-        let left =
+        let left_doc =
             self.not_in_tail_position(Some(Ordering::Strict), |this| this.child_expression(left));
-        let right =
+        let right_doc =
             self.not_in_tail_position(Some(Ordering::Strict), |this| this.child_expression(right));
-        self.tracker.float_division_used = true;
-        docvec!["divideFloat", wrap_arguments([left, right])]
+
+        if right.non_zero_compile_time_number() {
+            if let TypedExpr::BinOp { .. } = left {
+                docvec![left_doc.surround("(", ")"), " / ", right_doc]
+            } else {
+                docvec![left_doc, " / ", right_doc]
+            }
+        } else {
+            self.tracker.float_division_used = true;
+            docvec!["divideFloat", wrap_arguments([left_doc, right_doc])]
+        }
     }
 
     fn equal(
