@@ -7324,7 +7324,7 @@ impl<'a> RemoveBlock<'a> {
         self.edits.delete(SrcSpan::new(end - 1, end));
 
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new(&format!("Remove block"))
+        CodeActionBuilder::new("Remove block")
             .kind(CodeActionKind::REFACTOR_REWRITE)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(true)
