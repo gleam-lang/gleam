@@ -7010,7 +7010,8 @@ impl<'ast> ast::visit::Visit<'ast> for WrapInBlock<'ast> {
 /// what the correct alternative is.
 ///
 /// ```gleam
-///
+/// 1 +. 2 // becomes 1 + 2
+/// 1.0 + 2.3 // becomes 1.0 +. 2.3
 /// ```
 ///
 pub struct FixBinaryOperation<'a> {
@@ -7357,5 +7358,130 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveUnusedImports<'ast> {
                 _ => None,
             })
             .collect_vec();
+    }
+}
+
+/// Code action to remove a block wrapping a single expression.
+///
+pub struct RemoveBlock<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    block_span: Option<SrcSpan>,
+    position: RemoveBlockPosition,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
+enum RemoveBlockPosition {
+    InsideBinOp,
+    OutsideBinOp,
+}
+
+impl<'a> RemoveBlock<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            block_span: None,
+            position: RemoveBlockPosition::OutsideBinOp,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let Some(SrcSpan { start, end }) = self.block_span else {
+            return vec![];
+        };
+
+        self.edits.delete(SrcSpan::new(start, start + 1));
+        self.edits.delete(SrcSpan::new(end - 1, end));
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new(&format!("Remove block"))
+            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(true)
+            .push_to(&mut action);
+        action
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for RemoveBlock<'ast> {
+    fn visit_typed_expr_bin_op(
+        &mut self,
+        _location: &'ast SrcSpan,
+        _type_: &'ast Arc<Type>,
+        _name: &'ast ast::BinOp,
+        _name_location: &'ast SrcSpan,
+        left: &'ast TypedExpr,
+        right: &'ast TypedExpr,
+    ) {
+        let old_position = self.position;
+        self.position = RemoveBlockPosition::InsideBinOp;
+        ast::visit::visit_typed_expr(self, left);
+        self.position = RemoveBlockPosition::InsideBinOp;
+        ast::visit::visit_typed_expr(self, right);
+        self.position = old_position;
+    }
+
+    fn visit_typed_expr_block(
+        &mut self,
+        location: &'ast SrcSpan,
+        statements: &'ast [TypedStatement],
+    ) {
+        let block_range = self.edits.src_span_to_lsp_range(*location);
+        if !within(self.params.range, block_range) {
+            return;
+        }
+
+        match statements {
+            [] | [_, _, ..] => (),
+            [value] => match value {
+                ast::Statement::Use(_)
+                | ast::Statement::Assert(_)
+                | ast::Statement::Assignment(_) => {
+                    ast::visit::visit_typed_expr_block(self, location, statements)
+                }
+
+                ast::Statement::Expression(expr) => match expr {
+                    TypedExpr::Int { .. }
+                    | TypedExpr::Float { .. }
+                    | TypedExpr::String { .. }
+                    | TypedExpr::Block { .. }
+                    | TypedExpr::Var { .. }
+                    | TypedExpr::Fn { .. }
+                    | TypedExpr::List { .. }
+                    | TypedExpr::Call { .. }
+                    | TypedExpr::Case { .. }
+                    | TypedExpr::RecordAccess { .. }
+                    | TypedExpr::ModuleSelect { .. }
+                    | TypedExpr::Tuple { .. }
+                    | TypedExpr::TupleIndex { .. }
+                    | TypedExpr::Todo { .. }
+                    | TypedExpr::Panic { .. }
+                    | TypedExpr::Echo { .. }
+                    | TypedExpr::BitArray { .. }
+                    | TypedExpr::RecordUpdate { .. }
+                    | TypedExpr::NegateBool { .. }
+                    | TypedExpr::NegateInt { .. }
+                    | TypedExpr::Invalid { .. } => {
+                        self.block_span = Some(*location);
+                    }
+                    TypedExpr::BinOp { .. } | TypedExpr::Pipeline { .. } => {
+                        if self.position == RemoveBlockPosition::OutsideBinOp {
+                            self.block_span = Some(*location);
+                        }
+                    }
+                },
+            },
+        }
+
+        ast::visit::visit_typed_expr_block(self, location, statements);
     }
 }
