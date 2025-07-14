@@ -12,7 +12,8 @@ use crate::{
     config::PackageConfig,
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
-        compiler::LspProjectCompiler, files::FileSystemProxy, progress::ProgressReporter,
+        code_action::RemoveBlock, compiler::LspProjectCompiler, files::FileSystemProxy,
+        progress::ProgressReporter,
     },
     line_numbers::LineNumbers,
     paths::ProjectPaths,
@@ -435,6 +436,7 @@ where
             );
             actions.extend(InlineVariable::new(module, &lines, &params).code_actions());
             actions.extend(WrapInBlock::new(module, &lines, &params).code_actions());
+            actions.extend(RemoveBlock::new(module, &lines, &params).code_actions());
             GenerateDynamicDecoder::new(module, &lines, &params, &mut actions).code_actions();
             GenerateJsonEncoder::new(
                 module,

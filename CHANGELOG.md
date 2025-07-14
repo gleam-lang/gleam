@@ -318,9 +318,33 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The "generate function" and "generate variant" code actions are now quickfixes,
-  allowing them to be more easily applied to code which is producing an error.
+- The "generate function" and "generate variant" code actions are now
+  quickfixes, allowing them to be more easily applied to code which is producing
+  an error.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- The language server now offers a code action to remove needless blocks
+  wrapping a single expression. For example, in this code snippet:
+
+  ```gleam
+  case greeting {
+    User(name:) -> { "Hello, " <> name }
+    //             ^^^^^^^^^^^^^^^^^^^^^ Triggering the code action
+    //                                   with the cursor over this block.
+    Anonymous -> "Hello, stranger!"
+  }
+  ```
+
+  Would be turned into:
+
+  ```gleam
+  case greeting {
+    User(name:) -> "Hello, " <> name
+    Anonymous -> "Hello, stranger!"
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Formatter
 
