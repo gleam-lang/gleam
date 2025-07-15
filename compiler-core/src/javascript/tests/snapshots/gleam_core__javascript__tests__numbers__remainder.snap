@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-assertion_line: 216
 expression: "\npub fn go() {\n  5 % 0 // => 0\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -12,8 +10,6 @@ pub fn go() {
 
 
 ----- COMPILED JAVASCRIPT
-import { remainderInt } from "../gleam.mjs";
-
 export function go() {
-  return remainderInt(5, 0);
+  return 0;
 }

@@ -8,8 +8,6 @@ pub fn main() {
 }
 
 ----- COMPILED JAVASCRIPT
-import { divideInt } from "../gleam.mjs";
-
 export function main() {
-  return divideInt(1, 0);
+  return 0;
 }

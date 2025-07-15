@@ -8,8 +8,6 @@ pub fn main() {
 }
 
 ----- COMPILED JAVASCRIPT
-import { divideFloat } from "../gleam.mjs";
-
 export function main() {
-  return divideFloat(1.1, 0.0);
+  return 0.0;
 }

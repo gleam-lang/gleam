@@ -1104,6 +1104,12 @@ fn int_div<'a>(
         return binop_exprs(left, op, right, env);
     }
 
+    // If we have a constant value divided by zero then it's safe to replace it
+    // directly with 0.
+    if left.is_literal() && right.zero_compile_time_number() {
+        return "0".to_doc();
+    }
+
     let left = expr(left, env);
     let right = expr(right, env);
     let denominator = env.next_local_var_name("gleam@denominator");
