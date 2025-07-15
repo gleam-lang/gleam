@@ -1,0 +1,48 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\npub type Wibble {\n  Wibble(int: Int, string: String)\n  Wobble(Int)\n}\n\npub fn go(x) {\n   case x {\n     Wibble(1, s) -> Wibble(1, s)\n     _ -> Wobble(1)\n   }\n}"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(int: Int, string: String)
+  Wobble(Int)
+}
+
+pub fn go(x) {
+   case x {
+     Wibble(1, s) -> Wibble(1, s)
+     _ -> Wobble(1)
+   }
+}
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class Wibble extends $CustomType {
+  constructor(int, string) {
+    super();
+    this.int = int;
+    this.string = string;
+  }
+}
+
+export class Wobble extends $CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+}
+
+export function go(x) {
+  if (x instanceof Wibble) {
+    let $ = x.int;
+    if ($ === 1) {
+      return x;
+    } else {
+      return new Wobble(1);
+    }
+  } else {
+    return new Wobble(1);
+  }
+}

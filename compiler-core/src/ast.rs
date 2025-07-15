@@ -21,7 +21,7 @@ use crate::type_::expression::{Implementations, Purity};
 use crate::type_::printer::Names;
 use crate::type_::{
     self, Deprecation, HasType, ModuleValueConstructor, PatternConstructor, Type, TypedCallArg,
-    ValueConstructor, nil,
+    ValueConstructor, ValueConstructorVariant, nil,
 };
 use num_traits::Zero;
 use std::collections::HashSet;
@@ -1622,6 +1622,176 @@ impl TypedClause {
         };
 
         SrcSpan::new(start.unwrap_or_default(), end.unwrap_or_default())
+    }
+
+    /// Returns true if this branch is matching on a single value and returning
+    /// that value exactly as it is.
+    ///
+    /// For example:
+    /// ```
+    /// n -> n
+    /// 1 -> 1
+    /// Ok(1) -> Ok(1)
+    /// [a, b] -> [a, b]
+    /// ```
+    ///
+    pub fn is_rebuilding_matched_value(&self) -> bool {
+        // The pattern must not have any alternative patterns.
+        if !self.alternative_patterns.is_empty() {
+            return false;
+        }
+
+        // And it must match on a single subject.
+        //
+        // TODO: this limitation could actually be lifted by checking if the
+        // pattern is re-building any one of the matched subjects and not doing
+        // anything with the others!
+        let [pattern] = self.pattern.as_slice() else {
+            return false;
+        };
+
+        pattern_and_expression_are_the_same(pattern, &self.then)
+    }
+}
+
+fn pattern_and_expression_are_the_same(pattern: &TypedPattern, expression: &TypedExpr) -> bool {
+    match (pattern, expression) {
+        // A pattern and an expression are the same if they're a simple variable
+        // with exactly the same name: `x -> x`, `a -> a`
+        (
+            TypedPattern::Variable {
+                name: pattern_var, ..
+            },
+            TypedExpr::Var { name: body_var, .. },
+        ) => pattern_var == body_var,
+
+        // Floats, Ints, and Strings are the same if they are exactly the same
+        // literal.
+        // `1 -> 1`
+        // `1.1 -> 1.1`
+        // `"wibble" -> "wibble"`
+        (
+            TypedPattern::Float {
+                value: pattern_value,
+                ..
+            },
+            TypedExpr::Float { value, .. },
+        ) => pattern_value == value,
+
+        (
+            TypedPattern::Int {
+                int_value: pattern_value,
+                ..
+            },
+            TypedExpr::Int { int_value, .. },
+        ) => pattern_value == int_value,
+
+        (
+            TypedPattern::String {
+                value: pattern_value,
+                ..
+            },
+            TypedExpr::String { value, .. },
+        ) => pattern_value == value,
+
+        // Two tuples where each element is equivalent to the other:
+        // `#(a, 1, "wibble") -> #(a, 1, "wibble")`
+        // `#(a, b) -> #(a, b)`
+        (
+            TypedPattern::Tuple {
+                elements: pattern_elements,
+                ..
+            },
+            TypedExpr::Tuple { elements, .. },
+        ) => {
+            pattern_elements.len() == elements.len()
+                && pattern_elements
+                    .iter()
+                    .zip(elements)
+                    .all(|(pattern, expression)| {
+                        pattern_and_expression_are_the_same(pattern, expression)
+                    })
+        }
+
+        // Two lists are the same if each element is equivalent to the other:
+        // `[] -> []`
+        // `[a, b] -> [a, b]`
+        // `[1, ..rest] -> [1, ..rest]`
+        (
+            TypedPattern::List {
+                elements: pattern_elements,
+                tail: pattern_tail,
+                ..
+            },
+            TypedExpr::List { elements, tail, .. },
+        ) => {
+            let tails_are_the_same = match (pattern_tail, tail) {
+                (None, None) => true,
+                (None, Some(_)) | (Some(_), None) => false,
+                (Some(pattern_tail), Some(tail)) => {
+                    pattern_and_expression_are_the_same(pattern_tail, tail)
+                }
+            };
+
+            tails_are_the_same
+                && pattern_elements.len() == elements.len()
+                && pattern_elements
+                    .iter()
+                    .zip(elements)
+                    .all(|(pattern, expression)| {
+                        pattern_and_expression_are_the_same(pattern, expression)
+                    })
+        }
+
+        // Two constructors are the same if the expression is building exactly
+        // the same value being matched on (regardless of qualification).
+        // `Ok(a) -> Ok(a)`
+        // `Ok(1) -> Ok(1)`
+        // `Wibble(a, b, c) -> Wibble(a, b, c)`
+        // `Ok(a) -> gleam.Ok(a)`
+        // `gleam.Ok(1) -> Ok(1)`
+        (
+            TypedPattern::Constructor {
+                constructor:
+                    Inferred::Known(PatternConstructor {
+                        module: pattern_module,
+                        name: pattern_name,
+                        ..
+                    }),
+                arguments: pattern_arguments,
+                spread: None,
+                ..
+            },
+            TypedExpr::Call { fun, arguments, .. },
+        ) => match fun.as_ref() {
+            TypedExpr::Var {
+                constructor:
+                    ValueConstructor {
+                        variant: ValueConstructorVariant::Record { name, module, .. },
+                        ..
+                    },
+                ..
+            }
+            | TypedExpr::ModuleSelect {
+                constructor: ModuleValueConstructor::Record { name, .. },
+                module_name: module,
+                ..
+            } => {
+                pattern_module == module
+                    && pattern_name == name
+                    && pattern_arguments.len() == arguments.len()
+                    && pattern_arguments
+                        .iter()
+                        .zip(arguments)
+                        .all(|(pattern, expression)| {
+                            pattern_and_expression_are_the_same(&pattern.value, &expression.value)
+                        })
+            }
+
+            _ => false,
+        },
+
+        (_, _) => false,
     }
 }
 
