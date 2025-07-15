@@ -529,6 +529,36 @@ pub fn go(x) {
 }
 
 #[test]
+fn case_building_matched_string_1() {
+    assert_js!(
+        r#"
+import gleam
+
+pub fn go(x) {
+   case x {
+     "a" <> rest -> "a" <> rest
+     _ -> ""
+   }
+}"#
+    )
+}
+
+#[test]
+fn case_building_matched_string_2() {
+    assert_js!(
+        r#"
+import gleam
+
+pub fn go(x) {
+   case x {
+     "a" as a <> rest -> a <> rest
+     _ -> ""
+   }
+}"#
+    )
+}
+
+#[test]
 fn case_building_record_with_labels_matched_by_pattern_1() {
     assert_js!(
         "

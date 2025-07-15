@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\nimport gleam\n\npub fn go(x) {\n   case x {\n     \"a\" as a <> rest -> a <> rest\n     _ -> \"\"\n   }\n}"
+---
+----- SOURCE CODE
+
+import gleam
+
+pub fn go(x) {
+   case x {
+     "a" as a <> rest -> a <> rest
+     _ -> ""
+   }
+}
+
+----- COMPILED JAVASCRIPT
+import * as $gleam from "../gleam.mjs";
+
+export function go(x) {
+  if (x.startsWith("a")) {
+    return x;
+  } else {
+    return "";
+  }
+}
