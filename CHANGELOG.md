@@ -93,6 +93,38 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The code generated for pattern matching has been optimised on the JavaScript
+  target to reuse the matched variables when safe to do so. Take the following
+  snippet of Gleam code:
+
+  ```gleam
+  pub fn find_book() {
+    case ask_for_isbn() {
+      Ok(isbn) -> load_book(isbn)
+      Error(Nil) -> Error(Nil)
+    }
+  }
+  ```
+
+  Notice how in the `Error` case we're returning exactly the same value that is
+  being matched on! Now the compiler will generate the following JavaScript code
+  instead of allocating a new `Error` variant entirely:
+
+  ```js
+  export function find_book() {
+    let result = ask_for_isbn();
+    if (result instanceof Ok) {
+      let isbn = result[0];
+      return load_book(isbn);
+    } else {
+      // Previously this would have been: `return new Error(undefined);`!
+      return result;
+    }
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The compiler now raises a warning when performing a redundant comparison that
   it can tell is always going to succeed or fail. For example, this piece of
   code:
