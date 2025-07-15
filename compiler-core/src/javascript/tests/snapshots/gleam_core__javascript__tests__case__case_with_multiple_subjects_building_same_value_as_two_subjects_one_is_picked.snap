@@ -32,6 +32,6 @@ export function go(x, y) {
       return new Error(undefined);
     }
   } else {
-    return new Error(undefined);
+    return y;
   }
 }

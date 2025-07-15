@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\npub fn go(x) {\n   case x {\n     Ok(Nil) -> Ok(Nil)\n     _ -> Error(Nil)\n   }\n}"
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+   case x {
+     Ok(Nil) -> Ok(Nil)
+     _ -> Error(Nil)
+   }
+}
+
+----- COMPILED JAVASCRIPT
+import { Ok, Error } from "../gleam.mjs";
+
+export function go(x) {
+  if (x instanceof Ok) {
+    return x;
+  } else {
+    return new Error(undefined);
+  }
+}

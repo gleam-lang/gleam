@@ -1649,6 +1649,20 @@ impl TypedClause {
 
 fn pattern_and_expression_are_the_same(pattern: &TypedPattern, expression: &TypedExpr) -> bool {
     match (pattern, expression) {
+        // A pattern could be the same as a block if the block is wrapping just
+        // a single expression that is the same as the pattern itself!
+        (pattern, TypedExpr::Block { statements, .. }) if statements.len() == 1 => {
+            match statements.first() {
+                Statement::Assignment(_) | Statement::Use(_) | Statement::Assert(_) => false,
+                Statement::Expression(expression) => {
+                    pattern_and_expression_are_the_same(pattern, expression)
+                }
+            }
+        }
+        // If the block has many statements then it can never be the same as a
+        // pattern.
+        (_, TypedExpr::Block { .. }) => false,
+
         // A pattern and an expression are the same if they're a simple variable
         // with exactly the same name: `x -> x`, `a -> a`
         (
@@ -1823,13 +1837,62 @@ fn pattern_and_expression_are_the_same(pattern: &TypedPattern, expression: &Type
 
             _ => false,
         },
+
+        // A pattern for a constructor with no arguments:
+        // `Nil -> Nil`
+        // `gleam.Nil -> Nil`
+        // `Nil -> gleam.Nil`
+        // `Wibble -> Wibble`
+        (
+            TypedPattern::Constructor {
+                constructor:
+                    Inferred::Known(PatternConstructor {
+                        module: pattern_module,
+                        name: pattern_name,
+                        ..
+                    }),
+                arguments: pattern_arguments,
+                spread: None,
+                ..
+            },
+            TypedExpr::Var {
+                constructor:
+                    ValueConstructor {
+                        variant: ValueConstructorVariant::Record { name, module, .. },
+                        ..
+                    },
+                ..
+            }
+            | TypedExpr::ModuleSelect {
+                constructor: ModuleValueConstructor::Record { name, .. },
+                module_name: module,
+                ..
+            },
+        ) => pattern_module == module && pattern_name == name && pattern_arguments.is_empty(),
         (TypedPattern::Constructor { .. }, _) => false,
 
-        (TypedPattern::Assign { .. }, _) => false,
-        (TypedPattern::BitArray { .. }, _) => false,
-        (TypedPattern::BitArraySize { .. }, _) => false,
-        (TypedPattern::Discard { .. }, _) => false,
-        (TypedPattern::Invalid { .. }, _) => false,
+        // An assignment is the same if the corresponding expression is a
+        // variable with the same name, or if the inner pattern is the same:
+        // `Ok(1) as a -> a`
+        // `Ok(1) as a -> Ok(1)`
+        (
+            TypedPattern::Assign {
+                name: pattern_name, ..
+            },
+            TypedExpr::Var { name, .. },
+        ) => pattern_name == name,
+        (TypedPattern::Assign { pattern, .. }, expression) => {
+            pattern_and_expression_are_the_same(pattern, expression)
+        }
+
+        // Bit arrays are trickier as they can use existing variables in their
+        // pattern and shadow existing variables so for now we just ignore
+        // those.
+        (TypedPattern::BitArray { .. }, _) | (TypedPattern::BitArraySize { .. }, _) => false,
+
+        // A discard is never the same as an expression, same goes for an
+        // invalid pattern: there's no way to check if it matches an expression!
+        (TypedPattern::Discard { .. }, _) | (TypedPattern::Invalid { .. }, _) => false,
     }
 }
 

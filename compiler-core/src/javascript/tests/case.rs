@@ -559,6 +559,126 @@ pub fn go(x) {
 }
 
 #[test]
+fn case_building_matched_value_wrapped_in_block() {
+    assert_js!(
+        r#"
+import gleam
+
+pub fn go(x) {
+   case x {
+     1 -> { 1 }
+     _ -> 2
+   }
+}"#
+    )
+}
+
+#[test]
+fn case_building_matched_value_alias() {
+    assert_js!(
+        r#"
+import gleam
+
+pub fn go(x) {
+   case x {
+     Ok(_) as a -> a
+     Error(Nil) -> Error(Nil)
+   }
+}"#
+    )
+}
+
+#[test]
+fn case_building_matched_value_alias_2() {
+    assert_js!(
+        r#"
+import gleam
+
+pub fn go(x) {
+   case x {
+     Ok(1) as a -> Ok(1)
+     Ok(_) -> Ok(2)
+     Error(Nil) -> Error(Nil)
+   }
+}"#
+    )
+}
+
+#[test]
+fn case_building_matched_value_alias_3() {
+    assert_js!(
+        r#"
+import gleam
+
+pub fn go(x) {
+   case x {
+     Ok(1 as a) -> Ok(a)
+     Ok(_) -> Ok(2)
+     Error(Nil) -> Error(Nil)
+   }
+}"#
+    )
+}
+
+#[test]
+fn case_building_matched_no_variant_record() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+   case x {
+     Ok(Nil) -> Ok(Nil)
+     _ -> Error(Nil)
+   }
+}"#
+    )
+}
+
+#[test]
+fn case_building_matched_no_variant_record_2() {
+    assert_js!(
+        r#"
+import gleam
+
+pub fn go(x) {
+   case x {
+     Ok(gleam.Nil) -> Ok(Nil)
+     _ -> Error(Nil)
+   }
+}"#
+    )
+}
+
+#[test]
+fn case_building_matched_no_variant_record_3() {
+    assert_js!(
+        r#"
+import gleam
+
+pub fn go(x) {
+   case x {
+     Ok(Nil) -> Ok(gleam.Nil)
+     _ -> Error(Nil)
+   }
+}"#
+    )
+}
+
+#[test]
+fn case_building_matched_no_variant_record_4() {
+    assert_js!(
+        r#"
+import gleam
+
+pub fn go(x) {
+   case x {
+     Ok(gleam.Nil) -> Ok(gleam.Nil)
+     _ -> Error(Nil)
+   }
+}"#
+    )
+}
+
+#[test]
 fn case_building_record_with_labels_matched_by_pattern_1() {
     assert_js!(
         "
