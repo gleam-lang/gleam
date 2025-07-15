@@ -636,3 +636,58 @@ pub fn go(x) {
 }"
     )
 }
+
+#[test]
+fn case_with_multiple_subjects_building_simple_value_matched_by_pattern() {
+    assert_js!(
+        "pub fn go(x) {
+   case x, x + 1 {
+     1, _ -> 2
+     _, n -> n
+   }
+}"
+    )
+}
+
+#[test]
+fn case_with_multiple_subjects_building_list_matched_by_pattern() {
+    assert_js!(
+        "pub fn go(n, x) {
+   case n, x {
+     1, [] -> []
+     _, [a, b] -> [a, b]
+     3, [1, ..rest] -> [1, ..rest]
+     _, _ -> x
+   }
+}"
+    )
+}
+
+#[test]
+fn case_with_multiple_subjects_building_record_matched_by_pattern() {
+    assert_js!(
+        "pub fn go(x, y) {
+   case x, y {
+     Ok(1), Error(_) -> Ok(1)
+     Error(_), Ok(n) -> Ok(n)
+     _, _ -> Error(Nil)
+   }
+}"
+    )
+}
+
+#[test]
+fn case_with_multiple_subjects_building_same_value_as_two_subjects_one_is_picked() {
+    assert_js!(
+        "
+import gleam
+
+pub fn go(x, y) {
+   case x, y {
+     gleam.Ok(1), Ok(1) -> Ok(1)
+     _, Error(Nil) -> Error(Nil)
+     _, _ -> Error(Nil)
+   }
+}"
+    )
+}

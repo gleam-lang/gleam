@@ -23,6 +23,7 @@ use crate::type_::{
     self, Deprecation, HasType, ModuleValueConstructor, PatternConstructor, Type, TypedCallArg,
     ValueConstructor, ValueConstructorVariant, nil,
 };
+use itertools::Itertools;
 use num_traits::Zero;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -1624,33 +1625,25 @@ impl TypedClause {
         SrcSpan::new(start.unwrap_or_default(), end.unwrap_or_default())
     }
 
-    /// Returns true if this branch is matching on a single value and returning
-    /// that value exactly as it is.
+    /// If the branch is rebuilding exactly one of the matched subjects and
+    /// returning it, this will return the index of that subject.
     ///
     /// For example:
-    /// ```txt
-    /// n -> n
-    /// 1 -> 1
-    /// Ok(1) -> Ok(1)
-    /// [a, b] -> [a, b]
+    /// - `n -> n`, `1 -> 1`, `Ok(1) -> Ok(1)` all return `Some(0)`
+    /// - `"a", n -> n`, `n, m if n == m -> a` all return `Some(1)`
+    /// - `_ -> 1`, `Ok(1), _ -> Ok(2)` all return `None`
     /// ```
     ///
-    pub fn is_rebuilding_matched_value(&self) -> bool {
+    pub fn returned_subject(&self) -> Option<usize> {
         // The pattern must not have any alternative patterns.
         if !self.alternative_patterns.is_empty() {
-            return false;
+            return None;
         }
 
-        // And it must match on a single subject.
-        //
-        // TODO: this limitation could actually be lifted by checking if the
-        // pattern is re-building any one of the matched subjects and not doing
-        // anything with the others!
-        let [pattern] = self.pattern.as_slice() else {
-            return false;
-        };
-
-        pattern_and_expression_are_the_same(pattern, &self.then)
+        self.pattern
+            .iter()
+            .find_position(|pattern| pattern_and_expression_are_the_same(pattern, &self.then))
+            .map(|(position, _)| position)
     }
 }
 
