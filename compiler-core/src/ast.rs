@@ -1733,7 +1733,7 @@ fn pattern_and_expression_are_the_same(pattern: &TypedPattern, expression: &Type
                 (AssignName::Variable(right_side_name), TypedExpr::Var { name, .. }) => {
                     name == right_side_name
                 }
-                (AssignName::Variable(_), _) | (AssignName::Discard(_), _) => false,
+                (AssignName::Variable(_) | AssignName::Discard(_), _) => false,
             };
             left_side_matches && right_side_matches
         }
@@ -1888,11 +1888,11 @@ fn pattern_and_expression_are_the_same(pattern: &TypedPattern, expression: &Type
         // Bit arrays are trickier as they can use existing variables in their
         // pattern and shadow existing variables so for now we just ignore
         // those.
-        (TypedPattern::BitArray { .. }, _) | (TypedPattern::BitArraySize { .. }, _) => false,
+        (TypedPattern::BitArray { .. } | TypedPattern::BitArraySize { .. }, _) => false,
 
         // A discard is never the same as an expression, same goes for an
         // invalid pattern: there's no way to check if it matches an expression!
-        (TypedPattern::Discard { .. }, _) | (TypedPattern::Invalid { .. }, _) => false,
+        (TypedPattern::Discard { .. } | TypedPattern::Invalid { .. }, _) => false,
     }
 }
 
