@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/erlang/tests/inlining.rs
+expression: "\nimport gleam/bool\n\npub fn divide(a, b) {\n  use <- bool.guard(when: b == 0, return: 0)\n  a / b\n}\n"
+---
+----- SOURCE CODE
+
+import gleam/bool
+
+pub fn divide(a, b) {
+  use <- bool.guard(when: b == 0, return: 0)
+  a / b
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([divide/2]).
+
+-file("project/test/my/mod.gleam", 4).
+-spec divide(integer(), integer()) -> integer().
+divide(A, B) ->
+    case B =:= 0 of
+        true ->
+            0;
+
+        false ->
+            case B of
+                0 -> 0;
+                Gleam@denominator -> A div Gleam@denominator
+            end
+    end.

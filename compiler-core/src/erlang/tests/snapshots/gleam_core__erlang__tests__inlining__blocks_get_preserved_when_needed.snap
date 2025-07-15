@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/erlang/tests/inlining.rs
+expression: "\npub fn main() {\n    { 4 |> make_adder }(6)\n}\n\nfn make_adder(a) {\n  fn(b) { a + b }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+    { 4 |> make_adder }(6)
+}
+
+fn make_adder(a) {
+  fn(b) { a + b }
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 6).
+-spec make_adder(integer()) -> fun((integer()) -> integer()).
+make_adder(A) ->
+    fun(B) -> A + B end.
+
+-file("project/test/my/mod.gleam", 2).
+-spec main() -> integer().
+main() ->
+    begin
+        _pipe = 4,
+        make_adder(_pipe)
+    end(6).

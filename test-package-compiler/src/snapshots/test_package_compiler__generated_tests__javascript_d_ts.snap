@@ -5,6 +5,9 @@ expression: "./cases/javascript_d_ts"
 //// /out/lib/the_package/_gleam_artefacts/hello.cache
 <.cache binary>
 
+//// /out/lib/the_package/_gleam_artefacts/hello.cache_inline
+<8 byte binary>
+
 //// /out/lib/the_package/_gleam_artefacts/hello.cache_meta
 <81 byte binary>
 

@@ -18,6 +18,7 @@ use crate::{
     call_graph::{CallGraphNode, into_dependency_order},
     config::PackageConfig,
     dep_tree,
+    inline::{self, InlinableFunction},
     line_numbers::LineNumbers,
     parse::SpannedString,
     reference::{EntityKind, ReferenceKind},
@@ -174,6 +175,7 @@ impl<A> ModuleAnalyzerConstructor<'_, A> {
             value_names: HashMap::with_capacity(module.definitions.len()),
             hydrators: HashMap::with_capacity(module.definitions.len()),
             module_name: module.name.clone(),
+            inline_functions: HashMap::new(),
             minimum_required_version: Version::new(0, 1, 0),
         }
         .infer_module(module)
@@ -195,6 +197,8 @@ struct ModuleAnalyzer<'a, A> {
     value_names: HashMap<EcoString, SrcSpan>,
     hydrators: HashMap<EcoString, Hydrator>,
     module_name: EcoString,
+
+    inline_functions: HashMap<EcoString, InlinableFunction>,
 
     /// The minimum Gleam version required to compile the analysed module.
     minimum_required_version: Version,
@@ -372,6 +376,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     value_references: env.references.value_references,
                     type_references: env.references.type_references,
                 },
+                inline_functions: self.inline_functions,
             },
         };
 
@@ -708,10 +713,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             ReferenceKind::Definition,
         );
 
-        Definition::Function(Function {
+        let function = Function {
             documentation: doc,
             location,
-            name: Some((name_location, name)),
+            name: Some((name_location, name.clone())),
             publicity,
             deprecation,
             arguments: typed_arguments,
@@ -726,7 +731,17 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             external_javascript,
             implementations,
             purity,
-        })
+        };
+
+        if let Some(inline_function) = inline::function_to_inlinable(
+            &environment.current_package,
+            &environment.current_module,
+            &function,
+        ) {
+            _ = self.inline_functions.insert(name, inline_function);
+        }
+
+        Definition::Function(function)
     }
 
     fn assert_valid_javascript_external(

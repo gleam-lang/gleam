@@ -1,0 +1,34 @@
+---
+source: compiler-core/src/erlang/tests/inlining.rs
+expression: "\nimport gleam/bool\n\npub fn count(from: Int, to: Int) -> Int {\n  use <- bool.guard(when: from >= to, return: from)\n  echo from\n  count(from + 1, to)\n}\n"
+---
+----- SOURCE CODE
+
+import gleam/bool
+
+pub fn count(from: Int, to: Int) -> Int {
+  use <- bool.guard(when: from >= to, return: from)
+  echo from
+  count(from + 1, to)
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([count/2]).
+
+-file("project/test/my/mod.gleam", 4).
+-spec count(integer(), integer()) -> integer().
+count(From, To) ->
+    case From >= To of
+        true ->
+            From;
+
+        false ->
+            echo(From, nil, 6),
+            count(From + 1, To)
+    end.
+
+% ...omitted code from `templates/echo.erl`...

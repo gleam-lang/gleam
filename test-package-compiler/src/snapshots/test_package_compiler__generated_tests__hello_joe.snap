@@ -5,6 +5,9 @@ expression: "./cases/hello_joe"
 //// /out/lib/the_package/_gleam_artefacts/hello_joe.cache
 <.cache binary>
 
+//// /out/lib/the_package/_gleam_artefacts/hello_joe.cache_inline
+<8 byte binary>
+
 //// /out/lib/the_package/_gleam_artefacts/hello_joe.cache_meta
 <65 byte binary>
 

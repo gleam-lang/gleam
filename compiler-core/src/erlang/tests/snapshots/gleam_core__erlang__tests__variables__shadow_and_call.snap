@@ -18,4 +18,4 @@ pub fn main(x) {
 -file("project/test/my/mod.gleam", 2).
 -spec main(K) -> K.
 main(X) ->
-    (fun(X@1) -> X@1 end)(X).
+    X.

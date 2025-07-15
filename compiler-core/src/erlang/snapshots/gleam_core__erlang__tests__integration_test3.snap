@@ -18,7 +18,4 @@ pub fn y() { fn() { Point }()(4, 6) }
 -file("project/test/my/mod.gleam", 2).
 -spec y() -> point().
 y() ->
-    ((fun() -> fun(Field@0, Field@1) -> {point, Field@0, Field@1} end end)())(
-        4,
-        6
-    ).
+    {point, 4, 6}.

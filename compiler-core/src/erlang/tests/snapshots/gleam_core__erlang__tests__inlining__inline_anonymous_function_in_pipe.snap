@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/erlang/tests/inlining.rs
+expression: "\npub fn main() {\n  1 |> fn(x) { x + 1 } |> fn(y) { y * y }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  1 |> fn(x) { x + 1 } |> fn(y) { y * y }
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec main() -> integer().
+main() ->
+    _pipe = 1,
+    _pipe@1 = _pipe + 1,
+    begin
+        Y = _pipe@1,
+        Y * Y
+    end.

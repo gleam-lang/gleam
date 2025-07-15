@@ -1,0 +1,50 @@
+---
+source: compiler-core/src/erlang/tests/inlining.rs
+expression: "\nimport gleam/result\n\npub fn main() {\n  result.map(Ok(10), do_side_effects())\n}\n\nfn do_side_effects() {\n  let function = fn(x) { x + 1 }\n  panic as \"Side effects\"\n  function\n}\n"
+---
+----- SOURCE CODE
+
+import gleam/result
+
+pub fn main() {
+  result.map(Ok(10), do_side_effects())
+}
+
+fn do_side_effects() {
+  let function = fn(x) { x + 1 }
+  panic as "Side effects"
+  function
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 8).
+-spec do_side_effects() -> fun((integer()) -> integer()).
+do_side_effects() ->
+    Function = fun(X) -> X + 1 end,
+    erlang:error(#{gleam_error => panic,
+            message => <<"Side effects"/utf8>>,
+            file => <<?FILEPATH/utf8>>,
+            module => <<"my/mod"/utf8>>,
+            function => <<"do_side_effects"/utf8>>,
+            line => 10}),
+    Function.
+
+-file("project/test/my/mod.gleam", 4).
+-spec main() -> {ok, integer()} | {error, any()}.
+main() ->
+    begin
+        F = do_side_effects(),
+        case {ok, 10} of
+            {ok, Value} ->
+                {ok, F(Value)};
+
+            {error, Error} ->
+                {error, Error}
+        end
+    end.

@@ -1,0 +1,36 @@
+---
+source: compiler-core/src/erlang/tests/inlining.rs
+expression: "\nimport gleam/result\n\npub fn main() {\n  result.map(over: Ok(10), with: double)\n}\n\nfn double(x) { x + x }\n"
+---
+----- SOURCE CODE
+
+import gleam/result
+
+pub fn main() {
+  result.map(over: Ok(10), with: double)
+}
+
+fn double(x) { x + x }
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 8).
+-spec double(integer()) -> integer().
+double(X) ->
+    X + X.
+
+-file("project/test/my/mod.gleam", 4).
+-spec main() -> {ok, integer()} | {error, any()}.
+main() ->
+    case {ok, 10} of
+        {ok, Value} ->
+            {ok, double(Value)};
+
+        {error, Error} ->
+            {error, Error}
+    end.

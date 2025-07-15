@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/erlang/tests/pipes.rs
-expression: "fn id(x) {\n  x\n}\n        \npub fn main() {\n    1 == 1 |> id\n}"
+expression: "fn id(x) {\n  x\n}\n\npub fn main() {\n    1 == 1 |> id\n}"
 ---
 ----- SOURCE CODE
 fn id(x) {
   x
 }
-        
+
 pub fn main() {
     1 == 1 |> id
 }
