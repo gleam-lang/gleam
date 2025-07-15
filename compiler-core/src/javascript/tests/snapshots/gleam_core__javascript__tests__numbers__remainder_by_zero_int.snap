@@ -8,8 +8,6 @@ pub fn main() {
 }
 
 ----- COMPILED JAVASCRIPT
-import { remainderInt } from "../gleam.mjs";
-
 export function main() {
-  return remainderInt(1, 0);
+  return 0;
 }

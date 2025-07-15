@@ -583,11 +583,26 @@ impl TypedExpr {
         use regex::Regex;
         static NON_ZERO: OnceLock<Regex> = OnceLock::new();
 
-        matches!(
-            self,
-            Self::Int{ value, .. } | Self::Float { value, .. } if NON_ZERO.get_or_init(||
-                Regex::new(r"[1-9]").expect("NON_ZERO regex")).is_match(value)
-        )
+        match self {
+            Self::Int { int_value, .. } => int_value != &BigInt::ZERO,
+            Self::Float { value, .. } => NON_ZERO
+                .get_or_init(|| Regex::new(r"[1-9]").expect("NON_ZERO regex"))
+                .is_match(value),
+            _ => false,
+        }
+    }
+
+    pub fn zero_compile_time_number(&self) -> bool {
+        use regex::Regex;
+        static NON_ZERO: OnceLock<Regex> = OnceLock::new();
+
+        match self {
+            Self::Int { int_value, .. } => int_value == &BigInt::ZERO,
+            Self::Float { value, .. } => !NON_ZERO
+                .get_or_init(|| Regex::new(r"[1-9]").expect("NON_ZERO regex"))
+                .is_match(value),
+            _ => false,
+        }
     }
 
     pub fn location(&self) -> SrcSpan {
