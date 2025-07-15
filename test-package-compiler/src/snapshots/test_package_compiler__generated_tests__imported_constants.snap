@@ -5,6 +5,9 @@ expression: "./cases/imported_constants"
 //// /out/lib/the_package/_gleam_artefacts/one.cache
 <.cache binary>
 
+//// /out/lib/the_package/_gleam_artefacts/one.cache_inline
+<8 byte binary>
+
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
 <97 byte binary>
 
@@ -25,6 +28,9 @@ expression: "./cases/imported_constants"
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache
 <.cache binary>
+
+//// /out/lib/the_package/_gleam_artefacts/two.cache_inline
+<8 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
 <332 byte binary>

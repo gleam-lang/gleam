@@ -5,6 +5,9 @@ expression: "./cases/imported_external_fns"
 //// /out/lib/the_package/_gleam_artefacts/one.cache
 <.cache binary>
 
+//// /out/lib/the_package/_gleam_artefacts/one.cache_inline
+<8 byte binary>
+
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
 <77 byte binary>
 
@@ -28,6 +31,9 @@ escaped_thing() ->
 //// /out/lib/the_package/_gleam_artefacts/three.cache
 <.cache binary>
 
+//// /out/lib/the_package/_gleam_artefacts/three.cache_inline
+<8 byte binary>
+
 //// /out/lib/the_package/_gleam_artefacts/three.cache_meta
 <77 byte binary>
 
@@ -50,6 +56,9 @@ escaped_thing() ->
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache
 <.cache binary>
+
+//// /out/lib/the_package/_gleam_artefacts/two.cache_inline
+<8 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
 <489 byte binary>

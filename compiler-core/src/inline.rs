@@ -362,8 +362,8 @@ impl Inliner<'_> {
                 location,
                 type_,
                 fun,
-                args,
-            } => self.call(location, type_, fun, args),
+                arguments,
+            } => self.call(location, type_, fun, arguments),
 
             TypedExpr::BinOp {
                 location,
@@ -472,14 +472,14 @@ impl Inliner<'_> {
                 type_,
                 record_assignment,
                 constructor,
-                args,
+                arguments,
             } => TypedExpr::RecordUpdate {
                 location,
                 type_,
                 record_assignment: record_assignment
                     .map(|assignment| Box::new(self.assignment(*assignment))),
                 constructor: self.boxed_expression(constructor),
-                args,
+                arguments,
             },
         }
     }
@@ -654,7 +654,7 @@ impl Inliner<'_> {
             },
             // Direct calls to anonymous functions can always be inlined
             TypedExpr::Fn {
-                args: parameters,
+                arguments: parameters,
                 body,
                 ..
             } => {
@@ -692,7 +692,7 @@ impl Inliner<'_> {
             location,
             type_,
             fun: Box::new(function),
-            args: arguments,
+            arguments,
         }
     }
 
@@ -1255,10 +1255,13 @@ impl FunctionToInlinable {
                 })
             }
             TypedExpr::Call {
-                fun, args, type_, ..
+                fun,
+                arguments,
+                type_,
+                ..
             } => {
                 let function = self.expression(fun)?;
-                let arguments = args
+                let arguments = arguments
                     .iter()
                     .map(|argument| {
                         Some(InlinableArgument {
@@ -1300,13 +1303,19 @@ impl FunctionToInlinable {
 
     fn type_(&self, type_: &Arc<Type>) -> InlinableType {
         match collapse_links(type_.clone()).as_ref() {
-            Type::Fn { args, return_ } => InlinableType::Function {
-                arguments: args.iter().map(|argument| self.type_(argument)).collect(),
+            Type::Fn { arguments, return_ } => InlinableType::Function {
+                arguments: arguments
+                    .iter()
+                    .map(|argument| self.type_(argument))
+                    .collect(),
                 return_: Box::new(self.type_(return_)),
             },
             Type::Named {
-                module, name, args, ..
-            } if module == PRELUDE_MODULE_NAME => self.prelude_type(name, args),
+                module,
+                name,
+                arguments,
+                ..
+            } if module == PRELUDE_MODULE_NAME => self.prelude_type(name, arguments),
             Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => InlinableType::Other,
         }
     }
@@ -1515,7 +1524,7 @@ impl InlinableExpression {
                 location: BLANK_LOCATION,
                 type_: type_.to_type(),
                 fun: Box::new(function.to_expression()),
-                args: arguments
+                arguments: arguments
                     .iter()
                     .map(|argument| argument.to_call_arg(Self::to_expression))
                     .collect(),
