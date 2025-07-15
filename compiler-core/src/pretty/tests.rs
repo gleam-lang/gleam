@@ -247,7 +247,7 @@ fn nest_if_broken_test() {
     ])
     .group();
 
-    let args_doc = concat([
+    let arguments_doc = concat([
         break_("", ""),
         "one".to_doc(),
         ",".to_doc(),
@@ -259,7 +259,7 @@ fn nest_if_broken_test() {
 
     let function_call_doc = concat([
         "some_function_call(".to_doc(),
-        args_doc,
+        arguments_doc,
         break_("", ""),
         ")".to_doc(),
     ])

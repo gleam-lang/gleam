@@ -18,7 +18,7 @@ fn custom_bool() -> Arc<Type> {
         package: "wibble".into(),
         module: "one/two".into(),
         name: "Bool".into(),
-        args: vec![],
+        arguments: vec![],
         inferred_variant: None,
     })
 }

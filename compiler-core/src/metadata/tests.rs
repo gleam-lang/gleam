@@ -1111,7 +1111,7 @@ fn constant_record() {
         location: Default::default(),
         module: None,
         name: "".into(),
-        args: vec![
+        arguments: vec![
             CallArg {
                 implicit: None,
                 label: None,
@@ -1725,7 +1725,7 @@ fn type_with_inferred_variant() {
                     package: "some_package".into(),
                     module: "the/module".into(),
                     name: "Wibble".into(),
-                    args: Vec::new(),
+                    arguments: Vec::new(),
                     inferred_variant: Some(1),
                 }),
                 publicity: Publicity::Public,

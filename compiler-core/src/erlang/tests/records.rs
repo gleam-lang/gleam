@@ -52,7 +52,7 @@ fn module_types() {
                 package: "package".into(),
                 module: module_name,
                 name: "my_type".into(),
-                args: vec![],
+                arguments: vec![],
                 inferred_variant: None,
             })
         )]

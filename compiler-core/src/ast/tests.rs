@@ -93,7 +93,7 @@ fn compile_expression(src: &str) -> TypedStatement {
         package: "mypackage".into(),
         module: "mymod".into(),
         name: "Cat".into(),
-        args: vec![],
+        arguments: vec![],
         inferred_variant: None,
     });
     let variant = ValueConstructorVariant::Record {
@@ -762,7 +762,7 @@ fn find_node_call() {
 
     let TypedExpr::Call {
         fun: called_function,
-        args: function_arguments,
+        arguments: function_arguments,
         ..
     } = expr
     else {

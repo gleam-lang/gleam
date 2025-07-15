@@ -606,14 +606,14 @@ fn field_map_reorder_test() {
     struct Case {
         arity: u32,
         fields: HashMap<EcoString, u32>,
-        args: Vec<CallArg<UntypedExpr>>,
+        arguments: Vec<CallArg<UntypedExpr>>,
         expected_result: Result<(), crate::type_::Error>,
-        expected_args: Vec<CallArg<UntypedExpr>>,
+        expected_arguments: Vec<CallArg<UntypedExpr>>,
     }
 
     impl Case {
         fn test(self) {
-            let mut args = self.args;
+            let mut arguments = self.arguments;
             let fm = FieldMap {
                 arity: self.arity,
                 fields: self.fields,
@@ -621,25 +621,25 @@ fn field_map_reorder_test() {
             let location = SrcSpan { start: 0, end: 0 };
             assert_eq!(
                 self.expected_result,
-                fm.reorder(&mut args, location, IncorrectArityContext::Function)
+                fm.reorder(&mut arguments, location, IncorrectArityContext::Function)
             );
-            assert_eq!(self.expected_args, args);
+            assert_eq!(self.expected_arguments, arguments);
         }
     }
 
     Case {
         arity: 0,
         fields: HashMap::new(),
-        args: vec![],
+        arguments: vec![],
         expected_result: Ok(()),
-        expected_args: vec![],
+        expected_arguments: vec![],
     }
     .test();
 
     Case {
         arity: 3,
         fields: HashMap::new(),
-        args: vec![
+        arguments: vec![
             CallArg {
                 implicit: None,
                 location: Default::default(),
@@ -660,7 +660,7 @@ fn field_map_reorder_test() {
             },
         ],
         expected_result: Ok(()),
-        expected_args: vec![
+        expected_arguments: vec![
             CallArg {
                 implicit: None,
                 location: Default::default(),
@@ -686,7 +686,7 @@ fn field_map_reorder_test() {
     Case {
         arity: 3,
         fields: [("last".into(), 2)].into(),
-        args: vec![
+        arguments: vec![
             CallArg {
                 implicit: None,
                 location: Default::default(),
@@ -707,7 +707,7 @@ fn field_map_reorder_test() {
             },
         ],
         expected_result: Ok(()),
-        expected_args: vec![
+        expected_arguments: vec![
             CallArg {
                 implicit: None,
                 location: Default::default(),

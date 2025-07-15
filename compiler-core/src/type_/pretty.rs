@@ -53,7 +53,10 @@ impl Printer {
     pub fn print<'a>(&mut self, type_: &Type) -> Document<'a> {
         match type_ {
             Type::Named {
-                name, args, module, ..
+                name,
+                arguments,
+                module,
+                ..
             } => {
                 let doc = if self.name_clashes_if_unqualified(name, module) {
                     qualify_type_name(module, name)
@@ -61,18 +64,18 @@ impl Printer {
                     let _ = self.printed_types.insert(name.clone(), module.clone());
                     name.to_doc()
                 };
-                if args.is_empty() {
+                if arguments.is_empty() {
                     doc
                 } else {
                     doc.append("(")
-                        .append(self.args_to_gleam_doc(args))
+                        .append(self.arguments_to_gleam_doc(arguments))
                         .append(")")
                 }
             }
 
-            Type::Fn { args, return_ } => "fn("
+            Type::Fn { arguments, return_ } => "fn("
                 .to_doc()
-                .append(self.args_to_gleam_doc(args))
+                .append(self.arguments_to_gleam_doc(arguments))
                 .append(") ->")
                 .append(
                     break_("", " ")
@@ -83,7 +86,9 @@ impl Printer {
 
             Type::Var { type_, .. } => self.type_var_doc(&type_.borrow()),
 
-            Type::Tuple { elements, .. } => self.args_to_gleam_doc(elements).surround("#(", ")"),
+            Type::Tuple { elements, .. } => {
+                self.arguments_to_gleam_doc(elements).surround("#(", ")")
+            }
         }
     }
 
@@ -139,17 +144,17 @@ impl Printer {
         chars.into_iter().rev().collect()
     }
 
-    fn args_to_gleam_doc(&mut self, args: &[Arc<Type>]) -> Document<'static> {
-        if args.is_empty() {
+    fn arguments_to_gleam_doc(&mut self, arguments: &[Arc<Type>]) -> Document<'static> {
+        if arguments.is_empty() {
             return nil();
         }
 
-        let args = join(
-            args.iter().map(|type_| self.print(type_).group()),
+        let arguments = join(
+            arguments.iter().map(|type_| self.print(type_).group()),
             break_(",", ", "),
         );
         break_("", "")
-            .append(args)
+            .append(arguments)
             .nest(INDENT)
             .append(break_(",", ""))
             .group()
@@ -258,7 +263,7 @@ fn pretty_print_test() {
             package: "whatever".into(),
             name: "Int".into(),
             publicity: Publicity::Public,
-            args: vec![],
+            arguments: vec![],
             inferred_variant: None,
         },
         "Int",
@@ -269,13 +274,13 @@ fn pretty_print_test() {
             package: "whatever".into(),
             name: "Pair".into(),
             publicity: Publicity::Public,
-            args: vec![
+            arguments: vec![
                 Arc::new(Type::Named {
                     module: "whatever".into(),
                     package: "whatever".into(),
                     name: "Int".into(),
                     publicity: Publicity::Public,
-                    args: vec![],
+                    arguments: vec![],
                     inferred_variant: None,
                 }),
                 Arc::new(Type::Named {
@@ -283,7 +288,7 @@ fn pretty_print_test() {
                     package: "whatever".into(),
                     name: "Bool".into(),
                     publicity: Publicity::Public,
-                    args: vec![],
+                    arguments: vec![],
                     inferred_variant: None,
                 }),
             ],
@@ -293,9 +298,9 @@ fn pretty_print_test() {
     );
     assert_string!(
         Type::Fn {
-            args: vec![
+            arguments: vec![
                 Arc::new(Type::Named {
-                    args: vec![],
+                    arguments: vec![],
                     module: "whatever".into(),
                     package: "whatever".into(),
                     name: "Int".into(),
@@ -303,7 +308,7 @@ fn pretty_print_test() {
                     inferred_variant: None,
                 }),
                 Arc::new(Type::Named {
-                    args: vec![],
+                    arguments: vec![],
                     module: "whatever".into(),
                     package: "whatever".into(),
                     name: "Bool".into(),
@@ -312,7 +317,7 @@ fn pretty_print_test() {
                 }),
             ],
             return_: Arc::new(Type::Named {
-                args: vec![],
+                arguments: vec![],
                 module: "whatever".into(),
                 package: "whatever".into(),
                 name: "Bool".into(),
@@ -326,7 +331,7 @@ fn pretty_print_test() {
         Type::Var {
             type_: Arc::new(RefCell::new(TypeVar::Link {
                 type_: Arc::new(Type::Named {
-                    args: vec![],
+                    arguments: vec![],
                     module: "whatever".into(),
                     package: "whatever".into(),
                     name: "Int".into(),

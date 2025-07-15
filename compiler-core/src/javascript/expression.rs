@@ -231,21 +231,23 @@ impl<'module, 'a> Generator<'module, 'a> {
     pub fn function_body(
         &mut self,
         body: &'a [TypedStatement],
-        args: &'a [TypedArg],
+        arguments: &'a [TypedArg],
     ) -> Document<'a> {
         let body = self.statements(body);
         if self.tail_recursion_used {
-            self.tail_call_loop(body, args)
+            self.tail_call_loop(body, arguments)
         } else {
             body
         }
     }
 
-    fn tail_call_loop(&mut self, body: Document<'a>, args: &'a [TypedArg]) -> Document<'a> {
-        let loop_assignments = concat(args.iter().flat_map(Arg::get_variable_name).map(|name| {
-            let var = maybe_escape_identifier(name);
-            docvec!["let ", var, " = loop$", name, ";", line()]
-        }));
+    fn tail_call_loop(&mut self, body: Document<'a>, arguments: &'a [TypedArg]) -> Document<'a> {
+        let loop_assignments = concat(arguments.iter().flat_map(Arg::get_variable_name).map(
+            |name| {
+                let var = maybe_escape_identifier(name);
+                docvec!["let ", var, " = loop$", name, ";", line()]
+            },
+        ));
         docvec![
             "while (true) {",
             docvec![line(), loop_assignments, body].nest(INDENT),
@@ -308,16 +310,18 @@ impl<'module, 'a> Generator<'module, 'a> {
                 ..
             } => decision::case(compiled_case, clauses, subjects, self),
 
-            TypedExpr::Call { fun, args, .. } => self.call(fun, args),
-            TypedExpr::Fn { args, body, .. } => self.fn_(args, body),
+            TypedExpr::Call { fun, arguments, .. } => self.call(fun, arguments),
+            TypedExpr::Fn {
+                arguments, body, ..
+            } => self.fn_(arguments, body),
 
             TypedExpr::RecordAccess { record, label, .. } => self.record_access(record, label),
             TypedExpr::RecordUpdate {
                 record_assignment,
                 constructor,
-                args,
+                arguments,
                 ..
-            } => self.record_update(record_assignment, constructor, args),
+            } => self.record_update(record_assignment, constructor, arguments),
 
             TypedExpr::Var {
                 name, constructor, ..
@@ -909,8 +913,8 @@ impl<'module, 'a> Generator<'module, 'a> {
         location: SrcSpan,
     ) -> Document<'a> {
         let (subject_document, mut fields) = match subject {
-            TypedExpr::Call { fun, args, .. } => {
-                let argument_variables = args
+            TypedExpr::Call { fun, arguments, .. } => {
+                let argument_variables = arguments
                     .iter()
                     .map(|element| {
                         self.not_in_tail_position(Some(Ordering::Strict), |this| {
@@ -919,12 +923,12 @@ impl<'module, 'a> Generator<'module, 'a> {
                     })
                     .collect_vec();
                 (
-                    self.call_with_doc_args(fun, argument_variables.clone()),
+                    self.call_with_doc_arguments(fun, argument_variables.clone()),
                     vec![
                         ("kind", string("function_call")),
                         (
                             "arguments",
-                            array(argument_variables.into_iter().zip(args).map(
+                            array(argument_variables.into_iter().zip(arguments).map(
                                 |(variable, argument)| {
                                     self.asserted_expression(
                                         AssertExpression::from_expression(&argument.value),
@@ -1247,10 +1251,10 @@ impl<'module, 'a> Generator<'module, 'a> {
             })
             .collect_vec();
 
-        self.call_with_doc_args(fun, arguments)
+        self.call_with_doc_arguments(fun, arguments)
     }
 
-    fn call_with_doc_args(
+    fn call_with_doc_arguments(
         &mut self,
         fun: &'a TypedExpr,
         arguments: Vec<Document<'a>>,
@@ -1363,10 +1367,15 @@ impl<'module, 'a> Generator<'module, 'a> {
         std::mem::swap(&mut self.current_function, &mut current_function);
 
         docvec![
-            docvec![fun_args(arguments, false), " => {", break_("", " "), result]
-                .nest(INDENT)
-                .append(break_("", " "))
-                .group(),
+            docvec![
+                fun_arguments(arguments, false),
+                " => {",
+                break_("", " "),
+                result
+            ]
+            .nest(INDENT)
+            .append(break_("", " "))
+            .group(),
             "}",
         ]
     }
@@ -1382,15 +1391,15 @@ impl<'module, 'a> Generator<'module, 'a> {
         &mut self,
         record: &'a Option<Box<TypedAssignment>>,
         constructor: &'a TypedExpr,
-        args: &'a [TypedCallArg],
+        arguments: &'a [TypedCallArg],
     ) -> Document<'a> {
         match record.as_ref() {
             Some(record) => docvec![
                 self.not_in_tail_position(None, |this| this.assignment(record)),
                 line(),
-                self.call(constructor, args),
+                self.call(constructor, arguments),
             ],
-            None => self.call(constructor, args),
+            None => self.call(constructor, arguments),
         }
     }
 
@@ -1433,7 +1442,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         let right =
             self.not_in_tail_position(Some(Ordering::Strict), |this| this.child_expression(right));
         self.tracker.int_division_used = true;
-        docvec!["divideInt", wrap_args([left, right])]
+        docvec!["divideInt", wrap_arguments([left, right])]
     }
 
     fn remainder_int(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Document<'a> {
@@ -1442,7 +1451,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         let right =
             self.not_in_tail_position(Some(Ordering::Strict), |this| this.child_expression(right));
         self.tracker.int_remainder_used = true;
-        docvec!["remainderInt", wrap_args([left, right])]
+        docvec!["remainderInt", wrap_arguments([left, right])]
     }
 
     fn div_float(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Document<'a> {
@@ -1451,7 +1460,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         let right =
             self.not_in_tail_position(Some(Ordering::Strict), |this| this.child_expression(right));
         self.tracker.float_division_used = true;
-        docvec!["divideFloat", wrap_args([left, right])]
+        docvec!["divideFloat", wrap_arguments([left, right])]
     }
 
     fn equal(
@@ -1504,13 +1513,13 @@ impl<'module, 'a> Generator<'module, 'a> {
         // Record that we need to import the prelude's isEqual function into the module
         self.tracker.object_equality_used = true;
         // Construct the call
-        let args = wrap_args([left, right]);
+        let arguments = wrap_arguments([left, right]);
         let operator = if should_be_equal {
             "isEqual"
         } else {
             "!isEqual"
         };
-        docvec![operator, args]
+        docvec![operator, arguments]
     }
 
     fn print_bin_op(
@@ -1549,15 +1558,15 @@ impl<'module, 'a> Generator<'module, 'a> {
             BinOp::MultInt | BinOp::MultFloat => docvec![left, " * ", right],
             BinOp::RemainderInt => {
                 self.tracker.int_remainder_used = true;
-                docvec!["remainderInt", wrap_args([left, right])]
+                docvec!["remainderInt", wrap_arguments([left, right])]
             }
             BinOp::DivInt => {
                 self.tracker.int_division_used = true;
-                docvec!["divideInt", wrap_args([left, right])]
+                docvec!["divideInt", wrap_arguments([left, right])]
             }
             BinOp::DivFloat => {
                 self.tracker.float_division_used = true;
-                docvec!["divideFloat", wrap_args([left, right])]
+                docvec!["divideFloat", wrap_arguments([left, right])]
             }
         }
     }
@@ -1596,7 +1605,7 @@ impl<'module, 'a> Generator<'module, 'a> {
 
         docvec![
             "throw makeError",
-            wrap_args([
+            wrap_arguments([
                 string(error_name),
                 "FILEPATH".to_doc(),
                 module,
@@ -1686,7 +1695,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             Constant::Record { type_, .. } if type_.is_nil() => "undefined".to_doc(),
 
             Constant::Record {
-                args,
+                arguments,
                 module,
                 name,
                 tag,
@@ -1705,15 +1714,15 @@ impl<'module, 'a> Generator<'module, 'a> {
                 // arguments then this is the constructor being referenced, not the
                 // function being called.
                 if let Some(arity) = type_.fn_arity() {
-                    if args.is_empty() && arity != 0 {
+                    if arguments.is_empty() && arity != 0 {
                         let arity = arity as u16;
                         return record_constructor(type_.clone(), None, name, arity, self.tracker);
                     }
                 }
 
-                let field_values = args
+                let field_values = arguments
                     .iter()
-                    .map(|arg| self.constant_expression(context, &arg.value))
+                    .map(|argument| self.constant_expression(context, &argument.value))
                     .collect_vec();
 
                 let constructor = construct_record(
@@ -1958,21 +1967,21 @@ impl<'module, 'a> Generator<'module, 'a> {
                 let left = self.wrapped_guard(left);
                 let right = self.wrapped_guard(right);
                 self.tracker.float_division_used = true;
-                docvec!["divideFloat", wrap_args([left, right])]
+                docvec!["divideFloat", wrap_arguments([left, right])]
             }
 
             ClauseGuard::DivInt { left, right, .. } => {
                 let left = self.wrapped_guard(left);
                 let right = self.wrapped_guard(right);
                 self.tracker.int_division_used = true;
-                docvec!["divideInt", wrap_args([left, right])]
+                docvec!["divideInt", wrap_arguments([left, right])]
             }
 
             ClauseGuard::RemainderInt { left, right, .. } => {
                 let left = self.wrapped_guard(left);
                 let right = self.wrapped_guard(right);
                 self.tracker.int_remainder_used = true;
-                docvec!["remainderInt", wrap_args([left, right])]
+                docvec!["remainderInt", wrap_arguments([left, right])]
             }
 
             ClauseGuard::Or { left, right, .. } => {
@@ -2067,7 +2076,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             Constant::Record { type_, .. } if type_.is_nil() => "undefined".to_doc(),
 
             Constant::Record {
-                args,
+                arguments,
                 module,
                 name,
                 tag,
@@ -2086,15 +2095,15 @@ impl<'module, 'a> Generator<'module, 'a> {
                 // arguments then this is the constructor being referenced, not the
                 // function being called.
                 if let Some(arity) = type_.fn_arity() {
-                    if args.is_empty() && arity != 0 {
+                    if arguments.is_empty() && arity != 0 {
                         let arity = arity as u16;
                         return record_constructor(type_.clone(), None, name, arity, self.tracker);
                     }
                 }
 
-                let field_values = args
+                let field_values = arguments
                     .iter()
-                    .map(|arg| self.guard_constant_expression(&arg.value))
+                    .map(|argument| self.guard_constant_expression(&argument.value))
                     .collect_vec();
                 construct_record(
                     module.as_ref().map(|(module, _)| module.as_str()),
@@ -2302,8 +2311,8 @@ where
     I::IntoIter: DoubleEndedIterator + ExactSizeIterator,
 {
     elements.into_iter().rev().fold(tail, |tail, element| {
-        let args = call_arguments([element, tail]);
-        docvec!["listPrepend", args]
+        let arguments = call_arguments([element, tail]);
+        docvec!["listPrepend", arguments]
     })
 }
 
@@ -2494,7 +2503,7 @@ pub(crate) fn record_constructor<'a>(
             ";"
         ];
         docvec![
-            docvec![wrap_args(vars), " => {", break_("", " "), body]
+            docvec![wrap_arguments(vars), " => {", break_("", " "), body]
                 .nest(INDENT)
                 .append(break_("", " "))
                 .group(),

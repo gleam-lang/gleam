@@ -957,12 +957,12 @@ pub trait UntypedConstantFolder {
                 location,
                 module,
                 name,
-                args,
+                arguments,
                 tag: (),
                 type_: (),
                 field_map: _,
                 record_constructor: _,
-            } => self.fold_constant_record(location, module, name, args),
+            } => self.fold_constant_record(location, module, name, arguments),
 
             Constant::BitArray { location, segments } => {
                 self.fold_constant_bit_array(location, segments)
@@ -1035,13 +1035,13 @@ pub trait UntypedConstantFolder {
         location: SrcSpan,
         module: Option<(EcoString, SrcSpan)>,
         name: EcoString,
-        args: Vec<CallArg<UntypedConstant>>,
+        arguments: Vec<CallArg<UntypedConstant>>,
     ) -> UntypedConstant {
         Constant::Record {
             location,
             module,
             name,
-            args,
+            arguments,
             tag: (),
             type_: (),
             field_map: None,
@@ -1122,24 +1122,24 @@ pub trait UntypedConstantFolder {
                 location,
                 module,
                 name,
-                args,
+                arguments,
                 tag,
                 type_,
                 field_map,
                 record_constructor,
             } => {
-                let args = args
+                let arguments = arguments
                     .into_iter()
-                    .map(|mut arg| {
-                        arg.value = self.fold_constant(arg.value);
-                        arg
+                    .map(|mut argument| {
+                        argument.value = self.fold_constant(argument.value);
+                        argument
                     })
                     .collect();
                 Constant::Record {
                     location,
                     module,
                     name,
-                    args,
+                    arguments,
                     tag,
                     type_,
                     field_map,

@@ -1300,7 +1300,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             Endianness::Little => "false",
         };
         let signed = if signed { "true" } else { "false" };
-        let args = join(
+        let arguments = join(
             [
                 bit_array.to_doc(),
                 start.to_doc(),
@@ -1310,7 +1310,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             ],
             ", ".to_doc(),
         );
-        docvec!["bitArraySliceToInt(", args, ")"]
+        docvec!["bitArraySliceToInt(", arguments, ")"]
     }
 
     /// Generates the document that calls the `bitArraySliceToFloat` function,
@@ -1331,7 +1331,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             Endianness::Big => "true",
             Endianness::Little => "false",
         };
-        let args = join(
+        let arguments = join(
             [
                 bit_array.to_doc(),
                 start.to_doc(),
@@ -1340,7 +1340,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             ],
             ", ".to_doc(),
         );
-        docvec!["bitArraySliceToFloat(", args, ")"]
+        docvec!["bitArraySliceToFloat(", arguments, ")"]
     }
 
     /// Generates the document that calls the `bitArraySlice` function, with

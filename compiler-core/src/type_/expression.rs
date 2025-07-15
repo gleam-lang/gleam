@@ -481,11 +481,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             UntypedExpr::Fn {
                 location,
                 kind,
-                arguments: args,
+                arguments,
                 body,
                 return_annotation,
                 ..
-            } => Ok(self.infer_fn(args, &[], body, kind, return_annotation, location)),
+            } => Ok(self.infer_fn(arguments, &[], body, kind, return_annotation, location)),
 
             UntypedExpr::Case {
                 location,
@@ -503,9 +503,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             UntypedExpr::Call {
                 location,
                 fun,
-                arguments: args,
+                arguments,
                 ..
-            } => Ok(self.infer_call(*fun, args, location, CallKind::Function)),
+            } => Ok(self.infer_call(*fun, arguments, location, CallKind::Function)),
 
             UntypedExpr::BinOp {
                 location,
@@ -543,8 +543,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location,
                 constructor,
                 record,
-                arguments: args,
-            } => self.infer_record_update(*constructor, record, args, location),
+                arguments,
+            } => self.infer_record_update(*constructor, record, arguments, location),
 
             UntypedExpr::NegateBool { location, value } => {
                 Ok(self.infer_negate_bool(location, *value))
@@ -923,14 +923,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_fn(
         &mut self,
-        args: Vec<UntypedArg>,
-        expected_args: &[Arc<Type>],
+        arguments: Vec<UntypedArg>,
+        expected_arguments: &[Arc<Type>],
         body: Vec1<UntypedStatement>,
         kind: FunctionLiteralKind,
         return_annotation: Option<TypeAst>,
         location: SrcSpan,
     ) -> TypedExpr {
-        for Arg { names, .. } in args.iter() {
+        for Arg { names, .. } in arguments.iter() {
             check_argument_names(names, self.problems);
         }
 
@@ -961,15 +961,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // no way for a call to `divide_partial` to produce any side effects.
         self.purity = Purity::Pure;
 
-        let (args, body) = match self.do_infer_fn(args, expected_args, body, &return_annotation) {
-            Ok(result) => result,
-            Err(error) => {
-                self.problems.error(error);
-                return self.error_expr(location);
-            }
-        };
-        let args_types = args.iter().map(|a| a.type_.clone()).collect();
-        let type_ = fn_(args_types, body.last().type_());
+        let (arguments, body) =
+            match self.do_infer_fn(arguments, expected_arguments, body, &return_annotation) {
+                Ok(result) => result,
+                Err(error) => {
+                    self.problems.error(error);
+                    return self.error_expr(location);
+                }
+            };
+        let arguments_types = arguments.iter().map(|a| a.type_.clone()).collect();
+        let type_ = fn_(arguments_types, body.last().type_());
 
         // Defining an anonymous function never panics.
         self.already_warned_for_unreachable_code = already_warned_for_unreachable_code;
@@ -982,7 +983,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             location,
             type_,
             kind,
-            args,
+            arguments,
             body,
             return_annotation,
             purity: function_purity,
@@ -1035,11 +1036,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_call(
         &mut self,
         fun: UntypedExpr,
-        args: Vec<CallArg<UntypedExpr>>,
+        arguments: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
         kind: CallKind,
     ) -> TypedExpr {
-        let (fun, args, type_) = self.do_infer_call(fun, args, location, kind);
+        let (fun, arguments, type_) = self.do_infer_call(fun, arguments, location, kind);
 
         // One common mistake is to think that the syntax for adding a message
         // to a `todo` or a `panic` exception is to `todo("...")`, but really
@@ -1052,7 +1053,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             _ => None,
         };
         if let Some((location, kind)) = todopanic {
-            let args_location = match (args.first(), args.last()) {
+            let arguments_location = match (arguments.first(), arguments.last()) {
                 (Some(first), Some(last)) => Some(SrcSpan {
                     start: first.location().start,
                     end: last.location().end,
@@ -1062,8 +1063,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             self.problems.warning(Warning::TodoOrPanicUsedAsFunction {
                 kind,
                 location,
-                args_location,
-                args: args.len(),
+                arguments_location,
+                arguments: arguments.len(),
             });
         }
 
@@ -1072,7 +1073,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         TypedExpr::Call {
             location,
             type_,
-            args,
+            arguments,
             fun: Box::new(fun),
         }
     }
@@ -2974,7 +2975,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         constructor: UntypedExpr,
         record: RecordBeingUpdated,
-        args: Vec<UntypedRecordUpdateArg>,
+        arguments: Vec<UntypedRecordUpdateArg>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         // infer the constructor being used
@@ -3052,22 +3053,23 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let variant =
             self.infer_record_update_variant(&typed_constructor, &value_constructor, &record_var)?;
 
-        let args = self.infer_record_update_args(&variant, &record_var, args, location)?;
+        let arguments =
+            self.infer_record_update_arguments(&variant, &record_var, arguments, location)?;
 
         Ok(TypedExpr::RecordUpdate {
             location,
             type_: variant.retn,
             record_assignment,
             constructor: Box::new(typed_constructor),
-            args,
+            arguments,
         })
     }
 
-    fn infer_record_update_args(
+    fn infer_record_update_arguments(
         &mut self,
         variant: &RecordUpdateVariant<'_>,
         record: &TypedExpr,
-        args: Vec<UntypedRecordUpdateArg>,
+        arguments: Vec<UntypedRecordUpdateArg>,
         location: SrcSpan,
     ) -> Result<Vec<TypedCallArg>, Error> {
         let record_location = record.location();
@@ -3078,7 +3080,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let mut fields = variant.fields.clone();
 
         // collect explicit arguments given in the record update
-        let explicit_args = args
+        let explicit_arguments = arguments
             .iter()
             .map(
                 |arg @ UntypedRecordUpdateArg {
@@ -3145,7 +3147,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             _ => convert_unify_error(e, record_location),
         };
 
-        let implicit_args = fields
+        let implicit_arguments = fields
             .into_iter()
             .map(|(label, index)| {
                 let record_access = self.infer_known_record_expression_access(
@@ -3172,24 +3174,24 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        if explicit_args.is_empty() {
+        if explicit_arguments.is_empty() {
             self.problems
                 .warning(Warning::NoFieldsRecordUpdate { location });
         }
 
-        if implicit_args.is_empty() {
+        if implicit_arguments.is_empty() {
             self.problems
                 .warning(Warning::AllFieldsRecordUpdate { location });
         }
 
-        let args = explicit_args
+        let arguments = explicit_arguments
             .into_iter()
-            .chain(implicit_args)
+            .chain(implicit_arguments)
             .sorted_by_key(|(index, _)| *index)
             .map(|(_, value)| value)
             .collect();
 
-        Ok(args)
+        Ok(arguments)
     }
 
     fn infer_record_update_variant<'c>(
@@ -3200,8 +3202,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> Result<RecordUpdateVariant<'c>, Error> {
         let record_type = record.type_();
         // The record constructor needs to be a function.
-        let (args_types, return_type) = match constructor.type_().as_ref() {
-            Type::Fn { args, return_ } => (args.clone(), return_.clone()),
+        let (arguments_types, return_type) = match constructor.type_().as_ref() {
+            Type::Fn { arguments, return_ } => (arguments.clone(), return_.clone()),
             _ => {
                 return Err(Error::RecordUpdateInvalidConstructor {
                     location: constructor.location(),
@@ -3244,7 +3246,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // Updating a record with only one variant is always safe
         if variants_count == 1 {
             return Ok(RecordUpdateVariant {
-                args: args_types,
+                arguments: arguments_types,
                 retn: return_type,
                 fields: &field_map.fields,
             });
@@ -3255,7 +3257,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         if record_index.is_some_and(|index| index == variant_index) {
             self.track_feature_usage(FeatureKind::RecordUpdateVariantInference, record.location());
             return Ok(RecordUpdateVariant {
-                args: args_types,
+                arguments: arguments_types,
                 retn: return_type,
                 fields: &field_map.fields,
             });
@@ -3578,10 +3580,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 module,
                 location,
                 name,
-                args,
+                arguments,
                 // field_map, is always None here because untyped not yet unified
                 ..
-            } if args.is_empty() => {
+            } if arguments.is_empty() => {
                 // Type check the record constructor
                 let constructor = self.infer_value_constructor(&module, &name, &location)?;
 
@@ -3606,7 +3608,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     module,
                     location,
                     name,
-                    args: vec![],
+                    arguments: vec![],
                     type_: constructor.type_.clone(),
                     tag,
                     field_map,
@@ -3618,7 +3620,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 module,
                 location,
                 name,
-                mut args,
+                mut arguments,
                 // field_map, is always None here because untyped not yet unified
                 ..
             } => {
@@ -3665,7 +3667,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             name: name.clone(),
                             variant_index,
                             field_map: field_map.clone(),
-                            arity: args.len() as u16,
+                            arity: arguments.len() as u16,
                             type_: Arc::clone(&type_),
                             location: constructor.variant.definition_location(),
                             documentation: None,
@@ -3698,27 +3700,33 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     .map_err(|e| convert_get_value_constructor_error(e, location, None))?
                 {
                     // The fun has a field map so labelled arguments may be present and need to be reordered.
-                    Some(field_map) => {
-                        field_map.reorder(&mut args, location, IncorrectArityContext::Function)?
-                    }
+                    Some(field_map) => field_map.reorder(
+                        &mut arguments,
+                        location,
+                        IncorrectArityContext::Function,
+                    )?,
 
                     // The fun has no field map and so we error if arguments have been labelled
-                    None => assert_no_labelled_arguments(&args)?,
+                    None => assert_no_labelled_arguments(&arguments)?,
                 }
 
-                let (mut args_types, return_type) =
-                    match_fun_type(fun.type_(), args.len(), self.environment).map_err(|e| {
-                        convert_not_fun_error(e, fun.location(), location, CallKind::Function)
-                    })?;
+                let (mut arguments_types, return_type) = match_fun_type(
+                    fun.type_(),
+                    arguments.len(),
+                    self.environment,
+                )
+                .map_err(|error| {
+                    convert_not_fun_error(error, fun.location(), location, CallKind::Function)
+                })?;
 
-                let args = args_types
+                let arguments = arguments_types
                     .iter_mut()
-                    .zip(args)
-                    .map(|(type_, arg): (&mut Arc<Type>, _)| {
-                        if arg.uses_label_shorthand() {
+                    .zip(arguments)
+                    .map(|(type_, argument): (&mut Arc<Type>, _)| {
+                        if argument.uses_label_shorthand() {
                             self.track_feature_usage(
                                 FeatureKind::LabelShorthandSyntax,
-                                arg.location,
+                                argument.location,
                             );
                         }
                         let CallArg {
@@ -3726,10 +3734,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             value,
                             location,
                             implicit,
-                        } = arg;
+                        } = argument;
                         let value = self.infer_const(&None, value);
                         unify(type_.clone(), value.type_())
-                            .map_err(|e| convert_unify_error(e, value.location()))?;
+                            .map_err(|error| convert_unify_error(error, value.location()))?;
                         Ok(CallArg {
                             label,
                             value,
@@ -3743,7 +3751,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     module,
                     location,
                     name,
-                    args,
+                    arguments,
                     type_: return_type,
                     tag,
                     field_map,
@@ -3930,7 +3938,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     pub fn do_infer_call(
         &mut self,
         fun: UntypedExpr,
-        args: Vec<CallArg<UntypedExpr>>,
+        arguments: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
         kind: CallKind,
     ) -> (TypedExpr, Vec<TypedCallArg>, Arc<Type>) {
@@ -3951,13 +3959,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             UntypedExpr::Fn {
                 location,
                 kind,
-                arguments,
+                arguments: fn_arguments,
                 body,
                 return_annotation,
                 ..
-            } if arguments.len() == args.len() => self.infer_fn_with_call_context(
-                arguments,
-                &args,
+            } if fn_arguments.len() == arguments.len() => self.infer_fn_with_call_context(
+                fn_arguments,
+                &arguments,
                 body,
                 kind,
                 return_annotation,
@@ -3967,32 +3975,33 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             fun => self.infer(fun),
         };
 
-        let (fun, args, type_) = self.do_infer_call_with_known_fun(fun, args, location, kind);
-        (fun, args, type_)
+        let (fun, arguments, type_) =
+            self.do_infer_call_with_known_fun(fun, arguments, location, kind);
+        (fun, arguments, type_)
     }
 
     fn infer_fn_with_call_context(
         &mut self,
-        args: Vec<UntypedArg>,
-        call_args: &[CallArg<UntypedExpr>],
+        arguments: Vec<UntypedArg>,
+        call_arguments: &[CallArg<UntypedExpr>],
         body: Vec1<UntypedStatement>,
         kind: FunctionLiteralKind,
         return_annotation: Option<TypeAst>,
         location: SrcSpan,
     ) -> TypedExpr {
-        let typed_call_args: Vec<Arc<Type>> = call_args
+        let typed_call_arguments: Vec<Arc<Type>> = call_arguments
             .iter()
-            .map(|a| {
-                match self.infer_or_error(a.value.clone()) {
-                    Ok(arg) => arg,
+            .map(|argument| {
+                match self.infer_or_error(argument.value.clone()) {
+                    Ok(argument) => argument,
                     Err(_e) => self.error_expr(location),
                 }
                 .type_()
             })
             .collect_vec();
         self.infer_fn(
-            args,
-            &typed_call_args,
+            arguments,
+            &typed_call_arguments,
             body,
             kind,
             return_annotation,
@@ -4003,7 +4012,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     pub fn do_infer_call_with_known_fun(
         &mut self,
         fun: TypedExpr,
-        mut args: Vec<CallArg<UntypedExpr>>,
+        mut arguments: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
         kind: CallKind,
     ) -> (TypedExpr, Vec<TypedCallArg>, Arc<Type>) {
@@ -4017,7 +4026,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     // The fun has a field map so labelled arguments may be
                     // present and need to be reordered.
                     Some(field_map) => {
-                        field_map.reorder(&mut args, location, IncorrectArityContext::Function)
+                        field_map.reorder(&mut arguments, location, IncorrectArityContext::Function)
                     }
 
                     // The fun has no field map and so we error if arguments
@@ -4029,7 +4038,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     // known to be a valid function we can make sure that there's
                     // no labelled arguments if it doesn't actually have a field map.
                     None if fun.is_invalid() => Ok(()),
-                    None => assert_no_labelled_arguments(&args),
+                    None => assert_no_labelled_arguments(&arguments),
                 }
             });
 
@@ -4057,11 +4066,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
         }
 
-        let mut missing_args = 0;
-        let mut ignored_labelled_args = vec![];
+        let mut missing_arguments = 0;
+        let mut ignored_labelled_arguments = vec![];
         // Extract the type of the fun, ensuring it actually is a function
-        let (mut args_types, return_type) =
-            match match_fun_type(fun.type_(), args.len(), self.environment) {
+        let (mut arguments_types, return_type) =
+            match match_fun_type(fun.type_(), arguments.len(), self.environment) {
                 Ok(fun) => fun,
                 Err(e) => {
                     let converted_error =
@@ -4070,13 +4079,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         // If the function was valid but had the wrong number of arguments passed.
                         // Then we keep the error but still want to continue analysing the arguments that were passed.
                         MatchFunTypeError::IncorrectArity {
-                            args: arg_types,
+                            arguments: arg_types,
                             return_type,
                             expected,
                             given,
                             ..
                         } => {
-                            missing_args = expected.saturating_sub(given);
+                            missing_arguments = expected.saturating_sub(given);
                             // If the function has labels then arity issues will already
                             // be handled by the field map so we can ignore them here.
                             if !labelled_arity_error {
@@ -4086,15 +4095,22 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                                 // Since arity errors with labels cause incorrect
                                 // ordering, we can't type check the labelled arguments here.
                                 let first_labelled_arg =
-                                    args.iter().position(|arg| arg.label.is_some());
-                                ignored_labelled_args = args
+                                    arguments.iter().position(|arg| arg.label.is_some());
+                                ignored_labelled_arguments = arguments
                                     .iter()
-                                    .skip_while(|arg| arg.label.is_none())
-                                    .map(|arg| (arg.label.clone(), arg.location, arg.implicit))
+                                    .skip_while(|argument| argument.label.is_none())
+                                    .map(|argument| {
+                                        (
+                                            argument.label.clone(),
+                                            argument.location,
+                                            argument.implicit,
+                                        )
+                                    })
                                     .collect_vec();
-                                let args_to_keep = first_labelled_arg.unwrap_or(args.len());
+                                let arguments_to_keep =
+                                    first_labelled_arg.unwrap_or(arguments.len());
                                 (
-                                    arg_types.iter().take(args_to_keep).cloned().collect(),
+                                    arg_types.iter().take(arguments_to_keep).cloned().collect(),
                                     return_type,
                                 )
                             }
@@ -4120,9 +4136,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // This way we can provide better argument hints for incomplete use
         // expressions.
         if let CallKind::Use { .. } = kind {
-            if let Some(last) = args.pop() {
-                for _ in 0..missing_args {
-                    args.push(CallArg {
+            if let Some(last) = arguments.pop() {
+                for _ in 0..missing_arguments {
+                    arguments.push(CallArg {
                         label: None,
                         location,
                         value: UntypedExpr::Placeholder {
@@ -4137,15 +4153,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         implicit: Some(ImplicitCallArgOrigin::IncorrectArityUse),
                     });
                 }
-                args.push(last);
+                arguments.push(last);
             }
         };
 
         // Ensure that the given args have the correct types
-        let args_count = args_types.len();
-        let mut typed_args: Vec<_> = args_types
+        let arguments_count = arguments_types.len();
+        let mut typed_arguments: Vec<_> = arguments_types
             .iter_mut()
-            .zip(args)
+            .zip(arguments)
             .enumerate()
             .map(|(i, (type_, arg))| {
                 if arg.uses_label_shorthand() {
@@ -4167,7 +4183,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         call_location,
                         last_statement_location,
                         assignments_location,
-                    } if i == args_count - 1 => ArgumentKind::UseCallback {
+                    } if i == arguments_count - 1 => ArgumentKind::UseCallback {
                         function_location: call_location,
                         assignments_location,
                         last_statement_location,
@@ -4203,8 +4219,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         //
         // So now what we want to do is add back those labelled arguments to
         // make sure the LS can still see that those were explicitly supplied.
-        for (label, location, implicit) in ignored_labelled_args {
-            typed_args.push(CallArg {
+        for (label, location, implicit) in ignored_labelled_arguments {
+            typed_arguments.push(CallArg {
                 label,
                 value: TypedExpr::Invalid {
                     location,
@@ -4222,7 +4238,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             self.warn_for_unreachable_code(fun.location(), PanicPosition::LastFunctionArgument);
         }
 
-        (fun, typed_args, return_type)
+        (fun, typed_arguments, return_type)
     }
 
     fn infer_call_argument(
@@ -4242,7 +4258,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // messages.
             (
                 Type::Fn {
-                    args: expected_arguments,
+                    arguments: expected_arguments,
                     ..
                 },
                 UntypedExpr::Fn {
@@ -4276,17 +4292,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     pub fn do_infer_fn(
         &mut self,
-        args: Vec<UntypedArg>,
-        expected_args: &[Arc<Type>],
+        arguments: Vec<UntypedArg>,
+        expected_arguments: &[Arc<Type>],
         body: Vec1<UntypedStatement>,
         return_annotation: &Option<TypeAst>,
     ) -> Result<(Vec<TypedArg>, Vec1<TypedStatement>), Error> {
         // Construct an initial type for each argument of the function- either an unbound
         // type variable or a type provided by an annotation.
-        let args: Vec<_> = args
+        let arguments: Vec<_> = arguments
             .into_iter()
             .enumerate()
-            .map(|(i, arg)| self.infer_arg(arg, expected_args.get(i).cloned()))
+            .map(|(i, argument)| self.infer_arg(argument, expected_arguments.get(i).cloned()))
             .try_collect()?;
 
         let return_type = match return_annotation {
@@ -4294,12 +4310,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             None => None,
         };
 
-        self.infer_fn_with_known_types(args, body, return_type)
+        self.infer_fn_with_known_types(arguments, body, return_type)
     }
 
     pub fn infer_fn_with_known_types(
         &mut self,
-        args: Vec<TypedArg>,
+        arguments: Vec<TypedArg>,
         body: Vec1<UntypedStatement>,
         return_type: Option<Arc<Type>>,
     ) -> Result<(Vec<TypedArg>, Vec1<TypedStatement>), Error> {
@@ -4311,10 +4327,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         self.in_new_scope(|body_typer| {
             // Used to track if any argument names are used more than once
-            let mut argument_names = HashSet::with_capacity(args.len());
+            let mut argument_names = HashSet::with_capacity(arguments.len());
 
-            for arg in args.iter() {
-                match &arg.names {
+            for argument in arguments.iter() {
+                match &argument.names {
                     ArgNames::Named { name, location }
                     | ArgNames::NamedLabelled {
                         name,
@@ -4325,7 +4341,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         // another argument
                         if !argument_names.insert(name) {
                             return Err(Error::ArgumentNameAlreadyUsed {
-                                location: arg.location,
+                                location: argument.location,
                                 name: name.clone(),
                             });
                         }
@@ -4346,7 +4362,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             name.clone(),
                             *location,
                             origin.clone(),
-                            arg.type_.clone(),
+                            argument.type_.clone(),
                         );
 
                         if !body.first().is_placeholder() {
@@ -4355,7 +4371,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             body_typer.environment.init_usage(
                                 name.clone(),
                                 origin,
-                                arg.location,
+                                argument.location,
                                 body_typer.problems,
                             );
                         }
@@ -4392,7 +4408,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 };
             }
 
-            Ok((args, body))
+            Ok((arguments, body))
         })
     }
 
@@ -4781,14 +4797,14 @@ impl UseAssignments {
 /// Used during `infer_record_update` to return information about the updated variant.
 #[derive(Debug)]
 struct RecordUpdateVariant<'a> {
-    args: Vec<Arc<Type>>,
+    arguments: Vec<Arc<Type>>,
     retn: Arc<Type>,
     fields: &'a HashMap<EcoString, u32>,
 }
 
 impl RecordUpdateVariant<'_> {
     fn arg_type(&self, index: u32) -> Arc<Type> {
-        self.args
+        self.arguments
             .get(index as usize)
             .expect("Failed to get record argument type after successfully inferring that field")
             .clone()
@@ -4995,12 +5011,12 @@ fn static_compare(one: &TypedExpr, other: &TypedExpr) -> StaticComparison {
         (
             TypedExpr::Call {
                 fun: fun_one,
-                args: args_one,
+                arguments: arguments_one,
                 ..
             },
             TypedExpr::Call {
                 fun: fun_other,
-                args: args_other,
+                arguments: arguments_other,
                 ..
             },
         ) => match (fun_one.variant_index(), fun_other.variant_index()) {
@@ -5017,7 +5033,7 @@ fn static_compare(one: &TypedExpr, other: &TypedExpr) -> StaticComparison {
             // Otherwise we need to check their arguments pairwise:
             (Some(_), Some(_)) => {
                 let mut comparison = StaticComparison::CertainlyEqual;
-                for (one, other) in args_one.iter().zip(args_other.iter()) {
+                for (one, other) in arguments_one.iter().zip(arguments_other.iter()) {
                     match static_compare(&one.value, &other.value) {
                         StaticComparison::CertainlyEqual => (),
                         // If we can tell any of the arguments are never going to

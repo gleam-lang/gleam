@@ -165,11 +165,19 @@ pub trait Visit<'ast> {
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
-        args: &'ast [TypedArg],
+        arguments: &'ast [TypedArg],
         body: &'ast Vec1<TypedStatement>,
         return_annotation: &'ast Option<TypeAst>,
     ) {
-        visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
+        visit_typed_expr_fn(
+            self,
+            location,
+            type_,
+            kind,
+            arguments,
+            body,
+            return_annotation,
+        );
     }
 
     fn visit_typed_expr_list(
@@ -187,9 +195,9 @@ pub trait Visit<'ast> {
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         fun: &'ast TypedExpr,
-        args: &'ast [TypedCallArg],
+        arguments: &'ast [TypedCallArg],
     ) {
-        visit_typed_expr_call(self, location, type_, fun, args);
+        visit_typed_expr_call(self, location, type_, fun, arguments);
     }
 
     fn visit_typed_expr_bin_op(
@@ -303,9 +311,9 @@ pub trait Visit<'ast> {
         type_: &'ast Arc<Type>,
         record: &'ast Option<Box<TypedAssignment>>,
         constructor: &'ast TypedExpr,
-        args: &'ast [TypedCallArg],
+        arguments: &'ast [TypedCallArg],
     ) {
-        visit_typed_expr_record_update(self, location, type_, record, constructor, args);
+        visit_typed_expr_record_update(self, location, type_, record, constructor, arguments);
     }
 
     fn visit_typed_expr_negate_bool(&mut self, location: &'ast SrcSpan, value: &'ast TypedExpr) {
@@ -766,11 +774,11 @@ where
             location,
             type_,
             kind,
-            args,
+            arguments,
             body,
             return_annotation,
             purity: _,
-        } => v.visit_typed_expr_fn(location, type_, kind, args, body, return_annotation),
+        } => v.visit_typed_expr_fn(location, type_, kind, arguments, body, return_annotation),
         TypedExpr::List {
             location,
             type_,
@@ -781,8 +789,8 @@ where
             location,
             type_,
             fun,
-            args,
-        } => v.visit_typed_expr_call(location, type_, fun, args),
+            arguments,
+        } => v.visit_typed_expr_call(location, type_, fun, arguments),
         TypedExpr::BinOp {
             location,
             type_,
@@ -855,10 +863,14 @@ where
             type_,
             record_assignment,
             constructor,
-            args,
-        } => {
-            v.visit_typed_expr_record_update(location, type_, record_assignment, constructor, args)
-        }
+            arguments,
+        } => v.visit_typed_expr_record_update(
+            location,
+            type_,
+            record_assignment,
+            constructor,
+            arguments,
+        ),
         TypedExpr::NegateBool { location, value } => {
             v.visit_typed_expr_negate_bool(location, value)
         }
@@ -956,7 +968,7 @@ pub fn visit_typed_expr_fn<'a, V>(
     _location: &'a SrcSpan,
     _type_: &'a Arc<Type>,
     _kind: &'a FunctionLiteralKind,
-    _args: &'a [TypedArg],
+    _arguments: &'a [TypedArg],
     body: &'a Vec1<TypedStatement>,
     _return_annotation: &'a Option<TypeAst>,
 ) where
@@ -990,13 +1002,13 @@ pub fn visit_typed_expr_call<'a, V>(
     _location: &'a SrcSpan,
     _type_: &'a Arc<Type>,
     fun: &'a TypedExpr,
-    args: &'a [TypedCallArg],
+    arguments: &'a [TypedCallArg],
 ) where
     V: Visit<'a> + ?Sized,
 {
     v.visit_typed_expr(fun);
-    for arg in args {
-        v.visit_typed_call_arg(arg);
+    for argument in arguments {
+        v.visit_typed_call_arg(argument);
     }
 }
 
@@ -1152,7 +1164,7 @@ pub fn visit_typed_expr_record_update<'a, V>(
     _type: &'a Arc<Type>,
     record: &'a Option<Box<TypedAssignment>>,
     constructor: &'a TypedExpr,
-    args: &'a [TypedCallArg],
+    arguments: &'a [TypedCallArg],
 ) where
     V: Visit<'a> + ?Sized,
 {
@@ -1160,8 +1172,8 @@ pub fn visit_typed_expr_record_update<'a, V>(
     if let Some(record) = record {
         v.visit_typed_assignment(record);
     }
-    for arg in args {
-        v.visit_typed_call_arg(arg);
+    for argument in arguments {
+        v.visit_typed_call_arg(argument);
     }
 }
 

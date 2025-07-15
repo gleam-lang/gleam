@@ -38,7 +38,7 @@ pub enum Constant<T, RecordTag> {
         location: SrcSpan,
         module: Option<(EcoString, SrcSpan)>,
         name: EcoString,
-        args: Vec<CallArg<Self>>,
+        arguments: Vec<CallArg<Self>>,
         tag: RecordTag,
         type_: T,
         field_map: Option<FieldMap>,
@@ -103,7 +103,7 @@ impl TypedConstant {
                 .iter()
                 .find_map(|element| element.find_node(byte_index))
                 .unwrap_or(Located::Constant(self)),
-            Constant::Record { args, .. } => args
+            Constant::Record { arguments, .. } => arguments
                 .iter()
                 .find_map(|argument| argument.find_node(byte_index))
                 .unwrap_or(Located::Constant(self)),
@@ -155,9 +155,9 @@ impl TypedConstant {
                 .map(|element| element.referenced_variables())
                 .fold(im::hashset![], im::HashSet::union),
 
-            Constant::Record { args, .. } => args
+            Constant::Record { arguments, .. } => arguments
                 .iter()
-                .map(|arg| arg.value.referenced_variables())
+                .map(|argument| argument.value.referenced_variables())
                 .fold(im::hashset![], im::HashSet::union),
 
             Constant::BitArray { segments, .. } => segments

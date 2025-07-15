@@ -221,7 +221,7 @@ impl ModuleDecoder {
         let package = self.string(reader.get_package()?)?;
         let module = self.string(reader.get_module()?)?;
         let name = self.string(reader.get_name()?)?;
-        let args = read_vec!(&reader.get_parameters()?, self, type_);
+        let arguments = read_vec!(&reader.get_parameters()?, self, type_);
         let inferred_variant = self.inferred_variant(&reader.get_inferred_variant()?)?;
 
         Ok(Arc::new(Type::Named {
@@ -229,15 +229,15 @@ impl ModuleDecoder {
             package,
             module,
             name,
-            args,
+            arguments,
             inferred_variant,
         }))
     }
 
     fn type_fn(&mut self, reader: &schema::type_::fn_::Reader<'_>) -> Result<Arc<Type>> {
         let return_ = self.type_(&reader.get_return()?)?;
-        let args = read_vec!(&reader.get_arguments()?, self, type_);
-        Ok(Arc::new(Type::Fn { args, return_ }))
+        let arguments = read_vec!(&reader.get_arguments()?, self, type_);
+        Ok(Arc::new(Type::Fn { arguments, return_ }))
     }
 
     fn type_tuple(&mut self, reader: &schema::type_::tuple::Reader<'_>) -> Result<Arc<Type>> {
@@ -423,12 +423,12 @@ impl ModuleDecoder {
     fn constant_record(&mut self, reader: &constant::record::Reader<'_>) -> Result<TypedConstant> {
         let type_ = self.type_(&reader.get_type()?)?;
         let tag = self.string(reader.get_tag()?)?;
-        let args = read_vec!(reader.get_args()?, self, constant_call_arg);
+        let arguments = read_vec!(reader.get_args()?, self, constant_call_arg);
         Ok(Constant::Record {
             location: Default::default(),
             module: Default::default(),
             name: Default::default(),
-            args,
+            arguments,
             tag,
             type_,
             field_map: None,

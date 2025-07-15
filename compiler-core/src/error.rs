@@ -2053,12 +2053,12 @@ But this argument has this type:
                         // Remap the pipe function type into just the type expected by the pipe.
                         let expected = expected
                             .fn_types()
-                            .and_then(|(args, _)| args.first().cloned());
+                            .and_then(|(arguments, _)| arguments.first().cloned());
 
                         // Remap the argument as well, if it's a function.
                         let given = given
                             .fn_types()
-                            .and_then(|(args, _)| args.first().cloned())
+                            .and_then(|(arguments, _)| arguments.first().cloned())
                             .unwrap_or_else(|| given.clone());
 
                         let mut printer = Printer::new(names);
