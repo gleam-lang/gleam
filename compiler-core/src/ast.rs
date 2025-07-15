@@ -1657,6 +1657,7 @@ fn pattern_and_expression_are_the_same(pattern: &TypedPattern, expression: &Type
             },
             TypedExpr::Var { name: body_var, .. },
         ) => pattern_var == body_var,
+        (TypedPattern::Variable { .. }, _) => false,
 
         // Floats, Ints, and Strings are the same if they are exactly the same
         // literal.
@@ -1670,6 +1671,7 @@ fn pattern_and_expression_are_the_same(pattern: &TypedPattern, expression: &Type
             },
             TypedExpr::Float { value, .. },
         ) => pattern_value == value,
+        (TypedPattern::Float { .. }, _) => false,
 
         (
             TypedPattern::Int {
@@ -1678,6 +1680,7 @@ fn pattern_and_expression_are_the_same(pattern: &TypedPattern, expression: &Type
             },
             TypedExpr::Int { int_value, .. },
         ) => pattern_value == int_value,
+        (TypedPattern::Int { .. }, _) => false,
 
         (
             TypedPattern::String {
@@ -1686,6 +1689,41 @@ fn pattern_and_expression_are_the_same(pattern: &TypedPattern, expression: &Type
             },
             TypedExpr::String { value, .. },
         ) => pattern_value == value,
+        (TypedPattern::String { .. }, _) => false,
+
+        // A string prefix is equivalent to building the string back:
+        // `"wibble" <> wobble -> "wibble" <> wobble`
+        // `"wibble" as a <> wobble -> a <> wobble`
+        (
+            TypedPattern::StringPrefix {
+                left_side_assignment,
+                left_side_string,
+                right_side_assignment,
+                ..
+            },
+            TypedExpr::BinOp {
+                name: BinOp::Concatenate,
+                left,
+                right,
+                ..
+            },
+        ) => {
+            let left_side_matches = match (left_side_assignment, left_side_string, left.as_ref()) {
+                (_, left_side_string, TypedExpr::String { value, .. }) => value == left_side_string,
+                (Some((left_side_name, _)), _, TypedExpr::Var { name, .. }) => {
+                    left_side_name == name
+                }
+                (_, _, _) => false,
+            };
+            let right_side_matches = match (right_side_assignment, right.as_ref()) {
+                (AssignName::Variable(right_side_name), TypedExpr::Var { name, .. }) => {
+                    name == right_side_name
+                }
+                (AssignName::Variable(_), _) | (AssignName::Discard(_), _) => false,
+            };
+            left_side_matches && right_side_matches
+        }
+        (TypedPattern::StringPrefix { .. }, _) => false,
 
         // Two tuples where each element is equivalent to the other:
         // `#(a, 1, "wibble") -> #(a, 1, "wibble")`
@@ -1705,6 +1743,7 @@ fn pattern_and_expression_are_the_same(pattern: &TypedPattern, expression: &Type
                         pattern_and_expression_are_the_same(pattern, expression)
                     })
         }
+        (TypedPattern::Tuple { .. }, _) => false,
 
         // Two lists are the same if each element is equivalent to the other:
         // `[] -> []`
@@ -1735,6 +1774,7 @@ fn pattern_and_expression_are_the_same(pattern: &TypedPattern, expression: &Type
                         pattern_and_expression_are_the_same(pattern, expression)
                     })
         }
+        (TypedPattern::List { .. }, _) => false,
 
         // Two constructors are the same if the expression is building exactly
         // the same value being matched on (regardless of qualification).
@@ -1783,8 +1823,13 @@ fn pattern_and_expression_are_the_same(pattern: &TypedPattern, expression: &Type
 
             _ => false,
         },
+        (TypedPattern::Constructor { .. }, _) => false,
 
-        (_, _) => false,
+        (TypedPattern::Assign { .. }, _) => false,
+        (TypedPattern::BitArray { .. }, _) => false,
+        (TypedPattern::BitArraySize { .. }, _) => false,
+        (TypedPattern::Discard { .. }, _) => false,
+        (TypedPattern::Invalid { .. }, _) => false,
     }
 }
 
