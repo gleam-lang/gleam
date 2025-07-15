@@ -214,7 +214,7 @@
   ([Louis Pilfold](https://github.com/lpil))
 
 - The compiler now allows using bit array options to specify endianness when
-  construction or pattern matching on bit arrays.
+  constructing or pattern matching on UTF codepoints in bit arrays.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 - Calculations are now allowed in the size options of bit array patterns. For
@@ -233,7 +233,7 @@
 ### Build tool
 
 - `gleam update`, `gleam deps update`, and `gleam deps download` will now print
-  a message when there are new major versions of packages available.
+  a message when there are new major versions of packages available. For example:
 
   ```text
    $ gleam update
@@ -248,8 +248,8 @@
 
   ([Amjad Mohamed](https://github.com/andho))
 
-- Docs generator now strips trailing slashes from Gitea/Forgejo hosts so
-  sidebar "Repository" and "View Source" links never include `//`, and
+- The documentation generator now strips trailing slashes from Gitea/Forgejo
+  hosts so sidebar "Repository" and "View Source" links never include `//`, and
   single-line "View Source" anchors emit `#Lx` instead of `#Lx-x`.
   ([Aayush Tripathi](https://github.com/aayush-tripathi))
 
@@ -259,7 +259,6 @@
 
 - The build tool now also supports `.cjs` files placed in the `src`, `dev` or
   `test` directories.
-
   ([yoshi](https://github.com/yoshi-monster))
 
 - The build tool now produces better error messages when version resolution
@@ -455,7 +454,7 @@
 
 ### Bug fixes
 
-- Fixed a bug where the language server would not show type-related code action
+- Fixed a bug where the language server would not show type-related code actions
   for record fields in custom type definitions.
   ([cysabi](https://github.com/cysabi))
 
