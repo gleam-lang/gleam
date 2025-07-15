@@ -37,6 +37,7 @@ pub fn case<'a>(
     let assignments = variables.assign_case_subjects(compiled_case, subjects);
     let decision = CasePrinter {
         variables,
+        assignments: &assignments,
         kind: DecisionKind::Case { clauses },
     }
     .decision(&compiled_case.tree);
@@ -161,8 +162,9 @@ impl<'a> CaseBody<'a> {
     }
 }
 
-struct CasePrinter<'module, 'generator, 'a> {
+struct CasePrinter<'module, 'generator, 'a, 'assignments> {
     variables: Variables<'generator, 'module, 'a>,
+    assignments: &'assignments Vec<SubjectAssignment<'a>>,
     kind: DecisionKind<'a>,
 }
 
@@ -178,6 +180,25 @@ enum DecisionKind<'a> {
         pattern_location: SrcSpan,
         subject: EcoString,
     },
+}
+
+enum BodyExpression<'a> {
+    /// This happens when a case expression branch returns the same value that
+    /// is being matched on. So instead of rebuilding it from scratch we can
+    /// return the case subject directly. For example:
+    /// `Ok(1) -> Ok(1)`
+    /// `a -> a`
+    /// `[1, ..rest] -> [1, ..rest]`
+    ///
+    Variable(Document<'a>),
+
+    /// This happens when a case expression has a complex body that is not just
+    /// returning the matched subject. For example:
+    /// `Ok(1) -> Ok(2)`
+    /// `_ -> [1, 2, 3]`
+    /// `1 -> "wibble"`
+    ///
+    Expressions(Document<'a>),
 }
 
 /// Code generation for decision trees can look a bit daunting at a first glance
@@ -239,7 +260,7 @@ enum DecisionKind<'a> {
 /// In order to do that we'll be using a `Variables` data structure to hold all
 /// this information about the current scope.
 ///
-impl<'a> CasePrinter<'_, '_, 'a> {
+impl<'a> CasePrinter<'_, '_, 'a, '_> {
     fn decision(&mut self, decision: &'a Decision) -> CaseBody<'a> {
         match decision {
             Decision::Fail => {
@@ -263,7 +284,11 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             Decision::Run { body } => {
                 let bindings = self.variables.bindings_doc(&body.bindings);
                 let body = self.body_expression(body.clause_index);
-                CaseBody::Statements(join_with_line(bindings, body))
+                let body = match body {
+                    BodyExpression::Variable(variable) => variable,
+                    BodyExpression::Expressions(body) => join_with_line(bindings, body),
+                };
+                CaseBody::Statements(body)
             }
             Decision::Switch {
                 var,
@@ -279,22 +304,36 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         }
     }
 
-    fn body_expression(&mut self, clause_index: usize) -> Document<'a> {
+    fn body_expression(&mut self, clause_index: usize) -> BodyExpression<'a> {
         // If we are not in a `case` expression, there is no additional code to
         // execute when a branch matches; we only assign variables bound in the
         // pattern.
         let DecisionKind::Case { clauses } = &self.kind else {
-            return nil();
+            return BodyExpression::Expressions(nil());
         };
 
-        let body = &clauses
-            .get(clause_index)
-            .expect("invalid clause index")
-            .then;
+        let clause = &clauses.get(clause_index).expect("invalid clause index");
+        let body = &clause.then;
 
-        self.variables
-            .expression_generator
-            .expression_flattening_blocks(body)
+        if clause.is_rebuilding_matched_value() {
+            let variable = self
+                .assignments
+                .first()
+                .expect("case with no subjects")
+                .name();
+
+            BodyExpression::Variable(
+                self.variables
+                    .expression_generator
+                    .wrap_return(variable.to_doc()),
+            )
+        } else {
+            BodyExpression::Expressions(
+                self.variables
+                    .expression_generator
+                    .expression_flattening_blocks(body),
+            )
+        }
     }
 
     fn switch(
@@ -554,7 +593,12 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             // end up directly in the body of the if clause.
             let if_true_bindings = this.variables.bindings_ref_doc(&if_true_bindings);
             let if_true_body = this.body_expression(if_true.clause_index);
-            join_with_line(if_true_bindings, if_true_body)
+            match if_true_body {
+                BodyExpression::Variable(variable) => variable,
+                BodyExpression::Expressions(if_true_body) => {
+                    join_with_line(if_true_bindings, if_true_body)
+                }
+            }
         });
         let if_false_body = self.inside_new_scope(|this| this.decision(if_false));
 
@@ -628,9 +672,11 @@ pub fn let_<'a>(
 
     let assignment = variables.assign_let_subject(compiled_case, subject);
     let assignment_name = assignment.name();
+    let assignments = vec![assignment];
 
     let decision = CasePrinter {
         variables,
+        assignments: &assignments,
         kind: DecisionKind::LetAssert {
             kind,
             subject_location: subject.location(),
@@ -666,7 +712,7 @@ pub fn let_<'a>(
     });
 
     let doc = docvec![
-        assignments_to_doc(vec![assignment]),
+        assignments_to_doc(assignments),
         concat(beginning_assignments),
         decision.into_doc()
     ];

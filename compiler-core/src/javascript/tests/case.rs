@@ -443,3 +443,196 @@ pub fn go(x) {
 "
     );
 }
+
+#[test]
+fn case_building_simple_value_matched_by_pattern() {
+    assert_js!(
+        "pub fn go(x) {
+   case x {
+     1 -> 2
+     n -> n
+   }
+}"
+    )
+}
+
+#[test]
+fn case_building_list_matched_by_pattern() {
+    assert_js!(
+        "pub fn go(x) {
+   case x {
+     [] -> []
+     [a, b] -> [a, b]
+     [1, ..rest] -> [1, ..rest]
+     _ -> x
+   }
+}"
+    )
+}
+
+#[test]
+fn case_building_record_matched_by_pattern() {
+    assert_js!(
+        "pub fn go(x) {
+   case x {
+     Ok(1) -> Ok(1)
+     Ok(n) -> Ok(n)
+     Error(_) -> Error(Nil)
+   }
+}"
+    )
+}
+
+#[test]
+fn case_building_record_with_select_matched_by_pattern() {
+    assert_js!(
+        "
+import gleam
+
+pub fn go(x) {
+   case x {
+     Ok(1) -> gleam.Ok(1)
+     _ -> Error(Nil)
+   }
+}"
+    )
+}
+
+#[test]
+fn case_building_record_with_select_matched_by_pattern_2() {
+    assert_js!(
+        "
+import gleam
+
+pub fn go(x) {
+   case x {
+     gleam.Ok(1) -> gleam.Ok(1)
+     _ -> Error(Nil)
+   }
+}"
+    )
+}
+
+#[test]
+fn case_building_record_with_select_matched_by_pattern_3() {
+    assert_js!(
+        "
+import gleam
+
+pub fn go(x) {
+   case x {
+     gleam.Ok(1) -> Ok(1)
+     _ -> Error(Nil)
+   }
+}"
+    )
+}
+
+#[test]
+fn case_building_record_with_labels_matched_by_pattern_1() {
+    assert_js!(
+        "
+pub type Wibble {
+  Wibble(int: Int, string: String)
+  Wobble(Int)
+}
+
+pub fn go(x) {
+   case x {
+     Wibble(1, s) -> Wibble(1, s)
+     _ -> Wobble(1)
+   }
+}"
+    )
+}
+
+#[test]
+fn case_building_record_with_labels_matched_by_pattern_2() {
+    assert_js!(
+        "
+pub type Wibble {
+  Wibble(int: Int, string: String)
+  Wobble(Int)
+}
+
+pub fn go(x) {
+   case x {
+     Wibble(string:, int:) -> Wibble(string:, int:)
+     _ -> Wobble(1)
+   }
+}"
+    )
+}
+
+#[test]
+fn case_building_record_with_labels_matched_by_pattern_3() {
+    assert_js!(
+        "
+pub type Wibble {
+  Wibble(int: Int, string: String)
+  Wobble(Int)
+}
+
+pub fn go(x) {
+   case x {
+     // This should not be optimised away!
+     Wibble(string:, int:) -> Wibble(string:, int: 1)
+     _ -> Wobble(1)
+   }
+}"
+    )
+}
+
+#[test]
+fn case_building_record_with_labels_matched_by_pattern_4() {
+    assert_js!(
+        "
+pub type Wibble {
+  Wibble(int: Int, string: String)
+  Wobble(Int)
+}
+
+pub fn go(x) {
+   case x {
+     Wibble(string:, int:) -> Wibble(int:, string:)
+     _ -> Wobble(1)
+   }
+}"
+    )
+}
+
+#[test]
+fn case_building_record_with_labels_matched_by_pattern_5() {
+    assert_js!(
+        "
+pub type Wibble {
+  Wibble(int: Int, string: String)
+  Wobble(Int)
+}
+
+pub fn go(x) {
+   case x {
+     Wibble(string:, int: 1) -> Wibble(1, string:)
+     _ -> Wobble(1)
+   }
+}"
+    )
+}
+
+#[test]
+fn case_building_record_with_labels_matched_by_pattern_6() {
+    assert_js!(
+        "
+pub type Wibble {
+  Wibble(int: Int, string: String)
+  Wobble(Int)
+}
+
+pub fn go(x) {
+   case x {
+     Wibble(1, string:) -> Wibble(string:, int: 1)
+     _ -> Wobble(1)
+   }
+}"
+    )
+}

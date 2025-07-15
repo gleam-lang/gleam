@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-assertion_line: 227
 expression: "\npub fn go(x, y) {\n  let z = False\n  case True {\n    x if #(x, z) == #(True, False) -> x\n    _ -> False\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -23,7 +21,7 @@ export function go(x, y) {
   let $ = true;
   let x$1 = $;
   if (isEqual([x$1, z], [true, false])) {
-    return x$1;
+    return $;
   } else {
     return false;
   }
