@@ -58,7 +58,7 @@ pub enum TypedExpr {
         location: SrcSpan,
         type_: Arc<Type>,
         kind: FunctionLiteralKind,
-        args: Vec<TypedArg>,
+        arguments: Vec<TypedArg>,
         body: Vec1<TypedStatement>,
         return_annotation: Option<TypeAst>,
         purity: Purity,
@@ -75,7 +75,7 @@ pub enum TypedExpr {
         location: SrcSpan,
         type_: Arc<Type>,
         fun: Box<Self>,
-        args: Vec<CallArg<Self>>,
+        arguments: Vec<CallArg<Self>>,
     },
 
     BinOp {
@@ -169,7 +169,7 @@ pub enum TypedExpr {
         /// variable so it can be referred multiple times.
         record_assignment: Option<Box<TypedAssignment>>,
         constructor: Box<Self>,
-        args: Vec<CallArg<Self>>,
+        arguments: Vec<CallArg<Self>>,
     },
 
     NegateBool {
@@ -193,7 +193,7 @@ pub enum TypedExpr {
 impl TypedExpr {
     pub fn is_println(&self) -> bool {
         let fun = match self {
-            TypedExpr::Call { fun, args, .. } if args.len() == 1 => fun.as_ref(),
+            TypedExpr::Call { fun, arguments, .. } if arguments.len() == 1 => fun.as_ref(),
             _ => return false,
         };
 
@@ -351,15 +351,17 @@ impl TypedExpr {
                 .find_node(byte_index)
                 .or_else(|| self.self_if_contains_location(byte_index)),
 
-            Self::Fn { body, args, .. } => args
+            Self::Fn {
+                body, arguments, ..
+            } => arguments
                 .iter()
                 .find_map(|arg| arg.find_node(byte_index))
                 .or_else(|| body.iter().find_map(|s| s.find_node(byte_index)))
                 .or_else(|| self.self_if_contains_location(byte_index)),
 
-            Self::Call { fun, args, .. } => args
+            Self::Call { fun, arguments, .. } => arguments
                 .iter()
-                .find_map(|arg| arg.find_node(byte_index, fun, args))
+                .find_map(|argument| argument.find_node(byte_index, fun, arguments))
                 .or_else(|| fun.find_node(byte_index))
                 .or_else(|| self.self_if_contains_location(byte_index)),
 
@@ -392,12 +394,12 @@ impl TypedExpr {
             Self::RecordUpdate {
                 record_assignment,
                 constructor,
-                args,
+                arguments,
                 ..
-            } => args
+            } => arguments
                 .iter()
-                .filter(|arg| arg.implicit.is_none())
-                .find_map(|arg| arg.find_node(byte_index, constructor, args))
+                .filter(|argument| argument.implicit.is_none())
+                .find_map(|argument| argument.find_node(byte_index, constructor, arguments))
                 .or_else(|| {
                     record_assignment
                         .as_ref()
@@ -495,9 +497,9 @@ impl TypedExpr {
 
             Self::Fn { body, .. } => body.iter().find_map(|s| s.find_statement(byte_index)),
 
-            Self::Call { fun, args, .. } => args
+            Self::Call { fun, arguments, .. } => arguments
                 .iter()
-                .find_map(|arg| arg.find_statement(byte_index))
+                .find_map(|argument| argument.find_statement(byte_index))
                 .or_else(|| fun.find_statement(byte_index)),
 
             Self::BinOp { left, right, .. } => left
@@ -554,9 +556,9 @@ impl TypedExpr {
 
             Self::RecordUpdate {
                 record_assignment,
-                args,
+                arguments,
                 ..
-            } => args
+            } => arguments
                 .iter()
                 .filter(|arg| arg.implicit.is_none())
                 .find_map(|arg| arg.find_statement(byte_index))
@@ -726,8 +728,9 @@ impl TypedExpr {
             }
 
             // Calls are literals if they are records and all the arguemnts are also literals.
-            Self::Call { fun, args, .. } => {
-                fun.is_record_builder() && args.iter().all(|argument| argument.value.is_literal())
+            Self::Call { fun, arguments, .. } => {
+                fun.is_record_builder()
+                    && arguments.iter().all(|argument| argument.value.is_literal())
             }
 
             // Variables are literals if they are record constructors that take no arguments.
@@ -864,9 +867,9 @@ impl TypedExpr {
                     && finally.is_pure_value_constructor()
             }
 
-            TypedExpr::Call { fun, args, .. } => {
+            TypedExpr::Call { fun, arguments, .. } => {
                 (fun.is_record_builder() || fun.called_function_purity().is_pure())
-                    && args
+                    && arguments
                         .iter()
                         .all(|argument| argument.value.is_pure_value_constructor())
             }
@@ -1029,7 +1032,7 @@ impl TypedExpr {
 
     pub(crate) fn call_arguments(&self) -> Option<&Vec<TypedCallArg>> {
         match self {
-            TypedExpr::Call { args, .. } => Some(args),
+            TypedExpr::Call { arguments, .. } => Some(arguments),
             _ => None,
         }
     }

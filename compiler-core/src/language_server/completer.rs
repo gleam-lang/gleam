@@ -803,10 +803,10 @@ where
     pub fn completion_labels(
         &'a self,
         fun: &TypedExpr,
-        existing_args: &[CallArg<TypedExpr>],
+        existing_arguments: &[CallArg<TypedExpr>],
     ) -> Vec<CompletionItem> {
-        let fun_type = fun.type_().fn_types().map(|(args, _)| args);
-        let already_included_labels = existing_args
+        let fun_type = fun.type_().fn_types().map(|(arguments, _)| arguments);
+        let already_included_labels = existing_arguments
             .iter()
             .filter_map(|a| a.label.clone())
             .collect_vec();
@@ -821,9 +821,10 @@ where
             .iter()
             .filter(|field| !already_included_labels.contains(field.0))
             .map(|(label, arg_index)| {
-                let detail = fun_type.as_ref().and_then(|args| {
-                    args.get(*arg_index as usize)
-                        .map(|a| Printer::new().pretty_print(a, 0))
+                let detail = fun_type.as_ref().and_then(|arguments| {
+                    arguments
+                        .get(*arg_index as usize)
+                        .map(|argument| Printer::new().pretty_print(argument, 0))
                 });
                 let label = format!("{label}:");
                 let sort_text = Some(sort_text(CompletionKind::Label, &label));
@@ -1024,7 +1025,7 @@ impl<'a> LocalCompletion<'a> {
         fun: &'a Function<Arc<Type>, TypedExpr>,
     ) -> Vec<CompletionItem> {
         // Add function arguments to completions
-        self.visit_fn_args(&fun.arguments);
+        self.visit_fn_arguments(&fun.arguments);
 
         // Visit the function body statements
         for statement in &fun.body {
@@ -1035,10 +1036,10 @@ impl<'a> LocalCompletion<'a> {
         self.completions.into_values().collect_vec()
     }
 
-    fn visit_fn_args(&mut self, args: &[Arg<Arc<Type>>]) {
-        for arg in args {
-            if let Some(name) = arg.get_variable_name() {
-                self.push_completion(name, arg.type_.clone());
+    fn visit_fn_arguments(&mut self, arguments: &[Arg<Arc<Type>>]) {
+        for argument in arguments {
+            if let Some(name) = argument.get_variable_name() {
+                self.push_completion(name, argument.type_.clone());
             }
         }
     }
@@ -1084,7 +1085,7 @@ impl<'ast> Visit<'ast> for LocalCompletion<'_> {
         location: &'ast ast::SrcSpan,
         _: &'ast Arc<Type>,
         _: &'ast FunctionLiteralKind,
-        args: &'ast [ast::TypedArg],
+        arguments: &'ast [ast::TypedArg],
         body: &'ast Vec1<ast::TypedStatement>,
         _: &'ast Option<ast::TypeAst>,
     ) {
@@ -1093,7 +1094,7 @@ impl<'ast> Visit<'ast> for LocalCompletion<'_> {
         if self.cursor >= location.end {
             return;
         }
-        self.visit_fn_args(args);
+        self.visit_fn_arguments(arguments);
         for statement in body {
             self.visit_typed_statement(statement);
         }

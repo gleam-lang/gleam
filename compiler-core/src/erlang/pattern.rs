@@ -56,10 +56,10 @@ fn print<'a>(
         Pattern::String { value, .. } => string(value),
 
         Pattern::Constructor {
-            arguments: args,
+            arguments,
             constructor: Inferred::Known(PatternConstructor { name, .. }),
             ..
-        } => tag_tuple_pattern(name, args, vars, env, guards),
+        } => tag_tuple_pattern(name, arguments, vars, env, guards),
 
         Pattern::Constructor {
             constructor: Inferred::Unknown,
@@ -229,18 +229,18 @@ pub(super) fn to_doc<'a>(
 
 fn tag_tuple_pattern<'a>(
     name: &'a str,
-    args: &'a [CallArg<TypedPattern>],
+    arguments: &'a [CallArg<TypedPattern>],
     vars: &mut Vec<&'a str>,
     env: &mut Env<'a>,
     guards: &mut Vec<Document<'a>>,
 ) -> Document<'a> {
-    if args.is_empty() {
+    if arguments.is_empty() {
         atom_string(to_snake_case(name))
     } else {
         tuple(
             [atom_string(to_snake_case(name))]
                 .into_iter()
-                .chain(args.iter().map(|p| print(&p.value, vars, env, guards))),
+                .chain(arguments.iter().map(|p| print(&p.value, vars, env, guards))),
         )
     }
 }

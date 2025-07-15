@@ -490,7 +490,10 @@ fn type_to_definition_locations<'a>(
         // `Wobble`.
         //
         Type::Named {
-            module, name, args, ..
+            module,
+            name,
+            arguments,
+            ..
         } => {
             let Some(module) = importable_modules.get(module) else {
                 return vec![];
@@ -504,9 +507,9 @@ fn type_to_definition_locations<'a>(
                 module: Some(module.name.clone()),
                 span: type_.origin,
             }];
-            for arg in args {
+            for argument in arguments {
                 locations.extend(type_to_definition_locations(
-                    arg.clone(),
+                    argument.clone(),
                     importable_modules,
                 ));
             }
@@ -516,9 +519,9 @@ fn type_to_definition_locations<'a>(
         // For fn types we just get the locations of their arguments and return
         // type.
         //
-        Type::Fn { args, return_ } => args
+        Type::Fn { arguments, return_ } => arguments
             .iter()
-            .flat_map(|arg| type_to_definition_locations(arg.clone(), importable_modules))
+            .flat_map(|argument| type_to_definition_locations(argument.clone(), importable_modules))
             .chain(type_to_definition_locations(
                 return_.clone(),
                 importable_modules,

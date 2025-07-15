@@ -393,22 +393,22 @@ impl Printer<'_> {
                 package,
                 module,
                 name,
-                args,
+                arguments,
                 publicity,
                 ..
             } => {
                 let name = self.named_type_name(publicity, package, module, name);
-                if args.is_empty() {
+                if arguments.is_empty() {
                     name
                 } else {
                     name.append(Self::type_arguments(
-                        args.iter().map(|argument| self.type_(argument)),
+                        arguments.iter().map(|argument| self.type_(argument)),
                     ))
                 }
             }
-            Type::Fn { args, return_ } => docvec![
+            Type::Fn { arguments, return_ } => docvec![
                 self.keyword("fn"),
-                Self::type_arguments(args.iter().map(|argument| self.type_(argument))),
+                Self::type_arguments(arguments.iter().map(|argument| self.type_(argument))),
                 " -> ",
                 self.type_(return_)
             ],
@@ -585,14 +585,14 @@ impl Printer<'_> {
     ///
     fn register_local_type_variable_names(&mut self, type_: &Type) {
         match type_ {
-            Type::Named { args, .. } => {
-                for arg in args {
-                    self.register_local_type_variable_names(arg);
+            Type::Named { arguments, .. } => {
+                for argument in arguments {
+                    self.register_local_type_variable_names(argument);
                 }
             }
-            Type::Fn { args, return_ } => {
-                for arg in args {
-                    self.register_local_type_variable_names(arg);
+            Type::Fn { arguments, return_ } => {
+                for argument in arguments {
+                    self.register_local_type_variable_names(argument);
                 }
                 self.register_local_type_variable_names(return_);
             }

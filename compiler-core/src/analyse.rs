@@ -515,7 +515,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .expect("Could not find preregistered type for function");
         let field_map = preregistered_fn.field_map().cloned();
         let preregistered_type = preregistered_fn.type_.clone();
-        let (prereg_args_types, prereg_return_type) = preregistered_type
+        let (prereg_arguments_types, prereg_return_type) = preregistered_type
             .fn_types()
             .expect("Preregistered type for fn was not a fn");
 
@@ -550,8 +550,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             has_javascript_external: external_javascript.is_some(),
         };
 
-        let mut typed_args = Vec::with_capacity(arguments.len());
-        for (argument, type_) in arguments.into_iter().zip(&prereg_args_types) {
+        let mut typed_arguments = Vec::with_capacity(arguments.len());
+        for (argument, type_) in arguments.into_iter().zip(&prereg_arguments_types) {
             let argument = argument.set_type(type_.clone());
             match &argument.names {
                 ast::ArgNames::Named { .. } | ast::ArgNames::NamedLabelled { .. } => (),
@@ -565,7 +565,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 }
             }
 
-            typed_args.push(argument);
+            typed_arguments.push(argument);
         }
 
         // We have already registered the function in the `register_value_from_function`
@@ -581,13 +581,13 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 .remove(&name)
                 .expect("Could not find hydrator for fn");
 
-            let (args, body) = expr_typer.infer_fn_with_known_types(
-                typed_args.clone(),
+            let (arguments, body) = expr_typer.infer_fn_with_known_types(
+                typed_arguments.clone(),
                 body,
                 Some(prereg_return_type.clone()),
             )?;
-            let args_types = args.iter().map(|a| a.type_.clone()).collect();
-            let type_ = fn_(args_types, body.last().type_());
+            let arguments_types = arguments.iter().map(|a| a.type_.clone()).collect();
+            let type_ = fn_(arguments_types, body.last().type_());
             Ok((
                 type_,
                 body,
@@ -685,7 +685,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 .map(|(m, f, _)| (m.clone(), f.clone())),
             field_map,
             module: environment.current_module.clone(),
-            arity: typed_args.len(),
+            arity: typed_arguments.len(),
             location,
             implementations,
             purity,
@@ -713,7 +713,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             name: Some((name_location, name)),
             publicity,
             deprecation,
-            arguments: typed_args,
+            arguments: typed_arguments,
             end_position: end_location,
             return_annotation,
             return_type: preregistered_type
@@ -909,7 +909,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                      location,
                      name_location,
                      name,
-                     arguments: args,
+                     arguments,
                      documentation,
                      deprecation: constructor_deprecation,
                  }| {
@@ -926,11 +926,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                         .expect("Could not find preregistered type for function");
                     let preregistered_type = preregistered_fn.type_.clone();
 
-                    let args = match preregistered_type.fn_types() {
-                        Some((args_types, _return_type)) => args
+                    let arguments = match preregistered_type.fn_types() {
+                        Some((arguments_types, _return_type)) => arguments
                             .into_iter()
-                            .zip(&args_types)
-                            .map(|(argument, t)| {
+                            .zip(&arguments_types)
+                            .map(|(argument, type_)| {
                                 if let Some((location, label)) = &argument.label {
                                     self.check_name_case(*location, label, Named::Label);
                                 }
@@ -939,7 +939,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                                     label: argument.label,
                                     ast: argument.ast,
                                     location: argument.location,
-                                    type_: t.clone(),
+                                    type_: type_.clone(),
                                     doc: argument.doc,
                                 }
                             })
@@ -953,7 +953,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                         location,
                         name_location,
                         name,
-                        arguments: args,
+                        arguments,
                         documentation,
                         deprecation: constructor_deprecation,
                     }
@@ -1071,7 +1071,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 .register_type_reference_in_call_graph(name.clone());
 
             let mut field_map_builder = FieldMapBuilder::new(constructor.arguments.len() as u32);
-            let mut args_types = Vec::with_capacity(constructor.arguments.len());
+            let mut arguments_types = Vec::with_capacity(constructor.arguments.len());
             let mut fields = Vec::with_capacity(constructor.arguments.len());
 
             for RecordConstructorArg {
@@ -1096,7 +1096,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 });
 
                 // Register the type for this parameter
-                args_types.push(t);
+                arguments_types.push(t);
 
                 let (label_location, label) = match label {
                     Some((location, label)) => (*location, Some(label)),
@@ -1114,7 +1114,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             type_.set_custom_type_variant(index as u16);
             let type_ = match constructor.arguments.len() {
                 0 => Arc::new(type_),
-                _ => fn_(args_types.clone(), Arc::new(type_)),
+                _ => fn_(arguments_types.clone(), Arc::new(type_)),
             };
             let constructor_info = ValueConstructorVariant::Record {
                 documentation: constructor
@@ -1266,7 +1266,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             package: environment.current_package.clone(),
             module: self.module_name.to_owned(),
             name: name.clone(),
-            args: parameters.clone(),
+            arguments: parameters.clone(),
             inferred_variant: None,
         });
         let _ = self.hydrators.insert(name.clone(), hydrator);
@@ -1316,7 +1316,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let TypeAlias {
             location,
             publicity,
-            parameters: args,
+            parameters: arguments,
             alias: name,
             name_location,
             type_ast: resolved_type,
@@ -1342,7 +1342,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // Use the hydrator to convert the AST into a type, erroring if the AST was invalid
         // in some fashion.
         let mut hydrator = Hydrator::new();
-        let parameters = self.make_type_vars(args, &mut hydrator, environment);
+        let parameters = self.make_type_vars(arguments, &mut hydrator, environment);
         let arity = parameters.len();
         let tryblock = || {
             hydrator.disallow_new_type_variables();
@@ -1394,11 +1394,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
     fn make_type_vars(
         &mut self,
-        args: &[SpannedString],
+        arguments: &[SpannedString],
         hydrator: &mut Hydrator,
         environment: &mut Environment<'_>,
     ) -> Vec<Arc<Type>> {
-        args.iter()
+        arguments
+            .iter()
             .map(|(location, name)| {
                 self.check_name_case(*location, name, Named::TypeVariable);
                 match hydrator.add_type_variable(name, environment) {
@@ -1428,7 +1429,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
     ) {
         let Function {
             name,
-            arguments: args,
+            arguments,
             location,
             return_annotation,
             publicity,
@@ -1455,10 +1456,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             *publicity,
         );
 
-        let mut builder = FieldMapBuilder::new(args.len() as u32);
+        let mut builder = FieldMapBuilder::new(arguments.len() as u32);
         for Arg {
             names, location, ..
-        } in args.iter()
+        } in arguments.iter()
         {
             check_argument_names(names, &mut self.problems);
 
@@ -1473,11 +1474,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // must be given in full, so we disallow holes in the annotations.
         hydrator.permit_holes(external_erlang.is_none() && external_javascript.is_none());
 
-        let arg_types = args
+        let arguments_types = arguments
             .iter()
-            .map(|arg| {
+            .map(|argument| {
                 match hydrator.type_from_option_ast(
-                    &arg.annotation,
+                    &argument.annotation,
                     environment,
                     &mut self.problems,
                 ) {
@@ -1500,7 +1501,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 }
             };
 
-        let type_ = fn_(arg_types, return_type);
+        let type_ = fn_(arguments_types, return_type);
         let _ = self.hydrators.insert(name.clone(), hydrator);
 
         let variant = ValueConstructorVariant::ModuleFn {
@@ -1514,7 +1515,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 .as_ref()
                 .map(|(m, f, _)| (m.clone(), f.clone())),
             module: environment.current_module.clone(),
-            arity: args.len(),
+            arity: arguments.len(),
             location: *location,
             implementations: *implementations,
             purity: *purity,
@@ -1632,7 +1633,7 @@ fn analyse_type_alias(t: UntypedTypeAlias, environment: &mut Environment<'_>) ->
         publicity,
         alias,
         name_location,
-        parameters: args,
+        parameters: arguments,
         type_ast: resolved_type,
         deprecation,
         ..
@@ -1652,7 +1653,7 @@ fn analyse_type_alias(t: UntypedTypeAlias, environment: &mut Environment<'_>) ->
         publicity,
         alias,
         name_location,
-        parameters: args,
+        parameters: arguments,
         type_ast: resolved_type,
         type_,
         deprecation,
@@ -1793,7 +1794,7 @@ fn generalise_function(
         name,
         publicity,
         deprecation,
-        arguments: args,
+        arguments,
         body,
         return_annotation,
         end_position: end_location,
@@ -1827,7 +1828,7 @@ fn generalise_function(
             .as_ref()
             .map(|(m, f, _)| (m.clone(), f.clone())),
         module: module_name.clone(),
-        arity: args.len(),
+        arity: arguments.len(),
         location,
         implementations,
         purity,
@@ -1855,7 +1856,7 @@ fn generalise_function(
         name: Some((name_location, name)),
         publicity,
         deprecation,
-        arguments: args,
+        arguments,
         end_position: end_location,
         return_annotation,
         return_type,
@@ -1888,11 +1889,11 @@ struct Accessors {
 }
 
 fn custom_type_accessors(constructors: &[TypeValueConstructor]) -> Result<Accessors, Error> {
-    let args = get_compatible_record_fields(constructors);
+    let arguments = get_compatible_record_fields(constructors);
 
-    let mut shared_accessors = HashMap::with_capacity(args.len());
+    let mut shared_accessors = HashMap::with_capacity(arguments.len());
 
-    for (index, label, type_) in args {
+    for (index, label, type_) in arguments {
         let _ = shared_accessors.insert(
             label.clone(),
             RecordAccessor {

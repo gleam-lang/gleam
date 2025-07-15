@@ -101,7 +101,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
 
             let (kind, call) = match call {
                 func @ UntypedExpr::Fn { location, kind, .. } => {
-                    let (func, args, return_type) = self.expr_typer.do_infer_call(
+                    let (func, arguments, return_type) = self.expr_typer.do_infer_call(
                         func,
                         vec![self.untyped_left_hand_value_variable_call_argument()],
                         location,
@@ -124,7 +124,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                         kind,
                         TypedExpr::Call {
                             location,
-                            args,
+                            arguments,
                             type_: return_type,
                             fun: Box::new(func),
                         },
@@ -155,7 +155,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
 
                     match fun.type_().fn_types() {
                         // Rewrite as right(..args)(left)
-                        Some((args, _)) if args.len() == arguments.len() => {
+                        Some((fn_arguments, _)) if fn_arguments.len() == arguments.len() => {
                             // We are calling the return value of another function.
                             // Without lifting purity tracking into the type system,
                             // we have no idea whether it's pure or not!
@@ -284,37 +284,37 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
     fn infer_apply_to_call_pipe(
         &mut self,
         function: TypedExpr,
-        args: Vec<CallArg<UntypedExpr>>,
+        arguments: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
     ) -> TypedExpr {
-        let (function, args, type_) = self.expr_typer.do_infer_call_with_known_fun(
+        let (function, arguments, type_) = self.expr_typer.do_infer_call_with_known_fun(
             function,
-            args,
+            arguments,
             location,
             CallKind::Function,
         );
         let function = TypedExpr::Call {
             location,
             type_,
-            args,
+            arguments,
             fun: Box::new(function),
         };
-        let args = vec![self.untyped_left_hand_value_variable_call_argument()];
+        let arguments = vec![self.untyped_left_hand_value_variable_call_argument()];
         // TODO: use `.with_unify_error_situation(UnifyErrorSituation::PipeTypeMismatch)`
         // This will require the typing of the arguments to be lifted up out of
         // the function below. If it is not we don't know if the error comes
         // from incorrect usage of the pipe or if it originates from the
         // argument expressions.
-        let (function, args, type_) = self.expr_typer.do_infer_call_with_known_fun(
+        let (function, arguments, type_) = self.expr_typer.do_infer_call_with_known_fun(
             function,
-            args,
+            arguments,
             location,
             CallKind::Function,
         );
         TypedExpr::Call {
             location,
             type_,
-            args,
+            arguments,
             fun: Box::new(function),
         }
     }
@@ -332,7 +332,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         // the function below. If it is not we don't know if the error comes
         // from incorrect usage of the pipe or if it originates from the
         // argument expressions.
-        let (fun, args, type_) = self.expr_typer.do_infer_call_with_known_fun(
+        let (fun, arguments, type_) = self.expr_typer.do_infer_call_with_known_fun(
             function,
             arguments,
             location,
@@ -341,7 +341,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         TypedExpr::Call {
             location,
             type_,
-            args,
+            arguments,
             fun: Box::new(fun),
         }
     }
@@ -391,7 +391,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             location: function_location,
             type_: return_type,
             fun: function,
-            args: vec![self.typed_left_hand_value_variable_call_argument()],
+            arguments: vec![self.typed_left_hand_value_variable_call_argument()],
         }
     }
 
@@ -404,7 +404,9 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         };
 
         match types {
-            (Type::Fn { args: a, .. }, Type::Fn { args: b, .. }) if a.len() == b.len() => {
+            (Type::Fn { arguments: a, .. }, Type::Fn { arguments: b, .. })
+                if a.len() == b.len() =>
+            {
                 match (a.first(), b.first()) {
                     (Some(a), Some(b)) => unify(a.clone(), b.clone()).is_err(),
                     _ => false,

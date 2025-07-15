@@ -293,12 +293,12 @@ where
                 }
                 | Located::Constant(Constant::String { .. }) => None,
                 Located::Expression {
-                    expression: TypedExpr::Call { fun, args, .. },
+                    expression: TypedExpr::Call { fun, arguments, .. },
                     ..
                 } => {
                     let mut completions = vec![];
                     completions.append(&mut completer.completion_values());
-                    completions.append(&mut completer.completion_labels(fun, args));
+                    completions.append(&mut completer.completion_labels(fun, arguments));
                     Some(completions)
                 }
                 Located::Expression {
@@ -1193,7 +1193,11 @@ fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers, module: 
 
 fn get_function_type(fun: &TypedFunction) -> Type {
     Type::Fn {
-        args: fun.arguments.iter().map(|arg| arg.type_.clone()).collect(),
+        arguments: fun
+            .arguments
+            .iter()
+            .map(|argument| argument.type_.clone())
+            .collect(),
         return_: fun.return_type.clone(),
     }
 }

@@ -1424,9 +1424,14 @@ impl CallArg<TypedExpr> {
             // `TypedExpr::Fn{}.find_node()` except we do not return self as a
             // fallback.
             //
-            (Some(ImplicitCallArgOrigin::Use), TypedExpr::Fn { args, body, .. }) => args
+            (
+                Some(ImplicitCallArgOrigin::Use),
+                TypedExpr::Fn {
+                    arguments, body, ..
+                },
+            ) => arguments
                 .iter()
-                .find_map(|arg| arg.find_node(byte_index))
+                .find_map(|argument| argument.find_node(byte_index))
                 .or_else(|| body.iter().find_map(|s| s.find_node(byte_index))),
             // In all other cases we're happy with the default behaviour.
             //
@@ -3156,15 +3161,15 @@ impl TypedUse {
     }
 
     pub fn callback_arguments(&self) -> Option<&Vec<TypedArg>> {
-        let TypedExpr::Call { args, .. } = self.call.as_ref() else {
+        let TypedExpr::Call { arguments, .. } = self.call.as_ref() else {
             return None;
         };
-        let callback = args.iter().last()?;
-        let TypedExpr::Fn { args, .. } = &callback.value else {
+        let callback = arguments.iter().last()?;
+        let TypedExpr::Fn { arguments, .. } = &callback.value else {
             // The expression might be invalid so we have to return a None here
             return None;
         };
-        Some(args)
+        Some(arguments)
     }
 }
 

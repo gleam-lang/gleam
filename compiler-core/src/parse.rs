@@ -728,7 +728,7 @@ where
                 match self.parse_function(start, false, true, &mut attributes)? {
                     Some(Definition::Function(Function {
                         location,
-                        arguments: args,
+                        arguments,
                         body,
                         return_annotation,
                         end_position,
@@ -737,7 +737,7 @@ where
                         location: SrcSpan::new(location.start, end_position),
                         end_of_head_byte_index: location.end,
                         kind: FunctionLiteralKind::Anonymous { head: location },
-                        arguments: args,
+                        arguments,
                         body,
                         return_annotation,
                     },
@@ -941,9 +941,9 @@ where
                                         end: base_e,
                                     },
                                 };
-                                let mut args = vec![];
+                                let mut arguments = vec![];
                                 if self.maybe_one(&Token::Comma).is_some() {
-                                    args = Parser::series_of(
+                                    arguments = Parser::series_of(
                                         self,
                                         &Parser::parse_record_update_arg,
                                         Some(&Token::Comma),
@@ -955,14 +955,14 @@ where
                                     location: SrcSpan { start, end },
                                     constructor: Box::new(expr),
                                     record,
-                                    arguments: args,
+                                    arguments,
                                 };
                             }
                             _ => {
                                 // Call
-                                let args = self.parse_fn_args()?;
+                                let arguments = self.parse_fn_arguments()?;
                                 let (_, end) = self.expect_one(&Token::RightParen)?;
-                                expr = make_call(expr, args, start, end)?;
+                                expr = make_call(expr, arguments, start, end)?;
                             }
                         }
                     } else {
@@ -1675,7 +1675,7 @@ where
     fn parse_function_call_in_clause_guard(&mut self, start: u32) -> Result<(), ParseError> {
         if let Some((l_paren_start, l_paren_end)) = self.maybe_one(&Token::LeftParen) {
             if let Ok((_, end)) = self
-                .parse_fn_args()
+                .parse_fn_arguments()
                 .and(self.expect_one(&Token::RightParen))
             {
                 return parse_error(ParseErrorType::CallInClauseGuard, SrcSpan { start, end });
@@ -1861,14 +1861,15 @@ where
     ) -> Result<UntypedPattern, ParseError> {
         let (name_start, name, name_end) = self.expect_upname()?;
         let mut start = name_start;
-        let (args, spread, end) = self.parse_constructor_pattern_args(name_end, position)?;
+        let (arguments, spread, end) =
+            self.parse_constructor_pattern_arguments(name_end, position)?;
         if let Some((s, _, _)) = module {
             start = s;
         }
         Ok(Pattern::Constructor {
             location: SrcSpan { start, end },
             name_location: SrcSpan::new(name_start, name_end),
-            arguments: args,
+            arguments,
             module: module.map(|(start, n, end)| (n, SrcSpan { start, end })),
             name,
             spread,
@@ -1880,13 +1881,13 @@ where
     // examples:
     //   ( args )
     #[allow(clippy::type_complexity)]
-    fn parse_constructor_pattern_args(
+    fn parse_constructor_pattern_arguments(
         &mut self,
         upname_end: u32,
         position: PatternPosition,
     ) -> Result<(Vec<CallArg<UntypedPattern>>, Option<SrcSpan>, u32), ParseError> {
         if self.maybe_one(&Token::LeftParen).is_some() {
-            let (args, args_end_with_comma) = self.series_of_has_trailing_separator(
+            let (arguments, arguments_end_with_comma) = self.series_of_has_trailing_separator(
                 &|this| this.parse_constructor_pattern_arg(position),
                 Some(&Token::Comma),
             )?;
@@ -1897,7 +1898,7 @@ where
 
             if let Some(spread_location) = spread {
                 let _ = self.maybe_one(&Token::Comma);
-                if !args.is_empty() && !args_end_with_comma {
+                if !arguments.is_empty() && !arguments_end_with_comma {
                     self.warnings
                         .push(DeprecatedSyntaxWarning::DeprecatedRecordSpreadPattern {
                             location: spread_location,
@@ -1905,7 +1906,7 @@ where
                 }
             }
             let (_, end) = self.expect_one(&Token::RightParen)?;
-            Ok((args, spread, end))
+            Ok((arguments, spread, end))
         } else {
             Ok((vec![], None, upname_end))
         }
@@ -2039,7 +2040,7 @@ where
         let _ = self
             .expect_one(&Token::LeftParen)
             .map_err(|e| self.add_anon_function_hint(e))?;
-        let args = Parser::series_of(
+        let arguments = Parser::series_of(
             self,
             &|parser| Parser::parse_fn_param(parser, is_anon),
             Some(&Token::Comma),
@@ -2094,7 +2095,7 @@ where
             end_position,
             publicity: self.publicity(public, attributes.internal)?,
             name,
-            arguments: args,
+            arguments,
             body,
             return_type: (),
             return_annotation,
@@ -2263,9 +2264,9 @@ where
     //   expr, expr
     //   a: _, expr
     //   a: expr, _, b: _
-    fn parse_fn_args(&mut self) -> Result<Vec<ParserArg>, ParseError> {
-        let args = Parser::series_of(self, &Parser::parse_fn_arg, Some(&Token::Comma))?;
-        Ok(args)
+    fn parse_fn_arguments(&mut self) -> Result<Vec<ParserArg>, ParseError> {
+        let arguments = Parser::series_of(self, &Parser::parse_fn_argument, Some(&Token::Comma))?;
+        Ok(arguments)
     }
 
     // Parse a single function call arg
@@ -2275,7 +2276,7 @@ where
     //   expr
     //   a: _
     //   a: expr
-    fn parse_fn_arg(&mut self) -> Result<Option<ParserArg>, ParseError> {
+    fn parse_fn_argument(&mut self) -> Result<Option<ParserArg>, ParseError> {
         let label = match (self.tok0.take(), self.tok1.take()) {
             (Some((start, Token::Name { name }, _)), Some((_, Token::Colon, end))) => {
                 self.advance();
@@ -2409,8 +2410,9 @@ where
                     match Parser::maybe_upname(p) {
                         Some((c_s, c_n, c_e)) => {
                             let documentation = p.take_documentation(c_s);
-                            let (args, args_e) = Parser::parse_type_constructor_args(p)?;
-                            let end = args_e.max(c_e);
+                            let (arguments, arguments_e) =
+                                Parser::parse_type_constructor_arguments(p)?;
+                            let end = arguments_e.max(c_e);
                             Ok(Some(RecordConstructor {
                                 location: SrcSpan { start: c_s, end },
                                 name_location: SrcSpan {
@@ -2418,7 +2420,7 @@ where
                                     end: c_e,
                                 },
                                 name: c_n,
-                                arguments: args,
+                                arguments,
                                 documentation,
                                 deprecation: attributes.deprecated,
                             }))
@@ -2493,20 +2495,20 @@ where
         let (start, upname, end) = self.expect_upname()?;
         match self.maybe_one(&Token::LeftParen) {
             Some((par_s, _)) => {
-                let args =
+                let arguments =
                     Parser::series_of(self, &|p| Ok(Parser::maybe_name(p)), Some(&Token::Comma))?;
                 let (_, par_e) = self.expect_one_following_series(&Token::RightParen, "a name")?;
-                if args.is_empty() {
+                if arguments.is_empty() {
                     return parse_error(
                         ParseErrorType::TypeDefinitionNoArguments,
                         SrcSpan::new(par_s, par_e),
                     );
                 }
-                let args2 = args
+                let arguments2 = arguments
                     .into_iter()
                     .map(|(start, name, end)| (SrcSpan { start, end }, name))
                     .collect();
-                Ok((start, upname, args2, par_e, end))
+                Ok((start, upname, arguments2, par_e, end))
             }
             _ => Ok((start, upname, vec![], end, end)),
         }
@@ -2516,11 +2518,11 @@ where
     //   *no args*
     //   ()
     //   (a, b)
-    fn parse_type_constructor_args(
+    fn parse_type_constructor_arguments(
         &mut self,
     ) -> Result<(Vec<RecordConstructorArg<()>>, u32), ParseError> {
         if self.maybe_one(&Token::LeftParen).is_some() {
-            let args = Parser::series_of(
+            let arguments = Parser::series_of(
                 self,
                 &|p| match (p.tok0.take(), p.tok1.take()) {
                     (
@@ -2572,7 +2574,7 @@ where
             )?;
             let (_, end) = self
                 .expect_one_following_series(&Token::RightParen, "a constructor argument name")?;
-            Ok((args, end))
+            Ok((arguments, end))
         } else {
             Ok((vec![], 0))
         }
@@ -2626,7 +2628,7 @@ where
             Some((start, Token::Fn, _)) => {
                 self.advance();
                 let _ = self.expect_one(&Token::LeftParen)?;
-                let args =
+                let arguments =
                     Parser::series_of(self, &|x| Parser::parse_type(x), Some(&Token::Comma))?;
                 let _ = self.expect_one_following_series(&Token::RightParen, "a type")?;
                 let (arr_s, arr_e) = self.expect_one(&Token::RArrow)?;
@@ -2638,7 +2640,7 @@ where
                             end: return_.location().end,
                         },
                         return_: Box::new(return_),
-                        arguments: args,
+                        arguments,
                     }))),
                     _ => parse_error(
                         ParseErrorType::ExpectedType,
@@ -2694,9 +2696,9 @@ where
     ) -> Result<Option<TypeAst>, ParseError> {
         match self.maybe_one(&Token::LeftParen) {
             Some((par_s, _)) => {
-                let args = self.parse_types()?;
+                let arguments = self.parse_types()?;
                 let (_, par_e) = self.expect_one(&Token::RightParen)?;
-                if args.is_empty() {
+                if arguments.is_empty() {
                     return parse_error(
                         ParseErrorType::TypeConstructorNoArguments,
                         SrcSpan::new(par_s, par_e),
@@ -2710,7 +2712,7 @@ where
                     },
                     module,
                     name,
-                    arguments: args,
+                    arguments,
                 })))
             }
             _ => Ok(Some(TypeAst::Constructor(TypeAstConstructor {
@@ -3195,13 +3197,13 @@ where
     ) -> Result<Option<UntypedConstant>, ParseError> {
         match self.maybe_one(&Token::LeftParen) {
             Some((par_s, _)) => {
-                let args =
+                let arguments =
                     Parser::series_of(self, &Parser::parse_const_record_arg, Some(&Token::Comma))?;
                 let (_, par_e) = self.expect_one_following_series(
                     &Token::RightParen,
                     "a constant record argument",
                 )?;
-                if args.is_empty() {
+                if arguments.is_empty() {
                     return parse_error(
                         ParseErrorType::ConstantRecordConstructorNoArguments,
                         SrcSpan::new(par_s, par_e),
@@ -3211,7 +3213,7 @@ where
                     location: SrcSpan { start, end: par_e },
                     module,
                     name,
-                    args,
+                    arguments,
                     tag: (),
                     type_: (),
                     field_map: None,
@@ -3222,7 +3224,7 @@ where
                 location: SrcSpan { start, end },
                 module,
                 name,
-                args: vec![],
+                arguments: vec![],
                 tag: (),
                 type_: (),
                 field_map: None,
@@ -4476,15 +4478,15 @@ pub enum ParserArg {
 
 pub fn make_call(
     fun: UntypedExpr,
-    args: Vec<ParserArg>,
+    arguments: Vec<ParserArg>,
     start: u32,
     end: u32,
 ) -> Result<UntypedExpr, ParseError> {
     let mut hole_location = None;
 
-    let args = args
+    let arguments = arguments
         .into_iter()
-        .map(|a| match a {
+        .map(|argument| match argument {
             ParserArg::Arg(arg) => Ok(*arg),
             ParserArg::Hole {
                 arg_location,
@@ -4524,7 +4526,7 @@ pub fn make_call(
     let call = UntypedExpr::Call {
         location: SrcSpan { start, end },
         fun: Box::new(fun),
-        arguments: args,
+        arguments,
     };
 
     match hole_location {

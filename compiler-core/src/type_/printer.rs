@@ -163,8 +163,11 @@ impl Names {
     ) {
         match type_ {
             Type::Named {
-                module, name, args, ..
-            } if compare_arguments(args, parameters) => {
+                module,
+                name,
+                arguments,
+                ..
+            } if compare_arguments(arguments, parameters) => {
                 self.named_type_in_scope(module.clone(), name.clone(), local_alias);
             }
             Type::Named { .. } | Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => {
@@ -352,7 +355,10 @@ impl<'a> Printer<'a> {
     fn print(&mut self, type_: &Type, buffer: &mut EcoString, print_mode: PrintMode) {
         match type_ {
             Type::Named {
-                name, args, module, ..
+                name,
+                arguments,
+                module,
+                ..
             } => {
                 let (module, name) = match self.names.named_type(module, name, print_mode) {
                     NameContextInformation::Qualified(m, n) => (Some(m), n),
@@ -370,16 +376,16 @@ impl<'a> Printer<'a> {
                 }
                 buffer.push_str(name);
 
-                if !args.is_empty() {
+                if !arguments.is_empty() {
                     buffer.push('(');
-                    self.print_arguments(args, buffer, print_mode);
+                    self.print_arguments(arguments, buffer, print_mode);
                     buffer.push(')');
                 }
             }
 
-            Type::Fn { args, return_ } => {
+            Type::Fn { arguments, return_ } => {
                 buffer.push_str("fn(");
-                self.print_arguments(args, buffer, print_mode);
+                self.print_arguments(arguments, buffer, print_mode);
                 buffer.push_str(") -> ");
                 self.print(return_, buffer, print_mode);
             }
@@ -416,13 +422,13 @@ impl<'a> Printer<'a> {
 
     fn print_arguments(
         &mut self,
-        args: &[Arc<Type>],
+        arguments: &[Arc<Type>],
         type_str: &mut EcoString,
         print_mode: PrintMode,
     ) {
-        for (i, arg) in args.iter().enumerate() {
-            self.print(arg, type_str, print_mode);
-            if i < args.len() - 1 {
+        for (i, argument) in arguments.iter().enumerate() {
+            self.print(argument, type_str, print_mode);
+            if i < arguments.len() - 1 {
                 type_str.push_str(", ");
             }
         }
@@ -479,7 +485,7 @@ fn test_local_type() {
 
     let type_ = Type::Named {
         name: "Tiger".into(),
-        args: vec![],
+        arguments: vec![],
         module: "mod".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
@@ -497,7 +503,7 @@ fn test_prelude_type() {
 
     let type_ = Type::Named {
         name: "Int".into(),
-        args: vec![],
+        arguments: vec![],
         module: "gleam".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
@@ -518,7 +524,7 @@ fn test_shadowed_prelude_type() {
 
     let type_ = Type::Named {
         name: "Int".into(),
-        args: vec![],
+        arguments: vec![],
         module: "gleam".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
@@ -567,7 +573,7 @@ fn test_tuple_type() {
         elements: vec![
             Arc::new(Type::Named {
                 name: "Int".into(),
-                args: vec![],
+                arguments: vec![],
                 module: "gleam".into(),
                 publicity: crate::ast::Publicity::Public,
                 package: "".into(),
@@ -575,7 +581,7 @@ fn test_tuple_type() {
             }),
             Arc::new(Type::Named {
                 name: "String".into(),
-                args: vec![],
+                arguments: vec![],
                 module: "gleam".into(),
                 publicity: crate::ast::Publicity::Public,
                 package: "".into(),
@@ -595,10 +601,10 @@ fn test_fn_type() {
     let mut printer = Printer::new(&names);
 
     let type_ = Type::Fn {
-        args: vec![
+        arguments: vec![
             Arc::new(Type::Named {
                 name: "Int".into(),
-                args: vec![],
+                arguments: vec![],
                 module: "gleam".into(),
                 publicity: crate::ast::Publicity::Public,
                 package: "".into(),
@@ -606,7 +612,7 @@ fn test_fn_type() {
             }),
             Arc::new(Type::Named {
                 name: "String".into(),
-                args: vec![],
+                arguments: vec![],
                 module: "gleam".into(),
                 publicity: crate::ast::Publicity::Public,
                 package: "".into(),
@@ -615,7 +621,7 @@ fn test_fn_type() {
         ],
         return_: Arc::new(Type::Named {
             name: "Bool".into(),
-            args: vec![],
+            arguments: vec![],
             module: "gleam".into(),
             publicity: crate::ast::Publicity::Public,
             package: "".into(),
@@ -640,7 +646,7 @@ fn test_module_alias() {
 
     let type_ = Type::Named {
         name: "Cat".into(),
-        args: vec![],
+        arguments: vec![],
         module: "mod1".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
@@ -662,7 +668,7 @@ fn test_type_alias_and_generics() {
 
     let type_ = Type::Named {
         name: "Tiger".into(),
-        args: vec![Arc::new(Type::Var {
+        arguments: vec![Arc::new(Type::Var {
             type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: 0 })),
         })],
         module: "mod".into(),
@@ -686,7 +692,7 @@ fn test_unqualified_import_and_generic() {
 
     let type_ = Type::Named {
         name: "Cat".into(),
-        args: vec![Arc::new(Type::Var {
+        arguments: vec![Arc::new(Type::Var {
             type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: 0 })),
         })],
         module: "mod".into(),
@@ -704,7 +710,7 @@ fn nested_module() {
     let mut printer = Printer::new(&names);
     let type_ = Type::Named {
         name: "Cat".into(),
-        args: vec![],
+        arguments: vec![],
         module: "one/two/three".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
@@ -732,7 +738,7 @@ fn test_unqualified_import_and_module_alias() {
 
     let type_ = Type::Named {
         name: "Cat".into(),
-        args: vec![],
+        arguments: vec![],
         module: "mod1".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
@@ -760,7 +766,7 @@ fn test_module_imports() {
 
     let type_ = Type::Named {
         name: "Cat".into(),
-        args: vec![],
+        arguments: vec![],
         module: "mod".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
@@ -769,7 +775,7 @@ fn test_module_imports() {
 
     let typ1 = Type::Named {
         name: "Cat".into(),
-        args: vec![],
+        arguments: vec![],
         module: "mod2".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
@@ -791,7 +797,7 @@ fn test_multiple_generic_annotations() {
 
     let type_ = Type::Named {
         name: "Tiger".into(),
-        args: vec![
+        arguments: vec![
             Arc::new(Type::Var {
                 type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: 0 })),
             }),

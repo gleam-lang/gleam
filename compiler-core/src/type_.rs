@@ -64,7 +64,7 @@ pub enum Type {
         package: EcoString,
         module: EcoString,
         name: EcoString,
-        args: Vec<Arc<Type>>,
+        arguments: Vec<Arc<Type>>,
 
         /// Which variant of the types this value is, if it is known from variant inference.
         /// This allows us to permit certain operations when we know this,
@@ -98,7 +98,7 @@ pub enum Type {
     /// The type of a function. It takes arguments and returns a value.
     ///
     Fn {
-        args: Vec<Arc<Type>>,
+        arguments: Vec<Arc<Type>>,
         return_: Arc<Type>,
     },
 
@@ -133,8 +133,11 @@ impl Type {
     pub fn result_ok_type(&self) -> Option<Arc<Type>> {
         match self {
             Self::Named {
-                module, name, args, ..
-            } if "Result" == name && is_prelude_module(module) => args.first().cloned(),
+                module,
+                name,
+                arguments,
+                ..
+            } if "Result" == name && is_prelude_module(module) => arguments.first().cloned(),
             Self::Var { type_ } => type_.borrow().result_ok_type(),
             Self::Named { .. } | Self::Tuple { .. } | Type::Fn { .. } => None,
         }
@@ -143,9 +146,12 @@ impl Type {
     pub fn result_types(&self) -> Option<(Arc<Type>, Arc<Type>)> {
         match self {
             Self::Named {
-                module, name, args, ..
+                module,
+                name,
+                arguments,
+                ..
             } if "Result" == name && is_prelude_module(module) => {
-                Some((args.first().cloned()?, args.get(1).cloned()?))
+                Some((arguments.first().cloned()?, arguments.get(1).cloned()?))
             }
             Self::Var { type_ } => type_.borrow().result_types(),
             Self::Named { .. } | Self::Tuple { .. } | Type::Fn { .. } => None,
@@ -176,7 +182,9 @@ impl Type {
 
     pub fn fn_types(&self) -> Option<(Vec<Arc<Self>>, Arc<Self>)> {
         match self {
-            Self::Fn { args, return_, .. } => Some((args.clone(), return_.clone())),
+            Self::Fn {
+                arguments, return_, ..
+            } => Some((arguments.clone(), return_.clone())),
             Self::Var { type_ } => type_.borrow().fn_types(),
             _ => None,
         }
@@ -195,7 +203,7 @@ impl Type {
     /// does not lead to a type constructor.
     pub fn constructor_types(&self) -> Option<Vec<Arc<Self>>> {
         match self {
-            Self::Named { args, .. } => Some(args.clone()),
+            Self::Named { arguments, .. } => Some(arguments.clone()),
             Self::Var { type_, .. } => type_.borrow().constructor_types(),
             _ => None,
         }
@@ -210,13 +218,13 @@ impl Type {
                 name,
                 module,
                 package,
-                args,
+                arguments,
                 inferred_variant: _,
             } if package == PRELUDE_PACKAGE_NAME
                 && module == PRELUDE_MODULE_NAME
                 && name == LIST =>
             {
-                match args.as_slice() {
+                match arguments.as_slice() {
                     [inner_type] => Some(inner_type.clone()),
                     [] | [_, _, ..] => None,
                 }
@@ -231,7 +239,7 @@ impl Type {
             package: PRELUDE_PACKAGE_NAME.into(),
             module: PRELUDE_MODULE_NAME.into(),
             name: LIST.into(),
-            args: vec![inner_type],
+            arguments: vec![inner_type],
             inferred_variant: None,
         }
     }
@@ -322,8 +330,11 @@ impl Type {
     pub fn named_type_information(&self) -> Option<(EcoString, EcoString, Vec<Arc<Self>>)> {
         match self {
             Self::Named {
-                module, name, args, ..
-            } => Some((module.clone(), name.clone(), args.clone())),
+                module,
+                name,
+                arguments,
+                ..
+            } => Some((module.clone(), name.clone(), arguments.clone())),
             Self::Var { type_ } => type_.borrow().named_type_information(),
             _ => None,
         }
@@ -350,8 +361,8 @@ impl Type {
                     Arc::make_mut(element).generalise_custom_type_variant();
                 }
             }
-            Type::Fn { args, return_ } => {
-                for argument in args {
+            Type::Fn { arguments, return_ } => {
+                for argument in arguments {
                     Arc::make_mut(argument).generalise_custom_type_variant();
                 }
                 Arc::make_mut(return_).generalise_custom_type_variant();
@@ -375,7 +386,7 @@ impl Type {
     /// This function is currently only used for finding the `List` type.
     ///
     // TODO: specialise this to just List.
-    pub fn get_app_args(
+    pub fn get_app_arguments(
         &self,
         publicity: Publicity,
         package: &str,
@@ -388,20 +399,20 @@ impl Type {
             Self::Named {
                 module: m,
                 name: n,
-                args,
+                arguments,
                 ..
             } => {
-                if module == m && name == n && args.len() == arity {
-                    Some(args.clone())
+                if module == m && name == n && arguments.len() == arity {
+                    Some(arguments.clone())
                 } else {
                     None
                 }
             }
 
             Self::Var { type_ } => {
-                let args: Vec<_> = match type_.borrow().deref() {
+                let arguments: Vec<_> = match type_.borrow().deref() {
                     TypeVar::Link { type_ } => {
-                        return type_.get_app_args(
+                        return type_.get_app_arguments(
                             publicity,
                             package,
                             module,
@@ -425,12 +436,12 @@ impl Type {
                         name: name.into(),
                         package: package.into(),
                         module: module.into(),
-                        args: args.clone(),
+                        arguments: arguments.clone(),
                         publicity,
                         inferred_variant: None,
                     }),
                 };
-                Some(args)
+                Some(arguments)
             }
 
             _ => None,
@@ -444,15 +455,19 @@ impl Type {
                 ..
             } => Some(self.clone()),
 
-            Self::Named { args, .. } => args.iter().find_map(|type_| type_.find_private_type()),
+            Self::Named { arguments, .. } => {
+                arguments.iter().find_map(|type_| type_.find_private_type())
+            }
 
             Self::Tuple { elements, .. } => {
                 elements.iter().find_map(|type_| type_.find_private_type())
             }
 
-            Self::Fn { return_, args, .. } => return_
+            Self::Fn {
+                return_, arguments, ..
+            } => return_
                 .find_private_type()
-                .or_else(|| args.iter().find_map(|type_| type_.find_private_type())),
+                .or_else(|| arguments.iter().find_map(|type_| type_.find_private_type())),
 
             Self::Var { type_, .. } => match type_.borrow().deref() {
                 TypeVar::Unbound { .. } => None,
@@ -468,15 +483,21 @@ impl Type {
         match self {
             Self::Named { publicity, .. } if publicity.is_internal() => Some(self.clone()),
 
-            Self::Named { args, .. } => args.iter().find_map(|type_| type_.find_internal_type()),
+            Self::Named { arguments, .. } => arguments
+                .iter()
+                .find_map(|type_| type_.find_internal_type()),
 
             Self::Tuple { elements, .. } => {
                 elements.iter().find_map(|type_| type_.find_internal_type())
             }
 
-            Self::Fn { return_, args, .. } => return_
-                .find_internal_type()
-                .or_else(|| args.iter().find_map(|type_| type_.find_internal_type())),
+            Self::Fn {
+                return_, arguments, ..
+            } => return_.find_internal_type().or_else(|| {
+                arguments
+                    .iter()
+                    .find_map(|type_| type_.find_internal_type())
+            }),
 
             Self::Var { type_, .. } => match type_.borrow().deref() {
                 TypeVar::Unbound { .. } | TypeVar::Generic { .. } => None,
@@ -487,7 +508,7 @@ impl Type {
 
     pub fn fn_arity(&self) -> Option<usize> {
         match self {
-            Self::Fn { args, .. } => Some(args.len()),
+            Self::Fn { arguments, .. } => Some(arguments.len()),
             _ => None,
         }
     }
@@ -512,7 +533,7 @@ impl Type {
                     package,
                     module,
                     name,
-                    args,
+                    arguments,
                     inferred_variant: _,
                 },
                 Type::Named {
@@ -520,7 +541,7 @@ impl Type {
                     package: other_package,
                     module: other_module,
                     name: other_name,
-                    args: other_args,
+                    arguments: other_arguments,
                     inferred_variant: _,
                 },
             ) => {
@@ -528,7 +549,7 @@ impl Type {
                     && package == other_package
                     && module == other_module
                     && name == other_name
-                    && args == other_args
+                    && arguments == other_arguments
             }
 
             (Type::Fn { .. }, Type::Named { .. } | Type::Tuple { .. }) => false,
@@ -536,16 +557,16 @@ impl Type {
                 type_.as_ref().borrow().same_as_other_type(one)
             }
             (
-                Type::Fn { args, return_ },
+                Type::Fn { arguments, return_ },
                 Type::Fn {
-                    args: other_args,
+                    arguments: other_arguments,
                     return_: other_return,
                 },
             ) => {
-                args.len() == other_args.len()
-                    && args
+                arguments.len() == other_arguments.len()
+                    && arguments
                         .iter()
-                        .zip(other_args)
+                        .zip(other_arguments)
                         .all(|(one, other)| one.same_as(other))
                     && return_.same_as(other_return)
             }
@@ -1468,11 +1489,11 @@ impl ValueConstructor {
 
 pub type TypedCallArg = CallArg<TypedExpr>;
 
-fn assert_no_labelled_arguments<A>(args: &[CallArg<A>]) -> Result<(), Error> {
-    for arg in args {
-        if let Some(label) = &arg.label {
+fn assert_no_labelled_arguments<A>(arguments: &[CallArg<A>]) -> Result<(), Error> {
+    for argument in arguments {
+        if let Some(label) = &argument.label {
             return Err(Error::UnexpectedLabelledArg {
-                location: arg.location,
+                location: argument.location,
                 label: label.clone(),
             });
         }
@@ -1509,16 +1530,16 @@ fn unify_unbound_type(type_: Arc<Type>, own_id: u64) -> Result<(), UnifyError> {
     }
 
     match type_.deref() {
-        Type::Named { args, .. } => {
-            for arg in args {
-                unify_unbound_type(arg.clone(), own_id)?
+        Type::Named { arguments, .. } => {
+            for argument in arguments {
+                unify_unbound_type(argument.clone(), own_id)?
             }
             Ok(())
         }
 
-        Type::Fn { args, return_ } => {
-            for arg in args {
-                unify_unbound_type(arg.clone(), own_id)?;
+        Type::Fn { arguments, return_ } => {
+            for argument in arguments {
+                unify_unbound_type(argument.clone(), own_id)?;
             }
             unify_unbound_type(return_.clone(), own_id)
         }
@@ -1546,32 +1567,32 @@ fn match_fun_type(
             }
 
             TypeVar::Unbound { .. } => {
-                let args: Vec<_> = (0..arity).map(|_| environment.new_unbound_var()).collect();
+                let arguments: Vec<_> = (0..arity).map(|_| environment.new_unbound_var()).collect();
                 let return_ = environment.new_unbound_var();
-                Some((args, return_))
+                Some((arguments, return_))
             }
 
             TypeVar::Generic { .. } => None,
         };
 
-        if let Some((args, return_)) = new_value {
+        if let Some((arguments, return_)) = new_value {
             *type_.borrow_mut() = TypeVar::Link {
-                type_: fn_(args.clone(), return_.clone()),
+                type_: fn_(arguments.clone(), return_.clone()),
             };
-            return Ok((args, return_));
+            return Ok((arguments, return_));
         }
     }
 
-    if let Type::Fn { args, return_ } = type_.deref() {
-        return if args.len() != arity {
+    if let Type::Fn { arguments, return_ } = type_.deref() {
+        return if arguments.len() != arity {
             Err(MatchFunTypeError::IncorrectArity {
-                expected: args.len(),
+                expected: arguments.len(),
                 given: arity,
-                args: args.clone(),
+                arguments: arguments.clone(),
                 return_type: return_.clone(),
             })
         } else {
-            Ok((args.clone(), return_.clone()))
+            Ok((arguments.clone(), return_.clone()))
         };
     }
 
@@ -1593,22 +1614,28 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
             module,
             package,
             name,
-            args,
+            arguments,
             inferred_variant: _,
         } => {
-            let args = args.iter().map(|type_| generalise(type_.clone())).collect();
+            let arguments = arguments
+                .iter()
+                .map(|type_| generalise(type_.clone()))
+                .collect();
             Arc::new(Type::Named {
                 publicity: *publicity,
                 module: module.clone(),
                 package: package.clone(),
                 name: name.clone(),
-                args,
+                arguments,
                 inferred_variant: None,
             })
         }
 
-        Type::Fn { args, return_ } => fn_(
-            args.iter().map(|type_| generalise(type_.clone())).collect(),
+        Type::Fn { arguments, return_ } => fn_(
+            arguments
+                .iter()
+                .map(|type_| generalise(type_.clone()))
+                .collect(),
             generalise(return_.clone()),
         ),
 

@@ -841,7 +841,7 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         fun: &'ast TypedExpr,
-        args: &'ast [TypedCallArg],
+        arguments: &'ast [TypedCallArg],
     ) {
         let call_range = self.edits.src_span_to_lsp_range(*location);
         if !within(self.params.range, call_range) {
@@ -853,7 +853,7 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
             self.selected_call = Some(SelectedCall {
                 location,
                 field_map,
-                arguments: args.iter().map(Self::empty_argument).collect(),
+                arguments: arguments.iter().map(Self::empty_argument).collect(),
                 kind: SelectedCallKind::Value,
             })
         }
@@ -864,7 +864,7 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
         // we're inside a nested call.
         let previous = self.use_right_hand_side_location;
         self.use_right_hand_side_location = None;
-        ast::visit::visit_typed_expr_call(self, location, type_, fun, args);
+        ast::visit::visit_typed_expr_call(self, location, type_, fun, arguments);
         self.use_right_hand_side_location = previous;
     }
 
@@ -1225,11 +1225,19 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
-        args: &'ast [TypedArg],
+        arguments: &'ast [TypedArg],
         body: &'ast Vec1<TypedStatement>,
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
-        ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
+        ast::visit::visit_typed_expr_fn(
+            self,
+            location,
+            type_,
+            kind,
+            arguments,
+            body,
+            return_annotation,
+        );
 
         // If the function doesn't have a head, we can't annotate it
         let location = match kind {
@@ -1247,7 +1255,7 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
         }
 
         // Annotate each argument separately
-        for argument in args.iter() {
+        for argument in arguments.iter() {
             // Don't annotate the argument if it's already annotated
             if argument.annotation.is_some() {
                 continue;
@@ -1382,19 +1390,27 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
-        args: &'ast [TypedArg],
+        arguments: &'ast [TypedArg],
         body: &'ast Vec1<TypedStatement>,
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
-        for arg in args {
-            if let Some(annotation) = &arg.annotation {
+        for argument in arguments {
+            if let Some(annotation) = &argument.annotation {
                 self.visit_type_ast(annotation);
             }
         }
         if let Some(return_) = return_annotation {
             self.visit_type_ast(return_);
         }
-        ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
+        ast::visit::visit_typed_expr_fn(
+            self,
+            location,
+            type_,
+            kind,
+            arguments,
+            body,
+            return_annotation,
+        );
     }
 
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
@@ -1620,19 +1636,27 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
-        args: &'ast [TypedArg],
+        arguments: &'ast [TypedArg],
         body: &'ast Vec1<TypedStatement>,
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
-        for arg in args {
-            if let Some(annotation) = &arg.annotation {
+        for argument in arguments {
+            if let Some(annotation) = &argument.annotation {
                 self.visit_type_ast(annotation);
             }
         }
         if let Some(return_) = return_annotation {
             self.visit_type_ast(return_);
         }
-        ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
+        ast::visit::visit_typed_expr_fn(
+            self,
+            location,
+            type_,
+            kind,
+            arguments,
+            body,
+            return_annotation,
+        );
     }
 
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
@@ -1857,19 +1881,27 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
-        args: &'ast [TypedArg],
+        arguments: &'ast [TypedArg],
         body: &'ast Vec1<TypedStatement>,
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
-        for arg in args {
-            if let Some(annotation) = &arg.annotation {
+        for argument in arguments {
+            if let Some(annotation) = &argument.annotation {
                 self.visit_type_ast(annotation);
             }
         }
         if let Some(return_) = return_annotation {
             self.visit_type_ast(return_);
         }
-        ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
+        ast::visit::visit_typed_expr_fn(
+            self,
+            location,
+            type_,
+            kind,
+            arguments,
+            body,
+            return_annotation,
+        );
     }
 
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
@@ -2066,19 +2098,27 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
-        args: &'ast [TypedArg],
+        arguments: &'ast [TypedArg],
         body: &'ast Vec1<TypedStatement>,
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
-        for arg in args {
-            if let Some(annotation) = &arg.annotation {
+        for argument in arguments {
+            if let Some(annotation) = &argument.annotation {
                 self.visit_type_ast(annotation);
             }
         }
         if let Some(return_) = return_annotation {
             self.visit_type_ast(return_);
         }
-        ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
+        ast::visit::visit_typed_expr_fn(
+            self,
+            location,
+            type_,
+            kind,
+            arguments,
+            body,
+            return_annotation,
+        );
     }
 
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
@@ -2228,7 +2268,7 @@ impl<'a> ConvertFromUse<'a> {
             return vec![];
         };
 
-        let TypedExpr::Call { args, fun, .. } = use_.call.as_ref() else {
+        let TypedExpr::Call { arguments, fun, .. } = use_.call.as_ref() else {
             return vec![];
         };
 
@@ -2244,9 +2284,9 @@ impl<'a> ConvertFromUse<'a> {
         //     list.fold(over: list, from: 1, with: fn(acc, item) { ... })
         //                                    ^^^^^ We cannot forget to add this label back!
         //
-        let callback_label = if args.iter().any(|arg| arg.label.is_some()) {
+        let callback_label = if arguments.iter().any(|arg| arg.label.is_some()) {
             fun.field_map()
-                .and_then(|field_map| field_map.missing_labels(args).last().cloned())
+                .and_then(|field_map| field_map.missing_labels(arguments).last().cloned())
                 .map(|label| eco_format!("{label}: "))
                 .unwrap_or(EcoString::from(""))
         } else {
@@ -2257,7 +2297,7 @@ impl<'a> ConvertFromUse<'a> {
         // the following function: `wibble(a a, b b) { todo }`
         // And use it like this: `use <- wibble(b: 1)`, the first argument `a`
         // is going to be the use callback, not the last one!
-        let use_callback = args.iter().find(|arg| arg.is_use_implicit_callback());
+        let use_callback = arguments.iter().find(|arg| arg.is_use_implicit_callback());
         let Some(CallArg {
             implicit: Some(ImplicitCallArgOrigin::Use),
             value: TypedExpr::Fn { body, type_, .. },
@@ -2288,9 +2328,9 @@ impl<'a> ConvertFromUse<'a> {
         });
 
         let use_line_end = use_.right_hand_side_location.end;
-        let use_rhs_function_has_some_explicit_args = args
+        let use_rhs_function_has_some_explicit_arguments = arguments
             .iter()
-            .filter(|arg| !arg.is_use_implicit_callback())
+            .filter(|argument| !argument.is_use_implicit_callback())
             .peekable()
             .peek()
             .is_some();
@@ -2301,7 +2341,10 @@ impl<'a> ConvertFromUse<'a> {
             .get(use_line_end as usize - 1..use_line_end as usize)
             == Some(")");
 
-        let last_explicit_arg = args.iter().filter(|arg| !arg.is_implicit()).next_back();
+        let last_explicit_arg = arguments
+            .iter()
+            .filter(|argument| !argument.is_implicit())
+            .next_back();
         let last_arg_end = last_explicit_arg.map_or(use_line_end - 1, |arg| arg.location.end);
 
         // This is the piece of code between the end of the last argument and
@@ -2338,7 +2381,8 @@ impl<'a> ConvertFromUse<'a> {
                 // If the function on the rhs of use has other orguments besides
                 // the implicit fn expression then we need to put a comma after
                 // the last argument.
-                if use_rhs_function_has_some_explicit_args && !use_rhs_has_comma_after_last_argument
+                if use_rhs_function_has_some_explicit_arguments
+                    && !use_rhs_has_comma_after_last_argument
                 {
                     format!(", {callback_start}")
                 } else if needs_space_before_callback {
@@ -2431,7 +2475,7 @@ pub struct ConvertToUse<'a> {
 struct CallLocations {
     call_span: SrcSpan,
     called_function_span: SrcSpan,
-    callback_args_span: Option<SrcSpan>,
+    callback_arguments_span: Option<SrcSpan>,
     arg_before_callback_span: Option<SrcSpan>,
     callback_body_span: SrcSpan,
 }
@@ -2456,7 +2500,7 @@ impl<'a> ConvertToUse<'a> {
         let Some(CallLocations {
             call_span,
             called_function_span,
-            callback_args_span,
+            callback_arguments_span,
             arg_before_callback_span,
             callback_body_span,
         }) = self.selected_call
@@ -2471,11 +2515,15 @@ impl<'a> ConvertToUse<'a> {
 
         // First we move the callback arguments to the left hand side of the
         // call and add the `use` keyword.
-        let left_hand_side_text = if let Some(args_location) = callback_args_span {
-            let args_start = args_location.start as usize;
-            let args_end = args_location.end as usize;
-            let args_text = self.module.code.get(args_start..args_end).expect("fn args");
-            format!("use {args_text} <- ")
+        let left_hand_side_text = if let Some(arguments_location) = callback_arguments_span {
+            let arguments_start = arguments_location.start as usize;
+            let arguments_end = arguments_location.end as usize;
+            let arguments_text = self
+                .module
+                .code
+                .get(arguments_start..arguments_end)
+                .expect("fn args");
+            format!("use {arguments_text} <- ")
         } else {
             "use <- ".into()
         };
@@ -2554,7 +2602,7 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToUse<'ast> {
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
-        args: &'ast [TypedArg],
+        arguments: &'ast [TypedArg],
         body: &'ast Vec1<TypedStatement>,
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
@@ -2567,7 +2615,15 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToUse<'ast> {
             }
         }
 
-        ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
+        ast::visit::visit_typed_expr_fn(
+            self,
+            location,
+            type_,
+            kind,
+            arguments,
+            body,
+            return_annotation,
+        );
     }
 
     fn visit_typed_expr_block(
@@ -2602,7 +2658,7 @@ fn turn_statement_into_use(statement: &TypedStatement) -> Option<CallLocations> 
 
 fn turn_expression_into_use(expr: &TypedExpr) -> Option<CallLocations> {
     let TypedExpr::Call {
-        args,
+        arguments,
         location: call_span,
         fun: called_function,
         ..
@@ -2616,22 +2672,22 @@ fn turn_expression_into_use(expr: &TypedExpr) -> Option<CallLocations> {
     // in which they are written by the user. Since the rest of the code relies
     // on their order in the written code we first have to sort them by their
     // source position.
-    let args = args
+    let arguments = arguments
         .iter()
-        .sorted_by_key(|arg| arg.location.start)
+        .sorted_by_key(|argument| argument.location.start)
         .collect_vec();
 
     let CallArg {
         value: last_arg,
         implicit: None,
         ..
-    } = args.last()?
+    } = arguments.last()?
     else {
         return None;
     };
 
     let TypedExpr::Fn {
-        args: callback_args,
+        arguments: callback_arguments,
         body,
         ..
     } = last_arg
@@ -2639,13 +2695,15 @@ fn turn_expression_into_use(expr: &TypedExpr) -> Option<CallLocations> {
         return None;
     };
 
-    let callback_args_span = match (callback_args.first(), callback_args.last()) {
+    let callback_arguments_span = match (callback_arguments.first(), callback_arguments.last()) {
         (Some(first), Some(last)) => Some(first.location.merge(&last.location)),
         _ => None,
     };
 
-    let arg_before_callback_span = if args.len() >= 2 {
-        args.get(args.len() - 2).map(|call_arg| call_arg.location)
+    let arg_before_callback_span = if arguments.len() >= 2 {
+        arguments
+            .get(arguments.len() - 2)
+            .map(|call_arg| call_arg.location)
     } else {
         None
     };
@@ -2655,7 +2713,7 @@ fn turn_expression_into_use(expr: &TypedExpr) -> Option<CallLocations> {
     Some(CallLocations {
         call_span: *call_span,
         called_function_span: called_function.location(),
-        callback_args_span,
+        callback_arguments_span,
         arg_before_callback_span,
         callback_body_span,
     })
@@ -3014,7 +3072,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
-        args: &'ast [TypedArg],
+        arguments: &'ast [TypedArg],
         body: &'ast Vec1<TypedStatement>,
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
@@ -3025,7 +3083,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
                 location,
                 type_,
                 kind,
-                args,
+                arguments,
                 body,
                 return_annotation,
             );
@@ -3047,7 +3105,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
                 location,
                 type_,
                 kind,
-                args,
+                arguments,
                 body,
                 return_annotation,
             );
@@ -3215,9 +3273,9 @@ fn can_be_constant(
         }
 
         // Extract record types as long as arguments can be constant
-        TypedExpr::Call { args, fun, .. } => {
+        TypedExpr::Call { arguments, fun, .. } => {
             fun.is_record_builder()
-                && args
+                && arguments
                     .iter()
                     .all(|arg| can_be_constant(module, &arg.value, module_constants))
         }
@@ -3537,23 +3595,31 @@ impl<'ast> ast::visit::Visit<'ast> for ExpandFunctionCapture<'ast> {
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
-        args: &'ast [TypedArg],
+        arguments: &'ast [TypedArg],
         body: &'ast Vec1<TypedStatement>,
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
         let fn_range = self.edits.src_span_to_lsp_range(*location);
         if within(self.params.range, fn_range) && kind.is_capture() {
-            if let [arg] = args {
+            if let [argument] = arguments {
                 self.function_capture_data = Some(FunctionCaptureData {
                     function_span: *location,
-                    hole_span: arg.location,
-                    hole_type: arg.type_.clone(),
+                    hole_span: argument.location,
+                    hole_type: argument.type_.clone(),
                     reserved_names: VariablesNames::from_statements(body),
                 });
             }
         }
 
-        ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation)
+        ast::visit::visit_typed_expr_fn(
+            self,
+            location,
+            type_,
+            kind,
+            arguments,
+            body,
+            return_annotation,
+        )
     }
 }
 
@@ -3751,7 +3817,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast> {
             package: STDLIB_PACKAGE_NAME.into(),
             module: DECODE_MODULE.into(),
             name: "Decoder".into(),
-            args: vec![],
+            arguments: vec![],
             inferred_variant: None,
         });
 
@@ -4148,7 +4214,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast> {
             package: JSON_PACKAGE_NAME.into(),
             module: JSON_MODULE.into(),
             name: "Json".into(),
-            args: vec![],
+            arguments: vec![],
             inferred_variant: None,
         });
 
@@ -4685,7 +4751,7 @@ where
         }
 
         pattern.push('(');
-        let args = (0..*constructor_arity as u32)
+        let arguments = (0..*constructor_arity as u32)
             .map(|i| match index_to_label.get(&i) {
                 Some(label) => eco_format!("{label}:"),
                 None => match arguments_types.get(i as usize) {
@@ -4695,7 +4761,7 @@ where
             })
             .join(", ");
 
-        pattern.push_str(&args);
+        pattern.push_str(&arguments);
         pattern.push(')');
         Some(pattern)
     }
@@ -4742,7 +4808,7 @@ where
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
-        args: &'ast [TypedArg],
+        arguments: &'ast [TypedArg],
         body: &'ast Vec1<TypedStatement>,
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
@@ -4753,13 +4819,13 @@ where
             return;
         }
 
-        for arg in args {
+        for argument in arguments {
             // If the cursor is placed on one of the arguments, then we can try
             // and generate code for that one.
-            let arg_range = self.edits.src_span_to_lsp_range(arg.location);
+            let arg_range = self.edits.src_span_to_lsp_range(argument.location);
             if within(self.params.range, arg_range) {
                 self.selected_value = Some(PatternMatchedValue::FunctionArgument {
-                    arg,
+                    arg: argument,
                     first_statement: body.first(),
                     function_range,
                 });
@@ -4770,7 +4836,15 @@ where
         // If the cursor is not on any of the function arguments then we keep
         // exploring the function body as we might want to destructure the
         // argument of an expression function!
-        ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
+        ast::visit::visit_typed_expr_fn(
+            self,
+            location,
+            type_,
+            kind,
+            arguments,
+            body,
+            return_annotation,
+        );
     }
 
     fn visit_typed_assignment(&mut self, assignment: &'ast TypedAssignment) {
@@ -5071,18 +5145,18 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         fun: &'ast TypedExpr,
-        args: &'ast [TypedCallArg],
+        arguments: &'ast [TypedCallArg],
     ) {
         // If the function being called is invalid we need to generate a
         // function that has the proper labels.
         let fun_range = self.edits.src_span_to_lsp_range(fun.location());
 
         if within(self.params.range, fun_range) && fun.is_invalid() {
-            if labels_are_correct(args) {
-                self.try_save_function_to_generate(fun.location(), &fun.type_(), Some(args));
+            if labels_are_correct(arguments) {
+                self.try_save_function_to_generate(fun.location(), &fun.type_(), Some(arguments));
             }
         } else {
-            ast::visit::visit_typed_expr_call(self, location, type_, fun, args);
+            ast::visit::visit_typed_expr_call(self, location, type_, fun, arguments);
         }
     }
 }
@@ -5167,19 +5241,21 @@ enum Argument<'a> {
 impl<'a> Arguments<'a> {
     fn get(&self, index: usize) -> Option<Argument<'a>> {
         match self {
-            Arguments::Patterns(call_args) => call_args.get(index).map(Argument::Pattern),
-            Arguments::Expressions(call_args) => call_args.get(index).map(Argument::Expression),
+            Arguments::Patterns(call_arguments) => call_arguments.get(index).map(Argument::Pattern),
+            Arguments::Expressions(call_arguments) => {
+                call_arguments.get(index).map(Argument::Expression)
+            }
         }
     }
 
     fn types(&self) -> Vec<Arc<Type>> {
         match self {
-            Arguments::Expressions(call_args) => call_args
+            Arguments::Expressions(call_arguments) => call_arguments
                 .iter()
                 .map(|argument| argument.value.type_())
                 .collect_vec(),
 
-            Arguments::Patterns(call_args) => call_args
+            Arguments::Patterns(call_arguments) => call_arguments
                 .iter()
                 .map(|argument| argument.value.type_())
                 .collect_vec(),
@@ -5399,21 +5475,21 @@ where
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         fun: &'ast TypedExpr,
-        args: &'ast [TypedCallArg],
+        arguments: &'ast [TypedCallArg],
     ) {
         // If the function being called is invalid we need to generate a
         // function that has the proper labels.
         let fun_range = src_span_to_lsp_range(fun.location(), self.line_numbers);
         if within(self.params.range, fun_range) && fun.is_invalid() {
-            if labels_are_correct(args) {
+            if labels_are_correct(arguments) {
                 self.try_save_variant_to_generate(
                     fun.location(),
                     &fun.type_(),
-                    Some(Arguments::Expressions(args)),
+                    Some(Arguments::Expressions(arguments)),
                 );
             }
         } else {
-            ast::visit::visit_typed_expr_call(self, location, type_, fun, args);
+            ast::visit::visit_typed_expr_call(self, location, type_, fun, arguments);
         }
     }
 
@@ -5465,12 +5541,12 @@ where
 #[must_use]
 /// Checks the labels in the given arguments are correct: that is there's no
 /// duplicate labels and all labelled arguments come after the unlabelled ones.
-fn labels_are_correct<A>(args: &[CallArg<A>]) -> bool {
+fn labels_are_correct<A>(arguments: &[CallArg<A>]) -> bool {
     let mut labelled_arg_found = false;
     let mut used_labels = HashSet::new();
 
-    for arg in args {
-        match &arg.label {
+    for argument in arguments {
+        match &argument.label {
             // Labels are invalid if there's duplicate ones or if an unlabelled
             // argument comes after a labelled one.
             Some(label) if used_labels.contains(label) => return false,
@@ -6102,9 +6178,9 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToPipe<'ast> {
         location: &'ast SrcSpan,
         _type_: &'ast Arc<Type>,
         fun: &'ast TypedExpr,
-        args: &'ast [TypedCallArg],
+        arguments: &'ast [TypedCallArg],
     ) {
-        if args.iter().any(|arg| arg.is_capture_hole()) {
+        if arguments.iter().any(|arg| arg.is_capture_hole()) {
             return;
         }
 
@@ -6114,7 +6190,8 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToPipe<'ast> {
         if self.visiting_use_call {
             self.visiting_use_call = false;
             ast::visit::visit_typed_expr(self, fun);
-            args.iter()
+            arguments
+                .iter()
                 .for_each(|arg| ast::visit::visit_typed_call_arg(self, arg));
             return;
         }
@@ -6136,7 +6213,7 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToPipe<'ast> {
         // // ^^^^^^^^^^^^^ pipe the first argument if I'm here
         // //                ^^^ pipe the second argument if I'm here
         // ```
-        let argument_to_pipe = args
+        let argument_to_pipe = arguments
             .iter()
             .enumerate()
             .find_map(|(position, arg)| {
@@ -6147,7 +6224,7 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToPipe<'ast> {
                     None
                 }
             })
-            .or_else(|| args.first().map(|arg| (0, arg)));
+            .or_else(|| arguments.first().map(|argument| (0, argument)));
 
         // If we're not hovering over any of the arguments _or_ there's no
         // argument to extract at all we just return, there's nothing we can do
@@ -6162,7 +6239,9 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToPipe<'ast> {
             call: *location,
             position,
             arg,
-            next_arg: args.get(position + 1).map(|arg| arg.location),
+            next_arg: arguments
+                .get(position + 1)
+                .map(|argument| argument.location),
         })
     }
 
@@ -6451,7 +6530,7 @@ impl<'a> FillUnusedFields<'a> {
                 names.add_used_name(label.clone());
             }
 
-            let positional_args = positional
+            let positional_arguments = positional
                 .iter()
                 .map(|type_| names.generate_name_from_type(type_))
                 .join(", ");
@@ -6464,24 +6543,24 @@ impl<'a> FillUnusedFields<'a> {
             // final positional argument we're adding to separate it from the ones that
             // are going to come after.
             let has_arguments_after = last_argument_end.is_some() || !labelled.is_empty();
-            let positional_args = if has_arguments_after {
-                format!("{positional_args}, ")
+            let positional_arguments = if has_arguments_after {
+                format!("{positional_arguments}, ")
             } else {
-                positional_args
+                positional_arguments
             };
 
-            self.edits.insert(insert_at, positional_args);
+            self.edits.insert(insert_at, positional_arguments);
         }
 
         if !labelled.is_empty() {
             // If there's labelled arguments to add, we replace the existing spread
             // with the arguments to be added. This way commas and all should already
             // be correct.
-            let labelled_args = labelled
+            let labelled_arguments = labelled
                 .iter()
                 .map(|(label, _)| format!("{label}:"))
                 .join(", ");
-            self.edits.replace(spread_location, labelled_args);
+            self.edits.replace(spread_location, labelled_arguments);
         } else if let Some(delete_start) = last_argument_end {
             // However, if there's no labelled arguments to insert we still need
             // to delete the entire spread: we start deleting from the end of the
@@ -6693,7 +6772,7 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveEchos<'ast> {
         _location: &'ast SrcSpan,
         _type_: &'ast Arc<Type>,
         _kind: &'ast FunctionLiteralKind,
-        _args: &'ast [TypedArg],
+        _arguments: &'ast [TypedArg],
         body: &'ast Vec1<TypedStatement>,
         _return_annotation: &'ast Option<ast::TypeAst>,
     ) {

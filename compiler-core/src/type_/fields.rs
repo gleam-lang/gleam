@@ -44,35 +44,35 @@ impl FieldMap {
     ///
     pub fn reorder<A>(
         &self,
-        args: &mut Vec<CallArg<A>>,
+        arguments: &mut Vec<CallArg<A>>,
         location: SrcSpan,
         context: IncorrectArityContext,
     ) -> Result<(), Error> {
         let mut labelled_arguments_given = false;
         let mut seen_labels = HashSet::new();
         let mut unknown_labels = Vec::new();
-        let number_of_arguments = args.len();
+        let number_of_arguments = arguments.len();
 
-        if self.arity as usize != args.len() {
+        if self.arity as usize != arguments.len() {
             return Err(Error::IncorrectArity {
-                labels: self.missing_labels(args),
+                labels: self.missing_labels(arguments),
                 location,
                 context,
                 expected: self.arity as usize,
-                given: args.len(),
+                given: arguments.len(),
             });
         }
 
-        for arg in args.iter() {
-            match &arg.label {
+        for argument in arguments.iter() {
+            match &argument.label {
                 Some(_) => {
                     labelled_arguments_given = true;
                 }
 
                 None => {
-                    if labelled_arguments_given && !arg.is_implicit() {
+                    if labelled_arguments_given && !argument.is_implicit() {
                         return Err(Error::PositionalArgumentAfterLabelled {
-                            location: arg.location,
+                            location: argument.location,
                         });
                     }
                 }
@@ -85,25 +85,25 @@ impl FieldMap {
         // We iterate the argument in reverse order, because we have to remove elements
         // from the `args` list quite a lot, and removing from the end of a list is more
         // efficient than removing from the beginning or the middle.
-        let mut i = args.len();
+        let mut i = arguments.len();
         while i > 0 {
             i -= 1;
-            let (label, &location) = match &args.get(i).expect("Field indexing to get label").label
-            {
-                // A labelled argument, we may need to reposition it
-                Some(l) => (
-                    l,
-                    &args
-                        .get(i)
-                        .expect("Indexing in labelled field reordering")
-                        .location,
-                ),
+            let (label, &location) =
+                match &arguments.get(i).expect("Field indexing to get label").label {
+                    // A labelled argument, we may need to reposition it
+                    Some(l) => (
+                        l,
+                        &arguments
+                            .get(i)
+                            .expect("Indexing in labelled field reordering")
+                            .location,
+                    ),
 
-                // Not a labelled argument
-                None => {
-                    continue;
-                }
-            };
+                    // Not a labelled argument
+                    None => {
+                        continue;
+                    }
+                };
 
             let position = match self.fields.get(label) {
                 None => {
@@ -124,13 +124,13 @@ impl FieldMap {
 
             // Add this argument to the `labelled_arguments` map, and remove if from the
             // existing arguments list. It will be reinserted later in the correct index
-            let _ = labelled_arguments.insert(position as usize, args.remove(i));
+            let _ = labelled_arguments.insert(position as usize, arguments.remove(i));
         }
 
         // The labelled arguments must be reinserted in order
         for i in 0..number_of_arguments {
-            if let Some(arg) = labelled_arguments.remove(&i) {
-                args.insert(i, arg);
+            if let Some(argument) = labelled_arguments.remove(&i) {
+                arguments.insert(i, argument);
             }
         }
 
@@ -158,7 +158,7 @@ impl FieldMap {
     /// wibble(1, label3: 2) // -> unused labels: [label2]
     /// ```
     ///
-    pub fn missing_labels<A>(&self, args: &[CallArg<A>]) -> Vec<EcoString> {
+    pub fn missing_labels<A>(&self, arguments: &[CallArg<A>]) -> Vec<EcoString> {
         // We need to know how many positional arguments are in the function
         // arguments. That's given by the position of the first labelled
         // argument; if the first label argument is third, then we know the
@@ -170,12 +170,12 @@ impl FieldMap {
         // We need to count how many positional arguments were actually supplied
         // in the call, to remove the corresponding labelled arguments that have
         // been taken by any positional argument.
-        let given_positional_arguments = args
+        let given_positional_arguments = arguments
             .iter()
             .filter(|argument| argument.label.is_none() && !argument.is_use_implicit_callback())
             .count();
 
-        let explicit_labels = args
+        let explicit_labels = arguments
             .iter()
             .filter_map(|argument| argument.label.as_ref())
             .collect::<HashSet<&EcoString>>();

@@ -956,8 +956,8 @@ pub enum Warning {
     TodoOrPanicUsedAsFunction {
         kind: TodoOrPanic,
         location: SrcSpan,
-        args_location: Option<SrcSpan>,
-        args: usize,
+        arguments_location: Option<SrcSpan>,
+        arguments: usize,
     },
 
     UnreachableCodeAfterPanic {
@@ -1430,7 +1430,7 @@ pub enum MatchFunTypeError {
     IncorrectArity {
         expected: usize,
         given: usize,
-        args: Vec<Arc<Type>>,
+        arguments: Vec<Arc<Type>>,
         return_type: Arc<Type>,
     },
     NotFn {

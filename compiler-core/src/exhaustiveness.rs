@@ -779,9 +779,12 @@ impl Variable {
             }
 
             Type::Named {
-                module, name, args, ..
+                module,
+                name,
+                arguments,
+                ..
             } if is_prelude_module(module) && name == "List" => BranchMode::List {
-                inner_type: args.first().expect("list has a type argument").clone(),
+                inner_type: arguments.first().expect("list has a type argument").clone(),
             },
 
             Type::Tuple { elements } => BranchMode::Tuple {
@@ -791,14 +794,14 @@ impl Variable {
             Type::Named {
                 module,
                 name,
-                args,
+                arguments,
                 inferred_variant,
                 ..
             } => {
                 let constructors = ConstructorSpecialiser::specialise_constructors(
                     env.get_constructors_for_type(module, name)
                         .expect("Custom type variants must exist"),
-                    args.as_slice(),
+                    arguments.as_slice(),
                     &env.current_module,
                     module,
                 );
@@ -2638,19 +2641,25 @@ impl ConstructorSpecialiser {
                 package,
                 module,
                 name,
-                args,
+                arguments,
                 inferred_variant,
             } => Type::Named {
                 publicity: *publicity,
                 package: package.clone(),
                 module: module.clone(),
                 name: name.clone(),
-                args: args.iter().map(|a| self.specialise_type(a)).collect(),
+                arguments: arguments
+                    .iter()
+                    .map(|argument| self.specialise_type(argument))
+                    .collect(),
                 inferred_variant: *inferred_variant,
             },
 
-            Type::Fn { args, return_ } => Type::Fn {
-                args: args.iter().map(|a| self.specialise_type(a)).collect(),
+            Type::Fn { arguments, return_ } => Type::Fn {
+                arguments: arguments
+                    .iter()
+                    .map(|argument| self.specialise_type(argument))
+                    .collect(),
                 return_: return_.clone(),
             },
 

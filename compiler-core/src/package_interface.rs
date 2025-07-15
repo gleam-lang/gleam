@@ -472,7 +472,7 @@ impl ModuleInterface {
             match (value.type_.as_ref(), value.variant.clone()) {
                 (
                     Type::Fn {
-                        args: arguments,
+                        arguments,
                         return_: return_type,
                     },
                     ValueConstructorVariant::ModuleFn {
@@ -559,10 +559,10 @@ impl TypeInterface {
 /// have the same id will also have the same incremental number in the end).
 fn from_type_helper(type_: &Type, id_map: &mut IdMap) -> TypeInterface {
     match type_ {
-        Type::Fn { args, return_ } => TypeInterface::Fn {
-            parameters: args
+        Type::Fn { arguments, return_ } => TypeInterface::Fn {
+            parameters: arguments
                 .iter()
-                .map(|arg| from_type_helper(arg.as_ref(), id_map))
+                .map(|argument| from_type_helper(argument.as_ref(), id_map))
                 .collect(),
             return_: Box::new(from_type_helper(return_, id_map)),
         },
@@ -601,16 +601,16 @@ fn from_type_helper(type_: &Type, id_map: &mut IdMap) -> TypeInterface {
         Type::Named {
             name,
             module,
-            args,
+            arguments,
             package,
             ..
         } => TypeInterface::Named {
             name: name.clone(),
             package: package.clone(),
             module: module.clone(),
-            parameters: args
+            parameters: arguments
                 .iter()
-                .map(|arg| from_type_helper(arg.as_ref(), id_map))
+                .map(|argument| from_type_helper(argument.as_ref(), id_map))
                 .collect(),
         },
     }

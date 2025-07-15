@@ -518,13 +518,16 @@ impl<'a> ModuleEncoder<'a> {
             }
 
             Constant::Record {
-                args, tag, type_, ..
+                arguments,
+                tag,
+                type_,
+                ..
             } => {
                 let mut builder = builder.init_record();
                 {
-                    let mut builder = builder.reborrow().init_args(args.len() as u32);
-                    for (i, arg) in args.iter().enumerate() {
-                        self.build_constant(builder.reborrow().get(i as u32), &arg.value);
+                    let mut builder = builder.reborrow().init_args(arguments.len() as u32);
+                    for (i, argument) in arguments.iter().enumerate() {
+                        self.build_constant(builder.reborrow().get(i as u32), &argument.value);
                     }
                 }
                 builder.reborrow().set_tag(tag);
@@ -632,15 +635,18 @@ impl<'a> ModuleEncoder<'a> {
 
     fn build_type(&mut self, builder: schema::type_::Builder<'_>, type_: &Type) {
         match type_ {
-            Type::Fn { args, return_ } => {
+            Type::Fn { arguments, return_ } => {
                 let mut fun = builder.init_fn();
-                self.build_types(fun.reborrow().init_arguments(args.len() as u32), args);
+                self.build_types(
+                    fun.reborrow().init_arguments(arguments.len() as u32),
+                    arguments,
+                );
                 self.build_type(fun.init_return(), return_)
             }
 
             Type::Named {
                 name,
-                args,
+                arguments,
                 module,
                 package,
                 inferred_variant,
@@ -655,7 +661,10 @@ impl<'a> ModuleEncoder<'a> {
                     Some(variant) => variant_builder.set_inferred(*variant),
                     None => variant_builder.set_unknown(()),
                 }
-                self.build_types(app.reborrow().init_parameters(args.len() as u32), args);
+                self.build_types(
+                    app.reborrow().init_parameters(arguments.len() as u32),
+                    arguments,
+                );
             }
 
             Type::Tuple { elements } => self.build_types(

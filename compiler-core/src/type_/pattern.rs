@@ -752,7 +752,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 elements,
                 tail,
                 ..
-            } => match type_.get_app_args(
+            } => match type_.get_app_arguments(
                 Publicity::Public,
                 PRELUDE_PACKAGE_NAME,
                 PRELUDE_MODULE_NAME,
@@ -760,8 +760,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 1,
                 self.environment,
             ) {
-                Some(args) => {
-                    let type_ = args
+                Some(arguments) => {
+                    let type_ = arguments
                         .first()
                         .expect("Failed to get type argument of List")
                         .clone();
@@ -855,7 +855,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 module,
                 name_location,
                 name,
-                arguments: mut pattern_args,
+                arguments: mut pattern_arguments,
                 spread,
                 ..
             } => {
@@ -881,7 +881,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             location,
                             name_location,
                             name,
-                            arguments: self.infer_pattern_call_args(pattern_args, &[]),
+                            arguments: self.infer_pattern_call_arguments(pattern_arguments, &[]),
                             module,
                             constructor: Inferred::Unknown,
                             spread,
@@ -897,7 +897,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         if let Some(spread_location) = spread {
                             // Using the spread operator when you have already provided variables for all of the
                             // record's fields throws an error
-                            if pattern_args.len() == field_map.arity as usize {
+                            if pattern_arguments.len() == field_map.arity as usize {
                                 {
                                     self.problems.error(Error::UnnecessarySpreadOperator {
                                         location: spread_location,
@@ -913,10 +913,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             // we have calculate that index and then insert() the discards. It would be faster
                             // if we could put the discards anywhere which would let us use push().
                             // Potential future optimisation.
-                            let index_of_first_labelled_arg = pattern_args
+                            let index_of_first_labelled_arg = pattern_arguments
                                 .iter()
                                 .position(|argument| argument.label.is_some())
-                                .unwrap_or(pattern_args.len());
+                                .unwrap_or(pattern_arguments.len());
 
                             // In Gleam we can pass in positional unlabelled args to a constructor
                             // even if the field was defined as labelled
@@ -940,16 +940,16 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             //            │     ╰ We supplied 1 labelled arg
                             //            ╰ We supplied 2 unlabelled args
                             //
-                            let supplied_unlabelled_args = index_of_first_labelled_arg;
-                            let supplied_labelled_args = pattern_args
+                            let supplied_unlabelled_arguments = index_of_first_labelled_arg;
+                            let supplied_labelled_arguments = pattern_arguments
                                 .iter()
                                 .filter_map(|argument| argument.label.clone())
                                 .collect::<HashSet<_>>();
-                            let constructor_unlabelled_args =
+                            let constructor_unlabelled_arguments =
                                 field_map.arity - field_map.fields.len() as u32;
                             let labelled_arguments_supplied_as_unlabelled =
-                                supplied_unlabelled_args
-                                    .saturating_sub(constructor_unlabelled_args as usize);
+                                supplied_unlabelled_arguments
+                                    .saturating_sub(constructor_unlabelled_arguments as usize);
 
                             let mut missing_labels = field_map
                                 .fields
@@ -962,9 +962,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                 .skip(labelled_arguments_supplied_as_unlabelled)
                                 // ... lastly we still need to remove all those labels that
                                 // were explicitly supplied in the pattern.
-                                .filter(|label| !supplied_labelled_args.contains(label));
+                                .filter(|label| !supplied_labelled_arguments.contains(label));
 
-                            while pattern_args.len() < field_map.arity as usize {
+                            while pattern_arguments.len() < field_map.arity as usize {
                                 let new_call_arg = CallArg {
                                     value: Pattern::Discard {
                                         name: "_".into(),
@@ -976,12 +976,12 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                     implicit: Some(ImplicitCallArgOrigin::PatternFieldSpread),
                                 };
 
-                                pattern_args.insert(index_of_first_labelled_arg, new_call_arg);
+                                pattern_arguments.insert(index_of_first_labelled_arg, new_call_arg);
                             }
                         }
 
                         if let Err(error) = field_map.reorder(
-                            &mut pattern_args,
+                            &mut pattern_arguments,
                             location,
                             IncorrectArityContext::Pattern,
                         ) {
@@ -993,7 +993,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
                     None => {
                         // The fun has no field map and so we error if arguments have been labelled
-                        match assert_no_labelled_arguments(&pattern_args) {
+                        match assert_no_labelled_arguments(&pattern_arguments) {
                             Ok(()) => {}
                             Err(error) => {
                                 self.problems.error(error);
@@ -1005,8 +1005,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             if let ValueConstructorVariant::Record { arity, .. } =
                                 &constructor.variant
                             {
-                                while pattern_args.len() < usize::from(*arity) {
-                                    pattern_args.push(CallArg {
+                                while pattern_arguments.len() < usize::from(*arity) {
+                                    pattern_arguments.push(CallArg {
                                         value: Pattern::Discard {
                                             name: "_".into(),
                                             location: spread_location,
@@ -1087,7 +1087,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     self.environment
                         .instantiate(constructor_type, &mut hashmap![], self.hydrator);
                 match instantiated_constructor_type.deref() {
-                    Type::Fn { args, return_ } => {
+                    Type::Fn { arguments, return_ } => {
                         self.unify_types(type_.clone(), return_.clone(), location);
 
                         if let Some((variable_to_infer, inferred_variant)) =
@@ -1099,17 +1099,18 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         // We're emitting the incorrect arity error only if we haven't emitted
                         // one already. This might happen when we can't reorder the field map
                         // of a constructor because there's not enough labels.
-                        if args.len() != pattern_args.len() && !incorrect_arity_error {
+                        if arguments.len() != pattern_arguments.len() && !incorrect_arity_error {
                             self.error(Error::IncorrectArity {
                                 labels: vec![],
                                 location,
                                 context: IncorrectArityContext::Pattern,
-                                expected: args.len(),
-                                given: pattern_args.len(),
+                                expected: arguments.len(),
+                                given: pattern_arguments.len(),
                             });
                         }
 
-                        let pattern_args = self.infer_pattern_call_args(pattern_args, args);
+                        let pattern_arguments =
+                            self.infer_pattern_call_arguments(pattern_arguments, arguments);
 
                         Pattern::Constructor {
                             location,
@@ -1117,7 +1118,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             name,
                             module,
                             constructor: Inferred::Known(pattern_constructor),
-                            arguments: pattern_args,
+                            arguments: pattern_arguments,
                             spread,
                             type_: return_.clone(),
                         }
@@ -1134,13 +1135,13 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             self.set_subject_variable_variant(variable_to_infer, inferred_variant);
                         }
 
-                        if !pattern_args.is_empty() {
+                        if !pattern_arguments.is_empty() {
                             self.error(Error::IncorrectArity {
                                 labels: vec![],
                                 location,
                                 context: IncorrectArityContext::Pattern,
                                 expected: 0,
-                                given: pattern_args.len(),
+                                given: pattern_arguments.len(),
                             });
                         }
                         Pattern::Constructor {
@@ -1161,12 +1162,12 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         }
     }
 
-    fn infer_pattern_call_args(
+    fn infer_pattern_call_arguments(
         &mut self,
-        pattern_args: Vec<CallArg<UntypedPattern>>,
+        pattern_arguments: Vec<CallArg<UntypedPattern>>,
         expected_types: &[Arc<Type>],
     ) -> Vec<CallArg<TypedPattern>> {
-        pattern_args
+        pattern_arguments
             .into_iter()
             .enumerate()
             .map(|(index, arg)| {

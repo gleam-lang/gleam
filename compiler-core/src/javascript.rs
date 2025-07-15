@@ -653,7 +653,7 @@ impl<'a> Generator<'a> {
             function_doc,
             head,
             maybe_escape_identifier(name.as_str()),
-            fun_args(function.arguments.as_slice(), generator.tail_recursion_used),
+            fun_arguments(function.arguments.as_slice(), generator.tail_recursion_used),
             " {",
             docvec![line(), body].nest(INDENT).group(),
             line(),
@@ -736,29 +736,33 @@ pub fn ts_declaration(module: &TypedModule) -> String {
     document.to_pretty_string(80)
 }
 
-fn fun_args(args: &'_ [TypedArg], tail_recursion_used: bool) -> Document<'_> {
+fn fun_arguments(arguments: &'_ [TypedArg], tail_recursion_used: bool) -> Document<'_> {
     let mut discards = 0;
-    wrap_args(args.iter().map(|a| match a.get_variable_name() {
-        None => {
-            let doc = if discards == 0 {
-                "_".to_doc()
-            } else {
-                eco_format!("_{discards}").to_doc()
-            };
-            discards += 1;
-            doc
-        }
-        Some(name) if tail_recursion_used => eco_format!("loop${name}").to_doc(),
-        Some(name) => maybe_escape_identifier(name).to_doc(),
-    }))
+    wrap_arguments(
+        arguments
+            .iter()
+            .map(|argument| match argument.get_variable_name() {
+                None => {
+                    let doc = if discards == 0 {
+                        "_".to_doc()
+                    } else {
+                        eco_format!("_{discards}").to_doc()
+                    };
+                    discards += 1;
+                    doc
+                }
+                Some(name) if tail_recursion_used => eco_format!("loop${name}").to_doc(),
+                Some(name) => maybe_escape_identifier(name).to_doc(),
+            }),
+    )
 }
 
-fn wrap_args<'a, I>(args: I) -> Document<'a>
+fn wrap_arguments<'a, I>(arguments: I) -> Document<'a>
 where
     I: IntoIterator<Item = Document<'a>>,
 {
     break_("", "")
-        .append(join(args, break_(",", ", ")))
+        .append(join(arguments, break_(",", ", ")))
         .nest(INDENT)
         .append(break_("", ""))
         .surround("(", ")")

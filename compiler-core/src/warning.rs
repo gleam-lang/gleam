@@ -999,14 +999,14 @@ Either change the pattern or use `panic` to unconditionally fail.",
                 type_::Warning::TodoOrPanicUsedAsFunction {
                     kind,
                     location,
-                    args_location,
-                    args,
+                    arguments_location,
+                    arguments,
                 } => {
                     let title = match kind {
                         TodoOrPanic::Todo => "Todo used as a function".into(),
                         TodoOrPanic::Panic => "Panic used as a function".into(),
                     };
-                    let label_location = match args_location {
+                    let label_location = match arguments_location {
                         None => location,
                         Some(location) => location,
                     };
@@ -1015,7 +1015,7 @@ Either change the pattern or use `panic` to unconditionally fail.",
                         TodoOrPanic::Panic => "panic",
                     };
                     let mut text = format!("`{name}` is not a function");
-                    match args {
+                    match arguments {
                         0 => text.push_str(&format!(
                             ", you can just write `{name}` instead of `{name}()`."
                         )),
@@ -1027,7 +1027,7 @@ Either change the pattern or use `panic` to unconditionally fail.",
                         ),
                     };
 
-                    match args {
+                    match arguments {
                         0 => {}
                         _ => text.push_str(&format!(
                             "\n\nHint: if you want to display an error message you should write

@@ -487,9 +487,9 @@ impl<'a> CallGraphBuilder<'a> {
                 }
             }
 
-            Constant::Record { args, .. } => {
-                for arg in args {
-                    self.constant(&arg.value);
+            Constant::Record { arguments, .. } => {
+                for argument in arguments {
+                    self.constant(&argument.value);
                 }
             }
 

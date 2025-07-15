@@ -68,14 +68,14 @@ pub fn int() -> Arc<Type> {
         name: INT.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
-        args: vec![],
+        arguments: vec![],
         inferred_variant: None,
     })
 }
 
 pub fn float() -> Arc<Type> {
     Arc::new(Type::Named {
-        args: vec![],
+        arguments: vec![],
         publicity: Publicity::Public,
         name: FLOAT.into(),
         module: PRELUDE_MODULE_NAME.into(),
@@ -96,7 +96,7 @@ pub fn bool_with_variant(variant: Option<bool>) -> Arc<Type> {
     };
 
     Arc::new(Type::Named {
-        args: vec![],
+        arguments: vec![],
         publicity: Publicity::Public,
         name: BOOL.into(),
         module: PRELUDE_MODULE_NAME.into(),
@@ -107,7 +107,7 @@ pub fn bool_with_variant(variant: Option<bool>) -> Arc<Type> {
 
 pub fn string() -> Arc<Type> {
     Arc::new(Type::Named {
-        args: vec![],
+        arguments: vec![],
         publicity: Publicity::Public,
         name: STRING.into(),
         module: PRELUDE_MODULE_NAME.into(),
@@ -118,7 +118,7 @@ pub fn string() -> Arc<Type> {
 
 pub fn nil() -> Arc<Type> {
     Arc::new(Type::Named {
-        args: vec![],
+        arguments: vec![],
         publicity: Publicity::Public,
         name: NIL.into(),
         module: PRELUDE_MODULE_NAME.into(),
@@ -133,7 +133,7 @@ pub fn list(t: Arc<Type>) -> Arc<Type> {
         name: LIST.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
-        args: vec![t],
+        arguments: vec![t],
         inferred_variant: None,
     })
 }
@@ -148,7 +148,7 @@ fn result_with_variant(a: Arc<Type>, e: Arc<Type>, variant_index: Option<u16>) -
         name: RESULT.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
-        args: vec![a, e],
+        arguments: vec![a, e],
         inferred_variant: variant_index,
     })
 }
@@ -157,8 +157,8 @@ pub fn tuple(elements: Vec<Arc<Type>>) -> Arc<Type> {
     Arc::new(Type::Tuple { elements })
 }
 
-pub fn fn_(args: Vec<Arc<Type>>, return_: Arc<Type>) -> Arc<Type> {
-    Arc::new(Type::Fn { return_, args })
+pub fn fn_(arguments: Vec<Arc<Type>>, return_: Arc<Type>) -> Arc<Type> {
+    Arc::new(Type::Fn { return_, arguments })
 }
 
 pub fn named(
@@ -166,21 +166,21 @@ pub fn named(
     module: &str,
     name: &str,
     publicity: Publicity,
-    args: Vec<Arc<Type>>,
+    arguments: Vec<Arc<Type>>,
 ) -> Arc<Type> {
     Arc::new(Type::Named {
         publicity,
         package: package.into(),
         module: module.into(),
         name: name.into(),
-        args,
+        arguments,
         inferred_variant: None,
     })
 }
 
 pub fn bit_array() -> Arc<Type> {
     Arc::new(Type::Named {
-        args: vec![],
+        arguments: vec![],
         publicity: Publicity::Public,
         name: BIT_ARRAY.into(),
         module: PRELUDE_MODULE_NAME.into(),
@@ -191,7 +191,7 @@ pub fn bit_array() -> Arc<Type> {
 
 pub fn utf_codepoint() -> Arc<Type> {
     Arc::new(Type::Named {
-        args: vec![],
+        arguments: vec![],
         publicity: Publicity::Public,
         name: UTF_CODEPOINT.into(),
         module: PRELUDE_MODULE_NAME.into(),

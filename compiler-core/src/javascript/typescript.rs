@@ -27,7 +27,7 @@ use ecow::{EcoString, eco_format};
 use itertools::Itertools;
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
-use super::{INDENT, import::Imports, join, line, lines, wrap_args};
+use super::{INDENT, import::Imports, join, line, lines, wrap_arguments};
 
 /// When rendering a type variable to an TypeScript type spec we need all type
 /// variables with the same id to end up with the same name in the generated
@@ -66,7 +66,7 @@ fn name_with_generics<'a>(
         if generic_names.is_empty() {
             super::nil()
         } else {
-            wrap_generic_args(generic_names)
+            wrap_generic_arguments(generic_names)
         },
     ]
 }
@@ -99,14 +99,14 @@ fn generic_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
             }
             TypeVar::Link { type_ } => generic_ids(type_, ids),
         },
-        Type::Named { args, .. } => {
-            for arg in args {
-                generic_ids(arg, ids)
+        Type::Named { arguments, .. } => {
+            for argument in arguments {
+                generic_ids(argument, ids)
             }
         }
-        Type::Fn { args, return_ } => {
-            for arg in args {
-                generic_ids(arg, ids)
+        Type::Fn { arguments, return_ } => {
+            for argument in arguments {
+                generic_ids(argument, ids)
             }
             generic_ids(return_, ids);
         }
@@ -129,12 +129,12 @@ fn tuple<'a>(elements: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
         .group()
 }
 
-fn wrap_generic_args<'a, I>(args: I) -> Document<'a>
+fn wrap_generic_arguments<'a, I>(arguments: I) -> Document<'a>
 where
     I: IntoIterator<Item = Document<'a>>,
 {
     break_("", "")
-        .append(join(args, break_(",", ", ")))
+        .append(join(arguments, break_(",", ", ")))
         .nest(INDENT)
         .append(break_("", ""))
         .surround("<", ">")
@@ -288,7 +288,7 @@ impl<'a> TypeScriptGenerator<'a> {
             Type::Named {
                 package,
                 module,
-                args,
+                arguments,
                 ..
             } => {
                 let is_prelude = module == "gleam" && package.is_empty();
@@ -298,13 +298,13 @@ impl<'a> TypeScriptGenerator<'a> {
                     self.register_import(imports, package, module);
                 }
 
-                for arg in args {
-                    self.collect_imports_for_type(arg, imports);
+                for argument in arguments {
+                    self.collect_imports_for_type(argument, imports);
                 }
             }
-            Type::Fn { args, return_ } => {
-                for arg in args {
-                    self.collect_imports_for_type(arg, imports);
+            Type::Fn { arguments, return_ } => {
+                for argument in arguments {
+                    self.collect_imports_for_type(argument, imports);
                 }
                 self.collect_imports_for_type(return_, imports);
             }
@@ -501,15 +501,25 @@ impl<'a> TypeScriptGenerator<'a> {
             line(),
             // First add the constructor
             "constructor",
-            wrap_args(constructor.arguments.iter().enumerate().map(|(i, arg)| {
-                let name = arg
-                    .label
-                    .as_ref()
-                    .map(|(_, s)| super::maybe_escape_identifier(s))
-                    .unwrap_or_else(|| eco_format!("argument${i}"))
-                    .to_doc();
-                docvec![name, ": ", self.do_print_force_generic_param(&arg.type_)]
-            })),
+            wrap_arguments(
+                constructor
+                    .arguments
+                    .iter()
+                    .enumerate()
+                    .map(|(i, argument)| {
+                        let name = argument
+                            .label
+                            .as_ref()
+                            .map(|(_, s)| super::maybe_escape_identifier(s))
+                            .unwrap_or_else(|| eco_format!("argument${i}"))
+                            .to_doc();
+                        docvec![
+                            name,
+                            ": ",
+                            self.do_print_force_generic_param(&argument.type_)
+                        ]
+                    })
+            ),
             ";",
             line(),
             line(),
@@ -550,12 +560,12 @@ impl<'a> TypeScriptGenerator<'a> {
     fn module_function(
         &mut self,
         name: &'a EcoString,
-        args: &'a [TypedArg],
+        arguments: &'a [TypedArg],
         return_type: &'a Arc<Type>,
     ) -> Document<'a> {
         let generic_usages = collect_generic_usages(
             HashMap::new(),
-            std::iter::once(return_type).chain(args.iter().map(|a| &a.type_)),
+            std::iter::once(return_type).chain(arguments.iter().map(|a| &a.type_)),
         );
         let generic_names: Vec<Document<'_>> = generic_usages
             .iter()
@@ -570,27 +580,25 @@ impl<'a> TypeScriptGenerator<'a> {
             if generic_names.is_empty() {
                 super::nil()
             } else {
-                wrap_generic_args(generic_names)
+                wrap_generic_arguments(generic_names)
             },
-            wrap_args(
-                args.iter()
-                    .enumerate()
-                    .map(|(i, a)| match a.get_variable_name() {
-                        None => {
-                            docvec![
-                                "x",
-                                i,
-                                ": ",
-                                self.print_type_with_generic_usages(&a.type_, &generic_usages)
-                            ]
-                        }
-                        Some(name) => docvec![
-                            super::maybe_escape_identifier(name),
+            wrap_arguments(arguments.iter().enumerate().map(|(i, argument)| {
+                match argument.get_variable_name() {
+                    None => {
+                        docvec![
+                            "x",
+                            i,
                             ": ",
-                            self.print_type_with_generic_usages(&a.type_, &generic_usages)
-                        ],
-                    }),
-            ),
+                            self.print_type_with_generic_usages(&argument.type_, &generic_usages)
+                        ]
+                    }
+                    Some(name) => docvec![
+                        super::maybe_escape_identifier(name),
+                        ": ",
+                        self.print_type_with_generic_usages(&argument.type_, &generic_usages)
+                    ],
+                }
+            }),),
             ": ",
             self.print_type_with_generic_usages(return_type, &generic_usages),
             ";",
@@ -640,14 +648,22 @@ impl<'a> TypeScriptGenerator<'a> {
             Type::Var { type_ } => self.print_var(&type_.borrow(), generic_usages, false),
 
             Type::Named {
-                name, module, args, ..
-            } if is_prelude_module(module) => self.print_prelude_type(name, args, generic_usages),
+                name,
+                module,
+                arguments,
+                ..
+            } if is_prelude_module(module) => {
+                self.print_prelude_type(name, arguments, generic_usages)
+            }
 
             Type::Named {
-                name, args, module, ..
-            } => self.print_type_app(name, args, module, generic_usages),
+                name,
+                arguments,
+                module,
+                ..
+            } => self.print_type_app(name, arguments, module, generic_usages),
 
-            Type::Fn { args, return_ } => self.print_fn(args, return_, generic_usages),
+            Type::Fn { arguments, return_ } => self.print_fn(arguments, return_, generic_usages),
 
             Type::Tuple { elements } => tuple(
                 elements
@@ -662,14 +678,20 @@ impl<'a> TypeScriptGenerator<'a> {
             Type::Var { type_ } => self.print_var(&type_.borrow(), None, true),
 
             Type::Named {
-                name, module, args, ..
-            } if is_prelude_module(module) => self.print_prelude_type(name, args, None),
+                name,
+                module,
+                arguments,
+                ..
+            } if is_prelude_module(module) => self.print_prelude_type(name, arguments, None),
 
             Type::Named {
-                name, args, module, ..
-            } => self.print_type_app(name, args, module, None),
+                name,
+                arguments,
+                module,
+                ..
+            } => self.print_type_app(name, arguments, module, None),
 
-            Type::Fn { args, return_ } => self.print_fn(args, return_, None),
+            Type::Fn { arguments, return_ } => self.print_fn(arguments, return_, None),
 
             Type::Tuple { elements } => {
                 tuple(elements.iter().map(|element| self.do_print(element, None)))
@@ -710,7 +732,7 @@ impl<'a> TypeScriptGenerator<'a> {
     fn print_prelude_type(
         &mut self,
         name: &str,
-        args: &[Arc<Type>],
+        arguments: &[Arc<Type>],
         generic_usages: Option<&HashMap<u64, u64>>,
     ) -> Document<'static> {
         match name {
@@ -730,14 +752,20 @@ impl<'a> TypeScriptGenerator<'a> {
                 self.tracker.prelude_used = true;
                 docvec![
                     "_.List",
-                    wrap_generic_args(args.iter().map(|x| self.do_print(x, generic_usages)))
+                    wrap_generic_arguments(
+                        arguments
+                            .iter()
+                            .map(|argument| self.do_print(argument, generic_usages))
+                    )
                 ]
             }
             "Result" => {
                 self.tracker.prelude_used = true;
                 docvec![
                     "_.Result",
-                    wrap_generic_args(args.iter().map(|x| self.do_print(x, generic_usages)))
+                    wrap_generic_arguments(
+                        arguments.iter().map(|x| self.do_print(x, generic_usages))
+                    )
                 ]
             }
             // Getting here should mean we either forgot a built-in type or there is a
@@ -752,7 +780,7 @@ impl<'a> TypeScriptGenerator<'a> {
     fn print_type_app(
         &mut self,
         name: &str,
-        args: &[Arc<Type>],
+        arguments: &[Arc<Type>],
         module: &str,
         generic_usages: Option<&HashMap<u64, u64>>,
     ) -> Document<'static> {
@@ -765,14 +793,18 @@ impl<'a> TypeScriptGenerator<'a> {
                 docvec![self.module_name(module), ".", name]
             }
         };
-        if args.is_empty() {
+        if arguments.is_empty() {
             return name;
         }
 
         // If the App type takes arguments, pass them in as TypeScript generics
         docvec![
             name,
-            wrap_generic_args(args.iter().map(|a| self.do_print(a, generic_usages)))
+            wrap_generic_arguments(
+                arguments
+                    .iter()
+                    .map(|argument| self.do_print(argument, generic_usages))
+            )
         ]
     }
 
@@ -780,16 +812,16 @@ impl<'a> TypeScriptGenerator<'a> {
     ///
     fn print_fn(
         &mut self,
-        args: &[Arc<Type>],
+        arguments: &[Arc<Type>],
         return_: &Type,
         generic_usages: Option<&HashMap<u64, u64>>,
     ) -> Document<'static> {
         docvec![
-            wrap_args(args.iter().enumerate().map(|(idx, a)| docvec![
+            wrap_arguments(arguments.iter().enumerate().map(|(idx, argument)| docvec![
                 "x",
                 idx,
                 ": ",
-                self.do_print(a, generic_usages)
+                self.do_print(argument, generic_usages)
             ])),
             " => ",
             self.do_print(return_, generic_usages)

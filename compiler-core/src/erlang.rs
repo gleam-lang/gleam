@@ -314,7 +314,7 @@ fn register_imports_and_exports(
         Definition::Function(Function {
             publicity,
             name: Some((_, name)),
-            arguments: args,
+            arguments,
             implementations,
             ..
         }) if publicity.is_importable() || overridden_publicity.contains(name) => {
@@ -324,7 +324,7 @@ fn register_imports_and_exports(
                 exports.push(
                     atom_string(function_name.into())
                         .append("/")
-                        .append(args.len()),
+                        .append(arguments.len()),
                 )
             }
         }
@@ -385,11 +385,11 @@ fn register_imports_and_exports(
                             name
                         } else {
                             let type_printer = TypePrinter::new(module_name);
-                            let args = constructor
+                            let arguments = constructor
                                 .arguments
                                 .iter()
                                 .map(|argument| type_printer.print(&argument.type_));
-                            tuple(std::iter::once(name).chain(args))
+                            tuple(std::iter::once(name).chain(arguments))
                         }
                     })
                     .chain(phantom_vars_constructor);
@@ -481,17 +481,17 @@ fn module_function<'a>(
         std::iter::once(&function.return_type).chain(function.arguments.iter().map(|a| &a.type_)),
     );
     let type_printer = TypePrinter::new(module).with_var_usages(&var_usages);
-    let args_spec = function
+    let arguments_spec = function
         .arguments
         .iter()
         .map(|a| type_printer.print(&a.type_));
     let return_spec = type_printer.print(&function.return_type);
 
-    let spec = fun_spec(function_name, args_spec, return_spec);
+    let spec = fun_spec(function_name, arguments_spec, return_spec);
     let arguments = if function.external_erlang.is_some() {
-        external_fun_args(&function.arguments, &mut env)
+        external_fun_arguments(&function.arguments, &mut env)
     } else {
-        fun_args(&function.arguments, &mut env)
+        fun_arguments(&function.arguments, &mut env)
     };
 
     let body = function
@@ -606,9 +606,9 @@ fn doc_attribute<'a>(kind: DocCommentKind, content: DocCommentContent<'_>) -> Do
     }
 }
 
-fn external_fun_args<'a>(args: &'a [TypedArg], env: &mut Env<'a>) -> Document<'a> {
-    wrap_args(args.iter().map(|a| {
-        let name = match &a.names {
+fn external_fun_arguments<'a>(arguments: &'a [TypedArg], env: &mut Env<'a>) -> Document<'a> {
+    wrap_arguments(arguments.iter().map(|argument| {
+        let name = match &argument.names {
             ArgNames::Discard { name, .. }
             | ArgNames::LabelledDiscard { name, .. }
             | ArgNames::Named { name, .. }
@@ -622,8 +622,8 @@ fn external_fun_args<'a>(args: &'a [TypedArg], env: &mut Env<'a>) -> Document<'a
     }))
 }
 
-fn fun_args<'a>(args: &'a [TypedArg], env: &mut Env<'a>) -> Document<'a> {
-    wrap_args(args.iter().map(|a| match &a.names {
+fn fun_arguments<'a>(arguments: &'a [TypedArg], env: &mut Env<'a>) -> Document<'a> {
+    wrap_arguments(arguments.iter().map(|argument| match &argument.names {
         ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => "_".to_doc(),
         ArgNames::Named { name, .. } | ArgNames::NamedLabelled { name, .. } => {
             env.next_local_var_name(name)
@@ -631,12 +631,12 @@ fn fun_args<'a>(args: &'a [TypedArg], env: &mut Env<'a>) -> Document<'a> {
     }))
 }
 
-fn wrap_args<'a, I>(args: I) -> Document<'a>
+fn wrap_arguments<'a, I>(arguments: I) -> Document<'a>
 where
     I: IntoIterator<Item = Document<'a>>,
 {
     break_("", "")
-        .append(join(args, break_(",", ", ")))
+        .append(join(arguments, break_(",", ", ")))
         .nest(INDENT)
         .append(break_("", ""))
         .surround("(", ")")
@@ -645,13 +645,13 @@ where
 
 fn fun_spec<'a>(
     name: &'a str,
-    args: impl IntoIterator<Item = Document<'a>>,
+    arguments: impl IntoIterator<Item = Document<'a>>,
     return_: Document<'a>,
 ) -> Document<'a> {
     "-spec "
         .to_doc()
         .append(atom(name))
-        .append(wrap_args(args))
+        .append(wrap_arguments(arguments))
         .append(" -> ")
         .append(return_)
         .append(".")
@@ -1385,8 +1385,8 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
         ValueConstructorVariant::Record {
             name: record_name, ..
         } => match constructor.type_.deref() {
-            Type::Fn { args, .. } => {
-                let chars = incrementing_args_list(args.len());
+            Type::Fn { arguments, .. } => {
+                let chars = incrementing_arguments_list(arguments.len());
                 "fun("
                     .to_doc()
                     .append(chars.clone())
@@ -1476,16 +1476,21 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
         ),
 
         Constant::Record {
-            tag, type_, args, ..
-        } if args.is_empty() => match type_.deref() {
-            Type::Fn { args, .. } => record_constructor_function(tag, args.len()),
+            tag,
+            type_,
+            arguments,
+            ..
+        } if arguments.is_empty() => match type_.deref() {
+            Type::Fn { arguments, .. } => record_constructor_function(tag, arguments.len()),
             _ => atom_string(to_snake_case(tag)),
         },
 
-        Constant::Record { tag, args, .. } => {
-            let args = args.iter().map(|a| const_inline(&a.value, env));
+        Constant::Record { tag, arguments, .. } => {
+            let arguments = arguments
+                .iter()
+                .map(|argument| const_inline(&argument.value, env));
             let tag = atom_string(to_snake_case(tag));
-            tuple(std::iter::once(tag).chain(args))
+            tuple(std::iter::once(tag).chain(arguments))
         }
 
         Constant::Var {
@@ -1507,7 +1512,7 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
 }
 
 fn record_constructor_function(tag: &EcoString, arity: usize) -> Document<'_> {
-    let chars = incrementing_args_list(arity);
+    let chars = incrementing_arguments_list(arity);
     "fun("
         .to_doc()
         .append(chars.clone())
@@ -1715,7 +1720,7 @@ fn tuple_index_inline<'a>(
     let tuple_doc = bare_clause_guard(tuple, env);
     "erlang:element"
         .to_doc()
-        .append(wrap_args([index_doc, tuple_doc]))
+        .append(wrap_arguments([index_doc, tuple_doc]))
 }
 
 fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<'a> {
@@ -1791,37 +1796,38 @@ fn case<'a>(subjects: &'a [TypedExpr], cs: &'a [TypedClause], env: &mut Env<'a>)
         .group()
 }
 
-fn call<'a>(fun: &'a TypedExpr, args: &'a [TypedCallArg], env: &mut Env<'a>) -> Document<'a> {
-    docs_args_call(
+fn call<'a>(fun: &'a TypedExpr, arguments: &'a [TypedCallArg], env: &mut Env<'a>) -> Document<'a> {
+    docs_arguments_call(
         fun,
-        args.iter()
-            .map(|arg| maybe_block_expr(&arg.value, env))
+        arguments
+            .iter()
+            .map(|argument| maybe_block_expr(&argument.value, env))
             .collect(),
         env,
     )
 }
 
-fn module_fn_with_args<'a>(
+fn module_fn_with_arguments<'a>(
     module: &'a str,
     name: &'a str,
-    args: Vec<Document<'a>>,
+    arguments: Vec<Document<'a>>,
     env: &Env<'a>,
 ) -> Document<'a> {
     let name = escape_erlang_existing_name(name);
-    let args = wrap_args(args);
+    let arguments = wrap_arguments(arguments);
     if module == env.module {
-        atom(name).append(args)
+        atom(name).append(arguments)
     } else {
         atom_string(module.replace('/', "@").into())
             .append(":")
             .append(atom(name))
-            .append(args)
+            .append(arguments)
     }
 }
 
-fn docs_args_call<'a>(
+fn docs_arguments_call<'a>(
     fun: &'a TypedExpr,
-    mut args: Vec<Document<'a>>,
+    mut arguments: Vec<Document<'a>>,
     env: &mut Env<'a>,
 ) -> Document<'a> {
     match fun {
@@ -1836,7 +1842,7 @@ fn docs_args_call<'a>(
                     ..
                 },
             ..
-        } => tuple(std::iter::once(atom_string(to_snake_case(name))).chain(args)),
+        } => tuple(std::iter::once(atom_string(to_snake_case(name))).chain(arguments)),
 
         TypedExpr::Var {
             constructor:
@@ -1850,7 +1856,7 @@ fn docs_args_call<'a>(
                     ..
                 },
             ..
-        } => module_fn_with_args(module, name, args, env),
+        } => module_fn_with_arguments(module, name, arguments, env),
 
         // Match against a Constant::Var that contains a function.
         // We want this to be emitted like a normal function call, not a function variable
@@ -1876,7 +1882,7 @@ fn docs_args_call<'a>(
                 ..
             }
             | ValueConstructorVariant::ModuleFn { module, name, .. } => {
-                module_fn_with_args(module, name, args, env)
+                module_fn_with_arguments(module, name, arguments, env)
             }
             _ => {
                 unreachable!("The above clause guard ensures that this is a module fn")
@@ -1892,7 +1898,7 @@ fn docs_args_call<'a>(
                 | ModuleValueConstructor::Fn { module, name, .. },
             ..
         } => {
-            let args = wrap_args(args);
+            let arguments = wrap_arguments(arguments);
             let name = escape_erlang_existing_name(name);
             // We use the constructor Fn variant's `module` and function `name`.
             // It would also be valid to use the module and label as in the
@@ -1905,26 +1911,26 @@ fn docs_args_call<'a>(
             atom_string(module_erlang_name(module))
                 .append(":")
                 .append(atom_string(name.into()))
-                .append(args)
+                .append(arguments)
         }
 
         TypedExpr::Fn { kind, body, .. } if kind.is_capture() => {
             if let Statement::Expression(TypedExpr::Call {
                 fun,
-                args: inner_args,
+                arguments: inner_arguments,
                 ..
             }) = body.first()
             {
-                let mut merged_args = Vec::with_capacity(inner_args.len());
-                for arg in inner_args {
+                let mut merged_arguments = Vec::with_capacity(inner_arguments.len());
+                for arg in inner_arguments {
                     match &arg.value {
                         TypedExpr::Var { name, .. } if name == CAPTURE_VARIABLE => {
-                            merged_args.push(args.swap_remove(0))
+                            merged_arguments.push(arguments.swap_remove(0))
                         }
-                        e => merged_args.push(maybe_block_expr(e, env)),
+                        e => merged_arguments.push(maybe_block_expr(e, env)),
                     }
                 }
-                docs_args_call(fun, merged_args, env)
+                docs_arguments_call(fun, merged_arguments, env)
             } else {
                 panic!("Erl printing: Capture was not a call")
             }
@@ -1936,13 +1942,13 @@ fn docs_args_call<'a>(
         | TypedExpr::Panic { .. }
         | TypedExpr::RecordAccess { .. }
         | TypedExpr::TupleIndex { .. } => {
-            let args = wrap_args(args);
-            expr(fun, env).surround("(", ")").append(args)
+            let arguments = wrap_arguments(arguments);
+            expr(fun, env).surround("(", ")").append(arguments)
         }
 
         other => {
-            let args = wrap_args(args);
-            maybe_block_expr(other, env).append(args)
+            let arguments = wrap_arguments(arguments);
+            maybe_block_expr(other, env).append(arguments)
         }
     }
 }
@@ -1950,7 +1956,7 @@ fn docs_args_call<'a>(
 fn record_update<'a>(
     record: &'a Option<Box<TypedAssignment>>,
     constructor: &'a TypedExpr,
-    args: &'a [TypedCallArg],
+    arguments: &'a [TypedCallArg],
     env: &mut Env<'a>,
 ) -> Document<'a> {
     let vars = env.current_scope_vars.clone();
@@ -1960,9 +1966,9 @@ fn record_update<'a>(
             assignment(record, env, Position::NotTail),
             ",",
             line(),
-            call(constructor, args, env)
+            call(constructor, arguments, env)
         ],
-        None => call(constructor, args, env),
+        None => call(constructor, arguments, env),
     };
 
     env.current_scope_vars = vars;
@@ -2046,7 +2052,7 @@ fn echo<'a>(
         .map(|message| maybe_block_expr(message, env))
         .unwrap_or("nil".to_doc());
 
-    "echo".to_doc().append(wrap_args(vec![
+    "echo".to_doc().append(wrap_arguments(vec![
         body,
         message,
         env.line_numbers.line_number(location.start).to_doc(),
@@ -2091,7 +2097,7 @@ fn erlang_error<'a>(
             .append(value);
     }
     let error = docvec!["#{", fields_doc.group().nest(INDENT), "}"];
-    docvec!["erlang:error", wrap_args([error.group()])]
+    docvec!["erlang:error", wrap_arguments([error.group()])]
 }
 
 fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
@@ -2138,7 +2144,9 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
             name, constructor, ..
         } => var(name, constructor, env),
 
-        TypedExpr::Fn { args, body, .. } => fun(args, body, env),
+        TypedExpr::Fn {
+            arguments, body, ..
+        } => fun(arguments, body, env),
 
         TypedExpr::NegateBool { value, .. } => negate_with("not ", value, env),
 
@@ -2146,7 +2154,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
 
         TypedExpr::List { elements, tail, .. } => expr_list(elements, tail, env),
 
-        TypedExpr::Call { fun, args, .. } => call(fun, args, env),
+        TypedExpr::Call { fun, arguments, .. } => call(fun, arguments, env),
 
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::Record { name, arity: 0, .. },
@@ -2179,9 +2187,9 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::RecordUpdate {
             record_assignment,
             constructor,
-            args,
+            arguments,
             ..
-        } => record_update(record_assignment, constructor, args, env),
+        } => record_update(record_assignment, constructor, arguments, env),
 
         TypedExpr::Case {
             subjects, clauses, ..
@@ -2312,7 +2320,9 @@ fn assert<'a>(assert: &'a TypedAssert, env: &mut Env<'a>) -> Document<'a> {
     let mut assignments = Vec::new();
 
     let (subject, mut fields) = match value {
-        TypedExpr::Call { fun, args, .. } => assert_call(fun, args, &mut assignments, env),
+        TypedExpr::Call { fun, arguments, .. } => {
+            assert_call(fun, arguments, &mut assignments, env)
+        }
         TypedExpr::BinOp {
             name, left, right, ..
         } => {
@@ -2437,7 +2447,7 @@ fn assert_call<'a>(
     .surround("[", "]");
 
     (
-        docs_args_call(function, argument_variables, env),
+        docs_arguments_call(function, argument_variables, env),
         vec![("kind", atom("function_call")), ("arguments", arguments)],
     )
 }
@@ -2697,12 +2707,12 @@ fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64, env: &mut Env<'a>) -> Docum
     let tuple_doc = maybe_block_expr(tuple, env);
     "erlang:element"
         .to_doc()
-        .append(wrap_args([index_doc, tuple_doc]))
+        .append(wrap_arguments([index_doc, tuple_doc]))
 }
 
 fn module_select_fn<'a>(type_: Arc<Type>, module_name: &'a str, label: &'a str) -> Document<'a> {
     match crate::type_::collapse_links(type_).as_ref() {
-        Type::Fn { args, .. } => function_reference(Some(module_name), label, args.len()),
+        Type::Fn { arguments, .. } => function_reference(Some(module_name), label, arguments.len()),
 
         _ => module_name_atom(module_name)
             .append(":")
@@ -2711,11 +2721,15 @@ fn module_select_fn<'a>(type_: Arc<Type>, module_name: &'a str, label: &'a str) 
     }
 }
 
-fn fun<'a>(args: &'a [TypedArg], body: &'a [TypedStatement], env: &mut Env<'a>) -> Document<'a> {
+fn fun<'a>(
+    arguments: &'a [TypedArg],
+    body: &'a [TypedStatement],
+    env: &mut Env<'a>,
+) -> Document<'a> {
     let current_scope_vars = env.current_scope_vars.clone();
     let doc = "fun"
         .to_doc()
-        .append(fun_args(args, env).append(" ->"))
+        .append(fun_arguments(arguments, env).append(" ->"))
         .append(
             break_("", " ")
                 .append(statement_sequence(body, env))
@@ -2728,7 +2742,7 @@ fn fun<'a>(args: &'a [TypedArg], body: &'a [TypedStatement], env: &mut Env<'a>) 
     doc
 }
 
-fn incrementing_args_list(arity: usize) -> EcoString {
+fn incrementing_arguments_list(arity: usize) -> EcoString {
     let arguments = (0..arity).map(|c| format!("Field@{c}"));
     Itertools::intersperse(arguments, ", ".into())
         .collect::<String>()
@@ -2935,20 +2949,23 @@ fn type_var_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
             TypeVar::Link { type_ } => type_var_ids(type_, ids),
         },
         Type::Named {
-            args, module, name, ..
-        } => match args[..] {
+            arguments,
+            module,
+            name,
+            ..
+        } => match arguments[..] {
             [ref arg_ok, ref arg_err] if is_prelude_module(module) && name == "Result" => {
                 result_type_var_ids(ids, arg_ok, arg_err)
             }
             _ => {
-                for arg in args {
-                    type_var_ids(arg, ids)
+                for argument in arguments {
+                    type_var_ids(argument, ids)
                 }
             }
         },
-        Type::Fn { args, return_ } => {
-            for arg in args {
-                type_var_ids(arg, ids)
+        Type::Fn { arguments, return_ } => {
+            for argument in arguments {
+                type_var_ids(argument, ids)
             }
             type_var_ids(return_, ids);
         }
@@ -3035,14 +3052,20 @@ impl<'a> TypePrinter<'a> {
             Type::Var { type_ } => self.print_var(&type_.borrow()),
 
             Type::Named {
-                name, module, args, ..
-            } if is_prelude_module(module) => self.print_prelude_type(name, args),
+                name,
+                module,
+                arguments,
+                ..
+            } if is_prelude_module(module) => self.print_prelude_type(name, arguments),
 
             Type::Named {
-                name, module, args, ..
-            } => self.print_type_app(module, name, args),
+                name,
+                module,
+                arguments,
+                ..
+            } => self.print_type_app(module, name, arguments),
 
-            Type::Fn { args, return_ } => self.print_fn(args, return_),
+            Type::Fn { arguments, return_ } => self.print_fn(arguments, return_),
 
             Type::Tuple { elements } => tuple(elements.iter().map(|element| self.print(element))),
         }
@@ -3065,7 +3088,7 @@ impl<'a> TypePrinter<'a> {
         }
     }
 
-    fn print_prelude_type(&self, name: &str, args: &[Arc<Type>]) -> Document<'static> {
+    fn print_prelude_type(&self, name: &str, arguments: &[Arc<Type>]) -> Document<'static> {
         match name {
             "Nil" => "nil".to_doc(),
             "Int" | "UtfCodepoint" => "integer()".to_doc(),
@@ -3074,10 +3097,10 @@ impl<'a> TypePrinter<'a> {
             "Float" => "float()".to_doc(),
             "BitArray" => "bitstring()".to_doc(),
             "List" => {
-                let arg0 = self.print(args.first().expect("print_prelude_type list"));
+                let arg0 = self.print(arguments.first().expect("print_prelude_type list"));
                 "list(".to_doc().append(arg0).append(")")
             }
-            "Result" => match args {
+            "Result" => match arguments {
                 [arg_ok, arg_err] => {
                     let ok = tuple(["ok".to_doc(), self.print(arg_ok)]);
                     let error = tuple(["error".to_doc(), self.print(arg_err)]);
@@ -3091,22 +3114,33 @@ impl<'a> TypePrinter<'a> {
         }
     }
 
-    fn print_type_app(&self, module: &str, name: &str, args: &[Arc<Type>]) -> Document<'static> {
-        let args = join(args.iter().map(|a| self.print(a)), ", ".to_doc());
+    fn print_type_app(
+        &self,
+        module: &str,
+        name: &str,
+        arguments: &[Arc<Type>],
+    ) -> Document<'static> {
+        let arguments = join(
+            arguments.iter().map(|argument| self.print(argument)),
+            ", ".to_doc(),
+        );
         let name = erl_safe_type_name(to_snake_case(name)).to_doc();
         if self.current_module == module {
-            docvec![name, "(", args, ")"]
+            docvec![name, "(", arguments, ")"]
         } else {
-            docvec![module_name_atom(module), ":", name, "(", args, ")"]
+            docvec![module_name_atom(module), ":", name, "(", arguments, ")"]
         }
     }
 
-    fn print_fn(&self, args: &[Arc<Type>], return_: &Type) -> Document<'static> {
-        let args = join(args.iter().map(|a| self.print(a)), ", ".to_doc());
+    fn print_fn(&self, arguments: &[Arc<Type>], return_: &Type) -> Document<'static> {
+        let arguments = join(
+            arguments.iter().map(|argument| self.print(argument)),
+            ", ".to_doc(),
+        );
         let return_ = self.print(return_);
         "fun(("
             .to_doc()
-            .append(args)
+            .append(arguments)
             .append(") -> ")
             .append(return_)
             .append(")")
@@ -3156,9 +3190,9 @@ fn find_referenced_private_functions(
             }
         }
 
-        TypedConstant::Record { args, .. } => args
+        TypedConstant::Record { arguments, .. } => arguments
             .iter()
-            .for_each(|arg| find_referenced_private_functions(&arg.value, already_found)),
+            .for_each(|argument| find_referenced_private_functions(&argument.value, already_found)),
 
         TypedConstant::StringConcatenation { left, right, .. } => {
             find_referenced_private_functions(left, already_found);
