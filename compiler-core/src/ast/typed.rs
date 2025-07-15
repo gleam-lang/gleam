@@ -579,27 +579,17 @@ impl TypedExpr {
     }
 
     pub fn non_zero_compile_time_number(&self) -> bool {
-        use regex::Regex;
-        static NON_ZERO: OnceLock<Regex> = OnceLock::new();
-
         match self {
             Self::Int { int_value, .. } => int_value != &BigInt::ZERO,
-            Self::Float { value, .. } => NON_ZERO
-                .get_or_init(|| Regex::new(r"[1-9]").expect("NON_ZERO regex"))
-                .is_match(value),
+            Self::Float { value, .. } => is_non_zero_number(value),
             _ => false,
         }
     }
 
     pub fn zero_compile_time_number(&self) -> bool {
-        use regex::Regex;
-        static NON_ZERO: OnceLock<Regex> = OnceLock::new();
-
         match self {
             Self::Int { int_value, .. } => int_value == &BigInt::ZERO,
-            Self::Float { value, .. } => !NON_ZERO
-                .get_or_init(|| Regex::new(r"[1-9]").expect("NON_ZERO regex"))
-                .is_match(value),
+            Self::Float { value, .. } => !is_non_zero_number(value),
             _ => false,
         }
     }
@@ -1129,6 +1119,15 @@ impl TypedExpr {
             _ => false,
         }
     }
+}
+
+fn is_non_zero_number(value: &EcoString) -> bool {
+    use regex::Regex;
+    static NON_ZERO: OnceLock<Regex> = OnceLock::new();
+
+    NON_ZERO
+        .get_or_init(|| Regex::new(r"[1-9]").expect("NON_ZERO regex"))
+        .is_match(value)
 }
 
 impl<'a> From<&'a TypedExpr> for Located<'a> {
