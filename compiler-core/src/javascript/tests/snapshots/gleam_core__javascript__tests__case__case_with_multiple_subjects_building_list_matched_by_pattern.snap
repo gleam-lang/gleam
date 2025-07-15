@@ -1,0 +1,48 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "pub fn go(n, x) {\n   case n, x {\n     1, [] -> []\n     _, [a, b] -> [a, b]\n     3, [1, ..rest] -> [1, ..rest]\n     _, _ -> x\n   }\n}"
+---
+----- SOURCE CODE
+pub fn go(n, x) {
+   case n, x {
+     1, [] -> []
+     _, [a, b] -> [a, b]
+     3, [1, ..rest] -> [1, ..rest]
+     _, _ -> x
+   }
+}
+
+----- COMPILED JAVASCRIPT
+import { Empty as $Empty } from "../gleam.mjs";
+
+export function go(n, x) {
+  if (x instanceof $Empty) {
+    if (n === 1) {
+      return x;
+    } else {
+      return x;
+    }
+  } else {
+    let $ = x.tail;
+    if ($ instanceof $Empty) {
+      let $1 = x.head;
+      if ($1 === 1 && n === 3) {
+        return x;
+      } else {
+        return x;
+      }
+    } else {
+      let $1 = $.tail;
+      if ($1 instanceof $Empty) {
+        return x;
+      } else {
+        let $2 = x.head;
+        if ($2 === 1 && n === 3) {
+          return x;
+        } else {
+          return x;
+        }
+      }
+    }
+  }
+}

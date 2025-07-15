@@ -315,10 +315,10 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
         let clause = &clauses.get(clause_index).expect("invalid clause index");
         let body = &clause.then;
 
-        if clause.is_rebuilding_matched_value() {
+        if let Some(subject_index) = clause.returned_subject() {
             let variable = self
                 .assignments
-                .first()
+                .get(subject_index)
                 .expect("case with no subjects")
                 .name();
 

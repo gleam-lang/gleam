@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "pub fn go(x) {\n   case x, x + 1 {\n     1, _ -> 2\n     _, n -> n\n   }\n}"
+---
+----- SOURCE CODE
+pub fn go(x) {
+   case x, x + 1 {
+     1, _ -> 2
+     _, n -> n
+   }
+}
+
+----- COMPILED JAVASCRIPT
+export function go(x) {
+  let $ = x + 1;
+  if (x === 1) {
+    return 2;
+  } else {
+    return $;
+  }
+}
