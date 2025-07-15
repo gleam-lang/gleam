@@ -1628,7 +1628,7 @@ impl TypedClause {
     /// that value exactly as it is.
     ///
     /// For example:
-    /// ```
+    /// ```txt
     /// n -> n
     /// 1 -> 1
     /// Ok(1) -> Ok(1)
