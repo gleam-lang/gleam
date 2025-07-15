@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\nimport gleam\n\npub fn go(x) {\n   case x {\n     Ok(1) as a -> Ok(1)\n     Ok(_) -> Ok(2)\n     Error(Nil) -> Error(Nil)\n   }\n}"
+---
+----- SOURCE CODE
+
+import gleam
+
+pub fn go(x) {
+   case x {
+     Ok(1) as a -> Ok(1)
+     Ok(_) -> Ok(2)
+     Error(Nil) -> Error(Nil)
+   }
+}
+
+----- COMPILED JAVASCRIPT
+import * as $gleam from "../gleam.mjs";
+import { Ok } from "../gleam.mjs";
+
+export function go(x) {
+  if (x instanceof Ok) {
+    let $ = x[0];
+    if ($ === 1) {
+      return x;
+    } else {
+      return new Ok(2);
+    }
+  } else {
+    return x;
+  }
+}

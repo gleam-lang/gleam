@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\nimport gleam\n\npub fn go(x) {\n   case x {\n     1 -> { 1 }\n     _ -> 2\n   }\n}"
+---
+----- SOURCE CODE
+
+import gleam
+
+pub fn go(x) {
+   case x {
+     1 -> { 1 }
+     _ -> 2
+   }
+}
+
+----- COMPILED JAVASCRIPT
+import * as $gleam from "../gleam.mjs";
+
+export function go(x) {
+  if (x === 1) {
+    return x;
+  } else {
+    return 2;
+  }
+}
