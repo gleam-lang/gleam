@@ -1441,10 +1441,6 @@ impl<'module, 'a> Generator<'module, 'a> {
             self.not_in_tail_position(Some(Ordering::Strict), |this| this.child_expression(left));
         let right_doc =
             self.not_in_tail_position(Some(Ordering::Strict), |this| this.child_expression(right));
-<<<<<<< HEAD
-        self.tracker.int_division_used = true;
-        docvec!["divideInt", wrap_arguments([left, right])]
-=======
 
         if right.non_zero_compile_time_number() {
             let division = if let TypedExpr::BinOp { .. } = left {
@@ -1452,12 +1448,11 @@ impl<'module, 'a> Generator<'module, 'a> {
             } else {
                 docvec![left_doc, " / ", right_doc]
             };
-            docvec!["globalThis.Math.trunc", wrap_args([division])]
+            docvec!["globalThis.Math.trunc", wrap_arguments([division])]
         } else {
             self.tracker.int_division_used = true;
-            docvec!["divideInt", wrap_args([left_doc, right_doc])]
+            docvec!["divideInt", wrap_arguments([left_doc, right_doc])]
         }
->>>>>>> 15e8a1280 (improve int division and modulo on js)
     }
 
     fn remainder_int(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Document<'a> {
