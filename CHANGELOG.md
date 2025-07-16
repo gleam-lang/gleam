@@ -288,6 +288,14 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- `gleam run -m <module>` now calls the requested module’s `main` function
+  directly rather than first starting the project’s `erlang.application_start_module`.
+    
+  This prevents crashes when the start module isn’t meant to be run in that
+  context.
+
+  ([Aayush Tripathi](https://github.com/aayush-tripathi))
+
 ### Language server
 
 - It is now possible to use the "Pattern match on variable" code action on
