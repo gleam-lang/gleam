@@ -1,0 +1,23 @@
+---
+source: language-server/src/tests/action.rs
+expression: "pub fn main() {\n  fn(do) { fn(re){ mi(re) }(do) }\n}\n\nfn mi(v) {\n  todo\n}\n"
+---
+----- BEFORE ACTION
+pub fn main() {
+  fn(do) { fn(re){ mi(re) }(do) }
+           ↑                     
+}
+
+fn mi(v) {
+  todo
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  fn(do) { mi(do) }
+}
+
+fn mi(v) {
+  todo
+}

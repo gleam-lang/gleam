@@ -1,0 +1,23 @@
+---
+source: language-server/src/tests/action.rs
+expression: "pub fn main() {\n  fn(a, b, c) { op(a, second: b, third: c) }\n}\n\nfn op(a, second b, third c) {\n  todo\n}\n"
+---
+----- BEFORE ACTION
+pub fn main() {
+  fn(a, b, c) { op(a, second: b, third: c) }
+  ↑                                         
+}
+
+fn op(a, second b, third c) {
+  todo
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  op
+}
+
+fn op(a, second b, third c) {
+  todo
+}
