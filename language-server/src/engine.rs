@@ -45,7 +45,7 @@ use super::{
         GenerateVariant, InlineVariable, InterpolateString, LetAssertToCase, MergeCaseBranches,
         PatternMatchOnValue, RedundantTupleInCaseSubject, RemoveBlock, RemoveEchos,
         RemovePrivateOpaque, RemoveUnreachableCaseClauses, RemoveUnusedImports,
-        UseLabelShorthandSyntax, WrapInAnonymousFunction, WrapInBlock,
+        UnwrapAnonymousFunction, UseLabelShorthandSyntax, WrapInAnonymousFunction, WrapInBlock,
         code_action_add_missing_patterns, code_action_convert_qualified_constructor_to_unqualified,
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
         code_action_inexhaustive_let_to_case,
@@ -463,6 +463,7 @@ where
             GenerateDynamicDecoder::new(module, &lines, &params, &mut actions, &this.compiler)
                 .code_actions();
             actions.extend(WrapInAnonymousFunction::new(module, &lines, &params).code_actions());
+            actions.extend(UnwrapAnonymousFunction::new(module, &lines, &params).code_actions());
             GenerateJsonEncoder::new(
                 module,
                 &lines,
