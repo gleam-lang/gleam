@@ -1081,9 +1081,7 @@ your app.src file \"{app_ver}\"."
                 match os {
                     OS::MacOS => {
                         fn brew_install(name: &str, pkg: &str) -> String {
-                            format!(
-                                "\n\nYou can install {name} via homebrew: brew install {pkg}",
-                            )
+                            format!("\n\nYou can install {name} via homebrew: brew install {pkg}",)
                         }
                         match program.as_str() {
                             "erl" | "erlc" | "escript" => {
@@ -1100,9 +1098,7 @@ your app.src file \"{app_ver}\"."
                     }
                     OS::Linux(distro) => {
                         fn apt_install(name: &str, pkg: &str) -> String {
-                            format!(
-                                "\n\nYou can install {name} via apt: sudo apt install {pkg}"
-                            )
+                            format!("\n\nYou can install {name} via apt: sudo apt install {pkg}")
                         }
                         match distro {
                             Distro::Ubuntu | Distro::Debian => match program.as_str() {
@@ -1349,7 +1345,11 @@ same name and extension, unintentionally overwriting the native file."
                 vec![Diagnostic {
                     title: "Gleam module clashes with native file".into(),
                     text,
-                    hint: Some("Consider renaming one of the files, such as by adding an `_ffi` suffix to the native file's name, and trying again.".into()),
+                    hint: Some(
+                        "Consider renaming one of the files, such as by \
+adding an `_ffi` suffix to the native file's name, and trying again."
+                            .into(),
+                    ),
                     level: Level::Error,
                     location: None,
                 }]
@@ -2967,18 +2967,20 @@ a size are only allowed at the end of a bin pattern.",
                                 option: UnsupportedOption::NativeEndianness,
                             } => (
                                 "Unsupported endianness",
-                                vec![
-                                    wrap_format!("The {target} target does not support the `native` endianness option.")
-                                ],
+                                vec![wrap_format!(
+                                    "The {target} target does not support the `native` \
+endianness option."
+                                )],
                             ),
                             bit_array::ErrorType::OptionNotSupportedForTarget {
                                 target,
                                 option: UnsupportedOption::UtfCodepointPattern,
                             } => (
                                 "UTF-codepoint pattern matching is not supported",
-                                vec![
-                                    wrap_format!("The {target} target does not support UTF-codepoint pattern matching.")
-                                ],
+                                vec![wrap_format!(
+                                    "The {target} target does not support \
+UTF-codepoint pattern matching."
+                                )],
                             ),
                         };
                         extra.push("See: https://tour.gleam.run/data-types/bit-arrays/".into());
@@ -4135,23 +4137,13 @@ manifest.toml and a version range specified in gleam.toml:
                 }]
             }
 
-            Error::DependencyResolutionFailed(error) => {
-                let text = format!(
-                    "An error occurred while determining what dependency packages and
-versions should be downloaded.
-The error from the version resolver library was:
-
-{}",
-                    wrap(error)
-                );
-                vec![Diagnostic {
-                    title: "Dependency resolution failed".into(),
-                    text,
-                    hint: None,
-                    location: None,
-                    level: Level::Error,
-                }]
-            }
+            Error::DependencyResolutionFailed(error) => vec![Diagnostic {
+                title: "Dependency resolution failed".into(),
+                text: wrap(error),
+                hint: None,
+                location: None,
+                level: Level::Error,
+            }],
 
             Error::WrongDependencyProvided {
                 path,
