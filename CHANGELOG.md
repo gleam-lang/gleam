@@ -277,10 +277,6 @@
   Resolving versions
   error: Dependency resolution failed
 
-  An error occurred while determining what dependency packages and
-  versions should be downloaded.
-  The error from the version resolver library was:
-
   There's no compatible version of `gleam_otp`:
     - You require wisp >= 1.0.0 and < 2.0.0
       - wisp requires mist >= 1.2.0 and < 5.0.0
