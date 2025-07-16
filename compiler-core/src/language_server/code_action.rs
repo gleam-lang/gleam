@@ -3934,7 +3934,7 @@ impl VariablesNames {
         }
         variables
     }
-    
+
     fn from_expr(expr: &TypedExpr) -> Self {
         let mut variables = Self {
             names: HashSet::new(),
@@ -10012,6 +10012,110 @@ impl<'ast> ast::visit::Visit<'ast> for WrapInAnonymousFunction<'ast> {
                 arguments: arguments.clone(),
                 variables_names,
             });
+        }
+    }
+}
+
+pub struct UnwrapAnonymousFunction<'a> {
+    module: &'a Module,
+    line_numbers: &'a LineNumbers,
+    params: &'a CodeActionParams,
+    targets: Vec<FnToUnwrap>,
+}
+
+struct FnToUnwrap {
+    fn_location: SrcSpan,
+    inner_function_location: SrcSpan,
+}
+
+impl<'a> UnwrapAnonymousFunction<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            line_numbers,
+            params,
+            targets: vec![],
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let mut actions = Vec::with_capacity(self.targets.len());
+        for target in self.targets {
+            let mut edits = TextEdits::new(self.line_numbers);
+
+            edits.delete(SrcSpan {
+                start: target.fn_location.start,
+                end: target.inner_function_location.start,
+            });
+            edits.delete(SrcSpan {
+                start: target.inner_function_location.end,
+                end: target.fn_location.end,
+            });
+
+            CodeActionBuilder::new("Unwrap anonymous function")
+                .kind(CodeActionKind::REFACTOR_REWRITE)
+                .changes(self.params.text_document.uri.clone(), edits.edits)
+                .push_to(&mut actions);
+        }
+        actions
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for UnwrapAnonymousFunction<'ast> {
+    fn visit_typed_expr_fn(
+        &mut self,
+        location: &'ast SrcSpan,
+        _type_: &'ast Arc<Type>,
+        kind: &'ast FunctionLiteralKind,
+        arguments: &'ast [TypedArg],
+        body: &'ast Vec1<TypedStatement>,
+        _return_annotation: &'ast Option<ast::TypeAst>,
+    ) {
+        match kind {
+            FunctionLiteralKind::Anonymous { .. } => (),
+            _ => return,
+        }
+
+        // We need the existing argument list for the fn to be a 1:1 match for the args we pass
+        // to the called function. We figure out what the call-arg list needs to look like here,
+        // and bail out if any incoming args are discarded.
+        let mut expected_arguments = Vec::with_capacity(arguments.len());
+        for a in arguments {
+            match &a.names {
+                ArgNames::Named { name, .. } => expected_arguments.push(name),
+                ArgNames::NamedLabelled { name, .. } => expected_arguments.push(name),
+                ArgNames::Discard { .. } => return,
+                ArgNames::LabelledDiscard { .. } => return,
+            }
+        }
+
+        // match fn bodies with only a single function call
+        if let [stmt] = body.as_slice()
+            && let TypedStatement::Expression(expr) = stmt
+            && let TypedExpr::Call { fun, arguments, .. } = expr
+        {
+            let mut call_arguments = Vec::with_capacity(arguments.len());
+            for a in arguments {
+                match &a.value {
+                    TypedExpr::Var { name, .. } => call_arguments.push(name),
+                    _ => return,
+                }
+            }
+
+            if call_arguments != expected_arguments {
+                return;
+            }
+
+            self.targets.push(FnToUnwrap {
+                fn_location: *location,
+                inner_function_location: fun.location(),
+            })
         }
     }
 }
