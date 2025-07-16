@@ -138,6 +138,7 @@ const REMOVE_UNREACHABLE_CLAUSES: &str = "Remove unreachable clauses";
 const ADD_OMITTED_LABELS: &str = "Add omitted labels";
 const EXTRACT_FUNCTION: &str = "Extract function";
 const MERGE_CASE_BRANCHES: &str = "Merge case branches";
+const WRAP_IN_ANONYMOUS_FUNCTION: &str = "Wrap in anonymous function";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -11575,5 +11576,39 @@ fn wibble(one: Int) -> Int { one }
 fn wobble(one) { wibble(one) }
 "#,
         find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn wrap_call_arg_in_anonymous_function() {
+    assert_code_action!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "import gleam/list
+
+pub fn main() {
+    list.map([1, 2, 3], op)
+}
+
+fn op(i: Int) -> Int {
+    todo
+}
+",
+        find_position_of("op").to_selection()
+    );
+}
+
+#[test]
+fn wrap_assignment_in_anonymous_function() {
+    assert_code_action!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+    let op = op_factory(1, 2, 3)
+}
+
+fn op_factory(a: Int, b: Int, c: Int) -> fn(Int) -> Int {
+    todo
+}
+",
+        find_position_of("op_factory").to_selection()
     );
 }

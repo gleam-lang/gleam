@@ -1,4 +1,4 @@
-use std::{collections::HashSet, iter, sync::Arc};
+use std::{any::Any, collections::HashSet, iter, sync::Arc};
 
 use crate::{
     Error, STDLIB_PACKAGE_NAME,
@@ -3932,6 +3932,15 @@ impl VariablesNames {
         for statement in statements {
             variables.visit_typed_statement(statement);
         }
+        variables
+    }
+    
+    fn from_expr(expr: &TypedExpr) -> Self {
+        let mut variables = Self {
+            names: HashSet::new(),
+        };
+
+        variables.visit_typed_expr(expr);
         variables
     }
 }
@@ -9921,5 +9930,88 @@ impl<'ast> ast::visit::Visit<'ast> for MergeCaseBranches<'ast> {
         // the code action to some case expression that is nested in one of its
         // branches!
         ast::visit::visit_typed_expr_case(self, location, type_, subjects, clauses, compiled_case);
+    }
+}
+
+struct FunctionToWrap {
+    location: SrcSpan,
+    arguments: Vec<Arc<Type>>,
+    variables_names: VariablesNames,
+}
+
+pub struct WrapInAnonymousFunction<'a> {
+    module: &'a Module,
+    line_numbers: &'a LineNumbers,
+    params: &'a CodeActionParams,
+    targets: Vec<FunctionToWrap>,
+}
+
+impl<'a> WrapInAnonymousFunction<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            line_numbers,
+            params,
+            targets: vec![],
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let mut actions = Vec::with_capacity(self.targets.len());
+        for target in self.targets {
+            let mut name_generator = NameGenerator::new();
+            name_generator.reserve_variable_names(target.variables_names);
+            let arguments = target
+                .arguments
+                .iter()
+                .map(|t| name_generator.generate_name_from_type(t))
+                .join(", ");
+
+            let mut edits = TextEdits::new(self.line_numbers);
+            edits.insert(target.location.start, format!("fn({arguments}) {{ "));
+            edits.insert(target.location.end, format!("({arguments}) }}"));
+
+            CodeActionBuilder::new("Wrap in anonymous function")
+                .kind(CodeActionKind::REFACTOR_REWRITE)
+                .changes(self.params.text_document.uri.clone(), edits.edits)
+                .push_to(&mut actions);
+        }
+        actions
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for WrapInAnonymousFunction<'ast> {
+    fn visit_typed_call_arg(&mut self, arg: &'ast TypedCallArg) {
+        if let Type::Fn { ref arguments, .. } = *arg.value.type_() {
+            let variables_names = VariablesNames::from_expr(&arg.value);
+
+            self.targets.push(FunctionToWrap {
+                location: arg.location,
+                arguments: arguments.clone(),
+                variables_names,
+            });
+        }
+    }
+
+    fn visit_typed_assignment(&mut self, assignment: &'ast TypedAssignment) {
+        if assignment.kind != AssignmentKind::Let {
+            return;
+        }
+
+        if let Type::Fn { ref arguments, .. } = *assignment.value.type_() {
+            let variables_names = VariablesNames::from_expr(&assignment.value);
+
+            self.targets.push(FunctionToWrap {
+                location: assignment.value.location(),
+                arguments: arguments.clone(),
+                variables_names,
+            });
+        }
     }
 }
