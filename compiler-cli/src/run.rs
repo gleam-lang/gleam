@@ -51,12 +51,12 @@ pub fn setup(
     arguments: Vec<String>,
     target: Option<Target>,
     runtime: Option<Runtime>,
-    module: Option<String>,
+    module_arg: Option<String>,
     which: Which,
     no_print_progress: bool,
 ) -> Result<Command, Error> {
     // Validate the module path
-    if let Some(mod_path) = &module
+    if let Some(mod_path) = &module_arg
         && !is_gleam_module(mod_path)
     {
         return Err(Error::InvalidModuleName {
@@ -80,7 +80,7 @@ pub fn setup(
     // Get the config for the module that is being run to check the target.
     // Also get the kind of the package the module belongs to: wether the module
     // belongs to a dependency or to the root package.
-    let (mod_config, package_kind) = match &module {
+    let (mod_config, package_kind) = match &module_arg {
         Some(mod_path) => {
             crate::config::find_package_config_for_module(mod_path, &manifest, paths)?
         }
@@ -91,7 +91,7 @@ pub fn setup(
     let root_config = crate::config::root_config(paths)?;
 
     // Determine which module to run
-    let module = module.unwrap_or(match which {
+    let module = module_arg.clone().unwrap_or(match which {
         Which::Src => root_config.name.to_string(),
         Which::Test => format!("{}_test", &root_config.name),
         Which::Dev => format!("{}_dev", &root_config.name),
@@ -136,7 +136,13 @@ pub fn setup(
                 target: Target::Erlang,
                 invalid_runtime: r,
             }),
-            _ => run_erlang_command(paths, &root_config.name, &module, arguments),
+            _ => run_erlang_command(
+                paths,
+                &root_config.name,
+                &module,
+                arguments,
+                module_arg.is_none(),
+            ),
         },
         Target::JavaScript => match runtime.unwrap_or(mod_config.javascript.runtime) {
             Runtime::Deno => run_javascript_deno_command(
@@ -161,6 +167,7 @@ fn run_erlang_command(
     package: &str,
     module: &str,
     arguments: Vec<String>,
+    use_entrypoint: bool,
 ) -> Result<Command, Error> {
     let mut args = vec![];
 
@@ -174,9 +181,14 @@ fn run_erlang_command(
 
     // gleam modules are separated by `/`. Erlang modules are separated by `@`.
     let module = module.replace('/', "@");
-
+    // Decide what to evaluate
+    let erl_eval = if use_entrypoint {
+        format!("{package}@@main:run({module})")
+    } else {
+        format!("{module}:main(), init:stop()")
+    };
     args.push("-eval".into());
-    args.push(format!("{package}@@main:run({module})"));
+    args.push(erl_eval);
 
     // Don't run the Erlang shell
     args.push("-noshell".into());
@@ -420,4 +432,71 @@ fn valid_module_names() {
     for mod_name in ["valid", "valid/name", "valid/mod/name"] {
         assert!(is_gleam_module(mod_name));
     }
+}
+///Build a throw-away directory under the system TMP dir.
+fn fresh_tmp_dir() -> Utf8PathBuf {
+    use std::{env, fs, time::*};
+    let mut dir = env::temp_dir();
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    dir.push(format!("gleam_run_test_{nanos:x}"));
+    fs::create_dir_all(&dir).unwrap();
+    Utf8PathBuf::from_path_buf(dir).expect("temp dir is valid UTF-8")
+}
+
+/// Create the minimal directory structure that `run_erlang_command` walks
+fn prepare_erlang_build_tree(root: &std::path::Path) {
+    use std::fs;
+    let ebin = root
+        .join("build")
+        .join("dev")
+        .join("erlang")
+        .join("dummy_pkg")
+        .join("ebin");
+    fs::create_dir_all(ebin).unwrap();
+}
+
+#[test]
+fn run_erlang_command_uses_entrypoint_when_requested() {
+    use gleam_core::paths::ProjectPaths;
+    let root = fresh_tmp_dir();
+    prepare_erlang_build_tree(root.as_std_path());
+    let paths = ProjectPaths::new(root);
+    //call helper with entry point
+    let cmd = run_erlang_command(&paths, "myApp", "foo/bar", Vec::new(), true)
+        .expect("command build failed");
+
+    let eval_arg = cmd
+        .args
+        .iter()
+        .skip_while(|s| *s != "-eval")
+        .nth(1)
+        .expect("no -eval arg produced");
+    assert!(
+        eval_arg.contains("@@main:run("),
+        "expected entry-point call, got {eval_arg}"
+    );
+}
+
+#[test]
+fn run_erlang_command_skips_entrypoint_when_module_flag_used() {
+    use gleam_core::paths::ProjectPaths;
+    let root = fresh_tmp_dir();
+    prepare_erlang_build_tree(root.as_std_path());
+    let paths = ProjectPaths::new(root);
+    //call helper without entry point
+    let cmd = run_erlang_command(&paths, "myApp", "foo/bar", Vec::new(), false)
+        .expect("command build failed");
+    let eval_arg = cmd
+        .args
+        .iter()
+        .skip_while(|s| *s != "-eval")
+        .nth(1)
+        .expect("no -eval arg produced");
+    assert!(
+        eval_arg.ends_with(":main(), init:stop()"),
+        "expected direct main/0 call followed by init:stop(), got {eval_arg}"
+    );
 }
