@@ -140,6 +140,7 @@ const EXTRACT_FUNCTION: &str = "Extract function";
 const MERGE_CASE_BRANCHES: &str = "Merge case branches";
 const ADD_MISSING_TYPE_PARAMETER: &str = "Add missing type parameter";
 const REPLACE_UNDERSCORE_WITH_TYPE: &str = "Replace `_` with type";
+const WRAP_IN_ANONYMOUS_FUNCTION: &str = "Wrap in anonymous function";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -12951,6 +12952,22 @@ pub fn wibble() -> _ {
 }
 
 #[test]
+fn wrap_uncalled_function_in_anonymous_function() {
+    assert_code_action!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  op
+}
+
+fn op(i) {
+  todo
+}
+",
+        find_position_of("op").to_selection()
+    );
+}
+
+#[test]
 fn replace_nested_underscore_with_generic_type() {
     assert_code_action!(
         REPLACE_UNDERSCORE_WITH_TYPE,
@@ -12960,6 +12977,21 @@ pub fn wibble() -> Result(a, _) {
 }
     "#,
         find_position_of("_").to_selection()
+    );
+}
+
+fn wrap_uncalled_constructor_in_anonymous_function() {
+    assert_code_action!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  Record
+}
+
+type Record {
+  Record(i: Int)
+}
+",
+        find_position_of("Record").to_selection()
     );
 }
 
@@ -12976,6 +13008,23 @@ pub fn wibble() -> Result(Result(_, Nil), Int) {
     );
 }
 
+fn wrap_call_arg_in_anonymous_function() {
+    assert_code_action!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "import gleam/list
+
+pub fn main() {
+  list.map([1, 2, 3], op)
+}
+
+fn op(i: Int) -> Int {
+  todo
+}
+",
+        find_position_of("op").to_selection()
+    );
+}
+
 #[test]
 fn replace_nested_underscore_in_let_annotation() {
     assert_code_action!(
@@ -12986,6 +13035,22 @@ pub fn wibble() {
 }
     "#,
         find_position_of("_").to_selection()
+    );
+}
+
+#[test]
+fn wrap_function_in_anonymous_function_without_shadowing() {
+    assert_code_action!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  int
+}
+
+fn int(i: Int) {
+  todo
+}
+",
+        find_position_of("int").to_selection()
     );
 }
 
@@ -13038,5 +13103,21 @@ pub fn wibble() {
 }
     "#,
         find_position_of("_").to_selection()
+    );
+}
+
+#[test]
+fn wrap_assignment_in_anonymous_function() {
+    assert_code_action!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  let op = op_factory(1, 2, 3)
+}
+
+fn op_factory(a: Int, b: Int, c: Int) -> fn(Int) -> Int {
+  todo
+}
+",
+        find_position_of("op_factory").to_selection()
     );
 }
