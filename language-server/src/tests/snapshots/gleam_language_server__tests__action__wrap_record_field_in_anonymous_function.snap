@@ -1,0 +1,32 @@
+---
+source: language-server/src/tests/action.rs
+expression: "pub fn main() {\n  let r = Record(wibble)\n}\n\ntype Record {\n  Record(wibbler: fn(Int) -> Int)\n}\n\nfn wibble(v) {\n  todo\n}\n\n"
+---
+----- BEFORE ACTION
+pub fn main() {
+  let r = Record(wibble)
+                 ↑      
+}
+
+type Record {
+  Record(wibbler: fn(Int) -> Int)
+}
+
+fn wibble(v) {
+  todo
+}
+
+
+
+----- AFTER ACTION
+pub fn main() {
+  let r = Record(fn(int) { wibble(int) })
+}
+
+type Record {
+  Record(wibbler: fn(Int) -> Int)
+}
+
+fn wibble(v) {
+  todo
+}

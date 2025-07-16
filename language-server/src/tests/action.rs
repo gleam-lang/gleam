@@ -139,6 +139,7 @@ const ADD_OMITTED_LABELS: &str = "Add omitted labels";
 const EXTRACT_FUNCTION: &str = "Extract function";
 const MERGE_CASE_BRANCHES: &str = "Merge case branches";
 const ADD_MISSING_TYPE_PARAMETER: &str = "Add missing type parameter";
+const WRAP_IN_ANONYMOUS_FUNCTION: &str = "Wrap in anonymous function";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -12558,5 +12559,87 @@ pub type Nothing {
             .add_hex_module("gleam/dict", "pub type Dict(key, value)"),
         find_position_of("pub type Nothing {")
             .select_until(find_position_of("}").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn wrap_uncalled_function_in_anonymous_function() {
+    assert_code_action!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  op
+}
+
+fn op(i) {
+  todo
+}
+",
+        find_position_of("op").to_selection()
+    );
+}
+
+#[test]
+fn wrap_uncalled_constructor_in_anonymous_function() {
+    assert_code_action!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  Record
+}
+
+type Record {
+  Record(i: Int)
+}
+",
+        find_position_of("Record").to_selection()
+    );
+}
+
+#[test]
+fn wrap_call_arg_in_anonymous_function() {
+    assert_code_action!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "import gleam/list
+
+pub fn main() {
+  list.map([1, 2, 3], op)
+}
+
+fn op(i: Int) -> Int {
+  todo
+}
+",
+        find_position_of("op").to_selection()
+    );
+}
+
+#[test]
+fn wrap_function_in_anonymous_function_without_shadowing() {
+    assert_code_action!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  int
+}
+
+fn int(i: Int) {
+  todo
+}
+",
+        find_position_of("int").to_selection()
+    );
+}
+
+#[test]
+fn wrap_assignment_in_anonymous_function() {
+    assert_code_action!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  let op = op_factory(1, 2, 3)
+}
+
+fn op_factory(a: Int, b: Int, c: Int) -> fn(Int) -> Int {
+  todo
+}
+",
+        find_position_of("op_factory").to_selection()
     );
 }
