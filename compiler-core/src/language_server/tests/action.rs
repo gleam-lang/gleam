@@ -135,6 +135,7 @@ const REMOVE_OPAQUE_FROM_PRIVATE_TYPE: &str = "Remove opaque from private type";
 const COLLAPSE_NESTED_CASE: &str = "Collapse nested case";
 const REMOVE_UNREACHABLE_BRANCHES: &str = "Remove unreachable branches";
 const WRAP_IN_ANONYMOUS_FUNCTION: &str = "Wrap in anonymous function";
+const UNWRAP_ANONYMOUS_FUNCTION: &str = "Unwrap anonymous function";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -9829,5 +9830,61 @@ fn op_factory(a: Int, b: Int, c: Int) -> fn(Int) -> Int {
 }
 ",
         find_position_of("op_factory").to_selection()
+    );
+}
+
+#[test]
+fn unwrap_trivial_anonymous_function() {
+    assert_code_action!(
+        UNWRAP_ANONYMOUS_FUNCTION,
+        "import gleam/list
+
+pub fn main() {
+    list.map([1, 2, 3], fn(int) { op(int) })
+}
+
+fn op(i: Int) -> Int {
+    todo
+}
+",
+        find_position_of("fn(int)").to_selection()
+    );
+}
+
+#[test]
+fn unwrap_anonymous_function_unavailable_when_args_discarded() {
+    assert_no_code_actions!(
+        UNWRAP_ANONYMOUS_FUNCTION,
+        "import gleam/list
+
+pub fn main() {
+    list.index_map([1, 2, 3], fn(_, int) { op(int) })
+}
+
+fn op(i: Int) -> Int {
+    todo
+}
+",
+        find_position_of("fn(_, int)").to_selection()
+    );
+}
+
+#[test]
+fn unwrap_anonymous_function_unavailable_with_different_args() {
+    assert_no_code_actions!(
+        UNWRAP_ANONYMOUS_FUNCTION,
+        "import gleam/list
+
+const another_int = 7
+        
+pub fn main() {
+    list.map([1, 2, 3], fn(int) { op(another_int) })
+}
+
+fn op(i: Int) -> Int {
+    todo
+}
+",
+        find_position_of("fn(int)").to_selection()
     );
 }
