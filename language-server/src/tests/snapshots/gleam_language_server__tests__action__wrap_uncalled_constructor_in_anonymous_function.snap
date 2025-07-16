@@ -1,0 +1,23 @@
+---
+source: language-server/src/tests/action.rs
+expression: "pub fn main() {\n  Record\n}\n\ntype Record {\n  Record(i: Int)\n}\n"
+---
+----- BEFORE ACTION
+pub fn main() {
+  Record
+  ↑     
+}
+
+type Record {
+  Record(i: Int)
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  fn(int) { Record(int) }
+}
+
+type Record {
+  Record(i: Int)
+}

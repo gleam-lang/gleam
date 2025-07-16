@@ -4174,11 +4174,13 @@ impl<'ast> ast::visit::Visit<'ast> for ExpandFunctionCapture<'ast> {
     }
 }
 
+/// A set of variable names used in some gleam. Useful for passing to [NameGenerator::reserve_variable_names].
 struct VariablesNames {
     names: HashSet<EcoString>,
 }
 
 impl VariablesNames {
+    /// Creates a `VariableNames` by collecting all variables used in a list of statements.
     fn from_statements(statements: &[TypedStatement]) -> Self {
         let mut variables = Self {
             names: HashSet::new(),
@@ -4187,6 +4189,16 @@ impl VariablesNames {
         for statement in statements {
             variables.visit_typed_statement(statement);
         }
+        variables
+    }
+
+    /// Creates a `VariableNames` by collecting all variables used within an expression.
+    fn from_expression(expression: &TypedExpr) -> Self {
+        let mut variables = Self {
+            names: HashSet::new(),
+        };
+
+        variables.visit_typed_expr(expression);
         variables
     }
 }
@@ -11372,6 +11384,129 @@ impl<'ast> ast::visit::Visit<'ast> for ReplaceUnderscoreWithType<'ast> {
                 type_,
                 location: *location,
             })
+        }
+    }
+}
+
+/// Code action to turn a function used as a reference into a one-statement anonymous function.
+///
+/// For example, if the code action was used on `op` here:
+///
+/// ```gleam
+/// list.map([1, 2, 3], op)
+/// ```
+///
+/// it would become:
+///
+/// ```gleam
+/// list.map([1, 2, 3], fn(int) {
+///   op(int)
+/// })
+/// ```
+pub struct WrapInAnonymousFunction<'a> {
+    module: &'a Module,
+    line_numbers: &'a LineNumbers,
+    params: &'a CodeActionParams,
+    functions: Vec<FunctionToWrap>,
+}
+
+/// Helper struct, a target for [WrapInAnonymousFunction].
+struct FunctionToWrap {
+    location: SrcSpan,
+    arguments: Vec<Arc<Type>>,
+    variables_names: VariablesNames,
+}
+
+impl<'a> WrapInAnonymousFunction<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            line_numbers,
+            params,
+            functions: vec![],
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let mut actions = Vec::with_capacity(self.functions.len());
+        for target in self.functions {
+            let mut name_generator = NameGenerator::new();
+            name_generator.reserve_variable_names(target.variables_names);
+            let arguments = target
+                .arguments
+                .iter()
+                .map(|t| name_generator.generate_name_from_type(t))
+                .join(", ");
+
+            let mut edits = TextEdits::new(self.line_numbers);
+            edits.insert(target.location.start, format!("fn({arguments}) {{ "));
+            edits.insert(target.location.end, format!("({arguments}) }}"));
+
+            CodeActionBuilder::new("Wrap in anonymous function")
+                .kind(CodeActionKind::REFACTOR_REWRITE)
+                .changes(self.params.text_document.uri.clone(), edits.edits)
+                .push_to(&mut actions);
+        }
+        actions
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for WrapInAnonymousFunction<'ast> {
+    fn visit_typed_expr(&mut self, expression: &'ast TypedExpr) {
+        let expression_range = src_span_to_lsp_range(expression.location(), self.line_numbers);
+        if !overlaps(self.params.range, expression_range) {
+            return;
+        }
+
+        let is_excluded = if let TypedExpr::Fn { kind, .. } = expression {
+            kind.is_anonymous() || kind.is_capture()
+        } else {
+            false
+        };
+
+        if let Type::Fn { arguments, .. } = &*expression.type_()
+            && !is_excluded
+        {
+            self.functions.push(FunctionToWrap {
+                location: expression.location(),
+                arguments: arguments.clone(),
+                variables_names: VariablesNames::from_expression(expression),
+            });
+        };
+
+        ast::visit::visit_typed_expr(self, expression);
+    }
+
+    /// We don't want to apply to functions that are being explicitly called
+    /// already, so we need to intercept visits to function calls and bounce
+    /// them out again so they don't end up in our impl for visit_typed_expr.
+    /// Otherwise this is the same as [].
+    fn visit_typed_expr_call(
+        &mut self,
+        _location: &'ast SrcSpan,
+        _type: &'ast Arc<Type>,
+        fun: &'ast TypedExpr,
+        arguments: &'ast [TypedCallArg],
+        _argument_parentheses: &'ast Option<SrcSpan>,
+    ) {
+        // We only need to do this interception for explicit calls, so if any
+        // of our arguments are explicit we re-enter the visitor as usual.
+        if arguments.iter().any(|a| a.is_implicit()) {
+            self.visit_typed_expr(fun);
+        } else {
+            // We still want to visit other nodes nested in the function being
+            // called so we bounce the call back out.
+            ast::visit::visit_typed_expr(self, fun);
+        }
+
+        for argument in arguments {
+            self.visit_typed_call_arg(argument);
         }
     }
 }
