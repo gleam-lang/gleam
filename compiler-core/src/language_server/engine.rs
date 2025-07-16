@@ -44,7 +44,7 @@ use super::{
         FixTruncatedBitArraySegment, GenerateDynamicDecoder, GenerateFunction, GenerateJsonEncoder,
         GenerateVariant, InlineVariable, InterpolateString, LetAssertToCase, PatternMatchOnValue,
         RedundantTupleInCaseSubject, RemoveEchos, RemoveUnusedImports, UseLabelShorthandSyntax,
-        WrapInBlock, code_action_add_missing_patterns,
+        WrapInAnonymousFunction, WrapInBlock, code_action_add_missing_patterns,
         code_action_convert_qualified_constructor_to_unqualified,
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
         code_action_inexhaustive_let_to_case,
@@ -437,6 +437,7 @@ where
             actions.extend(InlineVariable::new(module, &lines, &params).code_actions());
             actions.extend(WrapInBlock::new(module, &lines, &params).code_actions());
             actions.extend(RemoveBlock::new(module, &lines, &params).code_actions());
+            actions.extend(WrapInAnonymousFunction::new(module, &lines, &params).code_actions());
             GenerateDynamicDecoder::new(module, &lines, &params, &mut actions).code_actions();
             GenerateJsonEncoder::new(
                 module,

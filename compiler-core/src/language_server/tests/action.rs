@@ -131,6 +131,7 @@ const REMOVE_ALL_ECHOS_FROM_THIS_MODULE: &str = "Remove all `echo`s from this mo
 const WRAP_IN_BLOCK: &str = "Wrap in block";
 const GENERATE_VARIANT: &str = "Generate variant";
 const REMOVE_BLOCK: &str = "Remove block";
+const WRAP_IN_ANONYMOUS_FUNCTION: &str = "Wrap in anonymous function";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -9130,5 +9131,39 @@ fn remove_block_does_not_unwrap_a_block_with_multiple_statements() {
 }
 ",
         find_position_of("1").to_selection()
+    );
+}
+
+#[test]
+fn wrap_call_arg_in_anonymous_function() {
+    assert_code_action!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "import gleam/list
+
+pub fn main() {
+    list.map([1, 2, 3], op)
+}
+
+fn op(i: Int) -> Int {
+    todo
+}
+",
+        find_position_of("op").to_selection()
+    );
+}
+
+#[test]
+fn wrap_assignment_in_anonymous_function() {
+    assert_code_action!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+    let op = op_factory(1, 2, 3)
+}
+
+fn op_factory(a: Int, b: Int, c: Int) -> fn(Int) -> Int {
+    todo
+}
+",
+        find_position_of("op_factory").to_selection()
     );
 }
