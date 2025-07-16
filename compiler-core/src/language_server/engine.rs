@@ -614,9 +614,13 @@ where
     }
 
     // TODO:
-    // - allow rename from const
-    // - allow rename from pattern match
-    // - any others i find
+    // - allow renaming module alias from const everything but annotation
+    // - allow renaming module alias from pattern match
+    // - allow renaming module alias from local var fn annotation
+    // - allow renaming module alias from local var list annotation recursive
+    // - allow renaming module alias from local var string concat
+    // - allow renaming module alias from local var tuple recursive
+    // - any others found later
     pub fn prepare_rename(
         &mut self,
         params: lsp::TextDocumentPositionParams,

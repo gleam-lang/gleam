@@ -1372,7 +1372,7 @@ fn func(arg: mod.Type, arg2: mod.GenericType(mod.Type), arg3: #(mod.GenericType(
   let _ = mod.fn1
 
   let _: #(mod.Type) = #(mod.Variant1)
-  let _: #(mod.GenericType(mod.Type)) = #(mod.Node(mod.Variant1, mod.Leaf)))
+  let _: #(mod.GenericType(mod.Type)) = #(mod.Node(mod.Variant1, mod.Leaf))
   let _ = #(mod.const1)
   let _ = #(mod.fn1())
   let _ = #(mod.fn1)
@@ -1412,19 +1412,17 @@ fn func(arg: mod.Type, arg2: mod.GenericType(mod.Type), arg3: #(mod.GenericType(
 }
 
 const c1: mod.Type = mod.Variant1
-const c1: mod.GenericType(mod.Type) = mod.Node(mod.Variant1, mod.Leaf)
-const c2 = mod.const1
-const c3 = mod.fn1
-const c4: #(mod.Type, Int, fn() -> a) = #(mod.Variant1, mod.const1, mod.fn1)
-const c5: List(mod.Type) = [mod.Variant1]
-const c6 = [mod.const1]
-const c7 = <<mod.const2:bits>>
-const c8 = mod.const3 <> mod.const3
+const c2: mod.GenericType(mod.Type) = mod.Node(mod.Variant1, mod.Leaf)
+const c3 = mod.const1
+const c4 = mod.fn1
+const c5: #(mod.Type, Int, fn() -> a) = #(mod.Variant1, mod.const1, mod.fn1)
+const c6: List(mod.Type) = [mod.Variant1]
+const c7 = [mod.const1]
+const c8 = [mod.fn1]
+const c9 = <<mod.const2:bits>>
+const c10 = mod.const3 <> mod.const3
 type Type1 { Var(mod.Type) }
 type Type2 = mod.GenericType(mod.Type)";
-
-// TODO:
-// lots
 
 #[test]
 fn rename_module_from_import() {
@@ -1436,7 +1434,7 @@ fn rename_module_from_import() {
 }
 
 #[test]
-fn rename_module_from_spaced_import() {
+fn rename_module_from_import_spaced() {
     let src =
 "import         mod
 const c = mod.Variant1";
@@ -1448,18 +1446,18 @@ const c = mod.Variant1";
 }
 
 #[test]
-fn rename_module_from_alias() {
+fn rename_module_from_import_with_alias() {
     let test_project = TestProject::for_source(TEST_MODULE).add_module("mod", MOCK_MODULE);
     let (_, result) = apply_rename(&test_project, "module", find_position_of("mod").find_position(test_project.src));
     assert_rename!(
         TestProject::for_source(result.get("app").unwrap()).add_module("mod", MOCK_MODULE),
-        "module_alias",
+        "alias",
         find_position_of("import mod as module")
     );
 }
 
 #[test]
-fn rename_module_from_spaced_alias() {
+fn rename_module_from_import_spaced_with_alias() {
     let src =
 "import mod     as      module
 const c = module.Variant1";
@@ -1471,7 +1469,7 @@ const c = module.Variant1";
 }
 
 #[test]
-fn rename_module_with_unqualified_member() {
+fn rename_module_from_import_with_unqualified_member() {
     let src =
 "import mod.{type Type}
 const c1 = mod.Variant1
@@ -1485,10 +1483,10 @@ type Alias = Type";
 }
 
 #[test]
-fn rename_module_with_spaced_alias_and_unqualified_member() {
+fn rename_module_from_import_spaced_with_alias_and_unqualified_member() {
     let src=
 "import     mod.{ type Type  }   as      module
-const c = mod.Variant";
+const c = module.Variant1";
     let test_project = TestProject::for_source(src).add_module("mod", MOCK_MODULE);
     assert_rename!(
         test_project,
@@ -1498,13 +1496,48 @@ const c = mod.Variant";
 }
 
 #[test]
-fn rename_module_to_orig() {
-    let test_project = TestProject::for_source(TEST_MODULE).add_module("mod", MOCK_MODULE);
-    let (_, result) = apply_rename(&test_project, "module", find_position_of("import mod").find_position(test_project.src));
+fn rename_module_from_import_to_orig() {
     assert_rename!(
-        TestProject::for_source(result.get("main").unwrap()).add_module("mod", MOCK_MODULE),
+        TestProject::for_source(
+            "import mod as module\nconst c = module.Variant1"
+        ).add_module("mod", MOCK_MODULE),
         "mod",
         find_position_of("import mod as module")
+    );
+}
+
+#[test]
+fn rename_module_from_import_nested() {
+    assert_rename!(
+        TestProject::for_source(
+            "import testing/mod\nconst c = mod.Variant1"
+        ).add_module("testing/mod", MOCK_MODULE),
+        "module",
+        find_position_of("import testing/mod")
+    );
+}
+
+#[test]
+fn rename_module_from_import_nested_spaced_with_unqualified_member() {
+    let src =
+"import         testing/commons/mod.{ type Type     }
+const c = mod.Variant1";
+    assert_rename!(
+        TestProject::for_source(src).add_module("testing/commons/mod", MOCK_MODULE),
+        "module",
+        find_position_of("import"),
+    );
+}
+
+#[test]
+fn rename_module_from_import_nested_spaced_with_alias_and_unqualified_member() {
+    let src=
+"import     testing/common/mod.{ type Type  }   as      module
+const c = module.Variant1";
+    assert_rename!(
+        TestProject::for_source(src).add_module("testing/common/mod", MOCK_MODULE),
+        "module_alias",
+        find_position_of("module"),
     );
 }
 
@@ -2044,4 +2077,219 @@ fn rename_module_from_pattern_list() {
     );
 }
 
-// TODO: consts
+#[test]
+fn rename_module_from_const_annotation_simple() {
+    assert_rename!(
+        TestProject::for_source("import mod\nconst c: mod.Type = mod.Variant1")
+        .add_module("mod", MOCK_MODULE),
+        "module",
+        find_position_of("mod.Type")
+    );
+}
+
+#[test]
+fn rename_module_from_const_simple_constructor() {
+    assert_rename!(
+        TestProject::for_source("import mod\nconst c: mod.Type = mod.Variant1")
+        .add_module("mod", MOCK_MODULE),
+        "module",
+        find_position_of("mod.Variant1")
+    );
+}
+
+#[test]
+fn rename_module_from_const_annotation_recursive() {
+    let test_project = TestProject::for_source(
+        "import mod\nconst c: mod.GenericType(mod.Type) = mod.Node(mod.Variant1, mod.Leaf)"
+        ).add_module("mod", MOCK_MODULE);
+    assert_rename!(
+        &test_project,
+        "module",
+        find_position_of("mod.GenericType")
+    );
+    assert_rename!(
+        test_project,
+        "module",
+        find_position_of("mod.Type")
+    );
+}
+
+#[test]
+fn rename_module_from_const_recursive_constructor() {
+    let test_project = TestProject::for_source(
+        "import mod\nconst c: mod.GenericType(mod.Type) = mod.Node(mod.Variant1, mod.Leaf)"
+        ).add_module("mod", MOCK_MODULE);
+    assert_rename!(
+        &test_project,
+        "module",
+        find_position_of("mod.Node")
+    );
+    assert_rename!(
+        &test_project,
+        "module",
+        find_position_of("mod.Variant1")
+    );
+    assert_rename!(
+        test_project,
+        "module",
+        find_position_of("mod.Leaf")
+    );
+}
+
+#[test]
+fn rename_module_from_const_const() {
+    assert_rename!(
+        TestProject::for_source("import mod\nconst c = mod.const1")
+        .add_module("mod", MOCK_MODULE),
+        "module",
+        find_position_of("mod.const1")
+    );
+}
+
+#[test]
+fn rename_module_from_const_fn() {
+    assert_rename!(
+        TestProject::for_source("import mod\nconst c = mod.fn1")
+        .add_module("mod", MOCK_MODULE),
+        "module",
+        find_position_of("mod.fn1")
+    );
+}
+
+#[test]
+fn rename_module_from_const_tuple_annotation() {
+    assert_rename!(
+        TestProject::for_source(
+            "import mod\nconst c: #(mod.Type) = #(mod.Variant1)"
+        ).add_module("mod", MOCK_MODULE),
+        "module",
+        find_position_of("mod.Type")
+    );
+}
+
+#[test]
+fn rename_module_from_const_tuple_constructor() {
+    assert_rename!(
+        TestProject::for_source(
+            "import mod\nconst c: #(mod.Type) = #(mod.Variant1)"
+        ).add_module("mod", MOCK_MODULE),
+        "module",
+        find_position_of("mod.Variant1")
+    );
+}
+
+#[test]
+fn rename_module_from_const_tuple_const() {
+    assert_rename!(
+        TestProject::for_source(
+            "import mod\nconst c = #(mod.const1)"
+        ).add_module("mod", MOCK_MODULE),
+        "module",
+        find_position_of("mod.const1")
+    );
+}
+
+#[test]
+fn rename_module_from_const_tuple_fn() {
+    assert_rename!(
+        TestProject::for_source(
+            "import mod\nconst c = #(mod.fn1)"
+        ).add_module("mod", MOCK_MODULE),
+        "module",
+        find_position_of("mod.fn1")
+    );
+}
+
+#[test]
+fn rename_module_from_const_list_annotation() {
+    assert_rename!(
+        TestProject::for_source(
+            "import mod\nconst c: List(mod.Type) = [mod.Variant1]"
+        ).add_module("mod", MOCK_MODULE),
+        "module",
+        find_position_of("mod.Type")
+    );
+}
+
+#[test]
+fn rename_module_from_const_list_constructor() {
+    assert_rename!(
+        TestProject::for_source(
+            "import mod\nconst c: List(mod.Type) = [mod.Variant1]"
+        ).add_module("mod", MOCK_MODULE),
+        "module",
+        find_position_of("mod.Variant1")
+    );
+}
+
+#[test]
+fn rename_module_from_const_list_const() {
+    assert_rename!(
+        TestProject::for_source(
+            "import mod\nconst c = [mod.const1]"
+        ).add_module("mod", MOCK_MODULE),
+        "module",
+        find_position_of("mod.const1")
+    );
+}
+
+#[test]
+fn rename_module_from_const_list_fn() {
+    assert_rename!(
+        TestProject::for_source(
+            "import mod\nconst c = [mod.fn1]"
+        ).add_module("mod", MOCK_MODULE),
+        "module",
+        find_position_of("mod.fn1")
+    );
+}
+
+#[test]
+fn rename_module_from_const_bit_array() {
+    assert_rename!(
+        TestProject::for_source(
+            "import mod\nconst c = <<mod.const2:bits>>"
+        ).add_module("mod", MOCK_MODULE),
+        "module",
+        find_position_of("mod.const2")
+    );
+}
+
+#[test]
+fn rename_module_from_const_string_concat() {
+    assert_rename!(
+        TestProject::for_source(
+            "import mod\nconst c = mod.const3 <> mod.const3"
+        ).add_module("mod", MOCK_MODULE),
+        "module",
+        find_position_of("mod.const3")
+    );
+}
+
+#[test]
+fn rename_module_from_custom_type() {
+    assert_rename!(
+        TestProject::for_source(
+            "import mod\ntype Type { Var(mod.Type) }"
+        ).add_module("mod", MOCK_MODULE),
+        "module",
+        find_position_of("mod.Type")
+    );
+}
+
+#[test]
+fn rename_module_from_type_alias() {
+    let test_project = TestProject::for_source(
+        "import mod\ntype CustomList = mod.GenericType(mod.Type)"
+    ).add_module("mod", MOCK_MODULE);
+    assert_rename!(
+        &test_project,
+        "module",
+        find_position_of("mod.GenericType")
+    );
+    assert_rename!(
+        test_project,
+        "module",
+        find_position_of("mod.Type")
+    );
+}
