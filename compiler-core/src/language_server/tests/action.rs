@@ -9806,11 +9806,11 @@ fn wrap_call_arg_in_anonymous_function() {
         "import gleam/list
 
 pub fn main() {
-    list.map([1, 2, 3], op)
+  list.map([1, 2, 3], op)
 }
 
 fn op(i: Int) -> Int {
-    todo
+  todo
 }
 ",
         find_position_of("op").to_selection()
@@ -9822,11 +9822,11 @@ fn wrap_assignment_in_anonymous_function() {
     assert_code_action!(
         WRAP_IN_ANONYMOUS_FUNCTION,
         "pub fn main() {
-    let op = op_factory(1, 2, 3)
+  let op = op_factory(1, 2, 3)
 }
 
 fn op_factory(a: Int, b: Int, c: Int) -> fn(Int) -> Int {
-    todo
+  todo
 }
 ",
         find_position_of("op_factory").to_selection()
@@ -9840,11 +9840,11 @@ fn unwrap_trivial_anonymous_function() {
         "import gleam/list
 
 pub fn main() {
-    list.map([1, 2, 3], fn(int) { op(int) })
+  list.map([1, 2, 3], fn(int) { op(int) })
 }
 
 fn op(i: Int) -> Int {
-    todo
+  todo
 }
 ",
         find_position_of("fn(int)").to_selection()
@@ -9858,11 +9858,11 @@ fn unwrap_anonymous_function_unavailable_when_args_discarded() {
         "import gleam/list
 
 pub fn main() {
-    list.index_map([1, 2, 3], fn(_, int) { op(int) })
+  list.index_map([1, 2, 3], fn(_, int) { op(int) })
 }
 
 fn op(i: Int) -> Int {
-    todo
+  todo
 }
 ",
         find_position_of("fn(_, int)").to_selection()
@@ -9878,11 +9878,11 @@ fn unwrap_anonymous_function_unavailable_with_different_args() {
 const another_int = 7
         
 pub fn main() {
-    list.map([1, 2, 3], fn(int) { op(another_int) })
+  list.map([1, 2, 3], fn(int) { op(another_int) })
 }
 
 fn op(i: Int) -> Int {
-    todo
+  todo
 }
 ",
         find_position_of("fn(int)").to_selection()
