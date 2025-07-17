@@ -325,7 +325,7 @@
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - The `repository` section in `gleam.toml` now allows specifying the
-  `tag_prefix` property, which overrides the default `v`.
+  `tag_prefix` property, which is prepended to the default tag.
   This makes it possible to have multiple packages with different versions in
   the same repository (together with `path`), without breaking links to source
   code in documentation.
