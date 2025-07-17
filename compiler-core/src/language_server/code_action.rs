@@ -10006,41 +10006,46 @@ impl<'a> WrapInAnonymousFunction<'a> {
 }
 
 impl<'ast> ast::visit::Visit<'ast> for WrapInAnonymousFunction<'ast> {
-    fn visit_typed_call_arg(&mut self, arg: &'ast TypedCallArg) {
-        let function_range = src_span_to_lsp_range(arg.location, self.line_numbers);
-        if !overlaps(self.params.range, function_range) {
+    fn visit_typed_expr(&mut self, expression: &'ast TypedExpr) {
+        let expression_range = src_span_to_lsp_range(expression.location(), self.line_numbers);
+        if !overlaps(self.params.range, expression_range) {
             return;
         }
 
-        if let Type::Fn { ref arguments, .. } = *arg.value.type_() {
-            let variables_names = VariablesNames::from_expression(&arg.value);
-
+        if let Type::Fn { ref arguments, .. } = *expression.type_() {
             self.functions.push(FunctionToWrap {
-                location: arg.location,
+                location: expression.location(),
                 arguments: arguments.clone(),
-                variables_names,
+                variables_names: VariablesNames::from_expression(expression),
             });
-        }
+        };
+
+        ast::visit::visit_typed_expr(self, expression);
     }
 
-    fn visit_typed_assignment(&mut self, assignment: &'ast TypedAssignment) {
-        let function_range = src_span_to_lsp_range(assignment.location, self.line_numbers);
-        if !overlaps(self.params.range, function_range) {
-            return;
+    /// We don't want to apply to functions that are being explicitly called
+    /// already, so we need to intercept visits to function calls and bounce
+    /// them out again so they don't end up in our impl for visit_typed_expr.
+    /// Otherwise this is the same as [ast::visit::visit_typed_expr_call].
+    fn visit_typed_expr_call(
+        &mut self,
+        _location: &'ast SrcSpan,
+        _type: &'ast Arc<Type>,
+        fun: &'ast TypedExpr,
+        arguments: &'ast [TypedCallArg],
+    ) {
+        // We only need to do this interception for explicit calls, so if any
+        // of our arguments are explicit we re-enter the visitor as usual.
+        if arguments.iter().any(|a| a.is_implicit()) {
+            self.visit_typed_expr(fun);
+        } else {
+            // We still want to visit other nodes nested in the function being
+            // called so we bounce the call back out.
+            ast::visit::visit_typed_expr(self, fun);
         }
 
-        if assignment.kind != AssignmentKind::Let {
-            return;
-        }
-
-        if let Type::Fn { ref arguments, .. } = *assignment.value.type_() {
-            let variables_names = VariablesNames::from_expression(&assignment.value);
-
-            self.functions.push(FunctionToWrap {
-                location: assignment.value.location(),
-                arguments: arguments.clone(),
-                variables_names,
-            });
+        for argument in arguments {
+            self.visit_typed_call_arg(argument);
         }
     }
 }
@@ -10114,7 +10119,7 @@ impl<'a> UnwrapAnonymousFunction<'a> {
     }
 
     /// If an anonymous function can be unwrapped, save it to our list
-    /// 
+    ///
     /// We need to ensure our subjects:
     /// - are anonymous function literals (not captures)
     /// - only contain a single statement
@@ -10187,11 +10192,11 @@ impl<'ast> ast::visit::Visit<'ast> for UnwrapAnonymousFunction<'ast> {
     fn visit_typed_expr_fn(
         &mut self,
         location: &'ast SrcSpan,
-        _type: &'ast Arc<Type>,
+        type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
         arguments: &'ast [TypedArg],
         body: &'ast Vec1<TypedStatement>,
-        _return_annotation: &'ast Option<ast::TypeAst>,
+        return_annotation: &'ast Option<ast::TypeAst>,
     ) {
         let function_range = src_span_to_lsp_range(*location, self.line_numbers);
         if !overlaps(self.params.range, function_range) {
@@ -10200,8 +10205,14 @@ impl<'ast> ast::visit::Visit<'ast> for UnwrapAnonymousFunction<'ast> {
 
         self.register_function(location, kind, arguments, body);
 
-        for statement in body {
-            self.visit_typed_statement(statement);
-        }
+        ast::visit::visit_typed_expr_fn(
+            self,
+            location,
+            type_,
+            kind,
+            arguments,
+            body,
+            return_annotation,
+        )
     }
 }

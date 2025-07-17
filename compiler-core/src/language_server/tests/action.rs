@@ -11581,6 +11581,22 @@ fn wobble(one) { wibble(one) }
 }
 
 #[test]
+fn wrap_uncalled_function_in_anonymous_function() {
+    assert_code_action!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  op
+}
+
+fn op(i) {
+  todo
+}
+",
+        find_position_of("op").to_selection()
+    );
+}
+
+#[test]
 fn wrap_call_arg_in_anonymous_function() {
     assert_code_action!(
         WRAP_IN_ANONYMOUS_FUNCTION,
@@ -11599,6 +11615,22 @@ fn op(i: Int) -> Int {
 }
 
 #[test]
+fn wrap_function_in_anonymous_function_without_shadowing() {
+    assert_code_action!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  int
+}
+
+fn int(i: Int) {
+  todo
+}
+",
+        find_position_of("int").to_selection()
+    );
+}
+
+#[test]
 fn wrap_assignment_in_anonymous_function() {
     assert_code_action!(
         WRAP_IN_ANONYMOUS_FUNCTION,
@@ -11611,6 +11643,118 @@ fn op_factory(a: Int, b: Int, c: Int) -> fn(Int) -> Int {
 }
 ",
         find_position_of("op_factory").to_selection()
+    );
+}
+
+#[test]
+fn wrap_imported_function_in_anonymous_function() {
+    let source = "import gleam/list
+import gleam/int
+
+pub fn main() {
+  list.map([1, 2, 3], int.is_even)
+}
+";
+
+    let int_source = "pub fn is_even(int) { int % 2 == 0 }";
+
+    assert_code_action!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        TestProject::for_source(source).add_module("gleam/int", int_source),
+        find_position_of("int.is_even").to_selection()
+    );
+}
+
+#[test]
+fn wrap_anonymous_function_in_anonymous_function() {
+    assert_code_action!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  let f = fn(in) { ception(in) }
+}
+
+",
+        find_position_of("fn(in)").to_selection()
+    );
+}
+
+#[test]
+fn wrap_pipeline_step_in_anonymous_function() {
+    assert_code_action!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  1 |> wibble |> wobble
+}
+
+fn wibble(i) {
+  todo
+}
+
+fn wobble(i) {
+  todo
+}
+
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn wrap_final_pipeline_step_in_anonymous_function() {
+    assert_code_action!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  1 |> wibble |> wobble
+}
+
+fn wibble(i) {
+  todo
+}
+
+fn wobble(i) {
+  todo
+}
+
+",
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn wrap_record_field_in_anonymous_function() {
+    assert_code_action!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  let r = Record(wibble)
+}
+
+type Record {
+  Record(wibbler: fn(Int) -> Int)
+}
+
+fn wibble(v) {
+  todo
+}
+
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn dont_wrap_functions_that_are_already_being_called() {
+    assert_no_code_actions!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  wibble(1)
+}
+
+fn wibble(i) {
+  todo
+}
+
+",
+        find_position_of("wibble").to_selection()
     );
 }
 
@@ -11673,7 +11817,7 @@ fn unwrap_anonymous_function_unavailable_with_different_args() {
         "import gleam/list
 
 const another_int = 7
-        
+
 pub fn main() {
   list.map([1, 2, 3], fn(int) { op(another_int) })
 }
