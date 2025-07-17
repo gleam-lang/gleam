@@ -107,9 +107,9 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
     );
 
     // Prompt the user to make a git tag if they have not.
-    let has_repo = config.repository.url().is_some();
+    let has_repo = config.repository.is_some();
     let git = PathBuf::from(".git");
-    let tag_name = config.repository.tag_for_version(&config.version);
+    let tag_name = config.tag_for_version(&config.version);
     let git_tag = git.join("refs").join("tags").join(&tag_name);
     if has_repo && git.exists() && !git_tag.exists() {
         println!(
@@ -207,9 +207,10 @@ For example:
 }
 
 fn check_repo_url(config: &PackageConfig, i_am_sure: bool) -> Result<bool, Error> {
-    let Some(url) = config.repository.url() else {
+    let Some(repo) = config.repository.as_ref() else {
         return Ok(true);
     };
+    let url = repo.url();
 
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let response = runtime.block_on(reqwest::get(&url)).map_err(Error::http)?;
@@ -443,7 +444,14 @@ fn metadata_config<'a>(
     source_files: &[Utf8PathBuf],
     generated_files: &[(Utf8PathBuf, String)],
 ) -> Result<String> {
-    let repo_url = http::Uri::try_from(config.repository.url().unwrap_or_default()).ok();
+    let repo_url = http::Uri::try_from(
+        config
+            .repository
+            .as_ref()
+            .map(|r| r.url())
+            .unwrap_or_default(),
+    )
+    .ok();
     let requirements: Result<Vec<ReleaseRequirement<'a>>> = config
         .dependencies
         .iter()

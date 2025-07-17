@@ -152,7 +152,7 @@ pub struct PackageConfig {
     #[serde(default, rename = "dev-dependencies", serialize_with = "ordered_map")]
     pub dev_dependencies: Dependencies,
     #[serde(default)]
-    pub repository: Repository,
+    pub repository: Option<Repository>,
     #[serde(default)]
     pub links: Vec<Link>,
     #[serde(default)]
@@ -298,6 +298,27 @@ impl PackageConfig {
             }
         }
         Ok(())
+    }
+
+    pub fn tag_for_version(&self, version: &Version) -> String {
+        let prefix = match self.repository.as_ref() {
+            Some(
+                Repository::GitHub { tag_prefix, .. }
+                | Repository::GitLab { tag_prefix, .. }
+                | Repository::BitBucket { tag_prefix, .. }
+                | Repository::Codeberg { tag_prefix, .. }
+                | Repository::SourceHut { tag_prefix, .. }
+                | Repository::Gitea { tag_prefix, .. }
+                | Repository::Forgejo { tag_prefix, .. },
+            ) => tag_prefix.as_ref(),
+
+            Some(Repository::Custom { .. }) | None => None,
+        };
+
+        match prefix {
+            Some(prefix) => format!("{prefix}v{version}"),
+            None => format!("v{version}"),
+        }
     }
 }
 
@@ -763,37 +784,46 @@ pub struct DenoConfig {
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
-#[serde(tag = "type", rename_all = "lowercase")]
+#[serde(tag = "type")]
 pub enum Repository {
+    #[serde(rename = "github")]
     GitHub {
         user: String,
         repo: String,
         path: Option<String>,
+        #[serde(rename = "tag-prefix")]
         tag_prefix: Option<String>,
     },
+    #[serde(rename = "gitlab")]
     GitLab {
         user: String,
         repo: String,
         path: Option<String>,
+        #[serde(rename = "tag-prefix")]
         tag_prefix: Option<String>,
     },
+    #[serde(rename = "bitbucket")]
     BitBucket {
         user: String,
         repo: String,
         path: Option<String>,
+        #[serde(rename = "tag-prefix")]
         tag_prefix: Option<String>,
     },
+    #[serde(rename = "codeberg")]
     Codeberg {
         user: String,
         repo: String,
         path: Option<String>,
+        #[serde(rename = "tag-prefix")]
         tag_prefix: Option<String>,
     },
-    #[serde(alias = "forgejo")]
+    #[serde(rename = "gitea")]
     Gitea {
         user: String,
         repo: String,
         path: Option<String>,
+        #[serde(rename = "tag-prefix")]
         tag_prefix: Option<String>,
         #[serde(
             serialize_with = "uri_serde::serialize",
@@ -801,45 +831,64 @@ pub enum Repository {
         )]
         host: Uri,
     },
+    #[serde(rename = "forgejo")]
+    Forgejo {
+        user: String,
+        repo: String,
+        path: Option<String>,
+        #[serde(rename = "tag-prefix")]
+        tag_prefix: Option<String>,
+        #[serde(
+            serialize_with = "uri_serde::serialize",
+            deserialize_with = "uri_serde_default_https::deserialize"
+        )]
+        host: Uri,
+    },
+    #[serde(rename = "sourcehut")]
     SourceHut {
         user: String,
         repo: String,
         path: Option<String>,
+        #[serde(rename = "tag-prefix")]
         tag_prefix: Option<String>,
     },
+    #[serde(rename = "custom")]
     Custom {
         url: String,
+        #[serde(rename = "tag-prefix")]
+        tag_prefix: Option<String>,
     },
-    None,
 }
 
 impl Repository {
-    pub fn url(&self) -> Option<String> {
+    pub fn url(&self) -> String {
         match self {
             Repository::GitHub { repo, user, .. } => {
-                Some(format!("https://github.com/{user}/{repo}"))
+                format!("https://github.com/{user}/{repo}")
             }
             Repository::GitLab { repo, user, .. } => {
-                Some(format!("https://gitlab.com/{user}/{repo}"))
+                format!("https://gitlab.com/{user}/{repo}")
             }
             Repository::BitBucket { repo, user, .. } => {
-                Some(format!("https://bitbucket.com/{user}/{repo}"))
+                format!("https://bitbucket.com/{user}/{repo}")
             }
             Repository::Codeberg { repo, user, .. } => {
-                Some(format!("https://codeberg.org/{user}/{repo}"))
+                format!("https://codeberg.org/{user}/{repo}")
             }
             Repository::SourceHut { repo, user, .. } => {
-                Some(format!("https://git.sr.ht/~{user}/{repo}"))
+                format!("https://git.sr.ht/~{user}/{repo}")
             }
             Repository::Gitea {
+                repo, user, host, ..
+            }
+            | Repository::Forgejo {
                 repo, user, host, ..
             } => {
                 let string_host = host.to_string();
                 let cleaned_host = string_host.trim_end_matches('/');
-                Some(format!("{cleaned_host}/{user}/{repo}"))
+                format!("{cleaned_host}/{user}/{repo}")
             }
-            Repository::Custom { url } => Some(url.clone()),
-            Repository::None => None,
+            Repository::Custom { url, .. } => url.clone(),
         }
     }
 
@@ -850,34 +899,11 @@ impl Repository {
             | Repository::BitBucket { path, .. }
             | Repository::Codeberg { path, .. }
             | Repository::SourceHut { path, .. }
-            | Repository::Gitea { path, .. } => path.as_ref(),
+            | Repository::Gitea { path, .. }
+            | Repository::Forgejo { path, .. } => path.as_ref(),
 
-            Repository::Custom { .. } | Repository::None => None,
+            Repository::Custom { .. } => None,
         }
-    }
-
-    pub fn tag_for_version(&self, version: &Version) -> String {
-        let prefix = match self {
-            Repository::GitHub { tag_prefix, .. }
-            | Repository::GitLab { tag_prefix, .. }
-            | Repository::BitBucket { tag_prefix, .. }
-            | Repository::Codeberg { tag_prefix, .. }
-            | Repository::SourceHut { tag_prefix, .. }
-            | Repository::Gitea { tag_prefix, .. } => tag_prefix.as_ref(),
-
-            Repository::Custom { .. } | Repository::None => None,
-        };
-
-        match prefix {
-            Some(prefix) => format!("{prefix}{version}"),
-            None => format!("v{version}"),
-        }
-    }
-}
-
-impl Default for Repository {
-    fn default() -> Self {
-        Self::None
     }
 }
 

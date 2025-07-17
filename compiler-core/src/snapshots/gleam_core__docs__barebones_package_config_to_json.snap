@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/docs.rs
+assertion_line: 785
 expression: output
+snapshot_kind: text
 ---
 --- GLEAM.TOML
 
@@ -22,9 +24,7 @@ version = "1.0.0"
     },
     "dependencies": {},
     "dev-dependencies": {},
-    "repository": {
-      "type": "none"
-    },
+    "repository": null,
     "links": [],
     "erlang": {
       "application_start_module": null,
