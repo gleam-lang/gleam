@@ -10153,11 +10153,12 @@ impl<'a> UnwrapAnonymousFunction<'a> {
         for a in arguments {
             match &a.names {
                 ArgNames::Named { name, .. } => outer_argument_names.push(name),
-                ArgNames::NamedLabelled { name, .. } => outer_argument_names.push(name),
-                // We can bail out early if any of these are discarded, since
-                // they couldn't match the arguments used.
+                // We can bail out early if any arguments are discarded, since
+                // they couldn't match those actually used.
                 ArgNames::Discard { .. } => return,
-                ArgNames::LabelledDiscard { .. } => return,
+                // Anonymous functions can't have labelled arguments.
+                ArgNames::NamedLabelled { .. } => unreachable!(),
+                ArgNames::LabelledDiscard { .. } => unreachable!(),
             }
         }
 
