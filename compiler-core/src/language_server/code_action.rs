@@ -10085,37 +10085,43 @@ impl<'ast> ast::visit::Visit<'ast> for UnwrapAnonymousFunction<'ast> {
         // We need the existing argument list for the fn to be a 1:1 match for the args we pass
         // to the called function. We figure out what the call-arg list needs to look like here,
         // and bail out if any incoming args are discarded.
-        let mut expected_arguments = Vec::with_capacity(arguments.len());
+        let mut expected_argument_names = Vec::with_capacity(arguments.len());
         for a in arguments {
             match &a.names {
-                ArgNames::Named { name, .. } => expected_arguments.push(name),
-                ArgNames::NamedLabelled { name, .. } => expected_arguments.push(name),
+                ArgNames::Named { name, .. } => expected_argument_names.push(name),
+                ArgNames::NamedLabelled { name, .. } => expected_argument_names.push(name),
                 ArgNames::Discard { .. } => return,
                 ArgNames::LabelledDiscard { .. } => return,
             }
         }
 
-        // match fn bodies with only a single function call
-        if let [stmt] = body.as_slice()
-            && let TypedStatement::Expression(expr) = stmt
-            && let TypedExpr::Call { fun, arguments, .. } = expr
-        {
-            let mut call_arguments = Vec::with_capacity(arguments.len());
-            for a in arguments {
-                match &a.value {
-                    TypedExpr::Var { name, .. } => call_arguments.push(name),
-                    _ => return,
-                }
-            }
+        // We can only apply to anonymous functions containing a single function call
+        let [
+            TypedStatement::Expression(TypedExpr::Call {
+                fun: called_function,
+                arguments: call_arguments,
+                ..
+            }),
+        ] = body.as_slice()
+        else {
+            return;
+        };
 
-            if call_arguments != expected_arguments {
-                return;
+        let mut call_argument_names = Vec::with_capacity(arguments.len());
+        for a in call_arguments {
+            match &a.value {
+                TypedExpr::Var { name, .. } => call_argument_names.push(name),
+                _ => return,
             }
-
-            self.targets.push(FnToUnwrap {
-                fn_location: *location,
-                inner_function_location: fun.location(),
-            })
         }
+
+        if call_argument_names != expected_argument_names {
+            return;
+        }
+
+        self.targets.push(FnToUnwrap {
+            fn_location: *location,
+            inner_function_location: called_function.location(),
+        })
     }
 }
