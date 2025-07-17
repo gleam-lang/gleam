@@ -40,20 +40,34 @@ impl ModuleExtra {
         self.first_comment_between(start, end).is_some()
     }
 
-    // TODO: this won't necessarily find the first comment, just any comment
+    /// Returns the first comment overlapping the given source locations (inclusive)
+    /// Note that the returned span covers the text of the comment, not the `//`
     pub(crate) fn first_comment_between(&self, start: u32, end: u32) -> Option<SrcSpan> {
-        self.comments
-            .binary_search_by(|comment| {
-                if comment.end < start {
-                    Ordering::Less
-                } else if comment.start > end {
-                    Ordering::Greater
-                } else {
-                    Ordering::Equal
-                }
-            })
-            .ok()
-            .and_then(|index| self.comments.get(index).copied())
+        let inner = |comments: &[SrcSpan], start, end| {
+            if comments.is_empty() {
+                return None;
+            }
+
+            comments
+                .binary_search_by(|comment| {
+                    if comment.end < start {
+                        Ordering::Less
+                    } else if comment.start > end {
+                        Ordering::Greater
+                    } else {
+                        Ordering::Equal
+                    }
+                })
+                .ok()
+        };
+
+        let mut best = None;
+        let mut search_list = &self.comments[..];
+        while let Some(index) = inner(search_list, start, end) {
+            best = self.comments.get(index).copied();
+            search_list = &search_list[0..index];
+        }
+        best
     }
 }
 
@@ -126,6 +140,15 @@ mod tests {
         let extra = set_up_extra();
         assert!(matches!(
             extra.first_comment_between(45, 80),
+            Some(SrcSpan { start: 40, end: 50 })
+        ));
+    }
+
+    #[test]
+    fn first_comment_between_overlapping_end_of_range() {
+        let extra = set_up_extra();
+        assert!(matches!(
+            extra.first_comment_between(35, 45),
             Some(SrcSpan { start: 40, end: 50 })
         ));
     }
