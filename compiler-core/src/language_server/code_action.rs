@@ -1,4 +1,4 @@
-use std::{any::Any, collections::HashSet, iter, sync::Arc};
+use std::{collections::HashSet, iter, sync::Arc};
 
 use crate::{
     Error, STDLIB_PACKAGE_NAME,
