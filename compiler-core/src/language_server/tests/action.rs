@@ -11840,7 +11840,43 @@ fn op(first a, second b) {
     );
 }
 
+#[test]
+fn dont_unwrap_anonymous_function_with_comment_after() {
+    assert_no_code_actions!(
+        UNWRAP_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  fn(a) {
+    op(a)
+    // look out!
+  }
+}
 
+fn op(a) {
+  todo
+}
+",
+        find_position_of("fn(a)").to_selection()
+    );
+}
+
+#[test]
+fn dont_unwrap_anonymous_function_with_comment_before() {
+    assert_no_code_actions!(
+        UNWRAP_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  fn(a) {
+    // look out!
+    op(a)
+  }
+}
+
+fn op(a) {
+  todo
+}
+",
+        find_position_of("fn(a)").to_selection()
+    );
+}
 
 #[test]
 fn unwrap_anonymous_function_unavailable_when_args_discarded() {

@@ -10138,6 +10138,15 @@ impl<'a> UnwrapAnonymousFunction<'a> {
             _ => return,
         }
 
+        // We can't apply to functions with comments in (yet)
+        if self
+            .module
+            .extra
+            .has_comment_between(location.start, location.end)
+        {
+            return;
+        }
+
         // We can only apply to anonymous functions containing a single function call
         let [
             TypedStatement::Expression(TypedExpr::Call {
