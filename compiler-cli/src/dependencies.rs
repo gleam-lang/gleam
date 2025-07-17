@@ -112,7 +112,7 @@ fn list_manifest_packages<W: std::io::Write>(mut buffer: W, manifest: Manifest) 
     manifest
         .packages
         .into_iter()
-        .try_for_each(|package| writeln!(buffer, "{} {}", package.name, package.version))
+        .try_for_each(|package| writeln!(buffer, "{}\t{}", package.name, package.version))
         .map_err(|e| Error::StandardIo {
             action: StandardIoAction::Write,
             err: Some(e.kind()),
