@@ -11793,6 +11793,56 @@ fn mi(v) {
 }
 
 #[test]
+fn unwrap_anonymous_function_with_labelled_args() {
+    assert_code_action!(
+        UNWRAP_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  fn(a, b) { op(first: a, second: b) }
+}
+
+fn op(first a, second b) {
+  todo
+}
+",
+        find_position_of("fn(a, b)").to_selection()
+    );
+}
+
+#[test]
+fn unwrap_anonymous_function_with_labelled_and_unlabelled_args() {
+    assert_code_action!(
+        UNWRAP_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  fn(a, b, c) { op(a, second: b, third: c) }
+}
+
+fn op(a, second b, third c) {
+  todo
+}
+",
+        find_position_of("fn(a, b, c)").to_selection()
+    );
+}
+
+#[test]
+fn unwrap_anonymous_function_with_labelled_args_out_of_order() {
+    assert_code_action!(
+        UNWRAP_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  fn(a, b) { op(second: b, first: a) }
+}
+
+fn op(first a, second b) {
+  todo
+}
+",
+        find_position_of("fn(a, b)").to_selection()
+    );
+}
+
+
+
+#[test]
 fn unwrap_anonymous_function_unavailable_when_args_discarded() {
     assert_no_code_actions!(
         UNWRAP_ANONYMOUS_FUNCTION,
