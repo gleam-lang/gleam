@@ -132,7 +132,7 @@ const WRAP_IN_BLOCK: &str = "Wrap in block";
 const GENERATE_VARIANT: &str = "Generate variant";
 const REMOVE_BLOCK: &str = "Remove block";
 const WRAP_IN_ANONYMOUS_FUNCTION: &str = "Wrap in anonymous function";
-const UNWRAP_ANONYMOUS_FUNCTION: &str = "Unwrap anonymous function";
+const UNWRAP_ANONYMOUS_FUNCTION: &str = "Remove anonymous function wrapper";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
