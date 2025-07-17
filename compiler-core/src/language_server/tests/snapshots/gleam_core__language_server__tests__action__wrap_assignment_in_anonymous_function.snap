@@ -1,23 +1,23 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "pub fn main() {\n    let op = op_factory(1, 2, 3)\n}\n\nfn op_factory(a: Int, b: Int, c: Int) -> fn(Int) -> Int {\n    todo\n}\n"
+expression: "pub fn main() {\n  let op = op_factory(1, 2, 3)\n}\n\nfn op_factory(a: Int, b: Int, c: Int) -> fn(Int) -> Int {\n  todo\n}\n"
 ---
 ----- BEFORE ACTION
 pub fn main() {
-    let op = op_factory(1, 2, 3)
-             ↑                  
+  let op = op_factory(1, 2, 3)
+           ↑                  
 }
 
 fn op_factory(a: Int, b: Int, c: Int) -> fn(Int) -> Int {
-    todo
+  todo
 }
 
 
 ----- AFTER ACTION
 pub fn main() {
-    let op = fn(int) { op_factory(1, 2, 3)(int) }
+  let op = fn(int) { op_factory(1, 2, 3)(int) }
 }
 
 fn op_factory(a: Int, b: Int, c: Int) -> fn(Int) -> Int {
-    todo
+  todo
 }

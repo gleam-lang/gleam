@@ -1,17 +1,17 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "import gleam/list\n\npub fn main() {\n    list.map([1, 2, 3], fn(int) { op(int) })\n}\n\nfn op(i: Int) -> Int {\n    todo\n}\n"
+expression: "import gleam/list\n\npub fn main() {\n  list.map([1, 2, 3], fn(int) { op(int) })\n}\n\nfn op(i: Int) -> Int {\n  todo\n}\n"
 ---
 ----- BEFORE ACTION
 import gleam/list
 
 pub fn main() {
-    list.map([1, 2, 3], fn(int) { op(int) })
-                        ↑                   
+  list.map([1, 2, 3], fn(int) { op(int) })
+                      ↑                   
 }
 
 fn op(i: Int) -> Int {
-    todo
+  todo
 }
 
 
@@ -19,9 +19,9 @@ fn op(i: Int) -> Int {
 import gleam/list
 
 pub fn main() {
-    list.map([1, 2, 3], op)
+  list.map([1, 2, 3], op)
 }
 
 fn op(i: Int) -> Int {
-    todo
+  todo
 }
