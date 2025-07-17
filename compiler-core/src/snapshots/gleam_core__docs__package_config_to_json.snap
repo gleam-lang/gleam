@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/docs.rs
+assertion_line: 765
 expression: output
+snapshot_kind: text
 ---
 --- GLEAM.TOML
 
@@ -79,7 +81,7 @@ allow_read = ["./database.sqlite"]
       "user": "example",
       "repo": "my_dep",
       "path": null,
-      "tag_prefix": null
+      "tag-prefix": null
     },
     "links": [
       {

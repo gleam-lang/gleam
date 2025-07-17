@@ -101,10 +101,14 @@ pub fn generate_html<IO: FileSystemReader>(
         path: doc_link.href.to_string(),
     });
 
-    let repo_link = config.repository.url().map(|path| Link {
-        name: "Repository".into(),
-        path,
-    });
+    let repo_link = config
+        .repository
+        .as_ref()
+        .map(|r| r.url())
+        .map(|path| Link {
+            name: "Repository".into(),
+            path,
+        });
 
     let host = if is_hex_publish == DocContext::HexPublish {
         "https://hexdocs.pm"

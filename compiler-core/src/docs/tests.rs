@@ -618,12 +618,12 @@ pub type Wibble = Int
 fn source_link_for_github_repository() {
     let mut config = PackageConfig::default();
     config.name = EcoString::from("test_project_name");
-    config.repository = Repository::GitHub {
+    config.repository = Some(Repository::GitHub {
         user: "wibble".to_string(),
         repo: "wobble".to_string(),
         path: None,
         tag_prefix: None,
-    };
+    });
 
     let modules = vec![("app.gleam", "pub type Wibble = Int")];
     assert!(
@@ -636,12 +636,12 @@ fn source_link_for_github_repository() {
 fn source_link_for_github_repository_with_path_and_tag_prefix() {
     let mut config = PackageConfig::default();
     config.name = EcoString::from("test_project_name");
-    config.repository = Repository::GitHub {
+    config.repository = Some(Repository::GitHub {
         user: "wibble".to_string(),
         repo: "wobble".to_string(),
         path: Some("path/to/package".to_string()),
-        tag_prefix: Some("subdir-v".into()),
-    };
+        tag_prefix: Some("subdir-".into()),
+    });
 
     let modules = vec![("app.gleam", "pub type Wibble = Int")];
     assert!(compile(config, modules).contains(
@@ -1168,17 +1168,15 @@ pub type Wibble {
 
 #[test]
 fn gitea_repository_url_has_no_double_slash() {
-    let repo = Repository::Gitea {
+    let repo = Repository::Forgejo {
         host: "https://code.example.org/".parse::<Uri>().unwrap(),
         user: "person".into(),
         repo: "forgejo_bug".into(),
         path: None,
+        tag_prefix: None,
     };
 
-    assert_eq!(
-        repo.url().unwrap(),
-        "https://code.example.org/person/forgejo_bug"
-    );
+    assert_eq!(repo.url(), "https://code.example.org/person/forgejo_bug");
 }
 
 #[test]
