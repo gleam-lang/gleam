@@ -10112,23 +10112,22 @@ impl<'a> UnwrapAnonymousFunction<'a> {
         }
         actions
     }
-}
 
-impl<'ast> ast::visit::Visit<'ast> for UnwrapAnonymousFunction<'ast> {
-    fn visit_typed_expr_fn(
+    /// If an anonymous function can be unwrapped, save it to our list
+    /// 
+    /// We need to ensure our subjects:
+    /// - are anonymous function literals (not captures)
+    /// - only contain a single statement
+    /// - that statement is a function call
+    /// - that call's arguments exactly match the arguments of the enclosing
+    ///   function
+    fn register_function(
         &mut self,
-        location: &'ast SrcSpan,
-        _type_: &'ast Arc<Type>,
-        kind: &'ast FunctionLiteralKind,
-        arguments: &'ast [TypedArg],
-        body: &'ast Vec1<TypedStatement>,
-        _return_annotation: &'ast Option<ast::TypeAst>,
+        location: &'a SrcSpan,
+        kind: &'a FunctionLiteralKind,
+        arguments: &'a [TypedArg],
+        body: &'a Vec1<TypedStatement>,
     ) {
-        let function_range = src_span_to_lsp_range(*location, self.line_numbers);
-        if !overlaps(self.params.range, function_range) {
-            return;
-        }
-
         match kind {
             FunctionLiteralKind::Anonymous { .. } => (),
             _ => return,
@@ -10180,5 +10179,28 @@ impl<'ast> ast::visit::Visit<'ast> for UnwrapAnonymousFunction<'ast> {
             anonymous_function_location: *location,
             inner_function_location: called_function.location(),
         })
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for UnwrapAnonymousFunction<'ast> {
+    fn visit_typed_expr_fn(
+        &mut self,
+        location: &'ast SrcSpan,
+        _type: &'ast Arc<Type>,
+        kind: &'ast FunctionLiteralKind,
+        arguments: &'ast [TypedArg],
+        body: &'ast Vec1<TypedStatement>,
+        _return_annotation: &'ast Option<ast::TypeAst>,
+    ) {
+        let function_range = src_span_to_lsp_range(*location, self.line_numbers);
+        if !overlaps(self.params.range, function_range) {
+            return;
+        }
+
+        self.register_function(location, kind, arguments, body);
+
+        for statement in body {
+            self.visit_typed_statement(statement);
+        }
     }
 }

@@ -11633,6 +11633,22 @@ fn op(i: Int) -> Int {
 }
 
 #[test]
+fn unwrap_nested_anonymous_function() {
+    assert_code_action!(
+        UNWRAP_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  fn(do) { fn(re){ mi(re) }(do) }
+}
+
+fn mi(v) {
+  todo
+}
+",
+        find_position_of("fn(re)").to_selection()
+    );
+}
+
+#[test]
 fn unwrap_anonymous_function_unavailable_when_args_discarded() {
     assert_no_code_actions!(
         UNWRAP_ANONYMOUS_FUNCTION,
