@@ -135,7 +135,7 @@ const REMOVE_OPAQUE_FROM_PRIVATE_TYPE: &str = "Remove opaque from private type";
 const COLLAPSE_NESTED_CASE: &str = "Collapse nested case";
 const REMOVE_UNREACHABLE_BRANCHES: &str = "Remove unreachable branches";
 const WRAP_IN_ANONYMOUS_FUNCTION: &str = "Wrap in anonymous function";
-const UNWRAP_ANONYMOUS_FUNCTION: &str = "Unwrap anonymous function";
+const UNWRAP_ANONYMOUS_FUNCTION: &str = "Remove anonymous function wrapper";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
