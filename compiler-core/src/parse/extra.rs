@@ -54,9 +54,22 @@ impl ModuleExtra {
             .ok()
     }
 
+    /// Returns the first comment overlapping the given source locations (inclusive)
+    /// Note that the returned span covers the text of the comment, not the `//`
     pub fn first_comment_between(&self, start: u32, end: u32) -> Option<SrcSpan> {
-        self.index_of_first_comment_between(start, end)
-            .and_then(|index| self.comments.get(index).copied())
+        // Index of a comment, but not necessarily the first one.
+        let index = self.index_of_first_comment_between(start, end)?;
+
+        self.comments
+            .get(0..=index)?
+            .iter()
+            .rev()
+            .take_while(|comment| {
+                // comment overlaps span (inclusive of endpoints)
+                comment.end >= start && comment.start <= end
+            })
+            .last()
+            .copied()
     }
 
     pub fn last_comment_between(&self, start: u32, end: u32) -> Option<SrcSpan> {
@@ -109,5 +122,71 @@ impl<'a> From<(&SrcSpan, &'a str)> for Comment<'a> {
                 .get(start as usize..end)
                 .expect("From span to comment"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{ast::SrcSpan, parse::extra::ModuleExtra};
+
+    fn set_up_extra() -> ModuleExtra {
+        let mut extra = ModuleExtra::new();
+        extra.comments = vec![
+            SrcSpan { start: 0, end: 10 },
+            SrcSpan { start: 20, end: 30 },
+            SrcSpan { start: 40, end: 50 },
+            SrcSpan { start: 60, end: 70 },
+            SrcSpan { start: 80, end: 90 },
+            SrcSpan {
+                start: 90,
+                end: 100,
+            },
+        ];
+        extra
+    }
+
+    #[test]
+    fn first_comment_between() {
+        let extra = set_up_extra();
+        assert!(matches!(
+            extra.first_comment_between(15, 85),
+            Some(SrcSpan { start: 20, end: 30 })
+        ));
+    }
+
+    #[test]
+    fn first_comment_between_equal_to_range() {
+        let extra = set_up_extra();
+        assert!(matches!(
+            extra.first_comment_between(40, 50),
+            Some(SrcSpan { start: 40, end: 50 })
+        ));
+    }
+
+    #[test]
+    fn first_comment_between_overlapping_start_of_range() {
+        let extra = set_up_extra();
+        assert!(matches!(
+            extra.first_comment_between(45, 80),
+            Some(SrcSpan { start: 40, end: 50 })
+        ));
+    }
+
+    #[test]
+    fn first_comment_between_overlapping_end_of_range() {
+        let extra = set_up_extra();
+        assert!(matches!(
+            extra.first_comment_between(35, 45),
+            Some(SrcSpan { start: 40, end: 50 })
+        ));
+    }
+
+    #[test]
+    fn first_comment_between_at_end_of_range() {
+        let extra = set_up_extra();
+        assert!(matches!(
+            dbg!(extra.first_comment_between(55, 60)),
+            Some(SrcSpan { start: 60, end: 70 })
+        ));
     }
 }
