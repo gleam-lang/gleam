@@ -40,6 +40,7 @@ impl ModuleExtra {
         self.first_comment_between(start, end).is_some()
     }
 
+    // TODO: this won't necessarily find the first comment, just any comment
     pub(crate) fn first_comment_between(&self, start: u32, end: u32) -> Option<SrcSpan> {
         self.comments
             .binary_search_by(|comment| {
