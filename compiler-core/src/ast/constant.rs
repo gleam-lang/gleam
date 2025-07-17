@@ -97,15 +97,34 @@ impl TypedConstant {
             Constant::Int { .. }
             | Constant::Float { .. }
             | Constant::String { .. }
-            | Constant::Var { .. }
             | Constant::Invalid { .. } => Located::Constant(self),
-            Constant::Tuple { elements, .. } | Constant::List { elements, .. } => elements
-                .iter()
-                .find_map(|element| element.find_node(byte_index))
-                .unwrap_or(Located::Constant(self)),
+
+            Constant::Var { module: Some((_, location)), constructor: Some(constructor), .. }
+            | Constant::Record { module: Some((_, location)), record_constructor: Some(constructor), .. }
+            if location.contains(byte_index) => {
+                match &constructor.variant {
+                    type_::ValueConstructorVariant::ModuleConstant { module, .. }
+                    | type_::ValueConstructorVariant::ModuleFn { module, .. }
+                    | type_::ValueConstructorVariant::Record { module, .. } => {
+                        Located::ModuleName {
+                            location: *location,
+                            name: module,
+                            layer: Layer::Value,
+                        }
+                    }
+                    // unreachable?
+                    _ => Located::Constant(self),
+                }
+            },
+
+            Constant::Var { .. } => Located::Constant(self),
             Constant::Record { args, .. } => args
                 .iter()
                 .find_map(|argument| argument.find_node(byte_index))
+                .unwrap_or(Located::Constant(self)),
+            Constant::Tuple { elements, .. } | Constant::List { elements, .. } => elements
+                .iter()
+                .find_map(|element| element.find_node(byte_index))
                 .unwrap_or(Located::Constant(self)),
             Constant::BitArray { segments, .. } => segments
                 .iter()

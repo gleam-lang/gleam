@@ -613,14 +613,7 @@ where
         }
     }
 
-    // TODO:
-    // - allow renaming module alias from const everything but annotation
-    // - allow renaming module alias from pattern match
-    // - allow renaming module alias from local var fn annotation
-    // - allow renaming module alias from local var list annotation recursive
-    // - allow renaming module alias from local var string concat
-    // - allow renaming module alias from local var tuple recursive
-    // - any others found later
+    // TODO: check tests for failing
     pub fn prepare_rename(
         &mut self,
         params: lsp::TextDocumentPositionParams,
@@ -630,6 +623,7 @@ where
                 Some(value) => value,
                 None => return Ok(None),
             };
+            eprintln!("{:?}", found);
 
             let Some(current_module) = this.module_for_uri(&params.text_document.uri) else {
                 return Ok(None);
