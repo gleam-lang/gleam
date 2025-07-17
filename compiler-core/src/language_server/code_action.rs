@@ -3919,11 +3919,13 @@ impl<'ast> ast::visit::Visit<'ast> for ExpandFunctionCapture<'ast> {
     }
 }
 
+/// A set of variable names used in some gleam. Useful for passing to [NameGenerator::reserve_variable_names].
 struct VariablesNames {
     names: HashSet<EcoString>,
 }
 
 impl VariablesNames {
+    /// Creates a `VariableNames` by collecting all variables used in a list of statements.
     fn from_statements(statements: &[TypedStatement]) -> Self {
         let mut variables = Self {
             names: HashSet::new(),
@@ -3935,12 +3937,13 @@ impl VariablesNames {
         variables
     }
 
-    fn from_expr(expr: &TypedExpr) -> Self {
+    /// Creates a `VariableNames` by collecting all variables used within an expression.
+    fn from_expression(expression: &TypedExpr) -> Self {
         let mut variables = Self {
             names: HashSet::new(),
         };
 
-        variables.visit_typed_expr(expr);
+        variables.visit_typed_expr(expression);
         variables
     }
 }
@@ -9933,17 +9936,33 @@ impl<'ast> ast::visit::Visit<'ast> for MergeCaseBranches<'ast> {
     }
 }
 
-struct FunctionToWrap {
-    location: SrcSpan,
-    arguments: Vec<Arc<Type>>,
-    variables_names: VariablesNames,
-}
-
+/// Code action to turn a function used as a reference into a one-statement anonymous function.
+///
+/// For example, if the code action was used on `op` here:
+///
+/// ```gleam
+/// list.map([1, 2, 3], op)
+/// ```
+///
+/// it would become:
+///
+/// ```gleam
+/// list.map([1, 2, 3], fn(int) {
+///   op(int)
+/// })
+/// ```
 pub struct WrapInAnonymousFunction<'a> {
     module: &'a Module,
     line_numbers: &'a LineNumbers,
     params: &'a CodeActionParams,
-    targets: Vec<FunctionToWrap>,
+    functions: Vec<FunctionToWrap>,
+}
+
+/// Helper struct, a target for [WrapInAnonymousFunction].
+struct FunctionToWrap {
+    location: SrcSpan,
+    arguments: Vec<Arc<Type>>,
+    variables_names: VariablesNames,
 }
 
 impl<'a> WrapInAnonymousFunction<'a> {
@@ -9956,15 +9975,15 @@ impl<'a> WrapInAnonymousFunction<'a> {
             module,
             line_numbers,
             params,
-            targets: vec![],
+            functions: vec![],
         }
     }
 
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
 
-        let mut actions = Vec::with_capacity(self.targets.len());
-        for target in self.targets {
+        let mut actions = Vec::with_capacity(self.functions.len());
+        for target in self.functions {
             let mut name_generator = NameGenerator::new();
             name_generator.reserve_variable_names(target.variables_names);
             let arguments = target
@@ -9989,9 +10008,9 @@ impl<'a> WrapInAnonymousFunction<'a> {
 impl<'ast> ast::visit::Visit<'ast> for WrapInAnonymousFunction<'ast> {
     fn visit_typed_call_arg(&mut self, arg: &'ast TypedCallArg) {
         if let Type::Fn { ref arguments, .. } = *arg.value.type_() {
-            let variables_names = VariablesNames::from_expr(&arg.value);
+            let variables_names = VariablesNames::from_expression(&arg.value);
 
-            self.targets.push(FunctionToWrap {
+            self.functions.push(FunctionToWrap {
                 location: arg.location,
                 arguments: arguments.clone(),
                 variables_names,
@@ -10005,9 +10024,9 @@ impl<'ast> ast::visit::Visit<'ast> for WrapInAnonymousFunction<'ast> {
         }
 
         if let Type::Fn { ref arguments, .. } = *assignment.value.type_() {
-            let variables_names = VariablesNames::from_expr(&assignment.value);
+            let variables_names = VariablesNames::from_expression(&assignment.value);
 
-            self.targets.push(FunctionToWrap {
+            self.functions.push(FunctionToWrap {
                 location: assignment.value.location(),
                 arguments: arguments.clone(),
                 variables_names,
@@ -10016,15 +10035,33 @@ impl<'ast> ast::visit::Visit<'ast> for WrapInAnonymousFunction<'ast> {
     }
 }
 
+/// Code action to unwrap trivial one-statement anonymous functions into just a reference to the function called
+///
+/// For example, if the code action was used on the anonymous function here:
+///
+/// ```gleam
+/// list.map([1, 2, 3], fn(int) {
+///   op(int)
+/// })
+/// ```
+///
+/// it would become:
+///
+/// ```gleam
+/// list.map([1, 2, 3], op)
+/// ```
 pub struct UnwrapAnonymousFunction<'a> {
     module: &'a Module,
     line_numbers: &'a LineNumbers,
     params: &'a CodeActionParams,
-    targets: Vec<FnToUnwrap>,
+    functions: Vec<FunctionToUnwrap>,
 }
 
-struct FnToUnwrap {
-    fn_location: SrcSpan,
+/// Helper struct, a target for [UnwrapAnonymousFunction]
+struct FunctionToUnwrap {
+    /// Location of the anonymous function to apply the action to
+    anonymous_function_location: SrcSpan,
+    /// Location of the function being called inside the anonymous function. This will be all that's left after the action.
     inner_function_location: SrcSpan,
 }
 
@@ -10038,27 +10075,27 @@ impl<'a> UnwrapAnonymousFunction<'a> {
             module,
             line_numbers,
             params,
-            targets: vec![],
+            functions: vec![],
         }
     }
 
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
 
-        let mut actions = Vec::with_capacity(self.targets.len());
-        for target in self.targets {
+        let mut actions = Vec::with_capacity(self.functions.len());
+        for target in self.functions {
             let mut edits = TextEdits::new(self.line_numbers);
 
             edits.delete(SrcSpan {
-                start: target.fn_location.start,
+                start: target.anonymous_function_location.start,
                 end: target.inner_function_location.start,
             });
             edits.delete(SrcSpan {
                 start: target.inner_function_location.end,
-                end: target.fn_location.end,
+                end: target.anonymous_function_location.end,
             });
 
-            CodeActionBuilder::new("Unwrap anonymous function")
+            CodeActionBuilder::new("Remove anonymous function wrapper")
                 .kind(CodeActionKind::REFACTOR_REWRITE)
                 .changes(self.params.text_document.uri.clone(), edits.edits)
                 .push_to(&mut actions);
@@ -10082,19 +10119,6 @@ impl<'ast> ast::visit::Visit<'ast> for UnwrapAnonymousFunction<'ast> {
             _ => return,
         }
 
-        // We need the existing argument list for the fn to be a 1:1 match for the args we pass
-        // to the called function. We figure out what the call-arg list needs to look like here,
-        // and bail out if any incoming args are discarded.
-        let mut expected_argument_names = Vec::with_capacity(arguments.len());
-        for a in arguments {
-            match &a.names {
-                ArgNames::Named { name, .. } => expected_argument_names.push(name),
-                ArgNames::NamedLabelled { name, .. } => expected_argument_names.push(name),
-                ArgNames::Discard { .. } => return,
-                ArgNames::LabelledDiscard { .. } => return,
-            }
-        }
-
         // We can only apply to anonymous functions containing a single function call
         let [
             TypedStatement::Expression(TypedExpr::Call {
@@ -10107,20 +10131,38 @@ impl<'ast> ast::visit::Visit<'ast> for UnwrapAnonymousFunction<'ast> {
             return;
         };
 
-        let mut call_argument_names = Vec::with_capacity(arguments.len());
+        // We need the existing argument list for the fn to be a 1:1 match for
+        // the args we pass to the called function, so we need to collect the
+        // names used in both lists and check they're equal.
+
+        let mut outer_argument_names = Vec::with_capacity(arguments.len());
+        for a in arguments {
+            match &a.names {
+                ArgNames::Named { name, .. } => outer_argument_names.push(name),
+                ArgNames::NamedLabelled { name, .. } => outer_argument_names.push(name),
+                // We can bail out early if any of these are discarded, since
+                // they couldn't match the arguments used.
+                ArgNames::Discard { .. } => return,
+                ArgNames::LabelledDiscard { .. } => return,
+            }
+        }
+
+        let mut inner_argument_names = Vec::with_capacity(arguments.len());
         for a in call_arguments {
             match &a.value {
-                TypedExpr::Var { name, .. } => call_argument_names.push(name),
+                TypedExpr::Var { name, .. } => inner_argument_names.push(name),
+                // We can bail out early if any of these aren't variables, since
+                // they couldn't match the inputs.
                 _ => return,
             }
         }
 
-        if call_argument_names != expected_argument_names {
+        if inner_argument_names != outer_argument_names {
             return;
         }
 
-        self.targets.push(FnToUnwrap {
-            fn_location: *location,
+        self.functions.push(FunctionToUnwrap {
+            anonymous_function_location: *location,
             inner_function_location: called_function.location(),
         })
     }
