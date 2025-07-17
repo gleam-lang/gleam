@@ -82,3 +82,60 @@ impl<'a> From<(&SrcSpan, &'a str)> for Comment<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{ast::SrcSpan, parse::extra::ModuleExtra};
+
+    fn set_up_extra() -> ModuleExtra {
+        let mut extra = ModuleExtra::new();
+        extra.comments = vec![
+            SrcSpan { start: 0, end: 10 },
+            SrcSpan { start: 20, end: 30 },
+            SrcSpan { start: 40, end: 50 },
+            SrcSpan { start: 60, end: 70 },
+            SrcSpan { start: 80, end: 90 },
+            SrcSpan {
+                start: 90,
+                end: 100,
+            },
+        ];
+        extra
+    }
+
+    #[test]
+    fn first_comment_between() {
+        let extra = set_up_extra();
+        assert!(matches!(
+            extra.first_comment_between(15, 85),
+            Some(SrcSpan { start: 20, end: 30 })
+        ));
+    }
+
+    #[test]
+    fn first_comment_between_equal_to_range() {
+        let extra = set_up_extra();
+        assert!(matches!(
+            extra.first_comment_between(40, 50),
+            Some(SrcSpan { start: 40, end: 50 })
+        ));
+    }
+
+    #[test]
+    fn first_comment_between_overlapping_start_of_range() {
+        let extra = set_up_extra();
+        assert!(matches!(
+            extra.first_comment_between(45, 80),
+            Some(SrcSpan { start: 40, end: 50 })
+        ));
+    }
+
+    #[test]
+    fn first_comment_between_at_end_of_range() {
+        let extra = set_up_extra();
+        assert!(matches!(
+            dbg!(extra.first_comment_between(55, 60)),
+            Some(SrcSpan { start: 60, end: 70 })
+        ));
+    }
+}
