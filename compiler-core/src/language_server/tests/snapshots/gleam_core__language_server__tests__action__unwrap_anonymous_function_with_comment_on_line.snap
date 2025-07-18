@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  fn(a) {\n    op(a) // look out!\n  }\n}\n\nfn op(a) {\n  todo\n}\n"
+---
+----- BEFORE ACTION
+pub fn main() {
+  fn(a) {
+  ↑      
+    op(a) // look out!
+  }
+}
+
+fn op(a) {
+  todo
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  op// look out!
+  
+}
+
+fn op(a) {
+  todo
+}
