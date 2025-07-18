@@ -11597,6 +11597,22 @@ fn op(i) {
 }
 
 #[test]
+fn wrap_uncalled_constructor_in_anonymous_function() {
+    assert_code_action!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  Record
+}
+
+type Record {
+  Record(i: Int)
+}
+",
+        find_position_of("Record").to_selection()
+    );
+}
+
+#[test]
 fn wrap_call_arg_in_anonymous_function() {
     assert_code_action!(
         WRAP_IN_ANONYMOUS_FUNCTION,
