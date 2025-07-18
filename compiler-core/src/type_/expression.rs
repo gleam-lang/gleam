@@ -2800,6 +2800,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             ClauseGuard::Constant(constant) => {
                 Ok(ClauseGuard::Constant(self.infer_const(&None, constant)))
             }
+
+            ClauseGuard::Block { value, location } => {
+                let value = self.infer_clause_guard(*value)?;
+                Ok(ClauseGuard::Block {
+                    location,
+                    value: Box::new(value),
+                })
+            }
         }
     }
 

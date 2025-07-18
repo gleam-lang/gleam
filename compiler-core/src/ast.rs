@@ -1901,6 +1901,11 @@ pub type TypedClauseGuard = ClauseGuard<Arc<Type>, EcoString>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ClauseGuard<Type, RecordTag> {
+    Block {
+        location: SrcSpan,
+        value: Box<ClauseGuard<Type, RecordTag>>,
+    },
+
     Equals {
         location: SrcSpan,
         left: Box<Self>,
@@ -2094,7 +2099,8 @@ impl<A, B> ClauseGuard<A, B> {
             | ClauseGuard::DivFloat { location, .. }
             | ClauseGuard::RemainderInt { location, .. }
             | ClauseGuard::LtEqFloat { location, .. }
-            | ClauseGuard::ModuleSelect { location, .. } => *location,
+            | ClauseGuard::ModuleSelect { location, .. }
+            | ClauseGuard::Block { location, .. } => *location,
             ClauseGuard::FieldAccess {
                 label_location,
                 container,
@@ -2140,7 +2146,8 @@ impl<A, B> ClauseGuard<A, B> {
             | ClauseGuard::Not { .. }
             | ClauseGuard::TupleIndex { .. }
             | ClauseGuard::FieldAccess { .. }
-            | ClauseGuard::ModuleSelect { .. } => None,
+            | ClauseGuard::ModuleSelect { .. }
+            | ClauseGuard::Block { .. } => None,
         }
     }
 }
@@ -2153,6 +2160,7 @@ impl TypedClauseGuard {
             ClauseGuard::FieldAccess { type_, .. } => type_.clone(),
             ClauseGuard::ModuleSelect { type_, .. } => type_.clone(),
             ClauseGuard::Constant(constant) => constant.type_(),
+            ClauseGuard::Block { value, .. } => value.type_(),
 
             ClauseGuard::AddInt { .. }
             | ClauseGuard::SubInt { .. }
@@ -2185,6 +2193,7 @@ impl TypedClauseGuard {
         match self {
             ClauseGuard::Var { name, .. } => im::hashset![name],
 
+            ClauseGuard::Block { value, .. } => value.referenced_variables(),
             ClauseGuard::Not { expression, .. } => expression.referenced_variables(),
             ClauseGuard::TupleIndex { tuple, .. } => tuple.referenced_variables(),
             ClauseGuard::FieldAccess { container, .. } => container.referenced_variables(),
