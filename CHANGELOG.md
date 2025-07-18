@@ -297,7 +297,7 @@
   Erlang compiler application instead of failing.
   ([Louis Pilfold](https://github.com/lpil))
 
-- `gleam docs list` now uses a tab rather than a space as a separator.
+- `gleam deps list` now uses a tab rather than a space as a separator.
   ([Louis Pilfold](https://github.com/lpil))
 
 - The build tool now also supports `.cjs` files placed in the `src`, `dev` or
