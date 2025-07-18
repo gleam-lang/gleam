@@ -2573,6 +2573,8 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn assert<'a>(&mut self, assert: &'a UntypedAssert) -> Document<'a> {
+        let comments = self.pop_comments(assert.location.start);
+
         let expression = if assert.value.is_binop() || assert.value.is_pipeline() {
             self.expr(&assert.value).nest(INDENT)
         } else {
@@ -2580,7 +2582,7 @@ impl<'comments> Formatter<'comments> {
         };
 
         let doc = self.append_as_message(expression, assert.message.as_ref());
-        docvec!["assert ", doc]
+        commented(docvec!["assert ", doc], comments)
     }
 
     fn bit_array<'a>(

@@ -6490,3 +6490,14 @@ fn assert_with_long_binary_expression() {
 "#
     );
 }
+
+#[test]
+fn comment_is_not_moved_after_assert() {
+    assert_format!(
+        "pub fn main() {
+  // Wibble!
+  assert True
+}
+"
+    );
+}
