@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Bug fixes
+
+- Fixed a bug where the formatter would move a comment before `assert` to be
+  after it.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.12.0-rc1 - 2025-07-18
 
 ### Compiler
