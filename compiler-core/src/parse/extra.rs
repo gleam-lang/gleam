@@ -65,7 +65,7 @@ impl ModuleExtra {
         let mut search_list = &self.comments[..];
         while let Some(index) = inner(search_list, start, end) {
             best = self.comments.get(index).copied();
-            search_list = &search_list[0..index];
+            search_list = search_list.get(0..index).unwrap_or(&[]);
         }
         best
     }
