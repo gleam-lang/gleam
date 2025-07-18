@@ -1367,6 +1367,7 @@ where
             v.visit_typed_clause_guard(left);
             v.visit_typed_clause_guard(right);
         }
+        super::ClauseGuard::Block { location: _, value } => v.visit_typed_clause_guard(value),
         super::ClauseGuard::Not {
             location: _,
             expression,

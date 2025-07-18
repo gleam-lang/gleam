@@ -1614,6 +1614,8 @@ fn optional_clause_guard<'a>(
 
 fn bare_clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<'a> {
     match guard {
+        ClauseGuard::Block { value, .. } => bare_clause_guard(value, env).surround("(", ")"),
+
         ClauseGuard::Not { expression, .. } => docvec!["not ", bare_clause_guard(expression, env)],
 
         ClauseGuard::Or { left, right, .. } => clause_guard(left, env)
@@ -1762,7 +1764,8 @@ fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<
         | ClauseGuard::Var { .. }
         | ClauseGuard::TupleIndex { .. }
         | ClauseGuard::FieldAccess { .. }
-        | ClauseGuard::ModuleSelect { .. } => bare_clause_guard(guard, env),
+        | ClauseGuard::ModuleSelect { .. }
+        | ClauseGuard::Block { .. } => bare_clause_guard(guard, env),
     }
 }
 

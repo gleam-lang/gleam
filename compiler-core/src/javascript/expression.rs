@@ -1936,6 +1936,8 @@ impl<'module, 'a> Generator<'module, 'a> {
 
     pub(crate) fn guard(&mut self, guard: &'a TypedClauseGuard) -> Document<'a> {
         match guard {
+            ClauseGuard::Block { value, .. } => self.guard(value).surround("(", ")"),
+
             ClauseGuard::Equals { left, right, .. } if is_js_scalar(left.type_()) => {
                 let left = self.wrapped_guard(left);
                 let right = self.wrapped_guard(right);
@@ -2066,7 +2068,8 @@ impl<'module, 'a> Generator<'module, 'a> {
             | ClauseGuard::TupleIndex { .. }
             | ClauseGuard::Constant(_)
             | ClauseGuard::Not { .. }
-            | ClauseGuard::FieldAccess { .. } => self.guard(guard),
+            | ClauseGuard::FieldAccess { .. }
+            | ClauseGuard::Block { .. } => self.guard(guard),
 
             ClauseGuard::Equals { .. }
             | ClauseGuard::NotEquals { .. }
@@ -2089,7 +2092,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             | ClauseGuard::RemainderInt { .. }
             | ClauseGuard::Or { .. }
             | ClauseGuard::And { .. }
-            | ClauseGuard::ModuleSelect { .. } => docvec!["(", self.guard(guard,), ")"],
+            | ClauseGuard::ModuleSelect { .. } => docvec!["(", self.guard(guard), ")"],
         }
     }
 

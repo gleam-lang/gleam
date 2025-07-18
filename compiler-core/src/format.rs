@@ -2514,6 +2514,8 @@ impl<'comments> Formatter<'comments> {
             ClauseGuard::Constant(constant) => self.const_expr(constant),
 
             ClauseGuard::Not { expression, .. } => docvec!["!", self.clause_guard(expression)],
+
+            ClauseGuard::Block { value, .. } => wrap_block(self.clause_guard(value)).group(),
         }
     }
 

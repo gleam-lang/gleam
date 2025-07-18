@@ -457,6 +457,8 @@ impl<'a> CallGraphBuilder<'a> {
                 self.guard(right);
             }
 
+            ClauseGuard::Block { value, .. } => self.guard(value),
+
             ClauseGuard::Not { expression, .. } => self.guard(expression),
 
             ClauseGuard::Var { name, .. } => self.referenced(name),
