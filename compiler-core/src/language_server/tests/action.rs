@@ -11857,8 +11857,8 @@ fn op(first a, second b) {
 }
 
 #[test]
-fn dont_unwrap_anonymous_function_with_comment_after() {
-    assert_no_code_actions!(
+fn unwrap_anonymous_function_with_comment_after() {
+    assert_code_action!(
         UNWRAP_ANONYMOUS_FUNCTION,
         "pub fn main() {
   fn(a) {
@@ -11876,12 +11876,54 @@ fn op(a) {
 }
 
 #[test]
-fn dont_unwrap_anonymous_function_with_comment_before() {
-    assert_no_code_actions!(
+fn unwrap_anonymous_function_with_comment_on_line() {
+    assert_code_action!(
         UNWRAP_ANONYMOUS_FUNCTION,
         "pub fn main() {
   fn(a) {
-    // look out!
+    op(a) // look out!
+  }
+}
+
+fn op(a) {
+  todo
+}
+",
+        find_position_of("fn(a)").to_selection()
+    );
+}
+
+#[test]
+fn unwrap_anonymous_function_with_comment_on_head_line() {
+    assert_code_action!(
+        UNWRAP_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  fn(a) { // look out!
+    op(a)
+  }
+}
+
+fn op(a) {
+  todo
+}
+",
+        find_position_of("fn(a)").to_selection()
+    );
+}
+
+#[test]
+fn unwrap_anonymous_function_with_comments_before() {
+    assert_code_action!(
+        UNWRAP_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  fn(a) {
+    // look out,
+    // there's a comment!
+
+    // another comment!
+    //here's one without a leading space
+      // here's one indented wrong
+  // here's one indented even wronger
     op(a)
   }
 }

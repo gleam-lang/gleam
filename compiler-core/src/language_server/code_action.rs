@@ -10050,7 +10050,8 @@ impl<'ast> ast::visit::Visit<'ast> for WrapInAnonymousFunction<'ast> {
     }
 }
 
-/// Code action to unwrap trivial one-statement anonymous functions into just a reference to the function called
+/// Code action to unwrap trivial one-statement anonymous functions into just a
+/// reference to the function called
 ///
 /// For example, if the code action was used on the anonymous function here:
 ///
@@ -10075,9 +10076,10 @@ pub struct UnwrapAnonymousFunction<'a> {
 /// Helper struct, a target for [UnwrapAnonymousFunction]
 struct FunctionToUnwrap {
     /// Location of the anonymous function to apply the action to
-    anonymous_function_location: SrcSpan,
-    /// Location of the function being called inside the anonymous function. This will be all that's left after the action.
-    inner_function_location: SrcSpan,
+    outer_function: SrcSpan,
+    /// Location of the function being called inside the anonymous function.
+    /// This will be all that's left after the action, plus any comments.
+    inner_function: SrcSpan,
 }
 
 impl<'a> UnwrapAnonymousFunction<'a> {
@@ -10098,16 +10100,29 @@ impl<'a> UnwrapAnonymousFunction<'a> {
         self.visit_typed_module(&self.module.ast);
 
         let mut actions = Vec::with_capacity(self.functions.len());
-        for target in self.functions {
+        for function in &self.functions {
             let mut edits = TextEdits::new(self.line_numbers);
 
+            // We need to delete the anonymous function's head but preserve
+            // comments between it and the inner function call.
+            edits.delete(self.span_until_comment(SrcSpan {
+                start: function.outer_function.start,
+                end: function.inner_function.start,
+            }));
+
+            // Now we need to delete the inner function call's arguments,
+            // preserving comments before the outer function tail.
+            edits.delete(self.span_until_comment(SrcSpan {
+                start: function.inner_function.end,
+                end: function.outer_function.end - 1,
+            }));
+
+            // To delete the tail we nip one character to make sure we get the
+            // `}`. This could be redundant with the above if there were no
+            // comments, but that's fine.
             edits.delete(SrcSpan {
-                start: target.anonymous_function_location.start,
-                end: target.inner_function_location.start,
-            });
-            edits.delete(SrcSpan {
-                start: target.inner_function_location.end,
-                end: target.anonymous_function_location.end,
+                start: function.outer_function.end - 1,
+                end: function.outer_function.end,
             });
 
             CodeActionBuilder::new("Remove anonymous function wrapper")
@@ -10116,6 +10131,24 @@ impl<'a> UnwrapAnonymousFunction<'a> {
                 .push_to(&mut actions);
         }
         actions
+    }
+
+    // Returns the given span, but with the end point adjusted to the start
+    // of the first comment in the span, if any.
+    fn span_until_comment(&self, span: SrcSpan) -> SrcSpan {
+        let SrcSpan { start, end } = span;
+        let adjusted_end = self
+            .module
+            .extra
+            .first_comment_between(start, end)
+            // The above will return the start of the comment's text, so we need
+            // to step backwards a bit to get the `//`.
+            .map(|comment| comment.start - 2)
+            .unwrap_or(end);
+        SrcSpan {
+            start,
+            end: adjusted_end,
+        }
     }
 
     /// If an anonymous function can be unwrapped, save it to our list
@@ -10136,15 +10169,6 @@ impl<'a> UnwrapAnonymousFunction<'a> {
         match kind {
             FunctionLiteralKind::Anonymous { .. } => (),
             _ => return,
-        }
-
-        // We can't apply to functions with comments in (yet)
-        if self
-            .module
-            .extra
-            .has_comment_between(location.start, location.end)
-        {
-            return;
         }
 
         // We can only apply to anonymous functions containing a single function call
@@ -10185,8 +10209,8 @@ impl<'a> UnwrapAnonymousFunction<'a> {
         }
 
         self.functions.push(FunctionToUnwrap {
-            anonymous_function_location: *location,
-            inner_function_location: called_function.location(),
+            outer_function: *location,
+            inner_function: called_function.location(),
         })
     }
 }
