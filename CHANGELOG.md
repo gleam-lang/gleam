@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.12.0-rc1 - 2025-07-18
 
 ### Compiler
 

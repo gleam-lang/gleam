@@ -1,6 +1,6 @@
 [package]
 name = "gleam-cli"
-version = "1.11.1"
+version = "1.12.0-rc1"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2024"
 license-file = "LICENCE"
