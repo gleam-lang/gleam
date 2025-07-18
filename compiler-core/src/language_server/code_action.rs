@@ -10163,30 +10163,24 @@ impl<'a> UnwrapAnonymousFunction<'a> {
         // the args we pass to the called function, so we need to collect the
         // names used in both lists and check they're equal.
 
-        let mut outer_argument_names = Vec::with_capacity(arguments.len());
-        for a in arguments {
-            match &a.names {
-                ArgNames::Named { name, .. } => outer_argument_names.push(name),
-                // We can bail out early if any arguments are discarded, since
-                // they couldn't match those actually used.
-                ArgNames::Discard { .. } => return,
-                // Anonymous functions can't have labelled arguments.
-                ArgNames::NamedLabelled { .. } => unreachable!(),
-                ArgNames::LabelledDiscard { .. } => unreachable!(),
-            }
-        }
+        let outer_argument_names = arguments.iter().map(|a| match &a.names {
+            ArgNames::Named { name, .. } => Some(name),
+            // We can bail out early if any arguments are discarded, since
+            // they couldn't match those actually used.
+            ArgNames::Discard { .. } => None,
+            // Anonymous functions can't have labelled arguments.
+            ArgNames::NamedLabelled { .. } => unreachable!(),
+            ArgNames::LabelledDiscard { .. } => unreachable!(),
+        });
 
-        let mut inner_argument_names = Vec::with_capacity(arguments.len());
-        for a in call_arguments {
-            match &a.value {
-                TypedExpr::Var { name, .. } => inner_argument_names.push(name),
-                // We can bail out early if any of these aren't variables, since
-                // they couldn't match the inputs.
-                _ => return,
-            }
-        }
+        let inner_argument_names = call_arguments.iter().map(|a| match &a.value {
+            TypedExpr::Var { name, .. } => Some(name),
+            // We can bail out early if any of these aren't variables, since
+            // they couldn't match the inputs.
+            _ => None,
+        });
 
-        if inner_argument_names != outer_argument_names {
+        if !inner_argument_names.eq(outer_argument_names) {
             return;
         }
 
