@@ -2285,7 +2285,7 @@ impl TypedPattern {
             | Pattern::Invalid { .. } => Some(Located::Pattern(self)),
 
             Pattern::Constructor {
-                arguments, spread, ..
+                arguments, spread, module, constructor, ..
             } => match spread {
                 Some(spread_location) if spread_location.contains(byte_index) => {
                     Some(Located::PatternSpread {
@@ -2293,7 +2293,20 @@ impl TypedPattern {
                         pattern: self,
                     })
                 }
-                _ => arguments.iter().find_map(|arg| arg.find_node(byte_index)),
+                _ => {
+                    if let Some((_, module_location)) = module {
+                        if module_location.contains(byte_index) {
+                            if let Inferred::Known(ctor) = constructor {
+                                return Some(Located::ModuleName {
+                                    location: *module_location,
+                                    name: &ctor.module,
+                                    layer: Layer::Value,
+                                })
+                            }
+                        }
+                    }
+                    arguments.iter().find_map(|arg| arg.find_node(byte_index))
+                },
             },
             Pattern::List { elements, tail, .. } => elements
                 .iter()

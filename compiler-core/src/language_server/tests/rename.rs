@@ -1988,7 +1988,7 @@ fn rename_module_from_expr_string_concat() {
 }
 
 #[test]
-fn rename_module_from_pattern_record_simple() {
+fn rename_module_from_pattern_simple_constructor() {
     let test_project = TestProject::for_source(
 "import mod
 fn func(arg: mod.Type) {
@@ -2023,7 +2023,7 @@ fn func(arg: mod.Type) {
 }
 
 #[test]
-fn rename_module_from_pattern_record_recursive() {
+fn rename_module_from_pattern_recursive_constructor() {
     let test_project= TestProject::for_source(
 "import mod
 fn func(arg: mod.GenericType(mod.Type)) {
@@ -2060,7 +2060,7 @@ fn func(arg: mod.GenericType(mod.Type)) {
 fn rename_module_from_pattern_tuple() {
     let test_project= TestProject::for_source(
 "import mod
-fn func(arg: #(mod.GenericType(mod.Type), mod.Type) {
+fn func(arg: #(mod.GenericType(mod.Type), mod.Type)) {
   case arg {
     #(mod.Node(_, mod.Leaf), mod.Variant1) -> todo
     _ -> todo
@@ -2088,9 +2088,12 @@ fn func(arg: #(mod.GenericType(mod.Type), mod.Type) {
 fn rename_module_from_pattern_list() {
     assert_rename!(
         TestProject::for_source(
-"case arg {
-  [mod.Variant1, ..] -> todo
-  _ -> todo
+"import mod
+fn func(arg: List(mod.Type)) {
+  case arg {
+    [mod.Variant1, ..] -> todo
+    _ -> todo
+  }
 }"
         ).add_module("mod", MOCK_MODULE),
         "module",
