@@ -1598,6 +1598,7 @@ impl TypedClause {
         self.pattern
             .iter()
             .find_map(|p| p.find_node(byte_index))
+            .or_else(|| self.guard.as_ref().and_then(|guard| guard.find_node(byte_index)))
             .or_else(|| self.then.find_node(byte_index))
     }
 }
@@ -1880,6 +1881,51 @@ impl TypedClauseGuard {
             | ClauseGuard::GtEqFloat { .. }
             | ClauseGuard::LtFloat { .. }
             | ClauseGuard::LtEqFloat { .. } => type_::bool(),
+        }
+    }
+
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        if !self.location().contains(byte_index) {
+            return None
+        }
+
+        match self {
+            ClauseGuard::Equals { left, right, .. }
+            | ClauseGuard::NotEquals { left, right, .. }
+            | ClauseGuard::GtInt { left, right, .. }
+            | ClauseGuard::GtEqInt { left, right, .. }
+            | ClauseGuard::LtInt { left, right, .. }
+            | ClauseGuard::LtEqInt { left, right, .. }
+            | ClauseGuard::GtFloat { left, right, .. }
+            | ClauseGuard::GtEqFloat { left, right, .. }
+            | ClauseGuard::LtFloat { left, right, .. }
+            | ClauseGuard::LtEqFloat { left, right, .. }
+            | ClauseGuard::AddInt { left, right, .. }
+            | ClauseGuard::AddFloat { left, right, .. }
+            | ClauseGuard::SubInt { left, right, .. }
+            | ClauseGuard::SubFloat { left, right, .. }
+            | ClauseGuard::MultInt { left, right, .. }
+            | ClauseGuard::MultFloat { left, right, .. }
+            | ClauseGuard::DivInt { left, right, .. }
+            | ClauseGuard::DivFloat { left, right, .. }
+            | ClauseGuard::RemainderInt { left, right, .. }
+            | ClauseGuard::Or { left, right, .. }
+            | ClauseGuard::And { left, right, .. } => {
+                left.find_node(byte_index)
+                    .or_else(|| right.find_node(byte_index))
+            },
+            ClauseGuard::Not { expression, .. } => expression.find_node(byte_index),
+            ClauseGuard::Var { .. } => None,
+            ClauseGuard::TupleIndex { .. } => None,
+            ClauseGuard::FieldAccess { .. } => None,
+            ClauseGuard::ModuleSelect { location, module_name, .. } => {
+                Some(Located::ModuleName {
+                    location: *location,
+                    name: module_name,
+                    layer: Layer::Value
+                })
+            },
+            ClauseGuard::Constant(..) => None,
         }
     }
 
