@@ -1927,7 +1927,27 @@ fn rename_module_from_local_var_annotation_fn_recursive() {
         "import mod\nfn func() { let _: fn(mod.GenericType(mod.Type)) -> mod.GenericType(mod.Type) = fn(arg: mod.GenericType(mod.Type)) -> mod.GenericType(mod.Type) { arg } }"
     ).add_module("mod", MOCK_MODULE);
 
-    for i in 1..5 {
+    for i in 1..3 {
+        assert_rename!(
+            &test_project,
+            "module",
+            find_position_of("mod.GenericType").nth_occurrence(i),
+        );
+        assert_rename!(
+            &test_project,
+            "module",
+            find_position_of("mod.Type").nth_occurrence(i),
+        );
+    }
+}
+
+#[test]
+fn rename_module_from_expr_fn_recursive_constructor() {
+    let test_project = TestProject::for_source(
+        "import mod\nfn func() { let _: fn(mod.GenericType(mod.Type)) -> mod.GenericType(mod.Type) = fn(arg: mod.GenericType(mod.Type)) -> mod.GenericType(mod.Type) { arg } }"
+    ).add_module("mod", MOCK_MODULE);
+
+    for i in 3..5 {
         assert_rename!(
             &test_project,
             "module",

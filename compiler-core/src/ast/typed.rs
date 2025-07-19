@@ -334,9 +334,16 @@ impl TypedExpr {
                 .find_node(byte_index)
                 .or_else(|| self.self_if_contains_location(byte_index)),
 
-            Self::Fn { body, args, .. } => args
+            Self::Fn { body, args, return_annotation, type_, .. } => args
                 .iter()
                 .find_map(|arg| arg.find_node(byte_index))
+                .or_else(|| return_annotation.as_ref().and_then(|ret| {
+                    if let Some(type_) = type_.return_type() {
+                        ret.find_node(byte_index, type_)
+                    } else {
+                        None
+                    }
+                }))
                 .or_else(|| body.iter().find_map(|s| s.find_node(byte_index)))
                 .or_else(|| self.self_if_contains_location(byte_index)),
 
