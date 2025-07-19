@@ -1416,6 +1416,8 @@ fn func(
     _ if mod.const1 == mod.const1 -> todo
     _ -> todo
   }
+  let mod = Record(false)
+  echo mod.bool
 }
 
 const c1: mod.Type = mod.Variant1
@@ -1429,7 +1431,8 @@ const c8 = [mod.fn1]
 const c9 = <<mod.const2:bits>>
 const c10 = mod.const3 <> mod.const3
 type Type1 { Var(mod.Type) }
-type Type2 = mod.GenericType(mod.Type)";
+type Type2 = mod.GenericType(mod.Type)
+type Record { Record (bool: Bool) }";
 
 #[test]
 fn rename_module_from_import() {
@@ -2341,12 +2344,12 @@ fn no_rename_module_from_record_access_same_as_module_name() {
         &TestProject::for_source(
 "import mod
 type Record {
-  Rec(name: String, mod: Bool)
+  Rec(name: String, available: Bool)
 }
 
 fn func() {
-  let rec = Record(\"test\", false)
-  echo rec.mod
+  let mod = Record(\"test\", false)
+  echo mod.available
 }"
         ).add_module("mod", MOCK_MODULE),
         "module",
@@ -2360,12 +2363,12 @@ fn no_rename_module_from_record_access_same_as_module_alias() {
         &TestProject::for_source(
 "import mod as modified
 type Record {
-  Rec(name: String, modified: Bool)
+  Rec(name: String, available: Bool)
 }
 
 fn func() {
-  let rec = Record(\"test\", false)
-  echo rec.modified
+  let module = Record(\"test\", false)
+  echo module.available
 }"
         ).add_module("mod", MOCK_MODULE),
         "module",

@@ -99,9 +99,16 @@ impl TypedConstant {
             | Constant::String { .. }
             | Constant::Invalid { .. } => Located::Constant(self),
 
-            Constant::Var { module: Some((_, location)), constructor: Some(constructor), .. }
-            | Constant::Record { module: Some((_, location)), record_constructor: Some(constructor), .. }
-            if location.contains(byte_index) => {
+            Constant::Var {
+                module: Some((_, location)),
+                constructor: Some(constructor),
+                ..
+            }
+            | Constant::Record {
+                module: Some((_, location)),
+                record_constructor: Some(constructor),
+                ..
+            } if location.contains(byte_index) => {
                 match &constructor.variant {
                     type_::ValueConstructorVariant::ModuleConstant { module, .. }
                     | type_::ValueConstructorVariant::ModuleFn { module, .. }
@@ -115,7 +122,7 @@ impl TypedConstant {
                     // unreachable?
                     _ => Located::Constant(self),
                 }
-            },
+            }
 
             Constant::Var { .. } => Located::Constant(self),
             Constant::Record { args, .. } => args

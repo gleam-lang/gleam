@@ -195,6 +195,7 @@ where
                 Some(location) => location,
                 None => return Ok(None),
             };
+            eprintln!("{node:?}");
 
             let Some(location) =
                 node.definition_location(this.compiler.project_compiler.get_importable_modules())
@@ -342,7 +343,7 @@ where
                 // we should try to provide completions for unqualified values
                 Located::ModuleStatement(Definition::Import(import)) => this
                     .compiler
-                    .get_module_interface((&import.module.0).as_str())
+                    .get_module_interface((import.module.0).as_str())
                     .map(|importing_module| {
                         completer.unqualified_completions_from_module(importing_module, true)
                     }),
@@ -623,7 +624,6 @@ where
                 Some(value) => value,
                 None => return Ok(None),
             };
-            eprintln!("{:?}", found);
 
             let Some(current_module) = this.module_for_uri(&params.text_document.uri) else {
                 return Ok(None);

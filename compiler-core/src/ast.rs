@@ -13,15 +13,15 @@ pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
 use crate::analyse::Inferred;
 use crate::bit_array;
-use crate::build::{ExpressionPosition, Located, Target, module_erlang_name};
+use crate::build::{module_erlang_name, ExpressionPosition, Located, Target};
 use crate::exhaustiveness::CompiledCase;
 use crate::parse::SpannedString;
 use crate::type_::error::VariableOrigin;
 use crate::type_::expression::{Implementations, Purity};
 use crate::type_::printer::Names;
 use crate::type_::{
-    self, Deprecation, HasType, ModuleValueConstructor, PatternConstructor, Type, TypedCallArg,
-    ValueConstructor, nil,
+    self, nil, Deprecation, HasType, ModuleValueConstructor, PatternConstructor, Type,
+    TypedCallArg, ValueConstructor,
 };
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -1598,7 +1598,7 @@ impl TypedClause {
         self.pattern
             .iter()
             .find_map(|p| p.find_node(byte_index))
-            .or_else(|| self.guard.as_ref().and_then(|guard| guard.find_node(byte_index)))
+            .or_else(|| self.guard.as_ref().and_then(|g| g.find_node(byte_index)))
             .or_else(|| self.then.find_node(byte_index))
     }
 }
@@ -1886,7 +1886,7 @@ impl TypedClauseGuard {
 
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         if !self.location().contains(byte_index) {
-            return None
+            return None;
         }
 
         match self {
@@ -1910,21 +1910,22 @@ impl TypedClauseGuard {
             | ClauseGuard::DivFloat { left, right, .. }
             | ClauseGuard::RemainderInt { left, right, .. }
             | ClauseGuard::Or { left, right, .. }
-            | ClauseGuard::And { left, right, .. } => {
-                left.find_node(byte_index)
-                    .or_else(|| right.find_node(byte_index))
-            },
+            | ClauseGuard::And { left, right, .. } => left
+                .find_node(byte_index)
+                .or_else(|| right.find_node(byte_index)),
             ClauseGuard::Not { expression, .. } => expression.find_node(byte_index),
             ClauseGuard::Var { .. } => None,
             ClauseGuard::TupleIndex { .. } => None,
             ClauseGuard::FieldAccess { .. } => None,
-            ClauseGuard::ModuleSelect { location, module_name, .. } => {
-                Some(Located::ModuleName {
-                    location: *location,
-                    name: module_name,
-                    layer: Layer::Value
-                })
-            },
+            ClauseGuard::ModuleSelect {
+                location,
+                module_name,
+                ..
+            } => Some(Located::ModuleName {
+                location: *location,
+                name: module_name,
+                layer: Layer::Value,
+            }),
             ClauseGuard::Constant(..) => None,
         }
     }
@@ -2285,7 +2286,11 @@ impl TypedPattern {
             | Pattern::Invalid { .. } => Some(Located::Pattern(self)),
 
             Pattern::Constructor {
-                arguments, spread, module, constructor, ..
+                arguments,
+                spread,
+                module,
+                constructor,
+                ..
             } => match spread {
                 Some(spread_location) if spread_location.contains(byte_index) => {
                     Some(Located::PatternSpread {
@@ -2301,12 +2306,12 @@ impl TypedPattern {
                                     location: *module_location,
                                     name: &ctor.module,
                                     layer: Layer::Value,
-                                })
+                                });
                             }
                         }
                     }
                     arguments.iter().find_map(|arg| arg.find_node(byte_index))
-                },
+                }
             },
             Pattern::List { elements, tail, .. } => elements
                 .iter()
