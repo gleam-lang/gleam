@@ -188,6 +188,27 @@ pub fn main() {
         find_position_of("wibble."),
     );
 }
+
+#[test]
+fn rename_local_variable_record_access_with_same_name_as_imported_module() {
+    assert_rename!(
+        &TestProject::for_source(
+"import mod
+type Record {
+  Rec(name: String, available: Bool)
+}
+
+pub fn main() {
+  let mod = Record(\"test\", false)
+  echo mod.available
+}"
+        ).add_module("mod", "pub const c = 5"),
+        "rec",
+        find_position_of("mod.available")
+    );
+}
+
+
 #[test]
 fn rename_local_variable_guard_clause() {
     assert_rename!(
@@ -2335,43 +2356,5 @@ fn func(arg: Int) {
         ).add_module("mod", MOCK_MODULE),
         "module",
         find_position_of("mod.const1"),
-    );
-}
-
-#[test]
-fn no_rename_module_from_record_access_same_as_module_name() {
-    assert_no_rename!(
-        &TestProject::for_source(
-"import mod
-type Record {
-  Rec(name: String, available: Bool)
-}
-
-fn func() {
-  let mod = Record(\"test\", false)
-  echo mod.available
-}"
-        ).add_module("mod", MOCK_MODULE),
-        "module",
-        find_position_of("rec.mod").with_char_offset(4),
-    );
-}
-
-#[test]
-fn no_rename_module_from_record_access_same_as_module_alias() {
-    assert_no_rename!(
-        &TestProject::for_source(
-"import mod as modified
-type Record {
-  Rec(name: String, available: Bool)
-}
-
-fn func() {
-  let module = Record(\"test\", false)
-  echo module.available
-}"
-        ).add_module("mod", MOCK_MODULE),
-        "module",
-        find_position_of("rec.modified").with_char_offset(4),
     );
 }

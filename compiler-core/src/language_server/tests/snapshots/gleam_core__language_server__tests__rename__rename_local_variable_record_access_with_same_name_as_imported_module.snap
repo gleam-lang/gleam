@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "import mod\ntype Record {\n  Rec(name: String, available: Bool)\n}\n\npub fn main() {\n  let mod = Record(\"test\", false)\n  echo mod.available\n}"
+---
+----- BEFORE RENAME
+-- mod.gleam
+pub const c = 5
+
+-- app.gleam
+import mod
+type Record {
+  Rec(name: String, available: Bool)
+}
+
+pub fn main() {
+  let mod = Record("test", false)
+  echo mod.available
+       ↑▔▔          
+}
+
+
+----- AFTER RENAME
+-- mod.gleam
+pub const c = 5
+
+-- app.gleam
+import mod
+type Record {
+  Rec(name: String, available: Bool)
+}
+
+pub fn main() {
+  let rec = Record("test", false)
+  echo rec.available
+}

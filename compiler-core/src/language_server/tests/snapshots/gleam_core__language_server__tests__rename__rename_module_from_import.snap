@@ -1,0 +1,173 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "import mod\n\nfn func(\n  arg: mod.Type,\n  arg2: mod.GenericType(mod.Type),\n  arg3: #(mod.GenericType(mod.Type), mod.Type),\n  arg4: List(mod.Type),\n  arg5: fn(mod.Type) -> mod.Type\n) {\n  mod.fn1()\n  arg5(mod.Variant1)\n\n  let _: mod.Type = mod.Variant1\n  let _: mod.GenericType(mod.Type) = mod.Node(mod.Variant1, mod.Leaf)\n  let _ = mod.const1\n  let _ = mod.fn1\n\n  let _: #(mod.Type) = #(mod.Variant1)\n  let _: #(mod.GenericType(mod.Type)) = #(mod.Node(mod.Variant1, mod.Leaf))\n  let _ = #(mod.const1)\n  let _ = #(mod.fn1())\n  let _ = #(mod.fn1)\n\n  let _: List(mod.Type) = [mod.Variant1]\n  let _: List(mod.GenericType(mod.Type)) = [mod.Node(mod.Variant1, mod.Leaf)]\n  let _ = [mod.const1]\n  let _ = [mod.fn1()]\n  let _ = [mod.fn1]\n\n  let _: fn(mod.Type) -> mod.Type = fn(arg: mod.Type) -> mod.Type { arg }\n  let _: fn(mod.GenericType(mod.Type)) -> mod.GenericType(mod.Type) = fn(arg: mod.GenericType(mod.Type)) -> mod.GenericType(mod.Type) { arg }\n\n  let _ = <<mod.const2:bits, mod.const2:bits>>\n\n  let _ = mod.const3 <> mod.const3\n\n  case arg {\n    mod.Variant1 -> todo\n    mod.Variant2(3) -> todo\n    mod.Variant2(_) -> todo\n    mod.Variant2(..) -> todo\n  }\n  case arg2 {\n    mod.Node(_, mod.Node(_, _)) -> todo\n    mod.Node(_, _) -> todo\n    mod.Leaf -> todo\n  }\n  case arg3 {\n    #(mod.Node(_, mod.Leaf), mod.Variant1) -> todo\n    _ -> todo\n  }\n  case arg4 {\n    [mod.Variant1, ..] -> todo\n    _ if mod.const1 == mod.const1 -> todo\n    _ -> todo\n  }\n  let mod = Record(false)\n  echo mod.bool\n}\n\nconst c1: mod.Type = mod.Variant1\nconst c2: mod.GenericType(mod.Type) = mod.Node(mod.Variant1, mod.Leaf)\nconst c3 = mod.const1\nconst c4 = mod.fn1\nconst c5: #(mod.Type, Int, fn() -> Nil) = #(mod.Variant1, mod.const1, mod.fn1)\nconst c6: List(mod.Type) = [mod.Variant1]\nconst c7 = [mod.const1]\nconst c8 = [mod.fn1]\nconst c9 = <<mod.const2:bits>>\nconst c10 = mod.const3 <> mod.const3\ntype Type1 { Var(mod.Type) }\ntype Type2 = mod.GenericType(mod.Type)\ntype Record { Record (bool: Bool) }"
+---
+----- BEFORE RENAME
+-- mod.gleam
+pub fn fn1() { Nil }
+pub const const1 = 5
+pub const const2 = <<0:8>>
+pub const const3 = "Hello"
+pub type Type { Variant1 Variant2(Int) }
+pub type GenericType(inner) { Node(inner, GenericType(inner)) Leaf }
+
+-- app.gleam
+import mod
+       ↑▔▔
+
+fn func(
+  arg: mod.Type,
+  arg2: mod.GenericType(mod.Type),
+  arg3: #(mod.GenericType(mod.Type), mod.Type),
+  arg4: List(mod.Type),
+  arg5: fn(mod.Type) -> mod.Type
+) {
+  mod.fn1()
+  arg5(mod.Variant1)
+
+  let _: mod.Type = mod.Variant1
+  let _: mod.GenericType(mod.Type) = mod.Node(mod.Variant1, mod.Leaf)
+  let _ = mod.const1
+  let _ = mod.fn1
+
+  let _: #(mod.Type) = #(mod.Variant1)
+  let _: #(mod.GenericType(mod.Type)) = #(mod.Node(mod.Variant1, mod.Leaf))
+  let _ = #(mod.const1)
+  let _ = #(mod.fn1())
+  let _ = #(mod.fn1)
+
+  let _: List(mod.Type) = [mod.Variant1]
+  let _: List(mod.GenericType(mod.Type)) = [mod.Node(mod.Variant1, mod.Leaf)]
+  let _ = [mod.const1]
+  let _ = [mod.fn1()]
+  let _ = [mod.fn1]
+
+  let _: fn(mod.Type) -> mod.Type = fn(arg: mod.Type) -> mod.Type { arg }
+  let _: fn(mod.GenericType(mod.Type)) -> mod.GenericType(mod.Type) = fn(arg: mod.GenericType(mod.Type)) -> mod.GenericType(mod.Type) { arg }
+
+  let _ = <<mod.const2:bits, mod.const2:bits>>
+
+  let _ = mod.const3 <> mod.const3
+
+  case arg {
+    mod.Variant1 -> todo
+    mod.Variant2(3) -> todo
+    mod.Variant2(_) -> todo
+    mod.Variant2(..) -> todo
+  }
+  case arg2 {
+    mod.Node(_, mod.Node(_, _)) -> todo
+    mod.Node(_, _) -> todo
+    mod.Leaf -> todo
+  }
+  case arg3 {
+    #(mod.Node(_, mod.Leaf), mod.Variant1) -> todo
+    _ -> todo
+  }
+  case arg4 {
+    [mod.Variant1, ..] -> todo
+    _ if mod.const1 == mod.const1 -> todo
+    _ -> todo
+  }
+  let mod = Record(false)
+  echo mod.bool
+}
+
+const c1: mod.Type = mod.Variant1
+const c2: mod.GenericType(mod.Type) = mod.Node(mod.Variant1, mod.Leaf)
+const c3 = mod.const1
+const c4 = mod.fn1
+const c5: #(mod.Type, Int, fn() -> Nil) = #(mod.Variant1, mod.const1, mod.fn1)
+const c6: List(mod.Type) = [mod.Variant1]
+const c7 = [mod.const1]
+const c8 = [mod.fn1]
+const c9 = <<mod.const2:bits>>
+const c10 = mod.const3 <> mod.const3
+type Type1 { Var(mod.Type) }
+type Type2 = mod.GenericType(mod.Type)
+type Record { Record (bool: Bool) }
+
+
+----- AFTER RENAME
+-- mod.gleam
+pub fn fn1() { Nil }
+pub const const1 = 5
+pub const const2 = <<0:8>>
+pub const const3 = "Hello"
+pub type Type { Variant1 Variant2(Int) }
+pub type GenericType(inner) { Node(inner, GenericType(inner)) Leaf }
+
+-- app.gleam
+import mod as module
+
+fn func(
+  arg: module.Type,
+  arg2: module.GenericType(module.Type),
+  arg3: #(module.GenericType(module.Type), module.Type),
+  arg4: List(module.Type),
+  arg5: fn(module.Type) -> module.Type
+) {
+  module.fn1()
+  arg5(module.Variant1)
+
+  let _: module.Type = module.Variant1
+  let _: module.GenericType(module.Type) = module.Node(module.Variant1, module.Leaf)
+  let _ = module.const1
+  let _ = module.fn1
+
+  let _: #(module.Type) = #(module.Variant1)
+  let _: #(module.GenericType(module.Type)) = #(module.Node(module.Variant1, module.Leaf))
+  let _ = #(module.const1)
+  let _ = #(module.fn1())
+  let _ = #(module.fn1)
+
+  let _: List(module.Type) = [module.Variant1]
+  let _: List(module.GenericType(module.Type)) = [module.Node(module.Variant1, module.Leaf)]
+  let _ = [module.const1]
+  let _ = [module.fn1()]
+  let _ = [module.fn1]
+
+  let _: fn(module.Type) -> module.Type = fn(arg: module.Type) -> module.Type { arg }
+  let _: fn(module.GenericType(module.Type)) -> module.GenericType(module.Type) = fn(arg: module.GenericType(module.Type)) -> module.GenericType(module.Type) { arg }
+
+  let _ = <<module.const2:bits, module.const2:bits>>
+
+  let _ = module.const3 <> module.const3
+
+  case arg {
+    module.Variant1 -> todo
+    module.Variant2(3) -> todo
+    module.Variant2(_) -> todo
+    module.Variant2(..) -> todo
+  }
+  case arg2 {
+    module.Node(_, module.Node(_, _)) -> todo
+    module.Node(_, _) -> todo
+    module.Leaf -> todo
+  }
+  case arg3 {
+    #(module.Node(_, module.Leaf), module.Variant1) -> todo
+    _ -> todo
+  }
+  case arg4 {
+    [module.Variant1, ..] -> todo
+    _ if module.const1 == module.const1 -> todo
+    _ -> todo
+  }
+  let mod = Record(false)
+  echo mod.bool
+}
+
+const c1: module.Type = module.Variant1
+const c2: module.GenericType(module.Type) = module.Node(module.Variant1, module.Leaf)
+const c3 = module.const1
+const c4 = module.fn1
+const c5: #(module.Type, Int, fn() -> Nil) = #(module.Variant1, module.const1, module.fn1)
+const c6: List(module.Type) = [module.Variant1]
+const c7 = [module.const1]
+const c8 = [module.fn1]
+const c9 = <<module.const2:bits>>
+const c10 = module.const3 <> module.const3
+type Type1 { Var(module.Type) }
+type Type2 = module.GenericType(module.Type)
+type Record { Record (bool: Bool) }

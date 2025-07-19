@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "import mod\nfn func(arg: mod.Type) {todo}"
+---
+----- BEFORE RENAME
+-- mod.gleam
+pub fn fn1() { Nil }
+pub const const1 = 5
+pub const const2 = <<0:8>>
+pub const const3 = "Hello"
+pub type Type { Variant1 Variant2(Int) }
+pub type GenericType(inner) { Node(inner, GenericType(inner)) Leaf }
+
+-- app.gleam
+import mod
+fn func(arg: mod.Type) {todo}
+             ↑▔▔             
+
+
+----- AFTER RENAME
+-- mod.gleam
+pub fn fn1() { Nil }
+pub const const1 = 5
+pub const const2 = <<0:8>>
+pub const const3 = "Hello"
+pub type Type { Variant1 Variant2(Int) }
+pub type GenericType(inner) { Node(inner, GenericType(inner)) Leaf }
+
+-- app.gleam
+import mod as module
+fn func(arg: module.Type) {todo}
