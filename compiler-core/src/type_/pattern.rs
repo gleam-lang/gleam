@@ -694,6 +694,13 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 location,
             } => {
                 let pattern = self.unify(*pattern, type_, subject_variable);
+
+                if pattern.is_discard() {
+                    self.problems.warning(Warning::UnusedDiscardPattern {
+                        location,
+                        name: name.clone(),
+                    });
+                }
                 self.insert_variable(
                     &name,
                     pattern.type_().clone(),
