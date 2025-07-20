@@ -202,7 +202,7 @@ impl EncryptedApiKey {
                 username: None,
             };
 
-            // try to save the file in the new format, but let if fail silently,
+            // Try to save the file in the new format, but let if fail silently,
             //  we do not want the load operation to fail because of a write.
             let _ = key.save(path);
 
