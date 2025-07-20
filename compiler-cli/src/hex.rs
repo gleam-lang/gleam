@@ -113,9 +113,8 @@ with a new one?";
         if previous.username != new_key.username {
             if let Some(previous_username) = previous.username {
                 let text = wrap(&format!(
-                    "
-Your previous Hex API key was created with username `{}` which is different from the username
-used to create the new Hex API key. You have to delete the key `{}` manually at https://hex.pm",
+                    "Your previous Hex API key was created with username `{}` which is different from the username \
+used to create the new Hex API key. You will have to delete the key `{}` manually at https://hex.pm",
                     previous_username, previous.name
                 ));
 
