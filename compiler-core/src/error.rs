@@ -37,10 +37,21 @@ pub type Result<Ok, Err = Error> = std::result::Result<Ok, Err>;
 #[cfg(test)]
 pub mod tests;
 
+#[macro_export]
 macro_rules! wrap_format {
     ($($tts:tt)*) => {
         wrap(&format!($($tts)*))
     }
+}
+
+#[macro_export]
+macro_rules! wrap_println {
+    ($fmt:expr) => {
+        println!("{}", wrap($fmt))
+    };
+    ($fmt:expr, $($arg:tt)*) => {
+        println!("{}", $crate::wrap_format!($fmt, $($arg)*))
+    };
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -1465,7 +1476,7 @@ The error from the encryption library was:
 
             Error::InvalidCredentialsFile { path } => {
                 let text = wrap_format!(
-                    "Your credentials file at {path} is in the wrong format. Try deleting the file and authenticate again."
+                    "Your credentials file at {path} is in the wrong format. Try deleting the file and authenticate again. If the file contains an api token, invalidate it manually."
                 );
 
                 vec![Diagnostic {
