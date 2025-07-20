@@ -7,6 +7,7 @@ use gleam_core::{
     hex::{self, RetirementReason},
     io::HttpClient as _,
     paths::ProjectPaths,
+    wrap_println,
 };
 
 pub use auth::HexAuthentication;
@@ -97,34 +98,33 @@ pub(crate) fn authenticate() -> Result<()> {
     let http = HttpClient::new();
     let config = hexpm::Config::new();
     let mut auth = HexAuthentication::new(&runtime, config.clone());
-    let previous = auth.read_stored_api_key()?;
+    let previous_key = auth.read_stored_api_key()?;
 
-    if previous.is_some() {
-        let question = "You already have a local Hex API key. Would you like to replace it
-with a new one?";
+    if previous_key.is_some() {
+        let question =
+            "You already have a local Hex API key. Would you like to replace it with a new one?";
         if !cli::confirm(question)? {
             return Ok(());
         }
     }
 
     let new_key = auth.create_and_store_api_key()?;
+    let new_key_encrypted = auth.read_stored_api_key()?;
 
-    if let Some(previous) = previous {
-        if previous.username != new_key.username {
-            if let Some(previous_username) = previous.username {
-                let text = wrap(&format!(
-                    "
-Your previous Hex API key was created with username `{}` which is different from the username
-used to create the new Hex API key. You have to delete the key `{}` manually at https://hex.pm",
-                    previous_username, previous.name
-                ));
-
-                println!("{text}");
-                return Ok(());
-            }
+    if let Some(previous) = previous_key {
+        if let Some(new_key_encrypted) = new_key_encrypted
+            && previous.username != new_key_encrypted.username
+        {
+            wrap_println!(
+                "Your previous Hex API key was created with username `{}` which is different from the username \
+used to create the new Hex API key. You will have to revoke the key `{}` manually at https://hex.pm",
+                previous.username,
+                previous.name
+            );
+            return Ok(());
         }
 
-        println!("Deleting previous key `{}` from Hex", previous.name);
+        wrap_println!("Deleting previous key `{}` from Hex", previous.name);
         if runtime
             .block_on(hex::remove_api_key(
                 &previous.name,
@@ -134,12 +134,10 @@ used to create the new Hex API key. You have to delete the key `{}` manually at 
             ))
             .is_err()
         {
-            let text = wrap(&format!(
-                "There was an error deleting key `{}` from Hex. You have to delete the key manually at https://hex.pm",
+            wrap_println!(
+                "There was an error revoking key `{}` from Hex. You have to revoke the key manually at https://hex.pm",
                 previous.name
-            ));
-
-            println!("{text}");
+            )
         };
     }
     Ok(())

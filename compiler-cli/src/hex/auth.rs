@@ -19,13 +19,12 @@ pub const API_ENV_NAME: &str = "HEXPM_API_KEY";
 pub struct EncryptedApiKey {
     pub name: String,
     pub encrypted: String,
-    pub username: Option<String>,
+    pub username: String,
 }
 
 #[derive(Debug)]
 pub struct UnencryptedApiKey {
     pub unencrypted: String,
-    pub username: Option<String>,
 }
 
 pub struct HexAuthentication<'runtime> {
@@ -82,7 +81,7 @@ encrypt your Hex API key.
         let encrypted = EncryptedApiKey {
             name,
             encrypted,
-            username: Some(username.clone()),
+            username,
         };
 
         encrypted.save(&path)?;
@@ -90,7 +89,6 @@ encrypt your Hex API key.
 
         Ok(UnencryptedApiKey {
             unencrypted: api_key,
-            username: Some(username),
         })
     }
 
@@ -129,12 +127,7 @@ encrypt your Hex API key.
     }
 
     fn read_and_decrypt_stored_api_key(&mut self) -> Result<Option<UnencryptedApiKey>> {
-        let Some(EncryptedApiKey {
-            encrypted,
-            username,
-            ..
-        }) = self.read_stored_api_key()?
-        else {
+        let Some(EncryptedApiKey { encrypted, .. }) = self.read_stored_api_key()? else {
             return Ok(None);
         };
 
@@ -144,16 +137,16 @@ encrypt your Hex API key.
                 detail: e.to_string(),
             })?;
 
-        Ok(Some(UnencryptedApiKey {
-            unencrypted,
-            username,
-        }))
+        Ok(Some(UnencryptedApiKey { unencrypted }))
     }
 
-    pub fn read_stored_api_key(&self) -> Result<Option<EncryptedApiKey>> {
+    pub fn read_stored_api_key(&mut self) -> Result<Option<EncryptedApiKey>> {
         let path = global_hexpm_credentials_path();
+
         if !path.exists() {
-            return Ok(None);
+            // maybe the user has the credentials in the old format, try migrate
+            let key = migrate_credentials_file(&path, &mut self.warnings)?;
+            return Ok(key);
         }
 
         EncryptedApiKey::load(&path)
@@ -180,33 +173,8 @@ impl EncryptedApiKey {
     pub fn load(path: &Utf8Path) -> Result<Option<Self>> {
         let text = crate::fs::read(path)?;
 
-        toml::from_str(&text).or_else(|_| {
-            // fallback from old format
-            let mut chunks = text.splitn(2, '\n');
-
-            let Some(name) = chunks.next() else {
-                return Err(Error::InvalidCredentialsFile {
-                    path: path.to_string(),
-                });
-            };
-
-            let Some(encrypted) = chunks.next() else {
-                return Err(Error::InvalidCredentialsFile {
-                    path: path.to_string(),
-                });
-            };
-
-            let key = Self {
-                name: name.to_string(),
-                encrypted: encrypted.to_string(),
-                username: None,
-            };
-
-            // Try to save the file in the new format, but let if fail silently,
-            //  we do not want the load operation to fail because of a write.
-            let _ = key.save(path);
-
-            Ok(Some(key))
+        toml::from_str(&text).map_err(|_| Error::InvalidCredentialsFile {
+            path: path.to_string(),
         })
     }
 }
@@ -251,4 +219,57 @@ pub fn generate_api_key_name() -> String {
         .to_string_lossy()
         .to_string();
     format!("{name}-{timestamp}")
+}
+
+/// Migrate users' credential file from the old plaintext format to the new TOML format,
+///     eventually this function should be deprecated
+fn migrate_credentials_file(
+    path: &Utf8Path,
+    warnings: &mut Vec<Warning>,
+) -> Result<Option<EncryptedApiKey>> {
+    // the original file name had no extension
+    let old_path = &path.with_extension("");
+
+    // if the file does not exist, there is nothing to migrate
+    if !old_path.exists() {
+        return Ok(None);
+    }
+
+    // otherwise, read the data and create a encrypted key
+    let text = crate::fs::read(old_path)?;
+
+    // data was split by a newline
+    let mut chunks = text.splitn(2, '\n');
+
+    // the first line was the name of the key
+    let Some(name) = chunks.next() else {
+        return Err(Error::InvalidCredentialsFile {
+            path: path.to_string(),
+        });
+    };
+
+    // the second line was the encrypted value
+    let Some(encrypted) = chunks.next() else {
+        return Err(Error::InvalidCredentialsFile {
+            path: path.to_string(),
+        });
+    };
+
+    // username was not stored in the old format, so we ask for it
+    let username = ask_username(warnings)?;
+
+    // create a new EncryptedApiKey struct with the old data
+    let key = EncryptedApiKey {
+        name: name.to_string(),
+        encrypted: encrypted.to_string(),
+        username,
+    };
+
+    // save the new EncryptedApiKey struct in the new format
+    key.save(path)?;
+
+    // remove old file, since it is migrated to the new format
+    crate::fs::delete_file(path)?;
+
+    Ok(Some(key))
 }
