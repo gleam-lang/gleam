@@ -439,20 +439,16 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
         });
     }
 
-    let mut empty_modules = vec![];
-
-    for module in built.root_package.modules.iter() {
-        let public_definitions = module
-            .ast
-            .definitions
-            .iter()
-            .filter(|def| def.is_public())
-            .count();
-
-        if public_definitions == 0 {
-            empty_modules.push(module.name.clone());
-        }
-    }
+    let empty_modules: Vec<_> = built.root_package.modules
+        .iter()
+        .filter(|module| {
+            module.ast.definitions
+                .iter()
+                .filter(|def| def.is_public())
+                .count() == 0
+        })
+        .map(|module| module.name.clone())
+        .collect();
 
     if !empty_modules.is_empty() {
         return Err(Error::CannotPublishEmptyModules {
