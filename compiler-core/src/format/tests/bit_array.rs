@@ -1,4 +1,4 @@
-use crate::assert_format;
+use crate::{assert_format, assert_format_rewrite};
 
 #[test]
 fn construction() {
@@ -210,5 +210,300 @@ fn operator_in_pattern_size() {
   let assert <<len, payload:size({ len + 1 } * 8 + 1)>> = <<>>
 }
 "
+    );
+}
+
+#[test]
+// https://github.com/gleam-lang/gleam/issues/4792#issuecomment-3096177213
+fn bit_array_segments_are_kept_one_per_line() {
+    assert_format!(
+        "pub fn main() {
+  <<
+    1:1,
+    1:1,
+    0:2,
+    opcode:4,
+    masked:1,
+    length_section:bits,
+    mask_key:bits,
+    data:bits,
+  >>
+  |> bytes_tree.from_bit_array
+}
+"
+    );
+}
+
+#[test]
+fn bit_array_with_trailing_comma_is_broken() {
+    assert_format_rewrite!(
+        "pub fn main() { <<1, 2, a,>> }",
+        r#"pub fn main() {
+  <<
+    1,
+    2,
+    a,
+  >>
+}
+"#
+    );
+}
+
+#[test]
+fn constant_bit_array_with_trailing_comma_is_broken() {
+    assert_format_rewrite!(
+        "const bit_array = <<1, 2, a,>>",
+        r#"const bit_array = <<
+  1,
+  2,
+  a,
+>>
+"#
+    );
+}
+
+#[test]
+fn bit_array_with_trailing_comma_is_kept_broken() {
+    assert_format!(
+        r#"pub fn main() {
+  <<
+    1,
+    2,
+    a,
+  >>
+}
+"#
+    );
+}
+
+#[test]
+fn constant_bit_array_with_trailing_comma_is_kept_broken() {
+    assert_format!(
+        r#"const bit_array = <<
+  1,
+  2,
+  a,
+>>
+"#
+    );
+}
+
+#[test]
+fn bit_array_with_no_trailing_comma_is_packed_on_a_single_line() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  <<
+    1,
+    2,
+    a
+  >>
+}
+"#,
+        r#"pub fn main() {
+  <<1, 2, a>>
+}
+"#
+    );
+}
+
+#[test]
+fn constant_bit_array_with_no_trailing_comma_is_packed_on_a_single_line() {
+    assert_format_rewrite!(
+        r#"const bit_array = <<
+  1,
+  2,
+  a
+>>"#,
+        "const bit_array = <<1, 2, a>>\n"
+    );
+}
+
+#[test]
+fn bit_array_with_no_comma_is_packed_on_a_single_line_or_split_one_item_per_line() {
+    assert_format_rewrite!(
+        "pub fn main() {
+  <<
+    1,
+    a,
+    12_312_312_312_312_312_312_312,
+    12_312_312_312_312_312_312_312,
+    12_312_312_312_312_312_312_312,
+    b,
+    12_312_312_312_312_312_312_312,
+    12_312_312_312_312_312_312_312,
+    12_312_312_312_312_312_312_312
+  >>
+}
+",
+        "pub fn main() {
+  <<
+    1,
+    a,
+    12_312_312_312_312_312_312_312,
+    12_312_312_312_312_312_312_312,
+    12_312_312_312_312_312_312_312,
+    b,
+    12_312_312_312_312_312_312_312,
+    12_312_312_312_312_312_312_312,
+    12_312_312_312_312_312_312_312,
+  >>
+}
+"
+    );
+}
+
+#[test]
+fn constant_bit_array_with_no_comma_is_packed_on_a_single_line_or_split_one_item_per_line() {
+    assert_format_rewrite!(
+        "const bit_array = <<
+  1,
+  a,
+  12_312_312_312_312_312_312_312,
+  12_312_312_312_312_312_312_312,
+  12_312_312_312_312_312_312_312,
+  b,
+  12_312_312_312_312_312_312_312,
+  12_312_312_312_312_312_312_312,
+  12_312_312_312_312_312_312_312
+>>
+",
+        "const bit_array = <<
+  1,
+  a,
+  12_312_312_312_312_312_312_312,
+  12_312_312_312_312_312_312_312,
+  12_312_312_312_312_312_312_312,
+  b,
+  12_312_312_312_312_312_312_312,
+  12_312_312_312_312_312_312_312,
+  12_312_312_312_312_312_312_312,
+>>
+"
+    );
+}
+
+#[test]
+fn simple_bit_array_with_no_comma_is_packed_on_a_single_line_or_split_one_item_per_line() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  <<
+    "hello",
+    "wibble wobble",
+    "these are all simple strings",
+    "but the bitarray won't be packed",
+    "the formatter will keep",
+    "one item",
+    "per line",
+    "since there's no trailing comma here ->"
+  >>
+}
+"#,
+        r#"pub fn main() {
+  <<
+    "hello",
+    "wibble wobble",
+    "these are all simple strings",
+    "but the bitarray won't be packed",
+    "the formatter will keep",
+    "one item",
+    "per line",
+    "since there's no trailing comma here ->",
+  >>
+}
+"#
+    );
+}
+
+#[test]
+fn simple_bit_array_with_trailing_comma_and_multiple_items_per_line_is_packed() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  <<
+    "hello",
+    "wibble wobble",
+    "these are all simple strings",
+    "and the bit array will be packed since the following strings are",
+    "on the same", "line", "and there's a trailing comma ->",
+  >>
+}
+"#,
+        r#"pub fn main() {
+  <<
+    "hello", "wibble wobble", "these are all simple strings",
+    "and the bit array will be packed since the following strings are",
+    "on the same", "line", "and there's a trailing comma ->",
+  >>
+}
+"#
+    );
+}
+
+#[test]
+fn simple_constant_bit_array_with_trailing_comma_and_multiple_items_per_line_is_packed() {
+    assert_format_rewrite!(
+        r#"pub const bit_array = <<
+  "hello",
+  "wibble wobble",
+  "these are all simple strings",
+  "and the bit array will be packed since the following strings are",
+  "on the same", "line", "and there's a trailing comma ->",
+>>
+"#,
+        r#"pub const bit_array = <<
+  "hello", "wibble wobble", "these are all simple strings",
+  "and the bit array will be packed since the following strings are",
+  "on the same", "line", "and there's a trailing comma ->",
+>>
+"#
+    );
+}
+
+#[test]
+fn simple_packed_bit_array_with_trailing_comma_is_kept_with_multiple_items_per_line() {
+    assert_format!(
+        r#"pub fn main() {
+  <<
+    "hello", "wibble wobble", "these are all simple strings",
+    "and the bit array will be kept packed since it ends with a trailing comma",
+    "right here! ->",
+  >>
+}
+"#
+    );
+}
+
+#[test]
+fn simple_single_line_bit_array_with_trailing_comma_is_split_one_item_per_line() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  <<"these are all simple strings", "but the bit array won't be packed", "since it ends with a trailing comma ->",>>
+}
+"#,
+        r#"pub fn main() {
+  <<
+    "these are all simple strings",
+    "but the bit array won't be packed",
+    "since it ends with a trailing comma ->",
+  >>
+}
+"#
+    );
+}
+
+#[test]
+fn simple_single_line_bit_array_with_no_trailing_comma_is_split_one_item_per_line() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  <<"these are all simple strings", "but the bit array won't be packed", "even if it doesn't end with a trailing comma!">>
+}
+"#,
+        r#"pub fn main() {
+  <<
+    "these are all simple strings",
+    "but the bit array won't be packed",
+    "even if it doesn't end with a trailing comma!",
+  >>
+}
+"#
     );
 }
