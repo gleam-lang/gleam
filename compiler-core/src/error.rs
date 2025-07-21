@@ -305,6 +305,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     )]
     CannotPublishLeakedInternalType { unfinished: Vec<EcoString> },
 
+    #[error("The modules {unfinished:?} are empty and so cannot be published")]
+    CannotPublishEmptyModules { unfinished: Vec<EcoString> },
+
     #[error("Publishing packages to reserve names is not permitted")]
     HexPackageSquatting,
 
@@ -1076,6 +1079,25 @@ resulting in compilation errors!"
 {}
 
 Please make sure internal types do not appear in public functions and try again.
+",
+                    unfinished
+                        .iter()
+                        .map(|name| format!("  - {}", name.as_str()))
+                        .join("\n")
+                ),
+                level: Level::Error,
+                hint: None,
+                location: None,
+            }],
+
+            Error::CannotPublishEmptyModules { unfinished } => vec![Diagnostic {
+                title: "Cannot publish empty modules".into(),
+                text: format!(
+                    "These modules contain no public definitions and cannot be published:
+
+{}
+
+Please add public functions, types, or constants to these modules, or remove them and try again.
 ",
                     unfinished
                         .iter()

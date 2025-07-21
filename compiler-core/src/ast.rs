@@ -873,6 +873,16 @@ impl TypedDefinition {
         }
     }
 
+    pub fn is_public(&self) -> bool {
+        match self {
+            Definition::Function(f) => f.publicity.is_public(),
+            Definition::TypeAlias(t) => t.publicity.is_public(),
+            Definition::CustomType(t) => t.publicity.is_public(),
+            Definition::ModuleConstant(c) => c.publicity.is_public(),
+            Definition::Import(_) => false,
+        }
+    }
+
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         match self {
             Definition::Function(function) => {

@@ -58,6 +58,17 @@ fn duplicate_module_test_dev() {
 
 #[rustfmt::skip]
 #[test]
+fn empty_module_publish_validation() {
+    let output = crate::prepare("./cases/empty_module_publish_validation");
+    insta::assert_snapshot!(
+        "empty_module_publish_validation",
+        output,
+        "./cases/empty_module_publish_validation",
+    );
+}
+
+#[rustfmt::skip]
+#[test]
 fn erlang_app_generation() {
     let output = crate::prepare("./cases/erlang_app_generation");
     insta::assert_snapshot!(
