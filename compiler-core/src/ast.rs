@@ -2846,6 +2846,12 @@ impl Endianness {
     }
 }
 
+impl<Value, Type> HasLocation for BitArraySegment<Value, Type> {
+    fn location(&self) -> SrcSpan {
+        self.location
+    }
+}
+
 impl<Type> BitArraySegment<Pattern<Type>, Type> {
     /// Returns the value of the pattern unwrapping any assign pattern.
     ///

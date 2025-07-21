@@ -481,13 +481,14 @@ impl<'comments> Formatter<'comments> {
                     .map(|segment| bit_array_segment(segment, |e| self.const_expr(e)))
                     .collect_vec();
 
-                self.bit_array(
-                    segment_docs,
-                    segments
-                        .iter()
-                        .all(|s| s.value.can_have_multiple_per_line()),
-                    location,
-                )
+                let packing = self.items_sequence_packing(
+                    segments,
+                    None,
+                    |segment| segment.value.can_have_multiple_per_line(),
+                    *location,
+                );
+
+                self.bit_array(segment_docs, packing, location)
             }
 
             Constant::Record {
@@ -586,17 +587,15 @@ impl<'comments> Formatter<'comments> {
             };
         }
 
-        let list_packing = self.list_items_packing(
+        let list_packing = self.items_sequence_packing(
             elements,
             None,
             |element| element.can_have_multiple_per_line(),
             *location,
         );
         let comma = match list_packing {
-            ListItemsPacking::FitMultiplePerLine => flex_break(",", ", "),
-            ListItemsPacking::FitOnePerLine | ListItemsPacking::BreakOnePerLine => {
-                break_(",", ", ")
-            }
+            ItemsPacking::FitMultiplePerLine => flex_break(",", ", "),
+            ItemsPacking::FitOnePerLine | ItemsPacking::BreakOnePerLine => break_(",", ", "),
         };
 
         let mut elements_doc = nil();
@@ -645,8 +644,8 @@ impl<'comments> Formatter<'comments> {
         };
 
         match list_packing {
-            ListItemsPacking::FitOnePerLine | ListItemsPacking::FitMultiplePerLine => doc.group(),
-            ListItemsPacking::BreakOnePerLine => doc.force_break(),
+            ItemsPacking::FitOnePerLine | ItemsPacking::FitMultiplePerLine => doc.group(),
+            ItemsPacking::BreakOnePerLine => doc.force_break(),
         }
     }
 
@@ -1084,13 +1083,14 @@ impl<'comments> Formatter<'comments> {
                     .map(|segment| bit_array_segment(segment, |e| self.bit_array_segment_expr(e)))
                     .collect_vec();
 
-                self.bit_array(
-                    segment_docs,
-                    segments
-                        .iter()
-                        .all(|s| s.value.can_have_multiple_per_line()),
-                    location,
-                )
+                let packing = self.items_sequence_packing(
+                    segments,
+                    None,
+                    |segment| segment.value.can_have_multiple_per_line(),
+                    *location,
+                );
+
+                self.bit_array(segment_docs, packing, location)
             }
             UntypedExpr::RecordUpdate {
                 constructor,
@@ -2028,7 +2028,7 @@ impl<'comments> Formatter<'comments> {
             };
         }
 
-        let list_packing = self.list_items_packing(
+        let list_packing = self.items_sequence_packing(
             elements,
             tail,
             UntypedExpr::can_have_multiple_per_line,
@@ -2036,10 +2036,8 @@ impl<'comments> Formatter<'comments> {
         );
 
         let comma = match list_packing {
-            ListItemsPacking::FitMultiplePerLine => flex_break(",", ", "),
-            ListItemsPacking::FitOnePerLine | ListItemsPacking::BreakOnePerLine => {
-                break_(",", ", ")
-            }
+            ItemsPacking::FitMultiplePerLine => flex_break(",", ", "),
+            ItemsPacking::FitOnePerLine | ItemsPacking::BreakOnePerLine => break_(",", ", "),
         };
 
         let list_size = elements.len()
@@ -2110,18 +2108,18 @@ impl<'comments> Formatter<'comments> {
         };
 
         match list_packing {
-            ListItemsPacking::FitOnePerLine | ListItemsPacking::FitMultiplePerLine => doc.group(),
-            ListItemsPacking::BreakOnePerLine => doc.force_break(),
+            ItemsPacking::FitOnePerLine | ItemsPacking::FitMultiplePerLine => doc.group(),
+            ItemsPacking::BreakOnePerLine => doc.force_break(),
         }
     }
 
-    fn list_items_packing<'a, T: HasLocation>(
+    fn items_sequence_packing<'a, T: HasLocation>(
         &self,
         items: &'a [T],
         tail: Option<&'a T>,
         can_have_multiple_per_line: impl Fn(&'a T) -> bool,
         list_location: SrcSpan,
-    ) -> ListItemsPacking {
+    ) -> ItemsPacking {
         let ends_with_trailing_comma = tail
             .map(|tail| tail.location().end)
             .or_else(|| items.last().map(|last| last.location().end))
@@ -2143,12 +2141,12 @@ impl<'comments> Formatter<'comments> {
             // If there's any empty line between elements we want to force each
             // item onto its own line to preserve the empty lines that were
             // intentionally added.
-            ListItemsPacking::BreakOnePerLine
+            ItemsPacking::BreakOnePerLine
         } else if !ends_with_trailing_comma {
             // If the list doesn't end with a trailing comma we try and pack it in
             // a single line; if we can't we'll put one item per line, no matter
             // the content of the list.
-            ListItemsPacking::FitOnePerLine
+            ItemsPacking::FitOnePerLine
         } else if tail.is_none()
             && items.iter().all(can_have_multiple_per_line)
             && has_multiple_elements_per_line
@@ -2183,11 +2181,11 @@ impl<'comments> Formatter<'comments> {
             // The first item is broken, meaning that once we get to the flex
             // space separating it from the following one the formatter is not
             // going to break it since there's enough space in the current line!
-            ListItemsPacking::FitMultiplePerLine
+            ItemsPacking::FitMultiplePerLine
         } else {
             // If it ends with a trailing comma we will force the list on
             // multiple lines, with one item per line.
-            ListItemsPacking::BreakOnePerLine
+            ItemsPacking::BreakOnePerLine
         }
     }
 
@@ -2288,7 +2286,7 @@ impl<'comments> Formatter<'comments> {
                     .map(|segment| bit_array_segment(segment, |pattern| self.pattern(pattern)))
                     .collect_vec();
 
-                self.bit_array(segment_docs, false, location)
+                self.bit_array(segment_docs, ItemsPacking::FitOnePerLine, location)
             }
 
             Pattern::StringPrefix {
@@ -2588,7 +2586,7 @@ impl<'comments> Formatter<'comments> {
     fn bit_array<'a>(
         &mut self,
         segments: Vec<Document<'a>>,
-        can_have_multiple_per_line: bool,
+        packing: ItemsPacking,
         location: &SrcSpan,
     ) -> Document<'a> {
         let comments = self.pop_comments(location.end);
@@ -2614,10 +2612,10 @@ impl<'comments> Formatter<'comments> {
                     .force_break(),
             };
         }
-        let comma = if can_have_multiple_per_line {
-            flex_break(",", ", ")
-        } else {
-            break_(",", ", ")
+
+        let comma = match packing {
+            ItemsPacking::FitMultiplePerLine => flex_break(",", ", "),
+            ItemsPacking::FitOnePerLine | ItemsPacking::BreakOnePerLine => break_(",", ", "),
         };
 
         let last_break = break_(",", "");
@@ -2625,8 +2623,8 @@ impl<'comments> Formatter<'comments> {
             .append(join(segments, comma))
             .nest(INDENT);
 
-        match comments_doc {
-            None => doc.append(last_break).append(">>").group(),
+        let doc = match comments_doc {
+            None => doc.append(last_break).append(">>"),
             Some(comments) => doc
                 .append(last_break.nest(INDENT))
                 // ^ Notice how in this case we nest the final break before
@@ -2635,8 +2633,12 @@ impl<'comments> Formatter<'comments> {
                 .append(comments.nest(INDENT))
                 .append(line())
                 .append(">>")
-                .force_break()
-                .group(),
+                .force_break(),
+        };
+
+        match packing {
+            ItemsPacking::FitOnePerLine | ItemsPacking::FitMultiplePerLine => doc.group(),
+            ItemsPacking::BreakOnePerLine => doc.force_break(),
         }
     }
 
@@ -3059,7 +3061,10 @@ impl<'a> Documentable<'a> for &'a BinOp {
 }
 
 #[allow(clippy::enum_variant_names)]
-enum ListItemsPacking {
+/// This is used to determine how to fit the items of a list, or the segments of
+/// a bit array in a line.
+///
+enum ItemsPacking {
     /// Try and fit everything on a single line; if the items don't fit, break
     /// the list putting each item into its own line.
     ///
