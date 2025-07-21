@@ -439,13 +439,18 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
         });
     }
 
-    let empty_modules: Vec<_> = built.root_package.modules
+    let empty_modules: Vec<_> = built
+        .root_package
+        .modules
         .iter()
         .filter(|module| {
-            module.ast.definitions
+            module
+                .ast
+                .definitions
                 .iter()
                 .filter(|def| def.is_public())
-                .count() == 0
+                .count()
+                == 0
         })
         .map(|module| module.name.clone())
         .collect();
