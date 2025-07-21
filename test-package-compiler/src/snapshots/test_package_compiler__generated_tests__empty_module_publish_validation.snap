@@ -1,0 +1,53 @@
+---
+source: test-package-compiler/src/generated_tests.rs
+expression: "./cases/empty_module_publish_validation"
+snapshot_kind: text
+---
+//// /out/lib/the_package/_gleam_artefacts/empty.cache
+<.cache binary>
+
+//// /out/lib/the_package/_gleam_artefacts/empty.cache_meta
+<53 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/empty.erl
+-module(empty).
+
+
+//// /out/lib/the_package/_gleam_artefacts/main.cache
+<.cache binary>
+
+//// /out/lib/the_package/_gleam_artefacts/main.cache_meta
+<61 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/main.erl
+-module(main).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "src/main.gleam").
+-export([main/0]).
+
+-file("src/main.gleam", 1).
+-spec main() -> binary().
+main() ->
+    <<"This module has public definitions"/utf8>>.
+
+
+//// /out/lib/the_package/ebin/empty_module_publish_validation.app
+{application, empty_module_publish_validation, [
+    {vsn, "1.0.0"},
+    {applications, [gleam_stdlib]},
+    {description, "Test package with empty modules"},
+    {modules, [empty,
+               main]},
+    {registered, []}
+]}.
+
+
+//// Warning
+warning: Empty module
+  ┌─ src/empty.gleam:1:1
+  │
+1 │ 
+  │ ^ This module is empty
+
+Module 'empty' contains no public definitions.
+Hint: Consider adding public functions, types, or constants, or removing this module.

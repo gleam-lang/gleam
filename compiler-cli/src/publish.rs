@@ -439,6 +439,27 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
         });
     }
 
+    let mut empty_modules = vec![];
+
+    for module in built.root_package.modules.iter() {
+        let public_definitions = module
+            .ast
+            .definitions
+            .iter()
+            .filter(|def| def.is_public())
+            .count();
+
+        if public_definitions == 0 {
+            empty_modules.push(module.name.clone());
+        }
+    }
+
+    if !empty_modules.is_empty() {
+        return Err(Error::CannotPublishEmptyModules {
+            unfinished: empty_modules,
+        });
+    }
+
     // TODO: If any of the modules in the package contain a leaked internal type then
     // refuse to publish as the package is not yet finished.
     // We need to move aliases in to the type system first.

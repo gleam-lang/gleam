@@ -1,6 +1,7 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
 expression: "./cases/erlang_empty"
+snapshot_kind: text
 ---
 //// /out/lib/the_package/_gleam_artefacts/empty.cache
 <.cache binary>
@@ -23,3 +24,14 @@ expression: "./cases/erlang_empty"
     {modules, [empty]},
     {registered, []}
 ]}.
+
+
+//// Warning
+warning: Empty module
+  ┌─ src/empty.gleam:1:1
+  │
+1 │ 
+  │ ^ This module is empty
+
+Module 'empty' contains no public definitions.
+Hint: Consider adding public functions, types, or constants, or removing this module.

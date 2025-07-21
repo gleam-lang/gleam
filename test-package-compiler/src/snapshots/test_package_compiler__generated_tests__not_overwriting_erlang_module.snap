@@ -1,6 +1,7 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
 expression: "./cases/not_overwriting_erlang_module"
+snapshot_kind: text
 ---
 //// /out/lib/the_package/_gleam_artefacts/app@code.cache
 <.cache binary>
@@ -23,3 +24,14 @@ expression: "./cases/not_overwriting_erlang_module"
     {modules, [app@code]},
     {registered, []}
 ]}.
+
+
+//// Warning
+warning: Empty module
+  ┌─ src/app/code.gleam:1:1
+  │
+1 │ 
+  │ ^ This module is empty
+
+Module 'app/code' contains no public definitions.
+Hint: Consider adding public functions, types, or constants, or removing this module.
