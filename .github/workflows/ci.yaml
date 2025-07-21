@@ -1,6 +1,8 @@
 name: ci
 on:
   pull_request:
+    paths-ignore:
+      - "CHANGELOG.md"
   push:
     branches:
       - main
