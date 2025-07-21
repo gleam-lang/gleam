@@ -102,5 +102,6 @@ fn test_warnings() {
 
     assert!(compile_package(0, "javascript").is_ok());
     assert!(pop_warning(0).is_some());
+    assert!(pop_warning(0).is_some());
     assert!(pop_warning(0).is_none());
 }
