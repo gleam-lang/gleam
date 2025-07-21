@@ -2,6 +2,81 @@
 
 ## Unreleased
 
+### Formatter
+
+- The formatter now allows more control over how bit arrays are split. By adding
+  a trailing comma at the end of a bit array that can fit on a single line, the
+  bit array will be split on multiple lines:
+
+  ```gleam
+  pub fn dgram() -> BitArray {
+    <<ip_version:4, header_length:4, service_type:8,>>
+  }
+  ```
+
+  Will be formatted as:
+
+  ```gleam
+  pub fn dgram() -> BitArray {
+    <<
+      ip_version:4,
+      header_length:4,
+      service_type:8,
+    >>
+  }
+  ```
+
+  By removing the trailing comma, the formatter will try and fit the bit array
+  on a single line again:
+
+  ```gleam
+  pub fn dgram() -> BitArray {
+    <<
+      ip_version:4,
+      header_length:4,
+      service_type:8
+    >>
+  }
+  ```
+
+  Will be formatted back to a single line:
+
+  ```gleam
+  pub fn dgram() -> BitArray {
+    <<ip_version:4, header_length:4, service_type:8>>
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The formatter now allows more control over how bit arrays are formatted.
+  If a bit array is split with multiple segments on the same line, removing the
+  trailing comma will make sure the formatter keeps each segment on its own
+  line:
+
+  ```gleam
+  pub fn dgram() -> BitArray {
+    <<
+      "This bit array was formatted", "keeping segments on the same line",
+      "notice how the formatting changes by removing the trailing comma ->",
+    >>
+  }
+  ```
+
+  Is formatted as:
+
+  ```gleam
+  pub fn dgram() -> BitArray {
+    <<
+      "This bit array was formatted",
+      "keeping segments on the same line",
+      "notice how the formatting changes by removing the trailing comma ->"
+    >>
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Bug fixes
 
 - Fixed a bug where the formatter would move a comment before `assert` to be
