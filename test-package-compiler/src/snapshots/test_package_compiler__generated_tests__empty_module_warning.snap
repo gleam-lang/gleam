@@ -1,6 +1,6 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-expression: "./cases/empty_module_publish_validation"
+expression: "./cases/empty_module_warning"
 snapshot_kind: text
 ---
 //// /out/lib/the_package/_gleam_artefacts/empty.cache
@@ -31,8 +31,8 @@ main() ->
     <<"This module has public definitions"/utf8>>.
 
 
-//// /out/lib/the_package/ebin/empty_module_publish_validation.app
-{application, empty_module_publish_validation, [
+//// /out/lib/the_package/ebin/empty_module_warning.app
+{application, empty_module_warning, [
     {vsn, "1.0.0"},
     {applications, [gleam_stdlib]},
     {description, "Test package with empty modules"},
@@ -44,10 +44,6 @@ main() ->
 
 //// Warning
 warning: Empty module
-  ┌─ src/empty.gleam:1:1
-  │
-1 │ 
-  │ ^ This module is empty
 
 Module 'empty' contains no public definitions.
 Hint: Consider adding public functions, types, or constants, or removing this module.

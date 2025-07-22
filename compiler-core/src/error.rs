@@ -1092,13 +1092,12 @@ Please make sure internal types do not appear in public functions and try again.
 
             Error::CannotPublishEmptyModules { unfinished } => vec![Diagnostic {
                 title: "Cannot publish empty modules".into(),
-                text: format!(
+                text: wrap_format!(
                     "These modules contain no public definitions and cannot be published:
 
 {}
 
-Please add public functions, types, or constants to these modules, or remove them and try again.
-",
+Please add public functions, types, or constants to these modules, or remove them and try again.",
                     unfinished
                         .iter()
                         .map(|name| format!("  - {}", name.as_str()))

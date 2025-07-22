@@ -58,12 +58,12 @@ fn duplicate_module_test_dev() {
 
 #[rustfmt::skip]
 #[test]
-fn empty_module_publish_validation() {
-    let output = crate::prepare("./cases/empty_module_publish_validation");
+fn empty_module_warning() {
+    let output = crate::prepare("./cases/empty_module_warning");
     insta::assert_snapshot!(
-        "empty_module_publish_validation",
+        "empty_module_warning",
         output,
-        "./cases/empty_module_publish_validation",
+        "./cases/empty_module_warning",
     );
 }
 

@@ -1,4 +1,4 @@
-name = "empty_module_publish_validation"
+name = "empty_module_warning"
 version = "1.0.0"
 description = "Test package with empty modules"
 licences = ["Apache-2.0"]
