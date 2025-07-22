@@ -439,20 +439,21 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
         });
     }
 
-    // empty_modules is a list of modules that contain no public definitions
-    // it is used to refuse to publish packages that are not yet finished.
+    // empty_modules is a list of modules that do not export any values or types.
+    // We do not allow publishing packages that contain empty modules.
     let empty_modules: Vec<_> = built
         .root_package
         .modules
         .iter()
         .filter(|module| {
-            module
-                .ast
-                .definitions
-                .iter()
-                .filter(|def| def.is_public())
-                .count()
-                == 0
+            built
+                .module_interfaces
+                .get(&module.name)
+                .map(|interface| {
+                    // Check if the module exports any values or types
+                    interface.values.is_empty() && interface.types.is_empty()
+                })
+                .unwrap_or(false)
         })
         .map(|module| module.name.clone())
         .collect();
