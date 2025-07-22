@@ -8,6 +8,10 @@
   after it.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the message following an `echo`, `panic`, `todo`, `assert`,
+  or `let assert` would not be formatted properly when preceded by a comment.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.12.0-rc1 - 2025-07-18
 
 ### Compiler
