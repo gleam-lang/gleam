@@ -6501,3 +6501,187 @@ fn comment_is_not_moved_after_assert() {
 "
     );
 }
+
+#[test]
+fn todo_as_with_comment() {
+    assert_format!(
+        r#"pub fn main() {
+  todo as
+    // A little comment explaining something
+    "wibble"
+}
+"#
+    );
+}
+
+#[test]
+fn todo_as_with_comment_on_the_same_line() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  todo as // A little comment explaining something
+    "wibble"
+}
+"#,
+        r#"pub fn main() {
+  todo as
+    // A little comment explaining something
+    "wibble"
+}
+"#
+    );
+}
+
+#[test]
+fn todo_as_with_comment_before_the_as() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  todo // A little comment explaining something
+    as "wibble"
+}
+"#,
+        r#"pub fn main() {
+  todo as
+    // A little comment explaining something
+    "wibble"
+}
+"#
+    );
+}
+
+#[test]
+fn panic_as_with_comment() {
+    assert_format!(
+        r#"pub fn main() {
+  panic as
+    // A little comment explaining something
+    "wibble"
+}
+"#
+    );
+}
+
+#[test]
+fn panic_as_with_comment_on_the_same_line() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  panic as // A little comment explaining something
+    "wibble"
+}
+"#,
+        r#"pub fn main() {
+  panic as
+    // A little comment explaining something
+    "wibble"
+}
+"#
+    );
+}
+
+#[test]
+fn panic_as_with_comment_before_the_as() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  panic // A little comment explaining something
+    as "wibble"
+}
+"#,
+        r#"pub fn main() {
+  panic as
+    // A little comment explaining something
+    "wibble"
+}
+"#
+    );
+}
+
+#[test]
+fn echo_as_with_comment() {
+    assert_format!(
+        r#"pub fn main() {
+  echo 1 as
+    // A little comment explaining something
+    "wibble"
+}
+"#
+    );
+}
+
+#[test]
+fn echo_as_with_comment_on_the_same_line() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  echo 1 as // A little comment explaining something
+    "wibble"
+}
+"#,
+        r#"pub fn main() {
+  echo 1 as
+    // A little comment explaining something
+    "wibble"
+}
+"#
+    );
+}
+
+#[test]
+fn echo_as_with_comment_before_the_as() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  echo 1 // A little comment explaining something
+    as "wibble"
+}
+"#,
+        r#"pub fn main() {
+  echo 1 as
+    // A little comment explaining something
+    "wibble"
+}
+"#
+    );
+}
+
+#[test]
+fn assert_as_with_comment() {
+    assert_format!(
+        r#"pub fn main() {
+  assert True as
+    // A little comment explaining something
+    "wibble"
+}
+"#
+    );
+}
+
+#[test]
+fn assert_as_with_comment_on_the_same_line() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  assert True as // A little comment explaining something
+    "wibble"
+}
+"#,
+        r#"pub fn main() {
+  assert True as
+    // A little comment explaining something
+    "wibble"
+}
+"#
+    );
+}
+
+#[test]
+fn assert_as_with_comment_before_the_as() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  assert True // A little comment explaining something
+    as "wibble"
+}
+"#,
+        r#"pub fn main() {
+  assert True as
+    // A little comment explaining something
+    "wibble"
+}
+"#
+    );
+}
