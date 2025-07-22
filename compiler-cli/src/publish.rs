@@ -439,6 +439,8 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
         });
     }
 
+    // empty_modules is a list of modules that contain no public definitions
+    // it is used to refuse to publish packages that are not yet finished.
     let empty_modules: Vec<_> = built
         .root_package
         .modules
