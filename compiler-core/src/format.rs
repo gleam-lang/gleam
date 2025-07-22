@@ -971,7 +971,10 @@ impl<'comments> Formatter<'comments> {
             .append(" =")
             .append(self.assigned_value(value));
 
-        commented(self.append_as_message(doc, message), comments)
+        commented(
+            self.append_as_message(doc, PrecedingAs::Expression, message),
+            comments,
+        )
     }
 
     fn expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
@@ -980,17 +983,13 @@ impl<'comments> Formatter<'comments> {
         let document = match expr {
             UntypedExpr::Placeholder { .. } => panic!("Placeholders should not be formatted"),
 
-            UntypedExpr::Panic { message: None, .. } => "panic".to_doc(),
-            UntypedExpr::Panic {
-                message: Some(message),
-                ..
-            } => docvec!["panic as ", self.expr(message)],
+            UntypedExpr::Panic { message, .. } => {
+                self.append_as_message("panic".to_doc(), PrecedingAs::Keyword, message.as_deref())
+            }
 
-            UntypedExpr::Todo { message: None, .. } => "todo".to_doc(),
-            UntypedExpr::Todo {
-                message: Some(message),
-                ..
-            } => docvec!["todo as ", self.expr(message)],
+            UntypedExpr::Todo { message, .. } => {
+                self.append_as_message("todo".to_doc(), PrecedingAs::Keyword, message.as_deref())
+            }
 
             UntypedExpr::Echo {
                 expression,
@@ -2581,7 +2580,8 @@ impl<'comments> Formatter<'comments> {
             self.expr(&assert.value)
         };
 
-        let doc = self.append_as_message(expression, assert.message.as_ref());
+        let doc =
+            self.append_as_message(expression, PrecedingAs::Expression, assert.message.as_ref());
         commented(docvec!["assert ", doc], comments)
     }
 
@@ -2875,17 +2875,43 @@ impl<'comments> Formatter<'comments> {
     fn append_as_message<'a>(
         &mut self,
         doc: Document<'a>,
+        preceding_as: PrecedingAs,
         message: Option<&'a UntypedExpr>,
     ) -> Document<'a> {
         let Some(message) = message else { return doc };
 
-        docvec![
-            doc.group(),
-            break_("", " ").nest(INDENT),
-            "as ",
-            self.expr(message).group().nest(INDENT)
-        ]
-        .group()
+        let comments = self.pop_comments(message.location().start);
+        let comments = printed_comments(comments, false);
+
+        let as_ = match preceding_as {
+            PrecedingAs::Keyword => " as".to_doc(),
+            PrecedingAs::Expression => docvec![break_("", " "), "as"].nest(INDENT),
+        };
+
+        let doc = match comments {
+            // If there's comments between the document and the message we want
+            // the `as` bit to be on the same line as the original document and
+            // go on a new indented line with the message and comments:
+            // ```gleam
+            // todo as
+            //   // comment!
+            //   "wibble"
+            // ```
+            Some(comments) => docvec![
+                doc.group(),
+                as_,
+                docvec![line(), comments, line(), self.expr(message).group()].nest(INDENT)
+            ],
+
+            None => docvec![
+                doc.group(),
+                as_,
+                " ",
+                self.expr(message).group().nest(INDENT),
+            ],
+        };
+
+        doc.group()
     }
 
     fn echo<'a>(
@@ -2894,7 +2920,11 @@ impl<'comments> Formatter<'comments> {
         message: &'a Option<Box<UntypedExpr>>,
     ) -> Document<'a> {
         let Some(expression) = expression else {
-            return self.append_as_message("echo".to_doc(), message.as_deref());
+            return self.append_as_message(
+                "echo".to_doc(),
+                PrecedingAs::Keyword,
+                message.as_deref(),
+            );
         };
 
         // When a binary expression gets broken on multiple lines we don't want
@@ -2918,12 +2948,46 @@ impl<'comments> Formatter<'comments> {
         //
         let doc = self.expr(expression);
         if expression.is_binop() || expression.is_pipeline() {
-            let doc = self.append_as_message(doc.nest(INDENT), message.as_deref());
+            let doc = self.append_as_message(
+                doc.nest(INDENT),
+                PrecedingAs::Expression,
+                message.as_deref(),
+            );
             docvec!["echo ", doc]
         } else {
-            docvec!["echo ", self.append_as_message(doc, message.as_deref())]
+            docvec![
+                "echo ",
+                self.append_as_message(doc, PrecedingAs::Expression, message.as_deref())
+            ]
         }
     }
+}
+
+/// This is used to describe the kind of things that might preceding an `as`
+/// message that can be added to various places: `panic`, `echo`, `let assert`,
+/// `assert`, `todo`.
+///
+/// It might be preceded by a keyword, like with `echo` and `panic`, or by
+/// an expression, like in `assert` or `let assert`.
+///
+enum PrecedingAs {
+    /// An expression is preceding the `as` message:
+    /// ```gleam
+    /// echo 1 as "message"
+    /// assert 1 == 2 as "message"
+    /// let assert Ok(_) = result as "message"
+    /// ```
+    ///
+    Expression,
+
+    /// A keyword is preceding the `as` message:
+    /// ```gleam
+    /// 1 |> echo as "message"
+    /// panic as "message"
+    /// todo as "message"
+    /// ```
+    ///
+    Keyword,
 }
 
 fn init_and_last<T>(vec: &[T]) -> Option<(&[T], &T)> {
