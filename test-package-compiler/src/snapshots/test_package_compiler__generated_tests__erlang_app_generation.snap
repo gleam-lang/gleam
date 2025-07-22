@@ -34,10 +34,6 @@ snapshot_kind: text
 
 //// Warning
 warning: Empty module
-  ┌─ src/main.gleam:1:1
-  │
-1 │ 
-  │ ^ This module is empty
 
 Module 'main' contains no public definitions.
 Hint: Consider adding public functions, types, or constants, or removing this module.
