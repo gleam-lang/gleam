@@ -87,6 +87,10 @@
   or `let assert` would not be formatted properly when preceded by a comment.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the compiler would generate invalid code for an `assert`
+  using pipes on the JavaScript target.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.12.0-rc1 - 2025-07-18
 
 ### Compiler
@@ -360,7 +364,8 @@
 ### Build tool
 
 - `gleam update`, `gleam deps update`, and `gleam deps download` will now print
-  a message when there are new major versions of packages available. For example:
+  a message when there are new major versions of packages available. For
+  example:
 
   ```text
    $ gleam update
@@ -668,8 +673,8 @@
   properly.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- Fixed a bug where fields of custom types named `prototype` would not be properly
-  escaped on the JavaScript target.
+- Fixed a bug where fields of custom types named `prototype` would not be
+  properly escaped on the JavaScript target.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 ## v1.11.1 - 2025-06-05
