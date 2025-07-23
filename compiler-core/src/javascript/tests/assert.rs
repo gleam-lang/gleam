@@ -187,3 +187,16 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn prova() {
+    assert_js!(
+        "
+pub fn main() {
+  assert Ok([]) == Ok([] |> id)
+}
+
+fn id(x) { x }
+"
+    )
+}

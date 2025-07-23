@@ -613,20 +613,21 @@ impl<'module, 'a> Generator<'module, 'a> {
     {
         // Save initial state
         let scope_position = std::mem::replace(&mut self.scope_position, Position::Tail);
+        let statement_level = std::mem::take(&mut self.statement_level);
 
         // Set state for in this iife
         let current_scope_vars = self.current_scope_vars.clone();
 
         // Generate the expression
         let result = to_doc(self, statements);
+        let doc = self.add_statement_level(result);
+        let doc = immediately_invoked_function_expression_document(doc);
 
         // Reset
         self.current_scope_vars = current_scope_vars;
         self.scope_position = scope_position;
+        self.statement_level = statement_level;
 
-        // Wrap in iife document
-        let doc =
-            immediately_invoked_function_expression_document(self.add_statement_level(result));
         self.wrap_return(doc)
     }
 
