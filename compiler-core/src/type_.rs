@@ -320,6 +320,14 @@ impl Type {
         }
     }
 
+    pub fn is_list(&self) -> bool {
+        match self {
+            Self::Named { module, name, .. } if "List" == name && is_prelude_module(module) => true,
+            Self::Var { type_ } => type_.borrow().is_list(),
+            _ => false,
+        }
+    }
+
     pub fn named_type_name(&self) -> Option<(EcoString, EcoString)> {
         match self {
             Self::Named { module, name, .. } => Some((module.clone(), name.clone())),
@@ -1236,6 +1244,13 @@ impl TypeVar {
         match self {
             Self::Link { type_ } => type_.is_result(),
             Self::Unbound { .. } | Self::Generic { .. } => false,
+        }
+    }
+
+    pub fn is_list(&self) -> bool {
+        match self {
+            TypeVar::Link { type_ } => type_.is_list(),
+            TypeVar::Unbound { .. } | TypeVar::Generic { .. } => false,
         }
     }
 

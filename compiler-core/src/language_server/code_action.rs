@@ -4664,6 +4664,14 @@ where
         match type_ {
             Type::Fn { .. } => None,
             Type::Var { type_ } => self.type_var_to_destructure_patterns(&type_.borrow()),
+
+            // We special case lists, they don't have "regular" constructors
+            // like other types. Instead we always add the two branches covering
+            // the empty and non empty list.
+            Type::Named { .. } if type_.is_list() => {
+                Some(vec1!["[]".into(), "[first, ..rest]".into()])
+            }
+
             Type::Named {
                 module: type_module,
                 name: type_name,
