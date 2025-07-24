@@ -9162,3 +9162,14 @@ fn remove_opaque_from_private_type() {
         find_position_of("Wibble").to_selection()
     );
 }
+
+#[test]
+fn pattern_match_on_list_variable() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_ARGUMENT,
+        "pub fn main(a_list: List(a)) {
+  todo
+}",
+        find_position_of("a_list").to_selection()
+    );
+}
