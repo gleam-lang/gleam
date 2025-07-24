@@ -9185,7 +9185,7 @@ fn allow_further_pattern_matching_on_let_record_destructuring() {
 
 pub type Wibble { Wibble(field: Result(Nil, String)) }
 ",
-        find_position_of("one").to_selection()
+        find_position_of("field").to_selection()
     );
 }
 
