@@ -9132,3 +9132,14 @@ fn remove_block_does_not_unwrap_a_block_with_multiple_statements() {
         find_position_of("1").to_selection()
     );
 }
+
+#[test]
+fn pattern_match_on_list_variable() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_ARGUMENT,
+        "pub fn main(a_list: List(a)) {
+  todo
+}",
+        find_position_of("a_list").to_selection()
+    );
+}
