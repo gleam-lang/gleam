@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.12.0-rc2 - 2025-07-24
 
 ### Formatter
 
