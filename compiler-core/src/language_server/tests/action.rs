@@ -9164,6 +9164,57 @@ fn remove_opaque_from_private_type() {
 }
 
 #[test]
+fn allow_further_pattern_matching_on_let_tuple_destructuring() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "pub fn main(x) {
+  let #(one, other) = #(Ok(1), Error(Nil))
+}
+",
+        find_position_of("one").to_selection()
+    );
+}
+
+#[test]
+fn allow_further_pattern_matching_on_let_record_destructuring() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "pub fn main(x) {
+  let Wibble(field:) = Wibble(Ok(Nil))
+}
+
+pub type Wibble { Wibble(field: Result(Nil, String)) }
+",
+        find_position_of("one").to_selection()
+    );
+}
+
+#[test]
+fn allow_further_pattern_matching_on_asserted_result() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "pub fn main(x) {
+  let assert Ok(one) = Ok(Error(Nil))
+}
+",
+        find_position_of("one").to_selection()
+    );
+}
+
+#[test]
+fn allow_further_pattern_matching_on_asserted_list() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "pub fn main(x) {
+  let assert [first, ..] = [Ok(Nil), ..todo]
+  todo
+}
+",
+        find_position_of("first").to_selection()
+    );
+}
+
+#[test]
 fn pattern_match_on_list_variable() {
     assert_code_action!(
         PATTERN_MATCH_ON_ARGUMENT,
