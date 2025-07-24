@@ -128,6 +128,53 @@
 
 ### Language server
 
+- The "pattern match on variable" can now be triggered on lists. For example:
+
+  ```gleam
+  pub fn is_empty(list: List(a)) -> Bool {
+    //            ^^^^ Triggering the action over here
+  }
+  ```
+
+  Triggering the action over the `list` argument would result in the following
+  code:
+
+  ```gleam
+  pub fn is_empty(list: List(a)) -> Bool {
+    case list {
+      [] -> todo
+      [first, ..rest] -> todo
+    }
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The "pattern match on variable" can now be triggered on variables introduced
+  by other patterns. For example:
+
+  ```gleam
+  pub fn main() {
+    let User(name:, role:) = find_user("lucy")
+    //              ^^^^ Triggering the action over
+  }
+  ```
+
+  Triggering the action over another variable like `role` would result in the
+  following code:
+
+  ```gleam
+  pub fn main() {
+    let User(name:, role:) = find_user("lucy")
+    case role {
+      Admin -> todo
+      Member -> todo
+    }
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The language server now offers a quick fix to remove `opaque` from a private
   type:
 
