@@ -359,14 +359,7 @@ pub fn find_variable_references(
     definition_location: SrcSpan,
     name: EcoString,
 ) -> Vec<VariableReference> {
-    let mut finder = FindVariableReferences {
-        references: Vec::new(),
-        definition_location,
-        alternative_variable: AlternativeVariable::Ignore,
-        name,
-    };
-    finder.visit_typed_module(module);
-    finder.references
+    FindVariableReferences::new(definition_location, name).find_in_module(module)
 }
 
 /// How to treat variables defined in alternative patterns
@@ -375,11 +368,32 @@ enum AlternativeVariable {
     Ignore,
 }
 
-struct FindVariableReferences {
+pub struct FindVariableReferences {
     references: Vec<VariableReference>,
     definition_location: SrcSpan,
     alternative_variable: AlternativeVariable,
     name: EcoString,
+}
+
+impl FindVariableReferences {
+    pub fn new(variable_definition_location: SrcSpan, variable_name: EcoString) -> Self {
+        Self {
+            references: vec![],
+            definition_location: variable_definition_location,
+            alternative_variable: AlternativeVariable::Ignore,
+            name: variable_name,
+        }
+    }
+
+    pub fn find_in_module(mut self, module: &TypedModule) -> Vec<VariableReference> {
+        self.visit_typed_module(module);
+        self.references
+    }
+
+    pub fn find(mut self, expression: &TypedExpr) -> Vec<VariableReference> {
+        self.visit_typed_expr(expression);
+        self.references
+    }
 }
 
 impl<'ast> Visit<'ast> for FindVariableReferences {
