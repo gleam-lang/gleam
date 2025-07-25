@@ -702,7 +702,7 @@ pub fn let_<'a>(
     // We must generate this after we generate the code for the decision tree
     // itself as we might be re-binding variables which are used in the checks
     // to determine whether the pattern matches or not.
-    let beginning_assignments = pattern.bound_variables().into_iter().map(|variable| {
+    let beginning_assignments = pattern.bound_variables().into_iter().map(|(variable, _)| {
         docvec![
             "let ",
             expression_generator.local_var(&variable),

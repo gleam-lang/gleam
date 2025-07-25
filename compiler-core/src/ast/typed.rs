@@ -1120,6 +1120,25 @@ impl TypedExpr {
             _ => false,
         }
     }
+
+    pub(crate) fn expression_flattening_block(&self) -> Option<&TypedExpr> {
+        match self {
+            // If a block has a single statement, we can flatten it into a
+            // single expression if that one statement is an expression.
+            TypedExpr::Block { statements, .. } if statements.len() == 1 => {
+                match statements.first() {
+                    Statement::Expression(expression) => expression.expression_flattening_block(),
+                    Statement::Assignment(_) | Statement::Use(_) | Statement::Assert(_) => None,
+                }
+            }
+
+            // If a block has multiple statements then it can't be flattened
+            // into a single expression.
+            TypedExpr::Block { .. } => None,
+
+            expression => Some(expression),
+        }
+    }
 }
 
 fn is_non_zero_number(value: &EcoString) -> bool {
