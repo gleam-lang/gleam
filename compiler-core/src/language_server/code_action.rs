@@ -3,11 +3,11 @@ use std::{collections::HashSet, iter, sync::Arc};
 use crate::{
     Error, STDLIB_PACKAGE_NAME, analyse,
     ast::{
-        self, ArgNames, AssignName, AssignmentKind, BitArraySegmentTruncation, CallArg, CustomType,
-        FunctionLiteralKind, ImplicitCallArgOrigin, Import, PIPE_PRECEDENCE, Pattern,
-        PatternUnusedArguments, PipelineAssignmentKind, RecordConstructor, SrcSpan, TodoKind,
-        TypedArg, TypedAssignment, TypedClauseGuard, TypedExpr, TypedModuleConstant, TypedPattern,
-        TypedPipelineAssignment, TypedRecordConstructor, TypedStatement, TypedUse,
+        self, ArgNames, AssignName, AssignmentKind, BitArraySegmentTruncation, BoundVariable,
+        CallArg, CustomType, FunctionLiteralKind, ImplicitCallArgOrigin, Import, PIPE_PRECEDENCE,
+        Pattern, PatternUnusedArguments, PipelineAssignmentKind, RecordConstructor, SrcSpan,
+        TodoKind, TypedArg, TypedAssignment, TypedClauseGuard, TypedExpr, TypedModuleConstant,
+        TypedPattern, TypedPipelineAssignment, TypedRecordConstructor, TypedStatement, TypedUse,
         visit::Visit as _,
     },
     build::{Located, Module},
@@ -7687,19 +7687,14 @@ struct Collapsed<'a> {
     ///
     outer_guard: &'a Option<TypedClauseGuard>,
 
-    /// In this example it's `username`.
-    ///
-    matched_variable_name: EcoString,
-
-    /// The span covering the definition of the pattern variable being matched
-    /// on:
+    /// The pattern variable being matched on:
     ///
     /// ```gleam
     /// case something {
     ///   User(username: _, NotAdmin) -> "Stranger!!"
     ///   User(username:, Admin) if wibble ->
     ///        ┬───────
-    ///        ╰─ `matched_variable_span`
+    ///        ╰─ `matched_variable`
     ///     case username {
     ///       "Joe" -> "Hello, Joe!"
     ///       _ -> "I don't know you, " <> username
@@ -7707,7 +7702,7 @@ struct Collapsed<'a> {
     /// }
     /// ```
     ///
-    matched_variable_span: SrcSpan,
+    matched_variable: BoundVariable,
 
     /// The span covering the entire pattern that is bringing the matched
     /// variable in scope:
@@ -7756,8 +7751,7 @@ impl<'a> CollapseNestedCase<'a> {
         let Some(Collapsed {
             outer_clause_span,
             outer_guard,
-            ref matched_variable_name,
-            matched_variable_span,
+            ref matched_variable,
             matched_pattern_span,
             inner_clauses,
         }) = self.collapsed
@@ -7794,15 +7788,37 @@ impl<'a> CollapseNestedCase<'a> {
         // can't simply write `Ok(2 | 3)` but we have to write `Ok(2) | Ok(3)`!
 
         let pattern_text: String = self.code_at(matched_pattern_span).into();
-
-        let variable_start_in_pattern = matched_variable_span.start - matched_pattern_span.start;
-        let variable_length = matched_variable_span.end - matched_variable_span.start;
-        let variable_end_in_pattern = variable_start_in_pattern + variable_length;
-        let variable_range = variable_start_in_pattern as usize..variable_end_in_pattern as usize;
+        let matched_variable_span = matched_variable.location();
 
         let pattern_with_variable = |new_content: String| {
             let mut new_pattern = pattern_text.clone();
-            new_pattern.replace_range(variable_range.clone(), &new_content);
+
+            match matched_variable {
+                BoundVariable::Regular { .. } => {
+                    // If the variable is a regular variable we'll have to replace
+                    // it entirely with the new pattern taking its place.
+                    let variable_start_in_pattern =
+                        matched_variable_span.start - matched_pattern_span.start;
+                    let variable_length = matched_variable_span.end - matched_variable_span.start;
+                    let variable_end_in_pattern = variable_start_in_pattern + variable_length;
+                    let replaced_range =
+                        variable_start_in_pattern as usize..variable_end_in_pattern as usize;
+
+                    new_pattern.replace_range(replaced_range, &new_content);
+                }
+
+                BoundVariable::ShorthandLabel { .. } => {
+                    // But if it's introduced using the shorthand syntax we can't
+                    // just replace it's location with the new pattern: we would be
+                    // removing the label!!
+                    // So we instead insert the pattern right after the label.
+                    new_pattern.insert_str(
+                        (matched_variable_span.end - matched_pattern_span.start) as usize,
+                        &format!(" {new_content}"),
+                    );
+                }
+            }
+
             new_pattern
         };
 
@@ -7813,7 +7829,7 @@ impl<'a> CollapseNestedCase<'a> {
             // everything together with ` | `.
 
             let references_to_matched_variable =
-                FindVariableReferences::new(matched_variable_span, matched_variable_name.clone())
+                FindVariableReferences::new(matched_variable_span, matched_variable.name())
                     .find(&clause.then);
 
             let new_patterns = iter::once(&clause.pattern)
@@ -7827,7 +7843,7 @@ impl<'a> CollapseNestedCase<'a> {
 
                     let mut pattern_code = self.code_at(pattern_location).to_string();
                     if !references_to_matched_variable.is_empty() {
-                        pattern_code = format!("{pattern_code} as {matched_variable_name}");
+                        pattern_code = format!("{pattern_code} as {}", matched_variable.name());
                     };
                     pattern_with_variable(pattern_code)
                 })
@@ -7927,10 +7943,10 @@ impl<'a> CollapseNestedCase<'a> {
 
         // That variable must be one the variables we brought into scope in this
         // branch.
-        let (variable_name, variable_location) = pattern
+        let variable = pattern
             .iter()
             .flat_map(|pattern| pattern.bound_variables())
-            .find(|(variable, _)| variable == name)?;
+            .find(|variable| variable.name() == *name)?;
 
         // There's one last condition to trigger the code action: we must
         // actually be with the cursor over the pattern or the nested case
@@ -7956,8 +7972,7 @@ impl<'a> CollapseNestedCase<'a> {
             Some(Collapsed {
                 outer_clause_span: *location,
                 outer_guard: guard,
-                matched_variable_name: variable_name,
-                matched_variable_span: variable_location,
+                matched_variable: variable,
                 matched_pattern_span: pattern_location,
                 inner_clauses: clauses,
             })
