@@ -9,7 +9,7 @@
 
   ```gleam
   case user {
-    User(Admin, name) ->
+    User(role: Admin, name:) ->
       // Here the only thing we're doing is pattern matching on the
       // `name` variable we've just defined in the outer pattern.
       case name {
@@ -25,8 +25,8 @@
 
   ```gleam
   case user {
-    User(Admin, "Joe") -> "Hello, Joe!"
-    User(Admin, _) -> "Hello, stranger"
+    User(role: Admin, name: "Joe") -> "Hello, Joe!"
+    User(role: Admin, name: _) -> "Hello, stranger"
     _ -> "You're not an admin!"
   }
   ```
