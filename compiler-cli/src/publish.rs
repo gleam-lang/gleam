@@ -382,6 +382,31 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
         });
     }
 
+    // empty_modules is a list of modules that do not export any values or types.
+    // We do not allow publishing packages that contain empty modules.
+    let empty_modules: Vec<_> = built
+        .root_package
+        .modules
+        .iter()
+        .filter(|module| {
+            built
+                .module_interfaces
+                .get(&module.name)
+                .map(|interface| {
+                    // Check if the module exports any values or types
+                    interface.values.is_empty() && interface.types.is_empty()
+                })
+                .unwrap_or(false)
+        })
+        .map(|module| module.name.clone())
+        .collect();
+
+    if !empty_modules.is_empty() {
+        return Err(Error::CannotPublishEmptyModules {
+            unfinished: empty_modules,
+        });
+    }
+
     // TODO: If any of the modules in the package contain a leaked internal type then
     // refuse to publish as the package is not yet finished.
     // We need to move aliases in to the type system first.

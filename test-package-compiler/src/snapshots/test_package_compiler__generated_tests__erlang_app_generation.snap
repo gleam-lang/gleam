@@ -1,6 +1,7 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
 expression: "./cases/erlang_app_generation"
+snapshot_kind: text
 ---
 //// /out/lib/the_package/_gleam_artefacts/main.cache
 <.cache binary>
@@ -26,3 +27,10 @@ expression: "./cases/erlang_app_generation"
     {modules, [main]},
     {registered, []}
 ]}.
+
+
+//// Warning
+warning: Empty module
+
+Module 'main' contains no public definitions.
+Hint: Consider adding public functions, types, or constants, or removing this module.
