@@ -1530,7 +1530,7 @@ where
 {
     #[must_use]
     pub fn uses_label_shorthand(&self) -> bool {
-        self.label.is_some() && self.location == self.value.location()
+        !self.is_implicit() && self.label.is_some() && self.location == self.value.location()
     }
 }
 
@@ -2519,6 +2519,32 @@ impl<A> Pattern<A> {
     }
 }
 
+/// A variable bound inside a pattern.
+#[derive(Debug, Clone)]
+pub enum BoundVariable {
+    /// A record's labelled field introduced with the shorthand syntax.
+    ShorthandLabel { name: EcoString, location: SrcSpan },
+    /// Any other variable.
+    Regular { name: EcoString, location: SrcSpan },
+}
+
+impl BoundVariable {
+    pub fn name(&self) -> EcoString {
+        match self {
+            BoundVariable::ShorthandLabel { name, .. } | BoundVariable::Regular { name, .. } => {
+                name.clone()
+            }
+        }
+    }
+
+    pub fn location(&self) -> SrcSpan {
+        match self {
+            BoundVariable::ShorthandLabel { location, .. }
+            | BoundVariable::Regular { location, .. } => *location,
+        }
+    }
+}
+
 impl TypedPattern {
     pub fn definition_location(&self) -> Option<DefinitionLocation> {
         match self {
@@ -2693,13 +2719,13 @@ impl TypedPattern {
         }
     }
 
-    pub fn bound_variables(&self) -> Vec<(EcoString, SrcSpan)> {
+    pub fn bound_variables(&self) -> Vec<BoundVariable> {
         let mut variables = Vec::new();
         self.collect_bound_variables(&mut variables);
         variables
     }
 
-    fn collect_bound_variables(&self, variables: &mut Vec<(EcoString, SrcSpan)>) {
+    fn collect_bound_variables(&self, variables: &mut Vec<BoundVariable>) {
         match self {
             Pattern::Int { .. }
             | Pattern::Float { .. }
@@ -2707,14 +2733,20 @@ impl TypedPattern {
             | Pattern::Discard { .. }
             | Pattern::Invalid { .. } => {}
 
-            Pattern::Variable { name, location, .. } => variables.push((name.clone(), *location)),
+            Pattern::Variable { name, location, .. } => variables.push(BoundVariable::Regular {
+                name: name.clone(),
+                location: *location,
+            }),
             Pattern::BitArraySize { .. } => {}
             Pattern::Assign {
                 name,
                 pattern,
                 location,
             } => {
-                variables.push((name.clone(), *location));
+                variables.push(BoundVariable::Regular {
+                    name: name.clone(),
+                    location: *location,
+                });
                 pattern.collect_bound_variables(variables);
             }
             Pattern::List { elements, tail, .. } => {
@@ -2727,7 +2759,14 @@ impl TypedPattern {
             }
             Pattern::Constructor { arguments, .. } => {
                 for argument in arguments {
-                    argument.value.collect_bound_variables(variables);
+                    if argument.uses_label_shorthand() {
+                        variables.push(BoundVariable::ShorthandLabel {
+                            name: argument.label.clone().expect("label for shorthand syntax"),
+                            location: argument.location,
+                        })
+                    } else {
+                        argument.value.collect_bound_variables(variables);
+                    }
                 }
             }
             Pattern::Tuple { elements, .. } => {
@@ -2746,11 +2785,17 @@ impl TypedPattern {
                 right_location,
                 ..
             } => {
-                if let Some(assignment) = left_side_assignment {
-                    variables.push(assignment.clone());
+                if let Some((name, location)) = left_side_assignment {
+                    variables.push(BoundVariable::Regular {
+                        name: name.clone(),
+                        location: *location,
+                    });
                 }
                 match right_side_assignment {
-                    AssignName::Variable(name) => variables.push((name.clone(), *right_location)),
+                    AssignName::Variable(name) => variables.push(BoundVariable::Regular {
+                        name: name.clone(),
+                        location: *right_location,
+                    }),
                     AssignName::Discard(_) => {}
                 }
             }
