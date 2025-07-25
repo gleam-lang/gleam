@@ -2707,13 +2707,13 @@ impl TypedPattern {
         }
     }
 
-    pub fn bound_variables(&self) -> Vec<EcoString> {
+    pub fn bound_variables(&self) -> Vec<(EcoString, SrcSpan)> {
         let mut variables = Vec::new();
         self.collect_bound_variables(&mut variables);
         variables
     }
 
-    fn collect_bound_variables(&self, variables: &mut Vec<EcoString>) {
+    fn collect_bound_variables(&self, variables: &mut Vec<(EcoString, SrcSpan)>) {
         match self {
             Pattern::Int { .. }
             | Pattern::Float { .. }
@@ -2721,10 +2721,14 @@ impl TypedPattern {
             | Pattern::Discard { .. }
             | Pattern::Invalid { .. } => {}
 
-            Pattern::Variable { name, .. } => variables.push(name.clone()),
+            Pattern::Variable { name, location, .. } => variables.push((name.clone(), *location)),
             Pattern::BitArraySize { .. } => {}
-            Pattern::Assign { name, pattern, .. } => {
-                variables.push(name.clone());
+            Pattern::Assign {
+                name,
+                pattern,
+                location,
+            } => {
+                variables.push((name.clone(), *location));
                 pattern.collect_bound_variables(variables);
             }
             Pattern::List { elements, tail, .. } => {
@@ -2753,13 +2757,14 @@ impl TypedPattern {
             Pattern::StringPrefix {
                 left_side_assignment,
                 right_side_assignment,
+                right_location,
                 ..
             } => {
-                if let Some((left_variable, _)) = left_side_assignment {
-                    variables.push(left_variable.clone());
+                if let Some(assignment) = left_side_assignment {
+                    variables.push(assignment.clone());
                 }
                 match right_side_assignment {
-                    AssignName::Variable(name) => variables.push(name.clone()),
+                    AssignName::Variable(name) => variables.push((name.clone(), *right_location)),
                     AssignName::Discard(_) => {}
                 }
             }
