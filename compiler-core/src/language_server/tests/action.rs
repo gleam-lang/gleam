@@ -9291,6 +9291,58 @@ pub type Wibble {
 }
 
 #[test]
+fn collapse_nested_case_does_not_remove_labels() {
+    assert_code_action!(
+        COLLAPSE_NESTED_CASE,
+        "pub fn main(x) {
+  case x {
+    Wibble(field2:, field: wibble) ->
+      case wibble {
+        1 -> 2
+        2 -> 4
+        _ -> -1
+      }
+
+    Wobble -> todo
+  }
+}
+
+pub type Wibble {
+  Wibble(field: Int, field2: String)
+  Wobble
+}
+",
+        find_position_of("field").to_selection()
+    );
+}
+
+#[test]
+fn collapse_nested_case_does_not_remove_labels_with_shorthand_syntax() {
+    assert_code_action!(
+        COLLAPSE_NESTED_CASE,
+        "pub fn main(x) {
+  case x {
+    Wibble(field2:, field:) ->
+      case field {
+        1 -> 2
+        2 -> 4
+        _ -> -1
+      }
+
+    Wobble -> todo
+  }
+}
+
+pub type Wibble {
+  Wibble(field: Int, field2: String)
+  Wobble
+}
+",
+        find_position_of("field").to_selection()
+    );
+}
+
+#[test]
 fn collapse_nested_case_works_with_alternative_patterns() {
     assert_code_action!(
         COLLAPSE_NESTED_CASE,
