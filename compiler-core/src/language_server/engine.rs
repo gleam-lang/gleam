@@ -12,7 +12,7 @@ use crate::{
     config::PackageConfig,
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
-        code_action::{RemoveBlock, RemovePrivateOpaque},
+        code_action::{CollapseNestedCase, RemoveBlock, RemovePrivateOpaque},
         compiler::LspProjectCompiler,
         files::FileSystemProxy,
         progress::ProgressReporter,
@@ -404,6 +404,7 @@ where
             code_action_fix_names(&lines, &params, &this.error, &mut actions);
             code_action_import_module(module, &lines, &params, &this.error, &mut actions);
             code_action_add_missing_patterns(module, &lines, &params, &this.error, &mut actions);
+            actions.extend(CollapseNestedCase::new(module, &lines, &params).code_actions());
             code_action_inexhaustive_let_to_case(
                 module,
                 &lines,
