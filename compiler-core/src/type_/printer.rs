@@ -181,9 +181,11 @@ impl Names {
         _ = self.type_variables.insert(id, local_alias.clone());
     }
 
-    pub fn map_new_variable(&mut self, old_id: u64, new_id: u64) {
-        if let Some(alias) = self.type_variables.get(&old_id) {
-            _ = self.type_variables.insert(new_id, alias.clone());
+    /// Assigns `source_id` alias to `target_id`. This is useful when type variables are unified
+    /// and we need to preserve the original name for consistent error messages and type display.
+    pub fn reassign_type_variable_alias(&mut self, source_id: u64, target_id: u64) {
+        if let Some(alias) = self.type_variables.get(&source_id) {
+            _ = self.type_variables.insert(target_id, alias.clone());
         }
     }
 
