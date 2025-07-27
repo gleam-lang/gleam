@@ -3527,6 +3527,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     .module_types
                     .keys()
                     .any(|typ| typ == name),
+                imported_modules_with_same_public_variable_name: self
+                    .environment
+                    .imported_modules
+                    .iter()
+                    .filter_map(|(module_name, (_, module))| {
+                        module.get_public_value(name).map(|_| module_name)
+                    })
+                    .cloned()
+                    .collect_vec(),
             },
         }
     }

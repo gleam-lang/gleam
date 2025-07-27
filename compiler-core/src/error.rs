@@ -2401,9 +2401,9 @@ but no type in scope with that name."
                         discarded_location,
                         name,
                         type_with_name_in_scope,
+                        imported_modules_with_same_public_variable_name,
                     } => {
                         let title = String::from("Unknown variable");
-
                         if let Some(ignored_location) = discarded_location {
                             let location = Location {
                                 label: Label {
@@ -2433,17 +2433,32 @@ but no type in scope with that name."
                             let text = if *type_with_name_in_scope {
                                 wrap_format!("`{name}` is a type, it cannot be used as a value.")
                             } else {
-                                let is_first_char_uppercase =
-                                    name.chars().next().is_some_and(char::is_uppercase);
-
-                                if is_first_char_uppercase {
+                                let mut text = if name.starts_with(char::is_uppercase) {
                                     wrap_format!(
-                                        "The custom type variant constructor \
-`{name}` is not in scope here."
+                                        "The custom type variant constructor `{name}` is not in scope here."
                                     )
-                                } else {
-                                    wrap_format!("The name `{name}` is not in scope here.")
                                 }
+                                else {
+                                    wrap_format!("The name `{name}` is not in scope here.")
+                                };
+
+                                // If there are some suggestions about variables in imported modules
+                                // put a "consider" text after the main message
+                                if !imported_modules_with_same_public_variable_name.is_empty() {
+                                    let consider_text = imported_modules_with_same_public_variable_name
+                                        .iter()
+                                        .fold(
+                                            String::from("Consider using one of these variables:\n\n"),
+                                            |mut acc, module_name| {
+                                                acc.push_str(&wrap_format!("    {module_name}.{name}\n"));
+                                                acc
+                                            }
+                                        );
+                                    text.push('\n');
+                                    text.push_str(&consider_text);
+                                }
+
+                                text
                             };
 
                             Diagnostic {
