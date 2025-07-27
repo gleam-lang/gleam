@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\n// Private function from another module should not be suggested.\n\nimport module\npub fn main() {\n    add(1, 1)\n}"
+---
+----- SOURCE CODE
+-- module.gleam
+
+fn add(x: Int, y: Int) {
+    x + y
+}
+
+-- main.gleam
+
+// Private function from another module should not be suggested.
+
+import module
+pub fn main() {
+    add(1, 1)
+}
+
+----- ERROR
+error: Unknown variable
+  ┌─ /src/one/two.gleam:6:5
+  │
+6 │     add(1, 1)
+  │     ^^^
+
+The name `add` is not in scope here.
