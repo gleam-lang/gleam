@@ -432,9 +432,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 message,
             } => Ok(self.infer_echo(location, keyword_end, expression, message)),
 
-            UntypedExpr::Var { location, name, .. } => {
-                self.infer_var(name, location, ReferenceRegistration::RegisterReferences)
-            }
+            UntypedExpr::Var { location, name, .. } => self.infer_var(
+                name,
+                location,
+                VarUsage::Other,
+                ReferenceRegistration::RegisterReferences,
+            ),
 
             UntypedExpr::Int {
                 location,
@@ -1139,10 +1142,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         name: EcoString,
         location: SrcSpan,
+        var_usage: VarUsage,
         register_reference: ReferenceRegistration,
     ) -> Result<TypedExpr, Error> {
-        let constructor =
-            self.do_infer_value_constructor(&None, &name, &location, register_reference)?;
+        let constructor = self.do_infer_value_constructor(
+            &None,
+            &name,
+            &location,
+            var_usage,
+            register_reference,
+        )?;
         self.narrow_implementations(location, &constructor.variant)?;
         Ok(TypedExpr::Var {
             constructor,
@@ -1237,6 +1246,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             UntypedExpr::Var { location, name } => self.infer_var(
                 name,
                 location,
+                VarUsage::Other,
                 ReferenceRegistration::DoNotRegisterReferences,
             ),
             _ => self.infer_or_error(container),
@@ -2202,7 +2212,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_clause_guard(&mut self, guard: UntypedClauseGuard) -> Result<TypedClauseGuard, Error> {
         match guard {
             ClauseGuard::Var { location, name, .. } => {
-                let constructor = self.infer_value_constructor(&None, &name, &location)?;
+                let constructor =
+                    self.infer_value_constructor(&None, &name, &location, VarUsage::Other)?;
 
                 // We cannot support all values in guard expressions as the BEAM does not
                 let definition_location = match &constructor.variant {
@@ -3352,11 +3363,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         module: &Option<(EcoString, SrcSpan)>,
         name: &EcoString,
         location: &SrcSpan,
+        var_usage: VarUsage,
     ) -> Result<ValueConstructor, Error> {
         self.do_infer_value_constructor(
             module,
             name,
             location,
+            var_usage,
             ReferenceRegistration::RegisterReferences,
         )
     }
@@ -3366,6 +3379,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         module: &Option<(EcoString, SrcSpan)>,
         name: &EcoString,
         location: &SrcSpan,
+        var_usage: VarUsage,
         register_reference: ReferenceRegistration,
     ) -> Result<ValueConstructor, Error> {
         let constructor = match module {
@@ -3374,7 +3388,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .environment
                 .get_variable(name)
                 .cloned()
-                .ok_or_else(|| self.report_name_error(name, location))?,
+                .ok_or_else(|| self.report_name_error(name, location, var_usage))?,
 
             // Look in an imported module for a binding with this name
             Some((module_name, module_location)) => {
@@ -3502,7 +3516,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn report_name_error(&mut self, name: &EcoString, location: &SrcSpan) -> Error {
+    fn report_name_error(
+        &mut self,
+        name: &EcoString,
+        location: &SrcSpan,
+        var_usage: VarUsage,
+    ) -> Error {
         // First try to see if this is a module alias:
         // `import gleam/io`
         // `io.debug(io)`
@@ -3513,30 +3532,59 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location: *location,
                 name: name.clone(),
             },
-            None => Error::UnknownVariable {
-                location: *location,
-                name: name.clone(),
-                variables: self.environment.local_value_names(),
-                discarded_location: self
-                    .environment
-                    .discarded_names
-                    .get(&eco_format!("_{name}"))
-                    .cloned(),
-                type_with_name_in_scope: self
-                    .environment
-                    .module_types
-                    .keys()
-                    .any(|typ| typ == name),
-                imported_modules_with_same_public_variable_name: self
-                    .environment
-                    .imported_modules
-                    .iter()
-                    .filter_map(|(module_name, (_, module))| {
-                        module.get_public_value(name).map(|_| module_name)
-                    })
-                    .cloned()
-                    .collect_vec(),
-            },
+            None => {
+                let imported_modules_with_same_public_variable_name = match var_usage {
+                    // This is a function call, we need to suggest a public
+                    // variable which is a function with the correct arity
+                    VarUsage::Call { arity } => self
+                        .environment
+                        .imported_modules
+                        .iter()
+                        .filter_map(|(module_name, (_, module))| {
+                            module
+                                .get_public_value(name)
+                                .filter(|value_constructor| {
+                                    match value_constructor.type_.fn_types() {
+                                        Some((fn_arguments_type, _)) => {
+                                            fn_arguments_type.len() == arity
+                                        }
+                                        None => false,
+                                    }
+                                })
+                                .map(|_| module_name)
+                        })
+                        .cloned()
+                        .collect_vec(),
+                    // This is a reference to a variable, we need to suggest
+                    // public variables of any type
+                    VarUsage::Other => self
+                        .environment
+                        .imported_modules
+                        .iter()
+                        .filter_map(|(module_name, (_, module))| {
+                            module.get_public_value(name).map(|_| module_name)
+                        })
+                        .cloned()
+                        .collect_vec(),
+                };
+
+                Error::UnknownVariable {
+                    location: *location,
+                    name: name.clone(),
+                    variables: self.environment.local_value_names(),
+                    discarded_location: self
+                        .environment
+                        .discarded_names
+                        .get(&eco_format!("_{name}"))
+                        .cloned(),
+                    type_with_name_in_scope: self
+                        .environment
+                        .module_types
+                        .keys()
+                        .any(|typ| typ == name),
+                    imported_modules_with_same_public_variable_name,
+                }
+            }
         }
     }
 
@@ -3594,7 +3642,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } if arguments.is_empty() => {
                 // Type check the record constructor
-                let constructor = self.infer_value_constructor(&module, &name, &location)?;
+                let constructor =
+                    self.infer_value_constructor(&module, &name, &location, VarUsage::Other)?;
 
                 let (tag, field_map) = match &constructor.variant {
                     ValueConstructorVariant::Record {
@@ -3633,7 +3682,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // field_map, is always None here because untyped not yet unified
                 ..
             } => {
-                let constructor = self.infer_value_constructor(&module, &name, &location)?;
+                let constructor = self.infer_value_constructor(
+                    &module,
+                    &name,
+                    &location,
+                    VarUsage::Call {
+                        arity: arguments.len(),
+                    },
+                )?;
 
                 let (tag, field_map, variant_index) = match &constructor.variant {
                     ValueConstructorVariant::Record {
@@ -3775,7 +3831,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 // Infer the type of this constant
-                let constructor = self.infer_value_constructor(&module, &name, &location)?;
+                let constructor =
+                    self.infer_value_constructor(&module, &name, &location, VarUsage::Other)?;
                 match constructor.variant {
                     ValueConstructorVariant::ModuleConstant { .. }
                     | ValueConstructorVariant::LocalConstant { .. }
@@ -3952,6 +4009,30 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         kind: CallKind,
     ) -> (TypedExpr, Vec<TypedCallArg>, Arc<Type>) {
         let fun = match fun {
+            UntypedExpr::Var { location, name } => {
+                // Because we are not calling infer / infer_or_error directly,
+                // we do not warn if there was a previous panic. Check for that
+                // here. Not perfect, but works.
+                if self.previous_panics {
+                    self.warn_for_unreachable_code(location, PanicPosition::PreviousExpression);
+                }
+
+                match self.infer_var(
+                    name,
+                    location,
+                    VarUsage::Call {
+                        arity: arguments.len(),
+                    },
+                    ReferenceRegistration::RegisterReferences,
+                ) {
+                    Ok(typed_expr) => typed_expr,
+                    Err(error) => {
+                        self.problems.error(error);
+                        self.error_expr(location)
+                    }
+                }
+            }
+
             UntypedExpr::FieldAccess {
                 label,
                 container,
