@@ -129,7 +129,34 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                     location,
                     ..
                 } => {
-                    let fun = self.expr_typer.infer(*fun);
+                    // If the function is used as a variable, then we can suggest values
+                    // from imported modules with the same name and same arity.
+                    let fun = match *fun {
+                        UntypedExpr::Var { location, name } => {
+                            self.expr_typer
+                                .infer_called_var(name, location, arguments.len() + 1)
+                        }
+                        UntypedExpr::Int { .. }
+                        | UntypedExpr::Float { .. }
+                        | UntypedExpr::String { .. }
+                        | UntypedExpr::Block { .. }
+                        | UntypedExpr::Fn { .. }
+                        | UntypedExpr::List { .. }
+                        | UntypedExpr::Call { .. }
+                        | UntypedExpr::BinOp { .. }
+                        | UntypedExpr::PipeLine { .. }
+                        | UntypedExpr::Case { .. }
+                        | UntypedExpr::FieldAccess { .. }
+                        | UntypedExpr::Tuple { .. }
+                        | UntypedExpr::TupleIndex { .. }
+                        | UntypedExpr::Todo { .. }
+                        | UntypedExpr::Panic { .. }
+                        | UntypedExpr::Echo { .. }
+                        | UntypedExpr::BitArray { .. }
+                        | UntypedExpr::RecordUpdate { .. }
+                        | UntypedExpr::NegateBool { .. }
+                        | UntypedExpr::NegateInt { .. } => self.expr_typer.infer(*fun),
+                    };
 
                     match fun.type_().fn_types() {
                         // Rewrite as right(..args)(left)
@@ -346,7 +373,33 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
     /// b is the `function` argument.
     fn infer_apply_pipe(&mut self, function: UntypedExpr) -> TypedExpr {
         let function_location = function.location();
-        let function = Box::new(self.expr_typer.infer(function));
+        // If the function is used as a variable, then we can suggest values
+        // from imported modules with the same name and same arity.
+        let function = Box::new(match function {
+            UntypedExpr::Var { location, name } => {
+                self.expr_typer.infer_called_var(name, location, 1)
+            }
+            UntypedExpr::Int { .. }
+            | UntypedExpr::Float { .. }
+            | UntypedExpr::String { .. }
+            | UntypedExpr::Block { .. }
+            | UntypedExpr::Fn { .. }
+            | UntypedExpr::List { .. }
+            | UntypedExpr::Call { .. }
+            | UntypedExpr::BinOp { .. }
+            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::Case { .. }
+            | UntypedExpr::FieldAccess { .. }
+            | UntypedExpr::Tuple { .. }
+            | UntypedExpr::TupleIndex { .. }
+            | UntypedExpr::Todo { .. }
+            | UntypedExpr::Panic { .. }
+            | UntypedExpr::Echo { .. }
+            | UntypedExpr::BitArray { .. }
+            | UntypedExpr::RecordUpdate { .. }
+            | UntypedExpr::NegateBool { .. }
+            | UntypedExpr::NegateInt { .. } => self.expr_typer.infer(function),
+        });
 
         self.expr_typer.purity = self
             .expr_typer

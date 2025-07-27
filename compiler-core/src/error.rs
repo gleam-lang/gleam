@@ -2529,9 +2529,9 @@ but no type in scope with that name."
                         discarded_location,
                         name,
                         type_with_name_in_scope,
+                        possible_modules,
                     } => {
                         let title = String::from("Unknown variable");
-
                         if let Some(ignored_location) = discarded_location {
                             let location = Location {
                                 label: Label {
@@ -2561,17 +2561,25 @@ but no type in scope with that name."
                             let text = if *type_with_name_in_scope {
                                 wrap_format!("`{name}` is a type, it cannot be used as a value.")
                             } else {
-                                let is_first_char_uppercase =
-                                    name.chars().next().is_some_and(char::is_uppercase);
-
-                                if is_first_char_uppercase {
+                                let mut text = if name.starts_with(char::is_uppercase) {
                                     wrap_format!(
-                                        "The custom type variant constructor \
-`{name}` is not in scope here."
+                                        "The custom type variant constructor `{name}` is not in scope here."
                                     )
-                                } else {
-                                    wrap_format!("The name `{name}` is not in scope here.")
                                 }
+                                else {
+                                    wrap_format!("The name `{name}` is not in scope here.")
+                                };
+
+                                // If there are some suggestions about public values in imported
+                                // modules put a "did you mean" text after the main message
+                                if !possible_modules.is_empty() {
+                                    text.push_str("\nDid you mean one of these:\n\n");
+                                    for module_name in possible_modules {
+                                        text.push_str(&format!("  - {module_name}.{name}\n"))
+                                    }
+                                }
+
+                                text
                             };
 
                             Diagnostic {

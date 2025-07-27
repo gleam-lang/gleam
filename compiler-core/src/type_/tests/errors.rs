@@ -3409,3 +3409,321 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn unknown_variable_possible_modules_1() {
+    assert_module_error!(
+        (
+            "module",
+            "
+pub const one = 1"
+        ),
+        "
+import module
+pub fn main() {
+    one
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_possible_modules_2() {
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn add(x: Int, y: Int) {
+    x + y
+}"
+        ),
+        "
+import module
+pub fn main() {
+    add(1, 1)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_possible_modules_3() {
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn add(x: Int) {
+    x + 1
+}"
+        ),
+        "
+import module
+pub fn main() {
+    add(1, 1)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_possible_modules_4() {
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn add(x: Float, y: Float) {
+    x +. y
+}"
+        ),
+        "
+import module
+pub fn main() {
+    add(1, 1)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_possible_modules_5() {
+    assert_module_error!(
+        (
+            "module",
+            "
+fn add(x: Int, y: Int) {
+    x + y
+}"
+        ),
+        "
+import module
+pub fn main() {
+    add(1, 1)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_possible_modules_6() {
+    assert_module_error!(
+        (
+            "module",
+            "
+pub const add = private_add
+fn private_add(x: Int, y: Int) {
+    x + y
+}"
+        ),
+        "
+import module
+pub fn main() {
+    add(1, 1)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_possible_modules_7() {
+    assert_module_error!(
+        (
+            "module",
+            "
+pub type OneOrTwo {
+    One
+    Two
+}"
+        ),
+        "
+import module
+pub fn main() {
+    One
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_possible_modules_8() {
+    assert_module_error!(
+        (
+            "moduleone",
+            "
+pub type MyType {
+    MyRecord(x: Int, y: Int)
+}"
+        ),
+        (
+            "moduletwo",
+            "
+pub type AnotherType {
+    MyRecord(x: Int)
+}"
+        ),
+        "
+import moduleone
+import moduletwo
+pub fn main() {
+    MyRecord(1)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_possible_modules_9() {
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn add(x: Int) {
+    x + 1
+}"
+        ),
+        "
+import module
+pub fn main() {
+    1 |> add
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_possible_modules_10() {
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn add(x: Int, y: Int) {
+    x + y
+}"
+        ),
+        "
+import module
+pub fn main() {
+    1 |> add(2)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_possible_modules_11() {
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn add(x: Int) {
+    fn(y: Int) { x + y }
+}"
+        ),
+        "
+import module
+pub fn main() {
+    1 |> add(2)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_possible_modules_12() {
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn add(x: Int) {
+    fn(y: Int, z: Int) { x + y + z }
+}"
+        ),
+        "
+import module
+pub fn main() {
+    1 |> add(2)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_possible_modules_13() {
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn wibble(_) {
+    1
+}"
+        ),
+        "
+import module
+pub fn main() {
+    use <- wibble
+    1
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_possible_modules_14() {
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn add(x: Int, y: Int) {
+    x + y
+}"
+        ),
+        "
+import module as wibble
+pub fn main() {
+    add(1, 1)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_possible_modules_15() {
+    assert_module_error!(
+        (
+            "gleam/module",
+            "
+pub fn add(x: Int, y: Int) {
+    x + y
+}"
+        ),
+        "
+import gleam/module
+pub fn main() {
+    add(1, 1)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_possible_modules_16() {
+    assert_module_error!(
+        (
+            "module",
+            "
+@internal
+pub fn add(x: Int, y: Int) {
+    x + y
+}"
+        ),
+        "
+import module
+pub fn main() {
+    add(1, 1)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_possible_modules_17() {
+    assert_module_error!(
+        (
+            "anotherpackage",
+            "module",
+            "
+@internal
+pub fn add(x: Int, y: Int) {
+    x + y
+}"
+        ),
+        "
+import module
+pub fn main() {
+    add(1, 1)
+}"
+    );
+}

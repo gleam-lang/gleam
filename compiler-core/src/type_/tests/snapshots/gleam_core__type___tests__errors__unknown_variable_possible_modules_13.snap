@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport module\npub fn main() {\n    use <- wibble\n    1\n}"
+---
+----- SOURCE CODE
+-- module.gleam
+
+pub fn wibble(_) {
+    1
+}
+
+-- main.gleam
+
+import module
+pub fn main() {
+    use <- wibble
+    1
+}
+
+----- ERROR
+error: Unknown variable
+  ┌─ /src/one/two.gleam:4:12
+  │
+4 │     use <- wibble
+  │            ^^^^^^
+
+The name `wibble` is not in scope here.
+Did you mean one of these:
+
+  - module.wibble

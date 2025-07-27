@@ -4,6 +4,34 @@
 
 ### Compiler
 
+- The compiler now suggest public values from imported modules when the variable
+  in unknown. These values are suggested based on name and arity.
+
+  Considering this program:
+  ```gleam
+  import gleam/io
+
+  pub fn main() -> Nil {
+    println("Hello, World!")
+  }
+  ```
+
+  The compiler will display this error message:
+  ```text
+    error: Unknown variable
+    ┌─ /path/to/project/src/project.gleam:4:3
+    │
+  4 │   println("Hello, World!")
+    │   ^^^^^^^
+
+  The name `println` is not in scope here.
+  Did you mean one of these:
+
+      - io.println
+  ```
+
+  ([raphrous](https://github.com/realraphrous))
+
 - The compiler now reports an error when integer and float binary operators are
   used incorrectly in case expression guards.
   ([Adi Salimgereyev](https://github.com/abs0luty))
