@@ -727,7 +727,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     }
 
     // Helper to create a new error expr.
-    fn error_expr(&mut self, location: SrcSpan) -> TypedExpr {
+    pub(crate) fn error_expr(&mut self, location: SrcSpan) -> TypedExpr {
         TypedExpr::Invalid {
             location,
             type_: self.new_unbound_var(),
@@ -1246,7 +1246,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn infer_var(
+    pub(crate) fn infer_var(
         &mut self,
         name: EcoString,
         location: SrcSpan,
@@ -3662,6 +3662,22 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         })
                         .cloned()
                         .collect_vec(),
+                    // This is a `Call` into a `Pipeline`. This is hard to make
+                    // good suggestions because of the way it can be desugared.
+                    // In this case, return every functions with the same name
+                    // even if they have wrong arity.
+                    VarUsage::PipelineCall => self
+                        .environment
+                        .imported_modules
+                        .iter()
+                        .filter_map(|(module_name, (_, module))| {
+                            module
+                                .get_public_value(name)
+                                .filter(|value_constructor| value_constructor.type_.is_fun())
+                                .map(|_| module_name)
+                        })
+                        .cloned()
+                        .collect_vec(),
                     // This is a reference to a variable, we need to suggest
                     // public variables of any type
                     VarUsage::Other => self
@@ -4739,7 +4755,7 @@ fn is_trusted_pure_module(environment: &Environment<'_>) -> bool {
 }
 
 #[derive(Debug, Clone, Copy)]
-enum ReferenceRegistration {
+pub(crate) enum ReferenceRegistration {
     RegisterReferences,
     DoNotRegisterReferences,
 }

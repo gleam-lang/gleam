@@ -1669,8 +1669,10 @@ pub enum FieldAccessUsage {
 /// function call, a pipeline or a custom type variant constructor
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum VarUsage {
-    /// Used as `variable()`
+    /// Used as `call()` or `left |> right`
     Call { arity: usize },
+    /// Used as `left |> right(..)`
+    PipelineCall,
     /// Used as `variable`
     Other,
 }
