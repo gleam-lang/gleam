@@ -1548,8 +1548,8 @@ impl<'a, IO> QualifiedToUnqualifiedImportFirstPass<'a, IO> {
                 // unqualify: we don't want to offer the action indiscriminately if
                 // it would generate invalid code!
                 let module_exports_constructor = match layer {
-                    ast::Layer::Value => module.get_public_value(constructor).is_some(),
-                    ast::Layer::Type => module.get_public_type(constructor).is_some(),
+                    ast::Layer::Value => module.get_importable_value(constructor).is_some(),
+                    ast::Layer::Type => module.get_importable_type(constructor).is_some(),
                 };
                 if module_exports_constructor {
                     matching_import = Some(import);

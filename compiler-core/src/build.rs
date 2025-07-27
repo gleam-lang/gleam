@@ -580,7 +580,7 @@ fn type_to_definition_locations<'a>(
                 return vec![];
             };
 
-            let Some(type_) = module.get_public_type(&name) else {
+            let Some(type_) = module.get_importable_type(&name) else {
                 return vec![];
             };
 
