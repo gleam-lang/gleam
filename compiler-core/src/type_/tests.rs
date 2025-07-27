@@ -2890,7 +2890,7 @@ fn infer_label_shorthand_in_record_update_arg() {
 #[test]
 fn public_type_from_internal_module_has_internal_publicity() {
     let module = compile_module("thepackage/internal", "pub type Wibble", None, vec![]).unwrap();
-    let type_ = module.type_info.get_public_type("Wibble").unwrap();
+    let type_ = module.type_info.get_importable_type("Wibble").unwrap();
     assert!(type_.publicity.is_internal());
 }
 
@@ -2903,14 +2903,14 @@ fn internal_type_from_internal_module_has_internal_publicity() {
         vec![],
     )
     .unwrap();
-    let type_ = module.type_info.get_public_type("Wibble").unwrap();
+    let type_ = module.type_info.get_importable_type("Wibble").unwrap();
     assert!(type_.publicity.is_internal());
 }
 
 #[test]
 fn private_type_from_internal_module_is_not_exposed_as_internal() {
     let module = compile_module("thepackage/internal", "type Wibble", None, vec![]).unwrap();
-    assert!(module.type_info.get_public_type("Wibble").is_none());
+    assert!(module.type_info.get_importable_type("Wibble").is_none());
 }
 
 #[test]
