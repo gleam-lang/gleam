@@ -165,6 +165,9 @@ pub enum Error {
         /// this will contain its location.
         discarded_location: Option<SrcSpan>,
         type_with_name_in_scope: bool,
+        /// Filled with the name of imported modules when the module has public value
+        /// with the same name as this variable
+        imported_modules_with_same_public_variable_name: Vec<EcoString>,
     },
 
     UnknownType {
@@ -1300,6 +1303,7 @@ pub enum UnknownValueConstructorError {
         name: EcoString,
         variables: Vec<EcoString>,
         type_with_name_in_scope: bool,
+        imported_modules_with_same_public_variable_name: Vec<EcoString>,
     },
 
     Module {
@@ -1325,12 +1329,14 @@ pub fn convert_get_value_constructor_error(
             name,
             variables,
             type_with_name_in_scope,
+            imported_modules_with_same_public_variable_name,
         } => Error::UnknownVariable {
             location,
             name,
             variables,
             discarded_location: None,
             type_with_name_in_scope,
+            imported_modules_with_same_public_variable_name,
         },
 
         UnknownValueConstructorError::Module { name, suggestions } => Error::UnknownModule {
