@@ -1,6 +1,6 @@
 use self::expression::CallKind;
 
-use super::*;
+use super::{expression::ReferenceRegistration, *};
 use crate::ast::{
     FunctionLiteralKind, ImplicitCallArgOrigin, PIPE_VARIABLE, PipelineAssignmentKind, Statement,
     TypedPipelineAssignment, UntypedExpr,
@@ -139,17 +139,24 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                     location,
                     ..
                 } => {
-                    let fun = match self.expr_typer.infer_or_error(*fun) {
+                    let fun_result = match *fun {
+                        UntypedExpr::Var { location, name } => self.expr_typer.infer_var(
+                            name,
+                            location,
+                            VarUsage::PipelineCall,
+                            ReferenceRegistration::RegisterReferences,
+                        ),
+                        fun => self.expr_typer.infer_or_error(fun),
+                    };
+
+                    let fun = match fun_result {
                         Ok(fun) => fun,
                         Err(e) => {
                             // In case we cannot infer the function we'll
                             // replace it with an invalid expression with an
                             // unbound type to keep going!
                             self.expr_typer.problems.error(e);
-                            TypedExpr::Invalid {
-                                location,
-                                type_: self.expr_typer.new_unbound_var(),
-                            }
+                            self.expr_typer.error_expr(location)
                         }
                     };
 
@@ -350,16 +357,26 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
     /// b is the `function` argument.
     fn infer_apply_pipe(&mut self, function: UntypedExpr) -> TypedExpr {
         let function_location = function.location();
-        let function = Box::new(match self.expr_typer.infer_or_error(function) {
+        // Need one more step for better error suggestion. If the function is
+        // a variable / identifier, then we can suggest variables / identifier
+        // from imported modules with the same name and same arity.
+        let function_result = match function {
+            UntypedExpr::Var { location, name } => self.expr_typer.infer_var(
+                name,
+                location,
+                VarUsage::Call { arity: 1 },
+                ReferenceRegistration::RegisterReferences,
+            ),
+            _ => self.expr_typer.infer_or_error(function),
+        };
+
+        let function = Box::new(match function_result {
             Ok(function) => function,
             Err(error) => {
                 // If we cannot infer the function we put an invalid expression
                 // in its place so we can still keep going with the other steps.
                 self.expr_typer.problems.error(error);
-                TypedExpr::Invalid {
-                    location: function_location,
-                    type_: self.expr_typer.new_unbound_var(),
-                }
+                self.expr_typer.error_expr(function_location)
             }
         });
 
