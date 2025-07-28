@@ -4,6 +4,34 @@
 
 ### Compiler
 
+- The compiler now suggest public values from imported modules when the variable
+  in unknown. These values are suggested based on name and arity.
+
+  Considering this program:
+  ```gleam
+  import gleam/io
+
+  pub fn main() -> Nil {
+    println("Hello, World!")
+  }
+  ```
+
+  The compiler will display this error message:
+  ```text
+    error: Unknown variable
+    ┌─ /path/to/project/src/project.gleam:4:3
+    │
+  4 │   println("Hello, World!")
+    │   ^^^^^^^
+
+  The name `println` is not in scope here.
+  Consider using one of these variables:
+
+      io.println
+  ```
+
+  ([raphrous](https://github.com/realraphrous))
+
 - The compiler now performs function inlining optimisations for a specific set
   of standard library functions, which can allow functions which were previously
   not tail-recursive on the JavaScript target to become tail-recursive. For
