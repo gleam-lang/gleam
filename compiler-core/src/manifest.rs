@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::Result;
+use crate::config::deserialize_version;
 use crate::io::{make_relative, ordered_map};
 use crate::requirement::Requirement;
 use camino::{Utf8Path, Utf8PathBuf};
@@ -138,8 +139,8 @@ impl<'de> serde::Deserialize<'de> for Base16Checksum {
     where
         D: serde::Deserializer<'de>,
     {
-        let s: &str = serde::de::Deserialize::deserialize(deserializer)?;
-        base16::decode(s)
+        let s: String = serde::de::Deserialize::deserialize(deserializer)?;
+        base16::decode(&s)
             .map(Base16Checksum)
             .map_err(serde::de::Error::custom)
     }
@@ -148,6 +149,7 @@ impl<'de> serde::Deserialize<'de> for Base16Checksum {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub struct ManifestPackage {
     pub name: EcoString,
+    #[serde(deserialize_with = "deserialize_version")]
     pub version: Version,
     pub build_tools: Vec<EcoString>,
     #[serde(default)]

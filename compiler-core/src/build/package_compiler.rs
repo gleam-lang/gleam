@@ -317,7 +317,8 @@ where
             // cannot fix directly.
             if self.cached_warnings.should_use() {
                 let warnings = &module.ast.type_info.warnings;
-                let data = bincode::serialize(warnings).expect("Serialise warnings");
+                let data = bincode::serde::encode_to_vec(warnings, bincode::config::legacy())
+                    .expect("Serialise warnings");
                 self.io.write_bytes(&cache_files.warnings_path, &data)?;
             }
         }
@@ -659,11 +660,14 @@ pub(crate) struct CacheMetadata {
 
 impl CacheMetadata {
     pub fn to_binary(&self) -> Vec<u8> {
-        bincode::serialize(self).expect("Serializing cache info")
+        bincode::serde::encode_to_vec(self, bincode::config::legacy())
+            .expect("Serializing cache info")
     }
 
     pub fn from_binary(bytes: &[u8]) -> Result<Self, String> {
-        bincode::deserialize(bytes).map_err(|e| e.to_string())
+        bincode::serde::borrow_decode_from_slice(bytes, bincode::config::legacy())
+            .map(|(s, _)| s)
+            .map_err(|e| e.to_string())
     }
 }
 

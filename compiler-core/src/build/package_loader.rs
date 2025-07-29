@@ -1,12 +1,12 @@
 #[cfg(test)]
 mod tests;
 
+use bincode::serde::borrow_decode_from_slice;
+use camino::{Utf8Path, Utf8PathBuf};
 use std::{
     collections::{HashMap, HashSet},
     time::{Duration, SystemTime},
 };
-
-use camino::{Utf8Path, Utf8PathBuf};
 
 // TODO: emit warnings for cached modules even if they are not compiled again.
 
@@ -191,12 +191,14 @@ where
             let path = cache_files.warnings_path;
             if self.io.exists(&path) {
                 let bytes = self.io.read_bytes(&path)?;
-                module.warnings = bincode::deserialize(&bytes).map_err(|e| Error::FileIo {
-                    kind: FileKind::File,
-                    action: FileIoAction::Parse,
-                    path,
-                    err: Some(e.to_string()),
-                })?;
+                module.warnings = borrow_decode_from_slice(&bytes, bincode::config::legacy())
+                    .map(|(s, _)| s)
+                    .map_err(|e| Error::FileIo {
+                        kind: FileKind::File,
+                        action: FileIoAction::Parse,
+                        path,
+                        err: Some(e.to_string()),
+                    })?;
             }
         }
 

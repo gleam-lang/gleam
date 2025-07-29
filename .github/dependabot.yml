@@ -13,25 +13,3 @@ updates:
   labels: []
   schedule:
     interval: "monthly"
-- package-ecosystem: "cargo"
-  directory: "/compiler-cli"
-  labels: []
-  schedule:
-    interval: "monthly"
-- package-ecosystem: "cargo"
-  directory: "/compiler-core"
-  labels: []
-  schedule:
-    interval: "monthly"
-- package-ecosystem: "cargo"
-  directory: "/compiler-wasm"
-  labels: []
-  schedule:
-    interval: "monthly"
-- package-ecosystem: "cargo"
-  # Does not have any custom deps right now,
-  # but can add them in the future:
-  directory: "/test-package-compiler"
-  labels: []
-  schedule:
-    interval: "monthly"
