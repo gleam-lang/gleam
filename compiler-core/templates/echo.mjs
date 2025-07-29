@@ -9,7 +9,7 @@ function echo(value, message, file, line) {
   if (globalThis.process?.stderr?.write) {
     // If we're in Node.js, use `stderr`
     const string = `${grey}${file_line}${reset_color}${string_message}\n${string_value}\n`;
-    process.stderr.write(string);
+    globalThis.process.stderr.write(string);
   } else if (globalThis.Deno) {
     // If we're in Deno, use `stderr`
     const string = `${grey}${file_line}${reset_color}${string_message}\n${string_value}\n`;
