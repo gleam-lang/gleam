@@ -6681,6 +6681,7 @@ fn assert_as_with_comment_before_the_as() {
   assert True as
     // A little comment explaining something
     "wibble"
+}
 "#
     );
 }
