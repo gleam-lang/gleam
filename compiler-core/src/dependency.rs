@@ -8,7 +8,7 @@ use hexpm::{
     version::{Range, Version},
 };
 use pubgrub::{Dependencies, Map};
-use thiserror::Error;
+use thiserror;
 
 pub type PackageVersions = HashMap<String, Version>;
 
@@ -192,7 +192,7 @@ pub trait PackageFetcher {
     fn get_dependencies(&self, package: &str) -> Result<Rc<hexpm::Package>, PackageFetchError>;
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 pub enum PackageFetchError {
     #[error("{0}")]
     ApiError(hexpm::ApiError),

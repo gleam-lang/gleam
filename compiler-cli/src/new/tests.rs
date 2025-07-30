@@ -36,7 +36,7 @@ fn new() {
 #[test]
 fn new_with_default_template() {
     let tmp = tempfile::tempdir().unwrap();
-    let path = Utf8PathBuf::from_path_buf(tmp.into_path()).expect("Non Utf8 Path");
+    let path = Utf8PathBuf::from_path_buf(tmp.keep()).expect("Non Utf8 Path");
 
     let creator = super::Creator::new(
         super::NewOptions {
@@ -66,7 +66,7 @@ fn new_with_default_template() {
 #[test]
 fn new_with_javascript_template() {
     let tmp = tempfile::tempdir().unwrap();
-    let path = Utf8PathBuf::from_path_buf(tmp.into_path()).expect("Non Utf8 Path");
+    let path = Utf8PathBuf::from_path_buf(tmp.keep()).expect("Non Utf8 Path");
 
     let creator = super::Creator::new(
         super::NewOptions {
