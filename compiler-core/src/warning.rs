@@ -1313,7 +1313,10 @@ can already tell whether it will be `True` or `False`.",
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
                             text: None,
-                            span: *location,
+                            span: SrcSpan {
+                                start: location.start,
+                                end: location.end + 4 + name.len() as u32,
+                            },
                         },
                         extra_labels: vec![],
                     }),
