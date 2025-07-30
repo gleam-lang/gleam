@@ -15,10 +15,9 @@ pub fn main() {
 
 ----- WARNING
 warning: Unused discard pattern
-  ┌─ /src/warning/wrn.gleam:4:10
+  ┌─ /src/warning/wrn.gleam:4:5
   │
 4 │     _ as b -> b
   │     ^^^^^^
 
 `_ as b` can be written more concisely as `b`
-Hint: Replace with b
