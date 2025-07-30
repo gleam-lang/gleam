@@ -1314,8 +1314,8 @@ can already tell whether it will be `True` or `False`.",
                         label: diagnostic::Label {
                             text: None,
                             span: SrcSpan {
-                                start: location.start,
-                                end: location.end + " as ".len() as u32 + name.len() as u32,
+                                start: location.start - "_ as ".len() as u32,
+                                end: location.end,
                             },
                         },
                         extra_labels: vec![],
