@@ -1315,7 +1315,7 @@ can already tell whether it will be `True` or `False`.",
                             text: None,
                             span: SrcSpan {
                                 start: location.start,
-                                end: location.end + 4 + name.len() as u32,
+                                end: location.end + " as ".len() as u32 + name.len() as u32,
                             },
                         },
                         extra_labels: vec![],
