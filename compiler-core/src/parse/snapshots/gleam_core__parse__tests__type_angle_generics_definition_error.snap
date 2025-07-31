@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\ntype Maybe<A> {\n    Some(A)\n    None\n}\n"
+---
+----- SOURCE CODE
+
+type Maybe<A> {
+    Some(A)
+    None
+}
+
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:11
+  │
+2 │ type Maybe<A> {
+  │           ^ I was expecting `(` here.
+
+Type parameters use lowercase names and are surrounded by parentheses.
+
+    List(String)
+    Result(Int, Error)
+
+See: https://tour.gleam.run/data-types/generic-custom-types/
