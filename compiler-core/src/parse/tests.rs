@@ -1942,3 +1942,8 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn function_definition_angle_generics_error() {
+    assert_module_error!("fn id<T>(x: T) { x }");
+}

@@ -117,6 +117,7 @@ pub enum ParseErrorType {
     EmptyGuardBlock,
     // When the use tries to define a constant inside a function
     ConstantInsideFunction,
+    FunctionDefinitionAngleGenerics, // fn something<T>() { ... }
 }
 
 pub(crate) struct ParseErrorDetails {
@@ -649,6 +650,21 @@ functions are not necessary.",
                     "Either move this into the global scope or use `let` binding instead.".into(),
                 ),
                 label_text: "Constants are not allowed inside functions".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::FunctionDefinitionAngleGenerics => ParseErrorDetails {
+                text: "\
+Generic function type variables do not need to be predeclared like they
+would be in some other languages, instead they are written with lowercase
+names.
+
+    fn example(argument: generic) -> generic
+
+See: https://tour.gleam.run/functions/generic-functions/"
+                    .into(),
+                hint: None,
+                label_text: "I was expecting `(` here.".into(),
                 extra_labels: vec![],
             },
         }
