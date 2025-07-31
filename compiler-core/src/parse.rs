@@ -2081,6 +2081,15 @@ where
                 n,
             ));
         }
+        if let Some((less_start, less_end)) = self.maybe_one(&Token::Less) {
+            return Err(ParseError {
+                error: ParseErrorType::FunctionDefinitionAngleGenerics,
+                location: SrcSpan {
+                    start: less_start,
+                    end: less_end,
+                },
+            });
+        }
         let _ = self
             .expect_one(&Token::LeftParen)
             .map_err(|e| self.add_anon_function_hint(e))?;

@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "fn id<T>(x: T) { x }"
+---
+----- SOURCE CODE
+fn id<T>(x: T) { x }
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:1:6
+  │
+1 │ fn id<T>(x: T) { x }
+  │      ^ I was expecting `(` here.
+
+Generic function type variables do not need to be predeclared like they
+would be in some other languages, instead they are written with lowercase
+names.
+
+    fn example(argument: generic) -> generic
+
+See: https://tour.gleam.run/functions/generic-functions/
