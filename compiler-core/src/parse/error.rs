@@ -118,6 +118,7 @@ pub enum ParseErrorType {
     // When the use tries to define a constant inside a function
     ConstantInsideFunction,
     FunctionDefinitionAngleGenerics,      // fn something<T>() { ... }
+    TypeAngleGenerics,                    // let a: List<String> = []
 }
 
 pub(crate) struct ParseErrorDetails {
@@ -662,6 +663,19 @@ names.
     fn example(argument: generic) -> generic
 
 See: https://tour.gleam.run/functions/generic-functions/".into(),
+                hint: None,
+                label_text: "I was expecting `(` here.".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::TypeAngleGenerics => ParseErrorDetails {
+                text: "\
+Type parameters use lowercase names and are surrounded by parentheses.
+
+    List(String)
+    Result(Int, Error)
+
+See: https://tour.gleam.run/data-types/generic-custom-types/".into(),
                 hint: None,
                 label_text: "I was expecting `(` here.".into(),
                 extra_labels: vec![],
