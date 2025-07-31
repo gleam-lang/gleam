@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.12.0-rc3 - 2025-07-31
+
+### Bug fixes
+
+- Fixed a bug where using `echo` in a module with a function named `process`
+  would result in a runtime error on JavaScript.
+  ([Peter Saxton](https://github.com/CrowdHailer))
+
 ## v1.12.0-rc2 - 2025-07-24
 
 ### Formatter
