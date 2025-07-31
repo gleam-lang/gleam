@@ -2748,28 +2748,35 @@ where
         name: EcoString,
         end: u32,
     ) -> Result<Option<TypeAst>, ParseError> {
-        match self.maybe_one(&Token::LeftParen) {
-            Some((par_s, _)) => {
-                let arguments = self.parse_types()?;
-                let (_, par_e) = self.expect_one(&Token::RightParen)?;
-                if arguments.is_empty() {
-                    return parse_error(
-                        ParseErrorType::TypeConstructorNoArguments,
-                        SrcSpan::new(par_s, par_e),
-                    );
-                }
-                Ok(Some(TypeAst::Constructor(TypeAstConstructor {
-                    location: SrcSpan { start, end: par_e },
-                    name_location: SrcSpan {
-                        start: name_start,
-                        end,
-                    },
-                    module,
-                    name,
-                    arguments,
-                })))
+        if let Some((par_s, _)) = self.maybe_one(&Token::LeftParen) {
+            let arguments = self.parse_types()?;
+            let (_, par_e) = self.expect_one(&Token::RightParen)?;
+            if arguments.is_empty() {
+                return parse_error(
+                    ParseErrorType::TypeConstructorNoArguments,
+                    SrcSpan::new(par_s, par_e),
+                );
             }
-            _ => Ok(Some(TypeAst::Constructor(TypeAstConstructor {
+            Ok(Some(TypeAst::Constructor(TypeAstConstructor {
+                location: SrcSpan { start, end: par_e },
+                name_location: SrcSpan {
+                    start: name_start,
+                    end,
+                },
+                module,
+                name,
+                arguments,
+            })))
+        } else if let Some((less_start, less_end)) = self.maybe_one(&Token::Less) {
+            Err(ParseError {
+                error: ParseErrorType::TypeAngleGenerics,
+                location: SrcSpan {
+                    start: less_start,
+                    end: less_end,
+                },
+            })
+        } else {
+            Ok(Some(TypeAst::Constructor(TypeAstConstructor {
                 location: SrcSpan { start, end },
                 name_location: SrcSpan {
                     start: name_start,
@@ -2778,7 +2785,7 @@ where
                 module,
                 name,
                 arguments: vec![],
-            }))),
+            })))
         }
     }
 

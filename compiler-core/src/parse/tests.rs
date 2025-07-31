@@ -1947,3 +1947,8 @@ pub fn main() {
 fn function_definition_angle_generics_error() {
     assert_module_error!("fn id<T>(x: T) { x }");
 }
+
+#[test]
+fn type_angle_generics_error() {
+    assert_error!("let list: List<Int> = []");
+}
