@@ -113,6 +113,7 @@ pub enum ParseErrorType {
         item: EcoString,
     },
     FunctionDefinitionAngleGenerics,      // fn something<T>() { ... }
+    TypeAngleGenerics,                    // let a: List<String> = []
 }
 
 pub(crate) struct ParseErrorDetails {
@@ -638,6 +639,21 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     "    fn example(arg: t) -> t",
                     "",
                     "See: https://tour.gleam.run/functions/generic-functions/",
+                ]
+                .join("\n"),
+                hint: None,
+                label_text: "I was expecting `(` here.".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::TypeAngleGenerics => ParseErrorDetails {
+                text: [
+                    "Instead of angle brackets, Gleam uses parentheses for generic types:",
+                    "",
+                    "    List(String)",
+                    "    Result(Int, Error)",
+                    "",
+                    "See: https://tour.gleam.run/data-types/generic-custom-types/",
                 ]
                 .join("\n"),
                 hint: None,
