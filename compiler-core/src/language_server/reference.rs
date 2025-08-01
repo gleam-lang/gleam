@@ -6,16 +6,11 @@ use lsp_types::Location;
 use crate::{
     analyse,
     ast::{
-        self, visit::Visit, ArgNames, AssignName, CallArg, Constant, CustomType, Definition,
-        Function, Import, ModuleConstant, Pattern, RecordConstructor, SrcSpan, TypeAst,
-        TypeAstConstructor, TypeAstFn, TypeAstTuple, TypedConstant, TypedExpr, TypedFunction,
-        TypedModule, TypedPattern,
+        self, visit::Visit, ArgNames, CallArg, Constant, CustomType, Definition, Function, ModuleConstant, Pattern, RecordConstructor, SrcSpan, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstTuple, TypedConstant, TypedExpr, TypedFunction, TypedModule, TypedPattern
     },
     build::Located,
     type_::{
-        error::{Named, VariableOrigin},
-        ModuleInterface, ModuleValueConstructor, PatternConstructor, Type, TypeVar,
-        ValueConstructor, ValueConstructorVariant,
+        collapse_links, error::{Named, VariableOrigin}, ModuleInterface, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor, ValueConstructorVariant
     },
 };
 
@@ -277,10 +272,10 @@ pub fn reference_for_ast_node(
             name: name.clone(),
             location,
         }),
-        Located::ModuleStatement(Definition::Import(import @ Import { .. })) => {
+        Located::ModuleStatement(Definition::Import(import)) => {
             Some(Referenced::ModuleName {
-                name: import.module.0.clone(),
-                location: get_module_name_span(import),
+                name: import.module.clone(),
+                location: import.name_location(),
             })
         }
         _ => None,
@@ -469,28 +464,15 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
     }
 }
 
-fn get_module_name_span<T>(import: &Import<T>) -> SrcSpan {
-    match &import.as_name {
-        Some((AssignName::Variable(name), location)) => {
-            SrcSpan::new(location.end - (name.len() as u32), location.end)
-        }
-
-        Some((AssignName::Discard(_), location)) => SrcSpan::new(location.end - 1, location.end),
-        None => {
-            let used_name = import.module.0.split('/').next_back();
-            let len = used_name.map(|str| str.len()).unwrap_or(0) as u32;
-            SrcSpan::new(import.module.1.end - len, import.module.1.end)
-        }
-    }
-}
-
+/// Finds all locations where the module_name is mentioned in the given module,
+/// be it the import itself or qualified access of one if its members
 pub fn find_module_name_references(
     module: &TypedModule,
     module_name: &EcoString,
 ) -> Vec<ModuleNameReference> {
     let mut finder = FindModuleNameReferences {
         references: Vec::new(),
-        module_name: module_name.clone(),
+        module: module_name.clone(),
     };
     finder.visit_typed_module(module);
     finder.references
@@ -505,20 +487,23 @@ pub enum ModuleNameReferenceKind {
     // Import of module without an alias
     // location is entire import statement
     //
-    // import lustre/attribute.{type ...}
-    // __________________________________
+    // e.g.
+    // import lustre/attribute.{...}
+    // _____________________________
     Import,
 
     // Import of module with alias
-    // location is everything starting from " as" until the alias
+    // location is everything starting from "as" until the alias
     //
+    // e.g.
     // import lustre/attribute   as attr
-    //                          ________
+    //                           _______
     AliasedImport,
 
     // Use of module
     // location is module name/alias until '.'
     //
+    // e.g.
     // attribute.action("...")
     // _________
     Name,
@@ -526,15 +511,15 @@ pub enum ModuleNameReferenceKind {
 
 struct FindModuleNameReferences {
     references: Vec<ModuleNameReference>,
-    module_name: EcoString,
+    module: EcoString,
 }
 
 impl<'ast> Visit<'ast> for FindModuleNameReferences {
     fn visit_typed_import(&mut self, import: &'ast ast::TypedImport) {
-        if import.module.0 == self.module_name {
+        if import.module == self.module {
             match &import.as_name {
-                Some(alias) => self.references.push(ModuleNameReference {
-                    location: SrcSpan::new(alias.1.start - 1, alias.1.end),
+                Some((_, location)) => self.references.push(ModuleNameReference {
+                    location: *location,
                     kind: ModuleNameReferenceKind::AliasedImport,
                 }),
                 None => self.references.push(ModuleNameReference {
@@ -582,7 +567,7 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences {
         module_alias: &'ast EcoString,
         literal: &'ast TypedConstant,
     ) {
-        if *module_name == self.module_name {
+        if *module_name == self.module {
             self.references.push(ModuleNameReference {
                 location: *location,
                 kind: ModuleNameReferenceKind::Name,
@@ -610,8 +595,9 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences {
         module_alias: &'ast EcoString,
         constructor: &'ast ModuleValueConstructor,
     ) {
-        if *module_name == self.module_name {
+        if *module_name == self.module {
             self.references.push(ModuleNameReference {
+                // subtract 1 from field_start to exclude '.' from location
                 location: SrcSpan::new(location.start, field_start - 1),
                 kind: ModuleNameReferenceKind::Name,
             });
@@ -641,33 +627,41 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences {
         match constant {
             Constant::Record {
                 module,
-                record_constructor: con,
+                record_constructor: constructor,
                 ..
             }
             | Constant::Var {
                 module,
-                constructor: con,
+                constructor,
                 ..
             } => {
                 if let Some((_, location)) = module {
-                    if let Some(con) = con {
-                        match &con.variant {
+                    if let Some(constructor) = constructor {
+                        match &constructor.variant {
                             ValueConstructorVariant::ModuleConstant { module, .. }
                             | ValueConstructorVariant::ModuleFn { module, .. }
                             | ValueConstructorVariant::Record { module, .. } => {
-                                if *module == self.module_name {
+                                if *module == self.module {
                                     self.references.push(ModuleNameReference {
                                         location: *location,
                                         kind: ModuleNameReferenceKind::Name,
                                     });
                                 }
                             }
-                            _ => {}
+                            ValueConstructorVariant::LocalVariable { .. } => {},
+                            ValueConstructorVariant::LocalConstant { .. } => {},
                         }
                     }
                 }
             }
-            _ => {}
+            Constant::Int { .. } => {},
+            Constant::Float { .. } => {},
+            Constant::String { .. } => {},
+            Constant::Tuple { .. } => {},
+            Constant::List { .. } => {},
+            Constant::BitArray { .. } => {},
+            Constant::StringConcatenation { .. } => {},
+            Constant::Invalid { .. } => {},
         }
 
         ast::visit::visit_typed_constant(self, constant);
@@ -686,7 +680,7 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences {
     ) {
         if let Some((_, module_location)) = module {
             if let Some((referenced_module, ..)) = type_.named_type_name() {
-                if referenced_module == self.module_name {
+                if referenced_module == self.module {
                     self.references.push(ModuleNameReference {
                         location: *module_location,
                         kind: ModuleNameReferenceKind::Name,
@@ -725,82 +719,63 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences {
         body: &'ast vec1::Vec1<ast::TypedStatement>,
         return_annotation: &'ast Option<TypeAst>,
     ) {
-        for arg in args {
-            if let Some(annotation) = &arg.annotation {
-                self.visit_type_ast(annotation, &arg.type_);
-            }
-        }
-        if let Some(ret) = return_annotation {
-            if let Type::Fn { return_, .. } = type_.as_ref() {
-                self.visit_type_ast(ret, return_);
-            }
-        }
+        let _ = type_
+            .fn_types()
+            .inspect(|(_, return_type)| {
+                for arg in args {
+                    if let Some(annotation) = &arg.annotation {
+                        self.visit_type_ast(annotation, &arg.type_);
+                    }
+                }
+
+                if let Some(annotation) = return_annotation {
+                    self.visit_type_ast(annotation, &return_type);
+                };
+            });
 
         ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
     }
 }
 
 impl FindModuleNameReferences {
-    fn visit_type_ast(&mut self, type_ast: &TypeAst, type_: &Type) {
-        match type_ast {
-            TypeAst::Constructor(TypeAstConstructor {
-                module, arguments, ..
-            }) => {
-                match type_ {
-                    Type::Named {
-                        module: module_name,
-                        args,
-                        ..
-                    } => {
-                        if let Some((_, module_location)) = module {
-                            if *module_name == self.module_name {
-                                self.references.push(ModuleNameReference {
-                                    location: *module_location,
-                                    kind: ModuleNameReferenceKind::Name,
-                                });
-                            }
-                        }
-                        arguments
-                            .iter()
-                            .zip(args.iter())
-                            .for_each(|(arg, type_)| self.visit_type_ast(arg, type_));
-                    }
-                    // Lists store their arguments' type as a var link
-                    Type::Var { type_: var_type } => {
-                        if let TypeVar::Link { type_ } = var_type.borrow().clone() {
-                            self.visit_type_ast(type_ast, &type_);
+    fn visit_type_ast(&mut self, node: &TypeAst, type_: &std::sync::Arc<Type>) {
+        let type_ = collapse_links(type_.clone());
+        match node {
+            TypeAst::Constructor(TypeAstConstructor { module, arguments, .. }) => {
+                let _ = type_.named_type_information().inspect(|(module_name, _, args_type)| {
+                    if let Some((_, location)) = module {
+                        if *module_name == self.module {
+                            self.references.push(ModuleNameReference {
+                                location: *location,
+                                kind: ModuleNameReferenceKind::Name
+                            });
                         }
                     }
-                    _ => {}
-                }
-            }
+
+                    for (arg, type_) in arguments.iter().zip(args_type) {
+                        self.visit_type_ast(arg, type_);
+                    }
+                });
+            },
+            TypeAst::Fn(TypeAstFn { arguments, return_, .. }) => {
+                let _ = type_.fn_types().inspect(|(args_type, return_type)| {
+                    for (arg, type_) in arguments.iter().zip(args_type) {
+                        self.visit_type_ast(arg, type_);
+                    }
+                    self.visit_type_ast(return_, return_type);
+                });
+            },
             TypeAst::Tuple(TypeAstTuple { elements, .. }) => {
-                if let Type::Tuple {
-                    elements: elements_type,
-                } = type_
-                {
-                    elements
-                        .iter()
-                        .zip(elements_type.iter())
-                        .for_each(|(e, type_)| self.visit_type_ast(e, type_));
-                }
-            }
-            TypeAst::Fn(TypeAstFn {
-                arguments, return_, ..
-            }) => {
-                if let Type::Fn {
-                    args,
-                    return_: ret_type,
-                } = type_
-                {
-                    arguments
-                        .iter()
-                        .zip(args.iter())
-                        .for_each(|(arg, type_)| self.visit_type_ast(arg, type_));
-                    self.visit_type_ast(return_, ret_type);
-                }
-            }
-            _ => {}
+                let _ = type_.tuple_types().inspect(|elements_type| {
+                    for (element, type_) in elements.iter().zip(elements_type) {
+                        self.visit_type_ast(element, type_);
+                    }
+                });
+            },
+
+            // these don't contain any references to module
+            TypeAst::Var(_)
+            | TypeAst::Hole(_) => {},
         }
     }
 }

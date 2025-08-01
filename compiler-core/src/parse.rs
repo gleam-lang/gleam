@@ -2822,13 +2822,11 @@ where
             },
             unqualified_values,
             unqualified_types,
-            module: (
-                module.clone(),
-                SrcSpan {
-                    start,
-                    end: start + (module.len() as u32)
-                }
-            ),
+            module: module.clone(),
+            module_location: SrcSpan {
+                start,
+                end: start + (module.len() as u32)
+            },
             as_name,
             package: (),
         })))

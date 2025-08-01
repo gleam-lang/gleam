@@ -195,7 +195,6 @@ where
                 Some(location) => location,
                 None => return Ok(None),
             };
-            eprintln!("{node:?}");
 
             let Some(location) =
                 node.definition_location(this.compiler.project_compiler.get_importable_modules())
@@ -343,7 +342,7 @@ where
                 // we should try to provide completions for unqualified values
                 Located::ModuleStatement(Definition::Import(import)) => this
                     .compiler
-                    .get_module_interface((import.module.0).as_str())
+                    .get_module_interface((import.module).as_str())
                     .map(|importing_module| {
                         completer.unqualified_completions_from_module(importing_module, true)
                     }),
@@ -614,7 +613,6 @@ where
         }
     }
 
-    // TODO: check tests for failing
     pub fn prepare_rename(
         &mut self,
         params: lsp::TextDocumentPositionParams,
@@ -879,7 +877,7 @@ where
                 }
                 Located::Constant(constant) => Some(hover_for_constant(constant, lines, module)),
                 Located::ModuleStatement(Definition::Import(import)) => {
-                    let Some(module) = this.compiler.get_module_interface(&import.module.0) else {
+                    let Some(module) = this.compiler.get_module_interface(&import.module) else {
                         return Ok(None);
                     };
                     Some(hover_for_module(
@@ -988,7 +986,7 @@ Unused labelled fields:
                     Some(hover_for_label(location, type_, lines, module))
                 }
                 Located::ModuleName { location, name, .. } => {
-                    let Some(module) = this.compiler.get_module_interface(name) else {
+                    let Some(module) = this.compiler.get_module_interface(&name) else {
                         return Ok(None);
                     };
                     Some(hover_for_module(module, location, &lines, &this.hex_deps))
@@ -1577,7 +1575,7 @@ fn get_hexdocs_link_section(
         .iter()
         .find_map(|definition| match definition {
             Definition::Import(import)
-                if import.module.0 == module_name && hex_deps.contains(&import.package) =>
+                if import.module == module_name && hex_deps.contains(&import.package) =>
             {
                 Some(&import.package)
             }

@@ -109,7 +109,7 @@ impl UntypedModule {
             .flat_map(|definition| match definition {
                 Definition::Import(Import {
                     module, location, ..
-                }) => Some((module.0.clone(), *location)),
+                }) => Some((module.clone(), *location)),
                 _ => None,
             })
             .collect()
@@ -443,8 +443,8 @@ impl TypeAst {
             TypeAst::Constructor(TypeAstConstructor {
                 arguments, module, ..
             }) => type_
-                .constructor_types()
-                .and_then(|arg_types| {
+                .named_type_information()
+                .and_then(|(module_name, _, arg_types)| {
                     if let Some(arg) = arguments
                         .iter()
                         .zip(arg_types)
@@ -453,19 +453,18 @@ impl TypeAst {
                         return Some(arg);
                     }
 
+                    if let Some((_, location)) = module {
+                        if location.contains(byte_index) {
+                            return Some(Located::ModuleName {
+                                location: *location,
+                                name: module_name,
+                                layer: Layer::Type,
+                            })
+                        }
+                    };
+
                     None
                 })
-                .or(module.as_ref().and_then(|(name, location)| {
-                    if location.contains(byte_index) {
-                        Some(Located::ModuleName {
-                            location: *location,
-                            name,
-                            layer: Layer::Type,
-                        })
-                    } else {
-                        None
-                    }
-                }))
                 .or(Some(Located::Annotation { ast: self, type_ })),
             TypeAst::Tuple(TypeAstTuple { elements, .. }) => type_
                 .tuple_types()
@@ -724,7 +723,8 @@ pub type TypedImport = Import<EcoString>;
 pub struct Import<PackageName> {
     pub documentation: Option<EcoString>,
     pub location: SrcSpan,
-    pub module: (EcoString, SrcSpan),
+    pub module: EcoString,
+    pub module_location: SrcSpan,
     pub as_name: Option<(AssignName, SrcSpan)>,
     pub unqualified_values: Vec<UnqualifiedImport>,
     pub unqualified_types: Vec<UnqualifiedImport>,
@@ -736,7 +736,18 @@ impl<T> Import<T> {
         match self.as_name.as_ref() {
             Some((AssignName::Variable(name), _)) => Some(name.clone()),
             Some((AssignName::Discard(_), _)) => None,
-            None => self.module.0.split('/').next_back().map(EcoString::from),
+            None => self.module.split('/').next_back().map(EcoString::from),
+        }
+    }
+
+    pub(crate) fn name_location(&self) -> SrcSpan {
+        match self.as_name.as_ref() {
+            // the location includes "as " so subtract name length from end to only get the alias
+            Some((AssignName::Variable(name) | AssignName::Discard(name), location)) => SrcSpan {
+                start: location.end - (name.len() as u32),
+                end: location.end
+            },
+            None => self.module_location,
         }
     }
 
@@ -986,7 +997,7 @@ impl TypedDefinition {
                         return Some(Located::UnqualifiedImport(
                             crate::build::UnqualifiedImport {
                                 name: &unqualified.name,
-                                module: &import.module.0,
+                                module: &import.module,
                                 is_type: false,
                                 location: &unqualified.location,
                             },
@@ -1001,7 +1012,7 @@ impl TypedDefinition {
                         return Some(Located::UnqualifiedImport(
                             crate::build::UnqualifiedImport {
                                 name: &unqualified.name,
-                                module: &import.module.0,
+                                module: &import.module,
                                 is_type: true,
                                 location: &unqualified.location,
                             },
@@ -1923,7 +1934,7 @@ impl TypedClauseGuard {
                 ..
             } => Some(Located::ModuleName {
                 location: *location,
-                name: module_name,
+                name: module_name.clone(),
                 layer: Layer::Value,
             }),
             ClauseGuard::Constant(..) => None,
@@ -2301,10 +2312,10 @@ impl TypedPattern {
                 _ => {
                     if let Some((_, module_location)) = module {
                         if module_location.contains(byte_index) {
-                            if let Inferred::Known(ctor) = constructor {
+                            if let Inferred::Known(constructor) = constructor {
                                 return Some(Located::ModuleName {
                                     location: *module_location,
-                                    name: &ctor.module,
+                                    name: constructor.module.clone(),
                                     layer: Layer::Value,
                                 });
                             }

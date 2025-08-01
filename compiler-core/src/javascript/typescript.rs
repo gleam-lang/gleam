@@ -269,7 +269,7 @@ impl<'a> TypeScriptGenerator<'a> {
                 }
 
                 Definition::Import(Import {
-                    module: (module, _), as_name, ..
+                    module, as_name, ..
                 }) => match as_name {
                     Some((AssignName::Variable(name), _)) => {
                         let _ = self.aliased_module_names.insert(module, name);

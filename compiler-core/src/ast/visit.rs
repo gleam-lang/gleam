@@ -42,8 +42,8 @@ use crate::{
     analyse::Inferred,
     exhaustiveness::CompiledCase,
     type_::{
-        ModuleValueConstructor, PatternConstructor, TypedCallArg, ValueConstructor,
-        error::VariableOrigin,
+        error::VariableOrigin, ModuleValueConstructor, PatternConstructor, TypedCallArg,
+        ValueConstructor, ValueConstructorVariant,
     },
 };
 use std::sync::Arc;
@@ -54,7 +54,12 @@ use vec1::Vec1;
 use crate::type_::Type;
 
 use super::{
-    untyped::FunctionLiteralKind, AssignName, BinOp, BitArrayOption, CallArg, Constant, Definition, Pattern, PipelineAssignmentKind, SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssert, TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant, TypedCustomType, TypedDefinition, TypedExpr, TypedExprBitArraySegment, TypedFunction, TypedImport, TypedModule, TypedModuleConstant, TypedPattern, TypedPatternBitArraySegment, TypedPipelineAssignment, TypedStatement, TypedTypeAlias, TypedUse
+    untyped::FunctionLiteralKind, AssignName, BinOp, BitArrayOption, CallArg, Constant, Definition,
+    Pattern, PipelineAssignmentKind, SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssert,
+    TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant, TypedCustomType,
+    TypedDefinition, TypedExpr, TypedExprBitArraySegment, TypedFunction, TypedImport, TypedModule,
+    TypedModuleConstant, TypedPattern, TypedPatternBitArraySegment, TypedPipelineAssignment,
+    TypedStatement, TypedTypeAlias, TypedUse,
 };
 
 pub trait Visit<'ast> {
@@ -717,15 +722,43 @@ where
     V: Visit<'a> + ?Sized,
 {
     match constant {
-        Constant::Record { args, .. } => args.iter().for_each(|arg| v.visit_typed_constant(&arg.value)),
+        Constant::Var { constructor, .. } => match constructor {
+            Some(constructor) => match &constructor.variant {
+                ValueConstructorVariant::LocalConstant { literal } => v.visit_typed_constant(literal),
+                ValueConstructorVariant::LocalVariable { .. }
+                | ValueConstructorVariant::ModuleConstant { .. }
+                | ValueConstructorVariant::ModuleFn { .. }
+                | ValueConstructorVariant::Record { .. } => {},
+            }
+            None => {},
+        }
+        Constant::Record { args, record_constructor, .. } => {
+            args.iter()
+                .for_each(|arg| v.visit_typed_constant(&arg.value));
+            match record_constructor {
+                Some(constructor) => match &constructor.variant {
+                    ValueConstructorVariant::LocalConstant { literal } => v.visit_typed_constant(literal),
+                    ValueConstructorVariant::LocalVariable { .. }
+                    | ValueConstructorVariant::ModuleConstant { .. }
+                    | ValueConstructorVariant::ModuleFn { .. }
+                    | ValueConstructorVariant::Record { .. } => {},
+                }
+                None => {},
+            }
+        },
         Constant::Tuple { elements, .. } => elements.iter().for_each(|e| v.visit_typed_constant(e)),
         Constant::List { elements, .. } => elements.iter().for_each(|e| v.visit_typed_constant(e)),
-        Constant::BitArray { segments, .. } => segments.iter().for_each(|seg| v.visit_typed_constant(&seg.value)),
+        Constant::BitArray { segments, .. } => segments
+            .iter()
+            .for_each(|segment| v.visit_typed_constant(&segment.value)),
         Constant::StringConcatenation { left, right, .. } => {
             v.visit_typed_constant(left);
             v.visit_typed_constant(right);
         },
-        _ => {},
+        Constant::Int { .. }
+        | Constant::Float { .. }
+        | Constant::String { .. }
+        | Constant::Invalid { .. } => {},
     }
 }
 

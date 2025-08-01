@@ -115,11 +115,10 @@ impl TypedConstant {
                     | type_::ValueConstructorVariant::Record { module, .. } => {
                         Located::ModuleName {
                             location: *location,
-                            name: module,
+                            name: module.clone(),
                             layer: Layer::Value,
                         }
                     }
-                    // unreachable?
                     _ => Located::Constant(self),
                 }
             }

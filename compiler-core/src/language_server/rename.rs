@@ -260,10 +260,11 @@ pub fn rename_module_alias(
             }
             // If new name is same as original, remove the alias
             ModuleNameReferenceKind::AliasedImport if params.new_name == original => {
-                edits.delete(reference.location)
+                // subtract 1 from start to delete leading space added above
+                edits.delete(SrcSpan::new(reference.location.start-1, reference.location.end))
             }
             ModuleNameReferenceKind::AliasedImport => {
-                edits.replace(reference.location, format!(" as {}", &params.new_name))
+                edits.replace(reference.location, format!("as {}", &params.new_name))
             }
             ModuleNameReferenceKind::Name => {
                 edits.replace(reference.location, params.new_name.to_string())

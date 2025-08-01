@@ -47,7 +47,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
 
     fn register_import(&mut self, import: &UntypedImport) {
         let location = import.location;
-        let name = import.module.0.clone();
+        let name = import.module.clone();
 
         // Find imported module
         let Some(module_info) = self.environment.importable_modules.get(&name) else {
@@ -280,14 +280,14 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         if let Some(alias_location) = import.alias_location() {
             self.environment.references.register_aliased_module(
                 used_name.clone(),
-                import.module.0.clone(),
+                import.module.clone(),
                 alias_location,
                 import.location,
             );
         } else {
             self.environment.references.register_module(
                 used_name.clone(),
-                import.module.0.clone(),
+                import.module.clone(),
                 import.location,
             );
         }
@@ -304,12 +304,12 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         // This isn't an error so long as the modules have different local aliases. In Gleam v2
         // this will likely become an error.
         if let Some(previous) = self.environment.names.imported_module(
-            import.module.0.clone(),
+            import.module.clone(),
             used_name,
             import.location,
         ) {
             self.problems.warning(Warning::ModuleImportedTwice {
-                name: import.module.0.clone(),
+                name: import.module.clone(),
                 first: previous,
                 second: import.location,
             });

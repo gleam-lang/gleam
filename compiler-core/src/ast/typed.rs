@@ -234,7 +234,7 @@ impl TypedExpr {
                 } else if module_span.contains(byte_index) {
                     Some(Located::ModuleName {
                         location: module_span,
-                        name: module_name,
+                        name: module_name.clone(),
                         layer: Layer::Value,
                     })
                 } else {
@@ -343,9 +343,9 @@ impl TypedExpr {
             } => args
                 .iter()
                 .find_map(|arg| arg.find_node(byte_index))
-                .or_else(|| return_annotation.as_ref().and_then(|ret| {
+                .or_else(|| return_annotation.as_ref().and_then(|annotation| {
                     if let Some(type_) = type_.return_type() {
-                        ret.find_node(byte_index, type_)
+                        annotation.find_node(byte_index, type_)
                     } else {
                         None
                     }

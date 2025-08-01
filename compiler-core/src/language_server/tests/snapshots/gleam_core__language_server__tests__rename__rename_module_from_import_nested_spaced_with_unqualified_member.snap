@@ -13,7 +13,7 @@ pub type GenericType(inner) { Node(inner, GenericType(inner)) Leaf }
 
 -- app.gleam
 import         testing/commons/mod.{ type Type     }
-                               ↑▔▔                  
+               ↑▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔                  
 const c = mod.Variant1
 
 

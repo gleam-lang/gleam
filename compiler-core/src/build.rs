@@ -370,7 +370,7 @@ pub enum Located<'a> {
     Label(SrcSpan, std::sync::Arc<Type>),
     ModuleName {
         location: SrcSpan,
-        name: &'a EcoString,
+        name: EcoString,
         layer: ast::Layer,
     },
     Constant(&'a TypedConstant),
@@ -400,7 +400,7 @@ impl<'a> Located<'a> {
             Self::FunctionBody(statement) => None,
             Self::Expression { expression, .. } => expression.definition_location(),
             Self::ModuleStatement(Definition::Import(import)) => Some(DefinitionLocation {
-                module: Some(import.module.0.clone()),
+                module: Some(import.module.clone()),
                 span: SrcSpan { start: 0, end: 0 },
             }),
             Self::ModuleStatement(statement) => Some(DefinitionLocation {

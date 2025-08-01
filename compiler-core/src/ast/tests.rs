@@ -8,7 +8,7 @@ use crate::config::PackageConfig;
 use crate::line_numbers::LineNumbers;
 use crate::type_::error::{VariableDeclaration, VariableOrigin, VariableSyntax};
 use crate::type_::expression::{FunctionDefinition, Purity};
-use crate::type_::{Deprecation, PRELUDE_MODULE_NAME, Problems};
+use crate::type_::{Deprecation, Problems, PRELUDE_MODULE_NAME};
 use crate::warning::WarningEmitter;
 use crate::{
     ast::{SrcSpan, TypedExpr},
@@ -652,7 +652,7 @@ fn find_node_module_select() {
         expr.find_node(1),
         Some(Located::ModuleName {
             location: SrcSpan::new(1, 1),
-            name: &"name".into(),
+            name: "name".into(),
             layer: super::Layer::Value
         })
     );
