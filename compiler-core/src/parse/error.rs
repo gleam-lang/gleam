@@ -112,6 +112,8 @@ pub enum ParseErrorType {
         module: EcoString,
         item: EcoString,
     },
+    FunctionDefinitionAngleGenerics,      // fn something<T>() { ... }
+    TypeAngleGenerics,                    // let a: List<String> = []
 }
 
 pub(crate) struct ParseErrorDetails {
@@ -625,6 +627,37 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 .join("\n"),
                 hint: None,
                 label_text: "I was expecting either `/` or `.{` here.".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::FunctionDefinitionAngleGenerics => ParseErrorDetails {
+                text: [
+                    "If you were trying to define a generic function, Gleam does not use angle brackets.",
+                    "Instead, you should write types in the parameter list with lower-case names.",
+                    "Each unique lower-case name becomes a type variable:",
+                    "",
+                    "    fn example(arg: t) -> t",
+                    "",
+                    "See: https://tour.gleam.run/functions/generic-functions/",
+                ]
+                .join("\n"),
+                hint: None,
+                label_text: "I was expecting `(` here.".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::TypeAngleGenerics => ParseErrorDetails {
+                text: [
+                    "Instead of angle brackets, Gleam uses parentheses for generic types:",
+                    "",
+                    "    List(String)",
+                    "    Result(Int, Error)",
+                    "",
+                    "See: https://tour.gleam.run/data-types/generic-custom-types/",
+                ]
+                .join("\n"),
+                hint: None,
+                label_text: "I was expecting `(` here.".into(),
                 extra_labels: vec![],
             },
         }

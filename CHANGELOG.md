@@ -1,5 +1,30 @@
 # Changelog
 
+## Unreleased
+
+### Compiler
+
+- The compiler now shows a specific syntax error when trying to use an
+  angle-bracket syntax for generic types or function definitions:
+
+  ```txt
+  error: Syntax error
+    ┌─ /src/parse/error.gleam:1:6
+    │
+  1 │ fn id<T>(x: T) { x }
+    │      ^ I was expecting `(` here.
+
+  If you were trying to define a generic function, Gleam does not use angle brackets.
+  Instead, you should write types in the parameter list with lower-case names.
+  Each unique lower-case name becomes a type variable:
+
+      fn example(arg: t) -> t
+
+  See: https://tour.gleam.run/functions/generic-functions/
+  ```
+
+  ([Aaron Christiansen](https://github.com/AaronC81))
+
 ## v1.12.0-rc3 - 2025-07-31
 
 ### Bug fixes
