@@ -10,6 +10,41 @@
 
 ## v1.12.0-rc2 - 2025-07-24
 
+### Language server
+
+- The language server now offers a code action to collapse nested case
+  expressions. Take this example:
+
+  ```gleam
+  case user {
+    User(role: Admin, name:) ->
+      // Here the only thing we're doing is pattern matching on the
+      // `name` variable we've just defined in the outer pattern.
+      case name {
+        "Joe" -> "Hello, Joe!"
+        _ -> "Hello, stranger"
+      }
+
+    _ -> "You're not an admin!"
+  }
+  ```
+
+  We could simplify this case expression and reduce nesting like so:
+
+  ```gleam
+  case user {
+    User(role: Admin, name: "Joe") -> "Hello, Joe!"
+    User(role: Admin, name: _) -> "Hello, stranger"
+    _ -> "You're not an admin!"
+  }
+  ```
+
+  Now, if you hover over that pattern, the language server will offer the
+  "collapse nested case" action that will simplify your code like shown in the
+  example above.
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 - The formatter now allows more control over how bit arrays are split. By adding

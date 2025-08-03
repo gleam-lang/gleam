@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main(x) {\n  case x {\n    [first, ..rest] if False ->\n      case first {\n        1 if False -> 1.1\n        _ if True -> 0.0 *. 10.0\n        _ -> 0.0\n      }\n\n    [] -> 1.1\n  }\n}\n"
+---
+----- BEFORE ACTION
+pub fn main(x) {
+  case x {
+    [first, ..rest] if False ->
+     ↑                         
+      case first {
+        1 if False -> 1.1
+        _ if True -> 0.0 *. 10.0
+        _ -> 0.0
+      }
+
+    [] -> 1.1
+  }
+}
+
+
+----- AFTER ACTION
+pub fn main(x) {
+  case x {
+    [1, ..rest] if False && False -> 1.1
+    [_, ..rest] if False && True -> 0.0 *. 10.0
+    [_, ..rest] if False -> 0.0
+
+    [] -> 1.1
+  }
+}

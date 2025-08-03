@@ -1,0 +1,40 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main(x) {\n  case x {\n    Wibble(var, var2) ->\n      case var {\n        1 -> 2\n        2 -> 4\n        _ -> -1\n      }\n\n    Wobble -> todo\n  }\n}\n\npub type Wibble {\n  Wibble(Int, String)\n  Wobble\n}\n"
+---
+----- BEFORE ACTION
+pub fn main(x) {
+  case x {
+    Wibble(var, var2) ->
+           ↑            
+      case var {
+        1 -> 2
+        2 -> 4
+        _ -> -1
+      }
+
+    Wobble -> todo
+  }
+}
+
+pub type Wibble {
+  Wibble(Int, String)
+  Wobble
+}
+
+
+----- AFTER ACTION
+pub fn main(x) {
+  case x {
+    Wibble(1, var2) -> 2
+    Wibble(2, var2) -> 4
+    Wibble(_, var2) -> -1
+
+    Wobble -> todo
+  }
+}
+
+pub type Wibble {
+  Wibble(Int, String)
+  Wobble
+}

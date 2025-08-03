@@ -131,6 +131,7 @@ const REMOVE_ALL_ECHOS_FROM_THIS_MODULE: &str = "Remove all `echo`s from this mo
 const WRAP_IN_BLOCK: &str = "Wrap in block";
 const GENERATE_VARIANT: &str = "Generate variant";
 const REMOVE_BLOCK: &str = "Remove block";
+const COLLAPSE_NESTED_CASE: &str = "Collapse nested case";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -9130,5 +9131,246 @@ fn remove_block_does_not_unwrap_a_block_with_multiple_statements() {
 }
 ",
         find_position_of("1").to_selection()
+    );
+}
+
+#[test]
+fn collapse_nested_case() {
+    assert_code_action!(
+        COLLAPSE_NESTED_CASE,
+        "pub fn main(x) {
+  case x {
+    Ok(var) -> case var {
+      1 -> 2
+      2 -> 4
+      _ -> -1
+    }
+    _ -> todo
+  }
+}",
+        find_position_of("var").to_selection()
+    );
+}
+
+#[test]
+fn collapse_nested_case_works_with_blocks() {
+    assert_code_action!(
+        COLLAPSE_NESTED_CASE,
+        "pub fn main(x) {
+  case x {
+    Ok(var) -> {
+      case var {
+        1 -> 2
+        2 -> 4
+        _ -> -1
+      }
+    }
+    _ -> todo
+  }
+}",
+        find_position_of("var").to_selection()
+    );
+}
+
+#[test]
+fn collapse_nested_case_works_with_patterns_defining_multiple_variables() {
+    assert_code_action!(
+        COLLAPSE_NESTED_CASE,
+        "pub fn main(x) {
+  case x {
+    Wibble(var, var2) ->
+      case var {
+        1 -> 2
+        2 -> 4
+        _ -> -1
+      }
+
+    Wobble -> todo
+  }
+}
+
+pub type Wibble {
+  Wibble(Int, String)
+  Wobble
+}
+",
+        find_position_of("var").to_selection()
+    );
+}
+
+#[test]
+fn collapse_nested_case_does_not_remove_labels() {
+    assert_code_action!(
+        COLLAPSE_NESTED_CASE,
+        "pub fn main(x) {
+  case x {
+    Wibble(field2:, field: wibble) ->
+      case wibble {
+        1 -> 2
+        2 -> 4
+        _ -> -1
+      }
+
+    Wobble -> todo
+  }
+}
+
+pub type Wibble {
+  Wibble(field: Int, field2: String)
+  Wobble
+}
+",
+        find_position_of("field").to_selection()
+    );
+}
+
+#[test]
+fn collapse_nested_case_does_not_remove_labels_with_shorthand_syntax() {
+    assert_code_action!(
+        COLLAPSE_NESTED_CASE,
+        "pub fn main(x) {
+  case x {
+    Wibble(field2:, field:) ->
+      case field {
+        1 -> 2
+        2 -> 4
+        _ -> -1
+      }
+
+    Wobble -> todo
+  }
+}
+
+pub type Wibble {
+  Wibble(field: Int, field2: String)
+  Wobble
+}
+",
+        find_position_of("field").to_selection()
+    );
+}
+
+#[test]
+fn collapse_nested_case_works_with_alternative_patterns() {
+    assert_code_action!(
+        COLLAPSE_NESTED_CASE,
+        "pub fn main(x) {
+  case x {
+    [first, ..rest] ->
+      case first {
+        1 | 2 -> True
+        3 | 4 | 5 -> False
+        _ -> False
+      }
+
+    [] -> True
+  }
+}
+",
+        find_position_of("first").to_selection()
+    );
+}
+
+#[test]
+fn collapse_nested_case_aliases_variable_if_it_is_used() {
+    assert_code_action!(
+        COLLAPSE_NESTED_CASE,
+        "pub fn main(x) {
+  case x {
+    [first, ..rest] ->
+      case first {
+        1 | 2 -> first
+        3 | 4 | 5 -> 5
+        _ -> 0
+      }
+
+    [] -> -1
+  }
+}
+",
+        find_position_of("first").to_selection()
+    );
+}
+
+#[test]
+fn collapse_nested_case_does_not_ignore_outer_guards() {
+    assert_code_action!(
+        COLLAPSE_NESTED_CASE,
+        "pub fn main(x) {
+  case x {
+    [first, ..rest] if True ->
+      case first {
+        1 -> 1.1
+        _ -> 0.0 *. 10.0
+      }
+
+    [] -> 1.1
+  }
+}
+",
+        find_position_of("first").to_selection()
+    );
+}
+
+#[test]
+fn collapse_nested_case_does_not_ignore_inner_guards() {
+    assert_code_action!(
+        COLLAPSE_NESTED_CASE,
+        "pub fn main(x) {
+  case x {
+    [first, ..rest] ->
+      case first {
+        1 -> 1.1
+        _ if True -> 0.0 *. 10.0
+        _ -> 0.0
+      }
+
+    [] -> 1.1
+  }
+}
+",
+        find_position_of("first").to_selection()
+    );
+}
+
+#[test]
+fn collapse_nested_case_combines_inner_and_outer_guards() {
+    assert_code_action!(
+        COLLAPSE_NESTED_CASE,
+        "pub fn main(x) {
+  case x {
+    [first, ..rest] if False ->
+      case first {
+        1 if False -> 1.1
+        _ if True -> 0.0 *. 10.0
+        _ -> 0.0
+      }
+
+    [] -> 1.1
+  }
+}
+",
+        find_position_of("first").to_selection()
+    );
+}
+
+#[test]
+fn collapse_nested_case_combines_inner_and_outer_guards_and_adds_parentheses_when_needed() {
+    assert_code_action!(
+        COLLAPSE_NESTED_CASE,
+        "pub fn main(x) {
+  case x {
+    [first, ..rest] if False || True ->
+      case first {
+        1 if False && True -> 1.1
+        _ if True || False -> 0.0 *. 10.0
+        _ -> 0.0
+      }
+
+    [] -> 1.1
+  }
+}
+",
+        find_position_of("first").to_selection()
     );
 }

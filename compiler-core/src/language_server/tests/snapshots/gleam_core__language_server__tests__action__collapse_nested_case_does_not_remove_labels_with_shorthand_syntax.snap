@@ -1,0 +1,40 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main(x) {\n  case x {\n    Wibble(field2:, field:) ->\n      case field {\n        1 -> 2\n        2 -> 4\n        _ -> -1\n      }\n\n    Wobble -> todo\n  }\n}\n\npub type Wibble {\n  Wibble(field: Int, field2: String)\n  Wobble\n}\n"
+---
+----- BEFORE ACTION
+pub fn main(x) {
+  case x {
+    Wibble(field2:, field:) ->
+           ↑                  
+      case field {
+        1 -> 2
+        2 -> 4
+        _ -> -1
+      }
+
+    Wobble -> todo
+  }
+}
+
+pub type Wibble {
+  Wibble(field: Int, field2: String)
+  Wobble
+}
+
+
+----- AFTER ACTION
+pub fn main(x) {
+  case x {
+    Wibble(field2:, field: 1) -> 2
+    Wibble(field2:, field: 2) -> 4
+    Wibble(field2:, field: _) -> -1
+
+    Wobble -> todo
+  }
+}
+
+pub type Wibble {
+  Wibble(field: Int, field2: String)
+  Wobble
+}

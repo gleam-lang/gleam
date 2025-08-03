@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main(x) {\n  case x {\n    [first, ..rest] ->\n      case first {\n        1 | 2 -> first\n        3 | 4 | 5 -> 5\n        _ -> 0\n      }\n\n    [] -> -1\n  }\n}\n"
+---
+----- BEFORE ACTION
+pub fn main(x) {
+  case x {
+    [first, ..rest] ->
+     ↑                
+      case first {
+        1 | 2 -> first
+        3 | 4 | 5 -> 5
+        _ -> 0
+      }
+
+    [] -> -1
+  }
+}
+
+
+----- AFTER ACTION
+pub fn main(x) {
+  case x {
+    [1 as first, ..rest] | [2 as first, ..rest] -> first
+    [3, ..rest] | [4, ..rest] | [5, ..rest] -> 5
+    [_, ..rest] -> 0
+
+    [] -> -1
+  }
+}
