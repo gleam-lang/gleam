@@ -35,11 +35,9 @@ Code changes to Gleam are welcomed via the process below.
    introduces new functionality or behaviour this would be a good time to
    discuss the details of the change to ensure we are in agreement as to how
    the new functionality should work.
-2. Open a GitHub pull request with your changes and ensure the tests and build
+2. Update the [CHANGELOG.md](CHANGELOG.md) file with your changes.
+3. Open a GitHub pull request with your changes and ensure the tests and build
    pass on CI.
-3. Reflect your changes in [CHANGELOG.md](CHANGELOG.md) under Unreleased at the top of the file.
-   Find the best section to describe your changes. You can draw inspiration from
-   the changes made previously.
 4. A Gleam team member will review the changes and may provide feedback to
    work on. Depending on the change there may be multiple rounds of feedback.
 5. Once the changes have been approved the code will be rebased into the
