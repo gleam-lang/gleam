@@ -2,6 +2,28 @@
 
 ## v1.14.0-rc1 - 2025-12-15
 
+- The language server now offers code actions to wrap a function reference in an
+  anonymous function, or to remove a trivial anonymous function, leaving its
+  contents. For example:
+
+  ```gleam
+  pub fn main() {
+    [-1, -2, -3] |> list.map(fn(a) { int.absolute_value(a) })
+                          // ^^ Activating the "Remove anonymous function"
+                          // code action here
+  }
+  ```
+
+  would result in:
+
+  ```gleam
+  pub fn main() {
+    [-1, -2, -3] |> list.map(int.absolute_value)
+  }
+  ```
+
+  while the other action would reverse the change. ([Eli Treuherz](http.github.com/treuherz))
+
 ### Compiler
 
 - The output of `echo` when printing atoms has been updated to use
