@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main(x) {\n  let assert [first, ..] = [Ok(Nil), ..todo]\n  todo\n}\n"
+---
+----- BEFORE ACTION
+pub fn main(x) {
+  let assert [first, ..] = [Ok(Nil), ..todo]
+              ↑                             
+  todo
+}
+
+
+----- AFTER ACTION
+pub fn main(x) {
+  let assert [first, ..] = [Ok(Nil), ..todo]
+  case first {
+    Ok(value) -> todo
+    Error(value) -> todo
+  }
+  todo
+}

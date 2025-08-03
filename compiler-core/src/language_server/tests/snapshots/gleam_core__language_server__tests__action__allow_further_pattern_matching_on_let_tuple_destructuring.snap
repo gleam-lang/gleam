@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main(x) {\n  let #(one, other) = #(Ok(1), Error(Nil))\n}\n"
+---
+----- BEFORE ACTION
+pub fn main(x) {
+  let #(one, other) = #(Ok(1), Error(Nil))
+        ↑                                 
+}
+
+
+----- AFTER ACTION
+pub fn main(x) {
+  let #(one, other) = #(Ok(1), Error(Nil))
+  case one {
+    Ok(value) -> todo
+    Error(value) -> todo
+  }
+}

@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main(x) {\n  let Wibble(field:) = Wibble(Ok(Nil))\n}\n\npub type Wibble { Wibble(field: Result(Nil, String)) }\n"
+---
+----- BEFORE ACTION
+pub fn main(x) {
+  let Wibble(field:) = Wibble(Ok(Nil))
+             ↑                        
+}
+
+pub type Wibble { Wibble(field: Result(Nil, String)) }
+
+
+----- AFTER ACTION
+pub fn main(x) {
+  let Wibble(field:) = Wibble(Ok(Nil))
+  case field {
+    Ok(value) -> todo
+    Error(value) -> todo
+  }
+}
+
+pub type Wibble { Wibble(field: Result(Nil, String)) }
