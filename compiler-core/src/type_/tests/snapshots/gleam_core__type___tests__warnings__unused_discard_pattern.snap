@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+assertion_line: 4195
+expression: "pub fn main() {\n  let a = 10\n  let _ = case a {\n    _ as b -> b\n  }\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+pub fn main() {
+  let a = 10
+  let _ = case a {
+    _ as b -> b
+  }
+}
+
+
+----- WARNING
+warning: Unused discard pattern
+  ┌─ /src/warning/wrn.gleam:4:5
+  │
+4 │     _ as b -> b
+  │     ^^^^^^
+
+`_ as b` can be written more concisely as `b`
