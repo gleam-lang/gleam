@@ -70,8 +70,14 @@ pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) ->
         #[allow(clippy::indexing_slicing)]
         {
             if dev {
+                if !gleam_toml.as_table().contains_key("dev-dependencies") {
+                    gleam_toml["dev-dependencies"] = toml_edit::table();
+                }
                 gleam_toml["dev-dependencies"][&added_package] = toml_edit::value(range.clone());
             } else {
+                if !gleam_toml.as_table().contains_key("dependencies") {
+                    gleam_toml["dependencies"] = toml_edit::table();
+                }
                 gleam_toml["dependencies"][&added_package] = toml_edit::value(range.clone());
             };
             manifest_toml["requirements"][&added_package]
