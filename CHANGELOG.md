@@ -1,5 +1,38 @@
 # Changelog
 
+## Unreleased
+
+### Compiler
+
+- The compiler now suggest public variables and functions from imported modules
+  when the variable in unknown. These variables and functions are suggested
+  based on name and arity.
+
+  Considering this program:
+  ```gleam
+  import gleam/io
+
+  pub fn main() -> Nil {
+    println("Hello, World!")
+  }
+  ```
+
+  The compiler will display this error message:
+  ```text
+    error: Unknown variable
+    ┌─ /path/to/project/src/project.gleam:4:3
+    │
+  4 │   println("Hello, World!")
+    │   ^^^^^^^
+
+  The name `println` is not in scope here.
+  Consider using one of these variables:
+
+      io.println
+  ```
+
+  ([raphrous](https://github.com/realraphrous))
+
 ## v1.12.0-rc3 - 2025-07-31
 
 ### Bug fixes

@@ -1662,6 +1662,18 @@ pub enum FieldAccessUsage {
     Other,
 }
 
+/// This is used to know when a variable is used as a value or as a call:
+/// function call, a pipeline or a custom type variant constructor
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum VarUsage {
+    /// Used as `call()` or `left |> right`
+    Call { arity: usize },
+    /// Used as `left |> right(..)`
+    PipelineCall,
+    /// Used as `variable`
+    Other,
+}
+
 /// Verify that a value is suitable to be used as a main function.
 fn assert_suitable_main_function(
     value: &ValueConstructor,
