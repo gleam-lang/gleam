@@ -550,6 +550,24 @@ fn analyse(
                 // Register the types from this module so they can be imported into
                 // other modules.
                 let _ = module_types.insert(module.name.clone(), module.ast.type_info.clone());
+
+                // Check for empty modules and emit warning
+                let public_definitions = module
+                    .ast
+                    .definitions
+                    .iter()
+                    .filter(|def| def.is_public())
+                    .count();
+
+                // Only emit the empty module warning if the module has no definitions at all.
+                // Modules with only private definitions already emit their own warnings.
+                if public_definitions == 0 && module.ast.definitions.is_empty() {
+                    warnings.emit(crate::warning::Warning::EmptyModule {
+                        path: module.input_path.clone(),
+                        name: module.name.clone(),
+                    });
+                }
+
                 // Register the successfully type checked module data so that it can be
                 // used for code generation and in the language server.
                 modules.push(module);
