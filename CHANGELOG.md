@@ -9,6 +9,10 @@
 - New projects are generated using OTP28 on GitHub Actions.
   ([Louis Pilfold](https://github.com/lpil))
 
+- `gleam add` now adds `dependencies` and `dev-dependencies` as tables instead
+  of inline tables if they are missing.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 ### Formatter
