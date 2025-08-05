@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Bug fixes
+
+- Corrected an error message that used incorrect terminology.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ## v1.12.0-rc3 - 2025-07-31
 
 ### Bug fixes
