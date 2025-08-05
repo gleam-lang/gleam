@@ -255,8 +255,8 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- When using two spreads, trying to concatenate lists, the compiler will now
-  show a nicer error message. For example, this snippet of code:
+- Attempting to use the list prefix syntax with two lists will now
+  show a helpful error message. For example, this snippet of code:
 
   ```gleam
   pub fn main() -> Nil {
@@ -273,9 +273,9 @@
     ┌─ /src/parse/error.gleam:5:13
     │
   5 │   [1, ..xs, ..ys]
-    │       --    ^^ I wasn't expecting a second spread here
+    │       --    ^^ I wasn't expecting a second list here
     │       │
-    │       You're using a spread here
+    │       You're using a list here
 
   Lists are immutable and singly-linked, so to join two or more lists
   all the elements of the lists would need to be copied into a new list.
