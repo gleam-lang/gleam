@@ -322,7 +322,7 @@
   ```gleam
   pub fn main() -> Nil {
     let trainer = Trainer(name: "Ash", badges: 0)
-    battle(Wobble(..trainer, badges: 1))
+    battle(Trainer(..trainer, badges: 1))
   }
   ```
 
