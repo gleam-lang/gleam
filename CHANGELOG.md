@@ -368,10 +368,6 @@
   compiler.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The code generated for floating point division on the JavaScript target has
-  been improved to avoid performing needless checks.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
 - The code generated for division and modulo operators on the JavaScript target
   has been improved to avoid performing needless checks.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
