@@ -17,7 +17,7 @@ use crate::{NewOptions, fs::get_current_directory};
 
 const GLEAM_STDLIB_REQUIREMENT: &str = ">= 0.44.0 and < 2.0.0";
 const GLEEUNIT_REQUIREMENT: &str = ">= 1.0.0 and < 2.0.0";
-const ERLANG_OTP_VERSION: &str = "27.1.2";
+const ERLANG_OTP_VERSION: &str = "28";
 const REBAR3_VERSION: &str = "3";
 const ELIXIR_VERSION: &str = "1";
 
