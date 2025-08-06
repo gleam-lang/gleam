@@ -25,7 +25,7 @@ function echo(value, message, file, line) {
 }
 
 class Echo$Inspector {
-  #references = new Set();
+  #references = new globalThis.Set();
 
   #isDict(value) {
     try {
@@ -63,17 +63,17 @@ class Echo$Inspector {
     if (v === null) return "//js(null)";
     if (v === undefined) return "Nil";
     if (t === "string") return this.#string(v);
-    if (t === "bigint" || Number.isInteger(v)) return v.toString();
+    if (t === "bigint" || globalThis.Number.isInteger(v)) return v.toString();
     if (t === "number") return this.#float(v);
     if (v instanceof $UtfCodepoint) return this.#utfCodepoint(v);
     if (v instanceof $BitArray) return this.#bit_array(v);
-    if (v instanceof RegExp) return `//js(${v})`;
-    if (v instanceof Date) return `//js(Date("${v.toISOString()}"))`;
+    if (v instanceof globalThis.RegExp) return `//js(${v})`;
+    if (v instanceof globalThis.Date) return `//js(Date("${v.toISOString()}"))`;
     if (v instanceof globalThis.Error) return `//js(${v.toString()})`;
-    if (v instanceof Function) {
+    if (v instanceof globalThis.Function) {
       const args = [];
-      for (const i of Array(v.length).keys())
-        args.push(String.fromCharCode(i + 97));
+      for (const i of globalThis.Array(v.length).keys())
+        args.push(globalThis.String.fromCharCode(i + 97));
       return `//fn(${args.join(", ")}) { ... }`;
     }
 
@@ -82,7 +82,7 @@ class Echo$Inspector {
     }
 
     let printed;
-    if (Array.isArray(v)) {
+    if (globalThis.Array.isArray(v)) {
       printed = `#(${v.map((v) => this.inspect(v)).join(", ")})`;
     } else if (v instanceof $List) {
       printed = this.#list(v);
@@ -100,9 +100,10 @@ class Echo$Inspector {
   }
 
   #object(v) {
-    const name = Object.getPrototypeOf(v)?.constructor?.name || "Object";
+    const name =
+      globalThis.Object.getPrototypeOf(v)?.constructor?.name || "Object";
     const props = [];
-    for (const k of Object.keys(v)) {
+    for (const k of globalThis.Object.keys(v)) {
       props.push(`${this.inspect(k)}: ${this.inspect(v[k])}`);
     }
     const body = props.length ? " " + props.join(", ") + " " : "";
@@ -128,7 +129,7 @@ class Echo$Inspector {
   }
 
   #customType(record) {
-    const props = Object.keys(record)
+    const props = globalThis.Object.keys(record)
       .map((label) => {
         const value = this.inspect(record[label]);
         return isNaN(parseInt(label)) ? `${label}: ${value}` : value;
@@ -158,8 +159,12 @@ class Echo$Inspector {
       list_out += this.inspect(element);
 
       if (char_out) {
-        if (Number.isInteger(element) && element >= 32 && element <= 126) {
-          char_out += String.fromCharCode(element);
+        if (
+          globalThis.Number.isInteger(element) &&
+          element >= 32 &&
+          element <= 126
+        ) {
+          char_out += globalThis.String.fromCharCode(element);
         } else {
           char_out = null;
         }
@@ -212,7 +217,7 @@ class Echo$Inspector {
   }
 
   #utfCodepoint(codepoint) {
-    return `//utfcodepoint(${String.fromCodePoint(codepoint.value)})`;
+    return `//utfcodepoint(${globalThis.String.fromCodePoint(codepoint.value)})`;
   }
 
   #bit_array(bits) {
