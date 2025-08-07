@@ -196,8 +196,9 @@ pub trait Visit<'ast> {
         type_: &'ast Arc<Type>,
         fun: &'ast TypedExpr,
         arguments: &'ast [TypedCallArg],
+        arguments_start: &'ast Option<u32>,
     ) {
-        visit_typed_expr_call(self, location, type_, fun, arguments);
+        visit_typed_expr_call(self, location, type_, fun, arguments, arguments_start);
     }
 
     fn visit_typed_expr_bin_op(
@@ -1165,7 +1166,8 @@ where
             type_,
             fun,
             arguments,
-        } => v.visit_typed_expr_call(location, type_, fun, arguments),
+            arguments_start,
+        } => v.visit_typed_expr_call(location, type_, fun, arguments, arguments_start),
         TypedExpr::BinOp {
             location,
             type_,
@@ -1400,6 +1402,7 @@ pub fn visit_typed_expr_call<'a, V>(
     _type_: &'a Arc<Type>,
     fun: &'a TypedExpr,
     arguments: &'a [TypedCallArg],
+    _arguments_start: &'a Option<u32>,
 ) where
     V: Visit<'a> + ?Sized,
 {

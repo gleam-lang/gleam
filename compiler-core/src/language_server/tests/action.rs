@@ -11757,7 +11757,6 @@ fn wobble(i) {
     );
 }
 
-
 #[test]
 fn wrap_final_pipeline_step_in_anonymous_function() {
     assert_code_action!(

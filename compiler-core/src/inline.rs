@@ -585,7 +585,8 @@ impl Inliner<'_> {
                 type_,
                 fun,
                 arguments,
-            } => self.call(location, type_, fun, arguments),
+                arguments_start,
+            } => self.call(location, type_, fun, arguments, arguments_start),
 
             TypedExpr::BinOp {
                 location,
@@ -803,6 +804,7 @@ impl Inliner<'_> {
         type_: Arc<Type>,
         function: Box<TypedExpr>,
         arguments: Vec<TypedCallArg>,
+        arguments_start: Option<u32>,
     ) -> TypedExpr {
         let arguments = self.arguments(arguments);
 
@@ -921,6 +923,7 @@ impl Inliner<'_> {
             type_,
             fun: Box::new(function),
             arguments,
+            arguments_start,
         }
     }
 
@@ -1859,6 +1862,7 @@ impl InlinableExpression {
                     .iter()
                     .map(|argument| argument.to_call_arg(Self::to_expression))
                     .collect(),
+                arguments_start: None,
             },
         }
     }
