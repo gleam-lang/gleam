@@ -11716,6 +11716,49 @@ fn wobble(i) {
 }
 
 #[test]
+fn wrap_multiargument_pipeline_step_in_anonymous_function() {
+    assert_code_action!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  1 |> wibble(2) |> wobble
+}
+
+fn wibble(a, b) {
+  todo
+}
+
+fn wobble(i) {
+  todo
+}
+
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn wrap_capturing_pipeline_step_in_anonymous_function() {
+    assert_code_action!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  1 |> wibble(2, _) |> wobble
+}
+
+fn wibble(a, b) {
+  todo
+}
+
+fn wobble(i) {
+  todo
+}
+
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+
+#[test]
 fn wrap_final_pipeline_step_in_anonymous_function() {
     assert_code_action!(
         WRAP_IN_ANONYMOUS_FUNCTION,
