@@ -145,6 +145,10 @@ Parsed {
                                                 implicit: None,
                                             },
                                         ],
+                                        argument_parentheses: SrcSpan {
+                                            start: 67,
+                                            end: 72,
+                                        },
                                     },
                                 },
                             ),

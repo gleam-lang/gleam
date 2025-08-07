@@ -29,6 +29,10 @@ expression: tuple().0.1
                         name: "tuple",
                     },
                     arguments: [],
+                    argument_parentheses: SrcSpan {
+                        start: 5,
+                        end: 7,
+                    },
                 },
             },
         },
