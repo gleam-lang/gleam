@@ -483,7 +483,7 @@ impl Environment<'_> {
                     name: name.clone(),
                     variables: self.local_value_names(),
                     type_with_name_in_scope: self.module_types.keys().any(|typ| typ == name),
-                    imported_modules_with_same_public_variable_name: self
+                    possible_modules: self
                         .imported_modules
                         .iter()
                         .filter_map(|(module_name, (_, module))| {

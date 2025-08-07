@@ -1252,7 +1252,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                     .module_types
                                     .keys()
                                     .any(|type_| type_ == &name),
-                                imported_modules_with_same_public_variable_name: self
+                                possible_modules: self
                                     .environment
                                     .imported_modules
                                     .iter()

@@ -35,6 +35,6 @@ error: Unknown variable
   │                                  ^^^
 
 The name `zoo` is not in scope here.
-Consider using one of these variables:
+Did you mean one of these:
 
-    wibble.zoo
+  - wibble.zoo

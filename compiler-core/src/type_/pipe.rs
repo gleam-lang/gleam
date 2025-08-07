@@ -1,6 +1,6 @@
 use self::expression::CallKind;
 
-use super::{expression::ReferenceRegistration, *};
+use super::*;
 use crate::ast::{
     FunctionLiteralKind, ImplicitCallArgOrigin, PIPE_VARIABLE, PipelineAssignmentKind, Statement,
     TypedPipelineAssignment, UntypedExpr,
@@ -139,25 +139,24 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                     location,
                     ..
                 } => {
-                    let fun_result = match *fun {
-                        UntypedExpr::Var { location, name } => self.expr_typer.infer_var(
-                            name,
-                            location,
-                            VarUsage::PipelineCall,
-                            ReferenceRegistration::RegisterReferences,
-                        ),
-                        fun => self.expr_typer.infer_or_error(fun),
-                    };
-
-                    let fun = match fun_result {
-                        Ok(fun) => fun,
-                        Err(e) => {
-                            // In case we cannot infer the function we'll
-                            // replace it with an invalid expression with an
-                            // unbound type to keep going!
-                            self.expr_typer.problems.error(e);
-                            self.expr_typer.error_expr(location)
+                    let fun = match *fun {
+                        UntypedExpr::Var { location, name } => {
+                            self.expr_typer
+                                .infer_called_var(name, location, arguments.len() + 1)
                         }
+                        untyped_fun => match self.expr_typer.infer_or_error(untyped_fun) {
+                            Ok(typed_fun) => typed_fun,
+                            Err(e) => {
+                                // In case we cannot infer the function we'll
+                                // replace it with an invalid expression with an
+                                // unbound type to keep going!
+                                self.expr_typer.problems.error(e);
+                                TypedExpr::Invalid {
+                                    location,
+                                    type_: self.expr_typer.new_unbound_var(),
+                                }
+                            }
+                        },
                     };
 
                     match fun.type_().fn_types() {
@@ -357,27 +356,13 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
     /// b is the `function` argument.
     fn infer_apply_pipe(&mut self, function: UntypedExpr) -> TypedExpr {
         let function_location = function.location();
-        // Need one more step for better error suggestion. If the function is
-        // a variable / identifier, then we can suggest variables / identifier
+        // If the function is used as a variable, then we can suggest values
         // from imported modules with the same name and same arity.
-        let function_result = match function {
-            UntypedExpr::Var { location, name } => self.expr_typer.infer_var(
-                name,
-                location,
-                VarUsage::Call { arity: 1 },
-                ReferenceRegistration::RegisterReferences,
-            ),
-            _ => self.expr_typer.infer_or_error(function),
-        };
-
-        let function = Box::new(match function_result {
-            Ok(function) => function,
-            Err(error) => {
-                // If we cannot infer the function we put an invalid expression
-                // in its place so we can still keep going with the other steps.
-                self.expr_typer.problems.error(error);
-                self.expr_typer.error_expr(function_location)
+        let function = Box::new(match function {
+            UntypedExpr::Var { location, name } => {
+                self.expr_typer.infer_called_var(name, location, 1)
             }
+            _ => self.expr_typer.infer(function),
         });
 
         self.expr_typer.purity = self

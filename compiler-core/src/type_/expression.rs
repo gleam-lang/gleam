@@ -435,7 +435,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             UntypedExpr::Var { location, name, .. } => self.infer_var(
                 name,
                 location,
-                VarUsage::Other,
+                ValueUsage::Other,
                 ReferenceRegistration::RegisterReferences,
             ),
 
@@ -727,7 +727,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     }
 
     // Helper to create a new error expr.
-    pub(crate) fn error_expr(&mut self, location: SrcSpan) -> TypedExpr {
+    fn error_expr(&mut self, location: SrcSpan) -> TypedExpr {
         TypedExpr::Invalid {
             location,
             type_: self.new_unbound_var(),
@@ -1246,11 +1246,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    pub(crate) fn infer_var(
+    fn infer_var(
         &mut self,
         name: EcoString,
         location: SrcSpan,
-        var_usage: VarUsage,
+        var_usage: ValueUsage,
         register_reference: ReferenceRegistration,
     ) -> Result<TypedExpr, Error> {
         let constructor = self.do_infer_value_constructor(
@@ -1354,7 +1354,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             UntypedExpr::Var { location, name } => self.infer_var(
                 name,
                 location,
-                VarUsage::Other,
+                ValueUsage::Other,
                 ReferenceRegistration::DoNotRegisterReferences,
             ),
             _ => self.infer_or_error(container),
@@ -2320,7 +2320,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         match guard {
             ClauseGuard::Var { location, name, .. } => {
                 let constructor =
-                    self.infer_value_constructor(&None, &name, &location, VarUsage::Other)?;
+                    self.infer_value_constructor(&None, &name, &location, ValueUsage::Other)?;
 
                 // We cannot support all values in guard expressions as the BEAM does not
                 let definition_location = match &constructor.variant {
@@ -3470,7 +3470,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         module: &Option<(EcoString, SrcSpan)>,
         name: &EcoString,
         location: &SrcSpan,
-        var_usage: VarUsage,
+        var_usage: ValueUsage,
     ) -> Result<ValueConstructor, Error> {
         self.do_infer_value_constructor(
             module,
@@ -3486,7 +3486,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         module: &Option<(EcoString, SrcSpan)>,
         name: &EcoString,
         location: &SrcSpan,
-        var_usage: VarUsage,
+        var_usage: ValueUsage,
         register_reference: ReferenceRegistration,
     ) -> Result<ValueConstructor, Error> {
         let constructor = match module {
@@ -3627,7 +3627,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         name: &EcoString,
         location: &SrcSpan,
-        var_usage: VarUsage,
+        var_usage: ValueUsage,
     ) -> Error {
         // First try to see if this is a module alias:
         // `import gleam/io`
@@ -3640,47 +3640,21 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 name: name.clone(),
             },
             None => {
-                let imported_modules_with_same_public_variable_name = match var_usage {
+                let possible_modules = match var_usage {
                     // This is a function call, we need to suggest a public
-                    // variable which is a function with the correct arity
-                    VarUsage::Call { arity } => self
+                    // value which is a function with the correct arity
+                    ValueUsage::Call { arity } => self
                         .environment
                         .imported_modules
                         .iter()
                         .filter_map(|(module_name, (_, module))| {
-                            module
-                                .get_public_value(name)
-                                .filter(|value_constructor| {
-                                    match value_constructor.type_.fn_types() {
-                                        Some((fn_arguments_type, _)) => {
-                                            fn_arguments_type.len() == arity
-                                        }
-                                        None => false,
-                                    }
-                                })
-                                .map(|_| module_name)
-                        })
-                        .cloned()
-                        .collect_vec(),
-                    // This is a `Call` into a `Pipeline`. This is hard to make
-                    // good suggestions because of the way it can be desugared.
-                    // In this case, return every functions with the same name
-                    // even if they have wrong arity.
-                    VarUsage::PipelineCall => self
-                        .environment
-                        .imported_modules
-                        .iter()
-                        .filter_map(|(module_name, (_, module))| {
-                            module
-                                .get_public_value(name)
-                                .filter(|value_constructor| value_constructor.type_.is_fun())
-                                .map(|_| module_name)
+                            module.get_public_function(name, arity).map(|_| module_name)
                         })
                         .cloned()
                         .collect_vec(),
                     // This is a reference to a variable, we need to suggest
-                    // public variables of any type
-                    VarUsage::Other => self
+                    // a public value of any type
+                    ValueUsage::Other => self
                         .environment
                         .imported_modules
                         .iter()
@@ -3705,7 +3679,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         .module_types
                         .keys()
                         .any(|typ| typ == name),
-                    imported_modules_with_same_public_variable_name,
+                    possible_modules,
                 }
             }
         }
@@ -3766,7 +3740,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } if arguments.is_empty() => {
                 // Type check the record constructor
                 let constructor =
-                    self.infer_value_constructor(&module, &name, &location, VarUsage::Other)?;
+                    self.infer_value_constructor(&module, &name, &location, ValueUsage::Other)?;
 
                 let (tag, field_map) = match &constructor.variant {
                     ValueConstructorVariant::Record {
@@ -3809,7 +3783,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     &module,
                     &name,
                     &location,
-                    VarUsage::Call {
+                    ValueUsage::Call {
                         arity: arguments.len(),
                     },
                 )?;
@@ -3955,7 +3929,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } => {
                 // Infer the type of this constant
                 let constructor =
-                    self.infer_value_constructor(&module, &name, &location, VarUsage::Other)?;
+                    self.infer_value_constructor(&module, &name, &location, ValueUsage::Other)?;
                 match constructor.variant {
                     ValueConstructorVariant::ModuleConstant { .. }
                     | ValueConstructorVariant::LocalConstant { .. }
@@ -4133,27 +4107,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> (TypedExpr, Vec<TypedCallArg>, Arc<Type>) {
         let fun = match fun {
             UntypedExpr::Var { location, name } => {
-                // Because we are not calling infer / infer_or_error directly,
-                // we do not warn if there was a previous panic. Check for that
-                // here. Not perfect, but works.
-                if self.previous_panics {
-                    self.warn_for_unreachable_code(location, PanicPosition::PreviousExpression);
-                }
-
-                match self.infer_var(
-                    name,
-                    location,
-                    VarUsage::Call {
-                        arity: arguments.len(),
-                    },
-                    ReferenceRegistration::RegisterReferences,
-                ) {
-                    Ok(typed_expr) => typed_expr,
-                    Err(error) => {
-                        self.problems.error(error);
-                        self.error_expr(location)
-                    }
-                }
+                self.infer_called_var(name, location, arguments.len())
             }
 
             UntypedExpr::FieldAccess {
@@ -4191,6 +4145,26 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let (fun, arguments, type_) =
             self.do_infer_call_with_known_fun(fun, arguments, location, kind);
         (fun, arguments, type_)
+    }
+
+    pub fn infer_called_var(
+        &mut self,
+        name: EcoString,
+        location: SrcSpan,
+        arity: usize,
+    ) -> TypedExpr {
+        match self.infer_var(
+            name,
+            location,
+            ValueUsage::Call { arity },
+            ReferenceRegistration::RegisterReferences,
+        ) {
+            Ok(typed_expr) => typed_expr,
+            Err(error) => {
+                self.problems.error(error);
+                self.error_expr(location)
+            }
+        }
     }
 
     fn infer_fn_with_call_context(
@@ -4755,7 +4729,7 @@ fn is_trusted_pure_module(environment: &Environment<'_>) -> bool {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub(crate) enum ReferenceRegistration {
+enum ReferenceRegistration {
     RegisterReferences,
     DoNotRegisterReferences,
 }
