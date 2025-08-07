@@ -12,7 +12,7 @@ use globset::{Glob, GlobSetBuilder};
 use hexpm::version::{self, LowestVersion, Version};
 use http::Uri;
 use serde::ser::SerializeSeq;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
 use std::fmt::{self};
 use std::marker::PhantomData;
@@ -50,16 +50,14 @@ impl ToString for SpdxLicense {
 impl<'de> Deserialize<'de> for SpdxLicense {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: serde::Deserializer<'de>,
+        D: Deserializer<'de>,
     {
-        let s: &str = Deserialize::deserialize(deserializer)?;
-        match spdx::license_id(s) {
+        let s: String = Deserialize::deserialize(deserializer)?;
+        match spdx::license_id(&s) {
             None => Err(serde::de::Error::custom(format!(
                 "{s} is not a valid SPDX License ID"
             ))),
-            Some(_) => Ok(SpdxLicense {
-                licence: String::from(s),
-            }),
+            Some(_) => Ok(SpdxLicense { licence: s }),
         }
     }
 }
@@ -127,11 +125,20 @@ impl GleamVersion {
     }
 }
 
+pub fn deserialize_version<'de, D>(deserializer: D) -> std::result::Result<Version, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let string: String = Deserialize::deserialize(deserializer)
+        .map_err(|e| serde::de::Error::custom(e.to_string()))?;
+    Version::parse(&string).map_err(|e| serde::de::Error::custom(e.to_string()))
+}
+
 #[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub struct PackageConfig {
     #[serde(deserialize_with = "package_name::deserialize")]
     pub name: EcoString,
-    #[serde(default = "default_version")]
+    #[serde(default = "default_version", deserialize_with = "deserialize_version")]
     pub version: Version,
 
     #[serde(
@@ -180,9 +187,10 @@ where
 
 pub fn deserialise_gleam_version<'de, D>(deserialiser: D) -> Result<Option<GleamVersion>, D::Error>
 where
-    D: serde::Deserializer<'de>,
+    D: Deserializer<'de>,
 {
-    match Deserialize::deserialize(deserialiser)? {
+    let result: Option<String> = Deserialize::deserialize(deserialiser).ok();
+    match result {
         Some(range_string) => {
             let hex = version::Range::new(range_string).map_err(serde::de::Error::custom)?;
             Ok(Some(hex.into()))
@@ -716,7 +724,7 @@ impl Serialize for DenoFlag {
 
 fn bool_or_seq_string_to_deno_flag<'de, D>(deserializer: D) -> Result<DenoFlag, D::Error>
 where
-    D: serde::Deserializer<'de>,
+    D: Deserializer<'de>,
 {
     struct StringOrVec(PhantomData<Vec<String>>);
 
@@ -1015,10 +1023,10 @@ mod package_name {
     where
         D: Deserializer<'de>,
     {
-        let name: &str = serde::de::Deserialize::deserialize(deserializer)?;
+        let name: String = serde::de::Deserialize::deserialize(deserializer)?;
         if PACKAGE_NAME_PATTERN
             .get_or_init(|| Regex::new("^[a-z][a-z0-9_]*$").expect("Package name regex"))
-            .is_match(name)
+            .is_match(&name)
         {
             Ok(name.into())
         } else {
@@ -1037,8 +1045,9 @@ name = "one-two"
     assert_eq!(
         toml::from_str::<PackageConfig>(input)
             .unwrap_err()
+            .message()
             .to_string(),
-        "Package names may only contain lowercase letters, numbers, and underscores for key `name` at line 1 column 1"
+        "Package names may only contain lowercase letters, numbers, and underscores"
     )
 }
 
@@ -1050,8 +1059,9 @@ name = "1"
     assert_eq!(
         toml::from_str::<PackageConfig>(input)
             .unwrap_err()
+            .message()
             .to_string(),
-        "Package names may only contain lowercase letters, numbers, and underscores for key `name` at line 1 column 1"
+        "Package names may only contain lowercase letters, numbers, and underscores"
     )
 }
 
