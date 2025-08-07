@@ -10012,7 +10012,14 @@ impl<'ast> ast::visit::Visit<'ast> for WrapInAnonymousFunction<'ast> {
             return;
         }
 
-        if let Type::Fn { ref arguments, .. } = *expression.type_() {
+        let is_excluded = match expression {
+            TypedExpr::Fn { kind, .. } if kind.is_anonymous() => true,
+            _ => false,
+        };
+
+        if let Type::Fn { arguments, .. } = &*expression.type_()
+            && !is_excluded
+        {
             self.functions.push(FunctionToWrap {
                 location: expression.location(),
                 arguments: arguments.clone(),
@@ -10026,7 +10033,7 @@ impl<'ast> ast::visit::Visit<'ast> for WrapInAnonymousFunction<'ast> {
     /// We don't want to apply to functions that are being explicitly called
     /// already, so we need to intercept visits to function calls and bounce
     /// them out again so they don't end up in our impl for visit_typed_expr.
-    /// Otherwise this is the same as [ast::visit::visit_typed_expr_call].
+    /// Otherwise this is the same as [].
     fn visit_typed_expr_call(
         &mut self,
         _location: &'ast SrcSpan,

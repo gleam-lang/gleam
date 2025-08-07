@@ -11682,8 +11682,8 @@ pub fn main() {
 }
 
 #[test]
-fn wrap_anonymous_function_in_anonymous_function() {
-    assert_code_action!(
+fn dont_wrap_anonymous_function_in_anonymous_function() {
+    assert_no_code_actions!(
         WRAP_IN_ANONYMOUS_FUNCTION,
         "pub fn main() {
   let f = fn(in) { ception(in) }

@@ -281,6 +281,13 @@ pub enum FunctionLiteralKind {
 }
 
 impl FunctionLiteralKind {
+    pub fn is_anonymous(&self) -> bool {
+        match self {
+            FunctionLiteralKind::Anonymous { .. } => true,
+            FunctionLiteralKind::Capture { .. } | FunctionLiteralKind::Use { .. } => false,
+        }
+    }
+
     pub fn is_capture(&self) -> bool {
         match self {
             FunctionLiteralKind::Capture { .. } => true,
