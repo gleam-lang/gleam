@@ -921,6 +921,7 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
         type_: &'ast Arc<Type>,
         fun: &'ast TypedExpr,
         arguments: &'ast [TypedCallArg],
+        argument_parentheses: &'ast Option<SrcSpan>,
     ) {
         let call_range = self.edits.src_span_to_lsp_range(*location);
         if !within(self.params.range, call_range) {
@@ -945,7 +946,14 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
         // we're inside a nested call.
         let previous = self.use_right_hand_side_location;
         self.use_right_hand_side_location = None;
-        ast::visit::visit_typed_expr_call(self, location, type_, fun, arguments);
+        ast::visit::visit_typed_expr_call(
+            self,
+            location,
+            type_,
+            fun,
+            arguments,
+            argument_parentheses,
+        );
         self.use_right_hand_side_location = previous;
     }
 
@@ -1458,7 +1466,7 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
         let location = match kind {
             // Function captures don't need any type annotations
             FunctionLiteralKind::Capture { .. } => return,
-            FunctionLiteralKind::Anonymous { head } => head,
+            FunctionLiteralKind::Anonymous { head, .. } => head,
             FunctionLiteralKind::Use { location } => location,
         };
 
@@ -6388,6 +6396,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
         type_: &'ast Arc<Type>,
         fun: &'ast TypedExpr,
         arguments: &'ast [TypedCallArg],
+        argument_parentheses: &'ast Option<SrcSpan>,
     ) {
         // If the function being called is invalid we need to generate a
         // function that has the proper labels.
@@ -6444,8 +6453,14 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
                 | TypedExpr::Invalid { .. } => {}
             }
         }
-
-        ast::visit::visit_typed_expr_call(self, location, type_, fun, arguments);
+        ast::visit::visit_typed_expr_call(
+            self,
+            location,
+            type_,
+            fun,
+            arguments,
+            argument_parentheses,
+        );
     }
 }
 
@@ -6760,6 +6775,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for GenerateVariant<'ast, IO> {
         type_: &'ast Arc<Type>,
         fun: &'ast TypedExpr,
         arguments: &'ast [TypedCallArg],
+        argument_parentheses: &'ast Option<SrcSpan>,
     ) {
         // If the function being called is invalid we need to generate a
         // function that has the proper labels.
@@ -6773,7 +6789,14 @@ impl<'ast, IO> ast::visit::Visit<'ast> for GenerateVariant<'ast, IO> {
                 );
             }
         } else {
-            ast::visit::visit_typed_expr_call(self, location, type_, fun, arguments);
+            ast::visit::visit_typed_expr_call(
+                self,
+                location,
+                type_,
+                fun,
+                arguments,
+                argument_parentheses,
+            );
         }
     }
 
@@ -7558,6 +7581,7 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToPipe<'ast> {
         _type_: &'ast Arc<Type>,
         fun: &'ast TypedExpr,
         arguments: &'ast [TypedCallArg],
+        _argument_parentheses: &'ast Option<SrcSpan>,
     ) {
         if arguments.iter().any(|arg| arg.is_capture_hole()) {
             return;
@@ -9623,15 +9647,30 @@ impl<'ast> ast::visit::Visit<'ast> for AddOmittedLabels<'ast> {
         type_: &'ast Arc<Type>,
         fun: &'ast TypedExpr,
         arguments: &'ast [TypedCallArg],
+        argument_parentheses: &'ast Option<SrcSpan>,
     ) {
         let called_function_range = self.edits.src_span_to_lsp_range(fun.location());
         if !within(self.params.range, called_function_range) {
-            ast::visit::visit_typed_expr_call(self, location, type_, fun, arguments);
+            ast::visit::visit_typed_expr_call(
+                self,
+                location,
+                type_,
+                fun,
+                arguments,
+                argument_parentheses,
+            );
             return;
         }
 
         let Some(field_map) = fun.field_map() else {
-            ast::visit::visit_typed_expr_call(self, location, type_, fun, arguments);
+            ast::visit::visit_typed_expr_call(
+                self,
+                location,
+                type_,
+                fun,
+                arguments,
+                argument_parentheses,
+            );
             return;
         };
         let argument_index_to_label = field_map.indices_to_labels();
