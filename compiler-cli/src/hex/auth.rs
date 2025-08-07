@@ -1,9 +1,11 @@
 use crate::{cli, fs::ConsoleWarningEmitter, http::HttpClient};
+use camino::Utf8Path;
 use gleam_core::{
     Error, Result, Warning, encryption, hex,
     paths::global_hexpm_credentials_path,
     warning::{DeprecatedEnvironmentVariable, WarningEmitter},
 };
+use serde::{Deserialize, Serialize};
 use std::{rc::Rc, time::SystemTime};
 
 pub const USER_PROMPT: &str = "https://hex.pm username";
@@ -13,10 +15,11 @@ pub const LOCAL_PASS_PROMPT: &str = "Local password";
 pub const PASS_ENV_NAME: &str = "HEXPM_PASS";
 pub const API_ENV_NAME: &str = "HEXPM_API_KEY";
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct EncryptedApiKey {
     pub name: String,
     pub encrypted: String,
+    pub username: String,
 }
 
 #[derive(Debug)]
@@ -75,7 +78,13 @@ encrypt your Hex API key.
                 detail: e.to_string(),
             })?;
 
-        crate::fs::write(&path, &format!("{name}\n{encrypted}"))?;
+        let encrypted = EncryptedApiKey {
+            name,
+            encrypted,
+            username,
+        };
+
+        encrypted.save(&path)?;
         println!("Encrypted Hex API key written to {path}");
 
         Ok(UnencryptedApiKey {
@@ -131,23 +140,16 @@ encrypt your Hex API key.
         Ok(Some(UnencryptedApiKey { unencrypted }))
     }
 
-    pub fn read_stored_api_key(&self) -> Result<Option<EncryptedApiKey>> {
+    pub fn read_stored_api_key(&mut self) -> Result<Option<EncryptedApiKey>> {
         let path = global_hexpm_credentials_path();
+
         if !path.exists() {
-            return Ok(None);
+            // maybe the user has the credentials in the old format, try migrate
+            let key = migrate_credentials_file(&path, &mut self.warnings)?;
+            return Ok(key);
         }
-        let text = crate::fs::read(&path)?;
-        let mut chunks = text.splitn(2, '\n');
-        let Some(name) = chunks.next() else {
-            return Ok(None);
-        };
-        let Some(encrypted) = chunks.next() else {
-            return Ok(None);
-        };
-        Ok(Some(EncryptedApiKey {
-            name: name.to_string(),
-            encrypted: encrypted.to_string(),
-        }))
+
+        EncryptedApiKey::load(&path)
     }
 }
 
@@ -156,6 +158,24 @@ impl Drop for HexAuthentication<'_> {
         while let Some(warning) = self.warnings.pop() {
             self.warning_emitter.emit(warning);
         }
+    }
+}
+
+impl EncryptedApiKey {
+    pub fn save(&self, path: &Utf8Path) -> Result<()> {
+        let text = toml::to_string(self).map_err(|_| Error::InvalidCredentialsFile {
+            path: path.to_string(),
+        })?;
+
+        crate::fs::write(path, &text)
+    }
+
+    pub fn load(path: &Utf8Path) -> Result<Option<Self>> {
+        let text = crate::fs::read(path)?;
+
+        toml::from_str(&text).map_err(|_| Error::InvalidCredentialsFile {
+            path: path.to_string(),
+        })
     }
 }
 
@@ -199,4 +219,57 @@ pub fn generate_api_key_name() -> String {
         .to_string_lossy()
         .to_string();
     format!("{name}-{timestamp}")
+}
+
+/// Migrate users' credential file from the old plaintext format to the new TOML format,
+///     eventually this function should be deprecated
+fn migrate_credentials_file(
+    path: &Utf8Path,
+    warnings: &mut Vec<Warning>,
+) -> Result<Option<EncryptedApiKey>> {
+    // the original file name had no extension
+    let old_path = &path.with_extension("");
+
+    // if the file does not exist, there is nothing to migrate
+    if !old_path.exists() {
+        return Ok(None);
+    }
+
+    // otherwise, read the data and create a encrypted key
+    let text = crate::fs::read(old_path)?;
+
+    // data was split by a newline
+    let mut chunks = text.splitn(2, '\n');
+
+    // the first line was the name of the key
+    let Some(name) = chunks.next() else {
+        return Err(Error::InvalidCredentialsFile {
+            path: path.to_string(),
+        });
+    };
+
+    // the second line was the encrypted value
+    let Some(encrypted) = chunks.next() else {
+        return Err(Error::InvalidCredentialsFile {
+            path: path.to_string(),
+        });
+    };
+
+    // username was not stored in the old format, so we ask for it
+    let username = ask_username(warnings)?;
+
+    // create a new EncryptedApiKey struct with the old data
+    let key = EncryptedApiKey {
+        name: name.to_string(),
+        encrypted: encrypted.to_string(),
+        username,
+    };
+
+    // save the new EncryptedApiKey struct in the new format
+    key.save(path)?;
+
+    // remove old file, since it is migrated to the new format
+    crate::fs::delete_file(path)?;
+
+    Ok(Some(key))
 }
