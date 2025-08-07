@@ -56,6 +56,7 @@ pub enum UntypedExpr {
         location: SrcSpan,
         fun: Box<Self>,
         arguments: Vec<CallArg<Self>>,
+        argument_parentheses: SrcSpan,
     },
 
     BinOp {

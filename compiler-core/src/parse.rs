@@ -957,7 +957,7 @@ where
                     }
                 }
                 _ => {
-                    if self.maybe_one(&Token::LeftParen).is_some() {
+                    if let Some((left_paren, _)) = self.maybe_one(&Token::LeftParen) {
                         let start = expr.location().start;
                         match self.maybe_one(&Token::DotDot) {
                             Some((dot_s, _)) => {
@@ -992,7 +992,12 @@ where
                                 // Call
                                 let arguments = self.parse_fn_arguments()?;
                                 let (_, end) = self.expect_one(&Token::RightParen)?;
-                                expr = make_call(expr, arguments, start, end)?;
+                                let argument_parentheses = SrcSpan {
+                                    start: left_paren,
+                                    end,
+                                };
+                                expr =
+                                    make_call(expr, arguments, start, end, argument_parentheses)?;
                             }
                         }
                     } else {
@@ -5029,6 +5034,7 @@ pub fn make_call(
     arguments: Vec<ParserArg>,
     start: u32,
     end: u32,
+    argument_parentheses: SrcSpan,
 ) -> Result<UntypedExpr, ParseError> {
     let mut hole_location = None;
 
@@ -5075,6 +5081,7 @@ pub fn make_call(
         location: SrcSpan { start, end },
         fun: Box::new(fun),
         arguments,
+        argument_parentheses,
     };
 
     match hole_location {
