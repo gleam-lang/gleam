@@ -368,7 +368,7 @@ impl TypedExpr {
             } => subjects
                 .iter()
                 .find_map(|subject| subject.find_node(byte_index))
-                .or_else(|| clauses.iter().find_map(|c| c.find_node(byte_index)))
+                .or_else(|| clauses.iter().find_map(|clause| clause.find_node(byte_index)))
                 .or_else(|| self.self_if_contains_location(byte_index)),
 
             Self::RecordAccess {

@@ -1608,8 +1608,8 @@ impl TypedClause {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         self.pattern
             .iter()
-            .find_map(|p| p.find_node(byte_index))
-            .or_else(|| self.guard.as_ref().and_then(|g| g.find_node(byte_index)))
+            .find_map(|pattern| pattern.find_node(byte_index))
+            .or_else(|| self.guard.as_ref().and_then(|guard| guard.find_node(byte_index)))
             .or_else(|| self.then.find_node(byte_index))
     }
 }
@@ -1921,13 +1921,14 @@ impl TypedClauseGuard {
             | ClauseGuard::DivFloat { left, right, .. }
             | ClauseGuard::RemainderInt { left, right, .. }
             | ClauseGuard::Or { left, right, .. }
-            | ClauseGuard::And { left, right, .. } => left
-                .find_node(byte_index)
+            | ClauseGuard::And { left, right, .. } =>
+                left.find_node(byte_index)
                 .or_else(|| right.find_node(byte_index)),
             ClauseGuard::Not { expression, .. } => expression.find_node(byte_index),
+            ClauseGuard::Constant(constant) => constant.find_node(byte_index),
+            ClauseGuard::TupleIndex { tuple, .. } => tuple.find_node(byte_index),
+            ClauseGuard::FieldAccess { container, .. } => container.find_node(byte_index),
             ClauseGuard::Var { .. } => None,
-            ClauseGuard::TupleIndex { .. } => None,
-            ClauseGuard::FieldAccess { .. } => None,
             ClauseGuard::ModuleSelect {
                 location,
                 module_name,
@@ -1937,7 +1938,6 @@ impl TypedClauseGuard {
                 name: module_name.clone(),
                 layer: Layer::Value,
             }),
-            ClauseGuard::Constant(..) => None,
         }
     }
 

@@ -722,28 +722,29 @@ where
     V: Visit<'a> + ?Sized,
 {
     match constant {
-        Constant::Var { constructor, .. } => match constructor {
-            Some(constructor) => match &constructor.variant {
-                ValueConstructorVariant::LocalConstant { literal } => v.visit_typed_constant(literal),
+        Constant::Var { constructor: Some(constructor), .. } => {
+            match &constructor.variant {
+                ValueConstructorVariant::LocalConstant { literal }
+                | ValueConstructorVariant::ModuleConstant { literal, .. } => v.visit_typed_constant(literal),
+
                 ValueConstructorVariant::LocalVariable { .. }
-                | ValueConstructorVariant::ModuleConstant { .. }
                 | ValueConstructorVariant::ModuleFn { .. }
                 | ValueConstructorVariant::Record { .. } => {},
             }
-            None => {},
         }
         Constant::Record { args, record_constructor, .. } => {
             args.iter()
                 .for_each(|arg| v.visit_typed_constant(&arg.value));
-            match record_constructor {
-                Some(constructor) => match &constructor.variant {
-                    ValueConstructorVariant::LocalConstant { literal } => v.visit_typed_constant(literal),
+
+            if let Some(constructor) = record_constructor {
+                match &constructor.variant {
+                    ValueConstructorVariant::LocalConstant { literal }
+                    | ValueConstructorVariant::ModuleConstant { literal, .. } => v.visit_typed_constant(literal),
+
                     ValueConstructorVariant::LocalVariable { .. }
-                    | ValueConstructorVariant::ModuleConstant { .. }
                     | ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::Record { .. } => {},
                 }
-                None => {},
             }
         },
         Constant::Tuple { elements, .. } => elements.iter().for_each(|e| v.visit_typed_constant(e)),
@@ -758,6 +759,7 @@ where
         Constant::Int { .. }
         | Constant::Float { .. }
         | Constant::String { .. }
+        | Constant::Var { .. }
         | Constant::Invalid { .. } => {},
     }
 }

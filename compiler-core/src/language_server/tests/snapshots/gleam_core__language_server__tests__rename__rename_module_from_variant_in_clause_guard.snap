@@ -1,0 +1,37 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\nimport mod\n\nfn func(arg: List(mod.Type)) {\n  case arg {\n    [x, ..rest] if x == mod.Variant1 -> 1 + func(rest)\n    [_, ..rest] -> func(rest)\n    [] -> 0\n  }\n}\n"
+---
+----- BEFORE RENAME
+-- mod.gleam
+pub type Type { Variant1 Variant2 }
+
+-- app.gleam
+
+import mod
+
+fn func(arg: List(mod.Type)) {
+  case arg {
+    [x, ..rest] if x == mod.Variant1 -> 1 + func(rest)
+                        ↑▔▔                           
+    [_, ..rest] -> func(rest)
+    [] -> 0
+  }
+}
+
+
+----- AFTER RENAME
+-- mod.gleam
+pub type Type { Variant1 Variant2 }
+
+-- app.gleam
+
+import mod as module
+
+fn func(arg: List(module.Type)) {
+  case arg {
+    [x, ..rest] if x == mod.Variant1 -> 1 + func(rest)
+    [_, ..rest] -> func(rest)
+    [] -> 0
+  }
+}

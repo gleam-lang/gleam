@@ -729,7 +729,7 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences {
                 }
 
                 if let Some(annotation) = return_annotation {
-                    self.visit_type_ast(annotation, &return_type);
+                    self.visit_type_ast(annotation, return_type);
                 };
             });
 

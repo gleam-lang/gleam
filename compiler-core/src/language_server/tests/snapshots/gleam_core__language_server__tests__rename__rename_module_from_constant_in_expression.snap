@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\nimport mod\n\npub fn main() {\n  echo mod.constant\n}\n"
+---
+----- BEFORE RENAME
+-- mod.gleam
+pub const constant = 10
+
+-- app.gleam
+
+import mod
+
+pub fn main() {
+  echo mod.constant
+       ↑▔▔         
+}
+
+
+----- AFTER RENAME
+-- mod.gleam
+pub const constant = 10
+
+-- app.gleam
+
+import mod as module
+
+pub fn main() {
+  echo module.constant
+}
