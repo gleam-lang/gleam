@@ -2402,7 +2402,7 @@ but no type in scope with that name."
                         discarded_location,
                         name,
                         type_with_name_in_scope,
-                        imported_modules_with_same_public_variable_name,
+                        possible_modules,
                     } => {
                         let title = String::from("Unknown variable");
                         if let Some(ignored_location) = discarded_location {
@@ -2443,20 +2443,15 @@ but no type in scope with that name."
                                     wrap_format!("The name `{name}` is not in scope here.")
                                 };
 
-                                // If there are some suggestions about variables in imported modules
-                                // put a "consider" text after the main message
-                                if !imported_modules_with_same_public_variable_name.is_empty() {
-                                    let consider_text = imported_modules_with_same_public_variable_name
-                                        .iter()
-                                        .fold(
-                                            String::from("Consider using one of these variables:\n\n"),
-                                            |mut acc, module_name| {
-                                                acc.push_str(&wrap_format!("    {module_name}.{name}\n"));
-                                                acc
-                                            }
-                                        );
+                                // If there are some suggestions about public values in imported
+                                // modules put a "did you mean" text after the main message
+                                if !possible_modules.is_empty() {
+                                    let mut did_you_mean_text = String::from("Did you mean one of these:\n\n");
+                                    for module_name in possible_modules {
+                                        did_you_mean_text.push_str(&format!("  - {module_name}.{name}\n"));
+                                    }
                                     text.push('\n');
-                                    text.push_str(&consider_text);
+                                    text.push_str(&did_you_mean_text);
                                 }
 
                                 text
