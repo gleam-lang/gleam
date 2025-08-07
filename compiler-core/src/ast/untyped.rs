@@ -53,6 +53,7 @@ pub enum UntypedExpr {
         location: SrcSpan,
         fun: Box<Self>,
         arguments: Vec<CallArg<Self>>,
+        arguments_start: u32,
     },
 
     BinOp {
@@ -293,7 +294,7 @@ impl HasLocation for UntypedExpr {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FunctionLiteralKind {
     Capture { hole: SrcSpan },
-    Anonymous { head: SrcSpan },
+    Anonymous { head: SrcSpan, body: SrcSpan },
     Use { location: SrcSpan },
 }
 

@@ -29,6 +29,7 @@ expression: tuple().0.1
                         name: "tuple",
                     },
                     arguments: [],
+                    arguments_start: 5,
                 },
             },
         },

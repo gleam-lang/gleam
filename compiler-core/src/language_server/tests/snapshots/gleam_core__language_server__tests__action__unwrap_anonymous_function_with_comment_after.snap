@@ -18,8 +18,8 @@ fn op(a) {
 
 ----- AFTER ACTION
 pub fn main() {
-  op// look out!
-  
+  op
+    // look out!
 }
 
 fn op(a) {
