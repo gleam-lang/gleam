@@ -873,7 +873,7 @@ version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "59a98bbaacea1c0eb6a0876280051b892eb73594fd90cf3b20e9c817029c57d2"
 dependencies = [
- "toml",
+ "toml 0.5.11",
 ]
 
 [[package]]
@@ -1151,7 +1151,7 @@ dependencies = [
  "tempfile",
  "termcolor",
  "tokio",
- "toml",
+ "toml 0.8.22",
  "toml_edit",
  "tracing",
  "tracing-subscriber 0.2.25",
@@ -1204,7 +1204,7 @@ dependencies = [
  "tar",
  "termcolor",
  "thiserror 1.0.69",
- "toml",
+ "toml 0.8.22",
  "tracing",
  "unicode-segmentation",
  "vec1",
@@ -2929,6 +2929,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_spanned"
+version = "0.6.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf41e0cfaf7226dca15e8197172c295a782857fcb97fad1808a166870dee75a3"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "serde_urlencoded"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3172,7 +3181,7 @@ dependencies = [
  "insta",
  "itertools",
  "regex",
- "toml",
+ "toml 0.8.22",
  "walkdir",
 ]
 
@@ -3198,7 +3207,7 @@ dependencies = [
  "itertools",
  "regex",
  "test-helpers-rs",
- "toml",
+ "toml 0.8.22",
 ]
 
 [[package]]
@@ -3212,7 +3221,7 @@ dependencies = [
  "itertools",
  "regex",
  "test-helpers-rs",
- "toml",
+ "toml 0.8.22",
 ]
 
 [[package]]
@@ -3357,10 +3366,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "toml"
+version = "0.8.22"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "05ae329d1f08c4d17a59bed7ff5b5a769d062e64a62d34a3261b219e62cd5aae"
+dependencies = [
+ "serde",
+ "serde_spanned",
+ "toml_datetime",
+ "toml_edit",
+]
+
+[[package]]
 name = "toml_datetime"
 version = "0.6.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3da5db5a963e24bc68be8b17b6fa82814bb22ee8660f192bb182771d498f09a3"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "toml_edit"
@@ -3369,6 +3393,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "310068873db2c5b3e7659d2cc35d21855dbafa50d1ce336397c666e3cb08137e"
 dependencies = [
  "indexmap",
+ "serde",
+ "serde_spanned",
  "toml_datetime",
  "toml_write",
  "winnow",
