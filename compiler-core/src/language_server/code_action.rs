@@ -3630,11 +3630,13 @@ impl<'ast> ast::visit::Visit<'ast> for ExpandFunctionCapture<'ast> {
     }
 }
 
+/// A set of variable names used in some gleam. Useful for passing to [NameGenerator::reserve_variable_names].
 struct VariablesNames {
     names: HashSet<EcoString>,
 }
 
 impl VariablesNames {
+    /// Creates a `VariableNames` by collecting all variables used in a list of statements.
     fn from_statements(statements: &[TypedStatement]) -> Self {
         let mut variables = Self {
             names: HashSet::new(),
@@ -3643,6 +3645,16 @@ impl VariablesNames {
         for statement in statements {
             variables.visit_typed_statement(statement);
         }
+        variables
+    }
+
+    /// Creates a `VariableNames` by collecting all variables used within an expression.
+    fn from_expression(expression: &TypedExpr) -> Self {
+        let mut variables = Self {
+            names: HashSet::new(),
+        };
+
+        variables.visit_typed_expr(expression);
         variables
     }
 }
@@ -7488,5 +7500,320 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveBlock<'ast> {
         }
 
         ast::visit::visit_typed_expr_block(self, location, statements);
+    }
+}
+
+/// Code action to turn a function used as a reference into a one-statement anonymous function.
+///
+/// For example, if the code action was used on `op` here:
+///
+/// ```gleam
+/// list.map([1, 2, 3], op)
+/// ```
+///
+/// it would become:
+///
+/// ```gleam
+/// list.map([1, 2, 3], fn(int) {
+///   op(int)
+/// })
+/// ```
+pub struct WrapInAnonymousFunction<'a> {
+    module: &'a Module,
+    line_numbers: &'a LineNumbers,
+    params: &'a CodeActionParams,
+    functions: Vec<FunctionToWrap>,
+}
+
+/// Helper struct, a target for [WrapInAnonymousFunction].
+struct FunctionToWrap {
+    location: SrcSpan,
+    arguments: Vec<Arc<Type>>,
+    variables_names: VariablesNames,
+}
+
+impl<'a> WrapInAnonymousFunction<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            line_numbers,
+            params,
+            functions: vec![],
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let mut actions = Vec::with_capacity(self.functions.len());
+        for target in self.functions {
+            let mut name_generator = NameGenerator::new();
+            name_generator.reserve_variable_names(target.variables_names);
+            let arguments = target
+                .arguments
+                .iter()
+                .map(|t| name_generator.generate_name_from_type(t))
+                .join(", ");
+
+            let mut edits = TextEdits::new(self.line_numbers);
+            edits.insert(target.location.start, format!("fn({arguments}) {{ "));
+            edits.insert(target.location.end, format!("({arguments}) }}"));
+
+            CodeActionBuilder::new("Wrap in anonymous function")
+                .kind(CodeActionKind::REFACTOR_REWRITE)
+                .changes(self.params.text_document.uri.clone(), edits.edits)
+                .push_to(&mut actions);
+        }
+        actions
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for WrapInAnonymousFunction<'ast> {
+    fn visit_typed_expr(&mut self, expression: &'ast TypedExpr) {
+        let expression_range = src_span_to_lsp_range(expression.location(), self.line_numbers);
+        if !overlaps(self.params.range, expression_range) {
+            return;
+        }
+
+        let is_excluded = match expression {
+            TypedExpr::Fn { kind, .. } if kind.is_anonymous() => true,
+            _ => false,
+        };
+
+        if let Type::Fn { arguments, .. } = &*expression.type_()
+            && !is_excluded
+        {
+            self.functions.push(FunctionToWrap {
+                location: expression.location(),
+                arguments: arguments.clone(),
+                variables_names: VariablesNames::from_expression(expression),
+            });
+        };
+
+        ast::visit::visit_typed_expr(self, expression);
+    }
+
+    /// We don't want to apply to functions that are being explicitly called
+    /// already, so we need to intercept visits to function calls and bounce
+    /// them out again so they don't end up in our impl for visit_typed_expr.
+    /// Otherwise this is the same as [].
+    fn visit_typed_expr_call(
+        &mut self,
+        _location: &'ast SrcSpan,
+        _type: &'ast Arc<Type>,
+        fun: &'ast TypedExpr,
+        arguments: &'ast [TypedCallArg],
+    ) {
+        // We only need to do this interception for explicit calls, so if any
+        // of our arguments are explicit we re-enter the visitor as usual.
+        if arguments.iter().any(|a| a.is_implicit()) {
+            self.visit_typed_expr(fun);
+        } else {
+            // We still want to visit other nodes nested in the function being
+            // called so we bounce the call back out.
+            ast::visit::visit_typed_expr(self, fun);
+        }
+
+        for argument in arguments {
+            self.visit_typed_call_arg(argument);
+        }
+    }
+}
+
+/// Code action to unwrap trivial one-statement anonymous functions into just a
+/// reference to the function called
+///
+/// For example, if the code action was used on the anonymous function here:
+///
+/// ```gleam
+/// list.map([1, 2, 3], fn(int) {
+///   op(int)
+/// })
+/// ```
+///
+/// it would become:
+///
+/// ```gleam
+/// list.map([1, 2, 3], op)
+/// ```
+pub struct UnwrapAnonymousFunction<'a> {
+    module: &'a Module,
+    line_numbers: &'a LineNumbers,
+    params: &'a CodeActionParams,
+    functions: Vec<FunctionToUnwrap>,
+}
+
+/// Helper struct, a target for [UnwrapAnonymousFunction]
+struct FunctionToUnwrap {
+    /// Location of the anonymous function to apply the action to
+    outer_function: SrcSpan,
+    /// Location of the function being called inside the anonymous function.
+    /// This will be all that's left after the action, plus any comments.
+    inner_function: SrcSpan,
+}
+
+impl<'a> UnwrapAnonymousFunction<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            line_numbers,
+            params,
+            functions: vec![],
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let mut actions = Vec::with_capacity(self.functions.len());
+        for function in &self.functions {
+            let mut edits = TextEdits::new(self.line_numbers);
+
+            // We need to delete the anonymous function's head but preserve
+            // comments between it and the inner function call.
+            edits.delete(self.span_until_comment(SrcSpan {
+                start: function.outer_function.start,
+                end: function.inner_function.start,
+            }));
+
+            // Now we need to delete the inner function call's arguments,
+            // preserving comments before the outer function tail.
+            edits.delete(self.span_until_comment(SrcSpan {
+                start: function.inner_function.end,
+                end: function.outer_function.end - 1,
+            }));
+
+            // To delete the tail we nip one character to make sure we get the
+            // `}`. This could be redundant with the above if there were no
+            // comments, but that's fine.
+            edits.delete(SrcSpan {
+                start: function.outer_function.end - 1,
+                end: function.outer_function.end,
+            });
+
+            CodeActionBuilder::new("Remove anonymous function wrapper")
+                .kind(CodeActionKind::REFACTOR_REWRITE)
+                .changes(self.params.text_document.uri.clone(), edits.edits)
+                .push_to(&mut actions);
+        }
+        actions
+    }
+
+    // Returns the given span, but with the end point adjusted to the start
+    // of the first comment in the span, if any.
+    fn span_until_comment(&self, span: SrcSpan) -> SrcSpan {
+        let SrcSpan { start, end } = span;
+        let adjusted_end = self
+            .module
+            .extra
+            .first_comment_between(start, end)
+            // The above will return the start of the comment's text, so we need
+            // to step backwards a bit to get the `//`.
+            .map(|comment| comment.start - 2)
+            .unwrap_or(end);
+        SrcSpan {
+            start,
+            end: adjusted_end,
+        }
+    }
+
+    /// If an anonymous function can be unwrapped, save it to our list
+    ///
+    /// We need to ensure our subjects:
+    /// - are anonymous function literals (not captures)
+    /// - only contain a single statement
+    /// - that statement is a function call
+    /// - that call's arguments exactly match the arguments of the enclosing
+    ///   function
+    fn register_function(
+        &mut self,
+        location: &'a SrcSpan,
+        kind: &'a FunctionLiteralKind,
+        arguments: &'a [TypedArg],
+        body: &'a Vec1<TypedStatement>,
+    ) {
+        match kind {
+            FunctionLiteralKind::Anonymous { .. } => (),
+            _ => return,
+        }
+
+        // We can only apply to anonymous functions containing a single function call
+        let [
+            TypedStatement::Expression(TypedExpr::Call {
+                fun: called_function,
+                arguments: call_arguments,
+                ..
+            }),
+        ] = body.as_slice()
+        else {
+            return;
+        };
+
+        // We need the existing argument list for the fn to be a 1:1 match for
+        // the args we pass to the called function, so we need to collect the
+        // names used in both lists and check they're equal.
+
+        let outer_argument_names = arguments.iter().map(|a| match &a.names {
+            ArgNames::Named { name, .. } => Some(name),
+            // We can bail out early if any arguments are discarded, since
+            // they couldn't match those actually used.
+            ArgNames::Discard { .. } => None,
+            // Anonymous functions can't have labelled arguments.
+            ArgNames::NamedLabelled { .. } => unreachable!(),
+            ArgNames::LabelledDiscard { .. } => unreachable!(),
+        });
+
+        let inner_argument_names = call_arguments.iter().map(|a| match &a.value {
+            TypedExpr::Var { name, .. } => Some(name),
+            // We can bail out early if any of these aren't variables, since
+            // they couldn't match the inputs.
+            _ => None,
+        });
+
+        if !inner_argument_names.eq(outer_argument_names) {
+            return;
+        }
+
+        self.functions.push(FunctionToUnwrap {
+            outer_function: *location,
+            inner_function: called_function.location(),
+        })
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for UnwrapAnonymousFunction<'ast> {
+    fn visit_typed_expr_fn(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        kind: &'ast FunctionLiteralKind,
+        arguments: &'ast [TypedArg],
+        body: &'ast Vec1<TypedStatement>,
+        return_annotation: &'ast Option<ast::TypeAst>,
+    ) {
+        let function_range = src_span_to_lsp_range(*location, self.line_numbers);
+        if !overlaps(self.params.range, function_range) {
+            return;
+        }
+
+        self.register_function(location, kind, arguments, body);
+
+        ast::visit::visit_typed_expr_fn(
+            self,
+            location,
+            type_,
+            kind,
+            arguments,
+            body,
+            return_annotation,
+        )
     }
 }
