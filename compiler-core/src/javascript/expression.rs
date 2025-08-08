@@ -1754,11 +1754,12 @@ impl<'module, 'a> Generator<'module, 'a> {
                 // If there's no arguments and the type is a function that takes
                 // arguments then this is the constructor being referenced, not the
                 // function being called.
-                if let Some(arity) = type_.fn_arity() {
-                    if arguments.is_empty() && arity != 0 {
-                        let arity = arity as u16;
-                        return record_constructor(type_.clone(), None, name, arity, self.tracker);
-                    }
+                if let Some(arity) = type_.fn_arity()
+                    && arguments.is_empty()
+                    && arity != 0
+                {
+                    let arity = arity as u16;
+                    return record_constructor(type_.clone(), None, name, arity, self.tracker);
                 }
 
                 let field_values = arguments
@@ -2135,11 +2136,12 @@ impl<'module, 'a> Generator<'module, 'a> {
                 // If there's no arguments and the type is a function that takes
                 // arguments then this is the constructor being referenced, not the
                 // function being called.
-                if let Some(arity) = type_.fn_arity() {
-                    if arguments.is_empty() && arity != 0 {
-                        let arity = arity as u16;
-                        return record_constructor(type_.clone(), None, name, arity, self.tracker);
-                    }
+                if let Some(arity) = type_.fn_arity()
+                    && arguments.is_empty()
+                    && arity != 0
+                {
+                    let arity = arity as u16;
+                    return record_constructor(type_.clone(), None, name, arity, self.tracker);
                 }
 
                 let field_values = arguments

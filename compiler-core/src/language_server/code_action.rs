@@ -1442,24 +1442,23 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
         arguments: &'ast Vec<ast::TypeAst>,
     ) {
         let range = src_span_to_lsp_range(*location, self.line_numbers);
-        if overlaps(self.params.range, range) {
-            if let Some((module_alias, _)) = module {
-                if let Some(import) = self.module.find_node(location.end).and_then(|node| {
-                    if let Located::Annotation { type_, .. } = node {
-                        if let Some((module, _)) = type_.named_type_name() {
-                            return self.get_module_import(&module, name, ast::Layer::Type);
-                        }
-                    }
-                    None
-                }) {
-                    self.qualified_constructor = Some(QualifiedConstructor {
-                        import,
-                        used_name: module_alias.clone(),
-                        constructor: name.clone(),
-                        layer: ast::Layer::Type,
-                    });
+        if overlaps(self.params.range, range)
+            && let Some((module_alias, _)) = module
+            && let Some(import) = self.module.find_node(location.end).and_then(|node| {
+                if let Located::Annotation { type_, .. } = node
+                    && let Some((module, _)) = type_.named_type_name()
+                {
+                    return self.get_module_import(&module, name, ast::Layer::Type);
                 }
-            }
+                None
+            })
+        {
+            self.qualified_constructor = Some(QualifiedConstructor {
+                import,
+                used_name: module_alias.clone(),
+                constructor: name.clone(),
+                layer: ast::Layer::Type,
+            });
         }
         ast::visit::visit_type_ast_constructor(
             self,
@@ -1487,23 +1486,20 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
         //  ↑
         // This allows us to offer a code action when hovering over the module name.
         let range = src_span_to_lsp_range(*location, self.line_numbers);
-        if overlaps(self.params.range, range) {
-            if let ModuleValueConstructor::Record {
+        if overlaps(self.params.range, range)
+            && let ModuleValueConstructor::Record {
                 name: constructor_name,
                 ..
             } = constructor
-            {
-                if let Some(import) =
-                    self.get_module_import(module_name, constructor_name, ast::Layer::Value)
-                {
-                    self.qualified_constructor = Some(QualifiedConstructor {
-                        import,
-                        used_name: module_alias.clone(),
-                        constructor: constructor_name.clone(),
-                        layer: ast::Layer::Value,
-                    });
-                }
-            }
+            && let Some(import) =
+                self.get_module_import(module_name, constructor_name, ast::Layer::Value)
+        {
+            self.qualified_constructor = Some(QualifiedConstructor {
+                import,
+                used_name: module_alias.clone(),
+                constructor: constructor_name.clone(),
+                layer: ast::Layer::Value,
+            });
         }
         ast::visit::visit_typed_expr_module_select(
             self,
@@ -1529,21 +1525,18 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
         type_: &'ast Arc<Type>,
     ) {
         let range = src_span_to_lsp_range(*location, self.line_numbers);
-        if overlaps(self.params.range, range) {
-            if let Some((module_alias, _)) = module {
-                if let analyse::Inferred::Known(constructor) = constructor {
-                    if let Some(import) =
-                        self.get_module_import(&constructor.module, name, ast::Layer::Value)
-                    {
-                        self.qualified_constructor = Some(QualifiedConstructor {
-                            import,
-                            used_name: module_alias.clone(),
-                            constructor: name.clone(),
-                            layer: ast::Layer::Value,
-                        });
-                    }
-                }
-            }
+        if overlaps(self.params.range, range)
+            && let Some((module_alias, _)) = module
+            && let analyse::Inferred::Known(constructor) = constructor
+            && let Some(import) =
+                self.get_module_import(&constructor.module, name, ast::Layer::Value)
+        {
+            self.qualified_constructor = Some(QualifiedConstructor {
+                import,
+                used_name: module_alias.clone(),
+                constructor: name.clone(),
+                layer: ast::Layer::Value,
+            });
         }
         ast::visit::visit_typed_pattern_constructor(
             self,
@@ -1754,18 +1747,18 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
         spread: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
     ) {
-        if let Some((module_alias, _)) = module {
-            if let analyse::Inferred::Known(_) = constructor {
-                let QualifiedConstructor {
-                    used_name,
-                    constructor,
-                    layer,
-                    ..
-                } = &self.qualified_constructor;
+        if let Some((module_alias, _)) = module
+            && let analyse::Inferred::Known(_) = constructor
+        {
+            let QualifiedConstructor {
+                used_name,
+                constructor,
+                layer,
+                ..
+            } = &self.qualified_constructor;
 
-                if layer.is_value() && used_name == module_alias && name == constructor {
-                    self.remove_module_qualifier(*location);
-                }
+            if layer.is_value() && used_name == module_alias && name == constructor {
+                self.remove_module_qualifier(*location);
             }
         }
         ast::visit::visit_typed_pattern_constructor(
@@ -1957,17 +1950,17 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
         name: &'ast EcoString,
     ) {
         let range = src_span_to_lsp_range(*location, self.line_numbers);
-        if overlaps(self.params.range, range) {
-            if let Some(module_name) = match &constructor.variant {
+        if overlaps(self.params.range, range)
+            && let Some(module_name) = match &constructor.variant {
                 type_::ValueConstructorVariant::ModuleConstant { module, .. }
                 | type_::ValueConstructorVariant::ModuleFn { module, .. }
                 | type_::ValueConstructorVariant::Record { module, .. } => Some(module),
 
                 type_::ValueConstructorVariant::LocalVariable { .. }
                 | type_::ValueConstructorVariant::LocalConstant { .. } => None,
-            } {
-                self.get_module_import_from_value_constructor(module_name, name);
             }
+        {
+            self.get_module_import_from_value_constructor(module_name, name);
         }
         ast::visit::visit_typed_expr_var(self, location, constructor, name);
     }
@@ -1988,10 +1981,9 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
                 self.params.range,
                 src_span_to_lsp_range(*location, self.line_numbers),
             )
+            && let analyse::Inferred::Known(constructor) = constructor
         {
-            if let analyse::Inferred::Known(constructor) = constructor {
-                self.get_module_import_from_value_constructor(&constructor.module, name);
-            }
+            self.get_module_import_from_value_constructor(&constructor.module, name);
         }
 
         ast::visit::visit_typed_pattern_constructor(
@@ -2595,10 +2587,10 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToUse<'ast> {
         // The cursor has to be inside the last statement of the function to
         // offer the code action.
         let last_statement_range = self.edits.src_span_to_lsp_range(fun.body.last().location());
-        if within(self.params.range, last_statement_range) {
-            if let Some(call_data) = turn_statement_into_use(fun.body.last()) {
-                self.selected_call = Some(call_data);
-            }
+        if within(self.params.range, last_statement_range)
+            && let Some(call_data) = turn_statement_into_use(fun.body.last())
+        {
+            self.selected_call = Some(call_data);
         }
 
         ast::visit::visit_typed_function(self, fun)
@@ -2616,10 +2608,10 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToUse<'ast> {
         // The cursor has to be inside the last statement of the body to
         // offer the code action.
         let last_statement_range = self.edits.src_span_to_lsp_range(body.last().location());
-        if within(self.params.range, last_statement_range) {
-            if let Some(call_data) = turn_statement_into_use(body.last()) {
-                self.selected_call = Some(call_data);
-            }
+        if within(self.params.range, last_statement_range)
+            && let Some(call_data) = turn_statement_into_use(body.last())
+        {
+            self.selected_call = Some(call_data);
         }
 
         ast::visit::visit_typed_expr_fn(
@@ -3614,15 +3606,16 @@ impl<'ast> ast::visit::Visit<'ast> for ExpandFunctionCapture<'ast> {
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
         let fn_range = self.edits.src_span_to_lsp_range(*location);
-        if within(self.params.range, fn_range) && kind.is_capture() {
-            if let [argument] = arguments {
-                self.function_capture_data = Some(FunctionCaptureData {
-                    function_span: *location,
-                    hole_span: argument.location,
-                    hole_type: argument.type_.clone(),
-                    reserved_names: VariablesNames::from_statements(body),
-                });
-            }
+        if within(self.params.range, fn_range)
+            && kind.is_capture()
+            && let [argument] = arguments
+        {
+            self.function_capture_data = Some(FunctionCaptureData {
+                function_span: *location,
+                hole_span: argument.location,
+                hole_type: argument.type_.clone(),
+                reserved_names: VariablesNames::from_statements(body),
+            });
         }
 
         ast::visit::visit_typed_expr_fn(
@@ -6612,34 +6605,32 @@ impl<'ast> ast::visit::Visit<'ast> for FillUnusedFields<'ast> {
             spread: Some(spread_location),
             ..
         } = pattern
-        {
-            if let Some(PatternUnusedArguments {
+            && let Some(PatternUnusedArguments {
                 positional,
                 labelled,
             }) = pattern.unused_arguments()
-            {
-                // If there's any unused argument that's being ignored we want to
-                // suggest the code action.
-                let first_labelled_argument_start = arguments
-                    .iter()
-                    .find(|arg| !arg.is_implicit() && arg.label.is_some())
-                    .map(|arg| arg.location.start);
+        {
+            // If there's any unused argument that's being ignored we want to
+            // suggest the code action.
+            let first_labelled_argument_start = arguments
+                .iter()
+                .find(|arg| !arg.is_implicit() && arg.label.is_some())
+                .map(|arg| arg.location.start);
 
-                let last_argument_end = arguments
-                    .iter()
-                    .filter(|arg| !arg.is_implicit())
-                    .next_back()
-                    .map(|arg| arg.location.end);
+            let last_argument_end = arguments
+                .iter()
+                .filter(|arg| !arg.is_implicit())
+                .next_back()
+                .map(|arg| arg.location.end);
 
-                self.data = Some(FillUnusedFieldsData {
-                    positional,
-                    labelled,
-                    first_labelled_argument_start,
-                    last_argument_end,
-                    spread_location: *spread_location,
-                });
-            };
-        }
+            self.data = Some(FillUnusedFieldsData {
+                positional,
+                labelled,
+                first_labelled_argument_start,
+                last_argument_end,
+                spread_location: *spread_location,
+            });
+        };
 
         ast::visit::visit_typed_pattern(self, pattern);
     }

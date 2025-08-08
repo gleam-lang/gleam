@@ -417,25 +417,21 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
     }
 
     fn warn_if_call_first_argument_is_hole(&mut self, call: &UntypedExpr) {
-        if let UntypedExpr::Fn { kind, body, .. } = &call {
-            if kind.is_capture() {
-                if let Statement::Expression(UntypedExpr::Call { arguments, .. }) = body.first() {
-                    match arguments.as_slice() {
-                        // If the first argument is labelled, we don't warn the user
-                        // as they might be intentionally adding it to provide more
-                        // information about exactly which argument is being piped into.
-                        [first] | [first, ..]
-                            if first.is_capture_hole() && first.label.is_none() =>
-                        {
-                            self.expr_typer.problems.warning(
-                                Warning::RedundantPipeFunctionCapture {
-                                    location: first.location,
-                                },
-                            )
-                        }
-                        _ => (),
-                    }
-                }
+        if let UntypedExpr::Fn { kind, body, .. } = &call
+            && kind.is_capture()
+            && let Statement::Expression(UntypedExpr::Call { arguments, .. }) = body.first()
+        {
+            match arguments.as_slice() {
+                // If the first argument is labelled, we don't warn the user
+                // as they might be intentionally adding it to provide more
+                // information about exactly which argument is being piped into.
+                [first] | [first, ..] if first.is_capture_hole() && first.label.is_none() => self
+                    .expr_typer
+                    .problems
+                    .warning(Warning::RedundantPipeFunctionCapture {
+                        location: first.location,
+                    }),
+                _ => (),
             }
         }
     }
