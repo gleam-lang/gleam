@@ -119,7 +119,9 @@ impl TypedConstant {
                             layer: Layer::Value,
                         }
                     }
-                    _ => Located::Constant(self),
+                    type_::ValueConstructorVariant::LocalVariable { .. }
+                    | type_::ValueConstructorVariant::LocalConstant { .. } =>
+                        Located::Constant(self),
                 }
             }
 

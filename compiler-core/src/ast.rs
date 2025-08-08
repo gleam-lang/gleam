@@ -1921,14 +1921,14 @@ impl TypedClauseGuard {
             | ClauseGuard::DivFloat { left, right, .. }
             | ClauseGuard::RemainderInt { left, right, .. }
             | ClauseGuard::Or { left, right, .. }
-            | ClauseGuard::And { left, right, .. } =>
+            | ClauseGuard::And { left, right, .. } => {
                 left.find_node(byte_index)
-                .or_else(|| right.find_node(byte_index)),
+                .or_else(|| right.find_node(byte_index))
+            },
             ClauseGuard::Not { expression, .. } => expression.find_node(byte_index),
             ClauseGuard::Constant(constant) => constant.find_node(byte_index),
             ClauseGuard::TupleIndex { tuple, .. } => tuple.find_node(byte_index),
             ClauseGuard::FieldAccess { container, .. } => container.find_node(byte_index),
-            ClauseGuard::Var { .. } => None,
             ClauseGuard::ModuleSelect {
                 location,
                 module_name,
@@ -1938,6 +1938,7 @@ impl TypedClauseGuard {
                 name: module_name.clone(),
                 layer: Layer::Value,
             }),
+            ClauseGuard::Var { .. } => None,
         }
     }
 
@@ -2596,7 +2597,11 @@ impl<Value, Type> BitArraySegment<Value, Type> {
 
 impl TypedExprBitArraySegment {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
-        self.value.find_node(byte_index)
+        self.value.find_node(byte_index).or_else(|| {
+            self.options
+                .iter()
+                .find_map(|option| option.find_node(byte_index))
+        })
     }
 }
 
@@ -2868,6 +2873,30 @@ impl BitArrayOption<TypedConstant> {
             | BitArrayOption::Native { .. } => im::hashset![],
 
             BitArrayOption::Size { value, .. } => value.referenced_variables(),
+        }
+    }
+}
+
+impl BitArrayOption<TypedExpr> {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        match self {
+            BitArrayOption::Bytes { .. }
+            | BitArrayOption::Int { .. }
+            | BitArrayOption::Float { .. }
+            | BitArrayOption::Bits { .. }
+            | BitArrayOption::Utf8 { .. }
+            | BitArrayOption::Utf16 { .. }
+            | BitArrayOption::Utf32 { .. }
+            | BitArrayOption::Utf8Codepoint { .. }
+            | BitArrayOption::Utf16Codepoint { .. }
+            | BitArrayOption::Utf32Codepoint { .. }
+            | BitArrayOption::Signed { .. }
+            | BitArrayOption::Unsigned { .. }
+            | BitArrayOption::Big { .. }
+            | BitArrayOption::Little { .. }
+            | BitArrayOption::Native { .. }
+            | BitArrayOption::Unit { .. } => None,
+            BitArrayOption::Size { value, .. } => value.find_node(byte_index),
         }
     }
 }

@@ -627,41 +627,41 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences {
         match constant {
             Constant::Record {
                 module,
-                record_constructor: constructor,
+                record_constructor: Some(constructor),
                 ..
             }
             | Constant::Var {
                 module,
-                constructor,
+                constructor: Some(constructor),
                 ..
             } => {
                 if let Some((_, location)) = module {
-                    if let Some(constructor) = constructor {
-                        match &constructor.variant {
-                            ValueConstructorVariant::ModuleConstant { module, .. }
-                            | ValueConstructorVariant::ModuleFn { module, .. }
-                            | ValueConstructorVariant::Record { module, .. } => {
-                                if *module == self.module {
-                                    self.references.push(ModuleNameReference {
-                                        location: *location,
-                                        kind: ModuleNameReferenceKind::Name,
-                                    });
-                                }
+                    match &constructor.variant {
+                        ValueConstructorVariant::ModuleConstant { module, .. }
+                        | ValueConstructorVariant::ModuleFn { module, .. }
+                        | ValueConstructorVariant::Record { module, .. } => {
+                            if *module == self.module {
+                                self.references.push(ModuleNameReference {
+                                    location: *location,
+                                    kind: ModuleNameReferenceKind::Name,
+                                });
                             }
-                            ValueConstructorVariant::LocalVariable { .. } => {},
-                            ValueConstructorVariant::LocalConstant { .. } => {},
                         }
+                        ValueConstructorVariant::LocalVariable { .. }
+                        | ValueConstructorVariant::LocalConstant { .. } => {},
                     }
                 }
             }
-            Constant::Int { .. } => {},
-            Constant::Float { .. } => {},
-            Constant::String { .. } => {},
-            Constant::Tuple { .. } => {},
-            Constant::List { .. } => {},
-            Constant::BitArray { .. } => {},
-            Constant::StringConcatenation { .. } => {},
-            Constant::Invalid { .. } => {},
+            Constant::Tuple { .. }
+            | Constant::List { .. }
+            | Constant::Int { .. }
+            | Constant::Float { .. }
+            | Constant::String { .. }
+            | Constant::Var { .. }
+            | Constant::Record { .. }
+            | Constant::BitArray { .. }
+            | Constant::StringConcatenation { .. }
+            | Constant::Invalid { .. } => {},
         }
 
         ast::visit::visit_typed_constant(self, constant);
