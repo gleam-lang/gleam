@@ -61,12 +61,6 @@ impl Problems {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub struct UnknownType {
-    pub location: SrcSpan,
-    pub name: EcoString,
-}
-
 /// This is used by the unknown record field error to tell if an unknown field
 /// is a field appearing in another variant of the same type to provide a better
 /// error message explaining why it can't be accessed:
