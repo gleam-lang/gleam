@@ -342,17 +342,13 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
         // Otherwise we need to check that the annotated version range is
         // correct and includes the minimum required version.
         Some(gleam_version) => {
-            if let Some(lowest_allowed_version) = gleam_version.lowest_version() {
-                if lowest_allowed_version < minimum_required_version {
-                    return Err(Error::CannotPublishWrongVersion {
-                        minimum_required_version: SmallVersion::from_hexpm(
-                            minimum_required_version,
-                        ),
-                        wrongfully_allowed_version: SmallVersion::from_hexpm(
-                            lowest_allowed_version,
-                        ),
-                    });
-                }
+            if let Some(lowest_allowed_version) = gleam_version.lowest_version()
+                && lowest_allowed_version < minimum_required_version
+            {
+                return Err(Error::CannotPublishWrongVersion {
+                    minimum_required_version: SmallVersion::from_hexpm(minimum_required_version),
+                    wrongfully_allowed_version: SmallVersion::from_hexpm(lowest_allowed_version),
+                });
             }
         }
     }

@@ -339,10 +339,10 @@ impl TypedExpr {
                     }
                 }
 
-                if let Some(tail) = tail {
-                    if let Some(node) = tail.find_node(byte_index) {
-                        return Some(node);
-                    }
+                if let Some(tail) = tail
+                    && let Some(node) = tail.find_node(byte_index)
+                {
+                    return Some(node);
                 }
                 self.self_if_contains_location(byte_index)
             }
@@ -484,10 +484,10 @@ impl TypedExpr {
                     }
                 }
 
-                if let Some(tail) = tail {
-                    if let Some(node) = tail.find_statement(byte_index) {
-                        return Some(node);
-                    }
+                if let Some(tail) = tail
+                    && let Some(node) = tail.find_statement(byte_index)
+                {
+                    return Some(node);
                 }
                 None
             }

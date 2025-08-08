@@ -2198,10 +2198,10 @@ impl<'comments> Formatter<'comments> {
             let item_location = item.location();
             // A list has multiple items on the same line if two consecutive
             // ones do not span multiple lines.
-            if let Some(previous) = previous {
-                if !self.spans_multiple_lines(previous.end, item_location.start) {
-                    return true;
-                }
+            if let Some(previous) = previous
+                && !self.spans_multiple_lines(previous.end, item_location.start)
+            {
+                return true;
             }
             previous = Some(item_location);
         }

@@ -903,11 +903,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .error(convert_unify_error(error, value.location()));
         }
 
-        if let TypedExpr::Int { value: ref v, .. } = value {
-            if v.starts_with('-') {
-                self.problems
-                    .warning(Warning::UnnecessaryDoubleIntNegation { location });
-            }
+        if let TypedExpr::Int { value: ref v, .. } = value
+            && v.starts_with('-')
+        {
+            self.problems
+                .warning(Warning::UnnecessaryDoubleIntNegation { location });
         }
 
         if let TypedExpr::NegateInt { .. } = value {
@@ -1259,20 +1259,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             (Ok(record_access), _) => {
                 // If this is actually record access and not module access, and we didn't register
                 // the reference earlier, we register it now.
-                if let TypedExpr::RecordAccess { record, .. } = &record_access {
-                    if let TypedExpr::Var {
+                if let TypedExpr::RecordAccess { record, .. } = &record_access
+                    && let TypedExpr::Var {
                         location,
                         constructor,
                         name,
                     } = record.as_ref()
-                    {
-                        self.register_value_constructor_reference(
-                            name,
-                            &constructor.variant,
-                            *location,
-                            ReferenceKind::Unqualified,
-                        )
-                    }
+                {
+                    self.register_value_constructor_reference(
+                        name,
+                        &constructor.variant,
+                        *location,
+                        ReferenceKind::Unqualified,
+                    )
                 }
                 record_access
             }
@@ -4135,26 +4134,26 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // argument that is implicitly passed by the compiler.
         // This way we can provide better argument hints for incomplete use
         // expressions.
-        if let CallKind::Use { .. } = kind {
-            if let Some(last) = arguments.pop() {
-                for _ in 0..missing_arguments {
-                    arguments.push(CallArg {
-                        label: None,
-                        location,
-                        value: UntypedExpr::Placeholder {
-                            // We intentionally give this an empty span since it
-                            // is an implicit argument being passed by the compiler
-                            // that doesn't appear in the source code.
-                            location: SrcSpan {
-                                start: last.location().start,
-                                end: last.location().start,
-                            },
+        if let CallKind::Use { .. } = kind
+            && let Some(last) = arguments.pop()
+        {
+            for _ in 0..missing_arguments {
+                arguments.push(CallArg {
+                    label: None,
+                    location,
+                    value: UntypedExpr::Placeholder {
+                        // We intentionally give this an empty span since it
+                        // is an implicit argument being passed by the compiler
+                        // that doesn't appear in the source code.
+                        location: SrcSpan {
+                            start: last.location().start,
+                            end: last.location().start,
                         },
-                        implicit: Some(ImplicitCallArgOrigin::IncorrectArityUse),
-                    });
-                }
-                arguments.push(last);
+                    },
+                    implicit: Some(ImplicitCallArgOrigin::IncorrectArityUse),
+                });
             }
+            arguments.push(last);
         };
 
         // Ensure that the given args have the correct types
@@ -4383,30 +4382,30 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             let mut body = body_typer.infer_statements(body);
 
             // Check that any return type is accurate.
-            if let Some(return_type) = return_type {
-                if let Err(error) = unify(return_type, body.last().type_()) {
-                    let error = error
-                        .return_annotation_mismatch()
-                        .into_error(body.last().type_defining_location());
-                    body_typer.problems.error(error);
+            if let Some(return_type) = return_type
+                && let Err(error) = unify(return_type, body.last().type_())
+            {
+                let error = error
+                    .return_annotation_mismatch()
+                    .into_error(body.last().type_defining_location());
+                body_typer.problems.error(error);
 
-                    // If the return type doesn't match with the annotation we
-                    // add a new expression to the end of the function to match
-                    // the annotated type and allow type inference to keep
-                    // going.
-                    body.push(Statement::Expression(TypedExpr::Invalid {
-                        // This is deliberately an empty span since this
-                        // placeholder expression is implicitly inserted by the
-                        // compiler and doesn't actually appear in the source
-                        // code.
-                        location: SrcSpan {
-                            start: body.last().location().end,
-                            end: body.last().location().end,
-                        },
-                        type_: body_typer.new_unbound_var(),
-                    }))
-                };
-            }
+                // If the return type doesn't match with the annotation we
+                // add a new expression to the end of the function to match
+                // the annotated type and allow type inference to keep
+                // going.
+                body.push(Statement::Expression(TypedExpr::Invalid {
+                    // This is deliberately an empty span since this
+                    // placeholder expression is implicitly inserted by the
+                    // compiler and doesn't actually appear in the source
+                    // code.
+                    location: SrcSpan {
+                        start: body.last().location().end,
+                        end: body.last().location().end,
+                    },
+                    type_: body_typer.new_unbound_var(),
+                }))
+            };
 
             Ok((arguments, body))
         })
@@ -4499,21 +4498,21 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         // Then if the required version is not in the specified version for the
         // range we emit a warning highlighting the usage of the feature.
-        if let Some(gleam_version) = &self.environment.gleam_version {
-            if let Some(lowest_allowed_version) = gleam_version.lowest_version() {
-                // There is a version in the specified range that is lower than
-                // the one required by this feature! This means that the
-                // specified range is wrong and would allow someone to run a
-                // compiler that is too old to know of this feature.
-                if minimum_required_version > lowest_allowed_version {
-                    self.problems
-                        .warning(Warning::FeatureRequiresHigherGleamVersion {
-                            location,
-                            feature_kind,
-                            minimum_required_version: minimum_required_version.clone(),
-                            wrongfully_allowed_version: lowest_allowed_version,
-                        })
-                }
+        if let Some(gleam_version) = &self.environment.gleam_version
+            && let Some(lowest_allowed_version) = gleam_version.lowest_version()
+        {
+            // There is a version in the specified range that is lower than
+            // the one required by this feature! This means that the
+            // specified range is wrong and would allow someone to run a
+            // compiler that is too old to know of this feature.
+            if minimum_required_version > lowest_allowed_version {
+                self.problems
+                    .warning(Warning::FeatureRequiresHigherGleamVersion {
+                        location,
+                        feature_kind,
+                        minimum_required_version: minimum_required_version.clone(),
+                        wrongfully_allowed_version: lowest_allowed_version,
+                    })
             }
         }
 

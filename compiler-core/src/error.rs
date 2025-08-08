@@ -688,21 +688,22 @@ pub fn edit_distance(a: &str, b: &str, limit: usize) -> Option<usize> {
                 );
             }
 
-            if (i > 1) && (j > 1) {
-                if let (Some(&a_val), Some(&b_val_prev), Some(&a_val_prev), Some(&b_val)) = (
+            if (i > 1)
+                && (j > 1)
+                && let (Some(&a_val), Some(&b_val_prev), Some(&a_val_prev), Some(&b_val)) = (
                     a.get(a_idx),
                     b.get(b_idx - 1),
                     a.get(a_idx - 1),
                     b.get(b_idx),
-                ) {
-                    if (a_val == b_val_prev) && (a_val_prev == b_val) {
-                        // transposition
-                        if let Some(curr) = current.get_mut(j) {
-                            if let Some(&prev_prev_val) = prev_prev.get(j - 2) {
-                                *curr = std::cmp::min(*curr, prev_prev_val + 1);
-                            }
-                        }
-                    }
+                )
+                && (a_val == b_val_prev)
+                && (a_val_prev == b_val)
+            {
+                // transposition
+                if let Some(curr) = current.get_mut(j)
+                    && let Some(&prev_prev_val) = prev_prev.get(j - 2)
+                {
+                    *curr = std::cmp::min(*curr, prev_prev_val + 1);
                 }
             }
         }
