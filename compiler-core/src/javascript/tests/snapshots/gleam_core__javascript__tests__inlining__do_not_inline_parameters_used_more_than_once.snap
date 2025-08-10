@@ -20,7 +20,7 @@ export function main() {
     if (something) {
       return something;
     } else {
-      return false;
+      return something;
     }
   }
 }
