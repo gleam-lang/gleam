@@ -19,7 +19,7 @@ fn do_side_effects() {
 
 ----- COMPILED JAVASCRIPT
 import * as $result from "../../gleam_stdlib/gleam/result.mjs";
-import { Ok, Error, makeError } from "../gleam.mjs";
+import { Ok, makeError } from "../gleam.mjs";
 
 const FILEPATH = "src/module.gleam";
 
@@ -45,8 +45,7 @@ export function main() {
       let value = $[0];
       return new Ok(f(value));
     } else {
-      let error = $[0];
-      return new Error(error);
+      return $;
     }
   }
 }

@@ -37,7 +37,6 @@ export function main() {
     let value = $[0];
     return divide(value, 2);
   } else {
-    let error = $[0];
-    return new Error(error);
+    return $;
   }
 }

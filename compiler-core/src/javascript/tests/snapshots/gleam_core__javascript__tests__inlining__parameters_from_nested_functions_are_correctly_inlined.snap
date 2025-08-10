@@ -49,15 +49,12 @@ export function halve_all(a, b, c) {
         let value$2 = $2[0];
         return new Ok([x, y, value$2]);
       } else {
-        let error = $2[0];
-        return new Error(error);
+        return $2;
       }
     } else {
-      let error = $1[0];
-      return new Error(error);
+      return $1;
     }
   } else {
-    let error = $[0];
-    return new Error(error);
+    return $;
   }
 }

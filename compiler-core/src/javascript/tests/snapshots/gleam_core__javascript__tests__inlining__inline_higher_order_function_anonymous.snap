@@ -15,7 +15,7 @@ pub fn main() {
 
 ----- COMPILED JAVASCRIPT
 import * as $result from "../../gleam_stdlib/gleam/result.mjs";
-import { Ok, Error } from "../gleam.mjs";
+import { Ok } from "../gleam.mjs";
 
 export function main() {
   let $ = new Ok(10);
@@ -23,7 +23,6 @@ export function main() {
     let value = $[0];
     return new Ok((value + 2) * 4);
   } else {
-    let error = $[0];
-    return new Error(error);
+    return $;
   }
 }

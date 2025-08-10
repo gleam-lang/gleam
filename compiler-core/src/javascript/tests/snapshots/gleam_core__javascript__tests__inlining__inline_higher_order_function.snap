@@ -15,7 +15,7 @@ fn double(x) { x + x }
 
 ----- COMPILED JAVASCRIPT
 import * as $result from "../../gleam_stdlib/gleam/result.mjs";
-import { Ok, Error } from "../gleam.mjs";
+import { Ok } from "../gleam.mjs";
 
 function double(x) {
   return x + x;
@@ -27,7 +27,6 @@ export function main() {
     let value = $[0];
     return new Ok(double(value));
   } else {
-    let error = $[0];
-    return new Error(error);
+    return $;
   }
 }
