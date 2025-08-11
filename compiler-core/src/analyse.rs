@@ -43,7 +43,7 @@ use hexpm::version::Version;
 use itertools::Itertools;
 use name::{check_argument_names, check_name_case};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     ops::Deref,
     sync::{Arc, OnceLock},
 };
@@ -146,6 +146,7 @@ pub struct ModuleAnalyzerConstructor<'a, A> {
     pub importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
     pub warnings: &'a TypeWarningEmitter,
     pub direct_dependencies: &'a HashMap<EcoString, A>,
+    pub dev_dependencies: &'a HashSet<EcoString>,
     pub target_support: TargetSupport,
     pub package_config: &'a PackageConfig,
 }
@@ -167,6 +168,7 @@ impl<A> ModuleAnalyzerConstructor<'_, A> {
             importable_modules: self.importable_modules,
             warnings: self.warnings,
             direct_dependencies: self.direct_dependencies,
+            dev_dependencies: self.dev_dependencies,
             target_support: self.target_support,
             package_config: self.package_config,
             line_numbers,
@@ -189,6 +191,7 @@ struct ModuleAnalyzer<'a, A> {
     importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
     warnings: &'a TypeWarningEmitter,
     direct_dependencies: &'a HashMap<EcoString, A>,
+    dev_dependencies: &'a HashSet<EcoString>,
     target_support: TargetSupport,
     package_config: &'a PackageConfig,
     line_numbers: LineNumbers,
@@ -224,6 +227,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             importable_modules: self.importable_modules,
             target_support: self.target_support,
             current_origin: self.origin,
+            dev_dependencies: self.dev_dependencies,
         }
         .build();
 
