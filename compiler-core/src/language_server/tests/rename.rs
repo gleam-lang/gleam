@@ -326,6 +326,24 @@ pub fn main() {
 }
 
 #[test]
+fn rename_local_variable_from_label_shorthand() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int)
+}
+
+pub fn main() {
+  let wibble = todo
+  Wibble(wibble:)
+}
+",
+        "wobble",
+        find_position_of("wibble:)")
+    );
+}
+
+#[test]
 fn rename_local_variable_in_bit_array_pattern() {
     assert_rename!(
         "
