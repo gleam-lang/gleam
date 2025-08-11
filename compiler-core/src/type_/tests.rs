@@ -352,6 +352,7 @@ fn compile_statement_sequence(
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
     let mut problems = Problems::new();
+    let dev_dependencies = HashSet::new();
     let mut environment = EnvironmentArguments {
         ids,
         current_package: "thepackage".into(),
@@ -361,6 +362,7 @@ fn compile_statement_sequence(
         importable_modules: &modules,
         target_support: TargetSupport::Enforced,
         current_origin: Origin::Src,
+        dev_dependencies: &dev_dependencies,
     }
     .build();
     let res = ExprTyper::new(
@@ -487,6 +489,7 @@ pub fn compile_module_with_opts(
             importable_modules: &modules,
             warnings: &TypeWarningEmitter::null(),
             direct_dependencies: &HashMap::new(),
+            dev_dependencies: &HashSet::new(),
             target_support,
             package_config: &config,
         }
@@ -515,6 +518,7 @@ pub fn compile_module_with_opts(
         importable_modules: &modules,
         warnings: &warnings,
         direct_dependencies: &direct_dependencies,
+        dev_dependencies: &HashSet::new(),
         target_support: TargetSupport::Enforced,
         package_config: &config,
     }
@@ -759,6 +763,7 @@ fn infer_module_type_retention_test() {
         importable_modules: &modules,
         warnings: &TypeWarningEmitter::null(),
         direct_dependencies: &direct_dependencies,
+        dev_dependencies: &HashSet::new(),
         target_support: TargetSupport::Enforced,
         package_config: &config,
     }
