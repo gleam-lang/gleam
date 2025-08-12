@@ -518,7 +518,7 @@ pub fn compile_module_with_opts(
         importable_modules: &modules,
         warnings: &warnings,
         direct_dependencies: &direct_dependencies,
-        dev_dependencies: &HashSet::new(),
+        dev_dependencies: &HashSet::from_iter(["dev_dependency".into()]),
         target_support: TargetSupport::Enforced,
         package_config: &config,
     }

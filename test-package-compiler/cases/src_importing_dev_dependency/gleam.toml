@@ -1,6 +1,0 @@
-name = "importy"
-version = "0.1.0"
-target = "erlang"
-
-[dev-dependencies]
-gleam_stdlib = ">= 0.62.0 and < 2.0.0"
