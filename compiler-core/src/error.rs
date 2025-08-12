@@ -301,6 +301,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("The modules {modules:?} import dev dependencies cannot be published")]
     CannotPublishImportingDevDependency { modules: Vec<EcoString> },
 
+    #[error("The modules {modules:?} import dev dependencies cannot be exported")]
+    CannotExportShipmentImportingDevDependency { modules: Vec<EcoString> },
+
     #[error("Publishing packages to reserve names is not permitted")]
     HexPackageSquatting,
 
@@ -1052,7 +1055,7 @@ Please make sure internal types do not appear in public functions and try again.
 
             Error::CannotPublishImportingDevDependency { modules } => vec![Diagnostic {
                 title: "Cannot publish code importing dev dependencies".into(),
-                text: format!(
+                text: wrap_format!(
                     "These modules import dev dependencies and cannot be published:
 
 {}
@@ -1061,6 +1064,27 @@ Dev dependencies are not available for published packages, so publishing code \
 importing them would lead to invalid code when this package is added as a \
 dependency. Please make sure your package does not import dev dependencies and \
 try again.",
+                    modules
+                        .iter()
+                        .map(|name| format!("  - {}", name.as_str()))
+                        .join("\n")
+                ),
+                level: Level::Error,
+                hint: None,
+                location: None,
+            }],
+
+            Error::CannotExportShipmentImportingDevDependency { modules } => vec![Diagnostic {
+                title: "Cannot export code importing dev dependencies".into(),
+                text: wrap_format!(
+                    "These modules import dev dependencies and cannot be export \
+as an Erlang shipment:
+
+{}
+
+Dev dependencies are not available for production builds, so exported code \
+importing them would lead to invalid code when run. Please make sure your \
+package does not import dev dependencies and try again.",
                     modules
                         .iter()
                         .map(|name| format!("  - {}", name.as_str()))
