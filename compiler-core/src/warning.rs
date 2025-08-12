@@ -679,13 +679,13 @@ Hint: You can safely remove it.
                 type_::Warning::UnnecessaryDoubleIntNegation { location } => Diagnostic {
                     title: "Unnecessary double negation (--) on integer".into(),
                     text: "".into(),
-                    hint: Some("You can safely remove this.".into()),
+                    hint: None,
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         src: src.clone(),
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
-                            text: None,
+                            text: Some("You can safely remove this.".into()),
                             span: *location,
                         },
                         extra_labels: Vec::new(),
@@ -694,13 +694,13 @@ Hint: You can safely remove it.
                 type_::Warning::UnnecessaryDoubleBoolNegation { location } => Diagnostic {
                     title: "Unnecessary double negation (!!) on bool".into(),
                     text: "".into(),
-                    hint: Some("You can safely remove this.".into()),
+                    hint: None,
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         src: src.clone(),
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
-                            text: None,
+                            text: Some("You can safely remove this.".into()),
                             span: *location,
                         },
                         extra_labels: Vec::new(),

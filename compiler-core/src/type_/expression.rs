@@ -884,9 +884,18 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .error(convert_unify_error(error, value.location()))
         }
 
-        if let TypedExpr::NegateBool { .. } = value {
+        if let TypedExpr::NegateBool {
+            location: inner_location,
+            ..
+        } = value
+        {
             self.problems
-                .warning(Warning::UnnecessaryDoubleBoolNegation { location });
+                .warning(Warning::UnnecessaryDoubleBoolNegation {
+                    location: SrcSpan {
+                        start: location.start,
+                        end: inner_location.start + 1,
+                    },
+                });
         }
 
         TypedExpr::NegateBool {
@@ -903,16 +912,34 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .error(convert_unify_error(error, value.location()));
         }
 
-        if let TypedExpr::Int { value: ref v, .. } = value
+        if let TypedExpr::Int {
+            value: ref v,
+            location: ref inner_location,
+            ..
+        } = value
             && v.starts_with('-')
         {
             self.problems
-                .warning(Warning::UnnecessaryDoubleIntNegation { location });
+                .warning(Warning::UnnecessaryDoubleIntNegation {
+                    location: SrcSpan {
+                        start: location.start,
+                        end: inner_location.start + 1,
+                    },
+                });
         }
 
-        if let TypedExpr::NegateInt { .. } = value {
+        if let TypedExpr::NegateInt {
+            location: inner_location,
+            ..
+        } = value
+        {
             self.problems
-                .warning(Warning::UnnecessaryDoubleIntNegation { location });
+                .warning(Warning::UnnecessaryDoubleIntNegation {
+                    location: SrcSpan {
+                        start: location.start,
+                        end: inner_location.start + 1,
+                    },
+                });
         }
 
         TypedExpr::NegateInt {
