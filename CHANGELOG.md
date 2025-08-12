@@ -107,6 +107,27 @@
 
 ### Formatter
 
+- The formatter now removes needless multiple negations that are safe to remove.
+  For example, this snippet of code:
+
+  ```gleam
+  pub fn useless_negations() {
+    let lucky_number = --11
+    let lucy_is_a_star = !!!False
+  }
+  ```
+
+  Is rewritten as:
+
+  ```gleam
+  pub fn useless_negations() {
+    let lucky_number = 11
+    let lucy_is_a_star = !False
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Bug fixes
 
 - Fixed a bug where `echo` could crash on JavaScript if the module contains
