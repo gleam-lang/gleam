@@ -96,6 +96,10 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The "inline variable" code action is now only suggested when hovering over the
+  relevant variable.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Bug fixes

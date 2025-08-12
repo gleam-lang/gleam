@@ -8934,6 +8934,23 @@ pub fn main() {
 }
 
 #[test]
+fn no_inline_variable_action_when_spanning_multiple_items() {
+    assert_no_code_actions!(
+        INLINE_VARIABLE,
+        "
+pub fn main(x: Int, y: Int) {
+  let a = 1
+  let b = 2
+  main(a, b)
+}
+",
+        find_position_of("main")
+            .nth_occurrence(2)
+            .select_until(find_position_of(")").nth_occurrence(2))
+    );
+}
+
+#[test]
 fn no_inline_variable_action_for_use_pattern() {
     assert_no_code_actions!(
         INLINE_VARIABLE,
