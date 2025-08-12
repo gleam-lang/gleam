@@ -4211,3 +4211,17 @@ pub fn main() -> Bool {
 "
     );
 }
+
+#[test]
+fn warn_when_src_imports_dev_dependency() {
+    assert_warning!(
+        ("dev_dependency", "some_module", "pub fn main() { Nil }"),
+        "
+import some_module
+
+pub fn main() {
+  some_module.main()
+}
+"
+    );
+}

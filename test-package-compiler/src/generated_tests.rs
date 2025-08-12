@@ -311,17 +311,6 @@ fn src_importing_dev() {
 
 #[rustfmt::skip]
 #[test]
-fn src_importing_dev_dependency() {
-    let output = crate::prepare("./cases/src_importing_dev_dependency");
-    insta::assert_snapshot!(
-        "src_importing_dev_dependency",
-        output,
-        "./cases/src_importing_dev_dependency",
-    );
-}
-
-#[rustfmt::skip]
-#[test]
 fn src_importing_test() {
     let output = crate::prepare("./cases/src_importing_test");
     insta::assert_snapshot!(
