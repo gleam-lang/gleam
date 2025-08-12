@@ -64,6 +64,11 @@
   errors.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler now emits a single warning for multiple negations in a row, while
+  previously it would emit multiple comments highlighting increasingly longer
+  spans.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Build tool
 
 - New projects are generated using OTP28 on GitHub Actions.
