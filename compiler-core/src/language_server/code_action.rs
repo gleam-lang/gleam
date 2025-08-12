@@ -5983,7 +5983,7 @@ impl<'ast> ast::visit::Visit<'ast> for InlineVariable<'ast> {
     ) {
         let range = self.edits.src_span_to_lsp_range(*location);
 
-        if !overlaps(self.params.range, range) {
+        if !within(self.params.range, range) {
             return;
         }
 
@@ -6025,7 +6025,7 @@ impl<'ast> ast::visit::Visit<'ast> for InlineVariable<'ast> {
 
         let range = self.edits.src_span_to_lsp_range(*location);
 
-        if !overlaps(self.params.range, range) {
+        if !within(self.params.range, range) {
             return;
         }
 
