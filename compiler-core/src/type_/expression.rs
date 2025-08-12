@@ -877,25 +877,65 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     }
 
     fn infer_negate_bool(&mut self, location: SrcSpan, value: UntypedExpr) -> TypedExpr {
-        let value = self.infer(value);
+        self.infer_multiple_negate_bool(location, 1, location, value)
+    }
 
-        if let Err(error) = unify(bool(), value.type_()) {
-            self.problems
-                .error(convert_unify_error(error, value.location()))
-        }
-
-        if let TypedExpr::NegateBool {
+    fn infer_multiple_negate_bool(
+        &mut self,
+        starting_location: SrcSpan,
+        negations: usize,
+        location: SrcSpan,
+        value: UntypedExpr,
+    ) -> TypedExpr {
+        // If we're typing a double negation we just keep going increasing the
+        // number of consecutive negations, inferring the wrapped value.
+        if let UntypedExpr::NegateBool {
             location: inner_location,
-            ..
+            value,
         } = value
         {
+            return TypedExpr::NegateBool {
+                location,
+                value: Box::new(self.infer_multiple_negate_bool(
+                    starting_location,
+                    negations + 1,
+                    inner_location,
+                    *value,
+                )),
+            };
+        }
+
+        // We know the last value can't be a bool negation if we're here, so
+        // we're ready to produce a typed value!
+        let value = self.infer(value);
+        if let Err(error) = unify(bool(), value.type_()) {
             self.problems
-                .warning(Warning::UnnecessaryDoubleBoolNegation {
-                    location: SrcSpan {
-                        start: location.start,
-                        end: inner_location.start + 1,
-                    },
-                });
+                .error(convert_unify_error(error, value.location()));
+        }
+
+        // If there's more than a single negation we can raise a warning
+        // highlighting the unneded ones. How many negations are highlighted
+        // depends if they're an even or odd number:
+        //
+        // ```gleam
+        // !!True   // all negations are superfluous.
+        // !!!True  // we can remove all but one negation.
+        // ```
+        if negations > 1 {
+            let location = if negations % 2 == 0 {
+                SrcSpan {
+                    start: starting_location.start,
+                    end: location.start + 1,
+                }
+            } else {
+                SrcSpan {
+                    start: starting_location.start,
+                    end: location.start,
+                }
+            };
+
+            self.problems
+                .warning(Warning::UnnecessaryDoubleBoolNegation { location });
         }
 
         TypedExpr::NegateBool {
@@ -905,41 +945,82 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     }
 
     fn infer_negate_int(&mut self, location: SrcSpan, value: UntypedExpr) -> TypedExpr {
-        let value = self.infer(value);
+        self.infer_multiple_negate_int(location, 1, location, value)
+    }
 
+    fn infer_multiple_negate_int(
+        &mut self,
+        starting_location: SrcSpan,
+        mut negations: usize,
+        location: SrcSpan,
+        value: UntypedExpr,
+    ) -> TypedExpr {
+        // If we're typing a double negation we just keep going increasing the
+        // number of consecutive negations, inferring the wrapped value.
+        if let UntypedExpr::NegateInt {
+            location: inner_location,
+            value,
+        } = value
+        {
+            return TypedExpr::NegateInt {
+                location,
+                value: Box::new(self.infer_multiple_negate_int(
+                    starting_location,
+                    negations + 1,
+                    inner_location,
+                    *value,
+                )),
+            };
+        }
+
+        // We know the last value can't be an int negation, so we're ready to
+        // produce a typed value!
+        let value = self.infer(value);
         if let Err(error) = unify(int(), value.type_()) {
             self.problems
                 .error(convert_unify_error(error, value.location()));
         }
 
+        // This is used to emit a warning in case there's multiple negations.
+        let mut end = location.start;
+
+        // There's one special case where the final integer being typed might be
+        // negated as well, in that case we need to update the number of
+        // consecutive negations.
         if let TypedExpr::Int {
             value: ref v,
-            location: ref inner_location,
+            ref location,
             ..
         } = value
             && v.starts_with('-')
         {
-            self.problems
-                .warning(Warning::UnnecessaryDoubleIntNegation {
-                    location: SrcSpan {
-                        start: location.start,
-                        end: inner_location.start + 1,
-                    },
-                });
+            negations += 1;
+            end = location.start;
         }
 
-        if let TypedExpr::NegateInt {
-            location: inner_location,
-            ..
-        } = value
-        {
+        // If there's more than a single negation we can raise a warning
+        // highlighting the unneded ones. How many negations are highlighted
+        // depends if they're an even or odd number:
+        //
+        // ```gleam
+        // --1   // all negations are superfluous.
+        // ---1  // we can remove all but one negation.
+        // ```
+        if negations > 1 {
+            let location = if negations % 2 == 0 {
+                SrcSpan {
+                    start: starting_location.start,
+                    end: end + 1,
+                }
+            } else {
+                SrcSpan {
+                    start: starting_location.start,
+                    end,
+                }
+            };
+
             self.problems
-                .warning(Warning::UnnecessaryDoubleIntNegation {
-                    location: SrcSpan {
-                        start: location.start,
-                        end: inner_location.start + 1,
-                    },
-                });
+                .warning(Warning::UnnecessaryDoubleIntNegation { location });
         }
 
         TypedExpr::NegateInt {
