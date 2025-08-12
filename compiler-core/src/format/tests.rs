@@ -4902,7 +4902,7 @@ fn double_negate() {
 "#,
         r#"pub fn main() {
   let a = 3
-  let b = - -a
+  let b = a
 }
 "#
     );
@@ -4918,7 +4918,7 @@ fn triple_negate() {
 "#,
         r#"pub fn main() {
   let a = 3
-  let b = - - -a
+  let b = -a
 }
 "#
     );
@@ -4950,14 +4950,32 @@ fn binary_double_negate() {
 "#,
         r#"pub fn main() {
   let a = 3
-  let b = - -{ a + 3 }
+  let b = { a + 3 }
 }
 "#
     );
 }
 
 #[test]
-fn repeated_negate_after_subtract() {
+fn even_repeated_negate_after_subtract() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  let a = 3
+  let b = 4
+  let c = a-------b
+}
+"#,
+        r#"pub fn main() {
+  let a = 3
+  let b = 4
+  let c = a - b
+}
+"#
+    );
+}
+
+#[test]
+fn odd_repeated_negate_after_subtract() {
     assert_format_rewrite!(
         r#"pub fn main() {
   let a = 3
@@ -4968,9 +4986,23 @@ fn repeated_negate_after_subtract() {
         r#"pub fn main() {
   let a = 3
   let b = 4
-  let c = a - - - - - - - -b
+  let c = a - -b
 }
 "#
+    );
+}
+
+#[test]
+fn double_negation_on_bools_is_removed() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  !!True
+}
+"#,
+        "pub fn main() {
+  True
+}
+"
     );
 }
 
