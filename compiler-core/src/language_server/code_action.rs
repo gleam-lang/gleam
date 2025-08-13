@@ -7490,3 +7490,75 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveBlock<'ast> {
         ast::visit::visit_typed_expr_block(self, location, statements);
     }
 }
+
+/// Code action to remove `opaque` from a private type.
+///
+pub struct RemovePrivateOpaque<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    opaque_span: Option<SrcSpan>,
+}
+
+impl<'a> RemovePrivateOpaque<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            opaque_span: None,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let Some(opaque_span) = self.opaque_span else {
+            return vec![];
+        };
+
+        self.edits.delete(opaque_span);
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Remove opaque from private type")
+            .kind(CodeActionKind::QUICKFIX)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(true)
+            .push_to(&mut action);
+        action
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for RemovePrivateOpaque<'ast> {
+    fn visit_typed_definition(&mut self, def: &'ast ast::TypedDefinition) {
+        // This code action is only relevant for type definitions, so we don't
+        // waste any time visiting definitions that are not relevant.
+        match def {
+            ast::Definition::Function(_)
+            | ast::Definition::TypeAlias(_)
+            | ast::Definition::Import(_)
+            | ast::Definition::ModuleConstant(_) => (),
+            ast::Definition::CustomType(custom_type) => {
+                self.visit_typed_custom_type(custom_type);
+            }
+        }
+    }
+
+    fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
+        let custom_type_range = self.edits.src_span_to_lsp_range(custom_type.location);
+        if !within(self.params.range, custom_type_range) {
+            return;
+        }
+
+        if custom_type.opaque && custom_type.publicity.is_private() {
+            self.opaque_span = Some(SrcSpan {
+                start: custom_type.location.start,
+                end: custom_type.location.start + 7,
+            })
+        }
+    }
+}

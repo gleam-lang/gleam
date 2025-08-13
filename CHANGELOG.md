@@ -75,6 +75,27 @@
 
 ### Language server
 
+- The language server now offers a quick fix to remove `opaque` from a private
+  type:
+
+  ```gleam
+  opaque type Wibble {
+  // ^^^ This is an error!
+    Wobble
+  }
+  ```
+
+  If you hover over the type and trigger the quick fix, the language server will
+  automatically remove the `opaque` keyword:
+
+  ```gleam
+  type Wibble {
+    Wobble
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Bug fixes
