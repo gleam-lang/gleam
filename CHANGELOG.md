@@ -138,3 +138,7 @@
   expression as safe to remove, instead of just highlighting the double
   negation.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the compiler would crash if there was an invalid version
+  requirement in a project's `gleam.toml`.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
