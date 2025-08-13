@@ -1,0 +1,67 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "opaque type Wibble { Wobble }"
+---
+Parsed {
+    module: Module {
+        name: "",
+        documentation: [],
+        type_info: (),
+        definitions: [
+            TargetedDefinition {
+                definition: CustomType(
+                    CustomType {
+                        location: SrcSpan {
+                            start: 0,
+                            end: 18,
+                        },
+                        end_position: 29,
+                        name: "Wibble",
+                        name_location: SrcSpan {
+                            start: 12,
+                            end: 18,
+                        },
+                        publicity: Private,
+                        constructors: [
+                            RecordConstructor {
+                                location: SrcSpan {
+                                    start: 21,
+                                    end: 27,
+                                },
+                                name_location: SrcSpan {
+                                    start: 21,
+                                    end: 27,
+                                },
+                                name: "Wobble",
+                                arguments: [],
+                                documentation: None,
+                                deprecation: NotDeprecated,
+                            },
+                        ],
+                        documentation: None,
+                        deprecation: NotDeprecated,
+                        opaque: true,
+                        parameters: [],
+                        typed_parameters: [],
+                    },
+                ),
+                target: None,
+            },
+        ],
+        names: Names {
+            local_types: {},
+            imported_modules: {},
+            type_variables: {},
+            local_value_constructors: {},
+        },
+        unused_definition_positions: {},
+    },
+    extra: ModuleExtra {
+        module_comments: [],
+        doc_comments: [],
+        comments: [],
+        empty_lines: [],
+        new_lines: [],
+        trailing_commas: [],
+    },
+}

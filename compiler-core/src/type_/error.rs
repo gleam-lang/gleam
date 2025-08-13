@@ -635,6 +635,19 @@ pub enum Error {
     NonUtf8StringAssignmentInBitArray {
         location: SrcSpan,
     },
+
+    /// This happens when a private type is marked as opaque. Only public types
+    /// can be opaque.
+    ///
+    /// ```gleam
+    /// opaque type Wibble {
+    ///   Wobble
+    /// }
+    /// ```
+    ///
+    PrivateOpaqueType {
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1198,8 +1211,8 @@ impl Error {
             | Error::IntOperatorOnFloats { location, .. }
             | Error::StringConcatenationWithAddInt { location }
             | Error::DoubleVariableAssignmentInBitArray { location }
-            | Error::NonUtf8StringAssignmentInBitArray { location } => location.start,
-
+            | Error::NonUtf8StringAssignmentInBitArray { location }
+            | Error::PrivateOpaqueType { location } => location.start,
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
             }
