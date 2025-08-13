@@ -122,7 +122,10 @@ impl<'de> Visitor<'de> for RequirementVisitor {
     where
         E: de::Error,
     {
-        Ok(FromStr::from_str(value).expect("expected string"))
+        match value.parse::<Requirement>() {
+            Ok(value) => Ok(value),
+            Err(error) => Err(de::Error::custom(error)),
+        }
     }
 
     fn visit_map<M>(self, visitor: M) -> Result<Self::Value, M::Error>
@@ -164,5 +167,16 @@ mod tests {
             deps["github"],
             Requirement::git("https://github.com/gleam-lang/otp.git", "4d34935")
         );
+    }
+
+    #[test]
+    fn read_wrong_version() {
+        let toml = r#"
+            short = ">= 2.0 and < 3.0.0"
+        "#;
+
+        let error =
+            toml::from_str::<HashMap<String, Requirement>>(toml).expect_err("invalid version");
+        insta::assert_snapshot!(error.to_string());
     }
 }
