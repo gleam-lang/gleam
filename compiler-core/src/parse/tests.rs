@@ -1907,3 +1907,8 @@ fn operator_in_pattern_size() {
 fn correct_precedence_in_pattern_size() {
     assert_parse!("let assert <<size, payload:size(size + 2 * 8)>> = <<>>");
 }
+
+#[test]
+fn private_opaque_type_is_parsed() {
+    assert_parse_module!("opaque type Wibble { Wobble }");
+}

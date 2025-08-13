@@ -1326,6 +1326,15 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             });
         }
 
+        if *opaque && publicity.is_private() {
+            self.problems.error(Error::PrivateOpaqueType {
+                location: SrcSpan {
+                    start: location.start,
+                    end: location.start + 6,
+                },
+            });
+        }
+
         Ok(())
     }
 

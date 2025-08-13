@@ -3877,6 +3877,22 @@ and explain your usecase for this pattern, and how you would expect it to behave
                             extra_labels: vec![],
                         }),
                     },
+
+                    TypeError::PrivateOpaqueType { location } => Diagnostic {
+                        title: "Private opaque type".to_string(),
+                        text: wrap("Only a public type can be opaque."),
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("You can safely remove this.".to_string()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    },
                 })
                 .collect_vec(),
 

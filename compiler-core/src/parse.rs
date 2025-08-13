@@ -348,6 +348,13 @@ where
                 self.advance();
                 self.parse_custom_type(start, true, false, &mut attributes)
             }
+            (Some((start, Token::Opaque, _)), Some((_, Token::Type, _))) => {
+                // A private opaque type makes no sense! We still want to parse it
+                // and return an error later during the analysis phase.
+                self.advance();
+                self.advance();
+                self.parse_custom_type(start, false, true, &mut attributes)
+            }
 
             (t0, _) => {
                 self.tok0 = t0;

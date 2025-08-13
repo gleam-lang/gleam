@@ -36,6 +36,34 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The compiler now emits a better error message for private types marked as
+  opaque. For example, the following piece of code:
+
+  ```gleam
+  opaque type Wibble {
+    Wobble
+  }
+  ```
+
+  Would result in the following error:
+
+  ```
+  error: Private opaque type
+    ┌─ /src/one/two.gleam:2:1
+    │
+  2 │ opaque type Wibble {
+    │ ^^^^^^ You can safely remove this.
+
+  Only a public type can be opaque.
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The parsing of opaque private types is now fault tolerant: having a private
+  opaque type in a module no longer stops the compiler from highlighting other
+  errors.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Build tool
 
 - New projects are generated using OTP28 on GitHub Actions.

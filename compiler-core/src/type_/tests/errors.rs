@@ -3283,3 +3283,14 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn private_opaque_type() {
+    assert_module_error!(
+        "
+opaque type Wibble {
+  Wobble
+}
+"
+    );
+}
