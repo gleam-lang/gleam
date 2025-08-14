@@ -312,3 +312,24 @@ fn divide(a, b) {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4852
+#[test]
+fn inlining_works_properly_with_record_updates() {
+    assert_js!(
+        ("gleam_stdlib", "gleam/result", RESULT_MODULE),
+        "
+import gleam/result
+
+pub type Wibble {
+  Wibble(a: Int, b: Int)
+}
+
+pub fn main() {
+  let w = Wibble(1, 2)
+  use b <- result.map(Ok(3))
+  Wibble(..w, b:)
+}
+"
+    );
+}

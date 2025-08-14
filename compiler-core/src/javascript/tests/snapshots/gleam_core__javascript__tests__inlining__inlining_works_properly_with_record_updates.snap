@@ -1,0 +1,41 @@
+---
+source: compiler-core/src/javascript/tests/inlining.rs
+expression: "\nimport gleam/result\n\npub type Wibble {\n  Wibble(a: Int, b: Int)\n}\n\npub fn main() {\n  let w = Wibble(1, 2)\n  use b <- result.map(Ok(3))\n  Wibble(..w, b:)\n}\n"
+---
+----- SOURCE CODE
+
+import gleam/result
+
+pub type Wibble {
+  Wibble(a: Int, b: Int)
+}
+
+pub fn main() {
+  let w = Wibble(1, 2)
+  use b <- result.map(Ok(3))
+  Wibble(..w, b:)
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $result from "../../gleam_stdlib/gleam/result.mjs";
+import { Ok, CustomType as $CustomType } from "../gleam.mjs";
+
+export class Wibble extends $CustomType {
+  constructor(a, b) {
+    super();
+    this.a = a;
+    this.b = b;
+  }
+}
+
+export function main() {
+  let w = new Wibble(1, 2);
+  let $ = new Ok(3);
+  if ($ instanceof Ok) {
+    let value = $[0];
+    return new Ok(new Wibble(w.a, value));
+  } else {
+    return $;
+  }
+}

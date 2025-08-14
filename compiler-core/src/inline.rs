@@ -479,9 +479,28 @@ impl Inliner<'_> {
                 record_assignment: record_assignment
                     .map(|assignment| Box::new(self.assignment(*assignment))),
                 constructor: self.boxed_expression(constructor),
-                arguments,
+                arguments: self.arguments(arguments),
             },
         }
+    }
+
+    fn arguments(&mut self, arguments: Vec<TypedCallArg>) -> Vec<TypedCallArg> {
+        arguments
+            .into_iter()
+            .map(
+                |TypedCallArg {
+                     label,
+                     location,
+                     value,
+                     implicit,
+                 }| TypedCallArg {
+                    label,
+                    location,
+                    value: self.expression(value),
+                    implicit,
+                },
+            )
+            .collect()
     }
 
     /// Where the magic happens. First, we check the left-hand side of the call
@@ -561,22 +580,7 @@ impl Inliner<'_> {
         function: Box<TypedExpr>,
         arguments: Vec<TypedCallArg>,
     ) -> TypedExpr {
-        let arguments = arguments
-            .into_iter()
-            .map(
-                |TypedCallArg {
-                     label,
-                     location,
-                     value,
-                     implicit,
-                 }| TypedCallArg {
-                    label,
-                    location,
-                    value: self.expression(value),
-                    implicit,
-                },
-            )
-            .collect();
+        let arguments = self.arguments(arguments);
 
         // First, we traverse the left-hand side of this call. If this is called
         // inside another inlined function, this could potentially inline an
