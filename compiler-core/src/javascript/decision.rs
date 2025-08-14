@@ -809,7 +809,7 @@ fn single_character_prefix_code(check: &RuntimeCheck) -> Option<u32> {
     match check {
         // On JavaScript, a single "character" is one that can be represented as
         // a single UTF-16 codepoint.
-        RuntimeCheck::StringPrefix { prefix, rest } if utf16_no_escape_len(prefix) == 1 => {
+        RuntimeCheck::StringPrefix { prefix, .. } if utf16_no_escape_len(prefix) == 1 => {
             convert_string_escape_chars(prefix)
                 .chars()
                 .next()
