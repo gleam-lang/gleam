@@ -142,3 +142,7 @@
 - Fixed a bug where the compiler would crash if there was an invalid version
   requirement in a project's `gleam.toml`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the compiler would suggest a discouraged project name as an
+  alternative to the reserved `gleam` name.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
