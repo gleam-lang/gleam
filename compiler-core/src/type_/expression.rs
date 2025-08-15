@@ -852,6 +852,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // We use `stacker` to prevent overflowing the stack when many `use`
         // expressions are chained. See https://github.com/gleam-lang/gleam/issues/4287
         let infer_call = || {
+            // We need this in the case where `call.function` has a special call path depending
+            // on the type such as `UntypedExpr::Var`. In these cases, `infer_call` does not call
+            // `infer_or_error`. `infer_or_error` is responsible for registering warnings about
+            // unreachable code and thus, warnings about unreachable code are not registered.
+            if self.previous_panics {
+                self.warn_for_unreachable_code(call_location, PanicPosition::PreviousExpression);
+            }
+
             self.infer_call(
                 *call.function,
                 call.arguments,
