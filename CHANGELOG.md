@@ -146,3 +146,7 @@
 - Fixed a bug where the compiler would suggest a discouraged project name as an
   alternative to the reserved `gleam` name.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where Forgejo source URLs in the HTML documentation could be
+  incorrectly structured.
+  ([Louis Pilfold](https://github.com/lpil))
