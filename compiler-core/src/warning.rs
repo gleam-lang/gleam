@@ -167,6 +167,11 @@ pub enum Warning {
     DeprecatedEnvironmentVariable {
         variable: DeprecatedEnvironmentVariable,
     },
+
+    EmptyModule {
+        path: Utf8PathBuf,
+        name: EcoString,
+    },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
@@ -1371,6 +1376,14 @@ The imported value could not be used in this module anyway."
                     location: None,
                 }
             }
+
+            Warning::EmptyModule { path: _, name } => Diagnostic {
+                title: "Empty module".into(),
+                text: format!("Module '{name}' contains no public definitions."),
+                hint: Some("Consider adding public functions, types, or constants, or removing this module.".into()),
+                level: diagnostic::Level::Warning,
+                location: None,
+            },
         }
     }
 
