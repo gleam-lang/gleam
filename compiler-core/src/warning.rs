@@ -1353,6 +1353,39 @@ The imported value could not be used in this module anyway."
                         extra_labels: vec![],
                     }),
                 },
+
+                type_::Warning::SrcImportingDevDependency {
+                    location,
+                    importing_module,
+                    imported_module,
+                    package,
+                } => {
+                    let text = wrap(&format!(
+                        "The application module `{importing_module}` is \
+importing the module `{imported_module}`, but `{package}`, the package it \
+belongs to, is a dev dependency.
+
+Dev dependencies are not included in production builds so application \
+modules should not import them. Perhaps change `{package}` to a regular dependency.
+
+In a future version of Gleam this may become a compile error."
+                    ));
+                    Diagnostic {
+                        title: "App importing dev dependency".into(),
+                        text,
+                        hint: None,
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            src: src.clone(),
+                            path: path.to_path_buf(),
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
             },
 
             Warning::DeprecatedEnvironmentVariable { variable } => {

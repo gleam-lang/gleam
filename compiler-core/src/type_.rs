@@ -1003,6 +1003,12 @@ impl ModuleInterface {
     pub fn contains_todo(&self) -> bool {
         self.warnings.iter().any(|warning| warning.is_todo())
     }
+
+    pub fn imports_dev_dependency(&self) -> bool {
+        self.warnings
+            .iter()
+            .any(|warning| warning.imports_dev_dependency())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]

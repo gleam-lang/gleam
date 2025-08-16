@@ -88,6 +88,7 @@ pub fn compile_package(
             importable_modules: &modules,
             warnings: &TypeWarningEmitter::null(),
             direct_dependencies: &std::collections::HashMap::new(),
+            dev_dependencies: &std::collections::HashSet::new(),
             target_support: TargetSupport::Enforced,
             package_config: &config,
         }
@@ -115,6 +116,7 @@ pub fn compile_package(
         importable_modules: &modules,
         warnings: &TypeWarningEmitter::null(),
         direct_dependencies: &direct_dependencies,
+        dev_dependencies: &std::collections::HashSet::new(),
         target_support: TargetSupport::Enforced,
         package_config: &config,
     }

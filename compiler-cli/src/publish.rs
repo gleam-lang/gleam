@@ -357,12 +357,15 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
     // refuse to publish as the package is not yet finished.
     let mut modules_containing_todo = vec![];
     let mut modules_containing_echo = vec![];
+    let mut modules_importing_dev_dependencies = vec![];
 
     for module in built.root_package.modules.iter() {
         if module.ast.type_info.contains_todo() {
             modules_containing_todo.push(module.name.clone());
         } else if module.ast.type_info.contains_echo {
             modules_containing_echo.push(module.name.clone());
+        } else if module.ast.type_info.imports_dev_dependency() {
+            modules_importing_dev_dependencies.push(module.name.clone());
         }
     }
 
@@ -375,6 +378,12 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
     if !modules_containing_echo.is_empty() {
         return Err(Error::CannotPublishEcho {
             unfinished: modules_containing_echo,
+        });
+    }
+
+    if !modules_importing_dev_dependencies.is_empty() {
+        return Err(Error::CannotPublishImportingDevDependency {
+            modules: modules_importing_dev_dependencies,
         });
     }
 

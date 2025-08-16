@@ -22,6 +22,7 @@ pub struct EnvironmentArguments<'a> {
     pub importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
     pub target_support: TargetSupport,
     pub current_origin: Origin,
+    pub dev_dependencies: &'a HashSet<EcoString>,
 }
 
 impl<'a> EnvironmentArguments<'a> {
@@ -90,6 +91,8 @@ pub struct Environment<'a> {
     pub echo_found: bool,
 
     pub references: ReferenceTracker,
+
+    pub dev_dependencies: &'a HashSet<EcoString>,
 }
 
 impl<'a> Environment<'a> {
@@ -103,6 +106,7 @@ impl<'a> Environment<'a> {
             importable_modules,
             target_support,
             current_origin: origin,
+            dev_dependencies,
         }: EnvironmentArguments<'a>,
     ) -> Self {
         let prelude = importable_modules
@@ -146,6 +150,7 @@ impl<'a> Environment<'a> {
             module_type_aliases: HashMap::new(),
             echo_found: false,
             references: ReferenceTracker::new(),
+            dev_dependencies,
         }
     }
 }

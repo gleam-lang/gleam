@@ -3,6 +3,7 @@ use gleam_core::{
     Result,
     analyse::TargetSupport,
     build::{Codegen, Compile, Mode, Options, Target},
+    error::Error,
     paths::ProjectPaths,
 };
 
@@ -51,6 +52,20 @@ pub(crate) fn erlang_shipment(paths: &ProjectPaths) -> Result<()> {
         },
         crate::build::download_dependencies(paths, crate::cli::Reporter::new())?,
     )?;
+
+    let mut modules_importing_dev_dependencies = Vec::new();
+
+    for module in built.root_package.modules.iter() {
+        if module.ast.type_info.imports_dev_dependency() {
+            modules_importing_dev_dependencies.push(module.name.clone());
+        }
+    }
+
+    if !modules_importing_dev_dependencies.is_empty() {
+        return Err(Error::CannotExportShipmentImportingDevDependency {
+            modules: modules_importing_dev_dependencies,
+        });
+    }
 
     for entry in crate::fs::read_dir(&build)?.filter_map(Result::ok) {
         let path = entry.path();
@@ -110,7 +125,7 @@ fn write_entrypoint_script(
     entrypoint_output_path: &Utf8PathBuf,
     entrypoint_template_path: &str,
     package_name: &str,
-) -> Result<(), gleam_core::Error> {
+) -> Result<()> {
     let text = entrypoint_template_path.replace("$PACKAGE_NAME_FROM_GLEAM", package_name);
     crate::fs::write(entrypoint_output_path, &text)?;
     crate::fs::make_executable(entrypoint_output_path)?;

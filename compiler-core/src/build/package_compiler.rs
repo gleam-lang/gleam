@@ -511,6 +511,7 @@ fn analyse(
 ) -> Outcome<Vec<Module>, Error> {
     let mut modules = Vec::with_capacity(parsed_modules.len() + 1);
     let direct_dependencies = package_config.dependencies_for(mode).expect("Package deps");
+    let dev_dependencies = package_config.dev_dependencies.keys().cloned().collect();
 
     // Insert the prelude
     // DUPE: preludeinsertion
@@ -542,6 +543,7 @@ fn analyse(
             importable_modules: module_types,
             warnings: &TypeWarningEmitter::new(path.clone(), code.clone(), warnings.clone()),
             direct_dependencies: &direct_dependencies,
+            dev_dependencies: &dev_dependencies,
             target_support,
             package_config,
         }

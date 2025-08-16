@@ -50,6 +50,7 @@ fn compile_module(src: &str) -> TypedModule {
         importable_modules: &modules,
         warnings: &TypeWarningEmitter::null(),
         direct_dependencies: &std::collections::HashMap::new(),
+        dev_dependencies: &std::collections::HashSet::new(),
         target_support: TargetSupport::Enforced,
         package_config: &config,
     }
@@ -76,6 +77,8 @@ fn compile_expression(src: &str) -> TypedStatement {
     // to have one place where we create all this required state for use in each
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), type_::build_prelude(&ids));
+    let dev_dependencies = std::collections::HashSet::new();
+
     let mut environment = EnvironmentArguments {
         ids,
         current_package: "thepackage".into(),
@@ -85,6 +88,7 @@ fn compile_expression(src: &str) -> TypedStatement {
         importable_modules: &modules,
         target_support: TargetSupport::Enforced,
         current_origin: Origin::Src,
+        dev_dependencies: &dev_dependencies,
     }
     .build();
 
