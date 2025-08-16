@@ -105,6 +105,10 @@
   relevant variable.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Renaming a variable from a label shorthand (`name:`) no longer includes the
+  colon in the rename dialog (`name:` -> `name`)
+  ([fruno](https://github.com/frunobulax-the-poodle))
+
 ### Formatter
 
 - The formatter now removes needless multiple negations that are safe to remove.

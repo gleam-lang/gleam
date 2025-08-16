@@ -645,11 +645,16 @@ where
                 }) if location.contains(byte_index) => match origin.map(|origin| origin.syntax) {
                     Some(VariableSyntax::Generated) => None,
                     Some(
-                        VariableSyntax::Variable { .. }
-                        | VariableSyntax::AssignmentPattern
-                        | VariableSyntax::LabelShorthand(_),
-                    )
-                    | None => success_response(location),
+                        VariableSyntax::Variable(label) | VariableSyntax::LabelShorthand(label),
+                    ) => success_response(SrcSpan {
+                        start: location.start,
+                        end: label
+                            .len()
+                            .try_into()
+                            .map(|len: u32| location.start + len)
+                            .unwrap_or(location.end),
+                    }),
+                    Some(VariableSyntax::AssignmentPattern) | None => success_response(location),
                 },
                 Some(
                     Referenced::ModuleValue {
