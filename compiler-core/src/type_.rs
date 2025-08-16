@@ -1095,6 +1095,15 @@ impl ModuleInterface {
         }
     }
 
+    pub fn get_public_function(&self, name: &str, arity: usize) -> Option<&ValueConstructor> {
+        self.get_public_value(name).filter(|value_constructor| {
+            match value_constructor.type_.fn_types() {
+                Some((fn_arguments_type, _)) => fn_arguments_type.len() == arity,
+                None => false,
+            }
+        })
+    }
+
     pub fn get_public_type(&self, name: &str) -> Option<&TypeConstructor> {
         let type_ = self.types.get(name)?;
         if type_.publicity.is_importable() {
@@ -1662,6 +1671,15 @@ pub enum FieldAccessUsage {
     ///
     RecordUpdate,
     /// Used as `thing.field`
+    Other,
+}
+
+/// This is used to know when a value is used as a call or not.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum ValueUsage {
+    /// Used as `call(..)`, `Type(..)`, `left |> right` or `left |> right(..)`
+    Call { arity: usize },
+    /// Used as `variable`
     Other,
 }
 
