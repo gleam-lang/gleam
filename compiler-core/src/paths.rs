@@ -131,7 +131,7 @@ pub fn global_package_cache_package_tarball(package_name: &str, version: &str) -
 }
 
 pub fn global_hexpm_credentials_path() -> Utf8PathBuf {
-    global_hexpm_cache().join("credentials")
+    global_hexpm_cache().join("credentials.toml")
 }
 
 fn global_hexpm_cache() -> Utf8PathBuf {
