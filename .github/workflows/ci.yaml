@@ -82,11 +82,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install musl-tools incl. musl-gcc
-        uses: awalsh128/cache-apt-pkgs-action@v1.5.0
+        uses: awalsh128/cache-apt-pkgs-action@v1.5.1
         with:
           # musl-tools provide `musl-gcc` which is required for `ring` which is required for `rustls` et al.
           packages: musl-tools
-          version: 1.1
+          version: 1.2.5
         if: ${{ matrix.target == 'x86_64-unknown-linux-musl'}}
 
       - name: Install Rust toolchain
@@ -98,7 +98,7 @@ jobs:
       - name: Install Erlang
         uses: erlef/setup-beam@v1
         with:
-          otp-version: "28.0.1"
+          otp-version: "28.0.2"
           elixir-version: "1.18"
           rebar3-version: "3"
 
@@ -110,7 +110,7 @@ jobs:
       - name: Setup Deno
         uses: denoland/setup-deno@v2
         with:
-          deno-version: "2.2"
+          deno-version: "2.4"
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
