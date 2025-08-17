@@ -183,6 +183,9 @@
 - Redundant `_ as x` patterns are rewritten to `x`.
   ([eutampieri](https://github.com/eutampieri))
 
+- The formatter no longer removes blocks from case clause guards.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Bug fixes
 
 - Fixed a bug where `echo` could crash on JavaScript if the module contains
