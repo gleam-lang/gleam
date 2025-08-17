@@ -56,10 +56,6 @@ export-hex-tarball-test: ## Run `gleam export hex-tarball` and verify it is crea
 typescript-declarations-test: ## Check that generated TypeScript declaration compile
 	cd test/typescript_declarations && make test
 
-.PHONY: typescript-declarations-test-watch
-typescript-declarations-test-watch: ## Check that generated TypeScript declaration compile when files change
-	watchexec "cd test/typescript_declarations && make test"
-
 .PHONY: benchmark
 benchmark: ## Run the benchmarks
 	cd benchmark/list && make
