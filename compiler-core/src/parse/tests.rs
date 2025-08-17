@@ -1912,3 +1912,21 @@ fn correct_precedence_in_pattern_size() {
 fn private_opaque_type_is_parsed() {
     assert_parse_module!("opaque type Wibble { Wobble }");
 }
+
+#[test]
+fn case_guard_with_nested_blocks() {
+    assert_parse!(
+        "case 1 {
+  _ if { 1 || { 1 || 1 } } || 1  -> 1
+}"
+    );
+}
+
+#[test]
+fn case_guard_with_empty_block() {
+    assert_error!(
+        "case 1 {
+  _ if a || {}  -> 1
+}"
+    );
+}

@@ -1809,12 +1809,9 @@ where
                 }
             }
 
-            Some((_, Token::LeftBrace, _)) => {
-                // Nested guard expression
+            Some((start, Token::LeftBrace, _)) => {
                 self.advance();
-                let guard = self.parse_clause_guard_inner();
-                let _ = self.expect_one(&Token::RightBrace)?;
-                guard
+                Ok(Some(self.parse_case_clause_guard_block(start)?))
             }
 
             t0 => {
@@ -1828,6 +1825,31 @@ where
                 }
             }
         }
+    }
+
+    fn parse_case_clause_guard_block(
+        &mut self,
+        start: u32,
+    ) -> Result<UntypedClauseGuard, ParseError> {
+        let body = self.parse_clause_guard_inner()?;
+
+        let Some(body) = body else {
+            let location = match self.next_tok() {
+                Some((_, Token::RightBrace, end)) => SrcSpan { start, end },
+                Some((_, _, _)) | None => SrcSpan {
+                    start,
+                    end: start + 1,
+                },
+            };
+
+            return parse_error(ParseErrorType::EmptyGuardBlock, location);
+        };
+
+        let (_, end) = self.expect_one(&Token::RightBrace)?;
+        Ok(ClauseGuard::Block {
+            location: SrcSpan { start, end },
+            value: Box::new(body),
+        })
     }
 
     fn parse_record_in_clause_guard(
