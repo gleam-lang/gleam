@@ -112,6 +112,9 @@ pub enum ParseErrorType {
         module: EcoString,
         item: EcoString,
     },
+    /// This can happen when there's an empty block in a case clause guard.
+    /// For example: `_ if a == {}`
+    EmptyGuardBlock,
 }
 
 pub(crate) struct ParseErrorDetails {
@@ -625,6 +628,13 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 .join("\n"),
                 hint: None,
                 label_text: "I was expecting either `/` or `.{` here.".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::EmptyGuardBlock => ParseErrorDetails {
+                text: "".into(),
+                hint: None,
+                label_text: "A clause guard block cannot be empty".into(),
                 extra_labels: vec![],
             },
         }
