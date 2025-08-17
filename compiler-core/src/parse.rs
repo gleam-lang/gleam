@@ -1567,7 +1567,7 @@ where
                     }
                     alternative_patterns.push(self.parse_patterns(PatternPosition::CaseClause)?);
                 }
-                let guard = self.parse_case_clause_guard(false)?;
+                let guard = self.parse_case_clause_guard()?;
                 let (arr_s, arr_e) = self
                     .expect_one(&Token::RArrow)
                     .map_err(|e| self.add_multi_line_clause_hint(e))?;
@@ -1615,65 +1615,65 @@ where
     //   if a
     //   if a < b
     //   if a < b || b < c
-    fn parse_case_clause_guard(
-        &mut self,
-        nested: bool,
-    ) -> Result<Option<UntypedClauseGuard>, ParseError> {
-        if self.maybe_one(&Token::If).is_some() || nested {
-            let mut opstack = vec![];
-            let mut estack = vec![];
-            let mut last_op_start = 0;
-            let mut last_op_end = 0;
-            loop {
-                match self.parse_case_clause_guard_unit()? {
-                    Some(unit) => estack.push(unit),
-                    _ => {
-                        if estack.is_empty() {
-                            return Ok(None);
-                        } else {
-                            return parse_error(
-                                ParseErrorType::OpNakedRight,
-                                SrcSpan {
-                                    start: last_op_start,
-                                    end: last_op_end,
-                                },
-                            );
-                        }
-                    }
-                }
+    fn parse_case_clause_guard(&mut self) -> Result<Option<UntypedClauseGuard>, ParseError> {
+        if self.maybe_one(&Token::If).is_some() {
+            self.parse_clause_guard_inner()
+        } else {
+            Ok(None)
+        }
+    }
 
-                if let Some((op_s, t, op_e)) = self.tok0.take() {
-                    match t.guard_precedence() {
-                        Some(p) => {
-                            // Is Op
-                            self.advance();
-                            last_op_start = op_s;
-                            last_op_end = op_e;
-                            let _ = handle_op(
-                                Some(((op_s, t, op_e), p)),
-                                &mut opstack,
-                                &mut estack,
-                                &do_reduce_clause_guard,
-                            );
-                        }
-                        _ => {
-                            // Is not Op
-                            self.tok0 = Some((op_s, t, op_e));
-                            break;
-                        }
+    fn parse_clause_guard_inner(&mut self) -> Result<Option<UntypedClauseGuard>, ParseError> {
+        let mut opstack = vec![];
+        let mut estack = vec![];
+        let mut last_op_start = 0;
+        let mut last_op_end = 0;
+        loop {
+            match self.parse_case_clause_guard_unit()? {
+                Some(unit) => estack.push(unit),
+                _ => {
+                    if estack.is_empty() {
+                        return Ok(None);
+                    } else {
+                        return parse_error(
+                            ParseErrorType::OpNakedRight,
+                            SrcSpan {
+                                start: last_op_start,
+                                end: last_op_end,
+                            },
+                        );
                     }
                 }
             }
 
-            Ok(handle_op(
-                None,
+            let Some((op_s, t, op_e)) = self.tok0.take() else {
+                break;
+            };
+
+            let Some(precedence) = t.guard_precedence() else {
+                // Is not Op
+                self.tok0 = Some((op_s, t, op_e));
+                break;
+            };
+
+            // Is Op
+            self.advance();
+            last_op_start = op_s;
+            last_op_end = op_e;
+            let _ = handle_op(
+                Some(((op_s, t, op_e), precedence)),
                 &mut opstack,
                 &mut estack,
                 &do_reduce_clause_guard,
-            ))
-        } else {
-            Ok(None)
+            );
         }
+
+        Ok(handle_op(
+            None,
+            &mut opstack,
+            &mut estack,
+            &do_reduce_clause_guard,
+        ))
     }
 
     /// Checks if we have an unexpected left parenthesis and returns appropriate
@@ -1808,13 +1808,15 @@ where
                     }
                 }
             }
+
             Some((_, Token::LeftBrace, _)) => {
                 // Nested guard expression
                 self.advance();
-                let guard = self.parse_case_clause_guard(true);
+                let guard = self.parse_clause_guard_inner();
                 let _ = self.expect_one(&Token::RightBrace)?;
                 guard
             }
+
             t0 => {
                 self.tok0 = t0;
                 match self.parse_const_value()? {
@@ -3583,7 +3585,7 @@ where
     // Parse Helpers
     //
 
-    // Expect a particular token, advances the token stream
+    /// Expect a particular token, advances the token stream
     fn expect_one(&mut self, wanted: &Token) -> Result<(u32, u32), ParseError> {
         match self.maybe_one(wanted) {
             Some((start, end)) => Ok((start, end)),
