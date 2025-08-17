@@ -17,4 +17,3 @@ pub fn get_name(user) {
     Guest -> "Guest"
   }
 }
-
