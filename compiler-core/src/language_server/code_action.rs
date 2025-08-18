@@ -4353,6 +4353,20 @@ pub enum PatternMatchedValue<'a> {
         ///
         assignment_location: SrcSpan,
     },
+    /// A variable that is bound in a case branch's pattern. For example:
+    /// ```gleam
+    /// case wibble {
+    ///   wobble -> 1
+    /// // ^^^^^ This!
+    /// }
+    /// ```
+    ///
+    ClausePatternVariable {
+        variable_name: &'a EcoString,
+        variable_type: Arc<Type>,
+        clause_body_location: SrcSpan,
+        clause_location: SrcSpan,
+    },
     UseVariable {
         variable_name: &'a EcoString,
         variable_type: Arc<Type>,
@@ -4408,6 +4422,21 @@ where
                 },
             ) => {
                 self.match_on_let_variable(variable_name, variable_type, location);
+                "Pattern match on variable"
+            }
+
+            Some(PatternMatchedValue::ClausePatternVariable {
+                variable_name,
+                variable_type,
+                clause_body_location,
+                clause_location,
+            }) => {
+                self.match_on_clause_variable(
+                    variable_name,
+                    variable_type,
+                    clause_body_location,
+                    clause_location,
+                );
                 "Pattern match on variable"
             }
 
@@ -4519,6 +4548,34 @@ where
 
         self.edits.insert(
             assignment_location.end,
+            format!("\n{nesting}{pattern_matching}"),
+        );
+    }
+
+    fn match_on_clause_variable(
+        &mut self,
+        variable_name: &EcoString,
+        variable_type: Arc<Type>,
+        clause_body_location: SrcSpan,
+        clause_location: SrcSpan,
+    ) {
+        let Some(patterns) = self.type_to_destructure_patterns(variable_type.as_ref()) else {
+            return;
+        };
+
+        let body_code = code_at(self.module, clause_body_location);
+
+        let clause_range = self.edits.src_span_to_lsp_range(clause_location);
+        let nesting = " ".repeat(2 + clause_range.start.character as usize);
+
+        let patterns = patterns
+            .iter()
+            .map(|p| format!("  {nesting}{p} -> {body_code}"))
+            .join("\n");
+        let pattern_matching = format!("case {variable_name} {{\n{patterns}\n{nesting}}}");
+
+        self.edits.replace(
+            clause_body_location,
             format!("\n{nesting}{pattern_matching}"),
         );
     }
@@ -4758,6 +4815,28 @@ where
                 variable_type: type_.clone(),
                 assignment_location: assignment.location,
             });
+        }
+    }
+
+    fn visit_typed_clause(&mut self, clause: &'ast ast::TypedClause) {
+        for pattern in clause.pattern.iter() {
+            self.visit_typed_pattern(pattern);
+        }
+        for patterns in clause.alternative_patterns.iter() {
+            for pattern in patterns {
+                self.visit_typed_pattern(pattern);
+            }
+        }
+
+        if let Some((name, type_)) = self.pattern_variable_under_cursor.take() {
+            self.selected_value = Some(PatternMatchedValue::ClausePatternVariable {
+                variable_name: name,
+                variable_type: type_,
+                clause_body_location: clause.then.location(),
+                clause_location: clause.location(),
+            });
+        } else {
+            self.visit_typed_expr(&clause.then);
         }
     }
 
