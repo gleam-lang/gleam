@@ -1526,3 +1526,27 @@ pub fn main() {
         find_position_of("Ok")
     );
 }
+
+#[test]
+fn rename_module_access_in_clause_guard() {
+    assert_rename!(
+        (
+            "wibble",
+            "
+import app
+
+pub fn main() {
+  case app.something {
+    thing if thing == app.something -> True
+    _ -> False
+  }
+}
+"
+        ),
+        "
+pub const something = 10
+",
+        "new_name",
+        find_position_of("something")
+    );
+}

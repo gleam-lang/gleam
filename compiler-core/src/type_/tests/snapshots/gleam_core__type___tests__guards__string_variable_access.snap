@@ -14,10 +14,10 @@ pub fn a(a: String) {
 
 ----- ERROR
 error: Unknown record field
-  ┌─ /src/one/two.gleam:4:11
+  ┌─ /src/one/two.gleam:4:12
   │
 4 │     _ if a.b -> 1
-  │           ^^ This field does not exist
+  │            ^ This field does not exist
 
 The value being accessed has this type:
 

@@ -159,3 +159,7 @@
   a dev dependency, while previously it would incorrectly let these
   dependencies to be imported.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where renaming a constant which is referenced in another module
+  inside a guard would generate invalid code.
+  ([Surya Rose](https://github.com/GearsDatapacks))
