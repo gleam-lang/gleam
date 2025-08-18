@@ -6968,6 +6968,57 @@ pub fn main() {
 }
 
 #[test]
+fn pattern_match_on_clause_variable() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "
+pub fn main() {
+  case maybe_wibble() {
+    Ok(something) -> 1
+    Error(_) -> 2
+  }
+}
+
+type Wibble {
+  Wobble
+  Woo
+}
+
+fn maybe_wibble() { Ok(Wobble) }
+
+",
+        find_position_of("something").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_clause_variable_with_block_body() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "
+pub fn main() {
+  case maybe_wibble() {
+    Ok(something) -> {
+      1
+      2
+    }
+    Error(_) -> 2
+  }
+}
+
+type Wibble {
+  Wobble
+  Woo
+}
+
+fn maybe_wibble() { Ok(Wobble) }
+
+",
+        find_position_of("something").to_selection()
+    );
+}
+
+#[test]
 fn pattern_match_on_argument_will_use_qualified_name() {
     let src = "
 import wibble
