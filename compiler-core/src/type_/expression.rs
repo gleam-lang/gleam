@@ -2370,20 +2370,22 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
 
             ClauseGuard::FieldAccess {
-                location,
+                label_location,
                 label,
                 container,
                 index: _,
                 type_: (),
             } => match self.infer_clause_guard(*container.clone()) {
-                Ok(container) => self.infer_guard_record_access(container, label, location),
+                Ok(container) => self.infer_guard_record_access(container, label, label_location),
 
                 Err(err) => match *container {
                     ClauseGuard::Var { name, location, .. } => {
-                        self.infer_guard_module_access(name, label, location, err)
+                        self.infer_guard_module_access(name, label, location, label_location, err)
                     }
 
-                    _ => Err(Error::RecordAccessUnknownType { location }),
+                    _ => Err(Error::RecordAccessUnknownType {
+                        location: label_location,
+                    }),
                 },
             },
 
@@ -2820,7 +2822,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             container,
             label,
             index: Some(index),
-            location,
+            label_location: location,
             type_,
         })
     }
@@ -2829,11 +2831,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         name: EcoString,
         label: EcoString,
-        location: SrcSpan,
+        module_location: SrcSpan,
+        label_location: SrcSpan,
         record_access_error: Error,
     ) -> Result<TypedClauseGuard, Error> {
         let module_access = self
-            .infer_module_access(&name, label, &location, location)
+            .infer_module_access(&name, label, &module_location, label_location)
             .and_then(|ma| match ma {
                 TypedExpr::ModuleSelect {
                     location,
@@ -2849,7 +2852,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             module_name.clone(),
                             label.clone(),
                             &label,
-                            location,
+                            label_location,
                             ReferenceKind::Qualified,
                         );
 
@@ -2866,7 +2869,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     _ => Err(Error::RecordAccessUnknownType { location }),
                 },
 
-                _ => Err(Error::RecordAccessUnknownType { location }),
+                _ => Err(Error::RecordAccessUnknownType {
+                    location: module_location,
+                }),
             });
 
         // If the name is in the environment, use the original error from

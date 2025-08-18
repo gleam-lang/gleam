@@ -1782,13 +1782,13 @@ where
                             }
                         }
 
-                        Some((_, Token::Name { name: label }, int_e)) => {
+                        Some((name_start, Token::Name { name: label }, name_end)) => {
                             self.parse_function_call_in_clause_guard(start)?;
 
                             unit = ClauseGuard::FieldAccess {
-                                location: SrcSpan {
-                                    start: dot_s,
-                                    end: int_e,
+                                label_location: SrcSpan {
+                                    start: name_start,
+                                    end: name_end,
                                 },
                                 index: None,
                                 label,

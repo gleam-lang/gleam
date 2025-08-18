@@ -2047,7 +2047,7 @@ pub enum ClauseGuard<Type, RecordTag> {
     },
 
     FieldAccess {
-        location: SrcSpan,
+        label_location: SrcSpan,
         index: Option<u64>,
         label: EcoString,
         type_: Type,
@@ -2093,9 +2093,13 @@ impl<A, B> ClauseGuard<A, B> {
             | ClauseGuard::DivInt { location, .. }
             | ClauseGuard::DivFloat { location, .. }
             | ClauseGuard::RemainderInt { location, .. }
-            | ClauseGuard::FieldAccess { location, .. }
             | ClauseGuard::LtEqFloat { location, .. }
             | ClauseGuard::ModuleSelect { location, .. } => *location,
+            ClauseGuard::FieldAccess {
+                label_location,
+                container,
+                ..
+            } => container.location().merge(label_location),
         }
     }
 

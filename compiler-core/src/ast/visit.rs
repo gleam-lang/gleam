@@ -382,13 +382,13 @@ pub trait Visit<'ast> {
 
     fn visit_typed_clause_guard_field_access(
         &mut self,
-        location: &'ast SrcSpan,
+        label_location: &'ast SrcSpan,
         index: &'ast Option<u64>,
         label: &'ast EcoString,
         type_: &'ast Arc<Type>,
         container: &'ast TypedClauseGuard,
     ) {
-        visit_typed_clause_guard_field_access(self, location, index, label, type_, container)
+        visit_typed_clause_guard_field_access(self, label_location, index, label, type_, container)
     }
 
     fn visit_typed_clause_guard_module_select(
@@ -1384,12 +1384,14 @@ where
             tuple,
         } => v.visit_typed_clause_guard_tuple_index(location, index, type_, tuple),
         super::ClauseGuard::FieldAccess {
-            location,
+            label_location,
             index,
             label,
             type_,
             container,
-        } => v.visit_typed_clause_guard_field_access(location, index, label, type_, container),
+        } => {
+            v.visit_typed_clause_guard_field_access(label_location, index, label, type_, container)
+        }
         super::ClauseGuard::ModuleSelect {
             location,
             type_,
@@ -1434,7 +1436,7 @@ pub fn visit_typed_clause_guard_tuple_index<'a, V>(
 
 pub fn visit_typed_clause_guard_field_access<'a, V>(
     v: &mut V,
-    _location: &'a SrcSpan,
+    _label_location: &'a SrcSpan,
     _index: &'a Option<u64>,
     _label: &'a EcoString,
     _type_: &'a Arc<Type>,
