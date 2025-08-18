@@ -180,8 +180,8 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The "pattern match on variable" can now be triggered on variables introduced
-  by other patterns. For example:
+- The "pattern match on variable" code action can now be triggered on variables
+  introduced by other patterns. For example:
 
   ```gleam
   pub fn main() {
@@ -199,6 +199,36 @@
     case role {
       Admin -> todo
       Member -> todo
+    }
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The "pattern match on variable" code action can now be triggered on variables
+  in case expressions. For example:
+
+  ```gleam
+  pub fn main() {
+    case find_user() {
+      Ok(user) -> todo
+      Error(_) -> todo
+    }
+  }
+  ```
+
+  Triggering the action over the `user` variable would result in the following
+  code:
+
+  ```gleam
+  pub fn main() {
+    case find_user() {
+      Ok(user) ->
+        case user {
+          Admin -> todo
+          Member -> todo
+        }
+      Error(_) -> todo
     }
   }
   ```
