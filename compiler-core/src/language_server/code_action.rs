@@ -4663,6 +4663,13 @@ where
     }
 }
 
+fn code_at(module: &Module, span: SrcSpan) -> &str {
+    module
+        .code
+        .get(span.start as usize..span.end as usize)
+        .expect("code location must be valid")
+}
+
 impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO>
 where
     IO: CommandExecutor + FileSystemWriter + FileSystemReader + BeamCompiler + Clone,
@@ -5080,12 +5087,11 @@ impl<'a> GenerateFunction<'a> {
         function_type: &Arc<Type>,
         given_arguments: Option<&'a [TypedCallArg]>,
     ) {
-        let name_range = function_name_location.start as usize..function_name_location.end as usize;
-        let candidate_name = self.module.code.get(name_range);
+        let candidate_name = code_at(self.module, function_name_location);
         match (candidate_name, function_type.fn_types()) {
-            (None, _) | (_, None) => (),
-            (Some(name), _) if !is_valid_lowercase_name(name) => (),
-            (Some(name), Some((arguments_types, return_type))) => {
+            (_, None) => (),
+            (name, _) if !is_valid_lowercase_name(name) => (),
+            (name, Some((arguments_types, return_type))) => {
                 self.function_to_generate = Some(FunctionToGenerate {
                     name,
                     arguments_types,
@@ -5438,8 +5444,7 @@ where
         type_: &Arc<Type>,
         given_arguments: Option<Arguments<'a>>,
     ) -> Option<VariantToGenerate<'a>> {
-        let name_range = function_name_location.start as usize..function_name_location.end as usize;
-        let name = self.module.code.get(name_range).expect("valid code range");
+        let name = code_at(self.module, function_name_location);
         if !is_valid_uppercase_name(name) {
             return None;
         }
@@ -6149,16 +6154,18 @@ impl<'a> ConvertToPipe<'a> {
             return vec![];
         };
 
-        let arg_range = if arg.uses_label_shorthand() {
-            arg.location.start as usize..arg.location.end as usize - 1
+        let arg_location = if arg.uses_label_shorthand() {
+            SrcSpan {
+                start: arg.location.start,
+                end: arg.location.end - 1,
+            }
         } else if arg.label.is_some() {
-            let value = arg.value.location();
-            value.start as usize..value.end as usize
+            arg.value.location()
         } else {
-            arg.location.start as usize..arg.location.end as usize
+            arg.location
         };
 
-        let arg_text = self.module.code.get(arg_range).expect("invalid srcspan");
+        let arg_text = code_at(self.module, arg_location);
         let arg_text = match arg.value {
             // If the expression being piped is a binary operation with
             // precedence lower than pipes then we have to wrap it in curly
@@ -7774,7 +7781,7 @@ impl<'a> CollapseNestedCase<'a> {
         // Notice one key detail: since alternative patterns can't be nested we
         // can't simply write `Ok(2 | 3)` but we have to write `Ok(2) | Ok(3)`!
 
-        let pattern_text: String = self.code_at(matched_pattern_span).into();
+        let pattern_text: String = code_at(self.module, matched_pattern_span).into();
         let matched_variable_span = matched_variable.location();
 
         let pattern_with_variable = |new_content: String| {
@@ -7828,7 +7835,7 @@ impl<'a> CollapseNestedCase<'a> {
                     let pattern_location =
                         patterns.first().expect("must have a pattern").location();
 
-                    let mut pattern_code = self.code_at(pattern_location).to_string();
+                    let mut pattern_code = code_at(self.module, pattern_location).to_string();
                     if !references_to_matched_variable.is_empty() {
                         pattern_code = format!("{pattern_code} as {}", matched_variable.name());
                     };
@@ -7836,11 +7843,11 @@ impl<'a> CollapseNestedCase<'a> {
                 })
                 .join(" | ");
 
-            let clause_code = self.code_at(clause.then.location());
+            let clause_code = code_at(self.module, clause.then.location());
             let guard_code = match (outer_guard, &clause.guard) {
                 (Some(outer), Some(inner)) => {
-                    let mut outer_code = self.code_at(outer.location()).to_string();
-                    let mut inner_code = self.code_at(inner.location()).to_string();
+                    let mut outer_code = code_at(self.module, outer.location()).to_string();
+                    let mut inner_code = code_at(self.module, inner.location()).to_string();
                     if ast::BinOp::And.precedence() > outer.precedence() {
                         outer_code = format!("{{ {outer_code} }}")
                     }
@@ -7850,7 +7857,7 @@ impl<'a> CollapseNestedCase<'a> {
                     format!(" if {outer_code} && {inner_code}")
                 }
                 (None, Some(guard)) | (Some(guard), None) => {
-                    format!(" if {}", self.code_at(guard.location()))
+                    format!(" if {}", code_at(self.module, guard.location()))
                 }
                 (None, None) => "".into(),
             };
@@ -7877,13 +7884,6 @@ impl<'a> CollapseNestedCase<'a> {
             .preferred(false)
             .push_to(&mut action);
         action
-    }
-
-    fn code_at(&self, span: SrcSpan) -> &str {
-        self.module
-            .code
-            .get(span.start as usize..span.end as usize)
-            .expect("location must be valid")
     }
 
     /// If the clause can be flattened because it's matching on a single variable
