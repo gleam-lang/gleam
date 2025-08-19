@@ -4774,10 +4774,11 @@ fn get_empty_list_check_kind<'a>(
         }
         (_, TypedExpr::Int { value, .. }) => match (binop, value.as_str()) {
             (BinOp::LtEqInt, "0" | "-0") | (BinOp::LtInt, "1") => Some(EmptyListCheckKind::Empty),
+            (BinOp::GtInt, "0" | "-0") => Some(EmptyListCheckKind::NonEmpty),
             _ => None,
         },
         (TypedExpr::Int { value, .. }, _) => match (binop, value.as_str()) {
-            (BinOp::GtEqInt, "0" | "-0") | (BinOp::GtInt, "1") => {
+            (BinOp::GtEqInt, "0" | "-0") | (BinOp::GtInt, "1") | (BinOp::LtInt, "0" | "-0") => {
                 Some(EmptyListCheckKind::NonEmpty)
             }
             _ => None,
