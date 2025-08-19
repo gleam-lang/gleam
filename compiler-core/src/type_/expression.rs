@@ -1827,7 +1827,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     /// Checks for inefficient usage of `list.length` for checking for the empty list.
     ///
-    /// If we find one of these usages, emit a warning to use `list.is_empty` instead.
+    /// If we find one of these usages, emit a warning to use comparison with empty list instead.
     fn check_for_inefficient_empty_list_check(
         &mut self,
         binop: BinOp,
@@ -1869,7 +1869,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         // Check the kind of the empty list check so we know whether to recommend
-        // `list.is_empty` or `!list.is_empty` as a replacement.
+        // `== []` or `!= []` syntax as a replacement.
         let kind = match get_empty_list_check_kind(binop, left, right) {
             Some(kind) => kind,
             None => return,
