@@ -69,10 +69,6 @@
   spans.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The compiler now emits an error when a module in the `src` directory imports
-  a dev dependency.
-  ([Surya Rose](https://github.com/GearsDatapacks))
-
 ### Build tool
 
 - New projects are generated using OTP28 on GitHub Actions.
@@ -158,3 +154,8 @@
 - Fixed a bug where Forgejo source URLs in the HTML documentation could be
   incorrectly structured.
   ([Louis Pilfold](https://github.com/lpil))
+
+- The compiler now emits an error when a module in the `src` directory imports
+  a dev dependency, while previously it would incorrectly let these
+  dependencies to be imported.
+  ([Surya Rose](https://github.com/GearsDatapacks))
