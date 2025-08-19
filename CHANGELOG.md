@@ -69,6 +69,9 @@
   spans.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Redundant `_ as x` patterns are now deprecated in favour of `x`.
+  ([eutampieri](https://github.com/eutampieri))
+
 ### Build tool
 
 - New projects are generated using OTP28 on GitHub Actions.
@@ -132,7 +135,7 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- Implememted rewrite of `_ as x` patterns to `x`.
+- Redundant `_ as x` patterns are rewritten to `x`.
   ([eutampieri](https://github.com/eutampieri))
 
 ### Bug fixes
