@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/type_/tests/warnings.rs
+source: compiler-core/src/type_/tests/errors.rs
 expression: "\nimport some_module\n\npub fn main() {\n  some_module.main()\n}\n"
 ---
 ----- SOURCE CODE
@@ -15,18 +15,16 @@ pub fn main() {
 }
 
 
------ WARNING
-warning: App importing dev dependency
-  ┌─ /src/warning/wrn.gleam:2:1
+----- ERROR
+error: App importing dev dependency
+  ┌─ /src/one/two.gleam:2:1
   │
 2 │ import some_module
   │ ^^^^^^^^^^^^^^^^^^
 
-The application module `test_module` is importing the module `some_module`,
+The application module `themodule` is importing the module `some_module`,
 but `dev_dependency`, the package it belongs to, is a dev dependency.
 
 Dev dependencies are not included in production builds so application
 modules should not import them. Perhaps change `dev_dependency` to a
 regular dependency.
-
-In a future version of Gleam this may become a compile error.

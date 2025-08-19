@@ -101,6 +101,22 @@ macro_rules! assert_module_error {
         output.push_str(&format!("-- main.gleam\n{}\n\n----- ERROR\n{error}", $src));
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
+
+    ($(($package:literal, $name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
+        let error = $crate::type_::tests::module_error(
+            $src,
+            vec![
+                $(($package, $name, $module_src)),*
+            ],
+        );
+
+        let mut output = String::from("----- SOURCE CODE\n");
+        for (name, src) in [$(($name, $module_src)),*] {
+            output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
+        }
+        output.push_str(&format!("-- main.gleam\n{}\n\n----- ERROR\n{error}", $src));
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
 }
 
 #[macro_export]
