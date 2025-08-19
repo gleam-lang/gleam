@@ -81,9 +81,9 @@
   import gleam/list
 
   pub fn main() {
-    let arr = [1, 46]
-    let _ = 0 < list.length(arr)
-    let _ = list.length(arr) > 0
+    let numbers = [1, 46]
+    let _ = 0 < list.length(numbers)
+    let _ = list.length(numbers) > 0
   }
   ```
 
@@ -93,8 +93,8 @@
   warning: Inefficient use of `list.length`
     ┌─ /data/data/com.termux/files/home/test_gleam/src/test_gleam.gleam:5:13
     │
-  5 │     let _ = 0 < list.length(arr)
-    │             ^^^^^^^^^^^^^^^^^^^^
+  5 │     let _ = 0 < list.length(numbers)
+    │             ^^^^^^^^^^^^^^^^^^^^^^^^
 
   The `list.length` function has to iterate across the whole
   list to calculate the length, which is wasteful if you only
@@ -105,8 +105,8 @@
   warning: Inefficient use of `list.length`
     ┌─ /data/data/com.termux/files/home/test_gleam/src/test_gleam.gleam:6:13
     │
-  6 │     let _ = list.length(arr) > 0
-    │             ^^^^^^^^^^^^^^^^^^^^
+  6 │     let _ = list.length(numbers) > 0
+    │             ^^^^^^^^^^^^^^^^^^^^^^^^
 
   The `list.length` function has to iterate across the whole
   list to calculate the length, which is wasteful if you only
