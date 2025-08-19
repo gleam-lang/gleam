@@ -1,0 +1,42 @@
+---
+source: compiler-core/src/javascript/tests/inlining.rs
+expression: "\nimport gleam/result\n\npub fn main() {\n  result.try(Ok(10), divide(_, 2))\n}\n\nfn divide(a: Int, b: Int) -> Result(Int, Nil) {\n  case a % b {\n    0 -> Ok(a / b)\n    _ -> Error(Nil)\n  }\n}\n"
+---
+----- SOURCE CODE
+
+import gleam/result
+
+pub fn main() {
+  result.try(Ok(10), divide(_, 2))
+}
+
+fn divide(a: Int, b: Int) -> Result(Int, Nil) {
+  case a % b {
+    0 -> Ok(a / b)
+    _ -> Error(Nil)
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $result from "../../gleam_stdlib/gleam/result.mjs";
+import { Ok, Error, remainderInt, divideInt } from "../gleam.mjs";
+
+function divide(a, b) {
+  let $ = remainderInt(a, b);
+  if ($ === 0) {
+    return new Ok(divideInt(a, b));
+  } else {
+    return new Error(undefined);
+  }
+}
+
+export function main() {
+  let $ = new Ok(10);
+  if ($ instanceof Ok) {
+    let value = $[0];
+    return divide(value, 2);
+  } else {
+    return $;
+  }
+}

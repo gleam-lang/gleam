@@ -1190,3 +1190,47 @@ pub fn aaaaaaaaaaaaaaaaaaaaaaaaaaaa() -> aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa {
         NONE
     );
 }
+
+#[test]
+fn forgejo_single_line_definition() {
+    let mut config = PackageConfig::default();
+    let repo = Repository::Forgejo {
+        host: "https://code.example.org/".parse::<Uri>().unwrap(),
+        user: "wibble".into(),
+        repo: "wobble".into(),
+        path: None,
+        tag_prefix: None,
+    };
+
+    config.name = EcoString::from("test_project_name");
+    config.repository = Some(repo);
+
+    let modules = vec![("app.gleam", "pub type Wibble = Int")];
+    let html = compile(config, modules);
+
+    assert!(
+        html.contains("https://code.example.org/wibble/wobble/src/tag/v0.1.0/src/app.gleam#L1")
+    );
+}
+
+#[test]
+fn forgejo_multiple_line_definition() {
+    let mut config = PackageConfig::default();
+    let repo = Repository::Forgejo {
+        host: "https://code.example.org/".parse::<Uri>().unwrap(),
+        user: "wibble".into(),
+        repo: "wobble".into(),
+        path: None,
+        tag_prefix: None,
+    };
+
+    config.name = EcoString::from("test_project_name");
+    config.repository = Some(repo);
+
+    let modules = vec![("app.gleam", "pub type Wibble \n\n= Int")];
+    let html = compile(config, modules);
+
+    assert!(
+        html.contains("https://code.example.org/wibble/wobble/src/tag/v0.1.0/src/app.gleam#L1-L3")
+    );
+}

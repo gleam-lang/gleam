@@ -95,6 +95,7 @@ mod dep_tree;
 pub(crate) mod derivation_tree;
 mod exhaustiveness;
 pub(crate) mod graph;
+pub(crate) mod inline;
 mod reference;
 
 pub use error::{Error, Result};

@@ -18,6 +18,7 @@ use crate::{
     call_graph::{CallGraphNode, into_dependency_order},
     config::PackageConfig,
     dep_tree,
+    inline::{self, InlinableFunction},
     line_numbers::LineNumbers,
     parse::SpannedString,
     reference::{EntityKind, ReferenceKind},
@@ -42,7 +43,7 @@ use hexpm::version::Version;
 use itertools::Itertools;
 use name::{check_argument_names, check_name_case};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     ops::Deref,
     sync::{Arc, OnceLock},
 };
@@ -145,6 +146,7 @@ pub struct ModuleAnalyzerConstructor<'a, A> {
     pub importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
     pub warnings: &'a TypeWarningEmitter,
     pub direct_dependencies: &'a HashMap<EcoString, A>,
+    pub dev_dependencies: &'a HashSet<EcoString>,
     pub target_support: TargetSupport,
     pub package_config: &'a PackageConfig,
 }
@@ -166,6 +168,7 @@ impl<A> ModuleAnalyzerConstructor<'_, A> {
             importable_modules: self.importable_modules,
             warnings: self.warnings,
             direct_dependencies: self.direct_dependencies,
+            dev_dependencies: self.dev_dependencies,
             target_support: self.target_support,
             package_config: self.package_config,
             line_numbers,
@@ -174,6 +177,7 @@ impl<A> ModuleAnalyzerConstructor<'_, A> {
             value_names: HashMap::with_capacity(module.definitions.len()),
             hydrators: HashMap::with_capacity(module.definitions.len()),
             module_name: module.name.clone(),
+            inline_functions: HashMap::new(),
             minimum_required_version: Version::new(0, 1, 0),
         }
         .infer_module(module)
@@ -187,6 +191,7 @@ struct ModuleAnalyzer<'a, A> {
     importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
     warnings: &'a TypeWarningEmitter,
     direct_dependencies: &'a HashMap<EcoString, A>,
+    dev_dependencies: &'a HashSet<EcoString>,
     target_support: TargetSupport,
     package_config: &'a PackageConfig,
     line_numbers: LineNumbers,
@@ -195,6 +200,8 @@ struct ModuleAnalyzer<'a, A> {
     value_names: HashMap<EcoString, SrcSpan>,
     hydrators: HashMap<EcoString, Hydrator>,
     module_name: EcoString,
+
+    inline_functions: HashMap<EcoString, InlinableFunction>,
 
     /// The minimum Gleam version required to compile the analysed module.
     minimum_required_version: Version,
@@ -220,6 +227,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             importable_modules: self.importable_modules,
             target_support: self.target_support,
             current_origin: self.origin,
+            dev_dependencies: self.dev_dependencies,
         }
         .build();
 
@@ -372,6 +380,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     value_references: env.references.value_references,
                     type_references: env.references.type_references,
                 },
+                inline_functions: self.inline_functions,
             },
         };
 
@@ -643,10 +652,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             } => self.track_feature_usage(FeatureKind::InternalAnnotation, location),
         }
 
-        if let Some((module, _, location)) = &external_javascript {
-            if module.contains('@') {
-                self.track_feature_usage(FeatureKind::AtInJavascriptModules, *location)
-            }
+        if let Some((module, _, location)) = &external_javascript
+            && module.contains('@')
+        {
+            self.track_feature_usage(FeatureKind::AtInJavascriptModules, *location)
         }
 
         // Assert that the inferred type matches the type of any recursive call
@@ -708,10 +717,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             ReferenceKind::Definition,
         );
 
-        Definition::Function(Function {
+        let function = Function {
             documentation: doc,
             location,
-            name: Some((name_location, name)),
+            name: Some((name_location, name.clone())),
             publicity,
             deprecation,
             arguments: typed_arguments,
@@ -726,7 +735,17 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             external_javascript,
             implementations,
             purity,
-        })
+        };
+
+        if let Some(inline_function) = inline::function_to_inlinable(
+            &environment.current_package,
+            &environment.current_module,
+            &function,
+        ) {
+            _ = self.inline_functions.insert(name, inline_function);
+        }
+
+        Definition::Function(function)
     }
 
     fn assert_valid_javascript_external(
@@ -1311,6 +1330,15 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             });
         }
 
+        if *opaque && publicity.is_private() {
+            self.problems.error(Error::PrivateOpaqueType {
+                location: SrcSpan {
+                    start: location.start,
+                    end: location.start + 6,
+                },
+            });
+        }
+
         Ok(())
     }
 
@@ -1558,21 +1586,21 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         // Then if the required version is not in the specified version for the
         // range we emit a warning highlighting the usage of the feature.
-        if let Some(gleam_version) = &self.package_config.gleam_version {
-            if let Some(lowest_allowed_version) = gleam_version.lowest_version() {
-                // There is a version in the specified range that is lower than
-                // the one required by this feature! This means that the
-                // specified range is wrong and would allow someone to run a
-                // compiler that is too old to know of this feature.
-                if minimum_required_version > lowest_allowed_version {
-                    self.problems
-                        .warning(Warning::FeatureRequiresHigherGleamVersion {
-                            location,
-                            feature_kind,
-                            minimum_required_version: minimum_required_version.clone(),
-                            wrongfully_allowed_version: lowest_allowed_version,
-                        })
-                }
+        if let Some(gleam_version) = &self.package_config.gleam_version
+            && let Some(lowest_allowed_version) = gleam_version.lowest_version()
+        {
+            // There is a version in the specified range that is lower than
+            // the one required by this feature! This means that the
+            // specified range is wrong and would allow someone to run a
+            // compiler that is too old to know of this feature.
+            if minimum_required_version > lowest_allowed_version {
+                self.problems
+                    .warning(Warning::FeatureRequiresHigherGleamVersion {
+                        location,
+                        feature_kind,
+                        minimum_required_version: minimum_required_version.clone(),
+                        wrongfully_allowed_version: lowest_allowed_version,
+                    })
             }
         }
 

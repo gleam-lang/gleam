@@ -339,7 +339,7 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
     fn switch(
         &mut self,
         var: &'a Variable,
-        choices: &'a [(RuntimeCheck, Box<Decision>)],
+        choices: &'a [(RuntimeCheck, Decision)],
         fallback: &'a Decision,
         fallback_check: &'a FallbackCheck,
     ) -> CaseBody<'a> {

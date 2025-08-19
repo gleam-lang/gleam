@@ -110,7 +110,7 @@ fn write_entrypoint_script(
     entrypoint_output_path: &Utf8PathBuf,
     entrypoint_template_path: &str,
     package_name: &str,
-) -> Result<(), gleam_core::Error> {
+) -> Result<()> {
     let text = entrypoint_template_path.replace("$PACKAGE_NAME_FROM_GLEAM", package_name);
     crate::fs::write(entrypoint_output_path, &text)?;
     crate::fs::make_executable(entrypoint_output_path)?;

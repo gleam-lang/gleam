@@ -61,12 +61,6 @@ impl Problems {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub struct UnknownType {
-    pub location: SrcSpan,
-    pub name: EcoString,
-}
-
 /// This is used by the unknown record field error to tell if an unknown field
 /// is a field appearing in another variant of the same type to provide a better
 /// error message explaining why it can't be accessed:
@@ -641,6 +635,26 @@ pub enum Error {
     NonUtf8StringAssignmentInBitArray {
         location: SrcSpan,
     },
+
+    /// This happens when a private type is marked as opaque. Only public types
+    /// can be opaque.
+    ///
+    /// ```gleam
+    /// opaque type Wibble {
+    ///   Wobble
+    /// }
+    /// ```
+    ///
+    PrivateOpaqueType {
+        location: SrcSpan,
+    },
+
+    SrcImportingDevDependency {
+        importing_module: EcoString,
+        imported_module: EcoString,
+        package: EcoString,
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1209,8 +1223,9 @@ impl Error {
             | Error::IntOperatorOnFloats { location, .. }
             | Error::StringConcatenationWithAddInt { location }
             | Error::DoubleVariableAssignmentInBitArray { location }
-            | Error::NonUtf8StringAssignmentInBitArray { location } => location.start,
-
+            | Error::NonUtf8StringAssignmentInBitArray { location }
+            | Error::PrivateOpaqueType { location }
+            | Error::SrcImportingDevDependency { location, .. } => location.start,
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
             }

@@ -90,6 +90,7 @@ impl ModuleDecoder {
             documentation: self.string_list(reader.get_documentation()?)?,
             contains_echo: reader.get_contains_echo(),
             references: self.references(reader.get_references()?)?,
+            inline_functions: HashMap::new(),
         })
     }
 

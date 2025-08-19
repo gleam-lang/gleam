@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/erlang/tests/inlining.rs
+expression: "\npub fn main() {\n  fn(a, b) { #(a, b) }(42, False)\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  fn(a, b) { #(a, b) }(42, False)
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec main() -> {integer(), boolean()}.
+main() ->
+    {42, false}.

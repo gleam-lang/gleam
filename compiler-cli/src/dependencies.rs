@@ -1037,11 +1037,11 @@ pub fn unlock_packages(
         let mut packages_to_unlock: Vec<EcoString> = packages_to_unlock.to_vec();
 
         while let Some(package_name) = packages_to_unlock.pop() {
-            if locked.remove(&package_name).is_some() {
-                if let Some(package) = manifest.packages.iter().find(|p| p.name == package_name) {
-                    let deps_to_unlock = find_deps_to_unlock(package, locked, manifest);
-                    packages_to_unlock.extend(deps_to_unlock);
-                }
+            if locked.remove(&package_name).is_some()
+                && let Some(package) = manifest.packages.iter().find(|p| p.name == package_name)
+            {
+                let deps_to_unlock = find_deps_to_unlock(package, locked, manifest);
+                packages_to_unlock.extend(deps_to_unlock);
             }
         }
     } else {

@@ -359,11 +359,11 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 ]
                 .join("\n"),
                 hint: None,
-                label_text: "I wasn't expecting a second spread here".into(),
+                label_text: "I wasn't expecting a second list here".into(),
                 extra_labels: vec![ExtraLabel {
                     src_info: None,
                     label: Label {
-                        text: Some("You're using a spread here".into()),
+                        text: Some("You're using a list here".into()),
                         span: *first_spread_location,
                     },
                 }],

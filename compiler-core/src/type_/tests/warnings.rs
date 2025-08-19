@@ -464,6 +464,28 @@ fn double_unary_integer_literal() {
     assert_warning!("pub fn main() { let _ = --7 }");
 }
 
+#[test]
+fn even_number_of_multiple_integer_negations_raise_a_single_warning() {
+    assert_warning!("pub fn main() { let _ = ----7 }");
+}
+
+#[test]
+fn odd_number_of_multiple_integer_negations_raise_a_single_warning_that_highlights_the_unnecessary_ones()
+ {
+    assert_warning!("pub fn main() { let _ = -----7 }");
+}
+
+#[test]
+fn even_number_of_multiple_bool_negations_raise_a_single_warning() {
+    assert_warning!("pub fn main() { let _ = !!!!True }");
+}
+
+#[test]
+fn odd_number_of_multiple_bool_negations_raise_a_single_warning_that_highlights_the_unnecessary_ones()
+ {
+    assert_warning!("pub fn main() { let _ = !!!!!False }");
+}
+
 // https://github.com/gleam-lang/gleam/issues/2050
 #[test]
 fn double_unary_integer_variable() {

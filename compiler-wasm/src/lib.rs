@@ -1,4 +1,3 @@
-mod log_telemetry;
 #[cfg(test)]
 mod tests;
 mod wasm_filesystem;

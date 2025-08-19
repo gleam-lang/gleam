@@ -1,0 +1,60 @@
+---
+source: compiler-core/src/javascript/tests/inlining.rs
+expression: "\nimport gleam/result\n\npub fn halve_all(a, b, c) {\n  use x <- result.try(divide(a, 2))\n  use y <- result.try(divide(b, 2))\n  use z <- result.map(divide(c, 2))\n\n  #(x, y, z)\n}\n\nfn divide(a, b) {\n  case a % b {\n    0 -> Ok(a / b)\n    _ -> Error(Nil)\n  }\n}\n"
+---
+----- SOURCE CODE
+
+import gleam/result
+
+pub fn halve_all(a, b, c) {
+  use x <- result.try(divide(a, 2))
+  use y <- result.try(divide(b, 2))
+  use z <- result.map(divide(c, 2))
+
+  #(x, y, z)
+}
+
+fn divide(a, b) {
+  case a % b {
+    0 -> Ok(a / b)
+    _ -> Error(Nil)
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $result from "../../gleam_stdlib/gleam/result.mjs";
+import { Ok, Error, remainderInt, divideInt } from "../gleam.mjs";
+
+function divide(a, b) {
+  let $ = remainderInt(a, b);
+  if ($ === 0) {
+    return new Ok(divideInt(a, b));
+  } else {
+    return new Error(undefined);
+  }
+}
+
+export function halve_all(a, b, c) {
+  let $ = divide(a, 2);
+  if ($ instanceof Ok) {
+    let value = $[0];
+    let x = value;
+    let $1 = divide(b, 2);
+    if ($1 instanceof Ok) {
+      let value$1 = $1[0];
+      let y = value$1;
+      let $2 = divide(c, 2);
+      if ($2 instanceof Ok) {
+        let value$2 = $2[0];
+        return new Ok([x, y, value$2]);
+      } else {
+        return $2;
+      }
+    } else {
+      return $1;
+    }
+  } else {
+    return $;
+  }
+}

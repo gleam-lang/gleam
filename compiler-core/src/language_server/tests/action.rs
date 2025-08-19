@@ -131,6 +131,7 @@ const REMOVE_ALL_ECHOS_FROM_THIS_MODULE: &str = "Remove all `echo`s from this mo
 const WRAP_IN_BLOCK: &str = "Wrap in block";
 const GENERATE_VARIANT: &str = "Generate variant";
 const REMOVE_BLOCK: &str = "Remove block";
+const REMOVE_OPAQUE_FROM_PRIVATE_TYPE: &str = "Remove opaque from private type";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -8933,6 +8934,23 @@ pub fn main() {
 }
 
 #[test]
+fn no_inline_variable_action_when_spanning_multiple_items() {
+    assert_no_code_actions!(
+        INLINE_VARIABLE,
+        "
+pub fn main(x: Int, y: Int) {
+  let a = 1
+  let b = 2
+  main(a, b)
+}
+",
+        find_position_of("main")
+            .nth_occurrence(2)
+            .select_until(find_position_of(")").nth_occurrence(2))
+    );
+}
+
+#[test]
 fn no_inline_variable_action_for_use_pattern() {
     assert_no_code_actions!(
         INLINE_VARIABLE,
@@ -9130,5 +9148,17 @@ fn remove_block_does_not_unwrap_a_block_with_multiple_statements() {
 }
 ",
         find_position_of("1").to_selection()
+    );
+}
+
+#[test]
+fn remove_opaque_from_private_type() {
+    assert_code_action!(
+        REMOVE_OPAQUE_FROM_PRIVATE_TYPE,
+        "opaque type Wibble {
+  Wobble
+}
+",
+        find_position_of("Wibble").to_selection()
     );
 }

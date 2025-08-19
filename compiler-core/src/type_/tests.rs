@@ -101,6 +101,22 @@ macro_rules! assert_module_error {
         output.push_str(&format!("-- main.gleam\n{}\n\n----- ERROR\n{error}", $src));
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
+
+    ($(($package:literal, $name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
+        let error = $crate::type_::tests::module_error(
+            $src,
+            vec![
+                $(($package, $name, $module_src)),*
+            ],
+        );
+
+        let mut output = String::from("----- SOURCE CODE\n");
+        for (name, src) in [$(($name, $module_src)),*] {
+            output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
+        }
+        output.push_str(&format!("-- main.gleam\n{}\n\n----- ERROR\n{error}", $src));
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
 }
 
 #[macro_export]
@@ -352,6 +368,7 @@ fn compile_statement_sequence(
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
     let mut problems = Problems::new();
+    let dev_dependencies = HashSet::new();
     let mut environment = EnvironmentArguments {
         ids,
         current_package: "thepackage".into(),
@@ -361,6 +378,7 @@ fn compile_statement_sequence(
         importable_modules: &modules,
         target_support: TargetSupport::Enforced,
         current_origin: Origin::Src,
+        dev_dependencies: &dev_dependencies,
     }
     .build();
     let res = ExprTyper::new(
@@ -487,6 +505,7 @@ pub fn compile_module_with_opts(
             importable_modules: &modules,
             warnings: &TypeWarningEmitter::null(),
             direct_dependencies: &HashMap::new(),
+            dev_dependencies: &HashSet::new(),
             target_support,
             package_config: &config,
         }
@@ -515,6 +534,7 @@ pub fn compile_module_with_opts(
         importable_modules: &modules,
         warnings: &warnings,
         direct_dependencies: &direct_dependencies,
+        dev_dependencies: &HashSet::from_iter(["dev_dependency".into()]),
         target_support: TargetSupport::Enforced,
         package_config: &config,
     }
@@ -759,6 +779,7 @@ fn infer_module_type_retention_test() {
         importable_modules: &modules,
         warnings: &TypeWarningEmitter::null(),
         direct_dependencies: &direct_dependencies,
+        dev_dependencies: &HashSet::new(),
         target_support: TargetSupport::Enforced,
         package_config: &config,
     }
@@ -840,7 +861,8 @@ fn infer_module_type_retention_test() {
             type_aliases: HashMap::new(),
             documentation: Vec::new(),
             contains_echo: false,
-            references: References::default()
+            references: References::default(),
+            inline_functions: HashMap::new(),
         }
     );
 }

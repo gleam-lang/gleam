@@ -73,7 +73,7 @@ impl SourceLinker {
                     let cleaned_host = string_host.trim_end_matches('/');
                     Some((
                         format!("{cleaned_host}/{user}/{repo}/src/tag/{tag}/{path_in_repo}#L",),
-                        "-".into(),
+                        "-L".into(),
                     ))
                 }
                 Repository::Custom { .. } => None,
@@ -85,6 +85,7 @@ impl SourceLinker {
             url_pattern,
         }
     }
+
     pub fn url(&self, span: SrcSpan) -> String {
         match &self.url_pattern {
             Some((base, line_sep)) => {

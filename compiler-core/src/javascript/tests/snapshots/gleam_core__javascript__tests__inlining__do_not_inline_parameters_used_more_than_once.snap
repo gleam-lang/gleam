@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/javascript/tests/inlining.rs
+expression: "\nimport testing\n\npub fn main() {\n  testing.always_inline(True)\n}\n"
+---
+----- SOURCE CODE
+
+import testing
+
+pub fn main() {
+  testing.always_inline(True)
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $testing from "../../gleam_stdlib/testing.mjs";
+
+export function main() {
+  {
+    let something = true;
+    if (something) {
+      return something;
+    } else {
+      return something;
+    }
+  }
+}

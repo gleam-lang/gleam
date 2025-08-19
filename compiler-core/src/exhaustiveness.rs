@@ -324,7 +324,7 @@ impl Branch {
 /// each body starts with a series of assignments we keep track of as we're
 /// compiling each branch.
 ///
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Body {
     /// Any variables to bind before running the code.
     ///
@@ -341,7 +341,7 @@ pub struct Body {
 /// A value that can appear on the right hand side of one of the assignments we
 /// find at the top of a body.
 ///
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
 pub enum BoundValue {
     /// `let a = variable`
     ///
@@ -557,7 +557,7 @@ struct PatternCheck {
 /// arguments: that pattern will be replaced by three new ones `a0 is 1`,
 /// `a1 is _` and `a2 is []`. Those new variables are the `args`.
 ///
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum RuntimeCheck {
     Int {
         value: EcoString,
@@ -667,7 +667,7 @@ pub enum RuntimeCheckKind {
 /// never explicitly matched on in a single `else` block without blowing up code
 /// size!
 ///
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum VariantMatch {
     ExplicitlyMatchedOn {
         name: EcoString,
@@ -696,7 +696,7 @@ impl VariantMatch {
 
 /// A variable that can be matched on in a branch.
 ///
-#[derive(Eq, PartialEq, Clone, Debug)]
+#[derive(Eq, PartialEq, Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Variable {
     pub id: usize,
     pub type_: Arc<Type>,
@@ -849,7 +849,7 @@ impl Variable {
 ///        if no options are supplied)
 /// ```
 ///
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
 pub enum BitArrayTest {
     Size(SizeTest),
     Match(MatchTest),
@@ -924,7 +924,7 @@ impl BitArrayTest {
 
 /// Test to make sure the bit array has a specific number of bits.
 ///
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
 pub struct SizeTest {
     pub operator: SizeOperator,
     pub size: Offset,
@@ -984,7 +984,7 @@ impl SizeTest {
 /// Test to make sure the segment read by the specified `read_action` matches
 /// a given value.
 ///
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
 pub struct MatchTest {
     pub value: BitArrayMatchedValue,
     pub read_action: ReadAction,
@@ -995,7 +995,7 @@ pub struct MatchTest {
 /// the possible patterns: it can only contain literal floats, ints, strings,
 /// a variable name, and a discard.
 ///
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
 pub enum BitArrayMatchedValue {
     LiteralFloat(EcoString),
     LiteralInt(BigInt),
@@ -1023,7 +1023,7 @@ impl BitArrayMatchedValue {
     }
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, Debug)]
+#[derive(Clone, Copy, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
 pub enum StringEncoding {
     Utf8,
     Utf16,
@@ -1122,7 +1122,7 @@ impl BitArrayTest {
 ///        least 12 bits: `Size(>, 12)`
 /// ```
 ///
-#[derive(Clone, Eq, PartialEq, Debug, Copy)]
+#[derive(Clone, Eq, PartialEq, Debug, Copy, serde::Serialize, serde::Deserialize)]
 pub enum SizeOperator {
     GreaterEqual,
     Equal,
@@ -1142,7 +1142,7 @@ pub enum SizeOperator {
 ///   ╰── While this segment has a constant size of 8 bits
 /// ```
 ///
-#[derive(Clone, Eq, PartialEq, Debug, Hash)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, serde::Serialize, serde::Deserialize)]
 pub struct ReadAction {
     /// The offset to start reading the bits from.
     ///
@@ -1164,7 +1164,7 @@ pub struct ReadAction {
 /// Only a subset of all the possible Gleam types can be used for a pattern
 /// segment. We enumerate those out explicitly here.
 ///
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum ReadType {
     Float,
     Int,
@@ -1227,14 +1227,14 @@ impl Confidence {
 /// is referenced once, in a segment with unit `1`; `calculations` would contain
 /// `b - 1`.
 ///
-#[derive(Clone, Eq, PartialEq, Debug, Hash)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, serde::Serialize, serde::Deserialize)]
 pub struct Offset {
     pub constant: BigInt,
     pub variables: im::HashMap<VariableUsage, usize>,
     pub calculations: im::Vector<OffsetCalculation>,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, serde::Serialize, serde::Deserialize)]
 pub struct OffsetCalculation {
     pub left: Offset,
     pub right: Offset,
@@ -1388,7 +1388,7 @@ impl Offset {
 
 /// The number of bits to read in a read action when reading a segment.
 ///
-#[derive(Clone, Eq, PartialEq, Debug, Hash)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, serde::Serialize, serde::Deserialize)]
 pub enum ReadSize {
     /// Read a constant, compile-time-known number of bits.
     ///
@@ -1504,7 +1504,7 @@ impl ReadSize {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, serde::Serialize, serde::Deserialize)]
 pub enum VariableUsage {
     /// A bit array named segment that was brought into scope in the bit array
     /// pattern itself and might be referenced by later segments.
@@ -1526,7 +1526,7 @@ impl VariableUsage {
 /// series of checks to perform at runtime to understand if a value matches with
 /// a given pattern.
 ///
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Decision {
     /// This is the final node of the tree, once we get to this one we know we
     /// have a body to run because a given pattern matched.
@@ -1564,7 +1564,7 @@ pub enum Decision {
     ///
     Switch {
         var: Variable,
-        choices: Vec<(RuntimeCheck, Box<Decision>)>,
+        choices: Vec<(RuntimeCheck, Decision)>,
         fallback: Box<Decision>,
         fallback_check: FallbackCheck,
     },
@@ -1581,7 +1581,7 @@ pub enum Decision {
 /// at least one choice that comes last and we know is going to match no matter
 /// what. This might fall under three different categories.
 ///
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
 pub enum FallbackCheck {
     /// This corresponds to the catch all added at the end of a case expression
     /// matching on an infinite type.
@@ -1690,7 +1690,7 @@ impl CompileCaseResult {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, serde::Serialize, serde::Deserialize)]
 pub struct CompiledCase {
     pub tree: Decision,
     pub subject_variables: Vec<Variable>,
@@ -1701,6 +1701,21 @@ impl CompiledCase {
         Self {
             tree: Decision::Fail,
             subject_variables: vec![],
+        }
+    }
+
+    /// The decision tree for simple variable assignment, such as in the following
+    /// assignment:
+    /// ```gleam
+    /// let x = 10
+    /// ```
+    pub fn simple_variable_assignment(name: EcoString, type_: Arc<Type>) -> Self {
+        let variable = Variable::new(0, type_);
+        let mut body = Body::new(0);
+        body.assign(name, variable.clone());
+        Self {
+            tree: Decision::Run { body },
+            subject_variables: vec![variable],
         }
     }
 }
@@ -2006,10 +2021,10 @@ impl<'a> Compiler<'a> {
     fn compile_all_choices(
         &mut self,
         choices: Vec<(RuntimeCheck, VecDeque<Branch>)>,
-    ) -> Vec<(RuntimeCheck, Box<Decision>)> {
+    ) -> Vec<(RuntimeCheck, Decision)> {
         choices
             .into_iter()
-            .map(|(check, branches)| (check, Box::new(self.compile(branches))))
+            .map(|(check, branches)| (check, self.compile(branches)))
             .collect_vec()
     }
 

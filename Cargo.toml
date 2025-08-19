@@ -14,7 +14,7 @@ members = [
 # common dependencies
 [workspace.dependencies]
 # Immutable data structures
-im = "15"
+im = { version = "15", features = ["serde"] }
 # Extra iter methods
 itertools = "0"
 # Parsing

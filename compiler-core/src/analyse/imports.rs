@@ -59,9 +59,8 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             return;
         };
 
-        if let Err(e) = self.check_for_invalid_imports(module_info, location, name.clone()) {
+        if let Err(e) = self.check_for_invalid_imports(module_info, location) {
             self.problems.error(e);
-            return;
         }
 
         if let Err(e) = self.register_module(import, module_info) {
@@ -247,8 +246,21 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         &mut self,
         module_info: &ModuleInterface,
         location: SrcSpan,
-        imported_module: EcoString,
     ) -> Result<(), Error> {
+        if self.origin.is_src()
+            && self
+                .environment
+                .dev_dependencies
+                .contains(&module_info.package)
+        {
+            return Err(Error::SrcImportingDevDependency {
+                importing_module: self.environment.current_module.clone(),
+                imported_module: module_info.name.clone(),
+                package: module_info.package.clone(),
+                location,
+            });
+        }
+
         let kind = match (self.origin, module_info.origin) {
             // `src` cannot import `test` or `dev`
             (Origin::Src, Origin::Test) => InvalidImportKind::SrcImportingTest,
@@ -261,7 +273,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         Err(Error::InvalidImport {
             location,
             importing_module: self.environment.current_module.clone(),
-            imported_module,
+            imported_module: module_info.name.clone(),
             kind,
         })
     }

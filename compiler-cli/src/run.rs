@@ -56,12 +56,12 @@ pub fn setup(
     no_print_progress: bool,
 ) -> Result<Command, Error> {
     // Validate the module path
-    if let Some(mod_path) = &module {
-        if !is_gleam_module(mod_path) {
-            return Err(Error::InvalidModuleName {
-                module: mod_path.to_owned(),
-            });
-        }
+    if let Some(mod_path) = &module
+        && !is_gleam_module(mod_path)
+    {
+        return Err(Error::InvalidModuleName {
+            module: mod_path.to_owned(),
+        });
     };
 
     let telemetry: &'static dyn Telemetry = if no_print_progress {

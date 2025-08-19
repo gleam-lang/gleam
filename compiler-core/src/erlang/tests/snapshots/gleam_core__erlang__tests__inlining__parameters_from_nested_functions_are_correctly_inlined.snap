@@ -1,0 +1,73 @@
+---
+source: compiler-core/src/erlang/tests/inlining.rs
+expression: "\nimport gleam/result\n\npub fn halve_all(a, b, c) {\n  use x <- result.try(divide(a, 2))\n  use y <- result.try(divide(b, 2))\n  use z <- result.map(divide(c, 2))\n\n  #(x, y, z)\n}\n\nfn divide(a, b) {\n  case a % b {\n    0 -> Ok(a / b)\n    _ -> Error(Nil)\n  }\n}\n"
+---
+----- SOURCE CODE
+
+import gleam/result
+
+pub fn halve_all(a, b, c) {
+  use x <- result.try(divide(a, 2))
+  use y <- result.try(divide(b, 2))
+  use z <- result.map(divide(c, 2))
+
+  #(x, y, z)
+}
+
+fn divide(a, b) {
+  case a % b {
+    0 -> Ok(a / b)
+    _ -> Error(Nil)
+  }
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([halve_all/3]).
+
+-file("project/test/my/mod.gleam", 12).
+-spec divide(integer(), integer()) -> {ok, integer()} | {error, nil}.
+divide(A, B) ->
+    case case B of
+        0 -> 0;
+        Gleam@denominator -> A rem Gleam@denominator
+    end of
+        0 ->
+            {ok, case B of
+                    0 -> 0;
+                    Gleam@denominator@1 -> A div Gleam@denominator@1
+                end};
+
+        _ ->
+            {error, nil}
+    end.
+
+-file("project/test/my/mod.gleam", 4).
+-spec halve_all(integer(), integer(), integer()) -> {ok,
+        {integer(), integer(), integer()}} |
+    {error, nil}.
+halve_all(A, B, C) ->
+    case divide(A, 2) of
+        {ok, Value} ->
+            X = Value,
+            case divide(B, 2) of
+                {ok, Value@1} ->
+                    Y = Value@1,
+                    case divide(C, 2) of
+                        {ok, Value@2} ->
+                            {ok, {X, Y, Value@2}};
+
+                        {error, Error} ->
+                            {error, Error}
+                    end;
+
+                {error, Error@1} ->
+                    {error, Error@1}
+            end;
+
+        {error, Error@2} ->
+            {error, Error@2}
+    end.

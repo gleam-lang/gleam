@@ -688,21 +688,22 @@ pub fn edit_distance(a: &str, b: &str, limit: usize) -> Option<usize> {
                 );
             }
 
-            if (i > 1) && (j > 1) {
-                if let (Some(&a_val), Some(&b_val_prev), Some(&a_val_prev), Some(&b_val)) = (
+            if (i > 1)
+                && (j > 1)
+                && let (Some(&a_val), Some(&b_val_prev), Some(&a_val_prev), Some(&b_val)) = (
                     a.get(a_idx),
                     b.get(b_idx - 1),
                     a.get(a_idx - 1),
                     b.get(b_idx),
-                ) {
-                    if (a_val == b_val_prev) && (a_val_prev == b_val) {
-                        // transposition
-                        if let Some(curr) = current.get_mut(j) {
-                            if let Some(&prev_prev_val) = prev_prev.get(j - 2) {
-                                *curr = std::cmp::min(*curr, prev_prev_val + 1);
-                            }
-                        }
-                    }
+                )
+                && (a_val == b_val_prev)
+                && (a_val_prev == b_val)
+            {
+                // transposition
+                if let Some(curr) = current.get_mut(j)
+                    && let Some(&prev_prev_val) = prev_prev.get(j - 2)
+                {
+                    *curr = std::cmp::min(*curr, prev_prev_val + 1);
                 }
             }
         }
@@ -3863,6 +3864,50 @@ at once, which is not possible in bit arrays.",
 variable in a bit array. This is planned to be supported in the future, but we are \
 unsure of the desired behaviour. Please go to https://github.com/gleam-lang/gleam/issues/4566 \
 and explain your usecase for this pattern, and how you would expect it to behave.",
+                        ),
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    },
+
+                    TypeError::PrivateOpaqueType { location } => Diagnostic {
+                        title: "Private opaque type".to_string(),
+                        text: wrap("Only a public type can be opaque."),
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("You can safely remove this.".to_string()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    },
+
+                    TypeError::SrcImportingDevDependency {
+                        location,
+                        importing_module,
+                        imported_module,
+                        package,
+                    } => Diagnostic {
+                        title: "App importing dev dependency".to_string(),
+                        text: wrap_format!(
+                            "The application module `{importing_module}` is \
+importing the module `{imported_module}`, but `{package}`, the package it \
+belongs to, is a dev dependency.
+
+Dev dependencies are not included in production builds so application \
+modules should not import them. Perhaps change `{package}` to a regular dependency."
                         ),
                         hint: None,
                         level: Level::Error,

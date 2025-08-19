@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/javascript/tests/inlining.rs
+expression: "\npub fn main() {\n    { 4 |> make_adder }(6)\n}\n\nfn make_adder(a) {\n  fn(b) { a + b }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+    { 4 |> make_adder }(6)
+}
+
+fn make_adder(a) {
+  fn(b) { a + b }
+}
+
+
+----- COMPILED JAVASCRIPT
+function make_adder(a) {
+  return (b) => { return a + b; };
+}
+
+export function main() {
+  let _block;
+  let _pipe = 4;
+  _block = make_adder(_pipe);
+  return _block(6);
+}

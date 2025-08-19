@@ -10,5 +10,5 @@ pub fn main() {
 
 ----- COMPILED JAVASCRIPT
 export function main() {
-  return ((n) => { return n + 1; })(10);
+  return 10 + 1;
 }

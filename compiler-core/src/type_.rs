@@ -31,6 +31,7 @@ use crate::{
     },
     bit_array,
     build::{Origin, Target},
+    inline::InlinableFunction,
     line_numbers::LineNumbers,
     reference::ReferenceMap,
     type_::expression::Implementations,
@@ -630,10 +631,10 @@ impl TypeVar {
 }
 
 pub fn collapse_links(t: Arc<Type>) -> Arc<Type> {
-    if let Type::Var { type_ } = t.deref() {
-        if let TypeVar::Link { type_ } = type_.borrow().deref() {
-            return collapse_links(type_.clone());
-        }
+    if let Type::Var { type_ } = t.deref()
+        && let TypeVar::Link { type_ } = type_.borrow().deref()
+    {
+        return collapse_links(type_.clone());
     }
     t
 }
@@ -994,6 +995,8 @@ pub struct ModuleInterface {
     /// Wether there's any echo in the module.
     pub contains_echo: bool,
     pub references: References,
+    /// Functions which can be inlined
+    pub inline_functions: HashMap<EcoString, InlinableFunction>,
 }
 
 impl ModuleInterface {

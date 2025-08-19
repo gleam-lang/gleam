@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/javascript/tests/inlining.rs
+expression: "\npub fn main() {\n  fn(a, b) { #(a, b) }(42, False)\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  fn(a, b) { #(a, b) }(42, False)
+}
+
+
+----- COMPILED JAVASCRIPT
+export function main() {
+  return [42, false];
+}

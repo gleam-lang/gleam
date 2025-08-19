@@ -12,7 +12,9 @@ use crate::{
     config::PackageConfig,
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
-        code_action::RemoveBlock, compiler::LspProjectCompiler, files::FileSystemProxy,
+        code_action::{RemoveBlock, RemovePrivateOpaque},
+        compiler::LspProjectCompiler,
+        files::FileSystemProxy,
         progress::ProgressReporter,
     },
     line_numbers::LineNumbers,
@@ -437,6 +439,7 @@ where
             actions.extend(InlineVariable::new(module, &lines, &params).code_actions());
             actions.extend(WrapInBlock::new(module, &lines, &params).code_actions());
             actions.extend(RemoveBlock::new(module, &lines, &params).code_actions());
+            actions.extend(RemovePrivateOpaque::new(module, &lines, &params).code_actions());
             GenerateDynamicDecoder::new(module, &lines, &params, &mut actions).code_actions();
             GenerateJsonEncoder::new(
                 module,
@@ -642,11 +645,16 @@ where
                 }) if location.contains(byte_index) => match origin.map(|origin| origin.syntax) {
                     Some(VariableSyntax::Generated) => None,
                     Some(
-                        VariableSyntax::Variable { .. }
-                        | VariableSyntax::AssignmentPattern
-                        | VariableSyntax::LabelShorthand(_),
-                    )
-                    | None => success_response(location),
+                        VariableSyntax::Variable(label) | VariableSyntax::LabelShorthand(label),
+                    ) => success_response(SrcSpan {
+                        start: location.start,
+                        end: label
+                            .len()
+                            .try_into()
+                            .map(|len: u32| location.start + len)
+                            .unwrap_or(location.end),
+                    }),
+                    Some(VariableSyntax::AssignmentPattern) | None => success_response(location),
                 },
                 Some(
                     Referenced::ModuleValue {
