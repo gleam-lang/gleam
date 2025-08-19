@@ -3294,3 +3294,17 @@ opaque type Wibble {
 "
     );
 }
+
+#[test]
+fn src_importing_dev_dependency() {
+    assert_module_error!(
+        ("dev_dependency", "some_module", "pub fn main() { Nil }"),
+        "
+import some_module
+
+pub fn main() {
+  some_module.main()
+}
+"
+    );
+}

@@ -69,7 +69,7 @@
   spans.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The compiler now emits a warning when a module in the `src` directory imports
+- The compiler now emits an error when a module in the `src` directory imports
   a dev dependency.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
@@ -81,10 +81,6 @@
 - `gleam add` now adds `dependencies` and `dev-dependencies` as tables instead
   of inline tables if they are missing.
   ([Andrey Kozhev](https://github.com/ankddev))
-
-- The build tool now prevents publishing packages and exporting Erlang shipments
-  when a module in the package's `src` directory imports a dev dependency.
-  ([Surya Rose](https://github.com/GearsDatapacks))
 
 ### Language server
 

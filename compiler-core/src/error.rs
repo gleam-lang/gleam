@@ -298,12 +298,6 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     )]
     CannotPublishLeakedInternalType { unfinished: Vec<EcoString> },
 
-    #[error("The modules {modules:?} import dev dependencies cannot be published")]
-    CannotPublishImportingDevDependency { modules: Vec<EcoString> },
-
-    #[error("The modules {modules:?} import dev dependencies cannot be exported")]
-    CannotExportShipmentImportingDevDependency { modules: Vec<EcoString> },
-
     #[error("Publishing packages to reserve names is not permitted")]
     HexPackageSquatting,
 
@@ -1044,48 +1038,6 @@ resulting in compilation errors!"
 Please make sure internal types do not appear in public functions and try again.
 ",
                     unfinished
-                        .iter()
-                        .map(|name| format!("  - {}", name.as_str()))
-                        .join("\n")
-                ),
-                level: Level::Error,
-                hint: None,
-                location: None,
-            }],
-
-            Error::CannotPublishImportingDevDependency { modules } => vec![Diagnostic {
-                title: "Cannot publish code importing dev dependencies".into(),
-                text: wrap_format!(
-                    "These modules import dev dependencies and cannot be published:
-
-{}
-
-Dev dependencies are not available for published packages, so publishing code \
-importing them would lead to invalid code when this package is added as a \
-dependency. Please make sure your package does not import dev dependencies and \
-try again.",
-                    modules
-                        .iter()
-                        .map(|name| format!("  - {}", name.as_str()))
-                        .join("\n")
-                ),
-                level: Level::Error,
-                hint: None,
-                location: None,
-            }],
-
-            Error::CannotExportShipmentImportingDevDependency { modules } => vec![Diagnostic {
-                title: "Cannot export code importing dev dependencies".into(),
-                text: wrap_format!(
-                    "These modules import dev dependencies and cannot be export \
-as an Erlang shipment:
-
-{}
-
-Dev dependencies are not available for production builds, so exported code \
-importing them would lead to invalid code when run. Please make sure your \
-package does not import dev dependencies and try again.",
-                    modules
                         .iter()
                         .map(|name| format!("  - {}", name.as_str()))
                         .join("\n")
@@ -3934,6 +3886,34 @@ and explain your usecase for this pattern, and how you would expect it to behave
                         location: Some(Location {
                             label: Label {
                                 text: Some("You can safely remove this.".to_string()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    },
+
+                    TypeError::SrcImportingDevDependency {
+                        location,
+                        importing_module,
+                        imported_module,
+                        package,
+                    } => Diagnostic {
+                        title: "App importing dev dependency".to_string(),
+                        text: wrap_format!(
+                            "The application module `{importing_module}` is \
+importing the module `{imported_module}`, but `{package}`, the package it \
+belongs to, is a dev dependency.
+
+Dev dependencies are not included in production builds so application \
+modules should not import them. Perhaps change `{package}` to a regular dependency."
+                        ),
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
                                 span: *location,
                             },
                             path: path.clone(),

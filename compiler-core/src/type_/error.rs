@@ -648,6 +648,13 @@ pub enum Error {
     PrivateOpaqueType {
         location: SrcSpan,
     },
+
+    SrcImportingDevDependency {
+        importing_module: EcoString,
+        imported_module: EcoString,
+        package: EcoString,
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1053,13 +1060,6 @@ pub enum Warning {
         location: SrcSpan,
         outcome: ComparisonOutcome,
     },
-
-    SrcImportingDevDependency {
-        importing_module: EcoString,
-        imported_module: EcoString,
-        package: EcoString,
-        location: SrcSpan,
-    },
 }
 
 #[derive(Debug, Eq, Copy, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
@@ -1219,7 +1219,8 @@ impl Error {
             | Error::StringConcatenationWithAddInt { location }
             | Error::DoubleVariableAssignmentInBitArray { location }
             | Error::NonUtf8StringAssignmentInBitArray { location }
-            | Error::PrivateOpaqueType { location } => location.start,
+            | Error::PrivateOpaqueType { location }
+            | Error::SrcImportingDevDependency { location, .. } => location.start,
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
             }
@@ -1289,8 +1290,7 @@ impl Warning {
             | Warning::ModuleImportedTwice {
                 second: location, ..
             }
-            | Warning::RedundantComparison { location, .. }
-            | Warning::SrcImportingDevDependency { location, .. } => *location,
+            | Warning::RedundantComparison { location, .. } => *location,
         }
     }
 
@@ -1299,10 +1299,6 @@ impl Warning {
             Self::Todo { .. } => true,
             _ => false,
         }
-    }
-
-    pub(crate) fn imports_dev_dependency(&self) -> bool {
-        matches!(self, Self::SrcImportingDevDependency { .. })
     }
 }
 
