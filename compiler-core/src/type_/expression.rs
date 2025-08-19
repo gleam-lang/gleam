@@ -4773,7 +4773,7 @@ fn get_empty_list_check_kind<'a>(
             _ => None,
         },
         (TypedExpr::Int { value, .. }, _) => match (binop, value.as_str()) {
-            (BinOp::GtEqInt, "0" | "-0") | (BinOp::GtInt, "1") | (BinOp::LtInt, "0" | "-0") => {
+            (BinOp::GtEqInt | BinOp::LtInt, "0" | "-0") | (BinOp::GtInt, "1") => {
                 Some(EmptyListCheckKind::NonEmpty)
             }
             _ => None,
