@@ -73,7 +73,10 @@
   ([eutampieri](https://github.com/eutampieri))
 
 - The compiler will now raise warning for inefficient use of `list.length()`
-  when trying to check is list empty via `0 < list.length(list)` or `list.length(list) > 0` as well as in other cases. For example, the following code:
+  when trying to check is list empty via `0 < list.length(list)` or
+`list.length(list) > 0` as well as in other cases. For example, the following
+  code:
+
   ```gleam
   import gleam/list
 
