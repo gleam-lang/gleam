@@ -6717,3 +6717,24 @@ fn assert_as_with_comment_before_the_as() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4664
+#[test]
+fn pattern_unused_discard() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  let a = 10
+  let _ = case a {
+    _ as b -> b
+  }
+}
+"#,
+        r#"pub fn main() {
+  let a = 10
+  let _ = case a {
+    b -> b
+  }
+}
+"#
+    );
+}
