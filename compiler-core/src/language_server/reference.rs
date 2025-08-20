@@ -400,10 +400,16 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
                 location: definition_location,
                 ..
             } if definition_location == self.definition_location => {
-                self.references.push(VariableReference {
-                    location: *location,
-                    kind: VariableReferenceKind::Variable,
-                })
+                if !self
+                    .references
+                    .iter()
+                    .any(|reference| reference.location == *location)
+                {
+                    self.references.push(VariableReference {
+                        location: *location,
+                        kind: VariableReferenceKind::Variable,
+                    })
+                }
             }
             _ => {}
         }

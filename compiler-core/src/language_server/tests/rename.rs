@@ -1550,3 +1550,20 @@ pub const something = 10
         find_position_of("something")
     );
 }
+
+#[test]
+fn rename_variable_used_in_record_update() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(a: Int, b: Int, c: Int)
+}
+
+fn wibble(wibble: Wibble) {
+  Wibble(..wibble, c: 1)
+}
+",
+        "value",
+        find_position_of("wibble:")
+    );
+}
