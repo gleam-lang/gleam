@@ -4444,6 +4444,7 @@ pub struct PatternMatchOnValue<'a, A> {
     module: &'a Module,
     params: &'a CodeActionParams,
     compiler: &'a LspProjectCompiler<A>,
+    pattern_variable_under_cursor: Option<(&'a EcoString, Arc<Type>)>,
     selected_value: Option<PatternMatchedValue<'a>>,
     edits: TextEdits<'a>,
 }
@@ -4468,7 +4469,7 @@ pub enum PatternMatchedValue<'a> {
         function_range: Range,
     },
     LetVariable {
-        variable_name: EcoString,
+        variable_name: &'a EcoString,
         variable_type: Arc<Type>,
         /// The location of the entire let assignment the variable is part of,
         /// so that we can add the pattern matching _after_ it.
@@ -4476,7 +4477,7 @@ pub enum PatternMatchedValue<'a> {
         assignment_location: SrcSpan,
     },
     UseVariable {
-        variable_name: EcoString,
+        variable_name: &'a EcoString,
         variable_type: Arc<Type>,
         /// The location of the entire use expression the variable is part of,
         /// so that we can add the pattern matching _after_ it.
@@ -4500,6 +4501,7 @@ where
             params,
             compiler,
             selected_value: None,
+            pattern_variable_under_cursor: None,
             edits: TextEdits::new(line_numbers),
         }
     }
@@ -4531,6 +4533,7 @@ where
                 self.match_on_let_variable(variable_name, variable_type, location);
                 "Pattern match on variable"
             }
+
             None => return vec![],
         };
 
@@ -4615,7 +4618,7 @@ where
 
     fn match_on_let_variable(
         &mut self,
-        variable_name: EcoString,
+        variable_name: &EcoString,
         variable_type: Arc<Type>,
         assignment_location: SrcSpan,
     ) {
@@ -4781,94 +4784,6 @@ where
         pattern.push(')');
         Some(pattern)
     }
-
-    fn pattern_variable_under_cursor(
-        &self,
-        pattern: &'a TypedPattern,
-    ) -> Option<(&'a EcoString, Arc<Type>)> {
-        match pattern {
-            Pattern::Int { .. }
-            | Pattern::Float { .. }
-            | Pattern::String { .. }
-            | Pattern::BitArraySize(_)
-            | Pattern::Discard { .. }
-            | Pattern::Invalid { .. } => None,
-
-            Pattern::Variable {
-                location,
-                name,
-                type_,
-                ..
-            } => {
-                if within(
-                    self.params.range,
-                    self.edits.src_span_to_lsp_range(*location),
-                ) {
-                    Some((name, type_.clone()))
-                } else {
-                    None
-                }
-            }
-
-            Pattern::Assign { pattern, .. } => self.pattern_variable_under_cursor(pattern),
-
-            Pattern::Constructor { arguments, .. } => arguments
-                .iter()
-                .find_map(|argument| self.pattern_variable_under_cursor(&argument.value)),
-
-            Pattern::Tuple { elements, .. } => elements
-                .iter()
-                .find_map(|element| self.pattern_variable_under_cursor(element)),
-
-            Pattern::List { elements, tail, .. } => elements
-                .iter()
-                .find_map(|element| self.pattern_variable_under_cursor(element))
-                .or_else(|| {
-                    tail.as_ref()
-                        .and_then(|tail| self.pattern_variable_under_cursor(tail))
-                }),
-
-            Pattern::BitArray { segments, .. } => segments
-                .iter()
-                .flat_map(|segment| &segment.options)
-                .find_map(|option| {
-                    option
-                        .value()
-                        .and_then(|pattern| self.pattern_variable_under_cursor(pattern))
-                }),
-
-            Pattern::StringPrefix {
-                left_side_assignment: Some((name, location)),
-                ..
-            } => {
-                if within(
-                    self.params.range,
-                    self.edits.src_span_to_lsp_range(*location),
-                ) {
-                    Some((name, type_::string()))
-                } else {
-                    None
-                }
-            }
-
-            Pattern::StringPrefix {
-                right_side_assignment: AssignName::Variable(name),
-                right_location,
-                ..
-            } => {
-                if within(
-                    self.params.range,
-                    self.edits.src_span_to_lsp_range(*right_location),
-                ) {
-                    Some((name, type_::string()))
-                } else {
-                    None
-                }
-            }
-
-            Pattern::StringPrefix { .. } => None,
-        }
-    }
 }
 
 impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO>
@@ -4952,18 +4867,14 @@ where
     }
 
     fn visit_typed_assignment(&mut self, assignment: &'ast TypedAssignment) {
-        if let Some((name, type_)) = self.pattern_variable_under_cursor(&assignment.pattern) {
+        ast::visit::visit_typed_assignment(self, assignment);
+        if let Some((name, ref type_)) = self.pattern_variable_under_cursor {
             self.selected_value = Some(PatternMatchedValue::LetVariable {
-                variable_name: name.clone(),
-                variable_type: type_,
+                variable_name: name,
+                variable_type: type_.clone(),
                 assignment_location: assignment.location,
             });
-            // If we've found the variable to pattern match on, there's no
-            // point in keeping traversing the AST.
-            return;
         }
-
-        ast::visit::visit_typed_assignment(self, assignment);
     }
 
     fn visit_typed_use(&mut self, use_: &'ast TypedUse) {
@@ -4989,7 +4900,7 @@ where
                 let variable_range = self.edits.src_span_to_lsp_range(*variable_location);
                 if within(self.params.range, variable_range) {
                     self.selected_value = Some(PatternMatchedValue::UseVariable {
-                        variable_name: name.clone(),
+                        variable_name: name,
                         variable_type: type_.clone(),
                         use_location: use_.location,
                     });
@@ -5001,6 +4912,47 @@ where
         }
 
         ast::visit::visit_typed_use(self, use_);
+    }
+
+    fn visit_typed_pattern_variable(
+        &mut self,
+        location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        type_: &'ast Arc<Type>,
+        _origin: &'ast VariableOrigin,
+    ) {
+        if within(
+            self.params.range,
+            self.edits.src_span_to_lsp_range(*location),
+        ) {
+            self.pattern_variable_under_cursor = Some((name, type_.clone()));
+        }
+    }
+
+    fn visit_typed_pattern_string_prefix(
+        &mut self,
+        _location: &'ast SrcSpan,
+        _left_location: &'ast SrcSpan,
+        left_side_assignment: &'ast Option<(EcoString, SrcSpan)>,
+        right_location: &'ast SrcSpan,
+        _left_side_string: &'ast EcoString,
+        right_side_assignment: &'ast AssignName,
+    ) {
+        if let Some((name, location)) = left_side_assignment
+            && within(
+                self.params.range,
+                self.edits.src_span_to_lsp_range(*location),
+            )
+        {
+            self.pattern_variable_under_cursor = Some((name, type_::string()));
+        } else if let AssignName::Variable(name) = right_side_assignment
+            && within(
+                self.params.range,
+                self.edits.src_span_to_lsp_range(*right_location),
+            )
+        {
+            self.pattern_variable_under_cursor = Some((name, type_::string()));
+        }
     }
 }
 
