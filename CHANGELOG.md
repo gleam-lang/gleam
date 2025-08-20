@@ -272,3 +272,7 @@
 
 - Fixed a bug where `echo .. as ..` message will be omitted in browser target.
   ([Andrey Kozhev](https://github.com/ankddev))
+
+- Fixed a bug where renaming a variable used in a record update would produce
+  invalid code in certain situations.
+  ([Surya Rose](https://github.com/GearsDatapacks))
