@@ -218,13 +218,7 @@ impl PackageConfig {
         fs: &FS,
     ) -> Result<PackageConfig, Error> {
         let toml = fs.read(path.as_ref())?;
-        let config: PackageConfig = toml::from_str(&toml).map_err(|e| Error::FileIo {
-            action: FileIoAction::Parse,
-            kind: FileKind::File,
-            path: path.as_ref().to_path_buf(),
-            err: Some(e.to_string()),
-        })?;
-        Ok(config)
+        deserialise_config(path, toml)
     }
 
     /// Get the locked packages for the current config and a given (optional)
@@ -320,6 +314,37 @@ impl PackageConfig {
             None => format!("v{version}"),
         }
     }
+}
+
+fn deserialise_config<P: AsRef<Utf8Path>>(
+    path: P,
+    toml: String,
+) -> std::result::Result<PackageConfig, Error> {
+    let config: PackageConfig = toml::from_str(&toml).map_err(|e| Error::FileIo {
+        action: FileIoAction::Parse,
+        kind: FileKind::File,
+        path: path.as_ref().to_path_buf(),
+        err: Some(e.to_string()),
+    })?;
+    Ok(config)
+}
+
+// https://github.com/gleam-lang/gleam/issues/4867
+#[test]
+fn deny_extra_deps_properties() {
+    let toml = r#"
+name = "wibble"
+version = "1.0.0"
+
+[dependencies]
+aide_generator = { git = "git@github.com:crowdhailer/aide.git", ref = "f559c5bc", extra = "idk what this is" }
+"#;
+    let error = deserialise_config("gleam.toml", toml.into())
+        .expect_err("should fail to deserialise because of additional path");
+    assert_eq!(
+        error.to_string(),
+        r#"Parse "gleam.toml" failed: Some("data did not match any variant of untagged enum Requirement for key `dependencies.aide_generator` at line 6 column 18")"#
+    );
 }
 
 #[test]

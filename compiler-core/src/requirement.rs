@@ -12,12 +12,13 @@ use serde::de::{self, Deserializer, MapAccess, Visitor};
 use serde::ser::{Serialize, SerializeMap, Serializer};
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
-#[serde(untagged, remote = "Self")]
+#[serde(untagged, remote = "Self", deny_unknown_fields)]
 pub enum Requirement {
     Hex {
         #[serde(deserialize_with = "deserialise_range")]
         version: Range,
     },
+
     Path {
         path: Utf8PathBuf,
     },

@@ -115,7 +115,7 @@ pub enum Error {
     #[error("cyclical package dependencies")]
     PackageCycle { packages: Vec<EcoString> },
 
-    #[error("file operation failed")]
+    #[error("{action:?} {path:?} failed: {err:?}")]
     FileIo {
         kind: FileKind,
         action: FileIoAction,
