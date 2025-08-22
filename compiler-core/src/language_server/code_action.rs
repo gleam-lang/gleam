@@ -5947,10 +5947,14 @@ impl<'a> InlineVariable<'a> {
     }
 
     fn maybe_inline(&mut self, location: SrcSpan, name: EcoString) {
-        let reference = match find_variable_references(&self.module.ast, location, name).as_slice()
-        {
-            [only_reference] => *only_reference,
-            _ => return,
+        let references = find_variable_references(&self.module.ast, location, name);
+        let reference = if references.len() == 1 {
+            references
+                .into_iter()
+                .next()
+                .expect("References has length 1")
+        } else {
+            return;
         };
 
         let Some(ast::Statement::Assignment(assignment)) =
