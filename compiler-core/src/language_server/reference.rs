@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use ecow::EcoString;
 use lsp_types::Location;
@@ -342,13 +342,13 @@ fn find_references_in_module(
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct VariableReference {
     pub location: SrcSpan,
     pub kind: VariableReferenceKind,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum VariableReferenceKind {
     Variable,
     LabelShorthand,
@@ -358,9 +358,9 @@ pub fn find_variable_references(
     module: &TypedModule,
     definition_location: SrcSpan,
     name: EcoString,
-) -> Vec<VariableReference> {
+) -> HashSet<VariableReference> {
     let mut finder = FindVariableReferences {
-        references: Vec::new(),
+        references: HashSet::new(),
         definition_location,
         alternative_variable: AlternativeVariable::Ignore,
         name,
@@ -376,7 +376,11 @@ enum AlternativeVariable {
 }
 
 struct FindVariableReferences {
-    references: Vec<VariableReference>,
+    // Due to the structure of some AST nodes (for example, record updates),
+    // when we traverse the AST it is possible to accidentally duplicate references.
+    // To avoid this, we use a `HashSet` instead of a `Vec` here.
+    // See: https://github.com/gleam-lang/gleam/issues/4859 and the linked PR.
+    references: HashSet<VariableReference>,
     definition_location: SrcSpan,
     alternative_variable: AlternativeVariable,
     name: EcoString,
@@ -400,16 +404,10 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
                 location: definition_location,
                 ..
             } if definition_location == self.definition_location => {
-                if !self
-                    .references
-                    .iter()
-                    .any(|reference| reference.location == *location)
-                {
-                    self.references.push(VariableReference {
-                        location: *location,
-                        kind: VariableReferenceKind::Variable,
-                    })
-                }
+                _ = self.references.insert(VariableReference {
+                    location: *location,
+                    kind: VariableReferenceKind::Variable,
+                });
             }
             _ => {}
         }
@@ -423,10 +421,10 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
         definition_location: &'ast SrcSpan,
     ) {
         if *definition_location == self.definition_location {
-            self.references.push(VariableReference {
+            _ = self.references.insert(VariableReference {
                 location: *location,
                 kind: VariableReferenceKind::Variable,
-            })
+            });
         }
     }
 
@@ -474,7 +472,7 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
             AlternativeVariable::Track
                 if *name == self.name && *location != self.definition_location =>
             {
-                self.references.push(VariableReference {
+                _ = self.references.insert(VariableReference {
                     location: *location,
                     kind: VariableReferenceKind::Variable,
                 });
@@ -499,10 +497,10 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
                 location: definition_location,
                 ..
             } if *definition_location == self.definition_location => {
-                self.references.push(VariableReference {
+                _ = self.references.insert(VariableReference {
                     location: *location,
                     kind: VariableReferenceKind::Variable,
-                })
+                });
             }
             _ => {}
         }
@@ -522,7 +520,7 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
                 } if arg.uses_label_shorthand()
                     && *definition_location == self.definition_location =>
                 {
-                    self.references.push(VariableReference {
+                    _ = self.references.insert(VariableReference {
                         location: *location,
                         kind: VariableReferenceKind::LabelShorthand,
                     });
