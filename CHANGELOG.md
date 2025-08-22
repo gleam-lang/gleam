@@ -126,6 +126,9 @@
   of inline tables if they are missing.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- Added `gleam hex deauthenticate` command.
+  ([Samuel Cristobal](https://github.com/scristobal))
+
 ### Language server
 
 - The "pattern match on variable" can now be triggered on lists. For example:
