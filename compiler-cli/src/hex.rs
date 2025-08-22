@@ -3,9 +3,11 @@ mod auth;
 use crate::{cli, http::HttpClient};
 use gleam_core::{
     Error, Result,
+    error::wrap,
     hex::{self, RetirementReason},
     io::HttpClient as _,
     paths::ProjectPaths,
+    wrap_println,
 };
 
 pub use auth::HexAuthentication;
@@ -96,26 +98,47 @@ pub(crate) fn authenticate() -> Result<()> {
     let http = HttpClient::new();
     let config = hexpm::Config::new();
     let mut auth = HexAuthentication::new(&runtime, config.clone());
-    let previous = auth.read_stored_api_key()?;
+    let previous_key = auth.read_stored_api_key()?;
 
-    if previous.is_some() {
-        let question = "You already have a local Hex API token. Would you like to replace it
-with a new one?";
+    if previous_key.is_some() {
+        let question =
+            "You already have a local Hex API key. Would you like to replace it with a new one?";
         if !cli::confirm(question)? {
             return Ok(());
         }
     }
 
     let new_key = auth.create_and_store_api_key()?;
+    let new_key_encrypted = auth.read_stored_api_key()?;
 
-    if let Some(previous) = previous {
-        println!("Deleting previous key `{}` from Hex", previous.name);
-        runtime.block_on(hex::remove_api_key(
-            &previous.name,
-            &config,
-            &new_key.unencrypted,
-            &http,
-        ))?;
+    if let Some(previous) = previous_key {
+        if let Some(new_key_encrypted) = new_key_encrypted
+            && previous.username != new_key_encrypted.username
+        {
+            wrap_println!(
+                "Your previous Hex API key was created with username `{}` which is different from the username \
+used to create the new Hex API key. You will have to revoke the key `{}` manually at https://hex.pm",
+                previous.username,
+                previous.name
+            );
+            return Ok(());
+        }
+
+        wrap_println!("Deleting previous key `{}` from Hex", previous.name);
+        if runtime
+            .block_on(hex::remove_api_key(
+                &previous.name,
+                &config,
+                &new_key.unencrypted,
+                &http,
+            ))
+            .is_err()
+        {
+            wrap_println!(
+                "There was an error revoking key `{}` from Hex. You have to revoke the key manually at https://hex.pm",
+                previous.name
+            )
+        };
     }
     Ok(())
 }
