@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nfn wibble(a, b, c) {\n  let x: a = todo\n  fn(a: b, b: c) -> d {\n    todo\n  }\n}\n"
+---
+----- BEFORE ACTION
+
+fn wibble(a, b, c) {
+   ↑                
+  let x: a = todo
+  fn(a: b, b: c) -> d {
+    todo
+  }
+}
+
+
+----- AFTER ACTION
+
+fn wibble(a: e, b: f, c: g) -> fn(b, c) -> d {
+  let x: a = todo
+  fn(a: b, b: c) -> d {
+    todo
+  }
+}

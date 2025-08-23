@@ -9508,3 +9508,19 @@ fn many_args(a, b, c, d: d, e: a, f, g) {
         find_position_of("many_args").to_selection()
     );
 }
+
+#[test]
+fn type_variables_in_let_bindings_are_considered_when_adding_annotations() {
+    assert_code_action!(
+        ADD_ANNOTATIONS,
+        "
+fn wibble(a, b, c) {
+  let x: a = todo
+  fn(a: b, b: c) -> d {
+    todo
+  }
+}
+",
+        find_position_of("wibble").to_selection()
+    );
+}
