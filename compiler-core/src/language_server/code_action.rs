@@ -1194,13 +1194,13 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
     }
 
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
-        self.printer.clear_type_variables();
-
         // Since type variable names are local to definitions, any type variables
         // in other parts of the module shouldn't affect what we print for the
         // annotations of this functions. The only variables which cannot clash
         // are ones defined in the signature of this function, which we register
-        // when we visit the parameters of this function below.
+        // when we visit the parameters of this function inside `collect_type_variables`.
+        self.printer.clear_type_variables();
+        collect_type_variables(&mut self.printer, fun);
 
         ast::visit::visit_typed_function(self, fun);
 
@@ -1238,12 +1238,6 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
                 format!(" -> {}", self.printer.print_type(&fun.return_type)),
             );
         }
-    }
-
-    fn visit_type_ast_var(&mut self, _location: &'ast SrcSpan, name: &'ast EcoString) {
-        // Register this type variable so that we don't duplicate names when
-        // adding annotations.
-        self.printer.register_type_variable(name.clone());
     }
 
     fn visit_typed_expr_fn(
@@ -1340,6 +1334,24 @@ impl<'a> AddAnnotations<'a> {
     }
 }
 
+struct TypeVariableCollector<'a, 'b> {
+    printer: &'a mut Printer<'b>,
+}
+
+/// Collect type variables defined within a function and register them for a
+/// `Printer`
+fn collect_type_variables(printer: &mut Printer<'_>, function: &ast::TypedFunction) {
+    TypeVariableCollector { printer }.visit_typed_function(function);
+}
+
+impl<'ast, 'a, 'b> ast::visit::Visit<'ast> for TypeVariableCollector<'a, 'b> {
+    fn visit_type_ast_var(&mut self, _location: &'ast SrcSpan, name: &'ast EcoString) {
+        // Register this type variable so that we don't duplicate names when
+        // adding annotations.
+        self.printer.register_type_variable(name.clone());
+    }
+}
+
 pub struct QualifiedConstructor<'a> {
     import: &'a Import<EcoString>,
     used_name: EcoString,
@@ -1411,34 +1423,6 @@ impl<'a> QualifiedToUnqualifiedImportFirstPass<'a> {
 }
 
 impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'ast> {
-    fn visit_typed_expr_fn(
-        &mut self,
-        location: &'ast SrcSpan,
-        type_: &'ast Arc<Type>,
-        kind: &'ast FunctionLiteralKind,
-        arguments: &'ast [TypedArg],
-        body: &'ast Vec1<TypedStatement>,
-        return_annotation: &'ast Option<ast::TypeAst>,
-    ) {
-        for argument in arguments {
-            if let Some(annotation) = &argument.annotation {
-                self.visit_type_ast(annotation);
-            }
-        }
-        if let Some(return_) = return_annotation {
-            self.visit_type_ast(return_);
-        }
-        ast::visit::visit_typed_expr_fn(
-            self,
-            location,
-            type_,
-            kind,
-            arguments,
-            body,
-            return_annotation,
-        );
-    }
-
     fn visit_type_ast_constructor(
         &mut self,
         location: &'ast SrcSpan,
@@ -1637,34 +1621,6 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
 }
 
 impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'ast> {
-    fn visit_typed_expr_fn(
-        &mut self,
-        location: &'ast SrcSpan,
-        type_: &'ast Arc<Type>,
-        kind: &'ast FunctionLiteralKind,
-        arguments: &'ast [TypedArg],
-        body: &'ast Vec1<TypedStatement>,
-        return_annotation: &'ast Option<ast::TypeAst>,
-    ) {
-        for argument in arguments {
-            if let Some(annotation) = &argument.annotation {
-                self.visit_type_ast(annotation);
-            }
-        }
-        if let Some(return_) = return_annotation {
-            self.visit_type_ast(return_);
-        }
-        ast::visit::visit_typed_expr_fn(
-            self,
-            location,
-            type_,
-            kind,
-            arguments,
-            body,
-            return_annotation,
-        );
-    }
-
     fn visit_type_ast_constructor(
         &mut self,
         location: &'ast SrcSpan,
@@ -1869,34 +1825,6 @@ impl<'a> UnqualifiedToQualifiedImportFirstPass<'a> {
 }
 
 impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'ast> {
-    fn visit_typed_expr_fn(
-        &mut self,
-        location: &'ast SrcSpan,
-        type_: &'ast Arc<Type>,
-        kind: &'ast FunctionLiteralKind,
-        arguments: &'ast [TypedArg],
-        body: &'ast Vec1<TypedStatement>,
-        return_annotation: &'ast Option<ast::TypeAst>,
-    ) {
-        for argument in arguments {
-            if let Some(annotation) = &argument.annotation {
-                self.visit_type_ast(annotation);
-            }
-        }
-        if let Some(return_) = return_annotation {
-            self.visit_type_ast(return_);
-        }
-        ast::visit::visit_typed_expr_fn(
-            self,
-            location,
-            type_,
-            kind,
-            arguments,
-            body,
-            return_annotation,
-        );
-    }
-
     fn visit_type_ast_constructor(
         &mut self,
         location: &'ast SrcSpan,
@@ -2073,47 +2001,6 @@ impl<'a> UnqualifiedToQualifiedImportSecondPass<'a> {
 }
 
 impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'ast> {
-    fn visit_typed_expr_fn(
-        &mut self,
-        location: &'ast SrcSpan,
-        type_: &'ast Arc<Type>,
-        kind: &'ast FunctionLiteralKind,
-        arguments: &'ast [TypedArg],
-        body: &'ast Vec1<TypedStatement>,
-        return_annotation: &'ast Option<ast::TypeAst>,
-    ) {
-        for argument in arguments {
-            if let Some(annotation) = &argument.annotation {
-                self.visit_type_ast(annotation);
-            }
-        }
-        if let Some(return_) = return_annotation {
-            self.visit_type_ast(return_);
-        }
-        ast::visit::visit_typed_expr_fn(
-            self,
-            location,
-            type_,
-            kind,
-            arguments,
-            body,
-            return_annotation,
-        );
-    }
-
-    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
-        for arg in &fun.arguments {
-            if let Some(annotation) = &arg.annotation {
-                self.visit_type_ast(annotation);
-            }
-        }
-
-        if let Some(return_annotation) = &fun.return_annotation {
-            self.visit_type_ast(return_annotation);
-        }
-        ast::visit::visit_typed_function(self, fun);
-    }
-
     fn visit_type_ast_constructor(
         &mut self,
         location: &'ast SrcSpan,
