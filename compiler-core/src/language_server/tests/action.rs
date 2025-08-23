@@ -9307,7 +9307,6 @@ fn collapse_nested_case_does_not_remove_labels() {
   }
 }
 
-pub type Wibble {
   Wibble(field: Int, field2: String)
   Wobble
 }
@@ -9328,7 +9327,6 @@ fn collapse_nested_case_does_not_remove_labels_with_shorthand_syntax() {
         2 -> 4
         _ -> -1
       }
-
     Wobble -> todo
   }
 }
@@ -9464,5 +9462,49 @@ fn collapse_nested_case_combines_inner_and_outer_guards_and_adds_parentheses_whe
 }
 ",
         find_position_of("first").to_selection()
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3786
+#[test]
+fn type_variables_from_other_functions_do_not_change_annotations() {
+    assert_code_action!(
+        ADD_ANNOTATIONS,
+        "
+fn wibble(a: a, b: b, c: c) -> d { todo }
+
+fn pair(a, b) {
+  #(a, b)
+}
+",
+        find_position_of("pair").to_selection()
+    );
+}
+
+#[test]
+fn type_variables_from_other_functions_do_not_change_annotations_constant() {
+    assert_code_action!(
+        ADD_ANNOTATION,
+        "
+fn wibble(a: a, b: b, c: c) -> d { todo }
+
+const empty = []
+",
+        find_position_of("empty").to_selection()
+    );
+}
+
+#[test]
+fn type_variables_are_not_duplicated_when_adding_annotations() {
+    assert_code_action!(
+        ADD_ANNOTATIONS,
+        "
+fn wibble(a: a, b: b, c: c) -> d { todo }
+
+fn many_args(a, b, c, d: d, e: a, f, g) {
+  todo
+}
+",
+        find_position_of("many_args").to_selection()
     );
 }

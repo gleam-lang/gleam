@@ -1170,6 +1170,11 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
     }
 
     fn visit_typed_module_constant(&mut self, constant: &'ast TypedModuleConstant) {
+        // Since type variable names are local to definitions, any type variables
+        // in other parts of the module shouldn't affect what we print for the
+        // annotations of this constant.
+        self.printer.clear_type_variables();
+
         let code_action_range = self.edits.src_span_to_lsp_range(constant.location);
 
         // Only offer the code action if the cursor is over the statement
@@ -1189,6 +1194,14 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
     }
 
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+        self.printer.clear_type_variables();
+
+        // Since type variable names are local to definitions, any type variables
+        // in other parts of the module shouldn't affect what we print for the
+        // annotations of this functions. The only variables which cannot clash
+        // are ones defined in the signature of this function, which we register
+        // when we visit the parameters of this function below.
+
         ast::visit::visit_typed_function(self, fun);
 
         let code_action_range = self.edits.src_span_to_lsp_range(
@@ -1225,6 +1238,12 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
                 format!(" -> {}", self.printer.print_type(&fun.return_type)),
             );
         }
+    }
+
+    fn visit_type_ast_var(&mut self, _location: &'ast SrcSpan, name: &'ast EcoString) {
+        // Register this type variable so that we don't duplicate names when
+        // adding annotations.
+        self.printer.register_type_variable(name.clone());
     }
 
     fn visit_typed_expr_fn(
@@ -1418,19 +1437,6 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
             body,
             return_annotation,
         );
-    }
-
-    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
-        for arg in &fun.arguments {
-            if let Some(annotation) = &arg.annotation {
-                self.visit_type_ast(annotation);
-            }
-        }
-
-        if let Some(return_annotation) = &fun.return_annotation {
-            self.visit_type_ast(return_annotation);
-        }
-        ast::visit::visit_typed_function(self, fun);
     }
 
     fn visit_type_ast_constructor(
@@ -1657,19 +1663,6 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
             body,
             return_annotation,
         );
-    }
-
-    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
-        for arg in &fun.arguments {
-            if let Some(annotation) = &arg.annotation {
-                self.visit_type_ast(annotation);
-            }
-        }
-
-        if let Some(return_annotation) = &fun.return_annotation {
-            self.visit_type_ast(return_annotation);
-        }
-        ast::visit::visit_typed_function(self, fun);
     }
 
     fn visit_type_ast_constructor(
@@ -1904,18 +1897,6 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
         );
     }
 
-    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
-        for arg in &fun.arguments {
-            if let Some(annotation) = &arg.annotation {
-                self.visit_type_ast(annotation);
-            }
-        }
-
-        if let Some(return_annotation) = &fun.return_annotation {
-            self.visit_type_ast(return_annotation);
-        }
-        ast::visit::visit_typed_function(self, fun);
-    }
     fn visit_type_ast_constructor(
         &mut self,
         location: &'ast SrcSpan,

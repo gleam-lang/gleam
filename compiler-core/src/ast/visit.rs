@@ -637,6 +637,14 @@ pub fn visit_typed_function<'a, V>(v: &mut V, fun: &'a TypedFunction)
 where
     V: Visit<'a> + ?Sized,
 {
+    for argument in fun.arguments.iter() {
+        if let Some(annotation) = &argument.annotation {
+            v.visit_type_ast(annotation);
+        }
+    }
+    if let Some(annotation) = &fun.return_annotation {
+        v.visit_type_ast(annotation);
+    }
     for stmt in &fun.body {
         v.visit_typed_statement(stmt);
     }
