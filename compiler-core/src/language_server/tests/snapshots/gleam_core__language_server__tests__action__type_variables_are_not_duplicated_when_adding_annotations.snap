@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nfn wibble(a: a, b: b, c: c) -> d { todo }\n\nfn many_args(a, b, c, d: d, e: a, f, g) {\n  todo\n}\n"
+---
+----- BEFORE ACTION
+
+fn wibble(a: a, b: b, c: c) -> d { todo }
+
+fn many_args(a, b, c, d: d, e: a, f, g) {
+   ↑                                     
+  todo
+}
+
+
+----- AFTER ACTION
+
+fn wibble(a: a, b: b, c: c) -> d { todo }
+
+fn many_args(a: b, b: c, c: e, d: d, e: a, f: f, g: g) -> h {
+  todo
+}
