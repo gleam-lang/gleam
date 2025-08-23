@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nfn wibble(a: a, b: b, c: c) -> d { todo }\n\nfn pair(a, b) {\n  #(a, b)\n}\n"
+---
+----- BEFORE ACTION
+
+fn wibble(a: a, b: b, c: c) -> d { todo }
+
+fn pair(a, b) {
+   ↑           
+  #(a, b)
+}
+
+
+----- AFTER ACTION
+
+fn wibble(a: a, b: b, c: c) -> d { todo }
+
+fn pair(a: a, b: b) -> #(a, b) {
+  #(a, b)
+}

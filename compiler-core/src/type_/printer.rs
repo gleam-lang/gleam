@@ -305,7 +305,7 @@ pub enum PrintMode {
 /// names that types and modules have been aliased with in the current module.
 #[derive(Debug)]
 pub struct Printer<'a> {
-    names: &'a Names,
+    pub names: &'a Names,
     uid: u64,
 
     /// Some type variables aren't bound to names, so when trying to print those,
@@ -331,6 +331,14 @@ impl<'a> Printer<'a> {
             printed_type_variables: Default::default(),
             printed_type_variable_names: names.type_variables.values().cloned().collect(),
         }
+    }
+
+    pub fn clear_type_variables(&mut self) {
+        self.printed_type_variable_names.clear();
+    }
+
+    pub fn register_type_variable(&mut self, name: EcoString) {
+        _ = self.printed_type_variable_names.insert(name);
     }
 
     pub fn print_type(&mut self, type_: &Type) -> EcoString {
