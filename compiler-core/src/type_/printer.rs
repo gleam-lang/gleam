@@ -333,6 +333,24 @@ impl<'a> Printer<'a> {
         }
     }
 
+    /// In the AST, type variables are represented by their IDs, not their names.
+    /// This means that when we are printing a type variable, we either need to
+    /// find its name that was given by the programmer, or generate a new one.
+    /// Type variable names are local to functions, meaning there can be one
+    /// named `a` in one function, and a different one named `a` in another
+    /// function. However, there can't be two named `a` in the same function.
+    ///
+    /// By default, the printer avoids duplicating type variable names entirely.
+    /// This is because we don't have easy access to information about which type
+    /// variables belong to this function. In order to ensure no accidental,
+    /// collisions, we treat all type variables from the module as in scope, even
+    /// though this isn't the case.
+    ///
+    /// When sufficient information is present to ensure type variables are not
+    /// duplicated, `new_without_type_variables` can be used, in combination with
+    /// `register_type_variables` in order to precisely control which variables
+    /// are in scope.
+    ///
     pub fn new_without_type_variables(names: &'a Names) -> Self {
         Printer {
             names,
