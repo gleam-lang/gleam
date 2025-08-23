@@ -9524,3 +9524,21 @@ fn wibble(a, b, c) {
         find_position_of("wibble").to_selection()
     );
 }
+
+#[test]
+fn generated_function_annotations_are_not_affected_by_other_functions() {
+    assert_code_action!(
+        GENERATE_FUNCTION,
+        "
+fn wibble(a: a, b: b, c: c) -> d { todo }
+
+pub fn main() {
+  let x = todo
+  let y = todo
+  let #(a, b) = something(x, y)
+  b
+}
+",
+        find_position_of("something").to_selection()
+    );
+}
