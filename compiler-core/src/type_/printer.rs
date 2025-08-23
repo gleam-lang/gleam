@@ -333,6 +333,15 @@ impl<'a> Printer<'a> {
         }
     }
 
+    pub fn new_without_type_variables(names: &'a Names) -> Self {
+        Printer {
+            names,
+            uid: Default::default(),
+            printed_type_variables: Default::default(),
+            printed_type_variable_names: Default::default(),
+        }
+    }
+
     pub fn clear_type_variables(&mut self) {
         self.printed_type_variable_names.clear();
     }

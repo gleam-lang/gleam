@@ -21,7 +21,7 @@ use crate::{
     type_::{
         self, FieldMap, ModuleValueConstructor, Type, TypeVar, TypedCallArg, ValueConstructor,
         error::{ModuleSuggestion, VariableDeclaration, VariableOrigin},
-        printer::{Names, Printer},
+        printer::Printer,
     },
 };
 use ecow::{EcoString, eco_format};
@@ -1310,7 +1310,7 @@ impl<'a> AddAnnotations<'a> {
             edits: TextEdits::new(line_numbers),
             // We need to use the same printer for all the edits because otherwise
             // we could get duplicate type variable names.
-            printer: Printer::new(&module.ast.names),
+            printer: Printer::new_without_type_variables(&module.ast.names),
         }
     }
 
@@ -3545,7 +3545,9 @@ impl<'a> GenerateDynamicDecoder<'a> {
         params: &'a CodeActionParams,
         actions: &'a mut Vec<CodeAction>,
     ) -> Self {
-        let printer = Printer::new(&module.ast.names);
+        // Since we are generating a new function, type variables from other
+        // functions and constants are irrelevant to the types we print.
+        let printer = Printer::new_without_type_variables(&module.ast.names);
         Self {
             module,
             params,
@@ -3633,7 +3635,7 @@ impl<'a> GenerateDynamicDecoder<'a> {
         }
 
         let mut decoder_printer = DecoderPrinter::new(
-            &self.module.ast.names,
+            &mut self.printer,
             custom_type.name.clone(),
             self.module.name.clone(),
         );
@@ -3741,8 +3743,8 @@ fn maybe_import(edits: &mut TextEdits<'_>, module: &Module, module_name: &str) {
     ));
 }
 
-struct DecoderPrinter<'a> {
-    printer: Printer<'a>,
+struct DecoderPrinter<'a, 'b> {
+    printer: &'a mut Printer<'b>,
     /// The name of the root type we are printing a decoder for
     type_name: EcoString,
     /// The module name of the root type we are printing a decoder for
@@ -3792,12 +3794,12 @@ impl RecordLabel<'_> {
     }
 }
 
-impl<'a> DecoderPrinter<'a> {
-    fn new(names: &'a Names, type_name: EcoString, type_module: EcoString) -> Self {
+impl<'a, 'b> DecoderPrinter<'a, 'b> {
+    fn new(printer: &'a mut Printer<'b>, type_name: EcoString, type_module: EcoString) -> Self {
         Self {
             type_name,
             type_module,
-            printer: Printer::new(names),
+            printer,
         }
     }
 
@@ -3937,7 +3939,9 @@ impl<'a> GenerateJsonEncoder<'a> {
         actions: &'a mut Vec<CodeAction>,
         config: &'a PackageConfig,
     ) -> Self {
-        let printer = Printer::new(&module.ast.names);
+        // Since we are generating a new function, type variables from other
+        // functions and constants are irrelevant to the types we print.
+        let printer = Printer::new_without_type_variables(&module.ast.names);
         Self {
             module,
             params,
@@ -4041,7 +4045,7 @@ impl<'a> GenerateJsonEncoder<'a> {
 
         // Otherwise we turn it into an object with a `type` tag field.
         let mut encoder_printer =
-            JsonEncoderPrinter::new(&self.module.ast.names, type_name, self.module.name.clone());
+            JsonEncoderPrinter::new(&mut self.printer, type_name, self.module.name.clone());
 
         // These are the fields of the json object to encode.
         let mut fields = Vec::with_capacity(constructor.arguments.len());
@@ -4126,20 +4130,20 @@ fn {name}({record_name}: {type_}) -> {json_type} {{
     }
 }
 
-struct JsonEncoderPrinter<'a> {
-    printer: Printer<'a>,
+struct JsonEncoderPrinter<'a, 'b> {
+    printer: &'a mut Printer<'b>,
     /// The name of the root type we are printing an encoder for
     type_name: EcoString,
     /// The module name of the root type we are printing an encoder for
     type_module: EcoString,
 }
 
-impl<'a> JsonEncoderPrinter<'a> {
-    fn new(names: &'a Names, type_name: EcoString, type_module: EcoString) -> Self {
+impl<'a, 'b> JsonEncoderPrinter<'a, 'b> {
+    fn new(printer: &'a mut Printer<'b>, type_name: EcoString, type_module: EcoString) -> Self {
         Self {
             type_name,
             type_module,
-            printer: Printer::new(names),
+            printer,
         }
     }
 
@@ -4982,7 +4986,10 @@ impl<'a> GenerateFunction<'a> {
         // generators to avoid renaming a label in case it shares a name with an argument.
         let mut label_names = NameGenerator::new();
         let mut argument_names = NameGenerator::new();
-        let mut printer = Printer::new(&self.module.ast.names);
+
+        // Since we are generating a new function, type variables from other
+        // functions and constants are irrelevant to the types we print.
+        let mut printer = Printer::new_without_type_variables(&self.module.ast.names);
         let arguments = arguments_types
             .iter()
             .enumerate()
