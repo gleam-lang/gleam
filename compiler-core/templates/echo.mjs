@@ -17,7 +17,7 @@ function echo(value, message, file, line) {
   } else {
     // Otherwise, use `console.log`
     // The browser's console.log doesn't support ansi escape codes
-    const string = `${file_line}\n${string_value}`;
+    const string = `${file_line}${string_message}\n${string_value}`;
     globalThis.console.log(string);
   }
 

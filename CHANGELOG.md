@@ -269,3 +269,6 @@
 - Fixed a bug where renaming a constant which is referenced in another module
   inside a guard would generate invalid code.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where `echo .. as ..` message will be omitted in browser target.
+  ([Andrey Kozhev](https://github.com/ankddev))
