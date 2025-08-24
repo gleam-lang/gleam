@@ -1530,7 +1530,18 @@ where
 {
     #[must_use]
     pub fn uses_label_shorthand(&self) -> bool {
-        self.label.is_some() && self.location == self.value.location()
+        self.label_shorthand_name().is_some()
+    }
+
+    /// If the call arg is defined using a label shorthand, this will return the
+    /// label name.
+    ///
+    fn label_shorthand_name(&self) -> Option<EcoString> {
+        if !self.is_implicit() && self.location == self.value.location() {
+            self.label.clone()
+        } else {
+            None
+        }
     }
 }
 
@@ -2533,6 +2544,32 @@ impl<A> Pattern<A> {
     }
 }
 
+/// A variable bound inside a pattern.
+#[derive(Debug, Clone)]
+pub enum BoundVariable {
+    /// A record's labelled field introduced with the shorthand syntax.
+    ShorthandLabel { name: EcoString, location: SrcSpan },
+    /// Any other variable.
+    Regular { name: EcoString, location: SrcSpan },
+}
+
+impl BoundVariable {
+    pub fn name(&self) -> EcoString {
+        match self {
+            BoundVariable::ShorthandLabel { name, .. } | BoundVariable::Regular { name, .. } => {
+                name.clone()
+            }
+        }
+    }
+
+    pub fn location(&self) -> SrcSpan {
+        match self {
+            BoundVariable::ShorthandLabel { location, .. }
+            | BoundVariable::Regular { location, .. } => *location,
+        }
+    }
+}
+
 impl TypedPattern {
     pub fn definition_location(&self) -> Option<DefinitionLocation> {
         match self {
@@ -2707,13 +2744,13 @@ impl TypedPattern {
         }
     }
 
-    pub fn bound_variables(&self) -> Vec<EcoString> {
+    pub fn bound_variables(&self) -> Vec<BoundVariable> {
         let mut variables = Vec::new();
         self.collect_bound_variables(&mut variables);
         variables
     }
 
-    fn collect_bound_variables(&self, variables: &mut Vec<EcoString>) {
+    fn collect_bound_variables(&self, variables: &mut Vec<BoundVariable>) {
         match self {
             Pattern::Int { .. }
             | Pattern::Float { .. }
@@ -2721,10 +2758,20 @@ impl TypedPattern {
             | Pattern::Discard { .. }
             | Pattern::Invalid { .. } => {}
 
-            Pattern::Variable { name, .. } => variables.push(name.clone()),
+            Pattern::Variable { name, location, .. } => variables.push(BoundVariable::Regular {
+                name: name.clone(),
+                location: *location,
+            }),
             Pattern::BitArraySize { .. } => {}
-            Pattern::Assign { name, pattern, .. } => {
-                variables.push(name.clone());
+            Pattern::Assign {
+                name,
+                pattern,
+                location,
+            } => {
+                variables.push(BoundVariable::Regular {
+                    name: name.clone(),
+                    location: *location,
+                });
                 pattern.collect_bound_variables(variables);
             }
             Pattern::List { elements, tail, .. } => {
@@ -2737,7 +2784,14 @@ impl TypedPattern {
             }
             Pattern::Constructor { arguments, .. } => {
                 for argument in arguments {
-                    argument.value.collect_bound_variables(variables);
+                    if let Some(name) = argument.label_shorthand_name() {
+                        variables.push(BoundVariable::ShorthandLabel {
+                            name,
+                            location: argument.location,
+                        })
+                    } else {
+                        argument.value.collect_bound_variables(variables);
+                    }
                 }
             }
             Pattern::Tuple { elements, .. } => {
@@ -2753,13 +2807,20 @@ impl TypedPattern {
             Pattern::StringPrefix {
                 left_side_assignment,
                 right_side_assignment,
+                right_location,
                 ..
             } => {
-                if let Some((left_variable, _)) = left_side_assignment {
-                    variables.push(left_variable.clone());
+                if let Some((name, location)) = left_side_assignment {
+                    variables.push(BoundVariable::Regular {
+                        name: name.clone(),
+                        location: *location,
+                    });
                 }
                 match right_side_assignment {
-                    AssignName::Variable(name) => variables.push(name.clone()),
+                    AssignName::Variable(name) => variables.push(BoundVariable::Regular {
+                        name: name.clone(),
+                        location: *right_location,
+                    }),
                     AssignName::Discard(_) => {}
                 }
             }
