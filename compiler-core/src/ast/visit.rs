@@ -223,6 +223,7 @@ pub trait Visit<'ast> {
         visit_typed_expr_case(self, location, type_, subjects, clauses, compiled_case);
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn visit_typed_expr_record_access(
         &mut self,
         location: &'ast SrcSpan,
@@ -1065,6 +1066,7 @@ pub fn visit_typed_expr_case<'a, V>(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn visit_typed_expr_record_access<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
