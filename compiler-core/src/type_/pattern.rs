@@ -521,7 +521,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 });
                 self.environment.new_unbound_var()
             }
-            Pattern::Variable { .. } if segment_type.is_string() => {
+            Pattern::Variable { .. } | Pattern::Discard { .. } if segment_type.is_string() => {
                 self.error(Error::BitArraySegmentError {
                     error: bit_array::ErrorType::VariableUtfSegmentInPattern,
                     location: segment.location,

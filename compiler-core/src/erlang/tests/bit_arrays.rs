@@ -90,36 +90,6 @@ pub fn main() {
 }
 
 #[test]
-fn bit_array_discard() {
-    // https://github.com/gleam-lang/gleam/issues/704
-
-    assert_erl!(
-        r#"
-pub fn bit_array_discard(x) -> Bool {
- case x {
-  <<_:utf8, rest:bytes>> -> True
-   _ -> False
- }
-}
-                    "#
-    );
-}
-
-#[test]
-fn bit_array_discard1() {
-    assert_erl!(
-        r#"
-pub fn bit_array_discard(x) -> Bool {
- case x {
-  <<_discardme:utf8, rest:bytes>> -> True
-   _ -> False
- }
-}
-"#
-    );
-}
-
-#[test]
 fn bit_array_declare_and_use_var() {
     assert_erl!(
         r#"pub fn go(x) {
@@ -180,16 +150,6 @@ pub fn main() {
     <<"a", "b", _:bits>> -> 1
     _ -> 2
   }
-}"#
-    );
-}
-
-#[test]
-fn discard_utf8_pattern() {
-    assert_erl!(
-        r#"
-pub fn main() {
-    let assert <<_:utf8, rest:bits>> = <<>>
 }"#
     );
 }
