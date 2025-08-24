@@ -446,6 +446,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                                 parameters: vec![TypeValueConstructorField {
                                     type_: result_value,
                                     label: None,
+                                    documentation: None,
                                 }],
                                 documentation: None,
                             },
@@ -454,6 +455,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                                 parameters: vec![TypeValueConstructorField {
                                     type_: result_error,
                                     label: None,
+                                    documentation: None,
                                 }],
                                 documentation: None,
                             },

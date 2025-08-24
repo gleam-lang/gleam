@@ -143,6 +143,7 @@ impl<'a> ModuleEncoder<'a> {
         self.build_type(builder.reborrow().init_type(), &accessor.type_);
         builder.reborrow().set_label(&accessor.label);
         builder.set_index(accessor.index as u16);
+        builder.set_documentation(accessor.documentation.as_deref().unwrap_or_default());
     }
 
     fn set_module_types(&mut self, module: &mut module::Builder<'_>) {
@@ -336,6 +337,7 @@ impl<'a> ModuleEncoder<'a> {
     ) {
         self.build_type(builder.reborrow().init_type(), parameter.type_.as_ref());
         builder.set_label(parameter.label.as_deref().unwrap_or_default());
+        builder.set_documentation(parameter.documentation.as_deref().unwrap_or_default());
     }
 
     fn build_value_constructor(

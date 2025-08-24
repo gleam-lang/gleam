@@ -896,6 +896,7 @@ fn accessors() {
                 index: 6,
                 label: "siiixxx".into(),
                 type_: type_::nil(),
+                documentation: Some("Here is some documentation".into()),
             },
         ),
         (
@@ -904,6 +905,7 @@ fn accessors() {
                 index: 5,
                 label: "fiveee".into(),
                 type_: type_::float(),
+                documentation: None,
             },
         ),
     ];
@@ -914,6 +916,7 @@ fn accessors() {
             index: 1,
             label: "ok".into(),
             type_: type_::float(),
+            documentation: Some("Documentation for the ok field".into()),
         },
     )];
 
@@ -970,6 +973,7 @@ fn private_accessors() {
                 index: 6,
                 label: "siiixxx".into(),
                 type_: type_::nil(),
+                documentation: None,
             },
         ),
         (
@@ -978,6 +982,7 @@ fn private_accessors() {
                 index: 5,
                 label: "fiveee".into(),
                 type_: type_::float(),
+                documentation: None,
             },
         ),
     ];
@@ -988,6 +993,7 @@ fn private_accessors() {
             index: 1,
             label: "ok".into(),
             type_: type_::float(),
+            documentation: None,
         },
     )];
 
@@ -1679,14 +1685,17 @@ fn type_variable_ids_in_constructors_are_shared() {
                         TypeValueConstructorField {
                             type_: type_::generic_var(6),
                             label: None,
+                            documentation: Some("Here's some documentation".into()),
                         },
                         TypeValueConstructorField {
                             type_: type_::int(),
                             label: None,
+                            documentation: None,
                         },
                         TypeValueConstructorField {
                             type_: type_::tuple(vec![type_::generic_var(4), type_::generic_var(5)]),
                             label: None,
+                            documentation: None,
                         },
                     ],
                     documentation: None,
@@ -1717,14 +1726,17 @@ fn type_variable_ids_in_constructors_are_shared() {
                     TypeValueConstructorField {
                         type_: type_::generic_var(0),
                         label: None,
+                        documentation: Some("Here's some documentation".into()),
                     },
                     TypeValueConstructorField {
                         type_: type_::int(),
                         label: None,
+                        documentation: None,
                     },
                     TypeValueConstructorField {
                         type_: type_::tuple(vec![type_::generic_var(1), type_::generic_var(2)]),
                         label: None,
+                        documentation: None,
                     },
                 ],
                 documentation: None,

@@ -316,6 +316,7 @@ impl ModuleDecoder {
         Ok(TypeValueConstructorField {
             type_: self.type_(&reader.get_type()?)?,
             label: self.optional_string(self.str(reader.get_label()?)?),
+            documentation: self.optional_string(self.str(reader.get_documentation()?)?),
         })
     }
 
@@ -698,6 +699,7 @@ impl ModuleDecoder {
             index: reader.get_index() as u64,
             label: self.string(reader.get_label()?)?,
             type_: self.type_(&reader.get_type()?)?,
+            documentation: self.optional_string(self.str(reader.get_documentation()?)?),
         })
     }
 

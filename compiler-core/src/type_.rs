@@ -672,6 +672,7 @@ pub struct RecordAccessor {
     pub index: u64,
     pub label: EcoString,
     pub type_: Arc<Type>,
+    pub documentation: Option<EcoString>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1091,6 +1092,7 @@ pub struct TypeValueConstructorField {
     /// This type of this parameter
     pub type_: Arc<Type>,
     pub label: Option<EcoString>,
+    pub documentation: Option<EcoString>,
 }
 
 impl ModuleInterface {
