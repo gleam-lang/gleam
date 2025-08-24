@@ -396,6 +396,7 @@ impl Inliner<'_> {
                 label,
                 index,
                 record,
+                documentation,
             } => TypedExpr::RecordAccess {
                 location,
                 field_start,
@@ -403,6 +404,7 @@ impl Inliner<'_> {
                 label,
                 index,
                 record: self.boxed_expression(record),
+                documentation,
             },
 
             TypedExpr::Tuple {

@@ -129,6 +129,7 @@ fn compile_expression(src: &str) -> TypedStatement {
                 index: 0,
                 label: "name".into(),
                 type_: type_::string(),
+                documentation: None,
             },
         ),
         (
@@ -137,6 +138,7 @@ fn compile_expression(src: &str) -> TypedStatement {
                 index: 1,
                 label: "age".into(),
                 type_: type_::int(),
+                documentation: None,
             },
         ),
     ];

@@ -102,6 +102,7 @@ pub enum TypedExpr {
         label: EcoString,
         index: u64,
         record: Box<Self>,
+        documentation: Option<EcoString>,
     },
 
     ModuleSelect {

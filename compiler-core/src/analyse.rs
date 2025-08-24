@@ -1099,6 +1099,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 label,
                 ast,
                 location,
+                doc,
                 ..
             } in constructor.arguments.iter()
             {
@@ -1114,6 +1115,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 fields.push(TypeValueConstructorField {
                     type_: t.clone(),
                     label: label.as_ref().map(|(_location, label)| label.clone()),
+                    documentation: doc.as_ref().map(|(_, documentation)| documentation.clone()),
                 });
 
                 // Register the type for this parameter
@@ -1933,6 +1935,7 @@ fn custom_type_accessors(constructors: &[TypeValueConstructor]) -> Result<Access
                 index: index as u64,
                 label: label.clone(),
                 type_: type_.clone(),
+                documentation: None,
             },
         );
     }
@@ -1954,6 +1957,7 @@ fn custom_type_accessors(constructors: &[TypeValueConstructor]) -> Result<Access
                     index: index as u64,
                     label: label.clone(),
                     type_: parameter.type_.clone(),
+                    documentation: parameter.documentation.clone(),
                 },
             );
         }

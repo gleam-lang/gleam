@@ -231,8 +231,18 @@ pub trait Visit<'ast> {
         label: &'ast EcoString,
         index: &'ast u64,
         record: &'ast TypedExpr,
+        documentation: &'ast Option<EcoString>,
     ) {
-        visit_typed_expr_record_access(self, location, field_start, type_, label, index, record);
+        visit_typed_expr_record_access(
+            self,
+            location,
+            field_start,
+            type_,
+            label,
+            index,
+            record,
+            documentation,
+        );
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -813,7 +823,16 @@ where
             label,
             index,
             record,
-        } => v.visit_typed_expr_record_access(location, field_start, type_, label, index, record),
+            documentation,
+        } => v.visit_typed_expr_record_access(
+            location,
+            field_start,
+            type_,
+            label,
+            index,
+            record,
+            documentation,
+        ),
         TypedExpr::ModuleSelect {
             location,
             field_start,
@@ -1054,6 +1073,7 @@ pub fn visit_typed_expr_record_access<'a, V>(
     _label: &'a EcoString,
     _index: &'a u64,
     record: &'a TypedExpr,
+    _documentation: &'a Option<EcoString>,
 ) where
     V: Visit<'a> + ?Sized,
 {
