@@ -1924,20 +1924,12 @@ struct Accessors {
 }
 
 fn custom_type_accessors(constructors: &[TypeValueConstructor]) -> Result<Accessors, Error> {
-    let arguments = get_compatible_record_fields(constructors);
+    let accessors = get_compatible_record_fields(constructors);
 
-    let mut shared_accessors = HashMap::with_capacity(arguments.len());
+    let mut shared_accessors = HashMap::with_capacity(accessors.len());
 
-    for (index, label, type_) in arguments {
-        let _ = shared_accessors.insert(
-            label.clone(),
-            RecordAccessor {
-                index: index as u64,
-                label: label.clone(),
-                type_: type_.clone(),
-                documentation: None,
-            },
-        );
+    for accessor in accessors {
+        let _ = shared_accessors.insert(accessor.label.clone(), accessor);
     }
 
     let mut variant_specific_accessors: Vec<HashMap<EcoString, RecordAccessor>> =
@@ -1972,9 +1964,7 @@ fn custom_type_accessors(constructors: &[TypeValueConstructor]) -> Result<Access
 
 /// Returns the fields that have the same label and type across all variants of
 /// the given type.
-fn get_compatible_record_fields(
-    constructors: &[TypeValueConstructor],
-) -> Vec<(usize, &EcoString, &Arc<Type>)> {
+fn get_compatible_record_fields(constructors: &[TypeValueConstructor]) -> Vec<RecordAccessor> {
     let mut compatible = vec![];
 
     let first = match constructors.first() {
@@ -1988,6 +1978,8 @@ fn get_compatible_record_fields(
             Some(label) => label,
             None => continue 'next_argument,
         };
+
+        let mut documentation = first_parameter.documentation.clone();
 
         // Check each variant to see if they have an field in the same position
         // with the same label and the same type
@@ -2011,12 +2003,22 @@ fn get_compatible_record_fields(
             if !parameter.type_.same_as(&first_parameter.type_) {
                 continue 'next_argument;
             }
+
+            // If there is more than one variant, we can't show documentation
+            // as we do not know which field it is.
+            documentation = None;
         }
 
         // The previous loop did not find any incompatible fields in the other
         // variants so this field is compatible across variants and we should
         // generate an accessor for it.
-        compatible.push((index, first_label, &first_parameter.type_))
+
+        compatible.push(RecordAccessor {
+            index: index as u64,
+            label: first_label.clone(),
+            type_: first_parameter.type_.clone(),
+            documentation,
+        })
     }
 
     compatible
