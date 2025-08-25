@@ -305,7 +305,7 @@ pub enum PrintMode {
 /// names that types and modules have been aliased with in the current module.
 #[derive(Debug)]
 pub struct Printer<'a> {
-    pub names: &'a Names,
+    names: &'a Names,
     uid: u64,
 
     /// Some type variables aren't bound to names, so when trying to print those,
@@ -360,10 +360,18 @@ impl<'a> Printer<'a> {
         }
     }
 
+    /// Clear the registered type variable names. This allows the same `Printer`
+    /// to be used in multiple different scopes, which have different sets of
+    /// type variables. After clearing, the correct variables from the desired
+    /// scope can be registered using `register_type_variable`.
     pub fn clear_type_variables(&mut self) {
         self.printed_type_variable_names.clear();
     }
 
+    /// As explained in the documentation for `new_without_type_variables`, it
+    /// it not always possible to determine which type variables are in scope.
+    /// However, when it is possible, this function can be used to manually
+    /// register which type variable names are in scope and cannot be used.
     pub fn register_type_variable(&mut self, name: EcoString) {
         _ = self.printed_type_variable_names.insert(name);
     }
