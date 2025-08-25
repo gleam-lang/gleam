@@ -38,7 +38,7 @@ use crate::{
     warning::TypeWarningEmitter,
 };
 use camino::Utf8PathBuf;
-use ecow::EcoString;
+use ecow::{EcoString, eco_format};
 use hexpm::version::Version;
 use itertools::Itertools;
 use name::{check_argument_names, check_name_case};
@@ -1099,6 +1099,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 label,
                 ast,
                 location,
+                doc,
                 ..
             } in constructor.arguments.iter()
             {
@@ -1114,6 +1115,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 fields.push(TypeValueConstructorField {
                     type_: t.clone(),
                     label: label.as_ref().map(|(_location, label)| label.clone()),
+                    documentation: doc.as_ref().map(|(_, documentation)| documentation.clone()),
                 });
 
                 // Register the type for this parameter
@@ -1922,19 +1924,12 @@ struct Accessors {
 }
 
 fn custom_type_accessors(constructors: &[TypeValueConstructor]) -> Result<Accessors, Error> {
-    let arguments = get_compatible_record_fields(constructors);
+    let accessors = get_compatible_record_fields(constructors);
 
-    let mut shared_accessors = HashMap::with_capacity(arguments.len());
+    let mut shared_accessors = HashMap::with_capacity(accessors.len());
 
-    for (index, label, type_) in arguments {
-        let _ = shared_accessors.insert(
-            label.clone(),
-            RecordAccessor {
-                index: index as u64,
-                label: label.clone(),
-                type_: type_.clone(),
-            },
-        );
+    for accessor in accessors {
+        let _ = shared_accessors.insert(accessor.label.clone(), accessor);
     }
 
     let mut variant_specific_accessors: Vec<HashMap<EcoString, RecordAccessor>> =
@@ -1954,6 +1949,7 @@ fn custom_type_accessors(constructors: &[TypeValueConstructor]) -> Result<Access
                     index: index as u64,
                     label: label.clone(),
                     type_: parameter.type_.clone(),
+                    documentation: parameter.documentation.clone(),
                 },
             );
         }
@@ -1968,9 +1964,7 @@ fn custom_type_accessors(constructors: &[TypeValueConstructor]) -> Result<Access
 
 /// Returns the fields that have the same label and type across all variants of
 /// the given type.
-fn get_compatible_record_fields(
-    constructors: &[TypeValueConstructor],
-) -> Vec<(usize, &EcoString, &Arc<Type>)> {
+fn get_compatible_record_fields(constructors: &[TypeValueConstructor]) -> Vec<RecordAccessor> {
     let mut compatible = vec![];
 
     let first = match constructors.first() {
@@ -1983,6 +1977,21 @@ fn get_compatible_record_fields(
         let first_label = match first_parameter.label.as_ref() {
             Some(label) => label,
             None => continue 'next_argument,
+        };
+
+        let mut documentation = if constructors.len() == 1 {
+            // If there is only one constructor, we simply show the documentation
+            // for the field.
+            first_parameter.documentation.clone()
+        } else {
+            // If there are multiple constructors, we show the documentation of
+            // this field for each of the variants.
+            first_parameter
+                .documentation
+                .as_ref()
+                .map(|field_documentation| {
+                    eco_format!("## {}\n\n{}", first.name, field_documentation)
+                })
         };
 
         // Check each variant to see if they have an field in the same position
@@ -2007,12 +2016,33 @@ fn get_compatible_record_fields(
             if !parameter.type_.same_as(&first_parameter.type_) {
                 continue 'next_argument;
             }
+
+            if let Some(field_documentation) = &parameter.documentation {
+                let field_documentation =
+                    eco_format!("## {}\n\n{}", constructor.name, field_documentation);
+
+                match &mut documentation {
+                    None => {
+                        documentation = Some(field_documentation);
+                    }
+                    Some(documentation) => {
+                        documentation.push('\n');
+                        documentation.push_str(&field_documentation);
+                    }
+                }
+            }
         }
 
         // The previous loop did not find any incompatible fields in the other
         // variants so this field is compatible across variants and we should
         // generate an accessor for it.
-        compatible.push((index, first_label, &first_parameter.type_))
+
+        compatible.push(RecordAccessor {
+            index: index as u64,
+            label: first_label.clone(),
+            type_: first_parameter.type_.clone(),
+            documentation,
+        })
     }
 
     compatible

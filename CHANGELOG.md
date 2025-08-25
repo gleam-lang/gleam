@@ -200,6 +200,10 @@
   relevant variable.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- When hovering over a record field in a record access expression, the language
+  sever will now show the documentation for that field, if present.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 - Renaming a variable from a label shorthand (`name:`) no longer includes the
   colon in the rename dialog (`name:` -> `name`)
   ([fruno](https://github.com/frunobulax-the-poodle))

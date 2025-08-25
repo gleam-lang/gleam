@@ -1750,3 +1750,69 @@ const value = #(1, 2, [Wibble, Wobble(<<1, 2, 3>>), Wibble])
         find_position_of("3")
     );
 }
+
+#[test]
+fn record_field_documentation() {
+    assert_hover!(
+        "
+pub type Wibble {
+  Wibble(
+    /// This is some documentation about the wibble field.
+    wibble: Int
+  )
+}
+
+pub fn wibble(w: Wibble) {
+  w.wibble
+}
+",
+        find_position_of("w.wibble").under_char('l')
+    );
+}
+
+#[test]
+fn no_documentation_for_shared_record_field() {
+    assert_hover!(
+        "
+pub type Wibble {
+  Wibble(
+    /// This is some documentation about the wibble field.
+    wibble: Int
+  )
+  Wobble(
+    /// Here's some documentation explaining a field of Wobble
+    wibble: Int
+  )
+}
+
+pub fn wibble(w: Wibble) {
+  w.wibble
+}
+",
+        find_position_of("w.wibble").under_char('l')
+    );
+}
+
+#[test]
+fn documentation_for_shared_record_field_when_variant_is_known() {
+    assert_hover!(
+        "
+pub type Wibble {
+  Wibble(
+    /// This is some documentation about the wibble field.
+    wibble: Int
+  )
+  Wobble(
+    /// This won't show up because it's a Wibble variant
+    wibble: Int
+  )
+}
+
+pub fn wibble(w: Wibble) {
+  let assert Wibble(..) = w
+  w.wibble
+}
+",
+        find_position_of("w.wibble").under_char('l')
+    );
+}

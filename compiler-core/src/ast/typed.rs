@@ -102,6 +102,7 @@ pub enum TypedExpr {
         label: EcoString,
         index: u64,
         record: Box<Self>,
+        documentation: Option<EcoString>,
     },
 
     ModuleSelect {
@@ -785,6 +786,7 @@ impl TypedExpr {
         match self {
             TypedExpr::Var { constructor, .. } => constructor.get_documentation(),
             TypedExpr::ModuleSelect { constructor, .. } => constructor.get_documentation(),
+            TypedExpr::RecordAccess { documentation, .. } => documentation.as_deref(),
 
             TypedExpr::Int { .. }
             | TypedExpr::Float { .. }
@@ -803,7 +805,6 @@ impl TypedExpr {
             | TypedExpr::Panic { .. }
             | TypedExpr::BitArray { .. }
             | TypedExpr::RecordUpdate { .. }
-            | TypedExpr::RecordAccess { .. }
             | TypedExpr::NegateBool { .. }
             | TypedExpr::NegateInt { .. }
             | TypedExpr::Invalid { .. } => None,

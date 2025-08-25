@@ -94,6 +94,7 @@ struct TypeValueConstructor {
 struct TypeValueConstructorParameter {
   type @0 :Type;
   label @1 :Text;
+  documentation @2 :Text;
 }
 
 struct TypeConstructor {
@@ -124,6 +125,7 @@ struct RecordAccessor {
   type @0 :Type;
   index @1 :UInt16;
   label @2 :Text;
+  documentation @3 :Text;
 }
 
 # UInt16 cannot be used as a generic parameter to Option,

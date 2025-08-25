@@ -1441,6 +1441,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         label: "".into(),
                         index: u64::MAX,
                         record: Box::new(record),
+                        documentation: None,
                     },
                     Err(_) => TypedExpr::Invalid {
                         location,
@@ -2819,7 +2820,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> Result<TypedClauseGuard, Error> {
         let container = Box::new(container);
         let container_type = container.type_();
-        let (index, label, type_) = self.infer_known_record_access(
+        let RecordAccessor {
+            index,
+            label,
+            type_,
+            documentation: _,
+        } = self.infer_known_record_access(
             container_type,
             container.location(),
             FieldAccessUsage::Other,
@@ -2983,7 +2989,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> Result<TypedExpr, Error> {
         let record = Box::new(record);
         let record_type = record.type_();
-        let (index, label, type_) = self.infer_known_record_access(
+        let RecordAccessor {
+            index,
+            label,
+            type_,
+            documentation,
+        } = self.infer_known_record_access(
             record_type,
             record.location(),
             usage,
@@ -2997,6 +3008,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             index,
             location,
             type_,
+            documentation,
         })
     }
 
@@ -3007,7 +3019,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         usage: FieldAccessUsage,
         location: SrcSpan,
         label: EcoString,
-    ) -> Result<(u64, EcoString, Arc<Type>), Error> {
+    ) -> Result<RecordAccessor, Error> {
         if record_type.is_unbound() {
             return Err(Error::RecordAccessUnknownType {
                 location: record_location,
@@ -3063,6 +3075,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             index,
             label,
             type_,
+            documentation,
         } = variant_accessors
             .get(&label)
             .ok_or_else(|| unknown_field(variant_accessors.keys().cloned().collect()))?
@@ -3088,7 +3101,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let type_ = self.instantiate(type_, &mut type_vars);
         unify(accessor_record_type, record_type)
             .map_err(|e| convert_unify_error(e, record_location))?;
-        Ok((index, label, type_))
+        Ok(RecordAccessor {
+            index,
+            label,
+            type_,
+            documentation,
+        })
     }
 
     fn infer_record_update(
