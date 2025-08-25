@@ -1780,7 +1780,7 @@ pub type Wibble {
     wibble: Int
   )
   Wobble(
-    /// This won't show up because we don't know which wibble field it is
+    /// Here's some documentation explaining a field of Wobble
     wibble: Int
   )
 }

@@ -38,7 +38,7 @@ use crate::{
     warning::TypeWarningEmitter,
 };
 use camino::Utf8PathBuf;
-use ecow::EcoString;
+use ecow::{EcoString, eco_format};
 use hexpm::version::Version;
 use itertools::Itertools;
 use name::{check_argument_names, check_name_case};
@@ -1979,7 +1979,20 @@ fn get_compatible_record_fields(constructors: &[TypeValueConstructor]) -> Vec<Re
             None => continue 'next_argument,
         };
 
-        let mut documentation = first_parameter.documentation.clone();
+        let mut documentation = if constructors.len() == 1 {
+            // If there is only one constructor, we simply show the documentation
+            // for the field.
+            first_parameter.documentation.clone()
+        } else if let Some(field_documentation) = &first_parameter.documentation {
+            // If there are multiple constructors, we show the documentation of
+            // this field for each of the variants.
+            Some(eco_format!("## {}\n\n{}", first.name, field_documentation))
+        } else {
+            // If there is no documentation on the field of the first constructor,
+            // we leave it as `None` until we find a field which does have
+            // documentation.
+            None
+        };
 
         // Check each variant to see if they have an field in the same position
         // with the same label and the same type
@@ -2004,9 +2017,20 @@ fn get_compatible_record_fields(constructors: &[TypeValueConstructor]) -> Vec<Re
                 continue 'next_argument;
             }
 
-            // If there is more than one variant, we can't show documentation
-            // as we do not know which field it is.
-            documentation = None;
+            if let Some(field_documentation) = &parameter.documentation {
+                let field_documentation =
+                    eco_format!("## {}\n\n{}", constructor.name, field_documentation);
+
+                match &mut documentation {
+                    None => {
+                        documentation = Some(field_documentation);
+                    }
+                    Some(documentation) => {
+                        documentation.push('\n');
+                        documentation.push_str(&field_documentation);
+                    }
+                }
+            }
         }
 
         // The previous loop did not find any incompatible fields in the other
