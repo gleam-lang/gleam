@@ -626,6 +626,14 @@ pub fn visit_typed_function<'a, V>(v: &mut V, fun: &'a TypedFunction)
 where
     V: Visit<'a> + ?Sized,
 {
+    for argument in fun.arguments.iter() {
+        if let Some(annotation) = &argument.annotation {
+            v.visit_type_ast(annotation);
+        }
+    }
+    if let Some(annotation) = &fun.return_annotation {
+        v.visit_type_ast(annotation);
+    }
     for stmt in &fun.body {
         v.visit_typed_statement(stmt);
     }
@@ -968,12 +976,21 @@ pub fn visit_typed_expr_fn<'a, V>(
     _location: &'a SrcSpan,
     _type_: &'a Arc<Type>,
     _kind: &'a FunctionLiteralKind,
-    _arguments: &'a [TypedArg],
+    arguments: &'a [TypedArg],
     body: &'a Vec1<TypedStatement>,
-    _return_annotation: &'a Option<TypeAst>,
+    return_annotation: &'a Option<TypeAst>,
 ) where
     V: Visit<'a> + ?Sized,
 {
+    for argument in arguments {
+        if let Some(annotation) = &argument.annotation {
+            v.visit_type_ast(annotation);
+        }
+    }
+    if let Some(return_) = return_annotation {
+        v.visit_type_ast(return_);
+    }
+
     for stmt in body {
         v.visit_typed_statement(stmt);
     }
@@ -1207,6 +1224,9 @@ pub fn visit_typed_assignment<'a, V>(v: &mut V, assignment: &'a TypedAssignment)
 where
     V: Visit<'a> + ?Sized,
 {
+    if let Some(annotation) = &assignment.annotation {
+        v.visit_type_ast(annotation);
+    }
     v.visit_typed_expr(&assignment.value);
     v.visit_typed_pattern(&assignment.pattern);
 }

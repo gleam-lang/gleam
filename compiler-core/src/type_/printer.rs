@@ -333,6 +333,49 @@ impl<'a> Printer<'a> {
         }
     }
 
+    /// In the AST, type variables are represented by their IDs, not their names.
+    /// This means that when we are printing a type variable, we either need to
+    /// find its name that was given by the programmer, or generate a new one.
+    /// Type variable names are local to functions, meaning there can be one
+    /// named `a` in one function, and a different one named `a` in another
+    /// function. However, there can't be two named `a` in the same function.
+    ///
+    /// By default, the printer avoids duplicating type variable names entirely.
+    /// This is because we don't have easy access to information about which type
+    /// variables belong to this function. In order to ensure no accidental,
+    /// collisions, we treat all type variables from the module as in scope, even
+    /// though this isn't the case.
+    ///
+    /// When sufficient information is present to ensure type variables are not
+    /// duplicated, `new_without_type_variables` can be used, in combination with
+    /// `register_type_variables` in order to precisely control which variables
+    /// are in scope.
+    ///
+    pub fn new_without_type_variables(names: &'a Names) -> Self {
+        Printer {
+            names,
+            uid: Default::default(),
+            printed_type_variables: Default::default(),
+            printed_type_variable_names: Default::default(),
+        }
+    }
+
+    /// Clear the registered type variable names. This allows the same `Printer`
+    /// to be used in multiple different scopes, which have different sets of
+    /// type variables. After clearing, the correct variables from the desired
+    /// scope can be registered using `register_type_variable`.
+    pub fn clear_type_variables(&mut self) {
+        self.printed_type_variable_names.clear();
+    }
+
+    /// As explained in the documentation for `new_without_type_variables`, it
+    /// it not always possible to determine which type variables are in scope.
+    /// However, when it is possible, this function can be used to manually
+    /// register which type variable names are in scope and cannot be used.
+    pub fn register_type_variable(&mut self, name: EcoString) {
+        _ = self.printed_type_variable_names.insert(name);
+    }
+
     pub fn print_type(&mut self, type_: &Type) -> EcoString {
         let mut buffer = EcoString::new();
         self.print(type_, &mut buffer, PrintMode::Normal);

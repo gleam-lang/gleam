@@ -24,6 +24,6 @@ pub fn main() {
   map([1, 2, 3], add(_, 1))
 }
 
-fn add(int: Int, int_2: Int) -> c {
+fn add(int: Int, int_2: Int) -> a {
   todo
 }

@@ -204,6 +204,30 @@
   colon in the rename dialog (`name:` -> `name`)
   ([fruno](https://github.com/frunobulax-the-poodle))
 
+- The "Add type annotations" and "Generate function" code actions now ignore type
+  variables defined in other functions, improving the generated code. For example:
+
+  ```gleam
+  fn something(a: a, b: b, c: c) -> d { todo }
+
+  fn pair(a, b) { #(a, b) }
+  ```
+
+  Previously, when triggering the "Add type annotations" code action on the
+  `pair` function, the language server would have generated:
+
+  ```gleam
+  fn pair(a: e, b: f) -> #(e, f) { #(a, b) }
+  ```
+
+  However in 1.13, it will now generate:
+
+  ```gleam
+  fn pair(a: a, b: b) -> #(a, b) { #(a, b) }
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Formatter
 
 - The formatter now removes needless multiple negations that are safe to remove.

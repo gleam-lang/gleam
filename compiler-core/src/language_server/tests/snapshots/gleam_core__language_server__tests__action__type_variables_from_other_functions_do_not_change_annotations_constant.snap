@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nfn wibble(a: a, b: b, c: c) -> d { todo }\n\nconst empty = []\n"
+---
+----- BEFORE ACTION
+
+fn wibble(a: a, b: b, c: c) -> d { todo }
+
+const empty = []
+      ↑         
+
+
+----- AFTER ACTION
+
+fn wibble(a: a, b: b, c: c) -> d { todo }
+
+const empty: List(a) = []
