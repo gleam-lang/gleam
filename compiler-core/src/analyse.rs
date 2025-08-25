@@ -1983,15 +1983,15 @@ fn get_compatible_record_fields(constructors: &[TypeValueConstructor]) -> Vec<Re
             // If there is only one constructor, we simply show the documentation
             // for the field.
             first_parameter.documentation.clone()
-        } else if let Some(field_documentation) = &first_parameter.documentation {
+        } else {
             // If there are multiple constructors, we show the documentation of
             // this field for each of the variants.
-            Some(eco_format!("## {}\n\n{}", first.name, field_documentation))
-        } else {
-            // If there is no documentation on the field of the first constructor,
-            // we leave it as `None` until we find a field which does have
-            // documentation.
-            None
+            first_parameter
+                .documentation
+                .as_ref()
+                .map(|field_documentation| {
+                    eco_format!("## {}\n\n{}", first.name, field_documentation)
+                })
         };
 
         // Check each variant to see if they have an field in the same position
