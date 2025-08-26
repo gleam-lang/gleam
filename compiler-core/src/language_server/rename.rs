@@ -7,8 +7,11 @@ use crate::{
     analyse::name,
     ast::{self, Definition, SrcSpan},
     build::Module,
-    language_server::edits::{
-        self, Newlines, add_newlines_after_import, position_of_first_definition_if_import,
+    language_server::{
+        edits::{
+            self, Newlines, add_newlines_after_import, position_of_first_definition_if_import,
+        },
+        reference::FindVariableReferences,
     },
     line_numbers::LineNumbers,
     reference::ReferenceKind,
@@ -16,10 +19,7 @@ use crate::{
 };
 
 use super::{
-    TextEdits,
-    compiler::ModuleSourceInformation,
-    reference::{VariableReferenceKind, find_variable_references},
-    url_from_path,
+    TextEdits, compiler::ModuleSourceInformation, reference::VariableReferenceKind, url_from_path,
 };
 
 fn workspace_edit(uri: Url, edits: Vec<TextEdit>) -> WorkspaceEdit {
@@ -54,7 +54,8 @@ pub fn rename_local_variable(
     let uri = params.text_document_position.text_document.uri.clone();
     let mut edits = TextEdits::new(line_numbers);
 
-    let references = find_variable_references(&module.ast, definition_location, name);
+    let references =
+        FindVariableReferences::new(definition_location, name).find_in_module(&module.ast);
 
     match kind {
         VariableReferenceKind::Variable => {

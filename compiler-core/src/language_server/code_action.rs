@@ -36,7 +36,7 @@ use super::{
     edits::{add_newlines_after_import, get_import_edit, position_of_first_definition_if_import},
     engine::{overlaps, within},
     files::FileSystemProxy,
-    reference::{VariableReferenceKind, find_variable_references},
+    reference::VariableReferenceKind,
     src_span_to_lsp_range, url_from_path,
 };
 
@@ -5947,7 +5947,8 @@ impl<'a> InlineVariable<'a> {
     }
 
     fn maybe_inline(&mut self, location: SrcSpan, name: EcoString) {
-        let references = find_variable_references(&self.module.ast, location, name);
+        let references =
+            FindVariableReferences::new(location, name).find_in_module(&self.module.ast);
         let reference = if references.len() == 1 {
             references
                 .into_iter()
