@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt;
 
 use crate::Result;
 use crate::io::{make_relative, ordered_map};
@@ -138,8 +139,24 @@ impl<'de> serde::Deserialize<'de> for Base16Checksum {
     where
         D: serde::Deserializer<'de>,
     {
-        let s: &str = serde::de::Deserialize::deserialize(deserializer)?;
-        base16::decode(s)
+        deserializer.deserialize_str(Base16ChecksumVisitor)
+    }
+}
+
+struct Base16ChecksumVisitor;
+
+impl<'de> serde::de::Visitor<'de> for Base16ChecksumVisitor {
+    type Value = Base16Checksum;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("a base 16 checksum")
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        base16::decode(value)
             .map(Base16Checksum)
             .map_err(serde::de::Error::custom)
     }
