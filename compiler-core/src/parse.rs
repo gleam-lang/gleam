@@ -808,14 +808,6 @@ where
                 return parse_error(ParseErrorType::ExprLparStart, SrcSpan { start, end: start });
             }
 
-            // Helpful error when trying to define a constant inside a function.
-            Some((start, Token::Const, end)) => {
-                return parse_error(
-                    ParseErrorType::ConstantInsideFunction,
-                    SrcSpan { start, end },
-                );
-            }
-
             // Boolean negation
             Some((start, Token::Bang, _end)) => {
                 self.advance();
@@ -1189,6 +1181,12 @@ where
                 self.advance();
                 Ok(Some(self.parse_assert(start)?))
             }
+
+            // Helpful error when trying to define a constant inside a function.
+            Some((start, Token::Const, end)) => parse_error(
+                ParseErrorType::ConstantInsideFunction,
+                SrcSpan { start, end },
+            ),
 
             token => {
                 self.tok0 = token;
