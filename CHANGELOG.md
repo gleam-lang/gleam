@@ -306,3 +306,8 @@
 - Fixed a bug where renaming a variable used in a record update would produce
   invalid code in certain situations.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where enabling `typescript_declarations = true` wouldn't generate
+  TypeScript declarations unless the build directory was manually deleted. The
+  compiler now automatically rebuilds the project when this configuration changes.
+  ([daniellionel01](https://github.com/daniellionel01))
