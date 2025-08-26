@@ -3228,3 +3228,28 @@ pub fn main() {
         vec![("main", "fn() -> Nil")]
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4883
+#[test]
+fn variant_inference_ignores_echo() {
+    assert_module_infer!(
+        "
+pub type Wibble {
+  Wibble(wibble: Int, wobble: String)
+  Wobble(a: String, b: Int)
+}
+
+pub fn get_int(w: Wibble) {
+  case echo w {
+    Wibble(..) -> w.wibble
+    Wobble(..) -> w.b
+  }
+}
+",
+        vec![
+            ("Wibble", "fn(Int, String) -> Wibble"),
+            ("Wobble", "fn(String, Int) -> Wibble"),
+            ("get_int", "fn(Wibble) -> Int"),
+        ]
+    );
+}

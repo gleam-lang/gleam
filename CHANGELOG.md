@@ -339,3 +339,7 @@
 - Fixed a bug where renaming a variable used in a record update would produce
   invalid code in certain situations.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where adding `echo` to the subject of a `case` expression would
+  prevent variant inference from working correctly.
+  ([Surya Rose](https://github.com/GearsDatapacks))
