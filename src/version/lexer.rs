@@ -122,7 +122,7 @@ pub struct Lexer<'input> {
 
 impl<'input> Lexer<'input> {
     /// Construct a new lexer for the given input.
-    pub fn new(input: &str) -> Lexer {
+    pub fn new(input: &str) -> Lexer<'_> {
         let mut chars = input.char_indices();
         let c1 = chars.next();
         let c2 = chars.next();
@@ -263,7 +263,7 @@ impl<'input> Iterator for Lexer<'input> {
 mod tests {
     use super::*;
 
-    fn lex(input: &str) -> Vec<Token> {
+    fn lex(input: &str) -> Vec<Token<'_>> {
         Lexer::new(input).map(Result::unwrap).collect::<Vec<_>>()
     }
 

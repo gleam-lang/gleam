@@ -7,7 +7,7 @@ use std::{cmp::Ordering, convert::TryFrom, fmt};
 use self::parser::Parser;
 use serde::{
     Deserialize, Serialize,
-    de::{self, Deserializer},
+    de::{self, Deserializer, Visitor},
 };
 
 mod lexer;
@@ -153,8 +153,24 @@ impl<'de> Deserialize<'de> for Version {
     where
         D: Deserializer<'de>,
     {
-        let s: &str = Deserialize::deserialize(deserializer)?;
-        Version::try_from(s).map_err(de::Error::custom)
+        deserializer.deserialize_str(VersionVisitor)
+    }
+}
+
+struct VersionVisitor;
+
+impl<'de> Visitor<'de> for VersionVisitor {
+    type Value = Version;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a Hex version string")
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Version::try_from(value).map_err(de::Error::custom)
     }
 }
 
