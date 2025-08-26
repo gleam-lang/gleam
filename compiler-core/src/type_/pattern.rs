@@ -315,20 +315,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         // Unify each pattern in the multi-pattern with the corresponding subject
         let mut typed_multi = Vec::with_capacity(multi_pattern.len());
         for (pattern, subject) in multi_pattern.into_iter().zip(subjects) {
-            let subject_variable = match subject {
-                TypedExpr::Var {
-                    constructor:
-                        ValueConstructor {
-                            // Records should not be considered local variables
-                            // See: https://github.com/gleam-lang/gleam/issues/3861
-                            variant: ValueConstructorVariant::Record { .. },
-                            ..
-                        },
-                    ..
-                } => None,
-                TypedExpr::Var { name, .. } => Some(name.clone()),
-                _ => None,
-            };
+            let subject_variable = Self::subject_variable(subject);
 
             let pattern = self.unify(pattern, subject.type_(), subject_variable);
             typed_multi.push(pattern);
@@ -344,7 +331,15 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         pattern: UntypedPattern,
         subject: &TypedExpr,
     ) -> TypedPattern {
-        let subject_variable = match subject {
+        let subject_variable = Self::subject_variable(subject);
+
+        let typed_pattern = self.unify(pattern, subject.type_(), subject_variable);
+        self.register_variables();
+        typed_pattern
+    }
+
+    fn subject_variable(subject: &TypedExpr) -> Option<EcoString> {
+        match subject {
             TypedExpr::Var {
                 constructor:
                     ValueConstructor {
@@ -356,12 +351,15 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 ..
             } => None,
             TypedExpr::Var { name, .. } => Some(name.clone()),
+            // If the subject of a `case` expression is something like
+            // `echo some_variable`, we still want to narrow the variant for
+            // `some_variable`.
+            TypedExpr::Echo {
+                expression: Some(subject),
+                ..
+            } => Self::subject_variable(subject),
             _ => None,
-        };
-
-        let typed_pattern = self.unify(pattern, subject.type_(), subject_variable);
-        self.register_variables();
-        typed_pattern
+        }
     }
 
     /// Register the variables bound in this pattern in the environment
