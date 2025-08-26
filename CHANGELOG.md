@@ -276,3 +276,7 @@
 - Fixed a bug where renaming a variable used in a record update would produce
   invalid code in certain situations.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where variable sized string segment patterns that are discarded
+  are not disallowed by the compiler.
+  ([Lily Rose](https://github.com/LilyRose2798))
