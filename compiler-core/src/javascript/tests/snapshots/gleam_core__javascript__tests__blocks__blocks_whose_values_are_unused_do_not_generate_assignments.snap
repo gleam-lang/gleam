@@ -1,0 +1,49 @@
+---
+source: compiler-core/src/javascript/tests/blocks.rs
+expression: "\npub fn main() {\n  {\n    let x = 10\n    echo x\n  }\n\n  {\n    let a = 1\n    let b = 2\n    a + b\n  }\n\n  Nil\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  {
+    let x = 10
+    echo x
+  }
+
+  {
+    let a = 1
+    let b = 2
+    a + b
+  }
+
+  Nil
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
+import {
+  Empty as $Empty,
+  NonEmpty as $NonEmpty,
+  CustomType as $CustomType,
+  bitArraySlice,
+  bitArraySliceToInt,
+  BitArray as $BitArray,
+  List as $List,
+  UtfCodepoint as $UtfCodepoint,
+} from "../gleam.mjs";
+
+export function main() {
+  {
+    let x = 10;
+    echo(x, undefined, "src/module.gleam", 5)
+  };
+  {
+    let a = 1;
+    let b = 2;
+    a + b
+  };
+  return undefined;
+}
+
+// ...omitted code from `templates/echo.mjs`...

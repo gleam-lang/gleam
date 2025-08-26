@@ -344,3 +344,27 @@ pub fn main() {
 "#
     )
 }
+
+#[test]
+fn blocks_whose_values_are_unused_do_not_generate_assignments() {
+    // There's no point generating `_block` assignments here, as the values
+    // would be unused.
+    assert_js!(
+        "
+pub fn main() {
+  {
+    let x = 10
+    echo x
+  }
+
+  {
+    let a = 1
+    let b = 2
+    a + b
+  }
+
+  Nil
+}
+"
+    );
+}
