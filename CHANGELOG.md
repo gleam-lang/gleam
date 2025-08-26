@@ -143,6 +143,10 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The code generated for blocks on the JavaScript target has been improved and
+  is now smaller in certain cases.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - New projects are generated using OTP28 on GitHub Actions.

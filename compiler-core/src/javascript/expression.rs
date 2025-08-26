@@ -15,8 +15,15 @@ use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub enum Position {
+    /// We are compiling the last expression in a function, meaning that it should
+    /// use `return` to return the value it produces from the function.
     Tail,
-    NotTail(Ordering),
+    /// We are inside a function, but the value of this expression isn't being
+    /// used, so we don't need to do anything with the returned value.
+    Statement,
+    /// The value of this expression needs to be used inside another expression,
+    /// so we need to use the value that is returned by this expression.
+    Expression(Ordering),
     /// We are compiling an expression inside a block, meaning we must assign
     /// to the `_block` variable at the end of the scope, because blocks are not
     /// expressions in JS.
@@ -38,8 +45,8 @@ impl Position {
     #[must_use]
     pub fn ordering(&self) -> Ordering {
         match self {
-            Self::NotTail(ordering) => *ordering,
-            Self::Tail | Self::Assign(_) => Ordering::Loose,
+            Self::Expression(ordering) => *ordering,
+            Self::Tail | Self::Assign(_) | Self::Statement => Ordering::Loose,
         }
     }
 }
@@ -518,7 +525,7 @@ impl<'module, 'a> Generator<'module, 'a> {
     pub fn wrap_return(&mut self, document: Document<'a>) -> Document<'a> {
         match &self.scope_position {
             Position::Tail => docvec!["return ", document, ";"],
-            Position::NotTail(_) => document,
+            Position::Expression(_) | Position::Statement => document,
             Position::Assign(name) => docvec![name.clone(), " = ", document, ";"],
         }
     }
@@ -536,10 +543,12 @@ impl<'module, 'a> Generator<'module, 'a> {
     {
         let new_ordering = ordering.unwrap_or(self.scope_position.ordering());
 
-        let function_position =
-            std::mem::replace(&mut self.function_position, Position::NotTail(new_ordering));
+        let function_position = std::mem::replace(
+            &mut self.function_position,
+            Position::Expression(new_ordering),
+        );
         let scope_position =
-            std::mem::replace(&mut self.scope_position, Position::NotTail(new_ordering));
+            std::mem::replace(&mut self.scope_position, Position::Expression(new_ordering));
 
         let result = compile(self);
 
@@ -562,7 +571,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                     record_assignment: Some(_),
                     ..
                 },
-                Position::NotTail(Ordering::Loose),
+                Position::Expression(Ordering::Loose),
             ) => self.wrap_block(|this| this.expression(expression)),
             (
                 TypedExpr::Panic { .. }
@@ -574,7 +583,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                     record_assignment: Some(_),
                     ..
                 },
-                Position::NotTail(Ordering::Strict),
+                Position::Expression(Ordering::Strict),
             ) => self.immediately_invoked_function_expression(expression, |this, expr| {
                 this.expression(expr)
             }),
@@ -597,8 +606,8 @@ impl<'module, 'a> Generator<'module, 'a> {
         match &self.scope_position {
             // Here the document is a return statement: `return <expr>;`
             // or an assignment: `_block = <expr>;`
-            Position::Tail | Position::Assign(_) => document,
-            Position::NotTail(_) => docvec!["(", document, ")"],
+            Position::Tail | Position::Assign(_) | Position::Statement => document,
+            Position::Expression(_) => docvec!["(", document, ")"],
         }
     }
 
@@ -644,7 +653,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         );
         let function_position = std::mem::replace(
             &mut self.function_position,
-            Position::NotTail(Ordering::Strict),
+            Position::Expression(Ordering::Strict),
         );
 
         // Generate the expression
@@ -774,12 +783,14 @@ impl<'module, 'a> Generator<'module, 'a> {
             }
         }
         match &self.scope_position {
-            Position::Tail | Position::Assign(_) => self.block_document(statements),
-            Position::NotTail(Ordering::Strict) => self
+            Position::Tail | Position::Assign(_) | Position::Statement => {
+                self.block_document(statements)
+            }
+            Position::Expression(Ordering::Strict) => self
                 .immediately_invoked_function_expression(statements, |this, statements| {
                     this.statements(statements)
                 }),
-            Position::NotTail(Ordering::Loose) => self.wrap_block(|this| {
+            Position::Expression(Ordering::Loose) => self.wrap_block(|this| {
                 // Save previous scope
                 let current_scope_vars = this.current_scope_vars.clone();
 
@@ -806,11 +817,16 @@ impl<'module, 'a> Generator<'module, 'a> {
         let mut documents = Vec::with_capacity(count * 3);
         for (i, statement) in statements.iter().enumerate() {
             if i + 1 < count {
-                documents.push(
-                    self.not_in_tail_position(Some(Ordering::Loose), |this| {
-                        this.statement(statement)
-                    }),
-                );
+                let function_position =
+                    std::mem::replace(&mut self.function_position, Position::Statement);
+                let scope_position =
+                    std::mem::replace(&mut self.scope_position, Position::Statement);
+
+                documents.push(self.statement(statement));
+
+                self.function_position = function_position;
+                self.scope_position = scope_position;
+
                 if requires_semicolon(statement) {
                     documents.push(";".to_doc());
                 }
@@ -845,7 +861,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         let js_name = self.next_local_var(name);
         let assignment = docvec!["let ", js_name.clone(), " = ", subject, ";"];
         let assignment = match &self.scope_position {
-            Position::NotTail(_) => assignment,
+            Position::Expression(_) | Position::Statement => assignment,
             Position::Tail => docvec![assignment, line(), "return ", js_name, ";"],
             Position::Assign(block_variable) => docvec![
                 assignment,
@@ -900,7 +916,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         });
 
         match &self.scope_position {
-            Position::NotTail(_) => check,
+            Position::Expression(_) | Position::Statement => check,
             Position::Tail | Position::Assign(_) => {
                 docvec![check, line(), self.wrap_return("undefined".to_doc())]
             }

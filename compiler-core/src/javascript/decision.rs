@@ -718,7 +718,7 @@ pub fn let_<'a>(
     ];
 
     match scope_position {
-        expression::Position::NotTail(_ordering) => doc,
+        expression::Position::Expression(_) | expression::Position::Statement => doc,
         expression::Position::Tail => docvec![doc, line(), "return ", assignment_name, ";"],
         expression::Position::Assign(variable) => {
             docvec![doc, line(), variable, " = ", assignment_name, ";"]
