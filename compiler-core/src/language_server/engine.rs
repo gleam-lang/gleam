@@ -16,6 +16,7 @@ use crate::{
         compiler::LspProjectCompiler,
         files::FileSystemProxy,
         progress::ProgressReporter,
+        reference::FindVariableReferences,
     },
     line_numbers::LineNumbers,
     paths::ProjectPaths,
@@ -53,8 +54,7 @@ use super::{
     },
     completer::Completer,
     reference::{
-        Referenced, VariableReferenceKind, find_module_references, find_variable_references,
-        reference_for_ast_node,
+        Referenced, VariableReferenceKind, find_module_references, reference_for_ast_node,
     },
     rename::{RenameTarget, Renamed, rename_local_variable, rename_module_entity},
     signature_help, src_span_to_lsp_range,
@@ -803,7 +803,8 @@ where
                     )
                     | None => {
                         let variable_references =
-                            find_variable_references(&module.ast, definition_location, name);
+                            FindVariableReferences::new(definition_location, name)
+                                .find_in_module(&module.ast);
 
                         let mut reference_locations =
                             Vec::with_capacity(variable_references.len() + 1);

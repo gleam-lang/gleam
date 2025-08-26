@@ -354,21 +354,6 @@ pub enum VariableReferenceKind {
     LabelShorthand,
 }
 
-pub fn find_variable_references(
-    module: &TypedModule,
-    definition_location: SrcSpan,
-    name: EcoString,
-) -> HashSet<VariableReference> {
-    let mut finder = FindVariableReferences {
-        references: HashSet::new(),
-        definition_location,
-        alternative_variable: AlternativeVariable::Ignore,
-        name,
-    };
-    finder.visit_typed_module(module);
-    finder.references
-}
-
 /// How to treat variables defined in alternative patterns
 enum AlternativeVariable {
     Track,
