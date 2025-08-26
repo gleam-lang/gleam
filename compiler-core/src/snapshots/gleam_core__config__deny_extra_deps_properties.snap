@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/config.rs
+expression: error.pretty_string()
+---
+error: File IO failure
+
+An error occurred while trying to parse this file:
+
+    gleam.toml
+
+The error message from the file IO library was:
+
+    TOML parse error at line 6, column 18
+  |
+6 | aide_generator = { git = "git@github.com:crowdhailer/aide.git", ref = "f559c5bc", extra = "idk what this is" }
+  |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+data did not match any variant of untagged enum Requirement

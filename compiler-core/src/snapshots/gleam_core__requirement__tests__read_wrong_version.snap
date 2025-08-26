@@ -2,4 +2,8 @@
 source: compiler-core/src/requirement.rs
 expression: error.to_string()
 ---
->= 2.0 and < 3.0.0 is not a valid version. missing patch version: 2.0 for key `short` at line 2 column 21
+TOML parse error at line 2, column 21
+  |
+2 |             short = ">= 2.0 and < 3.0.0"
+  |                     ^^^^^^^^^^^^^^^^^^^^
+>= 2.0 and < 3.0.0 is not a valid version. missing patch version: 2.0

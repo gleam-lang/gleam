@@ -52,13 +52,29 @@ impl<'de> Deserialize<'de> for SpdxLicense {
     where
         D: serde::Deserializer<'de>,
     {
-        let s: &str = Deserialize::deserialize(deserializer)?;
-        match spdx::license_id(s) {
+        deserializer.deserialize_str(SpdxLicenseVisitor)
+    }
+}
+
+struct SpdxLicenseVisitor;
+
+impl<'de> serde::de::Visitor<'de> for SpdxLicenseVisitor {
+    type Value = SpdxLicense;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("a SPDX License ID")
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        match spdx::license_id(value) {
             None => Err(serde::de::Error::custom(format!(
-                "{s} is not a valid SPDX License ID"
+                "{value} is not a valid SPDX License ID"
             ))),
             Some(_) => Ok(SpdxLicense {
-                licence: String::from(s),
+                licence: value.to_string(),
             }),
         }
     }
@@ -341,10 +357,8 @@ aide_generator = { git = "git@github.com:crowdhailer/aide.git", ref = "f559c5bc"
 "#;
     let error = deserialise_config("gleam.toml", toml.into())
         .expect_err("should fail to deserialise because of additional path");
-    assert_eq!(
-        error.to_string(),
-        r#"Parse "gleam.toml" failed: Some("data did not match any variant of untagged enum Requirement for key `dependencies.aide_generator` at line 6 column 18")"#
-    );
+
+    insta::assert_snapshot!(insta::internals::AutoName, error.pretty_string());
 }
 
 #[test]
@@ -1032,7 +1046,7 @@ mod package_name {
     use ecow::EcoString;
     use regex::Regex;
     use serde::Deserializer;
-    use std::sync::OnceLock;
+    use std::{fmt, sync::OnceLock};
 
     static PACKAGE_NAME_PATTERN: OnceLock<Regex> = OnceLock::new();
 
@@ -1040,16 +1054,32 @@ mod package_name {
     where
         D: Deserializer<'de>,
     {
-        let name: &str = serde::de::Deserialize::deserialize(deserializer)?;
-        if PACKAGE_NAME_PATTERN
-            .get_or_init(|| Regex::new("^[a-z][a-z0-9_]*$").expect("Package name regex"))
-            .is_match(name)
+        deserializer.deserialize_str(NameVisitor)
+    }
+
+    struct NameVisitor;
+
+    impl<'de> serde::de::Visitor<'de> for NameVisitor {
+        type Value = EcoString;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("a package name")
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
         {
-            Ok(name.into())
-        } else {
-            let error =
-                "Package names may only contain lowercase letters, numbers, and underscores";
-            Err(serde::de::Error::custom(error))
+            if PACKAGE_NAME_PATTERN
+                .get_or_init(|| Regex::new("^[a-z][a-z0-9_]*$").expect("Package name regex"))
+                .is_match(value)
+            {
+                Ok(value.into())
+            } else {
+                let error =
+                    "Package names may only contain lowercase letters, numbers, and underscores";
+                Err(serde::de::Error::custom(error))
+            }
         }
     }
 }
@@ -1059,12 +1089,13 @@ fn name_with_dash() {
     let input = r#"
 name = "one-two"
 "#;
-    assert_eq!(
+
+    insta::assert_snapshot!(
+        insta::internals::AutoName,
         toml::from_str::<PackageConfig>(input)
             .unwrap_err()
-            .to_string(),
-        "Package names may only contain lowercase letters, numbers, and underscores for key `name` at line 1 column 1"
-    )
+            .to_string()
+    );
 }
 
 #[test]
@@ -1072,11 +1103,11 @@ fn name_with_number_start() {
     let input = r#"
 name = "1"
 "#;
-    assert_eq!(
+    insta::assert_snapshot!(
+        insta::internals::AutoName,
         toml::from_str::<PackageConfig>(input)
             .unwrap_err()
             .to_string(),
-        "Package names may only contain lowercase letters, numbers, and underscores for key `name` at line 1 column 1"
     )
 }
 
