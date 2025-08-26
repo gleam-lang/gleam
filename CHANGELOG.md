@@ -117,6 +117,32 @@
 
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The compiler now provides an improved error message for when trying to define
+  a constant inside a function. For example, the following code:
+
+  ```gleam
+  pub fn deep_thought() {
+    const the_answer = 42
+    the_answer
+  }
+  ```
+
+  Will produce this error message:
+
+  ```txt
+    error: Syntax error
+    ┌─ /src/file.gleam:2:3
+    │
+  3 │   const the_answer = 43
+    │   ^^^^^ Constants are not allowed inside functions
+
+  All variables are immutable in Gleam, so constants inside functions are not
+  necessary.
+  Hint: Either move this into the global scope or use `let` binding instead.
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - New projects are generated using OTP28 on GitHub Actions.

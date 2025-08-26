@@ -115,6 +115,8 @@ pub enum ParseErrorType {
     /// This can happen when there's an empty block in a case clause guard.
     /// For example: `_ if a == {}`
     EmptyGuardBlock,
+    // When the use tries to define a constant inside a function
+    ConstantInsideFunction,
 }
 
 pub(crate) struct ParseErrorDetails {
@@ -635,6 +637,18 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 text: "".into(),
                 hint: None,
                 label_text: "A clause guard block cannot be empty".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::ConstantInsideFunction => ParseErrorDetails {
+                text: wrap(
+                    "All variables are immutable in Gleam, so constants inside \
+functions are not necessary.",
+                ),
+                hint: Some(
+                    "Either move this into the global scope or use `let` binding instead.".into(),
+                ),
+                label_text: "Constants are not allowed inside functions".into(),
                 extra_labels: vec![],
             },
         }

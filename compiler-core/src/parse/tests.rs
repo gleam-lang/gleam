@@ -1930,3 +1930,15 @@ fn case_guard_with_empty_block() {
 }"
     );
 }
+
+#[test]
+fn constant_inside_function() {
+    assert_module_error!(
+        "
+pub fn main() {
+  const x = 10
+  x
+}
+"
+    );
+}
