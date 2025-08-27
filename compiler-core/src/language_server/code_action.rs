@@ -4321,7 +4321,7 @@ pub struct PatternMatchOnValue<'a, A> {
     module: &'a Module,
     params: &'a CodeActionParams,
     compiler: &'a LspProjectCompiler<A>,
-    pattern_variable_under_cursor: Option<(&'a EcoString, Arc<Type>)>,
+    pattern_variable_under_cursor: Option<(&'a EcoString, SrcSpan, Arc<Type>)>,
     selected_value: Option<PatternMatchedValue<'a>>,
     edits: TextEdits<'a>,
 }
@@ -4362,9 +4362,8 @@ pub enum PatternMatchedValue<'a> {
     /// ```
     ///
     ClausePatternVariable {
-        variable_name: &'a EcoString,
         variable_type: Arc<Type>,
-        clause_body_location: SrcSpan,
+        variable_location: SrcSpan,
         clause_location: SrcSpan,
     },
     UseVariable {
@@ -4426,17 +4425,11 @@ where
             }
 
             Some(PatternMatchedValue::ClausePatternVariable {
-                variable_name,
                 variable_type,
-                clause_body_location,
+                variable_location,
                 clause_location,
             }) => {
-                self.match_on_clause_variable(
-                    variable_name,
-                    variable_type,
-                    clause_body_location,
-                    clause_location,
-                );
+                self.match_on_clause_variable(variable_type, variable_location, clause_location);
                 "Pattern match on variable"
             }
 
@@ -4554,30 +4547,32 @@ where
 
     fn match_on_clause_variable(
         &mut self,
-        variable_name: &EcoString,
         variable_type: Arc<Type>,
-        clause_body_location: SrcSpan,
+        variable_location: SrcSpan,
         clause_location: SrcSpan,
     ) {
         let Some(patterns) = self.type_to_destructure_patterns(variable_type.as_ref()) else {
             return;
         };
 
-        let body_code = code_at(self.module, clause_body_location);
-
         let clause_range = self.edits.src_span_to_lsp_range(clause_location);
-        let nesting = " ".repeat(2 + clause_range.start.character as usize);
+        let nesting = " ".repeat(clause_range.start.character as usize);
 
+        let variable_start = (variable_location.start - clause_location.start) as usize;
+        let variable_end =
+            variable_start + (variable_location.end - variable_location.start) as usize;
+
+        let clause_code = code_at(self.module, clause_location);
         let patterns = patterns
             .iter()
-            .map(|p| format!("  {nesting}{p} -> {body_code}"))
-            .join("\n");
-        let pattern_matching = format!("case {variable_name} {{\n{patterns}\n{nesting}}}");
+            .map(|pattern| {
+                let mut clause_code = clause_code.to_string();
+                clause_code.replace_range(variable_start..variable_end, pattern);
+                clause_code
+            })
+            .join(&format!("\n{nesting}"));
 
-        self.edits.replace(
-            clause_body_location,
-            format!("\n{nesting}{pattern_matching}"),
-        );
+        self.edits.replace(clause_location, patterns);
     }
 
     /// Will produce a pattern that can be used on the left hand side of a let
@@ -4809,7 +4804,7 @@ where
 
     fn visit_typed_assignment(&mut self, assignment: &'ast TypedAssignment) {
         ast::visit::visit_typed_assignment(self, assignment);
-        if let Some((name, ref type_)) = self.pattern_variable_under_cursor {
+        if let Some((name, _, ref type_)) = self.pattern_variable_under_cursor {
             self.selected_value = Some(PatternMatchedValue::LetVariable {
                 variable_name: name,
                 variable_type: type_.clone(),
@@ -4828,11 +4823,10 @@ where
             }
         }
 
-        if let Some((name, type_)) = self.pattern_variable_under_cursor.take() {
+        if let Some((_, variable_location, type_)) = self.pattern_variable_under_cursor.take() {
             self.selected_value = Some(PatternMatchedValue::ClausePatternVariable {
-                variable_name: name,
                 variable_type: type_,
-                clause_body_location: clause.then.location(),
+                variable_location,
                 clause_location: clause.location(),
             });
         } else {
@@ -4888,7 +4882,7 @@ where
             self.params.range,
             self.edits.src_span_to_lsp_range(*location),
         ) {
-            self.pattern_variable_under_cursor = Some((name, type_.clone()));
+            self.pattern_variable_under_cursor = Some((name, *location, type_.clone()));
         }
     }
 
@@ -4907,14 +4901,14 @@ where
                 self.edits.src_span_to_lsp_range(*location),
             )
         {
-            self.pattern_variable_under_cursor = Some((name, type_::string()));
+            self.pattern_variable_under_cursor = Some((name, *location, type_::string()));
         } else if let AssignName::Variable(name) = right_side_assignment
             && within(
                 self.params.range,
                 self.edits.src_span_to_lsp_range(*right_location),
             )
         {
-            self.pattern_variable_under_cursor = Some((name, type_::string()));
+            self.pattern_variable_under_cursor = Some((name, *right_location, type_::string()));
         }
     }
 }
