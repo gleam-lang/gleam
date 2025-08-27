@@ -1942,3 +1942,25 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn function_definition_angle_generics_error() {
+    assert_module_error!("fn id<T>(x: T) { x }");
+}
+
+#[test]
+fn type_angle_generics_usage_error() {
+    assert_error!("let list: List<Int> = []");
+}
+
+#[test]
+fn type_angle_generics_definition_error() {
+    assert_module_error!(
+        r#"
+type Maybe<A> {
+    Some(A)
+    None
+}
+"#
+    );
+}
