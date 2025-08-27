@@ -9796,3 +9796,101 @@ fn remove_unreachable_branches_does_not_pop_up_if_all_branches_are_reachable() {
         find_position_of("Ok(n)").to_selection()
     );
 }
+
+#[test]
+fn add_type_annotations_public_alias_to_internal_type_aliased_module() {
+    let src = "
+import package as pkg
+
+pub fn main() {
+  pkg.make_wibble()
+}
+";
+
+    assert_code_action!(
+        ADD_ANNOTATION,
+        TestProject::for_source(src)
+            .add_package_module(
+                "package",
+                "package",
+                "
+import package/internal
+
+pub type Wibble = internal.Wibble
+
+pub fn make_wibble() {
+  internal.Wibble
+}
+"
+            )
+            .add_package_module("package", "package/internal", "pub type Wibble { Wibble }"),
+        find_position_of("main").to_selection(),
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3898
+#[test]
+fn add_type_annotations_public_alias_to_internal_type() {
+    let src = "
+import package
+
+pub fn main() {
+  package.make_wibble()
+}
+";
+
+    assert_code_action!(
+        ADD_ANNOTATION,
+        TestProject::for_source(src)
+            .add_package_module(
+                "package",
+                "package",
+                "
+import package/internal
+
+pub type Wibble = internal.Wibble
+
+pub fn make_wibble() {
+  internal.Wibble
+}
+"
+            )
+            .add_package_module("package", "package/internal", "pub type Wibble { Wibble }"),
+        find_position_of("main").to_selection(),
+    );
+}
+
+#[test]
+fn add_type_annotations_public_alias_to_internal_generic_type() {
+    let src = "
+import package
+
+pub fn main() {
+  package.make_wibble(10)
+}
+";
+
+    assert_code_action!(
+        ADD_ANNOTATION,
+        TestProject::for_source(src)
+            .add_package_module(
+                "package",
+                "package",
+                "
+import package/internal
+
+pub type Wibble(a, b) = internal.Wibble(a, b)
+
+pub fn make_wibble(x) {
+  internal.Wibble(x)
+}
+"
+            )
+            .add_package_module(
+                "package",
+                "package/internal",
+                "pub type Wibble(a, b) { Wibble(a) }"
+            ),
+        find_position_of("main").to_selection(),
+    );
+}

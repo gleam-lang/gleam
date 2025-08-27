@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport package\n\npub fn main() {\n  package.make_wibble()\n}\n"
+---
+----- BEFORE ACTION
+
+import package
+
+pub fn main() {
+       ↑       
+  package.make_wibble()
+}
+
+
+----- AFTER ACTION
+
+import package
+
+pub fn main() -> package.Wibble {
+  package.make_wibble()
+}
