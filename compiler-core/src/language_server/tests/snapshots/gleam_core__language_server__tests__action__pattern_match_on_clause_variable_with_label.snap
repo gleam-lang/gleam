@@ -1,0 +1,39 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  case wibble() {\n    Wobble(wibble: something) -> 1\n    _ -> 2\n  }\n}\n\ntype Wibble {\n  Wobble(wibble: Wibble)\n  Woo\n}\n\nfn new() { Wobble }\n\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  case wibble() {
+    Wobble(wibble: something) -> 1
+                   ↑              
+    _ -> 2
+  }
+}
+
+type Wibble {
+  Wobble(wibble: Wibble)
+  Woo
+}
+
+fn new() { Wobble }
+
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  case wibble() {
+    Wobble(wibble: Wobble(wibble:)) -> 1
+    Wobble(wibble: Woo) -> 1
+    _ -> 2
+  }
+}
+
+type Wibble {
+  Wobble(wibble: Wibble)
+  Woo
+}
+
+fn new() { Wobble }
