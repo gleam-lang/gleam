@@ -9307,6 +9307,7 @@ fn collapse_nested_case_does_not_remove_labels() {
   }
 }
 
+pub type Wibble {
   Wibble(field: Int, field2: String)
   Wobble
 }
@@ -9327,6 +9328,7 @@ fn collapse_nested_case_does_not_remove_labels_with_shorthand_syntax() {
         2 -> 4
         _ -> -1
       }
+
     Wobble -> todo
   }
 }
