@@ -54,10 +54,10 @@ impl<'a> Printer<'a> {
                 ..
             } => {
                 let (module, name) = match self.names.named_constructor(module, name) {
-                    NameContextInformation::Qualified(m, n) => (Some(m), n),
-                    NameContextInformation::Unqualified(n) => (None, n),
-                    NameContextInformation::Unimported(n) => {
-                        (Some(module.split('/').next_back().unwrap_or(module)), n)
+                    NameContextInformation::Qualified(module, name) => (Some(module), name),
+                    NameContextInformation::Unqualified(name) => (None, name),
+                    NameContextInformation::Unimported(module, name) => {
+                        (module.split('/').next_back(), name)
                     }
                 };
 
