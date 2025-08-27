@@ -225,6 +225,9 @@ pub fn update(paths: &ProjectPaths, packages: Vec<String>) -> Result<()> {
         UseManifest::Yes
     };
 
+    let config = crate::config::read(paths.root_config())?;
+    assert_packages_exist_locally(&config, packages.clone())?;
+
     // Update specific packages
     _ = download(
         paths,
@@ -237,6 +240,25 @@ pub fn update(paths: &ProjectPaths, packages: Vec<String>) -> Result<()> {
         },
     )?;
 
+    Ok(())
+}
+
+fn assert_packages_exist_locally(config: &PackageConfig, packages: Vec<String>) -> Result<()> {
+    let missing_packages: Vec<String> = packages
+        .iter()
+        .filter(|package_name| {
+            let package_name_eco = EcoString::from(package_name.as_str());
+            !config.dependencies.contains_key(&package_name_eco)
+                && !config.dev_dependencies.contains_key(&package_name_eco)
+        })
+        .cloned()
+        .collect();
+
+    if !missing_packages.is_empty() {
+        return Err(Error::PackagesToUpdateNotExist {
+            packages: missing_packages,
+        });
+    }
     Ok(())
 }
 

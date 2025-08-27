@@ -74,7 +74,7 @@
 
 - The compiler will now raise warning for inefficient use of `list.length()`
   when trying to check is list empty via `0 < list.length(list)` or
-`list.length(list) > 0` as well as in other cases. For example, the following
+  `list.length(list) > 0` as well as in other cases. For example, the following
   code:
 
   ```gleam
@@ -343,3 +343,7 @@
 - Fixed a bug where adding `echo` to the subject of a `case` expression would
   prevent variant inference from working correctly.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Added an error message when attempting to update packages that are not dependencies
+  of the project, instead of failing silently.
+  ([Etienne Boutet](https://github.com/EtienneBoutet))

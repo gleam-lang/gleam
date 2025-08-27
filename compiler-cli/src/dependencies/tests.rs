@@ -1347,3 +1347,26 @@ fn test_pretty_print_major_versions_available() {
 
     insta::assert_snapshot!(output);
 }
+
+#[test]
+fn test_assert_packages_exist_locally() {
+    let config = package_config(
+        HashMap::from([(
+            "existing_package".into(),
+            Requirement::hex("~>1.0").unwrap(),
+        )]),
+        HashMap::from([("dev_package".into(), Requirement::hex("~>2.0").unwrap())]),
+    );
+
+    assert!(assert_packages_exist_locally(&config, vec!["existing_package".to_string()]).is_ok());
+    assert!(assert_packages_exist_locally(&config, vec!["dev_package".to_string()]).is_ok());
+
+    let result = assert_packages_exist_locally(&config, vec!["nonexistent_package".to_string()]);
+    assert!(result.is_err());
+    match result {
+        Err(Error::PackagesToUpdateNotExist { packages }) => {
+            assert_eq!(packages, vec!["nonexistent_package".to_string()]);
+        }
+        _ => panic!("Expected PackagesToUpdateNotExist error"),
+    }
+}
