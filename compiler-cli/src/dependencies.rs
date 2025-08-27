@@ -243,7 +243,7 @@ pub fn update(paths: &ProjectPaths, packages: Vec<String>) -> Result<()> {
     Ok(())
 }
 
-fn assert_packages_exist_locally(config: &PackageConfig, packages: Vec<String>) -> Result<()> {
+pub fn assert_packages_exist_locally(config: &PackageConfig, packages: Vec<String>) -> Result<()> {
     let missing_packages: Vec<String> = packages
         .iter()
         .filter(|package_name| {
