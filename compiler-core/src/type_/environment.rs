@@ -877,10 +877,10 @@ pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
     }
 
     // Collapse right hand side type links. Left hand side will be collapsed in the next block.
-    if let Type::Var { type_ } = t2.deref() {
-        if let TypeVar::Link { type_ } = type_.borrow().deref() {
-            return unify(t1, type_.clone());
-        }
+    if let Type::Var { type_ } = t2.deref()
+        && let TypeVar::Link { type_ } = type_.borrow().deref()
+    {
+        return unify(t1, type_.clone());
     }
 
     if let Type::Var { type_ } = t1.deref() {
@@ -899,11 +899,11 @@ pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
             }
 
             TypeVar::Generic { id } => {
-                if let Type::Var { type_ } = t2.deref() {
-                    if type_.borrow().is_unbound() {
-                        *type_.borrow_mut() = TypeVar::Generic { id: *id };
-                        return Ok(());
-                    }
+                if let Type::Var { type_ } = t2.deref()
+                    && type_.borrow().is_unbound()
+                {
+                    *type_.borrow_mut() = TypeVar::Generic { id: *id };
+                    return Ok(());
                 }
                 Action::CouldNotUnify
             }

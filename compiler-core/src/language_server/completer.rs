@@ -455,10 +455,10 @@ where
                 if let Some(module) = import.used_name() {
                     // If the user has already started a module select then don't show irrelevant modules.
                     // e.x. when the user has typed mymodule.| we should only show items from mymodule.
-                    if let Some(input_mod_name) = &module_select {
-                        if &module != input_mod_name {
-                            continue;
-                        }
+                    if let Some(input_mod_name) = &module_select
+                        && &module != input_mod_name
+                    {
+                        continue;
                     }
                     completions.push(type_completion(
                         Some(&module),
@@ -515,10 +515,10 @@ where
 
             // If the user has already started a module select then don't show irrelevant modules.
             // e.x. when the user has typed mymodule.| we should only show items from mymodule.
-            if let Some(input_mod_name) = &module_select {
-                if qualifier != input_mod_name {
-                    continue;
-                }
+            if let Some(input_mod_name) = &module_select
+                && qualifier != input_mod_name
+            {
+                continue;
             }
 
             // Qualified types
@@ -650,10 +650,10 @@ where
                 if let Some(module) = import.used_name() {
                     // If the user has already started a module select then don't show irrelevant modules.
                     // e.x. when the user has typed mymodule.| we should only show items from mymodule.
-                    if let Some(input_mod_name) = &module_select {
-                        if &module != input_mod_name {
-                            continue;
-                        }
+                    if let Some(input_mod_name) = &module_select
+                        && &module != input_mod_name
+                    {
+                        continue;
                     }
                     completions.push(value_completion(
                         Some(&module),
@@ -709,10 +709,10 @@ where
 
             // If the user has already started a module select then don't show irrelevant modules.
             // e.x. when the user has typed mymodule.| we should only show items from mymodule.
-            if let Some(input_mod_name) = &module_select {
-                if qualifier != input_mod_name {
-                    continue;
-                }
+            if let Some(input_mod_name) = &module_select
+                && qualifier != input_mod_name
+            {
+                continue;
             }
 
             // Qualified values

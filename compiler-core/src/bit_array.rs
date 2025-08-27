@@ -208,15 +208,14 @@ where
     }
 
     // All but the last segment in a pattern must have an exact size
-    if must_have_size {
-        if let SegmentOptionCategories {
+    if must_have_size
+        && let SegmentOptionCategories {
             type_: Some(opt @ (Bytes { .. } | Bits { .. })),
             size: None,
             ..
         } = categories
-        {
-            return err(ErrorType::SegmentMustHaveSize, opt.location());
-        }
+    {
+        return err(ErrorType::SegmentMustHaveSize, opt.location());
     }
 
     // Endianness is only valid for int, utf16, utf16_codepoint, utf32,
@@ -312,13 +311,12 @@ where
         size: Some(size),
         ..
     } = categories
+        && let Some(abox) = size.value()
     {
-        if let Some(abox) = size.value() {
-            match abox.as_int_literal() {
-                None => (),
-                Some(value) if value == 16.into() || value == 32.into() || value == 64.into() => (),
-                _ => return err(ErrorType::FloatWithSize, size.location()),
-            }
+        match abox.as_int_literal() {
+            None => (),
+            Some(value) if value == 16.into() || value == 32.into() || value == 64.into() => (),
+            _ => return err(ErrorType::FloatWithSize, size.location()),
         }
     }
 

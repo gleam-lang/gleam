@@ -61,6 +61,7 @@ impl Problems {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct UnknownType {
     pub location: SrcSpan,

@@ -962,10 +962,10 @@ impl TypedDefinition {
 
             Definition::ModuleConstant(constant) => {
                 // Check if location is within the annotation.
-                if let Some(annotation) = &constant.annotation {
-                    if let Some(l) = annotation.find_node(byte_index, constant.type_.clone()) {
-                        return Some(l);
-                    }
+                if let Some(annotation) = &constant.annotation
+                    && let Some(l) = annotation.find_node(byte_index, constant.type_.clone())
+                {
+                    return Some(l);
                 }
 
                 if let Some(located) = constant.value.find_node(byte_index) {
@@ -3635,10 +3635,10 @@ pub type UntypedAssignment = Assignment<(), UntypedExpr>;
 
 impl TypedAssignment {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
-        if let Some(annotation) = &self.annotation {
-            if let Some(l) = annotation.find_node(byte_index, self.pattern.type_()) {
-                return Some(l);
-            }
+        if let Some(annotation) = &self.annotation
+            && let Some(l) = annotation.find_node(byte_index, self.pattern.type_())
+        {
+            return Some(l);
         }
         self.pattern
             .find_node(byte_index)
@@ -3665,10 +3665,10 @@ impl TypedAssert {
         if let Some(found) = self.value.find_node(byte_index) {
             return Some(found);
         }
-        if let Some(message) = &self.message {
-            if let Some(found) = message.find_node(byte_index) {
-                return Some(found);
-            }
+        if let Some(message) = &self.message
+            && let Some(found) = message.find_node(byte_index)
+        {
+            return Some(found);
         }
         None
     }

@@ -1001,24 +1001,23 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             }
                         }
 
-                        if let Some(spread_location) = spread {
-                            if let ValueConstructorVariant::Record { arity, .. } =
+                        if let Some(spread_location) = spread
+                            && let ValueConstructorVariant::Record { arity, .. } =
                                 &constructor.variant
-                            {
-                                while pattern_arguments.len() < usize::from(*arity) {
-                                    pattern_arguments.push(CallArg {
-                                        value: Pattern::Discard {
-                                            name: "_".into(),
-                                            location: spread_location,
-                                            type_: (),
-                                        },
+                        {
+                            while pattern_arguments.len() < usize::from(*arity) {
+                                pattern_arguments.push(CallArg {
+                                    value: Pattern::Discard {
+                                        name: "_".into(),
                                         location: spread_location,
-                                        label: None,
-                                        implicit: Some(ImplicitCallArgOrigin::PatternFieldSpread),
-                                    });
-                                }
-                            };
-                        }
+                                        type_: (),
+                                    },
+                                    location: spread_location,
+                                    label: None,
+                                    implicit: Some(ImplicitCallArgOrigin::PatternFieldSpread),
+                                });
+                            }
+                        };
                     }
                 }
 
@@ -1316,21 +1315,21 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
         // Then if the required version is not in the specified version for the
         // range we emit a warning highlighting the usage of the feature.
-        if let Some(gleam_version) = &self.environment.gleam_version {
-            if let Some(lowest_allowed_version) = gleam_version.lowest_version() {
-                // There is a version in the specified range that is lower than
-                // the one required by this feature! This means that the
-                // specified range is wrong and would allow someone to run a
-                // compiler that is too old to know of this feature.
-                if minimum_required_version > lowest_allowed_version {
-                    self.problems
-                        .warning(Warning::FeatureRequiresHigherGleamVersion {
-                            location,
-                            feature_kind,
-                            minimum_required_version: minimum_required_version.clone(),
-                            wrongfully_allowed_version: lowest_allowed_version,
-                        })
-                }
+        if let Some(gleam_version) = &self.environment.gleam_version
+            && let Some(lowest_allowed_version) = gleam_version.lowest_version()
+        {
+            // There is a version in the specified range that is lower than
+            // the one required by this feature! This means that the
+            // specified range is wrong and would allow someone to run a
+            // compiler that is too old to know of this feature.
+            if minimum_required_version > lowest_allowed_version {
+                self.problems
+                    .warning(Warning::FeatureRequiresHigherGleamVersion {
+                        location,
+                        feature_kind,
+                        minimum_required_version: minimum_required_version.clone(),
+                        wrongfully_allowed_version: lowest_allowed_version,
+                    })
             }
         }
 

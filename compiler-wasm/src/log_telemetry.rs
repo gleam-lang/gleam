@@ -1,4 +1,6 @@
 use gleam_core::build::Telemetry;
+
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct LogTelemetry;
 
@@ -40,6 +42,7 @@ impl Telemetry for LogTelemetry {
     }
 }
 
+#[allow(dead_code)]
 pub fn seconds(duration: std::time::Duration) -> String {
     format!("{:.2}s", duration.as_millis() as f32 / 1000.)
 }

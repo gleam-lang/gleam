@@ -1034,12 +1034,11 @@ where
 }
 
 fn block<'a>(statements: &'a Vec1<TypedStatement>, env: &mut Env<'a>) -> Document<'a> {
-    if statements.len() == 1 {
-        if let Statement::Expression(expression) = statements.first() {
-            if !needs_begin_end_wrapping(expression) {
-                return docvec!['(', expr(expression, env), ')'];
-            }
-        }
+    if statements.len() == 1
+        && let Statement::Expression(expression) = statements.first()
+        && !needs_begin_end_wrapping(expression)
+    {
+        return docvec!['(', expr(expression, env), ')'];
     }
 
     let vars = env.current_scope_vars.clone();
@@ -3165,10 +3164,10 @@ fn find_private_functions_referenced_in_importable_constants(
     let mut overridden_publicity = im::HashSet::new();
 
     for definition in module.definitions.iter() {
-        if let Definition::ModuleConstant(constant) = definition {
-            if constant.publicity.is_importable() {
-                find_referenced_private_functions(&constant.value, &mut overridden_publicity)
-            }
+        if let Definition::ModuleConstant(constant) = definition
+            && constant.publicity.is_importable()
+        {
+            find_referenced_private_functions(&constant.value, &mut overridden_publicity)
         }
     }
     overridden_publicity
@@ -3189,10 +3188,10 @@ fn find_referenced_private_functions(
         TypedConstant::Var {
             name, constructor, ..
         } => {
-            if let Some(ValueConstructor { type_, .. }) = constructor.as_deref() {
-                if let Type::Fn { .. } = **type_ {
-                    let _ = already_found.insert(name.clone());
-                }
+            if let Some(ValueConstructor { type_, .. }) = constructor.as_deref()
+                && let Type::Fn { .. } = **type_
+            {
+                let _ = already_found.insert(name.clone());
             }
         }
 

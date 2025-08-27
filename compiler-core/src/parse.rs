@@ -470,12 +470,11 @@ where
     ) -> Result<(), ParseError> {
         // Produce better error message for `[x] = [1]` outside
         // of `let` statement.
-        if !is_let_binding {
-            if let UntypedExpr::List { .. } = unit {
-                if let Some((start, Token::Equal, end)) = self.tok0 {
-                    return parse_error(ParseErrorType::NoLetBinding, SrcSpan { start, end });
-                }
-            }
+        if !is_let_binding
+            && let UntypedExpr::List { .. } = unit
+            && let Some((start, Token::Equal, end)) = self.tok0
+        {
+            return parse_error(ParseErrorType::NoLetBinding, SrcSpan { start, end });
         }
         Ok(())
     }
@@ -1187,10 +1186,10 @@ where
 
     fn parse_statement_errors(&mut self) -> Result<(), ParseError> {
         // Better error: name definitions must start with `let`
-        if let Some((_, Token::Name { .. }, _)) = self.tok0.as_ref() {
-            if let Some((start, Token::Equal | Token::Colon, end)) = self.tok1 {
-                return parse_error(ParseErrorType::NoLetBinding, SrcSpan { start, end });
-            }
+        if let Some((_, Token::Name { .. }, _)) = self.tok0.as_ref()
+            && let Some((start, Token::Equal | Token::Colon, end)) = self.tok1
+        {
+            return parse_error(ParseErrorType::NoLetBinding, SrcSpan { start, end });
         }
         Ok(())
     }
