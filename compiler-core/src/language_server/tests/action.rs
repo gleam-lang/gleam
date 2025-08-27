@@ -133,6 +133,7 @@ const GENERATE_VARIANT: &str = "Generate variant";
 const REMOVE_BLOCK: &str = "Remove block";
 const REMOVE_OPAQUE_FROM_PRIVATE_TYPE: &str = "Remove opaque from private type";
 const COLLAPSE_NESTED_CASE: &str = "Collapse nested case";
+const REMOVE_UNREACHABLE_BRANCHES: &str = "Remove unreachable branches";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -9755,5 +9756,43 @@ pub fn main() {
         GENERATE_FUNCTION,
         TestProject::for_source(src).add_dep_module("maths", "pub fn add(a, b) { a + b }"),
         find_position_of("subtract").to_selection()
+    );
+}
+
+#[test]
+fn remove_unreachable_branches() {
+    assert_code_action!(
+        REMOVE_UNREACHABLE_BRANCHES,
+        "pub fn main(x) {
+  case x {
+    Ok(n) -> 1
+    Ok(_) -> 2
+    Error(_) -> todo
+    Ok(1) -> 3
+  }
+}
+",
+        find_position_of("Ok(1)").to_selection()
+    );
+}
+
+#[test]
+fn remove_unreachable_branches_does_not_pop_up_if_all_branches_are_reachable() {
+    assert_no_code_actions!(
+        REMOVE_UNREACHABLE_BRANCHES,
+        "pub fn main(x) {
+  case x {
+    Ok(n) -> 1
+    Error(_) -> todo
+  }
+
+  case x {
+    Ok(n) -> todo
+    Ok(_) -> todo
+    _ -> todo
+  }
+}
+",
+        find_position_of("Ok(n)").to_selection()
     );
 }

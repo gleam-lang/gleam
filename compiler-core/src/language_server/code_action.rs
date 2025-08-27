@@ -8106,3 +8106,93 @@ fn single_expression(expression: &TypedExpr) -> Option<&TypedExpr> {
         expression => Some(expression),
     }
 }
+
+/// Code action to remove `opaque` from a private type.
+///
+pub struct RemoveUnreachableBranches<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    /// The source location of the patterns of all the unreachable branches in
+    /// the current module.
+    ///
+    unreachable_branches: HashSet<SrcSpan>,
+    branches_to_delete: Vec<SrcSpan>,
+}
+
+impl<'a> RemoveUnreachableBranches<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        let unreachable_branches = (module.ast.type_info.warnings.iter())
+            .filter_map(|warning| match warning {
+                type_::Warning::UnreachableCasePattern { location, .. } => Some(*location),
+                _ => None,
+            })
+            .collect();
+
+        Self {
+            unreachable_branches,
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            branches_to_delete: vec![],
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+        if self.branches_to_delete.is_empty() {
+            return vec![];
+        }
+
+        for branch in self.branches_to_delete {
+            self.edits.delete(branch);
+        }
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Remove unreachable branches")
+            .kind(CodeActionKind::QUICKFIX)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(true)
+            .push_to(&mut action);
+        action
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for RemoveUnreachableBranches<'ast> {
+    fn visit_typed_expr_case(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        subjects: &'ast [TypedExpr],
+        clauses: &'ast [ast::TypedClause],
+        compiled_case: &'ast CompiledCase,
+    ) {
+        // We're showing the code action only if we're within one of the
+        // unreachable patterns. And the code action is going to remove all the
+        // unreachable patterns for this case.
+        let is_hovering_clause = clauses.iter().any(|clause| {
+            let pattern_range = self.edits.src_span_to_lsp_range(clause.pattern_location());
+            within(self.params.range, pattern_range)
+        });
+        if is_hovering_clause {
+            self.branches_to_delete = clauses
+                .iter()
+                .filter(|clause| {
+                    self.unreachable_branches
+                        .contains(&clause.pattern_location())
+                })
+                .map(|clause| clause.location())
+                .collect_vec();
+            return;
+        }
+
+        // If we're not hovering any of the branches clauses then we want to
+        // keep visiting the case expression as the unreachable branch might be
+        // in one of the nested cases.
+        ast::visit::visit_typed_expr_case(self, location, type_, subjects, clauses, compiled_case);
+    }
+}
