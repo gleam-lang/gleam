@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main(x) {\n  case x {\n    Ok(n) -> 1\n    Ok(_) -> 2\n    Error(_) -> todo\n    Ok(1) -> 3\n  }\n}\n"
+---
+----- BEFORE ACTION
+pub fn main(x) {
+  case x {
+    Ok(n) -> 1
+    Ok(_) -> 2
+    Error(_) -> todo
+    Ok(1) -> 3
+    ↑         
+  }
+}
+
+
+----- AFTER ACTION
+pub fn main(x) {
+  case x {
+    Ok(n) -> 1
+    
+    Error(_) -> todo
+    
+  }
+}
