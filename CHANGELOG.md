@@ -1,5 +1,9 @@
 # Changelog
 
+## v4.2.0 - 2025-08-27
+
+- `Version`'s serde deserializer can now work with `String` as well as `str`.
+
 ## v4.1.0 - 2025-06-03
 
 - Added `impl From<Range> for pubgrub::Range<Version>`
