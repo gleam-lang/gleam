@@ -71,6 +71,7 @@ struct TypeAliasConstructor {
     deprecation @4 :Text;
     documentation @5 :Text;
     origin @6 :SrcSpan;
+    parameters @7 :List(Type);
 }
 
 struct Version {
@@ -145,6 +146,7 @@ struct Type {
       parameters @2 :List(Type);
       package @7 :Text;
       inferredVariant @8 :InferredVariant;
+      publicity @9 :Publicity;
     }
 
     fn :group {

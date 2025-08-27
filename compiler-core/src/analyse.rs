@@ -1390,7 +1390,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 TypeConstructor {
                     origin: *location,
                     module: self.module_name.clone(),
-                    parameters,
+                    parameters: parameters.clone(),
                     type_: type_.clone(),
                     deprecation: deprecation.clone(),
                     publicity: *publicity,
@@ -1408,6 +1408,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     deprecation: deprecation.clone(),
                     documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
                     arity,
+                    parameters,
                 },
             )?;
 
