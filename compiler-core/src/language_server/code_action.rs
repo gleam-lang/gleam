@@ -4567,6 +4567,15 @@ where
             .iter()
             .map(|pattern| {
                 let mut clause_code = clause_code.to_string();
+                // If we're replacing a variable that's using the shorthand
+                // syntax we want to add a space to separate it from the
+                // preceding `:`.
+                let pattern = if variable_start == variable_end {
+                    &eco_format!(" {pattern}")
+                } else {
+                    pattern
+                };
+
                 clause_code.replace_range(variable_start..variable_end, pattern);
                 clause_code
             })
@@ -4884,6 +4893,24 @@ where
         ) {
             self.pattern_variable_under_cursor = Some((name, *location, type_.clone()));
         }
+    }
+
+    fn visit_typed_pattern_call_arg(&mut self, arg: &'ast CallArg<TypedPattern>) {
+        if let Some(name) = arg.label_shorthand_name()
+            && within(
+                self.params.range,
+                self.edits.src_span_to_lsp_range(arg.location),
+            )
+        {
+            let location = SrcSpan {
+                start: arg.location.end,
+                end: arg.location.end,
+            };
+            self.pattern_variable_under_cursor = Some((name, location, arg.value.type_()));
+            return;
+        }
+
+        ast::visit::visit_typed_pattern_call_arg(self, arg);
     }
 
     fn visit_typed_pattern_string_prefix(
