@@ -6992,6 +6992,30 @@ fn maybe_wibble() { Ok(Wobble) }
 }
 
 #[test]
+fn pattern_match_on_clause_variable_nested_pattern() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "
+pub fn main() {
+  case maybe_wibble() {
+    Ok(Wobble(something)) -> 1
+    Error(_) -> 2
+  }
+}
+
+type Wibble {
+  Wobble(Wibble)
+  Woo
+}
+
+fn maybe_wibble() { Ok(Woo) }
+
+",
+        find_position_of("something").to_selection()
+    );
+}
+
+#[test]
 fn pattern_match_on_clause_variable_with_block_body() {
     assert_code_action!(
         PATTERN_MATCH_ON_VARIABLE,

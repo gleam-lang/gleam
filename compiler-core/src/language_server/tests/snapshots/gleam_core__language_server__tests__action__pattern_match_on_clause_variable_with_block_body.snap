@@ -28,17 +28,14 @@ fn maybe_wibble() { Ok(Wobble) }
 
 pub fn main() {
   case maybe_wibble() {
-    Ok(something) -> 
-      case something {
-        Wobble -> {
+    Ok(Wobble) -> {
       1
       2
     }
-        Woo -> {
+    Ok(Woo) -> {
       1
       2
     }
-      }
     Error(_) -> 2
   }
 }

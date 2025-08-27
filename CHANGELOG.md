@@ -219,11 +219,8 @@
   ```gleam
   pub fn main() {
     case find_user() {
-      Ok(user) ->
-        case user {
-          Admin -> todo
-          Member -> todo
-        }
+      Ok(Admin) -> todo
+      Ok(Member) -> todo
       Error(_) -> todo
     }
   }
