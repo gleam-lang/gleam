@@ -15,7 +15,8 @@ use crate::{
     docvec,
     pretty::{Document, Documentable, break_, join, line, nil, zero_width_string},
     type_::{
-        Deprecation, PRELUDE_MODULE_NAME, PRELUDE_PACKAGE_NAME, Type, TypeVar, printer::Names,
+        Deprecation, PRELUDE_MODULE_NAME, PRELUDE_PACKAGE_NAME, Type, TypeVar,
+        printer::{Names, PrintMode},
     },
 };
 
@@ -279,8 +280,11 @@ impl Printer<'_> {
 
         let arguments = constructor.arguments.iter().map(
             |RecordConstructorArg { label, type_, .. }| match label {
-                Some((_, label)) => self.variable(label).append(": ").append(self.type_(type_)),
-                None => self.type_(type_),
+                Some((_, label)) => self
+                    .variable(label)
+                    .append(": ")
+                    .append(self.type_(type_, PrintMode::Normal)),
+                None => self.type_(type_, PrintMode::Normal),
             },
         );
 
@@ -309,7 +313,9 @@ impl Printer<'_> {
             self.title(name),
             parameters,
             " =",
-            line().append(self.type_(type_)).nest(INDENT)
+            line()
+                .append(self.type_(type_, PrintMode::ExpandAliases))
+                .nest(INDENT)
         ]
     }
 
@@ -320,7 +326,7 @@ impl Printer<'_> {
             self.keyword("pub const "),
             self.title(name),
             ": ",
-            self.type_(type_)
+            self.type_(type_, PrintMode::Normal)
         ]
     }
 
@@ -340,7 +346,7 @@ impl Printer<'_> {
         } else {
             Self::wrap_arguments(arguments.iter().map(|argument| {
                 let name = self.variable(self.argument_name(argument));
-                docvec![name, ": ", self.type_(&argument.type_)].group()
+                docvec![name, ": ", self.type_(&argument.type_, PrintMode::Normal)].group()
             }))
         };
 
@@ -349,7 +355,7 @@ impl Printer<'_> {
             self.title(name),
             arguments,
             " -> ",
-            self.type_(return_type)
+            self.type_(return_type, PrintMode::Normal)
         ]
         .group()
     }
@@ -387,7 +393,7 @@ impl Printer<'_> {
             .surround("(", ")")
     }
 
-    fn type_(&mut self, type_: &Type) -> Document<'static> {
+    fn type_(&mut self, type_: &Type, print_mode: PrintMode) -> Document<'static> {
         match type_ {
             Type::Named {
                 package,
@@ -397,27 +403,62 @@ impl Printer<'_> {
                 publicity,
                 ..
             } => {
-                let name = self.named_type_name(publicity, package, module, name);
+                let name = match print_mode {
+                    // If we are printing a type for a type alias, and the alias
+                    // is reexporting an internal type, we want to show that it
+                    // is aliasing that internal type, rather than showing it as
+                    // aliasing itself.
+                    PrintMode::ExpandAliases if *package == self.package => {
+                        self.named_type_name(publicity, package, module, name)
+                    }
+                    // If we are printing a type alias which aliases an internal
+                    // type from a different package, we still want to print the
+                    // public name for that type. If we are not printing a type
+                    // alias at all, we also want to use the public name.
+                    PrintMode::ExpandAliases | PrintMode::Normal => {
+                        // If we are using a reexported internal type, we want to
+                        // print it public name, whether it is from this package
+                        // or otherwise.
+                        if let Some((module, alias)) =
+                            self.names.reexport_alias(module.clone(), name.clone())
+                        {
+                            self.named_type_name(&Publicity::Public, package, module, alias)
+                        } else {
+                            self.named_type_name(publicity, package, module, name)
+                        }
+                    }
+                };
+
                 if arguments.is_empty() {
                     name
                 } else {
                     name.append(Self::type_arguments(
-                        arguments.iter().map(|argument| self.type_(argument)),
+                        arguments
+                            .iter()
+                            .map(|argument| self.type_(argument, PrintMode::Normal)),
                     ))
                 }
             }
             Type::Fn { arguments, return_ } => docvec![
                 self.keyword("fn"),
-                Self::type_arguments(arguments.iter().map(|argument| self.type_(argument))),
+                Self::type_arguments(
+                    arguments
+                        .iter()
+                        .map(|argument| self.type_(argument, PrintMode::Normal))
+                ),
                 " -> ",
-                self.type_(return_)
+                self.type_(return_, PrintMode::Normal)
             ],
             Type::Tuple { elements } => docvec![
                 "#",
-                Self::type_arguments(elements.iter().map(|element| self.type_(element))),
+                Self::type_arguments(
+                    elements
+                        .iter()
+                        .map(|element| self.type_(element, PrintMode::Normal))
+                ),
             ],
             Type::Var { type_ } => match type_.as_ref().borrow().deref() {
-                TypeVar::Link { type_ } => self.type_(type_),
+                TypeVar::Link { type_ } => self.type_(type_, PrintMode::Normal),
 
                 TypeVar::Unbound { id } | TypeVar::Generic { id } => {
                     let name = self.type_variable(*id);
