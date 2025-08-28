@@ -2265,6 +2265,10 @@ impl SrcSpan {
         byte_index >= self.start && byte_index <= self.end
     }
 
+    pub fn intersects(&self, other: Self) -> bool {
+        self.start < other.end && self.end > other.start
+    }
+
     /// Merges two spans into a new one that starts at the start of the smaller
     /// one and ends at the end of the bigger one. For example:
     ///
