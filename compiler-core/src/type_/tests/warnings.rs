@@ -4304,3 +4304,13 @@ fn unused_discard_pattern() {
 "
     );
 }
+
+#[test]
+fn discarded_argument_suggestion_is_not_given_for_different_functions() {
+    assert_no_warnings!(
+        "
+pub fn main(_x) { 1 }
+pub fn wibble() { x }
+"
+    );
+}
