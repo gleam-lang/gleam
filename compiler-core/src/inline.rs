@@ -108,9 +108,12 @@
 //! works.
 //!
 
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
-use ecow::EcoString;
+use ecow::{EcoString, eco_format};
 use itertools::Itertools;
 use vec1::Vec1;
 
@@ -118,9 +121,10 @@ use crate::{
     STDLIB_PACKAGE_NAME,
     analyse::Inferred,
     ast::{
-        self, ArgNames, Assert, Assignment, AssignmentKind, BitArrayOption, BitArraySegment,
-        CallArg, Definition, FunctionLiteralKind, PipelineAssignmentKind, Publicity, SrcSpan,
-        Statement, TypedArg, TypedAssert, TypedAssignment, TypedClause, TypedDefinition, TypedExpr,
+        self, ArgNames, Assert, AssignName, Assignment, AssignmentKind, BitArrayOption,
+        BitArraySegment, BitArraySize, CallArg, Definition, FunctionLiteralKind, Pattern,
+        PipelineAssignmentKind, Publicity, SrcSpan, Statement, TypedArg, TypedAssert,
+        TypedAssignment, TypedBitArraySize, TypedClause, TypedDefinition, TypedExpr,
         TypedExprBitArraySegment, TypedFunction, TypedModule, TypedPattern,
         TypedPipelineAssignment, TypedStatement, TypedUse, visit::Visit,
     },
@@ -177,6 +181,25 @@ struct Inliner<'a> {
     /// indicating the names of the variables to be inlined, as well as the
     /// values to replace them with.
     inline_variables: HashMap<EcoString, TypedExpr>,
+
+    /// The number we append to variable names in order to ensure uniqueness.
+    variable_number: usize,
+    /// Set of in-scope variables, used to determine when a conflict between
+    /// variable names occurs during inlining.
+    in_scope: HashSet<EcoString>,
+    /// If two variables conflict in names during inlining, we need to rename
+    /// one to avoid the conflict. Any variables renamed this way are stored
+    /// here.
+    renamed_variables: im::HashMap<EcoString, EcoString>,
+    /// The current position, whether we are inside the body of an inlined
+    /// function or not.
+    position: Position,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Position {
+    RegularFunction,
+    InlinedFunction,
 }
 
 impl Inliner<'_> {
@@ -184,7 +207,39 @@ impl Inliner<'_> {
         Inliner {
             modules,
             inline_variables: HashMap::new(),
+            variable_number: 0,
+            renamed_variables: im::HashMap::new(),
+            in_scope: HashSet::new(),
+            position: Position::RegularFunction,
         }
+    }
+
+    /// Defines a variable in the current scope, renaming it if necessary.
+    /// Currently, this duplicates work performed in the code generators, where
+    /// variables are renamed in a similar way. But since inlining can change
+    /// scope boundaries, it needs to be performed here too. Ideally, we would
+    /// move all the deduplicating logic from the code generators to here where
+    /// we perform inlining, but that is a fairly large item of work.
+    fn define_variable(&mut self, name: EcoString) -> EcoString {
+        let unique_in_scope = self.in_scope.insert(name.clone());
+        // If the variable name is already defined, and we are inlining a function,
+        // that means there is a potential conflict in names and we need to rename
+        // the variable.
+        if !unique_in_scope && self.position == Position::InlinedFunction {
+            // Prefixing the variable name with an underscore ensures it does
+            // not conflict with other defined variables.
+            let new_name = eco_format!("_{name}_{}", self.variable_number);
+            self.variable_number += 1;
+            _ = self.renamed_variables.insert(name, new_name.clone());
+            new_name
+        } else {
+            name
+        }
+    }
+
+    /// Get the name we are using for a variable, in case it is renamed.
+    fn variable_name(&mut self, name: EcoString) -> EcoString {
+        self.renamed_variables.get(&name).cloned().unwrap_or(name)
     }
 
     /// Perform inlining over a single definition. This only does anything for
@@ -201,6 +256,15 @@ impl Inliner<'_> {
     }
 
     fn function(&mut self, mut function: TypedFunction) -> TypedFunction {
+        for argument in function.arguments.iter() {
+            match &argument.names {
+                ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => {}
+                ArgNames::Named { name, .. } | ArgNames::NamedLabelled { name, .. } => {
+                    _ = self.in_scope.insert(name.clone());
+                }
+            }
+        }
+
         function.body = function
             .body
             .into_iter()
@@ -254,10 +318,159 @@ impl Inliner<'_> {
         Assignment {
             location,
             value: self.expression(value),
-            pattern,
+            pattern: self.register_pattern_variables(pattern),
             kind: self.assignment_kind(kind),
             annotation,
             compiled_case,
+        }
+    }
+
+    /// Register variables defined in a pattern so we correctly keep track of
+    /// the scope, and rename any which conflict with existing variables.
+    fn register_pattern_variables(&mut self, pattern: TypedPattern) -> TypedPattern {
+        match pattern {
+            Pattern::Int { .. }
+            | Pattern::Float { .. }
+            | Pattern::String { .. }
+            | Pattern::Discard { .. }
+            | Pattern::Invalid { .. } => pattern,
+
+            Pattern::Variable {
+                location,
+                name,
+                type_,
+                origin,
+            } => Pattern::Variable {
+                location,
+                name: self.define_variable(name),
+                type_,
+                origin,
+            },
+            Pattern::BitArraySize(size) => Pattern::BitArraySize(self.bit_array_size(size)),
+            Pattern::Assign {
+                name,
+                location,
+                pattern,
+            } => Pattern::Assign {
+                name: self.define_variable(name),
+                location,
+                pattern: Box::new(self.register_pattern_variables(*pattern)),
+            },
+            Pattern::List {
+                location,
+                elements,
+                tail,
+                type_,
+            } => Pattern::List {
+                location,
+                elements: elements
+                    .into_iter()
+                    .map(|element| self.register_pattern_variables(element))
+                    .collect(),
+                tail: tail.map(|tail| Box::new(self.register_pattern_variables(*tail))),
+                type_,
+            },
+            Pattern::Constructor {
+                location,
+                name_location,
+                name,
+                arguments,
+                module,
+                constructor,
+                spread,
+                type_,
+            } => Pattern::Constructor {
+                location,
+                name_location,
+                name,
+                arguments: arguments
+                    .into_iter()
+                    .map(
+                        |CallArg {
+                             label,
+                             location,
+                             value,
+                             implicit,
+                         }| CallArg {
+                            label,
+                            location,
+                            value: self.register_pattern_variables(value),
+                            implicit,
+                        },
+                    )
+                    .collect(),
+                module,
+                constructor,
+                spread,
+                type_,
+            },
+            Pattern::Tuple { location, elements } => Pattern::Tuple {
+                location,
+                elements: elements
+                    .into_iter()
+                    .map(|element| self.register_pattern_variables(element))
+                    .collect(),
+            },
+            Pattern::BitArray { location, segments } => Pattern::BitArray {
+                location,
+                segments: segments
+                    .into_iter()
+                    .map(|segment| {
+                        self.bit_array_segment(segment, Self::register_pattern_variables)
+                    })
+                    .collect(),
+            },
+            Pattern::StringPrefix {
+                location,
+                left_location,
+                left_side_assignment,
+                right_location,
+                left_side_string,
+                right_side_assignment,
+            } => Pattern::StringPrefix {
+                location,
+                left_location,
+                left_side_assignment: left_side_assignment
+                    .map(|(name, location)| (self.define_variable(name), location)),
+                right_location,
+                left_side_string,
+                right_side_assignment: match right_side_assignment {
+                    AssignName::Variable(name) => AssignName::Variable(self.define_variable(name)),
+                    AssignName::Discard(name) => AssignName::Discard(name),
+                },
+            },
+        }
+    }
+
+    fn bit_array_size(&mut self, size: TypedBitArraySize) -> TypedBitArraySize {
+        match size {
+            BitArraySize::Int { .. } => size,
+            BitArraySize::Variable {
+                location,
+                name,
+                constructor,
+                type_,
+            } => BitArraySize::Variable {
+                location,
+                name: self.variable_name(name),
+                constructor,
+                type_,
+            },
+            BitArraySize::BinaryOperator {
+                location,
+                operator,
+                left,
+                right,
+            } => BitArraySize::BinaryOperator {
+                location,
+                operator,
+                left: Box::new(self.bit_array_size(*left)),
+                right: Box::new(self.bit_array_size(*right)),
+            },
+            BitArraySize::Block { location, inner } => BitArraySize::Block {
+                location,
+                inner: Box::new(self.bit_array_size(*inner)),
+            },
         }
     }
 
@@ -291,7 +504,7 @@ impl Inliner<'_> {
     /// expressions can be deeply nested. Most expressions just recursively
     /// call this function on each of their component parts, but some have
     /// special handling.
-    fn expression(&mut self, expression: TypedExpr) -> TypedExpr {
+    fn expression(&mut self, mut expression: TypedExpr) -> TypedExpr {
         match expression {
             TypedExpr::Int { .. }
             | TypedExpr::Float { .. }
@@ -302,7 +515,7 @@ impl Inliner<'_> {
 
             TypedExpr::Var {
                 ref constructor,
-                ref name,
+                ref mut name,
                 ..
             } => match &constructor.variant {
                 // If this variable can be inlined, replace it with its value.
@@ -315,7 +528,13 @@ impl Inliner<'_> {
                     // to an `InlinableFunction`.
                     match self.inline_variables.remove(name) {
                         Some(inlined_expression) => inlined_expression,
-                        None => expression,
+                        None => match self.renamed_variables.get(name) {
+                            Some(new_name) => {
+                                *name = new_name.clone();
+                                expression
+                            }
+                            None => expression,
+                        },
                     }
                 }
                 ValueConstructorVariant::ModuleConstant { .. }
@@ -739,6 +958,10 @@ impl Inliner<'_> {
 
                 let type_ = argument.value.type_();
 
+                // Register the variable in scope, so that it is renamed if
+                // necessary.
+                let name = self.define_variable(name);
+
                 // Otherwise, we make an assignment which assigns the value of
                 // the argument to the correct parameter name.
                 Some(Statement::Assignment(Box::new(Assignment {
@@ -761,12 +984,18 @@ impl Inliner<'_> {
         // might be inlinable variables in the outer scope. However, these cannot be
         // inlined inside a nested function, so they are saved and restored afterwards.
         let inline_variables = std::mem::replace(&mut self.inline_variables, inline);
+        let position = self.position;
+        self.position = Position::InlinedFunction;
+        let variables = self.renamed_variables.clone();
 
         // Perform inlining on each of the statements in this function's body,
         // potentially inlining parameters and function calls inside this function.
         statements.extend(body.into_iter().map(|statement| self.statement(statement)));
 
+        // Restore scope
         self.inline_variables = inline_variables;
+        self.position = position;
+        self.renamed_variables = variables;
 
         // We try to expand this block, so a function which is inlined as a
         // single expression does not get wrapped unnecessarily
@@ -827,22 +1056,7 @@ impl Inliner<'_> {
     ) -> TypedExpr {
         let segments = segments
             .into_iter()
-            .map(
-                |BitArraySegment {
-                     location,
-                     value,
-                     options,
-                     type_,
-                 }| BitArraySegment {
-                    location,
-                    value: self.boxed_expression(value),
-                    options: options
-                        .into_iter()
-                        .map(|bit_array_option| self.bit_array_option(bit_array_option))
-                        .collect(),
-                    type_,
-                },
-            )
+            .map(|segment| self.bit_array_segment(segment, Self::expression))
             .collect();
 
         TypedExpr::BitArray {
@@ -852,7 +1066,34 @@ impl Inliner<'_> {
         }
     }
 
-    fn bit_array_option(&mut self, option: BitArrayOption<TypedExpr>) -> BitArrayOption<TypedExpr> {
+    fn bit_array_segment<Value>(
+        &mut self,
+        segment: BitArraySegment<Value, Arc<Type>>,
+        function: fn(&mut Self, Value) -> Value,
+    ) -> BitArraySegment<Value, Arc<Type>> {
+        let BitArraySegment {
+            location,
+            value,
+            options,
+            type_,
+        } = segment;
+
+        BitArraySegment {
+            location,
+            value: Box::new(function(self, *value)),
+            options: options
+                .into_iter()
+                .map(|option| self.bit_array_option(option, function))
+                .collect(),
+            type_,
+        }
+    }
+
+    fn bit_array_option<Value>(
+        &mut self,
+        option: BitArrayOption<Value>,
+        function: fn(&mut Self, Value) -> Value,
+    ) -> BitArrayOption<Value> {
         match option {
             BitArrayOption::Bytes { .. }
             | BitArrayOption::Int { .. }
@@ -876,7 +1117,7 @@ impl Inliner<'_> {
                 short_form,
             } => BitArrayOption::Size {
                 location,
-                value: self.boxed_expression(value),
+                value: Box::new(function(self, *value)),
                 short_form,
             },
         }
