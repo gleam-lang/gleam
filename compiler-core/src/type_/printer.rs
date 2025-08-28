@@ -222,6 +222,8 @@ impl Names {
             .map(|(_, location)| location)
     }
 
+    /// Check whether a particular type alias is reexporting an internal type,
+    /// and if so register it so we can print it correctly.
     pub fn maybe_register_reexport_alias(
         &mut self,
         package: &EcoString,
@@ -251,7 +253,7 @@ impl Names {
                     );
                 }
             }
-            _ => {}
+            Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => {}
         }
     }
 
