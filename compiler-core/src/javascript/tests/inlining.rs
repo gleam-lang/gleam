@@ -333,3 +333,60 @@ pub fn main() {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4877
+#[test]
+fn inline_shadowed_variable() {
+    assert_js!(
+        "
+pub fn main() {
+  let a = 10
+  let b = 20
+
+  fn(x) {
+    let a = 7
+    x + a
+  }(a + b)
+
+  a
+}
+"
+    );
+}
+
+#[test]
+fn inline_variable_shadowing_parameter() {
+    assert_js!(
+        "
+pub fn sum(a, b) {
+  fn(x) {
+    let a = 7
+    x + a
+  }(a + b)
+
+  a
+}
+"
+    );
+}
+
+#[test]
+fn inline_shadowed_variable_nested() {
+    assert_js!(
+        "
+pub fn sum(a, b) {
+  fn(x) {
+    let a = 7
+    fn(y) {
+      let a = 10
+      y - a
+    }(x + a)
+
+    a
+  }(a + b)
+
+  a
+}
+"
+    );
+}
