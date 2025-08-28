@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/docs/tests.rs
+expression: output
+---
+---- SOURCE CODE
+-- thepackage/internal.gleam
+pub type Internal
+
+-- thepackage/something.gleam
+
+import thepackage/internal
+
+pub type External = internal.Internal
+
+
+-- main.gleam
+
+import thepackage/something
+
+pub fn do_thing(value: something.External) {
+  value
+}
+
+
+---- VALUES
+
+--- do_thing
+<pre><code>pub fn do_thing(value: <a href="thepackage/something.html#External" title="thepackage/something.{type External}">something.External</a>) -> <a href="thepackage/something.html#External" title="thepackage/something.{type External}">something.External</a></code></pre>
