@@ -696,7 +696,11 @@ Hint: You can safely remove it.
                 },
 
                 type_::Warning::UnusedVariable { location, origin } => Diagnostic {
-                    title: "Unused variable".into(),
+                    title: if origin.is_function_parameter() {
+                        "Unused function argument".into()
+                    } else {
+                        "Unused variable".into()
+                    },
                     text: "".into(),
                     hint: origin.how_to_ignore(),
                     level: diagnostic::Level::Warning,
@@ -704,12 +708,45 @@ Hint: You can safely remove it.
                         src: src.clone(),
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
-                            text: Some("This variable is never used".into()),
+                            text: if origin.is_function_parameter() {
+                                Some("This argument is never used".into())
+                            } else {
+                                Some("This variable is never used".into())
+                            },
                             span: *location,
                         },
                         extra_labels: Vec::new(),
                     }),
                 },
+
+                type_::Warning::UnusedRecursiveArgument { location, usages } => Diagnostic {
+                    title: "Unused function argument".into(),
+                    text: wrap(
+                        "This argument is passed to the function when recursing, \
+but it's never used for anything.",
+                    ),
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        src: src.clone(),
+                        path: path.to_path_buf(),
+                        label: diagnostic::Label {
+                            text: Some("This argument is unused".into()),
+                            span: *location,
+                        },
+                        extra_labels: usages
+                            .iter()
+                            .map(|usage| ExtraLabel {
+                                src_info: None,
+                                label: diagnostic::Label {
+                                    text: None,
+                                    span: *usage,
+                                },
+                            })
+                            .collect(),
+                    }),
+                },
+
                 type_::Warning::UnnecessaryDoubleIntNegation { location } => Diagnostic {
                     title: "Unnecessary double negation (--) on integer".into(),
                     text: "".into(),

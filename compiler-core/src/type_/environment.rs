@@ -78,8 +78,17 @@ pub struct Environment<'a> {
     /// local_variable_usages is a stack of scopes. When a local variable is created it is
     /// added to the top scope. When a local variable is used we crawl down the scope
     /// stack for a variable with that name and mark it as used.
-    /// NOTE: The bool in the tuple here tracks if the variable has been used
-    pub local_variable_usages: Vec<HashMap<EcoString, (VariableOrigin, SrcSpan, bool)>>,
+    ///
+    /// NOTE: The usize in the tuple here tracks the number of times the variable has
+    ///       been used.
+    pub local_variable_usages: Vec<HashMap<EcoString, (VariableOrigin, SrcSpan, usize)>>,
+
+    /// Used to determine if an argument is only used unchanged in recursive
+    /// calls, and could thus be removed.
+    /// For each of the function's arguments keeps track of the usages in
+    /// recursive calls.
+    ///
+    pub recursive_argument_usages: HashMap<SrcSpan, Vec<SrcSpan>>,
 
     /// Used to determine if all functions/constants need to support the current
     /// compilation target.
@@ -134,6 +143,7 @@ impl<'a> Environment<'a> {
             importable_modules,
             current_module,
             local_variable_usages: vec![HashMap::new()],
+            recursive_argument_usages: HashMap::new(),
             target_support,
             names,
             module_type_aliases: HashMap::new(),
@@ -658,15 +668,15 @@ impl Environment<'_> {
         location: SrcSpan,
         problems: &mut Problems,
     ) {
-        if let Some((origin, location, false)) = self
+        if let Some((origin, location, 0)) = self
             .local_variable_usages
             .last_mut()
             .expect("Attempted to access non-existent entity usages scope")
-            .insert(name.clone(), (origin, location, false))
+            .insert(name.clone(), (origin, location, 0))
         {
             // an entity was overwritten in the top most scope without being used
             let mut unused = HashMap::with_capacity(1);
-            let _ = unused.insert(name, (origin, location, false));
+            let _ = unused.insert(name, (origin, location, 0));
             self.handle_unused_variables(unused, problems);
         }
     }
@@ -681,7 +691,7 @@ impl Environment<'_> {
             .rev()
             .find_map(|scope| scope.get_mut(&name))
         {
-            *used = true;
+            *used += 1;
         }
     }
 
@@ -795,12 +805,24 @@ impl Environment<'_> {
 
     fn handle_unused_variables(
         &mut self,
-        unused: HashMap<EcoString, (VariableOrigin, SrcSpan, bool)>,
+        unused: HashMap<EcoString, (VariableOrigin, SrcSpan, usize)>,
         problems: &mut Problems,
     ) {
-        for (origin, location, used) in unused.into_values() {
-            if !used {
+        for (origin, location, usages) in unused.into_values() {
+            if usages == 0 {
                 problems.warning(Warning::UnusedVariable { location, origin });
+            }
+            // If the function parameter is actually used somewhere, but all the
+            // usages are just passing it along in a recursive call, then it
+            // counts as being unused too.
+            else if origin.is_function_parameter()
+                && let Some(recursive_usages) = self.recursive_argument_usages.get(&location)
+                && recursive_usages.len() == usages
+            {
+                problems.warning(Warning::UnusedRecursiveArgument {
+                    location,
+                    usages: recursive_usages.clone(),
+                });
             }
         }
     }

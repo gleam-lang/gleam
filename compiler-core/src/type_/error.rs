@@ -761,13 +761,21 @@ pub enum VariableSyntax {
     Generated,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 /// The source of a variable, such as a `let` assignment, or function parameter.
 pub enum VariableDeclaration {
     LetPattern,
     UsePattern,
     ClausePattern,
-    FunctionParameter,
+    FunctionParameter {
+        /// The name of the function defining the parameter. This will be None
+        /// for parameters introduced by anoynmous functions: `fn(a) { a }`
+        ///
+        function_name: Option<EcoString>,
+        /// The index of the parameter in the function's parameter list.
+        ///
+        index: usize,
+    },
     Generated,
 }
 
@@ -789,6 +797,17 @@ impl VariableOrigin {
         Self {
             syntax: VariableSyntax::Generated,
             declaration: VariableDeclaration::Generated,
+        }
+    }
+
+    pub fn is_function_parameter(&self) -> bool {
+        match self.declaration {
+            VariableDeclaration::FunctionParameter { .. } => true,
+
+            VariableDeclaration::LetPattern
+            | VariableDeclaration::UsePattern
+            | VariableDeclaration::ClausePattern
+            | VariableDeclaration::Generated => false,
         }
     }
 }
@@ -1075,6 +1094,24 @@ pub enum Warning {
         location: SrcSpan,
         outcome: ComparisonOutcome,
     },
+    /// When a function's argument is only ever used unchanged in recursive
+    /// calls. For example:
+    ///
+    /// ```gleam
+    /// pub fn wibble(x, n) {
+    /// //            ^ This argument is not needed,
+    ///   case n {
+    ///     0 -> Nil
+    ///     _ -> wibble(x, n - 1)
+    /// //              ^ It's only used in recursive calls!
+    ///   }
+    /// }
+    /// ```
+    ///
+    UnusedRecursiveArgument {
+        location: SrcSpan,
+        usages: Vec<SrcSpan>,
+    },
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
@@ -1333,7 +1370,8 @@ impl Warning {
             | Warning::ModuleImportedTwice {
                 second: location, ..
             }
-            | Warning::RedundantComparison { location, .. } => *location,
+            | Warning::RedundantComparison { location, .. }
+            | Warning::UnusedRecursiveArgument { location, .. } => *location,
         }
     }
 

@@ -1051,14 +1051,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // no way for a call to `divide_partial` to produce any side effects.
         self.purity = Purity::Pure;
 
-        let (arguments, body) =
-            match self.do_infer_fn(arguments, expected_arguments, body, &return_annotation) {
-                Ok(result) => result,
-                Err(error) => {
-                    self.problems.error(error);
-                    return self.error_expr(location);
-                }
-            };
+        let (arguments, body) = match self.do_infer_fn(
+            None,
+            arguments,
+            expected_arguments,
+            body,
+            &return_annotation,
+        ) {
+            Ok(result) => result,
+            Err(error) => {
+                self.problems.error(error);
+                return self.error_expr(location);
+            }
+        };
         let arguments_types = arguments.iter().map(|a| a.type_.clone()).collect();
         let type_ = fn_(arguments_types, body.last().type_());
 
@@ -4330,7 +4335,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .iter_mut()
             .zip(arguments)
             .enumerate()
-            .map(|(i, (type_, arg))| {
+            .map(|(argument_index, (type_, arg))| {
                 if arg.uses_label_shorthand() {
                     self.track_feature_usage(FeatureKind::LabelShorthandSyntax, arg.location);
                 }
@@ -4350,7 +4355,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         call_location,
                         last_statement_location,
                         assignments_location,
-                    } if i == arguments_count - 1 => ArgumentKind::UseCallback {
+                    } if argument_index == arguments_count - 1 => ArgumentKind::UseCallback {
                         function_location: call_location,
                         assignments_location,
                         last_statement_location,
@@ -4368,7 +4373,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     )
                 }
 
-                let value = self.infer_call_argument(value, type_.clone(), argument_kind);
+                let value = self.infer_call_argument(
+                    &fun,
+                    value,
+                    argument_index,
+                    type_.clone(),
+                    argument_kind,
+                );
 
                 CallArg {
                     label,
@@ -4412,7 +4423,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_call_argument(
         &mut self,
+        fun: &TypedExpr,
         value: UntypedExpr,
+        argument_index: usize,
         type_: Arc<Type>,
         kind: ArgumentKind,
     ) -> TypedExpr {
@@ -4448,7 +4461,24 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             ),
 
             // Otherwise just perform normal type inference.
-            (_, value) => self.infer(value),
+            (_, value) => {
+                let inferred = self.infer(value);
+
+                // If the argument is a simple usage of a parameter defined
+                // by this same function we want to track it, to report unused
+                // parameters that are just passed along the recursive calls.
+                if let Some(definition_location) =
+                    self.argument_used_in_recursive_call(fun, &inferred, argument_index)
+                {
+                    let _ = self
+                        .environment
+                        .recursive_argument_usages
+                        .entry(definition_location)
+                        .and_modify(|usages| usages.push(inferred.location()))
+                        .or_insert(vec![inferred.location()]);
+                }
+                inferred
+            }
         };
 
         if let Err(error) = unify(type_.clone(), value.type_()) {
@@ -4459,8 +4489,45 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         value
     }
 
+    /// Given a function being called and one of its arguments, this returns the
+    /// argument's definition location if it was defined by that same function.
+    /// For example:
+    ///
+    /// ```gleam
+    /// fn wibble(x) {
+    /// //        ^ Defined by the wibble function
+    ///   wibble(x, 1)
+    /// //       ^ And used in the recursive call unchanged!
+    /// }
+    /// ```
+    ///
+    fn argument_used_in_recursive_call(
+        &self,
+        called_function: &TypedExpr,
+        argument: &TypedExpr,
+        argument_index: usize,
+    ) -> Option<SrcSpan> {
+        let argument = argument.var_constructor()?;
+        let (function_defining_argument, index_in_argument_list) =
+            argument.variant.argument_function_and_index()?;
+
+        let (module, function) = called_function
+            .var_constructor()
+            .and_then(|constructor| constructor.variant.function_module_and_name())?;
+
+        if self.environment.current_module == module
+            && function == function_defining_argument
+            && argument_index == index_in_argument_list
+        {
+            Some(argument.definition_location().span)
+        } else {
+            None
+        }
+    }
+
     pub fn do_infer_fn(
         &mut self,
+        function_name: Option<EcoString>,
         arguments: Vec<UntypedArg>,
         expected_arguments: &[Arc<Type>],
         body: Vec1<UntypedStatement>,
@@ -4480,7 +4547,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         };
 
         let (arguments, body) =
-            self.infer_fn_with_known_types(arguments, body.to_vec(), return_type)?;
+            self.infer_fn_with_known_types(function_name, arguments, body.to_vec(), return_type)?;
         let body =
             Vec1::try_from_vec(body).expect("body guaranteed to have at least one statement");
         Ok((arguments, body))
@@ -4488,6 +4555,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     pub fn infer_fn_with_known_types(
         &mut self,
+        function_name: Option<EcoString>,
         arguments: Vec<TypedArg>,
         body: Vec<UntypedStatement>,
         return_type: Option<Arc<Type>>,
@@ -4502,7 +4570,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // Used to track if any argument names are used more than once
             let mut argument_names = HashSet::with_capacity(arguments.len());
 
-            for argument in arguments.iter() {
+            for (argument_index, argument) in arguments.iter().enumerate() {
                 match &argument.names {
                     ArgNames::Named { name, location }
                     | ArgNames::NamedLabelled {
@@ -4527,7 +4595,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                         let origin = VariableOrigin {
                             syntax,
-                            declaration: VariableDeclaration::FunctionParameter,
+                            declaration: VariableDeclaration::FunctionParameter {
+                                function_name: function_name.clone(),
+                                index: argument_index,
+                            },
                         };
 
                         // Insert a variable for the argument into the environment
@@ -4544,7 +4615,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             body_typer.environment.init_usage(
                                 name.clone(),
                                 origin,
-                                argument.location,
+                                *location,
                                 body_typer.problems,
                             );
                         }
