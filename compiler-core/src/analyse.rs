@@ -1416,7 +1416,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
             environment.names.maybe_register_reexport_alias(
                 &environment.current_package,
-                &name,
+                name,
                 &alias,
             );
 
