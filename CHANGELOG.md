@@ -183,6 +183,32 @@
   function to prevent accidental publishing of unmodified template code.
   ([Joohoon Cha](https://github.com/jcha0713))
 
+- When generating documentation, the build tool will now print the names of
+  public type aliases instead of internal type names when annotating functions
+  and types. For example, for the following code:
+
+  ```gleam
+  import my_package/internal
+
+  pub type ExternalAlias = internal.InternalRepresentation
+
+  pub fn do_thing() -> ExternalAlias { ... }
+  ```
+
+  This is what the build tool used to generate:
+
+  ```gleam
+  pub fn do_thing() -> @internal InternalRepresentation
+  ```
+
+  Whereas now it will not use the internal name, and instead produce:
+
+  ```gleam
+  pub fn do_thing() -> ExternalAlias
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Language server
 
 - The language server now offers a code action to remove all the unreachable
@@ -419,6 +445,45 @@
 
   ```
   ([fruno](https://github.com/fruno-bulax))
+
+- When showing types of values on hover, or adding type annotations, the language
+  server will now prefer public type aliases to internal types. For example, if
+  the "Add type annotations" code action was triggered on the following code:
+
+  ```gleam
+  import lustre/html
+  import lustre/element
+  import lustre/attribute
+
+  pub fn make_link(attribute, element) {
+    html.a([attribute], [elements])
+  }
+  ```
+
+  Previously, the following code would have been generated:
+
+  ```gleam
+  pub fn make_link(
+    attribute: vattr.Attribute,
+    element: vdom.Element(a)
+  ) -> vdom.Element(a) {
+     html.a([attribute], [elements])
+  }
+  ```
+
+  Which references internal types which should not be imported by the user.
+  However, now the language server will produce the following:
+
+  ```gleam
+  pub fn make_link(
+    attribute: attribute.Attribute,
+    element: element.Element(a)
+  ) -> element.Element(a) {
+     html.a([attribute], [elements])
+  }
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
 
 ### Formatter
 
