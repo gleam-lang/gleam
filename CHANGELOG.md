@@ -25,6 +25,15 @@
   keyword of a variable to inline.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server now offers a code action to create unknown modules
+  when an import is added for a module that doesn't exist.
+
+  For example, if `import wobble/woo` is added to `src/wiggle.gleam`,
+  then a code action to create `src/wobble/woo.gleam` will be presented
+  when triggered over `import wobble/woo`.
+
+  ([Cory Forsstrom](https://github.com/tarkah))
+
 ### Formatter
 
 ### Bug fixes
