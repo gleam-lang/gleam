@@ -44,7 +44,7 @@ use super::{
     DownloadDependencies, MakeLocker,
     code_action::{
         AddAnnotations, CodeActionBuilder, ConvertFromUse, ConvertToFunctionCall, ConvertToPipe,
-        ConvertToUse, ExpandFunctionCapture, ExtractConstant, ExtractVariable,
+        ConvertToUse, CreateUnknownModule, ExpandFunctionCapture, ExtractConstant, ExtractVariable,
         FillInMissingLabelledArgs, FillUnusedFields, FixBinaryOperation,
         FixTruncatedBitArraySegment, GenerateDynamicDecoder, GenerateFunction, GenerateJsonEncoder,
         GenerateVariant, InlineVariable, InterpolateString, LetAssertToCase, PatternMatchOnValue,
@@ -457,6 +457,10 @@ where
             )
             .code_actions();
             AddAnnotations::new(module, &lines, &params).code_action(&mut actions);
+            actions.extend(
+                CreateUnknownModule::new(module, &lines, &params, &this.paths, &this.error)
+                    .code_actions(),
+            );
             Ok(if actions.is_empty() {
                 None
             } else {
@@ -1543,7 +1547,7 @@ fn code_action_fix_names(
                 new_text: correction.to_string(),
             };
 
-            CodeActionBuilder::new(&format!("Rename to {correction}"))
+            CodeActionBuilder::new(format!("Rename to {correction}"))
                 .kind(lsp_types::CodeActionKind::QUICKFIX)
                 .changes(uri.clone(), vec![edit])
                 .preferred(true)
