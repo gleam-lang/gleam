@@ -113,7 +113,7 @@ impl<'a> Environment<'a> {
             .get(PRELUDE_MODULE_NAME)
             .expect("Unable to find prelude in importable modules");
 
-        let names = Self::build_names(&current_package, prelude, importable_modules);
+        let names = Self::build_names(prelude, importable_modules);
 
         Self {
             current_package,
@@ -144,7 +144,6 @@ impl<'a> Environment<'a> {
     }
 
     fn build_names(
-        current_package: &str,
         prelude: &ModuleInterface,
         importable_modules: &im::HashMap<EcoString, ModuleInterface>,
     ) -> Names {
@@ -164,12 +163,6 @@ impl<'a> Environment<'a> {
 
         // Find potential type aliases which reexport internal types
         for module in importable_modules.values() {
-            // Internal types are accessibly within the package they are defined,
-            // so it doesn't make sense to look for reexports within the same
-            // package.
-            if module.package == current_package {
-                continue;
-            }
             // Internal modules are not part of the public API so they are also
             // not considered.
             if module.is_internal {

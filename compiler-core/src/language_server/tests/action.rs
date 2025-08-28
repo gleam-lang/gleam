@@ -9894,3 +9894,34 @@ pub fn make_wibble(x) {
         find_position_of("main").to_selection(),
     );
 }
+
+#[test]
+fn add_type_annotations_uses_internal_name_for_same_package() {
+    let src = "
+import thepackage/internal
+
+pub fn main() {
+  internal.Constructor
+}
+";
+
+    assert_code_action!(
+        ADD_ANNOTATION,
+        TestProject::for_source(src)
+            .add_module(
+                "thepackage/internal",
+                "
+pub type Internal { Constructor }
+"
+            )
+            .add_module(
+                "thepackage/external",
+                "
+import thepackage/internal
+
+pub type External = internal.Internal
+"
+            ),
+        find_position_of("main").to_selection(),
+    );
+}

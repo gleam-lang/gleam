@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport thepackage/internal\n\npub fn main() {\n  internal.Constructor\n}\n"
+---
+----- BEFORE ACTION
+
+import thepackage/internal
+
+pub fn main() {
+       ↑       
+  internal.Constructor
+}
+
+
+----- AFTER ACTION
+
+import thepackage/internal
+
+pub fn main() -> internal.Internal {
+  internal.Constructor
+}
