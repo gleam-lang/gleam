@@ -191,8 +191,7 @@ fn get_warnings(
         target,
         TargetSupport::NotEnforced,
         gleam_version,
-    )
-    .expect("Compilation should succeed");
+    );
     warnings.take().into_iter().collect_vec()
 }
 
@@ -455,7 +454,7 @@ pub fn compile_module(
     src: &str,
     warnings: Option<Rc<dyn WarningEmitterIO>>,
     dep: Vec<DependencyModule<'_>>,
-) -> Result<TypedModule, (Vec<crate::type_::Error>, Names)> {
+) -> Outcome<TypedModule, Vec1<super::Error>> {
     compile_module_with_opts(
         module_name,
         src,
@@ -475,7 +474,7 @@ pub fn compile_module_with_opts(
     target: Target,
     target_support: TargetSupport,
     gleam_version: Option<Range<Version>>,
-) -> Result<TypedModule, (Vec<crate::type_::Error>, Names)> {
+) -> Outcome<TypedModule, Vec1<super::Error>> {
     let ids = UniqueIdGenerator::new();
     let mut modules = im::HashMap::new();
 
@@ -527,7 +526,7 @@ pub fn compile_module_with_opts(
     config.gleam_version = gleam_version.map(|v| GleamVersion::from_pubgrub(v));
 
     let warnings = TypeWarningEmitter::new("/src/warning/wrn.gleam".into(), src.into(), emitter);
-    let inference_result = crate::analyse::ModuleAnalyzerConstructor::<()> {
+    crate::analyse::ModuleAnalyzerConstructor::<()> {
         target,
         ids: &ids,
         origin: Origin::Src,
@@ -538,13 +537,7 @@ pub fn compile_module_with_opts(
         target_support: TargetSupport::Enforced,
         package_config: &config,
     }
-    .infer_module(ast, LineNumbers::new(src), "".into());
-
-    match inference_result {
-        Outcome::Ok(ast) => Ok(ast),
-        Outcome::PartialFailure(ast, errors) => Err((errors.into(), ast.names)),
-        Outcome::TotalFailure(error) => Err((error.into(), Default::default())),
-    }
+    .infer_module(ast, LineNumbers::new(src), "".into())
 }
 
 pub fn module_error(src: &str, deps: Vec<DependencyModule<'_>>) -> String {
@@ -556,7 +549,7 @@ pub fn module_error_with_target(
     deps: Vec<DependencyModule<'_>>,
     target: Target,
 ) -> String {
-    let (error, names) = compile_module_with_opts(
+    let outcome = compile_module_with_opts(
         "themodule",
         src,
         None,
@@ -564,8 +557,14 @@ pub fn module_error_with_target(
         target,
         TargetSupport::NotEnforced,
         None,
-    )
-    .expect_err("should infer an error");
+    );
+
+    let (error, names) = match outcome {
+        Outcome::Ok(_) => panic!("should infer an error"),
+        Outcome::PartialFailure(ast, errors) => (errors.into(), ast.names),
+        Outcome::TotalFailure(errors) => (errors.into(), Default::default()),
+    };
+
     let error = Error::Type {
         names: Box::new(names),
         src: src.into(),
@@ -584,7 +583,7 @@ pub fn internal_module_error_with_target(
     deps: Vec<DependencyModule<'_>>,
     target: Target,
 ) -> String {
-    let (error, names) = compile_module_with_opts(
+    let outcome = compile_module_with_opts(
         "thepackage/internal/themodule",
         src,
         None,
@@ -592,8 +591,14 @@ pub fn internal_module_error_with_target(
         target,
         TargetSupport::NotEnforced,
         None,
-    )
-    .expect_err("should infer an error");
+    );
+
+    let (error, names) = match outcome {
+        Outcome::Ok(_) => panic!("should infer an error"),
+        Outcome::PartialFailure(ast, errors) => (errors.into(), ast.names),
+        Outcome::TotalFailure(errors) => (errors.into(), Default::default()),
+    };
+
     let error = Error::Type {
         names: Box::new(names),
         src: src.into(),
