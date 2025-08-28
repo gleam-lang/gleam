@@ -63,6 +63,39 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler now raises a warning when a function's argument is only passed
+  along in a recursive call but not actually used for anything. For example:
+
+  ```gleam
+  import gleam/io
+
+  pub fn greet(x, times) {
+    case times {
+      0 -> Nil
+      _ -> {
+        io.println("Hello, Joe!")
+        greet(x, times - 1)
+      }
+    }
+  }
+  ```
+
+  In this piece of code the `x` argument is actually never used, and the
+  compiler will raise the following warning:
+
+  ```text
+  warning: Unused function argument
+    ┌─ /Users/giacomocavalieri/Desktop/prova/src/prova.gleam:3:14
+    │
+  3 │ pub fn greet(x, times) {
+    │              ^ This argument is unused
+
+  This argument is passed to the function when recursing, but it's never used
+  for anything.
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The compiler now emits a better error message for private types marked as
   opaque. For example, the following piece of code:
 

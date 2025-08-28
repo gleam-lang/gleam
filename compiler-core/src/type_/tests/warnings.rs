@@ -4444,3 +4444,90 @@ pub fn wibble(bits) {
 }"#
     );
 }
+
+#[test]
+fn unused_recursive_function_argument() {
+    assert_warning!(
+        "
+pub fn main(x: Int) {
+  main(x)
+}
+"
+    );
+}
+
+#[test]
+fn unused_recursive_function_argument_2() {
+    assert_warning!(
+        "
+pub fn main(x, times) {
+  case times {
+    0 -> main(x, 0)
+    _ -> main(x, times - 1)
+  }
+}
+"
+    );
+}
+
+#[test]
+fn unused_recursive_function_with_shadowing() {
+    assert_warning!(
+        "
+pub fn main(x: Int) {
+  let _useless = fn(x) { main(x) }
+  main(x)
+}
+"
+    );
+}
+
+#[test]
+fn unused_recursive_function_inside_anonymous_function() {
+    assert_warning!(
+        "
+pub fn main(x: Int) {
+  let _useless = fn(_) { main(x) }
+  Nil
+}
+"
+    );
+}
+
+#[test]
+fn unused_recursive_function_with_variable_shadowing() {
+    assert_no_warnings!(
+        "
+pub fn main(x: Int) {
+  let x = x * 2
+  main(x)
+}
+"
+    );
+}
+
+#[test]
+fn unused_recursive_function_passing_argument_in_a_different_position_counts_as_using_it() {
+    assert_no_warnings!(
+        "
+pub fn main(x: Int, y) {
+  case y {
+    0 -> main(1, x)
+    _ -> main(0, 0)
+  }
+}
+"
+    );
+}
+
+#[test]
+fn unused_recursive_function_with_shadowed_function() {
+    assert_no_warnings!(
+        "
+pub fn main(x: Int) {
+  let main = fn(x) { x }
+  main(x)
+}
+"
+    );
+}

@@ -599,6 +599,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 .expect("Could not find hydrator for fn");
 
             let (arguments, body) = expr_typer.infer_fn_with_known_types(
+                Some(name.clone()),
                 typed_arguments.clone(),
                 body,
                 Some(prereg_return_type.clone()),
