@@ -2,7 +2,7 @@ use crate::{cli, fs::ConsoleWarningEmitter, http::HttpClient};
 use camino::Utf8Path;
 use gleam_core::{
     Error, Result, Warning, encryption, hex,
-    paths::global_hexpm_credentials_path,
+    paths::{global_hexpm_credentials_plaintext_path, global_hexpm_credentials_toml_path},
     warning::{DeprecatedEnvironmentVariable, WarningEmitter},
 };
 use serde::{Deserialize, Serialize};
@@ -19,7 +19,7 @@ pub const API_ENV_NAME: &str = "HEXPM_API_KEY";
 pub struct EncryptedApiKey {
     pub name: String,
     pub encrypted: String,
-    pub username: String,
+    pub username: Option<String>,
 }
 
 #[derive(Debug)]
@@ -54,7 +54,7 @@ impl<'runtime> HexAuthentication<'runtime> {
     ///
     pub fn create_and_store_api_key(&mut self) -> Result<UnencryptedApiKey> {
         let name = generate_api_key_name();
-        let path = global_hexpm_credentials_path();
+        let path = global_hexpm_credentials_toml_path();
 
         // Get login creds from user
         let username = ask_username(&mut self.warnings)?;
@@ -81,7 +81,7 @@ encrypt your Hex API key.
         let encrypted = EncryptedApiKey {
             name,
             encrypted,
-            username,
+            username: Some(username),
         };
 
         encrypted.save(&path)?;
@@ -141,11 +141,11 @@ encrypt your Hex API key.
     }
 
     pub fn read_stored_api_key(&mut self) -> Result<Option<EncryptedApiKey>> {
-        let path = global_hexpm_credentials_path();
+        let path = global_hexpm_credentials_toml_path();
 
         if !path.exists() {
-            // maybe the user has the credentials in the old format, try migrate
-            let key = migrate_credentials_file(&path, &mut self.warnings)?;
+            // Maybe the user has the credentials in the old format, try migrate
+            let key = migrate_credentials_file()?;
             return Ok(key);
         }
 
@@ -212,7 +212,7 @@ fn ask_username(warnings: &mut Vec<Warning>) -> std::result::Result<String, Erro
 pub fn generate_api_key_name() -> String {
     let timestamp = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
-        .expect("This function must only be called after January 1, 1970. Sorry time traveller!")
+        .expect("This function must only be called after January 1, 1970. Sorry time traveler!")
         .as_secs();
     let name = hostname::get()
         .expect("Looking up hostname")
@@ -221,55 +221,49 @@ pub fn generate_api_key_name() -> String {
     format!("{name}-{timestamp}")
 }
 
-/// Migrate users' credential file from the old plaintext format to the new TOML format,
-///     eventually this function should be deprecated
-fn migrate_credentials_file(
-    path: &Utf8Path,
-    warnings: &mut Vec<Warning>,
-) -> Result<Option<EncryptedApiKey>> {
-    // the original file name had no extension
-    let old_path = &path.with_extension("");
+/// Migrate users' credential file from the old plaintext format to the new TOML format
+fn migrate_credentials_file() -> Result<Option<EncryptedApiKey>> {
+    let old_path = global_hexpm_credentials_plaintext_path();
 
-    // if the file does not exist, there is nothing to migrate
+    // If the file does not exist, there is nothing to migrate
     if !old_path.exists() {
         return Ok(None);
     }
 
-    // otherwise, read the data and create a encrypted key
-    let text = crate::fs::read(old_path)?;
+    // Otherwise, read the data and create a encrypted key
+    let text = crate::fs::read(&old_path)?;
 
-    // data was split by a newline
+    // Data was split by a newline
     let mut chunks = text.splitn(2, '\n');
 
-    // the first line was the name of the key
+    // The first line was the name of the key
     let Some(name) = chunks.next() else {
         return Err(Error::InvalidCredentialsFile {
-            path: path.to_string(),
+            path: old_path.to_string(),
         });
     };
 
-    // the second line was the encrypted value
+    // The second line was the encrypted value
     let Some(encrypted) = chunks.next() else {
         return Err(Error::InvalidCredentialsFile {
-            path: path.to_string(),
+            path: old_path.to_string(),
         });
     };
 
-    // username was not stored in the old format, so we ask for it
-    let username = ask_username(warnings)?;
-
-    // create a new EncryptedApiKey struct with the old data
+    // Create a new EncryptedApiKey struct with the old data
     let key = EncryptedApiKey {
         name: name.to_string(),
         encrypted: encrypted.to_string(),
-        username,
+        // The plaintext format did not include a username
+        username: None,
     };
 
-    // save the new EncryptedApiKey struct in the new format
-    key.save(path)?;
+    // Save the new EncryptedApiKey struct in the new format
+    let path = global_hexpm_credentials_toml_path();
+    key.save(&path)?;
 
-    // remove old file, since it is migrated to the new format
-    crate::fs::delete_file(path)?;
+    // Remove old file, since it is migrated to the new format
+    crate::fs::delete_file(&old_path)?;
 
     Ok(Some(key))
 }

@@ -130,8 +130,12 @@ pub fn global_package_cache_package_tarball(package_name: &str, version: &str) -
     global_packages_cache().join(format!("{package_name}-{version}.tar"))
 }
 
-pub fn global_hexpm_credentials_path() -> Utf8PathBuf {
+pub fn global_hexpm_credentials_toml_path() -> Utf8PathBuf {
     global_hexpm_cache().join("credentials.toml")
+}
+
+pub fn global_hexpm_credentials_plaintext_path() -> Utf8PathBuf {
+    global_hexpm_cache().join("credentials")
 }
 
 fn global_hexpm_cache() -> Utf8PathBuf {
