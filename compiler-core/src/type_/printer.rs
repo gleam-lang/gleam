@@ -256,7 +256,7 @@ impl Names {
     }
 
     /// Get the name and optional module qualifier for a named type.
-    pub fn named_type<'a>(
+    fn named_type<'a>(
         &'a self,
         module: &'a EcoString,
         name: &'a EcoString,
@@ -334,6 +334,14 @@ impl Names {
 
     pub fn get_type_variable(&self, id: u64) -> Option<&EcoString> {
         self.type_variables.get(&id)
+    }
+
+    pub fn reexport_alias(
+        &self,
+        module: EcoString,
+        name: EcoString,
+    ) -> Option<&(EcoString, EcoString)> {
+        self.reexport_aliases.get(&(module, name))
     }
 }
 

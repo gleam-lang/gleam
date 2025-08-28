@@ -1403,19 +1403,24 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 },
             )?;
 
-            environment.insert_type_alias(
-                name.clone(),
-                TypeAliasConstructor {
-                    origin: *location,
-                    module: self.module_name.clone(),
-                    type_,
-                    publicity: *publicity,
-                    deprecation: deprecation.clone(),
-                    documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
-                    arity,
-                    parameters,
-                },
-            )?;
+            let alias = TypeAliasConstructor {
+                origin: *location,
+                module: self.module_name.clone(),
+                type_,
+                publicity: *publicity,
+                deprecation: deprecation.clone(),
+                documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
+                arity,
+                parameters,
+            };
+
+            environment.names.maybe_register_reexport_alias(
+                &environment.current_package,
+                &name,
+                &alias,
+            );
+
+            environment.insert_type_alias(name.clone(), alias)?;
 
             if let Some(name) = hydrator.unused_type_variables().next() {
                 return Err(Error::UnusedTypeAliasParameter {
