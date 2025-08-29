@@ -25,9 +25,9 @@
     │   ^^^^^^^
 
   The name `println` is not in scope here.
-  Consider using one of these variables:
+  Did you mean one of these:
 
-      io.println
+      - io.println
   ```
 
   ([raphrous](https://github.com/realraphrous))

@@ -2446,12 +2446,10 @@ but no type in scope with that name."
                                 // If there are some suggestions about public values in imported
                                 // modules put a "did you mean" text after the main message
                                 if !possible_modules.is_empty() {
-                                    let mut did_you_mean_text = String::from("Did you mean one of these:\n\n");
+                                    text.push_str("\nDid you mean one of these:\n\n");
                                     for module_name in possible_modules {
-                                        did_you_mean_text.push_str(&format!("  - {module_name}.{name}\n"));
+                                        text.push_str(&format!("  - {module_name}.{name}\n"))
                                     }
-                                    text.push('\n');
-                                    text.push_str(&did_you_mean_text);
                                 }
 
                                 text

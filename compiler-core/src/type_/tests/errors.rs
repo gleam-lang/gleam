@@ -3528,3 +3528,29 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn unknown_variable_possible_modules_13() {
+    assert_module_error!(
+        ("module", "pub fn add(x: Int, y: Int) { x + y }"),
+        "
+import module as wibble
+pub fn main() {
+    add(1, 1)
+}
+"
+    );
+}
+
+#[test]
+fn unknown_variable_possible_modules_14() {
+    assert_module_error!(
+        ("gleam/module", "pub fn add(x: Int, y: Int) { x + y }"),
+        "
+import gleam/module
+pub fn main() {
+    add(1, 1)
+}
+"
+    );
+}
