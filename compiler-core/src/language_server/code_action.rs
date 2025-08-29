@@ -5142,7 +5142,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
     ) {
         match constructor {
             // Invalid module selects leave the `name` field blank
-            ModuleValueConstructor::Fn { name, .. } if name == "" => {
+            ModuleValueConstructor::Fn { name, .. } if name.is_empty() => {
                 self.try_save_function_from_other_module(module_name, label, type_, None);
             }
             ModuleValueConstructor::Fn { .. }
@@ -5177,7 +5177,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
                     type_,
                     constructor: ModuleValueConstructor::Fn { name, .. },
                     ..
-                } if name == "" => {
+                } if name.is_empty() => {
                     return self.try_save_function_from_other_module(
                         module_name,
                         label,

@@ -1452,7 +1452,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     type_: self.new_unbound_var(),
                     label,
                     module_alias: module_name.clone(),
-                    module_name: module_name,
+                    module_name,
                     constructor: ModuleValueConstructor::Fn {
                         location,
                         module: "".into(),
