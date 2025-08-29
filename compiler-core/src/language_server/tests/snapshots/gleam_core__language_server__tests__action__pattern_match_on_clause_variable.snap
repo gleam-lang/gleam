@@ -1,0 +1,39 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  case maybe_wibble() {\n    Ok(something) -> 1\n    Error(_) -> 2\n  }\n}\n\ntype Wibble {\n  Wobble\n  Woo\n}\n\nfn maybe_wibble() { Ok(Wobble) }\n\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  case maybe_wibble() {
+    Ok(something) -> 1
+       ↑              
+    Error(_) -> 2
+  }
+}
+
+type Wibble {
+  Wobble
+  Woo
+}
+
+fn maybe_wibble() { Ok(Wobble) }
+
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  case maybe_wibble() {
+    Ok(Wobble) -> 1
+    Ok(Woo) -> 1
+    Error(_) -> 2
+  }
+}
+
+type Wibble {
+  Wobble
+  Woo
+}
+
+fn maybe_wibble() { Ok(Wobble) }
