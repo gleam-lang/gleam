@@ -1,0 +1,36 @@
+---
+source: compiler-core/src/erlang/tests/bit_arrays.rs
+assertion_line: 320
+expression: "\npub fn main() -> Nil {\n  let foo = <<\"\\u{feff}foo\":utf8>>\n  let _bits = case foo {\n    <<\"\\u{feff}\":utf8, rest: bits>> -> rest\n    _ -> foo\n  }\n  Nil\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub fn main() -> Nil {
+  let foo = <<"\u{feff}foo":utf8>>
+  let _bits = case foo {
+    <<"\u{feff}":utf8, rest: bits>> -> rest
+    _ -> foo
+  }
+  Nil
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec main() -> nil.
+main() ->
+    Foo = <<"\x{feff}foo"/utf8>>,
+    _ = case Foo of
+        <<"\u{feff}"/utf8, Rest/bitstring>> ->
+            Rest;
+
+        _ ->
+            Foo
+    end,
+    nil.
