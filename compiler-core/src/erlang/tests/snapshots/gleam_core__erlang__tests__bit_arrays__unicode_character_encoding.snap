@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/bit_arrays.rs
-assertion_line: 320
 expression: "\npub fn main() -> Nil {\n  let foo = <<\"\\u{feff}foo\":utf8>>\n  let _bits = case foo {\n    <<\"\\u{feff}\":utf8, rest: bits>> -> rest\n    _ -> foo\n  }\n  Nil\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -27,7 +25,7 @@ pub fn main() -> Nil {
 main() ->
     Foo = <<"\x{feff}foo"/utf8>>,
     _ = case Foo of
-        <<"\u{feff}"/utf8, Rest/bitstring>> ->
+        <<"\x{feff}"/utf8, Rest/bitstring>> ->
             Rest;
 
         _ ->
