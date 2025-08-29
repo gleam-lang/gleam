@@ -1,14 +1,14 @@
 ---
 source: compiler-core/src/erlang/tests/bit_arrays.rs
-expression: "\npub fn main() -> Nil {\n  let foo = <<\"\\u{00A9}foo\":utf8>>\n  let _bits = case foo {\n    <<\"\\u{00A9}\":utf8, rest: bits>> -> rest\n    _ -> foo\n  }\n  Nil\n}\n"
+expression: "\npub fn main() -> Nil {\n  let wibble = <<\"\\u{00A9}wibble\":utf8>>\n  let _bits = case wibble {\n    <<\"\\u{00A9}\":utf8, rest: bits>> -> rest\n    _ -> wibble\n  }\n  Nil\n}\n"
 ---
 ----- SOURCE CODE
 
 pub fn main() -> Nil {
-  let foo = <<"\u{00A9}foo":utf8>>
-  let _bits = case foo {
+  let wibble = <<"\u{00A9}wibble":utf8>>
+  let _bits = case wibble {
     <<"\u{00A9}":utf8, rest: bits>> -> rest
-    _ -> foo
+    _ -> wibble
   }
   Nil
 }
@@ -23,12 +23,12 @@ pub fn main() -> Nil {
 -file("project/test/my/mod.gleam", 2).
 -spec main() -> nil.
 main() ->
-    Foo = <<"\x{00A9}foo"/utf8>>,
-    _ = case Foo of
+    Wibble = <<"\x{00A9}wibble"/utf8>>,
+    _ = case Wibble of
         <<"\x{00A9}"/utf8, Rest/bitstring>> ->
             Rest;
 
         _ ->
-            Foo
+            Wibble
     end,
     nil.
