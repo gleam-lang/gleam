@@ -316,7 +316,7 @@ pub fn main() {
 }
 
 #[test]
-fn unicode_character_encoding() {
+fn unicode_character_encoding_in_bit_array_pattern_segment() {
     assert_erl!(
         "
 pub fn main() -> Nil {
