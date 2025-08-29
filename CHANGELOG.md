@@ -4,6 +4,11 @@
 
 ### Compiler
 
+- Literals using \u{XXXX} syntax in bit array pattern segments are now translated to
+  Erlang's \x{XXXX} syntax correctly.
+
+  ([Benjamin Peinhardt](https://github.com/bcpeinhardt))
+
 - The compiler now performs function inlining optimisations for a specific set
   of standard library functions, which can allow functions which were previously
   not tail-recursive on the JavaScript target to become tail-recursive. For
