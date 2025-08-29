@@ -225,6 +225,9 @@ pub fn update(paths: &ProjectPaths, packages: Vec<String>) -> Result<()> {
         UseManifest::Yes
     };
 
+    let manifest = read_manifest_from_disc(paths)?;
+    assert_packages_exist_locally(&manifest, packages.clone())?;
+
     // Update specific packages
     _ = download(
         paths,
@@ -237,6 +240,24 @@ pub fn update(paths: &ProjectPaths, packages: Vec<String>) -> Result<()> {
         },
     )?;
 
+    Ok(())
+}
+
+pub fn assert_packages_exist_locally(manifest: &Manifest, packages: Vec<String>) -> Result<()> {
+    let missing_packages: Vec<String> = packages
+        .iter()
+        .filter(|package_name| {
+            let package_name_eco = EcoString::from(package_name.as_str());
+            !manifest.packages.iter().any(|p| p.name == package_name_eco)
+        })
+        .cloned()
+        .collect();
+
+    if !missing_packages.is_empty() {
+        return Err(Error::PackagesToUpdateNotExist {
+            packages: missing_packages,
+        });
+    }
     Ok(())
 }
 
