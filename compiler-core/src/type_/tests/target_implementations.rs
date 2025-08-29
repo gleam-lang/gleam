@@ -323,7 +323,7 @@ pub fn no_valid_erlang_impl() {
         TargetSupport::Enforced,
         None,
     );
-    assert!(out.is_err());
+    assert!(out.into_result().is_err());
 }
 
 #[test]
@@ -350,7 +350,7 @@ pub fn no_valid_javascript_impl() {
         TargetSupport::Enforced,
         None,
     );
-    assert!(out.is_err());
+    assert!(out.into_result().is_err());
 }
 
 #[test]
@@ -377,7 +377,7 @@ pub fn no_valid_erlang_impl() {
         TargetSupport::Enforced,
         None,
     );
-    assert!(out.is_err());
+    assert!(out.into_result().is_err());
 }
 
 #[test]
@@ -404,7 +404,7 @@ pub fn no_valid_javascript_impl() {
         TargetSupport::Enforced,
         None,
     );
-    assert!(out.is_err());
+    assert!(out.into_result().is_err());
 }
 
 #[test]
@@ -427,7 +427,7 @@ pub fn no_valid_erlang_impl() {
         TargetSupport::Enforced,
         None,
     );
-    assert!(out.is_err());
+    assert!(out.into_result().is_err());
 }
 
 #[test]
@@ -450,5 +450,5 @@ pub fn no_valid_javascript_impl() {
         TargetSupport::Enforced,
         None,
     );
-    assert!(out.is_err());
+    assert!(out.into_result().is_err());
 }

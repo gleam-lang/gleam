@@ -5919,7 +5919,7 @@ impl<'ast> ast::visit::Visit<'ast> for InlineVariable<'ast> {
             VariableDeclaration::LetPattern => {}
             VariableDeclaration::UsePattern
             | VariableDeclaration::ClausePattern
-            | VariableDeclaration::FunctionParameter
+            | VariableDeclaration::FunctionParameter { .. }
             | VariableDeclaration::Generated => return,
         }
 
@@ -5939,7 +5939,7 @@ impl<'ast> ast::visit::Visit<'ast> for InlineVariable<'ast> {
             VariableDeclaration::LetPattern => {}
             VariableDeclaration::UsePattern
             | VariableDeclaration::ClausePattern
-            | VariableDeclaration::FunctionParameter
+            | VariableDeclaration::FunctionParameter { .. }
             | VariableDeclaration::Generated => return,
         }
 

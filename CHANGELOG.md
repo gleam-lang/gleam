@@ -36,6 +36,42 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The compiler now raises a warning when a function's argument is only passed
+  along in a recursive call but not actually used for anything. For example:
+
+  ```gleam
+  import gleam/io
+
+  pub fn greet(x, times) {
+    case times {
+      0 -> Nil
+      _ -> {
+        io.println("Hello, Joe!")
+        greet(x, times - 1)
+      }
+    }
+  }
+  ```
+
+  In this piece of code the `x` argument is actually never used, and the
+  compiler will raise the following warning:
+
+  ```text
+  warning: Unused function argument
+    ┌─ /Users/giacomocavalieri/Desktop/prova/src/prova.gleam:3:14
+    │
+  3 │ pub fn greet(x, times) {
+    │              ^ This argument is unused
+    ·
+  8 │       greet(x, times - 1)
+    │             -
+
+  This argument is passed to the function when recursing, but it's never used
+  for anything.
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The compiler now emits a better error message for private types marked as
   opaque. For example, the following piece of code:
 
@@ -74,7 +110,7 @@
 
 - The compiler will now raise warning for inefficient use of `list.length()`
   when trying to check is list empty via `0 < list.length(list)` or
-`list.length(list) > 0` as well as in other cases. For example, the following
+  `list.length(list) > 0` as well as in other cases. For example, the following
   code:
 
   ```gleam
@@ -371,3 +407,7 @@
 - Fixed a bug where adding `echo` to the subject of a `case` expression would
   prevent variant inference from working correctly.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where the compiler would suggest to use a discarded value defined
+  in a different function.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
