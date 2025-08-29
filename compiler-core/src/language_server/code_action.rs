@@ -14,12 +14,13 @@ use crate::{
     config::PackageConfig,
     exhaustiveness::CompiledCase,
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
-    language_server::{edits, reference::FindVariableReferences},
+    language_server::{edits, lsp_range_to_src_span, reference::FindVariableReferences},
     line_numbers::LineNumbers,
     parse::{extra::ModuleExtra, lexer::str_to_keyword},
     strings::to_snake_case,
     type_::{
-        self, FieldMap, ModuleValueConstructor, Type, TypeVar, TypedCallArg, ValueConstructor,
+        self, Error as TypeError, FieldMap, ModuleValueConstructor, Type, TypeVar, TypedCallArg,
+        ValueConstructor,
         error::{ModuleSuggestion, VariableDeclaration, VariableOrigin},
         printer::Printer,
     },
@@ -27,7 +28,10 @@ use crate::{
 use ecow::{EcoString, eco_format};
 use im::HashMap;
 use itertools::Itertools;
-use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, Position, Range, TextEdit, Url};
+use lsp_types::{
+    CodeAction, CodeActionKind, CodeActionParams, CreateFile, CreateFileOptions,
+    DocumentChangeOperation, DocumentChanges, Position, Range, ResourceOp, TextEdit, Url,
+};
 use vec1::{Vec1, vec1};
 
 use super::{
@@ -46,7 +50,7 @@ pub struct CodeActionBuilder {
 }
 
 impl CodeActionBuilder {
-    pub fn new(title: &str) -> Self {
+    pub fn new(title: impl ToString) -> Self {
         Self {
             action: CodeAction {
                 title: title.to_string(),
@@ -72,6 +76,15 @@ impl CodeActionBuilder {
         _ = changes.insert(uri, edits);
 
         edit.changes = Some(changes);
+        self.action.edit = Some(edit);
+        self
+    }
+
+    pub fn document_changes(mut self, changes: DocumentChanges) -> Self {
+        let mut edit = self.action.edit.take().unwrap_or_default();
+
+        edit.document_changes = Some(changes);
+
         self.action.edit = Some(edit);
         self
     }
@@ -7893,5 +7906,93 @@ fn single_expression(expression: &TypedExpr) -> Option<&TypedExpr> {
         TypedExpr::Block { .. } => None,
 
         expression => Some(expression),
+    }
+}
+
+/// Code action to create an unknown module
+///
+/// ```gleam
+/// // foo.gleam
+/// // Diagnostic: Unknown module
+/// import foo/bar/baz
+/// ```
+///
+/// Would create:
+///
+/// ```gleam
+/// // foo/bar/baz.gleam
+/// ```
+///
+pub struct CreateUnknownModule<'a> {
+    module: &'a Module,
+    error: &'a Option<Error>,
+    code_action_span: SrcSpan,
+}
+
+impl<'a> CreateUnknownModule<'a> {
+    pub fn new(
+        module: &'a Module,
+        lines: &'a LineNumbers,
+        params: &'a CodeActionParams,
+        error: &'a Option<Error>,
+    ) -> Self {
+        Self {
+            module,
+            error,
+            code_action_span: lsp_range_to_src_span(params.range, lines),
+        }
+    }
+
+    pub fn code_actions(self) -> Vec<CodeAction> {
+        struct UnknownModule<'a> {
+            name: &'a EcoString,
+            location: &'a SrcSpan,
+        }
+
+        let mut actions = vec![];
+
+        let Some(Error::Type { errors, .. }) = self.error else {
+            return actions;
+        };
+
+        let origin_path = self
+            .module
+            .input_path
+            .as_str()
+            .strip_suffix(&format!("{}.gleam", self.module.name))
+            .expect("origin is ancestor of module path");
+
+        let unknown_modules = errors.iter().filter_map(|error| {
+            if let TypeError::UnknownModule { name, location, .. } = error {
+                return Some(UnknownModule { name, location });
+            }
+
+            None
+        });
+
+        for unknown_module in unknown_modules {
+            if !self.code_action_span.intersects(*unknown_module.location) {
+                continue;
+            }
+
+            let uri = Url::from_file_path(format!("{origin_path}/{}.gleam", unknown_module.name))
+                .expect("origin path is absolute");
+
+            CodeActionBuilder::new(format!("Create module {}.gleam", unknown_module.name))
+                .kind(CodeActionKind::QUICKFIX)
+                .document_changes(DocumentChanges::Operations(vec![
+                    DocumentChangeOperation::Op(ResourceOp::Create(CreateFile {
+                        uri,
+                        options: Some(CreateFileOptions {
+                            overwrite: Some(false),
+                            ignore_if_exists: Some(true),
+                        }),
+                        annotation_id: None,
+                    })),
+                ]))
+                .push_to(&mut actions);
+        }
+
+        actions
     }
 }
