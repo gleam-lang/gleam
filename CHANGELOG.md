@@ -4,11 +4,6 @@
 
 ### Compiler
 
-- Literals using `\u{XXXX}` syntax in bit array pattern segments are now translated to
-  Erlang's `\x{XXXX}` syntax correctly.
-
-  ([Benjamin Peinhardt](https://github.com/bcpeinhardt))
-
 - The compiler now performs function inlining optimisations for a specific set
   of standard library functions, which can allow functions which were previously
   not tail-recursive on the JavaScript target to become tail-recursive. For
@@ -330,6 +325,10 @@
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Bug fixes
+
+- Fixed a bug where literals using `\u{XXXX}` syntax in bit array pattern segments were not
+  translated to Erlang's `\x{XXXX}` syntax correctly.
+  ([Benjamin Peinhardt](https://github.com/bcpeinhardt))
 
 - Fixed a bug where `echo` could crash on JavaScript if the module contains
   record variants with the same name as some built-in JavaScript objects.
