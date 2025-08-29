@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/javascript/tests/inlining.rs
+expression: "\npub fn main() {\n  let a = 10\n  let b = 20\n\n  fn(x) {\n    let a = 7\n    x + a\n  }(a + b)\n\n  a\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let a = 10
+  let b = 20
+
+  fn(x) {
+    let a = 7
+    x + a
+  }(a + b)
+
+  a
+}
+
+
+----- COMPILED JAVASCRIPT
+export function main() {
+  let a = 10;
+  let b = 20;
+  let _block;
+  {
+    let _a_0 = 7;
+    _block = (a + b) + _a_0;
+  }
+  _block;
+  return a;
+}
