@@ -1803,7 +1803,6 @@ pub type Wibble {
 }
 
 pub fn wibble(w: Wibble) {
-  let assert Wibble(..) = w
   w.wibble
 }
 ",
@@ -1821,7 +1820,7 @@ pub type Wibble {
     wibble: Int
   )
   Wobble(
-    /// Here's some documentation explaining a field of Wobble
+    /// This won't show up because it's a Wibble variant
     wibble: Int
   )
 }
