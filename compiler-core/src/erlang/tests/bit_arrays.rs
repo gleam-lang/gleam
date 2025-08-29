@@ -320,9 +320,9 @@ fn unicode_character_encoding() {
     assert_erl!(
         "
 pub fn main() -> Nil {
-  let foo = <<\"\\u{feff}foo\":utf8>>
+  let foo = <<\"\\u{00A9}foo\":utf8>>
   let _bits = case foo {
-    <<\"\\u{feff}\":utf8, rest: bits>> -> rest
+    <<\"\\u{00A9}\":utf8, rest: bits>> -> rest
     _ -> foo
   }
   Nil
