@@ -259,7 +259,7 @@ fn pattern_segment<'a>(
     let guards = RefCell::new(guards);
 
     let create_document = |env: &mut Env<'a>| match value {
-        Pattern::String { value, .. } => value.to_doc().surround("\"", "\""),
+        Pattern::String { value, .. } => string_inner(value).surround("\"", "\""),
         Pattern::Discard { .. }
         | Pattern::Variable { .. }
         | Pattern::Int { .. }

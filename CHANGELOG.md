@@ -326,6 +326,10 @@
 
 ### Bug fixes
 
+- Fixed a bug where literals using `\u{XXXX}` syntax in bit array pattern segments were not
+  translated to Erlang's `\x{XXXX}` syntax correctly.
+  ([Benjamin Peinhardt](https://github.com/bcpeinhardt))
+
 - Fixed a bug where `echo` could crash on JavaScript if the module contains
   record variants with the same name as some built-in JavaScript objects.
   ([Louis Pilfold](https://github.com/lpil))
