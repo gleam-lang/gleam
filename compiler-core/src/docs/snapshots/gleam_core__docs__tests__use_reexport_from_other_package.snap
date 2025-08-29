@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/docs/tests.rs
+expression: output
+---
+---- SOURCE CODE
+-- some_package/internal.gleam
+pub type Internal
+
+-- some_package/api.gleam
+
+import some_package/internal
+pub type External = internal.Internal
+
+
+-- main.gleam
+
+import some_package/api
+
+pub fn do_thing(value: api.External) {
+  value
+}
+
+
+---- VALUES
+
+--- do_thing
+<pre><code>pub fn do_thing(value: <a href="https://hexdocs.pm/some_package/1.0.0/some_package/api.html#External" title="some_package/api.{type External}">api.External</a>) -> <a href="https://hexdocs.pm/some_package/1.0.0/some_package/api.html#External" title="some_package/api.{type External}">api.External</a></code></pre>
