@@ -5,10 +5,10 @@ use crate::{
     ast::{
         self, ArgNames, AssignName, AssignmentKind, BitArraySegmentTruncation, BoundVariable,
         CallArg, CustomType, FunctionLiteralKind, ImplicitCallArgOrigin, Import, PIPE_PRECEDENCE,
-        Pattern, PatternUnusedArguments, PipelineAssignmentKind, RecordConstructor, SrcSpan,
-        TodoKind, TypedArg, TypedAssignment, TypedClauseGuard, TypedExpr, TypedModuleConstant,
-        TypedPattern, TypedPipelineAssignment, TypedRecordConstructor, TypedStatement, TypedUse,
-        visit::Visit as _,
+        Pattern, PatternUnusedArguments, PipelineAssignmentKind, Publicity, RecordConstructor,
+        SrcSpan, TodoKind, TypedArg, TypedAssignment, TypedClauseGuard, TypedExpr,
+        TypedModuleConstant, TypedPattern, TypedPipelineAssignment, TypedRecordConstructor,
+        TypedStatement, TypedUse, visit::Visit as _,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -3690,7 +3690,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast> {
         };
 
         let decoder_type = self.printer.print_type(&Type::Named {
-            publicity: ast::Publicity::Public,
+            publicity: Publicity::Public,
             package: STDLIB_PACKAGE_NAME.into(),
             module: DECODE_MODULE.into(),
             name: "Decoder".into(),
@@ -4089,7 +4089,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast> {
         };
 
         let json_type = self.printer.print_type(&Type::Named {
-            publicity: ast::Publicity::Public,
+            publicity: Publicity::Public,
             package: JSON_PACKAGE_NAME.into(),
             module: JSON_MODULE.into(),
             name: "Json".into(),
@@ -4934,6 +4934,7 @@ fn pretty_constructor_name(
 ///
 pub struct GenerateFunction<'a> {
     module: &'a Module,
+    modules: &'a std::collections::HashMap<EcoString, Module>,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
     last_visited_function_end: Option<u32>,
@@ -4941,6 +4942,7 @@ pub struct GenerateFunction<'a> {
 }
 
 struct FunctionToGenerate<'a> {
+    module: Option<&'a str>,
     name: &'a str,
     arguments_types: Vec<Arc<Type>>,
 
@@ -4956,11 +4958,13 @@ struct FunctionToGenerate<'a> {
 impl<'a> GenerateFunction<'a> {
     pub fn new(
         module: &'a Module,
+        modules: &'a std::collections::HashMap<EcoString, Module>,
         line_numbers: &'a LineNumbers,
         params: &'a CodeActionParams,
     ) -> Self {
         Self {
             module,
+            modules,
             params,
             edits: TextEdits::new(line_numbers),
             last_visited_function_end: None,
@@ -4971,16 +4975,53 @@ impl<'a> GenerateFunction<'a> {
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
 
-        let Some(FunctionToGenerate {
-            name,
-            arguments_types,
-            given_arguments,
-            previous_function_end: Some(insert_at),
-            return_type,
-        }) = self.function_to_generate
+        let Some(
+            function_to_generate @ FunctionToGenerate {
+                module,
+                previous_function_end: Some(insert_at),
+                ..
+            },
+        ) = self.function_to_generate.take()
         else {
             return vec![];
         };
+
+        if let Some(module) = module {
+            if let Some(module) = self.modules.get(module) {
+                let insert_at = if module.code.is_empty() {
+                    0
+                } else {
+                    (module.code.len() - 1) as u32
+                };
+                self.code_action_for_module(
+                    module,
+                    Publicity::Public,
+                    function_to_generate,
+                    insert_at,
+                )
+            } else {
+                Vec::new()
+            }
+        } else {
+            let module = self.module;
+            self.code_action_for_module(module, Publicity::Private, function_to_generate, insert_at)
+        }
+    }
+
+    fn code_action_for_module(
+        mut self,
+        module: &Module,
+        publicity: Publicity,
+        function_to_generate: FunctionToGenerate<'a>,
+        insert_at: u32,
+    ) -> Vec<CodeAction> {
+        let FunctionToGenerate {
+            name,
+            arguments_types,
+            given_arguments,
+            return_type,
+            ..
+        } = function_to_generate;
 
         // Labels do not share the same namespace as argument so we use two separate
         // generators to avoid renaming a label in case it shares a name with an argument.
@@ -4989,7 +5030,7 @@ impl<'a> GenerateFunction<'a> {
 
         // Since we are generating a new function, type variables from other
         // functions and constants are irrelevant to the types we print.
-        let mut printer = Printer::new_without_type_variables(&self.module.ast.names);
+        let mut printer = Printer::new_without_type_variables(&module.ast.names);
         let arguments = arguments_types
             .iter()
             .enumerate()
@@ -5009,15 +5050,20 @@ impl<'a> GenerateFunction<'a> {
 
         let return_type = printer.print_type(&return_type);
 
+        let publicity = if publicity.is_public() { "pub " } else { "" };
+
         self.edits.insert(
             insert_at,
-            format!("\n\nfn {name}({arguments}) -> {return_type} {{\n  todo\n}}"),
+            format!("\n\n{publicity}fn {name}({arguments}) -> {return_type} {{\n  todo\n}}"),
         );
 
+        let Some(uri) = url_from_path(module.input_path.as_str()) else {
+            return Vec::new();
+        };
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Generate function")
             .kind(CodeActionKind::QUICKFIX)
-            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .changes(uri, self.edits.edits)
             .preferred(true)
             .push_to(&mut action);
         action
@@ -5041,8 +5087,30 @@ impl<'a> GenerateFunction<'a> {
                     given_arguments,
                     return_type,
                     previous_function_end: self.last_visited_function_end,
+                    module: None,
                 })
             }
+        }
+    }
+
+    fn try_save_function_from_other_module(
+        &mut self,
+        module: &'a str,
+        name: &'a str,
+        function_type: &Arc<Type>,
+        given_arguments: Option<&'a [TypedCallArg]>,
+    ) {
+        if let Some((arguments_types, return_type)) = function_type.fn_types()
+            && is_valid_lowercase_name(name)
+        {
+            self.function_to_generate = Some(FunctionToGenerate {
+                name,
+                arguments_types,
+                given_arguments,
+                return_type,
+                previous_function_end: self.last_visited_function_end,
+                module: Some(module),
+            })
         }
     }
 }
@@ -5062,6 +5130,27 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
         ast::visit::visit_typed_expr_invalid(self, location, type_);
     }
 
+    fn visit_typed_expr_module_select(
+        &mut self,
+        _location: &'ast SrcSpan,
+        _field_start: &'ast u32,
+        type_: &'ast Arc<Type>,
+        label: &'ast EcoString,
+        module_name: &'ast EcoString,
+        _module_alias: &'ast EcoString,
+        constructor: &'ast ModuleValueConstructor,
+    ) {
+        match constructor {
+            // Invalid module selects leave the `name` field blank
+            ModuleValueConstructor::Fn { name, .. } if name == "" => {
+                self.try_save_function_from_other_module(module_name, label, type_, None);
+            }
+            ModuleValueConstructor::Fn { .. }
+            | ModuleValueConstructor::Record { .. }
+            | ModuleValueConstructor::Constant { .. } => {}
+        }
+    }
+
     fn visit_typed_expr_call(
         &mut self,
         location: &'ast SrcSpan,
@@ -5073,13 +5162,34 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
         // function that has the proper labels.
         let fun_range = self.edits.src_span_to_lsp_range(fun.location());
 
-        if within(self.params.range, fun_range) && fun.is_invalid() {
-            if labels_are_correct(arguments) {
-                self.try_save_function_to_generate(fun.location(), &fun.type_(), Some(arguments));
+        if within(self.params.range, fun_range) {
+            if !labels_are_correct(arguments) {
+                return;
             }
-        } else {
-            ast::visit::visit_typed_expr_call(self, location, type_, fun, arguments);
+
+            match fun {
+                TypedExpr::Invalid { type_, location } => {
+                    return self.try_save_function_to_generate(*location, type_, Some(arguments));
+                }
+                TypedExpr::ModuleSelect {
+                    module_name,
+                    label,
+                    type_,
+                    constructor: ModuleValueConstructor::Fn { name, .. },
+                    ..
+                } if name == "" => {
+                    return self.try_save_function_from_other_module(
+                        module_name,
+                        label,
+                        type_,
+                        Some(arguments),
+                    );
+                }
+                _ => {}
+            }
         }
+
+        ast::visit::visit_typed_expr_call(self, location, type_, fun, arguments);
     }
 }
 

@@ -428,7 +428,10 @@ where
             actions.extend(InterpolateString::new(module, &lines, &params).code_actions());
             actions.extend(ExtractVariable::new(module, &lines, &params).code_actions());
             actions.extend(ExtractConstant::new(module, &lines, &params).code_actions());
-            actions.extend(GenerateFunction::new(module, &lines, &params).code_actions());
+            actions.extend(
+                GenerateFunction::new(module, &this.compiler.modules, &lines, &params)
+                    .code_actions(),
+            );
             actions.extend(
                 GenerateVariant::new(module, &this.compiler, &lines, &params).code_actions(),
             );

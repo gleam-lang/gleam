@@ -271,6 +271,35 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The "Generate function" code action now allows generating function in other
+  modules. For example, given the following code:
+
+  ```gleam
+  // maths.gleam
+  pub fn add(a: Int, b: Int) -> Int { a + b }
+
+  // main.gleam
+  import maths
+
+  pub fn main() -> Int {
+    echo maths.add(1, 2)
+    echo maths.subtract(from: 2, subtract: 1)
+    //         ^ Trigger the "Generate function" code action here
+  }
+  ```
+
+  The language sever will edit the `maths.gleam` file:
+
+  ```gleam
+  pub fn add(a: Int, b: Int) -> Int { a + b }
+
+  pub fn subtract(from from: Int, subtract subtract: Int) -> Int {
+    todo
+  }
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 - The "Add type annotations" and "Generate function" code actions now ignore type
   variables defined in other functions, improving the generated code. For example:
 
