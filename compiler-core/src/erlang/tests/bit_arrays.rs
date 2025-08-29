@@ -318,15 +318,15 @@ pub fn main() {
 #[test]
 fn unicode_character_encoding_in_bit_array_pattern_segment() {
     assert_erl!(
-        "
+        r#"
 pub fn main() -> Nil {
-  let foo = <<\"\\u{00A9}foo\":utf8>>
-  let _bits = case foo {
-    <<\"\\u{00A9}\":utf8, rest: bits>> -> rest
-    _ -> foo
+  let wibble = <<"\u{00A9}wibble":utf8>>
+  let _bits = case wibble {
+    <<"\u{00A9}":utf8, rest: bits>> -> rest
+    _ -> wibble
   }
   Nil
 }
-"
+"#
     );
 }
