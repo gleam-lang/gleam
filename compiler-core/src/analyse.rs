@@ -560,31 +560,35 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             has_javascript_external: external_javascript.is_some(),
         };
 
-        let mut typed_arguments = Vec::with_capacity(arguments.len());
-        for (argument, type_) in arguments.into_iter().zip(&prereg_arguments_types) {
-            let argument = argument.set_type(type_.clone());
-            match &argument.names {
-                ast::ArgNames::Named { .. } | ast::ArgNames::NamedLabelled { .. } => (),
-                ast::ArgNames::Discard { name, location }
-                | ast::ArgNames::LabelledDiscard {
-                    name,
-                    name_location: location,
-                    ..
-                } => {
-                    let _ = environment.discarded_names.insert(name.clone(), *location);
-                }
-            }
-
-            typed_arguments.push(argument);
-        }
-
         // We have already registered the function in the `register_value_from_function`
         // method, but here we must set this as the current function again, so that anything
         // we reference in the body of it can be tracked properly in the call graph.
         environment.references.set_current_node(name.clone());
 
+        let mut typed_arguments = Vec::with_capacity(arguments.len());
+
         // Infer the type using the preregistered args + return types as a starting point
         let result = environment.in_new_scope(&mut self.problems, |environment, problems| {
+            for (argument, type_) in arguments.into_iter().zip(&prereg_arguments_types) {
+                let argument = argument.set_type(type_.clone());
+
+                // We track which arguments are discarded so we can provide nice
+                // error messages when someone
+                match &argument.names {
+                    ast::ArgNames::Named { .. } | ast::ArgNames::NamedLabelled { .. } => (),
+                    ast::ArgNames::Discard { name, location }
+                    | ast::ArgNames::LabelledDiscard {
+                        name,
+                        name_location: location,
+                        ..
+                    } => {
+                        let _ = environment.discarded_names.insert(name.clone(), *location);
+                    }
+                }
+
+                typed_arguments.push(argument);
+            }
+
             let mut expr_typer = ExprTyper::new(environment, definition, problems);
             expr_typer.hydrator = self
                 .hydrators
