@@ -1419,7 +1419,54 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     constructor,
                 }
             }
-            // Module access was attempted but failed and it does not shadow an existing variable
+            // If module access failed because the module exists but that module does not export
+            // the referenced value, we return a `TypedExpr::ModuleSelect` instead of
+            // `TypedExpr::Invalid`, so that we have information about the attempted module select
+            // and can use it, for example, in the "Generate function" code action to support other
+            // modules.
+            (
+                _,
+                Some((
+                    Err(Error::UnknownModuleValue {
+                        name,
+                        module_name,
+                        location,
+                        value_constructors,
+                        type_with_same_name,
+                        context,
+                    }),
+                    false,
+                )),
+            ) => {
+                self.problems.error(Error::UnknownModuleValue {
+                    name: name.clone(),
+                    module_name: module_name.clone(),
+                    location,
+                    value_constructors,
+                    type_with_same_name,
+                    context,
+                });
+                TypedExpr::ModuleSelect {
+                    location,
+                    field_start: label_location.start,
+                    type_: self.new_unbound_var(),
+                    label,
+                    module_alias: module_name.clone(),
+                    module_name: module_name,
+                    constructor: ModuleValueConstructor::Fn {
+                        location,
+                        module: "".into(),
+                        name: "".into(),
+                        external_erlang: None,
+                        external_javascript: None,
+                        field_map: None,
+                        documentation: None,
+                        purity: Purity::Unknown,
+                    },
+                }
+            }
+            // If module access failed for some other reason, and no local variable shadows the
+            // module, we just return an invalid expression.
             (_, Some((Err(module_access_err), false))) => {
                 self.problems.error(module_access_err);
                 TypedExpr::Invalid {

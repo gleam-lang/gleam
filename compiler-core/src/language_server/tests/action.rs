@@ -9544,3 +9544,93 @@ pub fn main() {
         find_position_of("something").to_selection()
     );
 }
+
+#[test]
+fn generate_function_in_other_module() {
+    let src = "
+import wibble
+
+pub fn main() {
+  wibble.wibble()
+  wibble.wobble()
+}
+";
+
+    assert_code_action!(
+        GENERATE_FUNCTION,
+        TestProject::for_source(src).add_module("wibble", "pub fn wibble() {}"),
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn generating_function_in_other_module_uses_local_names() {
+    let src = r#"
+import wibble
+
+pub fn main() -> List(Nil) {
+  wibble.wibble(1, #(True, "Hello"))
+}
+"#;
+
+    assert_code_action!(
+        GENERATE_FUNCTION,
+        TestProject::for_source(src).add_module(
+            "wibble",
+            "import gleam.{type Int as Number, type Bool as Boolean, type String as Text, type Nil as Nothing}"
+        ),
+        find_position_of("wibble(").to_selection()
+    );
+}
+
+#[test]
+fn generating_function_in_other_module_uses_labels() {
+    let src = r#"
+import wibble
+
+pub fn main() {
+  wibble.wibble("Unlabelled", int: 1, bool: True)
+}
+"#;
+
+    assert_code_action!(
+        GENERATE_FUNCTION,
+        TestProject::for_source(src).add_module("wibble", ""),
+        find_position_of("wibble(").to_selection()
+    );
+}
+
+#[test]
+fn no_code_action_to_generate_existing_function_in_other_module() {
+    let src = r#"
+import wibble
+
+pub fn main() {
+  wibble.wibble(1, 2, 3)
+}
+"#;
+
+    assert_no_code_actions!(
+        GENERATE_FUNCTION,
+        TestProject::for_source(src).add_module("wibble", "pub fn wibble(a, b, c) { a + b + c }"),
+        find_position_of("wibble(").to_selection()
+    );
+}
+
+#[test]
+fn do_not_generate_function_in_other_package() {
+    let src = r#"
+import maths
+
+pub fn main() {
+  maths.add(1, 2)
+  maths.subtract(1, 2)
+}
+"#;
+
+    assert_no_code_actions!(
+        GENERATE_FUNCTION,
+        TestProject::for_source(src).add_dep_module("maths", "pub fn add(a, b) { a + b }"),
+        find_position_of("subtract").to_selection()
+    );
+}

@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport wibble\n\npub fn main() -> List(Nil) {\n  wibble.wibble(1, #(True, \"Hello\"))\n}\n"
+---
+----- BEFORE ACTION
+
+import wibble
+
+pub fn main() -> List(Nil) {
+  wibble.wibble(1, #(True, "Hello"))
+         ↑                          
+}
+
+
+----- AFTER ACTION
+// --- Edits applied to module 'wibble'
+import gleam.{type Int as Number, type Bool as Boolean, type String as Text, type Nil as Nothing}
+
+pub fn wibble(int: Number, value: #(Boolean, Text)) -> List(Nothing) {
+  todo
+}

@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport wibble\n\npub fn main() {\n  wibble.wibble(\"Unlabelled\", int: 1, bool: True)\n}\n"
+---
+----- BEFORE ACTION
+
+import wibble
+
+pub fn main() {
+  wibble.wibble("Unlabelled", int: 1, bool: True)
+         ↑                                       
+}
+
+
+----- AFTER ACTION
+// --- Edits applied to module 'wibble'
+
+
+pub fn wibble(string: String, int int: Int, bool bool: Bool) -> a {
+  todo
+}
