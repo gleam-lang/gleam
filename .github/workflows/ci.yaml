@@ -3,6 +3,7 @@ on:
   pull_request:
     paths-ignore:
       - "CHANGELOG.md"
+      - "docs/**"
   push:
     branches:
       - main
