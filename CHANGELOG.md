@@ -147,6 +147,10 @@
   is now smaller in certain cases.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The compiler now emits a warning when a module contains no public definitions
+  and prevents publishing packages with empty modules to Hex.
+  ([Vitor Souza](https://github.com/vit0rr))
+
 ### Build tool
 
 - New projects are generated using OTP28 on GitHub Actions.
