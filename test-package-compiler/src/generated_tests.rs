@@ -69,17 +69,6 @@ fn empty_module_warning() {
 
 #[rustfmt::skip]
 #[test]
-fn empty_module_warning() {
-    let output = crate::prepare("./cases/empty_module_warning");
-    insta::assert_snapshot!(
-        "empty_module_warning",
-        output,
-        "./cases/empty_module_warning",
-    );
-}
-
-#[rustfmt::skip]
-#[test]
 fn erlang_app_generation() {
     let output = crate::prepare("./cases/erlang_app_generation");
     insta::assert_snapshot!(
