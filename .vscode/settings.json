@@ -29,19 +29,5 @@
     "Untar",
     "walkdir"
   ],
-  "cSpell.language": "en,uk,en-GB,en-US",
-  "files.exclude": {
-    "**/*.vo": true,
-    "**/*.vok": true,
-    "**/*.vos": true,
-    "**/*.aux": true,
-    "**/*.glob": true,
-    "**/.git": true,
-    "**/.svn": true,
-    "**/.hg": true,
-    "**/.DS_Store": true,
-    "**/Thumbs.db": true,
-    "**/CVS": true,
-    "**/.ruby-lsp": true
-  }
+  "cSpell.language": "en,uk,en-GB,en-US"
 }
