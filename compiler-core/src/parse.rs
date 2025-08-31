@@ -1625,16 +1625,16 @@ where
         let Some((start, end)) = self.maybe_one(&Token::If) else {
             return Ok(None);
         };
-        let guard_clause_result = self.parse_clause_guard_inner();
-        // if inner clause is none, a warning should be thrown to prevent that this behaviour
-        // is deprecated
-        if let Ok(None) = guard_clause_result {
+        let clause_guard_result = self.parse_clause_guard_inner();
+        // If inner clause is none, a warning should be shown to let the user
+        // know that empty clauses in guards are deprecated.
+        if let Ok(None) = clause_guard_result {
             self.warnings
-                .push(DeprecatedSyntaxWarning::DeprecatedEmptyGuardClause {
+                .push(DeprecatedSyntaxWarning::DeprecatedEmptyClauseGuard {
                     location: SrcSpan { start, end },
                 });
         }
-        guard_clause_result
+        clause_guard_result
     }
 
     fn parse_clause_guard_inner(&mut self) -> Result<Option<UntypedClauseGuard>, ParseError> {
