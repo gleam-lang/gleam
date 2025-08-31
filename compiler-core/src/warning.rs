@@ -246,10 +246,10 @@ pub enum DeprecatedSyntaxWarning {
     /// ```gleam
     /// case wibble {
     ///     big if -> True
-    ///         ^^ this should be followed by a guard or removed!!
+    ///         ^^ This can be removed.
     /// }
     /// ```
-    DeprecatedEmptyGuardClause {
+    DeprecatedEmptyClauseGuard {
         location: SrcSpan,
     },
 
@@ -369,19 +369,20 @@ To match on all possible lists, use the `_` catch-all pattern instead.",
             Warning::DeprecatedSyntax {
                 path,
                 src,
-                warning: DeprecatedSyntaxWarning::DeprecatedEmptyGuardClause { location },
+                warning: DeprecatedSyntaxWarning::DeprecatedEmptyClauseGuard { location },
             } => Diagnostic {
-                title: "Deprecated empty guard clause syntax".into(),
+                title: "Deprecated empty guard syntax".into(),
                 text: wrap(
-                    "Empty clause within a guard is deprecated.
-To keep its behaviour, either remove the guard or fill the clause with `True` instead.",
+                    "This syntax for an empty guard is deprecated. \
+To have a clause without a guard, remove this.",
                 ),
                 hint: None,
                 level: diagnostic::Level::Warning,
                 location: Some(Location {
                     label: diagnostic::Label {
-                        text: Some("This should be followed by a guard or removed!!
-".into()),
+                        text: Some(
+                            "This can be removed.".into(),
+                        ),
                         span: *location,
                     },
                     path: path.clone(),

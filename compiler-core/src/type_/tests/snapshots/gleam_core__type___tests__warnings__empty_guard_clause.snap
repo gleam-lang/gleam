@@ -14,13 +14,11 @@ pub fn main() {
 }
 
 ----- WARNING
-warning: Deprecated empty guard clause syntax
+warning: Deprecated empty guard syntax
   ┌─ test/path:5:12
   │
 5 │         10 if -> True
-  │            ^^ This should be followed by a guard or removed!!
+  │            ^^ This can be removed.
 
-
-Empty clause within a guard is deprecated.
-To keep its behaviour, either remove the guard or fill the clause with
-`True` instead.
+This syntax for an empty guard is deprecated. To have a clause without a
+guard, remove this.
