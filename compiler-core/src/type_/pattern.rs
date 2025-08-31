@@ -11,8 +11,8 @@ use super::*;
 use crate::{
     analyse::{self, Inferred, name::check_name_case},
     ast::{
-        AssignName, BitArrayOption, BitArraySize, ImplicitCallArgOrigin, Layer, TypedBitArraySize,
-        UntypedPatternBitArraySegment,
+        AssignName, BitArrayOption, BitArraySize, ImplicitCallArgOrigin, Layer, Pattern,
+        TypedBitArraySize, UntypedPatternBitArraySegment,
     },
     parse::PatternPosition,
     reference::ReferenceKind,
@@ -911,78 +911,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                     self.error_encountered = true;
                                 };
                             }
-
-                            // Insert discard variables to match the unspecified fields
-                            // In order to support both positional and labelled arguments we have to insert
-                            // them after all positional variables and before the labelled ones. This means
-                            // we have calculate that index and then insert() the discards. It would be faster
-                            // if we could put the discards anywhere which would let us use push().
-                            // Potential future optimisation.
-                            let index_of_first_labelled_arg = pattern_arguments
-                                .iter()
-                                .position(|argument| argument.label.is_some())
-                                .unwrap_or(pattern_arguments.len());
-
-                            // In Gleam we can pass in positional unlabelled args to a constructor
-                            // even if the field was defined as labelled
-                            //
-                            //     pub type Wibble {
-                            //       Wibble(Int, two: Int, three: Int, four: Int)
-                            //     }
-                            //     Wibble(1, 2, 3, 4)
-                            //
-                            // When using `..` to ignore some fields the compiler needs to add a
-                            // placeholder implicit discard pattern for each one of the ignored
-                            // arguments. To give those discards the proper missing label we need to
-                            // know how many of the labelled fields were provided as unlabelled.
-                            //
-                            // That's why we want to keep track of the number of unlabelled argument
-                            // that have been supplied to the pattern and all the labels that have
-                            // been explicitly supplied.
-                            //
-                            //     Wibble(a, b, four: c, ..)
-                            //            ┬───  ┬──────
-                            //            │     ╰ We supplied 1 labelled arg
-                            //            ╰ We supplied 2 unlabelled args
-                            //
-                            let supplied_unlabelled_arguments = index_of_first_labelled_arg;
-                            let supplied_labelled_arguments = pattern_arguments
-                                .iter()
-                                .filter_map(|argument| argument.label.clone())
-                                .collect::<HashSet<_>>();
-                            let constructor_unlabelled_arguments =
-                                field_map.arity - field_map.fields.len() as u32;
-                            let labelled_arguments_supplied_as_unlabelled =
-                                supplied_unlabelled_arguments
-                                    .saturating_sub(constructor_unlabelled_arguments as usize);
-
-                            let mut missing_labels = field_map
-                                .fields
-                                .iter()
-                                // We take the labels in order of definition in the constructor...
-                                .sorted_by_key(|(_, position)| *position)
-                                .map(|(label, _)| label.clone())
-                                // ...and then remove the ones that were supplied as unlabelled
-                                // positional arguments...
-                                .skip(labelled_arguments_supplied_as_unlabelled)
-                                // ... lastly we still need to remove all those labels that
-                                // were explicitly supplied in the pattern.
-                                .filter(|label| !supplied_labelled_arguments.contains(label));
-
-                            while pattern_arguments.len() < field_map.arity as usize {
-                                let new_call_arg = CallArg {
-                                    value: Pattern::Discard {
-                                        name: "_".into(),
-                                        location: spread_location,
-                                        type_: (),
-                                    },
-                                    location: spread_location,
-                                    label: missing_labels.next(),
-                                    implicit: Some(ImplicitCallArgOrigin::PatternFieldSpread),
-                                };
-
-                                pattern_arguments.insert(index_of_first_labelled_arg, new_call_arg);
-                            }
+                            insert_spread_call_arguments(
+                                &mut pattern_arguments,
+                                field_map,
+                                spread_location,
+                            );
                         }
 
                         if let Err(error) = field_map.reorder(
@@ -993,6 +926,13 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             incorrect_arity_error = true;
                             self.problems.error(error);
                             self.error_encountered = true;
+                            // Since we reported the arity error now, we can pretend
+                            // that `..` is now added, so other errors will not be affected.
+                            insert_spread_call_arguments(
+                                &mut pattern_arguments,
+                                field_map,
+                                name_location,
+                            );
                         }
                     }
 
@@ -1115,7 +1055,6 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
                         let pattern_arguments =
                             self.infer_pattern_call_arguments(pattern_arguments, arguments);
-
                         Pattern::Constructor {
                             location,
                             name_location,
@@ -1379,5 +1318,82 @@ fn unify_constructor_variants(into: &mut Type, from: &Type) {
         // If the variants are the same, or they aren't both named types,
         // no modifications are needed
         _ => {}
+    }
+}
+
+/// Inserts needed discard variables to Constructor::Pattern, when `spread` is used.
+fn insert_spread_call_arguments(
+    pattern_arguments: &mut Vec<CallArg<Pattern<()>>>,
+    field_map: &FieldMap,
+    location: SrcSpan,
+) {
+    // Insert discard variables to match the unspecified fields
+    // In order to support both positional and labelled arguments we have to insert
+    // them after all positional variables and before the labelled ones. This means
+    // we have calculate that index and then insert() the discards. It would be faster
+    // if we could put the discards anywhere which would let us use push().
+    // Potential future optimisation.
+    let index_of_first_labelled_arg = pattern_arguments
+        .iter()
+        .position(|argument| argument.label.is_some())
+        .unwrap_or(pattern_arguments.len());
+
+    // In Gleam we can pass in positional unlabelled args to a constructor
+    // even if the field was defined as labelled
+    //
+    //     pub type Wibble {
+    //       Wibble(Int, two: Int, three: Int, four: Int)
+    //     }
+    //     Wibble(1, 2, 3, 4)
+    //
+    // When using `..` to ignore some fields the compiler needs to add a
+    // placeholder implicit discard pattern for each one of the ignored
+    // arguments. To give those discards the proper missing label we need to
+    // know how many of the labelled fields were provided as unlabelled.
+    //
+    // That's why we want to keep track of the number of unlabelled argument
+    // that have been supplied to the pattern and all the labels that have
+    // been explicitly supplied.
+    //
+    //     Wibble(a, b, four: c, ..)
+    //            ┬───  ┬──────
+    //            │     ╰ We supplied 1 labelled arg
+    //            ╰ We supplied 2 unlabelled args
+    //
+    let supplied_unlabelled_arguments = index_of_first_labelled_arg;
+    let supplied_labelled_arguments = pattern_arguments
+        .iter()
+        .filter_map(|argument| argument.label.clone())
+        .collect::<HashSet<_>>();
+    let constructor_unlabelled_arguments = field_map.arity - field_map.fields.len() as u32;
+    let labelled_arguments_supplied_as_unlabelled =
+        supplied_unlabelled_arguments.saturating_sub(constructor_unlabelled_arguments as usize);
+
+    let mut missing_labels = field_map
+        .fields
+        .iter()
+        // We take the labels in order of definition in the constructor...
+        .sorted_by_key(|(_, position)| *position)
+        .map(|(label, _)| label.clone())
+        // ...and then remove the ones that were supplied as unlabelled
+        // positional arguments...
+        .skip(labelled_arguments_supplied_as_unlabelled)
+        // ... lastly we still need to remove all those labels that
+        // were explicitly supplied in the pattern.
+        .filter(|label| !supplied_labelled_arguments.contains(label));
+
+    while pattern_arguments.len() < field_map.arity as usize {
+        let new_call_arg = CallArg {
+            value: Pattern::Discard {
+                name: "_".into(),
+                location,
+                type_: (),
+            },
+            location,
+            label: missing_labels.next(),
+            implicit: Some(ImplicitCallArgOrigin::PatternFieldSpread),
+        };
+
+        pattern_arguments.insert(index_of_first_labelled_arg, new_call_arg);
     }
 }
