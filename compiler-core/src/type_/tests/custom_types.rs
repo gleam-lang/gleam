@@ -201,3 +201,22 @@ fn handle_fish(fish: Fish) {
 "#
     );
 }
+
+#[test]
+fn pattern_match_correct_pos_field() {
+    assert_module_error!(
+        r#"
+type Fish {
+  Starfish()
+  Jellyfish(String, Bool)
+}
+
+fn handle_fish(fish: Fish) {
+  case fish {
+    Starfish() -> False
+    Jellyfish(jiggly) -> jiggly
+  }
+}
+"#
+    );
+}
