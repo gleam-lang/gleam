@@ -166,6 +166,10 @@
 
   ([Aaron Christiansen](https://github.com/AaronC81))
 
+- Fault tolerance for analysis of labeled fields in constructor patterns has
+  been improved.
+  ([sobolevn](https://github.com/sobolevn))
+
 ### Build tool
 
 - New projects are generated using OTP28 on GitHub Actions.
