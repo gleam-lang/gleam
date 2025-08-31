@@ -1622,11 +1622,19 @@ where
     //   if a < b
     //   if a < b || b < c
     fn parse_case_clause_guard(&mut self) -> Result<Option<UntypedClauseGuard>, ParseError> {
-        if self.maybe_one(&Token::If).is_some() {
-            self.parse_clause_guard_inner()
-        } else {
-            Ok(None)
+        let Some((start, end)) = self.maybe_one(&Token::If) else {
+            return Ok(None);
+        };
+        let guard_clause_result = self.parse_clause_guard_inner();
+        // if inner clause is none, a warning should be thrown to prevent that this behaviour
+        // is deprecated
+        if let Ok(None) = guard_clause_result {
+            self.warnings
+                .push(DeprecatedSyntaxWarning::DeprecatedEmptyGuardClause {
+                    location: SrcSpan { start, end },
+                });
         }
+        guard_clause_result
     }
 
     fn parse_clause_guard_inner(&mut self) -> Result<Option<UntypedClauseGuard>, ParseError> {

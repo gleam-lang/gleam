@@ -4314,3 +4314,18 @@ pub fn wibble() { x }
 "
     );
 }
+
+#[test]
+fn empty_guard_clause() {
+    assert_warning!(
+        "
+pub fn main() {
+    let wibble = 10
+    case wibble {
+        10 if -> True
+        _ -> False
+    }
+
+}"
+    );
+}
