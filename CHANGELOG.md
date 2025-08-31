@@ -170,6 +170,30 @@
   been improved.
   ([sobolevn](https://github.com/sobolevn))
 
+- Compiler now adds a hint when `#`-styled comments are used. This code:
+
+  ```gleam
+  fn some() {
+    let a = 1
+    # let b = 2
+  }
+  ```
+
+  Now produces:
+
+  ```txt
+  error: Syntax error
+    ┌─ /src/main.gleam:3:5
+    │
+  3 │   # let b = 2
+    │     ^^^ I was not expecting this
+
+  Found the keyword `let`, expected one of:
+  - `(`
+  Hint: Maybe you meant to create a comment? Comments in Gleam start with `//`,not
+  `#`
+  ```
+
 ### Build tool
 
 - New projects are generated using OTP28 on GitHub Actions.

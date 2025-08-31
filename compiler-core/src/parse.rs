@@ -590,7 +590,9 @@ where
 
             Some((start, Token::Hash, _)) => {
                 self.advance();
-                let _ = self.expect_one(&Token::LeftParen)?;
+                let _ = self
+                    .expect_one(&Token::LeftParen)
+                    .map_err(|e| self.add_comment_style_hint(e))?;
                 let elements =
                     Parser::series_of(self, &Parser::parse_expression, Some(&Token::Comma))?;
                 let (_, end) =
@@ -980,6 +982,16 @@ where
         }
 
         Ok(Some(expr))
+    }
+
+    fn add_comment_style_hint(&self, mut err: ParseError) -> ParseError {
+        if let ParseErrorType::UnexpectedToken { ref mut hint, .. } = err.error {
+            *hint = Some(
+                "Maybe you meant to create a comment? Comments in Gleam start with `//`, not `#`"
+                    .into(),
+            );
+        }
+        err
     }
 
     // A `use` expression
