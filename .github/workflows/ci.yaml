@@ -124,7 +124,7 @@ jobs:
           key: v1-${{ matrix.target }}
 
       - name: Install Gleam
-        uses: clechasseur/rs-cargo@v3
+        uses: clechasseur/rs-cargo@v4
         with:
           command: install
           args: "--path gleam-bin --target ${{ matrix.target }} --debug --locked --force"
@@ -149,7 +149,7 @@ jobs:
         if: ${{ matrix.run-integration-tests }}
 
       - name: Run tests
-        uses: clechasseur/rs-cargo@v3
+        uses: clechasseur/rs-cargo@v4
         with:
           command: test
           # We only want to run the `test-output` when running integration tests.
