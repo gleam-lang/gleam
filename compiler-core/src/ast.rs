@@ -6,7 +6,7 @@ mod untyped;
 mod tests;
 pub mod visit;
 
-pub use self::typed::TypedExpr;
+pub use self::typed::{InvalidExpression, TypedExpr};
 pub use self::untyped::{FunctionLiteralKind, UntypedExpr};
 
 pub use self::constant::{Constant, TypedConstant, UntypedConstant};

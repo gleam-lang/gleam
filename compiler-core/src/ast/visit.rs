@@ -40,7 +40,7 @@
 
 use crate::{
     analyse::Inferred,
-    ast::{BitArraySize, TypedBitArraySize},
+    ast::{BitArraySize, TypedBitArraySize, typed::InvalidExpression},
     exhaustiveness::CompiledCase,
     type_::{
         ModuleValueConstructor, PatternConstructor, TypedCallArg, ValueConstructor,
@@ -335,8 +335,13 @@ pub trait Visit<'ast> {
         visit_typed_expr_negate_int(self, location, value)
     }
 
-    fn visit_typed_expr_invalid(&mut self, location: &'ast SrcSpan, type_: &'ast Arc<Type>) {
-        visit_typed_expr_invalid(self, location, type_);
+    fn visit_typed_expr_invalid(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        extra_information: &'ast Option<InvalidExpression>,
+    ) {
+        visit_typed_expr_invalid(self, location, type_, extra_information);
     }
 
     fn visit_typed_statement(&mut self, stmt: &'ast TypedStatement) {
@@ -903,7 +908,11 @@ where
             v.visit_typed_expr_negate_bool(location, value)
         }
         TypedExpr::NegateInt { location, value } => v.visit_typed_expr_negate_int(location, value),
-        TypedExpr::Invalid { location, type_ } => v.visit_typed_expr_invalid(location, type_),
+        TypedExpr::Invalid {
+            location,
+            type_,
+            extra_information,
+        } => v.visit_typed_expr_invalid(location, type_, extra_information),
         TypedExpr::Echo {
             location,
             expression,
@@ -1843,8 +1852,12 @@ where
 {
 }
 
-pub fn visit_typed_expr_invalid<'a, V>(_v: &mut V, _location: &'a SrcSpan, _type_: &'a Arc<Type>)
-where
+pub fn visit_typed_expr_invalid<'a, V>(
+    _v: &mut V,
+    _location: &'a SrcSpan,
+    _type_: &'a Arc<Type>,
+    _extra_information: &'a Option<InvalidExpression>,
+) where
     V: Visit<'a> + ?Sized,
 {
 }

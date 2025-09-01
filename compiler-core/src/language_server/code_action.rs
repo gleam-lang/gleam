@@ -4,11 +4,11 @@ use crate::{
     Error, STDLIB_PACKAGE_NAME, analyse,
     ast::{
         self, ArgNames, AssignName, AssignmentKind, BitArraySegmentTruncation, BoundVariable,
-        CallArg, CustomType, FunctionLiteralKind, ImplicitCallArgOrigin, Import, PIPE_PRECEDENCE,
-        Pattern, PatternUnusedArguments, PipelineAssignmentKind, Publicity, RecordConstructor,
-        SrcSpan, TodoKind, TypedArg, TypedAssignment, TypedClauseGuard, TypedExpr,
-        TypedModuleConstant, TypedPattern, TypedPipelineAssignment, TypedRecordConstructor,
-        TypedStatement, TypedUse, visit::Visit as _,
+        CallArg, CustomType, FunctionLiteralKind, ImplicitCallArgOrigin, Import, InvalidExpression,
+        PIPE_PRECEDENCE, Pattern, PatternUnusedArguments, PipelineAssignmentKind, Publicity,
+        RecordConstructor, SrcSpan, TodoKind, TypedArg, TypedAssignment, TypedClauseGuard,
+        TypedExpr, TypedModuleConstant, TypedPattern, TypedPipelineAssignment,
+        TypedRecordConstructor, TypedStatement, TypedUse, visit::Visit as _,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -3006,7 +3006,12 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
 
     // We don't want to offer the action if the cursor is over some invalid
     // piece of code.
-    fn visit_typed_expr_invalid(&mut self, location: &'ast SrcSpan, _type_: &'ast Arc<Type>) {
+    fn visit_typed_expr_invalid(
+        &mut self,
+        location: &'ast SrcSpan,
+        _type_: &'ast Arc<Type>,
+        _extra_information: &'ast Option<InvalidExpression>,
+    ) {
         let invalid_range = self.edits.src_span_to_lsp_range(*location);
         if within(self.params.range, invalid_range) {
             self.selected_expression = None;
@@ -5121,34 +5126,23 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
         ast::visit::visit_typed_function(self, fun);
     }
 
-    fn visit_typed_expr_invalid(&mut self, location: &'ast SrcSpan, type_: &'ast Arc<Type>) {
+    fn visit_typed_expr_invalid(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        extra_information: &'ast Option<InvalidExpression>,
+    ) {
         let invalid_range = self.edits.src_span_to_lsp_range(*location);
         if within(self.params.range, invalid_range) {
-            self.try_save_function_to_generate(*location, type_, None);
-        }
-
-        ast::visit::visit_typed_expr_invalid(self, location, type_);
-    }
-
-    fn visit_typed_expr_module_select(
-        &mut self,
-        _location: &'ast SrcSpan,
-        _field_start: &'ast u32,
-        type_: &'ast Arc<Type>,
-        label: &'ast EcoString,
-        module_name: &'ast EcoString,
-        _module_alias: &'ast EcoString,
-        constructor: &'ast ModuleValueConstructor,
-    ) {
-        match constructor {
-            // Invalid module selects leave the `name` field blank
-            ModuleValueConstructor::Fn { name, .. } if name.is_empty() => {
-                self.try_save_function_from_other_module(module_name, label, type_, None);
+            match extra_information {
+                Some(InvalidExpression::ModuleSelect { module_name, label }) => {
+                    self.try_save_function_from_other_module(module_name, label, type_, None)
+                }
+                None => self.try_save_function_to_generate(*location, type_, None),
             }
-            ModuleValueConstructor::Fn { .. }
-            | ModuleValueConstructor::Record { .. }
-            | ModuleValueConstructor::Constant { .. } => {}
         }
+
+        ast::visit::visit_typed_expr_invalid(self, location, type_, extra_information);
     }
 
     fn visit_typed_expr_call(
@@ -5168,22 +5162,24 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
             }
 
             match fun {
-                TypedExpr::Invalid { type_, location } => {
-                    return self.try_save_function_to_generate(*location, type_, Some(arguments));
-                }
-                TypedExpr::ModuleSelect {
-                    module_name,
-                    label,
+                TypedExpr::Invalid {
                     type_,
-                    constructor: ModuleValueConstructor::Fn { name, .. },
-                    ..
-                } if name.is_empty() => {
+                    extra_information: Some(InvalidExpression::ModuleSelect { module_name, label }),
+                    location: _,
+                } => {
                     return self.try_save_function_from_other_module(
                         module_name,
                         label,
                         type_,
                         Some(arguments),
                     );
+                }
+                TypedExpr::Invalid {
+                    type_,
+                    location,
+                    extra_information: _,
+                } => {
+                    return self.try_save_function_to_generate(*location, type_, Some(arguments));
                 }
                 _ => {}
             }
@@ -5494,12 +5490,17 @@ impl<'ast, IO> ast::visit::Visit<'ast> for GenerateVariant<'ast, IO>
 where
     IO: FileSystemReader + FileSystemWriter + BeamCompiler + CommandExecutor + Clone,
 {
-    fn visit_typed_expr_invalid(&mut self, location: &'ast SrcSpan, type_: &'ast Arc<Type>) {
+    fn visit_typed_expr_invalid(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        extra_information: &'ast Option<InvalidExpression>,
+    ) {
         let invalid_range = src_span_to_lsp_range(*location, self.line_numbers);
         if within(self.params.range, invalid_range) {
             self.try_save_variant_to_generate(*location, type_, None);
         }
-        ast::visit::visit_typed_expr_invalid(self, location, type_);
+        ast::visit::visit_typed_expr_invalid(self, location, type_, extra_information);
     }
 
     fn visit_typed_expr_call(
