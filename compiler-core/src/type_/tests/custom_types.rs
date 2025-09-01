@@ -182,3 +182,41 @@ pub fn main() {
         ]
     );
 }
+
+#[test]
+fn pattern_match_correct_labeled_field() {
+    assert_module_error!(
+        r#"
+type Fish {
+  Starfish()
+  Jellyfish(name: String, jiggly: Bool)
+}
+
+fn handle_fish(fish: Fish) {
+  case fish {
+    Starfish() -> False
+    Jellyfish(jiggly:) -> jiggly  // <- error is here
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn pattern_match_correct_pos_field() {
+    assert_module_error!(
+        r#"
+type Fish {
+  Starfish()
+  Jellyfish(String, Bool)
+}
+
+fn handle_fish(fish: Fish) {
+  case fish {
+    Starfish() -> False
+    Jellyfish(jiggly) -> jiggly
+  }
+}
+"#
+    );
+}

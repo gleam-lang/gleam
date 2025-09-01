@@ -379,3 +379,7 @@
 - Fixed a bug where the compiler would suggest to use a discarded value defined
   in a different function.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the compiler was incorrectly inferring labeled
+  fields in constructor patterns.
+  ([sobolevn](https://github.com/sobolevn))

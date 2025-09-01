@@ -886,7 +886,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             location,
                             name_location,
                             name,
-                            arguments: self.infer_pattern_call_arguments(pattern_arguments, &[]),
+                            arguments: self.infer_pattern_call_arguments(
+                                pattern_arguments,
+                                &[],
+                                None,
+                            ),
                             module,
                             constructor: Inferred::Unknown,
                             spread,
@@ -1028,6 +1032,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
                 let constructor_type = constructor.type_.clone();
                 let constructor_deprecation = constructor.deprecation.clone();
+                let constructor_field_map = constructor.field_map().cloned();
                 let pattern_constructor = match &constructor.variant {
                     ValueConstructorVariant::Record {
                         name,
@@ -1113,8 +1118,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             });
                         }
 
-                        let pattern_arguments =
-                            self.infer_pattern_call_arguments(pattern_arguments, arguments);
+                        let pattern_arguments = self.infer_pattern_call_arguments(
+                            pattern_arguments,
+                            arguments,
+                            constructor_field_map,
+                        );
 
                         Pattern::Constructor {
                             location,
@@ -1170,13 +1178,22 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         &mut self,
         pattern_arguments: Vec<CallArg<UntypedPattern>>,
         expected_types: &[Arc<Type>],
+        field_map: Option<FieldMap>,
     ) -> Vec<CallArg<TypedPattern>> {
         pattern_arguments
             .into_iter()
             .enumerate()
             .map(|(index, arg)| {
+                let mut index = index;
                 if !arg.is_implicit() && arg.uses_label_shorthand() {
                     self.track_feature_usage(FeatureKind::LabelShorthandSyntax, arg.location);
+
+                    if let Some(field_map) = &field_map
+                        && let Some(label) = &arg.label
+                        && let Some(field) = field_map.fields.get(label)
+                    {
+                        index = *field as usize
+                    }
                 }
 
                 let CallArg {
