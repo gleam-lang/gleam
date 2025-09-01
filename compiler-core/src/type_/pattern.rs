@@ -1190,8 +1190,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
                     if let Some(field_map) = &field_map
                         && let Some(label) = &arg.label
+                        && let Some(field) = field_map.fields.get(label)
                     {
-                        index = *field_map.fields.get(label).expect("Field already exists") as usize
+                        index = *field as usize
                     }
                 }
 
