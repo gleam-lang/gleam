@@ -188,6 +188,10 @@ pub enum TypedExpr {
     Invalid {
         location: SrcSpan,
         type_: Arc<Type>,
+        /// Extra information about the invalid expression, useful for providing
+        /// addition help or information, such as code actions to fix invalid
+        /// states.
+        extra_information: Option<InvalidExpression>,
     },
 }
 
@@ -1161,4 +1165,12 @@ impl bit_array::GetLiteralValue for TypedExpr {
             None
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum InvalidExpression {
+    ModuleSelect {
+        module_name: EcoString,
+        label: EcoString,
+    },
 }

@@ -628,6 +628,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                         start: body_location.end,
                         end: body_location.end,
                     },
+                    extra_information: None,
                 }));
                 let implementations = Implementations::supporting_all();
                 (

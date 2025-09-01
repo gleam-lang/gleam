@@ -63,6 +63,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 TypedExpr::Invalid {
                     location: first_location,
                     type_: expr_typer.new_unbound_var(),
+                    extra_information: None,
                 }
             }
         };
@@ -149,6 +150,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                             TypedExpr::Invalid {
                                 location,
                                 type_: self.expr_typer.new_unbound_var(),
+                                extra_information: None,
                             }
                         }
                     };
@@ -359,6 +361,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 TypedExpr::Invalid {
                     location: function_location,
                     type_: self.expr_typer.new_unbound_var(),
+                    extra_information: None,
                 }
             }
         });
