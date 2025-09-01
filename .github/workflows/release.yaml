@@ -60,7 +60,7 @@ jobs:
             cargo-tool: wasm-pack
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: "Build Archive"
         id: build
@@ -83,7 +83,7 @@ jobs:
     needs: ['build-release']
 
     runs-on: ubuntu-latest
-    
+
     environment: release
 
     permissions:
