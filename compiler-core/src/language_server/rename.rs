@@ -235,6 +235,7 @@ pub fn rename_module_alias(
     line_numbers: &LineNumbers,
     params: &RenameParams,
     module_name: &EcoString,
+    module_alias: &EcoString,
 ) -> Option<WorkspaceEdit> {
     if name::check_name_case(
         SrcSpan::default(),
@@ -249,24 +250,24 @@ pub fn rename_module_alias(
     let uri = params.text_document_position.text_document.uri.clone();
     let mut edits = TextEdits::new(line_numbers);
 
-    let references = find_module_name_references(&current_module.ast, module_name);
-
     let original = module_name.split('/').next_back()?;
+    let references = find_module_name_references(&current_module.ast, module_name, module_alias);
+
 
     for reference in references {
         match reference.kind {
             ModuleNameReferenceKind::Import => {
                 edits.insert(reference.location.end, format!(" as {}", &params.new_name))
             }
-            // If new name is same as original, remove the alias
-            ModuleNameReferenceKind::AliasedImport if params.new_name == original => {
-                // subtract 1 from start to delete leading space added above
-                edits.delete(SrcSpan::new(reference.location.start-1, reference.location.end))
-            }
             ModuleNameReferenceKind::AliasedImport => {
-                edits.replace(reference.location, format!("as {}", &params.new_name))
+                if params.new_name == original {
+                    // Subtract 1 from start to remove the leading space added in the import match
+                    edits.delete(SrcSpan::new(reference.location.start-1, reference.location.end));
+                } else {
+                    edits.replace(reference.location, format!("as {}", &params.new_name))
+                }
             }
-            ModuleNameReferenceKind::Name => {
+            ModuleNameReferenceKind::ModuleSelect => {
                 edits.replace(reference.location, params.new_name.to_string())
             }
         }

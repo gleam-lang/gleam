@@ -453,15 +453,16 @@ impl TypeAst {
                         return Some(arg);
                     }
 
-                    if let Some((_, location)) = module {
+                    if let Some((module_alias, location)) = module {
                         if location.contains(byte_index) {
                             return Some(Located::ModuleName {
                                 location: *location,
-                                name: module_name,
+                                module_name,
+                                module_alias: module_alias.clone(),
                                 layer: Layer::Type,
                             })
                         }
-                    };
+                    }
 
                     None
                 })
@@ -737,17 +738,6 @@ impl<T> Import<T> {
             Some((AssignName::Variable(name), _)) => Some(name.clone()),
             Some((AssignName::Discard(_), _)) => None,
             None => self.module.split('/').next_back().map(EcoString::from),
-        }
-    }
-
-    pub(crate) fn name_location(&self) -> SrcSpan {
-        match self.as_name.as_ref() {
-            // the location includes "as " so subtract name length from end to only get the alias
-            Some((AssignName::Variable(name) | AssignName::Discard(name), location)) => SrcSpan {
-                start: location.end - (name.len() as u32),
-                end: location.end
-            },
-            None => self.module_location,
         }
     }
 
@@ -1932,10 +1922,12 @@ impl TypedClauseGuard {
             ClauseGuard::ModuleSelect {
                 location,
                 module_name,
+                module_alias,
                 ..
             } => Some(Located::ModuleName {
                 location: *location,
-                name: module_name.clone(),
+                module_name: module_name.clone(),
+                module_alias: module_alias.clone(),
                 layer: Layer::Value,
             }),
             ClauseGuard::Var { .. } => None,
@@ -2310,13 +2302,14 @@ impl TypedPattern {
                         pattern: self,
                     })
                 }
-                _ => {
-                    if let Some((_, module_location)) = module {
+                None | Some(_) => {
+                    if let Some((module_alias, module_location)) = module {
                         if module_location.contains(byte_index) {
                             if let Inferred::Known(constructor) = constructor {
                                 return Some(Located::ModuleName {
                                     location: *module_location,
-                                    name: constructor.module.clone(),
+                                    module_name: constructor.module.clone(),
+                                    module_alias: module_alias.clone(),
                                     layer: Layer::Value,
                                 });
                             }

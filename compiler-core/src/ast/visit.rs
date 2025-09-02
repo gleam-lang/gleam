@@ -620,8 +620,18 @@ pub fn visit_typed_function<'a, V>(v: &mut V, fun: &'a TypedFunction)
 where
     V: Visit<'a> + ?Sized,
 {
+    for argument in &fun.arguments {
+        if let Some(annotation) = &argument.annotation {
+            v.visit_type_ast(annotation);
+        }
+    }
+
     for stmt in &fun.body {
         v.visit_typed_statement(stmt);
+    }
+
+    if let Some(annotation) = &fun.return_annotation {
+        v.visit_type_ast(annotation);
     }
 }
 
@@ -714,6 +724,10 @@ pub fn visit_typed_module_constant<'a, V>(v: &mut V, constant: &'a TypedModuleCo
 where
     V: Visit<'a> + ?Sized,
 {
+    if let Some(annotation) = &constant.annotation {
+        v.visit_type_ast(annotation);
+    }
+
     v.visit_typed_constant(&constant.value);
 }
 
@@ -775,10 +789,11 @@ where
     }
 }
 
-pub fn visit_typed_type_alias<'a, V>(_v: &mut V, _type_alias: &'a TypedTypeAlias)
+pub fn visit_typed_type_alias<'a, V>(v: &mut V, type_alias: &'a TypedTypeAlias)
 where
     V: Visit<'a> + ?Sized,
 {
+    v.visit_type_ast(&type_alias.type_ast);
 }
 
 pub fn visit_typed_import<'a, V>(_v: &mut V, _import: &'a TypedImport)
@@ -1017,14 +1032,24 @@ pub fn visit_typed_expr_fn<'a, V>(
     _location: &'a SrcSpan,
     _type_: &'a Arc<Type>,
     _kind: &'a FunctionLiteralKind,
-    _args: &'a [TypedArg],
+    args: &'a [TypedArg],
     body: &'a Vec1<TypedStatement>,
-    _return_annotation: &'a Option<TypeAst>,
+    return_annotation: &'a Option<TypeAst>,
 ) where
     V: Visit<'a> + ?Sized,
 {
+    for argument in args.iter() {
+        if let Some(annotation) = &argument.annotation {
+            v.visit_type_ast(annotation);
+        }
+    }
+
     for stmt in body {
         v.visit_typed_statement(stmt);
+    }
+
+    if let Some(annotation) = &return_annotation {
+        v.visit_type_ast(annotation);
     }
 }
 
@@ -1254,6 +1279,9 @@ where
 {
     v.visit_typed_expr(&assignment.value);
     v.visit_typed_pattern(&assignment.pattern);
+    if let Some(annotation) = &assignment.annotation {
+        v.visit_type_ast(annotation);
+    }
 }
 
 pub fn visit_typed_use<'a, V>(v: &mut V, use_: &'a TypedUse)

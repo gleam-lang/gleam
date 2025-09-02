@@ -100,12 +100,12 @@ impl TypedConstant {
             | Constant::Invalid { .. } => Located::Constant(self),
 
             Constant::Var {
-                module: Some((_, location)),
+                module: Some((module_alias, location)),
                 constructor: Some(constructor),
                 ..
             }
             | Constant::Record {
-                module: Some((_, location)),
+                module: Some((module_alias, location)),
                 record_constructor: Some(constructor),
                 ..
             } if location.contains(byte_index) => {
@@ -115,7 +115,8 @@ impl TypedConstant {
                     | type_::ValueConstructorVariant::Record { module, .. } => {
                         Located::ModuleName {
                             location: *location,
-                            name: module.clone(),
+                            module_name: module.clone(),
+                            module_alias: module_alias.clone(),
                             layer: Layer::Value,
                         }
                     }

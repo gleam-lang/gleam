@@ -342,7 +342,7 @@ where
                 // we should try to provide completions for unqualified values
                 Located::ModuleStatement(Definition::Import(import)) => this
                     .compiler
-                    .get_module_interface((import.module).as_str())
+                    .get_module_interface(import.module.as_str())
                     .map(|importing_module| {
                         completer.unqualified_completions_from_module(importing_module, true)
                     }),
@@ -746,8 +746,8 @@ where
                         layer: ast::Layer::Type,
                     },
                 ),
-                Some(Referenced::ModuleName { name, .. }) => {
-                    rename_module_alias(module, &lines, &params, &name)
+                Some(Referenced::ModuleName { module_name, module_alias, .. }) => {
+                    rename_module_alias(module, &lines, &params, &module_name, &module_alias)
                 }
                 None => None,
             })
@@ -985,8 +985,8 @@ Unused labelled fields:
                 Located::Label(location, type_) => {
                     Some(hover_for_label(location, type_, lines, module))
                 }
-                Located::ModuleName { location, name, .. } => {
-                    let Some(module) = this.compiler.get_module_interface(&name) else {
+                Located::ModuleName { location, module_name, .. } => {
+                    let Some(module) = this.compiler.get_module_interface(&module_name) else {
                         return Ok(None);
                     };
                     Some(hover_for_module(module, location, &lines, &this.hex_deps))

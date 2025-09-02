@@ -1560,7 +1560,7 @@ type Custom { Var(mod.Type) }
 }
 
 #[test]
-fn rename_module_from_type_in_alias() {
+fn rename_module_from_type_in_type_alias() {
     let src = "
 import mod
 

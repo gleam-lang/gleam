@@ -2759,6 +2759,10 @@ where
                 break;
             }
         }
+        let module_location = SrcSpan {
+            start,
+            end: start + (module.len() as u32)
+        };
 
         let (_, documentation) = self.take_documentation(start).unzip();
 
@@ -2822,11 +2826,8 @@ where
             },
             unqualified_values,
             unqualified_types,
-            module: module.clone(),
-            module_location: SrcSpan {
-                start,
-                end: start + (module.len() as u32)
-            },
+            module,
+            module_location,
             as_name,
             package: (),
         })))
