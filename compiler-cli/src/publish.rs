@@ -4,6 +4,7 @@ use flate2::{Compression, write::GzEncoder};
 use gleam_core::{
     Error, Result,
     analyse::TargetSupport,
+    ast::{CallArg, Statement, TypedExpr, TypedFunction},
     build::{Codegen, Compile, Mode, Options, Package, Target},
     config::{GleamVersion, PackageConfig, SpdxLicense},
     docs::{Dependency, DependencyKind, DocContext},
@@ -148,11 +149,51 @@ fn check_for_name_squatting(package: &Package) -> Result<(), Error> {
         return Ok(());
     };
 
-    if main.body.first().is_println() {
+    if main.documentation.is_some() {
+        return Ok(());
+    }
+
+    // Checks if the package has an unchanged default main function
+    // to prevent publishing it.
+    if is_default_main(main, &package.config.name) {
         return Err(Error::HexPackageSquatting);
     }
 
     Ok(())
+}
+
+fn is_default_main(main: &TypedFunction, package_name: &EcoString) -> bool {
+    if main.body.len() != 1 {
+        return false;
+    }
+
+    let Statement::Expression(expr) = main.body.first() else {
+        return false;
+    };
+
+    if !expr.is_println() {
+        return false;
+    }
+
+    match expr {
+        TypedExpr::Call { arguments, .. } => {
+            if arguments.len() != 1 {
+                return false;
+            }
+
+            match arguments.first() {
+                Some(CallArg {
+                    value: TypedExpr::String { value, .. },
+                    ..
+                }) => {
+                    let default_argument = format!("Hello from {}!", package_name);
+                    value == &default_argument
+                }
+                _ => false,
+            }
+        }
+        _ => false,
+    }
 }
 
 fn check_for_multiple_top_level_modules(package: &Package, i_am_sure: bool) -> Result<(), Error> {

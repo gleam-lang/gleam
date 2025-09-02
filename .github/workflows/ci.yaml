@@ -498,3 +498,11 @@ jobs:
       - name: test/assert
         run: make test-all
         working-directory: ./test/assert
+
+      - name: Test publishing with default main
+        run: ./test.sh
+        working-directory: ./test/default_main
+
+      - name: Test publishing with default main and doc
+        run: ./test.sh
+        working-directory: ./test/default_main_with_doc
