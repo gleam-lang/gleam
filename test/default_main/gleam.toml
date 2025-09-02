@@ -1,0 +1,7 @@
+name = "default_main"
+version = "1.0.0"
+description = "Test project for default main"
+licences = ["Apache-2.0"]
+
+[dependencies]
+gleam_stdlib = ">= 0.44.0 and < 2.0.0"
