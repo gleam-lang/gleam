@@ -451,6 +451,10 @@
   in a different function.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the formatter would format a panic message adding more
+  nesting than necessary.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Fixed a bug where the compiler allowed to write a guard with an empty clause.
   ([Tristan-Mihai Radulescu](https://github.com/Courtcircuits))
 
