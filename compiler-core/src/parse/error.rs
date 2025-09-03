@@ -118,7 +118,14 @@ pub enum ParseErrorType {
     // When the use tries to define a constant inside a function
     ConstantInsideFunction,
     FunctionDefinitionAngleGenerics, // fn something<T>() { ... }
-    TypeAngleGenerics, // let a: List<String> = []
+    // let a: List<String> = []
+    TypeUsageAngleGenerics {
+        module: Option<EcoString>,
+        name: EcoString,
+        arguments: Vec<TypeAst>,
+    },
+    // type Something<T> {
+    TypeDefinitionAngleGenerics,
 }
 
 pub(crate) struct ParseErrorDetails {
@@ -669,7 +676,40 @@ See: https://tour.gleam.run/functions/generic-functions/"
                 extra_labels: vec![],
             },
 
-            ParseErrorType::TypeAngleGenerics => ParseErrorDetails {
+            ParseErrorType::TypeUsageAngleGenerics {
+                module,
+                name,
+                arguments,
+            } => {
+                let type_arguments = arguments
+                    .iter()
+                    .map(|argument| {
+                        let mut argument_string = EcoString::new();
+                        argument.print(&mut argument_string);
+                        argument_string
+                    })
+                    .join(", ");
+                let replacement_type = match module {
+                    Some(module) => format!("{module}.{name}({type_arguments})"),
+                    None => format!("{name}({type_arguments})"),
+                };
+
+                ParseErrorDetails {
+                    text: format!(
+                        "\
+Type parameters use lowercase names and are surrounded by parentheses.
+
+    {replacement_type}
+
+See: https://tour.gleam.run/data-types/generic-custom-types/"
+                    ),
+                    hint: None,
+                    label_text: "I was expecting `(` here.".into(),
+                    extra_labels: vec![],
+                }
+            }
+
+            ParseErrorType::TypeDefinitionAngleGenerics => ParseErrorDetails {
                 text: "\
 Type parameters use lowercase names and are surrounded by parentheses.
 
