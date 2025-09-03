@@ -14,7 +14,7 @@ use gleam_core::{
 use std::{
     collections::HashSet,
     fmt::Debug,
-    fs::File,
+    fs::{File, exists},
     io::{self, BufRead, BufReader, Write},
     sync::{Arc, Mutex, OnceLock},
     time::SystemTime,
@@ -686,7 +686,7 @@ pub fn hardlink(
 /// given path. If git is not installed then we assume we're not in a git work
 /// tree.
 ///
-pub fn is_inside_git_work_tree(path: &Utf8Path) -> Result<bool, Error> {
+fn is_inside_git_work_tree(path: &Utf8Path) -> Result<bool, Error> {
     tracing::trace!(path=?path, "checking_for_git_repo");
 
     let args: Vec<&str> = vec!["rev-parse", "--is-inside-work-tree", "--quiet"];
@@ -713,6 +713,11 @@ pub fn is_inside_git_work_tree(path: &Utf8Path) -> Result<bool, Error> {
             }),
         },
     }
+}
+
+pub(crate) fn is_git_work_tree_root(path: &Utf8Path) -> bool {
+    tracing::trace!(path=?path, "checking_for_git_repo_root");
+    exists(path.join(".git")).unwrap_or(false)
 }
 
 /// Run `git init` in the given path.
