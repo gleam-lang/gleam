@@ -301,6 +301,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("Publishing packages to reserve names is not permitted")]
     HexPackageSquatting,
 
+    #[error("The package includes the default main function so cannot be published")]
+    CannotPublishWithDefaultMain { package_name: EcoString },
+
     #[error("Corrupt manifest.toml")]
     CorruptManifest,
 
@@ -810,6 +813,27 @@ package deletion or account suspension.
 
                 vec![Diagnostic {
                     title: "Invalid Hex package".into(),
+                    text,
+                    level: Level::Error,
+                    location: None,
+                    hint: None,
+                }]
+            }
+
+            Error::CannotPublishWithDefaultMain { package_name } => {
+                let text = wrap_format!(
+                    "Packages with the default main function cannot be published
+
+Remove or modify the main function that contains only:
+    `io.println(\"Hello from {package_name}!\")`
+
+Alternatively, add documentation to the main function \
+to indicate it is intentional.
+"
+                );
+
+                vec![Diagnostic {
+                    title: "Cannot publish with default main function".into(),
                     text,
                     level: Level::Error,
                     location: None,

@@ -156,8 +156,8 @@
   of inline tables if they are missing.
   ([Andrey Kozhev](https://github.com/ankddev))
 
-- `gleam publish` now blocks publishing packages with the default main function
-  to prevent accidental publishing of incomplete projects. ([Joohoon Cha](https://github.com/jcha0713))
+- `gleam publish` now blocks publishing packages that contain the default main function
+  to prevent accidental publishing of unmodified template code. ([Joohoon Cha](https://github.com/jcha0713))
 
 ### Language server
 
