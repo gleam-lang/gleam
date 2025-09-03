@@ -2564,7 +2564,7 @@ where
             Ok((start, upname, arguments2, par_e, end))
         } else if let Some((less_start, less_end)) = self.maybe_one(&Token::Less) {
             Err(ParseError {
-                error: ParseErrorType::TypeAngleGenerics,
+                error: ParseErrorType::TypeDefinitionAngleGenerics,
                 location: SrcSpan {
                     start: less_start,
                     end: less_end,
@@ -2775,8 +2775,13 @@ where
                 arguments,
             })))
         } else if let Some((less_start, less_end)) = self.maybe_one(&Token::Less) {
+            let arguments = self.parse_types()?;
             Err(ParseError {
-                error: ParseErrorType::TypeAngleGenerics,
+                error: ParseErrorType::TypeUsageAngleGenerics {
+                    name,
+                    module: module.map(|(module_name, _)| module_name),
+                    arguments,
+                },
                 location: SrcSpan {
                     start: less_start,
                     end: less_end,

@@ -1949,8 +1949,13 @@ fn function_definition_angle_generics_error() {
 }
 
 #[test]
-fn type_angle_generics_usage_error() {
-    assert_error!("let list: List<Int> = []");
+fn type_angle_generics_usage_without_module_error() {
+    assert_error!("let list: List<Int, String> = []");
+}
+
+#[test]
+fn type_angle_generics_usage_with_module_error() {
+    assert_error!("let set: set.Set<Int> = set.new()");
 }
 
 #[test]
