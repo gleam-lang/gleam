@@ -304,8 +304,9 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- The "Add type annotations" and "Generate function" code actions now ignore type
-  variables defined in other functions, improving the generated code. For example:
+- The "Add type annotations" and "Generate function" code actions now ignore
+  type variables defined in other functions, improving the generated code.
+  For example:
 
   ```gleam
   fn something(a: a, b: b, c: c) -> d { todo }
@@ -359,8 +360,8 @@
 
 ### Bug fixes
 
-- Fixed a bug where literals using `\u{XXXX}` syntax in bit array pattern segments were not
-  translated to Erlang's `\x{XXXX}` syntax correctly.
+- Fixed a bug where literals using `\u{XXXX}` syntax in bit array pattern
+  segments were not translated to Erlang's `\x{XXXX}` syntax correctly.
   ([Benjamin Peinhardt](https://github.com/bcpeinhardt))
 
 - Fixed a bug where `echo` could crash on JavaScript if the module contains
@@ -423,3 +424,7 @@
 - Fixed a bug where the compiler would reference a redeclared variable in a let
   assert message, instead of the original variable, on the Erlang target.
   ([Danielle Maywood](https://github.com/DanielleMaywood))
+
+- Fixed a bug where the compiler would report an imported module as unused if it
+  were used by private functions only.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
