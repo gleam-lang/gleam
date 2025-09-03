@@ -288,3 +288,21 @@ pub fn main() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4924
+#[test]
+fn let_assert_should_not_use_redefined_variable() {
+    assert_erl!(
+        r#"
+fn split_once(x: String, y: String) -> Result(#(String, String), String) {
+    Ok(#(x, y))
+}
+
+pub fn main() {
+    let string = "Hello, world!"
+    let assert Ok(#(prefix, string)) = split_once(string, "\n")
+    as { "Failed to split: " <> string }
+}
+        "#
+    );
+}
