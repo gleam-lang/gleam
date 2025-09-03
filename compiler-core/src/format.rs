@@ -2912,12 +2912,27 @@ impl<'comments> Formatter<'comments> {
                 docvec![line(), comments, line(), self.expr(message).group()].nest(INDENT)
             ],
 
-            None => docvec![
-                doc.group(),
-                as_,
-                " ",
-                self.expr(message).group().nest(INDENT),
-            ],
+            None => {
+                let message = match (preceding_as, message) {
+                    // If we have `as` preceded by a keyword (like with `panic` and `todo`)
+                    // and the message is a block, we don't want to nest it any further. That is,
+                    // we want it to look like this:
+                    // ```gleam
+                    // panic as {
+                    //   wibble wobble
+                    // }
+                    // ```
+                    // instead of this:
+                    // ```gleam
+                    // panic as {
+                    //     wibble wobble
+                    //   }
+                    // ```
+                    (PrecedingAs::Keyword, UntypedExpr::Block { .. }) => self.expr(message).group(),
+                    _ => self.expr(message).group().nest(INDENT),
+                };
+                docvec![doc.group(), as_, " ", message]
+            }
         };
 
         doc.group()
