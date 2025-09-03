@@ -20,7 +20,7 @@ rpassword = "7"
 tokio = { version = "1", features = ["rt", "rt-multi-thread"] }
 # Further file system functions (i.e. copy directory)
 fs_extra = "1"
-tracing-subscriber = { version = "0", features = ["fmt", "env-filter"] }
+tracing-subscriber = { version = "0.3.20", features = ["fmt", "env-filter"] }
 # HTTP client
 reqwest = { version = "0", default-features = false, features = ["rustls-tls"] }
 # Checksums
