@@ -415,3 +415,7 @@
 - Fixed a bug where switching from a hex dependency to a git dependency would
   result in an error from the compiler.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the compiler would reference a redeclared variable in a let
+  assert message, instead of the original variable, on the Erlang target.
+  ([Danielle Maywood](https://github.com/DanielleMaywood))
