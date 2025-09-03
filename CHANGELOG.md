@@ -411,3 +411,7 @@
 
 - Fixed a bug where the compiler allowed to write a guard with an empty clause.
   ([Tristan-Mihai Radulescu](https://github.com/Courtcircuits))
+
+- Fixed a bug where switching from a hex dependency to a git dependency would
+  result in an error from the compiler.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

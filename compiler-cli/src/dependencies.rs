@@ -848,7 +848,7 @@ fn download_git_package(
     // remove the directory because running `git init` in a non-empty directory
     // followed by `git checkout ...` is an error. See
     // https://github.com/gleam-lang/gleam/issues/4488 for details.
-    if !fs::is_inside_git_work_tree(&package_path).unwrap_or(false) {
+    if !fs::is_git_work_tree_root(&package_path) {
         fs::delete_directory(&package_path)?;
     }
 
