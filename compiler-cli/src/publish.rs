@@ -21,6 +21,8 @@ use std::{collections::HashMap, io::Write, path::PathBuf, time::Instant};
 
 use crate::{build, cli, docs, fs, http::HttpClient};
 
+const CORE_TEAM_PUBLISH_PASSWORD: &str = "Trans rights are human rights";
+
 pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<()> {
     let mut config = crate::config::root_config(paths)?;
 
@@ -264,9 +266,9 @@ fn check_for_gleam_prefix(config: &PackageConfig) -> Result<bool, Error> {
 the prefix `gleam_`, which is for packages maintained by the Gleam
 core team.\n",
     );
-    let should_publish = cli::confirm_with_text("I am part of the Gleam core team")?;
+    let password = cli::ask_password("Please enter the core team password to continue")?;
     println!();
-    Ok(should_publish)
+    Ok(password == CORE_TEAM_PUBLISH_PASSWORD)
 }
 
 struct Tarball {
