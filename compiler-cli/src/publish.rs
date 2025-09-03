@@ -45,6 +45,7 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
 
     check_for_name_squatting(&compile_result)?;
     check_for_multiple_top_level_modules(&compile_result, i_am_sure)?;
+    check_for_default_main(&compile_result)?;
 
     // Build HTML documentation
     let docs_tarball = fs::create_tar_archive(docs::build_documentation(
@@ -115,12 +116,12 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
     if has_repo && git.exists() && !git_tag.exists() {
         println!(
             "
-Please push a git tag for this release so source code links in the
-HTML documentation will work:
+     Please push a git tag for this release so source code links in the
+     HTML documentation will work:
 
     git tag {tag_name}
     git push origin {tag_name}
-"
+     "
         )
     }
     Ok(())
@@ -149,14 +150,29 @@ fn check_for_name_squatting(package: &Package) -> Result<(), Error> {
         return Ok(());
     };
 
-    if main.documentation.is_some() {
-        return Ok(());
+    if main.body.first().is_println() {
+        return Err(Error::HexPackageSquatting);
     }
 
-    // Checks if the package has an unchanged default main function
-    // to prevent publishing it.
-    if is_default_main(main, &package.config.name) {
-        return Err(Error::HexPackageSquatting);
+    Ok(())
+}
+
+// Checks if publishing packages contain default main functions.
+// Main functions with documentation are considered intentional and allowed.
+fn check_for_default_main(package: &Package) -> Result<(), Error> {
+    let package_name = &package.config.name;
+
+    let has_default_main = package
+        .modules
+        .iter()
+        .flat_map(|m| m.ast.definitions.iter())
+        .filter_map(|d| d.main_function())
+        .any(|main| main.documentation.is_none() && is_default_main(main, package_name));
+
+    if has_default_main {
+        return Err(Error::CannotPublishWithDefaultMain {
+            package_name: package_name.clone(),
+        });
     }
 
     Ok(())
@@ -186,7 +202,7 @@ fn is_default_main(main: &TypedFunction, package_name: &EcoString) -> bool {
                     value: TypedExpr::String { value, .. },
                     ..
                 }) => {
-                    let default_argument = format!("Hello from {}!", package_name);
+                    let default_argument = format!("Hello from {}!", &package_name);
                     value == &default_argument
                 }
                 _ => false,
