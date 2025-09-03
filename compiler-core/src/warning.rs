@@ -380,9 +380,7 @@ To have a clause without a guard, remove this.",
                 level: diagnostic::Level::Warning,
                 location: Some(Location {
                     label: diagnostic::Label {
-                        text: Some(
-                            "This can be removed.".into(),
-                        ),
+                        text: Some("This can be removed.".into()),
                         span: *location,
                     },
                     path: path.clone(),
