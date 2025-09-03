@@ -1257,6 +1257,15 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                     .module_types
                                     .keys()
                                     .any(|type_| type_ == &name),
+                                possible_modules: self
+                                    .environment
+                                    .imported_modules
+                                    .iter()
+                                    .filter_map(|(module_name, (_, module))| {
+                                        module.get_public_value(&name).map(|_| module_name)
+                                    })
+                                    .cloned()
+                                    .collect_vec(),
                             });
                         }
                     },

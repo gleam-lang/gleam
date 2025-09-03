@@ -481,14 +481,22 @@ impl Environment<'_> {
         name: &EcoString,
     ) -> Result<&ValueConstructor, UnknownValueConstructorError> {
         match module {
-            None => self.scope.get(name).ok_or_else(|| {
-                let type_with_name_in_scope = self.module_types.keys().any(|type_| type_ == name);
-                UnknownValueConstructorError::Variable {
+            None => self
+                .scope
+                .get(name)
+                .ok_or_else(|| UnknownValueConstructorError::Variable {
                     name: name.clone(),
                     variables: self.local_value_names(),
-                    type_with_name_in_scope,
-                }
-            }),
+                    type_with_name_in_scope: self.module_types.keys().any(|typ| typ == name),
+                    possible_modules: self
+                        .imported_modules
+                        .iter()
+                        .filter_map(|(module_name, (_, module))| {
+                            module.get_public_value(name).map(|_| module_name)
+                        })
+                        .cloned()
+                        .collect_vec(),
+                }),
 
             Some(module_name) => {
                 let (_, module) = self.imported_modules.get(module_name).ok_or_else(|| {
