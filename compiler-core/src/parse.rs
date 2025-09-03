@@ -2563,8 +2563,29 @@ where
                 .collect();
             Ok((start, upname, arguments2, par_e, end))
         } else if let Some((less_start, less_end)) = self.maybe_one(&Token::Less) {
+            let mut arguments = Parser::series_of(
+                self,
+                &|p|
+                        // Permit either names (`a`) or upnames (`A`) in this error-handling mode,
+                        // as upnames are common in other languages. Convert to lowercase so the
+                        // example is correct whichever was used.
+                        Ok(Parser::maybe_name(p)
+                            .or_else(|| Parser::maybe_upname(p))
+                            .map(|(_, name, _)| name.to_lowercase())),
+                Some(&Token::Comma),
+            )?;
+
+            // If no type arguments were parsed, fall back to a dummy type argument as an example,
+            // because `Type()` would be invalid
+            if arguments.is_empty() {
+                arguments = vec!["value".into()];
+            }
+
             Err(ParseError {
-                error: ParseErrorType::TypeDefinitionAngleGenerics,
+                error: ParseErrorType::TypeDefinitionAngleGenerics {
+                    name: upname,
+                    arguments: arguments,
+                },
                 location: SrcSpan {
                     start: less_start,
                     end: less_end,

@@ -1962,9 +1962,35 @@ fn type_angle_generics_usage_with_module_error() {
 fn type_angle_generics_definition_error() {
     assert_module_error!(
         r#"
-type Maybe<A> {
-    Some(A)
-    None
+type Either<a, b> {
+    This(a)
+    That(b)
+}
+"#
+    );
+}
+
+#[test]
+fn type_angle_generics_definition_with_upname_error() {
+    assert_module_error!(
+        r#"
+type Either<A, B> {
+    This(A)
+    That(B)
+}
+"#
+    );
+}
+
+#[test]
+fn type_angle_generics_definition_error_fallback() {
+    // Example of a more incorrect syntax, where Gleam doesn't make a suggestion.
+    // In this case, an example type argument is used instead.
+    assert_module_error!(
+        r#"
+type Either<type A, type B> {
+    This(A)
+    That(B)
 }
 "#
     );

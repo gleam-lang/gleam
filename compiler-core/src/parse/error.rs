@@ -125,7 +125,10 @@ pub enum ParseErrorType {
         arguments: Vec<TypeAst>,
     },
     // type Something<T> {
-    TypeDefinitionAngleGenerics,
+    TypeDefinitionAngleGenerics {
+        name: EcoString,
+        arguments: Vec<EcoString>,
+    },
 }
 
 pub(crate) struct ParseErrorDetails {
@@ -709,18 +712,23 @@ See: https://tour.gleam.run/data-types/generic-custom-types/"
                 }
             }
 
-            ParseErrorType::TypeDefinitionAngleGenerics => ParseErrorDetails {
-                text: "\
+            ParseErrorType::TypeDefinitionAngleGenerics { name, arguments } => {
+                let comma_separated_arguments = arguments.join(", ");
+
+                ParseErrorDetails {
+                    text: format!(
+                        "\
 Type parameters use lowercase names and are surrounded by parentheses.
 
-    List(String)
-    Result(Int, Error)
+    type {name}({comma_separated_arguments}) {{
 
-See: https://tour.gleam.run/data-types/generic-custom-types/".into(),
-                hint: None,
-                label_text: "I was expecting `(` here.".into(),
-                extra_labels: vec![],
-            },
+See: https://tour.gleam.run/data-types/generic-custom-types/"
+                    ),
+                    hint: None,
+                    label_text: "I was expecting `(` here.".into(),
+                    extra_labels: vec![],
+                }
+            }
         }
     }
 }
