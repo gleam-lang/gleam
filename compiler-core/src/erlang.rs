@@ -1192,6 +1192,11 @@ fn let_assert<'a>(
         return let_(value, pattern, env);
     }
 
+    let message = match message {
+        Some(message) => expr(message, env),
+        None => string("Pattern match failed, no pattern matched the value."),
+    };
+
     let mut vars: Vec<&str> = vec![];
     let subject = maybe_block_expr(value, env);
 
@@ -1255,11 +1260,6 @@ fn let_assert<'a>(
     let mut guards = vec![];
     let pattern_document = pattern::to_doc(pattern, &mut vars, env, &mut guards);
     let clause_guard = optional_clause_guard(None, guards, env);
-
-    let message = match message {
-        Some(message) => expr(message, env),
-        None => string("Pattern match failed, no pattern matched the value."),
-    };
 
     let value_document = match vars.as_slice() {
         _ if is_tail => subject.clone(),

@@ -1,0 +1,50 @@
+---
+source: compiler-core/src/erlang/tests/let_assert.rs
+expression: "\nfn split_once(x: String, y: String) -> Result(#(String, String), String) {\n    Ok(#(x, y))\n}\n\npub fn main() {\n    let string = \"Hello, world!\"\n    let assert Ok(#(prefix, string)) = split_once(string, \"\\n\")\n    as { \"Failed to split: \" <> string }\n}\n        "
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+fn split_once(x: String, y: String) -> Result(#(String, String), String) {
+    Ok(#(x, y))
+}
+
+pub fn main() {
+    let string = "Hello, world!"
+    let assert Ok(#(prefix, string)) = split_once(string, "\n")
+    as { "Failed to split: " <> string }
+}
+        
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec split_once(binary(), binary()) -> {ok, {binary(), binary()}} |
+    {error, binary()}.
+split_once(X, Y) ->
+    {ok, {X, Y}}.
+
+-file("project/test/my/mod.gleam", 6).
+-spec main() -> {ok, {binary(), binary()}} | {error, binary()}.
+main() ->
+    String = <<"Hello, world!"/utf8>>,
+    _assert_subject = split_once(String, <<"\n"/utf8>>),
+    case _assert_subject of
+        {ok, {Prefix, String@1}} -> _assert_subject;
+        _assert_fail ->
+            erlang:error(#{gleam_error => let_assert,
+                        message => (<<"Failed to split: "/utf8, String/binary>>),
+                        file => <<?FILEPATH/utf8>>,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"main"/utf8>>,
+                        line => 8,
+                        value => _assert_fail,
+                        start => 148,
+                        'end' => 207,
+                        pattern_start => 159,
+                        pattern_end => 180})
+    end.
