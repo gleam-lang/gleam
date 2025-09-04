@@ -6968,6 +6968,129 @@ pub fn main() {
 }
 
 #[test]
+fn pattern_match_on_clause_variable() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "
+pub fn main() {
+  case maybe_wibble() {
+    Ok(something) -> 1
+    Error(_) -> 2
+  }
+}
+
+type Wibble {
+  Wobble
+  Woo
+}
+
+fn maybe_wibble() { Ok(Wobble) }
+
+",
+        find_position_of("something").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_clause_variable_with_label() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "
+pub fn main() {
+  case wibble() {
+    Wobble(wibble: something) -> 1
+    _ -> 2
+  }
+}
+
+type Wibble {
+  Wobble(wibble: Wibble)
+  Woo
+}
+
+fn new() { Wobble }
+
+",
+        find_position_of("something").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_clause_variable_with_label_shorthand() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "
+pub fn main() {
+  case new() {
+    Wobble(wibble:) -> 1
+    _ -> 2
+  }
+}
+
+type Wibble {
+  Wobble(wibble: Wibble)
+  Woo
+}
+
+fn new() { Wobble }
+
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_clause_variable_nested_pattern() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "
+pub fn main() {
+  case maybe_wibble() {
+    Ok(Wobble(something)) -> 1
+    Error(_) -> 2
+  }
+}
+
+type Wibble {
+  Wobble(Wibble)
+  Woo
+}
+
+fn maybe_wibble() { Ok(Woo) }
+
+",
+        find_position_of("something").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_clause_variable_with_block_body() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "
+pub fn main() {
+  case maybe_wibble() {
+    Ok(something) -> {
+      1
+      2
+    }
+    Error(_) -> 2
+  }
+}
+
+type Wibble {
+  Wobble
+  Woo
+}
+
+fn maybe_wibble() { Ok(Wobble) }
+
+",
+        find_position_of("something").to_selection()
+    );
+}
+
+#[test]
 fn pattern_match_on_argument_will_use_qualified_name() {
     let src = "
 import wibble

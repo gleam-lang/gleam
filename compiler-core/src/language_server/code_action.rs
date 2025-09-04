@@ -4321,7 +4321,7 @@ pub struct PatternMatchOnValue<'a, A> {
     module: &'a Module,
     params: &'a CodeActionParams,
     compiler: &'a LspProjectCompiler<A>,
-    pattern_variable_under_cursor: Option<(&'a EcoString, Arc<Type>)>,
+    pattern_variable_under_cursor: Option<(&'a EcoString, SrcSpan, Arc<Type>)>,
     selected_value: Option<PatternMatchedValue<'a>>,
     edits: TextEdits<'a>,
 }
@@ -4352,6 +4352,19 @@ pub enum PatternMatchedValue<'a> {
         /// so that we can add the pattern matching _after_ it.
         ///
         assignment_location: SrcSpan,
+    },
+    /// A variable that is bound in a case branch's pattern. For example:
+    /// ```gleam
+    /// case wibble {
+    ///   wobble -> 1
+    /// // ^^^^^ This!
+    /// }
+    /// ```
+    ///
+    ClausePatternVariable {
+        variable_type: Arc<Type>,
+        variable_location: SrcSpan,
+        clause_location: SrcSpan,
     },
     UseVariable {
         variable_name: &'a EcoString,
@@ -4408,6 +4421,15 @@ where
                 },
             ) => {
                 self.match_on_let_variable(variable_name, variable_type, location);
+                "Pattern match on variable"
+            }
+
+            Some(PatternMatchedValue::ClausePatternVariable {
+                variable_type,
+                variable_location,
+                clause_location,
+            }) => {
+                self.match_on_clause_variable(variable_type, variable_location, clause_location);
                 "Pattern match on variable"
             }
 
@@ -4521,6 +4543,45 @@ where
             assignment_location.end,
             format!("\n{nesting}{pattern_matching}"),
         );
+    }
+
+    fn match_on_clause_variable(
+        &mut self,
+        variable_type: Arc<Type>,
+        variable_location: SrcSpan,
+        clause_location: SrcSpan,
+    ) {
+        let Some(patterns) = self.type_to_destructure_patterns(variable_type.as_ref()) else {
+            return;
+        };
+
+        let clause_range = self.edits.src_span_to_lsp_range(clause_location);
+        let nesting = " ".repeat(clause_range.start.character as usize);
+
+        let variable_start = (variable_location.start - clause_location.start) as usize;
+        let variable_end =
+            variable_start + (variable_location.end - variable_location.start) as usize;
+
+        let clause_code = code_at(self.module, clause_location);
+        let patterns = patterns
+            .iter()
+            .map(|pattern| {
+                let mut clause_code = clause_code.to_string();
+                // If we're replacing a variable that's using the shorthand
+                // syntax we want to add a space to separate it from the
+                // preceding `:`.
+                let pattern = if variable_start == variable_end {
+                    &eco_format!(" {pattern}")
+                } else {
+                    pattern
+                };
+
+                clause_code.replace_range(variable_start..variable_end, pattern);
+                clause_code
+            })
+            .join(&format!("\n{nesting}"));
+
+        self.edits.replace(clause_location, patterns);
     }
 
     /// Will produce a pattern that can be used on the left hand side of a let
@@ -4663,6 +4724,13 @@ where
     }
 }
 
+fn code_at(module: &Module, span: SrcSpan) -> &str {
+    module
+        .code
+        .get(span.start as usize..span.end as usize)
+        .expect("code location must be valid")
+}
+
 impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO>
 where
     IO: CommandExecutor + FileSystemWriter + FileSystemReader + BeamCompiler + Clone,
@@ -4745,12 +4813,33 @@ where
 
     fn visit_typed_assignment(&mut self, assignment: &'ast TypedAssignment) {
         ast::visit::visit_typed_assignment(self, assignment);
-        if let Some((name, ref type_)) = self.pattern_variable_under_cursor {
+        if let Some((name, _, ref type_)) = self.pattern_variable_under_cursor {
             self.selected_value = Some(PatternMatchedValue::LetVariable {
                 variable_name: name,
                 variable_type: type_.clone(),
                 assignment_location: assignment.location,
             });
+        }
+    }
+
+    fn visit_typed_clause(&mut self, clause: &'ast ast::TypedClause) {
+        for pattern in clause.pattern.iter() {
+            self.visit_typed_pattern(pattern);
+        }
+        for patterns in clause.alternative_patterns.iter() {
+            for pattern in patterns {
+                self.visit_typed_pattern(pattern);
+            }
+        }
+
+        if let Some((_, variable_location, type_)) = self.pattern_variable_under_cursor.take() {
+            self.selected_value = Some(PatternMatchedValue::ClausePatternVariable {
+                variable_type: type_,
+                variable_location,
+                clause_location: clause.location(),
+            });
+        } else {
+            self.visit_typed_expr(&clause.then);
         }
     }
 
@@ -4802,8 +4891,26 @@ where
             self.params.range,
             self.edits.src_span_to_lsp_range(*location),
         ) {
-            self.pattern_variable_under_cursor = Some((name, type_.clone()));
+            self.pattern_variable_under_cursor = Some((name, *location, type_.clone()));
         }
+    }
+
+    fn visit_typed_pattern_call_arg(&mut self, arg: &'ast CallArg<TypedPattern>) {
+        if let Some(name) = arg.label_shorthand_name()
+            && within(
+                self.params.range,
+                self.edits.src_span_to_lsp_range(arg.location),
+            )
+        {
+            let location = SrcSpan {
+                start: arg.location.end,
+                end: arg.location.end,
+            };
+            self.pattern_variable_under_cursor = Some((name, location, arg.value.type_()));
+            return;
+        }
+
+        ast::visit::visit_typed_pattern_call_arg(self, arg);
     }
 
     fn visit_typed_pattern_string_prefix(
@@ -4821,14 +4928,14 @@ where
                 self.edits.src_span_to_lsp_range(*location),
             )
         {
-            self.pattern_variable_under_cursor = Some((name, type_::string()));
+            self.pattern_variable_under_cursor = Some((name, *location, type_::string()));
         } else if let AssignName::Variable(name) = right_side_assignment
             && within(
                 self.params.range,
                 self.edits.src_span_to_lsp_range(*right_location),
             )
         {
-            self.pattern_variable_under_cursor = Some((name, type_::string()));
+            self.pattern_variable_under_cursor = Some((name, *right_location, type_::string()));
         }
     }
 }
@@ -5080,12 +5187,11 @@ impl<'a> GenerateFunction<'a> {
         function_type: &Arc<Type>,
         given_arguments: Option<&'a [TypedCallArg]>,
     ) {
-        let name_range = function_name_location.start as usize..function_name_location.end as usize;
-        let candidate_name = self.module.code.get(name_range);
+        let candidate_name = code_at(self.module, function_name_location);
         match (candidate_name, function_type.fn_types()) {
-            (None, _) | (_, None) => (),
-            (Some(name), _) if !is_valid_lowercase_name(name) => (),
-            (Some(name), Some((arguments_types, return_type))) => {
+            (_, None) => (),
+            (name, _) if !is_valid_lowercase_name(name) => (),
+            (name, Some((arguments_types, return_type))) => {
                 self.function_to_generate = Some(FunctionToGenerate {
                     name,
                     arguments_types,
@@ -5438,8 +5544,7 @@ where
         type_: &Arc<Type>,
         given_arguments: Option<Arguments<'a>>,
     ) -> Option<VariantToGenerate<'a>> {
-        let name_range = function_name_location.start as usize..function_name_location.end as usize;
-        let name = self.module.code.get(name_range).expect("valid code range");
+        let name = code_at(self.module, function_name_location);
         if !is_valid_uppercase_name(name) {
             return None;
         }
@@ -6149,16 +6254,18 @@ impl<'a> ConvertToPipe<'a> {
             return vec![];
         };
 
-        let arg_range = if arg.uses_label_shorthand() {
-            arg.location.start as usize..arg.location.end as usize - 1
+        let arg_location = if arg.uses_label_shorthand() {
+            SrcSpan {
+                start: arg.location.start,
+                end: arg.location.end - 1,
+            }
         } else if arg.label.is_some() {
-            let value = arg.value.location();
-            value.start as usize..value.end as usize
+            arg.value.location()
         } else {
-            arg.location.start as usize..arg.location.end as usize
+            arg.location
         };
 
-        let arg_text = self.module.code.get(arg_range).expect("invalid srcspan");
+        let arg_text = code_at(self.module, arg_location);
         let arg_text = match arg.value {
             // If the expression being piped is a binary operation with
             // precedence lower than pipes then we have to wrap it in curly
@@ -7774,7 +7881,7 @@ impl<'a> CollapseNestedCase<'a> {
         // Notice one key detail: since alternative patterns can't be nested we
         // can't simply write `Ok(2 | 3)` but we have to write `Ok(2) | Ok(3)`!
 
-        let pattern_text: String = self.code_at(matched_pattern_span).into();
+        let pattern_text: String = code_at(self.module, matched_pattern_span).into();
         let matched_variable_span = matched_variable.location();
 
         let pattern_with_variable = |new_content: String| {
@@ -7828,7 +7935,7 @@ impl<'a> CollapseNestedCase<'a> {
                     let pattern_location =
                         patterns.first().expect("must have a pattern").location();
 
-                    let mut pattern_code = self.code_at(pattern_location).to_string();
+                    let mut pattern_code = code_at(self.module, pattern_location).to_string();
                     if !references_to_matched_variable.is_empty() {
                         pattern_code = format!("{pattern_code} as {}", matched_variable.name());
                     };
@@ -7836,11 +7943,11 @@ impl<'a> CollapseNestedCase<'a> {
                 })
                 .join(" | ");
 
-            let clause_code = self.code_at(clause.then.location());
+            let clause_code = code_at(self.module, clause.then.location());
             let guard_code = match (outer_guard, &clause.guard) {
                 (Some(outer), Some(inner)) => {
-                    let mut outer_code = self.code_at(outer.location()).to_string();
-                    let mut inner_code = self.code_at(inner.location()).to_string();
+                    let mut outer_code = code_at(self.module, outer.location()).to_string();
+                    let mut inner_code = code_at(self.module, inner.location()).to_string();
                     if ast::BinOp::And.precedence() > outer.precedence() {
                         outer_code = format!("{{ {outer_code} }}")
                     }
@@ -7850,7 +7957,7 @@ impl<'a> CollapseNestedCase<'a> {
                     format!(" if {outer_code} && {inner_code}")
                 }
                 (None, Some(guard)) | (Some(guard), None) => {
-                    format!(" if {}", self.code_at(guard.location()))
+                    format!(" if {}", code_at(self.module, guard.location()))
                 }
                 (None, None) => "".into(),
             };
@@ -7877,13 +7984,6 @@ impl<'a> CollapseNestedCase<'a> {
             .preferred(false)
             .push_to(&mut action);
         action
-    }
-
-    fn code_at(&self, span: SrcSpan) -> &str {
-        self.module
-            .code
-            .get(span.start as usize..span.end as usize)
-            .expect("location must be valid")
     }
 
     /// If the clause can be flattened because it's matching on a single variable
