@@ -501,8 +501,4 @@ jobs:
 
       - name: Test publishing with default main
         run: ./test.sh
-        working-directory: ./test/default_main
-
-      - name: Test publishing with default main and doc
-        run: ./test.sh
-        working-directory: ./test/default_main_with_doc
+        working-directory: ./test/publishing_default_main
