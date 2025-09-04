@@ -159,8 +159,8 @@ fn check_for_name_squatting(package: &Package) -> Result<(), Error> {
     Ok(())
 }
 
-// Checks if publishing packages contain default main functions.
-// Main functions with documentation are considered intentional and allowed.
+/// Checks if publishing packages contain default main functions.
+/// Main functions with documentation are considered intentional and allowed.
 fn check_for_default_main(package: &Package) -> Result<(), Error> {
     let package_name = &package.config.name;
 
