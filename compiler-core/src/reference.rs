@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::ast::{Publicity, SrcSpan};
 use bimap::{BiMap, Overwritten};
@@ -84,7 +84,7 @@ pub struct ReferenceTracker {
     graph: StableGraph<(), (), Directed>,
     entities: BiMap<Entity, NodeIndex>,
     current_node: NodeIndex,
-    public_entities: Vec<Entity>,
+    public_entities: HashSet<Entity>,
     entity_information: HashMap<Entity, EntityInformation>,
 
     /// The locations of the references to each value in this module, used for
@@ -193,7 +193,7 @@ impl ReferenceTracker {
         self.create_node_and_maybe_shadow(entity.clone(), self.current_node);
         match publicity {
             Publicity::Public | Publicity::Internal { .. } => {
-                self.public_entities.push(entity.clone());
+                let _ = self.public_entities.insert(entity.clone());
             }
             Publicity::Private => {}
         }
@@ -223,7 +223,7 @@ impl ReferenceTracker {
         };
         match publicity {
             Publicity::Public | Publicity::Internal { .. } => {
-                self.public_entities.push(entity.clone());
+                let _ = self.public_entities.insert(entity.clone());
             }
             Publicity::Private => {}
         }
@@ -257,7 +257,7 @@ impl ReferenceTracker {
         };
         match publicity {
             Publicity::Public | Publicity::Internal { .. } => {
-                self.public_entities.push(entity.clone());
+                let _ = self.public_entities.insert(entity.clone());
             }
             Publicity::Private => {}
         }
@@ -423,6 +423,20 @@ impl ReferenceTracker {
             }
         }
 
+        for (entity, _) in self.entities.iter() {
+            let Some(index) = self.entities.get_by_left(entity) else {
+                continue;
+            };
+
+            if self.public_entities.contains(entity) {
+                self.mark_entity_as_used(&mut unused_values, entity, *index);
+            } else {
+                // If the entity is not public, we still want to mark referenced
+                // imports as used.
+                self.mark_referenced_imports_as_used(&mut unused_values, entity, *index);
+            }
+        }
+
         unused_values
     }
 
@@ -437,6 +451,47 @@ impl ReferenceTracker {
                 if let Some(entity) = self.entities.get_by_right(&node) {
                     self.mark_entity_as_used(unused, entity, node);
                 }
+            }
+        }
+    }
+
+    fn mark_referenced_imports_as_used(
+        &self,
+        unused: &mut HashMap<Entity, EntityInformation>,
+        entity: &Entity,
+        index: NodeIndex,
+    ) {
+        // If the entity is a module there's no way it can reference other
+        // modules so we just ignore it.
+        // This also means that module aliases do not count as using a module!
+        if entity.layer == EntityLayer::Module {
+            return;
+        }
+
+        for node in self.graph.neighbors_directed(index, Direction::Outgoing) {
+            // We only want to mark referenced modules as used, so if the node
+            // is not a module we just skip it.
+            let Some(
+                module @ Entity {
+                    layer: EntityLayer::Module,
+                    ..
+                },
+            ) = self.entities.get_by_right(&node)
+            else {
+                continue;
+            };
+
+            // If the value appears in the module import list, it doesn't count
+            // as using it!
+            let is_imported_type = self
+                .type_references
+                .contains_key(&(module.name.clone(), entity.name.clone()));
+            let is_imported_value = self
+                .value_references
+                .contains_key(&(module.name.clone(), entity.name.clone()));
+            let appears_in_module_import_list = is_imported_type || is_imported_value;
+            if !(appears_in_module_import_list) {
+                self.mark_entity_as_used(unused, module, node);
             }
         }
     }

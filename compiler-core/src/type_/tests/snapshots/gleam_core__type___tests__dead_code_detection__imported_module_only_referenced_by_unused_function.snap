@@ -20,14 +20,6 @@ fn unused() {
 
 
 ----- WARNING
-warning: Unused imported module
-  ┌─ /src/warning/wrn.gleam:2:1
-  │
-2 │ import wibble
-  │ ^^^^^^^^^^^^^ This imported module is never used
-
-Hint: You can safely remove it.
-
 warning: Unused private function
   ┌─ /src/warning/wrn.gleam:4:1
   │

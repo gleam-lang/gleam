@@ -1517,6 +1517,30 @@ pub fn main() {
 }
 
 #[test]
+fn module_used_by_unused_function_is_not_marked_as_unused() {
+    assert_warning!(
+        ("wibble", "pub const a = 1"),
+        "import wibble
+fn wobble() {
+  wibble.a
+}
+"
+    );
+}
+
+#[test]
+fn aliased_module_used_by_unused_function_is_not_marked_as_unused() {
+    assert_warning!(
+        ("wibble", "pub const a = 1"),
+        "import wibble as woo
+fn wobble() {
+  woo.a
+}
+"
+    );
+}
+
+#[test]
 fn calling_function_from_other_module_is_not_marked_unused() {
     assert_no_warnings!(
         ("wibble", "wibble", "pub fn println(a) { panic }"),

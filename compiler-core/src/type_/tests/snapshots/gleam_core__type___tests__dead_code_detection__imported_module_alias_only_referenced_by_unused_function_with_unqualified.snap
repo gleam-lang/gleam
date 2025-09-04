@@ -24,17 +24,6 @@ pub fn main() -> Wibble {
 
 
 ----- WARNING
-warning: Unused imported module alias
-  ┌─ /src/warning/wrn.gleam:2:29
-  │
-2 │ import wibble.{type Wibble} as wobble
-  │                             ^^^^^^^^^ This alias is never used
-
-Hint: You can safely remove it.
-
-    import wibble as _
-
-
 warning: Unused private function
   ┌─ /src/warning/wrn.gleam:4:1
   │
