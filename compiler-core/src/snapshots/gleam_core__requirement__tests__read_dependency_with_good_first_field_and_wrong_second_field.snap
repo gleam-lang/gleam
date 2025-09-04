@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/requirement.rs
+expression: error.to_string()
+---
+TOML parse error at line 1, column 24
+  |
+1 | github = { path = "a", stray = "b" }
+  |                        ^^^^^
+unknown field `stray`

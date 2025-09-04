@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/requirement.rs
+expression: error.to_string()
+---
+TOML parse error at line 1, column 10
+  |
+1 | github = {}
+  |          ^^
+no field found, expecting one of `version`, `path`, `git`, `ref`

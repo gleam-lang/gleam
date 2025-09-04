@@ -262,6 +262,33 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The error message for wrong dependencies found in a project's `gleam.toml` has
+  been improved. For example if someone made the following typo:
+
+  ```toml
+  lustre = { pat = "../path/to/lustre" }
+  ```
+
+  The compiler will now produce the following error:
+
+  ```text
+  error: File IO failure
+
+  An error occurred while trying to parse this file:
+
+      /my_gleam_project/gleam.toml
+
+  The error message from the file IO library was:
+
+      TOML parse error at line 17, column 12
+     |
+  17 | lustre = { pat = "asd" }
+     |            ^^^
+  unknown field `pat`, expected one of `version`, `path`, `git`, `ref`
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Language server
 
 - The language server now offers a code action to remove all the unreachable
