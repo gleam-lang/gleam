@@ -825,8 +825,7 @@ package deletion or account suspension.
                     "Packages with the default main function cannot be published
 
 Remove or modify the main function that contains only:
-    `io.println(\"Hello from {package_name}!\")`
-"
+    `io.println(\"Hello from {package_name}!\")`"
                 );
 
                 vec![Diagnostic {
