@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/requirement.rs
+expression: error.to_string()
+---
+TOML parse error at line 1, column 12
+  |
+1 | github = { a = "123", wibble = "123" }
+  |            ^
+unknown field `a`, expected one of `version`, `path`, `git`, `ref`
