@@ -10,8 +10,8 @@ An error occurred while trying to parse this file:
 
 The error message from the file IO library was:
 
-    TOML parse error at line 6, column 18
+    TOML parse error at line 6, column 83
   |
 6 | aide_generator = { git = "git@github.com:crowdhailer/aide.git", ref = "f559c5bc", extra = "idk what this is" }
-  |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-data did not match any variant of untagged enum Requirement
+  |                                                                                   ^^^^^
+unknown field `extra`, expected one of `version`, `path`, `git`, `ref`
