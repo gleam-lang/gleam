@@ -826,9 +826,6 @@ package deletion or account suspension.
 
 Remove or modify the main function that contains only:
     `io.println(\"Hello from {package_name}!\")`
-
-Alternatively, add documentation to the main function \
-to indicate it is intentional.
 "
                 );
 
