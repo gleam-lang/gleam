@@ -185,15 +185,15 @@ fn is_default_main(main: &TypedFunction, package_name: &EcoString) -> bool {
         return false;
     }
 
-    let Statement::Expression(expr) = main.body.first() else {
+    let Statement::Expression(expression) = main.body.first() else {
         return false;
     };
 
-    if !expr.is_println() {
+    if !expression.is_println() {
         return false;
     }
 
-    match expr {
+    match expression {
         TypedExpr::Call { arguments, .. } => {
             if arguments.len() != 1 {
                 return false;
