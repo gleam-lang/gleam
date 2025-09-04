@@ -6719,3 +6719,17 @@ fn pattern_unused_discard() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4929
+#[test]
+fn format_panic_as_with_block_message() {
+    assert_format!(
+        r#"pub fn main() {
+  panic as {
+    // b
+    a
+  }
+}
+"#
+    );
+}
