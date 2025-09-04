@@ -133,6 +133,7 @@ const GENERATE_VARIANT: &str = "Generate variant";
 const REMOVE_BLOCK: &str = "Remove block";
 const REMOVE_OPAQUE_FROM_PRIVATE_TYPE: &str = "Remove opaque from private type";
 const COLLAPSE_NESTED_CASE: &str = "Collapse nested case";
+const REMOVE_UNREACHABLE_BRANCHES: &str = "Remove unreachable branches";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -6968,6 +6969,129 @@ pub fn main() {
 }
 
 #[test]
+fn pattern_match_on_clause_variable() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "
+pub fn main() {
+  case maybe_wibble() {
+    Ok(something) -> 1
+    Error(_) -> 2
+  }
+}
+
+type Wibble {
+  Wobble
+  Woo
+}
+
+fn maybe_wibble() { Ok(Wobble) }
+
+",
+        find_position_of("something").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_clause_variable_with_label() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "
+pub fn main() {
+  case wibble() {
+    Wobble(wibble: something) -> 1
+    _ -> 2
+  }
+}
+
+type Wibble {
+  Wobble(wibble: Wibble)
+  Woo
+}
+
+fn new() { Wobble }
+
+",
+        find_position_of("something").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_clause_variable_with_label_shorthand() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "
+pub fn main() {
+  case new() {
+    Wobble(wibble:) -> 1
+    _ -> 2
+  }
+}
+
+type Wibble {
+  Wobble(wibble: Wibble)
+  Woo
+}
+
+fn new() { Wobble }
+
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_clause_variable_nested_pattern() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "
+pub fn main() {
+  case maybe_wibble() {
+    Ok(Wobble(something)) -> 1
+    Error(_) -> 2
+  }
+}
+
+type Wibble {
+  Wobble(Wibble)
+  Woo
+}
+
+fn maybe_wibble() { Ok(Woo) }
+
+",
+        find_position_of("something").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_clause_variable_with_block_body() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "
+pub fn main() {
+  case maybe_wibble() {
+    Ok(something) -> {
+      1
+      2
+    }
+    Error(_) -> 2
+  }
+}
+
+type Wibble {
+  Wobble
+  Woo
+}
+
+fn maybe_wibble() { Ok(Wobble) }
+
+",
+        find_position_of("something").to_selection()
+    );
+}
+
+#[test]
 fn pattern_match_on_argument_will_use_qualified_name() {
     let src = "
 import wibble
@@ -9632,5 +9756,43 @@ pub fn main() {
         GENERATE_FUNCTION,
         TestProject::for_source(src).add_dep_module("maths", "pub fn add(a, b) { a + b }"),
         find_position_of("subtract").to_selection()
+    );
+}
+
+#[test]
+fn remove_unreachable_branches() {
+    assert_code_action!(
+        REMOVE_UNREACHABLE_BRANCHES,
+        "pub fn main(x) {
+  case x {
+    Ok(n) -> 1
+    Ok(_) -> 2
+    Error(_) -> todo
+    Ok(1) -> 3
+  }
+}
+",
+        find_position_of("Ok(1)").to_selection()
+    );
+}
+
+#[test]
+fn remove_unreachable_branches_does_not_pop_up_if_all_branches_are_reachable() {
+    assert_no_code_actions!(
+        REMOVE_UNREACHABLE_BRANCHES,
+        "pub fn main(x) {
+  case x {
+    Ok(n) -> 1
+    Error(_) -> todo
+  }
+
+  case x {
+    Ok(n) -> todo
+    Ok(_) -> todo
+    _ -> todo
+  }
+}
+",
+        find_position_of("Ok(n)").to_selection()
     );
 }

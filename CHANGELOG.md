@@ -162,6 +162,37 @@
 
 ### Language server
 
+- The language server now offers a code action to remove all the unreachable
+  branches in a case expression. For example:
+
+  ```gleam
+  pub fn main() {
+    case find_user() {
+      Ok(user) -> todo
+      Ok(Admin) -> todo
+  //  ^^^^^^^^^ This branch is unreachable
+      Ok(User) -> todo
+  //  ^^^^^^^^ This branch is unreachable
+      Error(_) -> todo
+    }
+  }
+  ```
+
+  Hovering over one of the unreachable branches and triggering the code action
+  would remove all the unreachable branches:
+
+  ```gleam
+  pub fn main() {
+    case find_user() {
+      Ok(user) -> todo
+
+      Error(_) -> todo
+    }
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The "pattern match on variable" can now be triggered on lists. For example:
 
   ```gleam
@@ -184,8 +215,8 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The "pattern match on variable" can now be triggered on variables introduced
-  by other patterns. For example:
+- The "pattern match on variable" code action can now be triggered on variables
+  introduced by other patterns. For example:
 
   ```gleam
   pub fn main() {
@@ -203,6 +234,33 @@
     case role {
       Admin -> todo
       Member -> todo
+    }
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The "pattern match on variable" code action can now be triggered on variables
+  in case expressions. For example:
+
+  ```gleam
+  pub fn main() {
+    case find_user() {
+      Ok(user) -> todo
+      Error(_) -> todo
+    }
+  }
+  ```
+
+  Triggering the action over the `user` variable would result in the following
+  code:
+
+  ```gleam
+  pub fn main() {
+    case find_user() {
+      Ok(Admin) -> todo
+      Ok(Member) -> todo
+      Error(_) -> todo
     }
   }
   ```

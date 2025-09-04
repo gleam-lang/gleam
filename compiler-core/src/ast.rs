@@ -1536,9 +1536,9 @@ where
     /// If the call arg is defined using a label shorthand, this will return the
     /// label name.
     ///
-    fn label_shorthand_name(&self) -> Option<EcoString> {
+    pub fn label_shorthand_name(&self) -> Option<&EcoString> {
         if !self.is_implicit() && self.location == self.value.location() {
-            self.label.clone()
+            self.label.as_ref()
         } else {
             None
         }
@@ -2786,7 +2786,7 @@ impl TypedPattern {
                 for argument in arguments {
                     if let Some(name) = argument.label_shorthand_name() {
                         variables.push(BoundVariable::ShorthandLabel {
-                            name,
+                            name: name.clone(),
                             location: argument.location,
                         })
                     } else {
