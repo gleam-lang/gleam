@@ -122,7 +122,7 @@ use crate::{
     analyse::Inferred,
     ast::{
         self, ArgNames, Assert, AssignName, Assignment, AssignmentKind, BitArrayOption,
-        BitArraySegment, BitArraySize, CallArg, Definition, FunctionLiteralKind, Pattern,
+        BitArraySegment, BitArraySize, CallArg, Clause, Definition, FunctionLiteralKind, Pattern,
         PipelineAssignmentKind, Publicity, SrcSpan, Statement, TypedArg, TypedAssert,
         TypedAssignment, TypedBitArraySize, TypedClause, TypedDefinition, TypedExpr,
         TypedExprBitArraySegment, TypedFunction, TypedModule, TypedPattern,
@@ -1134,22 +1134,10 @@ impl Inliner<'_> {
         let subjects = self.expressions(subjects);
         let clauses = clauses
             .into_iter()
-            .map(
-                |TypedClause {
-                     location,
-                     pattern,
-                     alternative_patterns,
-                     guard,
-                     then,
-                 }| TypedClause {
-                    location,
-                    pattern,
-                    alternative_patterns,
-                    guard,
-                    then: self.expression(then),
-                },
-            )
+            .map(|clause| self.case_clause(clause))
             .collect();
+
+        dbg!(&compiled_case);
 
         TypedExpr::Case {
             location,
@@ -1157,6 +1145,41 @@ impl Inliner<'_> {
             subjects,
             clauses,
             compiled_case,
+        }
+    }
+
+    fn case_clause(&mut self, clause: TypedClause) -> TypedClause {
+        let Clause {
+            location,
+            pattern,
+            alternative_patterns,
+            guard,
+            then,
+        } = clause;
+
+        let pattern = pattern
+            .into_iter()
+            .map(|pattern| self.register_pattern_variables(pattern))
+            .collect();
+
+        let alternative_patterns = alternative_patterns
+            .into_iter()
+            .map(|patterns| {
+                patterns
+                    .into_iter()
+                    .map(|pattern| self.register_pattern_variables(pattern))
+                    .collect()
+            })
+            .collect();
+
+        let then = self.expression(then);
+
+        Clause {
+            location,
+            pattern,
+            alternative_patterns,
+            guard,
+            then,
         }
     }
 }
