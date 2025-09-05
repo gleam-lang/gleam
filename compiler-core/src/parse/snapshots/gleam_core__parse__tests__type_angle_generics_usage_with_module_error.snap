@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "let set: set.Set<Int> = set.new()"
+---
+----- SOURCE CODE
+let set: set.Set<Int> = set.new()
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:1:17
+  │
+1 │ let set: set.Set<Int> = set.new()
+  │                 ^ I was expecting `(` here.
+
+Type parameters use lowercase names and are surrounded by parentheses.
+
+    set.Set(Int)
+
+See: https://tour.gleam.run/data-types/generic-custom-types/

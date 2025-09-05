@@ -117,6 +117,18 @@ pub enum ParseErrorType {
     EmptyGuardBlock,
     // When the use tries to define a constant inside a function
     ConstantInsideFunction,
+    FunctionDefinitionAngleGenerics, // fn something<T>() { ... }
+    // let a: List<String> = []
+    TypeUsageAngleGenerics {
+        module: Option<EcoString>,
+        name: EcoString,
+        arguments: Vec<TypeAst>,
+    },
+    // type Something<T> {
+    TypeDefinitionAngleGenerics {
+        name: EcoString,
+        arguments: Vec<EcoString>,
+    },
 }
 
 pub(crate) struct ParseErrorDetails {
@@ -651,6 +663,72 @@ functions are not necessary.",
                 label_text: "Constants are not allowed inside functions".into(),
                 extra_labels: vec![],
             },
+
+            ParseErrorType::FunctionDefinitionAngleGenerics => ParseErrorDetails {
+                text: "\
+Generic function type variables do not need to be predeclared like they
+would be in some other languages, instead they are written with lowercase
+names.
+
+    fn example(argument: generic) -> generic
+
+See: https://tour.gleam.run/functions/generic-functions/"
+                    .into(),
+                hint: None,
+                label_text: "I was expecting `(` here.".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::TypeUsageAngleGenerics {
+                module,
+                name,
+                arguments,
+            } => {
+                let type_arguments = arguments
+                    .iter()
+                    .map(|argument| {
+                        let mut argument_string = EcoString::new();
+                        argument.print(&mut argument_string);
+                        argument_string
+                    })
+                    .join(", ");
+                let replacement_type = match module {
+                    Some(module) => format!("{module}.{name}({type_arguments})"),
+                    None => format!("{name}({type_arguments})"),
+                };
+
+                ParseErrorDetails {
+                    text: format!(
+                        "\
+Type parameters use lowercase names and are surrounded by parentheses.
+
+    {replacement_type}
+
+See: https://tour.gleam.run/data-types/generic-custom-types/"
+                    ),
+                    hint: None,
+                    label_text: "I was expecting `(` here.".into(),
+                    extra_labels: vec![],
+                }
+            }
+
+            ParseErrorType::TypeDefinitionAngleGenerics { name, arguments } => {
+                let comma_separated_arguments = arguments.join(", ");
+
+                ParseErrorDetails {
+                    text: format!(
+                        "\
+Type parameters use lowercase names and are surrounded by parentheses.
+
+    type {name}({comma_separated_arguments}) {{
+
+See: https://tour.gleam.run/data-types/generic-custom-types/"
+                    ),
+                    hint: None,
+                    label_text: "I was expecting `(` here.".into(),
+                    extra_labels: vec![],
+                }
+            }
         }
     }
 }

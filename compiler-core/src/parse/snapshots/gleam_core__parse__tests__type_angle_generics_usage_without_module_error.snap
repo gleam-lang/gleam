@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "let list: List<Int, String> = []"
+---
+----- SOURCE CODE
+let list: List<Int, String> = []
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:1:15
+  │
+1 │ let list: List<Int, String> = []
+  │               ^ I was expecting `(` here.
+
+Type parameters use lowercase names and are surrounded by parentheses.
+
+    List(Int, String)
+
+See: https://tour.gleam.run/data-types/generic-custom-types/

@@ -2081,6 +2081,15 @@ where
                 n,
             ));
         }
+        if let Some((less_start, less_end)) = self.maybe_one(&Token::Less) {
+            return Err(ParseError {
+                error: ParseErrorType::FunctionDefinitionAngleGenerics,
+                location: SrcSpan {
+                    start: less_start,
+                    end: less_end,
+                },
+            });
+        }
         let _ = self
             .expect_one(&Token::LeftParen)
             .map_err(|e| self.add_anon_function_hint(e))?;
@@ -2538,24 +2547,52 @@ where
         &mut self,
     ) -> Result<(u32, EcoString, Vec<SpannedString>, u32, u32), ParseError> {
         let (start, upname, end) = self.expect_upname()?;
-        match self.maybe_one(&Token::LeftParen) {
-            Some((par_s, _)) => {
-                let arguments =
-                    Parser::series_of(self, &|p| Ok(Parser::maybe_name(p)), Some(&Token::Comma))?;
-                let (_, par_e) = self.expect_one_following_series(&Token::RightParen, "a name")?;
-                if arguments.is_empty() {
-                    return parse_error(
-                        ParseErrorType::TypeDefinitionNoArguments,
-                        SrcSpan::new(par_s, par_e),
-                    );
-                }
-                let arguments2 = arguments
-                    .into_iter()
-                    .map(|(start, name, end)| (SrcSpan { start, end }, name))
-                    .collect();
-                Ok((start, upname, arguments2, par_e, end))
+        if let Some((par_s, _)) = self.maybe_one(&Token::LeftParen) {
+            let arguments =
+                Parser::series_of(self, &|p| Ok(Parser::maybe_name(p)), Some(&Token::Comma))?;
+            let (_, par_e) = self.expect_one_following_series(&Token::RightParen, "a name")?;
+            if arguments.is_empty() {
+                return parse_error(
+                    ParseErrorType::TypeDefinitionNoArguments,
+                    SrcSpan::new(par_s, par_e),
+                );
             }
-            _ => Ok((start, upname, vec![], end, end)),
+            let arguments2 = arguments
+                .into_iter()
+                .map(|(start, name, end)| (SrcSpan { start, end }, name))
+                .collect();
+            Ok((start, upname, arguments2, par_e, end))
+        } else if let Some((less_start, less_end)) = self.maybe_one(&Token::Less) {
+            let mut arguments = Parser::series_of(
+                self,
+                &|p|
+                        // Permit either names (`a`) or upnames (`A`) in this error-handling mode,
+                        // as upnames are common in other languages. Convert to lowercase so the
+                        // example is correct whichever was used.
+                        Ok(Parser::maybe_name(p)
+                            .or_else(|| Parser::maybe_upname(p))
+                            .map(|(_, name, _)| name.to_lowercase())),
+                Some(&Token::Comma),
+            )?;
+
+            // If no type arguments were parsed, fall back to a dummy type argument as an example,
+            // because `Type()` would be invalid
+            if arguments.is_empty() {
+                arguments = vec!["value".into()];
+            }
+
+            Err(ParseError {
+                error: ParseErrorType::TypeDefinitionAngleGenerics {
+                    name: upname,
+                    arguments: arguments,
+                },
+                location: SrcSpan {
+                    start: less_start,
+                    end: less_end,
+                },
+            })
+        } else {
+            Ok((start, upname, vec![], end, end))
         }
     }
 
@@ -2739,28 +2776,40 @@ where
         name: EcoString,
         end: u32,
     ) -> Result<Option<TypeAst>, ParseError> {
-        match self.maybe_one(&Token::LeftParen) {
-            Some((par_s, _)) => {
-                let arguments = self.parse_types()?;
-                let (_, par_e) = self.expect_one(&Token::RightParen)?;
-                if arguments.is_empty() {
-                    return parse_error(
-                        ParseErrorType::TypeConstructorNoArguments,
-                        SrcSpan::new(par_s, par_e),
-                    );
-                }
-                Ok(Some(TypeAst::Constructor(TypeAstConstructor {
-                    location: SrcSpan { start, end: par_e },
-                    name_location: SrcSpan {
-                        start: name_start,
-                        end,
-                    },
-                    module,
-                    name,
-                    arguments,
-                })))
+        if let Some((par_s, _)) = self.maybe_one(&Token::LeftParen) {
+            let arguments = self.parse_types()?;
+            let (_, par_e) = self.expect_one(&Token::RightParen)?;
+            if arguments.is_empty() {
+                return parse_error(
+                    ParseErrorType::TypeConstructorNoArguments,
+                    SrcSpan::new(par_s, par_e),
+                );
             }
-            _ => Ok(Some(TypeAst::Constructor(TypeAstConstructor {
+            Ok(Some(TypeAst::Constructor(TypeAstConstructor {
+                location: SrcSpan { start, end: par_e },
+                name_location: SrcSpan {
+                    start: name_start,
+                    end,
+                },
+                module,
+                name,
+                arguments,
+            })))
+        } else if let Some((less_start, less_end)) = self.maybe_one(&Token::Less) {
+            let arguments = self.parse_types()?;
+            Err(ParseError {
+                error: ParseErrorType::TypeUsageAngleGenerics {
+                    name,
+                    module: module.map(|(module_name, _)| module_name),
+                    arguments,
+                },
+                location: SrcSpan {
+                    start: less_start,
+                    end: less_end,
+                },
+            })
+        } else {
+            Ok(Some(TypeAst::Constructor(TypeAstConstructor {
                 location: SrcSpan { start, end },
                 name_location: SrcSpan {
                     start: name_start,
@@ -2769,7 +2818,7 @@ where
                 module,
                 name,
                 arguments: vec![],
-            }))),
+            })))
         }
     }
 

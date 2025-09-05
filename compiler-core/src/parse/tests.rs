@@ -1942,3 +1942,56 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn function_definition_angle_generics_error() {
+    assert_module_error!("fn id<T>(x: T) { x }");
+}
+
+#[test]
+fn type_angle_generics_usage_without_module_error() {
+    assert_error!("let list: List<Int, String> = []");
+}
+
+#[test]
+fn type_angle_generics_usage_with_module_error() {
+    assert_error!("let set: set.Set<Int> = set.new()");
+}
+
+#[test]
+fn type_angle_generics_definition_error() {
+    assert_module_error!(
+        r#"
+type Either<a, b> {
+    This(a)
+    That(b)
+}
+"#
+    );
+}
+
+#[test]
+fn type_angle_generics_definition_with_upname_error() {
+    assert_module_error!(
+        r#"
+type Either<A, B> {
+    This(A)
+    That(B)
+}
+"#
+    );
+}
+
+#[test]
+fn type_angle_generics_definition_error_fallback() {
+    // Example of a more incorrect syntax, where Gleam doesn't make a suggestion.
+    // In this case, an example type argument is used instead.
+    assert_module_error!(
+        r#"
+type Either<type A, type B> {
+    This(A)
+    That(B)
+}
+"#
+    );
+}
