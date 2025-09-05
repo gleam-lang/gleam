@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 193
 expression: "\npub type TypeWithALongNameAndSeveralArguments{\n  TypeWithALongNameAndSeveralArguments(String, String, String, String, String)\n}\n\n\npub fn go() {\n  TypeWithALongNameAndSeveralArguments\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -28,6 +26,27 @@ export class TypeWithALongNameAndSeveralArguments extends $CustomType {
     this[3] = $3;
     this[4] = $4;
   }
+}
+export function TypeWithALongNameAndSeveralArguments$TypeWithALongNameAndSeveralArguments($0, $1, $2, $3, $4) {
+  return new TypeWithALongNameAndSeveralArguments($0, $1, $2, $3, $4);
+}
+export function TypeWithALongNameAndSeveralArguments$isTypeWithALongNameAndSeveralArguments(value) {
+  return value instanceof TypeWithALongNameAndSeveralArguments;
+}
+export function TypeWithALongNameAndSeveralArguments$TypeWithALongNameAndSeveralArguments$0(value) {
+  return value[0];
+}
+export function TypeWithALongNameAndSeveralArguments$TypeWithALongNameAndSeveralArguments$1(value) {
+  return value[1];
+}
+export function TypeWithALongNameAndSeveralArguments$TypeWithALongNameAndSeveralArguments$2(value) {
+  return value[2];
+}
+export function TypeWithALongNameAndSeveralArguments$TypeWithALongNameAndSeveralArguments$3(value) {
+  return value[3];
+}
+export function TypeWithALongNameAndSeveralArguments$TypeWithALongNameAndSeveralArguments$4(value) {
+  return value[4];
 }
 
 export function go() {

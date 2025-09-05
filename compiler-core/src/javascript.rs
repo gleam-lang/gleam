@@ -5,13 +5,15 @@ mod import;
 mod tests;
 mod typescript;
 
+use std::collections::HashMap;
+
 use num_bigint::BigInt;
 use num_traits::ToPrimitive;
 
 use crate::build::Target;
 use crate::build::package_compiler::StdlibPackage;
 use crate::codegen::TypeScriptDeclarations;
-use crate::type_::PRELUDE_MODULE_NAME;
+use crate::type_::{PRELUDE_MODULE_NAME, RecordAccessor};
 use crate::{
     ast::{CustomType, Function, Import, ModuleConstant, TypeAlias, *},
     docvec,
@@ -340,6 +342,7 @@ impl<'a> Generator<'a> {
 
     fn custom_type_definition(
         &mut self,
+        name: &'a str,
         constructors: &'a [TypedRecordConstructor],
         publicity: Publicity,
         opaque: bool,
@@ -350,17 +353,204 @@ impl<'a> Generator<'a> {
         }
 
         self.tracker.custom_type_used = true;
-        constructors
+
+        let constructor_publicity = if opaque || publicity.is_private() {
+            Publicity::Private
+        } else {
+            Publicity::Public
+        };
+
+        let mut definitions = constructors
             .iter()
-            .map(|constructor| self.record_definition(constructor, publicity, opaque))
-            .collect()
+            .map(|constructor| self.record_definition(constructor, name, constructor_publicity))
+            .collect_vec();
+
+        // Generate getters for fields shared between variants
+        if let Some(accessors_map) = self.module.type_info.accessors.get(name)
+            && !accessors_map.shared_accessors.is_empty()
+            // Don't bother generating shared getters when there's only one variant,
+            // since the specific accessors can always be uses instead.
+            && constructors.len() != 1
+            // Only generate accessors for the API if the constructors are public
+            && constructor_publicity.is_public()
+        {
+            let function_head = if opaque || publicity.is_private() {
+                "function "
+            } else {
+                "export function "
+            };
+            definitions.push(self.shared_custom_type_fields(
+                name,
+                &accessors_map.shared_accessors,
+                function_head,
+            ));
+        }
+
+        definitions
     }
 
     fn record_definition(
         &self,
         constructor: &'a TypedRecordConstructor,
+        type_name: &'a str,
         publicity: Publicity,
-        opaque: bool,
+    ) -> Document<'a> {
+        let class_definition = self.record_class_definition(constructor, publicity);
+
+        // If the custom type is private or opaque, we don't need to generate API
+        // functions for it.
+        if publicity.is_private() {
+            return class_definition;
+        }
+
+        let constructor_definition = self.record_constructor_definition(constructor, type_name);
+        let variant_check_definition = self.record_check_definition(constructor, type_name);
+        let fields_definition = self.record_fields_definition(constructor, type_name);
+
+        docvec![
+            class_definition,
+            line(),
+            constructor_definition,
+            line(),
+            variant_check_definition,
+            fields_definition,
+        ]
+    }
+
+    fn record_constructor_definition(
+        &self,
+        constructor: &'a TypedRecordConstructor,
+        type_name: &'a str,
+    ) -> Document<'a> {
+        let mut arguments = Vec::new();
+
+        for (index, parameter) in constructor.arguments.iter().enumerate() {
+            if let Some((_, label)) = &parameter.label {
+                arguments.push(maybe_escape_identifier(label).to_doc());
+            } else {
+                arguments.push(eco_format!("${index}").to_doc());
+            }
+        }
+
+        let construction = docvec![
+            line(),
+            "return new ",
+            constructor.name.as_str(),
+            "(",
+            join(arguments.clone(), break_(",", ", ")),
+            ");"
+        ];
+
+        docvec![
+            "export function ",
+            type_name,
+            "$",
+            constructor.name.as_str(),
+            "(",
+            join(arguments, break_(",", ", ")),
+            ") {",
+            construction.nest(INDENT),
+            line(),
+            "}"
+        ]
+    }
+
+    fn record_check_definition(
+        &self,
+        constructor: &'a TypedRecordConstructor,
+        type_name: &'a str,
+    ) -> Document<'a> {
+        let construction = docvec![
+            line(),
+            "return value instanceof ",
+            constructor.name.as_str(),
+            ";"
+        ];
+
+        docvec![
+            "export function ",
+            type_name,
+            "$is",
+            constructor.name.as_str(),
+            "(value) {",
+            construction.nest(INDENT),
+            line(),
+            "}"
+        ]
+    }
+
+    fn record_fields_definition(
+        &self,
+        constructor: &'a TypedRecordConstructor,
+        type_name: &'a str,
+    ) -> Document<'a> {
+        let mut functions = Vec::new();
+
+        for (index, argument) in constructor.arguments.iter().enumerate() {
+            let function_name;
+            let field;
+
+            if let Some((_, label)) = &argument.label {
+                function_name = eco_format!(
+                    "{type_name}${record_name}${label}",
+                    record_name = constructor.name,
+                );
+                field = eco_format!(".{field_name}", field_name = maybe_escape_property(label));
+            } else {
+                function_name = eco_format!(
+                    "{type_name}${record_name}${index}",
+                    record_name = constructor.name,
+                );
+                field = eco_format!("[{index}]");
+            };
+
+            let contents = docvec![line(), "return value", field, ";"];
+
+            functions.push(docvec![
+                line(),
+                "export function ",
+                function_name,
+                "(value) {",
+                contents.nest(INDENT),
+                line(),
+                "}"
+            ]);
+        }
+
+        concat(functions)
+    }
+
+    fn shared_custom_type_fields(
+        &self,
+        type_name: &'a str,
+        shared_accessors: &HashMap<EcoString, RecordAccessor>,
+        function_head: &'a str,
+    ) -> Document<'a> {
+        let mut functions = Vec::new();
+
+        for field in shared_accessors.keys().sorted() {
+            let function_name = eco_format!("{type_name}${field}");
+
+            let contents = docvec![line(), "return value.", maybe_escape_property(field), ";"];
+
+            functions.push(docvec![
+                line(),
+                function_head,
+                function_name,
+                "(value) {",
+                contents.nest(INDENT),
+                line(),
+                "}"
+            ]);
+        }
+
+        concat(functions)
+    }
+
+    fn record_class_definition(
+        &self,
+        constructor: &'a TypedRecordConstructor,
+        publicity: Publicity,
     ) -> Document<'a> {
         fn parameter((i, arg): (usize, &TypedRecordConstructorArg)) -> Document<'_> {
             arg.label
@@ -376,10 +566,10 @@ impl<'a> Generator<'a> {
             nil()
         };
 
-        let head = if publicity.is_private() || opaque {
-            "class "
-        } else {
+        let head = if publicity.is_public() {
             "export class "
+        } else {
+            "class "
         };
         let head = docvec![head, &constructor.name, " extends $CustomType {"];
 
@@ -438,8 +628,9 @@ impl<'a> Generator<'a> {
                     publicity,
                     constructors,
                     opaque,
+                    name,
                     ..
-                }) => self.custom_type_definition(constructors, *publicity, *opaque),
+                }) => self.custom_type_definition(name, constructors, *publicity, *opaque),
 
                 Definition::Function(Function { .. })
                 | Definition::TypeAlias(TypeAlias { .. })

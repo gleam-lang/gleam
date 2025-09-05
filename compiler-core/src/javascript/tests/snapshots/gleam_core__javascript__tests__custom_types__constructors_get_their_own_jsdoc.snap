@@ -25,6 +25,15 @@ export class Wibble extends $CustomType {
     this.field = field;
   }
 }
+export function Wibble$Wibble(field) {
+  return new Wibble(field);
+}
+export function Wibble$isWibble(value) {
+  return value instanceof Wibble;
+}
+export function Wibble$Wibble$field(value) {
+  return value.field;
+}
 
 /**
  * Wobbling!!
@@ -34,4 +43,18 @@ export class Wobble extends $CustomType {
     super();
     this.field = field;
   }
+}
+export function Wibble$Wobble(field) {
+  return new Wobble(field);
+}
+export function Wibble$isWobble(value) {
+  return value instanceof Wobble;
+}
+export function Wibble$Wobble$field(value) {
+  return value.field;
+}
+
+
+export function Wibble$field(value) {
+  return value.field;
 }

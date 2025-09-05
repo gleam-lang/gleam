@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 23
 expression: "\npub type Mine {\n    This\n    ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant\n}\n\npub const this = This\npub const that = ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -19,8 +17,20 @@ pub const that = ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLonge
 import { CustomType as $CustomType } from "../gleam.mjs";
 
 export class This extends $CustomType {}
+export function Mine$This() {
+  return new This();
+}
+export function Mine$isThis(value) {
+  return value instanceof This;
+}
 
 export class ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant extends $CustomType {}
+export function Mine$ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant() {
+  return new ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant();
+}
+export function Mine$isThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant(value) {
+  return value instanceof ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant;
+}
 
 export const this$ = /* @__PURE__ */ new This();
 
