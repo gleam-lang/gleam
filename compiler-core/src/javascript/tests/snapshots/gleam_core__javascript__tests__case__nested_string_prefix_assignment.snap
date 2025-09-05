@@ -28,15 +28,6 @@ class Wibble extends $CustomType {
     this.wobble = wobble;
   }
 }
-function Wibble$Wibble(wobble) {
-  return new Wibble(wobble);
-}
-function Wibble$isWibble(value) {
-  return value instanceof Wibble;
-}
-function Wibble$Wibble$wobble(value) {
-  return value.wobble;
-}
 
 export function main() {
   let tmp = new Wibble("wibble");
