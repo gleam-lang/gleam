@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 605
 expression: "\npub type Thing {\n  Thing(constructor: Nil)\n}\n\npub fn main() {\n  let a = Thing(constructor: Nil)\n  let b = Thing(..a, constructor: Nil)\n  b.constructor\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -25,6 +23,12 @@ export class Thing extends $CustomType {
     super();
     this.constructor$ = constructor;
   }
+}
+export function Thing$Thing(constructor) {
+  return new Thing(constructor);
+}
+export function Thing$isThing(value) {
+  return value instanceof Thing;
 }
 
 export function main() {

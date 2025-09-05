@@ -27,6 +27,12 @@ export class Cat extends $CustomType {
     this.cuteness = cuteness;
   }
 }
+export function Cat$Cat($0, cuteness) {
+  return new Cat($0, cuteness);
+}
+export function Cat$isCat(value) {
+  return value instanceof Cat;
+}
 
 export function go(cat) {
   let x;

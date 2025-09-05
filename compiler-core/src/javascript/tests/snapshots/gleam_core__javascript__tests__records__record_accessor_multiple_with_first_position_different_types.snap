@@ -20,6 +20,12 @@ export class Teacher extends $CustomType {
     this.age = age;
   }
 }
+export function Person$Teacher(name, age) {
+  return new Teacher(name, age);
+}
+export function Person$isTeacher(value) {
+  return value instanceof Teacher;
+}
 
 export class Student extends $CustomType {
   constructor(name, age) {
@@ -27,6 +33,12 @@ export class Student extends $CustomType {
     this.name = name;
     this.age = age;
   }
+}
+export function Person$Student(name, age) {
+  return new Student(name, age);
+}
+export function Person$isStudent(value) {
+  return value instanceof Student;
 }
 
 export function get_age(person) {

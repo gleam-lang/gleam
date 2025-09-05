@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-assertion_line: 380
 expression: "\npub type Wibble {\n  Wibble(wibble: Int, wobble: Int)\n}\n\nfn identity(x) {\n  x\n}\n\npub fn go(x) {\n  case x {\n    Wibble(1, _) -> Wibble(..x, wibble: 4) |> identity\n    Wibble(_, 3) -> Wibble(..x, wobble: 10) |> identity\n    _ -> panic\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -34,6 +32,12 @@ export class Wibble extends $CustomType {
     this.wibble = wibble;
     this.wobble = wobble;
   }
+}
+export function Wibble$Wibble(wibble, wobble) {
+  return new Wibble(wibble, wobble);
+}
+export function Wibble$isWibble(value) {
+  return value instanceof Wibble;
 }
 
 function identity(x) {
