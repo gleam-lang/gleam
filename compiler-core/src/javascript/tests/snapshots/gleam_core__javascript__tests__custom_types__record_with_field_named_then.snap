@@ -30,6 +30,9 @@ export function Thing$Thing(then$) {
 export function Thing$isThing(value) {
   return value instanceof Thing;
 }
+export function Thing$Thing$then(value) {
+  return value.then$;
+}
 
 export function main() {
   let a = new Thing(undefined);

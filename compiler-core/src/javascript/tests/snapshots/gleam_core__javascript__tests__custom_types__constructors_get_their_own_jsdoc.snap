@@ -31,6 +31,9 @@ export function Wibble$Wibble(field) {
 export function Wibble$isWibble(value) {
   return value instanceof Wibble;
 }
+export function Wibble$Wibble$field(value) {
+  return value.field;
+}
 
 /**
  * Wobbling!!
@@ -46,4 +49,12 @@ export function Wibble$Wobble(field) {
 }
 export function Wibble$isWobble(value) {
   return value instanceof Wobble;
+}
+export function Wibble$Wobble$field(value) {
+  return value.field;
+}
+
+
+export function Wibble$field(value) {
+  return value.field;
 }

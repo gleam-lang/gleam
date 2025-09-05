@@ -133,7 +133,7 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
         PRELUDE_MODULE_NAME.into(),
         crate::type_::build_prelude(&ids),
     );
-    let mut direct_dependencies = std::collections::HashMap::from_iter(vec![]);
+    let mut direct_dependencies = HashMap::from_iter(vec![]);
 
     deps.iter().for_each(|(dep_package, dep_name, dep_src)| {
         let mut dep_config = PackageConfig::default();
@@ -154,7 +154,7 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
             origin: Origin::Src,
             importable_modules: &modules,
             warnings: &TypeWarningEmitter::null(),
-            direct_dependencies: &std::collections::HashMap::new(),
+            direct_dependencies: &HashMap::new(),
             dev_dependencies: &std::collections::HashSet::new(),
             target_support: TargetSupport::Enforced,
             package_config: &dep_config,

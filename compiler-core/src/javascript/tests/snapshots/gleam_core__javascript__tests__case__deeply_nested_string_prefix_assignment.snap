@@ -40,6 +40,9 @@ function Wibble$Wibble($0) {
 function Wibble$isWibble(value) {
   return value instanceof Wibble;
 }
+function Wibble$Wibble$0(value) {
+  return value[0];
+}
 
 class Wobble extends $CustomType {
   constructor(wabble) {
@@ -53,6 +56,9 @@ function Wobble$Wobble(wabble) {
 function Wobble$isWobble(value) {
   return value instanceof Wobble;
 }
+function Wobble$Wobble$wabble(value) {
+  return value.wabble;
+}
 
 class Wabble extends $CustomType {
   constructor(tuple) {
@@ -65,6 +71,9 @@ function Wabble$Wabble(tuple) {
 }
 function Wabble$isWabble(value) {
   return value instanceof Wabble;
+}
+function Wabble$Wabble$tuple(value) {
+  return value.tuple;
 }
 
 export function main() {

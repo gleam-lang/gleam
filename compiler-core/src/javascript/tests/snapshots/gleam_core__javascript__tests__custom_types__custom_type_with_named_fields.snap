@@ -54,6 +54,12 @@ export function Cat$Cat(name, cuteness) {
 export function Cat$isCat(value) {
   return value instanceof Cat;
 }
+export function Cat$Cat$name(value) {
+  return value.name;
+}
+export function Cat$Cat$cuteness(value) {
+  return value.cuteness;
+}
 
 export class Box extends $CustomType {
   constructor(occupant) {
@@ -66,6 +72,9 @@ export function Box$Box(occupant) {
 }
 export function Box$isBox(value) {
   return value instanceof Box;
+}
+export function Box$Box$occupant(value) {
+  return value.occupant;
 }
 
 export function go() {
