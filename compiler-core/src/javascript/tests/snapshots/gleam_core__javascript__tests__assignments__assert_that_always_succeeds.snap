@@ -29,6 +29,9 @@ function Wibble$Wibble($0) {
 function Wibble$isWibble(value) {
   return value instanceof Wibble;
 }
+function Wibble$Wibble$0(value) {
+  return value[0];
+}
 
 export function go() {
   let $ = new Wibble(1);

@@ -25,3 +25,9 @@ export function Wibble$Wibble($0, x0) {
 export function Wibble$isWibble(value) {
   return value instanceof Wibble;
 }
+export function Wibble$Wibble$0(value) {
+  return value[0];
+}
+export function Wibble$Wibble$x0(value) {
+  return value.x0;
+}

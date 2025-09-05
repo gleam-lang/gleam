@@ -24,3 +24,6 @@ export function Wibble$Wibble(constructor) {
 export function Wibble$isWibble(value) {
   return value instanceof Wibble;
 }
+export function Wibble$Wibble$constructor(value) {
+  return value.constructor$;
+}

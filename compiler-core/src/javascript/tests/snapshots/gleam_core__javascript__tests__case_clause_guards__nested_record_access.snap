@@ -39,6 +39,9 @@ export function A$A(b) {
 export function A$isA(value) {
   return value instanceof A;
 }
+export function A$A$b(value) {
+  return value.b;
+}
 
 export class B extends $CustomType {
   constructor(c) {
@@ -52,6 +55,9 @@ export function B$B(c) {
 export function B$isB(value) {
   return value instanceof B;
 }
+export function B$B$c(value) {
+  return value.c;
+}
 
 export class C extends $CustomType {
   constructor(d) {
@@ -64,6 +70,9 @@ export function C$C(d) {
 }
 export function C$isC(value) {
   return value instanceof C;
+}
+export function C$C$d(value) {
+  return value.d;
 }
 
 export function a(a) {

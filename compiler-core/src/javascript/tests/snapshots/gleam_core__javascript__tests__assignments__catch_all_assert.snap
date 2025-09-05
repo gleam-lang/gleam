@@ -30,6 +30,9 @@ function Wibble$Wibble($0) {
 function Wibble$isWibble(value) {
   return value instanceof Wibble;
 }
+function Wibble$Wibble$0(value) {
+  return value[0];
+}
 
 class Wobble extends $CustomType {
   constructor($0) {
@@ -42,6 +45,9 @@ function Wibble$Wobble($0) {
 }
 function Wibble$isWobble(value) {
   return value instanceof Wobble;
+}
+function Wibble$Wobble$0(value) {
+  return value[0];
 }
 
 export function go() {

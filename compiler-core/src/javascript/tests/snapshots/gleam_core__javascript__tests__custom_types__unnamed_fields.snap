@@ -40,6 +40,9 @@ export function Ip$Ip($0) {
 export function Ip$isIp(value) {
   return value instanceof Ip;
 }
+export function Ip$Ip$0(value) {
+  return value[0];
+}
 
 export function build(x) {
   return x("1.2.3.4");

@@ -30,6 +30,9 @@ export function Result$Ok($0) {
 export function Result$isOk(value) {
   return value instanceof Ok;
 }
+export function Result$Ok$0(value) {
+  return value[0];
+}
 
 export class Error extends $CustomType {
   constructor($0) {
@@ -42,6 +45,9 @@ export function Result$Error($0) {
 }
 export function Result$isError(value) {
   return value instanceof Error;
+}
+export function Result$Error$0(value) {
+  return value[0];
 }
 
 export const error = /* @__PURE__ */ new $gleam.Error("Bad");

@@ -39,6 +39,12 @@ export function Wibble$Wibble(wibble, wobble) {
 export function Wibble$isWibble(value) {
   return value instanceof Wibble;
 }
+export function Wibble$Wibble$wibble(value) {
+  return value.wibble;
+}
+export function Wibble$Wibble$wobble(value) {
+  return value.wobble;
+}
 
 function identity(x) {
   return x;

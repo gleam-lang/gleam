@@ -35,6 +35,12 @@ export function Cat$Cat(name, cuteness) {
 export function Cat$isCat(value) {
   return value instanceof Cat;
 }
+export function Cat$Cat$name(value) {
+  return value.name;
+}
+export function Cat$Cat$cuteness(value) {
+  return value.cuteness;
+}
 
 export function go(cat) {
   let x;
