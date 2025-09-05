@@ -5,13 +5,15 @@ mod import;
 mod tests;
 mod typescript;
 
+use std::collections::HashMap;
+
 use num_bigint::BigInt;
 use num_traits::ToPrimitive;
 
 use crate::build::Target;
 use crate::build::package_compiler::StdlibPackage;
 use crate::codegen::TypeScriptDeclarations;
-use crate::type_::PRELUDE_MODULE_NAME;
+use crate::type_::{PRELUDE_MODULE_NAME, RecordAccessor};
 use crate::{
     ast::{CustomType, Function, Import, ModuleConstant, TypeAlias, *},
     docvec,
@@ -351,10 +353,32 @@ impl<'a> Generator<'a> {
         }
 
         self.tracker.custom_type_used = true;
-        constructors
+
+        let mut definitions = constructors
             .iter()
             .map(|constructor| self.record_definition(constructor, name, publicity, opaque))
-            .collect()
+            .collect_vec();
+
+        // Generate getters for fields shared between variants
+        if let Some(accessors_map) = self.module.type_info.accessors.get(name)
+            && !accessors_map.shared_accessors.is_empty()
+            // Don't bother generating shared getters when there's only one variant,
+            // since the specific accessors can always be uses instead.
+            && constructors.len() != 1
+        {
+            let function_head = if opaque || publicity.is_private() {
+                "function "
+            } else {
+                "export function "
+            };
+            definitions.push(self.shared_custom_type_fields(
+                name,
+                &accessors_map.shared_accessors,
+                function_head,
+            ));
+        }
+
+        definitions
     }
 
     fn record_definition(
@@ -374,13 +398,16 @@ impl<'a> Generator<'a> {
             self.record_constructor_definition(constructor, type_name, function_head);
         let variant_check_definition =
             self.record_check_definition(constructor, type_name, function_head);
+        let fields_definition =
+            self.record_fields_definition(constructor, type_name, function_head);
 
         docvec![
             class_definition,
             line(),
             constructor_definition,
             line(),
-            variant_check_definition
+            variant_check_definition,
+            fields_definition,
         ]
     }
 
@@ -446,6 +473,75 @@ impl<'a> Generator<'a> {
             line(),
             "}"
         ]
+    }
+
+    fn record_fields_definition(
+        &self,
+        constructor: &'a TypedRecordConstructor,
+        type_name: &'a str,
+        function_head: &'a str,
+    ) -> Document<'a> {
+        let mut functions = Vec::new();
+
+        for (index, argument) in constructor.arguments.iter().enumerate() {
+            let function_name;
+            let field;
+
+            if let Some((_, label)) = &argument.label {
+                function_name = eco_format!(
+                    "{type_name}${record_name}${label}",
+                    record_name = constructor.name,
+                );
+                field = eco_format!(".{field_name}", field_name = maybe_escape_property(label));
+            } else {
+                function_name = eco_format!(
+                    "{type_name}${record_name}${index}",
+                    record_name = constructor.name,
+                );
+                field = eco_format!("[{index}]");
+            };
+
+            let contents = docvec![line(), "return value", field, ";"];
+
+            functions.push(docvec![
+                line(),
+                function_head,
+                function_name,
+                "(value) {",
+                contents.nest(INDENT),
+                line(),
+                "}"
+            ]);
+        }
+
+        concat(functions)
+    }
+
+    fn shared_custom_type_fields(
+        &self,
+        type_name: &'a str,
+        shared_accessors: &HashMap<EcoString, RecordAccessor>,
+        function_head: &'a str,
+    ) -> Document<'a> {
+        let mut functions = Vec::new();
+
+        for field in shared_accessors.keys() {
+            let function_name = eco_format!("{type_name}${field}");
+
+            let contents = docvec![line(), "return value.", maybe_escape_property(field), ";"];
+
+            functions.push(docvec![
+                line(),
+                function_head,
+                function_name,
+                "(value) {",
+                contents.nest(INDENT),
+                line(),
+                "}"
+            ]);
+        }
+
+        concat(functions)
     }
 
     fn record_class_definition(

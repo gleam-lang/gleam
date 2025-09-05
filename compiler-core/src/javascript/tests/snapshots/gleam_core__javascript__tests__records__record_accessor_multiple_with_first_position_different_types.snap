@@ -26,6 +26,12 @@ export function Person$Teacher(name, age) {
 export function Person$isTeacher(value) {
   return value instanceof Teacher;
 }
+export function Person$Teacher$name(value) {
+  return value.name;
+}
+export function Person$Teacher$age(value) {
+  return value.age;
+}
 
 export class Student extends $CustomType {
   constructor(name, age) {
@@ -39,6 +45,17 @@ export function Person$Student(name, age) {
 }
 export function Person$isStudent(value) {
   return value instanceof Student;
+}
+export function Person$Student$name(value) {
+  return value.name;
+}
+export function Person$Student$age(value) {
+  return value.age;
+}
+
+
+export function Person$age(value) {
+  return value.age;
 }
 
 export function get_age(person) {
