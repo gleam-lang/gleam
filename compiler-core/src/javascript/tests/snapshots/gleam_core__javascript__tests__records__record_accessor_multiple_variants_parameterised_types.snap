@@ -59,11 +59,11 @@ export function Person$Student$age(value) {
 }
 
 
-export function Person$name(value) {
-  return value.name;
-}
 export function Person$age(value) {
   return value.age;
+}
+export function Person$name(value) {
+  return value.name;
 }
 
 export function get_name(person) {
