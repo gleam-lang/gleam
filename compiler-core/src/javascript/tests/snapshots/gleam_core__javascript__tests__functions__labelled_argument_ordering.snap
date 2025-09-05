@@ -29,36 +29,12 @@ pub fn main() {
 import { CustomType as $CustomType } from "../gleam.mjs";
 
 class A extends $CustomType {}
-function A$A() {
-  return new A();
-}
-function A$isA(value) {
-  return value instanceof A;
-}
 
 class B extends $CustomType {}
-function B$B() {
-  return new B();
-}
-function B$isB(value) {
-  return value instanceof B;
-}
 
 class C extends $CustomType {}
-function C$C() {
-  return new C();
-}
-function C$isC(value) {
-  return value instanceof C;
-}
 
 class D extends $CustomType {}
-function D$D() {
-  return new D();
-}
-function D$isD(value) {
-  return value instanceof D;
-}
 
 function wibble(a, b, c, d) {
   return undefined;

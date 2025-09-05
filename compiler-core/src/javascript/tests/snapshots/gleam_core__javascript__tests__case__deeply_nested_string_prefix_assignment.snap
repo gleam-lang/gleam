@@ -34,15 +34,6 @@ class Wibble extends $CustomType {
     this[0] = $0;
   }
 }
-function Wibble$Wibble($0) {
-  return new Wibble($0);
-}
-function Wibble$isWibble(value) {
-  return value instanceof Wibble;
-}
-function Wibble$Wibble$0(value) {
-  return value[0];
-}
 
 class Wobble extends $CustomType {
   constructor(wabble) {
@@ -50,30 +41,12 @@ class Wobble extends $CustomType {
     this.wabble = wabble;
   }
 }
-function Wobble$Wobble(wabble) {
-  return new Wobble(wabble);
-}
-function Wobble$isWobble(value) {
-  return value instanceof Wobble;
-}
-function Wobble$Wobble$wabble(value) {
-  return value.wabble;
-}
 
 class Wabble extends $CustomType {
   constructor(tuple) {
     super();
     this.tuple = tuple;
   }
-}
-function Wabble$Wabble(tuple) {
-  return new Wabble(tuple);
-}
-function Wabble$isWabble(value) {
-  return value instanceof Wabble;
-}
-function Wabble$Wabble$tuple(value) {
-  return value.tuple;
 }
 
 export function main() {
