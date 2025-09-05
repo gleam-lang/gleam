@@ -1495,6 +1495,7 @@ pub struct TypeAliasConstructor {
     pub deprecation: Deprecation,
     pub documentation: Option<EcoString>,
     pub origin: SrcSpan,
+    pub parameters: Vec<Arc<Type>>,
 }
 
 impl ValueConstructor {

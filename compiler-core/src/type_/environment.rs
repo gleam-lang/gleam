@@ -113,21 +113,10 @@ impl<'a> Environment<'a> {
             .get(PRELUDE_MODULE_NAME)
             .expect("Unable to find prelude in importable modules");
 
-        let mut names = Names::new();
-        for name in prelude.values.keys() {
-            names.named_constructor_in_scope(
-                PRELUDE_MODULE_NAME.into(),
-                name.clone(),
-                name.clone(),
-            );
-        }
-
-        for name in prelude.types.keys() {
-            names.named_type_in_scope(PRELUDE_MODULE_NAME.into(), name.clone(), name.clone());
-        }
+        let names = Self::build_names(prelude, importable_modules);
 
         Self {
-            current_package: current_package.clone(),
+            current_package,
             gleam_version,
             previous_id: ids.next(),
             ids,
@@ -152,6 +141,42 @@ impl<'a> Environment<'a> {
             references: ReferenceTracker::new(),
             dev_dependencies,
         }
+    }
+
+    fn build_names(
+        prelude: &ModuleInterface,
+        importable_modules: &im::HashMap<EcoString, ModuleInterface>,
+    ) -> Names {
+        let mut names = Names::new();
+
+        // Insert prelude types and values into scope
+        for name in prelude.values.keys() {
+            names.named_constructor_in_scope(
+                PRELUDE_MODULE_NAME.into(),
+                name.clone(),
+                name.clone(),
+            );
+        }
+        for name in prelude.types.keys() {
+            names.named_type_in_scope(PRELUDE_MODULE_NAME.into(), name.clone(), name.clone());
+        }
+
+        // Find potential type aliases which reexport internal types
+        for module in importable_modules.values() {
+            // Internal modules are not part of the public API so they are also
+            // not considered.
+            if module.is_internal {
+                continue;
+            }
+            for (alias_name, alias) in module.type_aliases.iter() {
+                // An alias can only be a public reexport if it is public.
+                if alias.publicity.is_public() {
+                    names.maybe_register_reexport_alias(&module.package, alias_name, alias);
+                }
+            }
+        }
+
+        names
     }
 }
 

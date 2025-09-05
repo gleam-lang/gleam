@@ -197,6 +197,7 @@ impl ModuleDecoder {
                 message: self.string(deprecation)?,
             }
         };
+        let parameters = read_vec!(&reader.get_parameters()?, self, type_);
         Ok(TypeAliasConstructor {
             publicity: self.publicity(reader.get_publicity()?)?,
             origin: self.src_span(&reader.get_origin()?)?,
@@ -205,6 +206,7 @@ impl ModuleDecoder {
             deprecation,
             documentation: self.optional_string(self.str(reader.get_documentation()?)?),
             arity: reader.get_arity() as usize,
+            parameters,
         })
     }
 
@@ -224,9 +226,10 @@ impl ModuleDecoder {
         let name = self.string(reader.get_name()?)?;
         let arguments = read_vec!(&reader.get_parameters()?, self, type_);
         let inferred_variant = self.inferred_variant(&reader.get_inferred_variant()?)?;
+        let publicity = self.publicity(reader.get_publicity()?)?;
 
         Ok(Arc::new(Type::Named {
-            publicity: Publicity::Public,
+            publicity,
             package,
             module,
             name,

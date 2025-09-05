@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport package as pkg\n\npub fn main() {\n  pkg.make_wibble()\n}\n"
+---
+----- BEFORE ACTION
+
+import package as pkg
+
+pub fn main() {
+       ↑       
+  pkg.make_wibble()
+}
+
+
+----- AFTER ACTION
+
+import package as pkg
+
+pub fn main() -> pkg.Wibble {
+  pkg.make_wibble()
+}
