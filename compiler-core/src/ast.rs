@@ -1617,6 +1617,12 @@ impl TypedClause {
         self.pattern
             .iter()
             .find_map(|p| p.find_node(byte_index))
+            .or_else(|| {
+                self.alternative_patterns
+                    .iter()
+                    .flat_map(|p| p.iter())
+                    .find_map(|p| p.find_node(byte_index))
+            })
             .or_else(|| self.then.find_node(byte_index))
     }
 

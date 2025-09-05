@@ -328,6 +328,16 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- You can now go to definition, rename, etc. from alternative patterns!
+  ```gleam
+  case wibble {
+    Wibble | Wobble -> 0
+    //         ^- Previously you could not trigger actions from here
+  }
+
+  ```
+  ([fruno](https://github.com/fruno-bulax))
+
 ### Formatter
 
 - The formatter now removes needless multiple negations that are safe to remove.

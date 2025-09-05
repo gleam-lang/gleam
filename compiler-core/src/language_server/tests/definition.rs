@@ -874,3 +874,22 @@ const my_constant = wibble.Wibble(10)
         find_position_of("= wibble").under_char('w')
     );
 }
+
+#[test]
+fn goto_definition_from_alternative_pattern() {
+    assert_goto!(
+        "
+type Wibble {
+  Wibble
+  Wobble
+}
+
+fn warble(wibble: Wibble) {
+  case wibble {
+    Wibble | Wobble -> 0
+  }
+}
+",
+        find_position_of("Wobble ->")
+    );
+}
