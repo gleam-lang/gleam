@@ -21,11 +21,9 @@ pub fn main() {
 export function main() {
   let a = 10;
   let b = 20;
-  let _block;
   {
     let _a_0 = 7;
-    _block = (a + b) + _a_0;
-  }
-  _block;
+    (a + b) + _a_0
+  };
   return a;
 }
