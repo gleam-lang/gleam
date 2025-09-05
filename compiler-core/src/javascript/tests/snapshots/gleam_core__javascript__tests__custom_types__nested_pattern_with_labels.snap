@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 316
 expression: "pub type Box(x) { Box(a: Int, b: x) }\npub fn go(x) {\n  case x {\n    Box(a: _, b: Box(a: a, b: b)) -> a + b\n    _ -> 1\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub type Box(x) { Box(a: Int, b: x) }
@@ -23,6 +21,12 @@ export class Box extends $CustomType {
     this.a = a;
     this.b = b;
   }
+}
+export function Box$Box(a, b) {
+  return new Box(a, b);
+}
+export function Box$isBox(value) {
+  return value instanceof Box;
 }
 
 export function go(x) {

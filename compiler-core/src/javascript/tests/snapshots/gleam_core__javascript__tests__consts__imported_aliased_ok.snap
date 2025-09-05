@@ -17,5 +17,11 @@ import * as $gleam from "../gleam.mjs";
 import { Ok as Y, CustomType as $CustomType } from "../gleam.mjs";
 
 export class Ok extends $CustomType {}
+export function X$Ok() {
+  return new Ok();
+}
+export function X$isOk(value) {
+  return value instanceof Ok;
+}
 
 export const y = (var0) => { return new Y(var0); };

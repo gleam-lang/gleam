@@ -18,3 +18,9 @@ export class Wibble extends $CustomType {
     this.prototype$ = prototype;
   }
 }
+export function Wibble$Wibble(prototype) {
+  return new Wibble(prototype);
+}
+export function Wibble$isWibble(value) {
+  return value instanceof Wibble;
+}

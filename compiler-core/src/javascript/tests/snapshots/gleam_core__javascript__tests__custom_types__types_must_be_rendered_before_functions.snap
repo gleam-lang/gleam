@@ -12,6 +12,12 @@ pub type One { One }
 import { CustomType as $CustomType } from "../gleam.mjs";
 
 export class One extends $CustomType {}
+export function One$One() {
+  return new One();
+}
+export function One$isOne(value) {
+  return value instanceof One;
+}
 
 export function one() {
   return new One();

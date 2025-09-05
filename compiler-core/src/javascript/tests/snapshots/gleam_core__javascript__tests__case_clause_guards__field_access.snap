@@ -28,6 +28,12 @@ export class Person extends $CustomType {
     this.age = age;
   }
 }
+export function Person$Person(username, name, age) {
+  return new Person(username, name, age);
+}
+export function Person$isPerson(value) {
+  return value instanceof Person;
+}
 
 export function main() {
   let given_name = "jack";

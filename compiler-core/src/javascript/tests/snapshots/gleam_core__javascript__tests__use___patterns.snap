@@ -27,6 +27,12 @@ class Box extends $CustomType {
     this[0] = $0;
   }
 }
+function Box$Box($0) {
+  return new Box($0);
+}
+function Box$isBox(value) {
+  return value instanceof Box;
+}
 
 function apply(arg, fun) {
   return fun(arg);
