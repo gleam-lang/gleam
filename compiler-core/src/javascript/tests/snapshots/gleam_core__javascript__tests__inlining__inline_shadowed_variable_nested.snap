@@ -21,17 +21,13 @@ pub fn sum(a, b) {
 
 ----- COMPILED JAVASCRIPT
 export function sum(a, b) {
-  let _block;
   {
     let _a_0 = 7;
-    let _block$1;
     {
       let _a_1 = 10;
-      _block$1 = ((a + b) + _a_0) - _a_1;
-    }
-    _block$1;
-    _block = _a_0;
-  }
-  _block;
+      ((a + b) + _a_0) - _a_1
+    };
+    _a_0
+  };
   return a;
 }
