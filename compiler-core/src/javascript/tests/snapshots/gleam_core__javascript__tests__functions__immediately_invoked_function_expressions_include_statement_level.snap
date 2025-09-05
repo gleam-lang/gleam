@@ -26,6 +26,12 @@ export class Wibble extends $CustomType {
     this.b = b;
   }
 }
+export function Wibble$Wibble(a, b) {
+  return new Wibble(a, b);
+}
+export function Wibble$isWibble(value) {
+  return value instanceof Wibble;
+}
 
 function identity(x) {
   return x;

@@ -27,12 +27,24 @@ export class Wibble extends $CustomType {
     this.string = string;
   }
 }
+export function Wibble$Wibble(int, string) {
+  return new Wibble(int, string);
+}
+export function Wibble$isWibble(value) {
+  return value instanceof Wibble;
+}
 
 export class Wobble extends $CustomType {
   constructor($0) {
     super();
     this[0] = $0;
   }
+}
+export function Wibble$Wobble($0) {
+  return new Wobble($0);
+}
+export function Wibble$isWobble(value) {
+  return value instanceof Wobble;
 }
 
 export function go(x) {

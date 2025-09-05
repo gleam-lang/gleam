@@ -18,3 +18,9 @@ export class Thing extends $CustomType {
     this.class = class$;
   }
 }
+export function Thing$Thing(in$, class$) {
+  return new Thing(in$, class$);
+}
+export function Thing$isThing(value) {
+  return value instanceof Thing;
+}
