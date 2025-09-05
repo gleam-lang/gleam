@@ -28,6 +28,9 @@ export function Function$Function($0) {
 export function Function$isFunction(value) {
   return value instanceof Function;
 }
+export function Function$Function$0(value) {
+  return value[0];
+}
 
 export function main() {
   return toList([

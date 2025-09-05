@@ -33,6 +33,9 @@ function Box$Box($0) {
 function Box$isBox(value) {
   return value instanceof Box;
 }
+function Box$Box$0(value) {
+  return value[0];
+}
 
 function apply(arg, fun) {
   return fun(arg);

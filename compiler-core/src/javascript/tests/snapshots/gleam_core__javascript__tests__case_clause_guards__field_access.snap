@@ -34,6 +34,15 @@ export function Person$Person(username, name, age) {
 export function Person$isPerson(value) {
   return value instanceof Person;
 }
+export function Person$Person$username(value) {
+  return value.username;
+}
+export function Person$Person$name(value) {
+  return value.name;
+}
+export function Person$Person$age(value) {
+  return value.age;
+}
 
 export function main() {
   let given_name = "jack";

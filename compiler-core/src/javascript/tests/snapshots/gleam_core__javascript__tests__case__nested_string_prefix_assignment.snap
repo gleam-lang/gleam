@@ -34,6 +34,9 @@ function Wibble$Wibble(wobble) {
 function Wibble$isWibble(value) {
   return value instanceof Wibble;
 }
+function Wibble$Wibble$wobble(value) {
+  return value.wobble;
+}
 
 export function main() {
   let tmp = new Wibble("wibble");

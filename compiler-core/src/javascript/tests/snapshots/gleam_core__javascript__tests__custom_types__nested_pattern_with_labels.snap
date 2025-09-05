@@ -28,6 +28,12 @@ export function Box$Box(a, b) {
 export function Box$isBox(value) {
   return value instanceof Box;
 }
+export function Box$Box$a(value) {
+  return value.a;
+}
+export function Box$Box$b(value) {
+  return value.b;
+}
 
 export function go(x) {
   let a = x.b.a;

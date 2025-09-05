@@ -25,6 +25,12 @@ export function Person$Person(name, age) {
 export function Person$isPerson(value) {
   return value instanceof Person;
 }
+export function Person$Person$name(value) {
+  return value.name;
+}
+export function Person$Person$age(value) {
+  return value.age;
+}
 
 export function get_age(person) {
   return person.age;
