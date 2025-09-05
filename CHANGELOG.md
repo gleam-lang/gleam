@@ -226,6 +226,40 @@
 
   ([sobolevn](https://github.com/sobolevn))
 
+- Generated code for the JavaScript target now includes a public API which can
+  be used for FFI interacting with Gleam custom types. For example, if you have
+  this Gleam code:
+
+  ```gleam
+  pub type Person {
+    Teacher(name: String, subject: String)
+    Student(name: String, age: Int)
+  }
+  ```
+
+  You can use the new API to use the `Person` type in FFI code:
+
+  ```javascript
+  import * from "./person.mjs";
+
+  // Constructing custom types
+  let teacher = Person$Teacher("Joe Armstrong", "Computer Science");
+  let student = Person$Student("Louis Pilfold", 17);
+
+  let randomPerson = Math.random() > 0.5 ? teacher : student;
+
+  // Checking variants
+  let randomIsTeacher = Person$isTeacher(randomPerson);
+
+  // Getting fields
+  let studentAge = Person$Student$age(student);
+
+  // The `name` field is shared so can be accessed from either variant
+  let personNAme = Person$name(randomPerson);
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - New projects are generated using OTP28 on GitHub Actions.
