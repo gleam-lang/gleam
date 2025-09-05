@@ -128,7 +128,7 @@ use crate::{
         TypedExprBitArraySegment, TypedFunction, TypedModule, TypedPattern,
         TypedPipelineAssignment, TypedStatement, TypedUse, visit::Visit,
     },
-    exhaustiveness::CompiledCase,
+    exhaustiveness::{Body, CompiledCase, Decision},
     type_::{
         self, Deprecation, ModuleInterface, ModuleValueConstructor, PRELUDE_MODULE_NAME,
         PatternConstructor, Type, TypedCallArg, ValueConstructor, ValueConstructorVariant,
@@ -238,7 +238,7 @@ impl Inliner<'_> {
     }
 
     /// Get the name we are using for a variable, in case it is renamed.
-    fn variable_name(&mut self, name: EcoString) -> EcoString {
+    fn variable_name(&self, name: EcoString) -> EcoString {
         self.renamed_variables.get(&name).cloned().unwrap_or(name)
     }
 
@@ -1137,7 +1137,14 @@ impl Inliner<'_> {
             .map(|clause| self.case_clause(clause))
             .collect();
 
-        dbg!(&compiled_case);
+        // Since JavaScript code generation uses the decision tree to generate
+        // code for `case` expressions, we need to rename the variables bound
+        // in the decision tree too. Because we have already renamed the variables
+        // in the pattern, we can simply look up the rebound names.
+        let compiled_case = CompiledCase {
+            tree: self.decision(compiled_case.tree),
+            subject_variables: compiled_case.subject_variables,
+        };
 
         TypedExpr::Case {
             location,
@@ -1180,6 +1187,57 @@ impl Inliner<'_> {
             alternative_patterns,
             guard,
             then,
+        }
+    }
+
+    fn decision(&self, decision: Decision) -> Decision {
+        match decision {
+            Decision::Run { body } => Decision::Run {
+                body: self.case_body(body),
+            },
+            Decision::Guard {
+                guard,
+                if_true,
+                if_false,
+            } => Decision::Guard {
+                guard,
+                if_true: self.case_body(if_true),
+                if_false: Box::new(self.decision(*if_false)),
+            },
+            Decision::Switch {
+                var,
+                choices,
+                fallback,
+                fallback_check,
+            } => Decision::Switch {
+                var,
+                choices: choices
+                    .into_iter()
+                    .map(|(check, decision)| (check, self.decision(decision)))
+                    .collect(),
+                fallback: Box::new(self.decision(*fallback)),
+                fallback_check,
+            },
+            Decision::Fail => Decision::Fail,
+        }
+    }
+
+    fn case_body(&self, body: Body) -> Body {
+        let Body {
+            bindings,
+            clause_index,
+        } = body;
+
+        let bindings = bindings
+            .into_iter()
+            // We do this after renaming the variables in the pattern, so we can
+            // just lookup the new name, rather than renaming again.
+            .map(|(name, value)| (self.variable_name(name), value))
+            .collect();
+
+        Body {
+            bindings,
+            clause_index,
         }
     }
 }
