@@ -18,3 +18,9 @@ export class Wibble extends $CustomType {
     this.then$ = then$;
   }
 }
+export function Wibble$Wibble(then$) {
+  return new Wibble(then$);
+}
+export function Wibble$isWibble(value) {
+  return value instanceof Wibble;
+}

@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/consts.rs
-assertion_line: 58
 expression: "\npub type X {\n  X(Int, List(String))\n}\n\npub const x = [X(1, [\"1\"])]\npub const y = [X(1, [\"1\"])]\n        "
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -23,6 +21,12 @@ export class X extends $CustomType {
     this[0] = $0;
     this[1] = $1;
   }
+}
+export function X$X($0, $1) {
+  return new X($0, $1);
+}
+export function X$isX(value) {
+  return value instanceof X;
 }
 
 export const x = /* @__PURE__ */ toList([

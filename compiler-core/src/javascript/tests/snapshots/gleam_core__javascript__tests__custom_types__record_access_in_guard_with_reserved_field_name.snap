@@ -26,6 +26,12 @@ export class Thing extends $CustomType {
     this.constructor$ = constructor;
   }
 }
+export function Thing$Thing(constructor) {
+  return new Thing(constructor);
+}
+export function Thing$isThing(value) {
+  return value instanceof Thing;
+}
 
 export function main() {
   let a = new Thing(undefined);

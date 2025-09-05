@@ -33,6 +33,12 @@ export class A extends $CustomType {
     this.b = b;
   }
 }
+export function A$A(b) {
+  return new A(b);
+}
+export function A$isA(value) {
+  return value instanceof A;
+}
 
 export class B extends $CustomType {
   constructor(c) {
@@ -40,12 +46,24 @@ export class B extends $CustomType {
     this.c = c;
   }
 }
+export function B$B(c) {
+  return new B(c);
+}
+export function B$isB(value) {
+  return value instanceof B;
+}
 
 export class C extends $CustomType {
   constructor(d) {
     super();
     this.d = d;
   }
+}
+export function C$C(d) {
+  return new C(d);
+}
+export function C$isC(value) {
+  return value instanceof C;
 }
 
 export function a(a) {

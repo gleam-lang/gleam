@@ -340,6 +340,7 @@ impl<'a> Generator<'a> {
 
     fn custom_type_definition(
         &mut self,
+        name: &'a str,
         constructors: &'a [TypedRecordConstructor],
         publicity: Publicity,
         opaque: bool,
@@ -352,11 +353,102 @@ impl<'a> Generator<'a> {
         self.tracker.custom_type_used = true;
         constructors
             .iter()
-            .map(|constructor| self.record_definition(constructor, publicity, opaque))
+            .map(|constructor| self.record_definition(constructor, name, publicity, opaque))
             .collect()
     }
 
     fn record_definition(
+        &self,
+        constructor: &'a TypedRecordConstructor,
+        type_name: &'a str,
+        publicity: Publicity,
+        opaque: bool,
+    ) -> Document<'a> {
+        let class_definition = self.record_class_definition(constructor, publicity, opaque);
+        let function_head = if opaque || publicity.is_private() {
+            "function "
+        } else {
+            "export function "
+        };
+        let constructor_definition =
+            self.record_constructor_definition(constructor, type_name, function_head);
+        let variant_check_definition =
+            self.record_check_definition(constructor, type_name, function_head);
+
+        docvec![
+            class_definition,
+            line(),
+            constructor_definition,
+            line(),
+            variant_check_definition
+        ]
+    }
+
+    fn record_constructor_definition(
+        &self,
+        constructor: &'a TypedRecordConstructor,
+        type_name: &'a str,
+        function_head: &'a str,
+    ) -> Document<'a> {
+        let mut arguments = Vec::new();
+
+        for (index, parameter) in constructor.arguments.iter().enumerate() {
+            if let Some((_, label)) = &parameter.label {
+                arguments.push(maybe_escape_identifier(label).to_doc());
+            } else {
+                arguments.push(eco_format!("${index}").to_doc());
+            }
+        }
+
+        let construction = docvec![
+            line(),
+            "return new ",
+            constructor.name.as_str(),
+            "(",
+            join(arguments.clone(), break_(",", ", ")),
+            ");"
+        ];
+
+        docvec![
+            function_head,
+            type_name,
+            "$",
+            constructor.name.as_str(),
+            "(",
+            join(arguments, break_(",", ", ")),
+            ") {",
+            construction.nest(INDENT),
+            line(),
+            "}"
+        ]
+    }
+
+    fn record_check_definition(
+        &self,
+        constructor: &'a TypedRecordConstructor,
+        type_name: &'a str,
+        function_head: &'a str,
+    ) -> Document<'a> {
+        let construction = docvec![
+            line(),
+            "return value instanceof ",
+            constructor.name.as_str(),
+            ";"
+        ];
+
+        docvec![
+            function_head,
+            type_name,
+            "$is",
+            constructor.name.as_str(),
+            "(value) {",
+            construction.nest(INDENT),
+            line(),
+            "}"
+        ]
+    }
+
+    fn record_class_definition(
         &self,
         constructor: &'a TypedRecordConstructor,
         publicity: Publicity,
@@ -438,8 +530,9 @@ impl<'a> Generator<'a> {
                     publicity,
                     constructors,
                     opaque,
+                    name,
                     ..
-                }) => self.custom_type_definition(constructors, *publicity, *opaque),
+                }) => self.custom_type_definition(name, constructors, *publicity, *opaque),
 
                 Definition::Function(Function { .. })
                 | Definition::TypeAlias(TypeAlias { .. })
