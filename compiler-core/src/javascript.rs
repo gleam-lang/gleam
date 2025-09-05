@@ -528,7 +528,7 @@ impl<'a> Generator<'a> {
     ) -> Document<'a> {
         let mut functions = Vec::new();
 
-        for field in shared_accessors.keys() {
+        for field in shared_accessors.keys().sorted() {
             let function_name = eco_format!("{type_name}${field}");
 
             let contents = docvec![line(), "return value.", maybe_escape_property(field), ";"];
