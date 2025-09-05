@@ -354,9 +354,15 @@ impl<'a> Generator<'a> {
 
         self.tracker.custom_type_used = true;
 
+        let constructor_publicity = if opaque || publicity.is_private() {
+            Publicity::Private
+        } else {
+            Publicity::Public
+        };
+
         let mut definitions = constructors
             .iter()
-            .map(|constructor| self.record_definition(constructor, name, publicity, opaque))
+            .map(|constructor| self.record_definition(constructor, name, constructor_publicity))
             .collect_vec();
 
         // Generate getters for fields shared between variants
@@ -365,6 +371,8 @@ impl<'a> Generator<'a> {
             // Don't bother generating shared getters when there's only one variant,
             // since the specific accessors can always be uses instead.
             && constructors.len() != 1
+            // Only generate accessors for the API if the constructors are public
+            && constructor_publicity.is_public()
         {
             let function_head = if opaque || publicity.is_private() {
                 "function "
@@ -386,20 +394,18 @@ impl<'a> Generator<'a> {
         constructor: &'a TypedRecordConstructor,
         type_name: &'a str,
         publicity: Publicity,
-        opaque: bool,
     ) -> Document<'a> {
-        let class_definition = self.record_class_definition(constructor, publicity, opaque);
-        let function_head = if opaque || publicity.is_private() {
-            "function "
-        } else {
-            "export function "
-        };
-        let constructor_definition =
-            self.record_constructor_definition(constructor, type_name, function_head);
-        let variant_check_definition =
-            self.record_check_definition(constructor, type_name, function_head);
-        let fields_definition =
-            self.record_fields_definition(constructor, type_name, function_head);
+        let class_definition = self.record_class_definition(constructor, publicity);
+
+        // If the custom type is private or opaque, we don't need to generate API
+        // functions for it.
+        if publicity.is_private() {
+            return class_definition;
+        }
+
+        let constructor_definition = self.record_constructor_definition(constructor, type_name);
+        let variant_check_definition = self.record_check_definition(constructor, type_name);
+        let fields_definition = self.record_fields_definition(constructor, type_name);
 
         docvec![
             class_definition,
@@ -415,7 +421,6 @@ impl<'a> Generator<'a> {
         &self,
         constructor: &'a TypedRecordConstructor,
         type_name: &'a str,
-        function_head: &'a str,
     ) -> Document<'a> {
         let mut arguments = Vec::new();
 
@@ -437,7 +442,7 @@ impl<'a> Generator<'a> {
         ];
 
         docvec![
-            function_head,
+            "export function ",
             type_name,
             "$",
             constructor.name.as_str(),
@@ -454,7 +459,6 @@ impl<'a> Generator<'a> {
         &self,
         constructor: &'a TypedRecordConstructor,
         type_name: &'a str,
-        function_head: &'a str,
     ) -> Document<'a> {
         let construction = docvec![
             line(),
@@ -464,7 +468,7 @@ impl<'a> Generator<'a> {
         ];
 
         docvec![
-            function_head,
+            "export function ",
             type_name,
             "$is",
             constructor.name.as_str(),
@@ -479,7 +483,6 @@ impl<'a> Generator<'a> {
         &self,
         constructor: &'a TypedRecordConstructor,
         type_name: &'a str,
-        function_head: &'a str,
     ) -> Document<'a> {
         let mut functions = Vec::new();
 
@@ -505,7 +508,7 @@ impl<'a> Generator<'a> {
 
             functions.push(docvec![
                 line(),
-                function_head,
+                "export function ",
                 function_name,
                 "(value) {",
                 contents.nest(INDENT),
@@ -548,7 +551,6 @@ impl<'a> Generator<'a> {
         &self,
         constructor: &'a TypedRecordConstructor,
         publicity: Publicity,
-        opaque: bool,
     ) -> Document<'a> {
         fn parameter((i, arg): (usize, &TypedRecordConstructorArg)) -> Document<'_> {
             arg.label
@@ -564,10 +566,10 @@ impl<'a> Generator<'a> {
             nil()
         };
 
-        let head = if publicity.is_private() || opaque {
-            "class "
-        } else {
+        let head = if publicity.is_public() {
             "export class "
+        } else {
+            "class "
         };
         let head = docvec![head, &constructor.name, " extends $CustomType {"];
 
