@@ -325,6 +325,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("Failed to decrypt local Hex API key")]
     FailedToDecryptLocalHexApiKey { detail: String },
 
+    #[error("Invalid Credentials file")]
+    InvalidCredentialsFile { path: String },
+
     #[error("Cannot add a package with the same name as a dependency")]
     CannotAddSelfAsDependency { name: EcoString },
 }
@@ -1477,6 +1480,22 @@ The error from the encryption library was:
                     hint: None,
                     level: Level::Error,
                     location: None,
+                }]
+            }
+
+            Error::InvalidCredentialsFile { path } => {
+                let text = wrap_format!(
+                    "Your credentials file at {path} is in the wrong format. \
+Try deleting the file and authenticate again. If the file contains an api token, \
+invalidate it manually."
+                );
+
+                vec![Diagnostic {
+                    title: "Invalid credentials file".into(),
+                    text,
+                    level: Level::Error,
+                    location: None,
+                    hint: None,
                 }]
             }
 
