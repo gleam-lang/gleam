@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/signature_help.rs
+expression: "\nfn identity(x: a) -> a { x }\n\nfn main() {\n  let a = Ok(10)\n  identity( a)\n}\n"
+---
+fn identity(x: a) -> a { x }
+
+fn main() {
+  let a = Ok(10)
+  identity( a)
+           ↑  
+}
+
+
+----- Signature help -----
+identity(Result(Int, b)) -> Result(Int, b)
+
+No documentation
