@@ -15,8 +15,6 @@ warning: Unused function argument
   │
 2 │ pub fn main(x: Int) {
   │             ^ This argument is unused
-3 │   main(x)
-  │        -
 
 This argument is passed to the function when recursing, but it's never used
 for anything.

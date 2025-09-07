@@ -4467,15 +4467,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // If the argument is a simple usage of a parameter defined
                 // by this same function we want to track it, to report unused
                 // parameters that are just passed along the recursive calls.
-                if let Some(definition_location) =
+                if let Some(name) =
                     self.argument_used_in_recursive_call(fun, &inferred, argument_index)
                 {
-                    let _ = self
-                        .environment
-                        .recursive_argument_usages
-                        .entry(definition_location)
-                        .and_modify(|usages| usages.push(inferred.location()))
-                        .or_insert(vec![inferred.location()]);
+                    self.environment.set_used_recursively(&name);
                 }
                 inferred
             }
@@ -4506,20 +4501,20 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         called_function: &TypedExpr,
         argument: &TypedExpr,
         argument_index: usize,
-    ) -> Option<SrcSpan> {
-        let argument = argument.var_constructor()?;
+    ) -> Option<EcoString> {
+        let (argument, name) = argument.var_constructor()?;
         let (function_defining_argument, index_in_argument_list) =
             argument.variant.argument_function_and_index()?;
 
         let (module, function) = called_function
             .var_constructor()
-            .and_then(|constructor| constructor.variant.function_module_and_name())?;
+            .and_then(|(constructor, _)| constructor.variant.function_module_and_name())?;
 
         if self.environment.current_module == module
             && function == function_defining_argument
             && argument_index == index_in_argument_list
         {
-            Some(argument.definition_location().span)
+            Some(name.clone())
         } else {
             None
         }

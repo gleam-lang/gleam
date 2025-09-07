@@ -719,7 +719,7 @@ Hint: You can safely remove it.
                     }),
                 },
 
-                type_::Warning::UnusedRecursiveArgument { location, usages } => Diagnostic {
+                type_::Warning::UnusedRecursiveArgument { location } => Diagnostic {
                     title: "Unused function argument".into(),
                     text: wrap(
                         "This argument is passed to the function when recursing, \
@@ -734,16 +734,7 @@ but it's never used for anything.",
                             text: Some("This argument is unused".into()),
                             span: *location,
                         },
-                        extra_labels: usages
-                            .iter()
-                            .map(|usage| ExtraLabel {
-                                src_info: None,
-                                label: diagnostic::Label {
-                                    text: None,
-                                    span: *usage,
-                                },
-                            })
-                            .collect(),
+                        extra_labels: vec![],
                     }),
                 },
 
