@@ -731,7 +731,7 @@ but it's never used for anything.",
                         src: src.clone(),
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
-                            text: Some("This argument is unused".into()),
+                            text: Some("This argument is never used".into()),
                             span: *location,
                         },
                         extra_labels: vec![],
