@@ -19,18 +19,10 @@ export class Person extends $CustomType {
     this.age = age;
   }
 }
-export function Person$Person(name, age) {
-  return new Person(name, age);
-}
-export function Person$isPerson(value) {
-  return value instanceof Person;
-}
-export function Person$Person$name(value) {
-  return value.name;
-}
-export function Person$Person$age(value) {
-  return value.age;
-}
+export const Person$Person = (name, age) => new Person(name, age);
+export const Person$isPerson = (value) => value instanceof Person;
+export const Person$Person$name = (value) => value.name;
+export const Person$Person$age = (value) => value.age;
 
 export function get_age(person) {
   return person.age;

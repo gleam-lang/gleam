@@ -33,15 +33,9 @@ export class A extends $CustomType {
     this.b = b;
   }
 }
-export function A$A(b) {
-  return new A(b);
-}
-export function A$isA(value) {
-  return value instanceof A;
-}
-export function A$A$b(value) {
-  return value.b;
-}
+export const A$A = (b) => new A(b);
+export const A$isA = (value) => value instanceof A;
+export const A$A$b = (value) => value.b;
 
 export class B extends $CustomType {
   constructor(c) {
@@ -49,15 +43,9 @@ export class B extends $CustomType {
     this.c = c;
   }
 }
-export function B$B(c) {
-  return new B(c);
-}
-export function B$isB(value) {
-  return value instanceof B;
-}
-export function B$B$c(value) {
-  return value.c;
-}
+export const B$B = (c) => new B(c);
+export const B$isB = (value) => value instanceof B;
+export const B$B$c = (value) => value.c;
 
 export class C extends $CustomType {
   constructor(d) {
@@ -65,15 +53,9 @@ export class C extends $CustomType {
     this.d = d;
   }
 }
-export function C$C(d) {
-  return new C(d);
-}
-export function C$isC(value) {
-  return value instanceof C;
-}
-export function C$C$d(value) {
-  return value.d;
-}
+export const C$C = (d) => new C(d);
+export const C$isC = (value) => value instanceof C;
+export const C$C$d = (value) => value.d;
 
 export function a(a) {
   if (a.b.c.d) {
