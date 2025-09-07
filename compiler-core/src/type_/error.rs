@@ -1108,7 +1108,6 @@ pub enum Warning {
     ///
     UnusedRecursiveArgument {
         location: SrcSpan,
-        usages: Vec<SrcSpan>,
     },
 }
 
