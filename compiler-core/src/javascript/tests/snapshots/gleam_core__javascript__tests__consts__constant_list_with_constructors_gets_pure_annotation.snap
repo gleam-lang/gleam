@@ -22,18 +22,10 @@ export class X extends $CustomType {
     this[1] = $1;
   }
 }
-export function X$X($0, $1) {
-  return new X($0, $1);
-}
-export function X$isX(value) {
-  return value instanceof X;
-}
-export function X$X$0(value) {
-  return value[0];
-}
-export function X$X$1(value) {
-  return value[1];
-}
+export const X$X = ($0, $1) => new X($0, $1);
+export const X$isX = (value) => value instanceof X;
+export const X$X$0 = (value) => value[0];
+export const X$X$1 = (value) => value[1];
 
 export const x = /* @__PURE__ */ toList([
   /* @__PURE__ */ new X(1, /* @__PURE__ */ toList(["1"])),

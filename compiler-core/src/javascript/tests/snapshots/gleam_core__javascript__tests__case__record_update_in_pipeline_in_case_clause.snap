@@ -33,18 +33,10 @@ export class Wibble extends $CustomType {
     this.wobble = wobble;
   }
 }
-export function Wibble$Wibble(wibble, wobble) {
-  return new Wibble(wibble, wobble);
-}
-export function Wibble$isWibble(value) {
-  return value instanceof Wibble;
-}
-export function Wibble$Wibble$wibble(value) {
-  return value.wibble;
-}
-export function Wibble$Wibble$wobble(value) {
-  return value.wobble;
-}
+export const Wibble$Wibble = (wibble, wobble) => new Wibble(wibble, wobble);
+export const Wibble$isWibble = (value) => value instanceof Wibble;
+export const Wibble$Wibble$wibble = (value) => value.wibble;
+export const Wibble$Wibble$wobble = (value) => value.wobble;
 
 function identity(x) {
   return x;

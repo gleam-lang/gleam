@@ -18,15 +18,7 @@ export class Thing extends $CustomType {
     this.class = class$;
   }
 }
-export function Thing$Thing(in$, class$) {
-  return new Thing(in$, class$);
-}
-export function Thing$isThing(value) {
-  return value instanceof Thing;
-}
-export function Thing$Thing$in(value) {
-  return value.in;
-}
-export function Thing$Thing$class(value) {
-  return value.class;
-}
+export const Thing$Thing = (in$, class$) => new Thing(in$, class$);
+export const Thing$isThing = (value) => value instanceof Thing;
+export const Thing$Thing$in = (value) => value.in;
+export const Thing$Thing$class = (value) => value.class;

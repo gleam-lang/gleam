@@ -28,21 +28,12 @@ export class Person extends $CustomType {
     this.age = age;
   }
 }
-export function Person$Person(username, name, age) {
-  return new Person(username, name, age);
-}
-export function Person$isPerson(value) {
-  return value instanceof Person;
-}
-export function Person$Person$username(value) {
-  return value.username;
-}
-export function Person$Person$name(value) {
-  return value.name;
-}
-export function Person$Person$age(value) {
-  return value.age;
-}
+export const Person$Person = (username, name, age) =>
+  new Person(username, name, age);
+export const Person$isPerson = (value) => value instanceof Person;
+export const Person$Person$username = (value) => value.username;
+export const Person$Person$name = (value) => value.name;
+export const Person$Person$age = (value) => value.age;
 
 export function main() {
   let given_name = "jack";

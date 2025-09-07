@@ -374,16 +374,7 @@ impl<'a> Generator<'a> {
             // Only generate accessors for the API if the constructors are public
             && constructor_publicity.is_public()
         {
-            let function_head = if opaque || publicity.is_private() {
-                "function "
-            } else {
-                "export function "
-            };
-            definitions.push(self.shared_custom_type_fields(
-                name,
-                &accessors_map.shared_accessors,
-                function_head,
-            ));
+            definitions.push(self.shared_custom_type_fields(name, &accessors_map.shared_accessors));
         }
 
         definitions
@@ -433,25 +424,24 @@ impl<'a> Generator<'a> {
         }
 
         let construction = docvec![
-            line(),
-            "return new ",
+            break_("", " "),
+            "new ",
             constructor.name.as_str(),
             "(",
-            join(arguments.clone(), break_(",", ", ")),
+            join(arguments.clone(), break_(",", ", ")).group(),
             ");"
-        ];
+        ]
+        .group();
 
         docvec![
-            "export function ",
+            "export const ",
             type_name,
             "$",
             constructor.name.as_str(),
-            "(",
+            " = (",
             join(arguments, break_(",", ", ")),
-            ") {",
+            ") =>",
             construction.nest(INDENT),
-            line(),
-            "}"
         ]
     }
 
@@ -461,21 +451,20 @@ impl<'a> Generator<'a> {
         type_name: &'a str,
     ) -> Document<'a> {
         let construction = docvec![
-            line(),
-            "return value instanceof ",
+            break_("", " "),
+            "value instanceof ",
             constructor.name.as_str(),
             ";"
-        ];
+        ]
+        .group();
 
         docvec![
-            "export function ",
+            "export const ",
             type_name,
             "$is",
             constructor.name.as_str(),
-            "(value) {",
+            " = (value) =>",
             construction.nest(INDENT),
-            line(),
-            "}"
         ]
     }
 
@@ -504,16 +493,14 @@ impl<'a> Generator<'a> {
                 field = eco_format!("[{index}]");
             };
 
-            let contents = docvec![line(), "return value", field, ";"];
+            let contents = docvec![break_("", " "), "value", field, ";"].group();
 
             functions.push(docvec![
                 line(),
-                "export function ",
+                "export const ",
                 function_name,
-                "(value) {",
+                " = (value) =>",
                 contents.nest(INDENT),
-                line(),
-                "}"
             ]);
         }
 
@@ -524,23 +511,21 @@ impl<'a> Generator<'a> {
         &self,
         type_name: &'a str,
         shared_accessors: &HashMap<EcoString, RecordAccessor>,
-        function_head: &'a str,
     ) -> Document<'a> {
         let mut functions = Vec::new();
 
         for field in shared_accessors.keys().sorted() {
             let function_name = eco_format!("{type_name}${field}");
 
-            let contents = docvec![line(), "return value.", maybe_escape_property(field), ";"];
+            let contents =
+                docvec![break_("", " "), "value.", maybe_escape_property(field), ";"].group();
 
             functions.push(docvec![
                 line(),
-                function_head,
+                "export const ",
                 function_name,
-                "(value) {",
+                " = (value) =>",
                 contents.nest(INDENT),
-                line(),
-                "}"
             ]);
         }
 

@@ -42,12 +42,8 @@ export type A$ = A;
 import { CustomType as $CustomType } from "../gleam.mjs";
 
 export class A extends $CustomType {}
-export function A$A() {
-  return new A();
-}
-export function A$isA(value) {
-  return value instanceof A;
-}
+export const A$A = () => new A();
+export const A$isA = (value) => value instanceof A;
 
 
 //// /out/lib/the_package/two.d.mts

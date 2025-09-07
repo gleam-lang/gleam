@@ -22,18 +22,10 @@ export class Mine extends $CustomType {
     this.b = b;
   }
 }
-export function Mine$Mine(a, b) {
-  return new Mine(a, b);
-}
-export function Mine$isMine(value) {
-  return value instanceof Mine;
-}
-export function Mine$Mine$a(value) {
-  return value.a;
-}
-export function Mine$Mine$b(value) {
-  return value.b;
-}
+export const Mine$Mine = (a, b) => new Mine(a, b);
+export const Mine$isMine = (value) => value instanceof Mine;
+export const Mine$Mine$a = (value) => value.a;
+export const Mine$Mine$b = (value) => value.b;
 
 export const labels = /* @__PURE__ */ new Mine(1, 2);
 
