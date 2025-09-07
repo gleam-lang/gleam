@@ -1033,9 +1033,11 @@ impl TypedExpr {
         }
     }
 
-    pub fn var_constructor(&self) -> Option<&ValueConstructor> {
+    pub fn var_constructor(&self) -> Option<(&ValueConstructor, &EcoString)> {
         match self {
-            TypedExpr::Var { constructor, .. } => Some(constructor),
+            TypedExpr::Var {
+                constructor, name, ..
+            } => Some((constructor, name)),
             _ => None,
         }
     }

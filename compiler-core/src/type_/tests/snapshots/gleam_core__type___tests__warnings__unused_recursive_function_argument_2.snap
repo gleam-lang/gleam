@@ -18,11 +18,6 @@ warning: Unused function argument
   │
 2 │ pub fn main(x, times) {
   │             ^ This argument is unused
-3 │   case times {
-4 │     0 -> main(x, 0)
-  │               -
-5 │     _ -> main(x, times - 1)
-  │               -
 
 This argument is passed to the function when recursing, but it's never used
 for anything.
