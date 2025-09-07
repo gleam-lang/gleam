@@ -877,49 +877,6 @@ impl ValueConstructorVariant {
             ValueConstructorVariant::Record { field_map, .. } => field_map.as_ref(),
         }
     }
-
-    /// If this is the constructor of a module function, returns the function's
-    /// module and name.
-    ///
-    fn function_module_and_name(&self) -> Option<(EcoString, EcoString)> {
-        match self {
-            ValueConstructorVariant::ModuleFn { name, module, .. } => {
-                Some((module.clone(), name.clone()))
-            }
-
-            ValueConstructorVariant::ModuleConstant { .. }
-            | ValueConstructorVariant::LocalConstant { .. }
-            | ValueConstructorVariant::LocalVariable { .. }
-            | ValueConstructorVariant::Record { .. } => None,
-        }
-    }
-
-    /// If this is a constructor for an argument, returns the name of the
-    /// function where it is defined and its index in the function's parameter
-    /// list.
-    ///
-    fn argument_function_and_index(&self) -> Option<(EcoString, usize)> {
-        match self {
-            ValueConstructorVariant::LocalVariable {
-                location: _,
-                origin:
-                    VariableOrigin {
-                        syntax: _,
-                        declaration:
-                            VariableDeclaration::FunctionParameter {
-                                function_name,
-                                index,
-                            },
-                    },
-            } => Some((function_name.clone()?, *index)),
-
-            ValueConstructorVariant::LocalVariable { .. }
-            | ValueConstructorVariant::ModuleConstant { .. }
-            | ValueConstructorVariant::LocalConstant { .. }
-            | ValueConstructorVariant::ModuleFn { .. }
-            | ValueConstructorVariant::Record { .. } => None,
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

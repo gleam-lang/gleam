@@ -99,7 +99,7 @@ pub struct VariableUsage {
     origin: VariableOrigin,
     location: SrcSpan,
     usages: usize,
-    used_recursively: bool,
+    recursive_usages: usize,
 }
 
 impl<'a> Environment<'a> {
@@ -669,7 +669,7 @@ impl Environment<'_> {
             origin,
             location,
             usages: 0,
-            used_recursively,
+            recursive_usages,
         }) = self
             .local_variable_usages
             .last_mut()
@@ -680,7 +680,7 @@ impl Environment<'_> {
                     origin,
                     location,
                     usages: 0,
-                    used_recursively: false,
+                    recursive_usages: 0,
                 },
             )
         {
@@ -692,7 +692,7 @@ impl Environment<'_> {
                     origin,
                     location,
                     usages: 0,
-                    used_recursively,
+                    recursive_usages,
                 },
             );
             self.handle_unused_variables(unused, problems);
@@ -712,16 +712,16 @@ impl Environment<'_> {
     }
 
     /// Marks an argument as being passed recursively to a function call.
-    pub fn set_used_recursively(&mut self, name: &EcoString) {
+    pub fn increment_recursive_usage(&mut self, name: &EcoString) {
         if let Some(VariableUsage {
-            used_recursively, ..
+            recursive_usages, ..
         }) = self
             .local_variable_usages
             .iter_mut()
             .rev()
             .find_map(|scope| scope.get_mut(name))
         {
-            *used_recursively = true;
+            *recursive_usages += 1;
         }
     }
 
@@ -842,7 +842,7 @@ impl Environment<'_> {
             origin,
             location,
             usages,
-            used_recursively,
+            recursive_usages,
         } in unused.into_values()
         {
             if usages == 0 {
@@ -851,7 +851,7 @@ impl Environment<'_> {
             // If the function parameter is actually used somewhere, but all the
             // usages are just passing it along in a recursive call, then it
             // counts as being unused too.
-            else if origin.is_function_parameter() && used_recursively {
+            else if origin.is_function_parameter() && recursive_usages == usages {
                 problems.warning(Warning::UnusedRecursiveArgument { location });
             }
         }
