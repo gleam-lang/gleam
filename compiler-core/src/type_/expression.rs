@@ -426,7 +426,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } => Ok(self.infer_echo(location, keyword_end, expression, message)),
 
             UntypedExpr::Var { location, name, .. } => {
-                self.infer_var(name, location, ReferenceRegistration::RegisterReferences)
+                self.infer_var(name, location, ReferenceRegistration::Register)
             }
 
             UntypedExpr::Int {
@@ -1329,11 +1329,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // If the left-hand-side of the record access is a variable, this might actually be
             // module access. In that case, we only want to register a reference to the variable
             // if we actually referencing it in the record access.
-            UntypedExpr::Var { location, name } => self.infer_var(
-                name,
-                location,
-                ReferenceRegistration::DoNotRegisterReferences,
-            ),
+            UntypedExpr::Var { location, name } => {
+                self.infer_var(name, location, ReferenceRegistration::DoNotRegister)
+            }
             _ => self.infer_or_error(container),
         };
         // TODO: is this clone avoidable? we need to box the record for inference in both
@@ -3523,12 +3521,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         name: &EcoString,
         location: &SrcSpan,
     ) -> Result<ValueConstructor, Error> {
-        self.do_infer_value_constructor(
-            module,
-            name,
-            location,
-            ReferenceRegistration::RegisterReferences,
-        )
+        self.do_infer_value_constructor(module, name, location, ReferenceRegistration::Register)
     }
 
     fn do_infer_value_constructor(
@@ -3600,10 +3593,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         self.narrow_implementations(*location, &variant)?;
 
         match register_reference {
-            ReferenceRegistration::DoNotRegisterReferences => (),
+            ReferenceRegistration::DoNotRegister => (),
 
-            ReferenceRegistration::RegisterReferences
-            | ReferenceRegistration::VariableArgumentReferences { .. } => {
+            ReferenceRegistration::Register | ReferenceRegistration::VariableArgument { .. } => {
                 self.register_value_constructor_reference(
                     name,
                     &variant,
@@ -3634,7 +3626,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         register_reference: &ReferenceRegistration,
     ) {
         // If we are registering references for a call argument
-        let ReferenceRegistration::VariableArgumentReferences {
+        let ReferenceRegistration::VariableArgument {
             called_function,
             argument_index,
         } = register_reference
@@ -3657,7 +3649,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         // If the called function is the same where the argument is defined,
         // and the argument is passed unchanged.
-        if declaration_function.as_ref() == dbg!(Some(called_function))
+        if declaration_function.as_ref() == Some(called_function)
             && declaration_index == argument_index
         {
             self.environment.increment_recursive_usage(name);
@@ -4539,12 +4531,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         } = called_function
             && *module == self.environment.current_module
         {
-            ReferenceRegistration::VariableArgumentReferences {
+            ReferenceRegistration::VariableArgument {
                 called_function: name.clone(),
                 argument_index,
             }
         } else {
-            ReferenceRegistration::RegisterReferences
+            ReferenceRegistration::Register
         };
 
         match self.infer_var(argument_name, argument_location, references) {
@@ -4823,14 +4815,17 @@ fn is_trusted_pure_module(environment: &Environment<'_>) -> bool {
 
 #[derive(Debug, Clone)]
 enum ReferenceRegistration {
-    RegisterReferences,
-    DoNotRegisterReferences,
+    Register,
+    DoNotRegister,
 
-    /// If the variable is being passed to a function that is defined in the
-    /// current module, then this will have the name of the function and the
-    /// argument of the variable being passed as an argument
-    VariableArgumentReferences {
+    /// A special case that happens if we're registering references for
+    /// a variable call argument being passed to a function defined in the
+    /// current module.
+    VariableArgument {
+        /// The name of the function being called, the function is defined in
+        /// the current module.
         called_function: EcoString,
+        /// The position where the variable is being passed as an argument.
         argument_index: usize,
     },
 }
