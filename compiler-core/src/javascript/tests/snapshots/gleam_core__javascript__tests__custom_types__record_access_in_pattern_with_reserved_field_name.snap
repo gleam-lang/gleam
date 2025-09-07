@@ -28,15 +28,9 @@ export class Thing extends $CustomType {
     this.constructor$ = constructor;
   }
 }
-export function Thing$Thing(constructor) {
-  return new Thing(constructor);
-}
-export function Thing$isThing(value) {
-  return value instanceof Thing;
-}
-export function Thing$Thing$constructor(value) {
-  return value.constructor$;
-}
+export const Thing$Thing = (constructor) => new Thing(constructor);
+export const Thing$isThing = (value) => value instanceof Thing;
+export const Thing$Thing$constructor = (value) => value.constructor$;
 
 export function main() {
   let a = new Thing(undefined);
