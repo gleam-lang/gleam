@@ -17,7 +17,7 @@ warning: Unused function argument
   ┌─ /src/warning/wrn.gleam:2:13
   │
 2 │ pub fn main(x, times) {
-  │             ^ This argument is unused
+  │             ^ This argument is never used
 
 This argument is passed to the function when recursing, but it's never used
 for anything.

@@ -3586,6 +3586,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             deprecation,
         } = constructor;
 
+        self.check_recursive_argument_usage(name, &variant, &register_reference);
+
         // Emit a warning if the value being used is deprecated.
         if let Deprecation::Deprecated { message } = &deprecation {
             self.problems.warning(Warning::DeprecatedItem {
@@ -3597,20 +3599,22 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         self.narrow_implementations(*location, &variant)?;
 
-        if matches!(
-            register_reference,
+        match register_reference {
+            ReferenceRegistration::DoNotRegisterReferences => (),
+
             ReferenceRegistration::RegisterReferences
-        ) {
-            self.register_value_constructor_reference(
-                name,
-                &variant,
-                *location,
-                if module.is_some() {
-                    ReferenceKind::Qualified
-                } else {
-                    ReferenceKind::Unqualified
-                },
-            );
+            | ReferenceRegistration::VariableArgumentReferences { .. } => {
+                self.register_value_constructor_reference(
+                    name,
+                    &variant,
+                    *location,
+                    if module.is_some() {
+                        ReferenceKind::Qualified
+                    } else {
+                        ReferenceKind::Unqualified
+                    },
+                );
+            }
         }
 
         // Instantiate generic variables into unbound variables for this usage
@@ -3621,6 +3625,43 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             variant,
             type_,
         })
+    }
+
+    fn check_recursive_argument_usage(
+        &mut self,
+        name: &EcoString,
+        variant: &ValueConstructorVariant,
+        register_reference: &ReferenceRegistration,
+    ) {
+        // If we are registering references for a call argument
+        let ReferenceRegistration::VariableArgumentReferences {
+            called_function,
+            argument_index,
+        } = register_reference
+        else {
+            return;
+        };
+
+        // If the passed argument is a function's parameter.
+        let ValueConstructorVariant::LocalVariable { origin, .. } = variant else {
+            return;
+        };
+
+        let VariableDeclaration::FunctionParameter {
+            function_name: declaration_function,
+            index: declaration_index,
+        } = &origin.declaration
+        else {
+            return;
+        };
+
+        // If the called function is the same where the argument is defined,
+        // and the argument is passed unchanged.
+        if declaration_function.as_ref() == dbg!(Some(called_function))
+            && declaration_index == argument_index
+        {
+            self.environment.increment_recursive_usage(name);
+        }
     }
 
     fn register_value_constructor_reference(
@@ -4423,14 +4464,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_call_argument(
         &mut self,
-        fun: &TypedExpr,
-        value: UntypedExpr,
+        called_function: &TypedExpr,
+        argument: UntypedExpr,
         argument_index: usize,
         type_: Arc<Type>,
         kind: ArgumentKind,
     ) -> TypedExpr {
         let type_ = collapse_links(type_);
-        let value = match (&*type_, value) {
+        let value = match (&*type_, argument) {
             // If the argument is expected to be a function and we are passed a
             // function literal with the correct number of arguments then we
             // have special handling of this argument, passing in information
@@ -4460,20 +4501,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location,
             ),
 
-            // Otherwise just perform normal type inference.
-            (_, value) => {
-                let inferred = self.infer(value);
-
-                // If the argument is a simple usage of a parameter defined
-                // by this same function we want to track it, to report unused
-                // parameters that are just passed along the recursive calls.
-                if let Some(name) =
-                    self.argument_used_in_recursive_call(fun, &inferred, argument_index)
-                {
-                    self.environment.set_used_recursively(&name);
-                }
-                inferred
+            // If the argument is a regular var then we specialise.
+            (_, UntypedExpr::Var { location, name }) => {
+                self.infer_variable_call_arg(called_function, name, location, argument_index)
             }
+
+            // Otherwise just perform normal type inference.
+            (_, argument) => self.infer(argument),
         };
 
         if let Err(error) = unify(type_.clone(), value.type_()) {
@@ -4484,39 +4518,41 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         value
     }
 
-    /// Given a function being called and one of its arguments, this returns the
-    /// argument's definition location if it was defined by that same function.
-    /// For example:
-    ///
-    /// ```gleam
-    /// fn wibble(x) {
-    /// //        ^ Defined by the wibble function
-    ///   wibble(x, 1)
-    /// //       ^ And used in the recursive call unchanged!
-    /// }
-    /// ```
-    ///
-    fn argument_used_in_recursive_call(
-        &self,
+    fn infer_variable_call_arg(
+        &mut self,
         called_function: &TypedExpr,
-        argument: &TypedExpr,
+        argument_name: EcoString,
+        argument_location: SrcSpan,
         argument_index: usize,
-    ) -> Option<EcoString> {
-        let (argument, name) = argument.var_constructor()?;
-        let (function_defining_argument, index_in_argument_list) =
-            argument.variant.argument_function_and_index()?;
-
-        let (module, function) = called_function
-            .var_constructor()
-            .and_then(|(constructor, _)| constructor.variant.function_module_and_name())?;
-
-        if self.environment.current_module == module
-            && function == function_defining_argument
-            && argument_index == index_in_argument_list
+    ) -> TypedExpr {
+        // If the called function is a function defined in this same module we
+        // pass it along to the `infer_var` function so that we can check if the
+        // argument is being passed recursively to the function that is defining
+        // it.
+        let references = if let TypedExpr::Var {
+            constructor:
+                ValueConstructor {
+                    variant: ValueConstructorVariant::ModuleFn { name, module, .. },
+                    ..
+                },
+            ..
+        } = called_function
+            && *module == self.environment.current_module
         {
-            Some(name.clone())
+            ReferenceRegistration::VariableArgumentReferences {
+                called_function: name.clone(),
+                argument_index,
+            }
         } else {
-            None
+            ReferenceRegistration::RegisterReferences
+        };
+
+        match self.infer_var(argument_name, argument_location, references) {
+            Ok(result) => result,
+            Err(error) => {
+                self.problems.error(error);
+                self.error_expr(argument_location)
+            }
         }
     }
 
@@ -4785,10 +4821,18 @@ fn is_trusted_pure_module(environment: &Environment<'_>) -> bool {
     environment.origin == Origin::Src
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 enum ReferenceRegistration {
     RegisterReferences,
     DoNotRegisterReferences,
+
+    /// If the variable is being passed to a function that is defined in the
+    /// current module, then this will have the name of the function and the
+    /// argument of the variable being passed as an argument
+    VariableArgumentReferences {
+        called_function: EcoString,
+        argument_index: usize,
+    },
 }
 
 fn extract_typed_use_call_assignments(
