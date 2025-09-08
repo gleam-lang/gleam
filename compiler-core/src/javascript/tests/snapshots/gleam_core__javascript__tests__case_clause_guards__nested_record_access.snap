@@ -35,6 +35,7 @@ export class A extends $CustomType {
 }
 export const A$A = (b) => new A(b);
 export const A$isA = (value) => value instanceof A;
+export const A$A$0 = (value) => value[0];
 export const A$A$b = (value) => value.b;
 
 export class B extends $CustomType {
@@ -45,6 +46,7 @@ export class B extends $CustomType {
 }
 export const B$B = (c) => new B(c);
 export const B$isB = (value) => value instanceof B;
+export const B$B$0 = (value) => value[0];
 export const B$B$c = (value) => value.c;
 
 export class C extends $CustomType {
@@ -55,6 +57,7 @@ export class C extends $CustomType {
 }
 export const C$C = (d) => new C(d);
 export const C$isC = (value) => value instanceof C;
+export const C$C$0 = (value) => value[0];
 export const C$C$d = (value) => value.d;
 
 export function a(a) {

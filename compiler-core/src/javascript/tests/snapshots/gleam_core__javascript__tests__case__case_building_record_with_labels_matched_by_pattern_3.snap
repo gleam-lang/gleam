@@ -29,7 +29,9 @@ export class Wibble extends $CustomType {
 }
 export const Wibble$Wibble = (int, string) => new Wibble(int, string);
 export const Wibble$isWibble = (value) => value instanceof Wibble;
+export const Wibble$Wibble$0 = (value) => value[0];
 export const Wibble$Wibble$int = (value) => value.int;
+export const Wibble$Wibble$1 = (value) => value[1];
 export const Wibble$Wibble$string = (value) => value.string;
 
 export class Wobble extends $CustomType {
