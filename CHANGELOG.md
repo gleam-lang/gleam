@@ -152,18 +152,16 @@
 
   ```txt
   error: Syntax error
-    ┌─ /src/parse/error.gleam:1:6
+    ┌─ /src/parse/error.gleam:2:12
     │
-  1 │ fn id<T>(x: T) { x }
-    │      ^ I was expecting `(` here.
+  2 │ type Either<a, b> {
+    │            ^ I was expecting `(` here.
 
-  If you were trying to define a generic function, Gleam does not use angle brackets.
-  Instead, you should write types in the parameter list with lower-case names.
-  Each unique lower-case name becomes a type variable:
+  Type parameters use lowercase names and are surrounded by parentheses.
 
-      fn example(arg: t) -> t
+      type Either(a, b) {
 
-  See: https://tour.gleam.run/functions/generic-functions/
+  See: https://tour.gleam.run/data-types/generic-custom-types/
   ```
 
   ([Aaron Christiansen](https://github.com/AaronC81))

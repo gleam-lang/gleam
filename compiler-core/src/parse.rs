@@ -2584,7 +2584,7 @@ where
             Err(ParseError {
                 error: ParseErrorType::TypeDefinitionAngleGenerics {
                     name: upname,
-                    arguments: arguments,
+                    arguments,
                 },
                 location: SrcSpan {
                     start: less_start,
