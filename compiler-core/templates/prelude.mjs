@@ -61,10 +61,6 @@ export function isList(value) {
   return value instanceof List;
 }
 
-export function listToArray(list) {
-  return list.toArray();
-}
-
 // @internal
 export function prepend(element, tail) {
   return new NonEmpty(element, tail);
@@ -119,10 +115,10 @@ export function List$isNonEmpty(value) {
   return value instanceof NonEmpty;
 }
 
-export function List$NonEmpty$head(value) {
+export function List$NonEmpty$first(value) {
   return value.head;
 }
-export function List$NonEmpty$tail(value) {
+export function List$NonEmpty$rest(value) {
   return value.tail;
 }
 
@@ -347,19 +343,6 @@ export function BitArray$BitArray(buffer, bitSize, bitOffset) {
 
 export function BitArray$isBitArray(value) {
   return value instanceof BitArray;
-}
-
-export function BitArray$BitArray$bitSize(value) {
-  return value.bitSize;
-}
-export function BitArray$BitArray$byteSize(value) {
-  return value.byteSize;
-}
-export function BitArray$BitArray$bitOffset(value) {
-  return value.bitOffset;
-}
-export function BitArray$BitArray$rawBuffer(value) {
-  return value.rawBuffer;
 }
 
 /**
