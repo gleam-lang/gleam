@@ -476,24 +476,18 @@ impl<'a> Generator<'a> {
         let mut functions = Vec::new();
 
         for (index, argument) in constructor.arguments.iter().enumerate() {
-            let function_name;
-            let field;
+            // Always generate the accessor for the value at this index. Although
+            // this is not necessary when a label is present, we want to make sure
+            // that adding a label to a record isn't a breaking change. For this
+            // reason, we need to generate an index getter even when a label is
+            // present to ensure consistent behaviour between labelled and unlabelled
+            // field access.
+            let function_name = eco_format!(
+                "{type_name}${record_name}${index}",
+                record_name = constructor.name,
+            );
 
-            if let Some((_, label)) = &argument.label {
-                function_name = eco_format!(
-                    "{type_name}${record_name}${label}",
-                    record_name = constructor.name,
-                );
-                field = eco_format!(".{field_name}", field_name = maybe_escape_property(label));
-            } else {
-                function_name = eco_format!(
-                    "{type_name}${record_name}${index}",
-                    record_name = constructor.name,
-                );
-                field = eco_format!("[{index}]");
-            };
-
-            let contents = docvec![break_("", " "), "value", field, ";"].group();
+            let contents = docvec![break_("", " "), "value[", index, "];"].group();
 
             functions.push(docvec![
                 line(),
@@ -502,6 +496,26 @@ impl<'a> Generator<'a> {
                 " = (value) =>",
                 contents.nest(INDENT),
             ]);
+
+            // If the argument is labelled, also generate a getter for the labelled
+            // argument.
+            if let Some((_, label)) = &argument.label {
+                let function_name = eco_format!(
+                    "{type_name}${record_name}${label}",
+                    record_name = constructor.name,
+                );
+
+                let contents =
+                    docvec![break_("", " "), "value.", maybe_escape_property(label), ";"].group();
+
+                functions.push(docvec![
+                    line(),
+                    "export const ",
+                    function_name,
+                    " = (value) =>",
+                    contents.nest(INDENT),
+                ]);
+            }
         }
 
         concat(functions)
