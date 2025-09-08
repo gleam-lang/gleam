@@ -215,7 +215,7 @@
 
   Found the keyword `let`, expected one of:
   - `(`
-  Hint: Maybe you meant to create a comment? Comments in Gleam start with `//`,not
+  Hint: Maybe you meant to create a comment? Comments in Gleam start with `//`, not
   `#`
   ```
 
