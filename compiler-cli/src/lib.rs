@@ -68,6 +68,7 @@ mod hex;
 mod http;
 mod lsp;
 mod new;
+mod owner;
 mod panic;
 mod publish;
 mod remove;
@@ -189,6 +190,10 @@ enum Command {
     /// Work with the Hex package manager
     #[command(subcommand)]
     Hex(Hex),
+
+    /// Deal with package ownership
+    #[command(subcommand)]
+    Owner(Owner),
 
     /// Create a new project
     New(NewOptions),
@@ -450,6 +455,22 @@ enum Hex {
 }
 
 #[derive(Subcommand, Debug)]
+enum Owner {
+    /// Transfers ownership of this package to a new Hex user
+    ///
+    /// This command uses this environment variable:
+    ///
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate against the Hex package manager.
+    ///
+    #[command(verbatim_doc_comment)]
+    Transfer {
+        /// The username or email of the new owner
+        #[arg(long = "to")]
+        username_or_email: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
 enum Docs {
     /// Render HTML docs locally
     Build {
@@ -633,6 +654,11 @@ fn parse_and_run_command() -> Result<(), Error> {
         Command::Publish { replace, yes } => {
             let paths = find_project_paths()?;
             publish::command(&paths, replace, yes)
+        }
+
+        Command::Owner(Owner::Transfer { username_or_email }) => {
+            let paths = find_project_paths()?;
+            owner::transfer(&paths, username_or_email)
         }
 
         Command::PrintConfig => {
