@@ -54,6 +54,23 @@ impl DependencyManagerConfig {
     }
 }
 
+pub struct Resolved {
+    pub manifest: Manifest,
+    pub versions_changed: bool,
+}
+
+impl Resolved {
+    /// Create a `Resolved`, comparing the old and new versions of the manifest to work out
+    /// if resolution resulted in any changes.
+    pub fn with_updates(old: &Manifest, new: Manifest) -> Self {
+        let versions_changed = old.packages != new.packages;
+        Self {
+            manifest: new,
+            versions_changed,
+        }
+    }
+}
+
 pub struct DependencyManager<Telem, P> {
     runtime: tokio::runtime::Handle,
     package_fetcher: P,
@@ -68,50 +85,61 @@ where
     P: dependency::PackageFetcher,
     Telem: Telemetry,
 {
-    pub fn get_manifest(
+    /// Resolve the dependency versions used by a package.
+    ///
+    /// If the `use_manifest` configuration was set to `false` then it'll always resolve all the
+    /// versions, even if there are already versions locked in the manifest.
+    pub fn resolve_versions(
         &self,
         paths: &ProjectPaths,
         config: &PackageConfig,
         packages_to_update: Vec<EcoString>,
-    ) -> Result<(bool, Manifest)> {
-        // If there's no manifest (or we have been asked not to use it) then resolve
-        // the versions anew
-        let should_resolve = match self.use_manifest {
-            _ if !paths.manifest().exists() => {
-                tracing::debug!("manifest_not_present");
-                true
+    ) -> Result<Resolved> {
+        // If there's no manifest then the only thing we can do is attempt to update the versions.
+        if !paths.manifest().exists() {
+            tracing::debug!("manifest_not_present");
+            let manifest = self.perform_version_resolution(paths, config, None, Vec::new())?;
+            return Ok(Resolved {
+                manifest,
+                versions_changed: true,
+            });
+        }
+
+        let existing_manifest = read_manifest_from_disc(paths)?;
+
+        // If we have been asked not to use the manifest then
+        let manifest_for_resolver = match self.use_manifest {
+            UseManifest::No => None,
+            UseManifest::Yes => {
+                // If the manifest is to be used and the requirements have not changed then there's
+                // no point in performing resolution, it'll always result in the same versions
+                // already specified in the manifest.
+                if packages_to_update.is_empty()
+                    && is_same_requirements(
+                        &existing_manifest.requirements,
+                        &config.all_direct_dependencies()?,
+                        paths.root(),
+                    )?
+                {
+                    return Ok(Resolved {
+                        manifest: existing_manifest,
+                        versions_changed: false,
+                    });
+                }
+
+                // Otherwise, use the manifest to inform resolution.
+                Some(&existing_manifest)
             }
-            UseManifest::No => {
-                tracing::debug!("ignoring_manifest");
-                true
-            }
-            UseManifest::Yes => false,
         };
 
-        if should_resolve {
-            let manifest = self.resolve_versions(paths, config, None, Vec::new())?;
-            return Ok((true, manifest));
-        }
-
-        let manifest = read_manifest_from_disc(paths)?;
-
-        // If there are no requested updates, and the config is unchanged
-        // since the manifest was written then it is up to date so we can return it unmodified.
-        if packages_to_update.is_empty()
-            && is_same_requirements(
-                &manifest.requirements,
-                &config.all_direct_dependencies()?,
-                paths.root(),
-            )?
-        {
-            tracing::debug!("manifest_up_to_date");
-            Ok((false, manifest))
-        } else {
-            tracing::debug!("manifest_outdated");
-            let manifest =
-                self.resolve_versions(paths, config, Some(&manifest), packages_to_update)?;
-            Ok((true, manifest))
-        }
+        tracing::debug!("manifest_outdated");
+        let new_manifest = self.perform_version_resolution(
+            paths,
+            config,
+            manifest_for_resolver,
+            packages_to_update,
+        )?;
+        Ok(Resolved::with_updates(&existing_manifest, new_manifest))
     }
 
     pub fn download(
@@ -148,7 +176,10 @@ where
         }
 
         // Determine what versions we need
-        let (manifest_updated, manifest) = self.get_manifest(paths, &config, packages_to_update)?;
+        let Resolved {
+            manifest,
+            versions_changed: manifest_updated,
+        } = self.resolve_versions(paths, &config, packages_to_update)?;
         let local = LocalPackages::read_from_disc(paths)?;
 
         // Remove any packages that are no longer required due to gleam.toml changes
@@ -186,7 +217,7 @@ where
         Ok(manifest)
     }
 
-    fn resolve_versions(
+    fn perform_version_resolution(
         &self,
         project_paths: &ProjectPaths,
         config: &PackageConfig,
