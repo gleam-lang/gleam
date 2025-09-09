@@ -176,6 +176,11 @@ where
         }
         LocalPackages::from_manifest(&resolved.manifest).write_to_disc(paths)?;
 
+        // Display the changes in versions to the user.
+        self.telemetry.resolved_package_versions(&resolved);
+
+        // If requested to do so, check if there are major upgrades that could be performed with
+        // more relaxed version requirements, and inform the user if so.
         if let CheckMajorVersions::Yes = self.check_major_versions {
             let major_versions_available = dependency::check_for_major_version_updates(
                 &resolved.manifest,
@@ -188,8 +193,6 @@ where
                 );
             }
         }
-
-        self.telemetry.resolved_package_versions(&resolved);
         Ok(resolved.manifest)
     }
 
