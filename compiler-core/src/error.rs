@@ -236,8 +236,15 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("Failed to create canonical path for package {0}")]
     DependencyCanonicalizationFailed(String),
 
-    #[error("Dependency tree resolution failed: {0}")]
-    DependencyResolutionFailed(String),
+    #[error("Could not find versions that satisfy dependency requirements")]
+    DependencyResolutionNoSolution {
+        root_package_name: EcoString,
+        derivation_tree:
+            NeverEqual<pubgrub::DerivationTree<String, pubgrub::Ranges<Version>, String>>,
+    },
+
+    #[error("Dependency resolution failed: {0}")]
+    DependencyResolutionError(String),
 
     #[error("The package {0} is listed in dependencies and dev-dependencies")]
     DuplicateDependency(EcoString),
@@ -328,6 +335,17 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("Cannot add a package with the same name as a dependency")]
     CannotAddSelfAsDependency { name: EcoString },
 }
+
+// A wrapper that ignores the inner value for equality:
+#[derive(Debug, Clone)]
+pub struct NeverEqual<T>(pub T);
+
+impl<T> PartialEq for NeverEqual<T> {
+    fn eq(&self, _other: &Self) -> bool {
+        false
+    }
+}
+impl<T> Eq for NeverEqual<T> {}
 
 /// This is to make clippy happy and not make the error variant too big by
 /// storing an entire `hexpm::version::Version` in the error.
@@ -435,27 +453,30 @@ impl Error {
         error: ResolutionError<'_, T>,
         root_package_name: EcoString,
     ) -> Error {
-        Self::DependencyResolutionFailed(match error {
-            ResolutionError::NoSolution(derivation_tree) => {
-                DerivationTreePrinter::new(root_package_name, derivation_tree).print()
-            }
+        match error {
+            ResolutionError::NoSolution(derivation_tree) => Self::DependencyResolutionNoSolution {
+                root_package_name,
+                derivation_tree: NeverEqual(derivation_tree),
+            },
 
             ResolutionError::ErrorRetrievingDependencies {
                 package,
                 version,
                 source,
-            } => format!(
+            } => Self::DependencyResolutionError(format!(
                 "An error occurred while trying to retrieve dependencies of {package}@{version}: {source}",
-            ),
+            )),
 
             ResolutionError::ErrorChoosingVersion { package, source } => {
-                format!("An error occured while chosing the version of {package}: {source}",)
+                Self::DependencyResolutionError(format!(
+                    "An error occured while chosing the version of {package}: {source}",
+                ))
             }
 
-            ResolutionError::ErrorInShouldCancel(err) => {
-                format!("Dependency resolution was cancelled. {err}")
-            }
-        })
+            ResolutionError::ErrorInShouldCancel(err) => Self::DependencyResolutionError(format!(
+                "Dependency resolution was cancelled. {err}"
+            )),
+        }
     }
 
     pub fn expand_tar<E>(error: E) -> Error
@@ -4202,13 +4223,33 @@ manifest.toml and a version range specified in gleam.toml:
                 }]
             }
 
-            Error::DependencyResolutionFailed(error) => vec![Diagnostic {
+            Error::DependencyResolutionError(error) => vec![Diagnostic {
                 title: "Dependency resolution failed".into(),
                 text: wrap(error),
                 hint: None,
                 location: None,
                 level: Level::Error,
             }],
+
+            Error::DependencyResolutionNoSolution {
+                root_package_name,
+                derivation_tree,
+            } => {
+                let text = wrap(
+                    &DerivationTreePrinter::new(
+                        root_package_name.clone(),
+                        derivation_tree.0.clone(),
+                    )
+                    .print(),
+                );
+                vec![Diagnostic {
+                    title: "Dependency resolution failed".into(),
+                    text,
+                    hint: None,
+                    location: None,
+                    level: Level::Error,
+                }]
+            }
 
             Error::WrongDependencyProvided {
                 path,
