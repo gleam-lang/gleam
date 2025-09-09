@@ -240,7 +240,7 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     DependencyResolutionNoSolution {
         root_package_name: EcoString,
         derivation_tree:
-            NeverEqual<pubgrub::DerivationTree<String, pubgrub::Ranges<Version>, String>>,
+            Box<NeverEqual<pubgrub::DerivationTree<String, pubgrub::Ranges<Version>, String>>>,
     },
 
     #[error("Dependency resolution failed: {0}")]
@@ -456,7 +456,7 @@ impl Error {
         match error {
             ResolutionError::NoSolution(derivation_tree) => Self::DependencyResolutionNoSolution {
                 root_package_name,
-                derivation_tree: NeverEqual(derivation_tree),
+                derivation_tree: Box::new(NeverEqual(derivation_tree)),
             },
 
             ResolutionError::ErrorRetrievingDependencies {
