@@ -190,6 +190,14 @@ pub(crate) fn print_generating_documentation() {
     print_colourful_prefix("Generating", "documentation")
 }
 
+pub(crate) fn print_transferring_ownership() {
+    print_colourful_prefix("Transferring", "ownership");
+}
+
+pub(crate) fn print_transferred_ownership(elapsed: Duration) {
+    print_colourful_prefix("Transferred", &format!("ownership in {}", seconds(elapsed)));
+}
+
 fn print_packages_downloaded(start: Instant, count: usize) {
     let elapsed = seconds(start.elapsed());
     let msg = match count {
