@@ -479,3 +479,149 @@ zzz = { version = "> 0.0.0" }
         }
     }
 }
+
+#[derive(Debug)]
+pub struct Resolved {
+    pub manifest: Manifest,
+    pub added: Vec<(EcoString, Version)>,
+    pub changed: Vec<(EcoString, Version, Version)>,
+    pub removed: Vec<EcoString>,
+}
+
+impl Resolved {
+    pub fn any_changes(&self) -> bool {
+        !self.added.is_empty() || !self.changed.is_empty() || !self.removed.is_empty()
+    }
+
+    pub fn add_added(manifest: Manifest) -> Resolved {
+        let added = manifest
+            .packages
+            .iter()
+            .map(|package| (package.name.clone(), package.version.clone()))
+            .collect();
+        Self {
+            manifest,
+            added,
+            changed: vec![],
+            removed: vec![],
+        }
+    }
+
+    pub fn no_change(manifest: Manifest) -> Self {
+        Self {
+            manifest,
+            added: vec![],
+            changed: vec![],
+            removed: vec![],
+        }
+    }
+
+    /// Create a `Resolved`, comparing the old and new versions of the manifest to work out
+    /// if resolution resulted in any changes.
+    pub fn with_updates(old: &Manifest, new: Manifest) -> Self {
+        let mut added = vec![];
+        let mut changed = vec![];
+        let mut old: HashMap<_, _> = old
+            .packages
+            .iter()
+            .map(|package| (&package.name, &package.version))
+            .collect();
+
+        for new in &new.packages {
+            match old.remove(&new.name) {
+                Some(old_version) if old_version == &new.version => {
+                    continue;
+                }
+                Some(old_version) => {
+                    changed.push((new.name.clone(), old_version.clone(), new.version.clone()));
+                }
+                None => {
+                    added.push((new.name.clone(), new.version.clone()));
+                }
+            }
+        }
+
+        let removed = old.into_keys().cloned().collect();
+
+        Self {
+            manifest: new,
+            added,
+            changed,
+            removed,
+        }
+    }
+}
+
+#[test]
+fn resolved_with_updated() {
+    use crate::manifest::{Base16Checksum, ManifestPackage, ManifestPackageSource};
+
+    let package = |name: &str, version| ManifestPackage {
+        name: EcoString::from(name),
+        version,
+        build_tools: vec![],
+        otp_app: None,
+        requirements: vec![],
+        source: ManifestPackageSource::Hex {
+            outer_checksum: Base16Checksum(vec![]),
+        },
+    };
+
+    let old = Manifest {
+        requirements: HashMap::new(),
+        packages: vec![
+            package("unchanged1", Version::new(3, 0, 0)),
+            package("unchanged2", Version::new(0, 1, 0)),
+            package("changed1", Version::new(3, 0, 0)),
+            package("changed2", Version::new(0, 1, 0)),
+            package("removed1", Version::new(10, 0, 0)),
+            package("removed2", Version::new(20, 1, 0)),
+        ],
+    };
+
+    let new = Manifest {
+        requirements: HashMap::new(),
+        packages: vec![
+            package("new1", Version::new(1, 0, 0)),
+            package("new2", Version::new(2, 1, 0)),
+            package("unchanged1", Version::new(3, 0, 0)),
+            package("unchanged2", Version::new(0, 1, 0)),
+            package("changed1", Version::new(5, 0, 0)),
+            package("changed2", Version::new(3, 0, 0)),
+        ],
+    };
+
+    let mut resolved = Resolved::with_updates(&old, new);
+    resolved.added.sort();
+    resolved.changed.sort();
+    resolved.removed.sort();
+
+    assert_eq!(
+        resolved.added,
+        vec![
+            ("new1".into(), Version::new(1, 0, 0)),
+            ("new2".into(), Version::new(2, 1, 0)),
+        ]
+    );
+
+    assert_eq!(
+        resolved.changed,
+        vec![
+            (
+                "changed1".into(),
+                Version::new(3, 0, 0),
+                Version::new(5, 0, 0)
+            ),
+            (
+                "changed2".into(),
+                Version::new(0, 1, 0),
+                Version::new(3, 0, 0)
+            ),
+        ]
+    );
+
+    assert_eq!(
+        resolved.removed,
+        vec![EcoString::from("removed1"), EcoString::from("removed2")]
+    );
+}

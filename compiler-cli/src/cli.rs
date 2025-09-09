@@ -1,6 +1,7 @@
 use gleam_core::{
     build::Telemetry,
     error::{Error, StandardIoAction},
+    manifest::Resolved,
 };
 use hexpm::version::Version;
 use std::{
@@ -53,6 +54,10 @@ impl Telemetry for Reporter {
 
     fn waiting_for_build_directory_lock(&self) {
         print_waiting_for_build_directory_lock()
+    }
+
+    fn resolved_package_versions(&self, resolved: &Resolved) {
+        print_resolved(resolved)
     }
 }
 
@@ -148,11 +153,27 @@ pub(crate) fn print_running(text: &str) {
     print_colourful_prefix("Running", text)
 }
 
-pub(crate) fn print_added(text: &str) {
+pub(crate) fn print_resolved(resolved: &Resolved) {
+    for (name, version) in &resolved.added {
+        print_added(&format!("{name} v{version}"));
+    }
+    for (name, old, new) in &resolved.changed {
+        print_changed(&format!("{name} v{old} -> v{new}"));
+    }
+    for name in &resolved.removed {
+        print_removed(name);
+    }
+}
+
+fn print_added(text: &str) {
     print_colourful_prefix("Added", text)
 }
 
-pub(crate) fn print_removed(text: &str) {
+fn print_changed(text: &str) {
+    print_colourful_prefix("Changed", text)
+}
+
+fn print_removed(text: &str) {
     print_colourful_prefix("Removed", text)
 }
 

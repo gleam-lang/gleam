@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use ecow::EcoString;
 use futures::future;
 use gleam_core::{
@@ -7,10 +5,11 @@ use gleam_core::{
     build::{Mode, Telemetry},
     config::PackageConfig,
     dependency,
-    manifest::Manifest,
+    manifest::{Manifest, Resolved},
     paths::ProjectPaths,
     requirement::Requirement,
 };
+use std::collections::HashMap;
 
 use crate::{
     build_lock::BuildLock,
@@ -54,23 +53,6 @@ impl DependencyManagerConfig {
     }
 }
 
-pub struct Resolved {
-    pub manifest: Manifest,
-    pub versions_changed: bool,
-}
-
-impl Resolved {
-    /// Create a `Resolved`, comparing the old and new versions of the manifest to work out
-    /// if resolution resulted in any changes.
-    pub fn with_updates(old: &Manifest, new: Manifest) -> Self {
-        let versions_changed = old.packages != new.packages;
-        Self {
-            manifest: new,
-            versions_changed,
-        }
-    }
-}
-
 pub struct DependencyManager<Telem, P> {
     runtime: tokio::runtime::Handle,
     package_fetcher: P,
@@ -99,10 +81,7 @@ where
         if !paths.manifest().exists() {
             tracing::debug!("manifest_not_present");
             let manifest = self.perform_version_resolution(paths, config, None, Vec::new())?;
-            return Ok(Resolved {
-                manifest,
-                versions_changed: true,
-            });
+            return Ok(Resolved::add_added(manifest));
         }
 
         let existing_manifest = read_manifest_from_disc(paths)?;
@@ -121,10 +100,7 @@ where
                         paths.root(),
                     )?
                 {
-                    return Ok(Resolved {
-                        manifest: existing_manifest,
-                        versions_changed: false,
-                    });
+                    return Ok(Resolved::no_change(existing_manifest));
                 }
 
                 // Otherwise, use the manifest to inform resolution.
@@ -142,7 +118,7 @@ where
         Ok(Resolved::with_updates(&existing_manifest, new_manifest))
     }
 
-    pub fn download(
+    pub fn resolve_and_download_versions(
         &self,
         paths: &ProjectPaths,
         new_package: Option<(Vec<(EcoString, Requirement)>, bool)>,
@@ -176,36 +152,35 @@ where
         }
 
         // Determine what versions we need
-        let Resolved {
-            manifest,
-            versions_changed: manifest_updated,
-        } = self.resolve_versions(paths, &config, packages_to_update)?;
+        let resolved = self.resolve_versions(paths, &config, packages_to_update)?;
         let local = LocalPackages::read_from_disc(paths)?;
 
         // Remove any packages that are no longer required due to gleam.toml changes
-        remove_extra_packages(paths, &local, &manifest, &self.telemetry)?;
+        remove_extra_packages(paths, &local, &resolved.manifest, &self.telemetry)?;
 
         // Download them from Hex to the local cache
         self.runtime.block_on(add_missing_packages(
             paths,
             fs,
-            &manifest,
+            &resolved.manifest,
             &local,
             project_name,
             &self.telemetry,
         ))?;
 
-        if manifest_updated {
+        if resolved.any_changes() {
             // Record new state of the packages directory
             // TODO: test
             tracing::debug!("writing_manifest_toml");
-            write_manifest_to_disc(paths, &manifest)?;
+            write_manifest_to_disc(paths, &resolved.manifest)?;
         }
-        LocalPackages::from_manifest(&manifest).write_to_disc(paths)?;
+        LocalPackages::from_manifest(&resolved.manifest).write_to_disc(paths)?;
 
         if let CheckMajorVersions::Yes = self.check_major_versions {
-            let major_versions_available =
-                dependency::check_for_major_version_updates(&manifest, &self.package_fetcher);
+            let major_versions_available = dependency::check_for_major_version_updates(
+                &resolved.manifest,
+                &self.package_fetcher,
+            );
             if !major_versions_available.is_empty() {
                 eprintln!(
                     "{}",
@@ -214,7 +189,8 @@ where
             }
         }
 
-        Ok(manifest)
+        self.telemetry.resolved_package_versions(&resolved);
+        Ok(resolved.manifest)
     }
 
     fn perform_version_resolution(

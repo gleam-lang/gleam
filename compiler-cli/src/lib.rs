@@ -774,7 +774,7 @@ fn project_paths_at_current_directory_without_toml() -> ProjectPaths {
 }
 
 fn download_dependencies(paths: &ProjectPaths) -> Result<()> {
-    _ = dependencies::download(
+    _ = dependencies::resolve_and_download(
         paths,
         cli::Reporter::new(),
         None,
