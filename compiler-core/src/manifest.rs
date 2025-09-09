@@ -529,9 +529,7 @@ impl Resolved {
 
         for new in &new.packages {
             match old.remove(&new.name) {
-                Some(old_version) if old_version == &new.version => {
-                    continue;
-                }
+                Some(old_version) if old_version == &new.version => (),
                 Some(old_version) => {
                     changed.push((new.name.clone(), old_version.clone(), new.version.clone()));
                 }
