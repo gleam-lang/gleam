@@ -4,6 +4,7 @@ use gleam_core::{
     manifest::Resolved,
 };
 use hexpm::version::Version;
+use itertools::Itertools as _;
 use std::{
     io::{IsTerminal, Write},
     time::{Duration, Instant},
@@ -154,13 +155,13 @@ pub(crate) fn print_running(text: &str) {
 }
 
 pub(crate) fn print_resolved(resolved: &Resolved) {
-    for (name, version) in &resolved.added {
+    for (name, version) in resolved.added.iter().sorted() {
         print_added(&format!("{name} v{version}"));
     }
-    for (name, old, new) in &resolved.changed {
+    for (name, old, new) in resolved.changed.iter().sorted() {
         print_changed(&format!("{name} v{old} -> v{new}"));
     }
-    for name in &resolved.removed {
+    for name in resolved.removed.iter().sorted() {
         print_removed(name);
     }
 }
