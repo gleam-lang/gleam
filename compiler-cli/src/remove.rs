@@ -46,9 +46,5 @@ pub fn command(paths: &ProjectPaths, packages: Vec<String>) -> Result<()> {
     fs::write(root_config.as_path(), &toml.to_string())?;
     _ = crate::dependencies::cleanup(paths, cli::Reporter::new())?;
 
-    for package_to_remove in packages {
-        cli::print_removed(&package_to_remove);
-    }
-
     Ok(())
 }

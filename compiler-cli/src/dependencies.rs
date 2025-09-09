@@ -19,7 +19,7 @@ use gleam_core::{
     error::{FileIoAction, FileKind, ShellCommandFailureReason, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
     io::{HttpClient as _, TarUnpacker, WrappedReader},
-    manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
+    manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource, Resolved},
     paths::ProjectPaths,
     requirement::Requirement,
 };
@@ -228,7 +228,7 @@ pub fn update(paths: &ProjectPaths, packages: Vec<String>) -> Result<()> {
     };
 
     // Update specific packages
-    _ = download(
+    _ = resolve_and_download(
         paths,
         cli::Reporter::new(),
         None,
@@ -257,7 +257,8 @@ pub fn cleanup<Telem: Telemetry>(paths: &ProjectPaths, telemetry: Telem) -> Resu
 
     // Read the project config
     let config = crate::root_config(paths)?;
-    let mut manifest = read_manifest_from_disc(paths)?;
+    let old_manifest = read_manifest_from_disc(paths)?;
+    let mut manifest = old_manifest.clone();
 
     remove_extra_requirements(&config, &mut manifest)?;
 
@@ -270,7 +271,10 @@ pub fn cleanup<Telem: Telemetry>(paths: &ProjectPaths, telemetry: Telem) -> Resu
     write_manifest_to_disc(paths, &manifest)?;
     LocalPackages::from_manifest(&manifest).write_to_disc(paths)?;
 
-    Ok(manifest)
+    let resolved = Resolved::with_updates(&old_manifest, manifest);
+    telemetry.resolved_package_versions(&resolved);
+
+    Ok(resolved.manifest)
 }
 
 /// Remove requirements and unneeded packages from manifest that are no longer present in config.
@@ -367,7 +371,7 @@ pub fn parse_gleam_add_specifier(package: &str) -> Result<(EcoString, Requiremen
     Ok((package.into(), requirement))
 }
 
-pub fn download<Telem: Telemetry>(
+pub fn resolve_and_download<Telem: Telemetry>(
     paths: &ProjectPaths,
     telemetry: Telem,
     new_package: Option<(Vec<(EcoString, Requirement)>, bool)>,
@@ -385,7 +389,7 @@ pub fn download<Telem: Telemetry>(
         Mode::Dev,
     );
 
-    dependency_manager.download(paths, new_package, packages_to_update)
+    dependency_manager.resolve_and_download_versions(paths, new_package, packages_to_update)
 }
 
 fn pretty_print_major_versions_available(versions: dependency::PackageVersionDiffs) -> String {

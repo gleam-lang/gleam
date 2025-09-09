@@ -15,7 +15,7 @@ use crate::{
 };
 
 pub fn download_dependencies(paths: &ProjectPaths, telemetry: impl Telemetry) -> Result<Manifest> {
-    dependencies::download(
+    dependencies::resolve_and_download(
         paths,
         telemetry,
         None,
