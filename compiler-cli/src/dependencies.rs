@@ -104,7 +104,9 @@ fn get_manifest_details(paths: &ProjectPaths) -> Result<(PackageConfig, Manifest
         cli::Reporter::new(),
         Mode::Dev,
     );
-    let (_, manifest) = dependency_manager.get_manifest(paths, &config, Vec::new())?;
+    let manifest = dependency_manager
+        .resolve_versions(paths, &config, Vec::new())?
+        .manifest;
     Ok((config, manifest))
 }
 
