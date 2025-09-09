@@ -179,6 +179,10 @@
   of inline tables if they are missing.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- After dependency resolution the build tool will now print all packages added
+  and removed, and any versions changed.
+  ([Louis Pilfold](https://github.com/lpil))
+
 - `gleam publish` now blocks publishing packages that contain the default main
   function to prevent accidental publishing of unmodified template code.
   ([Joohoon Cha](https://github.com/jcha0713))
