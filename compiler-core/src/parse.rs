@@ -987,8 +987,8 @@ where
     fn add_comment_style_hint(&self, mut err: ParseError) -> ParseError {
         if let ParseErrorType::UnexpectedToken { ref mut hint, .. } = err.error {
             let text =
-                "Maybe you meant to create a comment? Comments in Gleam start with `//`, not `#`";
-            *hint = Some(wrap(text).into());
+                "Maybe you meant to create a comment?\nComments in Gleam start with `//`, not `#`";
+            *hint = Some(text.into());
         }
         err
     }
