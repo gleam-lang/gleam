@@ -484,8 +484,15 @@ zzz = { version = "> 0.0.0" }
 pub struct Resolved {
     pub manifest: Manifest,
     pub added: Vec<(EcoString, Version)>,
-    pub changed: Vec<(EcoString, Version, Version)>,
+    pub changed: Vec<Changed>,
     pub removed: Vec<EcoString>,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Changed {
+    pub name: EcoString,
+    pub old: Version,
+    pub new: Version,
 }
 
 impl Resolved {
@@ -493,7 +500,7 @@ impl Resolved {
         !self.added.is_empty() || !self.changed.is_empty() || !self.removed.is_empty()
     }
 
-    pub fn add_added(manifest: Manifest) -> Resolved {
+    pub fn all_added(manifest: Manifest) -> Resolved {
         let added = manifest
             .packages
             .iter()
@@ -531,7 +538,11 @@ impl Resolved {
             match old.remove(&new.name) {
                 Some(old_version) if old_version == &new.version => (),
                 Some(old_version) => {
-                    changed.push((new.name.clone(), old_version.clone(), new.version.clone()));
+                    changed.push(Changed {
+                        name: new.name.clone(),
+                        old: old_version.clone(),
+                        new: new.version.clone(),
+                    });
                 }
                 None => {
                     added.push((new.name.clone(), new.version.clone()));
@@ -591,7 +602,7 @@ fn resolved_with_updated() {
 
     let mut resolved = Resolved::with_updates(&old, new);
     resolved.added.sort();
-    resolved.changed.sort();
+    resolved.changed.sort_by(|a, b| a.name.cmp(&b.name));
     resolved.removed.sort();
 
     assert_eq!(
@@ -605,16 +616,16 @@ fn resolved_with_updated() {
     assert_eq!(
         resolved.changed,
         vec![
-            (
-                "changed1".into(),
-                Version::new(3, 0, 0),
-                Version::new(5, 0, 0)
-            ),
-            (
-                "changed2".into(),
-                Version::new(0, 1, 0),
-                Version::new(3, 0, 0)
-            ),
+            Changed {
+                name: "changed1".into(),
+                old: Version::new(3, 0, 0),
+                new: Version::new(5, 0, 0)
+            },
+            Changed {
+                name: "changed2".into(),
+                old: Version::new(0, 1, 0),
+                new: Version::new(3, 0, 0)
+            },
         ]
     );
 

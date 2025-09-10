@@ -81,7 +81,7 @@ where
         if !paths.manifest().exists() {
             tracing::debug!("manifest_not_present");
             let manifest = self.perform_version_resolution(paths, config, None, Vec::new())?;
-            return Ok(Resolved::add_added(manifest));
+            return Ok(Resolved::all_added(manifest));
         }
 
         let existing_manifest = read_manifest_from_disc(paths)?;
