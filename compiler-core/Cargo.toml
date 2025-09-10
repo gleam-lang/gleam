@@ -48,6 +48,8 @@ age = { version = "0.11", features = ["armor"] }
 radix_trie = "0.2.1"
 # Ensuring recursive type-checking doesn't stack overflow
 stacker = "0.1.21"
+# Manipulating bit arrays
+bitvec = "1"
 
 async-trait.workspace = true
 base16.workspace = true

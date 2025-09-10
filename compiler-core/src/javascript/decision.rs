@@ -8,7 +8,7 @@ use crate::{
     exhaustiveness::{
         BitArrayMatchedValue, BitArrayTest, Body, BoundValue, CompiledCase, Decision,
         FallbackCheck, MatchTest, Offset, ReadAction, ReadSize, ReadType, RuntimeCheck,
-        SizeOperator, SizeTest, StringEncoding, Variable, VariableUsage,
+        SizeOperator, SizeTest, Variable, VariableUsage,
     },
     format::break_block,
     javascript::{
@@ -16,9 +16,7 @@ use crate::{
         maybe_escape_property,
     },
     pretty::{Document, Documentable, break_, concat, join, line, nil},
-    strings::{
-        convert_string_escape_chars, length_utf16, string_to_utf16_bytes, string_to_utf32_bytes,
-    },
+    strings::{convert_string_escape_chars, length_utf16},
 };
 use ecow::{EcoString, eco_format};
 use itertools::Itertools;
@@ -1083,14 +1081,10 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                     read_action,
                 }) => match expected {
                     BitArrayMatchedValue::LiteralString {
-                        value: expected,
-                        encoding,
-                    } => self.literal_string_segment_bytes_check(
-                        value,
-                        expected,
-                        read_action,
-                        *encoding,
-                    ),
+                        value: _,
+                        encoding: _,
+                        bytes: expected,
+                    } => self.literal_string_segment_bytes_check(value, expected, read_action),
                     BitArrayMatchedValue::LiteralFloat(expected) => {
                         self.literal_float_segment_bytes_check(value, expected, read_action)
                     }
@@ -1423,9 +1417,9 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         &mut self,
         // A string representing the bit array value we read bits from.
         bit_array: EcoString,
-        literal_string: &EcoString,
+        // The bytes of the literal string we should be matching on.
+        string_bytes: &Vec<u8>,
         read_action: &ReadAction,
-        encoding: StringEncoding,
     ) -> Document<'a> {
         let ReadAction {
             from: start,
@@ -1437,22 +1431,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
 
         let equality = " === ";
 
-        let escaped = convert_string_escape_chars(literal_string);
-        // We need to have this vector here so that we don't run into lifetime
-        // issues when calling `.as_slice` on the local vectors created when this
-        // isn't a UTF-8 string.
-        let bytes_vec;
-        let bytes = match encoding {
-            StringEncoding::Utf8 => escaped.as_bytes(),
-            StringEncoding::Utf16 => {
-                bytes_vec = string_to_utf16_bytes(&escaped, read_action.endianness);
-                bytes_vec.as_slice()
-            }
-            StringEncoding::Utf32 => {
-                bytes_vec = string_to_utf32_bytes(&escaped, read_action.endianness);
-                bytes_vec.as_slice()
-            }
-        };
+        let bytes = string_bytes.as_slice();
 
         if let Some(mut from_byte) = start.constant_bytes() {
             // If the string starts at a compile-time known byte, then we can
