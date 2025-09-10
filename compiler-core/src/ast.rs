@@ -2521,6 +2521,7 @@ impl<T> BitArraySize<T> {
     }
 }
 
+<<<<<<< HEAD
 impl Default for Inferred<()> {
     fn default() -> Self {
         Self::Unknown
@@ -2555,6 +2556,8 @@ pub struct TailPattern<Type> {
     pub pattern: Pattern<Type>,
 }
 
+=======
+>>>>>>> 1a5ce6265 (Optimise comparison with singleton custom types on JavaScript #4903. also fixed some clippy errors)
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum AssignName {
     Variable(EcoString),

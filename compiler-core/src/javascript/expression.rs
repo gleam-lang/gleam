@@ -1536,11 +1536,62 @@ impl<'module, 'a> Generator<'module, 'a> {
             return docvec![left_doc, operator, right_doc];
         }
 
+        // Optimise comparison with singleton custom types on JavaScript (https://gleam-lang/gleam/issues/4903)
+        if let (
+            _,
+            // RHS: singleton record constructor (arity 0)
+            TypedExpr::Var {
+                constructor:
+                    ValueConstructor {
+                        variant: ValueConstructorVariant::Record { arity: 0, name, .. },
+                        ..
+                    },
+                ..
+            },
+        ) = (left, right)
+        {
+            let left_doc = self
+                .not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(left));
+
+            let constructor_name = name.to_doc();
+
+            if should_be_equal {
+                return docvec![left_doc, " instanceof ", constructor_name];
+            } else {
+                return docvec!["!(", left_doc, " instanceof ", constructor_name, ")"];
+            }
+        }
+
+        if let (
+            // LHS: singleton record constructor (arity 0)
+            TypedExpr::Var {
+                constructor:
+                    ValueConstructor {
+                        variant: ValueConstructorVariant::Record { arity: 0, name, .. },
+                        ..
+                    },
+                ..
+            },
+            _,
+        ) = (left, right)
+        {
+            let right_doc = self
+                .not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(right));
+            let constructor_name = name.to_doc();
+
+            if should_be_equal {
+                return docvec![right_doc, " instanceof ", constructor_name];
+            } else {
+                return docvec!["!(", right_doc, " instanceof ", constructor_name, ")"];
+            }
+        }
+
         // Other types must be compared using structural equality
         let left =
             self.not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(left));
         let right =
             self.not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(right));
+
         self.prelude_equal_call(should_be_equal, left, right)
     }
 
