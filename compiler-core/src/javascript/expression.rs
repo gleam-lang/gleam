@@ -178,6 +178,18 @@ pub(crate) struct Generator<'module, 'ast> {
     pub let_assert_always_panics: bool,
 }
 
+fn is_ctor_value(g: &TypedClauseGuard) -> Option<EcoString> {
+    match &*g {
+        ClauseGuard::Constant(Constant::Record { arguments, name, .. })
+            if arguments.is_empty() => Some(name.clone()),
+        _ => None,
+    }
+}
+
+fn is_var(g: &TypedClauseGuard) -> bool {
+    matches!(&*g, ClauseGuard::Var { .. })
+}
+
 impl<'module, 'a> Generator<'module, 'a> {
     #[allow(clippy::too_many_arguments)] // TODO: FIXME
     pub fn new(
@@ -1552,34 +1564,28 @@ impl<'module, 'a> Generator<'module, 'a> {
         // because the first approach needs to construct a new Wibble, and then call the isEqual function,
         // which supports any shape of data, and so does a lot of extra logic which isn't necessary.
 
-        if let (
-            _,
-            // RHS: singleton record constructor (arity 0)
-            TypedExpr::Var {
-                constructor:
-                    ValueConstructor {
-                        variant: ValueConstructorVariant::Record { arity: 0, name, .. },
-                        ..
-                    },
-                ..
-            },
-        ) = (left, right)
+        // RHS: singleton record constructor (arity 0)
+        if let TypedExpr::Var {
+            constructor:
+                ValueConstructor {
+                    variant: ValueConstructorVariant::Record { arity: 0, name, .. },
+                    ..
+                },
+            ..
+        } = right
         {
             return self.singleton_equal_helper(left, name, should_be_equal);
         }
 
-        if let (
-            // LHS: singleton record constructor (arity 0)
-            TypedExpr::Var {
-                constructor:
-                    ValueConstructor {
-                        variant: ValueConstructorVariant::Record { arity: 0, name, .. },
-                        ..
-                    },
-                ..
-            },
-            _,
-        ) = (left, right)
+        // LHS: singleton record constructor (arity 0)
+        if let TypedExpr::Var {
+            constructor:
+                ValueConstructor {
+                    variant: ValueConstructorVariant::Record { arity: 0, name, .. },
+                    ..
+                },
+            ..
+        } = left
         {
             return self.singleton_equal_helper(right, name, should_be_equal);
         }
@@ -2032,66 +2038,36 @@ impl<'module, 'a> Generator<'module, 'a> {
                 docvec![left, " !== ", right]
             }
 
-            ClauseGuard::Equals { left, right, .. } => {
-                if let (
-                    _,
-                    ClauseGuard::Constant(Constant::Record {
-                        arguments, name, ..
-                    }),
-                    // Check if it's a singleton (no arguments)
-                ) = (&**left, &**right)
-                    && arguments.is_empty()
-                {
-                    let left_doc = self.guard(left);
-                    return docvec![left_doc, " instanceof ", name.to_doc()];
-                }
+            ClauseGuard::Equals { left, right, .. }
+            | ClauseGuard::NotEquals { left, right, .. } => {
+                let should_be_equal = matches!(guard, ClauseGuard::Equals { .. });
 
-                if let (
-                    ClauseGuard::Constant(Constant::Record {
-                        arguments, name, ..
-                    }),
-                    _,
-                    // Check if it's a singleton (no arguments)
-                ) = (&**left, &**right)
-                    && arguments.is_empty()
-                {
-                    let right_doc = self.guard(right);
-                    return docvec![right_doc, " instanceof ", name.to_doc()];
-                }
+                // if is_var(right) {
+                //     if let Some(tag) = is_ctor_value(left) {
+                //         let val = self.guard(right);
+                //         return if should_be_equal {
+                //             docvec![val, " instanceof ", tag.to_doc()]
+                //         } else {
+                //             docvec!["!(", val, " instanceof ", tag.to_doc(), ")"]
+                //         };
+                //     }
+                // }
 
-                let left = self.guard(left);
-                let right = self.guard(right);
-                self.prelude_equal_call(true, left, right)
-            }
+                // if is_var(left) {
+                //     if let Some(tag) = is_ctor_value(right) {
+                //         let val = self.guard(left);
+                //         return if should_be_equal {
+                //             docvec![val, " instanceof ", tag.to_doc()]
+                //         } else {
+                //             docvec!["!(", val, " instanceof ", tag.to_doc(), ")"]
+                //         };
+                //     }
+                // }
 
-            ClauseGuard::NotEquals { left, right, .. } => {
-                if let (
-                    _,
-                    ClauseGuard::Constant(Constant::Record {
-                        arguments, name, ..
-                    }),
-                ) = (&**left, &**right)
-                    && arguments.is_empty()
-                {
-                    let left_doc = self.guard(left);
-                    return docvec!["!(", left_doc, " instanceof ", name.to_doc(), ")"];
-                }
-
-                if let (
-                    ClauseGuard::Constant(Constant::Record {
-                        arguments, name, ..
-                    }),
-                    _,
-                ) = (&**left, &**right)
-                    && arguments.is_empty()
-                {
-                    let right_doc = self.guard(right);
-                    return docvec!["!(", right_doc, " instanceof ", name.to_doc(), ")"];
-                }
-
-                let left = self.guard(left);
-                let right = self.guard(right);
-                self.prelude_equal_call(false, left, right)
+                // Otherwise fallback to normal equality check
+                let left_doc = self.guard(left);
+                let right_doc = self.guard(right);
+                self.prelude_equal_call(should_be_equal, left_doc, right_doc)
             }
 
             ClauseGuard::GtFloat { left, right, .. } | ClauseGuard::GtInt { left, right, .. } => {

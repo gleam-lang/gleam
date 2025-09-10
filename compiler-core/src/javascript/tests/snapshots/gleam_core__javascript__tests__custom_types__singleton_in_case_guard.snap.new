@@ -1,0 +1,36 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+assertion_line: 793
+expression: "\npub type State {\n  Active\n  Inactive\n}\n\npub fn process(s: State) -> String {\n  case s {\n    state if state == Active -> \"active\"\n    _ -> \"inactive\"\n  }\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub type State {
+  Active
+  Inactive
+}
+
+pub fn process(s: State) -> String {
+  case s {
+    state if state == Active -> "active"
+    _ -> "inactive"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType, isEqual } from "../gleam.mjs";
+
+export class Active extends $CustomType {}
+
+export class Inactive extends $CustomType {}
+
+export function process(s) {
+  let state = s;
+  if (isEqual(state, new Active())) {
+    return "active";
+  } else {
+    return "inactive";
+  }
+}
