@@ -1566,7 +1566,7 @@ pub enum Decision {
         var: Variable,
         choices: Vec<(RuntimeCheck, Decision)>,
         fallback: Box<Decision>,
-        fallback_check: FallbackCheck,
+        fallback_check: Box<FallbackCheck>,
     },
 
     /// This is a special node: it represents a missing pattern. If a tree
@@ -1969,7 +1969,7 @@ impl<'a> Compiler<'a> {
             var,
             choices,
             fallback: Box::new(last_choice),
-            fallback_check: FallbackCheck::InfiniteCatchAll,
+            fallback_check: Box::new(FallbackCheck::InfiniteCatchAll),
         }
     }
 
@@ -2014,7 +2014,7 @@ impl<'a> Compiler<'a> {
             var,
             choices,
             fallback,
-            fallback_check,
+            fallback_check: Box::new(fallback_check),
         }
     }
 
