@@ -53,6 +53,7 @@ pub enum UntypedExpr {
         location: SrcSpan,
         fun: Box<Self>,
         arguments: Vec<CallArg<Self>>,
+        arguments_start: u32,
     },
 
     BinOp {
@@ -293,11 +294,18 @@ impl HasLocation for UntypedExpr {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FunctionLiteralKind {
     Capture { hole: SrcSpan },
-    Anonymous { head: SrcSpan },
+    Anonymous { head: SrcSpan, body: SrcSpan },
     Use { location: SrcSpan },
 }
 
 impl FunctionLiteralKind {
+    pub fn is_anonymous(&self) -> bool {
+        match self {
+            FunctionLiteralKind::Anonymous { .. } => true,
+            FunctionLiteralKind::Capture { .. } | FunctionLiteralKind::Use { .. } => false,
+        }
+    }
+
     pub fn is_capture(&self) -> bool {
         match self {
             FunctionLiteralKind::Capture { .. } => true,

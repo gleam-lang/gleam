@@ -76,6 +76,7 @@ pub enum TypedExpr {
         type_: Arc<Type>,
         fun: Box<Self>,
         arguments: Vec<CallArg<Self>>,
+        arguments_start: Option<u32>,
     },
 
     BinOp {
