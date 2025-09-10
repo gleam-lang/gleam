@@ -36,6 +36,31 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The compiler now applies an optimisation known as "interference based pruning"
+  when compiling bit array pattern matching where matches are performed at the
+  start of bit arrays.
+  This optimisation drastically reduces compile times, memory usage and the
+  compiled code size, removing many redundant checks.
+  It is particularly important for network protocol applications where it is
+  typical to match on some fixed patterns at the start of the bitarray.
+  For example:
+
+  ```gleam
+  pub fn parser_headers(headers: BitArray, bytes: Int) -> Headers {
+    case headers {
+      <<"CONTENT_LENGTH" as header, 0, value:size(bytes), 0, rest:bytes>>
+      | <<"QUERY_STRING" as header, 0, value:size(bytes), 0, rest:bytes>>
+      | <<"REQUEST_URI" as header, 0, value:size(bytes), 0, rest:bytes>>
+      // ...
+      | <<"REDIRECT_STATUS" as header, 0, value:size(bytes), 0, rest:bytes>>
+      | <<"SCRIPT_NAME" as header, 0, value:size(bytes), 0, rest:bytes>>
+        -> [#(header, value), ..parse_headers(rest)]
+    }
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The compiler now emits a better error message for private types marked as
   opaque. For example, the following piece of code:
 
@@ -415,6 +440,7 @@
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 - You can now go to definition, rename, etc. from alternative patterns!
+
   ```gleam
   case wibble {
     Wibble | Wobble -> 0
@@ -422,6 +448,7 @@
   }
 
   ```
+
   ([fruno](https://github.com/fruno-bulax))
 
 ### Formatter

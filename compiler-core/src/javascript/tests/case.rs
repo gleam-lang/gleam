@@ -841,3 +841,51 @@ pub fn go(x, y) {
 }"
     )
 }
+
+#[test]
+fn interfering_string_pattern_fails_if_succeeding() {
+    assert_js!(
+        r#"
+pub fn wibble(bits) {
+  case bits {
+    <<"aaa", 0, _:bits>> -> 1
+    // If the first one fails, we know this one won't match, so it won't appear
+    // in the final else branch!
+    <<_, "aa", 1, _:bits>> -> 2
+    _ -> 3
+  }
+}"#
+    );
+}
+
+#[test]
+fn interfering_string_pattern_succeeds_if_succeeding() {
+    assert_js!(
+        r#"
+pub fn wibble(bits) {
+  case bits {
+    <<"aaa", 0, _:bits>> -> 1
+    // If the first one succeeds, so will the second check, so it won't be
+    // performed twice inside the first if branch!
+    <<"aaa", 1, _:bits>> -> 2
+    _ -> 3
+  }
+}"#
+    );
+}
+
+#[test]
+fn interfering_string_pattern_fails_if_failing() {
+    assert_js!(
+        r#"
+pub fn wibble(bits) {
+  case bits {
+    <<"aaaa", 0, _:bits>> -> 1
+    // If the first one fails we know this one will fail as well, so it won't
+    // appear in the final else branch.
+    <<_, "aaabbb", 1, _:bits>> -> 2
+    _ -> 3
+  }
+}"#
+    );
+}
