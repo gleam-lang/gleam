@@ -924,7 +924,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // !!!True  // we can remove all but one negation.
         // ```
         if negations > 1 {
-            let location = if negations % 2 == 0 {
+            let location = if negations.is_multiple_of(2) {
                 SrcSpan {
                     start: starting_location.start,
                     end: location.start + 1,
@@ -1009,7 +1009,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // ---1  // we can remove all but one negation.
         // ```
         if negations > 1 {
-            let location = if negations % 2 == 0 {
+            let location = if negations.is_multiple_of(2) {
                 SrcSpan {
                     start: starting_location.start,
                     end: end + 1,
