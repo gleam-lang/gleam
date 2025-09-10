@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\npub type Wibble {\n  Wibble\n  Wobble\n}\n\npub fn is_not_wibble(w: Wibble) -> Bool {\n  w != Wibble\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble
+  Wobble
+}
+
+pub fn is_not_wibble(w: Wibble) -> Bool {
+  w != Wibble
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class Wibble extends $CustomType {}
+export const Wibble$Wibble = () => new Wibble();
+export const Wibble$isWibble = (value) => value instanceof Wibble;
+
+export class Wobble extends $CustomType {}
+export const Wibble$Wobble = () => new Wobble();
+export const Wibble$isWobble = (value) => value instanceof Wobble;
+
+export function is_not_wibble(w) {
+  return !(w instanceof Wibble);
+}

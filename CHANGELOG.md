@@ -29,6 +29,10 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The performance of `==` and `!=` has been improved for single-variant custom types
+  compared using `instanceof` instead of `isEqual(new Variant())`).
+  ([Nafi](https://github.com/re-masashi))
+
 - The lowercase bool pattern error is no longer a syntax error, but instead a
   part of the analysis step. This allows the entire module to be analyzed, rather
   than stopping at the syntax error.

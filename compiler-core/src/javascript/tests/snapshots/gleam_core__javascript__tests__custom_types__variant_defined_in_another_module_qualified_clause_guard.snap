@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\nimport other_module\n\npub fn process(e) -> String {\n  case e {\n    value if value == other_module.Variant -> \"match\"\n    _ -> \"no match\"\n  }\n}\n"
+---
+----- SOURCE CODE
+-- other_module.gleam
+pub type Thingy { Variant Other(Int) }
+
+-- main.gleam
+
+import other_module
+
+pub fn process(e) -> String {
+  case e {
+    value if value == other_module.Variant -> "match"
+    _ -> "no match"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $other_module from "../other_module.mjs";
+
+export function process(e) {
+  let value = e;
+  if (value instanceof Variant) {
+    return "match";
+  } else {
+    return "no match";
+  }
+}

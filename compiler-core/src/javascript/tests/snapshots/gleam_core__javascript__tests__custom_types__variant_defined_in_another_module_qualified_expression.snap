@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\nimport other_module\n\npub fn check(x) -> Bool {\n  x == other_module.Variant\n}\n"
+---
+----- SOURCE CODE
+-- other_module.gleam
+pub type Thingy { Variant OtherVariant }
+
+-- main.gleam
+
+import other_module
+
+pub fn check(x) -> Bool {
+  x == other_module.Variant
+}
+
+
+----- COMPILED JAVASCRIPT
+import { isEqual } from "../gleam.mjs";
+import * as $other_module from "../other_module.mjs";
+
+export function check(x) {
+  return isEqual(x, new $other_module.Variant());
+}

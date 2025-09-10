@@ -131,6 +131,13 @@ impl Type {
         }
     }
 
+    pub fn is_named(&self) -> bool {
+        match self {
+            Self::Named { .. } => true,
+            _ => false,
+        }
+    }
+
     pub fn result_ok_type(&self) -> Option<Arc<Type>> {
         match self {
             Self::Named {

@@ -689,6 +689,256 @@ pub type Wibble {
 }
 
 #[test]
+fn singleton_record_equality() {
+    assert_js!(
+        r#"
+pub type Wibble {
+  Wibble
+  Wobble
+}
+
+pub fn is_wibble(w: Wibble) -> Bool {
+  w == Wibble
+}
+"#,
+    );
+}
+
+#[test]
+fn singleton_record_inequality() {
+    assert_js!(
+        r#"
+pub type Wibble {
+  Wibble
+  Wobble
+}
+
+pub fn is_not_wibble(w: Wibble) -> Bool {
+  w != Wibble
+}
+"#,
+    );
+}
+
+#[test]
+fn singleton_record_reverse_order() {
+    assert_js!(
+        r#"
+pub type Wibble {
+  Wibble
+  Wobble
+}
+
+pub fn is_wibble_reverse(w: Wibble) -> Bool {
+  Wibble == w
+}
+"#,
+    );
+}
+
+#[test]
+fn non_singleton_record_equality() {
+    assert_js!(
+        r#"
+pub type Person {
+  Person(name: String, age: Int)
+}
+
+pub fn same_person(p1: Person, p2: Person) -> Bool {
+  p1 == p2
+}
+"#,
+    );
+}
+
+#[test]
+fn multiple_singleton_constructors() {
+    assert_js!(
+        r#"
+pub type Status {
+  Loading
+  Success
+  Error
+}
+
+pub fn is_loading(s: Status) -> Bool {
+  s == Loading
+}
+
+pub fn is_success(s: Status) -> Bool {
+  s == Success
+}
+"#,
+    );
+}
+
+#[test]
+fn mixed_singleton_and_non_singleton() {
+    assert_js!(
+        r#"
+pub type Result {
+  Ok(value: Int)
+  Error
+}
+
+pub fn is_error(r: Result) -> Bool {
+  r == Error
+}
+"#,
+    );
+}
+
+#[test]
+fn singleton_in_case_guard() {
+    assert_js!(
+        r#"
+pub type State {
+  Active
+  Inactive
+}
+
+pub fn process(s: State) -> String {
+  case s {
+    state if state == Active -> "active"
+    _ -> "inactive"
+  }
+}
+"#,
+    );
+}
+
+#[test]
+fn equality_with_non_singleton_variant() {
+    assert_js!(
+        r#"
+pub type Thing {
+  Variant
+  Other(String)
+}
+
+pub fn check_other(x: Thing) -> Bool {
+  x == Other("hello")
+}
+"#,
+    );
+}
+
+#[test]
+fn guard_equality_with_non_singleton_variant() {
+    assert_js!(
+        r#"
+pub type Thing {
+  Variant
+  Other(String)
+}
+
+pub fn process(e: Thing) -> String {
+  case e {
+    value if value == Other("hello") -> "match"
+    _ -> "no match"
+  }
+}
+"#,
+    );
+}
+
+#[test]
+fn variant_defined_in_another_module_qualified_expression() {
+    assert_js!(
+        (
+            "other_module",
+            r#"pub type Thingy { Variant OtherVariant }"#
+        ),
+        r#"
+import other_module
+
+pub fn check(x) -> Bool {
+  x == other_module.Variant
+}
+"#,
+    );
+}
+
+#[test]
+fn variant_defined_in_another_module_unqualified_expression() {
+    assert_js!(
+        ("other_module", r#"pub type Thingy { Variant Other(Int) }"#),
+        r#"
+import other_module.{Variant}
+
+pub fn check(x) -> Bool {
+  x == Variant
+}
+"#,
+    );
+}
+
+#[test]
+fn variant_defined_in_another_module_aliased_expression() {
+    assert_js!(
+        ("other_module", r#"pub type Thingy { Variant Other(Int) }"#),
+        r#"
+import other_module.{Variant as Aliased}
+
+pub fn check(x) -> Bool {
+  x == Aliased
+}
+"#,
+    );
+}
+
+#[test]
+fn variant_defined_in_another_module_qualified_clause_guard() {
+    assert_js!(
+        ("other_module", r#"pub type Thingy { Variant Other(Int) }"#),
+        r#"
+import other_module
+
+pub fn process(e) -> String {
+  case e {
+    value if value == other_module.Variant -> "match"
+    _ -> "no match"
+  }
+}
+"#,
+    );
+}
+
+#[test]
+fn variant_defined_in_another_module_unqualified_clause_guard() {
+    assert_js!(
+        ("other_module", r#"pub type Thingy { Variant Other(Int) }"#),
+        r#"
+import other_module.{Variant}
+
+pub fn process(e) -> String {
+  case e {
+    value if value == Variant -> "match"
+    _ -> "no match"
+  }
+}
+"#,
+    );
+}
+
+#[test]
+fn variant_defined_in_another_module_aliased_clause_guard() {
+    assert_js!(
+        ("other_module", r#"pub type Thingy { Variant Other(Int) }"#),
+        r#"
+import other_module.{Variant as Aliased}
+
+pub fn process(e) -> String {
+  case e {
+    value if value == Aliased -> "match"
+    _ -> "no match"
+  }
+}
+"#,
+    );
+}
+
+#[test]
 fn external_annotation() {
     assert_ts_def!(
         r#"
