@@ -1,7 +1,7 @@
 use gleam_core::{
     build::Telemetry,
     error::{Error, StandardIoAction},
-    manifest::Resolved,
+    manifest::{Changed, Resolved},
 };
 use hexpm::version::Version;
 use itertools::Itertools as _;
@@ -158,7 +158,7 @@ pub(crate) fn print_resolved(resolved: &Resolved) {
     for (name, version) in resolved.added.iter().sorted() {
         print_added(&format!("{name} v{version}"));
     }
-    for (name, old, new) in resolved.changed.iter().sorted() {
+    for Changed { name, old, new } in resolved.changed.iter().sorted_by_key(|p| &p.name) {
         print_changed(&format!("{name} v{old} -> v{new}"));
     }
     for name in resolved.removed.iter().sorted() {
