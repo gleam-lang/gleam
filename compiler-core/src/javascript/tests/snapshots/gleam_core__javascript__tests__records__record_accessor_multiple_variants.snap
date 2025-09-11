@@ -22,10 +22,10 @@ export class Teacher extends $CustomType {
 }
 export const Person$Teacher = (name, title) => new Teacher(name, title);
 export const Person$isTeacher = (value) => value instanceof Teacher;
-export const Person$Teacher$0 = (value) => value[0];
 export const Person$Teacher$name = (value) => value.name;
-export const Person$Teacher$1 = (value) => value[1];
+export const Person$Teacher$0 = (value) => value.name;
 export const Person$Teacher$title = (value) => value.title;
+export const Person$Teacher$1 = (value) => value.title;
 
 export class Student extends $CustomType {
   constructor(name, age) {
@@ -36,10 +36,10 @@ export class Student extends $CustomType {
 }
 export const Person$Student = (name, age) => new Student(name, age);
 export const Person$isStudent = (value) => value instanceof Student;
-export const Person$Student$0 = (value) => value[0];
 export const Person$Student$name = (value) => value.name;
-export const Person$Student$1 = (value) => value[1];
+export const Person$Student$0 = (value) => value.name;
 export const Person$Student$age = (value) => value.age;
+export const Person$Student$1 = (value) => value.age;
 
 
 export const Person$name = (value) => value.name;

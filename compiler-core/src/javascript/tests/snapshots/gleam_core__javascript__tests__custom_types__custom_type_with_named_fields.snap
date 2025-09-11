@@ -50,10 +50,10 @@ export class Cat extends $CustomType {
 }
 export const Cat$Cat = (name, cuteness) => new Cat(name, cuteness);
 export const Cat$isCat = (value) => value instanceof Cat;
-export const Cat$Cat$0 = (value) => value[0];
 export const Cat$Cat$name = (value) => value.name;
-export const Cat$Cat$1 = (value) => value[1];
+export const Cat$Cat$0 = (value) => value.name;
 export const Cat$Cat$cuteness = (value) => value.cuteness;
+export const Cat$Cat$1 = (value) => value.cuteness;
 
 export class Box extends $CustomType {
   constructor(occupant) {
@@ -63,8 +63,8 @@ export class Box extends $CustomType {
 }
 export const Box$Box = (occupant) => new Box(occupant);
 export const Box$isBox = (value) => value instanceof Box;
-export const Box$Box$0 = (value) => value[0];
 export const Box$Box$occupant = (value) => value.occupant;
+export const Box$Box$0 = (value) => value.occupant;
 
 export function go() {
   new Cat("Nubi", 1);

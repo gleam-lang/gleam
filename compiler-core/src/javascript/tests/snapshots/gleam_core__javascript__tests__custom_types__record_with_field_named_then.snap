@@ -26,8 +26,8 @@ export class Thing extends $CustomType {
 }
 export const Thing$Thing = (then$) => new Thing(then$);
 export const Thing$isThing = (value) => value instanceof Thing;
-export const Thing$Thing$0 = (value) => value[0];
 export const Thing$Thing$then = (value) => value.then$;
+export const Thing$Thing$0 = (value) => value.then$;
 
 export function main() {
   let a = new Thing(undefined);

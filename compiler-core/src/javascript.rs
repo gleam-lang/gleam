@@ -487,15 +487,7 @@ impl<'a> Generator<'a> {
                 record_name = constructor.name,
             );
 
-            let contents = docvec![break_("", " "), "value[", index, "];"].group();
-
-            functions.push(docvec![
-                line(),
-                "export const ",
-                function_name,
-                " = (value) =>",
-                contents.nest(INDENT),
-            ]);
+            let contents;
 
             // If the argument is labelled, also generate a getter for the labelled
             // argument.
@@ -505,7 +497,7 @@ impl<'a> Generator<'a> {
                     record_name = constructor.name,
                 );
 
-                let contents =
+                contents =
                     docvec![break_("", " "), "value.", maybe_escape_property(label), ";"].group();
 
                 functions.push(docvec![
@@ -513,9 +505,19 @@ impl<'a> Generator<'a> {
                     "export const ",
                     function_name,
                     " = (value) =>",
-                    contents.nest(INDENT),
+                    contents.clone().nest(INDENT),
                 ]);
+            } else {
+                contents = docvec![break_("", " "), "value[", index, "];"].group()
             }
+
+            functions.push(docvec![
+                line(),
+                "export const ",
+                function_name,
+                " = (value) =>",
+                contents.nest(INDENT),
+            ]);
         }
 
         concat(functions)
