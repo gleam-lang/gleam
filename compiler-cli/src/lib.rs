@@ -191,10 +191,6 @@ enum Command {
     #[command(subcommand)]
     Hex(Hex),
 
-    /// Deal with package ownership
-    #[command(subcommand)]
-    Owner(Owner),
-
     /// Create a new project
     New(NewOptions),
 
@@ -450,6 +446,10 @@ enum Hex {
         version: Option<String>,
     },
 
+    /// Deal with package ownership
+    #[command(subcommand)]
+    Owner(Owner),
+
     /// Authenticate with Hex
     Authenticate,
 }
@@ -656,11 +656,6 @@ fn parse_and_run_command() -> Result<(), Error> {
             publish::command(&paths, replace, yes)
         }
 
-        Command::Owner(Owner::Transfer { username_or_email }) => {
-            let paths = find_project_paths()?;
-            owner::transfer(&paths, username_or_email)
-        }
-
         Command::PrintConfig => {
             let paths = find_project_paths()?;
             print_config(&paths)
@@ -678,6 +673,11 @@ fn parse_and_run_command() -> Result<(), Error> {
         Command::Hex(Hex::Revert { package, version }) => {
             let paths = find_project_paths()?;
             hex::revert(&paths, package, version)
+        }
+
+        Command::Hex(Hex::Owner(Owner::Transfer { username_or_email })) => {
+            let paths = find_project_paths()?;
+            owner::transfer(&paths, username_or_email)
         }
 
         Command::Add { packages, dev } => {
