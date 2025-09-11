@@ -3,12 +3,13 @@ use gleam_core::{Result, hex};
 use std::time::Instant;
 
 pub fn transfer(package: String, new_owner_username_or_email: String) -> Result<()> {
-    let should_transfer_ownership = cli::confirm(&format!(
-        "Transferring ownership of this package will remove all current owners
-and make {new_owner_username_or_email} its new owner.
+    println!(
+        "Transferring ownership of this package will remove all current owners and make
+{new_owner_username_or_email} its new owner.
 Do you wish to transfer ownership of `{package}` to {new_owner_username_or_email}?",
-    ))?;
+    );
 
+    let should_transfer_ownership = cli::confirm_with_text(&package)?;
     if !should_transfer_ownership {
         println!("Not transferring ownership.");
         return Ok(());
