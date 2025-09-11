@@ -1088,9 +1088,9 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                     BitArrayMatchedValue::LiteralFloat(expected) => {
                         self.literal_float_segment_bytes_check(value, expected, read_action)
                     }
-                    BitArrayMatchedValue::LiteralInt(expected) => {
-                        self.literal_int_segment_bytes_check(value, expected.clone(), read_action)
-                    }
+                    BitArrayMatchedValue::LiteralInt {
+                        value: expected, ..
+                    } => self.literal_int_segment_bytes_check(value, expected.clone(), read_action),
                     BitArrayMatchedValue::Variable(..)
                     | BitArrayMatchedValue::Discard(..)
                     | BitArrayMatchedValue::Assign { .. } => {
