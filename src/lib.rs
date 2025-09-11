@@ -274,7 +274,14 @@ pub fn get_repository_versions_response(
     let mut body = Vec::new();
     decoder.read_to_end(&mut body)?;
 
-    let signed = Signed::decode(body.as_slice())?;
+    get_repository_versions_data(&body, public_key)
+}
+
+pub fn get_repository_versions_data(
+    protobuf_bytes: &Vec<u8>,
+    public_key: &[u8],
+) -> Result<HashMap<String, Vec<Version>>, ApiError> {
+    let signed = Signed::decode(protobuf_bytes.as_slice())?;
 
     let payload =
         verify_payload(signed, public_key).map_err(|_| ApiError::IncorrectPayloadSignature)?;
@@ -339,7 +346,14 @@ pub fn get_package_response(
     let mut body = Vec::new();
     decoder.read_to_end(&mut body)?;
 
-    let signed = Signed::decode(body.as_slice())?;
+    get_package_data(&body, public_key)
+}
+
+pub fn get_package_data(
+    protobuf_bytes: &Vec<u8>,
+    public_key: &[u8],
+) -> Result<Package, ApiError> {
+    let signed = Signed::decode(protobuf_bytes.as_slice())?;
 
     let payload =
         verify_payload(signed, public_key).map_err(|_| ApiError::IncorrectPayloadSignature)?;
