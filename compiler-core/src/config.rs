@@ -319,7 +319,8 @@ impl PackageConfig {
                 | Repository::Codeberg { tag_prefix, .. }
                 | Repository::SourceHut { tag_prefix, .. }
                 | Repository::Gitea { tag_prefix, .. }
-                | Repository::Forgejo { tag_prefix, .. },
+                | Repository::Forgejo { tag_prefix, .. }
+                | Repository::Tangled { tag_prefix, .. },
             ) => tag_prefix.as_ref(),
 
             Some(Repository::Custom { .. }) | None => None,
@@ -891,6 +892,14 @@ pub enum Repository {
         #[serde(rename = "tag-prefix")]
         tag_prefix: Option<String>,
     },
+    #[serde(rename = "tangled")]
+    Tangled {
+        user: String,
+        repo: String,
+        path: Option<String>,
+        #[serde(rename = "tag-prefix")]
+        tag_prefix: Option<String>,
+    },
     #[serde(rename = "custom")]
     Custom {
         url: String,
@@ -917,6 +926,9 @@ impl Repository {
             Repository::SourceHut { repo, user, .. } => {
                 format!("https://git.sr.ht/~{user}/{repo}")
             }
+            Repository::Tangled { repo, user, .. } => {
+                format!("https://tangled.sh/{user}/{repo}")
+            }
             Repository::Gitea {
                 repo, user, host, ..
             }
@@ -938,6 +950,7 @@ impl Repository {
             | Repository::BitBucket { path, .. }
             | Repository::Codeberg { path, .. }
             | Repository::SourceHut { path, .. }
+            | Repository::Tangled { path, .. }
             | Repository::Gitea { path, .. }
             | Repository::Forgejo { path, .. } => path.as_ref(),
 

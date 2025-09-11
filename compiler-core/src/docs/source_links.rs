@@ -63,6 +63,10 @@ impl SourceLinker {
                     format!("https://git.sr.ht/~{user}/{repo}/tree/{tag}/item/{path_in_repo}#L"),
                     "-".into(),
                 )),
+                Repository::Tangled { user, repo, .. } => Some((
+                    format!("https://tangled.sh/{user}/{repo}/tree/{tag}/{path_in_repo}#L"),
+                    "-".into(),
+                )),
                 Repository::Gitea {
                     user, repo, host, ..
                 }

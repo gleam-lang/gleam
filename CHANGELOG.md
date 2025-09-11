@@ -236,6 +236,9 @@
   function to prevent accidental publishing of unmodified template code.
   ([Joohoon Cha](https://github.com/jcha0713))
 
+- Support has been added for using Tangled as a repository.
+  ([Naomi Roberts](https://github.com/naomieow))
+
 ### Language server
 
 - The language server now offers a code action to remove all the unreachable
