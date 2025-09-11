@@ -4353,3 +4353,78 @@ pub fn main() {
 }"
     );
 }
+
+#[test]
+fn impossible_to_reach_integer_segment() {
+    assert_warning!(
+        "
+pub fn main(x) {
+  case x {
+    <<9:size(2)>> -> True
+    _ -> False
+  }
+}"
+    );
+}
+
+#[test]
+fn impossible_to_reach_integer_segment_2() {
+    assert_warning!(
+        "
+pub fn main(x) {
+  case x {
+    <<-9:unsigned>> -> True
+    _ -> False
+  }
+}"
+    );
+}
+
+#[test]
+fn impossible_to_reach_integer_segment_3() {
+    assert_warning!(
+        "
+pub fn main(x) {
+  case x {
+    <<312>> -> True
+    _ -> False
+  }
+}"
+    );
+}
+
+#[test]
+fn impossible_to_reach_integer_segment_4() {
+    assert_warning!(
+        "
+pub fn main(x) {
+  case x {
+    <<-1>> -> True
+    _ -> False
+  }
+}"
+    );
+}
+
+#[test]
+fn multiple_impossible_to_reach_integer_segments() {
+    assert_warning!(
+        "
+pub fn main(x) {
+  case x {
+    <<1, -1, 2, -3>> -> True
+    _ -> False
+  }
+}"
+    );
+}
+
+#[test]
+fn assert_on_impossible_to_reach_integer_segment() {
+    assert_warning!(
+        "
+pub fn main(x) {
+  let assert <<1, -1, 2, -3>> = x
+}"
+    );
+}
