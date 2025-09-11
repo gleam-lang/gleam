@@ -175,8 +175,8 @@
 - New projects are generated using OTP28 on GitHub Actions.
   ([Louis Pilfold](https://github.com/lpil))
 
-- The build tool now has a new `owner transfer` subcommand to transfer ownership
-  of existing packages.
+- The build tool now has a new `hex owner transfer` subcommand to transfer
+  ownership of existing packages.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - `gleam add` now adds `dependencies` and `dev-dependencies` as tables instead
