@@ -24,10 +24,10 @@ export class Box extends $CustomType {
 }
 export const Box$Box = (a, b) => new Box(a, b);
 export const Box$isBox = (value) => value instanceof Box;
-export const Box$Box$0 = (value) => value[0];
 export const Box$Box$a = (value) => value.a;
-export const Box$Box$1 = (value) => value[1];
+export const Box$Box$0 = (value) => value.a;
 export const Box$Box$b = (value) => value.b;
+export const Box$Box$1 = (value) => value.b;
 
 export function go(x) {
   let a = x.b.a;
