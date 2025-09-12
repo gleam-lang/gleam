@@ -44,8 +44,8 @@ use super::{
     DownloadDependencies, MakeLocker,
     code_action::{
         AddAnnotations, CodeActionBuilder, ConvertFromUse, ConvertToFunctionCall, ConvertToPipe,
-        ConvertToUse, ExpandFunctionCapture, ExtractConstant, ExtractVariable,
-        FillInMissingLabelledArgs, FillUnusedFields, FixBinaryOperation,
+        ConvertToUse, DiscardUnusedVariables, ExpandFunctionCapture, ExtractConstant,
+        ExtractVariable, FillInMissingLabelledArgs, FillUnusedFields, FixBinaryOperation,
         FixTruncatedBitArraySegment, GenerateDynamicDecoder, GenerateFunction, GenerateJsonEncoder,
         GenerateVariant, InlineVariable, InterpolateString, LetAssertToCase, PatternMatchOnValue,
         RedundantTupleInCaseSubject, RemoveEchos, RemoveUnusedImports, UseLabelShorthandSyntax,
@@ -447,6 +447,7 @@ where
             actions.extend(WrapInBlock::new(module, &lines, &params).code_actions());
             actions.extend(RemoveBlock::new(module, &lines, &params).code_actions());
             actions.extend(RemovePrivateOpaque::new(module, &lines, &params).code_actions());
+            actions.extend(DiscardUnusedVariables::new(module, &lines, &params).code_actions());
             GenerateDynamicDecoder::new(module, &lines, &params, &mut actions).code_actions();
             GenerateJsonEncoder::new(
                 module,
