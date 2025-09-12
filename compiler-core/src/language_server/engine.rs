@@ -393,6 +393,7 @@ where
             actions.extend(RemoveUnusedImports::new(module, &lines, &params).code_actions());
             code_action_convert_qualified_constructor_to_unqualified(
                 module,
+                &this.compiler,
                 &lines,
                 &params,
                 &mut actions,
