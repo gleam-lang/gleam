@@ -8204,6 +8204,7 @@ pub struct DiscardUnusedVariables<'a> {
     edits: TextEdits<'a>,
 }
 
+/// Struct used to parse each UnusedVariable warning into code editions.
 struct UnusedVariable<'a> {
     location: &'a SrcSpan,
     origin: &'a VariableOrigin,
@@ -8222,6 +8223,7 @@ impl<'a> DiscardUnusedVariables<'a> {
         }
     }
 
+    // Parse UnusedVariable warnings into code editions.
     fn gen_edits(&mut self, unused_variable: &UnusedVariable<'a>) {
         match unused_variable.origin.syntax {
             VariableSyntax::Variable(_) => {
@@ -8252,7 +8254,9 @@ impl<'a> DiscardUnusedVariables<'a> {
                 }
                 _ => None,
             })
+            //Insert to self.edits the edits needed to discard each unused variable
             .for_each(|unused_variable| self.gen_edits(&unused_variable));
+
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Discard unused variables")
             .kind(CodeActionKind::QUICKFIX)
