@@ -9832,8 +9832,25 @@ pub fn main() -> Nil {
   let _ = check_my_type(instance)
 
   Nil
-}
-",
+}",
         find_position_of("b:,").to_selection()
+    );
+}
+
+#[test]
+fn discard_unused_variable_pattern() {
+    assert_code_action!(
+        DISCARD_UNUSED_VARIABLE,
+        "fn inner(all: List(Int)) -> Nil {
+  case all {
+    [_, ..] as inner -> Nil
+    [] -> Nil
+  }
+}
+
+pub fn main() -> Nil {
+  inner([1, 2, 3])
+}",
+        find_position_of("as inner").to_selection()
     );
 }
