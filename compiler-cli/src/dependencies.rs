@@ -1097,24 +1097,25 @@ async fn lookup_package(
             let cache_path = global_hexpm_package_release_response_cache(&name, &version.to_string());
             let release = match release {
                 Ok(rel) => {
-                    // save
-                    // FIXME: I may not need to wright every time
                     let _ = fs.write_bytes(&cache_path, &resp_body);
                     rel
                 },
                 Err(_) => {
-                    // load
                     let cached_result = fs.read_bytes(&cache_path)
+                        .map_err(|err| Error::FileIo {
+                            action: FileIoAction::Read,
+                            kind: FileKind::File,
+                            path: cache_path.clone(),
+                            err: Some(err.to_string()),
+                    })?;
+
+                    serde_json::from_slice(&cached_result)
                         .map_err(|err| Error::FileIo {
                             action: FileIoAction::Read,
                             kind: FileKind::File,
                             path: cache_path,
                             err: Some(err.to_string()),
-                    })?;
-
-                    // FIXME: I crash when the cache is bad
-                    // author note
-                    serde_json::from_slice(&cached_result).expect("cache bad")
+                    })?
                 }
             };
             let build_tools = release
