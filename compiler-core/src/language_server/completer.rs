@@ -17,7 +17,6 @@ use crate::{
         TypedExpr, visit::Visit,
     },
     build::{Module, Origin},
-    io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
     type_::{
         self, FieldMap, ModuleInterface, PRELUDE_MODULE_NAME, PreludeType, RecordAccessor, Type,
@@ -27,7 +26,6 @@ use crate::{
 };
 
 use super::{
-    DownloadDependencies, MakeLocker,
     compiler::LspProjectCompiler,
     edits::{
         Newlines, add_newlines_after_import, get_import, get_import_edit,
@@ -95,17 +93,7 @@ pub struct Completer<'a, IO> {
     pub module_line_numbers: LineNumbers,
 }
 
-impl<'a, IO> Completer<'a, IO>
-where
-    // IO to be supplied from outside of gleam-core
-    IO: FileSystemReader
-        + FileSystemWriter
-        + BeamCompiler
-        + CommandExecutor
-        + DownloadDependencies
-        + MakeLocker
-        + Clone,
-{
+impl<'a, IO> Completer<'a, IO> {
     pub fn new(
         src: &'a EcoString,
         params: &'a TextDocumentPositionParams,

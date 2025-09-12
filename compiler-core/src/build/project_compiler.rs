@@ -158,10 +158,6 @@ where
         }
     }
 
-    pub fn get_importable_modules(&self) -> &im::HashMap<EcoString, type_::ModuleInterface> {
-        &self.importable_modules
-    }
-
     pub fn mode(&self) -> Mode {
         self.options.mode
     }
@@ -633,6 +629,12 @@ where
             &mut self.incomplete_modules,
             self.telemetry,
         )
+    }
+}
+
+impl<IO> ProjectCompiler<IO> {
+    pub fn get_importable_modules(&self) -> &im::HashMap<EcoString, type_::ModuleInterface> {
+        &self.importable_modules
     }
 }
 
