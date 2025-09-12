@@ -2623,6 +2623,7 @@ pub struct ExtractVariable<'a> {
     statement_before_selected_expression: Option<SrcSpan>,
     latest_statement: Option<SrcSpan>,
     to_be_wrapped: bool,
+    name_generator: NameGenerator,
 }
 
 /// The Position of the selected code
@@ -2654,6 +2655,7 @@ impl<'a> ExtractVariable<'a> {
             latest_statement: None,
             statement_before_selected_expression: None,
             to_be_wrapped: false,
+            name_generator: NameGenerator::new(),
         }
     }
 
@@ -2667,8 +2669,9 @@ impl<'a> ExtractVariable<'a> {
             return vec![];
         };
 
-        let mut name_generator = NameGenerator::new();
-        let variable_name = name_generator.generate_name_from_type(&expression_type);
+        let variable_name = self
+            .name_generator
+            .generate_name_from_type(&expression_type);
 
         let content = self
             .module
@@ -2760,6 +2763,42 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         self.at_position(ExtractVariablePosition::TopLevelStatement, |this| {
             ast::visit::visit_typed_statement(this, stmt);
         });
+    }
+
+    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+        // We reset the name generator to purge the variable names from other scopes.
+        // We then add the reserve the constant names.
+        self.name_generator = NameGenerator::new();
+        self.module
+            .ast
+            .definitions
+            .iter()
+            .for_each(|def| match def {
+                ast::Definition::ModuleConstant(constant) => {
+                    self.name_generator.add_used_name(constant.name.clone());
+                }
+                ast::Definition::Function(function) => {
+                    if let Some((_, function_name)) = &function.name {
+                        self.name_generator.add_used_name(function_name.clone());
+                    }
+                }
+                ast::Definition::Import(import) => {
+                    let module_name = match &import.used_name() {
+                        Some(used_name) => used_name.clone(),
+                        _ => import.module.clone(),
+                    };
+                    self.name_generator.add_used_name(module_name);
+                }
+                ast::Definition::TypeAlias(_) | ast::Definition::CustomType(_) => (),
+            });
+        ast::visit::visit_typed_function(self, fun);
+    }
+
+    fn visit_typed_assignment(&mut self, assignment: &'ast TypedAssignment) {
+        if let Pattern::Variable { name, .. } = &assignment.pattern {
+            self.name_generator.add_used_name(name.clone())
+        };
+        ast::visit::visit_typed_assignment(self, assignment);
     }
 
     fn visit_typed_expr_pipeline(
