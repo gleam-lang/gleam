@@ -95,81 +95,42 @@ impl<'de> Visitor<'de> for RequirementVisitor {
         formatter.write_str("string or map")
     }
 
-    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
+    fn visit_str<E: de::Error>(self, value: &str) -> Result<Self::Value, E> {
         match value.parse::<Requirement>() {
             Ok(value) => Ok(value),
             Err(error) => Err(de::Error::custom(error)),
         }
     }
 
-    fn visit_map<M>(self, mut visitor: M) -> Result<Self::Value, M::Error>
-    where
-        M: MapAccess<'de>,
-    {
-        let Some((key, value)) = visitor.next_entry()? else {
-            return Err(de::Error::custom(
-                "no field found, expecting one of `version`, `path`, `git`, `ref` ",
-            ));
-        };
+    fn visit_map<M: MapAccess<'de>>(self, mut visitor: M) -> Result<Self::Value, M::Error> {
+        let mut git: Option<EcoString> = None;
+        let mut ref_: Option<EcoString> = None;
+        let mut version: Option<EcoString> = None;
+        let mut path: Option<Utf8PathBuf> = None;
 
-        // You might wonder why are we deconding the string key into a custom
-        // type instead of matching on a string directly? Because of serde's
-        // and toml's magic if we were to do that the error would end up
-        // highlighting the entire toml dictionary instead of just the field.
-        // We'd get this:
-        //
-        // ```toml
-        // { a = "" }
-        // ^^^^^^^^^^ unexpected field "a", expected "git", ...
-        // ```
-        //
-        // While we want the more pleasant:
-        //
-        // ```toml
-        // { a = "" }
-        //   ^ unexpected field "a", expected "git", ...
-        // ```
-        //
-        match key {
-            // If we've found the `git` field, then we're just missing the `ref`
-            // one; similarly, if we find the `ref` field, we know we're missing
-            // the `git` one.
-            DependencyField::Git => {
-                let Some((DependencyField::Ref, ref_)) = visitor.next_entry()? else {
-                    return Err(de::Error::missing_field("ref"));
-                };
-                let _ = visitor.next_entry::<DenyFurtherFields, ()>()?;
-                Ok(Requirement::Git {
-                    git: String::into(value),
-                    ref_: String::into(ref_),
-                })
+        while let Some(field) = visitor.next_key::<DependencyField>()? {
+            match field {
+                DependencyField::Git => replace_field("git", &mut git, &mut visitor)?,
+                DependencyField::Ref => replace_field("ref", &mut ref_, &mut visitor)?,
+                DependencyField::Path => replace_field("path", &mut path, &mut visitor)?,
+                DependencyField::Version => replace_field("version", &mut version, &mut visitor)?,
+            }
+        }
+
+        match (git, ref_, version, path) {
+            (Some(git), Some(ref_), None, None) => Ok(Requirement::Git { git, ref_ }),
+            (None, Some(_ref), None, None) => Err(de::Error::missing_field("git")),
+            (Some(_git), None, None, None) => Err(de::Error::missing_field("ref")),
+
+            (None, None, Some(version), None) => {
+                Requirement::hex(&version).map_err(de::Error::custom)
             }
 
-            DependencyField::Ref => {
-                let Some((DependencyField::Git, git)) = visitor.next_entry()? else {
-                    return Err(de::Error::missing_field("git"));
-                };
-                let _ = visitor.next_entry::<DenyFurtherFields, ()>()?;
-                Ok(Requirement::Git {
-                    git: String::into(git),
-                    ref_: String::into(value),
-                })
-            }
+            (None, None, None, Some(path)) => Ok(Requirement::Path { path }),
 
-            // The version and path fields are alone so there's nothing else we
-            // need to do here except make sure there's no other fields.
-            DependencyField::Version => {
-                let _ = visitor.next_entry::<DenyFurtherFields, ()>()?;
-                Requirement::hex(&value).map_err(de::Error::custom)
-            }
-
-            DependencyField::Path => {
-                let _ = visitor.next_entry::<DenyFurtherFields, ()>()?;
-                Ok(Requirement::path(&value))
-            }
+            _ => Err(de::Error::custom(
+                "expecting exactly one of `version`, `path`, or both `git` and `ref`",
+            )),
         }
     }
 }
@@ -183,91 +144,29 @@ impl<'de> Deserialize<'de> for Requirement {
     }
 }
 
+fn replace_field<'de, M: MapAccess<'de>, A: Deserialize<'de>>(
+    name: &'static str,
+    existing: &mut Option<A>,
+    visitor: &mut M,
+) -> Result<(), M::Error> {
+    if existing.replace(visitor.next_value()?).is_some() {
+        Err(de::Error::duplicate_field(name))
+    } else {
+        Ok(())
+    }
+}
+
 /// The possible fields that can appear in a dependency map: `git`, `ref` (for
 /// git dependencies), `path` (for path dependencies) and `version` (for Hex
 /// dependencies).
 ///
+#[derive(Deserialize)]
+#[serde(field_identifier, rename_all = "lowercase")]
 enum DependencyField {
+    Version,
+    Path,
     Git,
     Ref,
-    Path,
-    Version,
-}
-
-struct DependencyFieldVisitor;
-
-impl<'de> Visitor<'de> for DependencyFieldVisitor {
-    type Value = DependencyField;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str("str")
-    }
-
-    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        match value {
-            "git" => Ok(DependencyField::Git),
-            "path" => Ok(DependencyField::Path),
-            "ref" => Ok(DependencyField::Ref),
-            "version" => Ok(DependencyField::Version),
-            _ => Err(de::Error::unknown_field(
-                value,
-                &["version", "path", "git", "ref"],
-            )),
-        }
-    }
-}
-
-impl<'de> Deserialize<'de> for DependencyField {
-    fn deserialize<D>(deserializer: D) -> Result<DependencyField, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        // You might wonder why we're going through the hassle of defining a
-        // visitor to deserialise a `str` instead of just doing something like
-        //
-        // ```rs
-        // let value: &str = Deserialize::deserialize(deserializer)?;
-        // match value { ... }
-        // ```
-        //
-        // The toml library returns an error in that case! Sadly that forces us
-        // to define a `Visitor` and use that...
-        deserializer.deserialize_str(DependencyFieldVisitor)
-    }
-}
-
-/// A special dummy field that's used to reject all leftover fields with a
-/// custom error message.
-///
-struct DenyFurtherFields;
-
-struct DenyFurtherFieldsVisitor;
-
-impl<'de> Deserialize<'de> for DenyFurtherFields {
-    fn deserialize<D>(deserializer: D) -> Result<DenyFurtherFields, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(DenyFurtherFieldsVisitor)
-    }
-}
-
-impl<'de> Visitor<'de> for DenyFurtherFieldsVisitor {
-    type Value = DenyFurtherFields;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str("nothing")
-    }
-
-    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        Err(de::Error::custom(format!("unknown field `{value}`")))
-    }
 }
 
 #[cfg(test)]

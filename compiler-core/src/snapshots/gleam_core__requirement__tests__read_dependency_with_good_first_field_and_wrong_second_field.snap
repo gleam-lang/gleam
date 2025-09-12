@@ -6,4 +6,4 @@ TOML parse error at line 1, column 24
   |
 1 | github = { path = "a", stray = "b" }
   |                        ^^^^^
-unknown field `stray`
+unknown field `stray`, expected one of `version`, `path`, `git`, `ref`

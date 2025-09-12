@@ -6,4 +6,4 @@ TOML parse error at line 1, column 10
   |
 1 | github = {}
   |          ^^
-no field found, expecting one of `version`, `path`, `git`, `ref`
+expecting exactly one of `version`, `path`, or both `git` and `ref`
