@@ -2506,9 +2506,12 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToUse<'ast> {
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
         // The cursor has to be inside the last statement of the function to
         // offer the code action.
-        let last_statement_range = self.edits.src_span_to_lsp_range(fun.body.last().location());
-        if within(self.params.range, last_statement_range)
-            && let Some(call_data) = turn_statement_into_use(fun.body.last())
+        if let Some(body) = &fun.body
+            && within(
+                self.params.range,
+                self.edits.src_span_to_lsp_range(body.last().location()),
+            )
+            && let Some(call_data) = turn_statement_into_use(body.last())
         {
             self.selected_call = Some(call_data);
         }
@@ -4841,6 +4844,12 @@ impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO> {
             return;
         }
 
+        // If the function is external and has no body there's no point in
+        // offering this action
+        let Some(body) = &fun.body else {
+            return;
+        };
+
         for arg in &fun.arguments {
             // If the cursor is placed on one of the arguments, then we can try
             // and generate code for that one.
@@ -4848,7 +4857,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO> {
             if within(self.params.range, arg_range) {
                 self.selected_value = Some(PatternMatchedValue::FunctionArgument {
                     arg,
-                    first_statement: fun.body.first(),
+                    first_statement: body.first(),
                     function_range,
                 });
                 return;
@@ -6992,7 +7001,9 @@ impl<'a> RemoveEchos<'a> {
 
 impl<'ast> ast::visit::Visit<'ast> for RemoveEchos<'ast> {
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
-        self.visit_function_statements(&fun.body);
+        if let Some(body) = &fun.body {
+            self.visit_function_statements(body);
+        }
     }
 
     fn visit_typed_expr_fn(

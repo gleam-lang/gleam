@@ -689,7 +689,7 @@ pub struct Function<T, Expr> {
     pub end_position: u32,
     pub name: Option<SpannedString>,
     pub arguments: Vec<Arg<T>>,
-    pub body: Vec1<Statement<T, Expr>>,
+    pub body: Option<Vec1<Statement<T, Expr>>>,
     pub publicity: Publicity,
     pub deprecation: Deprecation,
     pub return_annotation: Option<TypeAst>,
@@ -877,10 +877,10 @@ impl TypedDefinition {
                     return None;
                 }
 
-                if let Some(found) = function
-                    .body
-                    .iter()
-                    .find_map(|statement| statement.find_node(byte_index))
+                if let Some(statements) = &function.body
+                    && let Some(found) = statements
+                        .iter()
+                        .find_map(|statement| statement.find_node(byte_index))
                 {
                     return Some(found);
                 }
@@ -893,10 +893,10 @@ impl TypedDefinition {
                     return Some(found_arg);
                 };
 
-                if let Some(found_statement) = function
-                    .body
-                    .iter()
-                    .find(|statement| statement.location().contains(byte_index))
+                if let Some(statements) = &function.body
+                    && let Some(found_statement) = statements
+                        .iter()
+                        .find(|statement| statement.location().contains(byte_index))
                 {
                     return Some(Located::Statement(found_statement));
                 };
@@ -1026,8 +1026,7 @@ impl TypedDefinition {
                     return None;
                 }
 
-                function
-                    .body
+                (function.body.as_ref())?
                     .iter()
                     .find_map(|statement| statement.find_statement(byte_index))
             }
@@ -3571,13 +3570,6 @@ impl UntypedStatement {
             Statement::Assignment(assignment) => assignment.location.start,
             Statement::Use(use_) => use_.location.start,
             Statement::Assert(assert) => assert.location.start,
-        }
-    }
-
-    pub fn is_placeholder(&self) -> bool {
-        match self {
-            Statement::Expression(expression) => expression.is_placeholder(),
-            Statement::Assignment(_) | Statement::Use(_) | Statement::Assert(_) => false,
         }
     }
 }

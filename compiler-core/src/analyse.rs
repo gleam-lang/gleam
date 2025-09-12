@@ -519,7 +519,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         } = f;
         let (name_location, name) = name.expect("Function in a definition must be named");
         let target = environment.target;
-        let body_location = body.last().location();
+        let body_location = body
+            .as_ref()
+            .map(|body| body.last().location())
+            .unwrap_or(location);
         let preregistered_fn = environment
             .get_variable(&name)
             .expect("Could not find preregistered type for function");
@@ -553,7 +556,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             self.ensure_annotations_present(&arguments, return_annotation.as_ref(), location);
         }
 
-        let has_body = !body.first().is_placeholder();
+        let has_body = body.is_some();
         let definition = FunctionDefinition {
             has_body,
             has_erlang_external: external_erlang.is_some(),
@@ -601,7 +604,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 Some(prereg_return_type.clone()),
             )?;
             let arguments_types = arguments.iter().map(|a| a.type_.clone()).collect();
-            let type_ = fn_(arguments_types, body.last().type_());
+            let type_ = fn_(
+                arguments_types,
+                body.as_ref()
+                    .map_or(prereg_return_type.clone(), |body| body.last().type_()),
+            );
             Ok((
                 type_,
                 body,
@@ -633,7 +640,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 let implementations = Implementations::supporting_all();
                 (
                     type_,
-                    body,
+                    Some(body),
                     implementations,
                     Version::new(1, 0, 0),
                     Purity::Impure,
@@ -815,13 +822,13 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
     fn ensure_function_has_an_implementation(
         &mut self,
-        body: &Vec1<UntypedStatement>,
+        body: &Option<Vec1<UntypedStatement>>,
         external_erlang: &Option<(EcoString, EcoString, SrcSpan)>,
         external_javascript: &Option<(EcoString, EcoString, SrcSpan)>,
         location: SrcSpan,
     ) -> bool {
-        match (external_erlang, external_javascript) {
-            (None, None) if body.first().is_placeholder() => {
+        match (body, external_erlang, external_javascript) {
+            (None, None, None) => {
                 self.problems.error(Error::NoImplementation { location });
                 false
             }

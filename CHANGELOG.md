@@ -633,6 +633,10 @@
   action if used on a type alias.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the language server would fail to rename an external
+  function with no body.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Fixed a bug where the compiler allowed to write a guard with an empty clause.
   ([Tristan-Mihai Radulescu](https://github.com/Courtcircuits))
 
