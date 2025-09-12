@@ -13,12 +13,11 @@ use gleam_core::{
     dependency::{self, PackageFetchError},
     error::{FileIoAction, FileKind, ShellCommandFailureReason, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
-    io::{HttpClient as _, TarUnpacker, WrappedReader},
-    manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource, Resolved},
+    io::{ TarUnpacker, WrappedReader, FileSystemReader, FileSystemWriter, HttpClient as _ },
+    manifest::{ Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource, Resolved },
     paths::ProjectPaths,
     requirement::Requirement,
-    io::{ FileSystemReader, FileSystemWriter, HttpClient as _,},
-    paths::{global_hexpm_package_release_response_cache, global_hexpm_packages_response_cache},
+    paths::{ global_hexpm_package_release_response_cache, global_hexpm_packages_response_cache },
     Error, Result
 };
 use hexpm::version::Version;
