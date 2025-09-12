@@ -130,6 +130,18 @@ pub fn global_package_cache_package_tarball(package_name: &str, version: &str) -
     global_packages_cache().join(format!("{package_name}-{version}.tar"))
 }
 
+pub fn global_hexpm_packages_response_cache(package_name: &str) -> Utf8PathBuf {
+    global_hexpm_response_cache_path().join(format!("packages-{package_name}.gz"))
+}
+
+pub fn global_hexpm_package_release_response_cache(package_name: &str, version: &str) -> Utf8PathBuf {
+    global_hexpm_response_cache_path().join(format!("packages-{package_name}-releases-{version}.json"))
+}
+
+fn global_hexpm_response_cache_path() -> Utf8PathBuf {
+    global_hexpm_cache().join("response")
+}
+
 pub fn global_hexpm_credentials_path() -> Utf8PathBuf {
     global_hexpm_cache().join("credentials")
 }
