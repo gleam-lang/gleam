@@ -134,6 +134,7 @@ const REMOVE_BLOCK: &str = "Remove block";
 const REMOVE_OPAQUE_FROM_PRIVATE_TYPE: &str = "Remove opaque from private type";
 const COLLAPSE_NESTED_CASE: &str = "Collapse nested case";
 const REMOVE_UNREACHABLE_BRANCHES: &str = "Remove unreachable branches";
+const DISCARD_UNUSED_VARIABLE: &str = "Discard unused variable";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -9794,5 +9795,45 @@ fn remove_unreachable_branches_does_not_pop_up_if_all_branches_are_reachable() {
 }
 ",
         find_position_of("Ok(n)").to_selection()
+    );
+}
+
+#[test]
+fn discard_unused_variable() {
+    assert_code_action!(
+        DISCARD_UNUSED_VARIABLE,
+        "pub fn main() -> Nil{
+    let x = 3
+Nil
+}",
+        find_position_of("x").to_selection()
+    );
+}
+
+#[test]
+fn discard_unused_variable_shorthand() {
+    assert_code_action!(
+        DISCARD_UNUSED_VARIABLE,
+        "pub type MyType {
+  Variant1(a: Int, b: Int)
+  Variant2(c: Int, d: Int)
+}
+
+fn check_my_type(my_value: MyType) -> Int {
+  case my_value {
+    Variant1(b:, a:) -> a
+    Variant2(d:, c:) -> c
+  }
+}
+
+pub fn main() -> Nil {
+  let instance = Variant1(1, 2)
+
+  let _ = check_my_type(instance)
+
+  Nil
+}
+",
+        find_position_of("b:,").to_selection()
     );
 }
