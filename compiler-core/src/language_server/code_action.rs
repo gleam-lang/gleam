@@ -758,6 +758,23 @@ impl<'a> FillInMissingLabelledArgs<'a> {
                 return vec![];
             }
 
+            // A pattern could have been written with no parentheses at all!
+            // So we need to check for the last character to see if parentheses
+            // are there or not before filling the arguments in
+            let has_parentheses = ")"
+                == code_at(
+                    self.module,
+                    SrcSpan::new(call_location.end - 1, call_location.end),
+                );
+            let label_insertion_start = if has_parentheses {
+                // If it ends with a parentheses we'll need to start inserting
+                // right before the closing one...
+                call_location.end - 1
+            } else {
+                // ...otherwise we just append the result
+                call_location.end
+            };
+
             // Now we need to figure out if there's a comma at the end of the
             // arguments list:
             //
@@ -767,7 +784,6 @@ impl<'a> FillInMissingLabelledArgs<'a> {
             //   call(one|)
             //           ^ Cursor here, no comma behind, we'll have to add one!
             //
-            let label_insertion_start = call_location.end - 1;
             let has_comma_after_last_argument = if let Some(last_arg) = arguments
                 .iter()
                 .filter(|arg| !arg.is_implicit())
@@ -801,7 +817,16 @@ impl<'a> FillInMissingLabelledArgs<'a> {
                 format!(", {labels_list}")
             };
 
-            self.edits.insert(label_insertion_start, labels_list);
+            let edit = if has_parentheses {
+                labels_list
+            } else {
+                // If the variant whose arguments we're filling in was written
+                // with no parentheses we need to add those as well to make it a
+                // valid constructor.
+                format!("({labels_list})")
+            };
+
+            self.edits.insert(label_insertion_start, edit);
 
             let mut action = Vec::with_capacity(1);
             CodeActionBuilder::new("Fill labels")
