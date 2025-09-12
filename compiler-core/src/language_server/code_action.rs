@@ -13,7 +13,6 @@ use crate::{
     build::{Located, Module},
     config::PackageConfig,
     exhaustiveness::CompiledCase,
-    io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{edits, reference::FindVariableReferences},
     line_numbers::LineNumbers,
     parse::{extra::ModuleExtra, lexer::str_to_keyword},
@@ -1377,9 +1376,7 @@ pub struct QualifiedToUnqualifiedImportFirstPass<'a, IO> {
     qualified_constructor: Option<QualifiedConstructor<'a>>,
 }
 
-impl<'a, IO: FileSystemReader + FileSystemWriter + BeamCompiler + CommandExecutor + Clone>
-    QualifiedToUnqualifiedImportFirstPass<'a, IO>
-{
+impl<'a, IO> QualifiedToUnqualifiedImportFirstPass<'a, IO> {
     fn new(
         module: &'a Module,
         compiler: &'a LspProjectCompiler<FileSystemProxy<IO>>,
@@ -1458,9 +1455,7 @@ impl<'a, IO: FileSystemReader + FileSystemWriter + BeamCompiler + CommandExecuto
     }
 }
 
-impl<'ast, IO: FileSystemReader + FileSystemWriter + BeamCompiler + CommandExecutor + Clone>
-    ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'ast, IO>
-{
+impl<'ast, IO> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'ast, IO> {
     fn visit_type_ast_constructor(
         &mut self,
         location: &'ast SrcSpan,
@@ -1754,9 +1749,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
     }
 }
 
-pub fn code_action_convert_qualified_constructor_to_unqualified<
-    IO: FileSystemReader + FileSystemWriter + BeamCompiler + CommandExecutor + Clone,
->(
+pub fn code_action_convert_qualified_constructor_to_unqualified<IO>(
     module: &Module,
     compiler: &LspProjectCompiler<FileSystemProxy<IO>>,
     line_numbers: &LineNumbers,
@@ -4410,10 +4403,7 @@ pub enum PatternMatchedValue<'a> {
     },
 }
 
-impl<'a, IO> PatternMatchOnValue<'a, IO>
-where
-    IO: CommandExecutor + FileSystemWriter + FileSystemReader + BeamCompiler + Clone,
-{
+impl<'a, IO> PatternMatchOnValue<'a, IO> {
     pub fn new(
         module: &'a Module,
         line_numbers: &'a LineNumbers,
@@ -4765,10 +4755,7 @@ fn code_at(module: &Module, span: SrcSpan) -> &str {
         .expect("code location must be valid")
 }
 
-impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO>
-where
-    IO: CommandExecutor + FileSystemWriter + FileSystemReader + BeamCompiler + Clone,
-{
+impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO> {
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
         // If we're not inside the function there's no point in exploring its
         // ast further.
@@ -4985,10 +4972,7 @@ fn get_type_constructors<'a, 'b, IO>(
     current_module: &'b EcoString,
     type_module: &'b EcoString,
     type_name: &'b EcoString,
-) -> Vec<&'a ValueConstructor>
-where
-    IO: CommandExecutor + FileSystemWriter + FileSystemReader + BeamCompiler + Clone,
-{
+) -> Vec<&'a ValueConstructor> {
     let type_is_inside_current_module = current_module == type_module;
     let module_interface = if !type_is_inside_current_module {
         // If the type is outside of the module we're in, we can only pattern
@@ -5440,10 +5424,7 @@ impl Argument<'_> {
     }
 }
 
-impl<'a, IO> GenerateVariant<'a, IO>
-where
-    IO: FileSystemReader + FileSystemWriter + BeamCompiler + CommandExecutor + Clone,
-{
+impl<'a, IO> GenerateVariant<'a, IO> {
     pub fn new(
         module: &'a Module,
         compiler: &'a LspProjectCompiler<FileSystemProxy<IO>>,
@@ -5625,10 +5606,7 @@ where
     }
 }
 
-impl<'ast, IO> ast::visit::Visit<'ast> for GenerateVariant<'ast, IO>
-where
-    IO: FileSystemReader + FileSystemWriter + BeamCompiler + CommandExecutor + Clone,
-{
+impl<'ast, IO> ast::visit::Visit<'ast> for GenerateVariant<'ast, IO> {
     fn visit_typed_expr_invalid(
         &mut self,
         location: &'ast SrcSpan,
