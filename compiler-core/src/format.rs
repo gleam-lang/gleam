@@ -842,10 +842,9 @@ impl<'comments> Formatter<'comments> {
         }
         .group();
 
-        let body = &function.body;
-        if body.len() == 1 && body.first().is_placeholder() {
+        let Some(body) = &function.body else {
             return attributes.append(signature);
-        }
+        };
 
         let head = attributes.append(signature);
 
@@ -980,8 +979,6 @@ impl<'comments> Formatter<'comments> {
         let comments = self.pop_comments(expr.start_byte_index());
 
         let document = match expr {
-            UntypedExpr::Placeholder { .. } => panic!("Placeholders should not be formatted"),
-
             UntypedExpr::Panic { message, .. } => {
                 self.append_as_message("panic".to_doc(), PrecedingAs::Keyword, message.as_deref())
             }
@@ -1253,8 +1250,6 @@ impl<'comments> Formatter<'comments> {
         location: &SrcSpan,
     ) -> Document<'a> {
         let expr = match fun {
-            UntypedExpr::Placeholder { .. } => panic!("Placeholders should not be formatted"),
-
             UntypedExpr::PipeLine { .. } => break_block(self.expr(fun)),
 
             UntypedExpr::BinOp { .. }
@@ -2651,8 +2646,6 @@ impl<'comments> Formatter<'comments> {
 
     fn bit_array_segment_expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
-            UntypedExpr::Placeholder { .. } => panic!("Placeholders should not be formatted"),
-
             UntypedExpr::BinOp { .. } => wrap_block(self.expr(expr)),
 
             UntypedExpr::Int { .. }

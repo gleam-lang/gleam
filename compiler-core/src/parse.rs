@@ -741,14 +741,20 @@ where
                         return_annotation,
                         end_position,
                         ..
-                    })) => UntypedExpr::Fn {
-                        location: SrcSpan::new(location.start, end_position),
-                        end_of_head_byte_index: location.end,
-                        kind: FunctionLiteralKind::Anonymous { head: location },
-                        arguments,
-                        body,
-                        return_annotation,
-                    },
+                    })) => {
+                        let Some(body) = body else {
+                            return parse_error(ParseErrorType::ExpectedFunctionBody, location);
+                        };
+
+                        UntypedExpr::Fn {
+                            location: SrcSpan::new(location.start, end_position),
+                            end_of_head_byte_index: location.end,
+                            kind: FunctionLiteralKind::Anonymous { head: location },
+                            arguments,
+                            body,
+                            return_annotation,
+                        }
+                    }
 
                     _ => {
                         // this isn't just none, it could also be Some(UntypedExpr::..)
@@ -2135,22 +2141,10 @@ where
                     Some((body, _)) => body,
                 };
 
-                (Some(left_brace_start), body, end, right_brace_end)
+                (Some(left_brace_start), Some(body), end, right_brace_end)
             }
 
-            None if is_anon => {
-                return parse_error(
-                    ParseErrorType::ExpectedFunctionBody,
-                    SrcSpan { start, end: rpar_e },
-                );
-            }
-
-            None => {
-                let body = vec1![Statement::Expression(UntypedExpr::Placeholder {
-                    location: SrcSpan::new(start, rpar_e)
-                })];
-                (None, body, rpar_e, rpar_e)
-            }
+            None => (None, None, rpar_e, rpar_e),
         };
 
         Ok(Some(Definition::Function(Function {

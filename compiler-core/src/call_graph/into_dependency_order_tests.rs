@@ -31,7 +31,7 @@ fn parse_and_order(
                     type_: (),
                 })
                 .collect_vec(),
-            body: crate::parse::parse_statement_sequence(src).expect("syntax error"),
+            body: Some(crate::parse::parse_statement_sequence(src).expect("syntax error")),
             location: Default::default(),
             body_start: None,
             return_annotation: None,
