@@ -1,5 +1,9 @@
 # Changelog
 
+## v4.3.0
+
+- Added `get_repository_versions_data`, `get_package_data`,
+
 ## v4.2.0 - 2025-08-27
 
 - `Version`'s serde deserializer can now work with `String` as well as `str`.
