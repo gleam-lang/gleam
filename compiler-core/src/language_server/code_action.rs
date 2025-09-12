@@ -8222,7 +8222,7 @@ impl<'a> DiscardUnusedVariables<'a> {
         }
     }
 
-    fn gen_edits(&mut self, unused_variable: &UnusedVariable) {
+    fn gen_edits(&mut self, unused_variable: &UnusedVariable<'a>) {
         match unused_variable.origin.syntax {
             VariableSyntax::Variable(_) => {
                 self.edits
