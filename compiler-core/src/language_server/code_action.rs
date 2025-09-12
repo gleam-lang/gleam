@@ -2766,6 +2766,15 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
     }
 
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+        let fun_range = self.edits.src_span_to_lsp_range(SrcSpan {
+            start: fun.location.start,
+            end: fun.end_position,
+        });
+
+        if !within(self.params.range, fun_range) {
+            return;
+        }
+
         // We reset the name generator to purge the variable names from other scopes.
         // We then add the reserve the constant names.
         self.name_generator = NameGenerator::new();
