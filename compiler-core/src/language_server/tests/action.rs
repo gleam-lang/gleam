@@ -134,7 +134,7 @@ const REMOVE_BLOCK: &str = "Remove block";
 const REMOVE_OPAQUE_FROM_PRIVATE_TYPE: &str = "Remove opaque from private type";
 const COLLAPSE_NESTED_CASE: &str = "Collapse nested case";
 const REMOVE_UNREACHABLE_BRANCHES: &str = "Remove unreachable branches";
-const DISCARD_UNUSED_VARIABLE: &str = "Discard unused variable";
+const DISCARD_UNUSED_VARIABLE: &str = "Discard unused variables";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
