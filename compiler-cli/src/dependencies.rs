@@ -1,18 +1,13 @@
 mod dependency_manager;
 
 use std::{
-    cell::RefCell,
-    collections::{HashMap, HashSet},
-    process::Command,
-    rc::Rc,
-    time::Instant,
+    cell::RefCell, collections::{HashMap, HashSet}, io::Read, process::Command, rc::Rc, time::Instant
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
 use ecow::{EcoString, eco_format};
 use flate2::read::GzDecoder;
 use gleam_core::{
-    Error, Result,
     build::{Mode, Target, Telemetry},
     config::PackageConfig,
     dependency::{self, PackageFetchError},
@@ -22,6 +17,9 @@ use gleam_core::{
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource, Resolved},
     paths::ProjectPaths,
     requirement::Requirement,
+    io::{ FileSystemReader, FileSystemWriter, HttpClient as _,},
+    paths::{global_hexpm_package_release_response_cache, global_hexpm_packages_response_cache},
+    Error, Result
 };
 use hexpm::version::Version;
 use itertools::Itertools;
@@ -34,11 +32,7 @@ pub use dependency_manager::DependencyManagerConfig;
 mod tests;
 
 use crate::{
-    TreeOptions,
-    build_lock::{BuildLock, Guard},
-    cli,
-    fs::{self, ProjectIO},
-    http::HttpClient,
+    build_lock::{BuildLock, Guard}, cli, fs::{self, ProjectIO}, http::HttpClient, TreeOptions
 };
 
 struct Symbols {
@@ -1093,8 +1087,37 @@ async fn lookup_package(
         Some(provided_package) => Ok(provided_package.to_manifest_package(name.as_str())),
         None => {
             let config = hexpm::Config::new();
+            // performance may be able to be improved by reading from local cache first
+            // depending on the volatility of the endpoint
+            // retirement status volatile, content volatile one hour after initial publication
+            // content may be edited or deleted by admins
+            let mut resp_body = Vec::new();
             let release =
-                hex::get_package_release(&name, &version, &config, &HttpClient::new()).await?;
+                hex::get_package_release(&name, &version, &config, Some(&mut resp_body), &HttpClient::new()).await;
+            let fs = ProjectIO::new();
+            let cache_path = global_hexpm_package_release_response_cache(&name, &version.to_string());
+            let release = match release {
+                Ok(rel) => {
+                    // save
+                    // FIXME: I may not need to wright every time
+                    let _ = fs.write_bytes(&cache_path, &resp_body);
+                    rel
+                },
+                Err(_) => {
+                    // load
+                    let cached_result = fs.read_bytes(&cache_path)
+                        .map_err(|err| Error::FileIo {
+                            action: FileIoAction::Read,
+                            kind: FileKind::File,
+                            path: cache_path,
+                            err: Some(err.to_string()),
+                    })?;
+
+                    // FIXME: I crash when the cache is bad
+                    // author note
+                    serde_json::from_slice(&cached_result).expect("cache bad")
+                }
+            };
             let build_tools = release
                 .meta
                 .build_tools
@@ -1187,10 +1210,28 @@ impl dependency::PackageFetcher for PackageFetcher {
         let response = self
             .runtime
             .block_on(self.http.send(request))
-            .map_err(PackageFetchError::fetch_error)?;
+            .map_err(PackageFetchError::fetch_error);
 
-        let pkg = hexpm::repository_v2_get_package_response(response, HEXPM_PUBLIC_KEY)
-            .map_err(PackageFetchError::from)?;
+        let fs = ProjectIO::new();
+        let cache_path = &global_hexpm_packages_response_cache(package);
+        let pkg = match response {
+            Ok(resp) => {
+                tracing::debug!(package = package, "saving_hex_package");
+                let _ = fs.write_bytes(cache_path, resp.body());
+                hexpm::repository_v2_get_package_response(resp, HEXPM_PUBLIC_KEY)
+            },
+            Err(_err) => {
+                tracing::debug!(package = package, "fetching_package_data_from_cache");
+                let reader = fs.reader(cache_path)
+                    .map_err(PackageFetchError::fetch_error)?;
+                let mut decoder = GzDecoder::new(reader);
+                let mut data = Vec::new();
+                let _ = decoder.read_to_end(&mut data)
+                    .map_err(PackageFetchError::fetch_error)?;
+                hexpm::repository_v2_package_parse_body(&data, HEXPM_PUBLIC_KEY)
+            },
+        }.map_err(PackageFetchError::from)?;
+
         let pkg = Rc::new(pkg);
         let pkg_ref = Rc::clone(&pkg);
         self.cache_package(package, pkg);
