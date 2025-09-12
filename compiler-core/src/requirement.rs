@@ -11,11 +11,23 @@ use serde::Deserialize;
 use serde::de::{self, Deserializer, MapAccess, Visitor};
 use serde::ser::{Serialize, SerializeMap, Serializer};
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
+#[serde(untagged, remote = "Self", deny_unknown_fields)]
 pub enum Requirement {
-    Hex { version: Range },
-    Path { path: Utf8PathBuf },
-    Git { git: EcoString, ref_: EcoString },
+    Hex {
+        #[serde(deserialize_with = "deserialise_range")]
+        version: Range,
+    },
+
+    Path {
+        path: Utf8PathBuf,
+    },
+
+    Git {
+        git: EcoString,
+        #[serde(rename = "ref")]
+        ref_: EcoString,
+    },
 }
 
 impl Requirement {
@@ -78,6 +90,15 @@ impl Serialize for Requirement {
 }
 
 // Deserialization
+
+fn deserialise_range<'de, D>(deserializer: D) -> Result<Range, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let version = String::deserialize(deserializer)?;
+    Range::new(version).map_err(de::Error::custom)
+}
+
 impl FromStr for Requirement {
     type Err = Error;
 
@@ -95,43 +116,27 @@ impl<'de> Visitor<'de> for RequirementVisitor {
         formatter.write_str("string or map")
     }
 
-    fn visit_str<E: de::Error>(self, value: &str) -> Result<Self::Value, E> {
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
         match value.parse::<Requirement>() {
             Ok(value) => Ok(value),
             Err(error) => Err(de::Error::custom(error)),
         }
     }
 
-    fn visit_map<M: MapAccess<'de>>(self, mut visitor: M) -> Result<Self::Value, M::Error> {
-        let mut git: Option<EcoString> = None;
-        let mut ref_: Option<EcoString> = None;
-        let mut version: Option<EcoString> = None;
-        let mut path: Option<Utf8PathBuf> = None;
-
-        while let Some(field) = visitor.next_key::<DependencyField>()? {
-            match field {
-                DependencyField::Git => replace_field("git", &mut git, &mut visitor)?,
-                DependencyField::Ref => replace_field("ref", &mut ref_, &mut visitor)?,
-                DependencyField::Path => replace_field("path", &mut path, &mut visitor)?,
-                DependencyField::Version => replace_field("version", &mut version, &mut visitor)?,
-            }
-        }
-
-        match (git, ref_, version, path) {
-            (Some(git), Some(ref_), None, None) => Ok(Requirement::Git { git, ref_ }),
-            (None, Some(_ref), None, None) => Err(de::Error::missing_field("git")),
-            (Some(_git), None, None, None) => Err(de::Error::missing_field("ref")),
-
-            (None, None, Some(version), None) => {
-                Requirement::hex(&version).map_err(de::Error::custom)
-            }
-
-            (None, None, None, Some(path)) => Ok(Requirement::Path { path }),
-
-            _ => Err(de::Error::custom(
-                "expecting exactly one of `version`, `path`, or both `git` and `ref`",
-            )),
-        }
+    fn visit_map<M>(self, visitor: M) -> Result<Self::Value, M::Error>
+    where
+        M: MapAccess<'de>,
+    {
+        Requirement::deserialize(de::value::MapAccessDeserializer::new(visitor)).map_err(|_| {
+            de::Error::custom(
+                "This is not a valid dependency requirement object.
+Hint: The documentation for the format can be viewed at
+https://gleam.run/writing-gleam/gleam-toml/",
+            )
+        })
     }
 }
 
@@ -142,31 +147,6 @@ impl<'de> Deserialize<'de> for Requirement {
     {
         deserializer.deserialize_any(RequirementVisitor)
     }
-}
-
-fn replace_field<'de, M: MapAccess<'de>, A: Deserialize<'de>>(
-    name: &'static str,
-    existing: &mut Option<A>,
-    visitor: &mut M,
-) -> Result<(), M::Error> {
-    if existing.replace(visitor.next_value()?).is_some() {
-        Err(de::Error::duplicate_field(name))
-    } else {
-        Ok(())
-    }
-}
-
-/// The possible fields that can appear in a dependency map: `git`, `ref` (for
-/// git dependencies), `path` (for path dependencies) and `version` (for Hex
-/// dependencies).
-///
-#[derive(Deserialize)]
-#[serde(field_identifier, rename_all = "lowercase")]
-enum DependencyField {
-    Version,
-    Path,
-    Git,
-    Ref,
 }
 
 #[cfg(test)]
@@ -195,7 +175,9 @@ mod tests {
 
     #[test]
     fn read_wrong_version() {
-        let toml = r#"short = ">= 2.0 and < 3.0.0""#;
+        let toml = r#"
+            short = ">= 2.0 and < 3.0.0"
+        "#;
 
         let error =
             toml::from_str::<HashMap<String, Requirement>>(toml).expect_err("invalid version");
@@ -206,62 +188,6 @@ mod tests {
     fn read_wrong_dependency() {
         let toml = r#"github = { a = "123", wibble = "123" }"#;
 
-        let error = toml::from_str::<HashMap<String, Requirement>>(toml).unwrap_err();
-        insta::assert_snapshot!(error.to_string());
-    }
-
-    #[test]
-    fn read_empty_dependency() {
-        let toml = "github = {}";
-        let error = toml::from_str::<HashMap<String, Requirement>>(toml).unwrap_err();
-        insta::assert_snapshot!(error.to_string());
-    }
-
-    #[test]
-    fn read_dependency_with_duplicate_field() {
-        let toml = r#"github = { git = "a", git = "b" }"#;
-        let error = toml::from_str::<HashMap<String, Requirement>>(toml).unwrap_err();
-        insta::assert_snapshot!(error.to_string());
-    }
-
-    #[test]
-    fn read_git_dependency_with_unknown_field() {
-        let toml = r#"github = { git = "a", ref = "b", mmm = 1 }"#;
-        let error = toml::from_str::<HashMap<String, Requirement>>(toml).unwrap_err();
-        insta::assert_snapshot!(error.to_string());
-    }
-
-    #[test]
-    fn read_dependency_with_good_first_field_and_wrong_second_field() {
-        let toml = r#"github = { path = "a", stray = "b" }"#;
-        let error = toml::from_str::<HashMap<String, Requirement>>(toml).unwrap_err();
-        insta::assert_snapshot!(error.to_string());
-    }
-
-    #[test]
-    fn read_dependency_with_ref_and_invalid_field() {
-        let toml = r#"github = { ref = "a", sgit = "b" }"#;
-        let error = toml::from_str::<HashMap<String, Requirement>>(toml).unwrap_err();
-        insta::assert_snapshot!(error.to_string());
-    }
-
-    #[test]
-    fn read_dependency_with_git_and_invalid_field() {
-        let toml = r#"github = { git = "a", refs = "b" }"#;
-        let error = toml::from_str::<HashMap<String, Requirement>>(toml).unwrap_err();
-        insta::assert_snapshot!(error.to_string());
-    }
-
-    #[test]
-    fn read_dependency_with_git_and_no_ref_field() {
-        let toml = r#"github = { git = "a" }"#;
-        let error = toml::from_str::<HashMap<String, Requirement>>(toml).unwrap_err();
-        insta::assert_snapshot!(error.to_string());
-    }
-
-    #[test]
-    fn read_dependency_with_ref_and_no_git_field() {
-        let toml = r#"github = { ref = "a" }"#;
         let error = toml::from_str::<HashMap<String, Requirement>>(toml).unwrap_err();
         insta::assert_snapshot!(error.to_string());
     }

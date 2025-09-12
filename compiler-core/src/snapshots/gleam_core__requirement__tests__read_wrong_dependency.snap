@@ -2,8 +2,10 @@
 source: compiler-core/src/requirement.rs
 expression: error.to_string()
 ---
-TOML parse error at line 1, column 12
+TOML parse error at line 1, column 10
   |
 1 | github = { a = "123", wibble = "123" }
-  |            ^
-unknown field `a`, expected one of `version`, `path`, `git`, `ref`
+  |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This is not a valid dependency requirement object.
+Hint: The documentation for the format can be viewed at
+https://gleam.run/writing-gleam/gleam-toml/

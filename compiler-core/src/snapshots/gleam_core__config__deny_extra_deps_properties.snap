@@ -10,8 +10,10 @@ An error occurred while trying to parse this file:
 
 The error message from the file IO library was:
 
-    TOML parse error at line 6, column 83
+    TOML parse error at line 6, column 18
   |
 6 | aide_generator = { git = "git@github.com:crowdhailer/aide.git", ref = "f559c5bc", extra = "idk what this is" }
-  |                                                                                   ^^^^^
-unknown field `extra`, expected one of `version`, `path`, `git`, `ref`
+  |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This is not a valid dependency requirement object.
+Hint: The documentation for the format can be viewed at
+https://gleam.run/writing-gleam/gleam-toml/

@@ -272,19 +272,13 @@
   The compiler will now produce the following error:
 
   ```text
-  error: File IO failure
-
-  An error occurred while trying to parse this file:
-
-      /my_gleam_project/gleam.toml
-
-  The error message from the file IO library was:
-
-      TOML parse error at line 17, column 12
-     |
-  17 | lustre = { pat = "asd" }
-     |            ^^^
-  unknown field `pat`, expected one of `version`, `path`, `git`, `ref`
+  TOML parse error at line 1, column 10
+    |
+  1 | lustre = { pat = "../path/to/lustre" }
+    |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  This is not a valid dependency requirement object.
+  Hint: The documentation for the format can be viewed at
+  https://gleam.run/writing-gleam/gleam-toml/
   ```
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

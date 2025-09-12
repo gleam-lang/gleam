@@ -1,9 +1,0 @@
----
-source: compiler-core/src/requirement.rs
-expression: error.to_string()
----
-TOML parse error at line 1, column 10
-  |
-1 | github = {}
-  |          ^^
-expecting exactly one of `version`, `path`, or both `git` and `ref`

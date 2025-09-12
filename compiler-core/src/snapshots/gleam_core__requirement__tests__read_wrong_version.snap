@@ -2,8 +2,8 @@
 source: compiler-core/src/requirement.rs
 expression: error.to_string()
 ---
-TOML parse error at line 1, column 9
+TOML parse error at line 2, column 21
   |
-1 | short = ">= 2.0 and < 3.0.0"
-  |         ^^^^^^^^^^^^^^^^^^^^
+2 |             short = ">= 2.0 and < 3.0.0"
+  |                     ^^^^^^^^^^^^^^^^^^^^
 >= 2.0 and < 3.0.0 is not a valid version. missing patch version: 2.0
