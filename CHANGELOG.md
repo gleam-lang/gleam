@@ -643,3 +643,7 @@
 - Fixed a bug where the compiler would report an imported module as unused if it
   were used by private functions only.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the "Extract variable" code action would shadow existing
+  variables, constants and function names.
+  ([Matias Carlander](https://github.com/matiascr))
