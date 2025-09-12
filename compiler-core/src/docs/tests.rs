@@ -1124,6 +1124,69 @@ pub type External =
 }
 
 #[test]
+fn use_reexport_from_other_package() {
+    assert_documentation!(
+        ("some_package", "some_package/internal", "pub type Internal"),
+        (
+            "some_package",
+            "some_package/api",
+            "
+import some_package/internal
+pub type External = internal.Internal
+"
+        ),
+        "
+import some_package/api
+
+pub fn do_thing(value: api.External) {
+  value
+}
+",
+        ONLY_LINKS
+    );
+}
+
+#[test]
+fn function_uses_reexport_of_internal_type() {
+    assert_documentation!(
+        ("thepackage/internal", "pub type Internal"),
+        "
+import thepackage/internal
+
+pub type External = internal.Internal
+
+pub fn do_thing(value: internal.Internal) -> External {
+  value
+}
+",
+        ONLY_LINKS
+    );
+}
+
+#[test]
+fn function_uses_reexport_of_internal_type_in_other_module() {
+    assert_documentation!(
+        ("thepackage/internal", "pub type Internal"),
+        (
+            "thepackage/something",
+            "
+import thepackage/internal
+
+pub type External = internal.Internal
+"
+        ),
+        "
+import thepackage/something
+
+pub fn do_thing(value: something.External) {
+  value
+}
+",
+        ONLY_LINKS
+    );
+}
+
+#[test]
 fn constructor_with_long_types_and_many_fields() {
     assert_documentation!(
         ("option", "pub type Option(a)"),

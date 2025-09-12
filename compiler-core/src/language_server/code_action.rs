@@ -5014,7 +5014,7 @@ fn pretty_constructor_name(
         .names
         .named_constructor(constructor_module, constructor_name)
     {
-        type_::printer::NameContextInformation::Unimported(_) => None,
+        type_::printer::NameContextInformation::Unimported(_, _) => None,
         type_::printer::NameContextInformation::Unqualified(constructor_name) => {
             Some(eco_format!("{constructor_name}"))
         }

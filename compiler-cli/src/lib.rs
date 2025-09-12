@@ -165,7 +165,7 @@ enum Command {
     ///
     /// This command uses the environment variable:
     ///
-    /// - HEXPM_API_KEY: (optional) A Hex API key to use instead of authenticating.
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate with the Hex package manager.
     ///
     #[command(verbatim_doc_comment)]
     Publish {
@@ -407,7 +407,7 @@ enum Hex {
     ///
     /// This command uses the environment variable:
     ///
-    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate against the Hex package manager.
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate with the Hex package manager.
     ///
     #[command(verbatim_doc_comment)]
     Retire {
@@ -425,7 +425,7 @@ enum Hex {
     ///
     /// This command uses this environment variable:
     ///
-    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate against the Hex package manager.
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate with the Hex package manager.
     ///
     #[command(verbatim_doc_comment)]
     Unretire { package: String, version: String },
@@ -434,7 +434,7 @@ enum Hex {
     ///
     /// This command uses this environment variable:
     ///
-    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate against the Hex package manager.
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate with the Hex package manager.
     ///
     #[command(verbatim_doc_comment)]
     Revert {
@@ -465,7 +465,7 @@ enum Docs {
     ///
     /// This command uses this environment variable:
     ///
-    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate against the Hex package manager.
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate with the Hex package manager.
     ///
     #[command(verbatim_doc_comment)]
     Publish,
@@ -474,7 +474,7 @@ enum Docs {
     ///
     /// This command uses this environment variable:
     ///
-    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate against the Hex package manager.
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate with the Hex package manager.
     ///
     #[command(verbatim_doc_comment)]
     Remove {

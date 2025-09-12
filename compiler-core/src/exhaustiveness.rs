@@ -7,7 +7,8 @@
 //!   Per Gustafsson and Konstantinos Sagonas.
 //!   <https://user.it.uu.se/~kostis/Papers/JFP_06.pdf>
 //!
-//! Adapted from Yorick Peterse's implementation at
+//! The first implementation of the decision tree was adapted from Yorick
+//! Peterse's implementation at
 //! <https://github.com/yorickpeterse/pattern-matching-in-rust>.
 //! Thank you Yorick!
 //!
@@ -67,17 +68,22 @@ use crate::{
         self, AssignName, BitArraySize, Endianness, IntOperator, TypedBitArraySize, TypedClause,
         TypedPattern, TypedPatternBitArraySegment,
     },
-    strings::{convert_string_escape_chars, length_utf16, length_utf32},
+    strings::{
+        convert_string_escape_chars, length_utf16, length_utf32, string_to_utf16_bytes,
+        string_to_utf32_bytes,
+    },
     type_::{
         Environment, Opaque, Type, TypeValueConstructor, TypeValueConstructorField, TypeVar,
         TypeVariantConstructors, collapse_links, error::UnreachablePatternReason,
         is_prelude_module, string,
     },
 };
+use bitvec::{order::Msb0, slice::BitSlice, view::BitView};
 use ecow::EcoString;
 use id_arena::{Arena, Id};
 use itertools::Itertools;
 use num_bigint::BigInt;
+use num_traits::ToPrimitive;
 use radix_trie::{Trie, TrieCommon};
 use std::{
     cell::RefCell,
@@ -990,6 +996,164 @@ pub struct MatchTest {
     pub read_action: ReadAction,
 }
 
+struct Interference {
+    interfering_bits_are_equal: bool,
+    first_encloses_second: bool,
+    second_encloses_first: bool,
+}
+
+impl MatchTest {
+    /// If this match test interferes with the other one, this will return
+    /// information about how they interfere.
+    ///
+    ///
+    /// # What is interference used for?
+    ///
+    /// Interference analysis is an optimization that we can apply to segments
+    /// matching on a literal value with a known offset and size.
+    /// It allows discarding many overlapping checks that we can for sure tell
+    /// will never (or will always) match.
+    ///
+    /// This optimization is particularly important for network protocol
+    /// applications where it is typical to match on some fixed patterns at the
+    /// start of the bitarray:
+    ///
+    /// ```gleam
+    /// case packet {
+    ///   <<"CONTENT_LENGTH", 0, rest:bytes>> -> todo
+    ///   <<"QUERY_STRING", 0, rest:bytes>> -> todo
+    ///   // ...
+    ///   _ -> todo
+    /// }
+    /// ```
+    ///
+    ///
+    /// # What is interference?
+    ///
+    /// We say two read actions interfere with each other if:
+    /// - They're both matching against a statically known value, we will call
+    ///   them `v1` and `v2`
+    /// - They both start at a statically known offset, `o1` and `o2`
+    /// - They both have a statically known size, `s1` and `s2`
+    /// - `o1 <= o2 && o1 + s1 > o2`
+    ///
+    /// This is a lot of letters to say something actually quite simple, having
+    /// a look at a graphical example will make this easier to grasp. Let's
+    /// visualize each match action as a segment; each read action will match
+    /// against a portion of the bit array, starting at the given offset and
+    /// with the given number of bits (in the example I'm also showing the bits
+    /// that the read action matches against):
+    ///
+    /// ```text
+    ///          o1         (o1+s1)
+    ///         ┄├0001010110┤┄
+    ///               ┄├1101000000111011┤┄
+    ///                o2               (o2+s2)
+    /// ```
+    ///
+    /// They interfere if the first one comes first (`o1 <= o2`) and the start
+    /// of the second one falls inside the range covered by the first one
+    /// (`o1 + s1 > p2`).
+    /// So the example above showcases two interfering read actions, here's an
+    /// example of two read actions that are not interfering with each other:
+    ///
+    /// ```text
+    ///          o1      (o1+s1)
+    ///         ┄├0110101┤┄
+    ///                      ┄├0101110101┤┄
+    ///                       o2         (o2+s2)
+    /// ```
+    ///
+    ///
+    /// # How is interference useful
+    ///
+    /// Knowing that two read actions interfere is very useful because, knowing
+    /// if the first one matches or not can allow us to tell for certain if an
+    /// interfering match has no change of succeeding as well.
+    /// Let's look at the three cases:
+    ///
+    /// 1. We know the first action succeeded, so the binary has the expected
+    ///    bits in the matched segment
+    ///    ```text
+    ///             o1         (o1+s1)
+    ///            ┄├0110101111┤┄  ← This check succeded!
+    ///                   ┄├0001110101┤┄
+    ///                    o2         (o2+s2)
+    ///    ```
+    ///    Can the second check ever succeed? No! Since the first check
+    ///    succeeded we know for certain that the first three bits the second
+    ///    check would match against are going to be `111`, so they surely won't
+    ///    match with `000`.
+    ///
+    /// 2. We know the first action succeeded, and the second action is fully
+    ///    contained inside it:
+    ///    ```text
+    ///             o1              (o1+s1)
+    ///            ┄├011010000001111┤┄  ← This check succeded!
+    ///               ┄├0100000┤┄
+    ///                o2      (o2+s2)
+    ///    ```
+    ///    In that case we know for certain that the second check will succeed
+    ///    as well (and so can be skipped) if the overlapping bits being checked
+    ///    are exactly the same.
+    ///
+    /// 3. We know that the first action failed, and the second one is
+    ///    fully enclosing it:
+    ///    ```text
+    ///             o1  (o1+s1)
+    ///            ┄├010┤┄  ← This check failed!
+    ///            ┄├01000001010000001111┤┄
+    ///             o2                   (o2+s2)
+    ///    ```
+    ///   Can the second check ever succeed? No! Since the first check failed we
+    ///   know for certain that the first bits are not `010`, so there's no
+    ///   chance for the second match to succeed as it requires those three bits
+    ///   to be `010` as well.
+    ///
+    ///
+    /// ## What information is returned by this function
+    ///
+    /// If the two actions are not interfering with each other this will return
+    /// `None`. Otherwise, it will return all the information needed by the
+    /// three examples above (check usages of this function to see how this is
+    /// used, hopefully it should be pretty straightforward!):
+    /// - whether the bits in the overlapping section are the same
+    /// - whether the first action fully encloses the second one
+    /// - whether the second action fully encloses the first one
+    ///
+    fn interfering_bits(&self, other: &Self) -> Option<Interference> {
+        // After reading the doc comment this should be pretty easy to follow:
+        // The first requirement for interference is: `o1 <= o2`
+        let offset_one = self.read_action.from.constant_bits()?.to_usize()?;
+        let offset_other = other.read_action.from.constant_bits()?.to_usize()?;
+        if offset_one > offset_other {
+            return None;
+        };
+
+        // The second requirement is that: `o1 + s1 > o2`
+        let size_one = self.read_action.size.constant_bits()?.to_usize()?;
+        let size_other = other.read_action.size.constant_bits()?.to_usize()?;
+        if offset_one + size_one <= offset_other {
+            return None;
+        };
+
+        // At this point we know that both are interfering, so we compare the
+        // overlapping slice of bits they're matching against.
+        // A little implementation note: we're storing the matched _bytes_, not
+        // bits, so we will be using the `view_bits` function to perform a
+        // comparison of slices of bits.
+        let bits_one = self.value.constant_bits()?;
+        let bits_other = other.value.constant_bits()?;
+        let end = (offset_other + size_other).min(offset_one + size_one);
+        Some(Interference {
+            interfering_bits_are_equal: bits_one[offset_other - offset_one..end - offset_one]
+                == bits_other[0..end - offset_other],
+            first_encloses_second: size_one + offset_one >= size_other + offset_other,
+            second_encloses_first: size_other + offset_other >= size_one + offset_one,
+        })
+    }
+}
+
 /// A value that can be matched in a bit array pattern's segment. We do not use
 /// a `Pattern` directly since the allowed values are actually a subset of all
 /// the possible patterns: it can only contain literal floats, ints, strings,
@@ -1002,6 +1166,9 @@ pub enum BitArrayMatchedValue {
     LiteralString {
         value: EcoString,
         encoding: StringEncoding,
+        /// The bytes representing the given literal string, with the correct
+        /// encoding and endianness specified in the bit array segment.
+        bytes: Vec<u8>,
     },
     Variable(EcoString),
     Discard(EcoString),
@@ -1019,6 +1186,25 @@ impl BitArrayMatchedValue {
             | BitArrayMatchedValue::LiteralString { .. } => true,
             BitArrayMatchedValue::Variable(..) | BitArrayMatchedValue::Discard(..) => false,
             BitArrayMatchedValue::Assign { value, .. } => value.is_literal(),
+        }
+    }
+
+    /// If the matched value is a literal value for which we implement
+    /// interference pruning, this returns the bits representing it to be used
+    /// for interference.
+    ///
+    fn constant_bits(&self) -> Option<&BitSlice<u8, Msb0>> {
+        match self {
+            BitArrayMatchedValue::LiteralString { bytes, .. } => Some(bytes.view_bits::<Msb0>()),
+            BitArrayMatchedValue::Assign { value, .. } => value.constant_bits(),
+
+            // TODO: We could also implement the interfering optimisation for
+            // literal ints as well, but that will be a bit trickier than
+            // strings.
+            BitArrayMatchedValue::LiteralInt(_)
+            | BitArrayMatchedValue::LiteralFloat(_)
+            | BitArrayMatchedValue::Variable(_)
+            | BitArrayMatchedValue::Discard(_) => None,
         }
     }
 }
@@ -1044,13 +1230,6 @@ impl BitArrayMatchedValue {
 }
 
 impl BitArrayTest {
-    // TODO: for these tests we could also implement a more sophisticated
-    // approach for `Match` tests. This is described in the linked paper as
-    // read action interference and can help making the tree smaller in some
-    // specific cases.
-    // This could be an interesting optimisation once we start using the tree
-    // for code generation as well.
-
     /// Tells us if this test is guaranteed to succeed given another test that
     /// we know has already succeeded.
     ///
@@ -1063,6 +1242,21 @@ impl BitArrayTest {
             (one, other) if one == other => Confidence::Certain,
             (BitArrayTest::Size(succeeding), BitArrayTest::Size(test)) => {
                 test.succeeds_if_succeeding(succeeding)
+            }
+            (BitArrayTest::Match(succeeding), BitArrayTest::Match(test)) => {
+                // This is example 2. in the doc comment of `interfering_bits`:
+                // if the bits are the same and the second one is fully enclosed
+                // in the first one, then the second one will succeed as well!
+                if let Some(Interference {
+                    interfering_bits_are_equal: true,
+                    first_encloses_second: true,
+                    ..
+                }) = succeeding.interfering_bits(test)
+                {
+                    Confidence::Certain
+                } else {
+                    Confidence::Uncertain
+                }
             }
             // The tests are not comparable, we can't deduce any new information.
             _ => Confidence::Uncertain,
@@ -1082,6 +1276,22 @@ impl BitArrayTest {
             (BitArrayTest::Size(failing), BitArrayTest::Size(test)) => {
                 test.fails_if_failing(failing)
             }
+            (BitArrayTest::Match(succeeding), BitArrayTest::Match(test)) => {
+                // This is example 3. in the doc comment of `interfering_bits`:
+                // if the bits are the same and the second one is fully
+                // enclosing the first one, then the second one will fail as
+                // well!
+                if let Some(Interference {
+                    interfering_bits_are_equal: true,
+                    second_encloses_first: true,
+                    ..
+                }) = succeeding.interfering_bits(test)
+                {
+                    Confidence::Certain
+                } else {
+                    Confidence::Uncertain
+                }
+            }
             // The tests are not comparable, we can't deduce any new information.
             _ => Confidence::Uncertain,
         }
@@ -1100,6 +1310,20 @@ impl BitArrayTest {
             // matching paper linked at the top of this module's documentation!
             (BitArrayTest::Size(succeeding), BitArrayTest::Size(test)) => {
                 test.fails_if_succeeding(succeeding)
+            }
+            (BitArrayTest::Match(succeeding), BitArrayTest::Match(test)) => {
+                // This is example 1. in the doc comment of `interfering_bits`:
+                // if the bits are the different and the first one is succeeding
+                // then we know the second one will fail.
+                if let Some(Interference {
+                    interfering_bits_are_equal: false,
+                    ..
+                }) = succeeding.interfering_bits(test)
+                {
+                    Confidence::Certain
+                } else {
+                    Confidence::Uncertain
+                }
             }
             // The tests are not comparable, we can't deduce any new information.
             _ => Confidence::Uncertain,
@@ -1566,7 +1790,7 @@ pub enum Decision {
         var: Variable,
         choices: Vec<(RuntimeCheck, Decision)>,
         fallback: Box<Decision>,
-        fallback_check: FallbackCheck,
+        fallback_check: Box<FallbackCheck>,
     },
 
     /// This is a special node: it represents a missing pattern. If a tree
@@ -1969,7 +2193,7 @@ impl<'a> Compiler<'a> {
             var,
             choices,
             fallback: Box::new(last_choice),
-            fallback_check: FallbackCheck::InfiniteCatchAll,
+            fallback_check: Box::new(FallbackCheck::InfiniteCatchAll),
         }
     }
 
@@ -2014,7 +2238,7 @@ impl<'a> Compiler<'a> {
             var,
             choices,
             fallback,
-            fallback_check,
+            fallback_check: Box::new(fallback_check),
         }
     }
 
@@ -2981,10 +3205,6 @@ impl CaseToCompile {
                 }
             };
 
-            // Each segment is also turned into a match test, checking the
-            // selected bits match with the pattern's value.
-            let value = segment_matched_value(segment, None);
-
             let type_ = match &segment.type_ {
                 type_ if type_.is_int() => ReadType::Int,
                 type_ if type_.is_float() => ReadType::Float,
@@ -3001,6 +3221,10 @@ impl CaseToCompile {
                 endianness: segment.endianness(),
                 signed: segment.signed(),
             };
+
+            // Each segment is also turned into a match test, checking the
+            // selected bits match with the pattern's value.
+            let value = segment_matched_value(segment, None, &read_action);
 
             // Then if the matched value is a variable that is in scope for the
             // rest of the pattern we keep track of it, so it can be used in the
@@ -3039,6 +3263,7 @@ fn segment_matched_value(
     // in above. However, we need to check the correct sub-pattern of the original
     // pattern, so if they are different we set this argument to `Some`.
     pattern: Option<&TypedPattern>,
+    read_action: &ReadAction,
 ) -> BitArrayMatchedValue {
     let pattern = pattern.unwrap_or(&segment.value);
     match pattern {
@@ -3048,23 +3273,32 @@ fn segment_matched_value(
             BitArrayMatchedValue::LiteralString {
                 value: value.clone(),
                 encoding: StringEncoding::Utf16,
+                bytes: string_to_utf16_bytes(
+                    &convert_string_escape_chars(value),
+                    read_action.endianness,
+                ),
             }
         }
         ast::Pattern::String { value, .. } if segment.has_utf32_option() => {
             BitArrayMatchedValue::LiteralString {
                 value: value.clone(),
                 encoding: StringEncoding::Utf32,
+                bytes: string_to_utf32_bytes(
+                    &convert_string_escape_chars(value),
+                    read_action.endianness,
+                ),
             }
         }
         ast::Pattern::String { value, .. } => BitArrayMatchedValue::LiteralString {
             value: value.clone(),
             encoding: StringEncoding::Utf8,
+            bytes: convert_string_escape_chars(value).as_bytes().into(),
         },
         ast::Pattern::Variable { name, .. } => BitArrayMatchedValue::Variable(name.clone()),
         ast::Pattern::Discard { name, .. } => BitArrayMatchedValue::Discard(name.clone()),
         ast::Pattern::Assign { name, pattern, .. } => BitArrayMatchedValue::Assign {
             name: name.clone(),
-            value: Box::new(segment_matched_value(segment, Some(pattern))),
+            value: Box::new(segment_matched_value(segment, Some(pattern), read_action)),
         },
         x => panic!("unexpected segment value pattern {x:?}"),
     }

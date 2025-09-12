@@ -1995,3 +1995,14 @@ type Either<type A, type B> {
 "#
     );
 }
+
+#[test]
+fn wrong_type_of_comments_with_hash() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  # a python-style comment
+}
+"#
+    );
+}

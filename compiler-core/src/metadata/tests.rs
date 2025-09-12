@@ -1761,14 +1761,18 @@ fn type_with_inferred_variant() {
             "Wibble".into(),
             TypeConstructor {
                 type_: Arc::new(Type::Named {
-                    publicity: Publicity::Public,
+                    publicity: Publicity::Internal {
+                        attribute_location: None,
+                    },
                     package: "some_package".into(),
                     module: "the/module".into(),
                     name: "Wibble".into(),
                     arguments: Vec::new(),
                     inferred_variant: Some(1),
                 }),
-                publicity: Publicity::Public,
+                publicity: Publicity::Internal {
+                    attribute_location: Some(SrcSpan::new(0, 10)),
+                },
                 origin: Default::default(),
                 module: "the/module".into(),
                 parameters: vec![],
@@ -1816,6 +1820,7 @@ fn module_with_type_aliases() {
                 deprecation: Deprecation::NotDeprecated,
                 documentation: Some("Some documentation".into()),
                 origin: Default::default(),
+                parameters: vec![type_::generic_var(0)],
             },
         )]
         .into(),

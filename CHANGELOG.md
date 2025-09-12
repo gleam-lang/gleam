@@ -36,6 +36,31 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The compiler now applies an optimisation known as "interference based pruning"
+  when compiling bit array pattern matching where matches are performed at the
+  start of bit arrays.
+  This optimisation drastically reduces compile times, memory usage and the
+  compiled code size, removing many redundant checks.
+  It is particularly important for network protocol applications where it is
+  typical to match on some fixed patterns at the start of the bitarray.
+  For example:
+
+  ```gleam
+  pub fn parser_headers(headers: BitArray, bytes: Int) -> Headers {
+    case headers {
+      <<"CONTENT_LENGTH" as header, 0, value:size(bytes), 0, rest:bytes>>
+      | <<"QUERY_STRING" as header, 0, value:size(bytes), 0, rest:bytes>>
+      | <<"REQUEST_URI" as header, 0, value:size(bytes), 0, rest:bytes>>
+      // ...
+      | <<"REDIRECT_STATUS" as header, 0, value:size(bytes), 0, rest:bytes>>
+      | <<"SCRIPT_NAME" as header, 0, value:size(bytes), 0, rest:bytes>>
+        -> [#(header, value), ..parse_headers(rest)]
+    }
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The compiler now emits a better error message for private types marked as
   opaque. For example, the following piece of code:
 
@@ -170,6 +195,30 @@
   been improved.
   ([sobolevn](https://github.com/sobolevn))
 
+- Compiler now adds a hint when `#`-styled comments are used. This code:
+
+  ```gleam
+  fn some() {
+    let a = 1
+    # let b = 2
+  }
+  ```
+
+  Now produces:
+
+  ```txt
+  error: Syntax error
+    ┌─ /src/main.gleam:3:5
+    │
+  3 │   # let b = 2
+    │     ^^^ I was not expecting this
+
+  Found the keyword `let`, expected one of:
+  - `(`
+  Hint: Maybe you meant to create a comment?
+  Comments in Gleam start with `//`, not `#`
+  ```
+
 ### Build tool
 
 - New projects are generated using OTP28 on GitHub Actions.
@@ -186,6 +235,32 @@
 - `gleam publish` now blocks publishing packages that contain the default main
   function to prevent accidental publishing of unmodified template code.
   ([Joohoon Cha](https://github.com/jcha0713))
+
+- When generating documentation, the build tool will now print the names of
+  public type aliases instead of internal type names when annotating functions
+  and types. For example, for the following code:
+
+  ```gleam
+  import my_package/internal
+
+  pub type ExternalAlias = internal.InternalRepresentation
+
+  pub fn do_thing() -> ExternalAlias { ... }
+  ```
+
+  This is what the build tool used to generate:
+
+  ```gleam
+  pub fn do_thing() -> @internal InternalRepresentation
+  ```
+
+  Whereas now it will not use the internal name, and instead produce:
+
+  ```gleam
+  pub fn do_thing() -> ExternalAlias
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
 
 ### Language server
 
@@ -415,6 +490,7 @@
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 - You can now go to definition, rename, etc. from alternative patterns!
+
   ```gleam
   case wibble {
     Wibble | Wobble -> 0
@@ -422,7 +498,47 @@
   }
 
   ```
+
   ([fruno](https://github.com/fruno-bulax))
+
+- When showing types of values on hover, or adding type annotations, the language
+  server will now prefer public type aliases to internal types. For example, if
+  the "Add type annotations" code action was triggered on the following code:
+
+  ```gleam
+  import lustre/html
+  import lustre/element
+  import lustre/attribute
+
+  pub fn make_link(attribute, element) {
+    html.a([attribute], [elements])
+  }
+  ```
+
+  Previously, the following code would have been generated:
+
+  ```gleam
+  pub fn make_link(
+    attribute: vattr.Attribute,
+    element: vdom.Element(a)
+  ) -> vdom.Element(a) {
+     html.a([attribute], [elements])
+  }
+  ```
+
+  Which references internal types which should not be imported by the user.
+  However, now the language server will produce the following:
+
+  ```gleam
+  pub fn make_link(
+    attribute: attribute.Attribute,
+    element: element.Element(a)
+  ) -> element.Element(a) {
+     html.a([attribute], [elements])
+  }
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
 
 ### Formatter
 

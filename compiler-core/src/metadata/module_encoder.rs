@@ -311,7 +311,12 @@ impl<'a> ModuleEncoder<'a> {
         self.build_type(type_builder, &constructor.type_);
         self.build_src_span(builder.reborrow().init_origin(), constructor.origin);
         builder.set_documentation(constructor.documentation.as_deref().unwrap_or_default());
-        builder.set_arity(constructor.arity as u32)
+        builder.set_arity(constructor.arity as u32);
+
+        let mut parameters_builder = builder.init_parameters(constructor.parameters.len() as u32);
+        for (index, parameter) in constructor.parameters.iter().enumerate() {
+            self.build_type(parameters_builder.reborrow().get(index as u32), parameter);
+        }
     }
 
     fn build_type_value_constructor(
@@ -652,7 +657,7 @@ impl<'a> ModuleEncoder<'a> {
                 module,
                 package,
                 inferred_variant,
-                ..
+                publicity,
             } => {
                 let mut app = builder.init_app();
                 app.set_name(name);
@@ -667,6 +672,7 @@ impl<'a> ModuleEncoder<'a> {
                     app.reborrow().init_parameters(arguments.len() as u32),
                     arguments,
                 );
+                self.build_publicity(app.init_publicity(), *publicity);
             }
 
             Type::Tuple { elements } => self.build_types(

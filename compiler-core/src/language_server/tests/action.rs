@@ -9834,7 +9834,7 @@ pub fn main() -> Nil {
   Nil
 }",
         find_position_of("b:,").to_selection()
-    );
+  );
 }
 
 #[test]
@@ -9852,5 +9852,134 @@ pub fn main() -> Nil {
   inner([1, 2, 3])
 }",
         find_position_of("as inner").to_selection()
+   );
+}
+
+#[test]
+fn add_type_annotations_public_alias_to_internal_type_aliased_module() {
+    let src = "
+import package as pkg
+
+pub fn main() {
+  pkg.make_wibble()
+}
+";
+
+    assert_code_action!(
+        ADD_ANNOTATION,
+        TestProject::for_source(src)
+            .add_package_module(
+                "package",
+                "package",
+                "
+import package/internal
+
+pub type Wibble = internal.Wibble
+
+pub fn make_wibble() {
+  internal.Wibble
+}
+"
+            )
+            .add_package_module("package", "package/internal", "pub type Wibble { Wibble }"),
+        find_position_of("main").to_selection(),
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3898
+#[test]
+fn add_type_annotations_public_alias_to_internal_type() {
+    let src = "
+import package
+
+pub fn main() {
+  package.make_wibble()
+}
+";
+
+    assert_code_action!(
+        ADD_ANNOTATION,
+        TestProject::for_source(src)
+            .add_package_module(
+                "package",
+                "package",
+                "
+import package/internal
+
+pub type Wibble = internal.Wibble
+
+pub fn make_wibble() {
+  internal.Wibble
+}
+"
+            )
+            .add_package_module("package", "package/internal", "pub type Wibble { Wibble }"),
+        find_position_of("main").to_selection(),
+    );
+}
+
+#[test]
+fn add_type_annotations_public_alias_to_internal_generic_type() {
+    let src = "
+import package
+
+pub fn main() {
+  package.make_wibble(10)
+}
+";
+
+    assert_code_action!(
+        ADD_ANNOTATION,
+        TestProject::for_source(src)
+            .add_package_module(
+                "package",
+                "package",
+                "
+import package/internal
+
+pub type Wibble(a, b) = internal.Wibble(a, b)
+
+pub fn make_wibble(x) {
+  internal.Wibble(x)
+}
+"
+            )
+            .add_package_module(
+                "package",
+                "package/internal",
+                "pub type Wibble(a, b) { Wibble(a) }"
+            ),
+        find_position_of("main").to_selection(),
+    );
+}
+
+#[test]
+fn add_type_annotations_uses_internal_name_for_same_package() {
+    let src = "
+import thepackage/internal
+
+pub fn main() {
+  internal.Constructor
+}
+";
+
+    assert_code_action!(
+        ADD_ANNOTATION,
+        TestProject::for_source(src)
+            .add_module(
+                "thepackage/internal",
+                "
+pub type Internal { Constructor }
+"
+            )
+            .add_module(
+                "thepackage/external",
+                "
+import thepackage/internal
+
+pub type External = internal.Internal
+"
+            ),
+        find_position_of("main").to_selection(),
     );
 }
