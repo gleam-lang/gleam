@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() -> Nil{\n    let x = 3\nNil\n}"
+---
+----- BEFORE ACTION
+pub fn main() -> Nil{
+    let x = 3
+        ↑    
+Nil
+}
+
+
+----- AFTER ACTION
+pub fn main() -> Nil{
+    let _x = 3
+Nil
+}

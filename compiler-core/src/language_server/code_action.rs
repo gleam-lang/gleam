@@ -8232,7 +8232,7 @@ impl<'a> DiscardUnusedVariables<'a> {
             }
             VariableSyntax::LabelShorthand(_) => {
                 self.edits
-                    .insert(unused_variable.location.end, ("_").to_string());
+                    .insert(unused_variable.location.end, (" _").to_string());
             }
             VariableSyntax::AssignmentPattern => {
                 self.edits.delete(SrcSpan {

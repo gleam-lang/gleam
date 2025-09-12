@@ -1,0 +1,47 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub type MyType {\n  Variant1(a: Int, b: Int)\n  Variant2(c: Int, d: Int)\n}\n\nfn check_my_type(my_value: MyType) -> Int {\n  case my_value {\n    Variant1(b:, a:) -> a\n    Variant2(d:, c:) -> c\n  }\n}\n\npub fn main() -> Nil {\n  let instance = Variant1(1, 2)\n\n  let _ = check_my_type(instance)\n\n  Nil\n}"
+---
+----- BEFORE ACTION
+pub type MyType {
+  Variant1(a: Int, b: Int)
+  Variant2(c: Int, d: Int)
+}
+
+fn check_my_type(my_value: MyType) -> Int {
+  case my_value {
+    Variant1(b:, a:) -> a
+             ↑           
+    Variant2(d:, c:) -> c
+  }
+}
+
+pub fn main() -> Nil {
+  let instance = Variant1(1, 2)
+
+  let _ = check_my_type(instance)
+
+  Nil
+}
+
+
+----- AFTER ACTION
+pub type MyType {
+  Variant1(a: Int, b: Int)
+  Variant2(c: Int, d: Int)
+}
+
+fn check_my_type(my_value: MyType) -> Int {
+  case my_value {
+    Variant1(b: _, a:) -> a
+    Variant2(d: _, c:) -> c
+  }
+}
+
+pub fn main() -> Nil {
+  let instance = Variant1(1, 2)
+
+  let _ = check_my_type(instance)
+
+  Nil
+}
