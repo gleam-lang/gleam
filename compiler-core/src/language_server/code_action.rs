@@ -8235,7 +8235,10 @@ impl<'a> DiscardUnusedVariables<'a> {
                     .insert(unused_variable.location.end, ("_").to_string());
             }
             VariableSyntax::AssignmentPattern => {
-                self.edits.delete(*unused_variable.location);
+                self.edits.delete(SrcSpan {
+                    start: unused_variable.location.start - 4, // Remove 'as ' before variable name
+                    end: unused_variable.location.end,
+                });
             }
             VariableSyntax::Generated => (),
         };
