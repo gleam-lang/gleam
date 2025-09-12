@@ -268,6 +268,9 @@
 
 ### Build tool
 
+- Dependency resolution will use cache when offline.
+  ([Ben Ownby](https://github.com/benev0))
+
 - New projects are generated using OTP28 on GitHub Actions.
   ([Louis Pilfold](https://github.com/lpil))
 
