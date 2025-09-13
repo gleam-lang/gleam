@@ -744,6 +744,7 @@ impl<'comments> Formatter<'comments> {
                 module,
                 location,
                 name_location,
+                start_parentheses: _,
             }) => self.type_ast_constructor(module, name, arguments, location, name_location),
 
             TypeAst::Fn(TypeAstFn {

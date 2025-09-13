@@ -3308,3 +3308,31 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn missing_type_constructor_arguments_in_type_annotation_1() {
+    assert_module_error!("pub fn main() -> Result() {}");
+}
+
+#[test]
+fn missing_type_constructor_arguments_in_type_annotation_2() {
+    assert_module_error!(
+        "pub fn main() {
+  let a: Result() = todo
+}"
+    );
+}
+
+#[test]
+fn arguments_list_for_type_which_requires_none_1() {
+    assert_module_error!("pub fn main() -> Int() {}");
+}
+
+#[test]
+fn arguments_list_for_type_which_requires_none_2() {
+    assert_module_error!(
+        "pub fn main() {
+  let a: Int() = todo
+}"
+    );
+}

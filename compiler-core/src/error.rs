@@ -2229,6 +2229,27 @@ but {given} where provided."
                         }
                     }
 
+                    TypeError::TypeExpectingNoArgumentsAndEmptyArgumentsList { location, name } => {
+                        let text = wrap_format!(
+                            "`{name}` has no type arguments, but here it's given an arguments list."
+                        );
+                        Diagnostic {
+                            title: "Incorrect type constructor".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: Some("You can remove this".into()),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
+                    }
+
                     TypeError::IncorrectArity {
                         labels,
                         location,
