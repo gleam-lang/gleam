@@ -2000,6 +2000,21 @@ pub type Wibble { Wibble(arg1: Int, arg2: String) }
 }
 
 #[test]
+fn fill_in_labelled_args_works_with_pattern_and_parentheses_with_spaces() {
+    assert_code_action!(
+        FILL_LABELS,
+        r#"
+pub fn main() {
+  let assert Ok(Wibble   ()) = Wibble(1, "2")
+}
+
+pub type Wibble { Wibble(arg1: Int, arg2: String) }
+ "#,
+        find_position_of("Wibble").select_until(find_position_of("Wibble").under_last_char()),
+    );
+}
+
+#[test]
 fn fill_in_labelled_args_works_with_pipes() {
     assert_code_action!(
         FILL_LABELS,
