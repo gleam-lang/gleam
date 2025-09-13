@@ -397,6 +397,35 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server now offers a code action to add the omitted labels in a
+  call. For example:
+
+  ```gleam
+  pub type User {
+    User(first_name: String, last_name: String, likes: List(String))
+  }
+
+  pub fn main() {
+    let first_name = "Giacomo"
+    User(first_name, "Cavalieri", ["gleam"])
+  //^^^^ Triggering the code action over here
+  }
+  ```
+
+  Triggering the code action over the `User` constructor will result in the
+  following code:
+
+  ```gleam
+  pub type User {
+    User(first_name: String, last_name: String, likes: List(String))
+  }
+
+  pub fn main() {
+    let first_name = "Giacomo"
+    User(first_name:, last_name: "Cavalieri", likes: ["gleam"])
+  }
+  ```
+
 - The "inline variable" code action is now only suggested when hovering over the
   relevant variable.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

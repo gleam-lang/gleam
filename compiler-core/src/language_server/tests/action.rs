@@ -134,6 +134,7 @@ const REMOVE_BLOCK: &str = "Remove block";
 const REMOVE_OPAQUE_FROM_PRIVATE_TYPE: &str = "Remove opaque from private type";
 const COLLAPSE_NESTED_CASE: &str = "Collapse nested case";
 const REMOVE_UNREACHABLE_BRANCHES: &str = "Remove unreachable branches";
+const ADD_OMITTED_LABELS: &str = "Add omitted labels";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -10111,5 +10112,149 @@ pub type External = internal.Internal
 "
             ),
         find_position_of("main").to_selection(),
+    );
+}
+
+#[test]
+fn add_omitted_labels_in_function_call() {
+    assert_code_action!(
+        ADD_OMITTED_LABELS,
+        "
+pub fn main() {
+  labelled(1, 2)
+}
+
+pub fn labelled(a a, b b) { todo }
+    ",
+        find_position_of("labelled").to_selection(),
+    );
+}
+
+#[test]
+fn add_omitted_labels_in_function_call_with_some_labels() {
+    assert_code_action!(
+        ADD_OMITTED_LABELS,
+        "
+pub fn main() {
+  labelled(1, 2)
+}
+
+pub fn labelled(a, b b) { todo }
+    ",
+        find_position_of("labelled").to_selection(),
+    );
+}
+
+#[test]
+fn add_omitted_labels_in_function_call_uses_shorthand_syntax() {
+    assert_code_action!(
+        ADD_OMITTED_LABELS,
+        "
+pub fn main() {
+  let a = 1
+  labelled(a, 2)
+}
+
+pub fn labelled(a a, b b) { todo }
+    ",
+        find_position_of("labelled").to_selection(),
+    );
+}
+
+#[test]
+fn add_omitted_labels_works_with_innermost_function_call() {
+    assert_code_action!(
+        ADD_OMITTED_LABELS,
+        "
+pub fn main() {
+  let a = 1
+  labelled(a, labelled(1, 2))
+}
+
+pub fn labelled(a a, b b) { todo }
+    ",
+        find_position_of("labelled")
+            .nth_occurrence(2)
+            .to_selection(),
+    );
+}
+
+#[test]
+fn add_omitted_labels_works_with_constructors_calls() {
+    assert_code_action!(
+        ADD_OMITTED_LABELS,
+        "
+pub fn main() {
+  Labelled(1, 2)
+}
+
+pub type Labelled {
+  Labelled(Int, b: Int)
+}
+    ",
+        find_position_of("Labelled").to_selection(),
+    );
+}
+
+#[test]
+fn add_omitted_labels_does_not_pop_up_if_function_already_has_labels() {
+    assert_no_code_actions!(
+        ADD_OMITTED_LABELS,
+        "
+pub fn main() {
+  let a = 1
+  labelled(a, b: 2)
+}
+
+pub fn labelled(a a, b b) { todo }
+    ",
+        find_position_of("labelled").to_selection(),
+    );
+}
+
+#[test]
+fn add_omitted_labels_does_not_pop_up_if_function_has_wrong_number_of_arguments() {
+    assert_no_code_actions!(
+        ADD_OMITTED_LABELS,
+        "
+pub fn main() {
+  let a = 1
+  labelled(a, 2, 1)
+}
+
+pub fn labelled(a, b b) { todo }
+    ",
+        find_position_of("labelled").to_selection(),
+    );
+}
+
+#[test]
+fn add_omitted_labels_does_not_pop_up_if_function_has_wrong_type_of_arguments() {
+    assert_no_code_actions!(
+        ADD_OMITTED_LABELS,
+        "
+pub fn main() {
+  labelled(1, 2)
+}
+
+pub fn labelled(a a: String, b b: String) { todo }
+    ",
+        find_position_of("labelled").to_selection(),
+    );
+}
+
+#[test]
+fn add_omitted_labels_does_not_pop_up_if_called_function_has_no_labels() {
+    assert_no_code_actions!(
+        ADD_OMITTED_LABELS,
+        "
+pub fn main() {
+  let a = 1
+  labelled(a, 2)
+}
+
+pub fn labelled(a, b) { todo }
+    ",
+        find_position_of("labelled").to_selection(),
     );
 }
