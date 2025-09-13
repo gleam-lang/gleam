@@ -101,53 +101,51 @@ Parsed {
                             ),
                         ),
                         arguments: [],
-                        body: Some(
-                            [
-                                Expression(
-                                    FieldAccess {
+                        body: [
+                            Expression(
+                                FieldAccess {
+                                    location: SrcSpan {
+                                        start: 61,
+                                        end: 73,
+                                    },
+                                    label_location: SrcSpan {
+                                        start: 72,
+                                        end: 73,
+                                    },
+                                    label: "",
+                                    container: Call {
                                         location: SrcSpan {
                                             start: 61,
-                                            end: 73,
+                                            end: 72,
                                         },
-                                        label_location: SrcSpan {
-                                            start: 72,
-                                            end: 73,
-                                        },
-                                        label: "",
-                                        container: Call {
+                                        fun: Var {
                                             location: SrcSpan {
                                                 start: 61,
-                                                end: 72,
+                                                end: 67,
                                             },
-                                            fun: Var {
+                                            name: "Wibble",
+                                        },
+                                        arguments: [
+                                            CallArg {
+                                                label: None,
                                                 location: SrcSpan {
-                                                    start: 61,
-                                                    end: 67,
+                                                    start: 68,
+                                                    end: 71,
                                                 },
-                                                name: "Wibble",
-                                            },
-                                            arguments: [
-                                                CallArg {
-                                                    label: None,
+                                                value: String {
                                                     location: SrcSpan {
                                                         start: 68,
                                                         end: 71,
                                                     },
-                                                    value: String {
-                                                        location: SrcSpan {
-                                                            start: 68,
-                                                            end: 71,
-                                                        },
-                                                        value: "a",
-                                                    },
-                                                    implicit: None,
+                                                    value: "a",
                                                 },
-                                            ],
-                                        },
+                                                implicit: None,
+                                            },
+                                        ],
                                     },
-                                ),
-                            ],
-                        ),
+                                },
+                            ),
+                        ],
                         publicity: Private,
                         deprecation: NotDeprecated,
                         return_annotation: None,

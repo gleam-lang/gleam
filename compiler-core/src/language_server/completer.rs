@@ -1016,11 +1016,9 @@ impl<'a> LocalCompletion<'a> {
         self.visit_fn_arguments(&fun.arguments);
 
         // Visit the function body statements
-        if let Some(body) = &fun.body {
-            for statement in body {
-                // Visit the statement to find local variables
-                self.visit_typed_statement(statement);
-            }
+        for statement in &fun.body {
+            // Visit the statement to find local variables
+            self.visit_typed_statement(statement);
         }
 
         self.completions.into_values().collect_vec()

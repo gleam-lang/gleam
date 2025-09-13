@@ -4468,20 +4468,21 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         };
 
         let (arguments, body) =
-            self.infer_fn_with_known_types(arguments, Some(body), return_type)?;
-        let body = body.expect("body guaranteed to have at least one statement");
+            self.infer_fn_with_known_types(arguments, body.to_vec(), return_type)?;
+        let body =
+            Vec1::try_from_vec(body).expect("body guaranteed to have at least one statement");
         Ok((arguments, body))
     }
 
     pub fn infer_fn_with_known_types(
         &mut self,
         arguments: Vec<TypedArg>,
-        body: Option<Vec1<UntypedStatement>>,
+        body: Vec<UntypedStatement>,
         return_type: Option<Arc<Type>>,
-    ) -> Result<(Vec<TypedArg>, Option<Vec1<TypedStatement>>), Error> {
+    ) -> Result<(Vec<TypedArg>, Vec<TypedStatement>), Error> {
         // If a function has an empty body then it doesn't have a pure gleam
         // implementation.
-        if body.is_none() {
+        if body.is_empty() {
             self.implementations.gleam = false;
         }
 
@@ -4525,7 +4526,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             argument.type_.clone(),
                         );
 
-                        if body.is_some() {
+                        if !body.is_empty() {
                             // Register the variable in the usage tracker so that we
                             // can identify if it is unused
                             body_typer.environment.init_usage(
@@ -4540,7 +4541,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 };
             }
 
-            if let Some(body) = body {
+            if let Ok(body) = Vec1::try_from_vec(body) {
                 let mut body = body_typer.infer_statements(body);
 
                 // Check that any return type is accurate.
@@ -4570,9 +4571,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     }))
                 };
 
-                Ok((arguments, Some(body)))
+                Ok((arguments, body.to_vec()))
             } else {
-                Ok((arguments, None))
+                Ok((arguments, vec![]))
             }
         })
     }

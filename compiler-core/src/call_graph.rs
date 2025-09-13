@@ -115,9 +115,9 @@ impl<'a> CallGraphBuilder<'a> {
         {
             self.define(name);
         }
-        if let Some(body) = &function.body {
-            self.statements(body);
-        }
+
+        self.statements(&function.body);
+
         self.names = names;
     }
 

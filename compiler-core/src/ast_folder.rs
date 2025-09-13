@@ -1,4 +1,5 @@
 use ecow::EcoString;
+use itertools::Itertools;
 use num_bigint::BigInt;
 use vec1::Vec1;
 
@@ -68,7 +69,9 @@ pub trait UntypedModuleFolder: TypeAstFolder + UntypedExprFolder {
     fn walk_function_definition(&mut self, mut function: UntypedFunction) -> UntypedDefinition {
         function.body = function
             .body
-            .map(|body| body.mapped(|statement| self.fold_statement(statement)));
+            .into_iter()
+            .map(|statement| self.fold_statement(statement))
+            .collect_vec();
         function.return_annotation = function
             .return_annotation
             .map(|type_| self.fold_type(type_));

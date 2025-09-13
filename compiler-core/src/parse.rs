@@ -742,7 +742,7 @@ where
                         end_position,
                         ..
                     })) => {
-                        let Some(body) = body else {
+                        let Ok(body) = Vec1::try_from_vec(body) else {
                             return parse_error(ParseErrorType::ExpectedFunctionBody, location);
                         };
 
@@ -2128,23 +2128,23 @@ where
                     .map(|l| l.location().end)
                     .unwrap_or(rpar_e);
                 let body = match some_body {
-                    None => vec1![Statement::Expression(UntypedExpr::Todo {
+                    None => vec![Statement::Expression(UntypedExpr::Todo {
                         kind: TodoKind::EmptyFunction {
-                            function_location: SrcSpan { start, end }
+                            function_location: SrcSpan { start, end },
                         },
                         location: SrcSpan {
                             start: left_brace_start + 1,
-                            end: right_brace_end
+                            end: right_brace_end,
                         },
                         message: None,
                     })],
-                    Some((body, _)) => body,
+                    Some((body, _)) => body.to_vec(),
                 };
 
-                (Some(left_brace_start), Some(body), end, right_brace_end)
+                (Some(left_brace_start), body, end, right_brace_end)
             }
 
-            None => (None, None, rpar_e, rpar_e),
+            None => (None, vec![], rpar_e, rpar_e),
         };
 
         Ok(Some(Definition::Function(Function {

@@ -650,10 +650,9 @@ where
     if let Some(annotation) = &fun.return_annotation {
         v.visit_type_ast(annotation);
     }
-    if let Some(body) = &fun.body {
-        for statement in body {
-            v.visit_typed_statement(statement);
-        }
+
+    for statement in &fun.body {
+        v.visit_typed_statement(statement);
     }
 }
 
