@@ -19,7 +19,7 @@ use crate::{
     strings::to_snake_case,
     type_::{
         self, FieldMap, ModuleValueConstructor, Type, TypeVar, TypedCallArg, ValueConstructor,
-        error::{ModuleSuggestion, VariableDeclaration, VariableOrigin},
+        error::{ModuleSuggestion, VariableDeclaration, VariableOrigin, VariableSyntax},
         printer::Printer,
     },
 };
@@ -8279,5 +8279,78 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveUnreachableBranches<'ast> {
         // keep visiting the case expression as the unreachable branch might be
         // in one of the nested cases.
         ast::visit::visit_typed_expr_case(self, location, type_, subjects, clauses, compiled_case);
+    }
+}
+
+/// Code action builder to discard unused variables.
+pub struct DiscardUnusedVariables<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+}
+
+/// Struct used to parse each UnusedVariable warning into code editions.
+struct UnusedVariable<'a> {
+    location: &'a SrcSpan,
+    origin: &'a VariableOrigin,
+}
+
+impl<'a> DiscardUnusedVariables<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+        }
+    }
+
+    // Parse UnusedVariable warnings into code editions.
+    fn gen_edits(&mut self, unused_variable: &UnusedVariable<'a>) {
+        match unused_variable.origin.syntax {
+            VariableSyntax::Variable(_) => {
+                self.edits
+                    .insert(unused_variable.location.start, ("_").to_string());
+            }
+            VariableSyntax::LabelShorthand(_) => {
+                self.edits
+                    .insert(unused_variable.location.end, (" _").to_string());
+            }
+            VariableSyntax::AssignmentPattern => {
+                self.edits.delete(SrcSpan {
+                    start: unused_variable.location.start - 4, // Remove 'as ' before variable name
+                    end: unused_variable.location.end,
+                });
+            }
+            VariableSyntax::Generated => (),
+        };
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.module
+            .ast
+            .type_info
+            .warnings
+            .iter()
+            // get all UnusedVariable warnings and parse them as UnusedVariable struct
+            .filter_map(|warning| match warning {
+                type_::Warning::UnusedVariable { location, origin } => {
+                    Some(UnusedVariable { location, origin })
+                }
+                _ => None,
+            })
+            //Insert to self.edits the edits needed to discard each unused variable
+            .for_each(|unused_variable| self.gen_edits(&unused_variable));
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Discard unused variables")
+            .kind(CodeActionKind::QUICKFIX)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(true)
+            .push_to(&mut action);
+        action
     }
 }

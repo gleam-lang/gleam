@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "fn inner(all: List(Int)) -> Nil {\n  case all {\n    [_, ..] as inner -> Nil\n    [] -> Nil\n  }\n}\n\npub fn main() -> Nil {\n  inner([1, 2, 3])\n}"
+---
+----- BEFORE ACTION
+fn inner(all: List(Int)) -> Nil {
+  case all {
+    [_, ..] as inner -> Nil
+            ↑              
+    [] -> Nil
+  }
+}
+
+pub fn main() -> Nil {
+  inner([1, 2, 3])
+}
+
+
+----- AFTER ACTION
+fn inner(all: List(Int)) -> Nil {
+  case all {
+    [_, ..] -> Nil
+    [] -> Nil
+  }
+}
+
+pub fn main() -> Nil {
+  inner([1, 2, 3])
+}
