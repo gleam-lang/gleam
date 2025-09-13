@@ -172,6 +172,10 @@
   is now smaller in certain cases.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Writing a type followed by an empty argument list no longer stops the compiler
+  from reporting errors further in the code.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The compiler now shows a specific syntax error when trying to use an
   angle-bracket syntax for generic types or function definitions:
 
@@ -218,6 +222,8 @@
   Hint: Maybe you meant to create a comment?
   Comments in Gleam start with `//`, not `#`
   ```
+
+  ([sobolevn](https://github.com/sobolevn))
 
 ### Build tool
 

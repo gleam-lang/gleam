@@ -89,9 +89,13 @@ expression: "let assert [x]: List(Int) = [2]"
                                     module: None,
                                     name: "Int",
                                     arguments: [],
+                                    start_parentheses: None,
                                 },
                             ),
                         ],
+                        start_parentheses: Some(
+                            20,
+                        ),
                     },
                 ),
             ),

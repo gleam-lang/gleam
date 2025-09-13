@@ -2790,12 +2790,6 @@ where
         if let Some((par_s, _)) = self.maybe_one(&Token::LeftParen) {
             let arguments = self.parse_types()?;
             let (_, par_e) = self.expect_one(&Token::RightParen)?;
-            if arguments.is_empty() {
-                return parse_error(
-                    ParseErrorType::TypeConstructorNoArguments,
-                    SrcSpan::new(par_s, par_e),
-                );
-            }
             Ok(Some(TypeAst::Constructor(TypeAstConstructor {
                 location: SrcSpan { start, end: par_e },
                 name_location: SrcSpan {
@@ -2805,6 +2799,7 @@ where
                 module,
                 name,
                 arguments,
+                start_parentheses: Some(par_s),
             })))
         } else if let Some((less_start, less_end)) = self.maybe_one(&Token::Less) {
             let arguments = self.parse_types()?;
@@ -2829,6 +2824,7 @@ where
                 module,
                 name,
                 arguments: vec![],
+                start_parentheses: None,
             })))
         }
     }

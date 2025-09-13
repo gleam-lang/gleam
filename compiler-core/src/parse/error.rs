@@ -104,7 +104,6 @@ pub enum ParseErrorType {
     CallInClauseGuard, // case x { _ if f() -> 1 }
     IfExpression,
     ConstantRecordConstructorNoArguments, // const x = Record()
-    TypeConstructorNoArguments,           // let a : Int()
     TypeDefinitionNoArguments,            // pub type Wibble() { ... }
     UnknownAttributeRecordVariant, // an attribute was used that is not know for a custom type variant
     // a Python-like import was written, such as `import gleam.io`, instead of `import gleam/io`
@@ -606,13 +605,6 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
 
             ParseErrorType::ConstantRecordConstructorNoArguments => ParseErrorDetails {
                 text: "A record must be passed arguments when constructed.".into(),
-                hint: None,
-                label_text: "I was expecting arguments here".into(),
-                extra_labels: vec![],
-            },
-
-            ParseErrorType::TypeConstructorNoArguments => ParseErrorDetails {
-                text: "A type constructor must be passed arguments.".into(),
                 hint: None,
                 label_text: "I was expecting arguments here".into(),
                 extra_labels: vec![],
