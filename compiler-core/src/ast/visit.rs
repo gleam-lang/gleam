@@ -667,6 +667,7 @@ where
             arguments,
             module,
             name,
+            start_parentheses: _,
         }) => {
             v.visit_type_ast_constructor(location, name_location, module, name, arguments);
         }
