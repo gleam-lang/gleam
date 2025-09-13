@@ -1,4 +1,5 @@
 use ecow::EcoString;
+use itertools::Itertools;
 use num_bigint::BigInt;
 use vec1::Vec1;
 
@@ -68,7 +69,9 @@ pub trait UntypedModuleFolder: TypeAstFolder + UntypedExprFolder {
     fn walk_function_definition(&mut self, mut function: UntypedFunction) -> UntypedDefinition {
         function.body = function
             .body
-            .mapped(|statement| self.fold_statement(statement));
+            .into_iter()
+            .map(|statement| self.fold_statement(statement))
+            .collect_vec();
         function.return_annotation = function
             .return_annotation
             .map(|type_| self.fold_type(type_));
@@ -349,8 +352,6 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
             UntypedExpr::NegateBool { location, value } => self.fold_negate_bool(location, value),
 
             UntypedExpr::NegateInt { location, value } => self.fold_negate_int(location, value),
-
-            UntypedExpr::Placeholder { location } => self.fold_placeholder(location),
         }
     }
 
@@ -362,8 +363,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
             | UntypedExpr::Float { .. }
             | UntypedExpr::String { .. }
             | UntypedExpr::NegateInt { .. }
-            | UntypedExpr::NegateBool { .. }
-            | UntypedExpr::Placeholder { .. } => expression,
+            | UntypedExpr::NegateBool { .. } => expression,
 
             UntypedExpr::Todo {
                 kind,
@@ -905,10 +905,6 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
 
     fn fold_negate_int(&mut self, location: SrcSpan, value: Box<UntypedExpr>) -> UntypedExpr {
         UntypedExpr::NegateInt { location, value }
-    }
-
-    fn fold_placeholder(&mut self, location: SrcSpan) -> UntypedExpr {
-        UntypedExpr::Placeholder { location }
     }
 
     fn fold_assignment(&mut self, assignment: UntypedAssignment) -> UntypedAssignment {

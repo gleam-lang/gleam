@@ -2506,9 +2506,12 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToUse<'ast> {
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
         // The cursor has to be inside the last statement of the function to
         // offer the code action.
-        let last_statement_range = self.edits.src_span_to_lsp_range(fun.body.last().location());
-        if within(self.params.range, last_statement_range)
-            && let Some(call_data) = turn_statement_into_use(fun.body.last())
+        if let Some(last) = &fun.body.last()
+            && within(
+                self.params.range,
+                self.edits.src_span_to_lsp_range(last.location()),
+            )
+            && let Some(call_data) = turn_statement_into_use(last)
         {
             self.selected_call = Some(call_data);
         }
@@ -4845,10 +4848,12 @@ impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO> {
             // If the cursor is placed on one of the arguments, then we can try
             // and generate code for that one.
             let arg_range = self.edits.src_span_to_lsp_range(arg.location);
-            if within(self.params.range, arg_range) {
+            if within(self.params.range, arg_range)
+                && let Some(first_statement) = fun.body.first()
+            {
                 self.selected_value = Some(PatternMatchedValue::FunctionArgument {
                     arg,
-                    first_statement: fun.body.first(),
+                    first_statement,
                     function_range,
                 });
                 return;

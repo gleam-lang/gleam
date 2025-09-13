@@ -201,7 +201,11 @@ impl Inliner<'_> {
     }
 
     fn function(&mut self, mut function: TypedFunction) -> TypedFunction {
-        function.body = function.body.mapped(|statement| self.statement(statement));
+        function.body = function
+            .body
+            .into_iter()
+            .map(|statement| self.statement(statement))
+            .collect_vec();
         function
     }
 

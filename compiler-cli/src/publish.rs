@@ -152,7 +152,9 @@ fn check_for_name_squatting(package: &Package) -> Result<(), Error> {
         return Ok(());
     };
 
-    if main.body.first().is_println() {
+    if let Some(first) = &main.body.first()
+        && first.is_println()
+    {
         return Err(Error::HexPackageSquatting);
     }
 
@@ -185,7 +187,7 @@ fn is_default_main(main: &TypedFunction, package_name: &EcoString) -> bool {
         return false;
     }
 
-    let Statement::Expression(expression) = main.body.first() else {
+    let Some(Statement::Expression(expression)) = main.body.first() else {
         return false;
     };
 

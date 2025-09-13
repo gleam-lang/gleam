@@ -842,15 +842,15 @@ impl<'comments> Formatter<'comments> {
         }
         .group();
 
-        let body = &function.body;
-        if body.len() == 1 && body.first().is_placeholder() {
+        if function.body.is_empty() {
             return attributes.append(signature);
         }
 
         let head = attributes.append(signature);
 
         // Format body
-        let body = self.statements(body);
+
+        let body = self.statements(&function.body);
 
         // Add any trailing comments
         let body = match printed_comments(self.pop_comments(function.end_position), false) {
@@ -904,7 +904,7 @@ impl<'comments> Formatter<'comments> {
             Some(t) => header.append(" -> ").append(self.type_ast(t)),
         };
 
-        let statements = self.statements(body);
+        let statements = self.statements(body.as_vec());
         let body = match printed_comments(self.pop_comments(location.end), false) {
             None => statements,
             Some(comments) => statements.append(line()).append(comments).force_break(),
@@ -913,7 +913,7 @@ impl<'comments> Formatter<'comments> {
         header.append(" ").append(wrap_block(body)).group()
     }
 
-    fn statements<'a>(&mut self, statements: &'a Vec1<UntypedStatement>) -> Document<'a> {
+    fn statements<'a>(&mut self, statements: &'a [UntypedStatement]) -> Document<'a> {
         let mut previous_position = 0;
         let count = statements.len();
         let mut documents = Vec::with_capacity(count * 2);
@@ -934,7 +934,12 @@ impl<'comments> Formatter<'comments> {
                 documents.push("todo".to_doc());
             }
         }
-        if count == 1 && statements.first().is_expression() {
+
+        if count == 1
+            && statements
+                .first()
+                .is_some_and(|statement| statement.is_expression())
+        {
             documents.to_doc()
         } else {
             documents.to_doc().force_break()
@@ -980,8 +985,6 @@ impl<'comments> Formatter<'comments> {
         let comments = self.pop_comments(expr.start_byte_index());
 
         let document = match expr {
-            UntypedExpr::Placeholder { .. } => panic!("Placeholders should not be formatted"),
-
             UntypedExpr::Panic { message, .. } => {
                 self.append_as_message("panic".to_doc(), PrecedingAs::Keyword, message.as_deref())
             }
@@ -1253,8 +1256,6 @@ impl<'comments> Formatter<'comments> {
         location: &SrcSpan,
     ) -> Document<'a> {
         let expr = match fun {
-            UntypedExpr::Placeholder { .. } => panic!("Placeholders should not be formatted"),
-
             UntypedExpr::PipeLine { .. } => break_block(self.expr(fun)),
 
             UntypedExpr::BinOp { .. }
@@ -2651,8 +2652,6 @@ impl<'comments> Formatter<'comments> {
 
     fn bit_array_segment_expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
-            UntypedExpr::Placeholder { .. } => panic!("Placeholders should not be formatted"),
-
             UntypedExpr::BinOp { .. } => wrap_block(self.expr(expr)),
 
             UntypedExpr::Int { .. }
@@ -2693,7 +2692,8 @@ impl<'comments> Formatter<'comments> {
         statements: &'a Vec1<UntypedStatement>,
         force_breaks: bool,
     ) -> Document<'a> {
-        let statements_doc = docvec![break_("", " "), self.statements(statements)].nest(INDENT);
+        let statements_doc =
+            docvec![break_("", " "), self.statements(statements.as_vec())].nest(INDENT);
         let trailing_comments = self.pop_comments(location.end);
         let trailing_comments = printed_comments(trailing_comments, false);
         let block_doc = match trailing_comments {

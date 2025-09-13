@@ -689,7 +689,7 @@ pub struct Function<T, Expr> {
     pub end_position: u32,
     pub name: Option<SpannedString>,
     pub arguments: Vec<Arg<T>>,
-    pub body: Vec1<Statement<T, Expr>>,
+    pub body: Vec<Statement<T, Expr>>,
     pub publicity: Publicity,
     pub deprecation: Deprecation,
     pub return_annotation: Option<TypeAst>,
@@ -3571,13 +3571,6 @@ impl UntypedStatement {
             Statement::Assignment(assignment) => assignment.location.start,
             Statement::Use(use_) => use_.location.start,
             Statement::Assert(assert) => assert.location.start,
-        }
-    }
-
-    pub fn is_placeholder(&self) -> bool {
-        match self {
-            Statement::Expression(expression) => expression.is_placeholder(),
-            Statement::Assignment(_) | Statement::Use(_) | Statement::Assert(_) => false,
         }
     }
 }

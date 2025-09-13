@@ -414,17 +414,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => Ok(self.infer_todo(location, kind, label)),
 
-            // A placeholder is used when the author has not provided a function
-            // body, instead only giving an external implementation for this
-            // target. This placeholder implementation will never be used so we
-            // treat it as a `panic` expression during analysis.
-            UntypedExpr::Placeholder { location } => {
-                Ok(self.infer_panic(location, None, PanicKind::Placeholder))
-            }
-
             UntypedExpr::Panic {
                 location, message, ..
-            } => Ok(self.infer_panic(location, message, PanicKind::Panic)),
+            } => Ok(self.infer_panic(location, message)),
 
             UntypedExpr::Echo {
                 location,
@@ -592,21 +584,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn infer_panic(
-        &mut self,
-        location: SrcSpan,
-        message: Option<Box<UntypedExpr>>,
-        kind: PanicKind,
-    ) -> TypedExpr {
+    fn infer_panic(&mut self, location: SrcSpan, message: Option<Box<UntypedExpr>>) -> TypedExpr {
         let type_ = self.new_unbound_var();
-
-        match kind {
-            PanicKind::Panic => self.purity = Purity::Impure,
-            // If this panic is a placeholder, we've already tracked impurity
-            // based on the FFI of this function, and don't need to change
-            // anything here.
-            PanicKind::Placeholder => {}
-        }
+        self.purity = Purity::Impure;
 
         let message = message.map(|message| Box::new(self.infer_and_unify(*message, string())));
         self.previous_panics = true;
@@ -4317,7 +4297,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 arguments.push(CallArg {
                     label: None,
                     location,
-                    value: UntypedExpr::Placeholder {
+                    value: UntypedExpr::Panic {
                         // We intentionally give this an empty span since it
                         // is an implicit argument being passed by the compiler
                         // that doesn't appear in the source code.
@@ -4325,6 +4305,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             start: last.location().start,
                             end: last.location().start,
                         },
+                        message: None,
                     },
                     implicit: Some(ImplicitCallArgOrigin::IncorrectArityUse),
                 });
@@ -4486,18 +4467,22 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             None => None,
         };
 
-        self.infer_fn_with_known_types(arguments, body, return_type)
+        let (arguments, body) =
+            self.infer_fn_with_known_types(arguments, body.to_vec(), return_type)?;
+        let body =
+            Vec1::try_from_vec(body).expect("body guaranteed to have at least one statement");
+        Ok((arguments, body))
     }
 
     pub fn infer_fn_with_known_types(
         &mut self,
         arguments: Vec<TypedArg>,
-        body: Vec1<UntypedStatement>,
+        body: Vec<UntypedStatement>,
         return_type: Option<Arc<Type>>,
-    ) -> Result<(Vec<TypedArg>, Vec1<TypedStatement>), Error> {
+    ) -> Result<(Vec<TypedArg>, Vec<TypedStatement>), Error> {
         // If a function has an empty body then it doesn't have a pure gleam
         // implementation.
-        if body.first().is_placeholder() {
+        if body.is_empty() {
             self.implementations.gleam = false;
         }
 
@@ -4541,7 +4526,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             argument.type_.clone(),
                         );
 
-                        if !body.first().is_placeholder() {
+                        if !body.is_empty() {
                             // Register the variable in the usage tracker so that we
                             // can identify if it is unused
                             body_typer.environment.init_usage(
@@ -4556,36 +4541,40 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 };
             }
 
-            let mut body = body_typer.infer_statements(body);
+            if let Ok(body) = Vec1::try_from_vec(body) {
+                let mut body = body_typer.infer_statements(body);
 
-            // Check that any return type is accurate.
-            if let Some(return_type) = return_type
-                && let Err(error) = unify(return_type, body.last().type_())
-            {
-                let error = error
-                    .return_annotation_mismatch()
-                    .into_error(body.last().type_defining_location());
-                body_typer.problems.error(error);
+                // Check that any return type is accurate.
+                if let Some(return_type) = return_type
+                    && let Err(error) = unify(return_type, body.last().type_())
+                {
+                    let error = error
+                        .return_annotation_mismatch()
+                        .into_error(body.last().type_defining_location());
+                    body_typer.problems.error(error);
 
-                // If the return type doesn't match with the annotation we
-                // add a new expression to the end of the function to match
-                // the annotated type and allow type inference to keep
-                // going.
-                body.push(Statement::Expression(TypedExpr::Invalid {
-                    // This is deliberately an empty span since this
-                    // placeholder expression is implicitly inserted by the
-                    // compiler and doesn't actually appear in the source
-                    // code.
-                    location: SrcSpan {
-                        start: body.last().location().end,
-                        end: body.last().location().end,
-                    },
-                    type_: body_typer.new_unbound_var(),
-                    extra_information: None,
-                }))
-            };
+                    // If the return type doesn't match with the annotation we
+                    // add a new expression to the end of the function to match
+                    // the annotated type and allow type inference to keep
+                    // going.
+                    body.push(Statement::Expression(TypedExpr::Invalid {
+                        // This is deliberately an empty span since this
+                        // placeholder expression is implicitly inserted by the
+                        // compiler and doesn't actually appear in the source
+                        // code.
+                        location: SrcSpan {
+                            start: body.last().location().end,
+                            end: body.last().location().end,
+                        },
+                        type_: body_typer.new_unbound_var(),
+                        extra_information: None,
+                    }))
+                };
 
-            Ok((arguments, body))
+                Ok((arguments, body.to_vec()))
+            } else {
+                Ok((arguments, vec![]))
+            }
         })
     }
 
@@ -4995,11 +4984,6 @@ impl RecordUpdateVariant<'_> {
     fn field_names(&self) -> Vec<EcoString> {
         self.fields.keys().cloned().collect()
     }
-}
-
-enum PanicKind {
-    Panic,
-    Placeholder,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]

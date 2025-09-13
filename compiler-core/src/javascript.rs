@@ -647,7 +647,7 @@ impl<'a> Generator<'a> {
             "export function "
         };
 
-        let body = generator.function_body(&function.body, function.arguments.as_slice());
+        let body = generator.function_body(function.body.as_slice(), function.arguments.as_slice());
 
         docvec![
             function_doc,

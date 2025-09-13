@@ -18,7 +18,7 @@ fn id(x) { x }
 -export([main/0]).
 
 -file("project/test/my/mod.gleam", 6).
--spec id(L) -> L.
+-spec id(K) -> K.
 id(X) ->
     X.
 

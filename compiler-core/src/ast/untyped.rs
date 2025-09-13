@@ -142,16 +142,6 @@ pub enum UntypedExpr {
         location: SrcSpan,
         value: Box<Self>,
     },
-
-    /// A placeholder used when parsing is incomplete or when a function body is
-    /// missing due to an external implementation being given for the function
-    /// instead.
-    /// TODO: This variant should be removed in future, but it requires some
-    /// rework of the type inference code to be able to handle functions that do
-    /// not have a body.
-    Placeholder {
-        location: SrcSpan,
-    },
 }
 
 impl UntypedExpr {
@@ -180,7 +170,6 @@ impl UntypedExpr {
             | Self::NegateInt { location, .. }
             | Self::NegateBool { location, .. }
             | Self::TupleIndex { location, .. }
-            | Self::Placeholder { location, .. }
             | Self::FieldAccess { location, .. }
             | Self::RecordUpdate { location, .. } => *location,
         }
@@ -235,8 +224,7 @@ impl UntypedExpr {
             | UntypedExpr::Panic { .. }
             | UntypedExpr::Echo { .. }
             | UntypedExpr::BitArray { .. }
-            | UntypedExpr::RecordUpdate { .. }
-            | UntypedExpr::Placeholder { .. } => false,
+            | UntypedExpr::RecordUpdate { .. } => false,
         }
     }
 
@@ -253,14 +241,6 @@ impl UntypedExpr {
     #[must_use]
     pub fn is_call(&self) -> bool {
         matches!(self, Self::Call { .. })
-    }
-
-    /// Returns `true` if the untyped expr is [`Placeholder`].
-    ///
-    /// [`Placeholder`]: UntypedExpr::Placeholder
-    #[must_use]
-    pub fn is_placeholder(&self) -> bool {
-        matches!(self, Self::Placeholder { .. })
     }
 
     #[must_use]
