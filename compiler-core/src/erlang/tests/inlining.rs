@@ -333,3 +333,96 @@ pub fn main() {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4877
+#[test]
+fn inline_shadowed_variable() {
+    assert_erl!(
+        "
+pub fn main() {
+  let a = 10
+  let b = 20
+
+  fn(x) {
+    let a = 7
+    x + a
+  }(a + b)
+
+  a
+}
+"
+    );
+}
+
+#[test]
+fn inline_variable_shadowing_parameter() {
+    assert_erl!(
+        "
+pub fn sum(a, b) {
+  fn(x) {
+    let a = 7
+    x + a
+  }(a + b)
+
+  a
+}
+"
+    );
+}
+
+#[test]
+fn inline_shadowed_variable_nested() {
+    assert_erl!(
+        "
+pub fn sum(a, b) {
+  fn(x) {
+    let a = 7
+    fn(y) {
+      let a = 10
+      y - a
+    }(x + a)
+
+    a
+  }(a + b)
+
+  a
+}
+"
+    );
+}
+
+#[test]
+fn inline_variable_shadowed_in_case_pattern() {
+    assert_erl!(
+        "
+pub fn sum() {
+  let a = 10
+  let b = 20
+
+  fn(x) {
+    case 7, 8 {
+      a, b -> a + b + x
+    }
+  }(a + b)
+
+  a + b
+}
+"
+    );
+}
+
+#[test]
+fn inline_variable_shadowing_case_pattern() {
+    assert_erl!(
+        "
+pub fn sum() {
+  case 1, 2 {
+    a, b -> fn(x) {
+      let a = 7
+      x + a
+    }(a + b)
+  }
+}
+"
+    );
+}
