@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn wibble(bits) {\n  case bits {\n    <<\"\\u{0000}a\\u{0000}b\":utf8>> -> 1\n    // This is the same as the one above, it shouldn't be reachable\n    <<\"ab\":utf16>> -> 2\n    _ -> 3\n  }\n}"
+---
+----- SOURCE CODE
+
+pub fn wibble(bits) {
+  case bits {
+    <<"\u{0000}a\u{0000}b":utf8>> -> 1
+    // This is the same as the one above, it shouldn't be reachable
+    <<"ab":utf16>> -> 2
+    _ -> 3
+  }
+}
+
+----- WARNING
+warning: Unreachable pattern
+  ┌─ /src/warning/wrn.gleam:6:5
+  │
+6 │     <<"ab":utf16>> -> 2
+  │     ^^^^^^^^^^^^^^
+
+This pattern cannot be reached as a previous pattern matches the same
+values.
+
+Hint: It can be safely removed.
