@@ -2276,6 +2276,10 @@ impl SrcSpan {
         byte_index >= self.start && byte_index <= self.end
     }
 
+    pub fn contains_span(&self, span: SrcSpan) -> bool {
+        self.contains(span.start) && self.contains(span.end)
+    }
+
     /// Merges two spans into a new one that starts at the start of the smaller
     /// one and ends at the end of the bigger one. For example:
     ///
