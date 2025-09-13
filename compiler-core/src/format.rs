@@ -913,7 +913,7 @@ impl<'comments> Formatter<'comments> {
         header.append(" ").append(wrap_block(body)).group()
     }
 
-    fn statements<'a>(&mut self, statements: &'a Vec<UntypedStatement>) -> Document<'a> {
+    fn statements<'a>(&mut self, statements: &'a [UntypedStatement]) -> Document<'a> {
         let mut previous_position = 0;
         let count = statements.len();
         let mut documents = Vec::with_capacity(count * 2);

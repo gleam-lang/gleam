@@ -822,7 +822,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
     fn ensure_function_has_an_implementation(
         &mut self,
-        body: &Vec<UntypedStatement>,
+        body: &[UntypedStatement],
         external_erlang: &Option<(EcoString, EcoString, SrcSpan)>,
         external_javascript: &Option<(EcoString, EcoString, SrcSpan)>,
         location: SrcSpan,
