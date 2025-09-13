@@ -8411,3 +8411,190 @@ impl<'ast> ast::visit::Visit<'ast> for AddOmittedLabels<'ast> {
         self.arguments_and_omitted_labels = Some(omitted_labels);
     }
 }
+
+/// Code action to extract selected code into a separate function.
+pub struct ExtractFunction<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    extract: Extract<'a>,
+    function_end_position: Option<u32>,
+}
+
+#[derive(Debug)]
+enum Extract<'a> {
+    None,
+    Expression(&'a TypedExpr),
+    Statements(Vec<&'a TypedStatement>),
+}
+
+impl<'a> ExtractFunction<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            extract: Extract::None,
+            function_end_position: None,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        if self.params.range.start == self.params.range.end {
+            return Vec::new();
+        }
+
+        self.visit_typed_module(&self.module.ast);
+
+        let Some(end) = self.function_end_position else {
+            return Vec::new();
+        };
+
+        match std::mem::replace(&mut self.extract, Extract::None) {
+            Extract::None => return Vec::new(),
+            Extract::Expression(expression) => self.extract_expression(expression, end),
+            Extract::Statements(statements) => self.extract_statements(statements, end),
+        }
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Extract function")
+            .kind(CodeActionKind::REFACTOR_EXTRACT)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(false)
+            .push_to(&mut action);
+        action
+    }
+
+    fn extract_expression(&mut self, expression: &TypedExpr, function_end: u32) {
+        let referenced_variables = referenced_variables(expression);
+
+        let expression_code = code_at(self.module, expression.location());
+
+        let arguments = referenced_variables.iter().map(|(name, _)| name).join(", ");
+        let call = format!("function({arguments})");
+        self.edits.replace(expression.location(), call);
+
+        let mut printer = Printer::new(&self.module.ast.names);
+
+        let parameters = referenced_variables
+            .iter()
+            .map(|(name, type_)| eco_format!("{name}: {}", printer.print_type(type_)))
+            .join(", ");
+        let return_type = printer.print_type(&expression.type_());
+
+        let function = format!(
+            "\n\nfn function({parameters}) -> {return_type} {{
+  {expression_code}
+}}"
+        );
+
+        self.edits.insert(function_end, function);
+    }
+
+    fn extract_statements(&mut self, statements: Vec<&TypedStatement>, function_end: u32) {
+        todo!("Implement for statements")
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
+    fn visit_typed_function(&mut self, function: &'ast ast::TypedFunction) {
+        let range = self.edits.src_span_to_lsp_range(function.full_location());
+
+        if within(self.params.range, range) {
+            self.function_end_position = Some(function.end_position);
+
+            ast::visit::visit_typed_function(self, function);
+        }
+    }
+
+    fn visit_typed_expr(&mut self, expression: &'ast TypedExpr) {
+        match &self.extract {
+            Extract::None => {
+                let range = self.edits.src_span_to_lsp_range(expression.location());
+
+                if within(range, self.params.range) {
+                    self.extract = Extract::Expression(expression);
+                    return;
+                }
+            }
+            Extract::Expression(_) | Extract::Statements(_) => {}
+        }
+        ast::visit::visit_typed_expr(self, expression);
+    }
+
+    fn visit_typed_statement(&mut self, statement: &'ast TypedStatement) {
+        let range = self.edits.src_span_to_lsp_range(statement.location());
+        if within(range, self.params.range) {
+            match &mut self.extract {
+                Extract::None => {
+                    self.extract = Extract::Statements(vec![statement]);
+                }
+                Extract::Expression(expression) => {
+                    if expression.location().contains_span(statement.location()) {
+                        return;
+                    }
+
+                    self.extract = Extract::Statements(vec![statement]);
+                }
+                Extract::Statements(statements) => {
+                    statements.push(statement);
+                }
+            }
+        } else {
+            ast::visit::visit_typed_statement(self, statement);
+        }
+    }
+}
+
+fn referenced_variables(expression: &TypedExpr) -> Vec<(EcoString, Arc<Type>)> {
+    let mut references = ReferencedVariables {
+        variables: Vec::new(),
+        defined_variables: HashSet::new(),
+    };
+    references.visit_typed_expr(expression);
+    references.variables
+}
+
+struct ReferencedVariables {
+    variables: Vec<(EcoString, Arc<Type>)>,
+    defined_variables: HashSet<EcoString>,
+}
+
+impl ReferencedVariables {
+    fn register(&mut self, name: &EcoString, type_: &Arc<Type>) {
+        if self.defined_variables.contains(name) {
+            return;
+        }
+
+        if !self
+            .variables
+            .iter()
+            .any(|(variable_name, _)| variable_name == name)
+        {
+            self.variables.push((name.clone(), type_.clone()))
+        }
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for ReferencedVariables {
+    fn visit_typed_expr_var(
+        &mut self,
+        _location: &'ast SrcSpan,
+        constructor: &'ast ValueConstructor,
+        name: &'ast EcoString,
+    ) {
+        match &constructor.variant {
+            type_::ValueConstructorVariant::LocalVariable { .. } => {
+                self.register(name, &constructor.type_);
+            }
+            type_::ValueConstructorVariant::ModuleConstant { .. }
+            | type_::ValueConstructorVariant::LocalConstant { .. }
+            | type_::ValueConstructorVariant::ModuleFn { .. }
+            | type_::ValueConstructorVariant::Record { .. } => {}
+        }
+    }
+}

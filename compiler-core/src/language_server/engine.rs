@@ -13,8 +13,8 @@ use crate::{
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
         code_action::{
-            AddOmittedLabels, CollapseNestedCase, RemoveBlock, RemovePrivateOpaque,
-            RemoveUnreachableBranches,
+            AddOmittedLabels, CollapseNestedCase, ExtractFunction, RemoveBlock,
+            RemovePrivateOpaque, RemoveUnreachableBranches,
         },
         compiler::LspProjectCompiler,
         files::FileSystemProxy,
@@ -450,6 +450,7 @@ where
             actions.extend(WrapInBlock::new(module, &lines, &params).code_actions());
             actions.extend(RemoveBlock::new(module, &lines, &params).code_actions());
             actions.extend(RemovePrivateOpaque::new(module, &lines, &params).code_actions());
+            actions.extend(ExtractFunction::new(module, &lines, &params).code_actions());
             GenerateDynamicDecoder::new(module, &lines, &params, &mut actions).code_actions();
             GenerateJsonEncoder::new(
                 module,

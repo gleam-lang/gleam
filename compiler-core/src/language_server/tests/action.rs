@@ -135,6 +135,7 @@ const REMOVE_OPAQUE_FROM_PRIVATE_TYPE: &str = "Remove opaque from private type";
 const COLLAPSE_NESTED_CASE: &str = "Collapse nested case";
 const REMOVE_UNREACHABLE_BRANCHES: &str = "Remove unreachable branches";
 const ADD_OMITTED_LABELS: &str = "Add omitted labels";
+const EXTRACT_FUNCTION: &str = "Extract function";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -10225,5 +10226,25 @@ pub fn main() {
 pub fn labelled(a, b) { todo }
     ",
         find_position_of("labelled").to_selection(),
+    );
+}
+
+#[test]
+fn extract_function() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+pub fn do_things(a, b) {
+  let result = {
+    let a = 10 + a
+    let b = 10 + b
+    a * b
+  }
+  result + 3
+}
+",
+        find_position_of("{")
+            .nth_occurrence(2)
+            .select_until(find_position_of("}\n").under_char('\n'))
     );
 }
