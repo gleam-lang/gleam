@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 193
 expression: "\npub type TypeWithALongNameAndSeveralArguments{\n  TypeWithALongNameAndSeveralArguments(String, String, String, String, String)\n}\n\n\npub fn go() {\n  TypeWithALongNameAndSeveralArguments\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -29,6 +27,20 @@ export class TypeWithALongNameAndSeveralArguments extends $CustomType {
     this[4] = $4;
   }
 }
+export const TypeWithALongNameAndSeveralArguments$TypeWithALongNameAndSeveralArguments = ($0, $1, $2, $3, $4) =>
+  new TypeWithALongNameAndSeveralArguments($0, $1, $2, $3, $4);
+export const TypeWithALongNameAndSeveralArguments$isTypeWithALongNameAndSeveralArguments = (value) =>
+  value instanceof TypeWithALongNameAndSeveralArguments;
+export const TypeWithALongNameAndSeveralArguments$TypeWithALongNameAndSeveralArguments$0 = (value) =>
+  value[0];
+export const TypeWithALongNameAndSeveralArguments$TypeWithALongNameAndSeveralArguments$1 = (value) =>
+  value[1];
+export const TypeWithALongNameAndSeveralArguments$TypeWithALongNameAndSeveralArguments$2 = (value) =>
+  value[2];
+export const TypeWithALongNameAndSeveralArguments$TypeWithALongNameAndSeveralArguments$3 = (value) =>
+  value[3];
+export const TypeWithALongNameAndSeveralArguments$TypeWithALongNameAndSeveralArguments$4 = (value) =>
+  value[4];
 
 export function go() {
   return (var0, var1, var2, var3, var4) => {

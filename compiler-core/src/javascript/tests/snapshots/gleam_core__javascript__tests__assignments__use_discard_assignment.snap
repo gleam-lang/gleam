@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
-assertion_line: 339
 expression: "\ntype Wibble {\n    Wibble(Int)\n    Wobble(Int)\n    Woo(Int)\n}\n\nfn fun(f) { f(Wibble(1)) }\n\npub fn go() {\n  use _ <- fun\n  1\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

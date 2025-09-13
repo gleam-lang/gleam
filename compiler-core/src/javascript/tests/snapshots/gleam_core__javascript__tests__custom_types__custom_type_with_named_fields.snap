@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 222
 expression: "\npub type Cat {\n  Cat(name: String, cuteness: Int)\n}\n\npub type Box {\n  Box(occupant: Cat)\n}\n\npub const felix = Cat(\"Felix\", 12)\npub const tom = Cat(cuteness: 1, name: \"Tom\")\n\npub fn go() {\n  Cat(\"Nubi\", 1)\n  Cat(2, name: \"Nubi\")\n  Cat(cuteness: 3, name: \"Nubi\")\n}\n\npub fn update(cat) {\n  Cat(..cat, name: \"Sid\")\n  Cat(..cat, name: \"Bartholemew Wonder Puss the Fourth !!!!!!!!!!!!!!!!\")\n  Cat(..new_cat(), name: \"Molly\")\n  let box = Box(occupant: cat)\n  Cat(..box.occupant, cuteness: box.occupant.cuteness + 1)\n}\n\npub fn access(cat: Cat) {\n  cat.cuteness\n}\n\npub fn new_cat() {\n  Cat(name: \"Beau\", cuteness: 11)\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -50,6 +48,12 @@ export class Cat extends $CustomType {
     this.cuteness = cuteness;
   }
 }
+export const Cat$Cat = (name, cuteness) => new Cat(name, cuteness);
+export const Cat$isCat = (value) => value instanceof Cat;
+export const Cat$Cat$name = (value) => value.name;
+export const Cat$Cat$0 = (value) => value.name;
+export const Cat$Cat$cuteness = (value) => value.cuteness;
+export const Cat$Cat$1 = (value) => value.cuteness;
 
 export class Box extends $CustomType {
   constructor(occupant) {
@@ -57,6 +61,10 @@ export class Box extends $CustomType {
     this.occupant = occupant;
   }
 }
+export const Box$Box = (occupant) => new Box(occupant);
+export const Box$isBox = (value) => value instanceof Box;
+export const Box$Box$occupant = (value) => value.occupant;
+export const Box$Box$0 = (value) => value.occupant;
 
 export function go() {
   new Cat("Nubi", 1);

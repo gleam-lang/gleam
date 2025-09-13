@@ -26,6 +26,12 @@ export class Wibble extends $CustomType {
     this.string = string;
   }
 }
+export const Wibble$Wibble = (int, string) => new Wibble(int, string);
+export const Wibble$isWibble = (value) => value instanceof Wibble;
+export const Wibble$Wibble$int = (value) => value.int;
+export const Wibble$Wibble$0 = (value) => value.int;
+export const Wibble$Wibble$string = (value) => value.string;
+export const Wibble$Wibble$1 = (value) => value.string;
 
 export class Wobble extends $CustomType {
   constructor($0) {
@@ -33,6 +39,9 @@ export class Wobble extends $CustomType {
     this[0] = $0;
   }
 }
+export const Wibble$Wobble = ($0) => new Wobble($0);
+export const Wibble$isWobble = (value) => value instanceof Wobble;
+export const Wibble$Wobble$0 = (value) => value[0];
 
 export function go(x) {
   if (x instanceof Wibble) {

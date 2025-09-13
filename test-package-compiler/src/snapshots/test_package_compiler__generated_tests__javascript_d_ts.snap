@@ -35,6 +35,8 @@ export function wobble(): Wibble$;
 import { CustomType as $CustomType } from "./gleam.mjs";
 
 export class Woo extends $CustomType {}
+export const Wibble$Woo = () => new Woo();
+export const Wibble$isWoo = (value) => value instanceof Woo;
 
 export function wobble() {
   return new Woo();

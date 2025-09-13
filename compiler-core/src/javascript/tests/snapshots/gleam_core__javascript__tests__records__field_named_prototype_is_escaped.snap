@@ -18,3 +18,7 @@ export class Wibble extends $CustomType {
     this.prototype$ = prototype;
   }
 }
+export const Wibble$Wibble = (prototype) => new Wibble(prototype);
+export const Wibble$isWibble = (value) => value instanceof Wibble;
+export const Wibble$Wibble$prototype = (value) => value.prototype$;
+export const Wibble$Wibble$0 = (value) => value.prototype$;

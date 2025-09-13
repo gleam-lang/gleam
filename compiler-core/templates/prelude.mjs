@@ -10,6 +10,10 @@ export class CustomType {
   }
 }
 
+export function isCustomType(value) {
+  return value instanceof CustomType;
+}
+
 export class List {
   static fromArray(array, tail) {
     let t = tail || new Empty();
@@ -53,6 +57,10 @@ export class List {
   }
 }
 
+export function isList(value) {
+  return value instanceof List;
+}
+
 // @internal
 export function prepend(element, tail) {
   return new NonEmpty(element, tail);
@@ -81,7 +89,15 @@ class ListIterator {
   }
 }
 
-export class Empty extends List {}
+export class Empty extends List { }
+
+export function List$Empty() {
+  return new Empty();
+}
+
+export function List$isEmpty(value) {
+  return value instanceof Empty;
+}
 
 export class NonEmpty extends List {
   constructor(head, tail) {
@@ -89,6 +105,21 @@ export class NonEmpty extends List {
     this.head = head;
     this.tail = tail;
   }
+}
+
+export function List$NonEmpty(head, tail) {
+  return new NonEmpty(head, tail);
+}
+
+export function List$isNonEmpty(value) {
+  return value instanceof NonEmpty;
+}
+
+export function List$NonEmpty$first(value) {
+  return value.head;
+}
+export function List$NonEmpty$rest(value) {
+  return value.tail;
 }
 
 /**
@@ -306,6 +337,14 @@ export class BitArray {
   }
 }
 
+export function BitArray$BitArray(buffer, bitSize, bitOffset) {
+  return new BitArray(buffer, bitSize, bitOffset);
+}
+
+export function BitArray$isBitArray(value) {
+  return value instanceof BitArray;
+}
+
 /**
  * Returns the nth byte in the given buffer, after applying the specified bit
  * offset. If the index is out of bounds then zero is returned.
@@ -330,6 +369,18 @@ export class UtfCodepoint {
   constructor(value) {
     this.value = value;
   }
+}
+
+export function UtfCodepoint$UtfCodepoint(value) {
+  return new UtfCodepoint(value);
+}
+
+export function UtfCodepoint$isUtfCodepoint(value) {
+  return value instanceof UtfCodepoint;
+}
+
+export function UtfCodepoint$UtfCodepoint$value(value) {
+  return value.value;
 }
 
 const isBitArrayDeprecationMessagePrinted = {};
@@ -592,7 +643,7 @@ export function toBitArray(segments) {
       return new BitArray(segment);
     }
 
-    return new BitArray(new Uint8Array(/** @type {number[]} */ (segments)));
+    return new BitArray(new Uint8Array(/** @type {number[]} */(segments)));
   }
 
   // Count the total number of bits and check if all segments are numbers, i.e.
@@ -614,7 +665,7 @@ export function toBitArray(segments) {
   // If all segments are numbers then pass the segments array directly to the
   // Uint8Array constructor
   if (areAllSegmentsNumbers) {
-    return new BitArray(new Uint8Array(/** @type {number[]} */ (segments)));
+    return new BitArray(new Uint8Array(/** @type {number[]} */(segments)));
   }
 
   // Pack the segments into a Uint8Array
@@ -1442,6 +1493,10 @@ export class Result extends CustomType {
   }
 }
 
+export function isResult(value) {
+  return value instanceof Result;
+}
+
 export class Ok extends Result {
   constructor(value) {
     super();
@@ -1454,6 +1509,18 @@ export class Ok extends Result {
   }
 }
 
+export function Result$Ok(value) {
+  return new Ok(value);
+}
+
+export function Result$isOk(value) {
+  return value instanceof Ok;
+}
+
+export function Result$Ok$0(value) {
+  return value[0];
+}
+
 export class Error extends Result {
   constructor(detail) {
     super();
@@ -1464,6 +1531,18 @@ export class Error extends Result {
   isOk() {
     return false;
   }
+}
+
+export function Result$Error(detail) {
+  return new Error(detail);
+}
+
+export function Result$isError(value) {
+  return value instanceof Error;
+}
+
+export function Result$Error$0(value) {
+  return value[0];
 }
 
 export function isEqual(x, y) {
@@ -1490,7 +1569,7 @@ export function isEqual(x, y) {
       try {
         if (a.equals(b)) continue;
         else return false;
-      } catch {}
+      } catch { }
     }
 
     let [keys, get] = getters(a);
