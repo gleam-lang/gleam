@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn main(x: Int) {\n  let _useless = fn(_) { main(x) }\n  Nil\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main(x: Int) {
+  let _useless = fn(_) { main(x) }
+  Nil
+}
+
+
+----- WARNING
+warning: Unused function argument
+  ┌─ /src/warning/wrn.gleam:2:13
+  │
+2 │ pub fn main(x: Int) {
+  │             ^ This argument is never used
+
+This argument is passed to the function when recursing, but it's never used
+for anything.

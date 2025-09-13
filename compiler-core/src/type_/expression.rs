@@ -434,7 +434,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } => Ok(self.infer_echo(location, keyword_end, expression, message)),
 
             UntypedExpr::Var { location, name, .. } => {
-                self.infer_var(name, location, ReferenceRegistration::RegisterReferences)
+                self.infer_var(name, location, ReferenceRegistration::Register)
             }
 
             UntypedExpr::Int {
@@ -1071,14 +1071,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // no way for a call to `divide_partial` to produce any side effects.
         self.purity = Purity::Pure;
 
-        let (arguments, body) =
-            match self.do_infer_fn(arguments, expected_arguments, body, &return_annotation) {
-                Ok(result) => result,
-                Err(error) => {
-                    self.problems.error(error);
-                    return self.error_expr(location);
-                }
-            };
+        let (arguments, body) = match self.do_infer_fn(
+            None,
+            arguments,
+            expected_arguments,
+            body,
+            &return_annotation,
+        ) {
+            Ok(result) => result,
+            Err(error) => {
+                self.problems.error(error);
+                return self.error_expr(location);
+            }
+        };
         let arguments_types = arguments.iter().map(|a| a.type_.clone()).collect();
         let type_ = fn_(arguments_types, body.last().type_());
 
@@ -1344,11 +1349,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // If the left-hand-side of the record access is a variable, this might actually be
             // module access. In that case, we only want to register a reference to the variable
             // if we actually referencing it in the record access.
-            UntypedExpr::Var { location, name } => self.infer_var(
-                name,
-                location,
-                ReferenceRegistration::DoNotRegisterReferences,
-            ),
+            UntypedExpr::Var { location, name } => {
+                self.infer_var(name, location, ReferenceRegistration::DoNotRegister)
+            }
             _ => self.infer_or_error(container),
         };
         // TODO: is this clone avoidable? we need to box the record for inference in both
@@ -3528,12 +3531,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         name: &EcoString,
         location: &SrcSpan,
     ) -> Result<ValueConstructor, Error> {
-        self.do_infer_value_constructor(
-            module,
-            name,
-            location,
-            ReferenceRegistration::RegisterReferences,
-        )
+        self.do_infer_value_constructor(module, name, location, ReferenceRegistration::Register)
     }
 
     fn do_infer_value_constructor(
@@ -3591,6 +3589,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             deprecation,
         } = constructor;
 
+        self.check_recursive_argument_usage(name, &variant, &register_reference);
+
         // Emit a warning if the value being used is deprecated.
         if let Deprecation::Deprecated { message } = &deprecation {
             self.problems.warning(Warning::DeprecatedItem {
@@ -3602,20 +3602,21 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         self.narrow_implementations(*location, &variant)?;
 
-        if matches!(
-            register_reference,
-            ReferenceRegistration::RegisterReferences
-        ) {
-            self.register_value_constructor_reference(
-                name,
-                &variant,
-                *location,
-                if module.is_some() {
-                    ReferenceKind::Qualified
-                } else {
-                    ReferenceKind::Unqualified
-                },
-            );
+        match register_reference {
+            ReferenceRegistration::DoNotRegister => (),
+
+            ReferenceRegistration::Register | ReferenceRegistration::VariableArgument { .. } => {
+                self.register_value_constructor_reference(
+                    name,
+                    &variant,
+                    *location,
+                    if module.is_some() {
+                        ReferenceKind::Qualified
+                    } else {
+                        ReferenceKind::Unqualified
+                    },
+                );
+            }
         }
 
         // Instantiate generic variables into unbound variables for this usage
@@ -3626,6 +3627,43 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             variant,
             type_,
         })
+    }
+
+    fn check_recursive_argument_usage(
+        &mut self,
+        name: &EcoString,
+        variant: &ValueConstructorVariant,
+        register_reference: &ReferenceRegistration,
+    ) {
+        // If we are registering references for a call argument
+        let ReferenceRegistration::VariableArgument {
+            called_function,
+            argument_index,
+        } = register_reference
+        else {
+            return;
+        };
+
+        // If the passed argument is a function's parameter.
+        let ValueConstructorVariant::LocalVariable { origin, .. } = variant else {
+            return;
+        };
+
+        let VariableDeclaration::FunctionParameter {
+            function_name: declaration_function,
+            index: declaration_index,
+        } = &origin.declaration
+        else {
+            return;
+        };
+
+        // If the called function is the same where the argument is defined,
+        // and the argument is passed unchanged.
+        if declaration_function.as_ref() == Some(called_function)
+            && declaration_index == argument_index
+        {
+            self.environment.increment_recursive_usage(name);
+        }
     }
 
     fn register_value_constructor_reference(
@@ -4338,7 +4376,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .iter_mut()
             .zip(arguments)
             .enumerate()
-            .map(|(i, (type_, arg))| {
+            .map(|(argument_index, (type_, arg))| {
                 if arg.uses_label_shorthand() {
                     self.track_feature_usage(FeatureKind::LabelShorthandSyntax, arg.location);
                 }
@@ -4358,7 +4396,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         call_location,
                         last_statement_location,
                         assignments_location,
-                    } if i == arguments_count - 1 => ArgumentKind::UseCallback {
+                    } if argument_index == arguments_count - 1 => ArgumentKind::UseCallback {
                         function_location: call_location,
                         assignments_location,
                         last_statement_location,
@@ -4376,7 +4414,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     )
                 }
 
-                let value = self.infer_call_argument(value, type_.clone(), argument_kind);
+                let value = self.infer_call_argument(
+                    &fun,
+                    value,
+                    argument_index,
+                    type_.clone(),
+                    argument_kind,
+                );
                 CallArg {
                     label,
                     value,
@@ -4419,12 +4463,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_call_argument(
         &mut self,
-        value: UntypedExpr,
+        called_function: &TypedExpr,
+        argument: UntypedExpr,
+        argument_index: usize,
         type_: Arc<Type>,
         kind: ArgumentKind,
     ) -> TypedExpr {
         let type_ = collapse_links(type_);
-        let value = match (&*type_, value) {
+        let value = match (&*type_, argument) {
             // If the argument is expected to be a function and we are passed a
             // function literal with the correct number of arguments then we
             // have special handling of this argument, passing in information
@@ -4454,8 +4500,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location,
             ),
 
+            // If the argument is a regular var then we specialise.
+            (_, UntypedExpr::Var { location, name }) => {
+                self.infer_variable_call_arg(called_function, name, location, argument_index)
+            }
+
             // Otherwise just perform normal type inference.
-            (_, value) => self.infer(value),
+            (_, argument) => self.infer(argument),
         };
 
         if let Err(error) = unify(type_.clone(), value.type_()) {
@@ -4466,8 +4517,47 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         value
     }
 
+    fn infer_variable_call_arg(
+        &mut self,
+        called_function: &TypedExpr,
+        argument_name: EcoString,
+        argument_location: SrcSpan,
+        argument_index: usize,
+    ) -> TypedExpr {
+        // If the called function is a function defined in this same module we
+        // pass it along to the `infer_var` function so that we can check if the
+        // argument is being passed recursively to the function that is defining
+        // it.
+        let references = if let TypedExpr::Var {
+            constructor:
+                ValueConstructor {
+                    variant: ValueConstructorVariant::ModuleFn { name, module, .. },
+                    ..
+                },
+            ..
+        } = called_function
+            && *module == self.environment.current_module
+        {
+            ReferenceRegistration::VariableArgument {
+                called_function: name.clone(),
+                argument_index,
+            }
+        } else {
+            ReferenceRegistration::Register
+        };
+
+        match self.infer_var(argument_name, argument_location, references) {
+            Ok(result) => result,
+            Err(error) => {
+                self.problems.error(error);
+                self.error_expr(argument_location)
+            }
+        }
+    }
+
     pub fn do_infer_fn(
         &mut self,
+        function_name: Option<EcoString>,
         arguments: Vec<UntypedArg>,
         expected_arguments: &[Arc<Type>],
         body: Vec1<UntypedStatement>,
@@ -4486,11 +4576,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             None => None,
         };
 
-        self.infer_fn_with_known_types(arguments, body, return_type)
+        self.infer_fn_with_known_types(function_name, arguments, body, return_type)
     }
 
     pub fn infer_fn_with_known_types(
         &mut self,
+        function_name: Option<EcoString>,
         arguments: Vec<TypedArg>,
         body: Vec1<UntypedStatement>,
         return_type: Option<Arc<Type>>,
@@ -4505,7 +4596,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // Used to track if any argument names are used more than once
             let mut argument_names = HashSet::with_capacity(arguments.len());
 
-            for argument in arguments.iter() {
+            for (argument_index, argument) in arguments.iter().enumerate() {
                 match &argument.names {
                     ArgNames::Named { name, location }
                     | ArgNames::NamedLabelled {
@@ -4530,7 +4621,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                         let origin = VariableOrigin {
                             syntax,
-                            declaration: VariableDeclaration::FunctionParameter,
+                            declaration: VariableDeclaration::FunctionParameter {
+                                function_name: function_name.clone(),
+                                index: argument_index,
+                            },
                         };
 
                         // Insert a variable for the argument into the environment
@@ -4547,7 +4641,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             body_typer.environment.init_usage(
                                 name.clone(),
                                 origin,
-                                argument.location,
+                                *location,
                                 body_typer.problems,
                             );
                         }
@@ -4718,10 +4812,21 @@ fn is_trusted_pure_module(environment: &Environment<'_>) -> bool {
     environment.origin == Origin::Src
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 enum ReferenceRegistration {
-    RegisterReferences,
-    DoNotRegisterReferences,
+    Register,
+    DoNotRegister,
+
+    /// A special case that happens if we're registering references for
+    /// a variable call argument being passed to a function defined in the
+    /// current module.
+    VariableArgument {
+        /// The name of the function being called, the function is defined in
+        /// the current module.
+        called_function: EcoString,
+        /// The position where the variable is being passed as an argument.
+        argument_index: usize,
+    },
 }
 
 fn extract_typed_use_call_assignments(
