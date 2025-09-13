@@ -936,6 +936,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                      name_location,
                      name,
                      arguments,
+                     type_name,
                      documentation,
                      deprecation: constructor_deprecation,
                  }| {
@@ -980,6 +981,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                         name_location,
                         name,
                         arguments,
+                        type_name,
                         documentation,
                         deprecation: constructor_deprecation,
                     }
