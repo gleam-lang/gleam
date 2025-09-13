@@ -44,6 +44,24 @@ pub async fn publish_package<Http: HttpClient>(
     })
 }
 
+pub async fn transfer_owner<Http: HttpClient>(
+    api_key: &str,
+    package_name: String,
+    new_owner_username_or_email: String,
+    config: &hexpm::Config,
+    http: &Http,
+) -> Result<()> {
+    tracing::info!(
+        "Transferring ownership of `{}` to {}",
+        package_name,
+        new_owner_username_or_email
+    );
+    let request =
+        hexpm::transfer_owner_request(&package_name, &new_owner_username_or_email, api_key, config);
+    let response = http.send(request).await?;
+    hexpm::transfer_owner_response(response).map_err(Error::hex)
+}
+
 #[derive(Debug, strum::EnumString, strum::VariantNames, Clone, Copy, PartialEq, Eq)]
 #[strum(serialize_all = "lowercase")]
 pub enum RetirementReason {
