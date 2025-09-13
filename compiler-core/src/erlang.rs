@@ -708,7 +708,7 @@ fn string_inner(value: &str) -> Document<'_> {
         .replace_all(value, |caps: &Captures<'_>| {
             let slashes = caps.get(1).map_or("", |m| m.as_str());
 
-            if slashes.len() % 2 == 0 {
+            if slashes.len().is_multiple_of(2) {
                 format!("{slashes}u")
             } else {
                 format!("{slashes}x")

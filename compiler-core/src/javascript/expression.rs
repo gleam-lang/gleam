@@ -1536,12 +1536,78 @@ impl<'module, 'a> Generator<'module, 'a> {
             return docvec![left_doc, operator, right_doc];
         }
 
+        // For comparison with singleton custom types, ie, one with no fields.
+        // If you have some code like this
+        // ```gleam
+        //  pub type Wibble {
+        //    Wibble
+        //    Wobble
+        //  }
+
+        //  pub fn is_wibble(w: Wibble) -> Bool {
+        //    w == Wibble
+        //  }
+        // ```
+        // Instead of `isEqual(w, new Wibble())`, generate `w instanceof Wibble`
+        // because the first approach needs to construct a new Wibble, and then call the isEqual function,
+        // which supports any shape of data, and so does a lot of extra logic which isn't necessary.
+
+        if let (
+            _,
+            // RHS: singleton record constructor (arity 0)
+            TypedExpr::Var {
+                constructor:
+                    ValueConstructor {
+                        variant: ValueConstructorVariant::Record { arity: 0, name, .. },
+                        ..
+                    },
+                ..
+            },
+        ) = (left, right)
+        {
+            return self.singleton_equal_helper(left, name, should_be_equal);
+        }
+
+        if let (
+            // LHS: singleton record constructor (arity 0)
+            TypedExpr::Var {
+                constructor:
+                    ValueConstructor {
+                        variant: ValueConstructorVariant::Record { arity: 0, name, .. },
+                        ..
+                    },
+                ..
+            },
+            _,
+        ) = (left, right)
+        {
+            return self.singleton_equal_helper(right, name, should_be_equal);
+        }
+
         // Other types must be compared using structural equality
         let left =
             self.not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(left));
         let right =
             self.not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(right));
+
         self.prelude_equal_call(should_be_equal, left, right)
+    }
+
+    fn singleton_equal_helper(
+        &mut self,
+        expr: &'a TypedExpr,
+        name: &EcoString,
+        should_be_equal: bool,
+    ) -> Document<'a> {
+        let expr_doc =
+            self.not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(expr));
+        let constructor_name = name.to_doc();
+
+        if should_be_equal {
+            docvec![expr_doc, " instanceof ", constructor_name]
+        } else {
+            docvec!["!(", expr_doc, " instanceof ", constructor_name, ")"]
+        }
     }
 
     fn equal_with_doc_operands(
@@ -1967,12 +2033,62 @@ impl<'module, 'a> Generator<'module, 'a> {
             }
 
             ClauseGuard::Equals { left, right, .. } => {
+                if let (
+                    _,
+                    ClauseGuard::Constant(Constant::Record {
+                        arguments, name, ..
+                    }),
+                    // Check if it's a singleton (no arguments)
+                ) = (&**left, &**right)
+                    && arguments.is_empty()
+                {
+                    let left_doc = self.guard(left);
+                    return docvec![left_doc, " instanceof ", name.to_doc()];
+                }
+
+                if let (
+                    ClauseGuard::Constant(Constant::Record {
+                        arguments, name, ..
+                    }),
+                    _,
+                    // Check if it's a singleton (no arguments)
+                ) = (&**left, &**right)
+                    && arguments.is_empty()
+                {
+                    let right_doc = self.guard(right);
+                    return docvec![right_doc, " instanceof ", name.to_doc()];
+                }
+
                 let left = self.guard(left);
                 let right = self.guard(right);
                 self.prelude_equal_call(true, left, right)
             }
 
             ClauseGuard::NotEquals { left, right, .. } => {
+                if let (
+                    _,
+                    ClauseGuard::Constant(Constant::Record {
+                        arguments, name, ..
+                    }),
+                ) = (&**left, &**right)
+                    && arguments.is_empty()
+                {
+                    let left_doc = self.guard(left);
+                    return docvec!["!(", left_doc, " instanceof ", name.to_doc(), ")"];
+                }
+
+                if let (
+                    ClauseGuard::Constant(Constant::Record {
+                        arguments, name, ..
+                    }),
+                    _,
+                ) = (&**left, &**right)
+                    && arguments.is_empty()
+                {
+                    let right_doc = self.guard(right);
+                    return docvec!["!(", right_doc, " instanceof ", name.to_doc(), ")"];
+                }
+
                 let left = self.guard(left);
                 let right = self.guard(right);
                 self.prelude_equal_call(false, left, right)
