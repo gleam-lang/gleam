@@ -655,6 +655,14 @@ pub enum Error {
         package: EcoString,
         location: SrcSpan,
     },
+
+    /// This happens when a type has no type arguments (for example `Int`) but
+    /// it is written with an explicit empty argument list: `Int()`.
+    ///
+    TypeExpectingNoArgumentsAndEmptyArgumentsList {
+        location: SrcSpan,
+        name: EcoString,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1168,6 +1176,7 @@ impl Error {
             | Error::UnsafeRecordUpdate { location, .. }
             | Error::UnnecessarySpreadOperator { location, .. }
             | Error::IncorrectTypeArity { location, .. }
+            | Error::TypeExpectingNoArgumentsAndEmptyArgumentsList { location, .. }
             | Error::CouldNotUnify { location, .. }
             | Error::RecursiveType { location, .. }
             | Error::DuplicateName {

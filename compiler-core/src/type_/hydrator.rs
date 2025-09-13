@@ -118,6 +118,7 @@ impl Hydrator {
                 module,
                 name,
                 arguments,
+                start_parentheses,
             }) => {
                 // Hydrate the type argument AST into types
                 let mut argument_types = Vec::with_capacity(arguments.len());
@@ -183,7 +184,19 @@ impl Hydrator {
                 }
 
                 // Ensure that the correct number of arguments have been given to the constructor
-                if arguments.len() != parameters.len() {
+                //
+                // This is a special case for when the type expects no parameters
+                // and we have written an empty argument list. For example:
+                // `Int()`
+                if let Some(start_parentheses) = start_parentheses
+                    && parameters.is_empty()
+                    && arguments.is_empty()
+                {
+                    return Err(Error::TypeExpectingNoArgumentsAndEmptyArgumentsList {
+                        location: SrcSpan::new(*start_parentheses, location.end),
+                        name: name.clone(),
+                    });
+                } else if arguments.len() != parameters.len() {
                     return Err(Error::IncorrectTypeArity {
                         location: *location,
                         name: name.clone(),
