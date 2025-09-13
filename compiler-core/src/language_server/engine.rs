@@ -13,7 +13,8 @@ use crate::{
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
         code_action::{
-            CollapseNestedCase, RemoveBlock, RemovePrivateOpaque, RemoveUnreachableBranches,
+            AddOmittedLabels, CollapseNestedCase, RemoveBlock, RemovePrivateOpaque,
+            RemoveUnreachableBranches,
         },
         compiler::LspProjectCompiler,
         files::FileSystemProxy,
@@ -444,6 +445,7 @@ where
             actions.extend(
                 PatternMatchOnValue::new(module, &lines, &params, &this.compiler).code_actions(),
             );
+            actions.extend(AddOmittedLabels::new(module, &lines, &params).code_actions());
             actions.extend(InlineVariable::new(module, &lines, &params).code_actions());
             actions.extend(WrapInBlock::new(module, &lines, &params).code_actions());
             actions.extend(RemoveBlock::new(module, &lines, &params).code_actions());

@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  Labelled(1, 2)\n}\n\npub type Labelled {\n  Labelled(Int, b: Int)\n}\n    "
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  Labelled(1, 2)
+  ↑             
+}
+
+pub type Labelled {
+  Labelled(Int, b: Int)
+}
+    
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  Labelled(1, b: 2)
+}
+
+pub type Labelled {
+  Labelled(Int, b: Int)
+}
