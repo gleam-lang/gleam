@@ -203,7 +203,9 @@ impl Inliner<'_> {
     fn function(&mut self, mut function: TypedFunction) -> TypedFunction {
         function.body = function
             .body
-            .map(|body| body.mapped(|statement| self.statement(statement)));
+            .into_iter()
+            .map(|statement| self.statement(statement))
+            .collect_vec();
         function
     }
 
@@ -1111,7 +1113,8 @@ pub fn function_to_inlinable(
 
     let mut converter = FunctionToInlinable::new(&function.arguments);
 
-    let body = (function.body.as_ref())?
+    let body = function
+        .body
         .iter()
         .map(|statement| converter.statement(statement))
         .collect::<Option<_>>()?;

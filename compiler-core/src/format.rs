@@ -842,14 +842,15 @@ impl<'comments> Formatter<'comments> {
         }
         .group();
 
-        let Some(body) = &function.body else {
+        if function.body.is_empty() {
             return attributes.append(signature);
-        };
+        }
 
         let head = attributes.append(signature);
 
         // Format body
-        let body = self.statements(body);
+
+        let body = self.statements(&function.body);
 
         // Add any trailing comments
         let body = match printed_comments(self.pop_comments(function.end_position), false) {
@@ -903,7 +904,7 @@ impl<'comments> Formatter<'comments> {
             Some(t) => header.append(" -> ").append(self.type_ast(t)),
         };
 
-        let statements = self.statements(body);
+        let statements = self.statements(body.as_vec());
         let body = match printed_comments(self.pop_comments(location.end), false) {
             None => statements,
             Some(comments) => statements.append(line()).append(comments).force_break(),
@@ -912,7 +913,7 @@ impl<'comments> Formatter<'comments> {
         header.append(" ").append(wrap_block(body)).group()
     }
 
-    fn statements<'a>(&mut self, statements: &'a Vec1<UntypedStatement>) -> Document<'a> {
+    fn statements<'a>(&mut self, statements: &'a Vec<UntypedStatement>) -> Document<'a> {
         let mut previous_position = 0;
         let count = statements.len();
         let mut documents = Vec::with_capacity(count * 2);
@@ -933,7 +934,12 @@ impl<'comments> Formatter<'comments> {
                 documents.push("todo".to_doc());
             }
         }
-        if count == 1 && statements.first().is_expression() {
+
+        if count == 1
+            && statements
+                .first()
+                .is_some_and(|statement| statement.is_expression())
+        {
             documents.to_doc()
         } else {
             documents.to_doc().force_break()
@@ -2686,7 +2692,8 @@ impl<'comments> Formatter<'comments> {
         statements: &'a Vec1<UntypedStatement>,
         force_breaks: bool,
     ) -> Document<'a> {
-        let statements_doc = docvec![break_("", " "), self.statements(statements)].nest(INDENT);
+        let statements_doc =
+            docvec![break_("", " "), self.statements(statements.as_vec())].nest(INDENT);
         let trailing_comments = self.pop_comments(location.end);
         let trailing_comments = printed_comments(trailing_comments, false);
         let block_doc = match trailing_comments {

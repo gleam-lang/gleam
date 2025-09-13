@@ -689,7 +689,7 @@ pub struct Function<T, Expr> {
     pub end_position: u32,
     pub name: Option<SpannedString>,
     pub arguments: Vec<Arg<T>>,
-    pub body: Option<Vec1<Statement<T, Expr>>>,
+    pub body: Vec<Statement<T, Expr>>,
     pub publicity: Publicity,
     pub deprecation: Deprecation,
     pub return_annotation: Option<TypeAst>,
@@ -877,10 +877,10 @@ impl TypedDefinition {
                     return None;
                 }
 
-                if let Some(statements) = &function.body
-                    && let Some(found) = statements
-                        .iter()
-                        .find_map(|statement| statement.find_node(byte_index))
+                if let Some(found) = function
+                    .body
+                    .iter()
+                    .find_map(|statement| statement.find_node(byte_index))
                 {
                     return Some(found);
                 }
@@ -893,10 +893,10 @@ impl TypedDefinition {
                     return Some(found_arg);
                 };
 
-                if let Some(statements) = &function.body
-                    && let Some(found_statement) = statements
-                        .iter()
-                        .find(|statement| statement.location().contains(byte_index))
+                if let Some(found_statement) = function
+                    .body
+                    .iter()
+                    .find(|statement| statement.location().contains(byte_index))
                 {
                     return Some(Located::Statement(found_statement));
                 };
@@ -1026,7 +1026,8 @@ impl TypedDefinition {
                     return None;
                 }
 
-                (function.body.as_ref())?
+                function
+                    .body
                     .iter()
                     .find_map(|statement| statement.find_statement(byte_index))
             }

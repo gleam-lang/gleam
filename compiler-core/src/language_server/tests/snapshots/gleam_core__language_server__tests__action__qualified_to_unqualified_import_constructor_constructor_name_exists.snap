@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-assertion_line: 3819
 expression: "\nimport option.{Some}\nimport opt\n\npub fn main() -> option.Option(opt.Option(Int)) {\n    Some(opt.Some(1))\n}\n"
-snapshot_kind: text
 ---
 ----- BEFORE ACTION
 

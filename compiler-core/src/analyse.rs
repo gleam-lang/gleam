@@ -520,8 +520,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let (name_location, name) = name.expect("Function in a definition must be named");
         let target = environment.target;
         let body_location = body
-            .as_ref()
-            .map(|body| body.last().location())
+            .last()
+            .map(|statement| statement.location())
             .unwrap_or(location);
         let preregistered_fn = environment
             .get_variable(&name)
@@ -556,7 +556,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             self.ensure_annotations_present(&arguments, return_annotation.as_ref(), location);
         }
 
-        let has_body = body.is_some();
+        let has_body = !body.is_empty();
         let definition = FunctionDefinition {
             has_body,
             has_erlang_external: external_erlang.is_some(),
@@ -606,8 +606,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             let arguments_types = arguments.iter().map(|a| a.type_.clone()).collect();
             let type_ = fn_(
                 arguments_types,
-                body.as_ref()
-                    .map_or(prereg_return_type.clone(), |body| body.last().type_()),
+                body.last()
+                    .map_or(prereg_return_type.clone(), |last| last.type_()),
             );
             Ok((
                 type_,
@@ -629,18 +629,18 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             Err(error) => {
                 self.problems.error(error);
                 let type_ = preregistered_type.clone();
-                let body = Vec1::new(Statement::Expression(TypedExpr::Invalid {
+                let body = vec![Statement::Expression(TypedExpr::Invalid {
                     type_: prereg_return_type.clone(),
                     location: SrcSpan {
                         start: body_location.end,
                         end: body_location.end,
                     },
                     extra_information: None,
-                }));
+                })];
                 let implementations = Implementations::supporting_all();
                 (
                     type_,
-                    Some(body),
+                    body,
                     implementations,
                     Version::new(1, 0, 0),
                     Purity::Impure,
@@ -822,13 +822,13 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
     fn ensure_function_has_an_implementation(
         &mut self,
-        body: &Option<Vec1<UntypedStatement>>,
+        body: &Vec<UntypedStatement>,
         external_erlang: &Option<(EcoString, EcoString, SrcSpan)>,
         external_javascript: &Option<(EcoString, EcoString, SrcSpan)>,
         location: SrcSpan,
     ) -> bool {
-        match (body, external_erlang, external_javascript) {
-            (None, None, None) => {
+        match (external_erlang, external_javascript) {
+            (None, None) if body.is_empty() => {
                 self.problems.error(Error::NoImplementation { location });
                 false
             }
