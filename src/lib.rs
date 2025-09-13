@@ -256,9 +256,8 @@ pub fn get_repository_versions_request(
         .expect("get_repository_versions_request request")
 }
 
-/// Parse a request that get the names and versions of all of the packages on
+/// Parse a request that gets the names and versions of all of the packages on
 /// the package registry.
-///
 pub fn get_repository_versions_response(
     response: http::Response<Vec<u8>>,
     public_key: &[u8],
@@ -277,6 +276,7 @@ pub fn get_repository_versions_response(
     get_repository_versions_data(&body, public_key)
 }
 
+/// Parse a signed binary message containing all of the packages on the package registry.
 pub fn get_repository_versions_data(
     protobuf_bytes: &Vec<u8>,
     public_key: &[u8],
@@ -349,6 +349,7 @@ pub fn get_package_response(
     get_package_data(&body, public_key)
 }
 
+/// Parse a signed binary message containing the information for a package in the repository.
 pub fn get_package_data(
     protobuf_bytes: &Vec<u8>,
     public_key: &[u8],
