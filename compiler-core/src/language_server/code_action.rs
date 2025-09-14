@@ -8505,7 +8505,7 @@ impl<'a> ExtractFunction<'a> {
 
         let location = SrcSpan::new(first.location().start, last.location().end);
 
-        let referenced_variables = referenced_variables_for_statements(&statements);
+        let referenced_variables = referenced_variables_for_statements(&statements, location);
 
         let code = code_at(self.module, location);
 
@@ -8582,15 +8582,16 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
 }
 
 fn referenced_variables(expression: &TypedExpr) -> Vec<(EcoString, Arc<Type>)> {
-    let mut references = ReferencedVariables::new();
+    let mut references = ReferencedVariables::new(expression.location());
     references.visit_typed_expr(expression);
     references.variables
 }
 
 fn referenced_variables_for_statements(
     statements: &[&TypedStatement],
+    location: SrcSpan,
 ) -> Vec<(EcoString, Arc<Type>)> {
-    let mut references = ReferencedVariables::new();
+    let mut references = ReferencedVariables::new(location);
     for statement in statements {
         references.visit_typed_statement(*statement);
     }
@@ -8599,19 +8600,19 @@ fn referenced_variables_for_statements(
 
 struct ReferencedVariables {
     variables: Vec<(EcoString, Arc<Type>)>,
-    defined_variables: HashSet<EcoString>,
+    location: SrcSpan,
 }
 
 impl ReferencedVariables {
-    fn new() -> Self {
+    fn new(location: SrcSpan) -> Self {
         Self {
             variables: Vec::new(),
-            defined_variables: HashSet::new(),
+            location,
         }
     }
 
-    fn register(&mut self, name: &EcoString, type_: &Arc<Type>) {
-        if self.defined_variables.contains(name) {
+    fn register(&mut self, name: &EcoString, type_: &Arc<Type>, definition_location: SrcSpan) {
+        if self.location.contains_span(definition_location) {
             return;
         }
 
@@ -8633,8 +8634,8 @@ impl<'ast> ast::visit::Visit<'ast> for ReferencedVariables {
         name: &'ast EcoString,
     ) {
         match &constructor.variant {
-            type_::ValueConstructorVariant::LocalVariable { .. } => {
-                self.register(name, &constructor.type_);
+            type_::ValueConstructorVariant::LocalVariable { location, .. } => {
+                self.register(name, &constructor.type_, *location);
             }
             type_::ValueConstructorVariant::ModuleConstant { .. }
             | type_::ValueConstructorVariant::LocalConstant { .. }
