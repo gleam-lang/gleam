@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "fn map(value, fn_over_value) { todo }\n\npub fn main() {\n  1\n  |> Ok\n  |> map(fn(value) { value + 2 })\n}"
+---
+----- BEFORE ACTION
+fn map(value, fn_over_value) { todo }
+
+pub fn main() {
+  1
+  |> Ok
+  |> map(fn(value) { value + 2 })
+                             ↑   
+}
+
+
+----- AFTER ACTION
+fn map(value, fn_over_value) { todo }
+
+pub fn main() {
+  1
+  |> Ok
+  |> map(fn(value) { let int = 2
+  value + int })
+}

@@ -659,3 +659,7 @@
 - Fixed a bug where the language server would not fill in the missing labels of
   a pattern correctly, generating invalid code.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where invalid code was being generated when using the "Extract
+  variable" code action inside an anonymous function.
+  ([Matias Carlander](https://github.com/matiascr))
