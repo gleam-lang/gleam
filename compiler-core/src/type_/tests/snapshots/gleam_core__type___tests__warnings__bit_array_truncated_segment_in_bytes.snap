@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 3096
 expression: "\npub fn main() {\n  <<258:size(8)>>\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

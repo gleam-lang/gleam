@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 3950
 expression: "\nimport module.{value}\n\npub const value = 1\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 -- module.gleam

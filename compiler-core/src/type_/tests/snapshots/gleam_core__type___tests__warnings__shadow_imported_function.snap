@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 3932
 expression: "\nimport module.{wibble}\n\npub fn wibble() { Nil }\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 -- module.gleam

@@ -2229,12 +2229,14 @@ but {given} where provided."
                         }
                     }
 
-                    TypeError::TypeExpectingNoArgumentsAndEmptyArgumentsList { location, name } => {
+                    TypeError::TypeUsedAsAConstructor { location, name } => {
                         let text = wrap_format!(
-                            "`{name}` has no type arguments, but here it's given an arguments list."
+                            "`{name}` is a type with no parameters, but here it's \
+being used as a type constructor."
                         );
+
                         Diagnostic {
-                            title: "Incorrect type constructor".into(),
+                            title: "Type used as a type constructor".into(),
                             text,
                             hint: None,
                             level: Level::Error,

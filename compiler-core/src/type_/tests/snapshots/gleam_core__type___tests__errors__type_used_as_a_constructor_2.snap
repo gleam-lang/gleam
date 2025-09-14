@@ -8,10 +8,11 @@ pub fn main() {
 }
 
 ----- ERROR
-error: Incorrect type constructor
+error: Type used as a type constructor
   ┌─ /src/one/two.gleam:2:13
   │
 2 │   let a: Int() = todo
   │             ^^ You can remove this
 
-`Int` has no type arguments, but here it's given an arguments list.
+`Int` is a type with no parameters, but here it's being used as a type
+constructor.
