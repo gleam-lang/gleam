@@ -10264,3 +10264,38 @@ pub fn do_things(a, b) {
         find_position_of("let").select_until(find_position_of("* b\n").under_char('\n'))
     );
 }
+
+#[test]
+fn extract_function_which_use_variables_defined_in_the_extracted_span() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+pub fn do_things(a, b) {
+  let new_a = 10 + a
+  let new_b = 10 + b
+  let result = new_a * new_b
+  result + 3
+}
+",
+        find_position_of("let").select_until(find_position_of("* new_b\n").under_char('\n'))
+    );
+}
+
+#[test]
+fn extract_function_which_use_variables_shadowed_in_an_inner_scope() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+pub fn do_things(a, b) {
+  let first_part = {
+    let a = a + 10
+    let b = b + 10
+    a * b
+  }
+  let result = first_part + a * b
+  result + 3
+}
+",
+        find_position_of("let").select_until(find_position_of("+ a * b\n").under_char('\n'))
+    );
+}
