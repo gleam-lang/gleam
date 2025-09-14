@@ -2947,6 +2947,16 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         }
 
         match expr {
+            TypedExpr::Fn {
+                kind: FunctionLiteralKind::Anonymous { .. },
+                ..
+            } => {
+                self.at_position(ExtractVariablePosition::TopLevelStatement, |this| {
+                    ast::visit::visit_typed_expr(this, expr);
+                });
+                return;
+            }
+
             // Expressions that don't make sense to extract
             TypedExpr::Panic { .. }
             | TypedExpr::Echo { .. }

@@ -9271,6 +9271,36 @@ pub fn main() {
     );
 }
 
+#[test]
+fn extract_variable_in_anonymous_fn_in_argument() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        "fn map(value, fn_over_value) { todo }
+
+pub fn main() {
+  1
+  |> Ok
+  |> map(fn(value) { value + 2 })
+}",
+        find_position_of("2").to_selection()
+    );
+}
+
+#[test]
+fn do_not_extract_top_level_variable_in_anonymous_fn_in_argument() {
+    assert_no_code_actions!(
+        EXTRACT_VARIABLE,
+        "fn map(value, fn_over_value) { todo }
+
+pub fn main() {
+  1
+  |> Ok
+  |> map(fn(value) { value + 1 })
+}",
+        find_position_of("value").nth_occurrence(4).to_selection()
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/4739
 #[test]
 fn do_not_import_internal_modules() {
