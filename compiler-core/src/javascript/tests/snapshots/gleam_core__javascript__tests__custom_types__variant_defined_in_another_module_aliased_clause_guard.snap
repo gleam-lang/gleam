@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\nimport other_module.{Variant as Aliased}\n\npub fn process(e) -> String {\n  case e {\n    value if value == Aliased -> \"match\"\n    _ -> \"no match\"\n  }\n}\n"
+---
+----- SOURCE CODE
+-- other_module.gleam
+pub type Thingy { Variant Other(Int) }
+
+-- main.gleam
+
+import other_module.{Variant as Aliased}
+
+pub fn process(e) -> String {
+  case e {
+    value if value == Aliased -> "match"
+    _ -> "no match"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $other_module from "../other_module.mjs";
+import { Variant as Aliased } from "../other_module.mjs";
+
+export function process(e) {
+  let value = e;
+  if (value instanceof Aliased) {
+    return "match";
+  } else {
+    return "no match";
+  }
+}

@@ -17,7 +17,7 @@ pub fn func() {
 
 ----- COMPILED JAVASCRIPT
 import * as $gleam from "../gleam.mjs";
-import { Ok as Y, CustomType as $CustomType } from "../gleam.mjs";
+import { Ok as Y, CustomType as $CustomType, isEqual } from "../gleam.mjs";
 
 export class Ok extends $CustomType {}
 export const X$Ok = () => new Ok();
@@ -26,7 +26,7 @@ export const X$isOk = (value) => value instanceof Ok;
 export function func() {
   let $ = (var0) => { return new Y(var0); };
   let y = $;
-  if (y instanceof Y) {
+  if (isEqual(y, (var0) => { return new Y(var0); })) {
     return true;
   } else {
     return false;

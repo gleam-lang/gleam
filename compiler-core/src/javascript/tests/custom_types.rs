@@ -808,6 +808,102 @@ pub fn process(s: State) -> String {
 }
 
 #[test]
+fn variant_defined_in_another_module_qualified_expression() {
+    assert_js!(
+        (
+            "other_module",
+            r#"pub type Thingy { Variant OtherVariant }"#
+        ),
+        r#"
+import other_module
+
+pub fn check(x) -> Bool {
+  x == other_module.Variant
+}
+"#,
+    );
+}
+
+#[test]
+fn variant_defined_in_another_module_unqualified_expression() {
+    assert_js!(
+        ("other_module", r#"pub type Thingy { Variant Other(Int) }"#),
+        r#"
+import other_module.{Variant}
+
+pub fn check(x) -> Bool {
+  x == Variant
+}
+"#,
+    );
+}
+
+#[test]
+fn variant_defined_in_another_module_aliased_expression() {
+    assert_js!(
+        ("other_module", r#"pub type Thingy { Variant Other(Int) }"#),
+        r#"
+import other_module.{Variant as Aliased}
+
+pub fn check(x) -> Bool {
+  x == Aliased
+}
+"#,
+    );
+}
+
+#[test]
+fn variant_defined_in_another_module_qualified_clause_guard() {
+    assert_js!(
+        ("other_module", r#"pub type Thingy { Variant Other(Int) }"#),
+        r#"
+import other_module
+
+pub fn process(e) -> String {
+  case e {
+    value if value == other_module.Variant -> "match"
+    _ -> "no match"
+  }
+}
+"#,
+    );
+}
+
+#[test]
+fn variant_defined_in_another_module_unqualified_clause_guard() {
+    assert_js!(
+        ("other_module", r#"pub type Thingy { Variant Other(Int) }"#),
+        r#"
+import other_module.{Variant}
+
+pub fn process(e) -> String {
+  case e {
+    value if value == Variant -> "match"
+    _ -> "no match"
+  }
+}
+"#,
+    );
+}
+
+#[test]
+fn variant_defined_in_another_module_aliased_clause_guard() {
+    assert_js!(
+        ("other_module", r#"pub type Thingy { Variant Other(Int) }"#),
+        r#"
+import other_module.{Variant as Aliased}
+
+pub fn process(e) -> String {
+  case e {
+    value if value == Aliased -> "match"
+    _ -> "no match"
+  }
+}
+"#,
+    );
+}
+
+#[test]
 fn external_annotation() {
     assert_ts_def!(
         r#"
