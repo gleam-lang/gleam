@@ -8496,7 +8496,38 @@ impl<'a> ExtractFunction<'a> {
     }
 
     fn extract_statements(&mut self, statements: Vec<&TypedStatement>, function_end: u32) {
-        todo!("Implement for statements")
+        let Some(first) = statements.first() else {
+            return;
+        };
+        let Some(last) = statements.last() else {
+            return;
+        };
+
+        let location = SrcSpan::new(first.location().start, last.location().end);
+
+        let referenced_variables = referenced_variables_for_statements(&statements);
+
+        let code = code_at(self.module, location);
+
+        let arguments = referenced_variables.iter().map(|(name, _)| name).join(", ");
+        let call = format!("function({arguments})");
+        self.edits.replace(location, call);
+
+        let mut printer = Printer::new(&self.module.ast.names);
+
+        let parameters = referenced_variables
+            .iter()
+            .map(|(name, type_)| eco_format!("{name}: {}", printer.print_type(type_)))
+            .join(", ");
+        let return_type = printer.print_type(&last.type_());
+
+        let function = format!(
+            "\n\nfn function({parameters}) -> {return_type} {{
+  {code}
+}}"
+        );
+
+        self.edits.insert(function_end, function);
     }
 }
 
@@ -8551,11 +8582,18 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
 }
 
 fn referenced_variables(expression: &TypedExpr) -> Vec<(EcoString, Arc<Type>)> {
-    let mut references = ReferencedVariables {
-        variables: Vec::new(),
-        defined_variables: HashSet::new(),
-    };
+    let mut references = ReferencedVariables::new();
     references.visit_typed_expr(expression);
+    references.variables
+}
+
+fn referenced_variables_for_statements(
+    statements: &[&TypedStatement],
+) -> Vec<(EcoString, Arc<Type>)> {
+    let mut references = ReferencedVariables::new();
+    for statement in statements {
+        references.visit_typed_statement(*statement);
+    }
     references.variables
 }
 
@@ -8565,6 +8603,13 @@ struct ReferencedVariables {
 }
 
 impl ReferencedVariables {
+    fn new() -> Self {
+        Self {
+            variables: Vec::new(),
+            defined_variables: HashSet::new(),
+        }
+    }
+
     fn register(&mut self, name: &EcoString, type_: &Arc<Type>) {
         if self.defined_variables.contains(name) {
             return;
