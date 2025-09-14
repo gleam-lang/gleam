@@ -10248,3 +10248,19 @@ pub fn do_things(a, b) {
             .select_until(find_position_of("}\n").under_char('\n'))
     );
 }
+
+#[test]
+fn extract_function_from_statements() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+pub fn do_things(a, b) {
+  let a = 10 + a
+  let b = 10 + b
+  let result = a * b
+  result + 3
+}
+",
+        find_position_of("let").select_until(find_position_of("* b\n").under_char('\n'))
+    );
+}
