@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\nimport other_module.{Variant as Aliased}\n\npub fn check(x) -> Bool {\n  x == Aliased\n}\n"
+---
+----- SOURCE CODE
+-- other_module.gleam
+pub type Thingy { Variant Other(Int) }
+
+-- main.gleam
+
+import other_module.{Variant as Aliased}
+
+pub fn check(x) -> Bool {
+  x == Aliased
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $other_module from "../other_module.mjs";
+import { Variant as Aliased } from "../other_module.mjs";
+
+export function check(x) {
+  return x instanceof Variant;
+}

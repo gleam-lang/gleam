@@ -178,16 +178,24 @@ pub(crate) struct Generator<'module, 'ast> {
     pub let_assert_always_panics: bool,
 }
 
-fn is_ctor_value(g: &TypedClauseGuard) -> Option<EcoString> {
-    match &*g {
-        ClauseGuard::Constant(Constant::Record { arguments, name, .. })
-            if arguments.is_empty() => Some(name.clone()),
+fn ctor_tag(g: &TypedClauseGuard) -> Option<EcoString> {
+    match g {
+        ClauseGuard::Constant(Constant::Record {
+            arguments, name, ..
+        }) if arguments.is_empty() => Some(name.clone()),
         _ => None,
     }
 }
 
 fn is_var(g: &TypedClauseGuard) -> bool {
-    matches!(&*g, ClauseGuard::Var { .. })
+    matches!(g, ClauseGuard::Var { .. })
+}
+
+fn looks_like_constructor_alias(var: &TypedClauseGuard) -> bool {
+    match var {
+        ClauseGuard::Var { type_, .. } => matches!(&**type_, Type::Fn { .. }), // lambda
+        _ => false,
+    }
 }
 
 impl<'module, 'a> Generator<'module, 'a> {
@@ -2041,28 +2049,32 @@ impl<'module, 'a> Generator<'module, 'a> {
             ClauseGuard::Equals { left, right, .. }
             | ClauseGuard::NotEquals { left, right, .. } => {
                 let should_be_equal = matches!(guard, ClauseGuard::Equals { .. });
+                let both_ctor_values = ctor_tag(left).is_some() && ctor_tag(right).is_some();
 
-                // if is_var(right) {
-                //     if let Some(tag) = is_ctor_value(left) {
-                //         let val = self.guard(right);
-                //         return if should_be_equal {
-                //             docvec![val, " instanceof ", tag.to_doc()]
-                //         } else {
-                //             docvec!["!(", val, " instanceof ", tag.to_doc(), ")"]
-                //         };
-                //     }
-                // }
-
-                // if is_var(left) {
-                //     if let Some(tag) = is_ctor_value(right) {
-                //         let val = self.guard(left);
-                //         return if should_be_equal {
-                //             docvec![val, " instanceof ", tag.to_doc()]
-                //         } else {
-                //             docvec!["!(", val, " instanceof ", tag.to_doc(), ")"]
-                //         };
-                //     }
-                // }
+                if !both_ctor_values {
+                    if is_var(left)
+                        && !looks_like_constructor_alias(left)
+                        && let Some(tag) = ctor_tag(right)
+                    {
+                        let l = self.guard(left);
+                        return if should_be_equal {
+                            docvec![l, " instanceof ", tag.to_doc()]
+                        } else {
+                            docvec!["!(", l, " instanceof ", tag.to_doc(), ")"]
+                        };
+                    }
+                    if is_var(right)
+                        && !looks_like_constructor_alias(right)
+                        && let Some(tag) = ctor_tag(left)
+                    {
+                        let r = self.guard(right);
+                        return if should_be_equal {
+                            docvec![r, " instanceof ", tag.to_doc()]
+                        } else {
+                            docvec!["!(", r, " instanceof ", tag.to_doc(), ")"]
+                        };
+                    }
+                }
 
                 // Otherwise fallback to normal equality check
                 let left_doc = self.guard(left);
