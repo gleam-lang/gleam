@@ -183,16 +183,15 @@ impl Hydrator {
                     environment.increment_usage(name);
                 }
 
-                // Ensure that the correct number of arguments have been given to the constructor
+                // Ensure that the correct number of arguments have been given
+                // to the constructor.
                 //
-                // This is a special case for when the type expects no parameters
-                // and we have written an empty argument list. For example:
-                // `Int()`
+                // This is a special case for when a type is being called as a
+                // type constructor. For example: `Int()` or `Bool(a, b)`
                 if let Some(start_parentheses) = start_parentheses
                     && parameters.is_empty()
-                    && arguments.is_empty()
                 {
-                    return Err(Error::TypeExpectingNoArgumentsAndEmptyArgumentsList {
+                    return Err(Error::TypeUsedAsAConstructor {
                         location: SrcSpan::new(*start_parentheses, location.end),
                         name: name.clone(),
                     });

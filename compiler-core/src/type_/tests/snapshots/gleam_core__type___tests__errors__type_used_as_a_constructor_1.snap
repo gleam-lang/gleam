@@ -6,10 +6,11 @@ expression: "pub fn main() -> Int() {}"
 pub fn main() -> Int() {}
 
 ----- ERROR
-error: Incorrect type constructor
+error: Type used as a type constructor
   ┌─ /src/one/two.gleam:1:21
   │
 1 │ pub fn main() -> Int() {}
   │                     ^^ You can remove this
 
-`Int` has no type arguments, but here it's given an arguments list.
+`Int` is a type with no parameters, but here it's being used as a type
+constructor.

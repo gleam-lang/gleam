@@ -3324,15 +3324,24 @@ fn missing_type_constructor_arguments_in_type_annotation_2() {
 }
 
 #[test]
-fn arguments_list_for_type_which_requires_none_1() {
+fn type_used_as_a_constructor_1() {
     assert_module_error!("pub fn main() -> Int() {}");
 }
 
 #[test]
-fn arguments_list_for_type_which_requires_none_2() {
+fn type_used_as_a_constructor_2() {
     assert_module_error!(
         "pub fn main() {
   let a: Int() = todo
+}"
+    );
+}
+
+#[test]
+fn type_used_as_a_constructor_with_more_arguments() {
+    assert_module_error!(
+        "pub fn main() {
+  let a: Int(Int, String) = todo
 }"
     );
 }

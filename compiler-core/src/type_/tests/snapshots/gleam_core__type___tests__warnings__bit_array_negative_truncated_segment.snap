@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 3187
 expression: "\npub fn main() {\n  // -5 in 2's complement is 1111...111011\n  // so if we truncate it to its first 3 bits we\n  // get 011, which is positive 3!\n  <<-5:size(3)>>\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

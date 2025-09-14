@@ -656,10 +656,10 @@ pub enum Error {
         location: SrcSpan,
     },
 
-    /// This happens when a type has no type arguments (for example `Int`) but
-    /// it is written with an explicit empty argument list: `Int()`.
+    /// This happens when a type has no type parameters (for example `Int`) but
+    /// it is being used as a constructor: `Int()`, `Bool(a, b)`.
     ///
-    TypeExpectingNoArgumentsAndEmptyArgumentsList {
+    TypeUsedAsAConstructor {
         location: SrcSpan,
         name: EcoString,
     },
@@ -1176,7 +1176,7 @@ impl Error {
             | Error::UnsafeRecordUpdate { location, .. }
             | Error::UnnecessarySpreadOperator { location, .. }
             | Error::IncorrectTypeArity { location, .. }
-            | Error::TypeExpectingNoArgumentsAndEmptyArgumentsList { location, .. }
+            | Error::TypeUsedAsAConstructor { location, .. }
             | Error::CouldNotUnify { location, .. }
             | Error::RecursiveType { location, .. }
             | Error::DuplicateName {
