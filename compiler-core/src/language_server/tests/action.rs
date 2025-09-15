@@ -10329,3 +10329,46 @@ pub fn do_things(a, b) {
         find_position_of("let").select_until(find_position_of("echo x\n").under_char('\n'))
     );
 }
+
+#[test]
+fn extract_function_which_uses_variable_in_guard() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+pub fn do_things(a, b) {
+  let result = case Nil {
+    _ if a > b -> 17
+    _ if a < b -> 12
+    _ -> panic
+  }
+
+  result % 4
+}
+",
+        find_position_of("case").select_until(find_position_of("}\n").under_char('\n'))
+    );
+}
+
+#[test]
+fn extract_function_which_uses_variable_in_bit_array_pattern() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+pub fn main() {
+  let bits = todo
+  let size = todo
+
+  let segment = case bits {
+    <<x:size(size), _:bits>> -> Ok(x)
+    _ -> Error(Nil)
+  }
+
+  case segment {
+    Ok(value) -> echo value
+    Error(_) -> panic
+  }
+}
+",
+        find_position_of("case").select_until(find_position_of("}\n").under_char('\n'))
+    );
+}

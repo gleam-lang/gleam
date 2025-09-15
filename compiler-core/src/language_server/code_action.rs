@@ -8679,22 +8679,47 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
         constructor: &'ast ValueConstructor,
         name: &'ast EcoString,
     ) {
-        match &constructor.variant {
-            type_::ValueConstructorVariant::LocalVariable {
-                location: definition_location,
-                ..
-            } => {
-                self.register_referenced_variable(
-                    name,
-                    &constructor.type_,
-                    *location,
-                    *definition_location,
-                );
-            }
-            type_::ValueConstructorVariant::ModuleConstant { .. }
-            | type_::ValueConstructorVariant::LocalConstant { .. }
-            | type_::ValueConstructorVariant::ModuleFn { .. }
-            | type_::ValueConstructorVariant::Record { .. } => {}
+        if let type_::ValueConstructorVariant::LocalVariable {
+            location: definition_location,
+            ..
+        } = &constructor.variant
+        {
+            self.register_referenced_variable(
+                name,
+                &constructor.type_,
+                *location,
+                *definition_location,
+            );
+        }
+    }
+
+    fn visit_typed_clause_guard_var(
+        &mut self,
+        location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        type_: &'ast Arc<Type>,
+        definition_location: &'ast SrcSpan,
+    ) {
+        self.register_referenced_variable(name, type_, *location, *definition_location);
+    }
+
+    fn visit_typed_bit_array_size_variable(
+        &mut self,
+        location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        constructor: &'ast Option<Box<ValueConstructor>>,
+        type_: &'ast Arc<Type>,
+    ) {
+        let variant = match constructor {
+            Some(constructor) => &constructor.variant,
+            None => return,
+        };
+        if let type_::ValueConstructorVariant::LocalVariable {
+            location: definition_location,
+            ..
+        } = variant
+        {
+            self.register_referenced_variable(name, type_, *location, *definition_location);
         }
     }
 }
