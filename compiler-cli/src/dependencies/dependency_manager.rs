@@ -5,7 +5,7 @@ use gleam_core::{
     build::{Mode, Telemetry},
     config::PackageConfig,
     dependency,
-    manifest::{Manifest, Resolved},
+    manifest::{Manifest, ManifestPackageSource, Resolved},
     paths::ProjectPaths,
     requirement::Requirement,
 };
@@ -228,14 +228,34 @@ where
                     &mut provided_packages,
                     &mut vec![],
                 )?,
-                Requirement::Git { git, ref_ } => provide_git_package(
-                    name.clone(),
-                    &git,
-                    &ref_,
-                    project_paths,
-                    &mut provided_packages,
-                    &mut Vec::new(),
-                )?,
+                Requirement::Git { git, ref_ } => {
+                    // If this package is locked and we already resolved a commit
+                    // hash for it, we want to use that hash rather than pulling
+                    // the latest commit.
+                    let ref_to_use = if locked.contains_key(&name)
+                        && let Some(manifest) = manifest
+                        && let Some(package) = manifest
+                            .packages
+                            .iter()
+                            .find(|package| package.name == name)
+                        && let ManifestPackageSource::Git { commit, .. } = &package.source
+                    {
+                        commit
+                    } else {
+                        // If the package is unlocked or we haven't resolved a version yet, we use
+                        // the ref specified in `gleam.toml`.
+                        &ref_
+                    };
+
+                    provide_git_package(
+                        name.clone(),
+                        &git,
+                        ref_to_use,
+                        project_paths,
+                        &mut provided_packages,
+                        &mut Vec::new(),
+                    )?
+                }
             };
             let _ = root_requirements.insert(name, version);
         }

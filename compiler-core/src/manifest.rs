@@ -562,7 +562,7 @@ impl Resolved {
                         ManifestPackageSource::Git {
                             commit: new_hash, ..
                         },
-                    ) => changed_git.push(ChangedGit {
+                    ) if old_hash != new_hash => changed_git.push(ChangedGit {
                         name: new.name.clone(),
                         old_hash: old_hash.clone(),
                         new_hash: new_hash.clone(),
