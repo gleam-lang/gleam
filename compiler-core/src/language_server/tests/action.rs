@@ -10167,37 +10167,6 @@ pub fn labelled(a a, b b) { todo }
 }
 
 #[test]
-fn add_omitted_labels_does_not_pop_up_if_function_has_wrong_number_of_arguments() {
-    assert_no_code_actions!(
-        ADD_OMITTED_LABELS,
-        "
-pub fn main() {
-  let a = 1
-  labelled(a, 2, 1)
-}
-
-pub fn labelled(a, b b) { todo }
-    ",
-        find_position_of("labelled").to_selection(),
-    );
-}
-
-#[test]
-fn add_omitted_labels_does_not_pop_up_if_function_has_wrong_type_of_arguments() {
-    assert_no_code_actions!(
-        ADD_OMITTED_LABELS,
-        "
-pub fn main() {
-  labelled(1, 2)
-}
-
-pub fn labelled(a a: String, b b: String) { todo }
-    ",
-        find_position_of("labelled").to_selection(),
-    );
-}
-
-#[test]
 fn add_omitted_labels_does_not_pop_up_if_called_function_has_no_labels() {
     assert_no_code_actions!(
         ADD_OMITTED_LABELS,
