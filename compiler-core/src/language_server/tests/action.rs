@@ -10299,3 +10299,33 @@ pub fn do_things(a, b) {
         find_position_of("let").select_until(find_position_of("+ a * b\n").under_char('\n'))
     );
 }
+
+#[test]
+fn extract_function_which_uses_multiple_extracted_variables() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+pub fn do_things(a, b) {
+  let wibble = a + b
+  let wobble = a * b
+  wobble / wibble
+}
+",
+        find_position_of("let").select_until(find_position_of("* b\n").under_char('\n'))
+    );
+}
+
+#[test]
+fn extract_function_which_uses_no_extracted_variables() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+pub fn do_things(a, b) {
+  let x = a + b
+  echo x
+  a
+}
+",
+        find_position_of("let").select_until(find_position_of("echo x\n").under_char('\n'))
+    );
+}

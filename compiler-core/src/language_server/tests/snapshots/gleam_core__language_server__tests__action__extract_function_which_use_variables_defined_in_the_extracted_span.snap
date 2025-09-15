@@ -18,7 +18,7 @@ pub fn do_things(a, b) {
 ----- AFTER ACTION
 
 pub fn do_things(a, b) {
-  function(a, b)
+  let result = function(a, b)
   result + 3
 }
 
@@ -26,4 +26,5 @@ fn function(a: Int, b: Int) -> Int {
   let new_a = 10 + a
   let new_b = 10 + b
   let result = new_a * new_b
+  result
 }
