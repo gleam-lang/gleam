@@ -567,9 +567,12 @@ impl Resolved {
                         old_hash: old_hash.clone(),
                         new_hash: new_hash.clone(),
                     }),
-                    (ManifestPackageSource::Hex { .. }, _)
-                    | (ManifestPackageSource::Local { .. }, _)
-                    | (ManifestPackageSource::Git { .. }, _) => {}
+                    (
+                        ManifestPackageSource::Hex { .. }
+                        | ManifestPackageSource::Local { .. }
+                        | ManifestPackageSource::Git { .. },
+                        _,
+                    ) => {}
                 },
                 Some(old) => {
                     changed.push(Changed {
