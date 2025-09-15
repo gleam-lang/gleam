@@ -485,6 +485,11 @@ pub struct Resolved {
     pub manifest: Manifest,
     pub added: Vec<(EcoString, Version)>,
     pub changed: Vec<Changed>,
+    /// When updating git dependencies, it is possible to update to a newer commit
+    /// without updating the version of the package (which is specified in
+    /// `gleam.toml`). In this case, we still want to record the change, but it
+    /// must be stored differently.
+    pub changed_git: Vec<ChangedGit>,
     pub removed: Vec<EcoString>,
 }
 
@@ -495,9 +500,19 @@ pub struct Changed {
     pub new: Version,
 }
 
+#[derive(Debug, PartialEq)]
+pub struct ChangedGit {
+    pub name: EcoString,
+    pub old_hash: EcoString,
+    pub new_hash: EcoString,
+}
+
 impl Resolved {
     pub fn any_changes(&self) -> bool {
-        !self.added.is_empty() || !self.changed.is_empty() || !self.removed.is_empty()
+        !self.added.is_empty()
+            || !self.changed.is_empty()
+            || !self.changed_git.is_empty()
+            || !self.removed.is_empty()
     }
 
     pub fn all_added(manifest: Manifest) -> Resolved {
@@ -510,6 +525,7 @@ impl Resolved {
             manifest,
             added,
             changed: vec![],
+            changed_git: vec![],
             removed: vec![],
         }
     }
@@ -519,6 +535,7 @@ impl Resolved {
             manifest,
             added: vec![],
             changed: vec![],
+            changed_git: vec![],
             removed: vec![],
         }
     }
@@ -528,19 +545,36 @@ impl Resolved {
     pub fn with_updates(old: &Manifest, new: Manifest) -> Self {
         let mut added = vec![];
         let mut changed = vec![];
+        let mut changed_git = vec![];
         let mut old: HashMap<_, _> = old
             .packages
             .iter()
-            .map(|package| (&package.name, &package.version))
+            .map(|package| (&package.name, package))
             .collect();
 
         for new in &new.packages {
             match old.remove(&new.name) {
-                Some(old_version) if old_version == &new.version => (),
-                Some(old_version) => {
+                Some(old) if old.version == new.version => match (&old.source, &new.source) {
+                    (
+                        ManifestPackageSource::Git {
+                            commit: old_hash, ..
+                        },
+                        ManifestPackageSource::Git {
+                            commit: new_hash, ..
+                        },
+                    ) => changed_git.push(ChangedGit {
+                        name: new.name.clone(),
+                        old_hash: old_hash.clone(),
+                        new_hash: new_hash.clone(),
+                    }),
+                    (ManifestPackageSource::Hex { .. }, _)
+                    | (ManifestPackageSource::Local { .. }, _)
+                    | (ManifestPackageSource::Git { .. }, _) => {}
+                },
+                Some(old) => {
                     changed.push(Changed {
                         name: new.name.clone(),
-                        old: old_version.clone(),
+                        old: old.version.clone(),
                         new: new.version.clone(),
                     });
                 }
@@ -556,6 +590,7 @@ impl Resolved {
             manifest: new,
             added,
             changed,
+            changed_git,
             removed,
         }
     }
