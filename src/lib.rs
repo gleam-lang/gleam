@@ -273,11 +273,11 @@ pub fn get_repository_versions_response(
     let mut body = Vec::new();
     decoder.read_to_end(&mut body)?;
 
-    get_repository_versions_data(&body, public_key)
+    parse_repository_v2_versions(&body, public_key)
 }
 
 /// Parse a signed binary message containing all of the packages on the package registry.
-pub fn get_repository_versions_data(
+pub fn parse_repository_v2_versions(
     protobuf_bytes: &Vec<u8>,
     public_key: &[u8],
 ) -> Result<HashMap<String, Vec<Version>>, ApiError> {
@@ -346,11 +346,11 @@ pub fn get_package_response(
     let mut body = Vec::new();
     decoder.read_to_end(&mut body)?;
 
-    get_package_data(&body, public_key)
+    parse_repository_v2_package(&body, public_key)
 }
 
 /// Parse a signed binary message containing the information for a package in the repository.
-pub fn get_package_data(
+pub fn parse_repository_v2_package(
     protobuf_bytes: &Vec<u8>,
     public_key: &[u8],
 ) -> Result<Package, ApiError> {

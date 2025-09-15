@@ -970,7 +970,7 @@ async fn get_package_from_bytes_ok() {
     let mut decoder = GzDecoder::new(Cursor::new(response_body));
     let _ = decoder.read_to_end(&mut uncompressed).expect("failed to decompress body");
 
-    let package = crate::get_package_data(
+    let package = crate::parse_repository_v2_package(
         &uncompressed,
         std::include_bytes!("../test/public_key")
     )
@@ -986,7 +986,7 @@ async fn get_package_from_bytes_ok() {
 async fn get_package_from_bytes_malformed() {
     // public key should not be a valid protobuf and should therefore fail
     let bytes = std::include_bytes!("../test/public_key").to_vec();
-    let package_error = crate::get_package_data(
+    let package_error = crate::parse_repository_v2_package(
         &bytes,
         &bytes,
     )
@@ -1046,7 +1046,7 @@ async fn get_repository_versions_from_bytes_ok() {
     let mut decoder = GzDecoder::new(Cursor::new(response_body));
     let _ = decoder.read_to_end(&mut uncompressed).expect("failed to decompress body");
 
-    let versions = crate::get_repository_versions_data(
+    let versions = crate::parse_repository_v2_versions(
         &uncompressed,
         std::include_bytes!("../test/public_key"),
     )
@@ -1073,7 +1073,7 @@ async fn get_repository_versions_from_bytes_ok() {
 async fn get_repository_versions_from_bytes_malformed() {
     // public key should not be a valid protobuf and should therefore fail
     let bytes = std::include_bytes!("../test/public_key").to_vec();
-    let versions_error = crate::get_repository_versions_data(
+    let versions_error = crate::parse_repository_v2_versions(
         &bytes,
         &bytes,
     )
