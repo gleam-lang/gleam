@@ -674,3 +674,7 @@
 - Fixed a bug where invalid code was being generated when using the "Extract
   variable" code action inside an anonymous function.
   ([Matias Carlander](https://github.com/matiascr))
+
+- Fixed a bug where running `gleam update` would not properly update git
+  dependencies unless `gleam clean` was run first.
+  ([Surya Rose](https://github.com/GearsDatapacks))
