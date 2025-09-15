@@ -310,17 +310,19 @@ pub struct LetAssertToCase<'a> {
 
 impl<'ast> ast::visit::Visit<'ast> for LetAssertToCase<'_> {
     fn visit_typed_assignment(&mut self, assignment: &'ast TypedAssignment) {
-        // To prevent weird behaviour when `let assert` statements are nested,
-        // we only check for the code action between the `let` and `=`.
-        let code_action_location =
-            SrcSpan::new(assignment.location.start, assignment.value.location().start);
-        let code_action_range =
-            src_span_to_lsp_range(code_action_location, self.edits.line_numbers);
-
+        let assignment_range = self.edits.src_span_to_lsp_range(assignment.location);
+        let assignment_start_range = self.edits.src_span_to_lsp_range(SrcSpan {
+            start: assignment.location.start,
+            end: assignment.value.location().start,
+        });
         self.visit_typed_expr(&assignment.value);
 
-        // Only offer the code action if the cursor is over the statement
-        if !overlaps(code_action_range, self.params.range) {
+        // Only offer the code action if the cursor is over the statement and
+        // to prevent weird behaviour when `let assert` statements are nested,
+        // we only check for the code action between the `let` and `=`.
+        if !(within(self.params.range, assignment_range)
+            && overlaps(self.params.range, assignment_start_range))
+        {
             return;
         }
 

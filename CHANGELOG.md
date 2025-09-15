@@ -540,6 +540,10 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The language server now offers the `convert to case` code action only if a
+  single `let assert` expression is selected.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 - The formatter now removes needless multiple negations that are safe to remove.
