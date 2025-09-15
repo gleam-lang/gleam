@@ -172,8 +172,9 @@
   is now smaller in certain cases.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- Writing a type followed by an empty argument list no longer stops the compiler
-  from reporting errors further in the code.
+- Writing a type name followed by `()` now emits an error during analysis
+  rather than parsing, so it no longer stops the compiler from reporting errors
+  further in the code.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - The compiler now shows a specific syntax error when trying to use an
