@@ -76,12 +76,6 @@ pub enum TypedExpr {
         type_: Arc<Type>,
         fun: Box<Self>,
         arguments: Vec<CallArg<Self>>,
-        /// Whether the call has the right number and type of arguments.
-        /// This is useful for the language server to know if a call did type
-        /// check to offer some specific actions. Otherwise it would have to
-        /// perform type checking again.
-        ///
-        is_well_typed: bool,
     },
 
     BinOp {

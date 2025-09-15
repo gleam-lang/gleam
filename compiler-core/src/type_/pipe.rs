@@ -102,13 +102,12 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
 
             let (kind, call) = match call {
                 func @ UntypedExpr::Fn { location, kind, .. } => {
-                    let (func, arguments, return_type, is_well_typed) =
-                        self.expr_typer.do_infer_call(
-                            func,
-                            vec![self.untyped_left_hand_value_variable_call_argument()],
-                            location,
-                            CallKind::Function,
-                        );
+                    let (func, arguments, return_type) = self.expr_typer.do_infer_call(
+                        func,
+                        vec![self.untyped_left_hand_value_variable_call_argument()],
+                        location,
+                        CallKind::Function,
+                    );
 
                     self.expr_typer.purity =
                         self.expr_typer.purity.merge(func.called_function_purity());
@@ -129,7 +128,6 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                             arguments,
                             type_: return_type,
                             fun: Box::new(func),
-                            is_well_typed,
                         },
                     )
                 }
@@ -291,15 +289,17 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         arguments: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
     ) -> TypedExpr {
-        let (function, arguments, type_, is_well_typed) = self
-            .expr_typer
-            .do_infer_call_with_known_fun(function, arguments, location, CallKind::Function);
+        let (function, arguments, type_) = self.expr_typer.do_infer_call_with_known_fun(
+            function,
+            arguments,
+            location,
+            CallKind::Function,
+        );
         let function = TypedExpr::Call {
             location,
             type_,
             arguments,
             fun: Box::new(function),
-            is_well_typed,
         };
         let arguments = vec![self.untyped_left_hand_value_variable_call_argument()];
         // TODO: use `.with_unify_error_situation(UnifyErrorSituation::PipeTypeMismatch)`
@@ -307,15 +307,17 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         // the function below. If it is not we don't know if the error comes
         // from incorrect usage of the pipe or if it originates from the
         // argument expressions.
-        let (function, arguments, type_, is_well_typed) = self
-            .expr_typer
-            .do_infer_call_with_known_fun(function, arguments, location, CallKind::Function);
+        let (function, arguments, type_) = self.expr_typer.do_infer_call_with_known_fun(
+            function,
+            arguments,
+            location,
+            CallKind::Function,
+        );
         TypedExpr::Call {
             location,
             type_,
             arguments,
             fun: Box::new(function),
-            is_well_typed,
         }
     }
 
@@ -332,7 +334,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         // the function below. If it is not we don't know if the error comes
         // from incorrect usage of the pipe or if it originates from the
         // argument expressions.
-        let (fun, arguments, type_, is_well_typed) = self.expr_typer.do_infer_call_with_known_fun(
+        let (fun, arguments, type_) = self.expr_typer.do_infer_call_with_known_fun(
             function,
             arguments,
             location,
@@ -343,19 +345,16 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             type_,
             arguments,
             fun: Box::new(fun),
-            is_well_typed,
         }
     }
 
     /// Attempt to infer a |> b as b(a)
     /// b is the `function` argument.
     fn infer_apply_pipe(&mut self, function: UntypedExpr) -> TypedExpr {
-        let mut is_well_typed = true;
         let function_location = function.location();
         let function = Box::new(match self.expr_typer.infer_or_error(function) {
             Ok(function) => function,
             Err(error) => {
-                is_well_typed = false;
                 // If we cannot infer the function we put an invalid expression
                 // in its place so we can still keep going with the other steps.
                 self.expr_typer.problems.error(error);
@@ -381,7 +380,6 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         match unification_result {
             Ok(_) => (),
             Err(error) => {
-                is_well_typed = false;
                 let error = if self.check_if_pipe_type_mismatch(&error) {
                     convert_unify_error(error, function.location())
                         .with_unify_error_situation(UnifyErrorSituation::PipeTypeMismatch)
@@ -397,7 +395,6 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             type_: return_type,
             fun: function,
             arguments: vec![self.typed_left_hand_value_variable_call_argument()],
-            is_well_typed,
         }
     }
 

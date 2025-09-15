@@ -367,8 +367,7 @@ impl Inliner<'_> {
                 type_,
                 fun,
                 arguments,
-                is_well_typed,
-            } => self.call(location, type_, fun, arguments, is_well_typed),
+            } => self.call(location, type_, fun, arguments),
 
             TypedExpr::BinOp {
                 location,
@@ -586,7 +585,6 @@ impl Inliner<'_> {
         type_: Arc<Type>,
         function: Box<TypedExpr>,
         arguments: Vec<TypedCallArg>,
-        is_well_typed: bool,
     ) -> TypedExpr {
         let arguments = self.arguments(arguments);
 
@@ -705,7 +703,6 @@ impl Inliner<'_> {
             type_,
             fun: Box::new(function),
             arguments,
-            is_well_typed,
         }
     }
 
@@ -1541,8 +1538,6 @@ impl InlinableExpression {
                     .iter()
                     .map(|argument| argument.to_call_arg(Self::to_expression))
                     .collect(),
-                // Inlining is only applied to well typed code!
-                is_well_typed: true,
             },
         }
     }

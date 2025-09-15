@@ -1130,8 +1130,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
         kind: CallKind,
     ) -> TypedExpr {
-        let (fun, arguments, type_, is_well_typed) =
-            self.do_infer_call(fun, arguments, location, kind);
+        let (fun, arguments, type_) = self.do_infer_call(fun, arguments, location, kind);
 
         // One common mistake is to think that the syntax for adding a message
         // to a `todo` or a `panic` exception is to `todo("...")`, but really
@@ -1166,7 +1165,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             type_,
             arguments,
             fun: Box::new(fun),
-            is_well_typed,
         }
     }
 
@@ -4098,7 +4096,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         arguments: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
         kind: CallKind,
-    ) -> (TypedExpr, Vec<TypedCallArg>, Arc<Type>, bool) {
+    ) -> (TypedExpr, Vec<TypedCallArg>, Arc<Type>) {
         let fun = match fun {
             UntypedExpr::FieldAccess {
                 label,
@@ -4132,9 +4130,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             fun => self.infer(fun),
         };
 
-        let (fun, arguments, type_, is_well_typed) =
+        let (fun, arguments, type_) =
             self.do_infer_call_with_known_fun(fun, arguments, location, kind);
-        (fun, arguments, type_, is_well_typed)
+        (fun, arguments, type_)
     }
 
     fn infer_fn_with_call_context(
@@ -4172,8 +4170,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         mut arguments: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
         kind: CallKind,
-    ) -> (TypedExpr, Vec<TypedCallArg>, Arc<Type>, bool) {
-        let mut is_well_typed = true;
+    ) -> (TypedExpr, Vec<TypedCallArg>, Arc<Type>) {
         let mut labelled_arity_error = false;
 
         // Check to see if the function accepts labelled arguments
@@ -4202,7 +4199,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             });
 
         if let Err(e) = field_map {
-            is_well_typed = false;
             match e {
                 Error::IncorrectArity {
                     expected,
@@ -4233,7 +4229,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             match match_fun_type(fun.type_(), arguments.len(), self.environment) {
                 Ok(function) => function,
                 Err(error) => {
-                    is_well_typed = false;
                     let converted_error =
                         convert_not_fun_error(error.clone(), fun.location(), location, kind);
                     match error {
@@ -4363,9 +4358,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     )
                 }
 
-                let (value, is_argument_well_typed) =
-                    self.infer_call_argument(value, type_.clone(), argument_kind);
-                is_well_typed = is_well_typed && is_argument_well_typed;
+                let value = self.infer_call_argument(value, type_.clone(), argument_kind);
 
                 CallArg {
                     label,
@@ -4404,7 +4397,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             self.warn_for_unreachable_code(fun.location(), PanicPosition::LastFunctionArgument);
         }
 
-        (fun, typed_arguments, return_type, is_well_typed)
+        (fun, typed_arguments, return_type)
     }
 
     fn infer_call_argument(
@@ -4412,7 +4405,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         value: UntypedExpr,
         type_: Arc<Type>,
         kind: ArgumentKind,
-    ) -> (TypedExpr, bool) {
+    ) -> TypedExpr {
         let type_ = collapse_links(type_);
         let value = match (&*type_, value) {
             // If the argument is expected to be a function and we are passed a
@@ -4448,14 +4441,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             (_, value) => self.infer(value),
         };
 
-        let mut is_well_typed = true;
         if let Err(error) = unify(type_.clone(), value.type_()) {
-            is_well_typed = false;
             self.problems
                 .error(convert_unify_call_error(error, value.location(), kind));
         }
 
-        (value, is_well_typed)
+        value
     }
 
     pub fn do_infer_fn(
