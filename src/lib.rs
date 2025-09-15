@@ -754,6 +754,10 @@ impl ApiError {
     pub fn is_not_found(&self) -> bool {
         matches!(self, Self::NotFound)
     }
+
+    pub fn is_invalid_protobuf(&self) -> bool {
+        matches!(self, Self::InvalidProtobuf(_))
+    }
 }
 
 /// Read a body and ensure it has the given sha256 digest.
