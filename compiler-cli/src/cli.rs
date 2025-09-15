@@ -1,7 +1,7 @@
 use gleam_core::{
     build::Telemetry,
     error::{Error, StandardIoAction},
-    manifest::{Changed, Resolved},
+    manifest::{Changed, ChangedGit, Resolved},
 };
 use hexpm::version::Version;
 use itertools::Itertools as _;
@@ -160,6 +160,14 @@ pub(crate) fn print_resolved(resolved: &Resolved) {
     }
     for Changed { name, old, new } in resolved.changed.iter().sorted_by_key(|p| &p.name) {
         print_changed(&format!("{name} v{old} -> v{new}"));
+    }
+    for ChangedGit {
+        name,
+        old_hash,
+        new_hash,
+    } in resolved.changed_git.iter().sorted_by_key(|p| &p.name)
+    {
+        print_changed(&format!("{name} {old_hash} -> {new_hash}"));
     }
     for name in resolved.removed.iter().sorted() {
         print_removed(name);
