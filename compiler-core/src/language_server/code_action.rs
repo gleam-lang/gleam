@@ -355,7 +355,7 @@ impl<'ast> ast::visit::Visit<'ast> for LetAssertToCase<'_> {
                 .expect("Location must be valid")
         });
 
-        let range = src_span_to_lsp_range(assignment.location, self.edits.line_numbers);
+        let range = self.edits.src_span_to_lsp_range(assignment.location);
 
         // Figure out which variables are assigned in the pattern
         let variables = PatternVariableFinder::find_variables_in_pattern(&assignment.pattern);
@@ -5753,7 +5753,6 @@ impl<'ast, IO> ast::visit::Visit<'ast> for GenerateVariant<'ast, IO> {
         type_: &'ast Arc<Type>,
     ) {
         let pattern_range = src_span_to_lsp_range(*location, self.line_numbers);
-        // TODO)) Solo se il pattern non è valido!!!!!
         if within(self.params.range, pattern_range) {
             if labels_are_correct(arguments) {
                 self.try_save_variant_to_generate(
