@@ -8413,17 +8413,57 @@ impl<'ast> ast::visit::Visit<'ast> for AddOmittedLabels<'ast> {
 }
 
 /// Code action to extract selected code into a separate function.
+/// If a user selected a portion of code in a function, we offer a code action
+/// to extract it into a new one. This can either be a single expression, such
+/// as in the following example:
+///
+/// ```gleam
+/// pub fn main() {
+///   let value = {
+///   //          ^ User selects from here
+///     ...
+///   }
+/// //^ Until here
+/// }
+/// ```
+///
+/// Here, we would extract the selected block expression. It could also be a
+/// series of statements. For example:
+///
+/// ```gleam
+/// pub fn main() {
+///   let a = 1
+/// //^ User selects from here
+///   let b = 2
+///   let c = a + b
+///   //          ^ Until here
+///
+///   do_more_things(c)
+/// }
+/// ```
+///
+/// Here, we want to extract the statements inside the user's selection.
+///
 pub struct ExtractFunction<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
-    extract: Option<ExtractedFunction<'a>>,
+    function: Option<ExtractedFunction<'a>>,
     function_end_position: Option<u32>,
 }
 
+/// Information about a section of code we are extracting as a function.
 struct ExtractedFunction<'a> {
+    /// A list of parameters which need to be passed to the extracted function.
+    /// These are any variables used in the extracted code, which are defined
+    /// outside of the extracted code.
     parameters: Vec<(EcoString, Arc<Type>)>,
+    /// A list of values which need to be returned from the extracted function.
+    /// These are the variables defined in the extracted code which are used
+    /// outside of the extracted section.
     returned_variables: Vec<(EcoString, Arc<Type>)>,
+    /// The piece of code to be extracted. This is either a single expression or
+    /// a list of statements, as explained in the documentation of `ExtractFunction`
     value: ExtractedValue<'a>,
 }
 
@@ -8460,12 +8500,14 @@ impl<'a> ExtractFunction<'a> {
             module,
             params,
             edits: TextEdits::new(line_numbers),
-            extract: None,
+            function: None,
             function_end_position: None,
         }
     }
 
     pub fn code_actions(mut self) -> Vec<CodeAction> {
+        // If no code is selected, then there is no function to extract and we
+        // can return no code actions.
         if self.params.range.start == self.params.range.end {
             return Vec::new();
         }
@@ -8476,9 +8518,11 @@ impl<'a> ExtractFunction<'a> {
             return Vec::new();
         };
 
-        let Some(extracted) = self.extract.take() else {
+        // If nothing was found in the selected range, there is no code action.
+        let Some(extracted) = self.function.take() else {
             return Vec::new();
         };
+
         match extracted.value {
             ExtractedValue::Expression(expression) => {
                 self.extract_expression(expression, extracted.parameters, end)
@@ -8500,6 +8544,8 @@ impl<'a> ExtractFunction<'a> {
         action
     }
 
+    /// Choose a suitable name for an extracted function to make sure it doesn't
+    /// clash with existing functions defined in the module and cause an error.
     fn function_name(&self) -> EcoString {
         if !self.module.ast.type_info.values.contains_key("function") {
             return "function".into();
@@ -8575,6 +8621,11 @@ impl<'a> ExtractFunction<'a> {
         let name = self.function_name();
         let arguments = parameters.iter().map(|(name, _)| name).join(", ");
         let call = format!("{name}({arguments})");
+
+        // Since we are only extracting a single expression, we can just replace
+        // it with the call and preserve all other semantics; only one value can
+        // be returned from the expression, unlike when extracting multiple
+        // statements.
         self.edits.replace(expression.location(), call);
 
         let mut printer = Printer::new(&self.module.ast.names);
@@ -8605,6 +8656,64 @@ impl<'a> ExtractFunction<'a> {
 
         let returns_anything = !returned_variables.is_empty();
 
+        // Here, we decide what value to return from the function. There are
+        // three cases:
+        // The first is when the extracted code is purely for side-effects, and
+        // does not produce any values which are needed outside of the extracted
+        // code. For example:
+        //
+        // ```gleam
+        // pub fn main() {
+        //   let message = "Something important"
+        // //^ Select from here
+        //   io.println("Something important")
+        //   io.println("Something else which is repeated")
+        //   //                                           ^ Until here
+        //
+        //   do_final_thing()
+        // }
+        // ```
+        //
+        // It doesn't make sense to return any values from this function, since
+        // no values from the extract code are used afterwards, so we simply
+        // return `Nil`.
+        //
+        // The next is when we need just a single value defined in the extracted
+        // function, such as in this piece of code:
+        //
+        // ```gleam
+        // pub fn main() {
+        //   let a = 10
+        // //^ Select from here
+        //   let b = 20
+        //   let c = a + b
+        //   //          ^ Until here
+        //
+        //   echo c
+        // }
+        // ```
+        //
+        // Here, we can just return the single value, `c`.
+        //
+        // The last situation is when we need multiple defined values, such as
+        // in the following code:
+        //
+        // ```gleam
+        // pub fn main() {
+        //   let a = 10
+        // //^ Select from here
+        //   let b = 20
+        //   let c = a + b
+        //   //          ^ Until here
+        //
+        //   echo a
+        //   echo b
+        //   echo c
+        // }
+        // ```
+        //
+        // In this case, we must return a tuple containing `a`, `b` and `c` in
+        // order for the calling function to have access to the correct values.
         let (return_type, return_value) = match returned_variables.as_slice() {
             [] => (type_::nil(), "Nil".into()),
             [(name, type_)] => (type_.clone(), name.clone()),
@@ -8624,6 +8733,8 @@ impl<'a> ExtractFunction<'a> {
         let name = self.function_name();
         let arguments = parameters.iter().map(|(name, _)| name).join(", ");
 
+        // If any values are returned from the extracted function, we need to
+        // bind them so that they are accessible in the current scope.
         let call = if returns_anything {
             format!("let {return_value} = {name}({arguments})")
         } else {
@@ -8650,6 +8761,13 @@ impl<'a> ExtractFunction<'a> {
         self.edits.insert(function_end, function);
     }
 
+    /// When a variable is referenced, we need to decide if we need to do anything
+    /// to ensure that the reference is still valid after extracting a function.
+    /// If the variable is defined outside the extracted function, but used inside
+    /// it, then we need to add it as a parameter of the function. Similarly, if
+    /// a variable is defined inside the extracted code, but used outside of it,
+    /// we need to ensure that value is returned from the function so that it is
+    /// accessible.
     fn register_referenced_variable(
         &mut self,
         name: &EcoString,
@@ -8657,16 +8775,20 @@ impl<'a> ExtractFunction<'a> {
         location: SrcSpan,
         definition_location: SrcSpan,
     ) {
-        let Some(extracted) = &mut self.extract else {
+        let Some(extracted) = &mut self.function else {
             return;
         };
 
         let extracted_location = extracted.location();
 
+        // If a variable defined outside the extracted code is referenced inside
+        // it, we need to add it to the list of parameters.
         let variables = if extracted_location.contains_span(location)
             && !extracted_location.contains_span(definition_location)
         {
             &mut extracted.parameters
+        // If a variable defined inside the extracted code is referenced outside
+        // it, then we need to ensure that it is returned from the function.
         } else if extracted_location.contains_span(definition_location)
             && !extracted_location.contains_span(location)
         {
@@ -8675,6 +8797,13 @@ impl<'a> ExtractFunction<'a> {
             return;
         };
 
+        // If the variable has already been tracked, no need to register it again.
+        // We use a `Vec` here rather than a `HashMap` because we want to ensure
+        // the order of arguments is consistent; in this case it will be determined
+        // by the order the variables are used. This isn't always desired, but it's
+        // better than random order, and makes it easier to write tests too.
+        // The cost of iterating the list here is minimal; it is unlikely that
+        // a given function will ever have more than 10 or so parameters.
         if variables.iter().any(|(variable, _)| variable == name) {
             return;
         }
@@ -8695,11 +8824,17 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
     }
 
     fn visit_typed_expr(&mut self, expression: &'ast TypedExpr) {
-        if self.extract.is_none() {
+        // If we have already determined what code we want to extract, we don't
+        // want to extract this instead. This expression would be inside the
+        // piece of code we already are going to extract, leading to us
+        // extracting just a single literal in any selection, which is of course
+        // not desired.
+        if self.function.is_none() {
             let range = self.edits.src_span_to_lsp_range(expression.location());
 
+            // If this expression is fully selected, we mark it as being extracted.
             if within(range, self.params.range) {
-                self.extract = Some(ExtractedFunction::new(ExtractedValue::Expression(
+                self.function = Some(ExtractedFunction::new(ExtractedValue::Expression(
                     expression,
                 )));
             }
@@ -8710,16 +8845,22 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
     fn visit_typed_statement(&mut self, statement: &'ast TypedStatement) {
         let range = self.edits.src_span_to_lsp_range(statement.location());
         if within(range, self.params.range) {
-            match &mut self.extract {
+            match &mut self.function {
                 None => {
-                    self.extract = Some(ExtractedFunction::new(ExtractedValue::Statements(
+                    self.function = Some(ExtractedFunction::new(ExtractedValue::Statements(
                         statement.location(),
                     )));
                 }
+                // If we have already chosen an expression to extract, that means
+                // that this statement is within the already extracted expression,
+                // so we don't want to extract this instead.
                 Some(ExtractedFunction {
                     value: ExtractedValue::Expression(_),
                     ..
                 }) => {}
+                // If we are selecting multiple statements, this statement should
+                // be included within list, so we merge th spans to ensure it is
+                // included.
                 Some(ExtractedFunction {
                     value: ExtractedValue::Statements(location),
                     ..
