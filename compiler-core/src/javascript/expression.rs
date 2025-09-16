@@ -178,7 +178,7 @@ pub(crate) struct Generator<'module, 'ast> {
     pub let_assert_always_panics: bool,
 }
 
-fn ctor_tag(g: &TypedClauseGuard) -> Option<EcoString> {
+fn zero_arity_constructor_tag(g: &TypedClauseGuard) -> Option<EcoString> {
     match g {
         ClauseGuard::Constant(Constant::Record {
             arguments, name, ..
@@ -187,11 +187,11 @@ fn ctor_tag(g: &TypedClauseGuard) -> Option<EcoString> {
     }
 }
 
-fn is_var(g: &TypedClauseGuard) -> bool {
+fn is_variable_guard(g: &TypedClauseGuard) -> bool {
     matches!(g, ClauseGuard::Var { .. })
 }
 
-fn looks_like_constructor_alias(var: &TypedClauseGuard) -> bool {
+fn is_constructor_pattern_binding(var: &TypedClauseGuard) -> bool {
     match var {
         ClauseGuard::Var { type_, .. } => matches!(&**type_, Type::Fn { .. }), // lambda
         _ => false,
@@ -1582,7 +1582,10 @@ impl<'module, 'a> Generator<'module, 'a> {
             ..
         } = right
         {
-            return self.singleton_equal_helper(left, name, should_be_equal);
+            let left = self
+                .not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(left));
+
+            return self.singleton_equal(left, name, should_be_equal);
         }
 
         // LHS: singleton record constructor (arity 0)
@@ -1595,7 +1598,10 @@ impl<'module, 'a> Generator<'module, 'a> {
             ..
         } = left
         {
-            return self.singleton_equal_helper(right, name, should_be_equal);
+            let right = self
+                .not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(right));
+
+            return self.singleton_equal(right, name, should_be_equal);
         }
 
         // Other types must be compared using structural equality
@@ -1607,20 +1613,16 @@ impl<'module, 'a> Generator<'module, 'a> {
         self.prelude_equal_call(should_be_equal, left, right)
     }
 
-    fn singleton_equal_helper(
-        &mut self,
-        expr: &'a TypedExpr,
-        name: &EcoString,
+    fn singleton_equal(
+        &self,
+        value: Document<'a>,
+        tag: &EcoString,
         should_be_equal: bool,
     ) -> Document<'a> {
-        let expr_doc =
-            self.not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(expr));
-        let constructor_name = name.to_doc();
-
         if should_be_equal {
-            docvec![expr_doc, " instanceof ", constructor_name]
+            docvec![value, " instanceof ", tag.to_doc()]
         } else {
-            docvec!["!(", expr_doc, " instanceof ", constructor_name, ")"]
+            docvec!["!(", value, " instanceof ", tag.to_doc(), ")"]
         }
     }
 
@@ -2049,12 +2051,13 @@ impl<'module, 'a> Generator<'module, 'a> {
             ClauseGuard::Equals { left, right, .. }
             | ClauseGuard::NotEquals { left, right, .. } => {
                 let should_be_equal = matches!(guard, ClauseGuard::Equals { .. });
-                let both_ctor_values = ctor_tag(left).is_some() && ctor_tag(right).is_some();
+                let both_ctor_values = zero_arity_constructor_tag(left).is_some()
+                    && zero_arity_constructor_tag(right).is_some();
 
                 if !both_ctor_values {
-                    if is_var(left)
-                        && !looks_like_constructor_alias(left)
-                        && let Some(tag) = ctor_tag(right)
+                    if is_variable_guard(left)
+                        && !is_constructor_pattern_binding(left)
+                        && let Some(tag) = zero_arity_constructor_tag(right)
                     {
                         let l = self.guard(left);
                         return if should_be_equal {
@@ -2063,9 +2066,9 @@ impl<'module, 'a> Generator<'module, 'a> {
                             docvec!["!(", l, " instanceof ", tag.to_doc(), ")"]
                         };
                     }
-                    if is_var(right)
-                        && !looks_like_constructor_alias(right)
-                        && let Some(tag) = ctor_tag(left)
+                    if is_variable_guard(right)
+                        && !is_constructor_pattern_binding(right)
+                        && let Some(tag) = zero_arity_constructor_tag(left)
                     {
                         let r = self.guard(right);
                         return if should_be_equal {
