@@ -10437,3 +10437,48 @@ pub fn main() {
             .select_until(find_position_of("TEXT"))
     );
 }
+
+#[test]
+fn extract_function_when_name_already_in_scope() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+fn function() { todo }
+
+pub fn do_things(a, b) {
+  let result = {
+    let a = 10 + a
+    let b = 10 + b
+    a * b
+  }
+  result + 3
+}
+"#,
+        find_position_of("= {")
+            .select_until(find_position_of("}\n").nth_occurrence(2).under_char('\n'))
+    );
+}
+
+#[test]
+fn extract_function_when_multiple_names_already_in_scope() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+fn function() { todo }
+fn function_2() { todo }
+fn function_3() { todo }
+fn function_4() { todo }
+
+pub fn do_things(a, b) {
+  let result = {
+    let a = 10 + a
+    let b = 10 + b
+    a * b
+  }
+  result + 3
+}
+"#,
+        find_position_of("= {")
+            .select_until(find_position_of("}\n").nth_occurrence(5).under_char('\n'))
+    );
+}

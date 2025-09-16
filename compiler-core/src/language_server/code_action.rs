@@ -8503,6 +8503,21 @@ impl<'a> ExtractFunction<'a> {
         action
     }
 
+    fn function_name(&self) -> EcoString {
+        if !self.module.ast.type_info.values.contains_key("function") {
+            return "function".into();
+        }
+
+        let mut number = 2;
+        loop {
+            let name = eco_format!("function_{number}");
+            if !self.module.ast.type_info.values.contains_key(&name) {
+                return name;
+            }
+            number += 1;
+        }
+    }
+
     fn extract_expression(
         &mut self,
         expression: &TypedExpr,
@@ -8511,8 +8526,9 @@ impl<'a> ExtractFunction<'a> {
     ) {
         let expression_code = code_at(self.module, expression.location());
 
+        let name = self.function_name();
         let arguments = parameters.iter().map(|(name, _)| name).join(", ");
-        let call = format!("function({arguments})");
+        let call = format!("{name}({arguments})");
         self.edits.replace(expression.location(), call);
 
         let mut printer = Printer::new(&self.module.ast.names);
@@ -8524,7 +8540,7 @@ impl<'a> ExtractFunction<'a> {
         let return_type = printer.print_type(&expression.type_());
 
         let function = format!(
-            "\n\nfn function({parameters}) -> {return_type} {{
+            "\n\nfn {name}({parameters}) -> {return_type} {{
   {expression_code}
 }}"
         );
@@ -8564,12 +8580,13 @@ impl<'a> ExtractFunction<'a> {
             }
         };
 
+        let name = self.function_name();
         let arguments = parameters.iter().map(|(name, _)| name).join(", ");
 
         let call = if returns_anything {
-            format!("let {return_value} = function({arguments})")
+            format!("let {return_value} = {name}({arguments})")
         } else {
-            format!("function({arguments})")
+            format!("{name}({arguments})")
         };
         self.edits.replace(location, call);
 
@@ -8583,7 +8600,7 @@ impl<'a> ExtractFunction<'a> {
         let return_type = printer.print_type(&return_type);
 
         let function = format!(
-            "\n\nfn function({parameters}) -> {return_type} {{
+            "\n\nfn {name}({parameters}) -> {return_type} {{
   {code}
   {return_value}
 }}"
