@@ -10372,3 +10372,68 @@ pub fn main() {
         find_position_of("case").select_until(find_position_of("}\n").under_char('\n'))
     );
 }
+
+#[test]
+fn extract_function_which_uses_constant() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+const pi = 3.14
+
+pub fn main() {
+  let radius = 4.5
+
+  let circumference = radius *. pi *. 2.0
+
+  echo circumference
+}
+",
+        find_position_of("radius *.").select_until(find_position_of("2.0\n").under_char('\n'))
+    );
+}
+
+#[test]
+fn extract_function_which_uses_constant_in_guard() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+const pi = 3.14
+
+pub fn main() {
+  let value = 3.15
+
+  let string = case value {
+    0.0 -> "Zero"
+    1.0 -> "One"
+    _ if value == pi -> "PI"
+    _ -> "Something else"
+  }
+
+  echo string
+}
+"#,
+        find_position_of("case").select_until(find_position_of("}\n").under_char('\n'))
+    );
+}
+
+#[test]
+fn no_code_action_to_extract_function_when_expression_is_not_fully_selected() {
+    assert_no_code_actions!(
+        EXTRACT_FUNCTION,
+        r#"
+fn print(text: String) { todo }
+
+pub fn main() {
+  let arguments = todo
+
+  case arguments {
+    ["help"] -> print("USAGE TEXT HERE")
+    _ -> panic as "Invalid args"
+  }
+}
+"#,
+        find_position_of("print")
+            .under_char('i')
+            .select_until(find_position_of("TEXT"))
+    );
+}
