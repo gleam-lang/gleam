@@ -27,9 +27,7 @@ pub fn do_things(a, b) {
 }
 
 fn function(a: Int, b: Int) -> Int {
-  {
-    let a = 10 + a
+  let a = 10 + a
     let b = 10 + b
     a * b
-  }
 }
