@@ -22,12 +22,12 @@ pub fn sum(a, b) {
 ----- COMPILED JAVASCRIPT
 export function sum(a, b) {
   {
-    let _a_0 = 7;
+    let _inline_a_0 = 7;
     {
-      let _a_1 = 10;
-      ((a + b) + _a_0) - _a_1
+      let _inline_a_1 = 10;
+      ((a + b) + _inline_a_0) - _inline_a_1
     };
-    _a_0
+    _inline_a_0
   };
   return a;
 }

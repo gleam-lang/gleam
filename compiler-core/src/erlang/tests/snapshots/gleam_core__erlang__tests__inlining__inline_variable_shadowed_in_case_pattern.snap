@@ -30,7 +30,7 @@ sum() ->
     A = 10,
     B = 20,
     case {7, 8} of
-        {_a_0, _b_1} ->
-            (_a_0 + _b_1) + (A + B)
+        {_inline_a_0, _inline_b_1} ->
+            (_inline_a_0 + _inline_b_1) + (A + B)
     end,
     A + B.

@@ -29,7 +29,7 @@ main() ->
     A = 10,
     B = 20,
     begin
-        _a_0 = 7,
-        (A + B) + _a_0
+        _inline_a_0 = 7,
+        (A + B) + _inline_a_0
     end,
     A.
