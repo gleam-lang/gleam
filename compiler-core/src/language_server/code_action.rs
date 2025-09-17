@@ -8439,10 +8439,7 @@ impl<'a> ExtractedFunction<'a> {
     fn location(&self) -> SrcSpan {
         match &self.value {
             ExtractedValue::Expression(expression) => expression.location(),
-            ExtractedValue::Statements(statements) => SrcSpan::new(
-                statements.first().location().start,
-                statements.last().location().end,
-            ),
+            ExtractedValue::Statements(location) => *location,
         }
     }
 }
@@ -8450,7 +8447,7 @@ impl<'a> ExtractedFunction<'a> {
 #[derive(Debug)]
 enum ExtractedValue<'a> {
     Expression(&'a TypedExpr),
-    Statements(Vec1<&'a TypedStatement>),
+    Statements(SrcSpan),
 }
 
 impl<'a> ExtractFunction<'a> {
@@ -8486,8 +8483,8 @@ impl<'a> ExtractFunction<'a> {
             ExtractedValue::Expression(expression) => {
                 self.extract_expression(expression, extracted.parameters, end)
             }
-            ExtractedValue::Statements(statements) => self.extract_statements(
-                statements,
+            ExtractedValue::Statements(location) => self.extract_statements(
+                location,
                 extracted.parameters,
                 extracted.returned_variables,
                 end,
@@ -8599,16 +8596,11 @@ impl<'a> ExtractFunction<'a> {
 
     fn extract_statements(
         &mut self,
-        statements: Vec1<&TypedStatement>,
+        location: SrcSpan,
         parameters: Vec<(EcoString, Arc<Type>)>,
         returned_variables: Vec<(EcoString, Arc<Type>)>,
         function_end: u32,
     ) {
-        let first = statements.first();
-        let last = statements.last();
-
-        let location = SrcSpan::new(first.location().start, last.location().end);
-
         let code = code_at(self.module, location);
 
         let returns_anything = !returned_variables.is_empty();
@@ -8720,20 +8712,18 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
         if within(range, self.params.range) {
             match &mut self.extract {
                 None => {
-                    self.extract = Some(ExtractedFunction::new(ExtractedValue::Statements(vec1![
-                        statement,
-                    ])));
+                    self.extract = Some(ExtractedFunction::new(ExtractedValue::Statements(
+                        statement.location(),
+                    )));
                 }
                 Some(ExtractedFunction {
                     value: ExtractedValue::Expression(_),
                     ..
                 }) => {}
                 Some(ExtractedFunction {
-                    value: ExtractedValue::Statements(statements),
+                    value: ExtractedValue::Statements(location),
                     ..
-                }) => {
-                    statements.push(statement);
-                }
+                }) => *location = location.merge(&statement.location()),
             }
         }
         ast::visit::visit_typed_statement(self, statement);
