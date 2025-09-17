@@ -8524,7 +8524,56 @@ impl<'a> ExtractFunction<'a> {
         parameters: Vec<(EcoString, Arc<Type>)>,
         function_end: u32,
     ) {
-        let expression_code = code_at(self.module, expression.location());
+        // If we extract a block, it isn't very helpful to have the body of the
+        // extracted function just be a single block expression, so instead we
+        // extract the statements inside the block. For example, the following
+        // code:
+        //
+        // ```gleam
+        // pub fn main() {
+        //   let x = {
+        //   //      ^ Select from here
+        //     let a = 1
+        //     let b = 2
+        //     a + b
+        //   }
+        // //^ Until here
+        //   x
+        // }
+        // ```
+        //
+        // Would produce the following extracted function:
+        //
+        // ```gleam
+        // fn function() {
+        //   let a = 1
+        //   let b = 2
+        //   a + b
+        // }
+        // ```
+        //
+        // Rather than:
+        //
+        // ```gleam
+        // fn function() {
+        //   {
+        //     let a = 1
+        //     let b = 2
+        //     a + b
+        //   }
+        // }
+        // ```
+        //
+        let extracted_code_location = if let TypedExpr::Block { statements, .. } = expression {
+            SrcSpan::new(
+                statements.first().location().start,
+                statements.last().location().end,
+            )
+        } else {
+            expression.location()
+        };
+
+        let expression_code = code_at(self.module, extracted_code_location);
 
         let name = self.function_name();
         let arguments = parameters.iter().map(|(name, _)| name).join(", ");
