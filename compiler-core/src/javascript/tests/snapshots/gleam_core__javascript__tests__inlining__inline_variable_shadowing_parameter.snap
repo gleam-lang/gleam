@@ -17,8 +17,8 @@ pub fn sum(a, b) {
 ----- COMPILED JAVASCRIPT
 export function sum(a, b) {
   {
-    let _a_0 = 7;
-    (a + b) + _a_0
+    let _inline_a_0 = 7;
+    (a + b) + _inline_a_0
   };
   return a;
 }

@@ -20,6 +20,6 @@ export function sum() {
   let $1 = 2;
   let a = $;
   let b = $1;
-  let _a_0 = 7;
-  return (a + b) + _a_0;
+  let _inline_a_0 = 7;
+  return (a + b) + _inline_a_0;
 }

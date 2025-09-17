@@ -22,8 +22,8 @@ export function main() {
   let a = 10;
   let b = 20;
   {
-    let _a_0 = 7;
-    (a + b) + _a_0
+    let _inline_a_0 = 7;
+    (a + b) + _inline_a_0
   };
   return a;
 }

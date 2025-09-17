@@ -29,11 +29,11 @@ pub fn sum(a, b) {
 -spec sum(integer(), integer()) -> integer().
 sum(A, B) ->
     begin
-        _a_0 = 7,
+        _inline_a_0 = 7,
         begin
-            _a_1 = 10,
-            ((A + B) + _a_0) - _a_1
+            _inline_a_1 = 10,
+            ((A + B) + _inline_a_0) - _inline_a_1
         end,
-        _a_0
+        _inline_a_0
     end,
     A.

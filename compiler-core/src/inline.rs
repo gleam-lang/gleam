@@ -226,9 +226,9 @@ impl Inliner<'_> {
         // that means there is a potential conflict in names and we need to rename
         // the variable.
         if !unique_in_scope && self.position == Position::InlinedFunction {
-            // Prefixing the variable name with an underscore ensures it does
+            // Prefixing the variable name with `_inline_` ensures it does
             // not conflict with other defined variables.
-            let new_name = eco_format!("_{name}_{}", self.variable_number);
+            let new_name = eco_format!("_inline_{name}_{}", self.variable_number);
             self.variable_number += 1;
             _ = self.renamed_variables.insert(name, new_name.clone());
             new_name
