@@ -10,7 +10,7 @@ pub fn do_things(a, b) {
   let new_b = 10 + b
 ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
   let result = new_a * new_b
-▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑      
   result + 3
 }
 
