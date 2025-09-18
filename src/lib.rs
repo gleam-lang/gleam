@@ -244,6 +244,14 @@ pub fn unretire_release_response(response: http::Response<Vec<u8>>) -> Result<()
 
 /// Create a request that get the names and versions of all of the packages on
 /// the package registry.
+///
+/// Uses the registry v2 API.
+/// Responses use gz encoding and are wrapped in a signing message.
+/// For direct usage of response see below:
+///
+/// https://github.com/hexpm/specifications/blob/main/registry-v2.md
+/// Recommended sections: (#registry-files, #signing, #decoding-registry-files)
+///
 /// TODO: Where are the API docs for this?
 pub fn get_repository_versions_request(
     api_key: Option<&str>,
@@ -307,6 +315,13 @@ pub fn parse_repository_v2_versions(
 }
 
 /// Create a request to get the information for a package in the repository.
+///
+/// Uses the registry v2 API.
+/// Responses use gz encoding and are wrapped in a signing message.
+/// For direct usage of response see below:
+///
+/// https://github.com/hexpm/specifications/blob/main/registry-v2.md
+/// Recommended sections: (#registry-files, #signing, #decoding-registry-files)
 ///
 /// API Docs:
 ///
