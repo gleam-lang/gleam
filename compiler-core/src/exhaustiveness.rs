@@ -1186,7 +1186,7 @@ impl MatchTest {
 /// the possible patterns: it can only contain literal floats, ints, strings,
 /// a variable name, and a discard.
 ///
-#[derive(Clone, Eq, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
 pub enum BitArrayMatchedValue {
     LiteralFloat(EcoString),
     LiteralInt {
@@ -1209,50 +1209,6 @@ pub enum BitArrayMatchedValue {
         name: EcoString,
         value: Box<BitArrayMatchedValue>,
     },
-}
-
-impl PartialEq for BitArrayMatchedValue {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            // Ints need special care: they're carrying around information about
-            // where they come from. But as for equality is concerned for the
-            // pattern match compilation, they are considered equal as long as
-            // the two values are equal, no matter where the values come from.
-            (Self::LiteralInt { value: one, .. }, Self::LiteralInt { value: other, .. }) => {
-                one == other
-            }
-            (Self::LiteralInt { .. }, _) => false,
-
-            // All the other cases follow the standard equality implementation.
-            (Self::LiteralFloat(one), Self::LiteralFloat(other)) => one == other,
-            (Self::LiteralFloat(_), _) => false,
-
-            // Two literal string matches are the same if they match for the
-            // same bytes. No matter the original starting string and encoding.
-            (Self::LiteralString { bytes: one, .. }, Self::LiteralString { bytes: other, .. }) => {
-                one == other
-            }
-            (Self::LiteralString { .. }, _) => false,
-
-            (Self::Variable(one), Self::Variable(other)) => one == other,
-            (Self::Variable(_), _) => false,
-
-            (Self::Discard(one), Self::Discard(other)) => one == other,
-            (Self::Discard(_), _) => false,
-
-            (
-                Self::Assign {
-                    name: name_one,
-                    value: one,
-                },
-                Self::Assign {
-                    name: name_other,
-                    value: other,
-                },
-            ) => name_one == name_other && one == other,
-            (Self::Assign { .. }, _) => false,
-        }
-    }
 }
 
 impl BitArrayMatchedValue {
@@ -1314,6 +1270,59 @@ impl BitArrayMatchedValue {
             | BitArrayMatchedValue::Discard(_) => None,
         }
     }
+
+    /// Returns true if the two `MatchedValue`s are matching for the exact same
+    /// thing. Note how this doesn't automatically mean they will be matching
+    /// for the exact same thing in a whole bit array pattern as they could be
+    /// matching at different positions!
+    ///
+    /// ```gleam
+    /// <<1, _>>
+    /// <<_, 1>>
+    /// // Both are matching on the same value but at different positions!
+    /// ```
+    ///
+    fn checking_same_value(&self, other: &Self) -> bool {
+        match (self, other) {
+            // Ints need special care: they're carrying around information about
+            // where they come from. But as for equality is concerned for the
+            // pattern match compilation, they are considered equal as long as
+            // the two values are equal, no matter where the values come from.
+            (Self::LiteralInt { value: one, .. }, Self::LiteralInt { value: other, .. }) => {
+                one == other
+            }
+            (Self::LiteralInt { .. }, _) => false,
+
+            // All the other cases follow the standard equality implementation.
+            (Self::LiteralFloat(one), Self::LiteralFloat(other)) => one == other,
+            (Self::LiteralFloat(_), _) => false,
+
+            // Two literal string matches are the same if they match for the
+            // same bytes. No matter the original starting string and encoding.
+            (Self::LiteralString { bytes: one, .. }, Self::LiteralString { bytes: other, .. }) => {
+                one == other
+            }
+            (Self::LiteralString { .. }, _) => false,
+
+            (Self::Variable(one), Self::Variable(other)) => one == other,
+            (Self::Variable(_), _) => false,
+
+            (Self::Discard(_), Self::Discard(_)) => true,
+            (Self::Discard(_), _) => false,
+
+            (
+                Self::Assign {
+                    name: _,
+                    value: one,
+                },
+                Self::Assign {
+                    name: _,
+                    value: other,
+                },
+            ) => one.checking_same_value(other),
+            (Self::Assign { .. }, _) => false,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
@@ -1337,6 +1346,43 @@ impl BitArrayMatchedValue {
 }
 
 impl BitArrayTest {
+    /// Wether two bit array tests are equivalent, that is they are checking
+    /// for the same thing.
+    ///
+    fn equivalent_to(&self, other: &Self) -> bool {
+        match (self, other) {
+            (BitArrayTest::Size(one), BitArrayTest::Size(other)) => one == other,
+            (BitArrayTest::Size(_), _) => false,
+
+            (
+                BitArrayTest::Match(MatchTest { value, read_action }),
+                BitArrayTest::Match(MatchTest {
+                    value: other_value,
+                    read_action: other_read_action,
+                }),
+            ) => value.checking_same_value(other_value) && read_action == other_read_action,
+            (BitArrayTest::Match(_), _) => false,
+
+            (
+                BitArrayTest::CatchAllIsBytes { size_so_far: one },
+                BitArrayTest::CatchAllIsBytes { size_so_far: other },
+            ) => one == other,
+            (BitArrayTest::CatchAllIsBytes { .. }, ..) => false,
+
+            (
+                BitArrayTest::ReadSizeIsNotNegative { size: one },
+                BitArrayTest::ReadSizeIsNotNegative { size: other },
+            ) => one == other,
+            (BitArrayTest::ReadSizeIsNotNegative { .. }, _) => false,
+
+            (
+                BitArrayTest::SegmentIsFiniteFloat { read_action: one },
+                BitArrayTest::SegmentIsFiniteFloat { read_action: other },
+            ) => one == other,
+            (BitArrayTest::SegmentIsFiniteFloat { .. }, _) => false,
+        }
+    }
+
     /// Tells us if this test is guaranteed to succeed given another test that
     /// we know has already succeeded.
     ///
@@ -1346,7 +1392,7 @@ impl BitArrayTest {
     #[must_use]
     fn succeeds_if_succeeding(&self, succeeding: &BitArrayTest) -> Confidence {
         match (succeeding, self) {
-            (one, other) if one == other => Confidence::Certain,
+            (one, other) if one.equivalent_to(other) => Confidence::Certain,
             (BitArrayTest::Size(succeeding), BitArrayTest::Size(test)) => {
                 test.succeeds_if_succeeding(succeeding)
             }
@@ -1379,7 +1425,7 @@ impl BitArrayTest {
     #[must_use]
     fn fails_if_failing(&self, failing: &BitArrayTest) -> Confidence {
         match (failing, self) {
-            (one, other) if one == other => Confidence::Certain,
+            (one, other) if one.equivalent_to(other) => Confidence::Certain,
             (BitArrayTest::Size(failing), BitArrayTest::Size(test)) => {
                 test.fails_if_failing(failing)
             }
