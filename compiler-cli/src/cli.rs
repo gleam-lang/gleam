@@ -194,8 +194,8 @@ pub(crate) fn print_transferring_ownership() {
     print_colourful_prefix("Transferring", "ownership");
 }
 
-pub(crate) fn print_transferred_ownership(elapsed: Duration) {
-    print_colourful_prefix("Transferred", &format!("ownership in {}", seconds(elapsed)));
+pub(crate) fn print_transferred_ownership() {
+    print_colourful_prefix("Transferred", "ownership");
 }
 
 fn print_packages_downloaded(start: Instant, count: usize) {
