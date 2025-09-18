@@ -15,7 +15,7 @@ pub fn main() {
     _ -> Error(Nil)
 ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
   }
-▔▔▔
+▔▔↑
 
   case segment {
     Ok(value) -> echo value

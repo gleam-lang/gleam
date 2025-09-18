@@ -8,7 +8,7 @@ pub fn do_things(a, b) {
   let x = a + b
   ▔▔▔▔▔▔▔▔▔▔▔▔▔
   echo x
-▔▔▔▔▔▔▔▔
+▔▔↑     
   a
 }
 

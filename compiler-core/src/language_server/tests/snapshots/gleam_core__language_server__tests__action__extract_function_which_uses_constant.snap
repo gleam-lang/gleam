@@ -10,7 +10,7 @@ pub fn main() {
   let radius = 4.5
 
   let circumference = radius *. pi *. 2.0
-                      ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+                      ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑  
 
   echo circumference
 }

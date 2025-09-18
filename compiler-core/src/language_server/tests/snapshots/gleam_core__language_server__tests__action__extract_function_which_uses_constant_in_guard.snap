@@ -20,7 +20,7 @@ pub fn main() {
     _ -> "Something else"
 ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
   }
-▔▔▔
+▔▔↑
 
   echo string
 }

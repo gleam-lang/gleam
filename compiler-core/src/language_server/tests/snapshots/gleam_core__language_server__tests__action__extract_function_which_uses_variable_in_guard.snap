@@ -14,7 +14,7 @@ pub fn do_things(a, b) {
     _ -> panic
 ▔▔▔▔▔▔▔▔▔▔▔▔▔▔
   }
-▔▔▔
+▔▔↑
 
   result % 4
 }

@@ -8810,6 +8810,49 @@ impl<'a> ExtractFunction<'a> {
 
         variables.push((name.clone(), type_.clone()));
     }
+
+    fn can_extract(&self, location: SrcSpan) -> bool {
+        let expression_range = self.edits.src_span_to_lsp_range(location);
+        let selected_range = self.params.range;
+
+        // If the selected range doesn't touch the expression at all, then there
+        // is no reason to extract it.
+        if !overlaps(expression_range, selected_range) {
+            return false;
+        }
+
+        // Determine whether the selected range falls completely within the
+        // expression. For example:
+        // ```gleam
+        // pub fn main() {
+        //   let something = {
+        //     let a = 1
+        //     let b = 2
+        //     let c = a + b
+        //   //^ The user has selected from here
+        //     let d = a * b
+        //     c / d
+        //     //  ^ Until here
+        //   }
+        // }
+        // ```
+        //
+        // Here, the selected range does overlap with the `let something`
+        // statement; but we don't want to extract that whole statement! The
+        // user only wanted to extract the statements inside the block. So if
+        // the selected range falls completely within the expression, we ignore
+        // it and traverse the tree further until we find exactly what the user
+        // selected.
+        //
+        let selected_within_expression = selected_range.start > expression_range.start
+            && selected_range.start < expression_range.end
+            && selected_range.end > expression_range.start
+            && selected_range.end < expression_range.end;
+
+        // If the selected range is completely within the expression, we don't
+        // want to extract it.
+        !selected_within_expression
+    }
 }
 
 impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
@@ -8830,10 +8873,8 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
         // extracting just a single literal in any selection, which is of course
         // not desired.
         if self.function.is_none() {
-            let range = self.edits.src_span_to_lsp_range(expression.location());
-
             // If this expression is fully selected, we mark it as being extracted.
-            if within(range, self.params.range) {
+            if self.can_extract(expression.location()) {
                 self.function = Some(ExtractedFunction::new(ExtractedValue::Expression(
                     expression,
                 )));
@@ -8843,8 +8884,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
     }
 
     fn visit_typed_statement(&mut self, statement: &'ast TypedStatement) {
-        let range = self.edits.src_span_to_lsp_range(statement.location());
-        if within(range, self.params.range) {
+        if self.can_extract(statement.location()) {
             match &mut self.function {
                 None => {
                     self.function = Some(ExtractedFunction::new(ExtractedValue::Statements(

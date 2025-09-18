@@ -8,7 +8,7 @@ pub fn do_things(a, b) {
   let wibble = a + b
   ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
   let wobble = a * b
-▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑  
   wobble / wibble
 }
 
