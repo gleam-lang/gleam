@@ -178,26 +178,6 @@ pub(crate) struct Generator<'module, 'ast> {
     pub let_assert_always_panics: bool,
 }
 
-fn zero_arity_constructor_tag(g: &TypedClauseGuard) -> Option<EcoString> {
-    match g {
-        ClauseGuard::Constant(Constant::Record {
-            arguments, name, ..
-        }) if arguments.is_empty() => Some(name.clone()),
-        _ => None,
-    }
-}
-
-fn is_variable_guard(g: &TypedClauseGuard) -> bool {
-    matches!(g, ClauseGuard::Var { .. })
-}
-
-fn is_constructor_pattern_binding(var: &TypedClauseGuard) -> bool {
-    match var {
-        ClauseGuard::Var { type_, .. } => matches!(&**type_, Type::Fn { .. }), // lambda
-        _ => false,
-    }
-}
-
 impl<'module, 'a> Generator<'module, 'a> {
     #[allow(clippy::too_many_arguments)] // TODO: FIXME
     pub fn new(
@@ -2050,39 +2030,54 @@ impl<'module, 'a> Generator<'module, 'a> {
 
             ClauseGuard::Equals { left, right, .. }
             | ClauseGuard::NotEquals { left, right, .. } => {
-                let should_be_equal = matches!(guard, ClauseGuard::Equals { .. });
-                let both_ctor_values = zero_arity_constructor_tag(left).is_some()
-                    && zero_arity_constructor_tag(right).is_some();
+                fn is_variable(g: &TypedClauseGuard) -> bool {
+                    matches!(g, ClauseGuard::Var { .. })
+                }
 
-                if !both_ctor_values {
-                    if is_variable_guard(left)
-                        && !is_constructor_pattern_binding(left)
-                        && let Some(tag) = zero_arity_constructor_tag(right)
-                    {
-                        let l = self.guard(left);
-                        return if should_be_equal {
-                            docvec![l, " instanceof ", tag.to_doc()]
-                        } else {
-                            docvec!["!(", l, " instanceof ", tag.to_doc(), ")"]
-                        };
-                    }
-                    if is_variable_guard(right)
-                        && !is_constructor_pattern_binding(right)
-                        && let Some(tag) = zero_arity_constructor_tag(left)
-                    {
-                        let r = self.guard(right);
-                        return if should_be_equal {
-                            docvec![r, " instanceof ", tag.to_doc()]
-                        } else {
-                            docvec!["!(", r, " instanceof ", tag.to_doc(), ")"]
-                        };
+                // returns Some(name) if g is a zero arity constructor *value*
+                fn zero_arity_constructor_tag(g: &TypedClauseGuard) -> Option<EcoString> {
+                    match g {
+                        ClauseGuard::Constant(Constant::Record {
+                            arguments, name, ..
+                        }) if arguments.is_empty() && g.type_().is_named() => Some(name.clone()),
+                        _ => None,
                     }
                 }
 
-                // Otherwise fallback to normal equality check
-                let left_doc = self.guard(left);
-                let right_doc = self.guard(right);
-                self.prelude_equal_call(should_be_equal, left_doc, right_doc)
+                // true when the variable is the alias introduced by pattern
+                fn is_constructor_alias(g: &TypedClauseGuard) -> bool {
+                    match g {
+                        ClauseGuard::Var { type_, .. } => matches!(&**type_, Type::Fn { .. }),
+                        _ => false,
+                    }
+                }
+
+                let want_equal = matches!(guard, ClauseGuard::Equals { .. });
+                let both_sides_ctor = zero_arity_constructor_tag(left).is_some()
+                    && zero_arity_constructor_tag(right).is_some();
+
+                if !both_sides_ctor {
+                    // variable == constructor_value
+                    if is_variable(left)
+                        && !is_constructor_alias(left)
+                        && let Some(tag) = zero_arity_constructor_tag(right)
+                    {
+                        let val = self.guard(left);
+                        return self.singleton_equal(val, &tag, want_equal);
+                    }
+                    // constructor_value == variable
+                    if is_variable(right)
+                        && !is_constructor_alias(right)
+                        && let Some(tag) = zero_arity_constructor_tag(left)
+                    {
+                        let val = self.guard(right);
+                        return self.singleton_equal(val, &tag, want_equal);
+                    }
+                }
+
+                let l = self.guard(left);
+                let r = self.guard(right);
+                self.prelude_equal_call(want_equal, l, r)
             }
 
             ClauseGuard::GtFloat { left, right, .. } | ClauseGuard::GtInt { left, right, .. } => {
