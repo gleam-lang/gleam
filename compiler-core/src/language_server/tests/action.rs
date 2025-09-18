@@ -10245,7 +10245,7 @@ pub fn do_things(a, b) {
 ",
         find_position_of("{")
             .nth_occurrence(2)
-            .select_until(find_position_of("}\n").under_char('\n'))
+            .select_until(find_position_of("}"))
     );
 }
 
@@ -10261,7 +10261,7 @@ pub fn do_things(a, b) {
   result + 3
 }
 ",
-        find_position_of("let").select_until(find_position_of("* b\n").under_char('\n'))
+        find_position_of("let").select_until(find_position_of("* b"))
     );
 }
 
@@ -10277,7 +10277,7 @@ pub fn do_things(a, b) {
   result + 3
 }
 ",
-        find_position_of("let").select_until(find_position_of("* new_b\n").under_char('\n'))
+        find_position_of("let").select_until(find_position_of("* new_b"))
     );
 }
 
@@ -10296,7 +10296,7 @@ pub fn do_things(a, b) {
   result + 3
 }
 ",
-        find_position_of("let").select_until(find_position_of("+ a * b\n").under_char('\n'))
+        find_position_of("let").select_until(find_position_of("+ a * b"))
     );
 }
 
@@ -10311,7 +10311,7 @@ pub fn do_things(a, b) {
   wobble / wibble
 }
 ",
-        find_position_of("let").select_until(find_position_of("* b\n").under_char('\n'))
+        find_position_of("let").select_until(find_position_of("* b"))
     );
 }
 
@@ -10326,7 +10326,7 @@ pub fn do_things(a, b) {
   a
 }
 ",
-        find_position_of("let").select_until(find_position_of("echo x\n").under_char('\n'))
+        find_position_of("let").select_until(find_position_of("echo x"))
     );
 }
 
@@ -10345,7 +10345,7 @@ pub fn do_things(a, b) {
   result % 4
 }
 ",
-        find_position_of("case").select_until(find_position_of("}\n").under_char('\n'))
+        find_position_of("case").select_until(find_position_of("}"))
     );
 }
 
@@ -10369,7 +10369,7 @@ pub fn main() {
   }
 }
 ",
-        find_position_of("case").select_until(find_position_of("}\n").under_char('\n'))
+        find_position_of("case").select_until(find_position_of("}"))
     );
 }
 
@@ -10388,7 +10388,7 @@ pub fn main() {
   echo circumference
 }
 ",
-        find_position_of("radius *.").select_until(find_position_of("2.0\n").under_char('\n'))
+        find_position_of("radius *.").select_until(find_position_of("2.0"))
     );
 }
 
@@ -10412,7 +10412,7 @@ pub fn main() {
   echo string
 }
 "#,
-        find_position_of("case").select_until(find_position_of("}\n").under_char('\n'))
+        find_position_of("case").select_until(find_position_of("}"))
     );
 }
 
@@ -10454,8 +10454,7 @@ pub fn do_things(a, b) {
   result + 3
 }
 "#,
-        find_position_of("= {")
-            .select_until(find_position_of("}\n").nth_occurrence(2).under_char('\n'))
+        find_position_of("= {").select_until(find_position_of("}").nth_occurrence(2))
     );
 }
 
@@ -10478,7 +10477,63 @@ pub fn do_things(a, b) {
   result + 3
 }
 "#,
-        find_position_of("= {")
-            .select_until(find_position_of("}\n").nth_occurrence(5).under_char('\n'))
+        find_position_of("= {").select_until(find_position_of("}").nth_occurrence(5))
+    );
+}
+
+#[test]
+fn extract_function_partially_selected() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn main() {
+  let a = 10
+  let b = 20
+  let c = a + b
+
+  echo c
+}
+"#,
+        find_position_of("a =").select_until(find_position_of("c ="))
+    );
+}
+
+#[test]
+fn selected_statements_do_not_select_outer_block() {
+    // We want to make sure only the statements within the block are extracted,
+    // and not the block itself.
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn main() {
+  let c = {
+    let a = 10
+    let b = 20
+    a + b
+  }
+
+  echo c
+}
+"#,
+        find_position_of("let a").select_until(find_position_of("+ b"))
+    );
+}
+
+#[test]
+fn no_code_action_to_extract_when_multiple_functions_are_selected() {
+    assert_no_code_actions!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn main() {
+  let a = 10
+  a + 1
+}
+
+pub fn other() {
+  let b = 20
+  b * 2
+}
+"#,
+        find_position_of("let a").select_until(find_position_of("let b"))
     );
 }

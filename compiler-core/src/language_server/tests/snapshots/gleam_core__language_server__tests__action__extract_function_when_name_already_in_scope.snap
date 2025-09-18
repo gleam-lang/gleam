@@ -16,7 +16,7 @@ pub fn do_things(a, b) {
     a * b
 ▔▔▔▔▔▔▔▔▔
   }
-▔▔▔
+▔▔↑
   result + 3
 }
 

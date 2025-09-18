@@ -16,7 +16,7 @@ pub fn do_things(a, b) {
   }
 ▔▔▔
   let result = first_part + a * b
-▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑      
   result + 3
 }
 
