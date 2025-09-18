@@ -276,6 +276,9 @@
 - Support has been added for using Tangled as a repository.
   ([Naomi Roberts](https://github.com/naomieow))
 
+- Added `gleam hex deauthenticate` command.
+  ([Samuel Cristobal](https://github.com/scristobal))
+
 ### Language server
 
 - The language server now offers a code action to remove all the unreachable
