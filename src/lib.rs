@@ -99,7 +99,7 @@ fn make_request(
 /// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.ex#L137
 ///
 /// https://github.com/hexpm/hex/blob/main/lib/hex/api/key.ex#L6
-pub fn create_api_key_request(
+pub fn api_create_api_key_request(
     username: &str,
     password: &str,
     key_name: &str,
@@ -121,7 +121,7 @@ pub fn create_api_key_request(
 }
 
 /// Parses a request that creates a Hex API key.
-pub fn create_api_key_response(response: http::Response<Vec<u8>>) -> Result<String, ApiError> {
+pub fn api_create_api_key_response(response: http::Response<Vec<u8>>) -> Result<String, ApiError> {
     #[derive(Deserialize)]
     struct Resp {
         secret: String,
@@ -142,7 +142,7 @@ pub fn create_api_key_response(response: http::Response<Vec<u8>>) -> Result<Stri
 /// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.user.ex#L291
 ///
 /// https://github.com/hexpm/hex/blob/main/lib/hex/api/key.ex#L15
-pub fn remove_api_key_request(
+pub fn api_remove_api_key_request(
     name_of_key_to_delete: &str,
     api_key: &str,
     config: &Config,
@@ -158,7 +158,7 @@ pub fn remove_api_key_request(
 }
 
 /// Parses a request that deleted a Hex API key.
-pub fn remove_api_key_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
+pub fn api_remove_api_key_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
     let (parts, body) = response.into_parts();
     match parts.status {
         StatusCode::NO_CONTENT | StatusCode::OK => Ok(()),
@@ -175,7 +175,7 @@ pub fn remove_api_key_response(response: http::Response<Vec<u8>>) -> Result<(), 
 /// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.retire.ex#L75
 ///
 /// https://github.com/hexpm/hex/blob/main/lib/hex/api/release.ex#L28
-pub fn retire_release_request(
+pub fn api_retire_release_request(
     package: &str,
     version: &str,
     reason: RetirementReason,
@@ -198,7 +198,7 @@ pub fn retire_release_request(
 }
 
 /// Parses a request that retired a release.
-pub fn retire_release_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
+pub fn api_retire_release_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
     let (parts, body) = response.into_parts();
     match parts.status {
         StatusCode::NO_CONTENT | StatusCode::OK => Ok(()),
@@ -215,7 +215,7 @@ pub fn retire_release_response(response: http::Response<Vec<u8>>) -> Result<(), 
 /// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.retire.ex#L89
 ///
 /// https://github.com/hexpm/hex/blob/main/lib/hex/api/release.ex#L35
-pub fn unretire_release_request(
+pub fn api_unretire_release_request(
     package: &str,
     version: &str,
     api_key: &str,
@@ -232,7 +232,7 @@ pub fn unretire_release_request(
 }
 
 /// Parses a request that un-retired a package version.
-pub fn unretire_release_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
+pub fn api_unretire_release_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
     let (parts, body) = response.into_parts();
     match parts.status {
         StatusCode::NO_CONTENT | StatusCode::OK => Ok(()),
@@ -245,15 +245,10 @@ pub fn unretire_release_response(response: http::Response<Vec<u8>>) -> Result<()
 /// Create a request that get the names and versions of all of the packages on
 /// the package registry.
 ///
-/// Uses the registry v2 API.
-/// Responses use gz encoding and are wrapped in a signing message.
-/// For direct usage of response see below:
-///
 /// https://github.com/hexpm/specifications/blob/main/registry-v2.md
-/// Recommended sections: (#registry-files, #signing, #decoding-registry-files)
 ///
 /// TODO: Where are the API docs for this?
-pub fn get_repository_versions_request(
+pub fn repository_v2_get_versions_request(
     api_key: Option<&str>,
     config: &Config,
 ) -> http::Request<Vec<u8>> {
@@ -266,7 +261,7 @@ pub fn get_repository_versions_request(
 
 /// Parse a request that gets the names and versions of all of the packages on
 /// the package registry.
-pub fn get_repository_versions_response(
+pub fn repository_v2_get_versions_response(
     response: http::Response<Vec<u8>>,
     public_key: &[u8],
 ) -> Result<HashMap<String, Vec<Version>>, ApiError> {
@@ -281,11 +276,11 @@ pub fn get_repository_versions_response(
     let mut body = Vec::new();
     decoder.read_to_end(&mut body)?;
 
-    parse_repository_v2_versions(&body, public_key)
+    repository_v2_get_versions_body(&body, public_key)
 }
 
 /// Parse a signed binary message containing all of the packages on the package registry.
-pub fn parse_repository_v2_versions(
+pub fn repository_v2_get_versions_body(
     protobuf_bytes: &Vec<u8>,
     public_key: &[u8],
 ) -> Result<HashMap<String, Vec<Version>>, ApiError> {
@@ -316,19 +311,9 @@ pub fn parse_repository_v2_versions(
 
 /// Create a request to get the information for a package in the repository.
 ///
-/// Uses the registry v2 API.
-/// Responses use gz encoding and are wrapped in a signing message.
-/// For direct usage of response see below:
-///
 /// https://github.com/hexpm/specifications/blob/main/registry-v2.md
-/// Recommended sections: (#registry-files, #signing, #decoding-registry-files)
 ///
-/// API Docs:
-///
-/// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.package.ex#L348
-///
-/// https://github.com/hexpm/hex/blob/main/lib/hex/api/package.ex#L36
-pub fn get_package_request(
+pub fn repository_v2_get_package_request(
     name: &str,
     api_key: Option<&str>,
     config: &Config,
@@ -342,7 +327,7 @@ pub fn get_package_request(
 
 /// Parse a response to get the information for a package in the repository.
 ///
-pub fn get_package_response(
+pub fn repository_v2_get_package_response(
     response: http::Response<Vec<u8>>,
     public_key: &[u8],
 ) -> Result<Package, ApiError> {
@@ -361,11 +346,11 @@ pub fn get_package_response(
     let mut body = Vec::new();
     decoder.read_to_end(&mut body)?;
 
-    parse_repository_v2_package(&body, public_key)
+    repository_v2_package_parse_body(&body, public_key)
 }
 
 /// Parse a signed binary message containing the information for a package in the repository.
-pub fn parse_repository_v2_package(
+pub fn repository_v2_package_parse_body(
     protobuf_bytes: &Vec<u8>,
     public_key: &[u8],
 ) -> Result<Package, ApiError> {
@@ -392,7 +377,7 @@ pub fn parse_repository_v2_package(
 
 /// Create a request to download a version of a package as a tarball
 /// TODO: Where are the API docs for this?
-pub fn get_package_tarball_request(
+pub fn repository_get_package_tarball_request(
     name: &str,
     version: &str,
     api_key: Option<&str>,
@@ -411,7 +396,7 @@ pub fn get_package_tarball_request(
 
 /// Parse a response to download a version of a package as a tarball
 ///
-pub fn get_package_tarball_response(
+pub fn repository_get_package_tarball_response(
     response: http::Response<Vec<u8>>,
     checksum: &[u8],
 ) -> Result<Vec<u8>, ApiError> {
@@ -433,7 +418,7 @@ pub fn get_package_tarball_response(
 /// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.publish.ex#L384
 ///
 /// https://github.com/hexpm/hex/blob/main/lib/hex/api/release_docs.ex#L19
-pub fn remove_docs_request(
+pub fn api_remove_docs_request(
     package_name: &str,
     version: &str,
     api_key: &str,
@@ -451,7 +436,7 @@ pub fn remove_docs_request(
         .expect("remove_docs_request request"))
 }
 
-pub fn remove_docs_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
+pub fn api_remove_docs_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
     let (parts, body) = response.into_parts();
     match parts.status {
         StatusCode::NO_CONTENT => Ok(()),
@@ -468,7 +453,7 @@ pub fn remove_docs_response(response: http::Response<Vec<u8>>) -> Result<(), Api
 /// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.publish.ex#L429
 ///
 /// https://github.com/hexpm/hex/blob/main/lib/hex/api/release_docs.ex#L11
-pub fn publish_docs_request(
+pub fn api_publish_docs_request(
     package_name: &str,
     version: &str,
     gzipped_tarball: Vec<u8>,
@@ -489,7 +474,7 @@ pub fn publish_docs_request(
         .expect("publish_docs_request request"))
 }
 
-pub fn publish_docs_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
+pub fn api_publish_docs_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
     let (parts, body) = response.into_parts();
     match parts.status {
         StatusCode::CREATED => Ok(()),
@@ -506,7 +491,7 @@ pub fn publish_docs_response(response: http::Response<Vec<u8>>) -> Result<(), Ap
 /// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.publish.ex#L512
 ///
 /// https://github.com/hexpm/hex/blob/main/lib/hex/api/release.ex#L13
-pub fn publish_package_request(
+pub fn api_publish_package_request(
     release_tarball: Vec<u8>,
     api_key: &str,
     config: &Config,
@@ -524,7 +509,7 @@ pub fn publish_package_request(
         .expect("publish_package_request request")
 }
 
-pub fn publish_package_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
+pub fn api_publish_package_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
     // TODO: return data from body
     let (parts, body) = response.into_parts();
     match parts.status {
@@ -549,7 +534,7 @@ pub fn publish_package_response(response: http::Response<Vec<u8>>) -> Result<(),
 /// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.publish.ex#L371
 ///
 /// https://github.com/hexpm/hex/blob/main/lib/hex/api/release.ex#L21
-pub fn revert_release_request(
+pub fn api_revert_release_request(
     package_name: &str,
     version: &str,
     api_key: &str,
@@ -567,7 +552,7 @@ pub fn revert_release_request(
         .expect("publish_package_request request"))
 }
 
-pub fn revert_release_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
+pub fn api_revert_release_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
     let (parts, body) = response.into_parts();
     match parts.status {
         StatusCode::NO_CONTENT => Ok(()),
@@ -602,7 +587,7 @@ impl Display for OwnerLevel {
 /// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.owner.ex#L107
 ///
 /// https://github.com/hexpm/hex/blob/main/lib/hex/api/package.ex#L19
-pub fn add_owner_request(
+pub fn api_add_owner_request(
     package_name: &str,
     owner: &str,
     level: OwnerLevel,
@@ -624,7 +609,7 @@ pub fn add_owner_request(
         .expect("add_owner_request request")
 }
 
-pub fn add_owner_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
+pub fn api_add_owner_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
     let (parts, body) = response.into_parts();
     match parts.status {
         StatusCode::NO_CONTENT => Ok(()),
@@ -641,7 +626,7 @@ pub fn add_owner_response(response: http::Response<Vec<u8>>) -> Result<(), ApiEr
 /// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.owner.ex#L125
 ///
 /// https://github.com/hexpm/hex/blob/main/lib/hex/api/package.ex#L19
-pub fn transfer_owner_request(
+pub fn api_transfer_owner_request(
     package_name: &str,
     owner: &str,
     api_key: &str,
@@ -662,7 +647,7 @@ pub fn transfer_owner_request(
         .expect("transfer_owner_request request")
 }
 
-pub fn transfer_owner_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
+pub fn api_transfer_owner_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
     let (parts, body) = response.into_parts();
     match parts.status {
         StatusCode::NO_CONTENT => Ok(()),
@@ -679,7 +664,7 @@ pub fn transfer_owner_response(response: http::Response<Vec<u8>>) -> Result<(), 
 /// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.owner.ex#L139
 ///
 /// https://github.com/hexpm/hex/blob/main/lib/hex/api/package.ex#L28
-pub fn remove_owner_request(
+pub fn api_remove_owner_request(
     package_name: &str,
     owner: &str,
     api_key: &str,
@@ -695,7 +680,7 @@ pub fn remove_owner_request(
         .expect("remove_owner_request request")
 }
 
-pub fn remove_owner_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
+pub fn api_remove_owner_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
     let (parts, body) = response.into_parts();
     match parts.status {
         StatusCode::NO_CONTENT => Ok(()),
@@ -1005,7 +990,7 @@ fn verify_payload(mut signed: Signed, pem_public_key: &[u8]) -> Result<Vec<u8>, 
 
 /// Create a request to get the information for a package release.
 ///
-pub fn get_package_release_request(
+pub fn api_get_package_release_request(
     name: &str,
     version: &str,
     api_key: Option<&str>,
@@ -1024,7 +1009,7 @@ pub fn get_package_release_request(
 
 /// Parse a response to get the information for a package release.
 ///
-pub fn get_package_release_response(
+pub fn api_get_package_release_response(
     response: http::Response<Vec<u8>>,
 ) -> Result<Release<ReleaseMeta>, ApiError> {
     let (parts, body) = response.into_parts();

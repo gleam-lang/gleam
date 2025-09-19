@@ -1,8 +1,10 @@
 # Changelog
 
-## v4.3.0
+## v5.0.0 - 2025-09-19
 
-- Added `get_repository_versions_data`, `get_package_data`,
+- Functions renamed to make it more clear if the JSON API is used or if the
+  repository endpoints are used.
+- Added `repository_v2_package_parse_body`, and `repository_v2_get_versions_body`,
 
 ## v4.2.0 - 2025-08-27
 
