@@ -2631,3 +2631,17 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn pattern_match_unknown_size_and_literal_string() {
+    assert_js!(
+        r#"
+pub fn go(x, n) {
+  case x {
+    <<_:size(n), "\r\n">> -> 1
+    _ -> 2
+  }
+}
+"#
+    );
+}

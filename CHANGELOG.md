@@ -748,3 +748,7 @@
 - Fixed a bug where running `gleam update` would not properly update git
   dependencies unless `gleam clean` was run first.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where the compiler would produce wrong JavaScript code for binary
+  pattern matching expressions using literal strings and byte segments.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
