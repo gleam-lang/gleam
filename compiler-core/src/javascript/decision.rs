@@ -1443,14 +1443,18 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                 from_byte += 1;
             }
         } else {
+            let mut start = start.clone();
+
             // If the string doesn't start at a byte aligned offset then we'll
             // have to take slices out of it to check that each byte matches.
             for byte in bytes {
-                let end = self.offset_to_doc(&start.add_constant(8), false);
-                let from = self.offset_to_doc(start, false);
-                let byte_access =
-                    self.bit_array_slice_to_int(&bit_array, from, end, endianness, *signed);
+                let start_doc = self.offset_to_doc(&start, false);
+                let end = start.add_constant(8);
+                let end_doc = self.offset_to_doc(&end, false);
+                let byte_access = self
+                    .bit_array_slice_to_int(&bit_array, start_doc, end_doc, endianness, *signed);
                 checks.push(docvec![byte_access, equality, byte]);
+                start = end;
             }
         }
 
