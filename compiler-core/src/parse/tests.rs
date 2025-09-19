@@ -2019,3 +2019,12 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn wrong_function_return_type_declaration_using_colon_instead_of_right_arrow() {
+    assert_module_error!(
+        r#"
+pub fn main(): Nil {}
+        "#
+    );
+}
