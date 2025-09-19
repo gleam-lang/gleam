@@ -135,6 +135,7 @@ const REMOVE_OPAQUE_FROM_PRIVATE_TYPE: &str = "Remove opaque from private type";
 const COLLAPSE_NESTED_CASE: &str = "Collapse nested case";
 const REMOVE_UNREACHABLE_BRANCHES: &str = "Remove unreachable branches";
 const ADD_OMITTED_LABELS: &str = "Add omitted labels";
+const EXTRACT_FUNCTION: &str = "Extract function";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -10225,5 +10226,314 @@ pub fn main() {
 pub fn labelled(a, b) { todo }
     ",
         find_position_of("labelled").to_selection(),
+    );
+}
+
+#[test]
+fn extract_function() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+pub fn do_things(a, b) {
+  let result = {
+    let a = 10 + a
+    let b = 10 + b
+    a * b
+  }
+  result + 3
+}
+",
+        find_position_of("{")
+            .nth_occurrence(2)
+            .select_until(find_position_of("}"))
+    );
+}
+
+#[test]
+fn extract_function_from_statements() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+pub fn do_things(a, b) {
+  let a = 10 + a
+  let b = 10 + b
+  let result = a * b
+  result + 3
+}
+",
+        find_position_of("let").select_until(find_position_of("* b"))
+    );
+}
+
+#[test]
+fn extract_function_which_use_variables_defined_in_the_extracted_span() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+pub fn do_things(a, b) {
+  let new_a = 10 + a
+  let new_b = 10 + b
+  let result = new_a * new_b
+  result + 3
+}
+",
+        find_position_of("let").select_until(find_position_of("* new_b"))
+    );
+}
+
+#[test]
+fn extract_function_which_use_variables_shadowed_in_an_inner_scope() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+pub fn do_things(a, b) {
+  let first_part = {
+    let a = a + 10
+    let b = b + 10
+    a * b
+  }
+  let result = first_part + a * b
+  result + 3
+}
+",
+        find_position_of("let").select_until(find_position_of("+ a * b"))
+    );
+}
+
+#[test]
+fn extract_function_which_uses_multiple_extracted_variables() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+pub fn do_things(a, b) {
+  let wibble = a + b
+  let wobble = a * b
+  wobble / wibble
+}
+",
+        find_position_of("let").select_until(find_position_of("* b"))
+    );
+}
+
+#[test]
+fn extract_function_which_uses_no_extracted_variables() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+pub fn do_things(a, b) {
+  let x = a + b
+  echo x
+  a
+}
+",
+        find_position_of("let").select_until(find_position_of("echo x"))
+    );
+}
+
+#[test]
+fn extract_function_which_uses_variable_in_guard() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+pub fn do_things(a, b) {
+  let result = case Nil {
+    _ if a > b -> 17
+    _ if a < b -> 12
+    _ -> panic
+  }
+
+  result % 4
+}
+",
+        find_position_of("case").select_until(find_position_of("}"))
+    );
+}
+
+#[test]
+fn extract_function_which_uses_variable_in_bit_array_pattern() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+pub fn main() {
+  let bits = todo
+  let size = todo
+
+  let segment = case bits {
+    <<x:size(size), _:bits>> -> Ok(x)
+    _ -> Error(Nil)
+  }
+
+  case segment {
+    Ok(value) -> echo value
+    Error(_) -> panic
+  }
+}
+",
+        find_position_of("case").select_until(find_position_of("}"))
+    );
+}
+
+#[test]
+fn extract_function_which_uses_constant() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+const pi = 3.14
+
+pub fn main() {
+  let radius = 4.5
+
+  let circumference = radius *. pi *. 2.0
+
+  echo circumference
+}
+",
+        find_position_of("radius *.").select_until(find_position_of("2.0"))
+    );
+}
+
+#[test]
+fn extract_function_which_uses_constant_in_guard() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+const pi = 3.14
+
+pub fn main() {
+  let value = 3.15
+
+  let string = case value {
+    0.0 -> "Zero"
+    1.0 -> "One"
+    _ if value == pi -> "PI"
+    _ -> "Something else"
+  }
+
+  echo string
+}
+"#,
+        find_position_of("case").select_until(find_position_of("}"))
+    );
+}
+
+#[test]
+fn no_code_action_to_extract_function_when_expression_is_not_fully_selected() {
+    assert_no_code_actions!(
+        EXTRACT_FUNCTION,
+        r#"
+fn print(text: String) { todo }
+
+pub fn main() {
+  let arguments = todo
+
+  case arguments {
+    ["help"] -> print("USAGE TEXT HERE")
+    _ -> panic as "Invalid args"
+  }
+}
+"#,
+        find_position_of("print")
+            .under_char('i')
+            .select_until(find_position_of("TEXT"))
+    );
+}
+
+#[test]
+fn extract_function_when_name_already_in_scope() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+fn function() { todo }
+
+pub fn do_things(a, b) {
+  let result = {
+    let a = 10 + a
+    let b = 10 + b
+    a * b
+  }
+  result + 3
+}
+"#,
+        find_position_of("= {").select_until(find_position_of("}").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn extract_function_when_multiple_names_already_in_scope() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+fn function() { todo }
+fn function_2() { todo }
+fn function_3() { todo }
+fn function_4() { todo }
+
+pub fn do_things(a, b) {
+  let result = {
+    let a = 10 + a
+    let b = 10 + b
+    a * b
+  }
+  result + 3
+}
+"#,
+        find_position_of("= {").select_until(find_position_of("}").nth_occurrence(5))
+    );
+}
+
+#[test]
+fn extract_function_partially_selected() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn main() {
+  let a = 10
+  let b = 20
+  let c = a + b
+
+  echo c
+}
+"#,
+        find_position_of("a =").select_until(find_position_of("c ="))
+    );
+}
+
+#[test]
+fn selected_statements_do_not_select_outer_block() {
+    // We want to make sure only the statements within the block are extracted,
+    // and not the block itself.
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn main() {
+  let c = {
+    let a = 10
+    let b = 20
+    a + b
+  }
+
+  echo c
+}
+"#,
+        find_position_of("let a").select_until(find_position_of("+ b"))
+    );
+}
+
+#[test]
+fn no_code_action_to_extract_when_multiple_functions_are_selected() {
+    assert_no_code_actions!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn main() {
+  let a = 10
+  a + 1
+}
+
+pub fn other() {
+  let b = 20
+  b * 2
+}
+"#,
+        find_position_of("let a").select_until(find_position_of("let b"))
     );
 }

@@ -1,0 +1,48 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nconst pi = 3.14\n\npub fn main() {\n  let value = 3.15\n\n  let string = case value {\n    0.0 -> \"Zero\"\n    1.0 -> \"One\"\n    _ if value == pi -> \"PI\"\n    _ -> \"Something else\"\n  }\n\n  echo string\n}\n"
+---
+----- BEFORE ACTION
+
+const pi = 3.14
+
+pub fn main() {
+  let value = 3.15
+
+  let string = case value {
+               ▔▔▔▔▔▔▔▔▔▔▔▔
+    0.0 -> "Zero"
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    1.0 -> "One"
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    _ if value == pi -> "PI"
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    _ -> "Something else"
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  }
+▔▔↑
+
+  echo string
+}
+
+
+----- AFTER ACTION
+
+const pi = 3.14
+
+pub fn main() {
+  let value = 3.15
+
+  let string = function(value)
+
+  echo string
+}
+
+fn function(value: Float) -> String {
+  case value {
+    0.0 -> "Zero"
+    1.0 -> "One"
+    _ if value == pi -> "PI"
+    _ -> "Something else"
+  }
+}

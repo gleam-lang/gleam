@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn do_things(a, b) {\n  let wibble = a + b\n  let wobble = a * b\n  wobble / wibble\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn do_things(a, b) {
+  let wibble = a + b
+  ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  let wobble = a * b
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑  
+  wobble / wibble
+}
+
+
+----- AFTER ACTION
+
+pub fn do_things(a, b) {
+  let #(wobble, wibble) = function(a, b)
+  wobble / wibble
+}
+
+fn function(a: Int, b: Int) -> #(Int, Int) {
+  let wibble = a + b
+  let wobble = a * b
+  #(wobble, wibble)
+}
