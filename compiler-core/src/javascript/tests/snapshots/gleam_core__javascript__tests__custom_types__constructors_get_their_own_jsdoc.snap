@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
+assertion_line: 678
 expression: "\npub type Wibble {\n  /// Wibbling!!\n  Wibble(field: Int)\n\n  /// Wobbling!!\n  Wobble(field: Int)\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -43,6 +45,5 @@ export const Wibble$Wobble = (field) => new Wobble(field);
 export const Wibble$isWobble = (value) => value instanceof Wobble;
 export const Wibble$Wobble$field = (value) => value.field;
 export const Wibble$Wobble$0 = (value) => value.field;
-
 
 export const Wibble$field = (value) => value.field;

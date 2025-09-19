@@ -362,7 +362,7 @@ impl<'a> Generator<'a> {
 
         let mut definitions = constructors
             .iter()
-            .map(|constructor| self.record_definition(constructor, name, constructor_publicity))
+            .map(|constructor| self.variant_definition(constructor, name, constructor_publicity))
             .collect_vec();
 
         // Generate getters for fields shared between variants
@@ -380,13 +380,13 @@ impl<'a> Generator<'a> {
         definitions
     }
 
-    fn record_definition(
+    fn variant_definition(
         &self,
         constructor: &'a TypedRecordConstructor,
         type_name: &'a str,
         publicity: Publicity,
     ) -> Document<'a> {
-        let class_definition = self.record_class_definition(constructor, publicity);
+        let class_definition = self.variant_class_definition(constructor, publicity);
 
         // If the custom type is private or opaque, we don't need to generate API
         // functions for it.
@@ -394,9 +394,9 @@ impl<'a> Generator<'a> {
             return class_definition;
         }
 
-        let constructor_definition = self.record_constructor_definition(constructor, type_name);
-        let variant_check_definition = self.record_check_definition(constructor, type_name);
-        let fields_definition = self.record_fields_definition(constructor, type_name);
+        let constructor_definition = self.variant_constructor_definition(constructor, type_name);
+        let variant_check_definition = self.variant_check_definition(constructor, type_name);
+        let fields_definition = self.variant_fields_definition(constructor, type_name);
 
         docvec![
             class_definition,
@@ -408,7 +408,7 @@ impl<'a> Generator<'a> {
         ]
     }
 
-    fn record_constructor_definition(
+    fn variant_constructor_definition(
         &self,
         constructor: &'a TypedRecordConstructor,
         type_name: &'a str,
@@ -445,7 +445,7 @@ impl<'a> Generator<'a> {
         ]
     }
 
-    fn record_check_definition(
+    fn variant_check_definition(
         &self,
         constructor: &'a TypedRecordConstructor,
         type_name: &'a str,
@@ -468,7 +468,7 @@ impl<'a> Generator<'a> {
         ]
     }
 
-    fn record_fields_definition(
+    fn variant_fields_definition(
         &self,
         constructor: &'a TypedRecordConstructor,
         type_name: &'a str,
@@ -528,27 +528,23 @@ impl<'a> Generator<'a> {
         type_name: &'a str,
         shared_accessors: &HashMap<EcoString, RecordAccessor>,
     ) -> Document<'a> {
-        let mut functions = Vec::new();
-
-        for field in shared_accessors.keys().sorted() {
+        let accessors = shared_accessors.keys().sorted().map(|field| {
             let function_name = eco_format!("{type_name}${field}");
 
             let contents =
                 docvec![break_("", " "), "value.", maybe_escape_property(field), ";"].group();
 
-            functions.push(docvec![
-                line(),
+            docvec![
                 "export const ",
                 function_name,
                 " = (value) =>",
                 contents.nest(INDENT),
-            ]);
-        }
-
-        concat(functions)
+            ]
+        });
+        concat(Itertools::intersperse(accessors, line()))
     }
 
-    fn record_class_definition(
+    fn variant_class_definition(
         &self,
         constructor: &'a TypedRecordConstructor,
         publicity: Publicity,
