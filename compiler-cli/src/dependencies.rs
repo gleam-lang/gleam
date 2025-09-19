@@ -1228,7 +1228,7 @@ impl dependency::PackageFetcher for PackageFetcher {
                 let mut data = Vec::new();
                 let _ = decoder.read_to_end(&mut data)
                     .map_err(PackageFetchError::fetch_error)?;
-                hexpm::get_package_data(&data, HEXPM_PUBLIC_KEY)
+                hexpm::parse_repository_v2_package(&data, HEXPM_PUBLIC_KEY)
             },
         }.map_err(PackageFetchError::from)?;
 
