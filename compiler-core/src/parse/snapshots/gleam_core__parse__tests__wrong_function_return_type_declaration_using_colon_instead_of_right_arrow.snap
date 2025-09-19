@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\npub fn main(): Nil {}\n        "
+---
+----- SOURCE CODE
+
+pub fn main(): Nil {}
+        
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:14
+  │
+2 │ pub fn main(): Nil {}
+  │              ^ I was not expecting this
+
+Found `:`, expected one of: 
+- ->
+Hint: Maybe you meant to write return value type annotation?
+Return type annotations are written using `->`, not `:`
