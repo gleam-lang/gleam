@@ -81,10 +81,10 @@ pub fn revert(
     let http = HttpClient::new();
 
     // Revert release from API
-    let request = hexpm::revert_release_request(&package, &version, &api_key, &hex_config)
+    let request = hexpm::api_revert_release_request(&package, &version, &api_key, &hex_config)
         .map_err(Error::hex)?;
     let response = runtime.block_on(http.send(request))?;
-    hexpm::revert_release_response(response).map_err(Error::hex)?;
+    hexpm::api_revert_release_response(response).map_err(Error::hex)?;
 
     // Done!
     println!("{package} {version} has been removed from Hex");
