@@ -2149,59 +2149,76 @@ where
         )?;
         let (_, rpar_e) =
             self.expect_one_following_series(&Token::RightParen, "a function parameter")?;
-        let return_annotation = self.parse_type_annotation(&Token::RArrow)?;
 
-        let (body_start, body, end, end_position) = match self.maybe_one(&Token::LeftBrace) {
-            Some((left_brace_start, _)) => {
-                let some_body = self.parse_statement_seq()?;
-                let (_, right_brace_end) = self.expect_one(&Token::RightBrace)?;
-                let end = return_annotation
-                    .as_ref()
-                    .map(|l| l.location().end)
-                    .unwrap_or(rpar_e);
-                let body = match some_body {
-                    None => vec![Statement::Expression(UntypedExpr::Todo {
-                        kind: TodoKind::EmptyFunction {
-                            function_location: SrcSpan { start, end },
-                        },
-                        location: SrcSpan {
-                            start: left_brace_start + 1,
-                            end: right_brace_end,
-                        },
-                        message: None,
-                    })],
-                    Some((body, _)) => body.to_vec(),
+        // Check for TypeScript-style return type annotation (:) instead of arrow (->)
+        match self.maybe_one(&Token::Colon) {
+            Some((colon_start, colon_end)) => Err(ParseError {
+                error: ParseErrorType::UnexpectedToken {
+                    token: Token::Colon,
+                    expected: vec!["->".into()],
+                    hint: Some("Maybe you meant to write return value type annotation?\nReturn type annotations are written using `->`, not `:`".into()),
+                },
+                location: SrcSpan {
+                    start: colon_start,
+                    end: colon_end,
+                },
+            }),
+           None => {
+               let return_annotation = self.parse_type_annotation(&Token::RArrow)?;
+
+                let (body_start, body, end, end_position) = match self.maybe_one(&Token::LeftBrace) {
+                    Some((left_brace_start, _)) => {
+                        let some_body = self.parse_statement_seq()?;
+                        let (_, right_brace_end) = self.expect_one(&Token::RightBrace)?;
+                        let end = return_annotation
+                            .as_ref()
+                            .map(|l| l.location().end)
+                            .unwrap_or(rpar_e);
+                        let body = match some_body {
+                            None => vec![Statement::Expression(UntypedExpr::Todo {
+                                kind: TodoKind::EmptyFunction {
+                                    function_location: SrcSpan { start, end },
+                                },
+                                location: SrcSpan {
+                                    start: left_brace_start + 1,
+                                    end: right_brace_end,
+                                },
+                                message: None,
+                            })],
+                            Some((body, _)) => body.to_vec(),
+                        };
+
+                        (Some(left_brace_start), body, end, right_brace_end)
+                    }
+
+                    None => (None, vec![], rpar_e, rpar_e),
                 };
 
-                (Some(left_brace_start), body, end, right_brace_end)
-            }
-
-            None => (None, vec![], rpar_e, rpar_e),
-        };
-
-        Ok(Some(Definition::Function(Function {
-            documentation,
-            location: SrcSpan { start, end },
-            end_position,
-            body_start,
-            publicity: self.publicity(public, attributes.internal)?,
-            name,
-            arguments,
-            body,
-            return_type: (),
-            return_annotation,
-            deprecation: std::mem::take(&mut attributes.deprecated),
-            external_erlang: attributes.external_erlang.take(),
-            external_javascript: attributes.external_javascript.take(),
-            implementations: Implementations {
-                gleam: true,
-                can_run_on_erlang: true,
-                can_run_on_javascript: true,
-                uses_erlang_externals: false,
-                uses_javascript_externals: false,
-            },
-            purity: Purity::Pure,
-        })))
+                Ok(Some(Definition::Function(Function {
+                    documentation,
+                    location: SrcSpan { start, end },
+                    end_position,
+                    body_start,
+                    publicity: self.publicity(public, attributes.internal)?,
+                    name,
+                    arguments,
+                    body,
+                    return_type: (),
+                    return_annotation,
+                    deprecation: std::mem::take(&mut attributes.deprecated),
+                    external_erlang: attributes.external_erlang.take(),
+                    external_javascript: attributes.external_javascript.take(),
+                    implementations: Implementations {
+                        gleam: true,
+                        can_run_on_erlang: true,
+                        can_run_on_javascript: true,
+                        uses_erlang_externals: false,
+                        uses_javascript_externals: false,
+                    },
+                    purity: Purity::Pure,
+                })))
+           }
+        }
     }
 
     fn add_anon_function_hint(&self, mut err: ParseError) -> ParseError {
