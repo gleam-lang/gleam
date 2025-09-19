@@ -29,7 +29,7 @@ toml = "0"
 # Enum trait impl macros
 strum = { version = "0", features = ["derive"] }
 # Hex package manager client
-hexpm = "4"
+hexpm = "5"
 # Creation of tar file archives
 tar = "0"
 # gzip compression
