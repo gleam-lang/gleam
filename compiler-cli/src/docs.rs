@@ -29,10 +29,10 @@ pub fn remove(package: String, version: String) -> Result<()> {
     let http = HttpClient::new();
 
     // Remove docs from API
-    let request = hexpm::remove_docs_request(&package, &version, &api_key, &hex_config)
+    let request = hexpm::api_remove_docs_request(&package, &version, &api_key, &hex_config)
         .map_err(Error::hex)?;
     let response = runtime.block_on(http.send(request))?;
-    hexpm::remove_docs_response(response).map_err(Error::hex)?;
+    hexpm::api_remove_docs_response(response).map_err(Error::hex)?;
 
     // Done!
     println!("The docs for {package} {version} have been removed from HexDocs");
