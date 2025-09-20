@@ -12,7 +12,7 @@
 //! <https://www.typescriptlang.org/docs/handbook/declaration-files/introduction.html>
 
 use crate::ast::{AssignName, Publicity};
-use crate::type_::{PRELUDE_MODULE_NAME, is_prelude_module};
+use crate::type_::{PRELUDE_MODULE_NAME, RecordAccessor, is_prelude_module};
 use crate::{
     ast::{
         CustomType, Definition, Function, Import, ModuleConstant, TypeAlias, TypedArg,
@@ -27,7 +27,7 @@ use ecow::{EcoString, eco_format};
 use itertools::Itertools;
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
-use super::{INDENT, import::Imports, join, line, lines, wrap_arguments};
+use super::{INDENT, concat, import::Imports, join, line, lines, wrap_arguments};
 
 /// When rendering a type variable to an TypeScript type spec we need all type
 /// variables with the same id to end up with the same name in the generated
@@ -438,11 +438,25 @@ impl<'a> TypeScriptGenerator<'a> {
         publicity: &Publicity,
     ) -> Vec<Document<'a>> {
         // Constructors for opaque and private types are not exported
-        let export_constructors = !opaque && publicity.is_importable();
+        let constructor_publicity = if opaque || !publicity.is_importable() {
+            Publicity::Private
+        } else {
+            Publicity::Public
+        };
+
+        let type_name = name_with_generics(eco_format!("{name}$").to_doc(), typed_parameters);
 
         let mut definitions = constructors
             .iter()
-            .map(|constructor| self.record_definition(constructor, export_constructors))
+            .map(|constructor| {
+                self.record_definition(
+                    constructor,
+                    constructor_publicity,
+                    name,
+                    &type_name,
+                    typed_parameters,
+                )
+            })
             .collect_vec();
 
         let definition = if constructors.is_empty() {
@@ -464,11 +478,28 @@ impl<'a> TypeScriptGenerator<'a> {
                 "declare ".to_doc()
             },
             "type ",
-            name_with_generics(eco_format!("{name}$").to_doc(), typed_parameters),
+            type_name.clone(),
             " = ",
             definition,
             ";",
         ]);
+
+        // Generate getters for fields shared between variants
+        if let Some(accessors_map) = self.module.type_info.accessors.get(name)
+            && !accessors_map.shared_accessors.is_empty()
+            // Don't bother generating shared getters when there's only one variant,
+            // since the specific accessors can always be uses instead.
+            && constructors.len() != 1
+            // Only generate accessors for the API if the constructors are public
+            && constructor_publicity.is_public()
+        {
+            definitions.push(self.shared_custom_type_fields(
+                name,
+                &type_name,
+                typed_parameters,
+                &accessors_map.shared_accessors,
+            ));
+        }
 
         definitions
     }
@@ -476,11 +507,56 @@ impl<'a> TypeScriptGenerator<'a> {
     fn record_definition(
         &mut self,
         constructor: &'a TypedRecordConstructor,
-        export: bool,
+        publicity: Publicity,
+        type_name: &'a str,
+        type_name_with_generics: &Document<'a>,
+        type_parameters: &'a [Arc<Type>],
     ) -> Document<'a> {
         self.set_prelude_used();
+        let class_definition = self.record_class_definition(constructor, publicity);
+
+        // If the custom type is private or opaque, we don't need to generate API
+        // functions for it.
+        if publicity.is_private() {
+            return class_definition;
+        }
+
+        let constructor_definition = self.record_constructor_definition(
+            constructor,
+            type_name,
+            type_name_with_generics,
+            type_parameters,
+        );
+        let record_check_definition = self.record_check_definition(
+            constructor,
+            type_name,
+            type_name_with_generics,
+            type_parameters,
+        );
+        let fields_definition = self.record_fields_definition(
+            constructor,
+            type_name,
+            type_name_with_generics,
+            type_parameters,
+        );
+
+        docvec![
+            class_definition,
+            line(),
+            constructor_definition,
+            line(),
+            record_check_definition,
+            fields_definition,
+        ]
+    }
+
+    fn record_class_definition(
+        &mut self,
+        constructor: &'a TypedRecordConstructor,
+        publicity: Publicity,
+    ) -> Document<'a> {
         let head = docvec![
-            if export {
+            if publicity.is_public() {
                 "export ".to_doc()
             } else {
                 "declare ".to_doc()
@@ -545,6 +621,166 @@ impl<'a> TypeScriptGenerator<'a> {
         .nest(INDENT);
 
         docvec![head, class_body, line(), "}"]
+    }
+
+    fn record_constructor_definition(
+        &mut self,
+        constructor: &'a TypedRecordConstructor,
+        type_name: &'a str,
+        type_name_with_generics: &Document<'a>,
+        type_parameters: &'a [Arc<Type>],
+    ) -> Document<'a> {
+        let mut arguments = Vec::new();
+
+        for (index, parameter) in constructor.arguments.iter().enumerate() {
+            let name = if let Some((_, label)) = &parameter.label {
+                super::maybe_escape_identifier(label)
+            } else {
+                eco_format!("${index}")
+            };
+
+            arguments.push(docvec![
+                name,
+                ": ",
+                self.do_print_force_generic_param(&parameter.type_)
+            ])
+        }
+
+        let function_name =
+            eco_format!("{type_name}${record_name}", record_name = constructor.name).to_doc();
+
+        docvec![
+            "export function ",
+            name_with_generics(function_name, type_parameters),
+            "(",
+            docvec![break_("", ""), join(arguments, break_(",", ", ")),].nest(INDENT),
+            break_(",", ""),
+            "): ",
+            type_name_with_generics.clone(),
+            ";"
+        ]
+        .group()
+    }
+
+    fn record_check_definition(
+        &self,
+        constructor: &'a TypedRecordConstructor,
+        type_name: &'a str,
+        type_name_with_generics: &Document<'a>,
+        type_parameters: &'a [Arc<Type>],
+    ) -> Document<'a> {
+        let function_name = eco_format!(
+            "{type_name}$is{record_name}",
+            record_name = constructor.name
+        )
+        .to_doc();
+
+        docvec![
+            "export function ",
+            name_with_generics(function_name, type_parameters),
+            "(",
+            docvec![break_("", "",), "value: ", type_name_with_generics.clone(),].nest(INDENT),
+            break_(",", ""),
+            "): boolean;",
+        ]
+        .group()
+    }
+
+    fn record_fields_definition(
+        &mut self,
+        constructor: &'a TypedRecordConstructor,
+        type_name: &'a str,
+        type_name_with_generics: &Document<'a>,
+        type_parameters: &'a [Arc<Type>],
+    ) -> Document<'a> {
+        let mut functions = Vec::new();
+
+        for (index, argument) in constructor.arguments.iter().enumerate() {
+            // Always generate the accessor for the value at this index. Although
+            // this is not necessary when a label is present, we want to make sure
+            // that adding a label to a record isn't a breaking change. For this
+            // reason, we need to generate an index getter even when a label is
+            // present to ensure consistent behaviour between labelled and unlabelled
+            // field access.
+            let function_name = eco_format!(
+                "{type_name}${record_name}${index}",
+                record_name = constructor.name
+            )
+            .to_doc();
+
+            functions.push(
+                docvec![
+                    line(),
+                    "export function ",
+                    name_with_generics(function_name, type_parameters),
+                    "(",
+                    docvec![break_("", "",), "value: ", type_name_with_generics.clone(),]
+                        .nest(INDENT),
+                    break_(",", ""),
+                    "): ",
+                    self.do_print_force_generic_param(&argument.type_),
+                    ";",
+                ]
+                .group(),
+            );
+
+            // If the argument is labelled, also generate a getter for the labelled
+            // argument.
+            if let Some((_, label)) = &argument.label {
+                let function_name = eco_format!(
+                    "{type_name}${record_name}${label}",
+                    record_name = constructor.name
+                )
+                .to_doc();
+
+                functions.push(
+                    docvec![
+                        line(),
+                        "export function ",
+                        name_with_generics(function_name, type_parameters),
+                        "(",
+                        docvec![break_("", "",), "value: ", type_name_with_generics.clone(),]
+                            .nest(INDENT),
+                        break_(",", ""),
+                        "): ",
+                        self.do_print_force_generic_param(&argument.type_),
+                        ";",
+                    ]
+                    .group(),
+                );
+            }
+        }
+
+        concat(functions)
+    }
+
+    fn shared_custom_type_fields(
+        &mut self,
+        type_name: &'a str,
+        type_name_with_generics: &Document<'a>,
+        type_parameters: &'a [Arc<Type>],
+        shared_accessors: &HashMap<EcoString, RecordAccessor>,
+    ) -> Document<'a> {
+        let accessors = shared_accessors
+            .iter()
+            .sorted_by_key(|(name, _)| *name)
+            .map(|(field, accessor)| {
+                let function_name = eco_format!("{type_name}${field}").to_doc();
+
+                docvec![
+                    "export function ",
+                    name_with_generics(function_name, type_parameters),
+                    "(",
+                    docvec![break_("", "",), "value: ", type_name_with_generics.clone(),]
+                        .nest(INDENT),
+                    break_(",", ""),
+                    "): ",
+                    self.do_print_force_generic_param(&accessor.type_),
+                    ";"
+                ]
+                .group()
+            });
+        join(accessors, line())
     }
 
     fn module_constant(&mut self, name: &'a EcoString, value: &'a TypedConstant) -> Document<'a> {

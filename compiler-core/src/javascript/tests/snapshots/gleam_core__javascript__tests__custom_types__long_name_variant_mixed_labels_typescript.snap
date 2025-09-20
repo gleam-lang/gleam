@@ -29,6 +29,29 @@ export class TypeWithALongNameAndSeveralArguments extends _.CustomType {
   a: string;
   b: string;
 }
+export function TypeWithALongNameAndSeveralArguments$TypeWithALongNameAndSeveralArguments(
+  $0: string,
+  $1: string,
+  $2: string,
+  a: string,
+  b: string,
+): TypeWithALongNameAndSeveralArguments$;
+export function TypeWithALongNameAndSeveralArguments$isTypeWithALongNameAndSeveralArguments(
+  value: TypeWithALongNameAndSeveralArguments$,
+): boolean;
+export function TypeWithALongNameAndSeveralArguments$TypeWithALongNameAndSeveralArguments$0(value: TypeWithALongNameAndSeveralArguments$): string;
+export function TypeWithALongNameAndSeveralArguments$TypeWithALongNameAndSeveralArguments$1(
+  value: TypeWithALongNameAndSeveralArguments$,
+): string;
+export function TypeWithALongNameAndSeveralArguments$TypeWithALongNameAndSeveralArguments$2(value: TypeWithALongNameAndSeveralArguments$): string;
+export function TypeWithALongNameAndSeveralArguments$TypeWithALongNameAndSeveralArguments$3(
+  value: TypeWithALongNameAndSeveralArguments$,
+): string;
+export function TypeWithALongNameAndSeveralArguments$TypeWithALongNameAndSeveralArguments$a(value: TypeWithALongNameAndSeveralArguments$): string;
+export function TypeWithALongNameAndSeveralArguments$TypeWithALongNameAndSeveralArguments$4(
+  value: TypeWithALongNameAndSeveralArguments$,
+): string;
+export function TypeWithALongNameAndSeveralArguments$TypeWithALongNameAndSeveralArguments$b(value: TypeWithALongNameAndSeveralArguments$): string;
 
 export type TypeWithALongNameAndSeveralArguments$ = TypeWithALongNameAndSeveralArguments;
 
