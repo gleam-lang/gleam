@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\npub type Wibble {\n  Wibble\n  Wobble\n}\n\npub fn is_wibble_reverse(w: Wibble) -> Bool {\n  Wibble == w\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble
+  Wobble
+}
+
+pub fn is_wibble_reverse(w: Wibble) -> Bool {
+  Wibble == w
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class Wibble extends $CustomType {}
+
+export class Wobble extends $CustomType {}
+
+export function is_wibble_reverse(w) {
+  return w instanceof Wibble;
+}

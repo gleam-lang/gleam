@@ -1536,12 +1536,74 @@ impl<'module, 'a> Generator<'module, 'a> {
             return docvec![left_doc, operator, right_doc];
         }
 
+        // For comparison with singleton custom types, ie, one with no fields.
+        // If you have some code like this
+        // ```gleam
+        //  pub type Wibble {
+        //    Wibble
+        //    Wobble
+        //  }
+
+        //  pub fn is_wibble(w: Wibble) -> Bool {
+        //    w == Wibble
+        //  }
+        // ```
+        // Instead of `isEqual(w, new Wibble())`, generate `w instanceof Wibble`
+        // because the first approach needs to construct a new Wibble, and then call the isEqual function,
+        // which supports any shape of data, and so does a lot of extra logic which isn't necessary.
+
+        // RHS: singleton record constructor (arity 0)
+        if let TypedExpr::Var {
+            constructor:
+                ValueConstructor {
+                    variant: ValueConstructorVariant::Record { arity: 0, name, .. },
+                    ..
+                },
+            ..
+        } = right
+        {
+            let left = self
+                .not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(left));
+
+            return self.singleton_equal(left, name, should_be_equal);
+        }
+
+        // LHS: singleton record constructor (arity 0)
+        if let TypedExpr::Var {
+            constructor:
+                ValueConstructor {
+                    variant: ValueConstructorVariant::Record { arity: 0, name, .. },
+                    ..
+                },
+            ..
+        } = left
+        {
+            let right = self
+                .not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(right));
+
+            return self.singleton_equal(right, name, should_be_equal);
+        }
+
         // Other types must be compared using structural equality
         let left =
             self.not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(left));
         let right =
             self.not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(right));
+
         self.prelude_equal_call(should_be_equal, left, right)
+    }
+
+    fn singleton_equal(
+        &self,
+        value: Document<'a>,
+        tag: &EcoString,
+        should_be_equal: bool,
+    ) -> Document<'a> {
+        if should_be_equal {
+            docvec![value, " instanceof ", tag.to_doc()]
+        } else {
+            docvec!["!(", value, " instanceof ", tag.to_doc(), ")"]
+        }
     }
 
     fn equal_with_doc_operands(
@@ -1966,16 +2028,56 @@ impl<'module, 'a> Generator<'module, 'a> {
                 docvec![left, " !== ", right]
             }
 
-            ClauseGuard::Equals { left, right, .. } => {
-                let left = self.guard(left);
-                let right = self.guard(right);
-                self.prelude_equal_call(true, left, right)
-            }
+            ClauseGuard::Equals { left, right, .. }
+            | ClauseGuard::NotEquals { left, right, .. } => {
+                fn is_variable(g: &TypedClauseGuard) -> bool {
+                    matches!(g, ClauseGuard::Var { .. })
+                }
 
-            ClauseGuard::NotEquals { left, right, .. } => {
-                let left = self.guard(left);
-                let right = self.guard(right);
-                self.prelude_equal_call(false, left, right)
+                // returns Some(name) if g is a zero arity constructor *value*
+                fn zero_arity_constructor_tag(g: &TypedClauseGuard) -> Option<EcoString> {
+                    match g {
+                        ClauseGuard::Constant(Constant::Record {
+                            arguments, name, ..
+                        }) if arguments.is_empty() && g.type_().is_named() => Some(name.clone()),
+                        _ => None,
+                    }
+                }
+
+                // true when the variable is the alias introduced by pattern
+                fn is_constructor_alias(g: &TypedClauseGuard) -> bool {
+                    match g {
+                        ClauseGuard::Var { type_, .. } => matches!(&**type_, Type::Fn { .. }),
+                        _ => false,
+                    }
+                }
+
+                let want_equal = matches!(guard, ClauseGuard::Equals { .. });
+                let both_sides_ctor = zero_arity_constructor_tag(left).is_some()
+                    && zero_arity_constructor_tag(right).is_some();
+
+                if !both_sides_ctor {
+                    // variable == constructor_value
+                    if is_variable(left)
+                        && !is_constructor_alias(left)
+                        && let Some(tag) = zero_arity_constructor_tag(right)
+                    {
+                        let val = self.guard(left);
+                        return self.singleton_equal(val, &tag, want_equal);
+                    }
+                    // constructor_value == variable
+                    if is_variable(right)
+                        && !is_constructor_alias(right)
+                        && let Some(tag) = zero_arity_constructor_tag(left)
+                    {
+                        let val = self.guard(right);
+                        return self.singleton_equal(val, &tag, want_equal);
+                    }
+                }
+
+                let l = self.guard(left);
+                let r = self.guard(right);
+                self.prelude_equal_call(want_equal, l, r)
             }
 
             ClauseGuard::GtFloat { left, right, .. } | ClauseGuard::GtInt { left, right, .. } => {
