@@ -33,6 +33,8 @@ export * from "../prelude.mjs";
 import type * as _ from "../gleam.d.mts";
 
 export class A extends _.CustomType {}
+export function A$A(): A$;
+export function A$isA(value: A$): boolean;
 
 export type A$ = A;
 

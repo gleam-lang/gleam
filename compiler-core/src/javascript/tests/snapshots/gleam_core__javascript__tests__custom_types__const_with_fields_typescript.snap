@@ -21,6 +21,12 @@ export class Mine extends _.CustomType {
   a: number;
   b: number;
 }
+export function Mine$Mine(a: number, b: number): Mine$;
+export function Mine$isMine(value: Mine$): boolean;
+export function Mine$Mine$0(value: Mine$): number;
+export function Mine$Mine$a(value: Mine$): number;
+export function Mine$Mine$1(value: Mine$): number;
+export function Mine$Mine$b(value: Mine$): number;
 
 export type Mine$ = Mine;
 
