@@ -1033,6 +1033,15 @@ impl TypedExpr {
         }
     }
 
+    pub fn var_constructor(&self) -> Option<(&ValueConstructor, &EcoString)> {
+        match self {
+            TypedExpr::Var {
+                constructor, name, ..
+            } => Some((constructor, name)),
+            _ => None,
+        }
+    }
+
     #[must_use]
     pub(crate) fn is_panic(&self) -> bool {
         match self {

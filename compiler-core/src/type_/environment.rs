@@ -78,8 +78,7 @@ pub struct Environment<'a> {
     /// local_variable_usages is a stack of scopes. When a local variable is created it is
     /// added to the top scope. When a local variable is used we crawl down the scope
     /// stack for a variable with that name and mark it as used.
-    /// NOTE: The bool in the tuple here tracks if the variable has been used
-    pub local_variable_usages: Vec<HashMap<EcoString, (VariableOrigin, SrcSpan, bool)>>,
+    pub local_variable_usages: Vec<HashMap<EcoString, VariableUsage>>,
 
     /// Used to determine if all functions/constants need to support the current
     /// compilation target.
@@ -93,6 +92,14 @@ pub struct Environment<'a> {
     pub references: ReferenceTracker,
 
     pub dev_dependencies: &'a HashSet<EcoString>,
+}
+
+#[derive(Debug)]
+pub struct VariableUsage {
+    origin: VariableOrigin,
+    location: SrcSpan,
+    usages: usize,
+    recursive_usages: usize,
 }
 
 impl<'a> Environment<'a> {
@@ -658,30 +665,63 @@ impl Environment<'_> {
         location: SrcSpan,
         problems: &mut Problems,
     ) {
-        if let Some((origin, location, false)) = self
+        if let Some(VariableUsage {
+            origin,
+            location,
+            usages: 0,
+            recursive_usages,
+        }) = self
             .local_variable_usages
             .last_mut()
             .expect("Attempted to access non-existent entity usages scope")
-            .insert(name.clone(), (origin, location, false))
+            .insert(
+                name.clone(),
+                VariableUsage {
+                    origin,
+                    location,
+                    usages: 0,
+                    recursive_usages: 0,
+                },
+            )
         {
             // an entity was overwritten in the top most scope without being used
             let mut unused = HashMap::with_capacity(1);
-            let _ = unused.insert(name, (origin, location, false));
+            let _ = unused.insert(
+                name,
+                VariableUsage {
+                    origin,
+                    location,
+                    usages: 0,
+                    recursive_usages,
+                },
+            );
             self.handle_unused_variables(unused, problems);
         }
     }
 
     /// Increments an entity's usage in the current or nearest enclosing scope
     pub fn increment_usage(&mut self, name: &EcoString) {
-        let name = name.clone();
-
-        if let Some((_, _, used)) = self
+        if let Some(VariableUsage { usages, .. }) = self
             .local_variable_usages
             .iter_mut()
             .rev()
-            .find_map(|scope| scope.get_mut(&name))
+            .find_map(|scope| scope.get_mut(name))
         {
-            *used = true;
+            *usages += 1;
+        }
+    }
+
+    /// Marks an argument as being passed recursively to a function call.
+    pub fn increment_recursive_usage(&mut self, name: &EcoString) {
+        if let Some(VariableUsage {
+            recursive_usages, ..
+        }) = self
+            .local_variable_usages
+            .iter_mut()
+            .rev()
+            .find_map(|scope| scope.get_mut(name))
+        {
+            *recursive_usages += 1;
         }
     }
 
@@ -795,12 +835,24 @@ impl Environment<'_> {
 
     fn handle_unused_variables(
         &mut self,
-        unused: HashMap<EcoString, (VariableOrigin, SrcSpan, bool)>,
+        unused: HashMap<EcoString, VariableUsage>,
         problems: &mut Problems,
     ) {
-        for (origin, location, used) in unused.into_values() {
-            if !used {
+        for VariableUsage {
+            origin,
+            location,
+            usages,
+            recursive_usages,
+        } in unused.into_values()
+        {
+            if usages == 0 {
                 problems.warning(Warning::UnusedVariable { location, origin });
+            }
+            // If the function parameter is actually used somewhere, but all the
+            // usages are just passing it along in a recursive call, then it
+            // counts as being unused too.
+            else if origin.is_function_parameter() && recursive_usages == usages {
+                problems.warning(Warning::UnusedRecursiveArgument { location });
             }
         }
     }
