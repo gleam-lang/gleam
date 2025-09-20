@@ -20,6 +20,9 @@ export class Ip extends _.CustomType {
   
   0: string;
 }
+export function Ip$Ip($0: string): Ip$;
+export function Ip$isIp(value: Ip$): boolean;
+export function Ip$Ip$0(value: Ip$): string;
 
 export type Ip$ = Ip;
 

@@ -24,6 +24,8 @@ export * from "../prelude.mjs";
 import type * as _ from "./gleam.d.mts";
 
 export class Woo extends _.CustomType {}
+export function Wibble$Woo(): Wibble$;
+export function Wibble$isWoo(value: Wibble$): boolean;
 
 export type Wibble$ = Woo;
 
