@@ -3,11 +3,12 @@ use crate::{
     build::Target,
     diagnostic::{self, Diagnostic, ExtraLabel, Location},
     error::wrap,
+    exhaustiveness::ImpossibleBitArraySegmentPattern,
     type_::{
         self,
         error::{
-            FeatureKind, LiteralCollectionKind, PanicPosition, TodoOrPanic,
-            UnreachablePatternReason,
+            AssertImpossiblePattern, FeatureKind, LiteralCollectionKind, PanicPosition,
+            TodoOrPanic, UnreachablePatternReason,
         },
         expression::ComparisonOutcome,
         pretty::Printer,
@@ -16,6 +17,7 @@ use crate::{
 use camino::Utf8PathBuf;
 use debug_ignore::DebugIgnore;
 use ecow::EcoString;
+use itertools::Itertools;
 use std::{
     io::Write,
     sync::{Arc, atomic::Ordering},
@@ -838,7 +840,7 @@ Run this command to add it to your dependencies:
                 }
 
                 type_::Warning::UnreachableCasePattern { location, reason } => {
-                    let text: String = match reason {
+                    let text = match reason {
                         UnreachablePatternReason::DuplicatePattern => wrap(
                             "This pattern cannot be reached as a previous \
 pattern matches the same values.\n",
@@ -847,7 +849,27 @@ pattern matches the same values.\n",
                             "This pattern cannot be reached as it matches on \
 a variant of a type which is never present.\n",
                         ),
+                        UnreachablePatternReason::ImpossibleSegments(_) => wrap(
+                            "This pattern cannot be reached as it contains \
+segments that will never match.\n",
+                        ),
                     };
+
+                    let extra_labels = match reason {
+                        UnreachablePatternReason::DuplicatePattern
+                        | UnreachablePatternReason::ImpossibleVariant => vec![],
+                        UnreachablePatternReason::ImpossibleSegments(segments) => segments
+                            .iter()
+                            .map(|segment| ExtraLabel {
+                                src_info: None,
+                                label: diagnostic::Label {
+                                    text: Some(explain_impossible_segment(segment)),
+                                    span: segment.location(),
+                                },
+                            })
+                            .collect_vec(),
+                    };
+
                     Diagnostic {
                         title: "Unreachable pattern".into(),
                         text,
@@ -860,7 +882,7 @@ a variant of a type which is never present.\n",
                                 text: None,
                                 span: *location,
                             },
-                            extra_labels: Vec::new(),
+                            extra_labels,
                         }),
                     }
                 }
@@ -1007,26 +1029,42 @@ hidden from the package's documentation.",
                     }),
                 },
 
-                type_::Warning::AssertAssignmentOnInferredVariant { location } => Diagnostic {
-                    title: "Assertion that will always fail".into(),
-                    text: wrap(
-                        "We can tell from the code above that the value will never match \
+                type_::Warning::AssertAssignmentOnImpossiblePattern { location, reason } => {
+                    let extra_labels = match reason {
+                        AssertImpossiblePattern::InferredVariant => vec![],
+                        AssertImpossiblePattern::ImpossibleSegments { segments } => segments
+                            .iter()
+                            .map(|segment| ExtraLabel {
+                                src_info: None,
+                                label: diagnostic::Label {
+                                    text: Some(explain_impossible_segment(segment)),
+                                    span: segment.location(),
+                                },
+                            })
+                            .collect_vec(),
+                    };
+
+                    Diagnostic {
+                        title: "Assertion that will always fail".into(),
+                        text: wrap(
+                            "We can tell from the code above that the value will never match \
 this pattern and that this code will always crash.
 
 Either change the pattern or use `panic` to unconditionally fail.",
-                    ),
-                    hint: None,
-                    level: diagnostic::Level::Warning,
-                    location: Some(Location {
-                        label: diagnostic::Label {
-                            text: None,
-                            span: *location,
-                        },
-                        path: path.clone(),
-                        src: src.clone(),
-                        extra_labels: vec![],
-                    }),
-                },
+                        ),
+                        hint: None,
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels,
+                        }),
+                    }
+                }
 
                 type_::Warning::TodoOrPanicUsedAsFunction {
                     kind,
@@ -1436,6 +1474,26 @@ The imported value could not be used in this module anyway."
         let mut nocolor = Buffer::no_color();
         self.pretty(&mut nocolor);
         String::from_utf8(nocolor.into_inner()).expect("Warning printing produced invalid utf8")
+    }
+}
+
+fn explain_impossible_segment(segment: &ImpossibleBitArraySegmentPattern) -> String {
+    match segment {
+        ImpossibleBitArraySegmentPattern::UnrepresentableInteger {
+            size,
+            signed,
+            value: _,
+            location: _,
+        } => {
+            let human_readable_size = match size {
+                1 => "1 bit".into(),
+                8 => "1 byte".into(),
+                n if n % 8 == 0 => format!("{} bytes", n / 8),
+                n => format!("{n} bits"),
+            };
+            let sign = if *signed { "signed" } else { "unsigned" };
+            format!("A {human_readable_size} {sign} integer will never match this value")
+        }
     }
 }
 
