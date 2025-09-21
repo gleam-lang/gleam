@@ -226,6 +226,12 @@
 
   ([sobolevn](https://github.com/sobolevn))
 
+- The `erlang.application_start_argument` parameter has been added to
+  `gleam.toml`. This is a string containing an Erlang term that will be written
+  into the package's Erlang `.app` file if `erlang.application_start_module`
+  has been set, replacing the default argument of `[]`.
+  ([Louis Pilfold](https://github.com/lpil))
+
 - Generated code for the JavaScript target now includes a public API which can
   be used for FFI interacting with Gleam custom types. For example, if you have
   this Gleam code:
