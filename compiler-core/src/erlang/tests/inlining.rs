@@ -426,3 +426,24 @@ pub fn sum() {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5002
+#[test]
+fn perform_inlining_in_anonymous_functions() {
+    assert_erl!(
+        ("gleam_stdlib", "gleam/result", RESULT_MODULE),
+        "
+import gleam/result
+
+fn some_function_that_is_not_inlined(f) {
+  f()
+}
+
+pub fn main() {
+  use <- some_function_that_is_not_inlined()
+  use x <- result.map(Ok(1))
+  x + 1
+}
+"
+    );
+}

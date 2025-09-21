@@ -509,7 +509,6 @@ impl Inliner<'_> {
             TypedExpr::Int { .. }
             | TypedExpr::Float { .. }
             | TypedExpr::String { .. }
-            | TypedExpr::Fn { .. }
             | TypedExpr::ModuleSelect { .. }
             | TypedExpr::Invalid { .. } => expression,
 
@@ -549,6 +548,24 @@ impl Inliner<'_> {
             } => TypedExpr::Block {
                 location,
                 statements: statements.mapped(|statement| self.statement(statement)),
+            },
+
+            TypedExpr::Fn {
+                location,
+                type_,
+                kind,
+                arguments,
+                body,
+                return_annotation,
+                purity,
+            } => TypedExpr::Fn {
+                location,
+                type_,
+                kind,
+                arguments,
+                body: body.mapped(|statement| self.statement(statement)),
+                return_annotation,
+                purity,
             },
 
             TypedExpr::NegateBool { location, value } => TypedExpr::NegateBool {

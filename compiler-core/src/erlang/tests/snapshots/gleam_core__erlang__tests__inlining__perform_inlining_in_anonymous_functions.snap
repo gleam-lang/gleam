@@ -1,0 +1,40 @@
+---
+source: compiler-core/src/erlang/tests/inlining.rs
+expression: "\nimport gleam/result\n\nfn some_function_that_is_not_inlined(f) {\n  f()\n}\n\npub fn main() {\n  use <- some_function_that_is_not_inlined()\n  use x <- result.map(Ok(1))\n  x + 1\n}\n"
+---
+----- SOURCE CODE
+
+import gleam/result
+
+fn some_function_that_is_not_inlined(f) {
+  f()
+}
+
+pub fn main() {
+  use <- some_function_that_is_not_inlined()
+  use x <- result.map(Ok(1))
+  x + 1
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 4).
+-spec some_function_that_is_not_inlined(fun(() -> AS)) -> AS.
+some_function_that_is_not_inlined(F) ->
+    F().
+
+-file("project/test/my/mod.gleam", 8).
+-spec main() -> {ok, integer()} | {error, any()}.
+main() ->
+    some_function_that_is_not_inlined(fun() -> case {ok, 1} of
+                {ok, Value} ->
+                    {ok, Value + 1};
+
+                {error, Error} ->
+                    {error, Error}
+            end end).
