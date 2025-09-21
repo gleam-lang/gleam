@@ -15,6 +15,6 @@ error: Syntax error
   │              ^ I was not expecting this
 
 Found `:`, expected one of: 
-- ->
+- `->`
 Hint: Maybe you meant to write return value type annotation?
 Return type annotations are written using `->`, not `:`
