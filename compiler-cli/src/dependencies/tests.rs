@@ -1180,6 +1180,7 @@ fn package_config(
         links: vec![],
         erlang: ErlangConfig {
             application_start_module: None,
+            application_start_argument: None,
             extra_applications: vec![],
         },
         javascript: JavaScriptConfig {

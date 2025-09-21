@@ -104,12 +104,17 @@ impl<'a> ErlangApp<'a> {
 
         let path = self.output_directory.join(format!("{}.app", &config.name));
 
-        let start_module = config
-            .erlang
-            .application_start_module
-            .as_ref()
-            .map(|module| tuple("mod", &format!("{{'{}', []}}", module_erlang_name(module))))
-            .unwrap_or_default();
+        let start_module = match config.erlang.application_start_module.as_ref() {
+            None => "".into(),
+            Some(module) => {
+                let module = module_erlang_name(module);
+                let argument = match config.erlang.application_start_argument.as_ref() {
+                    Some(argument) => argument.as_str(),
+                    None => "[]",
+                };
+                tuple("mod", &format!("{{'{module}', {argument}}}"))
+            }
+        };
 
         let modules = modules
             .iter()

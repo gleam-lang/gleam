@@ -708,8 +708,16 @@ impl Default for PackageConfig {
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Default, Clone)]
 pub struct ErlangConfig {
+    /// An module that can be set in the `.app` file as the entrypoint for a stateful application
+    /// that defines a singleton supervision tree.
+    /// Erlang syntax.
     #[serde(default)]
     pub application_start_module: Option<EcoString>,
+    /// The argument for the start module start function. If not set then `[]` is used as the
+    /// default argument.
+    /// Erlang syntax.
+    #[serde(default)]
+    pub application_start_argument: Option<EcoString>,
     #[serde(default)]
     pub extra_applications: Vec<EcoString>,
 }
