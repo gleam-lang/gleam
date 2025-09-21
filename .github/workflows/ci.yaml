@@ -73,7 +73,7 @@ jobs:
             binary: arm64
             cargo-tool: cargo
             run-integration-tests: true
-          - os: windows-latest
+          - os: windows-2022
             target: x86_64-pc-windows-msvc
             binary: x86-64
             cargo-tool: cargo
