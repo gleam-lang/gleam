@@ -1,24 +1,29 @@
 mod dependency_manager;
 
 use std::{
-    cell::RefCell, collections::{HashMap, HashSet}, io::Read, process::Command, rc::Rc, time::Instant
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+    io::Read,
+    process::Command,
+    rc::Rc,
+    time::Instant,
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
 use ecow::{EcoString, eco_format};
 use flate2::read::GzDecoder;
 use gleam_core::{
+    Error, Result,
     build::{Mode, Target, Telemetry},
     config::PackageConfig,
     dependency::{self, PackageFetchError},
     error::{FileIoAction, FileKind, ShellCommandFailureReason, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
-    io::{ TarUnpacker, WrappedReader, FileSystemReader, FileSystemWriter, HttpClient as _ },
-    manifest::{ Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource, Resolved },
+    io::{FileSystemReader, FileSystemWriter, HttpClient as _, TarUnpacker, WrappedReader},
+    manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource, Resolved},
     paths::ProjectPaths,
+    paths::{global_hexpm_package_release_response_cache, global_hexpm_packages_response_cache},
     requirement::Requirement,
-    paths::{ global_hexpm_package_release_response_cache, global_hexpm_packages_response_cache },
-    Error, Result
 };
 use hexpm::version::Version;
 use itertools::Itertools;
@@ -31,7 +36,11 @@ pub use dependency_manager::DependencyManagerConfig;
 mod tests;
 
 use crate::{
-    build_lock::{BuildLock, Guard}, cli, fs::{self, ProjectIO}, http::HttpClient, TreeOptions
+    TreeOptions,
+    build_lock::{BuildLock, Guard},
+    cli,
+    fs::{self, ProjectIO},
+    http::HttpClient,
 };
 
 struct Symbols {
@@ -1091,30 +1100,36 @@ async fn lookup_package(
             // retirement status volatile, content volatile one hour after initial publication
             // content may be edited or deleted by admins
             let mut resp_body = Vec::new();
-            let release =
-                hex::get_package_release(&name, &version, &config, Some(&mut resp_body), &HttpClient::new()).await;
+            let release = hex::get_package_release(
+                &name,
+                &version,
+                &config,
+                Some(&mut resp_body),
+                &HttpClient::new(),
+            )
+            .await;
             let fs = ProjectIO::new();
-            let cache_path = global_hexpm_package_release_response_cache(&name, &version.to_string());
+            let cache_path =
+                global_hexpm_package_release_response_cache(&name, &version.to_string());
             let release = match release {
                 Ok(rel) => {
                     let _ = fs.write_bytes(&cache_path, &resp_body);
                     rel
-                },
+                }
                 Err(_) => {
-                    let cached_result = fs.read_bytes(&cache_path)
-                        .map_err(|err| Error::FileIo {
+                    let cached_result =
+                        fs.read_bytes(&cache_path).map_err(|err| Error::FileIo {
                             action: FileIoAction::Read,
                             kind: FileKind::File,
                             path: cache_path.clone(),
                             err: Some(err.to_string()),
-                    })?;
+                        })?;
 
-                    serde_json::from_slice(&cached_result)
-                        .map_err(|err| Error::FileIo {
-                            action: FileIoAction::Read,
-                            kind: FileKind::File,
-                            path: cache_path,
-                            err: Some(err.to_string()),
+                    serde_json::from_slice(&cached_result).map_err(|err| Error::FileIo {
+                        action: FileIoAction::Read,
+                        kind: FileKind::File,
+                        path: cache_path,
+                        err: Some(err.to_string()),
                     })?
                 }
             };
@@ -1219,18 +1234,21 @@ impl dependency::PackageFetcher for PackageFetcher {
                 tracing::debug!(package = package, "saving_hex_package");
                 let _ = fs.write_bytes(cache_path, resp.body());
                 hexpm::repository_v2_get_package_response(resp, HEXPM_PUBLIC_KEY)
-            },
+            }
             Err(_err) => {
                 tracing::debug!(package = package, "fetching_package_data_from_cache");
-                let reader = fs.reader(cache_path)
+                let reader = fs
+                    .reader(cache_path)
                     .map_err(PackageFetchError::fetch_error)?;
                 let mut decoder = GzDecoder::new(reader);
                 let mut data = Vec::new();
-                let _ = decoder.read_to_end(&mut data)
+                let _ = decoder
+                    .read_to_end(&mut data)
                     .map_err(PackageFetchError::fetch_error)?;
                 hexpm::repository_v2_package_parse_body(&data, HEXPM_PUBLIC_KEY)
-            },
-        }.map_err(PackageFetchError::from)?;
+            }
+        }
+        .map_err(PackageFetchError::from)?;
 
         let pkg = Rc::new(pkg);
         let pkg_ref = Rc::clone(&pkg);

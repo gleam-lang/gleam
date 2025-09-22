@@ -134,8 +134,12 @@ pub fn global_hexpm_packages_response_cache(package_name: &str) -> Utf8PathBuf {
     global_hexpm_response_cache_path().join(format!("packages-{package_name}.gz"))
 }
 
-pub fn global_hexpm_package_release_response_cache(package_name: &str, version: &str) -> Utf8PathBuf {
-    global_hexpm_response_cache_path().join(format!("packages-{package_name}-releases-{version}.json"))
+pub fn global_hexpm_package_release_response_cache(
+    package_name: &str,
+    version: &str,
+) -> Utf8PathBuf {
+    global_hexpm_response_cache_path()
+        .join(format!("packages-{package_name}-releases-{version}.json"))
 }
 
 fn global_hexpm_response_cache_path() -> Utf8PathBuf {
