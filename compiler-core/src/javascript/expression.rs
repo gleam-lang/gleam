@@ -1552,16 +1552,21 @@ impl<'module, 'a> Generator<'module, 'a> {
         // because the first approach needs to construct a new Wibble, and then call the isEqual function,
         // which supports any shape of data, and so does a lot of extra logic which isn't necessary.
 
-        // RHS: singleton record constructor (arity 0)
-        if let TypedExpr::Var {
-            constructor:
-                ValueConstructor {
-                    variant: ValueConstructorVariant::Record { arity: 0, name, .. },
+        fn singleton_record_constructor_name(expr: &TypedExpr) -> Option<&EcoString> {
+            match expr {
+                TypedExpr::Var {
+                    constructor:
+                        ValueConstructor {
+                            variant: ValueConstructorVariant::Record { arity: 0, name, .. },
+                            ..
+                        },
                     ..
-                },
-            ..
-        } = right
-        {
+                } => Some(name),
+                _ => None,
+            }
+        }
+
+        if let Some(name) = singleton_record_constructor_name(right) {
             let left = self
                 .not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(left));
 
@@ -1569,15 +1574,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         }
 
         // LHS: singleton record constructor (arity 0)
-        if let TypedExpr::Var {
-            constructor:
-                ValueConstructor {
-                    variant: ValueConstructorVariant::Record { arity: 0, name, .. },
-                    ..
-                },
-            ..
-        } = left
-        {
+        if let Some(name) = singleton_record_constructor_name(left) {
             let right = self
                 .not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(right));
 
@@ -2030,35 +2027,27 @@ impl<'module, 'a> Generator<'module, 'a> {
 
             ClauseGuard::Equals { left, right, .. }
             | ClauseGuard::NotEquals { left, right, .. } => {
-                fn eligible_singleton_cmp(
-                    lhs: &TypedClauseGuard,
-                    rhs: &TypedClauseGuard,
-                ) -> Option<EcoString> {
-                    match rhs {
+                fn singleton_record_constructor_name(
+                    guard: &TypedClauseGuard,
+                ) -> Option<&EcoString> {
+                    match guard {
                         ClauseGuard::Constant(Constant::Record {
                             arguments, name, ..
-                        }) if arguments.is_empty() && rhs.type_().is_named() => {
-                            // exclude the `Type::Fn` case
-                            if !matches!(lhs,
-                                ClauseGuard::Var { type_, .. } if matches!(&**type_, Type::Fn { .. }))
-                            {
-                                return Some(name.clone());
-                            }
-                        }
-                        _ => {}
+                        }) if arguments.is_empty() => Some(name),
+                        _ => None,
                     }
-                    None
                 }
 
                 let should_be_equal = matches!(guard, ClauseGuard::Equals { .. });
 
-                if let Some(tag) = eligible_singleton_cmp(left, right) {
-                    let doc = self.guard(left);
-                    return self.singleton_equal(doc, &tag, should_be_equal);
+                if let Some(name) = singleton_record_constructor_name(right) {
+                    let left = self.guard(left);
+                    return self.singleton_equal(left, name, should_be_equal);
                 }
-                if let Some(tag) = eligible_singleton_cmp(right, left) {
-                    let doc = self.guard(right);
-                    return self.singleton_equal(doc, &tag, should_be_equal);
+
+                if let Some(name) = singleton_record_constructor_name(left) {
+                    let right = self.guard(right);
+                    return self.singleton_equal(right, name, should_be_equal);
                 }
 
                 let left = self.guard(left);
