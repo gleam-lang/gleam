@@ -2030,54 +2030,40 @@ impl<'module, 'a> Generator<'module, 'a> {
 
             ClauseGuard::Equals { left, right, .. }
             | ClauseGuard::NotEquals { left, right, .. } => {
-                fn is_variable(g: &TypedClauseGuard) -> bool {
-                    matches!(g, ClauseGuard::Var { .. })
-                }
-
-                // returns Some(name) if g is a zero arity constructor *value*
-                fn zero_arity_constructor_tag(g: &TypedClauseGuard) -> Option<EcoString> {
-                    match g {
+                fn eligible_singleton_cmp(
+                    lhs: &TypedClauseGuard,
+                    rhs: &TypedClauseGuard,
+                ) -> Option<EcoString> {
+                    match rhs {
                         ClauseGuard::Constant(Constant::Record {
                             arguments, name, ..
-                        }) if arguments.is_empty() && g.type_().is_named() => Some(name.clone()),
-                        _ => None,
+                        }) if arguments.is_empty() && rhs.type_().is_named() => {
+                            // exclude the `Type::Fn` case
+                            if !matches!(lhs,
+                                ClauseGuard::Var { type_, .. } if matches!(&**type_, Type::Fn { .. }))
+                            {
+                                return Some(name.clone());
+                            }
+                        }
+                        _ => {}
                     }
+                    None
                 }
 
-                // true when the variable is the alias introduced by pattern
-                fn is_constructor_alias(g: &TypedClauseGuard) -> bool {
-                    match g {
-                        ClauseGuard::Var { type_, .. } => matches!(&**type_, Type::Fn { .. }),
-                        _ => false,
-                    }
+                let should_be_equal = matches!(guard, ClauseGuard::Equals { .. });
+
+                if let Some(tag) = eligible_singleton_cmp(left, right) {
+                    let doc = self.guard(left);
+                    return self.singleton_equal(doc, &tag, should_be_equal);
+                }
+                if let Some(tag) = eligible_singleton_cmp(right, left) {
+                    let doc = self.guard(right);
+                    return self.singleton_equal(doc, &tag, should_be_equal);
                 }
 
-                let want_equal = matches!(guard, ClauseGuard::Equals { .. });
-                let both_sides_ctor = zero_arity_constructor_tag(left).is_some()
-                    && zero_arity_constructor_tag(right).is_some();
-
-                if !both_sides_ctor {
-                    // variable == constructor_value
-                    if is_variable(left)
-                        && !is_constructor_alias(left)
-                        && let Some(tag) = zero_arity_constructor_tag(right)
-                    {
-                        let val = self.guard(left);
-                        return self.singleton_equal(val, &tag, want_equal);
-                    }
-                    // constructor_value == variable
-                    if is_variable(right)
-                        && !is_constructor_alias(right)
-                        && let Some(tag) = zero_arity_constructor_tag(left)
-                    {
-                        let val = self.guard(right);
-                        return self.singleton_equal(val, &tag, want_equal);
-                    }
-                }
-
-                let l = self.guard(left);
-                let r = self.guard(right);
-                self.prelude_equal_call(want_equal, l, r)
+                let left = self.guard(left);
+                let right = self.guard(right);
+                self.prelude_equal_call(should_be_equal, left, right)
             }
 
             ClauseGuard::GtFloat { left, right, .. } | ClauseGuard::GtInt { left, right, .. } => {
