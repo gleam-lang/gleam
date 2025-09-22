@@ -195,20 +195,8 @@ enum Command {
     New(NewOptions),
 
     /// Format source code
+    #[command(alias = "fmt")]
     Format {
-        /// Files to format
-        #[arg(default_value = ".")]
-        files: Vec<String>,
-
-        /// Read source from STDIN
-        #[arg(long)]
-        stdin: bool,
-
-        /// Check if inputs are formatted without changing them
-        #[arg(long)]
-        check: bool,
-    },
-    Fmt {
         /// Files to format
         #[arg(default_value = ".")]
         files: Vec<String>,
@@ -574,12 +562,6 @@ fn parse_and_run_command() -> Result<(), Error> {
         Command::Format {
             stdin,
             files,
-            check,
-        } => format::run(stdin, check, files),
-
-        Command::Fmt {
-            files,
-            stdin,
             check,
         } => format::run(stdin, check, files),
 
