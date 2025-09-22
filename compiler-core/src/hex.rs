@@ -56,8 +56,12 @@ pub async fn transfer_owner<Http: HttpClient>(
         package_name,
         new_owner_username_or_email
     );
-    let request =
-        hexpm::api_transfer_owner_request(&package_name, &new_owner_username_or_email, api_key, config);
+    let request = hexpm::api_transfer_owner_request(
+        &package_name,
+        &new_owner_username_or_email,
+        api_key,
+        config,
+    );
     let response = http.send(request).await?;
     hexpm::api_transfer_owner_response(response).map_err(Error::hex)
 }
@@ -127,7 +131,8 @@ pub async fn create_api_key<Http: HttpClient>(
     http: &Http,
 ) -> Result<String> {
     tracing::info!("Creating API key with Hex");
-    let request = hexpm::api_create_api_key_request(username, password, &key_name(hostname), config);
+    let request =
+        hexpm::api_create_api_key_request(username, password, &key_name(hostname), config);
     let response = http.send(request).await?;
     hexpm::api_create_api_key_response(response).map_err(Error::hex)
 }
@@ -209,14 +214,12 @@ impl Downloader {
         );
         let response = self.http.send(request).await?;
 
-        let tarball =
-            hexpm::repository_get_package_tarball_response(response, &outer_checksum.0).map_err(|error| {
-                Error::DownloadPackageError {
-                    package_name: package.name.to_string(),
-                    package_version: package.version.to_string(),
-                    error: error.to_string(),
-                }
-            })?;
+        let tarball = hexpm::repository_get_package_tarball_response(response, &outer_checksum.0)
+            .map_err(|error| Error::DownloadPackageError {
+            package_name: package.name.to_string(),
+            package_version: package.version.to_string(),
+            error: error.to_string(),
+        })?;
         self.fs_writer.write_bytes(&tarball_path, &tarball)?;
         Ok(true)
     }
@@ -302,8 +305,9 @@ pub async fn publish_documentation<Http: HttpClient>(
     http: &Http,
 ) -> Result<()> {
     tracing::info!("publishing_documentation");
-    let request = hexpm::api_publish_docs_request(name, &version.to_string(), archive, api_key, config)
-        .map_err(Error::hex)?;
+    let request =
+        hexpm::api_publish_docs_request(name, &version.to_string(), archive, api_key, config)
+            .map_err(Error::hex)?;
     let response = http.send(request).await?;
     hexpm::api_publish_docs_response(response).map_err(Error::hex)
 }
