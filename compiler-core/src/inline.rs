@@ -108,6 +108,8 @@
 //! works.
 //!
 
+#![allow(dead_code)]
+
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,

@@ -214,17 +214,20 @@ where
 
         tracing::debug!("performing_code_generation");
 
-        let modules = if self.perform_codegen {
-            modules
-                .into_iter()
-                .map(|mut module| {
-                    module.ast = inline::module(module.ast, &existing_modules);
-                    module
-                })
-                .collect()
-        } else {
-            modules
-        };
+        // Inlining is currently disabled. See
+        // https://github.com/gleam-lang/gleam/pull/5010 for information.
+
+        // let modules = if self.perform_codegen {
+        //     modules
+        //         .into_iter()
+        //         .map(|mut module| {
+        //             module.ast = inline::module(module.ast, &existing_modules);
+        //             module
+        //         })
+        //         .collect()
+        // } else {
+        //     modules
+        // };
 
         if let Err(error) = self.perform_codegen(&modules) {
             return error.into();
