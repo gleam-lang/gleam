@@ -18,5 +18,4 @@ error: Syntax error
 
 Found `:`, expected one of: 
 - `->`
-Hint: Maybe you meant to write return value type annotation?
-Return type annotations are written using `->`, not `:`
+Hint: Return type annotations are written using `->`, not `:`
