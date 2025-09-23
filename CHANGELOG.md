@@ -758,3 +758,8 @@
 - Fixed a bug where the compiler would produce wrong JavaScript code for binary
   pattern matching expressions using literal strings and byte segments.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The compiler now provides a clearer error message when a function's return type
+  is mistakenly declared using `:` instead of `->`.
+  ([Gurvir Singh](https://github.com/baraich))
+>>>>>>> Stashed changes
