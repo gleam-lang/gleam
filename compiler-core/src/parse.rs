@@ -2156,7 +2156,7 @@ where
                 error: ParseErrorType::UnexpectedToken {
                     token: Token::Colon,
                     expected: vec!["`->`".into()],
-                    hint: Some("Maybe you meant to write return value type annotation?\nReturn type annotations are written using `->`, not `:`".into()),
+                    hint: Some("Return type annotations are written using `->`, not `:`".into()),
                 },
                 location: SrcSpan {
                     start: colon_start,
