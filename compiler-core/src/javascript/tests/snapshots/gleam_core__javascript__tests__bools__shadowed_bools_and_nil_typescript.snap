@@ -16,10 +16,16 @@ pub fn go(x, y) {
 import type * as _ from "../gleam.d.mts";
 
 export class True extends _.CustomType {}
+export function True$True(): True$;
+export function True$isTrue(value: True$): boolean;
 
 export class False extends _.CustomType {}
+export function True$False(): True$;
+export function True$isFalse(value: True$): boolean;
 
 export class Nil extends _.CustomType {}
+export function True$Nil(): True$;
+export function True$isNil(value: True$): boolean;
 
 export type True$ = True | False | Nil;
 

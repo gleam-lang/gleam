@@ -18,6 +18,10 @@ export class Cat extends _.CustomType {
   
   name: string;
 }
+export function Cat$Cat(name: string): Cat$;
+export function Cat$isCat(value: Cat$): boolean;
+export function Cat$Cat$0(value: Cat$): string;
+export function Cat$Cat$name(value: Cat$): string;
 
 export type Cat$ = Cat;
 

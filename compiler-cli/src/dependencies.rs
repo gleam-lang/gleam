@@ -1183,13 +1183,13 @@ impl dependency::PackageFetcher for PackageFetcher {
 
         tracing::debug!(package = package, "looking_up_hex_package");
         let config = hexpm::Config::new();
-        let request = hexpm::get_package_request(package, None, &config);
+        let request = hexpm::repository_v2_get_package_request(package, None, &config);
         let response = self
             .runtime
             .block_on(self.http.send(request))
             .map_err(PackageFetchError::fetch_error)?;
 
-        let pkg = hexpm::get_package_response(response, HEXPM_PUBLIC_KEY)
+        let pkg = hexpm::repository_v2_get_package_response(response, HEXPM_PUBLIC_KEY)
             .map_err(PackageFetchError::from)?;
         let pkg = Rc::new(pkg);
         let pkg_ref = Rc::clone(&pkg);

@@ -226,6 +226,46 @@
 
   ([sobolevn](https://github.com/sobolevn))
 
+- The `erlang.application_start_argument` parameter has been added to
+  `gleam.toml`. This is a string containing an Erlang term that will be written
+  into the package's Erlang `.app` file if `erlang.application_start_module`
+  has been set, replacing the default argument of `[]`.
+  ([Louis Pilfold](https://github.com/lpil))
+
+- Generated code for the JavaScript target now includes a public API which can
+  be used for FFI interacting with Gleam custom types. For example, if you have
+  this Gleam code:
+
+  ```gleam
+  pub type Person {
+    Teacher(name: String, subject: String)
+    Student(name: String, age: Int)
+  }
+  ```
+
+  You can use the new API to use the `Person` type in FFI code:
+
+  ```javascript
+  import * from "./person.mjs";
+
+  // Constructing custom types
+  let teacher = Person$Teacher("Joe Armstrong", "Computer Science");
+  let student = Person$Student("Louis Pilfold", 17);
+
+  let randomPerson = Math.random() > 0.5 ? teacher : student;
+
+  // Checking variants
+  let randomIsTeacher = Person$isTeacher(randomPerson);
+
+  // Getting fields
+  let studentAge = Person$Student$age(student);
+
+  // The `name` field is shared so can be accessed from either variant
+  let personNAme = Person$name(randomPerson);
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - New projects are generated using OTP28 on GitHub Actions.
@@ -714,3 +754,7 @@
 - Fixed a bug where running `gleam update` would not properly update git
   dependencies unless `gleam clean` was run first.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where the compiler would produce wrong JavaScript code for binary
+  pattern matching expressions using literal strings and byte segments.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

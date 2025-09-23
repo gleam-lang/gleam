@@ -29,6 +29,12 @@ export class Cat extends $CustomType {
     this.cuteness = cuteness;
   }
 }
+export const Cat$Cat = (name, cuteness) => new Cat(name, cuteness);
+export const Cat$isCat = (value) => value instanceof Cat;
+export const Cat$Cat$name = (value) => value.name;
+export const Cat$Cat$0 = (value) => value.name;
+export const Cat$Cat$cuteness = (value) => value.cuteness;
+export const Cat$Cat$1 = (value) => value.cuteness;
 
 export function go(cat) {
   let x;

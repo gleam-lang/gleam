@@ -28,6 +28,7 @@ version = "1.0.0"
     "links": [],
     "erlang": {
       "application_start_module": null,
+      "application_start_argument": null,
       "extra_applications": []
     },
     "javascript": {

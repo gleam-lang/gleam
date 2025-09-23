@@ -1,0 +1,22 @@
+# This config file has a bunch of properties that will be entered into the
+# Erlang .app file
+
+name = "my_erlang_application" # <-
+version = "0.1.0"              # <-
+description = "It's very cool" # <-
+
+target = "erlang"
+
+[erlang]
+extra_applications = ["inets", "ssl"] # <-
+application_start_module = "my_erlang_application_sup" # <-
+application_start_argument = "[1, two]" # <-
+
+[dependencies] # <-
+gleam_stdlib = "~> 1337.0"
+gleam_otp = "~> 1337.0"
+
+[dev-dependencies] # <-
+midas = "~> 1337.0"
+simple_json = "~> 1337.0"
+

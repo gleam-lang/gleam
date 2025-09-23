@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/config.rs
-assertion_line: 1116
+assertion_line: 1187
 expression: output
 snapshot_kind: text
 ---
@@ -27,6 +27,7 @@ version = "1.0.0"
   "links": [],
   "erlang": {
     "application_start_module": null,
+    "application_start_argument": null,
     "extra_applications": []
   },
   "javascript": {

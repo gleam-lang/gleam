@@ -36,9 +36,9 @@ pub async fn publish_package<Http: HttpClient>(
     http: &Http,
 ) -> Result<()> {
     tracing::info!("Publishing package, replace: {}", replace);
-    let request = hexpm::publish_package_request(release_tarball, api_key, config, replace);
+    let request = hexpm::api_publish_package_request(release_tarball, api_key, config, replace);
     let response = http.send(request).await?;
-    hexpm::publish_package_response(response).map_err(|e| match e {
+    hexpm::api_publish_package_response(response).map_err(|e| match e {
         ApiError::NotReplacing => Error::HexPublishReplaceRequired { version },
         err => Error::hex(err),
     })
@@ -56,10 +56,14 @@ pub async fn transfer_owner<Http: HttpClient>(
         package_name,
         new_owner_username_or_email
     );
-    let request =
-        hexpm::transfer_owner_request(&package_name, &new_owner_username_or_email, api_key, config);
+    let request = hexpm::api_transfer_owner_request(
+        &package_name,
+        &new_owner_username_or_email,
+        api_key,
+        config,
+    );
     let response = http.send(request).await?;
-    hexpm::transfer_owner_response(response).map_err(Error::hex)
+    hexpm::api_transfer_owner_response(response).map_err(Error::hex)
 }
 
 #[derive(Debug, strum::EnumString, strum::VariantNames, Clone, Copy, PartialEq, Eq)]
@@ -94,7 +98,7 @@ pub async fn retire_release<Http: HttpClient>(
     http: &Http,
 ) -> Result<()> {
     tracing::info!(package=%package, version=%version, "retiring_hex_release");
-    let request = hexpm::retire_release_request(
+    let request = hexpm::api_retire_release_request(
         package,
         version,
         reason.to_library_enum(),
@@ -103,7 +107,7 @@ pub async fn retire_release<Http: HttpClient>(
         config,
     );
     let response = http.send(request).await?;
-    hexpm::retire_release_response(response).map_err(Error::hex)
+    hexpm::api_retire_release_response(response).map_err(Error::hex)
 }
 
 pub async fn unretire_release<Http: HttpClient>(
@@ -114,9 +118,9 @@ pub async fn unretire_release<Http: HttpClient>(
     http: &Http,
 ) -> Result<()> {
     tracing::info!(package=%package, version=%version, "retiring_hex_release");
-    let request = hexpm::unretire_release_request(package, version, api_key, config);
+    let request = hexpm::api_unretire_release_request(package, version, api_key, config);
     let response = http.send(request).await?;
-    hexpm::unretire_release_response(response).map_err(Error::hex)
+    hexpm::api_unretire_release_response(response).map_err(Error::hex)
 }
 
 pub async fn create_api_key<Http: HttpClient>(
@@ -127,9 +131,10 @@ pub async fn create_api_key<Http: HttpClient>(
     http: &Http,
 ) -> Result<String> {
     tracing::info!("Creating API key with Hex");
-    let request = hexpm::create_api_key_request(username, password, &key_name(hostname), config);
+    let request =
+        hexpm::api_create_api_key_request(username, password, &key_name(hostname), config);
     let response = http.send(request).await?;
-    hexpm::create_api_key_response(response).map_err(Error::hex)
+    hexpm::api_create_api_key_response(response).map_err(Error::hex)
 }
 
 pub async fn remove_api_key<Http: HttpClient>(
@@ -139,9 +144,9 @@ pub async fn remove_api_key<Http: HttpClient>(
     http: &Http,
 ) -> Result<()> {
     tracing::info!("Deleting API key from Hex");
-    let request = hexpm::remove_api_key_request(&key_name(hostname), auth_key, config);
+    let request = hexpm::api_remove_api_key_request(&key_name(hostname), auth_key, config);
     let response = http.send(request).await?;
-    hexpm::remove_api_key_response(response).map_err(Error::hex)
+    hexpm::api_remove_api_key_response(response).map_err(Error::hex)
 }
 
 #[derive(Debug)]
@@ -201,7 +206,7 @@ impl Downloader {
             "downloading_package_to_cache"
         );
 
-        let request = hexpm::get_package_tarball_request(
+        let request = hexpm::repository_get_package_tarball_request(
             &package.name,
             &package.version.to_string(),
             None,
@@ -209,14 +214,12 @@ impl Downloader {
         );
         let response = self.http.send(request).await?;
 
-        let tarball =
-            hexpm::get_package_tarball_response(response, &outer_checksum.0).map_err(|error| {
-                Error::DownloadPackageError {
-                    package_name: package.name.to_string(),
-                    package_version: package.version.to_string(),
-                    error: error.to_string(),
-                }
-            })?;
+        let tarball = hexpm::repository_get_package_tarball_response(response, &outer_checksum.0)
+            .map_err(|error| Error::DownloadPackageError {
+            package_name: package.name.to_string(),
+            package_version: package.version.to_string(),
+            error: error.to_string(),
+        })?;
         self.fs_writer.write_bytes(&tarball_path, &tarball)?;
         Ok(true)
     }
@@ -302,10 +305,11 @@ pub async fn publish_documentation<Http: HttpClient>(
     http: &Http,
 ) -> Result<()> {
     tracing::info!("publishing_documentation");
-    let request = hexpm::publish_docs_request(name, &version.to_string(), archive, api_key, config)
-        .map_err(Error::hex)?;
+    let request =
+        hexpm::api_publish_docs_request(name, &version.to_string(), archive, api_key, config)
+            .map_err(Error::hex)?;
     let response = http.send(request).await?;
-    hexpm::publish_docs_response(response).map_err(Error::hex)
+    hexpm::api_publish_docs_response(response).map_err(Error::hex)
 }
 
 pub async fn get_package_release<Http: HttpClient>(
@@ -320,7 +324,7 @@ pub async fn get_package_release<Http: HttpClient>(
         version = version.as_str(),
         "looking_up_package_release"
     );
-    let request = hexpm::get_package_release_request(name, &version, None, config);
+    let request = hexpm::api_get_package_release_request(name, &version, None, config);
     let response = http.send(request).await?;
-    hexpm::get_package_release_response(response).map_err(Error::hex)
+    hexpm::api_get_package_release_response(response).map_err(Error::hex)
 }

@@ -18,10 +18,16 @@ import { CustomType as $CustomType, makeError } from "../gleam.mjs";
 const FILEPATH = "src/module.gleam";
 
 export class True extends $CustomType {}
+export const True$True = () => new True();
+export const True$isTrue = (value) => value instanceof True;
 
 export class False extends $CustomType {}
+export const True$False = () => new False();
+export const True$isFalse = (value) => value instanceof False;
 
 export class Nil extends $CustomType {}
+export const True$Nil = () => new Nil();
+export const True$isNil = (value) => value instanceof Nil;
 
 export function go(x, y) {
   if (!(x instanceof True)) {

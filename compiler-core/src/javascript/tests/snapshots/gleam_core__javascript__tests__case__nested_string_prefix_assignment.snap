@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-assertion_line: 335
 expression: "\ntype Wibble {\n  Wibble(wobble: String)\n}\n\npub fn main() {\n  let tmp = Wibble(wobble: \"wibble\")\n  case tmp {\n    Wibble(wobble: \"w\" as wibble <> rest) -> wibble <> rest\n    _ -> panic\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
