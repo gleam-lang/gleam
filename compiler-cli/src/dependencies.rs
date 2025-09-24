@@ -13,7 +13,20 @@ use camino::{Utf8Path, Utf8PathBuf};
 use ecow::{EcoString, eco_format};
 use flate2::read::GzDecoder;
 use gleam_core::{
-    build::{Mode, Target, Telemetry}, config::PackageConfig, dependency::{self, PackageFetchError}, error::{FileIoAction, FileKind, ShellCommandFailureReason, StandardIoAction}, hex::{self, HEXPM_PUBLIC_KEY}, io::{FileSystemReader, FileSystemWriter, HttpClient as _, TarUnpacker, WrappedReader}, manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource, Resolved}, paths::{global_hexpm_package_release_response_cache, global_hexpm_packages_response_cache, ProjectPaths}, requirement::Requirement, warning::WarningEmitterIO, Error, Result, Warning
+    Error, Result, Warning,
+    build::{Mode, Target, Telemetry},
+    config::PackageConfig,
+    dependency::{self, PackageFetchError},
+    error::{FileIoAction, FileKind, ShellCommandFailureReason, StandardIoAction},
+    hex::{self, HEXPM_PUBLIC_KEY},
+    io::{FileSystemReader, FileSystemWriter, HttpClient as _, TarUnpacker, WrappedReader},
+    manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource, Resolved},
+    paths::{
+        ProjectPaths, global_hexpm_package_release_response_cache,
+        global_hexpm_packages_response_cache,
+    },
+    requirement::Requirement,
+    warning::WarningEmitterIO,
 };
 use hexpm::version::Version;
 use itertools::Itertools;
@@ -1115,14 +1128,18 @@ async fn lookup_package(
                             path: cache_path.clone(),
                             err: Some(err.to_string()),
                         })?;
-                    let release = serde_json::from_slice(&cached_result).map_err(|err| Error::FileIo {
-                        action: FileIoAction::Read,
-                        kind: FileKind::File,
-                        path: cache_path,
-                        err: Some(err.to_string()),
-                    })?;
+                    let release =
+                        serde_json::from_slice(&cached_result).map_err(|err| Error::FileIo {
+                            action: FileIoAction::Read,
+                            kind: FileKind::File,
+                            path: cache_path,
+                            err: Some(err.to_string()),
+                        })?;
 
-                    ConsoleWarningEmitter.emit_warning(Warning::LocalCache { message: "json cache is not secure; verify dependencies when online.".into() });
+                    ConsoleWarningEmitter.emit_warning(Warning::LocalCache {
+                        message: "json cache is not secure; verify dependencies when online."
+                            .into(),
+                    });
 
                     release
                 }
@@ -1239,7 +1256,9 @@ impl dependency::PackageFetcher for PackageFetcher {
                 let _ = decoder
                     .read_to_end(&mut data)
                     .map_err(PackageFetchError::fetch_error)?;
-                ConsoleWarningEmitter.emit_warning(Warning::LocalCache { message: "Hexpm repository cache used; dependencies may be outdated.".into() });
+                ConsoleWarningEmitter.emit_warning(Warning::LocalCache {
+                    message: "Hexpm repository cache used; dependencies may be outdated.".into(),
+                });
                 hexpm::repository_v2_package_parse_body(&data, HEXPM_PUBLIC_KEY)
             }
         }
