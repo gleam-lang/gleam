@@ -167,6 +167,10 @@ pub enum Warning {
     DeprecatedEnvironmentVariable {
         variable: DeprecatedEnvironmentVariable,
     },
+
+    LocalCache {
+        message: EcoString,
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
@@ -1422,6 +1426,16 @@ The imported value could not be used in this module anyway."
                     location: None,
                 }
             }
+
+            Warning::LocalCache { message } => {
+                Diagnostic {
+                    title: "Use of cached files".into(),
+                    text: message.into(),
+                    level: diagnostic::Level::Warning,
+                    location: None,
+                    hint: None,
+                }
+            },
         }
     }
 
