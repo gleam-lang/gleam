@@ -115,6 +115,20 @@ pub fn check_for_major_version_updates(
     resolve_major_versions(package_fetcher, versions)
 }
 
+fn resolve_all_versions(
+    package_fetcher: &impl PackageFetcher,
+    versions: PackageVersions,
+) -> PackageVersionDiffs {
+    todo!()
+}
+
+pub fn check_for_version_updates(
+    manifest: &manifest::Manifest,
+    package_fetcher: &impl PackageFetcher,
+) -> PackageVersionDiffs {
+    todo!()
+}
+
 // If the string would parse to an exact version then return the version
 fn parse_exact_version(ver: &str) -> Option<Version> {
     let version = ver.trim();
