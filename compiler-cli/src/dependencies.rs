@@ -19,7 +19,7 @@ use gleam_core::{
     error::{FileIoAction, FileKind, ShellCommandFailureReason, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
     io::{HttpClient as _, TarUnpacker, WrappedReader},
-    manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource, Resolved},
+    manifest::{self, Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource, Resolved},
     paths::ProjectPaths,
     requirement::Requirement,
 };
@@ -212,6 +212,18 @@ fn list_dependencies_tree(
     }
 
     tree
+}
+
+pub fn outdated(paths: &ProjectPaths) -> Result<()> {
+    let (_, manifest) = get_manifest_details(paths)?;
+
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let package_fetcher = PackageFetcher::new(runtime.handle().clone());
+
+    // compiler-core/src/dependency.rs:118-130
+    todo!();
+
+    Ok(())
 }
 
 #[derive(Debug, Clone, Copy)]
