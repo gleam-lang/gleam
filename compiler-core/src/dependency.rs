@@ -119,14 +119,45 @@ fn resolve_all_versions(
     package_fetcher: &impl PackageFetcher,
     versions: PackageVersions,
 ) -> PackageVersionDiffs {
-    todo!()
+    versions
+        .iter()
+        .filter_map(|(package, version)| {
+            let Ok(hexpackage) = package_fetcher.get_dependencies(package) else {
+                return None;
+            };
+
+            let latest = hexpackage
+                .releases
+                .iter()
+                .map(|release| &release.version)
+                .filter(|version| !version.is_pre())
+                .max()?;
+
+            if latest <= version {
+                return None;
+            }
+
+            Some((package.to_string(), (version.clone(), latest.clone())))
+        })
+        .collect()
 }
 
 pub fn check_for_version_updates(
     manifest: &manifest::Manifest,
     package_fetcher: &impl PackageFetcher,
 ) -> PackageVersionDiffs {
-    todo!()
+    // get all hex packages from the manifest
+    let versions = manifest
+        .packages
+        .iter()
+        .filter(|manifest_package| {
+            // only check for version updates for hex packages
+            matches!(manifest_package.source, manifest::ManifestPackageSource::Hex { .. })
+        })
+        .map(|manifest_pkg| (manifest_pkg.name.to_string(), manifest_pkg.version.clone()))
+        .collect();
+
+    resolve_all_versions(package_fetcher, versions)
 }
 
 // If the string would parse to an exact version then return the version
