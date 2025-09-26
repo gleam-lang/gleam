@@ -834,7 +834,18 @@ impl<'comments> Formatter<'comments> {
                     .expect("Function in a statement must be named")
                     .1,
             )
-            .append(self.wrap_arguments(arguments, function.location.end));
+            .append(
+                self.wrap_arguments(
+                    // We count end location of arguments here.
+                    // Before this change, wrap_arguments consumed all comments
+                    // leading in moving comments from return annotation to argument list
+                    arguments,
+                    function
+                        .return_annotation
+                        .as_ref()
+                        .map_or(function.location.end, |ann| ann.location().start),
+                ),
+            );
 
         // Add return annotation
         let signature = match &function.return_annotation {
