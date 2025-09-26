@@ -658,6 +658,9 @@
 - The formatter no longer removes blocks from case clause guards.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The formatter now properly formats tuple return annotation with comments.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Bug fixes
 
 - Fixed a bug where literals using `\u{XXXX}` syntax in bit array pattern
