@@ -29,6 +29,40 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler now raises a warning for unreachable branches that are matching
+  on bit array segments that could never match. Consider this example:
+
+  ```gleam
+  pub fn get_payload(packet: BitArray) -> Result(BitArray, Nil) {
+    case packet {
+      <<200, payload:bytes>> -> Ok(payload)
+      <<404, _:bits>> -> Error(Nil)
+      _ -> Ok(packet)
+    }
+  }
+  ```
+
+  There's a subtle bug here. The second branch can never match since it's
+  impossible for the first byte of the bit array to have the value `404`.
+  The new error explains this nicely:
+
+  ```text
+  warning: Unreachable pattern
+    ┌─ /src.gleam:4:5
+    │
+  4 │     <<404, _:bits>> -> Error(Nil)
+    │     ^^^^^^^^^^^^^^^
+    │       │
+    │       A 1 byte unsigned integer will never match this value
+
+  This pattern cannot be reached as it contains segments that will never
+  match.
+
+  Hint: It can be safely removed.
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The compiler now emits a better error message for private types marked as
   opaque. For example, the following piece of code:
 

@@ -2039,8 +2039,18 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 match output.is_reachable(0, 0) {
                     Reachability::Unreachable(UnreachablePatternReason::ImpossibleVariant) => self
                         .problems
-                        .warning(Warning::AssertAssignmentOnInferredVariant {
+                        .warning(Warning::AssertAssignmentOnImpossiblePattern {
                             location: pattern.location(),
+                            reason: AssertImpossiblePattern::InferredVariant,
+                        }),
+
+                    Reachability::Unreachable(UnreachablePatternReason::ImpossibleSegments(
+                        segments,
+                    )) => self
+                        .problems
+                        .warning(Warning::AssertAssignmentOnImpossiblePattern {
+                            location: pattern.location(),
+                            reason: AssertImpossiblePattern::ImpossibleSegments { segments },
                         }),
                     // A duplicate pattern warning should not happen, since there is only one pattern.
                     Reachability::Reachable
