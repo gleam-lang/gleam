@@ -3,6 +3,7 @@ mod dependency_manager;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
+    io::Write,
     process::Command,
     rc::Rc,
     time::Instant,
@@ -19,7 +20,7 @@ use gleam_core::{
     error::{FileIoAction, FileKind, ShellCommandFailureReason, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
     io::{HttpClient as _, TarUnpacker, WrappedReader},
-    manifest::{self, Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource, Resolved},
+    manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource, Resolved},
     paths::ProjectPaths,
     requirement::Requirement,
 };
@@ -110,7 +111,7 @@ fn get_manifest_details(paths: &ProjectPaths) -> Result<(PackageConfig, Manifest
     Ok((config, manifest))
 }
 
-fn list_manifest_packages<W: std::io::Write>(mut buffer: W, manifest: Manifest) -> Result<()> {
+fn list_manifest_packages<W: Write>(mut buffer: W, manifest: Manifest) -> Result<()> {
     manifest
         .packages
         .into_iter()
@@ -121,7 +122,7 @@ fn list_manifest_packages<W: std::io::Write>(mut buffer: W, manifest: Manifest) 
         })
 }
 
-fn list_package_and_dependencies_tree<W: std::io::Write>(
+fn list_package_and_dependencies_tree<W: Write>(
     mut buffer: W,
     options: TreeOptions,
     packages: Vec<ManifestPackage>,
@@ -222,10 +223,8 @@ pub fn outdated(paths: &ProjectPaths) -> Result<()> {
 
     let version_updates = dependency::check_for_version_updates(&manifest, &package_fetcher);
 
-
-    println!("Package\tCurrent\tLatest");
-    for (package_name, (current_version, latest_version)) in version_updates {
-        println!("{}\tv{}\tv{}", package_name, current_version, latest_version);
+    if !version_updates.is_empty() {
+        print!("{}", pretty_print_version_updates(version_updates));
     }
 
     Ok(())
@@ -451,6 +450,75 @@ fn pretty_print_major_versions_available(versions: dependency::PackageVersionDif
                 &v1.to_string(),
                 &curr_ver_padding,
                 " -> ",
+                &v2.to_string(),
+                "\n",
+            ]
+            .concat(),
+        );
+    }
+
+    output_string
+}
+
+fn pretty_print_version_updates(versions: dependency::PackageVersionDiffs) -> String {
+    let total_lines = versions.len() + 1;
+
+    let versions = versions
+        .iter()
+        .map(|(name, (v1, v2))| (name, v1.to_string(), v2.to_string()))
+        .sorted();
+
+    let longest_parts = versions.clone().fold(
+        (0, 0, 0),
+        |(max_name, max_curr, max_latest), (name, curr, latest)| {
+            (
+                max_name.max(name.len()),
+                max_curr.max(curr.len()),
+                max_latest.max(latest.len()),
+            )
+        },
+    );
+
+    let (name_len, curr_len, latest_len) = longest_parts;
+    let longest_package_name_length = name_len.max(7);
+    let longest_current_version_length = (curr_len + 1).max(7);
+    let longest_latest_version_length = (latest_len + 1).max(6);
+
+    let mut output_string = String::with_capacity(
+        (longest_package_name_length
+            + longest_current_version_length
+            + longest_latest_version_length
+            + 3)
+            * total_lines,
+    );
+
+    let name_padding = " ".repeat(longest_package_name_length - 7);
+    let curr_ver_padding = " ".repeat(longest_current_version_length - 7);
+
+    output_string.push_str(
+        &[
+            "Package",
+            &name_padding,
+            " Current",
+            &curr_ver_padding,
+            " Latest\n",
+        ]
+        .concat(),
+    );
+
+    for (name, v1, v2) in versions {
+        let name_padding = " ".repeat(longest_package_name_length - name.len());
+        let curr_ver_padding =
+            " ".repeat(longest_current_version_length - 1 - v1.to_string().len());
+
+        output_string.push_str(
+            &[
+                name,
+                &name_padding,
+                " v",
+                &v1.to_string(),
+                &curr_ver_padding,
+                " v",
                 &v2.to_string(),
                 "\n",
             ]
