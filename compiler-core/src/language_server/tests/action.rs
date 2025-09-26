@@ -134,6 +134,7 @@ const REMOVE_BLOCK: &str = "Remove block";
 const REMOVE_OPAQUE_FROM_PRIVATE_TYPE: &str = "Remove opaque from private type";
 const COLLAPSE_NESTED_CASE: &str = "Collapse nested case";
 const REMOVE_UNREACHABLE_BRANCHES: &str = "Remove unreachable branches";
+const ADD_OMITTED_LABELS: &str = "Add omitted labels";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -1794,6 +1795,22 @@ pub fn main() {
 }
 
 #[test]
+fn test_convert_assert_does_not_appear_if_the_entire_module_is_selected() {
+    assert_no_code_actions!(
+        CONVERT_TO_CASE,
+        "
+pub type Wibble { Wibble(arg: Int, arg2: Float) }
+pub fn main() {
+  let assert Wibble(arg2:, ..) = Wibble(arg: 1, arg2: 1.0)
+  let assert Wibble(arg2:, ..) = Wibble(arg: 1, arg2: 1.0)
+}
+// end
+",
+        find_position_of("pub").select_until(find_position_of("// end")),
+    );
+}
+
+#[test]
 fn label_shorthand_action_works_on_labelled_call_args() {
     assert_code_action!(
         USE_LABEL_SHORTHAND_SYNTAX,
@@ -1966,6 +1983,51 @@ pub fn main() {
 pub type Wibble { Wibble(arg1: Int, arg2: String) }
  "#,
         find_position_of("Wibble").select_until(find_position_of("Wibble()").under_last_char()),
+    );
+}
+
+#[test]
+fn fill_in_labelled_args_works_with_pattern_and_no_parentheses() {
+    assert_code_action!(
+        FILL_LABELS,
+        r#"
+pub fn main() {
+  let assert Ok(Wibble) = Wibble(1, "2")
+}
+
+pub type Wibble { Wibble(arg1: Int, arg2: String) }
+ "#,
+        find_position_of("Wibble").select_until(find_position_of("Wibble").under_last_char()),
+    );
+}
+
+#[test]
+fn fill_in_labelled_args_works_with_pattern_and_parentheses() {
+    assert_code_action!(
+        FILL_LABELS,
+        r#"
+pub fn main() {
+  let assert Ok(Wibble()) = Wibble(1, "2")
+}
+
+pub type Wibble { Wibble(arg1: Int, arg2: String) }
+ "#,
+        find_position_of("Wibble").select_until(find_position_of("Wibble").under_last_char()),
+    );
+}
+
+#[test]
+fn fill_in_labelled_args_works_with_pattern_and_parentheses_with_spaces() {
+    assert_code_action!(
+        FILL_LABELS,
+        r#"
+pub fn main() {
+  let assert Ok(Wibble   ()) = Wibble(1, "2")
+}
+
+pub type Wibble { Wibble(arg1: Int, arg2: String) }
+ "#,
+        find_position_of("Wibble").select_until(find_position_of("Wibble").under_last_char()),
     );
 }
 
@@ -3459,6 +3521,57 @@ pub fn main(x) -> option.Option(wobble.Wibble) {
             .add_hex_module("option", "pub type Option(v) { Some(v) None }")
             .add_hex_module("wobble", "pub type Wibble { Wobble(Int) }"),
         find_position_of("wobble.").select_until(find_position_of("Wibble")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_aliased_type() {
+    let src = r#"
+import wobble
+
+pub fn main(x) -> wobble.Wibble(a) {
+    todo
+}
+"#;
+    assert_code_action!(
+        "Unqualify wobble.Wibble",
+        TestProject::for_source(src).add_hex_module("wobble", "pub type Wibble(a) = List(a)"),
+        find_position_of("wobble.").select_until(find_position_of("Wibble")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_aliased_type_with_multiple_imports() {
+    let src = r#"
+import other/wobble as other
+import wibble/wobble
+
+pub fn main(x) -> wobble.Wibble(a) {
+    todo
+}
+"#;
+    assert_code_action!(
+        "Unqualify wobble.Wibble",
+        TestProject::for_source(src)
+            .add_hex_module("wibble/wobble", "pub type Wibble(a) = List(a)")
+            .add_hex_module("other/wobble", "pub type Wibble(a) = List(a)"),
+        find_position_of("wobble.").select_until(find_position_of("Wibble")),
+    );
+}
+
+#[test]
+fn test_qualified_aliased_to_unqualified_aliased_type() {
+    let src = r#"
+import wobble as wob
+
+pub fn main(x) -> wob.Wibble(a) {
+    todo
+}
+"#;
+    assert_code_action!(
+        "Unqualify wob.Wibble",
+        TestProject::for_source(src).add_hex_module("wobble", "pub type Wibble(a) = List(a)"),
+        find_position_of("wob.").select_until(find_position_of("Wibble")),
     );
 }
 
@@ -5563,6 +5676,52 @@ fn extract_variable_in_block() {
   }
 }"#,
         find_position_of("2").select_until(find_position_of("3"))
+    );
+}
+
+#[test]
+fn extract_variable_and_dont_shadow_existing_variable_in_operator() {
+    let src = "import gleam/int
+import random_import as int_2
+
+const int_3 = 3
+
+fn int_4() { 4 }
+
+fn isolated_scope() {
+    let int_6 = 6
+    int_6 + 1
+}
+
+pub fn main() {
+  let int_5 = 5
+  let result = int_5 + 6
+  result
+}
+";
+
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        TestProject::for_source(src)
+            .add_hex_module("gleam/int", "")
+            .add_hex_module("random_import", ""),
+        find_position_of("6").nth_occurrence(4).to_selection(),
+    );
+}
+
+#[test]
+fn extract_variable_and_dont_shadow_existing_variable_in_argument() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"fn wibble(a, b) {
+  a + b
+}
+
+fn main() {
+  let int = 1
+  wibble(int, 2)
+}"#,
+        find_position_of("2").to_selection()
     );
 }
 
@@ -9129,6 +9288,36 @@ pub fn main() {
     );
 }
 
+#[test]
+fn extract_variable_in_anonymous_fn_in_argument() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        "fn map(value, fn_over_value) { todo }
+
+pub fn main() {
+  1
+  |> Ok
+  |> map(fn(value) { value + 2 })
+}",
+        find_position_of("2").to_selection()
+    );
+}
+
+#[test]
+fn do_not_extract_top_level_variable_in_anonymous_fn_in_argument() {
+    assert_no_code_actions!(
+        EXTRACT_VARIABLE,
+        "fn map(value, fn_over_value) { todo }
+
+pub fn main() {
+  1
+  |> Ok
+  |> map(fn(value) { value + 1 })
+}",
+        find_position_of("value").nth_occurrence(4).to_selection()
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/4739
 #[test]
 fn do_not_import_internal_modules() {
@@ -9794,5 +9983,247 @@ fn remove_unreachable_branches_does_not_pop_up_if_all_branches_are_reachable() {
 }
 ",
         find_position_of("Ok(n)").to_selection()
+    );
+}
+
+#[test]
+fn add_type_annotations_public_alias_to_internal_type_aliased_module() {
+    let src = "
+import package as pkg
+
+pub fn main() {
+  pkg.make_wibble()
+}
+";
+
+    assert_code_action!(
+        ADD_ANNOTATION,
+        TestProject::for_source(src)
+            .add_package_module(
+                "package",
+                "package",
+                "
+import package/internal
+
+pub type Wibble = internal.Wibble
+
+pub fn make_wibble() {
+  internal.Wibble
+}
+"
+            )
+            .add_package_module("package", "package/internal", "pub type Wibble { Wibble }"),
+        find_position_of("main").to_selection(),
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3898
+#[test]
+fn add_type_annotations_public_alias_to_internal_type() {
+    let src = "
+import package
+
+pub fn main() {
+  package.make_wibble()
+}
+";
+
+    assert_code_action!(
+        ADD_ANNOTATION,
+        TestProject::for_source(src)
+            .add_package_module(
+                "package",
+                "package",
+                "
+import package/internal
+
+pub type Wibble = internal.Wibble
+
+pub fn make_wibble() {
+  internal.Wibble
+}
+"
+            )
+            .add_package_module("package", "package/internal", "pub type Wibble { Wibble }"),
+        find_position_of("main").to_selection(),
+    );
+}
+
+#[test]
+fn add_type_annotations_public_alias_to_internal_generic_type() {
+    let src = "
+import package
+
+pub fn main() {
+  package.make_wibble(10)
+}
+";
+
+    assert_code_action!(
+        ADD_ANNOTATION,
+        TestProject::for_source(src)
+            .add_package_module(
+                "package",
+                "package",
+                "
+import package/internal
+
+pub type Wibble(a, b) = internal.Wibble(a, b)
+
+pub fn make_wibble(x) {
+  internal.Wibble(x)
+}
+"
+            )
+            .add_package_module(
+                "package",
+                "package/internal",
+                "pub type Wibble(a, b) { Wibble(a) }"
+            ),
+        find_position_of("main").to_selection(),
+    );
+}
+
+#[test]
+fn add_type_annotations_uses_internal_name_for_same_package() {
+    let src = "
+import thepackage/internal
+
+pub fn main() {
+  internal.Constructor
+}
+";
+
+    assert_code_action!(
+        ADD_ANNOTATION,
+        TestProject::for_source(src)
+            .add_module(
+                "thepackage/internal",
+                "
+pub type Internal { Constructor }
+"
+            )
+            .add_module(
+                "thepackage/external",
+                "
+import thepackage/internal
+
+pub type External = internal.Internal
+"
+            ),
+        find_position_of("main").to_selection(),
+    );
+}
+
+#[test]
+fn add_omitted_labels_in_function_call() {
+    assert_code_action!(
+        ADD_OMITTED_LABELS,
+        "
+pub fn main() {
+  labelled(1, 2)
+}
+
+pub fn labelled(a a, b b) { todo }
+    ",
+        find_position_of("labelled").to_selection(),
+    );
+}
+
+#[test]
+fn add_omitted_labels_in_function_call_with_some_labels() {
+    assert_code_action!(
+        ADD_OMITTED_LABELS,
+        "
+pub fn main() {
+  labelled(1, 2)
+}
+
+pub fn labelled(a, b b) { todo }
+    ",
+        find_position_of("labelled").to_selection(),
+    );
+}
+
+#[test]
+fn add_omitted_labels_in_function_call_uses_shorthand_syntax() {
+    assert_code_action!(
+        ADD_OMITTED_LABELS,
+        "
+pub fn main() {
+  let a = 1
+  labelled(a, 2)
+}
+
+pub fn labelled(a a, b b) { todo }
+    ",
+        find_position_of("labelled").to_selection(),
+    );
+}
+
+#[test]
+fn add_omitted_labels_works_with_innermost_function_call() {
+    assert_code_action!(
+        ADD_OMITTED_LABELS,
+        "
+pub fn main() {
+  let a = 1
+  labelled(a, labelled(1, 2))
+}
+
+pub fn labelled(a a, b b) { todo }
+    ",
+        find_position_of("labelled")
+            .nth_occurrence(2)
+            .to_selection(),
+    );
+}
+
+#[test]
+fn add_omitted_labels_works_with_constructors_calls() {
+    assert_code_action!(
+        ADD_OMITTED_LABELS,
+        "
+pub fn main() {
+  Labelled(1, 2)
+}
+
+pub type Labelled {
+  Labelled(Int, b: Int)
+}
+    ",
+        find_position_of("Labelled").to_selection(),
+    );
+}
+
+#[test]
+fn add_omitted_labels_does_not_pop_up_if_function_already_has_labels() {
+    assert_no_code_actions!(
+        ADD_OMITTED_LABELS,
+        "
+pub fn main() {
+  let a = 1
+  labelled(a, b: 2)
+}
+
+pub fn labelled(a a, b b) { todo }
+    ",
+        find_position_of("labelled").to_selection(),
+    );
+}
+
+#[test]
+fn add_omitted_labels_does_not_pop_up_if_called_function_has_no_labels() {
+    assert_no_code_actions!(
+        ADD_OMITTED_LABELS,
+        "
+pub fn main() {
+  let a = 1
+  labelled(a, 2)
+}
+
+pub fn labelled(a, b) { todo }
+    ",
+        find_position_of("labelled").to_selection(),
     );
 }

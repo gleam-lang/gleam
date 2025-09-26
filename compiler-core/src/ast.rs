@@ -290,6 +290,7 @@ pub struct TypeAstConstructor {
     pub module: Option<(EcoString, SrcSpan)>,
     pub name: EcoString,
     pub arguments: Vec<TypeAst>,
+    pub start_parentheses: Option<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -345,6 +346,7 @@ impl TypeAst {
                 arguments,
                 location: _,
                 name_location: _,
+                start_parentheses: _,
             }) => match other {
                 TypeAst::Constructor(TypeAstConstructor {
                     module: o_module,
@@ -352,6 +354,7 @@ impl TypeAst {
                     arguments: o_arguments,
                     location: _,
                     name_location: _,
+                    start_parentheses: _,
                 }) => {
                     let module_name =
                         |m: &Option<(EcoString, _)>| m.as_ref().map(|(m, _)| m.clone());
@@ -577,6 +580,7 @@ fn type_ast_print_constructor() {
                 name: "Bool".into(),
             }),
         ],
+        start_parentheses: Some(1),
     });
     ast.print(&mut buffer);
     assert_eq!(&buffer, "some_module.SomeType(String, Bool)")
@@ -603,6 +607,7 @@ fn type_ast_print_tuple() {
                         name: "Bool".into(),
                     }),
                 ],
+                start_parentheses: Some(1),
             }),
             TypeAst::Fn(TypeAstFn {
                 location: SrcSpan { start: 1, end: 1 },
@@ -689,7 +694,7 @@ pub struct Function<T, Expr> {
     pub end_position: u32,
     pub name: Option<SpannedString>,
     pub arguments: Vec<Arg<T>>,
-    pub body: Vec1<Statement<T, Expr>>,
+    pub body: Vec<Statement<T, Expr>>,
     pub publicity: Publicity,
     pub deprecation: Deprecation,
     pub return_annotation: Option<TypeAst>,
@@ -3565,13 +3570,6 @@ impl UntypedStatement {
             Statement::Assignment(assignment) => assignment.location.start,
             Statement::Use(use_) => use_.location.start,
             Statement::Assert(assert) => assert.location.start,
-        }
-    }
-
-    pub fn is_placeholder(&self) -> bool {
-        match self {
-            Statement::Expression(expression) => expression.is_placeholder(),
-            Statement::Assignment(_) | Statement::Use(_) | Statement::Assert(_) => false,
         }
     }
 }

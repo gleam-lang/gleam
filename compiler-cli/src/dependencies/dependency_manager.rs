@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use ecow::EcoString;
 use futures::future;
 use gleam_core::{
@@ -7,10 +5,11 @@ use gleam_core::{
     build::{Mode, Telemetry},
     config::PackageConfig,
     dependency,
-    manifest::Manifest,
+    manifest::{Manifest, ManifestPackageSource, Resolved},
     paths::ProjectPaths,
     requirement::Requirement,
 };
+use std::collections::HashMap;
 
 use crate::{
     build_lock::BuildLock,
@@ -68,53 +67,58 @@ where
     P: dependency::PackageFetcher,
     Telem: Telemetry,
 {
-    pub fn get_manifest(
+    /// Resolve the dependency versions used by a package.
+    ///
+    /// If the `use_manifest` configuration was set to `false` then it'll always resolve all the
+    /// versions, even if there are already versions locked in the manifest.
+    pub fn resolve_versions(
         &self,
         paths: &ProjectPaths,
         config: &PackageConfig,
         packages_to_update: Vec<EcoString>,
-    ) -> Result<(bool, Manifest)> {
-        // If there's no manifest (or we have been asked not to use it) then resolve
-        // the versions anew
-        let should_resolve = match self.use_manifest {
-            _ if !paths.manifest().exists() => {
-                tracing::debug!("manifest_not_present");
-                true
+    ) -> Result<Resolved> {
+        // If there's no manifest then the only thing we can do is attempt to update the versions.
+        if !paths.manifest().exists() {
+            tracing::debug!("manifest_not_present");
+            let manifest = self.perform_version_resolution(paths, config, None, Vec::new())?;
+            return Ok(Resolved::all_added(manifest));
+        }
+
+        let existing_manifest = read_manifest_from_disc(paths)?;
+
+        // If we have been asked not to use the manifest then
+        let manifest_for_resolver = match self.use_manifest {
+            UseManifest::No => None,
+            UseManifest::Yes => {
+                // If the manifest is to be used and the requirements have not changed then there's
+                // no point in performing resolution, it'll always result in the same versions
+                // already specified in the manifest.
+                if packages_to_update.is_empty()
+                    && is_same_requirements(
+                        &existing_manifest.requirements,
+                        &config.all_direct_dependencies()?,
+                        paths.root(),
+                    )?
+                {
+                    return Ok(Resolved::no_change(existing_manifest));
+                }
+
+                // Otherwise, use the manifest to inform resolution.
+                Some(&existing_manifest)
             }
-            UseManifest::No => {
-                tracing::debug!("ignoring_manifest");
-                true
-            }
-            UseManifest::Yes => false,
         };
 
-        if should_resolve {
-            let manifest = self.resolve_versions(paths, config, None, Vec::new())?;
-            return Ok((true, manifest));
-        }
-
-        let manifest = read_manifest_from_disc(paths)?;
-
-        // If there are no requested updates, and the config is unchanged
-        // since the manifest was written then it is up to date so we can return it unmodified.
-        if packages_to_update.is_empty()
-            && is_same_requirements(
-                &manifest.requirements,
-                &config.all_direct_dependencies()?,
-                paths.root(),
-            )?
-        {
-            tracing::debug!("manifest_up_to_date");
-            Ok((false, manifest))
-        } else {
-            tracing::debug!("manifest_outdated");
-            let manifest =
-                self.resolve_versions(paths, config, Some(&manifest), packages_to_update)?;
-            Ok((true, manifest))
-        }
+        tracing::debug!("manifest_outdated");
+        let new_manifest = self.perform_version_resolution(
+            paths,
+            config,
+            manifest_for_resolver,
+            packages_to_update,
+        )?;
+        Ok(Resolved::with_updates(&existing_manifest, new_manifest))
     }
 
-    pub fn download(
+    pub fn resolve_and_download_versions(
         &self,
         paths: &ProjectPaths,
         new_package: Option<(Vec<(EcoString, Requirement)>, bool)>,
@@ -148,33 +152,40 @@ where
         }
 
         // Determine what versions we need
-        let (manifest_updated, manifest) = self.get_manifest(paths, &config, packages_to_update)?;
+        let resolved = self.resolve_versions(paths, &config, packages_to_update)?;
         let local = LocalPackages::read_from_disc(paths)?;
 
         // Remove any packages that are no longer required due to gleam.toml changes
-        remove_extra_packages(paths, &local, &manifest, &self.telemetry)?;
+        remove_extra_packages(paths, &local, &resolved.manifest, &self.telemetry)?;
 
         // Download them from Hex to the local cache
         self.runtime.block_on(add_missing_packages(
             paths,
             fs,
-            &manifest,
+            &resolved.manifest,
             &local,
             project_name,
             &self.telemetry,
         ))?;
 
-        if manifest_updated {
+        if resolved.any_changes() {
             // Record new state of the packages directory
             // TODO: test
             tracing::debug!("writing_manifest_toml");
-            write_manifest_to_disc(paths, &manifest)?;
+            write_manifest_to_disc(paths, &resolved.manifest)?;
         }
-        LocalPackages::from_manifest(&manifest).write_to_disc(paths)?;
+        LocalPackages::from_manifest(&resolved.manifest).write_to_disc(paths)?;
 
+        // Display the changes in versions to the user.
+        self.telemetry.resolved_package_versions(&resolved);
+
+        // If requested to do so, check if there are major upgrades that could be performed with
+        // more relaxed version requirements, and inform the user if so.
         if let CheckMajorVersions::Yes = self.check_major_versions {
-            let major_versions_available =
-                dependency::check_for_major_version_updates(&manifest, &self.package_fetcher);
+            let major_versions_available = dependency::check_for_major_version_updates(
+                &resolved.manifest,
+                &self.package_fetcher,
+            );
             if !major_versions_available.is_empty() {
                 eprintln!(
                     "{}",
@@ -182,11 +193,10 @@ where
                 );
             }
         }
-
-        Ok(manifest)
+        Ok(resolved.manifest)
     }
 
-    fn resolve_versions(
+    fn perform_version_resolution(
         &self,
         project_paths: &ProjectPaths,
         config: &PackageConfig,
@@ -218,14 +228,34 @@ where
                     &mut provided_packages,
                     &mut vec![],
                 )?,
-                Requirement::Git { git, ref_ } => provide_git_package(
-                    name.clone(),
-                    &git,
-                    &ref_,
-                    project_paths,
-                    &mut provided_packages,
-                    &mut Vec::new(),
-                )?,
+                Requirement::Git { git, ref_ } => {
+                    // If this package is locked and we already resolved a commit
+                    // hash for it, we want to use that hash rather than pulling
+                    // the latest commit.
+                    let ref_to_use = if locked.contains_key(&name)
+                        && let Some(manifest) = manifest
+                        && let Some(package) = manifest
+                            .packages
+                            .iter()
+                            .find(|package| package.name == name)
+                        && let ManifestPackageSource::Git { commit, .. } = &package.source
+                    {
+                        commit
+                    } else {
+                        // If the package is unlocked or we haven't resolved a version yet, we use
+                        // the ref specified in `gleam.toml`.
+                        &ref_
+                    };
+
+                    provide_git_package(
+                        name.clone(),
+                        &git,
+                        ref_to_use,
+                        project_paths,
+                        &mut provided_packages,
+                        &mut Vec::new(),
+                    )?
+                }
             };
             let _ = root_requirements.insert(name, version);
         }

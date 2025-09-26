@@ -33,6 +33,10 @@ export class A extends $CustomType {
     this.b = b;
   }
 }
+export const A$A = (b) => new A(b);
+export const A$isA = (value) => value instanceof A;
+export const A$A$b = (value) => value.b;
+export const A$A$0 = (value) => value.b;
 
 export class B extends $CustomType {
   constructor(c) {
@@ -40,6 +44,10 @@ export class B extends $CustomType {
     this.c = c;
   }
 }
+export const B$B = (c) => new B(c);
+export const B$isB = (value) => value instanceof B;
+export const B$B$c = (value) => value.c;
+export const B$B$0 = (value) => value.c;
 
 export class C extends $CustomType {
   constructor(d) {
@@ -47,6 +55,10 @@ export class C extends $CustomType {
     this.d = d;
   }
 }
+export const C$C = (d) => new C(d);
+export const C$isC = (value) => value instanceof C;
+export const C$C$d = (value) => value.d;
+export const C$C$0 = (value) => value.d;
 
 export function a(a) {
   if (a.b.c.d) {

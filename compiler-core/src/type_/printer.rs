@@ -5,7 +5,7 @@ use std::{collections::HashSet, sync::Arc};
 
 use crate::{
     ast::SrcSpan,
-    type_::{Type, TypeVar},
+    type_::{Type, TypeAliasConstructor, TypeVar},
 };
 
 /// This class keeps track of what names are used for modules in the current
@@ -117,6 +117,32 @@ pub struct Names {
     /// - value: `"Woo"`
     ///
     local_value_constructors: BiMap<(EcoString, EcoString), EcoString>,
+
+    /// A map containing information about public alias of internal types in
+    /// other packages. This is a common pattern in Gleam, in order to reexport
+    /// an internal type, without exposing its implementation details. Because
+    /// of this, we want to be able to properly handle this case, and use the
+    /// public alias rather than the internal underlying type. Since Gleam type
+    /// aliases are not part of the type system, we have to track them manually
+    /// here.
+    ///
+    /// This is a mapping of internal types to their public aliases that we want
+    /// to favour over the internal types.
+    ///
+    /// For example, if we had the following code:
+    ///
+    /// ```gleam
+    /// // lustre/element.gleam
+    /// import lustre/internal
+    ///
+    /// pub type Element(a) = internal.Element(a)
+    /// ```
+    ///
+    /// This map would contain a key of `("lustre/internal", "Element")` with a
+    /// value of `("lustre/element", "Element")`. This can then be used to look
+    /// up the alias we want to print based on the type we are printing.
+    ///
+    reexport_aliases: HashMap<(EcoString, EcoString), (EcoString, EcoString)>,
 }
 
 /// The `PartialEq` implementation for `Type` doesn't account for `TypeVar::Link`,
@@ -139,6 +165,7 @@ impl Names {
             imported_modules: Default::default(),
             type_variables: Default::default(),
             local_value_constructors: Default::default(),
+            reexport_aliases: Default::default(),
         }
     }
 
@@ -195,8 +222,43 @@ impl Names {
             .map(|(_, location)| location)
     }
 
+    /// Check whether a particular type alias is reexporting an internal type,
+    /// and if so register it so we can print it correctly.
+    pub fn maybe_register_reexport_alias(
+        &mut self,
+        package: &EcoString,
+        alias_name: &EcoString,
+        alias: &TypeAliasConstructor,
+    ) {
+        match alias.type_.as_ref() {
+            Type::Named {
+                publicity,
+                package: type_package,
+                module,
+                name,
+                arguments,
+                ..
+            } => {
+                // We only count this alias as a reexport if it is:
+                // - aliasing a type in the same package
+                // - the type is internal
+                // - the alias exposes the same type parameters as the internal type
+                if type_package == package
+                    && publicity.is_internal()
+                    && compare_arguments(arguments, &alias.parameters)
+                {
+                    _ = self.reexport_aliases.insert(
+                        (module.clone(), name.clone()),
+                        (alias.module.clone(), alias_name.clone()),
+                    );
+                }
+            }
+            Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => {}
+        }
+    }
+
     /// Get the name and optional module qualifier for a named type.
-    pub fn named_type<'a>(
+    fn named_type<'a>(
         &'a self,
         module: &'a EcoString,
         name: &'a EcoString,
@@ -207,7 +269,7 @@ impl Names {
                 return NameContextInformation::Qualified(module, name.as_str());
             };
 
-            return NameContextInformation::Unimported(name.as_str());
+            return NameContextInformation::Unimported(module, name);
         }
 
         let key = (module.clone(), name.clone());
@@ -218,12 +280,20 @@ impl Names {
             return NameContextInformation::Unqualified(name.as_str());
         }
 
+        if let Some((module, alias)) = self.reexport_aliases.get(&key) {
+            if let Some((module, _)) = self.imported_modules.get(module) {
+                return NameContextInformation::Qualified(module, alias);
+            } else {
+                return NameContextInformation::Unimported(module, alias);
+            }
+        }
+
         // This type is from a module that has been imported
         if let Some((module, _)) = self.imported_modules.get(module) {
             return NameContextInformation::Qualified(module, name.as_str());
         };
 
-        NameContextInformation::Unimported(name.as_str())
+        NameContextInformation::Unimported(module, name)
     }
 
     /// Record a named value in this module.
@@ -257,7 +327,7 @@ impl Names {
             return NameContextInformation::Qualified(module, name.as_str());
         };
 
-        NameContextInformation::Unimported(name.as_str())
+        NameContextInformation::Unimported(module, name)
     }
 
     pub fn is_imported(&self, module: &str) -> bool {
@@ -267,12 +337,20 @@ impl Names {
     pub fn get_type_variable(&self, id: u64) -> Option<&EcoString> {
         self.type_variables.get(&id)
     }
+
+    pub fn reexport_alias(
+        &self,
+        module: EcoString,
+        name: EcoString,
+    ) -> Option<&(EcoString, EcoString)> {
+        self.reexport_aliases.get(&(module, name))
+    }
 }
 
 #[derive(Debug)]
 pub enum NameContextInformation<'a> {
     /// This type is from a module that has not been imported in this module.
-    Unimported(&'a str),
+    Unimported(&'a str, &'a str),
     /// This type has been imported in an unqualifid fashion in this module.
     Unqualified(&'a str),
     /// This type is from a module that has been imported.
@@ -404,12 +482,12 @@ impl<'a> Printer<'a> {
                 ..
             } => {
                 let (module, name) = match self.names.named_type(module, name, print_mode) {
-                    NameContextInformation::Qualified(m, n) => (Some(m), n),
-                    NameContextInformation::Unqualified(n) => (None, n),
+                    NameContextInformation::Qualified(module, name) => (Some(module), name),
+                    NameContextInformation::Unqualified(name) => (None, name),
                     // TODO: indicate that the module is not import and as such
                     // needs to be, as well as how.
-                    NameContextInformation::Unimported(n) => {
-                        (Some(module.split('/').next_back().unwrap_or(module)), n)
+                    NameContextInformation::Unimported(module, name) => {
+                        (module.split('/').next_back(), name)
                     }
                 };
 
@@ -452,8 +530,8 @@ impl<'a> Printer<'a> {
         let (module, name) = match self.names.named_constructor(module, name) {
             NameContextInformation::Qualified(module, name) => (Some(module), name),
             NameContextInformation::Unqualified(name) => (None, name),
-            NameContextInformation::Unimported(name) => {
-                (Some(module.split('/').next_back().unwrap_or(module)), name)
+            NameContextInformation::Unimported(module, name) => {
+                (module.split('/').next_back(), name)
             }
         };
 

@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "fn wibble(a, b) {\n  a + b\n}\n\nfn main() {\n  let int = 1\n  wibble(int, 2)\n}"
+---
+----- BEFORE ACTION
+fn wibble(a, b) {
+  a + b
+}
+
+fn main() {
+  let int = 1
+  wibble(int, 2)
+              ↑ 
+}
+
+
+----- AFTER ACTION
+fn wibble(a, b) {
+  a + b
+}
+
+fn main() {
+  let int = 1
+  let int_2 = 2
+  wibble(int, int_2)
+}

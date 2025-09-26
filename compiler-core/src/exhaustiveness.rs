@@ -7,7 +7,8 @@
 //!   Per Gustafsson and Konstantinos Sagonas.
 //!   <https://user.it.uu.se/~kostis/Papers/JFP_06.pdf>
 //!
-//! Adapted from Yorick Peterse's implementation at
+//! The first implementation of the decision tree was adapted from Yorick
+//! Peterse's implementation at
 //! <https://github.com/yorickpeterse/pattern-matching-in-rust>.
 //! Thank you Yorick!
 //!
@@ -64,20 +65,25 @@ pub mod printer;
 
 use crate::{
     ast::{
-        self, AssignName, BitArraySize, Endianness, IntOperator, TypedBitArraySize, TypedClause,
-        TypedPattern, TypedPatternBitArraySegment,
+        self, AssignName, BitArraySize, Endianness, IntOperator, SrcSpan, TypedBitArraySize,
+        TypedClause, TypedPattern, TypedPatternBitArraySegment,
     },
-    strings::{convert_string_escape_chars, length_utf16, length_utf32},
+    strings::{
+        convert_string_escape_chars, length_utf16, length_utf32, string_to_utf16_bytes,
+        string_to_utf32_bytes,
+    },
     type_::{
         Environment, Opaque, Type, TypeValueConstructor, TypeValueConstructorField, TypeVar,
         TypeVariantConstructors, collapse_links, error::UnreachablePatternReason,
         is_prelude_module, string,
     },
 };
+use bitvec::{order::Msb0, slice::BitSlice, view::BitView};
 use ecow::EcoString;
 use id_arena::{Arena, Id};
 use itertools::Itertools;
 use num_bigint::BigInt;
+use num_traits::ToPrimitive;
 use radix_trie::{Trie, TrieCommon};
 use std::{
     cell::RefCell,
@@ -404,7 +410,7 @@ impl Body {
     fn assign_segment_constant_value(&mut self, name: EcoString, value: &BitArrayMatchedValue) {
         let value = match value {
             BitArrayMatchedValue::LiteralFloat(value) => BoundValue::LiteralFloat(value.clone()),
-            BitArrayMatchedValue::LiteralInt(value) => BoundValue::LiteralInt(value.clone()),
+            BitArrayMatchedValue::LiteralInt { value, .. } => BoundValue::LiteralInt(value.clone()),
             BitArrayMatchedValue::LiteralString { value, .. } => {
                 BoundValue::LiteralString(value.clone())
             }
@@ -519,6 +525,33 @@ impl Pattern {
                 },
             ) if index != variant => true,
             _ => false,
+        }
+    }
+
+    fn is_matching_on_impossible_segment(&self) -> Option<Vec<ImpossibleBitArraySegmentPattern>> {
+        match self {
+            Self::BitArray { tests } => {
+                let impossible_segments = tests
+                    .iter()
+                    .filter_map(|test| match test {
+                        BitArrayTest::Size(_)
+                        | BitArrayTest::CatchAllIsBytes { .. }
+                        | BitArrayTest::ReadSizeIsNotNegative { .. }
+                        | BitArrayTest::SegmentIsFiniteFloat { .. } => None,
+
+                        BitArrayTest::Match(MatchTest { value, read_action }) => {
+                            value.is_impossible_segment(read_action)
+                        }
+                    })
+                    .collect_vec();
+
+                if impossible_segments.is_empty() {
+                    None
+                } else {
+                    Some(impossible_segments)
+                }
+            }
+            _ => None,
         }
     }
 }
@@ -990,6 +1023,164 @@ pub struct MatchTest {
     pub read_action: ReadAction,
 }
 
+struct Interference {
+    interfering_bits_are_equal: bool,
+    first_encloses_second: bool,
+    second_encloses_first: bool,
+}
+
+impl MatchTest {
+    /// If this match test interferes with the other one, this will return
+    /// information about how they interfere.
+    ///
+    ///
+    /// # What is interference used for?
+    ///
+    /// Interference analysis is an optimization that we can apply to segments
+    /// matching on a literal value with a known offset and size.
+    /// It allows discarding many overlapping checks that we can for sure tell
+    /// will never (or will always) match.
+    ///
+    /// This optimization is particularly important for network protocol
+    /// applications where it is typical to match on some fixed patterns at the
+    /// start of the bitarray:
+    ///
+    /// ```gleam
+    /// case packet {
+    ///   <<"CONTENT_LENGTH", 0, rest:bytes>> -> todo
+    ///   <<"QUERY_STRING", 0, rest:bytes>> -> todo
+    ///   // ...
+    ///   _ -> todo
+    /// }
+    /// ```
+    ///
+    ///
+    /// # What is interference?
+    ///
+    /// We say two read actions interfere with each other if:
+    /// - They're both matching against a statically known value, we will call
+    ///   them `v1` and `v2`
+    /// - They both start at a statically known offset, `o1` and `o2`
+    /// - They both have a statically known size, `s1` and `s2`
+    /// - `o1 <= o2 && o1 + s1 > o2`
+    ///
+    /// This is a lot of letters to say something actually quite simple, having
+    /// a look at a graphical example will make this easier to grasp. Let's
+    /// visualize each match action as a segment; each read action will match
+    /// against a portion of the bit array, starting at the given offset and
+    /// with the given number of bits (in the example I'm also showing the bits
+    /// that the read action matches against):
+    ///
+    /// ```text
+    ///          o1         (o1+s1)
+    ///         ┄├0001010110┤┄
+    ///               ┄├1101000000111011┤┄
+    ///                o2               (o2+s2)
+    /// ```
+    ///
+    /// They interfere if the first one comes first (`o1 <= o2`) and the start
+    /// of the second one falls inside the range covered by the first one
+    /// (`o1 + s1 > p2`).
+    /// So the example above showcases two interfering read actions, here's an
+    /// example of two read actions that are not interfering with each other:
+    ///
+    /// ```text
+    ///          o1      (o1+s1)
+    ///         ┄├0110101┤┄
+    ///                      ┄├0101110101┤┄
+    ///                       o2         (o2+s2)
+    /// ```
+    ///
+    ///
+    /// # How is interference useful
+    ///
+    /// Knowing that two read actions interfere is very useful because, knowing
+    /// if the first one matches or not can allow us to tell for certain if an
+    /// interfering match has no change of succeeding as well.
+    /// Let's look at the three cases:
+    ///
+    /// 1. We know the first action succeeded, so the binary has the expected
+    ///    bits in the matched segment
+    ///    ```text
+    ///             o1         (o1+s1)
+    ///            ┄├0110101111┤┄  ← This check succeded!
+    ///                   ┄├0001110101┤┄
+    ///                    o2         (o2+s2)
+    ///    ```
+    ///    Can the second check ever succeed? No! Since the first check
+    ///    succeeded we know for certain that the first three bits the second
+    ///    check would match against are going to be `111`, so they surely won't
+    ///    match with `000`.
+    ///
+    /// 2. We know the first action succeeded, and the second action is fully
+    ///    contained inside it:
+    ///    ```text
+    ///             o1              (o1+s1)
+    ///            ┄├011010000001111┤┄  ← This check succeded!
+    ///               ┄├0100000┤┄
+    ///                o2      (o2+s2)
+    ///    ```
+    ///    In that case we know for certain that the second check will succeed
+    ///    as well (and so can be skipped) if the overlapping bits being checked
+    ///    are exactly the same.
+    ///
+    /// 3. We know that the first action failed, and the second one is
+    ///    fully enclosing it:
+    ///    ```text
+    ///             o1  (o1+s1)
+    ///            ┄├010┤┄  ← This check failed!
+    ///            ┄├01000001010000001111┤┄
+    ///             o2                   (o2+s2)
+    ///    ```
+    ///   Can the second check ever succeed? No! Since the first check failed we
+    ///   know for certain that the first bits are not `010`, so there's no
+    ///   chance for the second match to succeed as it requires those three bits
+    ///   to be `010` as well.
+    ///
+    ///
+    /// ## What information is returned by this function
+    ///
+    /// If the two actions are not interfering with each other this will return
+    /// `None`. Otherwise, it will return all the information needed by the
+    /// three examples above (check usages of this function to see how this is
+    /// used, hopefully it should be pretty straightforward!):
+    /// - whether the bits in the overlapping section are the same
+    /// - whether the first action fully encloses the second one
+    /// - whether the second action fully encloses the first one
+    ///
+    fn interfering_bits(&self, other: &Self) -> Option<Interference> {
+        // After reading the doc comment this should be pretty easy to follow:
+        // The first requirement for interference is: `o1 <= o2`
+        let offset_one = self.read_action.from.constant_bits()?.to_usize()?;
+        let offset_other = other.read_action.from.constant_bits()?.to_usize()?;
+        if offset_one > offset_other {
+            return None;
+        };
+
+        // The second requirement is that: `o1 + s1 > o2`
+        let size_one = self.read_action.size.constant_bits()?.to_usize()?;
+        let size_other = other.read_action.size.constant_bits()?.to_usize()?;
+        if offset_one + size_one <= offset_other {
+            return None;
+        };
+
+        // At this point we know that both are interfering, so we compare the
+        // overlapping slice of bits they're matching against.
+        // A little implementation note: we're storing the matched _bytes_, not
+        // bits, so we will be using the `view_bits` function to perform a
+        // comparison of slices of bits.
+        let bits_one = self.value.constant_bits()?;
+        let bits_other = other.value.constant_bits()?;
+        let end = (offset_other + size_other).min(offset_one + size_one);
+        Some(Interference {
+            interfering_bits_are_equal: bits_one[offset_other - offset_one..end - offset_one]
+                == bits_other[0..end - offset_other],
+            first_encloses_second: size_one + offset_one >= size_other + offset_other,
+            second_encloses_first: size_other + offset_other >= size_one + offset_one,
+        })
+    }
+}
+
 /// A value that can be matched in a bit array pattern's segment. We do not use
 /// a `Pattern` directly since the allowed values are actually a subset of all
 /// the possible patterns: it can only contain literal floats, ints, strings,
@@ -998,10 +1189,19 @@ pub struct MatchTest {
 #[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
 pub enum BitArrayMatchedValue {
     LiteralFloat(EcoString),
-    LiteralInt(BigInt),
+    LiteralInt {
+        value: BigInt,
+        /// This is carried around for better error reporting in case a segment
+        /// is deemed unreachable: it is the location this literal value comes
+        /// from in the whole pattern.
+        location: SrcSpan,
+    },
     LiteralString {
         value: EcoString,
         encoding: StringEncoding,
+        /// The bytes representing the given literal string, with the correct
+        /// encoding and endianness specified in the bit array segment.
+        bytes: Vec<u8>,
     },
     Variable(EcoString),
     Discard(EcoString),
@@ -1015,10 +1215,112 @@ impl BitArrayMatchedValue {
     pub(crate) fn is_literal(&self) -> bool {
         match self {
             BitArrayMatchedValue::LiteralFloat(_)
-            | BitArrayMatchedValue::LiteralInt(_)
+            | BitArrayMatchedValue::LiteralInt { .. }
             | BitArrayMatchedValue::LiteralString { .. } => true,
             BitArrayMatchedValue::Variable(..) | BitArrayMatchedValue::Discard(..) => false,
             BitArrayMatchedValue::Assign { value, .. } => value.is_literal(),
+        }
+    }
+
+    /// If the matched value is a literal value for which we implement
+    /// interference pruning, this returns the bits representing it to be used
+    /// for interference.
+    ///
+    fn constant_bits(&self) -> Option<&BitSlice<u8, Msb0>> {
+        match self {
+            BitArrayMatchedValue::LiteralString { bytes, .. } => Some(bytes.view_bits::<Msb0>()),
+            BitArrayMatchedValue::Assign { value, .. } => value.constant_bits(),
+
+            // TODO: We could also implement the interfering optimisation for
+            // literal ints as well, but that will be a bit trickier than
+            // strings.
+            BitArrayMatchedValue::LiteralInt { .. }
+            | BitArrayMatchedValue::LiteralFloat(_)
+            | BitArrayMatchedValue::Variable(_)
+            | BitArrayMatchedValue::Discard(_) => None,
+        }
+    }
+
+    /// If we can statically tell the segment will never match, this will return
+    /// the reason why it can't match. Otherwise it returns `None`.
+    ///
+    fn is_impossible_segment(
+        &self,
+        read_action: &ReadAction,
+    ) -> Option<ImpossibleBitArraySegmentPattern> {
+        match self {
+            BitArrayMatchedValue::Assign { value, .. } => value.is_impossible_segment(read_action),
+            BitArrayMatchedValue::LiteralInt { value, location } => {
+                let size = read_action.size.constant_bits()?.to_u32()?;
+                if representable_with_bits(value.clone(), size, read_action.signed) {
+                    None
+                } else {
+                    Some(ImpossibleBitArraySegmentPattern::UnrepresentableInteger {
+                        value: value.clone(),
+                        size,
+                        location: *location,
+                        signed: read_action.signed,
+                    })
+                }
+            }
+
+            BitArrayMatchedValue::LiteralFloat(_)
+            | BitArrayMatchedValue::LiteralString { .. }
+            | BitArrayMatchedValue::Variable(_)
+            | BitArrayMatchedValue::Discard(_) => None,
+        }
+    }
+
+    /// Returns true if the two `MatchedValue`s are matching for the exact same
+    /// thing. Note how this doesn't automatically mean they will be matching
+    /// for the exact same thing in a whole bit array pattern as they could be
+    /// matching at different positions!
+    ///
+    /// ```gleam
+    /// <<1, _>>
+    /// <<_, 1>>
+    /// // Both are matching on the same value but at different positions!
+    /// ```
+    ///
+    fn checking_same_value(&self, other: &Self) -> bool {
+        match (self, other) {
+            // Ints need special care: they're carrying around information about
+            // where they come from. But as for equality is concerned for the
+            // pattern match compilation, they are considered equal as long as
+            // the two values are equal, no matter where the values come from.
+            (Self::LiteralInt { value: one, .. }, Self::LiteralInt { value: other, .. }) => {
+                one == other
+            }
+            (Self::LiteralInt { .. }, _) => false,
+
+            // All the other cases follow the standard equality implementation.
+            (Self::LiteralFloat(one), Self::LiteralFloat(other)) => one == other,
+            (Self::LiteralFloat(_), _) => false,
+
+            // Two literal string matches are the same if they match for the
+            // same bytes. No matter the original starting string and encoding.
+            (Self::LiteralString { bytes: one, .. }, Self::LiteralString { bytes: other, .. }) => {
+                one == other
+            }
+            (Self::LiteralString { .. }, _) => false,
+
+            (Self::Variable(one), Self::Variable(other)) => one == other,
+            (Self::Variable(_), _) => false,
+
+            (Self::Discard(_), Self::Discard(_)) => true,
+            (Self::Discard(_), _) => false,
+
+            (
+                Self::Assign {
+                    name: _,
+                    value: one,
+                },
+                Self::Assign {
+                    name: _,
+                    value: other,
+                },
+            ) => one.checking_same_value(other),
+            (Self::Assign { .. }, _) => false,
         }
     }
 }
@@ -1035,7 +1337,7 @@ impl BitArrayMatchedValue {
         match self {
             BitArrayMatchedValue::Discard(_) => true,
             BitArrayMatchedValue::LiteralFloat(_)
-            | BitArrayMatchedValue::LiteralInt(_)
+            | BitArrayMatchedValue::LiteralInt { .. }
             | BitArrayMatchedValue::LiteralString { .. }
             | BitArrayMatchedValue::Variable(_)
             | BitArrayMatchedValue::Assign { .. } => false,
@@ -1044,12 +1346,42 @@ impl BitArrayMatchedValue {
 }
 
 impl BitArrayTest {
-    // TODO: for these tests we could also implement a more sophisticated
-    // approach for `Match` tests. This is described in the linked paper as
-    // read action interference and can help making the tree smaller in some
-    // specific cases.
-    // This could be an interesting optimisation once we start using the tree
-    // for code generation as well.
+    /// Wether two bit array tests are equivalent, that is they are checking
+    /// for the same thing.
+    ///
+    fn equivalent_to(&self, other: &Self) -> bool {
+        match (self, other) {
+            (BitArrayTest::Size(one), BitArrayTest::Size(other)) => one == other,
+            (BitArrayTest::Size(_), _) => false,
+
+            (
+                BitArrayTest::Match(MatchTest { value, read_action }),
+                BitArrayTest::Match(MatchTest {
+                    value: other_value,
+                    read_action: other_read_action,
+                }),
+            ) => value.checking_same_value(other_value) && read_action == other_read_action,
+            (BitArrayTest::Match(_), _) => false,
+
+            (
+                BitArrayTest::CatchAllIsBytes { size_so_far: one },
+                BitArrayTest::CatchAllIsBytes { size_so_far: other },
+            ) => one == other,
+            (BitArrayTest::CatchAllIsBytes { .. }, ..) => false,
+
+            (
+                BitArrayTest::ReadSizeIsNotNegative { size: one },
+                BitArrayTest::ReadSizeIsNotNegative { size: other },
+            ) => one == other,
+            (BitArrayTest::ReadSizeIsNotNegative { .. }, _) => false,
+
+            (
+                BitArrayTest::SegmentIsFiniteFloat { read_action: one },
+                BitArrayTest::SegmentIsFiniteFloat { read_action: other },
+            ) => one == other,
+            (BitArrayTest::SegmentIsFiniteFloat { .. }, _) => false,
+        }
+    }
 
     /// Tells us if this test is guaranteed to succeed given another test that
     /// we know has already succeeded.
@@ -1060,9 +1392,24 @@ impl BitArrayTest {
     #[must_use]
     fn succeeds_if_succeeding(&self, succeeding: &BitArrayTest) -> Confidence {
         match (succeeding, self) {
-            (one, other) if one == other => Confidence::Certain,
+            (one, other) if one.equivalent_to(other) => Confidence::Certain,
             (BitArrayTest::Size(succeeding), BitArrayTest::Size(test)) => {
                 test.succeeds_if_succeeding(succeeding)
+            }
+            (BitArrayTest::Match(succeeding), BitArrayTest::Match(test)) => {
+                // This is example 2. in the doc comment of `interfering_bits`:
+                // if the bits are the same and the second one is fully enclosed
+                // in the first one, then the second one will succeed as well!
+                if let Some(Interference {
+                    interfering_bits_are_equal: true,
+                    first_encloses_second: true,
+                    ..
+                }) = succeeding.interfering_bits(test)
+                {
+                    Confidence::Certain
+                } else {
+                    Confidence::Uncertain
+                }
             }
             // The tests are not comparable, we can't deduce any new information.
             _ => Confidence::Uncertain,
@@ -1078,9 +1425,25 @@ impl BitArrayTest {
     #[must_use]
     fn fails_if_failing(&self, failing: &BitArrayTest) -> Confidence {
         match (failing, self) {
-            (one, other) if one == other => Confidence::Certain,
+            (one, other) if one.equivalent_to(other) => Confidence::Certain,
             (BitArrayTest::Size(failing), BitArrayTest::Size(test)) => {
                 test.fails_if_failing(failing)
+            }
+            (BitArrayTest::Match(succeeding), BitArrayTest::Match(test)) => {
+                // This is example 3. in the doc comment of `interfering_bits`:
+                // if the bits are the same and the second one is fully
+                // enclosing the first one, then the second one will fail as
+                // well!
+                if let Some(Interference {
+                    interfering_bits_are_equal: true,
+                    second_encloses_first: true,
+                    ..
+                }) = succeeding.interfering_bits(test)
+                {
+                    Confidence::Certain
+                } else {
+                    Confidence::Uncertain
+                }
             }
             // The tests are not comparable, we can't deduce any new information.
             _ => Confidence::Uncertain,
@@ -1100,6 +1463,20 @@ impl BitArrayTest {
             // matching paper linked at the top of this module's documentation!
             (BitArrayTest::Size(succeeding), BitArrayTest::Size(test)) => {
                 test.fails_if_succeeding(succeeding)
+            }
+            (BitArrayTest::Match(succeeding), BitArrayTest::Match(test)) => {
+                // This is example 1. in the doc comment of `interfering_bits`:
+                // if the bits are the different and the first one is succeeding
+                // then we know the second one will fail.
+                if let Some(Interference {
+                    interfering_bits_are_equal: false,
+                    ..
+                }) = succeeding.interfering_bits(test)
+                {
+                    Confidence::Certain
+                } else {
+                    Confidence::Uncertain
+                }
             }
             // The tests are not comparable, we can't deduce any new information.
             _ => Confidence::Uncertain,
@@ -1566,7 +1943,7 @@ pub enum Decision {
         var: Variable,
         choices: Vec<(RuntimeCheck, Decision)>,
         fallback: Box<Decision>,
-        fallback_check: FallbackCheck,
+        fallback_check: Box<FallbackCheck>,
     },
 
     /// This is a special node: it represents a missing pattern. If a tree
@@ -1680,6 +2057,14 @@ impl CompileCaseResult {
             .contains(&(clause, pattern_index))
         {
             Reachability::Unreachable(UnreachablePatternReason::ImpossibleVariant)
+        } else if let Some(segments) = self
+            .diagnostics
+            .match_impossible_segments
+            .get(&(clause, pattern_index))
+        {
+            Reachability::Unreachable(UnreachablePatternReason::ImpossibleSegments(
+                segments.clone(),
+            ))
         } else {
             Reachability::Unreachable(UnreachablePatternReason::DuplicatePattern)
         }
@@ -1722,7 +2107,7 @@ impl CompiledCase {
 
 /// Whether a pattern is reachable, or why it is unreachable.
 ///
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Reachability {
     Reachable,
     Unreachable(UnreachablePatternReason),
@@ -1759,6 +2144,29 @@ pub struct Diagnostics {
     /// See `reachable` for an explanation of its structure.
     ///
     pub match_impossible_variants: HashSet<(usize, usize)>,
+
+    /// Patterns that are matching on bit array segments the compiler can tell
+    /// for sure will never match.
+    ///
+    pub match_impossible_segments: HashMap<(usize, usize), Vec<ImpossibleBitArraySegmentPattern>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum ImpossibleBitArraySegmentPattern {
+    UnrepresentableInteger {
+        value: BigInt,
+        size: u32,
+        location: SrcSpan,
+        signed: bool,
+    },
+}
+
+impl ImpossibleBitArraySegmentPattern {
+    pub fn location(&self) -> SrcSpan {
+        match self {
+            ImpossibleBitArraySegmentPattern::UnrepresentableInteger { location, .. } => *location,
+        }
+    }
 }
 
 impl<'a> Compiler<'a> {
@@ -1771,6 +2179,7 @@ impl<'a> Compiler<'a> {
                 missing: false,
                 reachable: HashSet::new(),
                 match_impossible_variants: HashSet::new(),
+                match_impossible_segments: HashMap::new(),
             },
         }
     }
@@ -1806,6 +2215,21 @@ impl<'a> Compiler<'a> {
             .diagnostics
             .match_impossible_variants
             .insert((branch.clause_index, branch.alternative_index));
+    }
+
+    fn mark_as_matching_impossible_segment(
+        &mut self,
+        branch: &Branch,
+        segments: Vec<ImpossibleBitArraySegmentPattern>,
+    ) {
+        let _ = self
+            .diagnostics
+            .reachable
+            .remove(&(branch.clause_index, branch.alternative_index));
+        let _ = self
+            .diagnostics
+            .match_impossible_segments
+            .insert((branch.clause_index, branch.alternative_index), segments);
     }
 
     fn compile(&mut self, mut branches: VecDeque<Branch>) -> Decision {
@@ -1949,8 +2373,14 @@ impl<'a> Compiler<'a> {
             };
 
             let checked_pattern = self.pattern(pattern_check.pattern);
+
             if checked_pattern.is_matching_on_unreachable_variant(branch_mode) {
                 self.mark_as_matching_impossible_variant(&branch);
+                continue;
+            } else if let Some(unreachable_segments) =
+                checked_pattern.is_matching_on_impossible_segment()
+            {
+                self.mark_as_matching_impossible_segment(&branch, unreachable_segments);
                 continue;
             }
 
@@ -1969,7 +2399,7 @@ impl<'a> Compiler<'a> {
             var,
             choices,
             fallback: Box::new(last_choice),
-            fallback_check: FallbackCheck::InfiniteCatchAll,
+            fallback_check: Box::new(FallbackCheck::InfiniteCatchAll),
         }
     }
 
@@ -2014,7 +2444,7 @@ impl<'a> Compiler<'a> {
             var,
             choices,
             fallback,
-            fallback_check,
+            fallback_check: Box::new(fallback_check),
         }
     }
 
@@ -2981,10 +3411,6 @@ impl CaseToCompile {
                 }
             };
 
-            // Each segment is also turned into a match test, checking the
-            // selected bits match with the pattern's value.
-            let value = segment_matched_value(segment, None);
-
             let type_ = match &segment.type_ {
                 type_ if type_.is_int() => ReadType::Int,
                 type_ if type_.is_float() => ReadType::Float,
@@ -3002,12 +3428,16 @@ impl CaseToCompile {
                 signed: segment.signed(),
             };
 
+            // Each segment is also turned into a match test, checking the
+            // selected bits match with the pattern's value.
+            let value = segment_matched_value(segment, None, &read_action);
+
             // Then if the matched value is a variable that is in scope for the
             // rest of the pattern we keep track of it, so it can be used in the
             // following read actions as a valid size.
             match &value {
                 BitArrayMatchedValue::LiteralFloat(_)
-                | BitArrayMatchedValue::LiteralInt(_)
+                | BitArrayMatchedValue::LiteralInt { .. }
                 | BitArrayMatchedValue::LiteralString { .. }
                 | BitArrayMatchedValue::Discard(_) => {}
                 BitArrayMatchedValue::Variable(name)
@@ -3039,32 +3469,49 @@ fn segment_matched_value(
     // in above. However, we need to check the correct sub-pattern of the original
     // pattern, so if they are different we set this argument to `Some`.
     pattern: Option<&TypedPattern>,
+    read_action: &ReadAction,
 ) -> BitArrayMatchedValue {
     let pattern = pattern.unwrap_or(&segment.value);
     match pattern {
-        ast::Pattern::Int { int_value, .. } => BitArrayMatchedValue::LiteralInt(int_value.clone()),
+        ast::Pattern::Int {
+            int_value,
+            location,
+            ..
+        } => BitArrayMatchedValue::LiteralInt {
+            value: int_value.clone(),
+            location: *location,
+        },
         ast::Pattern::Float { value, .. } => BitArrayMatchedValue::LiteralFloat(value.clone()),
         ast::Pattern::String { value, .. } if segment.has_utf16_option() => {
             BitArrayMatchedValue::LiteralString {
                 value: value.clone(),
                 encoding: StringEncoding::Utf16,
+                bytes: string_to_utf16_bytes(
+                    &convert_string_escape_chars(value),
+                    read_action.endianness,
+                ),
             }
         }
         ast::Pattern::String { value, .. } if segment.has_utf32_option() => {
             BitArrayMatchedValue::LiteralString {
                 value: value.clone(),
                 encoding: StringEncoding::Utf32,
+                bytes: string_to_utf32_bytes(
+                    &convert_string_escape_chars(value),
+                    read_action.endianness,
+                ),
             }
         }
         ast::Pattern::String { value, .. } => BitArrayMatchedValue::LiteralString {
             value: value.clone(),
             encoding: StringEncoding::Utf8,
+            bytes: convert_string_escape_chars(value).as_bytes().into(),
         },
         ast::Pattern::Variable { name, .. } => BitArrayMatchedValue::Variable(name.clone()),
         ast::Pattern::Discard { name, .. } => BitArrayMatchedValue::Discard(name.clone()),
         ast::Pattern::Assign { name, pattern, .. } => BitArrayMatchedValue::Assign {
             name: name.clone(),
-            value: Box::new(segment_matched_value(segment, Some(pattern))),
+            value: Box::new(segment_matched_value(segment, Some(pattern), read_action)),
         },
         x => panic!("unexpected segment value pattern {x:?}"),
     }
@@ -3184,4 +3631,58 @@ fn superset(
             Some(occurrences) => occurrences >= other_occurrences,
             None => false,
         })
+}
+
+#[must_use]
+fn representable_with_bits(value: BigInt, bits: u32, signed: bool) -> bool {
+    // No number is representable in 0 bits.
+    if bits == 0 {
+        return false;
+    };
+    if signed {
+        // Signed numbers range in [-2^(bits-1), 2^(bits-1)[
+        let power = BigInt::from(2).pow(bits - 1);
+        -&power <= value && value < power
+    } else {
+        // Unsigned numbers range in [0, 2^bits[
+        BigInt::from(0) <= value && value < BigInt::from(2).pow(bits)
+    }
+}
+
+#[cfg(test)]
+mod representable_with_bits_test {
+    use crate::exhaustiveness::representable_with_bits;
+    use num_bigint::BigInt;
+
+    #[test]
+    fn positive_number_representable_with_bits_test() {
+        // 9 can be represented as a >=4 bits unsigned number.
+        assert!(representable_with_bits(9.into(), 4, false));
+        assert!(representable_with_bits(9.into(), 5, false));
+        // But not in <=3 bits as an unsigned number.
+        assert!(!representable_with_bits(9.into(), 3, false));
+        assert!(!representable_with_bits(9.into(), 2, false));
+
+        // It can be represented as a >=5 bit signed number.
+        assert!(representable_with_bits(9.into(), 5, true));
+        assert!(representable_with_bits(9.into(), 6, true));
+        // But not in <= 4 bits as a signed number.
+        assert!(!representable_with_bits(9.into(), 4, true));
+        assert!(!representable_with_bits(9.into(), 3, true));
+    }
+
+    #[test]
+    fn negative_number_representable_with_bits_test() {
+        // A negative number will never be representable as an unsigned number,
+        // no matter the number of bits!
+        assert!(!representable_with_bits(BigInt::from(-9), 1, false));
+        assert!(!representable_with_bits(BigInt::from(-9), 500, false));
+
+        // -9 can be represented in >=5 bits as a signed number.
+        assert!(representable_with_bits(BigInt::from(-9), 5, true));
+        assert!(representable_with_bits(BigInt::from(-9), 6, true));
+        // But not in <= 4 bits as a signed number.
+        assert!(!representable_with_bits(BigInt::from(-9), 4, true));
+        assert!(!representable_with_bits(BigInt::from(-9), 3, true));
+    }
 }

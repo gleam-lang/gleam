@@ -26,6 +26,9 @@ export class Ok extends $CustomType {
     this[0] = $0;
   }
 }
+export const Result$Ok = ($0) => new Ok($0);
+export const Result$isOk = (value) => value instanceof Ok;
+export const Result$Ok$0 = (value) => value[0];
 
 export class Error extends $CustomType {
   constructor($0) {
@@ -33,6 +36,9 @@ export class Error extends $CustomType {
     this[0] = $0;
   }
 }
+export const Result$Error = ($0) => new Error($0);
+export const Result$isError = (value) => value instanceof Error;
+export const Result$Error$0 = (value) => value[0];
 
 export function main() {
   return new $gleam.Ok(10);

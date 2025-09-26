@@ -1,0 +1,44 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "import gleam/int\nimport random_import as int_2\n\nconst int_3 = 3\n\nfn int_4() { 4 }\n\nfn isolated_scope() {\n    let int_6 = 6\n    int_6 + 1\n}\n\npub fn main() {\n  let int_5 = 5\n  let result = int_5 + 6\n  result\n}\n"
+---
+----- BEFORE ACTION
+import gleam/int
+import random_import as int_2
+
+const int_3 = 3
+
+fn int_4() { 4 }
+
+fn isolated_scope() {
+    let int_6 = 6
+    int_6 + 1
+}
+
+pub fn main() {
+  let int_5 = 5
+  let result = int_5 + 6
+                       ↑
+  result
+}
+
+
+----- AFTER ACTION
+import gleam/int
+import random_import as int_2
+
+const int_3 = 3
+
+fn int_4() { 4 }
+
+fn isolated_scope() {
+    let int_6 = 6
+    int_6 + 1
+}
+
+pub fn main() {
+  let int_5 = 5
+  let int_6 = 6
+  let result = int_5 + int_6
+  result
+}

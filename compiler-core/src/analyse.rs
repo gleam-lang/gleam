@@ -520,7 +520,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         } = f;
         let (name_location, name) = name.expect("Function in a definition must be named");
         let target = environment.target;
-        let body_location = body.last().location();
+        let body_location = body
+            .last()
+            .map(|statement| statement.location())
+            .unwrap_or(location);
         let preregistered_fn = environment
             .get_variable(&name)
             .expect("Could not find preregistered type for function");
@@ -554,7 +557,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             self.ensure_annotations_present(&arguments, return_annotation.as_ref(), location);
         }
 
-        let has_body = !body.first().is_placeholder();
+        let has_body = !body.is_empty();
         let definition = FunctionDefinition {
             has_body,
             has_erlang_external: external_erlang.is_some(),
@@ -602,7 +605,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 Some(prereg_return_type.clone()),
             )?;
             let arguments_types = arguments.iter().map(|a| a.type_.clone()).collect();
-            let type_ = fn_(arguments_types, body.last().type_());
+            let type_ = fn_(
+                arguments_types,
+                body.last()
+                    .map_or(prereg_return_type.clone(), |last| last.type_()),
+            );
             Ok((
                 type_,
                 body,
@@ -623,14 +630,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             Err(error) => {
                 self.problems.error(error);
                 let type_ = preregistered_type.clone();
-                let body = Vec1::new(Statement::Expression(TypedExpr::Invalid {
+                let body = vec![Statement::Expression(TypedExpr::Invalid {
                     type_: prereg_return_type.clone(),
                     location: SrcSpan {
                         start: body_location.end,
                         end: body_location.end,
                     },
                     extra_information: None,
-                }));
+                })];
                 let implementations = Implementations::supporting_all();
                 (
                     type_,
@@ -816,13 +823,13 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
     fn ensure_function_has_an_implementation(
         &mut self,
-        body: &Vec1<UntypedStatement>,
+        body: &[UntypedStatement],
         external_erlang: &Option<(EcoString, EcoString, SrcSpan)>,
         external_javascript: &Option<(EcoString, EcoString, SrcSpan)>,
         location: SrcSpan,
     ) -> bool {
         match (external_erlang, external_javascript) {
-            (None, None) if body.first().is_placeholder() => {
+            (None, None) if body.is_empty() => {
                 self.problems.error(Error::NoImplementation { location });
                 false
             }
@@ -1396,7 +1403,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 TypeConstructor {
                     origin: *location,
                     module: self.module_name.clone(),
-                    parameters,
+                    parameters: parameters.clone(),
                     type_: type_.clone(),
                     deprecation: deprecation.clone(),
                     publicity: *publicity,
@@ -1404,18 +1411,24 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 },
             )?;
 
-            environment.insert_type_alias(
-                name.clone(),
-                TypeAliasConstructor {
-                    origin: *location,
-                    module: self.module_name.clone(),
-                    type_,
-                    publicity: *publicity,
-                    deprecation: deprecation.clone(),
-                    documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
-                    arity,
-                },
-            )?;
+            let alias = TypeAliasConstructor {
+                origin: *location,
+                module: self.module_name.clone(),
+                type_,
+                publicity: *publicity,
+                deprecation: deprecation.clone(),
+                documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
+                arity,
+                parameters,
+            };
+
+            environment.names.maybe_register_reexport_alias(
+                &environment.current_package,
+                name,
+                &alias,
+            );
+
+            environment.insert_type_alias(name.clone(), alias)?;
 
             if let Some(name) = hydrator.unused_type_variables().next() {
                 return Err(Error::UnusedTypeAliasParameter {

@@ -4,37 +4,64 @@
 
 ### Compiler
 
-- The compiler now performs function inlining optimisations for a specific set
-  of standard library functions, which can allow functions which were previously
-  not tail-recursive on the JavaScript target to become tail-recursive. For
-  example, the following code:
+- The compiler now applies an optimisation known as "interference based pruning"
+  when compiling bit array pattern matching where matches are performed at the
+  start of bit arrays.
+  This optimisation drastically reduces compile times, memory usage and the
+  compiled code size, removing many redundant checks.
+  It is particularly important for network protocol applications where it is
+  typical to match on some fixed patterns at the start of the bitarray.
+  For example:
 
   ```gleam
-  pub fn count(from: Int, to: Int) -> Int {
-    use <- bool.guard(when: from >= to, return: from)
-    io.println(int.to_string())
-    count(from + 1, to)
-  }
-  ```
-
-  Would previously cause a stack overflow on the JavaScript target for large
-  values. Now it is rewritten to:
-
-  ```gleam
-  pub fn count(from: Int, to: Int) -> Int {
-    case from >= to {
-      True -> from
-      False -> {
-        io.println(int.to_string())
-        count(from + 1, to)
-      }
+  pub fn parser_headers(headers: BitArray, bytes: Int) -> Headers {
+    case headers {
+      <<"CONTENT_LENGTH" as header, 0, value:size(bytes), 0, rest:bytes>>
+      | <<"QUERY_STRING" as header, 0, value:size(bytes), 0, rest:bytes>>
+      | <<"REQUEST_URI" as header, 0, value:size(bytes), 0, rest:bytes>>
+      // ...
+      | <<"REDIRECT_STATUS" as header, 0, value:size(bytes), 0, rest:bytes>>
+      | <<"SCRIPT_NAME" as header, 0, value:size(bytes), 0, rest:bytes>>
+        -> [#(header, value), ..parse_headers(rest)]
     }
   }
   ```
 
-  Which allows tail-call optimisation to occur.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-  ([Surya Rose](https://github.com/GearsDatapacks))
+- The compiler now raises a warning for unreachable branches that are matching
+  on bit array segments that could never match. Consider this example:
+
+  ```gleam
+  pub fn get_payload(packet: BitArray) -> Result(BitArray, Nil) {
+    case packet {
+      <<200, payload:bytes>> -> Ok(payload)
+      <<404, _:bits>> -> Error(Nil)
+      _ -> Ok(packet)
+    }
+  }
+  ```
+
+  There's a subtle bug here. The second branch can never match since it's
+  impossible for the first byte of the bit array to have the value `404`.
+  The new error explains this nicely:
+
+  ```text
+  warning: Unreachable pattern
+    ┌─ /src.gleam:4:5
+    │
+  4 │     <<404, _:bits>> -> Error(Nil)
+    │     ^^^^^^^^^^^^^^^
+    │       │
+    │       A 1 byte unsigned integer will never match this value
+
+  This pattern cannot be reached as it contains segments that will never
+  match.
+
+  Hint: It can be safely removed.
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - The compiler now emits a better error message for private types marked as
   opaque. For example, the following piece of code:
@@ -147,6 +174,11 @@
   is now smaller in certain cases.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Writing a type name followed by `()` now emits an error during analysis
+  rather than parsing, so it no longer stops the compiler from reporting errors
+  further in the code.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The compiler now shows a specific syntax error when trying to use an
   angle-bracket syntax for generic types or function definitions:
 
@@ -170,18 +202,121 @@
   been improved.
   ([sobolevn](https://github.com/sobolevn))
 
+- Compiler now adds a hint when `#`-styled comments are used. This code:
+
+  ```gleam
+  fn some() {
+    let a = 1
+    # let b = 2
+  }
+  ```
+
+  Now produces:
+
+  ```txt
+  error: Syntax error
+    ┌─ /src/main.gleam:3:5
+    │
+  3 │   # let b = 2
+    │     ^^^ I was not expecting this
+
+  Found the keyword `let`, expected one of:
+  - `(`
+  Hint: Maybe you meant to create a comment?
+  Comments in Gleam start with `//`, not `#`
+  ```
+
+  ([sobolevn](https://github.com/sobolevn))
+
+- The `erlang.application_start_argument` parameter has been added to
+  `gleam.toml`. This is a string containing an Erlang term that will be written
+  into the package's Erlang `.app` file if `erlang.application_start_module`
+  has been set, replacing the default argument of `[]`.
+  ([Louis Pilfold](https://github.com/lpil))
+
+- Generated code for the JavaScript target now includes a public API which can
+  be used for FFI interacting with Gleam custom types. For example, if you have
+  this Gleam code:
+
+  ```gleam
+  pub type Person {
+    Teacher(name: String, subject: String)
+    Student(name: String, age: Int)
+  }
+  ```
+
+  You can use the new API to use the `Person` type in FFI code:
+
+  ```javascript
+  import * from "./person.mjs";
+
+  // Constructing custom types
+  let teacher = Person$Teacher("Joe Armstrong", "Computer Science");
+  let student = Person$Student("Louis Pilfold", 17);
+
+  let randomPerson = Math.random() > 0.5 ? teacher : student;
+
+  // Checking variants
+  let randomIsTeacher = Person$isTeacher(randomPerson);
+
+  // Getting fields
+  let studentAge = Person$Student$age(student);
+
+  // The `name` field is shared so can be accessed from either variant
+  let personNAme = Person$name(randomPerson);
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - New projects are generated using OTP28 on GitHub Actions.
   ([Louis Pilfold](https://github.com/lpil))
 
+- The build tool now has a new `hex owner transfer` subcommand to transfer
+  ownership of existing packages.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - `gleam add` now adds `dependencies` and `dev-dependencies` as tables instead
   of inline tables if they are missing.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- After dependency resolution the build tool will now print all packages added
+  and removed, and any versions changed.
+  ([Louis Pilfold](https://github.com/lpil))
+
 - `gleam publish` now blocks publishing packages that contain the default main
   function to prevent accidental publishing of unmodified template code.
   ([Joohoon Cha](https://github.com/jcha0713))
+
+- When generating documentation, the build tool will now print the names of
+  public type aliases instead of internal type names when annotating functions
+  and types. For example, for the following code:
+
+  ```gleam
+  import my_package/internal
+
+  pub type ExternalAlias = internal.InternalRepresentation
+
+  pub fn do_thing() -> ExternalAlias { ... }
+  ```
+
+  This is what the build tool used to generate:
+
+  ```gleam
+  pub fn do_thing() -> @internal InternalRepresentation
+  ```
+
+  Whereas now it will not use the internal name, and instead produce:
+
+  ```gleam
+  pub fn do_thing() -> ExternalAlias
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Support has been added for using Tangled as a repository.
+  ([Naomi Roberts](https://github.com/naomieow))
 
 ### Language server
 
@@ -311,6 +446,35 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server now offers a code action to add the omitted labels in a
+  call. For example:
+
+  ```gleam
+  pub type User {
+    User(first_name: String, last_name: String, likes: List(String))
+  }
+
+  pub fn main() {
+    let first_name = "Giacomo"
+    User(first_name, "Cavalieri", ["gleam"])
+  //^^^^ Triggering the code action over here
+  }
+  ```
+
+  Triggering the code action over the `User` constructor will result in the
+  following code:
+
+  ```gleam
+  pub type User {
+    User(first_name: String, last_name: String, likes: List(String))
+  }
+
+  pub fn main() {
+    let first_name = "Giacomo"
+    User(first_name:, last_name: "Cavalieri", likes: ["gleam"])
+  }
+  ```
+
 - The "inline variable" code action is now only suggested when hovering over the
   relevant variable.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
@@ -411,6 +575,7 @@
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 - You can now go to definition, rename, etc. from alternative patterns!
+
   ```gleam
   case wibble {
     Wibble | Wobble -> 0
@@ -418,7 +583,51 @@
   }
 
   ```
+
   ([fruno](https://github.com/fruno-bulax))
+
+- When showing types of values on hover, or adding type annotations, the language
+  server will now prefer public type aliases to internal types. For example, if
+  the "Add type annotations" code action was triggered on the following code:
+
+  ```gleam
+  import lustre/html
+  import lustre/element
+  import lustre/attribute
+
+  pub fn make_link(attribute, element) {
+    html.a([attribute], [elements])
+  }
+  ```
+
+  Previously, the following code would have been generated:
+
+  ```gleam
+  pub fn make_link(
+    attribute: vattr.Attribute,
+    element: vdom.Element(a)
+  ) -> vdom.Element(a) {
+     html.a([attribute], [elements])
+  }
+  ```
+
+  Which references internal types which should not be imported by the user.
+  However, now the language server will produce the following:
+
+  ```gleam
+  pub fn make_link(
+    attribute: attribute.Attribute,
+    element: element.Element(a)
+  ) -> element.Element(a) {
+     html.a([attribute], [elements])
+  }
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- The language server now offers the `convert to case` code action only if a
+  single `let assert` expression is selected.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Formatter
 
@@ -509,6 +718,14 @@
   nesting than necessary.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the language server wouldn't offer the "unqualify" code
+  action if used on a type alias.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the language server would fail to rename an external
+  function with no body.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Fixed a bug where the compiler allowed to write a guard with an empty clause.
   ([Tristan-Mihai Radulescu](https://github.com/Courtcircuits))
 
@@ -522,4 +739,24 @@
 
 - Fixed a bug where the compiler would report an imported module as unused if it
   were used by private functions only.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the "Extract variable" code action would shadow existing
+  variables, constants and function names.
+  ([Matias Carlander](https://github.com/matiascr))
+
+- Fixed a bug where the language server would not fill in the missing labels of
+  a pattern correctly, generating invalid code.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where invalid code was being generated when using the "Extract
+  variable" code action inside an anonymous function.
+  ([Matias Carlander](https://github.com/matiascr))
+
+- Fixed a bug where running `gleam update` would not properly update git
+  dependencies unless `gleam clean` was run first.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where the compiler would produce wrong JavaScript code for binary
+  pattern matching expressions using literal strings and byte segments.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

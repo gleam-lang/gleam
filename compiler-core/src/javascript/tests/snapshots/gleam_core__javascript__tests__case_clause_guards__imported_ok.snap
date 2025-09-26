@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/case_clause_guards.rs
-assertion_line: 506
 expression: "import gleam\npub type X {\n  Ok\n}\npub fn func(x) {\n  case gleam.Ok {\n    _ if [] == [ gleam.Ok ] -> True\n    _ -> False\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 import gleam
@@ -22,6 +20,8 @@ import * as $gleam from "../gleam.mjs";
 import { Ok, toList, CustomType as $CustomType, isEqual } from "../gleam.mjs";
 
 export class Ok extends $CustomType {}
+export const X$Ok = () => new Ok();
+export const X$isOk = (value) => value instanceof Ok;
 
 export function func(x) {
   let $ = (var0) => { return new $gleam.Ok(var0); };

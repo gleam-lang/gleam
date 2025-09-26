@@ -3308,3 +3308,40 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn missing_type_constructor_arguments_in_type_annotation_1() {
+    assert_module_error!("pub fn main() -> Result() {}");
+}
+
+#[test]
+fn missing_type_constructor_arguments_in_type_annotation_2() {
+    assert_module_error!(
+        "pub fn main() {
+  let a: Result() = todo
+}"
+    );
+}
+
+#[test]
+fn type_used_as_a_constructor_1() {
+    assert_module_error!("pub fn main() -> Int() {}");
+}
+
+#[test]
+fn type_used_as_a_constructor_2() {
+    assert_module_error!(
+        "pub fn main() {
+  let a: Int() = todo
+}"
+    );
+}
+
+#[test]
+fn type_used_as_a_constructor_with_more_arguments() {
+    assert_module_error!(
+        "pub fn main() {
+  let a: Int(Int, String) = todo
+}"
+    );
+}

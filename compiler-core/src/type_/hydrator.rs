@@ -118,6 +118,7 @@ impl Hydrator {
                 module,
                 name,
                 arguments,
+                start_parentheses,
             }) => {
                 // Hydrate the type argument AST into types
                 let mut argument_types = Vec::with_capacity(arguments.len());
@@ -182,8 +183,19 @@ impl Hydrator {
                     environment.increment_usage(name);
                 }
 
-                // Ensure that the correct number of arguments have been given to the constructor
-                if arguments.len() != parameters.len() {
+                // Ensure that the correct number of arguments have been given
+                // to the constructor.
+                //
+                // This is a special case for when a type is being called as a
+                // type constructor. For example: `Int()` or `Bool(a, b)`
+                if let Some(start_parentheses) = start_parentheses
+                    && parameters.is_empty()
+                {
+                    return Err(Error::TypeUsedAsAConstructor {
+                        location: SrcSpan::new(*start_parentheses, location.end),
+                        name: name.clone(),
+                    });
+                } else if arguments.len() != parameters.len() {
                     return Err(Error::IncorrectTypeArity {
                         location: *location,
                         name: name.clone(),

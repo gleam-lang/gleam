@@ -126,7 +126,7 @@ impl<'a, 'env> MissingPatternsGenerator<'a, 'env> {
                     self.add_missing_patterns_after_check(var, check, body);
                 }
 
-                match fallback_check {
+                match fallback_check.as_ref() {
                     FallbackCheck::InfiniteCatchAll => {
                         self.add_missing_patterns(fallback);
                     }

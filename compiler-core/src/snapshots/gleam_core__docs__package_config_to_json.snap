@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/docs.rs
-assertion_line: 765
+assertion_line: 769
 expression: output
 snapshot_kind: text
 ---
@@ -91,6 +91,7 @@ allow_read = ["./database.sqlite"]
     ],
     "erlang": {
       "application_start_module": "my_app/application",
+      "application_start_argument": null,
       "extra_applications": [
         "inets",
         "ssl"

@@ -69,6 +69,17 @@ fn erlang_app_generation() {
 
 #[rustfmt::skip]
 #[test]
+fn erlang_app_generation_with_argument() {
+    let output = crate::prepare("./cases/erlang_app_generation_with_argument");
+    insta::assert_snapshot!(
+        "erlang_app_generation_with_argument",
+        output,
+        "./cases/erlang_app_generation_with_argument",
+    );
+}
+
+#[rustfmt::skip]
+#[test]
 fn erlang_bug_752() {
     let output = crate::prepare("./cases/erlang_bug_752");
     insta::assert_snapshot!(

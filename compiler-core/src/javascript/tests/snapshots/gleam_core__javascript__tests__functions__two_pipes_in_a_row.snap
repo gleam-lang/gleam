@@ -22,6 +22,9 @@ export class Function extends $CustomType {
     this[0] = $0;
   }
 }
+export const Function$Function = ($0) => new Function($0);
+export const Function$isFunction = (value) => value instanceof Function;
+export const Function$Function$0 = (value) => value[0];
 
 export function main() {
   return toList([

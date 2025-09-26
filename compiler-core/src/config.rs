@@ -319,7 +319,8 @@ impl PackageConfig {
                 | Repository::Codeberg { tag_prefix, .. }
                 | Repository::SourceHut { tag_prefix, .. }
                 | Repository::Gitea { tag_prefix, .. }
-                | Repository::Forgejo { tag_prefix, .. },
+                | Repository::Forgejo { tag_prefix, .. }
+                | Repository::Tangled { tag_prefix, .. },
             ) => tag_prefix.as_ref(),
 
             Some(Repository::Custom { .. }) | None => None,
@@ -707,8 +708,16 @@ impl Default for PackageConfig {
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Default, Clone)]
 pub struct ErlangConfig {
+    /// An module that can be set in the `.app` file as the entrypoint for a stateful application
+    /// that defines a singleton supervision tree.
+    /// Erlang syntax.
     #[serde(default)]
     pub application_start_module: Option<EcoString>,
+    /// The argument for the start module start function. If not set then `[]` is used as the
+    /// default argument.
+    /// Erlang syntax.
+    #[serde(default)]
+    pub application_start_argument: Option<EcoString>,
     #[serde(default)]
     pub extra_applications: Vec<EcoString>,
 }
@@ -891,6 +900,14 @@ pub enum Repository {
         #[serde(rename = "tag-prefix")]
         tag_prefix: Option<String>,
     },
+    #[serde(rename = "tangled")]
+    Tangled {
+        user: String,
+        repo: String,
+        path: Option<String>,
+        #[serde(rename = "tag-prefix")]
+        tag_prefix: Option<String>,
+    },
     #[serde(rename = "custom")]
     Custom {
         url: String,
@@ -917,6 +934,9 @@ impl Repository {
             Repository::SourceHut { repo, user, .. } => {
                 format!("https://git.sr.ht/~{user}/{repo}")
             }
+            Repository::Tangled { repo, user, .. } => {
+                format!("https://tangled.sh/{user}/{repo}")
+            }
             Repository::Gitea {
                 repo, user, host, ..
             }
@@ -938,6 +958,7 @@ impl Repository {
             | Repository::BitBucket { path, .. }
             | Repository::Codeberg { path, .. }
             | Repository::SourceHut { path, .. }
+            | Repository::Tangled { path, .. }
             | Repository::Gitea { path, .. }
             | Repository::Forgejo { path, .. } => path.as_ref(),
 

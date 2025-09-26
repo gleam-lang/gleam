@@ -77,7 +77,7 @@ impl DerivationTreePrinter {
 
     /// Tries and print a pretty explanation for the given resolution tree.
     /// If for some reason our heuristic to produce a nice error message fails
-    /// we return `None` se we can still produce a good enough error message!
+    /// we return `None` so we can still produce a good enough error message!
     ///
     fn pretty_explanation(&self) -> Option<String> {
         let root_package_index = self.nodes.get(self.root_package_name.as_str())?;

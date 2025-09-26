@@ -54,20 +54,20 @@ halve_all(A, B, C) ->
         {ok, Value} ->
             X = Value,
             case divide(B, 2) of
-                {ok, Value@1} ->
-                    Y = Value@1,
+                {ok, _inline_value_0} ->
+                    Y = _inline_value_0,
                     case divide(C, 2) of
-                        {ok, Value@2} ->
-                            {ok, {X, Y, Value@2}};
+                        {ok, _inline_value_1} ->
+                            {ok, {X, Y, _inline_value_1}};
 
                         {error, Error} ->
                             {error, Error}
                     end;
 
-                {error, Error@1} ->
-                    {error, Error@1}
+                {error, _inline_error_2} ->
+                    {error, _inline_error_2}
             end;
 
-        {error, Error@2} ->
-            {error, Error@2}
+        {error, _inline_error_3} ->
+            {error, _inline_error_3}
     end.

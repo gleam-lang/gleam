@@ -34,6 +34,9 @@ export class Ip extends $CustomType {
     this[0] = $0;
   }
 }
+export const Ip$Ip = ($0) => new Ip($0);
+export const Ip$isIp = (value) => value instanceof Ip;
+export const Ip$Ip$0 = (value) => value[0];
 
 export function build(x) {
   return x("1.2.3.4");

@@ -27,7 +27,7 @@ pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) ->
 
     // Insert the new packages into the manifest and perform dependency
     // resolution to determine suitable versions
-    let manifest = dependencies::download(
+    let manifest = dependencies::resolve_and_download(
         paths,
         cli::Reporter::new(),
         Some((new_package_requirements.clone(), dev)),
@@ -84,8 +84,6 @@ pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) ->
                 .as_inline_table_mut()
                 .expect("Invalid manifest format")["version"] = range.into();
         }
-
-        cli::print_added(&format!("{added_package} v{version}"));
     }
 
     // Write the updated config

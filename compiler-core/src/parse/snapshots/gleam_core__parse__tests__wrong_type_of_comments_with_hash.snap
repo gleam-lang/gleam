@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\npub fn main() {\n  # a python-style comment\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  # a python-style comment
+}
+
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:5
+  │
+3 │   # a python-style comment
+  │     ^ I was not expecting this
+
+Found a name, expected one of: 
+- `(`
+Hint: Maybe you meant to create a comment?
+Comments in Gleam start with `//`, not `#`

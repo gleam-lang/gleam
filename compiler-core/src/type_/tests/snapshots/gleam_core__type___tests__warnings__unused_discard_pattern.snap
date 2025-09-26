@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 4195
 expression: "pub fn main() {\n  let a = 10\n  let _ = case a {\n    _ as b -> b\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn main() {

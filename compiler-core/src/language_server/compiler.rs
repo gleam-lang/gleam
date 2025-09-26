@@ -190,10 +190,6 @@ where
             Some(error) => Outcome::PartialFailure(compiled_modules, error),
         }
     }
-
-    pub fn get_module_interface(&self, name: &str) -> Option<&ModuleInterface> {
-        self.project_compiler.get_importable_modules().get(name)
-    }
 }
 
 impl<IO> LspProjectCompiler<IO> {
@@ -203,6 +199,10 @@ impl<IO> LspProjectCompiler<IO> {
 
     pub fn get_source(&self, module: &str) -> Option<&ModuleSourceInformation> {
         self.sources.get(module)
+    }
+
+    pub fn get_module_interface(&self, name: &str) -> Option<&ModuleInterface> {
+        self.project_compiler.get_importable_modules().get(name)
     }
 }
 

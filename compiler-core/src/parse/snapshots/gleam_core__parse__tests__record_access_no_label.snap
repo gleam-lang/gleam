@@ -57,6 +57,7 @@ Parsed {
                                                 module: None,
                                                 name: "String",
                                                 arguments: [],
+                                                start_parentheses: None,
                                             },
                                         ),
                                         location: SrcSpan {
@@ -171,6 +172,7 @@ Parsed {
             imported_modules: {},
             type_variables: {},
             local_value_constructors: {},
+            reexport_aliases: {},
         },
         unused_definition_positions: {},
     },

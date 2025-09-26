@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\npub fn main() { wibble() }\n\n@external(javascript, \"a\", \"a\")\nfn wibble() -> Nil {\n  Nil\n}\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+pub fn main() { wibble() }
+
+@external(javascript, "a", "a")
+fn wibble() -> Nil {
+   ↑▔▔▔▔▔           
+  Nil
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+
+pub fn main() { new_name() }
+
+@external(javascript, "a", "a")
+fn new_name() -> Nil {
+  Nil
+}

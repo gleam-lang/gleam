@@ -42,12 +42,12 @@ export function halve_all(a, b, c) {
     let x = value;
     let $1 = divide(b, 2);
     if ($1 instanceof Ok) {
-      let value$1 = $1[0];
-      let y = value$1;
+      let _inline_value_0 = $1[0];
+      let y = _inline_value_0;
       let $2 = divide(c, 2);
       if ($2 instanceof Ok) {
-        let value$2 = $2[0];
-        return new Ok([x, y, value$2]);
+        let _inline_value_1 = $2[0];
+        return new Ok([x, y, _inline_value_1]);
       } else {
         return $2;
       }

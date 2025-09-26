@@ -1741,20 +1741,6 @@ pub type A() {
 }
 
 #[test]
-fn missing_type_constructor_arguments_in_type_annotation_1() {
-    assert_module_error!("pub fn main() -> Int() {}");
-}
-
-#[test]
-fn missing_type_constructor_arguments_in_type_annotation_2() {
-    assert_module_error!(
-        "pub fn main() {
-  let a: Int() = todo
-}"
-    );
-}
-
-#[test]
 fn tuple_without_hash() {
     assert_module_error!(
         r#"
@@ -1991,6 +1977,17 @@ fn type_angle_generics_definition_error_fallback() {
 type Either<type A, type B> {
     This(A)
     That(B)
+}
+"#
+    );
+}
+
+#[test]
+fn wrong_type_of_comments_with_hash() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  # a python-style comment
 }
 "#
     );

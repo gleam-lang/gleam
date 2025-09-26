@@ -5,6 +5,7 @@ use super::{
 use crate::{
     ast::{BinOp, BitArraySegmentTruncation, Layer, SrcSpan, TodoKind},
     build::Target,
+    exhaustiveness::ImpossibleBitArraySegmentPattern,
     type_::{Type, expression::ComparisonOutcome},
 };
 
@@ -655,6 +656,14 @@ pub enum Error {
         package: EcoString,
         location: SrcSpan,
     },
+
+    /// This happens when a type has no type parameters (for example `Int`) but
+    /// it is being used as a constructor: `Int()`, `Bool(a, b)`.
+    ///
+    TypeUsedAsAConstructor {
+        location: SrcSpan,
+        name: EcoString,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -961,8 +970,9 @@ pub enum Warning {
         location: SrcSpan,
     },
 
-    AssertAssignmentOnInferredVariant {
+    AssertAssignmentOnImpossiblePattern {
         location: SrcSpan,
+        reason: AssertImpossiblePattern,
     },
 
     /// When a `todo` or `panic` is used as a function instead of providing the
@@ -1067,6 +1077,29 @@ pub enum Warning {
     },
 }
 
+#[derive(Debug, Eq, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
+pub enum AssertImpossiblePattern {
+    /// When `let assert`-ing on a variant that's different from the inferred
+    /// one.
+    ///
+    /// ```gleam
+    /// let assert Error(_) = Ok(_)
+    /// ```
+    ///
+    InferredVariant,
+
+    /// When `let assert`-ing on a pattern that will never match because it's
+    /// matching on impossible segment(s).
+    ///
+    /// ```gleam
+    /// let assert <<-2:unsigned>> = bit_array
+    /// ```
+    ///
+    ImpossibleSegments {
+        segments: Vec<ImpossibleBitArraySegmentPattern>,
+    },
+}
+
 #[derive(Debug, Eq, Copy, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
 pub enum FeatureKind {
     LabelShorthandSyntax,
@@ -1139,7 +1172,7 @@ pub enum TodoOrPanic {
     Panic,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum UnreachablePatternReason {
     /// The clause is unreachable because a previous pattern
     /// matches the same case.
@@ -1148,6 +1181,9 @@ pub enum UnreachablePatternReason {
     /// of the custom type that we are matching on, and this matches
     /// against one of the variants we know it isn't.
     ImpossibleVariant,
+    /// The clause is unreachable because it is matching on a pattern segment
+    /// that we could tell is never going to match
+    ImpossibleSegments(Vec<ImpossibleBitArraySegmentPattern>),
 }
 
 impl Error {
@@ -1168,6 +1204,7 @@ impl Error {
             | Error::UnsafeRecordUpdate { location, .. }
             | Error::UnnecessarySpreadOperator { location, .. }
             | Error::IncorrectTypeArity { location, .. }
+            | Error::TypeUsedAsAConstructor { location, .. }
             | Error::CouldNotUnify { location, .. }
             | Error::RecursiveType { location, .. }
             | Error::DuplicateName {
@@ -1283,7 +1320,7 @@ impl Warning {
             | Warning::OpaqueExternalType { location, .. }
             | Warning::InternalTypeLeak { location, .. }
             | Warning::RedundantAssertAssignment { location, .. }
-            | Warning::AssertAssignmentOnInferredVariant { location, .. }
+            | Warning::AssertAssignmentOnImpossiblePattern { location, .. }
             | Warning::TodoOrPanicUsedAsFunction { location, .. }
             | Warning::UnreachableCodeAfterPanic { location, .. }
             | Warning::RedundantPipeFunctionCapture { location, .. }

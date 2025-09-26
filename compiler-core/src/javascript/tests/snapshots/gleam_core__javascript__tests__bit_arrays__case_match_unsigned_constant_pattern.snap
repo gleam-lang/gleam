@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 575
 expression: "\npub fn go(x) {\n  case x {\n    <<-2:unsigned>> -> 1\n    _ -> 2\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -16,9 +14,5 @@ pub fn go(x) {
 
 ----- COMPILED JAVASCRIPT
 export function go(x) {
-  if (x.bitSize === 8 && x.byteAt(0) === 254) {
-    return 1;
-  } else {
-    return 2;
-  }
+  return 2;
 }

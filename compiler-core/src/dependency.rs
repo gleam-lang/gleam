@@ -401,6 +401,7 @@ mod tests {
     use hexpm::RetirementStatus;
 
     use crate::{
+        derivation_tree::DerivationTreePrinter,
         manifest::{Base16Checksum, ManifestPackage, ManifestPackageSource},
         requirement,
     };
@@ -1087,7 +1088,14 @@ mod tests {
             &vec![].into_iter().collect(),
         );
 
-        if let Err(Error::DependencyResolutionFailed(message)) = result {
+        if let Err(Error::DependencyResolutionNoSolution {
+            root_package_name,
+            derivation_tree,
+        }) = result
+        {
+            let message = crate::error::wrap(
+                &DerivationTreePrinter::new(root_package_name, derivation_tree.0).print(),
+            );
             insta::assert_snapshot!(message)
         } else {
             panic!("expected a resolution error message")

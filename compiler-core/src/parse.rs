@@ -590,7 +590,9 @@ where
 
             Some((start, Token::Hash, _)) => {
                 self.advance();
-                let _ = self.expect_one(&Token::LeftParen)?;
+                let _ = self
+                    .expect_one(&Token::LeftParen)
+                    .map_err(|e| self.add_comment_style_hint(e))?;
                 let elements =
                     Parser::series_of(self, &Parser::parse_expression, Some(&Token::Comma))?;
                 let (_, end) =
@@ -739,14 +741,20 @@ where
                         return_annotation,
                         end_position,
                         ..
-                    })) => UntypedExpr::Fn {
-                        location: SrcSpan::new(location.start, end_position),
-                        end_of_head_byte_index: location.end,
-                        kind: FunctionLiteralKind::Anonymous { head: location },
-                        arguments,
-                        body,
-                        return_annotation,
-                    },
+                    })) => {
+                        let Ok(body) = Vec1::try_from_vec(body) else {
+                            return parse_error(ParseErrorType::ExpectedFunctionBody, location);
+                        };
+
+                        UntypedExpr::Fn {
+                            location: SrcSpan::new(location.start, end_position),
+                            end_of_head_byte_index: location.end,
+                            kind: FunctionLiteralKind::Anonymous { head: location },
+                            arguments,
+                            body,
+                            return_annotation,
+                        }
+                    }
 
                     _ => {
                         // this isn't just none, it could also be Some(UntypedExpr::..)
@@ -980,6 +988,15 @@ where
         }
 
         Ok(Some(expr))
+    }
+
+    fn add_comment_style_hint(&self, mut err: ParseError) -> ParseError {
+        if let ParseErrorType::UnexpectedToken { ref mut hint, .. } = err.error {
+            let text =
+                "Maybe you meant to create a comment?\nComments in Gleam start with `//`, not `#`";
+            *hint = Some(text.into());
+        }
+        err
     }
 
     // A `use` expression
@@ -2111,35 +2128,23 @@ where
                     .map(|l| l.location().end)
                     .unwrap_or(rpar_e);
                 let body = match some_body {
-                    None => vec1![Statement::Expression(UntypedExpr::Todo {
+                    None => vec![Statement::Expression(UntypedExpr::Todo {
                         kind: TodoKind::EmptyFunction {
-                            function_location: SrcSpan { start, end }
+                            function_location: SrcSpan { start, end },
                         },
                         location: SrcSpan {
                             start: left_brace_start + 1,
-                            end: right_brace_end
+                            end: right_brace_end,
                         },
                         message: None,
                     })],
-                    Some((body, _)) => body,
+                    Some((body, _)) => body.to_vec(),
                 };
 
                 (Some(left_brace_start), body, end, right_brace_end)
             }
 
-            None if is_anon => {
-                return parse_error(
-                    ParseErrorType::ExpectedFunctionBody,
-                    SrcSpan { start, end: rpar_e },
-                );
-            }
-
-            None => {
-                let body = vec1![Statement::Expression(UntypedExpr::Placeholder {
-                    location: SrcSpan::new(start, rpar_e)
-                })];
-                (None, body, rpar_e, rpar_e)
-            }
+            None => (None, vec![], rpar_e, rpar_e),
         };
 
         Ok(Some(Definition::Function(Function {
@@ -2779,12 +2784,6 @@ where
         if let Some((par_s, _)) = self.maybe_one(&Token::LeftParen) {
             let arguments = self.parse_types()?;
             let (_, par_e) = self.expect_one(&Token::RightParen)?;
-            if arguments.is_empty() {
-                return parse_error(
-                    ParseErrorType::TypeConstructorNoArguments,
-                    SrcSpan::new(par_s, par_e),
-                );
-            }
             Ok(Some(TypeAst::Constructor(TypeAstConstructor {
                 location: SrcSpan { start, end: par_e },
                 name_location: SrcSpan {
@@ -2794,6 +2793,7 @@ where
                 module,
                 name,
                 arguments,
+                start_parentheses: Some(par_s),
             })))
         } else if let Some((less_start, less_end)) = self.maybe_one(&Token::Less) {
             let arguments = self.parse_types()?;
@@ -2818,6 +2818,7 @@ where
                 module,
                 name,
                 arguments: vec![],
+                start_parentheses: None,
             })))
         }
     }

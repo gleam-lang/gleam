@@ -115,7 +115,9 @@ impl<'a> CallGraphBuilder<'a> {
         {
             self.define(name);
         }
+
         self.statements(&function.body);
+
         self.names = names;
     }
 
@@ -177,10 +179,7 @@ impl<'a> CallGraphBuilder<'a> {
 
     fn expression(&mut self, expression: &'a UntypedExpr) {
         match expression {
-            UntypedExpr::Int { .. }
-            | UntypedExpr::Float { .. }
-            | UntypedExpr::String { .. }
-            | UntypedExpr::Placeholder { .. } => (),
+            UntypedExpr::Int { .. } | UntypedExpr::Float { .. } | UntypedExpr::String { .. } => (),
 
             UntypedExpr::Todo { message, .. } => {
                 if let Some(msg_expr) = message {

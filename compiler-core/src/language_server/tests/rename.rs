@@ -1567,3 +1567,34 @@ fn wibble(wibble: Wibble) {
         find_position_of("wibble:")
     );
 }
+
+//https://github.com/gleam-lang/gleam/issues/4941
+#[test]
+fn rename_external_function() {
+    assert_rename!(
+        r#"
+pub fn main() { wibble() }
+
+@external(erlang, "a", "a")
+fn wibble() -> Nil
+"#,
+        "new_name",
+        find_position_of("wibble").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn rename_external_javascript_function_with_pure_gleam_fallback() {
+    assert_rename!(
+        r#"
+pub fn main() { wibble() }
+
+@external(javascript, "a", "a")
+fn wibble() -> Nil {
+  Nil
+}
+"#,
+        "new_name",
+        find_position_of("wibble").nth_occurrence(2)
+    );
+}

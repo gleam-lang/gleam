@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 622
 expression: "\npub type Thing {\n  Thing(then: Nil)\n}\n\npub fn main() {\n  let a = Thing(then: Nil)\n  let b = Thing(..a, then: Nil)\n  b.then\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -26,6 +24,10 @@ export class Thing extends $CustomType {
     this.then$ = then$;
   }
 }
+export const Thing$Thing = (then$) => new Thing(then$);
+export const Thing$isThing = (value) => value instanceof Thing;
+export const Thing$Thing$then = (value) => value.then$;
+export const Thing$Thing$0 = (value) => value.then$;
 
 export function main() {
   let a = new Thing(undefined);

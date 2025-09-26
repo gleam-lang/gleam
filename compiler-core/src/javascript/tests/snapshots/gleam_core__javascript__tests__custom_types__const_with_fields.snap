@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 140
 expression: "\npub type Mine {\n  Mine(a: Int, b: Int)\n}\n\npub const labels = Mine(b: 2, a: 1)\npub const no_labels = Mine(3, 4)\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -24,6 +22,12 @@ export class Mine extends $CustomType {
     this.b = b;
   }
 }
+export const Mine$Mine = (a, b) => new Mine(a, b);
+export const Mine$isMine = (value) => value instanceof Mine;
+export const Mine$Mine$a = (value) => value.a;
+export const Mine$Mine$0 = (value) => value.a;
+export const Mine$Mine$b = (value) => value.b;
+export const Mine$Mine$1 = (value) => value.b;
 
 export const labels = /* @__PURE__ */ new Mine(1, 2);
 

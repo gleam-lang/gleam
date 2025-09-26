@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 3123
 expression: "\npub fn main() {\n  <<65_537:size(2)-unit(8)>>\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

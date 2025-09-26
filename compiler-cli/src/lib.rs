@@ -68,6 +68,7 @@ mod hex;
 mod http;
 mod lsp;
 mod new;
+mod owner;
 mod panic;
 mod publish;
 mod remove;
@@ -165,7 +166,7 @@ enum Command {
     ///
     /// This command uses the environment variable:
     ///
-    /// - HEXPM_API_KEY: (optional) A Hex API key to use instead of authenticating.
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate with the Hex package manager.
     ///
     #[command(verbatim_doc_comment)]
     Publish {
@@ -407,7 +408,7 @@ enum Hex {
     ///
     /// This command uses the environment variable:
     ///
-    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate against the Hex package manager.
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate with the Hex package manager.
     ///
     #[command(verbatim_doc_comment)]
     Retire {
@@ -425,7 +426,7 @@ enum Hex {
     ///
     /// This command uses this environment variable:
     ///
-    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate against the Hex package manager.
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate with the Hex package manager.
     ///
     #[command(verbatim_doc_comment)]
     Unretire { package: String, version: String },
@@ -434,7 +435,7 @@ enum Hex {
     ///
     /// This command uses this environment variable:
     ///
-    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate against the Hex package manager.
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate with the Hex package manager.
     ///
     #[command(verbatim_doc_comment)]
     Revert {
@@ -445,8 +446,30 @@ enum Hex {
         version: Option<String>,
     },
 
+    /// Deal with package ownership
+    #[command(subcommand)]
+    Owner(Owner),
+
     /// Authenticate with Hex
     Authenticate,
+}
+
+#[derive(Subcommand, Debug)]
+enum Owner {
+    /// Transfers ownership of the given package to a new Hex user
+    ///
+    /// This command uses this environment variable:
+    ///
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate against the Hex package manager.
+    ///
+    #[command(verbatim_doc_comment)]
+    Transfer {
+        package: String,
+
+        /// The username or email of the new owner
+        #[arg(long = "to")]
+        username_or_email: String,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -465,7 +488,7 @@ enum Docs {
     ///
     /// This command uses this environment variable:
     ///
-    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate against the Hex package manager.
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate with the Hex package manager.
     ///
     #[command(verbatim_doc_comment)]
     Publish,
@@ -474,7 +497,7 @@ enum Docs {
     ///
     /// This command uses this environment variable:
     ///
-    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate against the Hex package manager.
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate with the Hex package manager.
     ///
     #[command(verbatim_doc_comment)]
     Remove {
@@ -654,6 +677,11 @@ fn parse_and_run_command() -> Result<(), Error> {
             hex::revert(&paths, package, version)
         }
 
+        Command::Hex(Hex::Owner(Owner::Transfer {
+            package,
+            username_or_email,
+        })) => owner::transfer(package, username_or_email),
+
         Command::Add { packages, dev } => {
             let paths = find_project_paths()?;
             add::command(&paths, packages, dev)
@@ -774,7 +802,7 @@ fn project_paths_at_current_directory_without_toml() -> ProjectPaths {
 }
 
 fn download_dependencies(paths: &ProjectPaths) -> Result<()> {
-    _ = dependencies::download(
+    _ = dependencies::resolve_and_download(
         paths,
         cli::Reporter::new(),
         None,

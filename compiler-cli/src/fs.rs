@@ -246,7 +246,7 @@ impl MakeLocker for ProjectIO {
 
 impl DownloadDependencies for ProjectIO {
     fn download_dependencies(&self, paths: &ProjectPaths) -> Result<Manifest> {
-        dependencies::download(
+        dependencies::resolve_and_download(
             paths,
             NullTelemetry,
             None,
