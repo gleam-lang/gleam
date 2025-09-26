@@ -1552,8 +1552,12 @@ impl<'module, 'a> Generator<'module, 'a> {
         // because the first approach needs to construct a new Wibble, and then call the isEqual function,
         // which supports any shape of data, and so does a lot of extra logic which isn't necessary.
 
-        if let Some(result) = self.handle_singleton_equality(left, right, should_be_equal) {
-            return result;
+        if let Some(doc) = self.singleton_variant_equality(left, right, should_be_equal) {
+            return doc;
+        }
+
+        if let Some(doc) = self.singleton_variant_equality(right, left, should_be_equal) {
+            return doc;
         }
 
         // Other types must be compared using structural equality
@@ -1565,42 +1569,30 @@ impl<'module, 'a> Generator<'module, 'a> {
         self.prelude_equal_call(should_be_equal, left, right)
     }
 
-    fn handle_singleton_equality(
+    fn singleton_variant_equality(
         &mut self,
         left: &'a TypedExpr,
         right: &'a TypedExpr,
         should_be_equal: bool,
     ) -> Option<Document<'a>> {
-        fn singleton_record_constructor_name(expr: &TypedExpr) -> Option<&EcoString> {
-            match expr {
-                TypedExpr::Var {
-                    constructor:
-                        ValueConstructor {
-                            variant: ValueConstructorVariant::Record { arity: 0, name, .. },
-                            ..
-                        },
+        if let TypedExpr::Var {
+            constructor:
+                ValueConstructor {
+                    variant: ValueConstructorVariant::Record { arity: 0, name, .. },
                     ..
-                } => Some(name),
-                _ => None,
-            }
-        }
-
-        if let Some(name) = singleton_record_constructor_name(right) {
+                },
+            ..
+        } = right
+        {
             let left_doc = self
                 .not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(left));
-            return Some(self.singleton_equal(left_doc, name, should_be_equal));
+            Some(self.singleton_equal_helper(left_doc, name, should_be_equal))
+        } else {
+            None
         }
-
-        if let Some(name) = singleton_record_constructor_name(left) {
-            let right_doc = self
-                .not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(right));
-            return Some(self.singleton_equal(right_doc, name, should_be_equal));
-        }
-
-        None
     }
 
-    fn singleton_equal(
+    fn singleton_equal_helper(
         &self,
         value: Document<'a>,
         tag: &EcoString,
@@ -2040,10 +2032,16 @@ impl<'module, 'a> Generator<'module, 'a> {
                 let should_be_equal = matches!(guard, ClauseGuard::Equals { .. });
 
                 // Handle singleton equality optimization for guards
-                if let Some(result) =
-                    self.handle_guard_singleton_equality(left, right, should_be_equal)
+                if let Some(doc) =
+                    self.singleton_variant_guard_equality(left, right, should_be_equal)
                 {
-                    return result;
+                    return doc;
+                }
+
+                if let Some(doc) =
+                    self.singleton_variant_guard_equality(right, left, should_be_equal)
+                {
+                    return doc;
                 }
 
                 let left_doc = self.guard(left);
@@ -2151,31 +2149,21 @@ impl<'module, 'a> Generator<'module, 'a> {
         }
     }
 
-    fn handle_guard_singleton_equality(
+    fn singleton_variant_guard_equality(
         &mut self,
         left: &'a TypedClauseGuard,
         right: &'a TypedClauseGuard,
         should_be_equal: bool,
     ) -> Option<Document<'a>> {
-        fn singleton_record_constructor_name(guard: &TypedClauseGuard) -> Option<&EcoString> {
-            match guard {
-                ClauseGuard::Constant(Constant::Record {
-                    arguments, name, ..
-                }) if arguments.is_empty() => Some(name),
-                _ => None,
-            }
-        }
-
-        if let Some(name) = singleton_record_constructor_name(right) {
-            let left_doc = self.guard(left);
-            return Some(self.singleton_equal(left_doc, name, should_be_equal));
-        }
-
-        if let Some(name) = singleton_record_constructor_name(left) {
-            let right_doc = self.guard(right);
-            return Some(self.singleton_equal(right_doc, name, should_be_equal));
-        }
-
+        if let ClauseGuard::Constant(Constant::Record {
+            arguments, name, ..
+        }) = right
+            && arguments.is_empty() && right.type_().is_named()
+                && let ClauseGuard::Var { type_, .. } = left
+                    && !matches!(&**type_, Type::Fn { .. }) {
+                        let left_doc = self.guard(left);
+                        return Some(self.singleton_equal_helper(left_doc, name, should_be_equal));
+                    }
         None
     }
 

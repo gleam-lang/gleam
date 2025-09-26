@@ -23,10 +23,16 @@ pub fn is_success(s: Status) -> Bool {
 import { CustomType as $CustomType } from "../gleam.mjs";
 
 export class Loading extends $CustomType {}
+export const Status$Loading = () => new Loading();
+export const Status$isLoading = (value) => value instanceof Loading;
 
 export class Success extends $CustomType {}
+export const Status$Success = () => new Success();
+export const Status$isSuccess = (value) => value instanceof Success;
 
 export class Error extends $CustomType {}
+export const Status$Error = () => new Error();
+export const Status$isError = (value) => value instanceof Error;
 
 export function is_loading(s) {
   return s instanceof Loading;

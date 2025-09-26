@@ -23,8 +23,14 @@ export class Ok extends $CustomType {
     this.value = value;
   }
 }
+export const Result$Ok = (value) => new Ok(value);
+export const Result$isOk = (value) => value instanceof Ok;
+export const Result$Ok$value = (value) => value.value;
+export const Result$Ok$0 = (value) => value.value;
 
 export class Error extends $CustomType {}
+export const Result$Error = () => new Error();
+export const Result$isError = (value) => value instanceof Error;
 
 export function is_error(r) {
   return r instanceof Error;

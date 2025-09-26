@@ -21,8 +21,12 @@ pub fn process(s: State) -> String {
 import { CustomType as $CustomType } from "../gleam.mjs";
 
 export class Active extends $CustomType {}
+export const State$Active = () => new Active();
+export const State$isActive = (value) => value instanceof Active;
 
 export class Inactive extends $CustomType {}
+export const State$Inactive = () => new Inactive();
+export const State$isInactive = (value) => value instanceof Inactive;
 
 export function process(s) {
   let state = s;
