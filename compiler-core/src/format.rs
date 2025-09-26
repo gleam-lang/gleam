@@ -836,10 +836,9 @@ impl<'comments> Formatter<'comments> {
             )
             .append(
                 self.wrap_arguments(
-                    // We count end location of arguments here.
-                    // Before this change, wrap_arguments consumed all comments
-                    // leading in moving comments from return annotation to argument list
                     arguments,
+                    // Calculate end location of arguments to not consume comments in
+                    // return annotation
                     function
                         .return_annotation
                         .as_ref()
