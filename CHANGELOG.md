@@ -318,6 +318,18 @@
 - Support has been added for using Tangled as a repository.
   ([Naomi Roberts](https://github.com/naomieow))
 
+- The build tool now has a new `gleam deps outdated` command that shows outdated
+  versions for dependencies. For example:
+  
+  ```bash
+  Package     Current    Latest
+  wibble      v1.4.0     v1.4.1
+  wobble      v1.0.1     v2.3.0
+  ```
+
+  ([Vladislav Shakitskiy](https://github.com/vshakitskiy))
+
+
 ### Language server
 
 - The language server now offers a code action to remove all the unreachable
