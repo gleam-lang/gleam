@@ -4493,7 +4493,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location,
             ),
 
-            // If the argument is a regular var then we specialise.
+            // If the argument is a regular var then we want to add some extra
+            // checks. The value will be inferred regularly, but we also want to
+            // see if this is an argument that is being passed recursively to
+            // the same function that defined it!
             (_, UntypedExpr::Var { location, name }) => {
                 self.infer_variable_call_arg(called_function, name, location, argument_index)
             }
