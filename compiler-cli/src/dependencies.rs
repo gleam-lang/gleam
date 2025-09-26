@@ -220,8 +220,13 @@ pub fn outdated(paths: &ProjectPaths) -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let package_fetcher = PackageFetcher::new(runtime.handle().clone());
 
-    // compiler-core/src/dependency.rs:118-130
-    todo!();
+    let version_updates = dependency::check_for_version_updates(&manifest, &package_fetcher);
+
+
+    println!("Package\tCurrent\tLatest");
+    for (package_name, (current_version, latest_version)) in version_updates {
+        println!("{}\tv{}\tv{}", package_name, current_version, latest_version);
+    }
 
     Ok(())
 }
