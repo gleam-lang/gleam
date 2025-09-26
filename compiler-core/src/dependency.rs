@@ -65,6 +65,21 @@ where
 */
 pub type PackageVersionDiffs = HashMap<String, (Version, Version)>;
 
+/// Get the resolved versions of the direct dependencies
+fn resolve_versions_from_manifest(manifest: &manifest::Manifest) -> PackageVersions {
+    manifest
+        .packages
+        .iter()
+        .filter(|manifest_package| {
+            manifest
+                .requirements
+                .iter()
+                .any(|(required_pkg, _)| manifest_package.name == *required_pkg)
+        })
+        .map(|manifest_pkg| (manifest_pkg.name.to_string(), manifest_pkg.version.clone()))
+        .collect()
+}
+
 fn resolve_major_versions(
     package_fetcher: &impl PackageFetcher,
     versions: PackageVersions,
@@ -98,20 +113,7 @@ pub fn check_for_major_version_updates(
     manifest: &manifest::Manifest,
     package_fetcher: &impl PackageFetcher,
 ) -> PackageVersionDiffs {
-    // get the resolved versions of the direct dependencies to check for major
-    // version updates.
-    let versions = manifest
-        .packages
-        .iter()
-        .filter(|manifest_package| {
-            manifest
-                .requirements
-                .iter()
-                .any(|(required_pkg, _)| manifest_package.name == *required_pkg)
-        })
-        .map(|manifest_pkg| (manifest_pkg.name.to_string(), manifest_pkg.version.clone()))
-        .collect();
-
+    let versions = resolve_versions_from_manifest(manifest);
     resolve_major_versions(package_fetcher, versions)
 }
 
@@ -142,21 +144,12 @@ fn resolve_all_versions(
         .collect()
 }
 
+/// Check for version updates for direct dependencies.
 pub fn check_for_version_updates(
     manifest: &manifest::Manifest,
     package_fetcher: &impl PackageFetcher,
 ) -> PackageVersionDiffs {
-    // get all hex packages from the manifest
-    let versions = manifest
-        .packages
-        .iter()
-        .filter(|manifest_package| {
-            // only check for version updates for hex packages
-            matches!(manifest_package.source, manifest::ManifestPackageSource::Hex { .. })
-        })
-        .map(|manifest_pkg| (manifest_pkg.name.to_string(), manifest_pkg.version.clone()))
-        .collect();
-
+    let versions = resolve_versions_from_manifest(manifest);
     resolve_all_versions(package_fetcher, versions)
 }
 
