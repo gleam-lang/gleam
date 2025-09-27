@@ -2158,12 +2158,14 @@ impl<'module, 'a> Generator<'module, 'a> {
         if let ClauseGuard::Constant(Constant::Record {
             arguments, name, ..
         }) = right
-            && arguments.is_empty() && right.type_().is_named()
-                && let ClauseGuard::Var { type_, .. } = left
-                    && !matches!(&**type_, Type::Fn { .. }) {
-                        let left_doc = self.guard(left);
-                        return Some(self.singleton_equal_helper(left_doc, name, should_be_equal));
-                    }
+            && arguments.is_empty()
+            && right.type_().is_named()
+            && let ClauseGuard::Var { type_, .. } = left
+            && !matches!(&**type_, Type::Fn { .. })
+        {
+            let left_doc = self.guard(left);
+            return Some(self.singleton_equal_helper(left_doc, name, should_be_equal));
+        }
         None
     }
 

@@ -808,6 +808,41 @@ pub fn process(s: State) -> String {
 }
 
 #[test]
+fn equality_with_non_singleton_variant() {
+    assert_js!(
+        r#"
+pub type Thing {
+  Variant
+  Other(String)
+}
+
+pub fn check_other(x: Thing) -> Bool {
+  x == Other("hello")
+}
+"#,
+    );
+}
+
+#[test]
+fn guard_equality_with_non_singleton_variant() {
+    assert_js!(
+        r#"
+pub type Thing {
+  Variant
+  Other(String)
+}
+
+pub fn process(e: Thing) -> String {
+  case e {
+    value if value == Other("hello") -> "match"
+    _ -> "no match"
+  }
+}
+"#,
+    );
+}
+
+#[test]
 fn variant_defined_in_another_module_qualified_expression() {
     assert_js!(
         (
