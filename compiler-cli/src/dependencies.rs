@@ -417,10 +417,10 @@ fn pretty_print_major_versions_available(versions: dependency::PackageVersionDif
 
     let longest_parts = versions.clone().fold(
         (0, 0, 0),
-        |(max_name, max_curr, max_major), (name, curr, major)| {
+        |(max_name, max_current, max_major), (name, current, major)| {
             (
                 max_name.max(name.len()),
-                max_curr.max(curr.len()),
+                max_current.max(current.len()),
                 max_major.max(major.len()),
             )
         },
@@ -440,7 +440,7 @@ fn pretty_print_major_versions_available(versions: dependency::PackageVersionDif
     output_string.push_str("\nThe following dependencies have new major versions available:\n\n");
     for (name, v1, v2) in versions {
         let name_padding = " ".repeat(longest_package_name_length - name.len());
-        let curr_ver_padding = " ".repeat(longest_current_version_length - v1.to_string().len());
+        let current_version_padding = " ".repeat(longest_current_version_length - v1.to_string().len());
 
         output_string.push_str(
             &[
@@ -448,7 +448,7 @@ fn pretty_print_major_versions_available(versions: dependency::PackageVersionDif
                 &name_padding,
                 " ",
                 &v1.to_string(),
-                &curr_ver_padding,
+                &current_version_padding,
                 " -> ",
                 &v2.to_string(),
                 "\n",
@@ -470,19 +470,19 @@ fn pretty_print_version_updates(versions: dependency::PackageVersionDiffs) -> St
 
     let longest_parts = versions.clone().fold(
         (0, 0, 0),
-        |(max_name, max_curr, max_latest), (name, curr, latest)| {
+        |(max_name, max_current, max_latest), (name, current, latest)| {
             (
                 max_name.max(name.len()),
-                max_curr.max(curr.len()),
+                max_current.max(current.len()),
                 max_latest.max(latest.len()),
             )
         },
     );
 
-    let (name_len, curr_len, latest_len) = longest_parts;
-    let longest_package_name_length = name_len.max(7);
-    let longest_current_version_length = (curr_len + 1).max(7);
-    let longest_latest_version_length = (latest_len + 1).max(6);
+    let (name_length, current_length, latest_length) = longest_parts;
+    let longest_package_name_length = name_length.max(7);
+    let longest_current_version_length = (current_length + 1).max(7);
+    let longest_latest_version_length = (latest_length + 1).max(6);
 
     let mut output_string = String::with_capacity(
         (longest_package_name_length
@@ -493,14 +493,14 @@ fn pretty_print_version_updates(versions: dependency::PackageVersionDiffs) -> St
     );
 
     let name_padding = " ".repeat(longest_package_name_length - 7);
-    let curr_ver_padding = " ".repeat(longest_current_version_length - 7);
+    let current_version_padding = " ".repeat(longest_current_version_length - 7);
 
     output_string.push_str(
         &[
             "Package",
             &name_padding,
             " Current",
-            &curr_ver_padding,
+            &current_version_padding,
             " Latest\n",
         ]
         .concat(),
@@ -508,7 +508,7 @@ fn pretty_print_version_updates(versions: dependency::PackageVersionDiffs) -> St
 
     for (name, v1, v2) in versions {
         let name_padding = " ".repeat(longest_package_name_length - name.len());
-        let curr_ver_padding =
+        let current_version_padding =
             " ".repeat(longest_current_version_length - 1 - v1.to_string().len());
 
         output_string.push_str(
@@ -517,7 +517,7 @@ fn pretty_print_version_updates(versions: dependency::PackageVersionDiffs) -> St
                 &name_padding,
                 " v",
                 &v1.to_string(),
-                &curr_ver_padding,
+                &current_version_padding,
                 " v",
                 &v2.to_string(),
                 "\n",
