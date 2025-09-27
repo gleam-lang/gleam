@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2020 The Gleam contributors
 
-use std::sync::OnceLock;
-
 use camino::Utf8PathBuf;
 use ecow::EcoString;
 use gleam_core::{
@@ -15,10 +13,10 @@ use gleam_core::{
     error::Error,
     io::{Command, CommandExecutor, Stdio},
     paths::ProjectPaths,
+    strings::is_gleam_module,
     type_::ModuleFunction,
     version::COMPILER_VERSION,
 };
-use regex::Regex;
 
 use crate::{config::PackageKind, fs::ProjectIO};
 
@@ -361,22 +359,6 @@ fn add_deno_flag(args: &mut Vec<String>, flag: &str, flags: &DenoFlag) {
             }
         }
     }
-}
-
-static IS_GLEAM_MODULE_PATTERN: OnceLock<Regex> = OnceLock::new();
-
-/// Check if a module name is a valid gleam module name.
-fn is_gleam_module(module: &str) -> bool {
-    IS_GLEAM_MODULE_PATTERN
-        .get_or_init(|| {
-            Regex::new(&format!(
-                "^({module}{slash})*{module}$",
-                module = "[a-z][_a-z0-9]*",
-                slash = "/",
-            ))
-            .expect("is_gleam_module() RE regex")
-        })
-        .is_match(module)
 }
 
 /// If provided module is not executable, suggest a possible valid module.
