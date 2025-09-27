@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{
     Result,
-    diagnostic::{Diagnostic, Level},
+    diagnostic::{Diagnostic, Label, Level, Location},
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
         DownloadDependencies, MakeLocker,
@@ -15,6 +15,7 @@ use crate::{
         src_span_to_lsp_range,
     },
     line_numbers::LineNumbers,
+    strings::to_snake_case,
 };
 use camino::{Utf8Path, Utf8PathBuf};
 use debug_ignore::DebugIgnore;
@@ -366,7 +367,9 @@ where
         if let Err(error) = self.io.write_mem_cache(&path, &text) {
             return self.outside_of_project_feedback.error(error);
         }
-        Feedback::none()
+        // Validate the module filename and emit a diagnostic if invalid
+        self.validate_module_filename(&path, &text)
+            .unwrap_or_else(Feedback::none)
     }
 
     fn discard_in_memory_cache(&mut self, path: Utf8PathBuf) -> Feedback {
@@ -397,6 +400,66 @@ where
         if let Some(project_path) = project_path {
             _ = self.changed_projects.insert(project_path);
         }
+    }
+}
+
+impl<'a, IO> LanguageServer<'a, IO>
+where
+    IO: FileSystemReader
+        + FileSystemWriter
+        + BeamCompiler
+        + CommandExecutor
+        + DownloadDependencies
+        + MakeLocker
+        + Clone,
+{
+    fn validate_module_filename(&self, path: &Utf8Path, src: &str) -> Option<Feedback> {
+        // Only validate .gleam files
+        if path.extension().map(|e| e != "gleam").unwrap_or(true) {
+            return None;
+        }
+        let Some(stem) = path.file_stem() else {
+            return None;
+        };
+        let name = stem.to_string();
+
+        // A valid module filename is snake_case, starting with a lowercase letter
+        // and containing only [a-z0-9_]
+        // This mirrors the module segment regex used elsewhere in the toolchain.
+        static VALID_RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+        let re = VALID_RE.get_or_init(|| {
+            regex::Regex::new("^[a-z][a-z0-9_]*$").expect("valid module filename regex")
+        });
+
+        if re.is_match(&name) {
+            return None;
+        }
+
+        // Compute a suggested valid name
+        let mut suggestion = to_snake_case(&ecow::EcoString::from(name.clone())).to_string();
+        if suggestion.is_empty() || !suggestion.starts_with(|c: char| c.is_ascii_lowercase()) {
+            suggestion = format!("_{}", suggestion);
+        }
+
+        let mut feedback = Feedback::default();
+        let diagnostic = Diagnostic {
+            title: format!("{name} is not a valid name for a Gleam module"),
+            text: format!("You should switch to {suggestion} instead."),
+            level: Level::Error,
+            location: Some(Location {
+                src: src.into(),
+                path: path.to_path_buf(),
+                // No module declaration in a Gleam file, so point to the start of the file
+                label: Label {
+                    text: None,
+                    span: crate::ast::SrcSpan::new(0, 0),
+                },
+                extra_labels: vec![],
+            }),
+            hint: None,
+        };
+        feedback.append_diagnostic(path.to_path_buf(), diagnostic);
+        Some(feedback)
     }
 }
 
