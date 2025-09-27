@@ -322,9 +322,10 @@
   versions for dependencies. For example:
   
   ```bash
-  Package     Current    Latest
-  wibble      v1.4.0     v1.4.1
-  wobble      v1.0.1     v2.3.0
+  $ gleam deps outdated
+  Package Current Latest
+  wibble  v1.4.0  v1.4.1
+  wobble  v1.0.1  v2.3.0
   ```
 
   ([Vladislav Shakitskiy](https://github.com/vshakitskiy))

@@ -87,11 +87,11 @@ fn resolve_major_versions(
     versions
         .iter()
         .filter_map(|(package, version)| {
-            let Ok(hexpackage) = package_fetcher.get_dependencies(package) else {
+            let Ok(hex_package) = package_fetcher.get_dependencies(package) else {
                 return None;
             };
 
-            let latest = hexpackage
+            let latest = hex_package
                 .releases
                 .iter()
                 .map(|release| &release.version)
@@ -124,11 +124,11 @@ fn resolve_all_versions(
     versions
         .iter()
         .filter_map(|(package, version)| {
-            let Ok(hexpackage) = package_fetcher.get_dependencies(package) else {
+            let Ok(hex_package) = package_fetcher.get_dependencies(package) else {
                 return None;
             };
 
-            let latest = hexpackage
+            let latest = hex_package
                 .releases
                 .iter()
                 .map(|release| &release.version)
