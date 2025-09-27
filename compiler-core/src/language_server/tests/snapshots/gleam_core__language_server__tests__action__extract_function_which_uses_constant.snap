@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nconst pi = 3.14\n\npub fn main() {\n  let radius = 4.5\n\n  let circumference = radius *. pi *. 2.0\n\n  echo circumference\n}\n"
+---
+----- BEFORE ACTION
+
+const pi = 3.14
+
+pub fn main() {
+  let radius = 4.5
+
+  let circumference = radius *. pi *. 2.0
+                      ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑  
+
+  echo circumference
+}
+
+
+----- AFTER ACTION
+
+const pi = 3.14
+
+pub fn main() {
+  let radius = 4.5
+
+  let circumference = function(radius)
+
+  echo circumference
+}
+
+fn function(radius: Float) -> Float {
+  radius *. pi *. 2.0
+}

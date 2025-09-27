@@ -1,0 +1,46 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  let bits = todo\n  let size = todo\n\n  let segment = case bits {\n    <<x:size(size), _:bits>> -> Ok(x)\n    _ -> Error(Nil)\n  }\n\n  case segment {\n    Ok(value) -> echo value\n    Error(_) -> panic\n  }\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  let bits = todo
+  let size = todo
+
+  let segment = case bits {
+                ▔▔▔▔▔▔▔▔▔▔▔
+    <<x:size(size), _:bits>> -> Ok(x)
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    _ -> Error(Nil)
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  }
+▔▔↑
+
+  case segment {
+    Ok(value) -> echo value
+    Error(_) -> panic
+  }
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  let bits = todo
+  let size = todo
+
+  let segment = function(bits, size)
+
+  case segment {
+    Ok(value) -> echo value
+    Error(_) -> panic
+  }
+}
+
+fn function(bits: BitArray, size: Int) -> Result(Int, Nil) {
+  case bits {
+    <<x:size(size), _:bits>> -> Ok(x)
+    _ -> Error(Nil)
+  }
+}

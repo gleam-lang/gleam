@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn do_things(a, b) {\n  let new_a = 10 + a\n  let new_b = 10 + b\n  let result = new_a * new_b\n  result + 3\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn do_things(a, b) {
+  let new_a = 10 + a
+  ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  let new_b = 10 + b
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  let result = new_a * new_b
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑      
+  result + 3
+}
+
+
+----- AFTER ACTION
+
+pub fn do_things(a, b) {
+  let result = function(a, b)
+  result + 3
+}
+
+fn function(a: Int, b: Int) -> Int {
+  let new_a = 10 + a
+  let new_b = 10 + b
+  let result = new_a * new_b
+  result
+}
