@@ -3,6 +3,7 @@ mod dependency_manager;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
+    io::Write,
     process::Command,
     rc::Rc,
     time::Instant,
@@ -110,7 +111,7 @@ fn get_manifest_details(paths: &ProjectPaths) -> Result<(PackageConfig, Manifest
     Ok((config, manifest))
 }
 
-fn list_manifest_packages<W: std::io::Write>(mut buffer: W, manifest: Manifest) -> Result<()> {
+fn list_manifest_packages<W: Write>(mut buffer: W, manifest: Manifest) -> Result<()> {
     manifest
         .packages
         .into_iter()
@@ -121,7 +122,7 @@ fn list_manifest_packages<W: std::io::Write>(mut buffer: W, manifest: Manifest) 
         })
 }
 
-fn list_package_and_dependencies_tree<W: std::io::Write>(
+fn list_package_and_dependencies_tree<W: Write>(
     mut buffer: W,
     options: TreeOptions,
     packages: Vec<ManifestPackage>,
@@ -212,6 +213,21 @@ fn list_dependencies_tree(
     }
 
     tree
+}
+
+pub fn outdated(paths: &ProjectPaths) -> Result<()> {
+    let (_, manifest) = get_manifest_details(paths)?;
+
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let package_fetcher = PackageFetcher::new(runtime.handle().clone());
+
+    let version_updates = dependency::check_for_version_updates(&manifest, &package_fetcher);
+
+    if !version_updates.is_empty() {
+        print!("{}", pretty_print_version_updates(version_updates));
+    }
+
+    Ok(())
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -401,10 +417,10 @@ fn pretty_print_major_versions_available(versions: dependency::PackageVersionDif
 
     let longest_parts = versions.clone().fold(
         (0, 0, 0),
-        |(max_name, max_curr, max_major), (name, curr, major)| {
+        |(max_name, max_current, max_major), (name, current, major)| {
             (
                 max_name.max(name.len()),
-                max_curr.max(curr.len()),
+                max_current.max(current.len()),
                 max_major.max(major.len()),
             )
         },
@@ -424,7 +440,7 @@ fn pretty_print_major_versions_available(versions: dependency::PackageVersionDif
     output_string.push_str("\nThe following dependencies have new major versions available:\n\n");
     for (name, v1, v2) in versions {
         let name_padding = " ".repeat(longest_package_name_length - name.len());
-        let curr_ver_padding = " ".repeat(longest_current_version_length - v1.to_string().len());
+        let current_version_padding = " ".repeat(longest_current_version_length - v1.to_string().len());
 
         output_string.push_str(
             &[
@@ -432,8 +448,77 @@ fn pretty_print_major_versions_available(versions: dependency::PackageVersionDif
                 &name_padding,
                 " ",
                 &v1.to_string(),
-                &curr_ver_padding,
+                &current_version_padding,
                 " -> ",
+                &v2.to_string(),
+                "\n",
+            ]
+            .concat(),
+        );
+    }
+
+    output_string
+}
+
+fn pretty_print_version_updates(versions: dependency::PackageVersionDiffs) -> String {
+    let total_lines = versions.len() + 1;
+
+    let versions = versions
+        .iter()
+        .map(|(name, (v1, v2))| (name, v1.to_string(), v2.to_string()))
+        .sorted();
+
+    let longest_parts = versions.clone().fold(
+        (0, 0, 0),
+        |(max_name, max_current, max_latest), (name, current, latest)| {
+            (
+                max_name.max(name.len()),
+                max_current.max(current.len()),
+                max_latest.max(latest.len()),
+            )
+        },
+    );
+
+    let (name_length, current_length, latest_length) = longest_parts;
+    let longest_package_name_length = name_length.max(7);
+    let longest_current_version_length = (current_length + 1).max(7);
+    let longest_latest_version_length = (latest_length + 1).max(6);
+
+    let mut output_string = String::with_capacity(
+        (longest_package_name_length
+            + longest_current_version_length
+            + longest_latest_version_length
+            + 3)
+            * total_lines,
+    );
+
+    let name_padding = " ".repeat(longest_package_name_length - 7);
+    let current_version_padding = " ".repeat(longest_current_version_length - 7);
+
+    output_string.push_str(
+        &[
+            "Package",
+            &name_padding,
+            " Current",
+            &current_version_padding,
+            " Latest\n",
+        ]
+        .concat(),
+    );
+
+    for (name, v1, v2) in versions {
+        let name_padding = " ".repeat(longest_package_name_length - name.len());
+        let current_version_padding =
+            " ".repeat(longest_current_version_length - 1 - v1.to_string().len());
+
+        output_string.push_str(
+            &[
+                name,
+                &name_padding,
+                " v",
+                &v1.to_string(),
+                &current_version_padding,
+                " v",
                 &v2.to_string(),
                 "\n",
             ]
