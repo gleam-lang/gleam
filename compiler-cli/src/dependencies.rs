@@ -408,26 +408,37 @@ pub fn resolve_and_download<Telem: Telemetry>(
     dependency_manager.resolve_and_download_versions(paths, new_package, packages_to_update)
 }
 
-fn pretty_print_major_versions_available(versions: dependency::PackageVersionDiffs) -> String {
-    let total_lines = versions.len() + 3;
+fn format_versions_and_extract_longest_parts(
+    versions: dependency::PackageVersionDiffs,
+) -> (
+    impl Iterator<Item = (String, String, String)>,
+    (usize, usize, usize),
+) {
     let versions = versions
         .iter()
-        .map(|(name, (v1, v2))| (name, v1.to_string(), v2.to_string()))
+        .map(|(name, (v1, v2))| (name.to_string(), v1.to_string(), v2.to_string()))
         .sorted();
 
     let longest_parts = versions.clone().fold(
         (0, 0, 0),
-        |(max_name, max_current, max_major), (name, current, major)| {
+        |(max_name, max_current, max_latest), (name, current, latest)| {
             (
                 max_name.max(name.len()),
                 max_current.max(current.len()),
-                max_major.max(major.len()),
+                max_latest.max(latest.len()),
             )
         },
     );
 
-    let (longest_package_name_length, longest_current_version_length, longest_major_version_length) =
-        longest_parts;
+    (versions, longest_parts)
+}
+
+fn pretty_print_major_versions_available(versions: dependency::PackageVersionDiffs) -> String {
+    let total_lines = versions.len() + 3;
+    let (
+        versions,
+        (longest_package_name_length, longest_current_version_length, longest_major_version_length),
+    ) = format_versions_and_extract_longest_parts(versions);
 
     let mut output_string = String::with_capacity(
         (longest_package_name_length
@@ -440,11 +451,12 @@ fn pretty_print_major_versions_available(versions: dependency::PackageVersionDif
     output_string.push_str("\nThe following dependencies have new major versions available:\n\n");
     for (name, v1, v2) in versions {
         let name_padding = " ".repeat(longest_package_name_length - name.len());
-        let current_version_padding = " ".repeat(longest_current_version_length - v1.to_string().len());
+        let current_version_padding =
+            " ".repeat(longest_current_version_length - v1.to_string().len());
 
         output_string.push_str(
             &[
-                name,
+                &name,
                 &name_padding,
                 " ",
                 &v1.to_string(),
@@ -462,27 +474,18 @@ fn pretty_print_major_versions_available(versions: dependency::PackageVersionDif
 
 fn pretty_print_version_updates(versions: dependency::PackageVersionDiffs) -> String {
     let total_lines = versions.len() + 1;
+    let (
+        versions,
+        (
+            longest_package_name_length,
+            longest_current_version_length,
+            longest_latest_version_length,
+        ),
+    ) = format_versions_and_extract_longest_parts(versions);
 
-    let versions = versions
-        .iter()
-        .map(|(name, (v1, v2))| (name, v1.to_string(), v2.to_string()))
-        .sorted();
-
-    let longest_parts = versions.clone().fold(
-        (0, 0, 0),
-        |(max_name, max_current, max_latest), (name, current, latest)| {
-            (
-                max_name.max(name.len()),
-                max_current.max(current.len()),
-                max_latest.max(latest.len()),
-            )
-        },
-    );
-
-    let (name_length, current_length, latest_length) = longest_parts;
-    let longest_package_name_length = name_length.max(7);
-    let longest_current_version_length = (current_length + 1).max(7);
-    let longest_latest_version_length = (latest_length + 1).max(6);
+    let longest_package_name_length = longest_package_name_length.max(7);
+    let longest_current_version_length = (longest_current_version_length + 1).max(7);
+    let longest_latest_version_length = (longest_latest_version_length + 1).max(6);
 
     let mut output_string = String::with_capacity(
         (longest_package_name_length
@@ -513,7 +516,7 @@ fn pretty_print_version_updates(versions: dependency::PackageVersionDiffs) -> St
 
         output_string.push_str(
             &[
-                name,
+                &name,
                 &name_padding,
                 " v",
                 &v1.to_string(),
