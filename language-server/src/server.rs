@@ -12,9 +12,10 @@ use camino::{Utf8Path, Utf8PathBuf};
 use debug_ignore::DebugIgnore;
 use gleam_core::{
     Result,
-    diagnostic::{Diagnostic, ExtraLabel, Level},
+    diagnostic::{Diagnostic, ExtraLabel, Label, Level, Location},
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
+    strings::is_gleam_module,
 };
 use lsp_server::ResponseError;
 use lsp_types::{
@@ -433,7 +434,18 @@ where
         if let Err(error) = self.io.write_mem_cache(&path, &text) {
             return self.outside_of_project_feedback.error(error);
         }
-        Feedback::none()
+        // Validate the module filename and emit a diagnostic if invalid.
+        // If now valid, explicitly unset any previous file-name diagnostics for this file.
+        let mut feedback = Feedback::none();
+        match self.validate_module_filename(&path, &text) {
+            Some(diagnostic) => {
+                feedback.append_diagnostic(path.clone(), diagnostic);
+            }
+            None => {
+                feedback.unset_existing_diagnostics(path);
+            }
+        }
+        feedback
     }
 
     fn discard_in_memory_cache(&mut self, path: Utf8PathBuf) -> Feedback {
@@ -441,7 +453,10 @@ where
         if let Err(error) = self.io.delete_mem_cache(&path) {
             return self.outside_of_project_feedback.error(error);
         }
-        Feedback::none()
+        // File closed or saved to disk. Unset any inline diagnostics for this file.
+        let mut feedback = Feedback::none();
+        feedback.unset_existing_diagnostics(path);
+        feedback
     }
 
     fn watched_files_changed(&mut self, path: Utf8PathBuf) -> Feedback {
@@ -464,6 +479,74 @@ where
         if let Some(project_path) = project_path {
             _ = self.changed_projects.insert(project_path);
         }
+    }
+
+    fn validate_module_filename(&self, path: &Utf8Path, src: &str) -> Option<Diagnostic> {
+        // Only validate .gleam files
+        if path.extension().map(|e| e != "gleam").unwrap_or(true) {
+            return None;
+        }
+
+        // Only validate inside a Gleam project. Outside projects the LS may only provide formatting.
+        let project_root = self.router.project_path(path)?;
+
+        let rel = match path.strip_prefix(&project_root) {
+            Ok(p) => p,
+            Err(_) => return None,
+        };
+        let rel_str = rel.as_str();
+        // Trim the leading project area (src/test/dev)
+        let module_rel = if let Some(rest) = rel_str.strip_prefix("src/") {
+            rest
+        } else if let Some(rest) = rel_str.strip_prefix("test/") {
+            rest
+        } else if let Some(rest) = rel_str.strip_prefix("dev/") {
+            rest
+        } else {
+            return None;
+        };
+        let module_name = module_rel.strip_suffix(".gleam")?;
+
+        // Check if the module name is valid
+        let is_valid_format = is_gleam_module(module_name);
+
+        // "gleam" is a reserved module name for the standard library
+        let is_reserved = module_name == "gleam" || module_name.starts_with("gleam/");
+
+        if is_valid_format && !is_reserved {
+            return None;
+        }
+
+        // Determine the error message based on what's wrong
+        let error_message = if is_reserved {
+            format!(
+                "The module name \"{module_name}\" is reserved for the Gleam standard library. \
+                 Please choose a different name."
+            )
+        } else {
+            "Module names must be snake_case, starting with a lowercase letter \
+             and containing only lowercase letters, numbers, and underscores."
+                .to_string()
+        };
+
+        // Highlight the first line to ensure the diagnostic is visible in editors
+        let first_line_end = src.find('\n').unwrap_or(src.len());
+        let span_end: u32 = first_line_end.max(1).try_into().unwrap_or(1);
+        Some(Diagnostic {
+            title: format!("{module_name} is not a valid module name"),
+            text: error_message,
+            level: Level::Error,
+            location: Some(Location {
+                src: src.into(),
+                path: path.to_path_buf(),
+                label: Label {
+                    text: None,
+                    span: crate::ast::SrcSpan::new(0, span_end),
+                },
+                extra_labels: vec![],
+            }),
+            hint: None,
+        })
     }
 }
 
