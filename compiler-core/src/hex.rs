@@ -316,6 +316,7 @@ pub async fn get_package_release<Http: HttpClient>(
     name: &str,
     version: &Version,
     config: &hexpm::Config,
+    raw_response: Option<&mut Vec<u8>>,
     http: &Http,
 ) -> Result<hexpm::Release<hexpm::ReleaseMeta>> {
     let version = version.to_string();
@@ -326,5 +327,8 @@ pub async fn get_package_release<Http: HttpClient>(
     );
     let request = hexpm::api_get_package_release_request(name, &version, None, config);
     let response = http.send(request).await?;
+    if let Some(data) = raw_response {
+        data.clone_from(response.body());
+    }
     hexpm::api_get_package_release_response(response).map_err(Error::hex)
 }
