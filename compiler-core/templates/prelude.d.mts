@@ -106,6 +106,8 @@ export class Ok<T, E> extends Result<T, E> {
   /** @deprecated */
   constructor(value: T);
   /** @deprecated */
+  withFields<K extends keyof this>(fields: { [P in K]: this[P] }): this;
+  /** @deprecated */
   static isResult(data: unknown): boolean;
 }
 /** @deprecated */
@@ -114,6 +116,8 @@ export class Error<T, E> extends Result<T, E> {
   0: E;
   /** @deprecated */
   constructor(value: E);
+  /** @deprecated */
+  withFields<K extends keyof this>(fields: { [P in K]: this[P] }): this;
   /** @deprecated */
   static isResult(data: unknown): boolean;
 }
