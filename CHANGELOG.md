@@ -796,3 +796,6 @@
 - Fixed a bug where the compiler would produce wrong JavaScript code for binary
   pattern matching expressions using literal strings and byte segments.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the build tool would crash when trying to add transitive dependency.
+  ([Andrey Kozhev](https://github.com/ankddev))
