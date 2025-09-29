@@ -28,9 +28,8 @@ pub fn main() {
   echo c
 }
 
-fn function() -> Nil {
+fn function() -> Int {
   let a = 10
     let b = 20
     a + b
-  Nil
 }

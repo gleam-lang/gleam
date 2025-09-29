@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  let a = 1\n  let b = 2\n  let c = 3\n  let d = 4\n  a * b + c * d\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  let a = 1
+  let b = 2
+  let c = 3
+  ▔▔▔▔▔▔▔▔▔
+  let d = 4
+▔▔▔▔▔▔▔▔▔▔▔
+  a * b + c * d
+▔▔▔▔▔▔▔▔▔▔▔▔↑  
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  let a = 1
+  let b = 2
+  function(a, b)
+}
+
+fn function(a: Int, b: Int) -> Int {
+  let c = 3
+  let d = 4
+  a * b + c * d
+}
