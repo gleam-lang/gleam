@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
+assertion_line: 179
 expression: "\npub type Ip{\n    Ip(String)\n}\n\npub const local = Ip(\"0.0.0.0\")\n\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -16,8 +18,9 @@ pub const local = Ip("0.0.0.0")
 import type * as _ from "../gleam.d.mts";
 
 export class Ip extends _.CustomType {
+  /** @deprecated */
   constructor(argument$0: string);
-  
+  /** @deprecated */
   0: string;
 }
 export function Ip$Ip($0: string): Ip$;

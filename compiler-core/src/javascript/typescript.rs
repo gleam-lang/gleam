@@ -449,7 +449,7 @@ impl<'a> TypeScriptGenerator<'a> {
         let mut definitions = constructors
             .iter()
             .map(|constructor| {
-                self.record_definition(
+                self.variant_definition(
                     constructor,
                     constructor_publicity,
                     name,
@@ -504,7 +504,7 @@ impl<'a> TypeScriptGenerator<'a> {
         definitions
     }
 
-    fn record_definition(
+    fn variant_definition(
         &mut self,
         constructor: &'a TypedRecordConstructor,
         publicity: Publicity,
@@ -513,7 +513,7 @@ impl<'a> TypeScriptGenerator<'a> {
         type_parameters: &'a [Arc<Type>],
     ) -> Document<'a> {
         self.set_prelude_used();
-        let class_definition = self.record_class_definition(constructor, publicity);
+        let class_definition = self.variant_class_definition(constructor, publicity);
 
         // If the custom type is private or opaque, we don't need to generate API
         // functions for it.
@@ -521,19 +521,19 @@ impl<'a> TypeScriptGenerator<'a> {
             return class_definition;
         }
 
-        let constructor_definition = self.record_constructor_definition(
+        let constructor_definition = self.variant_constructor_definition(
             constructor,
             type_name,
             type_name_with_generics,
             type_parameters,
         );
-        let record_check_definition = self.record_check_definition(
+        let variant_check_definition = self.variant_check_definition(
             constructor,
             type_name,
             type_name_with_generics,
             type_parameters,
         );
-        let fields_definition = self.record_fields_definition(
+        let fields_definition = self.variant_fields_definition(
             constructor,
             type_name,
             type_name_with_generics,
@@ -545,12 +545,12 @@ impl<'a> TypeScriptGenerator<'a> {
             line(),
             constructor_definition,
             line(),
-            record_check_definition,
+            variant_check_definition,
             fields_definition,
         ]
     }
 
-    fn record_class_definition(
+    fn variant_class_definition(
         &mut self,
         constructor: &'a TypedRecordConstructor,
         publicity: Publicity,
@@ -575,6 +575,8 @@ impl<'a> TypeScriptGenerator<'a> {
 
         let class_body = docvec![
             line(),
+            "/** @deprecated */",
+            line(),
             // First add the constructor
             "constructor",
             wrap_arguments(
@@ -598,7 +600,6 @@ impl<'a> TypeScriptGenerator<'a> {
             ),
             ";",
             line(),
-            line(),
             // Then add each field to the class
             join(
                 constructor.arguments.iter().enumerate().map(|(i, arg)| {
@@ -609,6 +610,8 @@ impl<'a> TypeScriptGenerator<'a> {
                         .unwrap_or_else(|| eco_format!("{i}"))
                         .to_doc();
                     docvec![
+                        "/** @deprecated */",
+                        line(),
                         name,
                         ": ",
                         self.do_print_force_generic_param(&arg.type_),
@@ -623,7 +626,7 @@ impl<'a> TypeScriptGenerator<'a> {
         docvec![head, class_body, line(), "}"]
     }
 
-    fn record_constructor_definition(
+    fn variant_constructor_definition(
         &mut self,
         constructor: &'a TypedRecordConstructor,
         type_name: &'a str,
@@ -646,8 +649,11 @@ impl<'a> TypeScriptGenerator<'a> {
             ])
         }
 
-        let function_name =
-            eco_format!("{type_name}${record_name}", record_name = constructor.name).to_doc();
+        let function_name = eco_format!(
+            "{type_name}${variant_name}",
+            variant_name = constructor.name
+        )
+        .to_doc();
 
         docvec![
             "export function ",
@@ -662,7 +668,7 @@ impl<'a> TypeScriptGenerator<'a> {
         .group()
     }
 
-    fn record_check_definition(
+    fn variant_check_definition(
         &self,
         constructor: &'a TypedRecordConstructor,
         type_name: &'a str,
@@ -670,8 +676,8 @@ impl<'a> TypeScriptGenerator<'a> {
         type_parameters: &'a [Arc<Type>],
     ) -> Document<'a> {
         let function_name = eco_format!(
-            "{type_name}$is{record_name}",
-            record_name = constructor.name
+            "{type_name}$is{variant_name}",
+            variant_name = constructor.name
         )
         .to_doc();
 
@@ -686,7 +692,7 @@ impl<'a> TypeScriptGenerator<'a> {
         .group()
     }
 
-    fn record_fields_definition(
+    fn variant_fields_definition(
         &mut self,
         constructor: &'a TypedRecordConstructor,
         type_name: &'a str,
@@ -703,8 +709,8 @@ impl<'a> TypeScriptGenerator<'a> {
             // present to ensure consistent behaviour between labelled and unlabelled
             // field access.
             let function_name = eco_format!(
-                "{type_name}${record_name}${index}",
-                record_name = constructor.name
+                "{type_name}${variant_name}${index}",
+                variant_name = constructor.name
             )
             .to_doc();
 
@@ -728,8 +734,8 @@ impl<'a> TypeScriptGenerator<'a> {
             // argument.
             if let Some((_, label)) = &argument.label {
                 let function_name = eco_format!(
-                    "{type_name}${record_name}${label}",
-                    record_name = constructor.name
+                    "{type_name}${variant_name}${label}",
+                    variant_name = constructor.name
                 )
                 .to_doc();
 

@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
+assertion_line: 555
 expression: "pub type Cat { Cat(name: String) }\n\npub fn return_unapplied_cat() {\n  Cat\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub type Cat { Cat(name: String) }
@@ -14,8 +16,9 @@ pub fn return_unapplied_cat() {
 import type * as _ from "../gleam.d.mts";
 
 export class Cat extends _.CustomType {
+  /** @deprecated */
   constructor(name: string);
-  
+  /** @deprecated */
   name: string;
 }
 export function Cat$Cat(name: string): Cat$;
