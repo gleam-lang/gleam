@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
+assertion_line: 138
 expression: "\npub type Mine {\n  Mine(a: Int, b: Int)\n}\n\npub const labels = Mine(b: 2, a: 1)\npub const no_labels = Mine(3, 4)\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -16,9 +18,11 @@ pub const no_labels = Mine(3, 4)
 import type * as _ from "../gleam.d.mts";
 
 export class Mine extends _.CustomType {
+  /** @deprecated */
   constructor(a: number, b: number);
-  
+  /** @deprecated */
   a: number;
+  /** @deprecated */
   b: number;
 }
 export function Mine$Mine(a: number, b: number): Mine$;

@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/type_alias.rs
+assertion_line: 14
 expression: "\ntype PrivateType {\n  PrivateType\n}\n\npub opaque type OpaqueType {\n  OpaqueType(PrivateType)\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -21,8 +23,9 @@ declare class PrivateType extends _.CustomType {}
 declare type PrivateType$ = PrivateType;
 
 declare class OpaqueType extends _.CustomType {
+  /** @deprecated */
   constructor(argument$0: PrivateType$);
-  
+  /** @deprecated */
   0: PrivateType$;
 }
 
