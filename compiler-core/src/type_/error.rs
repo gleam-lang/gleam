@@ -6,6 +6,7 @@ use crate::{
     ast::{BinOp, BitArraySegmentTruncation, Layer, SrcSpan, TodoKind},
     build::Target,
     exhaustiveness::ImpossibleBitArraySegmentPattern,
+    parse::LiteralFloatValue,
     type_::{Type, expression::ComparisonOutcome},
 };
 
@@ -1978,17 +1979,14 @@ pub fn check_javascript_int_safety(int_value: &BigInt, location: SrcSpan, proble
 /// Erlang's floating point numbers
 ///
 pub fn check_erlang_float_safety(
-    string_value: &EcoString,
+    value: LiteralFloatValue,
     location: SrcSpan,
     problems: &mut Problems,
 ) {
     let erl_min_float = -1.7976931348623157e308f64;
     let erl_max_float = 1.7976931348623157e308f64;
 
-    let float_value: f64 = string_value
-        .replace("_", "")
-        .parse()
-        .expect("Unable to parse string to floating point value");
+    let float_value = value.value();
 
     if float_value < erl_min_float || float_value > erl_max_float {
         problems.error(Error::ErlangFloatUnsafe { location });

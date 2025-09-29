@@ -3,15 +3,33 @@ use std::fmt;
 
 use ecow::EcoString;
 
+use crate::parse::LiteralFloatValue;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Token {
-    Name { name: EcoString },
-    UpName { name: EcoString },
-    DiscardName { name: EcoString },
-    Int { value: EcoString, int_value: BigInt },
-    Float { value: EcoString },
-    String { value: EcoString },
-    CommentDoc { content: EcoString },
+    Name {
+        name: EcoString,
+    },
+    UpName {
+        name: EcoString,
+    },
+    DiscardName {
+        name: EcoString,
+    },
+    Int {
+        value: EcoString,
+        int_value: BigInt,
+    },
+    Float {
+        value: EcoString,
+        float_value: LiteralFloatValue,
+    },
+    String {
+        value: EcoString,
+    },
+    CommentDoc {
+        content: EcoString,
+    },
     // Groupings
     LeftParen,   // (
     RightParen,  // )
@@ -207,7 +225,10 @@ impl fmt::Display for Token {
                 value,
                 int_value: _,
             }
-            | Token::Float { value }
+            | Token::Float {
+                value,
+                float_value: _,
+            }
             | Token::String { value } => value.as_str(),
             Token::AmperAmper => "&&",
             Token::As => "as",

@@ -15,7 +15,7 @@ use crate::analyse::Inferred;
 use crate::bit_array;
 use crate::build::{ExpressionPosition, Located, Target, module_erlang_name};
 use crate::exhaustiveness::CompiledCase;
-use crate::parse::SpannedString;
+use crate::parse::{LiteralFloatValue, SpannedString};
 use crate::type_::error::VariableOrigin;
 use crate::type_::expression::{Implementations, Purity};
 use crate::type_::printer::Names;
@@ -2356,6 +2356,7 @@ pub enum Pattern<Type> {
     Float {
         location: SrcSpan,
         value: EcoString,
+        float_value: LiteralFloatValue,
     },
 
     String {

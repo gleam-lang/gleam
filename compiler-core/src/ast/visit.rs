@@ -774,6 +774,7 @@ where
             location,
             type_,
             value,
+            float_value: _,
         } => v.visit_typed_expr_float(location, type_, value),
         TypedExpr::String {
             location,
@@ -1568,7 +1569,11 @@ where
             value,
             int_value: _,
         } => v.visit_typed_pattern_int(location, value),
-        Pattern::Float { location, value } => v.visit_typed_pattern_float(location, value),
+        Pattern::Float {
+            location,
+            value,
+            float_value: _,
+        } => v.visit_typed_pattern_float(location, value),
         Pattern::String { location, value } => v.visit_typed_pattern_string(location, value),
         Pattern::Variable {
             location,
