@@ -1,6 +1,7 @@
 use ecow::EcoString;
 
 use crate::ast::SrcSpan;
+use crate::parse::LiteralFloatValue;
 use crate::parse::error::{LexicalError, LexicalErrorType};
 use crate::parse::token::Token;
 use std::char;
@@ -621,10 +622,13 @@ where
                 value.push_str(&exponent_run);
             }
             let end_pos = self.get_pos();
+            let float_value =
+                LiteralFloatValue::parse(&value).expect("float value to parse as non-NaN f64");
             Ok((
                 start_pos,
                 Token::Float {
                     value: value.into(),
+                    float_value,
                 },
                 end_pos,
             ))

@@ -16,7 +16,7 @@ use crate::{
     },
     build::Target,
     exhaustiveness::{self, CompileCaseResult, CompiledCase, Reachability},
-    parse::PatternPosition,
+    parse::{LiteralFloatValue, PatternPosition},
     reference::ReferenceKind,
 };
 use ecow::eco_format;
@@ -454,15 +454,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } => Ok(self.infer_tuple(elements, location)),
 
             UntypedExpr::Float {
-                location, value, ..
+                location,
+                value,
+                float_value,
             } => {
                 if self.environment.target == Target::Erlang
                     && !self.current_function_definition.has_erlang_external
                 {
-                    check_erlang_float_safety(&value, location, self.problems)
+                    check_erlang_float_safety(float_value, location, self.problems)
                 }
 
-                Ok(self.infer_float(value, location))
+                Ok(self.infer_float(value, float_value, location))
             }
 
             UntypedExpr::String {
@@ -665,10 +667,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn infer_float(&mut self, value: EcoString, location: SrcSpan) -> TypedExpr {
+    fn infer_float(
+        &mut self,
+        value: EcoString,
+        float_value: LiteralFloatValue,
+        location: SrcSpan,
+    ) -> TypedExpr {
         TypedExpr::Float {
             location,
             value,
+            float_value,
             type_: float(),
         }
     }
@@ -3773,13 +3781,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
 
             Constant::Float {
-                location, value, ..
+                location,
+                value,
+                float_value,
             } => {
                 if self.environment.target == Target::Erlang {
-                    check_erlang_float_safety(&value, location, self.problems)
+                    check_erlang_float_safety(float_value, location, self.problems)
                 }
 
-                Ok(Constant::Float { location, value })
+                Ok(Constant::Float {
+                    location,
+                    value,
+                    float_value,
+                })
             }
 
             Constant::String {

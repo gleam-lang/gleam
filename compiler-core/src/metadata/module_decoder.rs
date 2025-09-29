@@ -12,6 +12,7 @@ use crate::{
     },
     build::Origin,
     line_numbers::{Character, LineNumbers},
+    parse::LiteralFloatValue,
     reference::{Reference, ReferenceKind, ReferenceMap},
     schema_capnp::{self as schema, *},
     type_::{
@@ -396,6 +397,8 @@ impl ModuleDecoder {
         Constant::Float {
             location: Default::default(),
             value: value.into(),
+            float_value: LiteralFloatValue::parse(value)
+                .expect("float value to parse as non-NaN f64"),
         }
     }
 
