@@ -80,9 +80,7 @@ pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) ->
                 }
                 gleam_toml["dependencies"][&added_package] = toml_edit::value(range.clone());
             };
-            manifest_toml["requirements"][&added_package]
-                .as_inline_table_mut()
-                .expect("Invalid manifest format")["version"] = range.into();
+            manifest_toml["requirements"][&added_package]["version"] = range.into();
         }
     }
 
