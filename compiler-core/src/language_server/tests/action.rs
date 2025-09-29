@@ -10537,3 +10537,20 @@ pub fn other() {
         find_position_of("let a").select_until(find_position_of("let b"))
     );
 }
+
+#[test]
+fn extract_statements_in_tail_position() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn main() {
+  let a = 1
+  let b = 2
+  let c = 3
+  let d = 4
+  a * b + c * d
+}
+"#,
+        find_position_of("let c").select_until(find_position_of("* d"))
+    );
+}

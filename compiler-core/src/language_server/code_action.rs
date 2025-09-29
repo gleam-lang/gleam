@@ -8450,6 +8450,10 @@ pub struct ExtractFunction<'a> {
     edits: TextEdits<'a>,
     function: Option<ExtractedFunction<'a>>,
     function_end_position: Option<u32>,
+    /// Since the `visit_typed_statement` visitor function doesn't tell us when
+    /// a statement is the last in a block or function, we need to track that
+    /// manually.
+    last_statement_location: Option<SrcSpan>,
 }
 
 /// Information about a section of code we are extracting as a function.
@@ -8479,7 +8483,7 @@ impl<'a> ExtractedFunction<'a> {
     fn location(&self) -> SrcSpan {
         match &self.value {
             ExtractedValue::Expression(expression) => expression.location(),
-            ExtractedValue::Statements(location) => *location,
+            ExtractedValue::Statements { location, .. } => *location,
         }
     }
 }
@@ -8487,7 +8491,57 @@ impl<'a> ExtractedFunction<'a> {
 #[derive(Debug)]
 enum ExtractedValue<'a> {
     Expression(&'a TypedExpr),
-    Statements(SrcSpan),
+    Statements {
+        location: SrcSpan,
+        position: StatementPosition,
+    },
+}
+
+/// When we are extracting multiple statements, there are two possible cases:
+/// The first is if we are extracting statements in the middle of a function.
+/// In this case, we will need to return some number of arguments, or `Nil`.
+/// For example:
+///
+/// ```gleam
+/// pub fn main() {
+///   let message = "Hello!"
+///   let log_message = "[INFO] " <> message
+/// //^ Select from here
+///   io.println(log_message)
+///   //                    ^ Until here
+///
+///   do_some_more_things()
+/// }
+/// ```
+///
+/// Here, the extracted function doesn't bind any variables which we need
+/// afterwards, it purely performs side effects. In this case we can just return
+/// `Nil` from the new function.
+///
+/// However, consider the following:
+///
+/// ```gleam
+/// pub fn main() {
+///   let a = 1
+///   let b = 2
+/// //^ Select from here
+///   a + b
+///   //  ^ Until here
+/// }
+/// ```
+///
+/// Here, despite us not needing any variables from the extracted code, there
+/// is one key difference: the `a + b` expression is at the end of the function,
+/// and so its value is returned from the entire function. This is known as the
+/// "tail" position. In that case, we can't return `Nil` as that would make the
+/// `main` function return `Nil` instead of the result of the addition. If we
+/// extract the tail-position statement, we need to return that last value rather
+/// than `Nil`.
+///
+#[derive(Debug)]
+enum StatementPosition {
+    Tail { type_: Arc<Type> },
+    NotTail,
 }
 
 impl<'a> ExtractFunction<'a> {
@@ -8502,6 +8556,7 @@ impl<'a> ExtractFunction<'a> {
             edits: TextEdits::new(line_numbers),
             function: None,
             function_end_position: None,
+            last_statement_location: None,
         }
     }
 
@@ -8524,13 +8579,86 @@ impl<'a> ExtractFunction<'a> {
         };
 
         match extracted.value {
-            ExtractedValue::Expression(expression) => {
-                self.extract_expression(expression, extracted.parameters, end)
+            // If we extract a block, it isn't very helpful to have the body of the
+            // extracted function just be a single block expression, so instead we
+            // extract the statements inside the block. For example, the following
+            // code:
+            //
+            // ```gleam
+            // pub fn main() {
+            //   let x = {
+            //   //      ^ Select from here
+            //     let a = 1
+            //     let b = 2
+            //     a + b
+            //   }
+            // //^ Until here
+            //   x
+            // }
+            // ```
+            //
+            // Would produce the following extracted function:
+            //
+            // ```gleam
+            // fn function() {
+            //   let a = 1
+            //   let b = 2
+            //   a + b
+            // }
+            // ```
+            //
+            // Rather than:
+            //
+            // ```gleam
+            // fn function() {
+            //   {
+            //     let a = 1
+            //     let b = 2
+            //     a + b
+            //   }
+            // }
+            // ```
+            //
+            ExtractedValue::Expression(TypedExpr::Block {
+                statements,
+                location: full_location,
+            }) => {
+                let location = SrcSpan::new(
+                    statements.first().location().start,
+                    statements.last().location().end,
+                );
+                self.extract_code_in_tail_position(
+                    *full_location,
+                    location,
+                    statements.last().type_(),
+                    extracted.parameters,
+                    end,
+                )
             }
-            ExtractedValue::Statements(location) => self.extract_statements(
+            ExtractedValue::Expression(expression) => self.extract_code_in_tail_position(
+                expression.location(),
+                expression.location(),
+                expression.type_(),
+                extracted.parameters,
+                end,
+            ),
+            ExtractedValue::Statements {
+                location,
+                position: StatementPosition::NotTail,
+            } => self.extract_statements(
                 location,
                 extracted.parameters,
                 extracted.returned_variables,
+                end,
+            ),
+            ExtractedValue::Statements {
+                location,
+                position: StatementPosition::Tail { type_ },
+            } => self.extract_code_in_tail_position(
+                location,
+                location,
+                type_,
+                extracted.parameters,
                 end,
             ),
         }
@@ -8561,62 +8689,17 @@ impl<'a> ExtractFunction<'a> {
         }
     }
 
-    fn extract_expression(
+    /// Extracts code from the end of a function or block. This could either be
+    /// a single expression, or multiple statements followed by a final expression.
+    fn extract_code_in_tail_position(
         &mut self,
-        expression: &TypedExpr,
+        location: SrcSpan,
+        code_location: SrcSpan,
+        type_: Arc<Type>,
         parameters: Vec<(EcoString, Arc<Type>)>,
         function_end: u32,
     ) {
-        // If we extract a block, it isn't very helpful to have the body of the
-        // extracted function just be a single block expression, so instead we
-        // extract the statements inside the block. For example, the following
-        // code:
-        //
-        // ```gleam
-        // pub fn main() {
-        //   let x = {
-        //   //      ^ Select from here
-        //     let a = 1
-        //     let b = 2
-        //     a + b
-        //   }
-        // //^ Until here
-        //   x
-        // }
-        // ```
-        //
-        // Would produce the following extracted function:
-        //
-        // ```gleam
-        // fn function() {
-        //   let a = 1
-        //   let b = 2
-        //   a + b
-        // }
-        // ```
-        //
-        // Rather than:
-        //
-        // ```gleam
-        // fn function() {
-        //   {
-        //     let a = 1
-        //     let b = 2
-        //     a + b
-        //   }
-        // }
-        // ```
-        //
-        let extracted_code_location = if let TypedExpr::Block { statements, .. } = expression {
-            SrcSpan::new(
-                statements.first().location().start,
-                statements.last().location().end,
-            )
-        } else {
-            expression.location()
-        };
-
-        let expression_code = code_at(self.module, extracted_code_location);
+        let expression_code = code_at(self.module, code_location);
 
         let name = self.function_name();
         let arguments = parameters.iter().map(|(name, _)| name).join(", ");
@@ -8626,7 +8709,7 @@ impl<'a> ExtractFunction<'a> {
         // it with the call and preserve all other semantics; only one value can
         // be returned from the expression, unlike when extracting multiple
         // statements.
-        self.edits.replace(expression.location(), call);
+        self.edits.replace(location, call);
 
         let mut printer = Printer::new(&self.module.ast.names);
 
@@ -8634,7 +8717,7 @@ impl<'a> ExtractFunction<'a> {
             .iter()
             .map(|(name, type_)| eco_format!("{name}: {}", printer.print_type(type_)))
             .join(", ");
-        let return_type = printer.print_type(&expression.type_());
+        let return_type = printer.print_type(&type_);
 
         let function = format!(
             "\n\nfn {name}({parameters}) -> {return_type} {{
@@ -8861,9 +8944,23 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
 
         if within(self.params.range, range) {
             self.function_end_position = Some(function.end_position);
+            self.last_statement_location = function.body.last().map(|last| last.location());
 
             ast::visit::visit_typed_function(self, function);
         }
+    }
+
+    fn visit_typed_expr_block(
+        &mut self,
+        location: &'ast SrcSpan,
+        statements: &'ast [TypedStatement],
+    ) {
+        let last_statement_location = self.last_statement_location;
+        self.last_statement_location = statements.last().map(|last| last.location());
+
+        ast::visit::visit_typed_expr_block(self, location, statements);
+
+        self.last_statement_location = last_statement_location;
     }
 
     fn visit_typed_expr(&mut self, expression: &'ast TypedExpr) {
@@ -8884,12 +8981,24 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
     }
 
     fn visit_typed_statement(&mut self, statement: &'ast TypedStatement) {
-        if self.can_extract(statement.location()) {
+        let location = statement.location();
+        if self.can_extract(location) {
+            let position = if let Some(last_statement_location) = self.last_statement_location
+                && location == last_statement_location
+            {
+                StatementPosition::Tail {
+                    type_: statement.type_(),
+                }
+            } else {
+                StatementPosition::NotTail
+            };
+
             match &mut self.function {
                 None => {
-                    self.function = Some(ExtractedFunction::new(ExtractedValue::Statements(
-                        statement.location(),
-                    )));
+                    self.function = Some(ExtractedFunction::new(ExtractedValue::Statements {
+                        location,
+                        position,
+                    }));
                 }
                 // If we have already chosen an expression to extract, that means
                 // that this statement is within the already extracted expression,
@@ -8902,9 +9011,16 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
                 // be included within list, so we merge th spans to ensure it is
                 // included.
                 Some(ExtractedFunction {
-                    value: ExtractedValue::Statements(location),
+                    value:
+                        ExtractedValue::Statements {
+                            location,
+                            position: extracted_position,
+                        },
                     ..
-                }) => *location = location.merge(&statement.location()),
+                }) => {
+                    *location = location.merge(&statement.location());
+                    *extracted_position = position;
+                }
             }
         }
         ast::visit::visit_typed_statement(self, statement);
