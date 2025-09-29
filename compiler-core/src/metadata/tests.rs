@@ -10,6 +10,7 @@ use crate::{
     },
     build::Origin,
     line_numbers::LineNumbers,
+    parse::LiteralFloatValue,
     reference::{Reference, ReferenceKind},
     type_::{
         self, Deprecation, ModuleInterface, Opaque, References, Type, TypeAliasConstructor,
@@ -1056,6 +1057,7 @@ fn constant_float() {
     let module = constant_module(Constant::Float {
         location: Default::default(),
         value: "1.0".into(),
+        float_value: LiteralFloatValue::ONE,
     });
 
     assert_eq!(roundtrip(&module), module);
@@ -1084,6 +1086,7 @@ fn constant_tuple() {
             Constant::Float {
                 location: Default::default(),
                 value: "1.0".into(),
+                float_value: LiteralFloatValue::ONE,
             },
             Constant::Tuple {
                 location: Default::default(),
@@ -1096,6 +1099,7 @@ fn constant_tuple() {
                     Constant::Float {
                         location: Default::default(),
                         value: "1.0".into(),
+                        float_value: LiteralFloatValue::ONE,
                     },
                 ],
             },
@@ -1146,6 +1150,7 @@ fn constant_record() {
                 value: Constant::Float {
                     location: Default::default(),
                     value: "0.0".into(),
+                    float_value: LiteralFloatValue::ZERO,
                 },
             },
             CallArg {

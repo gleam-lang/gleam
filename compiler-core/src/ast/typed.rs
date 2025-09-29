@@ -6,6 +6,7 @@ use super::*;
 use crate::{
     build::ExpressionPosition,
     exhaustiveness::CompiledCase,
+    parse::LiteralFloatValue,
     type_::{HasType, Type, ValueConstructorVariant, bool},
 };
 
@@ -22,6 +23,7 @@ pub enum TypedExpr {
         location: SrcSpan,
         type_: Arc<Type>,
         value: EcoString,
+        float_value: LiteralFloatValue,
     },
 
     String {
