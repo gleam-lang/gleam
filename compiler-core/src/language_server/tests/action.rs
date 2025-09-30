@@ -112,6 +112,7 @@ const ASSIGN_UNUSED_RESULT: &str = "Assign unused Result value to `_`";
 const ADD_MISSING_PATTERNS: &str = "Add missing patterns";
 const ADD_ANNOTATION: &str = "Add type annotation";
 const ADD_ANNOTATIONS: &str = "Add type annotations";
+const ANNOTATE_TOP_LEVEL_TYPE_DEFINITIONS: &str = "Annotate all top level type definitions";
 const CONVERT_FROM_USE: &str = "Convert from `use`";
 const CONVERT_TO_USE: &str = "Convert to `use`";
 const EXTRACT_VARIABLE: &str = "Extract variable";
@@ -11166,5 +11167,58 @@ fn merge_case_branch_does_not_merge_branches_with_variables_with_same_name_and_d
   }
 }"#,
         find_position_of("Ok").select_until(find_position_of("Error"))
+}
+
+fn annotate_all_top_level_definitions_dont_affect_local_vars() {
+    assert_code_action!(
+        ANNOTATE_TOP_LEVEL_TYPE_DEFINITIONS,
+        r#"
+pub const answer = 42
+
+pub fn add_two(thing) {
+  thing + 2
+
+pub fn add_one(thing) {
+  let result = thing + 1
+  result
+}
+"#,
+        find_position_of("fn").select_until(find_position_of("("));
+}
+
+#[test]
+fn annotate_all_top_level_definitions_constant() {
+    assert_code_action!(
+        ANNOTATE_TOP_LEVEL_TYPE_DEFINITIONS,
+        r#"
+pub const answer = 42
+
+pub fn add_two(thing) {
+  thing + 2
+}
+
+pub fn add_one(thing) {
+  thing + 1
+}
+"#,
+        find_position_of("const").select_until(find_position_of("="))
+    );
+}
+
+
+#[test]
+fn annotate_all_top_level_definitions_function() {
+    assert_code_action!(
+        ANNOTATE_TOP_LEVEL_TYPE_DEFINITIONS,
+        r#"
+pub fn add_two(thing) {
+    thing + 2
+}
+
+pub fn add_one(thing) {
+    thing + 1
+}
+        "#,
+        find_position_of("fn").select_until(find_position_of("("))
     );
 }
