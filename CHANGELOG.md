@@ -307,13 +307,13 @@
   }
 
   pub fn add_one(thing) {
-    //     ^ Triggering "Annotate all top level type definitions" code action here
+    //     ^ Triggering "Annotate all top level definitions" code action here
     let result = add(thing, 1)
     result
   }
   ```
 
-  Triggering the "Annotate all top level type definitions" code action over
+  Triggering the "Annotate all top level definitions" code action over
   the name of function `add_one` would result in following code:
 
   ```gleam
