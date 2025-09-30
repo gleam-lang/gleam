@@ -4,7 +4,7 @@
 
 ### Language server
 
-- The language server nof offers code action to add type annotations to all
+- The language server now offers code action to add type annotations to all
   functions and constants. For example,
 
   ```gleam
