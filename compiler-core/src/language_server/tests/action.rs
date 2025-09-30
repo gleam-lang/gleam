@@ -112,7 +112,7 @@ const ASSIGN_UNUSED_RESULT: &str = "Assign unused Result value to `_`";
 const ADD_MISSING_PATTERNS: &str = "Add missing patterns";
 const ADD_ANNOTATION: &str = "Add type annotation";
 const ADD_ANNOTATIONS: &str = "Add type annotations";
-const ANNOTATE_TOP_LEVEL_TYPE_DEFINITIONS: &str = "Annotate all top level type definitions";
+const ANNOTATE_TOP_LEVEL_DEFINITIONS: &str = "Annotate all top level definitions";
 const CONVERT_FROM_USE: &str = "Convert from `use`";
 const CONVERT_TO_USE: &str = "Convert to `use`";
 const EXTRACT_VARIABLE: &str = "Extract variable";
@@ -10805,7 +10805,7 @@ fn wibble() -> Nil
 #[test]
 fn annotate_all_top_level_definitions_dont_affect_local_vars() {
     assert_code_action!(
-        ANNOTATE_TOP_LEVEL_TYPE_DEFINITIONS,
+        ANNOTATE_TOP_LEVEL_DEFINITIONS,
         r#"
 pub const answer = 42
 
@@ -10823,7 +10823,7 @@ pub fn add_one(thing) {
 #[test]
 fn annotate_all_top_level_definitions_constant() {
     assert_code_action!(
-        ANNOTATE_TOP_LEVEL_TYPE_DEFINITIONS,
+        ANNOTATE_TOP_LEVEL_DEFINITIONS,
         r#"
 pub const answer = 42
 
