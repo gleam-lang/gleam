@@ -45,9 +45,9 @@ use std::{collections::HashSet, sync::Arc};
 use super::{
     DownloadDependencies, MakeLocker,
     code_action::{
-        AddAnnotations, CodeActionBuilder, ConvertFromUse, ConvertToFunctionCall, ConvertToPipe,
-        ConvertToUse, ExpandFunctionCapture, ExtractConstant, ExtractVariable,
-        FillInMissingLabelledArgs, FillUnusedFields, FixBinaryOperation,
+        AddAnnotations, AnnotateTopLevelTypeDefinitions, CodeActionBuilder, ConvertFromUse,
+        ConvertToFunctionCall, ConvertToPipe, ConvertToUse, ExpandFunctionCapture, ExtractConstant,
+        ExtractVariable, FillInMissingLabelledArgs, FillUnusedFields, FixBinaryOperation,
         FixTruncatedBitArraySegment, GenerateDynamicDecoder, GenerateFunction, GenerateJsonEncoder,
         GenerateVariant, InlineVariable, InterpolateString, LetAssertToCase, PatternMatchOnValue,
         RedundantTupleInCaseSubject, RemoveEchos, RemoveUnusedImports, UseLabelShorthandSyntax,
@@ -467,6 +467,9 @@ where
             )
             .code_actions();
             AddAnnotations::new(module, &lines, &params).code_action(&mut actions);
+            actions.extend(
+                AnnotateTopLevelTypeDefinitions::new(module, &lines, &params).code_actions(),
+            );
             Ok(if actions.is_empty() {
                 None
             } else {
