@@ -10725,7 +10725,6 @@ pub fn add_one(thing) {
     );
 }
 
-
 #[test]
 fn annotate_all_top_level_definitions_function() {
     assert_code_action!(
