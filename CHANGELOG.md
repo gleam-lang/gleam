@@ -2,6 +2,43 @@
 
 ## v1.13.0-rc2 - 2025-10-06
 
+### Language server
+
+- The language server nof offers code action to add type annotations to all
+  functions and constants. For example,
+
+  ```gleam
+  pub const answer = 42
+
+  pub fn add(x, y) {
+    x + y
+  }
+
+  pub fn add_one(thing) {
+  //     ^ Triggering "Annotate all top level type definitions" code action here
+    let result = add(thing, 1)
+    result
+  }
+  ```
+
+  Triggering the "Annotate all top level type definitions" code action over
+  the name of function `add_one` would result in following code:
+
+  ```gleam
+  pub const answer: Int = 42
+
+  pub fn add(x: Int, y: Int) -> Int {
+    x + y
+  }
+
+  pub fn add_one(thing: Int) -> Int {
+    let result = add(thing, 1)
+    result
+  }
+  ```
+
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Bug fixes
 
 - Fixed a bug where the "Extract function" code action would not properly
