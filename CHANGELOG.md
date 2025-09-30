@@ -49,7 +49,7 @@
   }
 
   pub fn add_one(thing) {
-  //     ^ Triggering "Annotate all top level type definitions" code action here
+    //     ^ Triggering "Annotate all top level type definitions" code action here
     let result = add(thing, 1)
     result
   }
