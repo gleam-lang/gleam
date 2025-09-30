@@ -1476,62 +1476,6 @@ impl<'ast> ast::visit::Visit<'ast> for AnnotateTopLevelTypeDefinitions<'_> {
             );
         }
     }
-
-    fn visit_typed_expr_fn(
-        &mut self,
-        location: &'ast SrcSpan,
-        type_: &'ast Arc<Type>,
-        kind: &'ast FunctionLiteralKind,
-        arguments: &'ast [TypedArg],
-        body: &'ast Vec1<TypedStatement>,
-        return_annotation: &'ast Option<ast::TypeAst>,
-    ) {
-        ast::visit::visit_typed_expr_fn(
-            self,
-            location,
-            type_,
-            kind,
-            arguments,
-            body,
-            return_annotation,
-        );
-
-        // If the function doesn't have a head, we can't annotate it
-        let location = match kind {
-            // Function captures don't need any type annotations
-            FunctionLiteralKind::Capture { .. } => return,
-            FunctionLiteralKind::Anonymous { head } => head,
-            FunctionLiteralKind::Use { location } => location,
-        };
-
-        let code_action_range = self.edits.src_span_to_lsp_range(*location);
-
-        if overlaps(code_action_range, self.params.range) {
-            self.is_hovering_definition = true;
-        }
-
-        // Annotate each argument separately
-        for argument in arguments.iter() {
-            // Don't annotate the argument if it's already annotated
-            if argument.annotation.is_some() {
-                continue;
-            }
-
-            self.edits.insert(
-                argument.location.end,
-                format!(": {}", self.printer.print_type(&argument.type_)),
-            );
-        }
-
-        // Annotate the return type if it isn't already annotated, and this is
-        // an anonymous function.
-        if return_annotation.is_none() && matches!(kind, FunctionLiteralKind::Anonymous { .. }) {
-            let return_type = &type_.return_type().expect("Type must be a function");
-            let pretty_type = self.printer.print_type(return_type);
-            self.edits
-                .insert(location.end, format!(" -> {pretty_type}"));
-        }
-    }
 }
 
 struct TypeVariableCollector<'a, 'b> {
