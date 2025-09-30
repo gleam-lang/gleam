@@ -11249,7 +11249,7 @@ pub fn add_one(thing) {
   thing + 1
 }
 "#,
-        find_position_of("fn").select_until(find_position_of("("))
+        find_position_of("thing + 1").to_selection()
     );
 }
 
