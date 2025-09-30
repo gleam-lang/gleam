@@ -1363,7 +1363,7 @@ impl<'a> AddAnnotations<'a> {
 
 /// Code action to add type annotations to all top level definitions
 ///
-pub struct AnnotateTopLevelTypeDefinitions<'a> {
+pub struct AnnotateTopLevelDefinitions<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
@@ -1371,7 +1371,7 @@ pub struct AnnotateTopLevelTypeDefinitions<'a> {
     is_hovering_definition: bool,
 }
 
-impl<'a> AnnotateTopLevelTypeDefinitions<'a> {
+impl<'a> AnnotateTopLevelDefinitions<'a> {
     pub fn new(
         module: &'a Module,
         line_numbers: &'a LineNumbers,
@@ -1398,7 +1398,7 @@ impl<'a> AnnotateTopLevelTypeDefinitions<'a> {
         };
 
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new("Annotate all top level type definitions")
+        CodeActionBuilder::new("Annotate all top level definitions")
             .kind(CodeActionKind::REFACTOR_REWRITE)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
@@ -1407,7 +1407,7 @@ impl<'a> AnnotateTopLevelTypeDefinitions<'a> {
     }
 }
 
-impl<'ast> ast::visit::Visit<'ast> for AnnotateTopLevelTypeDefinitions<'_> {
+impl<'ast> ast::visit::Visit<'ast> for AnnotateTopLevelDefinitions<'_> {
     fn visit_typed_module_constant(&mut self, constant: &'ast TypedModuleConstant) {
         // Since type variable names are local to definitions, any type variables
         // in other parts of the module shouldn't affect what we print for the
