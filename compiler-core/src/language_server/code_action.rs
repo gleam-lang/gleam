@@ -1361,6 +1361,179 @@ impl<'a> AddAnnotations<'a> {
     }
 }
 
+/// Code action to add type annotations to all top level definitions
+///
+pub struct AnnotateTopLevelTypeDefinitions<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    printer: Printer<'a>,
+    is_hovering_definition: bool,
+}
+
+impl<'a> AnnotateTopLevelTypeDefinitions<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            // We need to use the same printer for all the edits because otherwise
+            // we could get duplicate type variable names.
+            printer: Printer::new_without_type_variables(&module.ast.names),
+            is_hovering_definition: false,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        // We only want to trigger the action if we're over one of the definition in
+        // the module
+        if !self.is_hovering_definition {
+            return vec![];
+        };
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Annotate all top level type definitions")
+            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(false)
+            .push_to(&mut action);
+        action
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for AnnotateTopLevelTypeDefinitions<'_> {
+    fn visit_typed_module_constant(&mut self, constant: &'ast TypedModuleConstant) {
+        // Since type variable names are local to definitions, any type variables
+        // in other parts of the module shouldn't affect what we print for the
+        // annotations of this constant.
+        self.printer.clear_type_variables();
+
+        let code_action_range = self.edits.src_span_to_lsp_range(constant.location);
+
+        if overlaps(code_action_range, self.params.range) {
+            self.is_hovering_definition = true;
+        }
+
+        // We don't need to add an annotation if there already is one
+        if constant.annotation.is_some() {
+            return;
+        }
+
+        self.edits.insert(
+            constant.name_location.end,
+            format!(": {}", self.printer.print_type(&constant.type_)),
+        );
+    }
+
+    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+        // Since type variable names are local to definitions, any type variables
+        // in other parts of the module shouldn't affect what we print for the
+        // annotations of this functions. The only variables which cannot clash
+        // are ones defined in the signature of this function, which we register
+        // when we visit the parameters of this function inside `collect_type_variables`.
+        self.printer.clear_type_variables();
+        collect_type_variables(&mut self.printer, fun);
+
+        ast::visit::visit_typed_function(self, fun);
+
+        let code_action_range = self.edits.src_span_to_lsp_range(
+            fun.body_start
+                .map(|body_start| SrcSpan {
+                    start: fun.location.start,
+                    end: body_start,
+                })
+                .unwrap_or(fun.location),
+        );
+
+        if overlaps(code_action_range, self.params.range) {
+            self.is_hovering_definition = true;
+        }
+
+        // Annotate each argument separately
+        for argument in fun.arguments.iter() {
+            // Don't annotate the argument if it's already annotated
+            if argument.annotation.is_some() {
+                continue;
+            }
+
+            self.edits.insert(
+                argument.location.end,
+                format!(": {}", self.printer.print_type(&argument.type_)),
+            );
+        }
+
+        // Annotate the return type if it isn't already annotated
+        if fun.return_annotation.is_none() {
+            self.edits.insert(
+                fun.location.end,
+                format!(" -> {}", self.printer.print_type(&fun.return_type)),
+            );
+        }
+    }
+
+    fn visit_typed_expr_fn(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        kind: &'ast FunctionLiteralKind,
+        arguments: &'ast [TypedArg],
+        body: &'ast Vec1<TypedStatement>,
+        return_annotation: &'ast Option<ast::TypeAst>,
+    ) {
+        ast::visit::visit_typed_expr_fn(
+            self,
+            location,
+            type_,
+            kind,
+            arguments,
+            body,
+            return_annotation,
+        );
+
+        // If the function doesn't have a head, we can't annotate it
+        let location = match kind {
+            // Function captures don't need any type annotations
+            FunctionLiteralKind::Capture { .. } => return,
+            FunctionLiteralKind::Anonymous { head } => head,
+            FunctionLiteralKind::Use { location } => location,
+        };
+
+        let code_action_range = self.edits.src_span_to_lsp_range(*location);
+
+        if overlaps(code_action_range, self.params.range) {
+            self.is_hovering_definition = true;
+        }
+
+        // Annotate each argument separately
+        for argument in arguments.iter() {
+            // Don't annotate the argument if it's already annotated
+            if argument.annotation.is_some() {
+                continue;
+            }
+
+            self.edits.insert(
+                argument.location.end,
+                format!(": {}", self.printer.print_type(&argument.type_)),
+            );
+        }
+
+        // Annotate the return type if it isn't already annotated, and this is
+        // an anonymous function.
+        if return_annotation.is_none() && matches!(kind, FunctionLiteralKind::Anonymous { .. }) {
+            let return_type = &type_.return_type().expect("Type must be a function");
+            let pretty_type = self.printer.print_type(return_type);
+            self.edits
+                .insert(location.end, format!(" -> {pretty_type}"));
+        }
+    }
+}
+
 struct TypeVariableCollector<'a, 'b> {
     printer: &'a mut Printer<'b>,
 }
