@@ -11221,3 +11221,68 @@ pub fn add_one(thing) {
         find_position_of("fn").select_until(find_position_of("("))
     );
 }
+
+fn annotate_all_top_level_definitions_already_annotated() {
+    assert_no_code_actions!(
+        ANNOTATE_TOP_LEVEL_DEFINITIONS,
+        r#"
+pub const answer: Int = 42
+
+pub fn add_two(thing: Int) -> {
+  thing + 2
+}
+
+pub fn add_one(thing: Int) -> Int {
+  thing + 1
+}
+"#,
+        find_position_of("fn").select_until(find_position_of("("))
+    );
+}
+
+#[test]
+fn annotate_all_top_level_definitions_inside_body() {
+    assert_no_code_actions!(
+        ANNOTATE_TOP_LEVEL_DEFINITIONS,
+        r#"
+pub fn add_one(thing) {
+  thing + 1
+}
+"#,
+        find_position_of("fn").select_until(find_position_of("("))
+    );
+}
+
+#[test]
+fn annotate_all_top_level_definitions_partially_annotated() {
+    assert_code_action!(
+        ANNOTATE_TOP_LEVEL_DEFINITIONS,
+        r#"
+pub const answer: Int = 42
+pub const another_answer = 43
+
+pub fn add_two(thing) -> Int {
+  thing + 2
+}
+
+pub fn add_one(thing: Int) {
+  thing + 1
+}
+"#,
+        find_position_of("fn").select_until(find_position_of("("))
+    );
+}
+
+// FIXME: make test working
+// #[test]
+// fn annotate_all_top_level_definitions_with_two_generic_functions() {
+//     assert_code_action!(
+//         ANNOTATE_TOP_LEVEL_DEFINITIONS,
+//         r#"
+// fn wibble(one) { todo }
+
+// fn wobble(other) { todo }
+// "#,
+//         find_position_of("wobble").to_selection()
+//     );
+// }
