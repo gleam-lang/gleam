@@ -787,6 +787,20 @@ enum BranchMode {
 }
 
 impl BranchMode {
+    /// Returns a heuristic estimate of the branching factor.
+    ///
+    /// This value is used by the pivot-selection to prefer splits
+    /// with fewer branches, which tends to produce smaller and shallower
+    /// decision trees.
+    fn branching_factor(&self) -> usize {
+        match self {
+            BranchMode::Infinite => usize::MAX,
+            BranchMode::Tuple { elements } => elements.len(),
+            BranchMode::List { .. } => 2,
+            BranchMode::NamedType { constructors, .. } => constructors.len(),
+        }
+    }
+
     fn is_infinite(&self) -> bool {
         match self {
             BranchMode::Infinite => true,
@@ -2250,7 +2264,7 @@ impl<'a> Compiler<'a> {
         // the first branch, and use the variable it's pattern matching on to create
         // a new node in the tree. All the branches will be split into different
         // possible paths of this tree.
-        match find_pivot_check(first_branch, &branches) {
+        match find_pivot_check(first_branch, &branches, self.environment) {
             Some(PatternCheck { var, .. }) => self.split_and_compile_with_pivot_var(var, branches),
 
             // If the branch has no remaining checks, it means that we've moved all
@@ -2713,7 +2727,11 @@ impl<'a> Compiler<'a> {
 /// Returns a pattern check from `first_branch` to be used as a pivot to split all
 /// the `branches`.
 ///
-fn find_pivot_check(first_branch: &Branch, branches: &VecDeque<Branch>) -> Option<PatternCheck> {
+fn find_pivot_check(
+    first_branch: &Branch,
+    branches: &VecDeque<Branch>,
+    env: &Environment<'_>,
+) -> Option<PatternCheck> {
     // To try and minimise code duplication, we use the following heuristic: we
     // choose the check matching on the variable that is referenced the most
     // across all checks in all branches.
@@ -2727,10 +2745,28 @@ fn find_pivot_check(first_branch: &Branch, branches: &VecDeque<Branch>) -> Optio
         }
     }
 
+    // Maximize ( -branching_factor, references ).
+    //
+    // - branching_factor: prefer the split that creates the FEWEST switch arms.
+    //   Fewer children tends to yield smaller, shallower decision trees.
+    //
+    // - references: break ties by choosing the subject that appears in the most
+    //   clauses (i.e. a test that will pay off for more rows).
+    //
+    // Both parts mirror standard guidance for good match trees (small branching
+    // factor; prioritize columns that are widely useful).
+    //
+    // https://www.cs.tufts.edu/~nr/cs257/archive/luc-maranget/jun08.pdf
     first_branch
         .checks
         .iter()
-        .max_by_key(|check| var_references.get(&check.var.id).cloned().unwrap_or(0))
+        .max_by_key(|check| {
+            let mode = check.var.branch_mode(env);
+            let branching_factor = mode.branching_factor();
+            let references = var_references.get(&check.var.id).cloned().unwrap_or(0);
+
+            (usize::MAX - branching_factor, references)
+        })
         .cloned()
 }
 

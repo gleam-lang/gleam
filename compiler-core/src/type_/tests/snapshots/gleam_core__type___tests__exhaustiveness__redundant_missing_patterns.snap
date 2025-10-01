@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/type_/tests/exhaustiveness.rs
+expression: "\nfn wibble(b: Bool, i: Int) {\n  case b, i {\n    False, 1 -> todo\n    True, 2 -> todo\n  }\n}\n\npub fn main() { wibble(False, 1) }"
+---
+----- SOURCE CODE
+
+fn wibble(b: Bool, i: Int) {
+  case b, i {
+    False, 1 -> todo
+    True, 2 -> todo
+  }
+}
+
+pub fn main() { wibble(False, 1) }
+
+----- ERROR
+error: Inexhaustive patterns
+  ┌─ /src/one/two.gleam:3:3
+  │  
+3 │ ╭   case b, i {
+4 │ │     False, 1 -> todo
+5 │ │     True, 2 -> todo
+6 │ │   }
+  │ ╰───^
+
+This case expression does not have a pattern for all possible values. If it
+is run on one of the values without a pattern then it will crash.
+
+The missing patterns are:
+
+    False, _
+    True, _

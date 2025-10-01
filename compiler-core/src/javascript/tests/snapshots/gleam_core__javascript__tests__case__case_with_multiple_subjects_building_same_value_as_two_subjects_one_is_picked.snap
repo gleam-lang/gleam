@@ -20,11 +20,15 @@ import { Ok, Error } from "../gleam.mjs";
 
 export function go(x, y) {
   if (y instanceof Ok) {
-    let $ = y[0];
-    if ($ === 1 && x instanceof $gleam.Ok) {
-      let $1 = x[0];
-      if ($1 === 1) {
-        return x;
+    if (x instanceof $gleam.Ok) {
+      let $ = x[0];
+      if ($ === 1) {
+        let $1 = y[0];
+        if ($1 === 1) {
+          return x;
+        } else {
+          return new Error(undefined);
+        }
       } else {
         return new Error(undefined);
       }
