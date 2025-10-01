@@ -1389,7 +1389,7 @@ impl<'a> AnnotateTopLevelDefinitions<'a> {
 
         // We only want to trigger the action if we're over one of the definition in
         // the module
-        if !self.is_hovering_definition {
+        if !self.is_hovering_definition || self.edits.edits.is_empty() {
             return vec![];
         };
 
