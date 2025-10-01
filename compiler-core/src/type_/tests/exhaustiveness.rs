@@ -1787,3 +1787,19 @@ pub fn main(w: Wibble) {
 "
     );
 }
+
+#[test]
+// https://github.com/gleam-lang/gleam/issues/4278
+fn redundant_missing_patterns() {
+    assert_module_error!(
+        r#"
+fn wibble(b: Bool, i: Int) {
+  case b, i {
+    False, 1 -> todo
+    True, 2 -> todo
+  }
+}
+
+pub fn main() { wibble(False, 1) }"#
+    );
+}
