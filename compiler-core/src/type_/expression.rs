@@ -1964,6 +1964,22 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }
             }
 
+            (
+                TypedExpr::Float { float_value: n, .. },
+                op,
+                TypedExpr::Float { float_value: m, .. },
+            ) => match op {
+                BinOp::LtFloat if n < m => ComparisonOutcome::AlwaysSucceeds,
+                BinOp::LtFloat => ComparisonOutcome::AlwaysFails,
+                BinOp::LtEqFloat if n <= m => ComparisonOutcome::AlwaysSucceeds,
+                BinOp::LtEqFloat => ComparisonOutcome::AlwaysFails,
+                BinOp::GtFloat if n > m => ComparisonOutcome::AlwaysSucceeds,
+                BinOp::GtFloat => ComparisonOutcome::AlwaysFails,
+                BinOp::GtEqFloat if n >= m => ComparisonOutcome::AlwaysSucceeds,
+                BinOp::GtEqFloat => ComparisonOutcome::AlwaysFails,
+                _ => return,
+            },
+
             _ => return,
         };
 
@@ -5222,7 +5238,7 @@ fn static_compare(one: &TypedExpr, other: &TypedExpr) -> StaticComparison {
             }
         }
 
-        (TypedExpr::Float { value: n, .. }, TypedExpr::Float { value: m, .. }) => {
+        (TypedExpr::Float { float_value: n, .. }, TypedExpr::Float { float_value: m, .. }) => {
             if n == m {
                 StaticComparison::CertainlyEqual
             } else {
