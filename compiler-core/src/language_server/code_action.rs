@@ -8981,11 +8981,24 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
     }
 
     fn visit_typed_statement(&mut self, statement: &'ast TypedStatement) {
-        let location = statement.location();
-        if self.can_extract(location) {
-            let position = if let Some(last_statement_location) = self.last_statement_location
-                && location == last_statement_location
-            {
+        let statement_location = match statement {
+            ast::Statement::Expression(expression) => expression.location(),
+            ast::Statement::Assignment(assignment) => assignment.location,
+            ast::Statement::Assert(assert) => assert.location,
+            ast::Statement::Use(use_) => use_.location.merge(&use_.call.location()),
+        };
+
+        if self.can_extract(statement_location) {
+            let is_in_tail_position =
+                self.last_statement_location
+                    .is_some_and(|last_statement_location| {
+                        last_statement_location == statement_location
+                    });
+
+            // A use is always eating up the entire block, if we're extracting it,
+            // it will be in tail position there and the extracted function should
+            // return its returned value.
+            let position = if statement.is_use() || is_in_tail_position {
                 StatementPosition::Tail {
                     type_: statement.type_(),
                 }
@@ -8996,7 +9009,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
             match &mut self.function {
                 None => {
                     self.function = Some(ExtractedFunction::new(ExtractedValue::Statements {
-                        location,
+                        location: statement_location,
                         position,
                     }));
                 }
@@ -9008,8 +9021,8 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
                     ..
                 }) => {}
                 // If we are selecting multiple statements, this statement should
-                // be included within list, so we merge th spans to ensure it is
-                // included.
+                // be included within list, so we merge the spans to ensure it
+                // is included.
                 Some(ExtractedFunction {
                     value:
                         ExtractedValue::Statements {
@@ -9018,7 +9031,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
                         },
                     ..
                 }) => {
-                    *location = location.merge(&statement.location());
+                    *location = location.merge(&statement_location);
                     *extracted_position = position;
                 }
             }

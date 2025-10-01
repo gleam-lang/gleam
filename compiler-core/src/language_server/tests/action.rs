@@ -10554,3 +10554,20 @@ pub fn main() {
         find_position_of("let c").select_until(find_position_of("* d"))
     );
 }
+
+#[test]
+fn extract_use_in_tail_position() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn main() {
+  use <- wibble
+  123
+}
+
+fn wibble(f: fn() -> Int) -> Int { f() }
+"#,
+        find_position_of("use").select_until(find_position_of("wibble"))
+    );
+}
+
