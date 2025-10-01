@@ -10590,3 +10590,50 @@ fn wobble(f: fn() -> Int) -> Float { 1.1 }
             .select_until(find_position_of("wobble"))
     );
 }
+
+#[test]
+fn extract_block_tail_position_3() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn main() {
+  case 1 {
+    _ -> {
+      use <- wibble
+      123
+    }
+    _ -> todo
+  }
+}
+
+fn wibble(f: fn() -> Float) -> Float { f() }
+"#,
+        find_position_of("{")
+            .nth_occurrence(3)
+            .select_until(find_position_of("}"))
+    );
+}
+
+#[test]
+fn extract_block_tail_position_4() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn main() {
+  case 1 {
+    _ -> {
+      use <- wibble
+      use <- wibble
+      123
+    }
+    _ -> todo
+  }
+}
+
+fn wibble(f: fn() -> Float) -> Float { f() }
+"#,
+        find_position_of("{")
+            .nth_occurrence(3)
+            .select_until(find_position_of("}"))
+    );
+}

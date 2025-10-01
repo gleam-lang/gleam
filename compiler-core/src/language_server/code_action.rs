@@ -8623,10 +8623,16 @@ impl<'a> ExtractFunction<'a> {
                 statements,
                 location: full_location,
             }) => {
-                let location = SrcSpan::new(
-                    statements.first().location().start,
-                    statements.last().location().end,
-                );
+                let location = statements
+                    .first()
+                    .location()
+                    .merge(&match &statements.last() {
+                        ast::Statement::Expression(expression) => expression.location(),
+                        ast::Statement::Assignment(assignment) => assignment.location,
+                        ast::Statement::Assert(assert) => assert.location,
+                        ast::Statement::Use(use_) => use_.call.location(),
+                    });
+
                 self.extract_code_in_tail_position(
                     *full_location,
                     location,
@@ -8966,7 +8972,12 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
         statements: &'ast [TypedStatement],
     ) {
         let last_statement_location = self.last_statement_location;
-        self.last_statement_location = statements.last().map(|last| last.location());
+        self.last_statement_location = statements.last().map(|last| match last {
+            ast::Statement::Expression(_)
+            | ast::Statement::Assignment(_)
+            | ast::Statement::Assert(_) => last.location(),
+            ast::Statement::Use(use_) => last.location().merge(&use_.call.location()),
+        });
 
         ast::visit::visit_typed_expr_block(self, location, statements);
 
