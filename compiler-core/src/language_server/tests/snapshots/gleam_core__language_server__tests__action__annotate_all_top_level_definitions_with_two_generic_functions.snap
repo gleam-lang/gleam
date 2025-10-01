@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nfn wibble(one) { todo }\n\nfn wobble(other) { todo }\n"
+---
+----- BEFORE ACTION
+
+fn wibble(one) { todo }
+
+fn wobble(other) { todo }
+   ↑                     
+
+
+----- AFTER ACTION
+
+fn wibble(one: a) -> b { todo }
+
+fn wobble(other: a) -> b { todo }
