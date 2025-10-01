@@ -255,6 +255,7 @@ pub struct RecordConstructor<T> {
     pub location: SrcSpan,
     pub name_location: SrcSpan,
     pub name: EcoString,
+    pub type_name: EcoString,
     pub arguments: Vec<RecordConstructorArg<T>>,
     pub documentation: Option<(u32, EcoString)>,
     pub deprecation: Deprecation,
@@ -931,16 +932,17 @@ impl TypedDefinition {
                     .iter()
                     .find(|constructor| constructor.location.contains(byte_index))
                 {
-                    if let Some(annotation) = constructor
+                    return match constructor
                         .arguments
                         .iter()
                         .find(|arg| arg.location.contains(byte_index))
-                        .and_then(|arg| arg.ast.find_node(byte_index, arg.type_.clone()))
                     {
-                        return Some(annotation);
-                    }
-
-                    return Some(Located::VariantConstructorDefinition(constructor));
+                        Some(arg) => match arg.ast.find_node(byte_index, arg.type_.clone()) {
+                            Some(annotation) => Some(annotation),
+                            None => Some(Located::Label(arg.location, arg.type_.clone())),
+                        },
+                        None => Some(Located::VariantConstructorDefinition(constructor)),
+                    };
                 }
 
                 // Note that the custom type `.location` covers the function
