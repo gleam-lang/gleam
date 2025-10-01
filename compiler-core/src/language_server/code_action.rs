@@ -1432,7 +1432,6 @@ impl<'ast> ast::visit::Visit<'ast> for AnnotateTopLevelDefinitions<'_> {
         let mut printer = Printer::new_without_type_variables(&self.module.ast.names);
         collect_type_variables(&mut printer, fun);
 
-
         let code_action_range = self.edits.src_span_to_lsp_range(
             fun.body_start
                 .map(|body_start| SrcSpan {
