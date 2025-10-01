@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn wibble(a: a, b, c: c, d) {\n  todo\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn wibble(a: a, b, c: c, d) {
+       ↑                         
+  todo
+}
+
+
+----- AFTER ACTION
+
+pub fn wibble(a: a, b: b, c: c, d: d) -> e {
+  todo
+}

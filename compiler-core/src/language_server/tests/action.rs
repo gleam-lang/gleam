@@ -11274,6 +11274,19 @@ pub fn add_one(thing: Int) {
 }
 
 #[test]
+fn annotate_all_top_level_definitions_with_partially_annotated_generic_function() {
+    assert_code_action!(
+        ANNOTATE_TOP_LEVEL_DEFINITIONS,
+        r#"
+pub fn wibble(a: a, b, c: c, d) {
+  todo
+}
+"#,
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
 fn annotate_all_top_level_definitions_with_two_generic_functions() {
     assert_code_action!(
         ANNOTATE_TOP_LEVEL_DEFINITIONS,
