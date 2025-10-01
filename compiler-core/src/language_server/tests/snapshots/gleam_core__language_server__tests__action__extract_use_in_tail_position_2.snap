@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  use <- wibble\n  use <- wobble\n  123\n}\n\nfn wibble(f: fn() -> Float) -> Float { f() }\nfn wobble(f: fn() -> Int) -> Float { 1.1 }\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  use <- wibble
+  use <- wobble
+  ▔▔▔▔▔▔▔↑     
+  123
+}
+
+fn wibble(f: fn() -> Float) -> Float { f() }
+fn wobble(f: fn() -> Int) -> Float { 1.1 }
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  use <- wibble
+  function()
+}
+
+fn function() -> Float {
+  use <- wobble
+  123
+}
+
+fn wibble(f: fn() -> Float) -> Float { f() }
+fn wobble(f: fn() -> Int) -> Float { 1.1 }
