@@ -1,0 +1,43 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+assertion_line: 10619
+expression: "\npub fn main() {\n  case 1 {\n    _ -> {\n      use <- wibble\n      use <- wibble\n      123\n    }\n    _ -> todo\n  }\n}\n\nfn wibble(f: fn() -> Float) -> Float { f() }\n"
+snapshot_kind: text
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  case 1 {
+    _ -> {
+         ▔
+      use <- wibble
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+      use <- wibble
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+      123
+▔▔▔▔▔▔▔▔▔
+    }
+▔▔▔▔↑
+    _ -> todo
+  }
+}
+
+fn wibble(f: fn() -> Float) -> Float { f() }
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  case 1 {
+    _ -> function()
+    _ -> todo
+  }
+}
+
+fn function() -> Float {
+  use <- wibble
+      use <- wibble
+      123
+}
+
+fn wibble(f: fn() -> Float) -> Float { f() }
