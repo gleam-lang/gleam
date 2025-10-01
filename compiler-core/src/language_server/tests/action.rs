@@ -10748,7 +10748,7 @@ fn annotate_all_top_level_definitions_already_annotated() {
         r#"
 pub const answer: Int = 42
 
-pub fn add_two(thing: Int) -> {
+pub fn add_two(thing: Int) -> Int {
   thing + 2
 }
 
