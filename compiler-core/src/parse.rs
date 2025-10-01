@@ -4730,3 +4730,15 @@ impl NotNan {
 }
 
 impl Eq for NotNan {}
+impl Ord for NotNan {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0
+            .partial_cmp(&other.0)
+            .expect("Only NaN comparisons should fail")
+    }
+}
+impl PartialOrd for NotNan {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
