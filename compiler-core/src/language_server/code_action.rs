@@ -1367,7 +1367,6 @@ pub struct AnnotateTopLevelDefinitions<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
-    printer: Printer<'a>,
     is_hovering_definition: bool,
 }
 
@@ -1381,9 +1380,6 @@ impl<'a> AnnotateTopLevelDefinitions<'a> {
             module,
             params,
             edits: TextEdits::new(line_numbers),
-            // We need to use the same printer for all the edits because otherwise
-            // we could get duplicate type variable names.
-            printer: Printer::new_without_type_variables(&module.ast.names),
             is_hovering_definition: false,
         }
     }
@@ -1409,11 +1405,6 @@ impl<'a> AnnotateTopLevelDefinitions<'a> {
 
 impl<'ast> ast::visit::Visit<'ast> for AnnotateTopLevelDefinitions<'_> {
     fn visit_typed_module_constant(&mut self, constant: &'ast TypedModuleConstant) {
-        // Since type variable names are local to definitions, any type variables
-        // in other parts of the module shouldn't affect what we print for the
-        // annotations of this constant.
-        self.printer.clear_type_variables();
-
         let code_action_range = self.edits.src_span_to_lsp_range(constant.location);
 
         if overlaps(code_action_range, self.params.range) {
@@ -1427,18 +1418,19 @@ impl<'ast> ast::visit::Visit<'ast> for AnnotateTopLevelDefinitions<'_> {
 
         self.edits.insert(
             constant.name_location.end,
-            format!(": {}", self.printer.print_type(&constant.type_)),
+            format!(
+                ": {}",
+                // Create new printer to ignore type variables from other definitions
+                Printer::new_without_type_variables(&self.module.ast.names)
+                    .print_type(&constant.type_)
+            ),
         );
     }
 
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
-        // Since type variable names are local to definitions, any type variables
-        // in other parts of the module shouldn't affect what we print for the
-        // annotations of this functions. The only variables which cannot clash
-        // are ones defined in the signature of this function, which we register
-        // when we visit the parameters of this function inside `collect_type_variables`.
-        self.printer.clear_type_variables();
-        collect_type_variables(&mut self.printer, fun);
+        // Create new printer to ignore type variables from other definitions
+        let mut printer = Printer::new_without_type_variables(&self.module.ast.names);
+        collect_type_variables(&mut printer, fun);
 
         ast::visit::visit_typed_function(self, fun);
 
@@ -1464,7 +1456,7 @@ impl<'ast> ast::visit::Visit<'ast> for AnnotateTopLevelDefinitions<'_> {
 
             self.edits.insert(
                 argument.location.end,
-                format!(": {}", self.printer.print_type(&argument.type_)),
+                format!(": {}", printer.print_type(&argument.type_)),
             );
         }
 
@@ -1472,7 +1464,7 @@ impl<'ast> ast::visit::Visit<'ast> for AnnotateTopLevelDefinitions<'_> {
         if fun.return_annotation.is_none() {
             self.edits.insert(
                 fun.location.end,
-                format!(" -> {}", self.printer.print_type(&fun.return_type)),
+                format!(" -> {}", printer.print_type(&fun.return_type)),
             );
         }
     }

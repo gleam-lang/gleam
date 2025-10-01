@@ -11273,16 +11273,30 @@ pub fn add_one(thing: Int) {
     );
 }
 
-// FIXME: make test working
-// #[test]
-// fn annotate_all_top_level_definitions_with_two_generic_functions() {
-//     assert_code_action!(
-//         ANNOTATE_TOP_LEVEL_DEFINITIONS,
-//         r#"
-// fn wibble(one) { todo }
+#[test]
+fn annotate_all_top_level_definitions_with_two_generic_functions() {
+    assert_code_action!(
+        ANNOTATE_TOP_LEVEL_DEFINITIONS,
+        r#"
+fn wibble(one) { todo }
 
-// fn wobble(other) { todo }
-// "#,
-//         find_position_of("wobble").to_selection()
-//     );
-// }
+fn wobble(other) { todo }
+"#,
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn annotate_all_top_level_definitions_with_constant_and_generic_functions() {
+    assert_code_action!(
+        ANNOTATE_TOP_LEVEL_DEFINITIONS,
+        r#"
+const answer = 42
+
+fn wibble(one) { todo }
+
+fn wobble(other) { todo }
+"#,
+        find_position_of("wobble").to_selection()
+    );
+}

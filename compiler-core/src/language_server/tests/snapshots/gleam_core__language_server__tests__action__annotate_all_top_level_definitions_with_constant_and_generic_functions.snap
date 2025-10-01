@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nconst answer = 42\n\nfn wibble(one) { todo }\n\nfn wobble(other) { todo }\n"
+---
+----- BEFORE ACTION
+
+const answer = 42
+
+fn wibble(one) { todo }
+
+fn wobble(other) { todo }
+   ↑                     
+
+
+----- AFTER ACTION
+
+const answer: Int = 42
+
+fn wibble(one: a) -> b { todo }
+
+fn wobble(other: a) -> b { todo }
