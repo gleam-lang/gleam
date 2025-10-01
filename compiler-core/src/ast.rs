@@ -1739,11 +1739,11 @@ fn pattern_and_expression_are_the_same(pattern: &TypedPattern, expression: &Type
         // `"wibble" -> "wibble"`
         (
             TypedPattern::Float {
-                value: pattern_value,
+                float_value: pattern_value,
                 ..
             },
-            TypedExpr::Float { value, .. },
-        ) => pattern_value == value,
+            TypedExpr::Float { float_value, .. },
+        ) => pattern_value == float_value,
         (TypedPattern::Float { .. }, _) => false,
 
         (
