@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Bug fixes
+
+- Fixed a bug where the "Extract function" code action would not properly
+  extract a `use` expression.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.13.0-rc1 - 2025-09-29
 
 ### Compiler
