@@ -10571,3 +10571,22 @@ fn wibble(f: fn() -> Int) -> Int { f() }
     );
 }
 
+#[test]
+fn extract_use_in_tail_position_2() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn main() {
+  use <- wibble
+  use <- wobble
+  123
+}
+
+fn wibble(f: fn() -> Float) -> Float { f() }
+fn wobble(f: fn() -> Int) -> Float { 1.1 }
+"#,
+        find_position_of("use")
+            .nth_occurrence(2)
+            .select_until(find_position_of("wobble"))
+    );
+}

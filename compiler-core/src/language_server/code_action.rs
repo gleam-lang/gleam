@@ -8635,13 +8635,23 @@ impl<'a> ExtractFunction<'a> {
                     end,
                 )
             }
-            ExtractedValue::Expression(expression) => self.extract_code_in_tail_position(
-                expression.location(),
-                expression.location(),
-                expression.type_(),
-                extracted.parameters,
-                end,
-            ),
+            ExtractedValue::Expression(expression) => {
+                let expression_type = match expression {
+                    TypedExpr::Fn {
+                        type_,
+                        kind: FunctionLiteralKind::Use { .. },
+                        ..
+                    } => type_.fn_types().expect("use callback to be a function").1,
+                    _ => expression.type_(),
+                };
+                self.extract_code_in_tail_position(
+                    expression.location(),
+                    expression.location(),
+                    expression_type,
+                    extracted.parameters,
+                    end,
+                )
+            }
             ExtractedValue::Statements {
                 location,
                 position: StatementPosition::NotTail,
