@@ -4730,3 +4730,17 @@ impl LiteralFloatValue {
 }
 
 impl Eq for LiteralFloatValue {}
+
+impl Ord for LiteralFloatValue {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0
+            .partial_cmp(&other.0)
+            .expect("Only NaN comparisons should fail")
+    }
+}
+
+impl PartialOrd for LiteralFloatValue {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
