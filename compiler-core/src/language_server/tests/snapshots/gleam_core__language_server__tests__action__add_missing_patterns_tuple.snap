@@ -17,7 +17,7 @@ pub fn main(two_at_once: #(Bool, Result(Int, Nil))) {
 pub fn main(two_at_once: #(Bool, Result(Int, Nil))) {
   case two_at_once {
     #(False, Error(_)) -> Nil
-    #(True, Error(_)) -> todo
-    #(_, Ok(_)) -> todo
+    #(False, Ok(_)) -> todo
+    #(True, _) -> todo
   }
 }

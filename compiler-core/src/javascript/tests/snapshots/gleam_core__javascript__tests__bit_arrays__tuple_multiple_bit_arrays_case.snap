@@ -14,17 +14,18 @@ pub fn go(x) {
 
 ----- COMPILED JAVASCRIPT
 export function go(x) {
-  let $ = x[2];
-  if (
-    $.bitSize >= 8 &&
-    $.byteAt(0) === 2 &&
-    $.bitSize === 16 &&
-    $.byteAt(1) === 3
-  ) {
+  let $ = x[0];
+  if ($.bitSize === 0) {
     let $1 = x[1];
-    if ($1.bitSize === 8 && $1.byteAt(0) === 1) {
-      let $2 = x[0];
-      if ($2.bitSize === 0) {
+    if ($1.bitSize === 8) {
+      let $2 = x[2];
+      if (
+        $2.bitSize >= 8 &&
+        $1.byteAt(0) === 1 &&
+        $2.byteAt(0) === 2 &&
+        $2.bitSize === 16 &&
+        $2.byteAt(1) === 3
+      ) {
         return true;
       } else {
         return false;

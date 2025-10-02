@@ -82,10 +82,10 @@ export function go(x, y) {
     } else {
       let $2 = $1.tail;
       if ($2 instanceof $Empty) {
-        let $3 = $1.head;
-        if ($3 === 2) {
-          let $4 = x.head;
-          if (!($4 === 1)) {
+        let $3 = x.head;
+        if ($3 === 1) {
+          let $4 = $1.head;
+          if (!($4 === 2)) {
             throw makeError(
               "let_assert",
               FILEPATH,
