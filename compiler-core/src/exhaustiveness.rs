@@ -2748,27 +2748,29 @@ fn find_pivot_check(
         }
     }
 
-    // Maximize ( -branching_factor, references ).
+    // We want to picke the variable that has the smallest branching factor
+    // possible, this tends to yield smaller, shallower decision trees.
+    // So, for example, we will pick a list (branching factor of 2 `[]` and
+    // `[_, ..]`) over an integer (infinitely many choices).
     //
-    // - branching_factor: prefer the split that creates the FEWEST switch arms.
-    //   Fewer children tends to yield smaller, shallower decision trees.
-    //
-    // - references: break ties by choosing the subject that appears in the most
-    //   clauses (i.e. a test that will pay off for more rows).
+    // In case two variables are tied we break the tie by choosing the subject
+    // that appears in the most clauses (i.e. a test that will pay off for more
+    // rows).
     //
     // Both parts mirror standard guidance for good match trees (small branching
-    // factor; prioritize columns that are widely useful).
-    //
+    // factor; prioritize columns that are widely useful):
     // https://www.cs.tufts.edu/~nr/cs257/archive/luc-maranget/jun08.pdf
     first_branch
         .checks
         .iter()
-        .max_by_key(|check| {
-            let mode = check.var.branch_mode(env);
-            let branching_factor = mode.branching_factor();
+        .min_by_key(|check| {
+            let branching_factor = check.var.branch_mode(env).branching_factor();
             let references = var_references.get(&check.var.id).cloned().unwrap_or(0);
 
-            (usize::MAX - branching_factor, references)
+            // Notice how we're using `-references`: we want to favour the one
+            // that has the most references, so the one were `-references` is
+            // the smallest.
+            (branching_factor, -references)
         })
         .cloned()
 }

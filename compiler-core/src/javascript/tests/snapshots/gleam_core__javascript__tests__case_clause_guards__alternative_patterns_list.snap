@@ -29,10 +29,10 @@ export function main(xs) {
     } else {
       let $1 = $.tail;
       if ($1 instanceof $Empty) {
-        let $2 = $.head;
-        if ($2 === 2) {
-          let $3 = xs.head;
-          if ($3 === 1) {
+        let $2 = xs.head;
+        if ($2 === 1) {
+          let $3 = $.head;
+          if ($3 === 2) {
             return 0;
           } else {
             return 1;

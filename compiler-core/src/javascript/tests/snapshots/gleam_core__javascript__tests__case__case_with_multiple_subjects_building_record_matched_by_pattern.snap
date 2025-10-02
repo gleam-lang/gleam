@@ -15,19 +15,19 @@ pub fn go(x, y) {
 import { Ok, Error } from "../gleam.mjs";
 
 export function go(x, y) {
-  if (y instanceof Ok) {
-    if (x instanceof Error) {
-      return y;
+  if (x instanceof Ok) {
+    if (y instanceof Error) {
+      let $ = x[0];
+      if ($ === 1) {
+        return x;
+      } else {
+        return new Error(undefined);
+      }
     } else {
       return new Error(undefined);
     }
-  } else if (x instanceof Ok) {
-    let $ = x[0];
-    if ($ === 1) {
-      return x;
-    } else {
-      return new Error(undefined);
-    }
+  } else if (y instanceof Ok) {
+    return y;
   } else {
     return new Error(undefined);
   }

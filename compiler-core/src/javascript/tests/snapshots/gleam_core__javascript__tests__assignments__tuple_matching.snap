@@ -15,10 +15,10 @@ import { makeError } from "../gleam.mjs";
 const FILEPATH = "src/module.gleam";
 
 export function go(x) {
-  let $ = x[1];
-  if ($ === 2) {
-    let $1 = x[0];
-    if (!($1 === 1)) {
+  let $ = x[0];
+  if ($ === 1) {
+    let $1 = x[1];
+    if (!($1 === 2)) {
       throw makeError(
         "let_assert",
         FILEPATH,

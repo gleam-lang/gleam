@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-assertion_line: 258
 expression: "\npub fn main() {\n  case Ok([\"a\", \"b c\", \"d\"]) {\n    Ok([\"a\", \"b \" <> _, \"d\"]) -> 1\n    _ -> 1\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -33,12 +31,12 @@ export function main() {
       } else {
         let $4 = $3.tail;
         if ($4 instanceof $Empty) {
-          let $5 = $3.head;
-          if ($5 === "d") {
+          let $5 = $1.head;
+          if ($5 === "a") {
             let $6 = $2.head;
             if ($6.startsWith("b ")) {
-              let $7 = $1.head;
-              if ($7 === "a") {
+              let $7 = $3.head;
+              if ($7 === "d") {
                 return 1;
               } else {
                 return 1;

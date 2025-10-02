@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-assertion_line: 95
 expression: "\npub fn go(x, y) {\n  case x, y {\n    True, True -> 1\n    _, _ -> 0\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -16,7 +14,7 @@ pub fn go(x, y) {
 
 ----- COMPILED JAVASCRIPT
 export function go(x, y) {
-  if (y && x) {
+  if (x && y) {
     return 1;
   } else {
     return 0;

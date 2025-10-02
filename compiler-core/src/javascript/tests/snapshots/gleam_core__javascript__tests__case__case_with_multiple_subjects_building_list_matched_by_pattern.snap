@@ -25,9 +25,13 @@ export function go(n, x) {
   } else {
     let $ = x.tail;
     if ($ instanceof $Empty) {
-      let $1 = x.head;
-      if ($1 === 1 && n === 3) {
-        return x;
+      if (n === 3) {
+        let $1 = x.head;
+        if ($1 === 1) {
+          return x;
+        } else {
+          return x;
+        }
       } else {
         return x;
       }
@@ -35,13 +39,15 @@ export function go(n, x) {
       let $1 = $.tail;
       if ($1 instanceof $Empty) {
         return x;
-      } else {
+      } else if (n === 3) {
         let $2 = x.head;
-        if ($2 === 1 && n === 3) {
+        if ($2 === 1) {
           return x;
         } else {
           return x;
         }
+      } else {
+        return x;
       }
     }
   }
