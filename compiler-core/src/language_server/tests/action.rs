@@ -10637,3 +10637,26 @@ fn wibble(f: fn() -> Float) -> Float { f() }
             .select_until(find_position_of("}"))
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5036
+#[test]
+fn generate_function_in_other_module_correctly_appends() {
+    let src = "import module_breaker/another
+
+pub fn main() -> Nil {
+  another.function()
+}
+";
+
+    assert_code_action!(
+        GENERATE_FUNCTION,
+        TestProject::for_source(src).add_module(
+            "module_breaker/another",
+            "pub fn useless() {
+  Nil
+}
+"
+        ),
+        find_position_of("function").to_selection()
+    );
+}
