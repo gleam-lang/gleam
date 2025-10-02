@@ -7,6 +7,9 @@
 //!   Per Gustafsson and Konstantinos Sagonas.
 //!   <https://user.it.uu.se/~kostis/Papers/JFP_06.pdf>
 //!
+//! - Compiling Pattern Matching to good Decision Trees, Luc Maranget.
+//!   <https://www.cs.tufts.edu/~nr/cs257/archive/luc-maranget/jun08.pdf>
+//!
 //! The first implementation of the decision tree was adapted from Yorick
 //! Peterse's implementation at
 //! <https://github.com/yorickpeterse/pattern-matching-in-rust>.
