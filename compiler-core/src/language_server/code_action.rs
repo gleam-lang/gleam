@@ -6292,10 +6292,13 @@ pub struct ConvertToPipe<'a> {
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
     argument_to_pipe: Option<ConvertToPipeArg<'a>>,
-    /// this will be true if we're visiting the call on the right hand side of a
-    /// use expression. So we can skip it and not try to turn it into a
-    /// function.
-    visiting_use_call: bool,
+    visited_item: VisitedItem,
+}
+
+pub enum VisitedItem {
+    RegularExpression,
+    UseRightHandSide,
+    PipelineFinalStep,
 }
 
 /// Holds all the data needed by the "convert to pipe" code action to properly
@@ -6336,7 +6339,7 @@ impl<'a> ConvertToPipe<'a> {
             module,
             params,
             edits: TextEdits::new(line_numbers),
-            visiting_use_call: false,
+            visited_item: VisitedItem::RegularExpression,
             argument_to_pipe: None,
         }
     }
@@ -6433,13 +6436,16 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToPipe<'ast> {
         // If we're visiting the typed function produced by typing a use, we
         // skip the thing itself and only visit its arguments and called
         // function, that is the body of the use.
-        if self.visiting_use_call {
-            self.visiting_use_call = false;
-            ast::visit::visit_typed_expr(self, fun);
-            arguments
-                .iter()
-                .for_each(|arg| ast::visit::visit_typed_call_arg(self, arg));
-            return;
+        match self.visited_item {
+            VisitedItem::RegularExpression => (),
+            VisitedItem::UseRightHandSide | VisitedItem::PipelineFinalStep => {
+                self.visited_item = VisitedItem::RegularExpression;
+                ast::visit::visit_typed_expr(self, fun);
+                arguments
+                    .iter()
+                    .for_each(|arg| ast::visit::visit_typed_call_arg(self, arg));
+                return;
+            }
         }
 
         // We only visit a call if the cursor is somewhere within its location,
@@ -6496,16 +6502,18 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToPipe<'ast> {
         _location: &'ast SrcSpan,
         first_value: &'ast TypedPipelineAssignment,
         _assignments: &'ast [(TypedPipelineAssignment, PipelineAssignmentKind)],
-        _finally: &'ast TypedExpr,
+        finally: &'ast TypedExpr,
         _finally_kind: &'ast PipelineAssignmentKind,
     ) {
         // We can only apply the action on the first step of a pipeline, so we
         // visit just that one and skip all the others.
         ast::visit::visit_typed_pipeline_assignment(self, first_value);
+        self.visited_item = VisitedItem::PipelineFinalStep;
+        ast::visit::visit_typed_expr(self, finally);
     }
 
     fn visit_typed_use(&mut self, use_: &'ast TypedUse) {
-        self.visiting_use_call = true;
+        self.visited_item = VisitedItem::UseRightHandSide;
         ast::visit::visit_typed_use(self, use_);
     }
 }
