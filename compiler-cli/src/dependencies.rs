@@ -444,6 +444,69 @@ fn pretty_print_major_versions_available(versions: dependency::PackageVersionDif
     output_string
 }
 
+fn pretty_print_newer_versions_available(versions: dependency::PackageVersionDiffs) -> String {
+    let total_lines = versions.len() + 3;
+    let versions = versions
+        .iter()
+        .map(|(name, (v1, v2))| (name, v1.to_string(), v2.to_string()))
+        .sorted();
+
+    let longest_parts = versions.clone().fold(
+        (0, 0, 0),
+        |(max_name, max_curr, max_latest), (name, curr, latest)| {
+            (
+                max_name.max(name.len()),
+                max_curr.max(curr.len()),
+                max_latest.max(latest.len()),
+            )
+        },
+    );
+
+    let (longest_package_name_length, longest_current_version_length, longest_latest_version_length) =
+        longest_parts;
+
+    let mut output_string = String::with_capacity(
+        (longest_package_name_length
+            + longest_current_version_length
+            + longest_latest_version_length
+            + 5)
+            * total_lines,
+    );
+
+    output_string.push_str("\nThe following dependencies have newer versions available:\n\n");
+    for (name, v1, v2) in versions {
+        let name_padding = " ".repeat(longest_package_name_length - name.len());
+        let curr_ver_padding = " ".repeat(longest_current_version_length - v1.to_string().len());
+
+        output_string.push_str(
+            &[
+                name,
+                &name_padding,
+                " ",
+                &v1.to_string(),
+                &curr_ver_padding,
+                " -> ",
+                &v2.to_string(),
+                "\n",
+            ]
+            .concat(),
+        );
+    }
+
+    output_string
+}
+
+pub fn outdated(paths: &ProjectPaths) -> Result<()> {
+    let (_, manifest) = get_manifest_details(paths)?;
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let package_fetcher = PackageFetcher::new(runtime.handle().clone());
+    let versions = dependency::check_for_newer_version_updates(&manifest, &package_fetcher);
+    if !versions.is_empty() {
+        println!("{}", pretty_print_newer_versions_available(versions));
+    }
+    Ok(())
+}
+
 async fn add_missing_packages<Telem: Telemetry>(
     paths: &ProjectPaths,
     fs: Box<ProjectIO>,

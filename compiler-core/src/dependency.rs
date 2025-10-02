@@ -115,6 +115,53 @@ pub fn check_for_major_version_updates(
     resolve_major_versions(package_fetcher, versions)
 }
 
+fn resolve_outdated_versions(
+    package_fetcher: &impl PackageFetcher,
+    versions: PackageVersions,
+) -> PackageVersionDiffs {
+    versions
+        .iter()
+        .filter_map(|(package, current)| {
+            let Ok(hexpackage) = package_fetcher.get_dependencies(package) else {
+                return None;
+            };
+
+            let latest = hexpackage
+                .releases
+                .iter()
+                .map(|release| &release.version)
+                .filter(|version| !version.is_pre())
+                .max()?;
+
+            if latest > current {
+                Some((package.to_string(), (current.clone(), latest.clone())))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+/// Check for any newer version updates (including minor and patch) for direct dependencies.
+pub fn check_for_newer_version_updates(
+    manifest: &manifest::Manifest,
+    package_fetcher: &impl PackageFetcher,
+) -> PackageVersionDiffs {
+    let versions = manifest
+        .packages
+        .iter()
+        .filter(|manifest_package| {
+            manifest
+                .requirements
+                .iter()
+                .any(|(required_pkg, _)| manifest_package.name == *required_pkg)
+        })
+        .map(|manifest_pkg| (manifest_pkg.name.to_string(), manifest_pkg.version.clone()))
+        .collect();
+
+    resolve_outdated_versions(package_fetcher, versions)
+}
+
 // If the string would parse to an exact version then return the version
 fn parse_exact_version(ver: &str) -> Option<Version> {
     let version = ver.trim();
@@ -963,6 +1010,47 @@ mod tests {
                     Version::try_from("1.1.0").unwrap()
                 )
             ),]
+            .into_iter()
+            .collect()
+        );
+    }
+
+    #[test]
+    fn resolve_newer_version_updates_including_patch() {
+        // Remote with only patch updates available (no new major/minor)
+        let remote = remote(vec![(
+            "patch_only_pkg",
+            vec![release("1.2.3", vec![]), release("1.2.5", vec![])],
+        )]);
+
+        let manifest = manifest::Manifest {
+            requirements: vec![(
+                EcoString::from("patch_only_pkg"),
+                requirement::Requirement::Hex {
+                    version: Range::new(">= 1.0.0".into()).unwrap(),
+                },
+            )]
+            .into_iter()
+            .collect(),
+            packages: vec![ManifestPackage {
+                name: "patch_only_pkg".into(),
+                version: Version::parse("1.2.3").unwrap(),
+                build_tools: ["gleam".into()].into(),
+                otp_app: None,
+                requirements: vec![],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![1, 2, 3]),
+                },
+            }],
+        };
+
+        let result = check_for_newer_version_updates(&manifest, &remote);
+        assert_eq!(
+            result,
+            vec![(
+                "patch_only_pkg".into(),
+                (Version::try_from("1.2.3").unwrap(), Version::try_from("1.2.5").unwrap())
+            )]
             .into_iter()
             .collect()
         );

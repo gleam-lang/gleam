@@ -400,6 +400,9 @@ enum Dependencies {
 
     /// Tree of all the dependency packages
     Tree(TreeOptions),
+
+    /// Show dependencies with newer versions available (including minor and patch)
+    Outdated,
 }
 
 #[derive(Subcommand, Debug)]
@@ -587,6 +590,11 @@ fn parse_and_run_command() -> Result<(), Error> {
         Command::Deps(Dependencies::Tree(options)) => {
             let paths = find_project_paths()?;
             dependencies::tree(&paths, options)
+        }
+
+        Command::Deps(Dependencies::Outdated) => {
+            let paths = find_project_paths()?;
+            dependencies::outdated(&paths)
         }
 
         Command::Hex(Hex::Authenticate) => hex::authenticate(),
