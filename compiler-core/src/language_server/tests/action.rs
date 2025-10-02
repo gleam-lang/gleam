@@ -10803,24 +10803,6 @@ fn wibble() -> Nil
 }
 
 #[test]
-fn annotate_all_top_level_definitions_dont_affect_local_vars() {
-    assert_code_action!(
-        ANNOTATE_TOP_LEVEL_DEFINITIONS,
-        r#"
-pub const answer = 42
-
-pub fn add_two(thing) {
-  thing + 2
-
-pub fn add_one(thing) {
-  let result = thing + 1
-  result
-}
-"#,
-        find_position_of("fn").select_until(find_position_of("("));
-}
-
-#[test]
 fn annotate_all_top_level_definitions_constant() {
     assert_code_action!(
         ANNOTATE_TOP_LEVEL_DEFINITIONS,
@@ -10842,20 +10824,21 @@ pub fn add_one(thing) {
 #[test]
 fn annotate_all_top_level_definitions_function() {
     assert_code_action!(
-        ANNOTATE_TOP_LEVEL_TYPE_DEFINITIONS,
+        ANNOTATE_TOP_LEVEL_DEFINITIONS,
         r#"
 pub fn add_two(thing) {
-    thing + 2
+  thing + 2
 }
 
 pub fn add_one(thing) {
-    thing + 1
+  thing + 1
 }
-        "#,
+"#,
         find_position_of("fn").select_until(find_position_of("("))
     );
 }
 
+#[test]
 fn annotate_all_top_level_definitions_already_annotated() {
     assert_no_code_actions!(
         ANNOTATE_TOP_LEVEL_DEFINITIONS,
