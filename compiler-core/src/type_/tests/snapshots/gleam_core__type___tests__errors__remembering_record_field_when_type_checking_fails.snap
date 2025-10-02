@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "pub type Wibble {\n  Wibble(x: Int, f: fn(Wobble) -> Int)\n}\n\npub fn wibble() {\n  Wibble(1, fn(_) { 2 })\n}\n\npub fn wobble(wibble: Wibble) {\n  wibble.f\n}\n\npub fn woo(wibble: Wibble) {\n  Wibble(..wibble, x: 1)\n}"
+---
+----- SOURCE CODE
+pub type Wibble {
+  Wibble(x: Int, f: fn(Wobble) -> Int)
+}
+
+pub fn wibble() {
+  Wibble(1, fn(_) { 2 })
+}
+
+pub fn wobble(wibble: Wibble) {
+  wibble.f
+}
+
+pub fn woo(wibble: Wibble) {
+  Wibble(..wibble, x: 1)
+}
+
+----- ERROR
+error: Unknown type
+  ┌─ /src/one/two.gleam:2:24
+  │
+2 │   Wibble(x: Int, f: fn(Wobble) -> Int)
+  │                        ^^^^^^ Did you mean `Wibble`?
+
+The type `Wobble` is not defined or imported in this module.
