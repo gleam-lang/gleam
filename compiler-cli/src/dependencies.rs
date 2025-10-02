@@ -444,6 +444,99 @@ fn pretty_print_major_versions_available(versions: dependency::PackageVersionDif
     output_string
 }
 
+fn classify_update(current: &Version, latest: &Version) -> &'static str {
+    if latest.major > current.major {
+        "major"
+    } else if latest.minor > current.minor {
+        "minor"
+    } else {
+        "patch"
+    }
+}
+
+fn pretty_print_newer_versions_available(versions: dependency::PackageVersionDiffs) -> String {
+    use std::fmt::Write as _;
+    // Group entries by update type
+    let mut major = Vec::new();
+    let mut minor = Vec::new();
+    let mut patch = Vec::new();
+
+    for (name, (curr, latest)) in versions.iter() {
+        let kind = classify_update(curr, latest);
+        match kind {
+            "major" => major.push((name, curr, latest)),
+            "minor" => minor.push((name, curr, latest)),
+            _ => patch.push((name, curr, latest)),
+        }
+    }
+
+    // Sort within groups by package name for stable output
+    major.sort_by(|a, b| a.0.cmp(b.0));
+    minor.sort_by(|a, b| a.0.cmp(b.0));
+    patch.sort_by(|a, b| a.0.cmp(b.0));
+
+    let mut out = String::new();
+    if !(major.is_empty() && minor.is_empty() && patch.is_empty()) {
+        let _ = writeln!(out, "\nThe following dependencies have newer versions available:\n");
+    }
+
+    let mut write_group = |title: &str, items: &Vec<(&String, &Version, &Version)>| {
+        if items.is_empty() {
+            return;
+        }
+        let _ = writeln!(out, "{title}:");
+        for (name, curr, latest) in items {
+            let _ = writeln!(out, "{name} {curr} -> {latest}");
+        }
+        let _ = writeln!(out);
+    };
+
+    write_group("Major updates", &major);
+    write_group("Minor updates", &minor);
+    write_group("Patch updates", &patch);
+
+    out
+}
+
+pub fn outdated(paths: &ProjectPaths, options: crate::OutdatedOptions) -> Result<()> {
+    let (_, manifest) = get_manifest_details(paths)?;
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let package_fetcher = PackageFetcher::new(runtime.handle().clone());
+
+    let versions = dependency::check_for_newer_version_updates(
+        &manifest,
+        &package_fetcher,
+        options.include_prerelease,
+    );
+
+    if versions.is_empty() {
+        return Ok(());
+    }
+
+    match options.format {
+        crate::OutputFormat::Human => {
+            println!("{}", pretty_print_newer_versions_available(versions));
+        }
+        crate::OutputFormat::Json => {
+            let mut v = Vec::with_capacity(versions.len());
+            for (name, (curr, latest)) in versions.iter() {
+                let update_type = classify_update(curr, latest);
+                let is_prerelease = latest.is_pre();
+                v.push(serde_json::json!({
+                    "name": name,
+                    "current": curr.to_string(),
+                    "latest": latest.to_string(),
+                    "update_type": update_type,
+                    "prerelease": is_prerelease,
+                }));
+            }
+            println!("{}", serde_json::Value::Array(v).to_string());
+        }
+    }
+
+    Ok(())
+}
+
 async fn add_missing_packages<Telem: Telemetry>(
     paths: &ProjectPaths,
     fs: Box<ProjectIO>,

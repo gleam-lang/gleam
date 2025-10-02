@@ -91,7 +91,7 @@ use std::str::FromStr;
 use camino::Utf8PathBuf;
 
 use clap::{
-    Args, Parser, Subcommand,
+    Args, Parser, Subcommand, ValueEnum,
     builder::{PossibleValuesParser, Styles, TypedValueParser, styling},
 };
 use strum::VariantNames;
@@ -353,6 +353,23 @@ pub struct NewOptions {
     pub skip_github: bool,
 }
 
+#[derive(ValueEnum, Debug, Clone, Copy)]
+pub enum OutputFormat {
+    Human,
+    Json,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct OutdatedOptions {
+    /// Include prerelease versions when checking for updates (e.g. 1.2.3-rc1)
+    #[arg(long)]
+    pub include_prerelease: bool,
+
+    /// Output format (human or json)
+    #[arg(long, value_enum, default_value_t = OutputFormat::Human)]
+    pub format: OutputFormat,
+}
+
 #[derive(Args, Debug)]
 pub struct CompilePackage {
     /// The compilation target for the generated project
@@ -400,6 +417,9 @@ enum Dependencies {
 
     /// Tree of all the dependency packages
     Tree(TreeOptions),
+
+    /// Show dependencies with newer versions available (including minor and patch)
+    Outdated(OutdatedOptions),
 }
 
 #[derive(Subcommand, Debug)]
@@ -587,6 +607,11 @@ fn parse_and_run_command() -> Result<(), Error> {
         Command::Deps(Dependencies::Tree(options)) => {
             let paths = find_project_paths()?;
             dependencies::tree(&paths, options)
+        }
+
+        Command::Deps(Dependencies::Outdated(options)) => {
+            let paths = find_project_paths()?;
+            dependencies::outdated(&paths, options)
         }
 
         Command::Hex(Hex::Authenticate) => hex::authenticate(),
