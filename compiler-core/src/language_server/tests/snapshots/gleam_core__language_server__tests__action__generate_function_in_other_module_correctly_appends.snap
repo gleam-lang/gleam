@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "import module_breaker/another\n\npub fn main() -> Nil {\n  another.function()\n}\n"
+---
+----- BEFORE ACTION
+import module_breaker/another
+
+pub fn main() -> Nil {
+  another.function()
+          ↑         
+}
+
+
+----- AFTER ACTION
+// --- Edits applied to module 'module_breaker/another'
+pub fn useless() {
+  Nil
+}
+
+
+pub fn function() -> Nil {
+  todo
+}

@@ -5208,11 +5208,7 @@ impl<'a> GenerateFunction<'a> {
 
         if let Some(module) = module {
             if let Some(module) = self.modules.get(module) {
-                let insert_at = if module.code.is_empty() {
-                    0
-                } else {
-                    (module.code.len() - 1) as u32
-                };
+                let insert_at = module.code.len() as u32;
                 self.code_action_for_module(
                     module,
                     Publicity::Public,
@@ -5230,7 +5226,7 @@ impl<'a> GenerateFunction<'a> {
 
     fn code_action_for_module(
         mut self,
-        module: &Module,
+        module: &'a Module,
         publicity: Publicity,
         function_to_generate: FunctionToGenerate<'a>,
         insert_at: u32,
@@ -5272,6 +5268,10 @@ impl<'a> GenerateFunction<'a> {
 
         let publicity = if publicity.is_public() { "pub " } else { "" };
 
+        // Make sure we use the line number information of the module we are
+        // editing, which might not be the module where the code action is
+        // triggered.
+        self.edits.line_numbers = &module.ast.type_info.line_numbers;
         self.edits.insert(
             insert_at,
             format!("\n\n{publicity}fn {name}({arguments}) -> {return_type} {{\n  todo\n}}"),
