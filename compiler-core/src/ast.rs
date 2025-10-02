@@ -3569,7 +3569,7 @@ impl UntypedStatement {
         match self {
             Statement::Expression(expression) => expression.location(),
             Statement::Assignment(assignment) => assignment.location,
-            Statement::Use(use_) => use_.location,
+            Statement::Use(use_) => use_.location.merge(&use_.call.location()),
             Statement::Assert(assert) => assert.location,
         }
     }
@@ -3598,7 +3598,9 @@ impl TypedStatement {
         match self {
             Statement::Expression(expression) => expression.location(),
             Statement::Assignment(assignment) => assignment.location,
-            Statement::Use(use_) => use_.location,
+            // A use statement covers the entire block: `use_.location` covers
+            // just the use's first line and not what comes after it.
+            Statement::Use(use_) => use_.location.merge(&use_.call.location()),
             Statement::Assert(assert) => assert.location,
         }
     }
