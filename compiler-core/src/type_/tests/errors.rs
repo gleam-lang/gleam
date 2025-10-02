@@ -3345,3 +3345,24 @@ fn type_used_as_a_constructor_with_more_arguments() {
 }"
     );
 }
+
+#[test]
+fn remembering_record_field_when_type_checking_fails() {
+    assert_module_error!(
+        r#"pub type Wibble {
+  Wibble(x: Int, f: fn(Wobble) -> Int)
+}
+
+pub fn wibble() {
+  Wibble(1, fn(_) { 2 })
+}
+
+pub fn wobble(wibble: Wibble) {
+  wibble.f
+}
+
+pub fn woo(wibble: Wibble) {
+  Wibble(..wibble, x: 1)
+}"#
+    );
+}
