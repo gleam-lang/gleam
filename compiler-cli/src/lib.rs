@@ -215,6 +215,8 @@ enum Command {
     Shell,
 
     /// Run the project
+    ///
+    /// This command runs the `main` function defined in `src/<PROJECT_NAME>.gleam`
     #[command(trailing_var_arg = true)]
     Run {
         #[arg(short, long, ignore_case = true, help = target_doc())]
@@ -235,6 +237,8 @@ enum Command {
     },
 
     /// Run the project tests
+    ///
+    /// This command runs the `main` function defined in `test/<PROJECT_NAME>_test.gleam`.
     #[command(trailing_var_arg = true)]
     Test {
         #[arg(short, long, ignore_case = true, help = target_doc())]
@@ -247,6 +251,8 @@ enum Command {
     },
 
     /// Run the project development entrypoint
+    ///
+    /// This command runs the `main` function defined in `dev/<PROJECT_NAME>_dev.gleam`
     #[command(trailing_var_arg = true)]
     Dev {
         #[arg(short, long, ignore_case = true, help = target_doc())]

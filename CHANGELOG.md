@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Build tool
+
+- The help text displayed by `gleam dev --help`, `gleam test --help`, and
+  `gleam run --help` has been improved: now each one states which function it's
+  going to run.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Bug fixes
 
 - Fixed a bug where the "Extract function" code action would not properly
