@@ -10,6 +10,11 @@
 
 ### Build tool
 
+- The help text displayed by `gleam dev --help`, `gleam test --help`, and
+  `gleam run --help` has been improved: now each one states which function it's
+  going to run.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Language server
 
 - The "inline variable" code action can now trigger when used over the let
