@@ -23,7 +23,6 @@ use crate::{
 use camino::Utf8Path;
 use ecow::{EcoString, eco_format};
 use itertools::Itertools;
-use pattern::pattern;
 use regex::{Captures, Regex};
 use std::collections::HashSet;
 use std::sync::OnceLock;
@@ -1197,7 +1196,6 @@ fn let_assert<'a>(
         None => string("Pattern match failed, no pattern matched the value."),
     };
 
-    let mut vars: Vec<&str> = vec![];
     let subject = maybe_block_expr(value, env);
 
     // The code we generated for a `let assert` assignment looks something like
@@ -1258,6 +1256,7 @@ fn let_assert<'a>(
     };
 
     let mut guards = vec![];
+    let mut vars = vec![];
     let pattern_document = pattern::to_doc(pattern, &mut vars, env, &mut guards);
     let clause_guard = optional_clause_guard(None, guards, env);
 
@@ -1338,7 +1337,10 @@ fn let_assert<'a>(
 fn let_<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a> {
     let body = maybe_block_expr(value, env).group();
     let mut guards = vec![];
-    pattern(pat, env, &mut guards).append(" = ").append(body)
+
+    pattern::to_doc(pat, &mut vec![], env, &mut guards)
+        .append(" = ")
+        .append(body)
 }
 
 fn float<'a>(value: &str) -> Document<'a> {
@@ -1554,13 +1556,11 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
 
                 let patterns_doc = if patterns.len() == 1 {
                     let p = patterns.first().expect("Single pattern clause printing");
-                    pattern(p, env, &mut additional_guards)
+                    pattern::to_doc(p, &mut vec![], env, &mut additional_guards)
                 } else {
-                    tuple(
-                        patterns
-                            .iter()
-                            .map(|p| pattern(p, env, &mut additional_guards)),
-                    )
+                    tuple(patterns.iter().map(|pattern| {
+                        pattern::to_doc(pattern, &mut vec![], env, &mut additional_guards)
+                    }))
                 };
 
                 let guard = optional_clause_guard(guard.as_ref(), additional_guards, env);

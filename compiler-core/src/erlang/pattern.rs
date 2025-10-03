@@ -6,13 +6,13 @@ use crate::analyse::Inferred;
 
 use super::*;
 
-pub(super) fn pattern<'a>(
+pub(super) fn to_doc<'a>(
     p: &'a TypedPattern,
+    vars: &mut Vec<&'a str>,
     env: &mut Env<'a>,
     guards: &mut Vec<Document<'a>>,
 ) -> Document<'a> {
-    let mut vars = vec![];
-    to_doc(p, &mut vars, env, guards)
+    print(p, vars, env, guards)
 }
 
 fn print<'a>(
@@ -216,15 +216,6 @@ fn bit_array_size_operator<'a>(
         _ => bit_array_size(right, env),
     };
     binop_documents(left, operator, right)
-}
-
-pub(super) fn to_doc<'a>(
-    p: &'a TypedPattern,
-    vars: &mut Vec<&'a str>,
-    env: &mut Env<'a>,
-    guards: &mut Vec<Document<'a>>,
-) -> Document<'a> {
-    print(p, vars, env, guards)
 }
 
 fn tag_tuple_pattern<'a>(
