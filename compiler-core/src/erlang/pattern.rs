@@ -8,6 +8,12 @@ pub(super) struct PatternPrinter<'a, 'env> {
     pub environment: &'env mut Env<'a>,
     pub variables: Vec<&'a str>,
     pub guards: Vec<Document<'a>>,
+    /// In case we're dealing with string patterns, we might have something like
+    /// this: `"a" as letter <> rest`. In this case we want to compile it to
+    /// `<<"a"/utf8, rest/binary>>` and then bind a variable to `"a"`.
+    /// This way it's easier for the erlang compiler to optimise the pattern
+    /// matching.
+    pub assignments: Vec<Document<'a>>,
 }
 
 impl<'a, 'env> PatternPrinter<'a, 'env> {
@@ -16,6 +22,7 @@ impl<'a, 'env> PatternPrinter<'a, 'env> {
             environment,
             variables: vec![],
             guards: vec![],
+            assignments: vec![],
         }
     }
 
@@ -89,43 +96,32 @@ impl<'a, 'env> PatternPrinter<'a, 'env> {
                     AssignName::Discard(_) => "_".to_doc(),
                 };
 
-                match left_side_assignment {
-                    Some((left_name, _)) => {
-                        // "wibble" as prefix <> rest
-                        //             ^^^^^^^^^ In case the left prefix of the pattern matching is given an alias
-                        //                       we bind it to a local variable so that it can be correctly
-                        //                       referenced inside the case branch.
-                        //
-                        // <<Prefix:3/binary, Rest/binary>> when Prefix =:= <<"wibble">>
-                        //   ^^^^^^^^                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-                        //   since erlang's binary pattern matching doesn't allow direct string assignment
-                        //   to variables within the pattern, we first match the expected prefix length in
-                        //   bytes, then use a guard clause to verify the content.
-                        //
-                        self.variables.push(left_name);
-                        let name = self.environment.next_local_var_name(left_name);
-                        self.guards
-                            .push(docvec![name.clone(), " =:= ", string(left_side_string)]);
-                        docvec![
-                            "<<",
-                            name.clone(),
-                            ":",
-                            string_length_utf8_bytes(left_side_string),
-                            "/binary",
-                            ", ",
-                            right,
-                            "/binary>>",
-                        ]
-                    }
-                    None => docvec![
-                        "<<\"",
-                        string_inner(left_side_string),
-                        "\"/utf8",
-                        ", ",
-                        right,
-                        "/binary>>"
-                    ],
+                if let Some((left_name, _)) = left_side_assignment {
+                    // "wibble" as prefix <> rest
+                    //             ^^^^^^^^^ In case the left prefix of the pattern matching is given an alias
+                    //                       we bind it to a local variable so that it can be correctly
+                    //                       referenced inside the case branch.
+                    //
+                    // So we will end up with something that looks like this:
+                    //
+                    // <<"wibble"/binary, Rest/binary>> ->
+                    //     Prefix = "wibble",
+                    //     ...
+                    //
+                    self.variables.push(left_name);
+                    let name = self.environment.next_local_var_name(left_name);
+                    self.assignments
+                        .push(docvec![name, " = ", string(left_side_string)]);
                 }
+
+                docvec![
+                    "<<\"",
+                    string_inner(left_side_string),
+                    "\"/utf8",
+                    ", ",
+                    right,
+                    "/binary>>"
+                ]
             }
 
             Pattern::Invalid { .. } => panic!("invalid patterns should not reach code generation"),

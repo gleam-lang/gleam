@@ -20,7 +20,9 @@ pub fn a(x) {
 -spec a(list(binary())) -> binary().
 a(X) ->
     case X of
-        [<<A:1/binary, _/binary>>, <<B:1/binary, _/binary>>] when (A =:= <<"a"/utf8>>) andalso (B =:= <<"b"/utf8>>) ->
+        [<<"a"/utf8, _/binary>>, <<"b"/utf8, _/binary>>] ->
+            A = <<"a"/utf8>>,
+            B = <<"b"/utf8>>,
             <<A/binary, B/binary>>;
 
         _ ->

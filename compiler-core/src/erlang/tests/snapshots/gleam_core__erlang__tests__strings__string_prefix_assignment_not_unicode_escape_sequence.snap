@@ -31,34 +31,44 @@ pub fn go(x) {
 -spec go(binary()) -> binary().
 go(X) ->
     _ = case X of
-        <<Start:5/binary, Rest/binary>> when Start =:= <<"\\u{9}"/utf8>> ->
+        <<"\\u{9}"/utf8, Rest/binary>> ->
+            Start = <<"\\u{9}"/utf8>>,
             <<"test"/utf8>>;
 
-        <<Start@1:10/binary, Rest@1/binary>> when Start@1 =:= <<"\\u{000009}"/utf8>> ->
+        <<"\\u{000009}"/utf8, Rest@1/binary>> ->
+            Start@1 = <<"\\u{000009}"/utf8>>,
             <<"test"/utf8>>;
 
-        <<Start@2:6/binary, Rest@2/binary>> when Start@2 =:= <<"\\u{21}"/utf8>> ->
+        <<"\\u{21}"/utf8, Rest@2/binary>> ->
+            Start@2 = <<"\\u{21}"/utf8>>,
             <<"test"/utf8>>;
 
-        <<Start@3:7/binary, Rest@3/binary>> when Start@3 =:= <<"\\u{100}"/utf8>> ->
+        <<"\\u{100}"/utf8, Rest@3/binary>> ->
+            Start@3 = <<"\\u{100}"/utf8>>,
             <<"test"/utf8>>;
 
-        <<Start@4:8/binary, Rest@4/binary>> when Start@4 =:= <<"\\u{1000}"/utf8>> ->
+        <<"\\u{1000}"/utf8, Rest@4/binary>> ->
+            Start@4 = <<"\\u{1000}"/utf8>>,
             <<"test"/utf8>>;
 
-        <<Start@5:9/binary, Rest@5/binary>> when Start@5 =:= <<"\\u{1F600}"/utf8>> ->
+        <<"\\u{1F600}"/utf8, Rest@5/binary>> ->
+            Start@5 = <<"\\u{1F600}"/utf8>>,
             <<"test"/utf8>>;
 
-        <<Start@6:9/binary, Rest@6/binary>> when Start@6 =:= <<"\\u{1f600}"/utf8>> ->
+        <<"\\u{1f600}"/utf8, Rest@6/binary>> ->
+            Start@6 = <<"\\u{1f600}"/utf8>>,
             <<"test"/utf8>>;
 
-        <<Start@7:10/binary, Rest@7/binary>> when Start@7 =:= <<"\\u{01F600}"/utf8>> ->
+        <<"\\u{01F600}"/utf8, Rest@7/binary>> ->
+            Start@7 = <<"\\u{01F600}"/utf8>>,
             <<"test"/utf8>>;
 
-        <<Start@8:10/binary, Rest@8/binary>> when Start@8 =:= <<"\\u{01f600}"/utf8>> ->
+        <<"\\u{01f600}"/utf8, Rest@8/binary>> ->
+            Start@8 = <<"\\u{01f600}"/utf8>>,
             <<"test"/utf8>>;
 
-        <<Start@9:61/binary, Rest@9/binary>> when Start@9 =:= <<"\\u{9} \\u{000009} \\u{21} \\u{100} \\u{1000} \\u{1F600} \\u{01F600}"/utf8>> ->
+        <<"\\u{9} \\u{000009} \\u{21} \\u{100} \\u{1000} \\u{1F600} \\u{01F600}"/utf8, Rest@9/binary>> ->
+            Start@9 = <<"\\u{9} \\u{000009} \\u{21} \\u{100} \\u{1000} \\u{1F600} \\u{01F600}"/utf8>>,
             <<"test"/utf8>>;
 
         _ ->
