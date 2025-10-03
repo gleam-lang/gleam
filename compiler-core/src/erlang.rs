@@ -7,6 +7,7 @@ mod pattern;
 mod tests;
 
 use crate::build::{Target, module_erlang_name};
+use crate::erlang::pattern::PatternPrinter;
 use crate::strings::{convert_string_escape_chars, to_snake_case};
 use crate::type_::is_prelude_module;
 use crate::{
@@ -959,18 +960,18 @@ fn expr_segment<'a>(
     )
 }
 
-fn bit_array_segment<'a, Value: 'a, CreateDoc, SizeToDoc, UnitToDoc>(
+fn bit_array_segment<'a, Value: 'a, CreateDoc, SizeToDoc, UnitToDoc, State>(
     mut create_document: CreateDoc,
     options: &'a [BitArrayOption<Value>],
     mut size_to_doc: SizeToDoc,
     mut unit_to_doc: UnitToDoc,
     value_is_a_string_literal: bool,
     value_is_a_discard: bool,
-    env: &mut Env<'a>,
+    state: &mut State,
 ) -> Document<'a>
 where
-    CreateDoc: FnMut(&mut Env<'a>) -> Document<'a>,
-    SizeToDoc: FnMut(&'a Value, &mut Env<'a>) -> Option<Document<'a>>,
+    CreateDoc: FnMut(&mut State) -> Document<'a>,
+    SizeToDoc: FnMut(&'a Value, &mut State) -> Option<Document<'a>>,
     UnitToDoc: FnMut(&'a u8) -> Option<Document<'a>>,
 {
     let mut size: Option<Document<'a>> = None;
@@ -1007,12 +1008,12 @@ where
             Opt::Big { .. } => others.push("big".to_doc()),
             Opt::Little { .. } => others.push("little".to_doc()),
             Opt::Native { .. } => others.push("native".to_doc()),
-            Opt::Size { value, .. } => size = size_to_doc(value, env),
+            Opt::Size { value, .. } => size = size_to_doc(value, state),
             Opt::Unit { value, .. } => unit = unit_to_doc(value),
         }
     }
 
-    let mut document = create_document(env);
+    let mut document = create_document(state);
 
     document = document.append(size);
     let others_is_empty = others.is_empty();
@@ -1180,7 +1181,7 @@ fn binop_documents<'a>(left: Document<'a>, op: &'static str, right: Document<'a>
 fn let_assert<'a>(
     value: &'a TypedExpr,
     pattern: &'a TypedPattern,
-    env: &mut Env<'a>,
+    environment: &mut Env<'a>,
     message: Option<&'a TypedExpr>,
     position: Position,
     location: SrcSpan,
@@ -1188,15 +1189,15 @@ fn let_assert<'a>(
     // If the pattern will never fail, like a tuple or a simple variable, we
     // simply treat it as if it were a `let` assignment.
     if pattern.always_matches() {
-        return let_(value, pattern, env);
+        return let_(value, pattern, environment);
     }
 
     let message = match message {
-        Some(message) => expr(message, env),
+        Some(message) => expr(message, environment),
         None => string("Pattern match failed, no pattern matched the value."),
     };
 
-    let subject = maybe_block_expr(value, env);
+    let subject = maybe_block_expr(value, environment);
 
     // The code we generated for a `let assert` assignment looks something like
     // this. For this Gleam code:
@@ -1248,26 +1249,31 @@ fn let_assert<'a>(
     };
 
     let (subject_assignment, subject) = if is_tail && !value.is_var() {
-        let variable = env.next_local_var_name(ASSERT_SUBJECT_VARIABLE);
+        let variable = environment.next_local_var_name(ASSERT_SUBJECT_VARIABLE);
         let assignment = docvec![variable.clone(), " = ", subject, ",", line()];
         (assignment, variable)
     } else {
         (nil(), subject)
     };
 
-    let mut guards = vec![];
-    let mut vars = vec![];
-    let pattern_document = pattern::to_doc(pattern, &mut vars, env, &mut guards);
-    let clause_guard = optional_clause_guard(None, guards, env);
+    let mut pattern_printer = PatternPrinter::new(environment);
+    let pattern_document = pattern_printer.print(pattern);
+    let PatternPrinter {
+        environment,
+        variables,
+        guards,
+    } = pattern_printer;
 
-    let value_document = match vars.as_slice() {
+    let clause_guard = optional_clause_guard(None, guards, environment);
+
+    let value_document = match variables.as_slice() {
         _ if is_tail => subject.clone(),
         [] => "nil".to_doc(),
-        [variable] => env.local_var_name(variable),
+        [variable] => environment.local_var_name(variable),
         variables => {
             let variables = variables
                 .iter()
-                .map(|variable| env.local_var_name(variable));
+                .map(|variable| environment.local_var_name(variable));
             docvec![
                 break_("{", "{"),
                 join(variables, break_(",", ", ")).nest(INDENT),
@@ -1277,14 +1283,14 @@ fn let_assert<'a>(
         }
     };
 
-    let assignment = match vars.as_slice() {
+    let assignment = match variables.as_slice() {
         _ if is_tail => nil(),
         [] => nil(),
-        [variable] => env.next_local_var_name(variable).append(" = "),
+        [variable] => environment.next_local_var_name(variable).append(" = "),
         variables => {
             let variables = variables
                 .iter()
-                .map(|variable| env.next_local_var_name(variable));
+                .map(|variable| environment.next_local_var_name(variable));
             docvec![
                 break_("{", "{"),
                 join(variables, break_(",", ", ")).nest(INDENT),
@@ -1301,7 +1307,7 @@ fn let_assert<'a>(
         value_document,
         ";",
         line(),
-        env.next_local_var_name(ASSERT_FAIL_VARIABLE),
+        environment.next_local_var_name(ASSERT_FAIL_VARIABLE),
         " ->",
         docvec![
             line(),
@@ -1310,13 +1316,13 @@ fn let_assert<'a>(
                 &message,
                 location,
                 vec![
-                    ("value", env.local_var_name(ASSERT_FAIL_VARIABLE)),
+                    ("value", environment.local_var_name(ASSERT_FAIL_VARIABLE)),
                     ("start", location.start.to_doc()),
                     ("'end'", value.location().end.to_doc()),
                     ("pattern_start", pattern.location().start.to_doc()),
                     ("pattern_end", pattern.location().end.to_doc()),
                 ],
-                env,
+                environment,
             )
             .nest(INDENT)
         ]
@@ -1334,11 +1340,14 @@ fn let_assert<'a>(
     ]
 }
 
-fn let_<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a> {
-    let body = maybe_block_expr(value, env).group();
-    let mut guards = vec![];
-
-    pattern::to_doc(pat, &mut vec![], env, &mut guards)
+fn let_<'a>(
+    value: &'a TypedExpr,
+    pattern: &'a TypedPattern,
+    environment: &mut Env<'a>,
+) -> Document<'a> {
+    let body = maybe_block_expr(value, environment).group();
+    PatternPrinter::new(environment)
+        .print(pattern)
         .append(" = ")
         .append(body)
 }
@@ -1530,7 +1539,7 @@ fn record_constructor_function(tag: &EcoString, arity: usize) -> Document<'_> {
         .append("} end")
 }
 
-fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
+fn clause<'a>(clause: &'a TypedClause, environment: &mut Env<'a>) -> Document<'a> {
     let Clause {
         guard,
         pattern: pat,
@@ -1544,29 +1553,36 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
     // rewriting because each pattern would define different (rewritten)
     // variables names.
     let mut then_doc = None;
-    let initial_erlang_vars = env.erl_function_scope_vars.clone();
+    let initial_erlang_vars = environment.erl_function_scope_vars.clone();
     let mut end_erlang_vars = im::HashMap::new();
 
     let doc = join(
         std::iter::once(pat)
             .chain(alternative_patterns)
             .map(|patterns| {
-                let mut additional_guards = vec![];
-                env.erl_function_scope_vars = initial_erlang_vars.clone();
+                environment.erl_function_scope_vars = initial_erlang_vars.clone();
+                let mut pattern_printer = PatternPrinter::new(environment);
 
                 let patterns_doc = if patterns.len() == 1 {
-                    let p = patterns.first().expect("Single pattern clause printing");
-                    pattern::to_doc(p, &mut vec![], env, &mut additional_guards)
+                    let pattern = patterns.first().expect("Single pattern clause printing");
+                    pattern_printer.print(pattern)
                 } else {
                     tuple(patterns.iter().map(|pattern| {
-                        pattern::to_doc(pattern, &mut vec![], env, &mut additional_guards)
+                        pattern_printer.reset_variables();
+                        pattern_printer.print(pattern)
                     }))
                 };
 
-                let guard = optional_clause_guard(guard.as_ref(), additional_guards, env);
+                let PatternPrinter {
+                    environment,
+                    guards,
+                    variables: _,
+                } = pattern_printer;
+
+                let guard = optional_clause_guard(guard.as_ref(), guards, environment);
                 if then_doc.is_none() {
-                    then_doc = Some(clause_consequence(then, env));
-                    end_erlang_vars = env.erl_function_scope_vars.clone();
+                    then_doc = Some(clause_consequence(then, environment));
+                    end_erlang_vars = environment.erl_function_scope_vars.clone();
                 }
 
                 patterns_doc.append(
@@ -1578,7 +1594,7 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
         ";".to_doc().append(lines(2)),
     );
 
-    env.erl_function_scope_vars = end_erlang_vars;
+    environment.erl_function_scope_vars = end_erlang_vars;
     doc
 }
 
