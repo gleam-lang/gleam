@@ -25,6 +25,10 @@
   the final step of a pipeline.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the record field is forgotten by compiler when its 
+  type is not valid.
+  ([Adi Salimgereyev](https://github.com/abs0luty))
+
 ## v1.13.0-rc1 - 2025-09-29
 
 ### Compiler
