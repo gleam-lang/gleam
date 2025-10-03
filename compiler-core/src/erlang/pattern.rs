@@ -7,32 +7,30 @@ use crate::analyse::Inferred;
 use super::*;
 
 pub(super) fn to_doc<'a>(
-    p: &'a TypedPattern,
-    vars: &mut Vec<&'a str>,
-    env: &mut Env<'a>,
+    pattern: &'a TypedPattern,
+    variables: &mut Vec<&'a str>,
+    environment: &mut Env<'a>,
     guards: &mut Vec<Document<'a>>,
 ) -> Document<'a> {
-    print(p, vars, env, guards)
+    print(pattern, variables, environment, guards)
 }
 
 fn print<'a>(
-    p: &'a TypedPattern,
-    vars: &mut Vec<&'a str>,
-    env: &mut Env<'a>,
+    pattern: &'a TypedPattern,
+    variables: &mut Vec<&'a str>,
+    environment: &mut Env<'a>,
     guards: &mut Vec<Document<'a>>,
 ) -> Document<'a> {
-    match p {
-        Pattern::Assign {
-            name, pattern: p, ..
-        } => {
-            vars.push(name);
-            print(p, vars, env, guards)
+    match pattern {
+        Pattern::Assign { name, pattern, .. } => {
+            variables.push(name);
+            print(pattern, variables, environment, guards)
                 .append(" = ")
-                .append(env.next_local_var_name(name))
+                .append(environment.next_local_var_name(name))
         }
 
         Pattern::List { elements, tail, .. } => {
-            pattern_list(elements, tail.as_deref(), vars, env, guards)
+            pattern_list(elements, tail.as_deref(), variables, environment, guards)
         }
 
         Pattern::Discard { .. } => "_".to_doc(),
@@ -40,13 +38,15 @@ fn print<'a>(
         Pattern::BitArraySize(size) => match size {
             BitArraySize::Int { .. }
             | BitArraySize::Variable { .. }
-            | BitArraySize::Block { .. } => bit_array_size(size, env),
-            BitArraySize::BinaryOperator { .. } => bit_array_size(size, env).surround("(", ")"),
+            | BitArraySize::Block { .. } => bit_array_size(size, environment),
+            BitArraySize::BinaryOperator { .. } => {
+                bit_array_size(size, environment).surround("(", ")")
+            }
         },
 
         Pattern::Variable { name, .. } => {
-            vars.push(name);
-            env.next_local_var_name(name)
+            variables.push(name);
+            environment.next_local_var_name(name)
         }
 
         Pattern::Int { value, .. } => int(value),
@@ -59,7 +59,7 @@ fn print<'a>(
             arguments,
             constructor: Inferred::Known(PatternConstructor { name, .. }),
             ..
-        } => tag_tuple_pattern(name, arguments, vars, env, guards),
+        } => tag_tuple_pattern(name, arguments, variables, environment, guards),
 
         Pattern::Constructor {
             constructor: Inferred::Unknown,
@@ -68,14 +68,16 @@ fn print<'a>(
             panic!("Erlang generation performed with uninferred pattern constructor")
         }
 
-        Pattern::Tuple { elements, .. } => {
-            tuple(elements.iter().map(|p| print(p, vars, env, guards)))
-        }
+        Pattern::Tuple { elements, .. } => tuple(
+            elements
+                .iter()
+                .map(|pattern| print(pattern, variables, environment, guards)),
+        ),
 
         Pattern::BitArray { segments, .. } => bit_array(
             segments
                 .iter()
-                .map(|s| pattern_segment(&s.value, &s.options, vars, env, guards)),
+                .map(|s| pattern_segment(&s.value, &s.options, variables, environment, guards)),
         ),
 
         Pattern::StringPrefix {
@@ -86,8 +88,8 @@ fn print<'a>(
         } => {
             let right = match right_side_assignment {
                 AssignName::Variable(right) => {
-                    vars.push(right);
-                    env.next_local_var_name(right)
+                    variables.push(right);
+                    environment.next_local_var_name(right)
                 }
                 AssignName::Discard(_) => "_".to_doc(),
             };
@@ -105,8 +107,8 @@ fn print<'a>(
                     //   to variables within the pattern, we first match the expected prefix length in
                     //   bytes, then use a guard clause to verify the content.
                     //
-                    vars.push(left_name);
-                    let name = env.next_local_var_name(left_name);
+                    variables.push(left_name);
+                    let name = environment.next_local_var_name(left_name);
                     guards.push(docvec![name.clone(), " =:= ", string(left_side_string)]);
                     docvec![
                         "<<",
@@ -134,7 +136,7 @@ fn print<'a>(
     }
 }
 
-fn bit_array_size<'a>(size: &'a TypedBitArraySize, env: &mut Env<'a>) -> Document<'a> {
+fn bit_array_size<'a>(size: &'a TypedBitArraySize, environment: &mut Env<'a>) -> Document<'a> {
     match size {
         BitArraySize::Int { value, .. } => int(value),
         BitArraySize::Variable {
@@ -146,9 +148,9 @@ fn bit_array_size<'a>(size: &'a TypedBitArraySize, env: &mut Env<'a>) -> Documen
                 .variant;
             match v {
                 ValueConstructorVariant::ModuleConstant { literal, .. } => {
-                    const_inline(literal, env)
+                    const_inline(literal, environment)
                 }
-                _ => env.local_var_name(name),
+                _ => environment.local_var_name(name),
             }
         }
         BitArraySize::BinaryOperator {
@@ -161,19 +163,21 @@ fn bit_array_size<'a>(size: &'a TypedBitArraySize, env: &mut Env<'a>) -> Documen
                 IntOperator::Add => " + ",
                 IntOperator::Subtract => " - ",
                 IntOperator::Multiply => " * ",
-                IntOperator::Divide => return bit_array_size_divide(left, right, "div", env),
+                IntOperator::Divide => {
+                    return bit_array_size_divide(left, right, "div", environment);
+                }
                 IntOperator::Remainder => {
-                    return bit_array_size_divide(left, right, "rem", env);
+                    return bit_array_size_divide(left, right, "rem", environment);
                 }
             };
 
             docvec![
-                bit_array_size(left, env),
+                bit_array_size(left, environment),
                 operator,
-                bit_array_size(right, env)
+                bit_array_size(right, environment)
             ]
         }
-        BitArraySize::Block { inner, .. } => bit_array_size(inner, env).surround("(", ")"),
+        BitArraySize::Block { inner, .. } => bit_array_size(inner, environment).surround("(", ")"),
     }
 }
 
@@ -181,15 +185,15 @@ fn bit_array_size_divide<'a>(
     left: &'a TypedBitArraySize,
     right: &'a TypedBitArraySize,
     operator: &'static str,
-    env: &mut Env<'a>,
+    environment: &mut Env<'a>,
 ) -> Document<'a> {
     if right.non_zero_compile_time_number() {
-        return bit_array_size_operator(left, operator, right, env);
+        return bit_array_size_operator(left, operator, right, environment);
     }
 
-    let left = bit_array_size(left, env);
-    let right = bit_array_size(right, env);
-    let denominator = env.next_local_var_name("gleam@denominator");
+    let left = bit_array_size(left, environment);
+    let right = bit_array_size(right, environment);
+    let denominator = environment.next_local_var_name("gleam@denominator");
     let clauses = docvec![
         line(),
         "0 -> 0;",
@@ -205,15 +209,17 @@ fn bit_array_size_operator<'a>(
     left: &'a TypedBitArraySize,
     operator: &'static str,
     right: &'a TypedBitArraySize,
-    env: &mut Env<'a>,
+    environment: &mut Env<'a>,
 ) -> Document<'a> {
     let left = match left {
-        BitArraySize::BinaryOperator { .. } => bit_array_size(left, env).surround("(", ")"),
-        _ => bit_array_size(left, env),
+        BitArraySize::BinaryOperator { .. } => bit_array_size(left, environment).surround("(", ")"),
+        _ => bit_array_size(left, environment),
     };
     let right = match right {
-        BitArraySize::BinaryOperator { .. } => bit_array_size(right, env).surround("(", ")"),
-        _ => bit_array_size(right, env),
+        BitArraySize::BinaryOperator { .. } => {
+            bit_array_size(right, environment).surround("(", ")")
+        }
+        _ => bit_array_size(right, environment),
     };
     binop_documents(left, operator, right)
 }
@@ -221,17 +227,19 @@ fn bit_array_size_operator<'a>(
 fn tag_tuple_pattern<'a>(
     name: &'a str,
     arguments: &'a [CallArg<TypedPattern>],
-    vars: &mut Vec<&'a str>,
-    env: &mut Env<'a>,
+    variables: &mut Vec<&'a str>,
+    environment: &mut Env<'a>,
     guards: &mut Vec<Document<'a>>,
 ) -> Document<'a> {
     if arguments.is_empty() {
         atom_string(to_snake_case(name))
     } else {
         tuple(
-            [atom_string(to_snake_case(name))]
-                .into_iter()
-                .chain(arguments.iter().map(|p| print(&p.value, vars, env, guards))),
+            [atom_string(to_snake_case(name))].into_iter().chain(
+                arguments
+                    .iter()
+                    .map(|argument| print(&argument.value, variables, environment, guards)),
+            ),
         )
     }
 }
@@ -239,28 +247,31 @@ fn tag_tuple_pattern<'a>(
 fn pattern_segment<'a>(
     value: &'a TypedPattern,
     options: &'a [BitArrayOption<TypedPattern>],
-    vars: &mut Vec<&'a str>,
-    env: &mut Env<'a>,
+    variables: &mut Vec<&'a str>,
+    environment: &mut Env<'a>,
     guards: &mut Vec<Document<'a>>,
 ) -> Document<'a> {
     let pattern_is_a_string_literal = matches!(value, Pattern::String { .. });
     let pattern_is_a_discard = matches!(value, Pattern::Discard { .. });
 
-    let vars = RefCell::new(vars);
+    let variables = RefCell::new(variables);
     let guards = RefCell::new(guards);
 
-    let create_document = |env: &mut Env<'a>| match value {
+    let create_document = |environment: &mut Env<'a>| match value {
         Pattern::String { value, .. } => string_inner(value).surround("\"", "\""),
         Pattern::Discard { .. }
         | Pattern::Variable { .. }
         | Pattern::Int { .. }
-        | Pattern::Float { .. } => {
-            print(value, &mut vars.borrow_mut(), env, &mut guards.borrow_mut())
-        }
+        | Pattern::Float { .. } => print(
+            value,
+            &mut variables.borrow_mut(),
+            environment,
+            &mut guards.borrow_mut(),
+        ),
 
         Pattern::Assign { name, pattern, .. } => {
-            vars.borrow_mut().push(name);
-            let variable_name = env.next_local_var_name(name);
+            variables.borrow_mut().push(name);
+            let variable_name = environment.next_local_var_name(name);
 
             match pattern.as_ref() {
                 // In Erlang, assignment patterns inside bit arrays are not allowed. So instead of
@@ -303,11 +314,11 @@ fn pattern_segment<'a>(
         _ => panic!("Pattern segment match not recognised"),
     };
 
-    let size = |value: &'a TypedPattern, env: &mut Env<'a>| {
+    let size = |value: &'a TypedPattern, environment: &mut Env<'a>| {
         Some(":".to_doc().append(print(
             value,
-            &mut vars.borrow_mut(),
-            env,
+            &mut variables.borrow_mut(),
+            environment,
             &mut guards.borrow_mut(),
         )))
     };
@@ -321,23 +332,23 @@ fn pattern_segment<'a>(
         unit,
         pattern_is_a_string_literal,
         pattern_is_a_discard,
-        env,
+        environment,
     )
 }
 
 fn pattern_list<'a>(
     elements: &'a [TypedPattern],
     tail: Option<&'a TypedPattern>,
-    vars: &mut Vec<&'a str>,
-    env: &mut Env<'a>,
+    variables: &mut Vec<&'a str>,
+    environment: &mut Env<'a>,
     guards: &mut Vec<Document<'a>>,
 ) -> Document<'a> {
     let elements = join(
         elements
             .iter()
-            .map(|element| print(element, vars, env, guards)),
+            .map(|element| print(element, variables, environment, guards)),
         break_(",", ", "),
     );
-    let tail = tail.map(|tail| print(tail, vars, env, guards));
+    let tail = tail.map(|tail| print(tail, variables, environment, guards));
     list(elements, tail)
 }
