@@ -22,7 +22,8 @@ pub fn go(x) {
 -spec go(binary()) -> binary().
 go(X) ->
     case X of
-        <<Greeting:7/binary, Name/binary>> when Greeting =:= <<"Hello, "/utf8>> ->
+        <<"Hello, "/utf8, Name/binary>> ->
+            Greeting = <<"Hello, "/utf8>>,
             Greeting;
 
         _ ->

@@ -20,7 +20,8 @@ pub fn a(x) {
 -spec a(binary()) -> binary().
 a(X) ->
     case {X, X} of
-        {_, <<A:1/binary, _/binary>>} when A =:= <<"a"/utf8>> ->
+        {_, <<"a"/utf8, _/binary>>} ->
+            A = <<"a"/utf8>>,
             A;
 
         {_, _} ->
