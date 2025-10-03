@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "pub fn main() { 1_0.0 == 10.0 }"
+---
+----- SOURCE CODE
+pub fn main() { 1_0.0 == 10.0 }
+
+----- WARNING
+warning: Redundant comparison
+  ┌─ /src/warning/wrn.gleam:1:17
+  │
+1 │ pub fn main() { 1_0.0 == 10.0 }
+  │                 ^^^^^^^^^^^^^ This is always `True`
+
+This comparison is redundant since it always succeeds.
