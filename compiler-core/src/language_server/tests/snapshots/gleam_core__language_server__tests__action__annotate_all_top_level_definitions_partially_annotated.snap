@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub const answer: Int = 42\npub const another_answer = 43\n\npub fn add_two(thing) -> Int {\n  thing + 2\n}\n\npub fn add_one(thing: Int) {\n  thing + 1\n}\n"
+---
+----- BEFORE ACTION
+
+pub const answer: Int = 42
+pub const another_answer = 43
+
+pub fn add_two(thing) -> Int {
+    ▔▔▔▔▔▔▔▔▔▔↑               
+  thing + 2
+}
+
+pub fn add_one(thing: Int) {
+  thing + 1
+}
+
+
+----- AFTER ACTION
+
+pub const answer: Int = 42
+pub const another_answer: Int = 43
+
+pub fn add_two(thing: Int) -> Int {
+  thing + 2
+}
+
+pub fn add_one(thing: Int) -> Int {
+  thing + 1
+}

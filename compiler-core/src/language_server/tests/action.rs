@@ -112,6 +112,7 @@ const ASSIGN_UNUSED_RESULT: &str = "Assign unused Result value to `_`";
 const ADD_MISSING_PATTERNS: &str = "Add missing patterns";
 const ADD_ANNOTATION: &str = "Add type annotation";
 const ADD_ANNOTATIONS: &str = "Add type annotations";
+const ANNOTATE_TOP_LEVEL_DEFINITIONS: &str = "Annotate all top level definitions";
 const CONVERT_FROM_USE: &str = "Convert from `use`";
 const CONVERT_TO_USE: &str = "Convert to `use`";
 const EXTRACT_VARIABLE: &str = "Extract variable";
@@ -10684,5 +10685,134 @@ pub fn main() -> Nil {
 "
         ),
         find_position_of("function").to_selection()
+    );
+}
+
+#[test]
+fn annotate_all_top_level_definitions_constant() {
+    assert_code_action!(
+        ANNOTATE_TOP_LEVEL_DEFINITIONS,
+        r#"
+pub const answer = 42
+
+pub fn add_two(thing) {
+  thing + 2
+}
+
+pub fn add_one(thing) {
+  thing + 1
+}
+"#,
+        find_position_of("const").select_until(find_position_of("="))
+    );
+}
+
+#[test]
+fn annotate_all_top_level_definitions_function() {
+    assert_code_action!(
+        ANNOTATE_TOP_LEVEL_DEFINITIONS,
+        r#"
+pub fn add_two(thing) {
+  thing + 2
+}
+
+pub fn add_one(thing) {
+  thing + 1
+}
+"#,
+        find_position_of("fn").select_until(find_position_of("("))
+    );
+}
+
+#[test]
+fn annotate_all_top_level_definitions_already_annotated() {
+    assert_no_code_actions!(
+        ANNOTATE_TOP_LEVEL_DEFINITIONS,
+        r#"
+pub const answer: Int = 42
+
+pub fn add_two(thing: Int) -> Int {
+  thing + 2
+}
+
+pub fn add_one(thing: Int) -> Int {
+  thing + 1
+}
+"#,
+        find_position_of("fn").select_until(find_position_of("("))
+    );
+}
+
+#[test]
+fn annotate_all_top_level_definitions_inside_body() {
+    assert_no_code_actions!(
+        ANNOTATE_TOP_LEVEL_DEFINITIONS,
+        r#"
+pub fn add_one(thing) {
+  thing + 1
+}
+"#,
+        find_position_of("thing + 1").to_selection()
+    );
+}
+
+#[test]
+fn annotate_all_top_level_definitions_partially_annotated() {
+    assert_code_action!(
+        ANNOTATE_TOP_LEVEL_DEFINITIONS,
+        r#"
+pub const answer: Int = 42
+pub const another_answer = 43
+
+pub fn add_two(thing) -> Int {
+  thing + 2
+}
+
+pub fn add_one(thing: Int) {
+  thing + 1
+}
+"#,
+        find_position_of("fn").select_until(find_position_of("("))
+    );
+}
+
+#[test]
+fn annotate_all_top_level_definitions_with_partially_annotated_generic_function() {
+    assert_code_action!(
+        ANNOTATE_TOP_LEVEL_DEFINITIONS,
+        r#"
+pub fn wibble(a: a, b, c: c, d) {
+  todo
+}
+"#,
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn annotate_all_top_level_definitions_with_two_generic_functions() {
+    assert_code_action!(
+        ANNOTATE_TOP_LEVEL_DEFINITIONS,
+        r#"
+fn wibble(one) { todo }
+
+fn wobble(other) { todo }
+"#,
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn annotate_all_top_level_definitions_with_constant_and_generic_functions() {
+    assert_code_action!(
+        ANNOTATE_TOP_LEVEL_DEFINITIONS,
+        r#"
+const answer = 42
+
+fn wibble(one) { todo }
+
+fn wobble(other) { todo }
+"#,
+        find_position_of("wobble").to_selection()
     );
 }
