@@ -1262,6 +1262,7 @@ fn let_assert<'a>(
         environment,
         variables,
         guards,
+        assignments,
     } = pattern_printer;
 
     let clause_guard = optional_clause_guard(None, guards, environment);
@@ -1328,6 +1329,13 @@ fn let_assert<'a>(
         ]
         .nest(INDENT)
     ];
+
+    let assignments = if assignments.is_empty() {
+        nil()
+    } else {
+        docvec![",", line(), join(assignments, ",".to_doc().append(line()))]
+    };
+
     docvec![
         subject_assignment,
         assignment,
@@ -1337,6 +1345,7 @@ fn let_assert<'a>(
         docvec![line(), clauses].nest(INDENT),
         line(),
         "end",
+        assignments,
     ]
 }
 
@@ -1577,11 +1586,12 @@ fn clause<'a>(clause: &'a TypedClause, environment: &mut Env<'a>) -> Document<'a
                     environment,
                     guards,
                     variables: _,
+                    assignments,
                 } = pattern_printer;
 
                 let guard = optional_clause_guard(guard.as_ref(), guards, environment);
                 if then_doc.is_none() {
-                    then_doc = Some(clause_consequence(then, environment));
+                    then_doc = Some(clause_consequence(then, assignments, environment));
                     end_erlang_vars = environment.erl_function_scope_vars.clone();
                 }
 
@@ -1598,11 +1608,25 @@ fn clause<'a>(clause: &'a TypedClause, environment: &mut Env<'a>) -> Document<'a
     doc
 }
 
-fn clause_consequence<'a>(consequence: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
-    match consequence {
+fn clause_consequence<'a>(
+    consequence: &'a TypedExpr,
+    // Further assignments that the pattern might need to introduce at the start
+    // of the new block.
+    assignments: Vec<Document<'a>>,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    let assignment_doc = if assignments.is_empty() {
+        nil()
+    } else {
+        let separator = ",".to_doc().append(line());
+        join(assignments, separator.clone()).append(separator)
+    };
+
+    let consequence = match consequence {
         TypedExpr::Block { statements, .. } => statement_sequence(statements, env),
         _ => expr(consequence, env),
-    }
+    };
+    assignment_doc.append(consequence)
 }
 
 fn optional_clause_guard<'a>(
