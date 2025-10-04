@@ -1,0 +1,47 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub type Wibble {\n    Wibble(Wobble)\n}\n\npub type Wobble {\n    Wobble\n    Wubble\n}\n\npub fn main() {\n    let Wibble(wobble) = todo\n\n    case todo {\n      _ -> todo\n    }\n}\n"
+---
+----- BEFORE ACTION
+
+pub type Wibble {
+    Wibble(Wobble)
+}
+
+pub type Wobble {
+    Wobble
+    Wubble
+}
+
+pub fn main() {
+    let Wibble(wobble) = todo
+               ↑             
+
+    case todo {
+      _ -> todo
+    }
+}
+
+
+----- AFTER ACTION
+
+pub type Wibble {
+    Wibble(Wobble)
+}
+
+pub type Wobble {
+    Wobble
+    Wubble
+}
+
+pub fn main() {
+    let Wibble(wobble) = todo
+    case wobble {
+      Wobble -> todo
+      Wubble -> todo
+    }
+
+    case todo {
+      _ -> todo
+    }
+}

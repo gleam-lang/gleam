@@ -7539,6 +7539,33 @@ fn map(list: List(a), fun: fn(a) -> b) { todo }
 }
 
 #[test]
+// https://github.com/gleam-lang/gleam/issues/5042
+fn pattern_match_on_variable_crashes() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        r#"
+pub type Wibble {
+    Wibble(Wobble)
+}
+
+pub type Wobble {
+    Wobble
+    Wubble
+}
+
+pub fn main() {
+    let Wibble(wobble) = todo
+
+    case todo {
+      _ -> todo
+    }
+}
+"#,
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
 fn generate_function_works_with_invalid_call() {
     assert_code_action!(
         GENERATE_FUNCTION,
