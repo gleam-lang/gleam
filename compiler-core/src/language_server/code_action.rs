@@ -4923,6 +4923,13 @@ impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO> {
     }
 
     fn visit_typed_assignment(&mut self, assignment: &'ast TypedAssignment) {
+        // If we're not inside the assignment there's no point in exploring its
+        // ast further.
+        let assignment_range = self.edits.src_span_to_lsp_range(assignment.location);
+        if !within(self.params.range, assignment_range) {
+            return;
+        }
+
         ast::visit::visit_typed_assignment(self, assignment);
         if let Some((name, _, ref type_)) = self.pattern_variable_under_cursor {
             self.selected_value = Some(PatternMatchedValue::LetVariable {
@@ -4934,6 +4941,13 @@ impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO> {
     }
 
     fn visit_typed_clause(&mut self, clause: &'ast ast::TypedClause) {
+        // If we're not inside the clause there's no point in exploring its
+        // ast further.
+        let clause_range = self.edits.src_span_to_lsp_range(clause.location);
+        if !within(self.params.range, clause_range) {
+            return;
+        }
+
         for pattern in clause.pattern.iter() {
             self.visit_typed_pattern(pattern);
         }

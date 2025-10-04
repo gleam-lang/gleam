@@ -25,6 +25,10 @@
   the final step of a pipeline.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the "pattern match on variable" code action would crash when
+  used on a variable followed by a case expression.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.13.0-rc1 - 2025-09-29
 
 ### Compiler
