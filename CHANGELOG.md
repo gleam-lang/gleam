@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.13.0-rc2 - 2025-10-06
 
 ### Bug fixes
 
