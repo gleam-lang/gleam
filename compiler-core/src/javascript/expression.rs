@@ -1586,13 +1586,13 @@ impl<'module, 'a> Generator<'module, 'a> {
         {
             let left_doc = self
                 .not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(left));
-            Some(self.singleton_equal_helper(left_doc, name, should_be_equal))
+            Some(self.singleton_equal(left_doc, name, should_be_equal))
         } else {
             None
         }
     }
 
-    fn singleton_equal_helper(
+    fn singleton_equal(
         &self,
         value: Document<'a>,
         tag: &EcoString,
@@ -2164,7 +2164,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             && !matches!(&**type_, Type::Fn { .. })
         {
             let left_doc = self.guard(left);
-            return Some(self.singleton_equal_helper(left_doc, name, should_be_equal));
+            return Some(self.singleton_equal(left_doc, name, should_be_equal));
         }
         None
     }
