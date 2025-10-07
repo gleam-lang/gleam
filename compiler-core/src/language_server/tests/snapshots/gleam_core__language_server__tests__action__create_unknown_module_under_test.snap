@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport wobble/woo"
+---
+----- BEFORE ACTION
+
+import wobble/woo
+              ↑  
+
+
+----- AFTER ACTION
+
+----- FILE OPERATIONS -----
+- Create /test/wobble/woo.gleam
