@@ -2793,11 +2793,11 @@ impl<'a> ExtractVariable<'a> {
 }
 
 impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
-    fn visit_typed_statement(&mut self, stmt: &'ast TypedStatement) {
-        let range = self.edits.src_span_to_lsp_range(stmt.location());
+    fn visit_typed_statement(&mut self, statement: &'ast TypedStatement) {
+        let range = self.edits.src_span_to_lsp_range(statement.location());
         if !within(self.params.range, range) {
-            self.latest_statement = Some(stmt.location());
-            ast::visit::visit_typed_statement(self, stmt);
+            self.latest_statement = Some(statement.location());
+            ast::visit::visit_typed_statement(self, statement);
             return;
         }
 
@@ -2808,17 +2808,17 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
             Some(ExtractVariablePosition::InsideCaptureBody) => {}
             Some(ExtractVariablePosition::PipelineCall) => {
                 // Insert above the pipeline start
-                self.latest_statement = Some(stmt.location());
+                self.latest_statement = Some(statement.location());
             }
             _ => {
                 // Insert below the previous statement
-                self.latest_statement = Some(stmt.location());
+                self.latest_statement = Some(statement.location());
                 self.statement_before_selected_expression = self.latest_statement;
             }
         }
 
         self.at_position(ExtractVariablePosition::TopLevelStatement, |this| {
-            ast::visit::visit_typed_statement(this, stmt);
+            ast::visit::visit_typed_statement(this, statement);
         });
     }
 
