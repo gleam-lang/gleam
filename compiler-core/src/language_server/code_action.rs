@@ -6226,6 +6226,31 @@ impl<'a> InlineVariable<'a> {
 }
 
 impl<'ast> ast::visit::Visit<'ast> for InlineVariable<'ast> {
+    fn visit_typed_assignment(&mut self, assignment: &'ast TypedAssignment) {
+        let TypedPattern::Variable { location, name, .. } = &assignment.pattern else {
+            ast::visit::visit_typed_assignment(self, assignment);
+            return;
+        };
+
+        // We special case assignment variables because we want to trigger the
+        // code action also if we're over the let keyword:
+        //
+        // ```gleam
+        //    let wibble = 11
+        // // ^^^^^^^^^^ Here!
+        // ```
+        //
+        let assignment_range = self
+            .edits
+            .src_span_to_lsp_range(SrcSpan::new(assignment.location.start, location.end));
+        if !within(self.params.range, assignment_range) {
+            ast::visit::visit_typed_assignment(self, assignment);
+            return;
+        }
+
+        self.maybe_inline(*location, name.clone());
+    }
+
     fn visit_typed_expr_var(
         &mut self,
         location: &'ast SrcSpan,
