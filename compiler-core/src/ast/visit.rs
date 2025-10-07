@@ -344,8 +344,8 @@ pub trait Visit<'ast> {
         visit_typed_expr_invalid(self, location, type_, extra_information);
     }
 
-    fn visit_typed_statement(&mut self, stmt: &'ast TypedStatement) {
-        visit_typed_statement(self, stmt);
+    fn visit_typed_statement(&mut self, statement: &'ast TypedStatement) {
+        visit_typed_statement(self, statement);
     }
 
     fn visit_typed_assignment(&mut self, assignment: &'ast TypedAssignment) {
@@ -961,8 +961,8 @@ pub fn visit_typed_expr_block<'a, V>(
 ) where
     V: Visit<'a> + ?Sized,
 {
-    for stmt in statements {
-        v.visit_typed_statement(stmt);
+    for statement in statements {
+        v.visit_typed_statement(statement);
     }
 }
 
@@ -1022,8 +1022,8 @@ pub fn visit_typed_expr_fn<'a, V>(
         v.visit_type_ast(return_);
     }
 
-    for stmt in body {
-        v.visit_typed_statement(stmt);
+    for statement in body {
+        v.visit_typed_statement(statement);
     }
 }
 
@@ -1241,12 +1241,12 @@ where
     v.visit_typed_expr(value);
 }
 
-pub fn visit_typed_statement<'a, V>(v: &mut V, stmt: &'a TypedStatement)
+pub fn visit_typed_statement<'a, V>(v: &mut V, statement: &'a TypedStatement)
 where
     V: Visit<'a> + ?Sized,
 {
-    match stmt {
-        Statement::Expression(expr) => v.visit_typed_expr(expr),
+    match statement {
+        Statement::Expression(expression) => v.visit_typed_expr(expression),
         Statement::Assignment(assignment) => v.visit_typed_assignment(assignment),
         Statement::Use(use_) => v.visit_typed_use(use_),
         Statement::Assert(assert) => v.visit_typed_assert(assert),
