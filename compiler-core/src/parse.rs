@@ -515,11 +515,12 @@ where
                 }
             }
 
-            Some((start, Token::Float { value }, end)) => {
+            Some((start, Token::Float { value, float_value }, end)) => {
                 self.advance();
                 UntypedExpr::Float {
                     location: SrcSpan { start, end },
                     value,
+                    float_value,
                 }
             }
 
@@ -1399,11 +1400,12 @@ where
                     int_value,
                 }
             }
-            Some((start, Token::Float { value }, end)) => {
+            Some((start, Token::Float { value, float_value }, end)) => {
                 self.advance();
                 Pattern::Float {
                     location: SrcSpan { start, end },
                     value,
+                    float_value,
                 }
             }
             Some((start, Token::Hash, _)) => {
@@ -3096,11 +3098,12 @@ where
                 }))
             }
 
-            Some((start, Token::Float { value }, end)) => {
+            Some((start, Token::Float { value, float_value }, end)) => {
                 self.advance();
                 Ok(Some(Constant::Float {
                     value,
                     location: SrcSpan { start, end },
+                    float_value,
                 }))
             }
 
@@ -4694,5 +4697,48 @@ impl PatternPosition {
             PatternPosition::CaseClause => VariableDeclaration::ClausePattern,
             PatternPosition::UsePattern => VariableDeclaration::UsePattern,
         }
+    }
+}
+
+/// A thin f64 wrapper that does not permit NaN.
+/// This allows us to implement `Eq`, which require reflexivity.
+///
+/// Used for gleam float literals, which cannot be NaN.
+/// While there is no syntax for "infinity", float literals
+/// may overflow into (possibly negative) infinity on the JS target.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct NotNan(f64);
+
+impl NotNan {
+    pub const ONE: Self = NotNan(1.0);
+    pub const ZERO: Self = NotNan(0.0);
+
+    /// Parse from a string, returning `None` if the string
+    /// is not a valid f64 or the float is `NaN``
+    pub fn parse(value: &str) -> Option<Self> {
+        value
+            .replace("_", "")
+            .parse::<f64>()
+            .ok()
+            .filter(|f| !f.is_nan())
+            .map(NotNan)
+    }
+
+    pub fn value(&self) -> f64 {
+        self.0
+    }
+}
+
+impl Eq for NotNan {}
+impl Ord for NotNan {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0
+            .partial_cmp(&other.0)
+            .expect("Only NaN comparisons should fail")
+    }
+}
+impl PartialOrd for NotNan {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
