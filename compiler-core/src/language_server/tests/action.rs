@@ -8322,6 +8322,20 @@ pub fn main(x) {
 }
 
 #[test]
+fn inline_variable_when_over_let_keyword() {
+    assert_code_action!(
+        INLINE_VARIABLE,
+        r#"
+pub fn main() {
+  let x = 123
+  x + 1
+}
+"#,
+        find_position_of("let").to_selection()
+    );
+}
+
+#[test]
 fn no_code_action_to_inline_variable_used_multiple_times() {
     let src = r#"
 import gleam/io
