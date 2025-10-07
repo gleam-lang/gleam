@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type Wibble(a, b, c, d, e, f) {\n  Wibble(value: a)\n}\n\npub fn main() {\n  let x: Nil = []\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble(a, b, c, d, e, f) {
+  Wibble(value: a)
+}
+
+pub fn main() {
+  let x: Nil = []
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:7:16
+  │
+7 │   let x: Nil = []
+  │                ^^
+
+Expected type:
+
+    Nil
+
+Found type:
+
+    List(a)
