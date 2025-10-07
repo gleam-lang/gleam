@@ -3345,3 +3345,66 @@ fn type_used_as_a_constructor_with_more_arguments() {
 }"
     );
 }
+
+#[test]
+fn errors_type_printing_ignores_type_variables_from_other_function() {
+    assert_module_error!(
+        "
+pub fn hello(a, b, c, d, e, f) { todo }
+
+pub fn main() {
+  let x: Nil = []
+}
+"
+    );
+}
+
+#[test]
+fn errors_type_printing_ignores_type_variables_from_constructor() {
+    assert_module_error!(
+        "
+pub type Wibble(a, b, c, d, e, f) {
+  Wibble(value: a)
+}
+
+pub fn main() {
+  let x: Nil = []
+}
+"
+    );
+}
+
+#[test]
+fn errors_type_printing_considers_type_variables_from_current_function() {
+    assert_module_error!(
+        "
+pub fn wibble(a, b) {
+  let x: Nil = []
+}
+"
+    );
+}
+
+#[test]
+fn errors_type_printing_considers_type_variables_from_current_function_with_return_value() {
+    assert_module_error!(
+        "
+pub fn wibble(a, b) -> a {
+  let x: Nil = []
+}
+"
+    );
+}
+
+#[test]
+fn errors_type_printing_considers_type_variables_from_current_function_and_ignores_from_other() {
+    assert_module_error!(
+        "
+pub fn wobble(a, b, c, d, e) -> f { todo }
+
+pub fn wibble(a, b) -> a {
+  let x: Nil = []
+}
+"
+    );
+}
