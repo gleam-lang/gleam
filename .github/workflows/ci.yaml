@@ -106,7 +106,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: "22"
+          node-version: "24"
 
       - name: Setup Deno
         uses: denoland/setup-deno@v2
@@ -321,7 +321,7 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: "22"
+          node-version: "24"
 
       - name: Install wasm-pack
         run: |
