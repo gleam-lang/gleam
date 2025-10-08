@@ -4,6 +4,10 @@
 
 ### Compiler
 
+- Patterns aliasing a string prefix have been optimised to generate faster code
+  on the Erlang target.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Build tool
 
 ### Language server
