@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Compiler
+
+- Patterns aliasing a string prefix have been optimised to generate faster code
+  on the Erlang target.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Bug fixes
 
 - Fixed a bug where the "Extract function" code action would not properly
