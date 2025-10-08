@@ -18,9 +18,7 @@ pub fn go() {
 -spec go() -> {binary(), binary()}.
 go() ->
     {Name@1, Greeting@1} = case <<"Hello John"/utf8>> of
-        <<Greeting:6/binary, Name/binary>> when Greeting =:= <<"Hello "/utf8>> -> {
-        Name,
-            Greeting};
+        <<"Hello "/utf8, Name/binary>> -> {Name, Greeting};
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
@@ -34,4 +32,5 @@ go() ->
                         pattern_start => 27,
                         pattern_end => 55})
     end,
+    Greeting = <<"Hello "/utf8>>,
     {Greeting@1, Name@1}.

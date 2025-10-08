@@ -18,7 +18,7 @@ pub fn a(x) {
 -spec a(any()) -> binary().
 a(X) ->
     {Rest@1, A@1} = case <<"wibble"/utf8>> of
-        <<A:1/binary, Rest/binary>> when A =:= <<"a"/utf8>> -> {Rest, A};
+        <<"a"/utf8, Rest/binary>> -> {Rest, A};
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
@@ -32,4 +32,5 @@ a(X) ->
                         pattern_start => 27,
                         pattern_end => 43})
     end,
+    A = <<"a"/utf8>>,
     A@1.

@@ -38,55 +38,72 @@ pub fn go(x) {
 -spec go(binary()) -> binary().
 go(X) ->
     _ = case X of
-        <<Start:1/binary, Rest/binary>> when Start =:= <<"\f"/utf8>> ->
+        <<"\f"/utf8, Rest/binary>> ->
+            Start = <<"\f"/utf8>>,
             <<"test"/utf8>>;
 
-        <<Start@1:1/binary, Rest@1/binary>> when Start@1 =:= <<"\n"/utf8>> ->
+        <<"\n"/utf8, Rest@1/binary>> ->
+            Start@1 = <<"\n"/utf8>>,
             <<"test"/utf8>>;
 
-        <<Start@2:1/binary, Rest@2/binary>> when Start@2 =:= <<"\r"/utf8>> ->
+        <<"\r"/utf8, Rest@2/binary>> ->
+            Start@2 = <<"\r"/utf8>>,
             <<"test"/utf8>>;
 
-        <<Start@3:1/binary, Rest@3/binary>> when Start@3 =:= <<"\t"/utf8>> ->
+        <<"\t"/utf8, Rest@3/binary>> ->
+            Start@3 = <<"\t"/utf8>>,
             <<"test"/utf8>>;
 
-        <<Start@4:1/binary, Rest@4/binary>> when Start@4 =:= <<"\""/utf8>> ->
+        <<"\""/utf8, Rest@4/binary>> ->
+            Start@4 = <<"\""/utf8>>,
             <<"test"/utf8>>;
 
-        <<Start@5:1/binary, Rest@5/binary>> when Start@5 =:= <<"\\"/utf8>> ->
+        <<"\\"/utf8, Rest@5/binary>> ->
+            Start@5 = <<"\\"/utf8>>,
             <<"test"/utf8>>;
 
-        <<Start@6:11/binary, Rest@6/binary>> when Start@6 =:= <<"\f \n \r \t \" \\"/utf8>> ->
+        <<"\f \n \r \t \" \\"/utf8, Rest@6/binary>> ->
+            Start@6 = <<"\f \n \r \t \" \\"/utf8>>,
             <<"control chars with prefix assignment"/utf8>>;
 
-        <<Start@7:1/binary, Rest@7/binary>> when Start@7 =:= <<"\x{9}"/utf8>> ->
+        <<"\x{9}"/utf8, Rest@7/binary>> ->
+            Start@7 = <<"\x{9}"/utf8>>,
             <<"test"/utf8>>;
 
-        <<Start@8:1/binary, Rest@8/binary>> when Start@8 =:= <<"\x{000009}"/utf8>> ->
+        <<"\x{000009}"/utf8, Rest@8/binary>> ->
+            Start@8 = <<"\x{000009}"/utf8>>,
             <<"test"/utf8>>;
 
-        <<Start@9:1/binary, Rest@9/binary>> when Start@9 =:= <<"\x{21}"/utf8>> ->
+        <<"\x{21}"/utf8, Rest@9/binary>> ->
+            Start@9 = <<"\x{21}"/utf8>>,
             <<"test"/utf8>>;
 
-        <<Start@10:2/binary, Rest@10/binary>> when Start@10 =:= <<"\x{100}"/utf8>> ->
+        <<"\x{100}"/utf8, Rest@10/binary>> ->
+            Start@10 = <<"\x{100}"/utf8>>,
             <<"test"/utf8>>;
 
-        <<Start@11:3/binary, Rest@11/binary>> when Start@11 =:= <<"\x{1000}"/utf8>> ->
+        <<"\x{1000}"/utf8, Rest@11/binary>> ->
+            Start@11 = <<"\x{1000}"/utf8>>,
             <<"test"/utf8>>;
 
-        <<Start@12:4/binary, Rest@12/binary>> when Start@12 =:= <<"\x{1F600}"/utf8>> ->
+        <<"\x{1F600}"/utf8, Rest@12/binary>> ->
+            Start@12 = <<"\x{1F600}"/utf8>>,
             <<"test"/utf8>>;
 
-        <<Start@13:4/binary, Rest@13/binary>> when Start@13 =:= <<"\x{1f600}"/utf8>> ->
+        <<"\x{1f600}"/utf8, Rest@13/binary>> ->
+            Start@13 = <<"\x{1f600}"/utf8>>,
             <<"test"/utf8>>;
 
-        <<Start@14:4/binary, Rest@14/binary>> when Start@14 =:= <<"\x{01F600}"/utf8>> ->
+        <<"\x{01F600}"/utf8, Rest@14/binary>> ->
+            Start@14 = <<"\x{01F600}"/utf8>>,
             <<"test"/utf8>>;
 
-        <<Start@15:4/binary, Rest@15/binary>> when Start@15 =:= <<"\x{01f600}"/utf8>> ->
+        <<"\x{01f600}"/utf8, Rest@15/binary>> ->
+            Start@15 = <<"\x{01f600}"/utf8>>,
             <<"test"/utf8>>;
 
-        <<Start@16:22/binary, Rest@16/binary>> when Start@16 =:= <<"\x{9} \x{000009} \x{21} \x{100} \x{1000} \x{1F600} \x{01F600}"/utf8>> ->
+        <<"\x{9} \x{000009} \x{21} \x{100} \x{1000} \x{1F600} \x{01F600}"/utf8, Rest@16/binary>> ->
+            Start@16 = <<"\x{9} \x{000009} \x{21} \x{100} \x{1000} \x{1F600} \x{01F600}"/utf8>>,
             <<"test"/utf8>>;
 
         _ ->
