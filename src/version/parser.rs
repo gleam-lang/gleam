@@ -372,6 +372,8 @@ impl<'input> Parser<'input> {
 
                 Some(_) => return Err(UnexpectedToken(self.pop()?.to_string())),
             };
+
+            self.skip_whitespace()?;
             if self.peek() == Some(&Token::And) {
                 self.pop()?;
                 self.expect_whitespace()?;

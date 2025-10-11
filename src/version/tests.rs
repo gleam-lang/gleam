@@ -320,6 +320,37 @@ parse_range_test!(
         )
 );
 
+parse_range_test!(
+    pessimistic_and_gt,
+    "~> 0.6 and >= 0.6.16",
+    PubgrubRange::higher_than(v(0, 6, 0))
+        .intersection(&PubgrubRange::strictly_lower_than(v(1, 0, 0)))
+        .intersection(&PubgrubRange::higher_than(v(0, 6, 16)))
+);
+
+parse_range_test!(
+    pessimistic_and_gt_pre,
+    "~> 1.0-pre and >= 1.0.0-pre.5",
+    PubgrubRange::higher_than(v_(
+        1,
+        0,
+        0,
+        vec![Identifier::AlphaNumeric("pre".to_string())],
+        None
+    ))
+    .intersection(&PubgrubRange::strictly_lower_than(v(2, 0, 0)))
+    .intersection(&PubgrubRange::higher_than(v_(
+        1,
+        0,
+        0,
+        vec![
+            Identifier::AlphaNumeric("pre".to_string()),
+            Identifier::Numeric(5)
+        ],
+        None
+    )))
+);
+
 parse_range_fail_test!(range_quad, "1.1.1.1");
 parse_range_fail_test!(range_just_major, "1");
 parse_range_fail_test!(range_just_major_minor, "1.1");
