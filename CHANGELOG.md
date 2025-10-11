@@ -733,6 +733,34 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+  - The function signature helper now displays original function definition
+  generic names when arguments are unbound. For example, in this code:
+
+  ```gleam
+  pub fn wibble(x: something, y: fn() -> something, z: anything) { Nil }
+
+  pub fn main() {
+      wibble( )
+          // ↑
+  }
+  ```
+
+  will show a signature help
+
+  ```gleam
+  wibble(something, fn() -> something, anything)
+
+  ```
+
+  instead of
+
+  ```gleam
+  wibble(a, fn() -> a, b) -> Nil
+  ```
+
+  ([Samuel Cristobal](https://github.com/scristobal)) and
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Formatter
 
 - The formatter now removes needless multiple negations that are safe to remove.

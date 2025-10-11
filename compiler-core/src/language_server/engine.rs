@@ -1025,15 +1025,21 @@ Unused labelled fields:
         &mut self,
         params: lsp_types::SignatureHelpParams,
     ) -> Response<Option<SignatureHelp>> {
-        self.respond(
-            |this| match this.node_at_position(&params.text_document_position_params) {
+        self.respond(|this| {
+            let Some(module) =
+                this.module_for_uri(&params.text_document_position_params.text_document.uri)
+            else {
+                return Ok(None);
+            };
+
+            match this.node_at_position(&params.text_document_position_params) {
                 Some((_lines, Located::Expression { expression, .. })) => {
-                    Ok(signature_help::for_expression(expression))
+                    Ok(signature_help::for_expression(expression, module))
                 }
                 Some((_lines, _located)) => Ok(None),
                 None => Ok(None),
-            },
-        )
+            }
+        })
     }
 
     fn module_node_at_position(

@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/language_server/tests/signature_help.rs
+expression: "\npub fn wibble(x: something, y: fn() -> something, z: anything) { Nil }\npub fn main() {\n    wibble(1, )\n}\n"
+---
+pub fn wibble(x: something, y: fn() -> something, z: anything) { Nil }
+pub fn main() {
+    wibble(1, )
+              ↑
+}
+
+
+----- Signature help -----
+wibble(Int, fn() -> Int, anything) -> Nil
+            ▔▔▔▔▔▔▔▔▔▔▔
+
+No documentation
