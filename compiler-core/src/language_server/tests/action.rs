@@ -10727,3 +10727,20 @@ pub fn main() -> Nil {
         find_position_of("function").to_selection()
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4904
+#[test]
+fn no_code_action_to_generate_function_on_unsupported_target() {
+    assert_no_code_actions!(
+        GENERATE_FUNCTION,
+        r#"
+pub fn main() {
+  wibble()
+}
+
+@external(javascript, "./ffi.mjs", "wibble")
+fn wibble() -> Nil
+"#,
+        find_position_of("wibble").to_selection()
+    );
+}

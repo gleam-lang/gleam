@@ -1182,4 +1182,7 @@ pub enum InvalidExpression {
         module_name: EcoString,
         label: EcoString,
     },
+    UnknownVariable {
+        name: EcoString,
+    },
 }
