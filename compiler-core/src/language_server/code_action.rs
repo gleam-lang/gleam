@@ -5305,15 +5305,13 @@ impl<'a> GenerateFunction<'a> {
 
     fn try_save_function_to_generate(
         &mut self,
-        function_name_location: SrcSpan,
+        name: &'a EcoString,
         function_type: &Arc<Type>,
         given_arguments: Option<&'a [TypedCallArg]>,
     ) {
-        let candidate_name = code_at(self.module, function_name_location);
-        match (candidate_name, function_type.fn_types()) {
-            (_, None) => (),
-            (name, _) if !is_valid_lowercase_name(name) => (),
-            (name, Some((arguments_types, return_type))) => {
+        match function_type.fn_types() {
+            None => {}
+            Some((arguments_types, return_type)) => {
                 self.function_to_generate = Some(FunctionToGenerate {
                     name,
                     arguments_types,
@@ -5366,7 +5364,10 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
                 Some(InvalidExpression::ModuleSelect { module_name, label }) => {
                     self.try_save_function_from_other_module(module_name, label, type_, None)
                 }
-                None => self.try_save_function_to_generate(*location, type_, None),
+                Some(InvalidExpression::UnknownVariable { name }) => {
+                    self.try_save_function_to_generate(name, type_, None)
+                }
+                None => {}
             }
         }
 
@@ -5404,10 +5405,10 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
                 }
                 TypedExpr::Invalid {
                     type_,
-                    location,
-                    extra_information: _,
+                    extra_information: Some(InvalidExpression::UnknownVariable { name }),
+                    location: _,
                 } => {
-                    return self.try_save_function_to_generate(*location, type_, Some(arguments));
+                    return self.try_save_function_to_generate(name, type_, Some(arguments));
                 }
                 _ => {}
             }
