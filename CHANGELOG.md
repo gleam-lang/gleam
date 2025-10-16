@@ -314,7 +314,7 @@
 
   // Constructing custom types
   let teacher = Person$Teacher("Joe Armstrong", "Computer Science");
-  let student = Person$Student("Louis Pilfold", 17);
+  let student = Person$Student("Louis Pilfold");
 
   let randomPerson = Math.random() > 0.5 ? teacher : student;
 
@@ -322,7 +322,7 @@
   let randomIsTeacher = Person$isTeacher(randomPerson);
 
   // Getting fields
-  let studentAge = Person$Student$age(student);
+  let teacherSubject = Person$Teacher$subject(teacher);
 
   // The `name` field is shared so can be accessed from either variant
   let personName = Person$name(randomPerson);
