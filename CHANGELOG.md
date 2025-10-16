@@ -325,7 +325,7 @@
   let studentAge = Person$Student$age(student);
 
   // The `name` field is shared so can be accessed from either variant
-  let personNAme = Person$name(randomPerson);
+  let personName = Person$name(randomPerson);
   ```
 
   ([Surya Rose](https://github.com/GearsDatapacks))
