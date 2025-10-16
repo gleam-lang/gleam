@@ -260,7 +260,7 @@
 
   ([Aaron Christiansen](https://github.com/AaronC81))
 
-- Fault tolerance for analysis of labeled fields in constructor patterns has
+- Fault tolerance for analysis of labeled fields in variant patterns has
   been improved.
   ([sobolevn](https://github.com/sobolevn))
 
