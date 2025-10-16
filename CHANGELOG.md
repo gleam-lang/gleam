@@ -210,7 +210,7 @@
   a constant inside a function. For example, the following code:
 
   ```gleam
-  pub fn deep_thought() {
+  pub fn deep_thought() -> Int {
     const the_answer = 42
     the_answer
   }
