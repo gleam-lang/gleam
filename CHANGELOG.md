@@ -310,7 +310,7 @@
   You can use the new API to use the `Person` type in FFI code:
 
   ```javascript
-  import * from "./person.mjs";
+  import {...} from "./person.mjs";
 
   // Constructing custom types
   let teacher = Person$Teacher("Joe Armstrong", "Computer Science");
