@@ -417,11 +417,11 @@
 
   ```gleam
   pub fn is_empty(list: List(a)) -> Bool {
-    //            ^^^^ Triggering the action over here
+    //            ^^^^ Triggering the action here
   }
   ```
 
-  Triggering the action over the `list` argument would result in the following
+  Triggering the action on the `list` argument would result in the following
   code:
 
   ```gleam
@@ -441,11 +441,11 @@
   ```gleam
   pub fn main() {
     let User(name:, role:) = find_user("lucy")
-    //              ^^^^ Triggering the action over
+    //              ^^^^ Triggering the action here
   }
   ```
 
-  Triggering the action over another variable like `role` would result in the
+  Triggering the action on another variable like `role` would result in the
   following code:
 
   ```gleam
@@ -472,7 +472,7 @@
   }
   ```
 
-  Triggering the action over the `user` variable would result in the following
+  Triggering the action on the `user` variable would result in the following
   code:
 
   ```gleam
@@ -519,11 +519,11 @@
   pub fn main() {
     let first_name = "Giacomo"
     User(first_name, "Cavalieri", ["gleam"])
-  //^^^^ Triggering the code action over here
+  //^^^^ Triggering the code action here
   }
   ```
 
-  Triggering the code action over the `User` constructor will result in the
+  Triggering the code action on the `User` constructor will result in the
   following code:
 
   ```gleam
