@@ -1929,7 +1929,7 @@ value has. It seems to be defined in terms of itself.",
                     }
 
                     TypeError::NotFn { location, type_ } => {
-                        let mut printer = Printer::new(names);
+                        let mut printer = Printer::new_without_type_variables(names);
                         let text = format!(
                             "This value is being called as a function but its type is:\n\n    {}",
                             printer.print_type(type_)
@@ -1959,7 +1959,7 @@ value has. It seems to be defined in terms of itself.",
                         fields,
                         unknown_field: variants,
                     } => {
-                        let mut printer = Printer::new(names);
+                        let mut printer = Printer::new_without_type_variables(names);
 
                         // Give a hint about what type this value has.
                         let mut text = format!(
@@ -2051,7 +2051,7 @@ to call a method on this value you may want to use the function syntax instead."
                         given,
                         situation: Some(UnifyErrorSituation::Operator(op)),
                     } => {
-                        let mut printer = Printer::new(names);
+                        let mut printer = Printer::new_without_type_variables(names);
                         let mut text = format!(
                             "The {op} operator expects arguments of this type:
 
@@ -2103,7 +2103,7 @@ But this argument has this type:
                             .and_then(|(arguments, _)| arguments.first().cloned())
                             .unwrap_or_else(|| given.clone());
 
-                        let mut printer = Printer::new(names);
+                        let mut printer = Printer::new_without_type_variables(names);
                         let text = format!(
                             "The argument is:
 
@@ -2143,7 +2143,7 @@ But function expects:
                         given,
                         situation,
                     } => {
-                        let mut printer = Printer::new(names);
+                        let mut printer = Printer::new_without_type_variables(names);
                         let mut text = if let Some(description) =
                             situation.as_ref().and_then(|s| s.description())
                         {
@@ -2386,7 +2386,7 @@ specify all fields explicitly instead of using the record update syntax."
                             field_name,
                             ..
                         } => {
-                            let mut printer = Printer::new(names);
+                            let mut printer = Printer::new_without_type_variables(names);
                             let expected_field_type = printer.print_type(expected_field_type);
                             let record_field_type = printer.print_type(record_field_type);
                             let record_variant = printer.print_type(record_variant);
@@ -2530,7 +2530,7 @@ but no type in scope with that name."
                     }
 
                     TypeError::PrivateTypeLeak { location, leaked } => {
-                        let mut printer = Printer::new(names);
+                        let mut printer = Printer::new_without_type_variables(names);
 
                         // TODO: be more precise.
                         // - is being returned by this public function
@@ -2859,7 +2859,7 @@ tuple has {} elements so the highest valid index is {}.",
                     }
 
                     TypeError::NotATuple { location, given } => {
-                        let mut printer = Printer::new(names);
+                        let mut printer = Printer::new_without_type_variables(names);
                         let text = format!(
                             "To index into this value it needs to be a tuple, \
 however it has this type:
@@ -3518,7 +3518,7 @@ Rename or remove one of them.",
                     }
 
                     TypeError::NotFnInUse { location, type_ } => {
-                        let mut printer = Printer::new(names);
+                        let mut printer = Printer::new_without_type_variables(names);
                         let text = wrap_format!(
                             "In a use expression, there should be a function on \
 the right hand side of `<-`, but this value has type:
@@ -3643,7 +3643,7 @@ so it cannot take the `use` callback function as a final argument.\n",
                         location,
                         actual_type: Some(actual),
                     } => {
-                        let mut printer = Printer::new(names);
+                        let mut printer = Printer::new_without_type_variables(names);
                         let text = wrap_format!(
                             "The function on the right hand side of `<-` \
 has to take a callback function as its last argument. \
