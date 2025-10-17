@@ -2482,12 +2482,6 @@ impl<T> BitArraySize<T> {
     }
 }
 
-impl Default for Inferred<()> {
-    fn default() -> Self {
-        Self::Unknown
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum AssignName {
     Variable(EcoString),
