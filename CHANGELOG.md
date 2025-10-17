@@ -2,6 +2,12 @@
 
 ## v1.13.0-rc2 - 2025-10-06
 
+### Language server
+
+- The "inline variable" code action can now trigger when used over the let
+  keyword of a variable to inline.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Bug fixes
 
 - Fixed a bug where the "Extract function" code action would not properly
