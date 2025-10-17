@@ -1121,7 +1121,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     Ok(t) => t,
                     Err(e) => {
                         self.problems.error(e);
-                        continue;
+                        environment.new_unbound_var()
                     }
                 };
 
