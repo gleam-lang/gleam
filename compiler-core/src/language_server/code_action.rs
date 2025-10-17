@@ -3706,14 +3706,14 @@ impl<'a> GenerateDynamicDecoder<'a> {
             eco_format!("use variant <- {module}.field(\"type\", {module}.string)")
         };
 
-        let mut branches = Vec::with_capacity(constructors_size);
+        let mut clauses = Vec::with_capacity(constructors_size);
         for constructor in iter::once(first).chain(rest) {
             let body = self.constructor_decoder(mode, custom_type, constructor, 4)?;
             let name = to_snake_case(&constructor.name);
-            branches.push(eco_format!(r#"    "{name}" -> {body}"#));
+            clauses.push(eco_format!(r#"    "{name}" -> {body}"#));
         }
 
-        let cases = branches.join("\n");
+        let cases = clauses.join("\n");
         let type_name = &custom_type.name;
         Some(eco_format!(
             r#"{{
@@ -4116,7 +4116,7 @@ impl<'a> GenerateJsonEncoder<'a> {
         // Otherwise we generate an encoder for a type with multiple constructors:
         // it will need to pattern match on the various constructors and encode each
         // one separately.
-        let mut branches = Vec::with_capacity(constructors_size);
+        let mut clauses = Vec::with_capacity(constructors_size);
         for constructor in iter::once(first).chain(rest) {
             let RecordConstructor { name, .. } = constructor;
             let encoder =
@@ -4135,13 +4135,13 @@ impl<'a> GenerateJsonEncoder<'a> {
                         .join(":, ")
                 )
             };
-            branches.push(eco_format!("    {name}{unpacking} -> {encoder}"));
+            clauses.push(eco_format!("    {name}{unpacking} -> {encoder}"));
         }
 
-        let branches = branches.join("\n");
+        let clauses = clauses.join("\n");
         Some(eco_format!(
             "case {record_name} {{
-{branches}
+{clauses}
   }}",
         ))
     }
@@ -4720,7 +4720,7 @@ impl<'a, IO> PatternMatchOnValue<'a, IO> {
             Type::Var { type_ } => self.type_var_to_destructure_patterns(&type_.borrow()),
 
             // We special case lists, they don't have "regular" constructors
-            // like other types. Instead we always add the two branches covering
+            // like other types. Instead we always add the two clauses covering
             // the empty and non empty list.
             Type::Named { .. } if type_.is_list() => {
                 Some(vec1!["[]".into(), "[first, ..rest]".into()])
@@ -8230,26 +8230,26 @@ fn single_expression(expression: &TypedExpr) -> Option<&TypedExpr> {
     }
 }
 
-/// Code action to remove `opaque` from a private type.
+/// Code action to remove unreachable clauses from a case expression.
 ///
-pub struct RemoveUnreachableBranches<'a> {
+pub struct RemoveUnreachableCaseClauses<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
-    /// The source location of the patterns of all the unreachable branches in
+    /// The source location of the patterns of all the unreachable clauses in
     /// the current module.
     ///
-    unreachable_branches: HashSet<SrcSpan>,
-    branches_to_delete: Vec<SrcSpan>,
+    unreachable_clauses: HashSet<SrcSpan>,
+    clauses_to_delete: Vec<SrcSpan>,
 }
 
-impl<'a> RemoveUnreachableBranches<'a> {
+impl<'a> RemoveUnreachableCaseClauses<'a> {
     pub fn new(
         module: &'a Module,
         line_numbers: &'a LineNumbers,
         params: &'a CodeActionParams,
     ) -> Self {
-        let unreachable_branches = (module.ast.type_info.warnings.iter())
+        let unreachable_clauses = (module.ast.type_info.warnings.iter())
             .filter_map(|warning| match warning {
                 type_::Warning::UnreachableCasePattern { location, .. } => Some(*location),
                 _ => None,
@@ -8257,26 +8257,26 @@ impl<'a> RemoveUnreachableBranches<'a> {
             .collect();
 
         Self {
-            unreachable_branches,
+            unreachable_clauses,
             module,
             params,
             edits: TextEdits::new(line_numbers),
-            branches_to_delete: vec![],
+            clauses_to_delete: vec![],
         }
     }
 
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
-        if self.branches_to_delete.is_empty() {
+        if self.clauses_to_delete.is_empty() {
             return vec![];
         }
 
-        for branch in self.branches_to_delete {
+        for branch in self.clauses_to_delete {
             self.edits.delete(branch);
         }
 
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new("Remove unreachable branches")
+        CodeActionBuilder::new("Remove unreachable clauses")
             .kind(CodeActionKind::QUICKFIX)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(true)
@@ -8285,7 +8285,7 @@ impl<'a> RemoveUnreachableBranches<'a> {
     }
 }
 
-impl<'ast> ast::visit::Visit<'ast> for RemoveUnreachableBranches<'ast> {
+impl<'ast> ast::visit::Visit<'ast> for RemoveUnreachableCaseClauses<'ast> {
     fn visit_typed_expr_case(
         &mut self,
         location: &'ast SrcSpan,
@@ -8302,10 +8302,10 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveUnreachableBranches<'ast> {
             within(self.params.range, pattern_range)
         });
         if is_hovering_clause {
-            self.branches_to_delete = clauses
+            self.clauses_to_delete = clauses
                 .iter()
                 .filter(|clause| {
-                    self.unreachable_branches
+                    self.unreachable_clauses
                         .contains(&clause.pattern_location())
                 })
                 .map(|clause| clause.location())
@@ -8313,7 +8313,7 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveUnreachableBranches<'ast> {
             return;
         }
 
-        // If we're not hovering any of the branches clauses then we want to
+        // If we're not hovering any of the clauses then we want to
         // keep visiting the case expression as the unreachable branch might be
         // in one of the nested cases.
         ast::visit::visit_typed_expr_case(self, location, type_, subjects, clauses, compiled_case);

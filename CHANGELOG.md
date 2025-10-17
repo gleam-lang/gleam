@@ -58,7 +58,7 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The compiler now raises a warning for unreachable branches that are matching
+- The compiler now raises a warning for unreachable clauses that are matching
   on bit array segments that could never match. Consider this example:
 
   ```gleam
@@ -71,7 +71,7 @@
   }
   ```
 
-  There's a subtle bug here. The second branch can never match since it's
+  There's a subtle bug here. The second clause can never match since it's
   impossible for the first byte of the bit array to have the value `404`.
   The new error explains this nicely:
 
@@ -383,23 +383,23 @@
 ### Language server
 
 - The language server now offers a code action to remove all the unreachable
-  branches in a case expression. For example:
+  clauses in a case expression. For example:
 
   ```gleam
   pub fn main() {
     case find_user() {
       Ok(user) -> todo
       Ok(Admin) -> todo
-  //  ^^^^^^^^^ This branch is unreachable
+  //  ^^^^^^^^^ This clause is unreachable
       Ok(User) -> todo
-  //  ^^^^^^^^ This branch is unreachable
+  //  ^^^^^^^^ This clause is unreachable
       Error(_) -> todo
     }
   }
   ```
 
-  Hovering over one of the unreachable branches and triggering the code action
-  would remove all the unreachable branches:
+  Hovering over one of the unreachable clauses and triggering the code action
+  would remove all the unreachable clauses:
 
   ```gleam
   pub fn main() {

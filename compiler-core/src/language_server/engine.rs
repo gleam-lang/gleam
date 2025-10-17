@@ -14,7 +14,7 @@ use crate::{
     language_server::{
         code_action::{
             AddOmittedLabels, CollapseNestedCase, ExtractFunction, RemoveBlock,
-            RemovePrivateOpaque, RemoveUnreachableBranches,
+            RemovePrivateOpaque, RemoveUnreachableCaseClauses,
         },
         compiler::LspProjectCompiler,
         files::FileSystemProxy,
@@ -408,7 +408,8 @@ where
             code_action_fix_names(&lines, &params, &this.error, &mut actions);
             code_action_import_module(module, &lines, &params, &this.error, &mut actions);
             code_action_add_missing_patterns(module, &lines, &params, &this.error, &mut actions);
-            actions.extend(RemoveUnreachableBranches::new(module, &lines, &params).code_actions());
+            actions
+                .extend(RemoveUnreachableCaseClauses::new(module, &lines, &params).code_actions());
             actions.extend(CollapseNestedCase::new(module, &lines, &params).code_actions());
             code_action_inexhaustive_let_to_case(
                 module,

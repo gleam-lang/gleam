@@ -133,7 +133,7 @@ const GENERATE_VARIANT: &str = "Generate variant";
 const REMOVE_BLOCK: &str = "Remove block";
 const REMOVE_OPAQUE_FROM_PRIVATE_TYPE: &str = "Remove opaque from private type";
 const COLLAPSE_NESTED_CASE: &str = "Collapse nested case";
-const REMOVE_UNREACHABLE_BRANCHES: &str = "Remove unreachable branches";
+const REMOVE_UNREACHABLE_CLAUSES: &str = "Remove unreachable clauses";
 const ADD_OMITTED_LABELS: &str = "Add omitted labels";
 const EXTRACT_FUNCTION: &str = "Extract function";
 
@@ -10003,9 +10003,9 @@ pub fn main() {
 }
 
 #[test]
-fn remove_unreachable_branches() {
+fn remove_unreachable_clauses() {
     assert_code_action!(
-        REMOVE_UNREACHABLE_BRANCHES,
+        REMOVE_UNREACHABLE_CLAUSES,
         "pub fn main(x) {
   case x {
     Ok(n) -> 1
@@ -10022,7 +10022,7 @@ fn remove_unreachable_branches() {
 #[test]
 fn remove_unreachable_branches_does_not_pop_up_if_all_branches_are_reachable() {
     assert_no_code_actions!(
-        REMOVE_UNREACHABLE_BRANCHES,
+        REMOVE_UNREACHABLE_CLAUSES,
         "pub fn main(x) {
   case x {
     Ok(n) -> 1
