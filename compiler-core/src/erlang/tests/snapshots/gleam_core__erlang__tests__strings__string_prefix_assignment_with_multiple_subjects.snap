@@ -22,10 +22,12 @@ pub fn go(x) {
 -spec go(binary()) -> binary().
 go(X) ->
     case X of
-        <<Digit:1/binary, _/binary>> when Digit =:= <<"1"/utf8>> ->
+        <<"1"/utf8, _/binary>> ->
+            Digit = <<"1"/utf8>>,
             Digit;
 
-        <<Digit:1/binary, _/binary>> when Digit =:= <<"2"/utf8>> ->
+        <<"2"/utf8, _/binary>> ->
+            Digit = <<"1"/utf8>>,
             Digit;
 
         _ ->
