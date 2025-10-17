@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+assertion_line: 1637
+expression: "\nimport mod   as     module\n\nfn func() {\n  echo module        .constant\n}\n"
+snapshot_kind: text
+---
+----- BEFORE RENAME
+-- mod.gleam
+pub const constant = 10
+
+-- app.gleam
+
+import mod   as     module
+
+fn func() {
+  echo module        .constant
+       ↑▔▔▔▔▔                 
+}
+
+
+----- AFTER RENAME
+-- mod.gleam
+pub const constant = 10
+
+-- app.gleam
+
+import mod   as alias
+
+fn func() {
+  echo alias        .constant
+}

@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "import     testing  / mod . {   str   ,  type    Type  }   as     module"
+---
+----- BEFORE RENAME
+-- testing/mod.gleam
+
+pub const str = "string"
+pub type Type { Variant }
+
+
+-- app.gleam
+import     testing  / mod . {   str   ,  type    Type  }   as     module
+                                                                  ↑▔▔▔▔▔
+
+
+----- AFTER RENAME
+-- testing/mod.gleam
+
+pub const str = "string"
+pub type Type { Variant }
+
+
+-- app.gleam
+import     testing  / mod . {   str   ,  type    Type  }   as alias

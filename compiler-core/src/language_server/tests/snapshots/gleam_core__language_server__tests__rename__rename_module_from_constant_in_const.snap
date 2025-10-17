@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/rename.rs
-expression: "\nimport mod\n\nconst c = mod.constant\n"
+expression: "\nimport mod\n\nconst c = mod   .   constant\n"
 ---
 ----- BEFORE RENAME
 -- mod.gleam
@@ -10,8 +10,8 @@ pub const constant = 10
 
 import mod
 
-const c = mod.constant
-          ↑▔▔         
+const c = mod   .   constant
+          ↑▔▔               
 
 
 ----- AFTER RENAME
@@ -22,4 +22,4 @@ pub const constant = 10
 
 import mod as module
 
-const c = module.constant
+const c = module   .   constant

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/rename.rs
-expression: "\nimport mod\n\nfn func() {\n  mod.function()\n}\n"
+expression: "\nimport mod\n\nfn func() {\n  mod   .   function()\n}\n"
 ---
 ----- BEFORE RENAME
 -- mod.gleam
@@ -11,8 +11,8 @@ pub fn function() { todo }
 import mod
 
 fn func() {
-  mod.function()
-  ↑▔▔           
+  mod   .   function()
+  ↑▔▔                 
 }
 
 
@@ -25,5 +25,5 @@ pub fn function() { todo }
 import mod as module
 
 fn func() {
-  module.function()
+  module   .   function()
 }

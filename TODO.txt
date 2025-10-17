@@ -1,0 +1,1 @@
+file bug report for no goto definition of module constant in clause guard

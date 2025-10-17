@@ -1393,7 +1393,7 @@ fn rename_module_from_import_with_alias() {
 #[test]
 fn rename_module_from_import_with_unqualified_member() {
     assert_rename!(
-        TestProject::for_source("import     mod .{   type Type   }").add_module("mod", ""),
+        TestProject::for_source("import     mod .  {   type Type   }").add_module("mod", ""),
         "module",
         find_position_of("mod"),
     );
@@ -1402,27 +1402,49 @@ fn rename_module_from_import_with_unqualified_member() {
 #[test]
 fn rename_module_from_import_with_unqualified_member_and_alias() {
     assert_rename!(
-        TestProject::for_source("import     mod.{ type Type  }   as      module").add_module("mod", ""),
+        TestProject::for_source("import     mod  . { type Type  }   as      module").add_module("mod", ""),
         "alias",
         find_position_of("module"),
     );
 }
 
 #[test]
-fn rename_module_from_import_nested() {
+fn rename_module_from_import_namespaced() {
+    let src = "
+import     testing     /   mod
+
+pub fn main() {
+  echo mod.str
+}
+";
     assert_rename!(
-        TestProject::for_source("import     testing/mod     ").add_module("testing/mod", ""),
+        TestProject::for_source(src).add_module("testing/mod", "pub const str = \"string\""),
         "module",
-        find_position_of("testing/mod")
+        find_position_of("testing     /   mod")
+    );
+}
+
+#[test]
+fn rename_module_from_import_namespaced_with_unqualified_member_and_alias() {
+    let src = "import     testing  / mod . {   str   ,  type    Type  }   as     module";
+    let mod_src =
+"
+pub const str = \"string\"
+pub type Type { Variant }
+";
+    assert_rename!(
+        TestProject::for_source(src).add_module("testing/mod", mod_src),
+        "alias",
+        find_position_of("module")
     );
 }
 
 #[test]
 fn rename_module_from_import_with_alias_to_orig() {
     assert_rename!(
-        TestProject::for_source("import mod as module").add_module("mod", ""),
+        TestProject::for_source("import     mod     as   module").add_module("mod", ""),
         "mod",
-        find_position_of("import mod as module")
+        find_position_of("import")
     );
 }
 
@@ -1432,13 +1454,13 @@ fn rename_module_from_variant_in_expression() {
 import mod
 
 pub fn main() {
-  echo mod.Variant
+  echo mod   .  Variant
 }
 ";
     assert_rename!(
         TestProject::for_source(src).add_module("mod", "pub type Type { Variant }"),
         "module",
-        find_position_of("mod.Variant")
+        find_position_of("mod").nth_occurrence(2)
     );
 }
 
@@ -1448,13 +1470,13 @@ fn rename_module_from_constant_in_expression() {
 import mod
 
 pub fn main() {
-  echo mod.constant
+  echo mod  . constant
 }
 ";
     assert_rename!(
         TestProject::for_source(src).add_module("mod", "pub const constant = 10"),
         "module",
-        find_position_of("mod.constant")
+        find_position_of("mod").nth_occurrence(2)
     );
 }
 
@@ -1463,12 +1485,12 @@ fn rename_module_from_variant_in_const() {
     let src = "
 import mod
 
-const c = mod.Variant
+const c = mod       .   Variant
 ";
     assert_rename!(
         TestProject::for_source(src).add_module("mod", "pub type Type { Variant }"),
         "module",
-        find_position_of("mod.Variant")
+        find_position_of("mod").nth_occurrence(2)
     );
 }
 
@@ -1477,12 +1499,12 @@ fn rename_module_from_constant_in_const() {
     let src = "
 import mod
 
-const c = mod.constant
+const c = mod   .   constant
 ";
     assert_rename!(
         TestProject::for_source(src).add_module("mod", "pub const constant = 10"),
         "module",
-        find_position_of("mod.constant")
+        find_position_of("mod").nth_occurrence(2)
     );
 }
 
@@ -1493,7 +1515,7 @@ import mod
 
 fn func(arg) {
   case arg {
-    mod.Variant1 -> todo
+    mod .   Variant1 -> todo
     mod.Variant2 -> todo
   }
 }
@@ -1501,7 +1523,7 @@ fn func(arg) {
     assert_rename!(
         TestProject::for_source(src).add_module("mod", "pub type Type { Variant1 Variant2 }"),
         "module",
-        find_position_of("mod.Variant")
+        find_position_of("mod").nth_occurrence(2)
     );
 }
 
@@ -1510,9 +1532,9 @@ fn rename_module_from_variant_in_clause_guard() {
     let src = "
 import mod
 
-fn func(arg: List(mod.Type)) {
+fn func(arg) {
   case arg {
-    [x, ..rest] if x == mod.Variant1 -> 1 + func(rest)
+    [x, ..rest] if x == mod .   Variant1 -> 1 + func(rest)
     [_, ..rest] -> func(rest)
     [] -> 0
   }
@@ -1521,7 +1543,7 @@ fn func(arg: List(mod.Type)) {
     assert_rename!(
         TestProject::for_source(src).add_module("mod", "pub type Type { Variant1 Variant2 }"),
         "module",
-        find_position_of("mod.Variant")
+        find_position_of("mod").nth_occurrence(2)
     );
 }
 
@@ -1532,7 +1554,7 @@ import mod
 
 fn func(arg: List(Int)) {
   case arg {
-    [x, ..rest] if x == mod.constant -> 1 + func(rest)
+    [x, ..rest] if x == mod .   constant -> 1 + func(rest)
     [_, ..rest] -> func(rest)
     [] -> 0
   }
@@ -1541,7 +1563,7 @@ fn func(arg: List(Int)) {
     assert_rename!(
         TestProject::for_source(src).add_module("mod", "pub const constant = 10"),
         "module",
-        find_position_of("mod.constant")
+        find_position_of("mod").nth_occurrence(2)
     );
 }
 
@@ -1550,12 +1572,12 @@ fn rename_module_from_type_in_custom_type() {
     let src = "
 import mod
 
-type Custom { Var(mod.Type) }
+type Custom { Var(mod  . Type) }
 ";
     assert_rename!(
         TestProject::for_source(src).add_module("mod", "pub type Type { Variant }"),
         "module",
-        find_position_of("mod.Type")
+        find_position_of("mod").nth_occurrence(2)
     );
 }
 
@@ -1564,12 +1586,12 @@ fn rename_module_from_type_in_type_alias() {
     let src = "
 import mod
 
-type Alias = mod.Type
+type Alias = mod    .  Type
 ";
     assert_rename!(
         TestProject::for_source(src).add_module("mod", "pub type Type { Variant }"),
         "module",
-        find_position_of("mod.Type")
+        find_position_of("mod").nth_occurrence(2)
     );
 }
 
@@ -1578,12 +1600,12 @@ fn rename_module_from_type_in_annotation() {
     let src = "
 import mod
 
-const c: mod.Type = mod.Variant
+const c: mod    . Type = mod.Variant
 ";
     assert_rename!(
         TestProject::for_source(src).add_module("mod", "pub type Type { Variant }"),
         "module",
-        find_position_of("mod.Type")
+        find_position_of("mod").nth_occurrence(2)
     );
 }
 
@@ -1593,12 +1615,44 @@ fn rename_module_from_function_call() {
 import mod
 
 fn func() {
-  mod.function()
+  mod   .   function()
 }
 ";
     assert_rename!(
         TestProject::for_source(src).add_module("mod", "pub fn function() { todo }"),
         "module",
-        find_position_of("mod.function")
+        find_position_of("mod").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn rename_module_from_alias_use() {
+    let src = "
+import mod   as     module
+
+fn func() {
+  echo module        .constant
+}
+";
+    assert_rename!(
+        TestProject::for_source(src).add_module("mod", "pub const constant = 10"),
+        "alias",
+        find_position_of("module").nth_occurrence(2),
+    );
+}
+
+#[test]
+fn rename_module_from_namespaced_use() {
+    let src = "
+import testing  / mod
+
+fn func() {
+  echo mod  . constant
+}
+";
+    assert_rename!(
+        TestProject::for_source(src).add_module("testing/mod", "pub const constant = 10"),
+        "module",
+        find_position_of("mod").nth_occurrence(2)
     );
 }

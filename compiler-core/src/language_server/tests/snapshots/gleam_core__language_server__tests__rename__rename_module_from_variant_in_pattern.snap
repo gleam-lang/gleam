@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/rename.rs
-expression: "\nimport mod\n\nfn func(arg) {\n  case arg {\n    mod.Variant1 -> todo\n    mod.Variant2 -> todo\n  }\n}\n"
+expression: "\nimport mod\n\nfn func(arg) {\n  case arg {\n    mod .   Variant1 -> todo\n    mod.Variant2 -> todo\n  }\n}\n"
 ---
 ----- BEFORE RENAME
 -- mod.gleam
@@ -12,8 +12,8 @@ import mod
 
 fn func(arg) {
   case arg {
-    mod.Variant1 -> todo
-    ↑▔▔                 
+    mod .   Variant1 -> todo
+    ↑▔▔                     
     mod.Variant2 -> todo
   }
 }
@@ -29,7 +29,7 @@ import mod as module
 
 fn func(arg) {
   case arg {
-    module.Variant1 -> todo
+    module .   Variant1 -> todo
     module.Variant2 -> todo
   }
 }

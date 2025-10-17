@@ -2759,10 +2759,7 @@ where
                 break;
             }
         }
-        let module_location = SrcSpan {
-            start,
-            end: start + (module.len() as u32)
-        };
+        let module_location = SrcSpan { start, end };
 
         let (_, documentation) = self.take_documentation(start).unzip();
 

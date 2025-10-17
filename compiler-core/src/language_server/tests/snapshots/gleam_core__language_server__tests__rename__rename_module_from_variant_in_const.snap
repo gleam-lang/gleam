@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/rename.rs
-expression: "\nimport mod\n\nconst c = mod.Variant\n"
+expression: "\nimport mod\n\nconst c = mod       .   Variant\n"
 ---
 ----- BEFORE RENAME
 -- mod.gleam
@@ -10,8 +10,8 @@ pub type Type { Variant }
 
 import mod
 
-const c = mod.Variant
-          ↑▔▔        
+const c = mod       .   Variant
+          ↑▔▔                  
 
 
 ----- AFTER RENAME
@@ -22,4 +22,4 @@ pub type Type { Variant }
 
 import mod as module
 
-const c = module.Variant
+const c = module       .   Variant

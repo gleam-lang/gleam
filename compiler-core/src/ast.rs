@@ -1925,7 +1925,7 @@ impl TypedClauseGuard {
                 module_alias,
                 ..
             } => Some(Located::ModuleName {
-                location: *location,
+                location: SrcSpan::new(location.start, location.start + (module_alias.len() as u32)),
                 module_name: module_name.clone(),
                 module_alias: module_alias.clone(),
                 layer: Layer::Value,

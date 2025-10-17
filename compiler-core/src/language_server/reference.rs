@@ -286,7 +286,7 @@ pub fn reference_for_ast_node(
                 },
                 None => Referenced::ModuleName {
                     module_name: import.module.clone(),
-                    module_alias: import.module.clone(),
+                    module_alias: import.module.split('/').next_back().map(EcoString::from).unwrap(),
                     location: import.module_location,
                 }
             })
@@ -568,7 +568,7 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
     ) {
         if module_alias == self.module_alias {
             self.references.push(ModuleNameReference {
-                location: *location,
+                location: SrcSpan::new(location.start, location.start + (module_alias.len() as u32)),
                 kind: ModuleNameReferenceKind::ModuleSelect,
             });
         }
@@ -596,8 +596,7 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
     ) {
         if module_alias == self.module_alias {
             self.references.push(ModuleNameReference {
-                // Subtract 1 from field_start to exclude '.' from location
-                location: SrcSpan::new(location.start, field_start - 1),
+                location: SrcSpan::new(location.start, location.start + (module_alias.len() as u32)),
                 kind: ModuleNameReferenceKind::ModuleSelect,
             });
         }

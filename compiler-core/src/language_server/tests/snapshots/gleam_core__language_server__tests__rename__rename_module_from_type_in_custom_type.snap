@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/rename.rs
-expression: "\nimport mod\n\ntype Custom { Var(mod.Type) }\n"
+expression: "\nimport mod\n\ntype Custom { Var(mod  . Type) }\n"
 ---
 ----- BEFORE RENAME
 -- mod.gleam
@@ -10,8 +10,8 @@ pub type Type { Variant }
 
 import mod
 
-type Custom { Var(mod.Type) }
-                  ↑▔▔        
+type Custom { Var(mod  . Type) }
+                  ↑▔▔           
 
 
 ----- AFTER RENAME
@@ -22,4 +22,4 @@ pub type Type { Variant }
 
 import mod as module
 
-type Custom { Var(module.Type) }
+type Custom { Var(module  . Type) }

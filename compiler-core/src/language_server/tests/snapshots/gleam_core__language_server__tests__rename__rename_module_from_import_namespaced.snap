@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\nimport     testing     /   mod\n\npub fn main() {\n  echo mod.str\n}\n"
+---
+----- BEFORE RENAME
+-- testing/mod.gleam
+pub const str = "string"
+
+-- app.gleam
+
+import     testing     /   mod
+           ↑▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+
+pub fn main() {
+  echo mod.str
+}
+
+
+----- AFTER RENAME
+-- testing/mod.gleam
+pub const str = "string"
+
+-- app.gleam
+
+import     testing     /   mod as module
+
+pub fn main() {
+  echo module.str
+}

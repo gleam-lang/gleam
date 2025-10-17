@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+assertion_line: 1444
+expression: import     mod     as   module
+snapshot_kind: text
+---
+----- BEFORE RENAME
+-- mod.gleam
+
+
+-- app.gleam
+import     mod     as   module
+                        ↑▔▔▔▔▔
+
+
+----- AFTER RENAME
+-- mod.gleam
+
+
+-- app.gleam
+import     mod

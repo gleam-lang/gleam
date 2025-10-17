@@ -1,14 +1,14 @@
 ---
 source: compiler-core/src/language_server/tests/rename.rs
-expression: "import     mod.{ type Type  }   as      module"
+expression: "import     mod  . { type Type  }   as      module"
 ---
 ----- BEFORE RENAME
 -- mod.gleam
 
 
 -- app.gleam
-import     mod.{ type Type  }   as      module
-                                        ↑▔▔▔▔▔
+import     mod  . { type Type  }   as      module
+                                           ↑▔▔▔▔▔
 
 
 ----- AFTER RENAME
@@ -16,4 +16,4 @@ import     mod.{ type Type  }   as      module
 
 
 -- app.gleam
-import     mod.{ type Type  }   as alias
+import     mod  . { type Type  }   as alias

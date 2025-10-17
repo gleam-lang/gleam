@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/rename.rs
-expression: "\nimport mod\n\nfn func(arg: List(mod.Type)) {\n  case arg {\n    [x, ..rest] if x == mod.Variant1 -> 1 + func(rest)\n    [_, ..rest] -> func(rest)\n    [] -> 0\n  }\n}\n"
+expression: "\nimport mod\n\nfn func(arg) {\n  case arg {\n    [x, ..rest] if x == mod .   Variant1 -> 1 + func(rest)\n    [_, ..rest] -> func(rest)\n    [] -> 0\n  }\n}\n"
 ---
 ----- BEFORE RENAME
 -- mod.gleam
@@ -10,10 +10,10 @@ pub type Type { Variant1 Variant2 }
 
 import mod
 
-fn func(arg: List(mod.Type)) {
+fn func(arg) {
   case arg {
-    [x, ..rest] if x == mod.Variant1 -> 1 + func(rest)
-                        ↑▔▔                           
+    [x, ..rest] if x == mod .   Variant1 -> 1 + func(rest)
+                        ↑▔▔                               
     [_, ..rest] -> func(rest)
     [] -> 0
   }
@@ -28,9 +28,9 @@ pub type Type { Variant1 Variant2 }
 
 import mod as module
 
-fn func(arg: List(module.Type)) {
+fn func(arg) {
   case arg {
-    [x, ..rest] if x == mod.Variant1 -> 1 + func(rest)
+    [x, ..rest] if x == mod .   Variant1 -> 1 + func(rest)
     [_, ..rest] -> func(rest)
     [] -> 0
   }
