@@ -713,6 +713,18 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
+    fn error_expr_with_information(
+        &mut self,
+        location: SrcSpan,
+        extra_information: Option<InvalidExpression>,
+    ) -> TypedExpr {
+        TypedExpr::Invalid {
+            location,
+            type_: self.new_unbound_var(),
+            extra_information,
+        }
+    }
+
     fn infer_iter_statements<StatementsIter: Iterator<Item = UntypedStatement>>(
         &mut self,
         location: SrcSpan,
@@ -1713,8 +1725,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         match self.infer_or_error(expression) {
             Ok(result) => result,
             Err(error) => {
+                let information = match &error {
+                    Error::UnknownVariable { name, .. } => {
+                        Some(InvalidExpression::UnknownVariable { name: name.clone() })
+                    }
+                    _ => None,
+                };
+
                 self.problems.error(error);
-                self.error_expr(location)
+                self.error_expr_with_information(location, information)
             }
         }
     }
@@ -4542,11 +4561,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             ReferenceRegistration::Register
         };
 
-        match self.infer_var(argument_name, argument_location, references) {
+        match self.infer_var(argument_name.clone(), argument_location, references) {
             Ok(result) => result,
             Err(error) => {
                 self.problems.error(error);
-                self.error_expr(argument_location)
+                self.error_expr_with_information(
+                    argument_location,
+                    Some(InvalidExpression::UnknownVariable {
+                        name: argument_name,
+                    }),
+                )
             }
         }
     }

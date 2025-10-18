@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Bug fixes
+
+- Fixed a bug where the "Generate function" code action would be incorrectly
+  offered when calling a function unsupported by the current target, leading to
+  invalid code if the code action was accepted.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.13.0-rc2 - 2025-10-06
 
 ### Bug fixes

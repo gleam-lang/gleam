@@ -55,18 +55,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         let end = expressions.last().location().end;
         let mut expressions = expressions.into_iter();
         let first = expressions.next().expect("Empty pipeline in typer");
-        let first_location = first.location();
-        let first = match expr_typer.infer_or_error(first) {
-            Ok(inferred) => inferred,
-            Err(e) => {
-                expr_typer.problems.error(e);
-                TypedExpr::Invalid {
-                    location: first_location,
-                    type_: expr_typer.new_unbound_var(),
-                    extra_information: None,
-                }
-            }
-        };
+        let first = expr_typer.infer(first);
 
         Self::new(expr_typer, size, first, end).infer_expressions(expressions)
     }
@@ -140,20 +129,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                     location,
                     ..
                 } => {
-                    let fun = match self.expr_typer.infer_or_error(*fun) {
-                        Ok(fun) => fun,
-                        Err(e) => {
-                            // In case we cannot infer the function we'll
-                            // replace it with an invalid expression with an
-                            // unbound type to keep going!
-                            self.expr_typer.problems.error(e);
-                            TypedExpr::Invalid {
-                                location,
-                                type_: self.expr_typer.new_unbound_var(),
-                                extra_information: None,
-                            }
-                        }
-                    };
+                    let fun = self.expr_typer.infer(*fun);
 
                     match fun.type_().fn_types() {
                         // Rewrite as right(..args)(left)
@@ -352,19 +328,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
     /// b is the `function` argument.
     fn infer_apply_pipe(&mut self, function: UntypedExpr) -> TypedExpr {
         let function_location = function.location();
-        let function = Box::new(match self.expr_typer.infer_or_error(function) {
-            Ok(function) => function,
-            Err(error) => {
-                // If we cannot infer the function we put an invalid expression
-                // in its place so we can still keep going with the other steps.
-                self.expr_typer.problems.error(error);
-                TypedExpr::Invalid {
-                    location: function_location,
-                    type_: self.expr_typer.new_unbound_var(),
-                    extra_information: None,
-                }
-            }
-        });
+        let function = Box::new(self.expr_typer.infer(function));
 
         self.expr_typer.purity = self
             .expr_typer
