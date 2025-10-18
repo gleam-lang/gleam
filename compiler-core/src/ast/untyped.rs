@@ -1,5 +1,7 @@
 use vec1::Vec1;
 
+use crate::parse::NotNan;
+
 use super::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -13,6 +15,7 @@ pub enum UntypedExpr {
     Float {
         location: SrcSpan,
         value: EcoString,
+        float_value: NotNan,
     },
 
     String {
