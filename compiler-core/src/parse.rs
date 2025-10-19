@@ -1278,22 +1278,14 @@ where
                         }
                     }
                 } else {
-                    match name.as_str() {
-                        "true" | "false" => {
-                            return parse_error(
-                                ParseErrorType::LowcaseBooleanPattern,
-                                SrcSpan { start, end },
-                            );
-                        }
-                        _ => Pattern::Variable {
-                            origin: VariableOrigin {
-                                syntax: VariableSyntax::Variable(name.clone()),
-                                declaration: position.to_declaration(),
-                            },
-                            location: SrcSpan { start, end },
-                            name,
-                            type_: (),
+                    Pattern::Variable {
+                        origin: VariableOrigin {
+                            syntax: VariableSyntax::Variable(name.clone()),
+                            declaration: position.to_declaration(),
                         },
+                        location: SrcSpan { start, end },
+                        name,
+                        type_: (),
                     }
                 }
             }

@@ -2134,6 +2134,21 @@ pub fn main() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/1358
+#[test]
+fn type_unification_does_not_allow_lowercase_bools_in_match_clause() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  case 42 > 42 {
+    true -> 1
+    false -> 2
+  }
+}
+"#
+    );
+}
+
 #[test]
 fn record_update_variant_inference_in_alternate_pattern_with_all_same_variants() {
     assert_module_infer!(

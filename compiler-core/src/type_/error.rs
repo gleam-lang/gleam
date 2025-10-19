@@ -672,6 +672,10 @@ pub enum Error {
     ExternalTypeWithConstructors {
         location: SrcSpan,
     },
+
+    LowercaseBoolPattern {
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1310,7 +1314,8 @@ impl Error {
             | Error::NonUtf8StringAssignmentInBitArray { location }
             | Error::PrivateOpaqueType { location }
             | Error::SrcImportingDevDependency { location, .. }
-            | Error::ExternalTypeWithConstructors { location, .. } => location.start,
+            | Error::ExternalTypeWithConstructors { location, .. }
+            | Error::LowercaseBoolPattern { location } => location.start,
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
             }
