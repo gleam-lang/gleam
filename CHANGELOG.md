@@ -29,6 +29,11 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The lowercase bool pattern error is no longer a syntax error, but instead a
+  part of the analysis step. This allows the entire module to be analyzed, rather
+  than stopping at the syntax error.
+  ([mxtthias](https://github.com/mxtthias))
+
 ### Build tool
 
 - The help text displayed by `gleam dev --help`, `gleam test --help`, and

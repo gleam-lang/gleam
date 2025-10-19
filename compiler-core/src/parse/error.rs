@@ -77,7 +77,6 @@ pub enum ParseErrorType {
     ListSpreadWithAnotherSpread {
         first_spread_location: SrcSpan,
     }, // trying to use multiple spreads: `[..xs, ..ys]`
-    LowcaseBooleanPattern, // most likely user meant True or False in patterns
     UnexpectedLabel, // argument labels were provided, but are not supported in this context
     UnexpectedEof,
     UnexpectedReservedWord, // reserved word used when a name was expected
@@ -417,13 +416,6 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 text: "".into(),
                 hint: Some("I was expecting to see a name here.".into()),
                 label_text: "This is a reserved word".into(),
-                extra_labels: vec![],
-            },
-
-            ParseErrorType::LowcaseBooleanPattern => ParseErrorDetails {
-                text: "See: https://tour.gleam.run/basics/bools/".into(),
-                hint: Some("In Gleam boolean literals are `True` and `False`.".into()),
-                label_text: "Did you want a Bool instead of a variable?".into(),
                 extra_labels: vec![],
             },
 

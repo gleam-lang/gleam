@@ -608,16 +608,22 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 location,
                 origin,
                 ..
-            } => {
-                self.insert_variable(&name, type_.clone(), location, origin.clone());
-
-                Pattern::Variable {
-                    type_,
-                    name,
-                    location,
-                    origin,
+            } => match name.as_str() {
+                "true" | "false" => {
+                    self.error(Error::LowercaseBoolPattern { location });
+                    Pattern::Invalid { location, type_ }
                 }
-            }
+                _ => {
+                    self.insert_variable(&name, type_.clone(), location, origin.clone());
+
+                    Pattern::Variable {
+                        type_,
+                        name,
+                        location,
+                        origin,
+                    }
+                }
+            },
 
             Pattern::BitArraySize(size) => {
                 let location = size.location();
