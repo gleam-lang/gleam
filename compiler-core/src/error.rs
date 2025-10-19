@@ -922,8 +922,7 @@ forward slash and must not end with a slash."
                 level: Level::Error,
                 location: None,
                 hint: Some(format!(
-                    "Add a public `main` function to \
-to `{}/{module}.gleam`.",
+                    "Add a public `main` function to `{}/{module}.gleam`.",
                     origin.folder_name()
                 )),
             }],
