@@ -3984,6 +3984,22 @@ modules should not import them. Perhaps change `{package}` to a regular dependen
                             extra_labels: vec![],
                         }),
                     },
+
+                    TypeError::LowcaseBooleanPattern { location } => Diagnostic {
+                        title: "Lowercase boolean pattern".to_string(),
+                        text: "See: https://tour.gleam.run/basics/bools/".into(),
+                        hint: Some("In Gleam boolean literals are `True` and `False`.".into()),
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("Did you want a Bool instead of a variabel?".into()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    },
                 })
                 .collect_vec(),
 

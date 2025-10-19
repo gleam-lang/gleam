@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "\npub fn main() {\n  case 42 > 42 {\n    true -> 1\n    false -> 2\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  case 42 > 42 {
+    true -> 1
+    false -> 2
+  }
+}
+
+
+----- ERROR
+error: Lowercase boolean pattern
+  ┌─ /src/one/two.gleam:4:5
+  │
+4 │     true -> 1
+  │     ^^^^ Did you want a Bool instead of a variabel?
+
+See: https://tour.gleam.run/basics/bools/
+Hint: In Gleam boolean literals are `True` and `False`.
+
+error: Lowercase boolean pattern
+  ┌─ /src/one/two.gleam:5:5
+  │
+5 │     false -> 2
+  │     ^^^^^ Did you want a Bool instead of a variabel?
+
+See: https://tour.gleam.run/basics/bools/
+Hint: In Gleam boolean literals are `True` and `False`.

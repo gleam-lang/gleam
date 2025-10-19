@@ -664,6 +664,10 @@ pub enum Error {
         location: SrcSpan,
         name: EcoString,
     },
+
+    LowcaseBooleanPattern {
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1298,7 +1302,8 @@ impl Error {
             | Error::DoubleVariableAssignmentInBitArray { location }
             | Error::NonUtf8StringAssignmentInBitArray { location }
             | Error::PrivateOpaqueType { location }
-            | Error::SrcImportingDevDependency { location, .. } => location.start,
+            | Error::SrcImportingDevDependency { location, .. }
+            | Error::LowcaseBooleanPattern { location } => location.start,
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
             }
