@@ -12,10 +12,8 @@ error: Type mismatch
 1 │ fn main() { let x: #(x, x) = #(5, 5.0) x }
   │                              ^^^^^^^^^
 
-Expected type:
-
-    #(x, x)
-
 Found type:
 
     #(Int, Float)
+      ^^^ expected: x
+           ^^^^^ expected: x

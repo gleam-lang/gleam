@@ -361,6 +361,32 @@ fn pipe_value_type_mismatch_error() {
 }
 
 #[test]
+fn emphasize_multiple_type_mismatches() {
+    assert_module_error!(
+        "type Container(a, b) {
+        Container(first: a, second: b)
+    }
+
+    pub fn main() {
+        let container: Container(String, #(Int, Float)) = Container(123, #(2, \"hello\"))
+    }"
+    );
+}
+
+#[test]
+fn emphasize_nested_type_mismatches() {
+    assert_module_error!(
+        "type Wrapper(a) {
+        Wrapper(value: a)
+    }
+
+    pub fn main() {
+        let nested: Wrapper(List(String)) = Wrapper([1, 2, 3])
+    }"
+    );
+}
+
+#[test]
 fn case_tuple_guard() {
     assert_error!("case #(1, 2, 3) { x if x == #(1, 1.0) -> 1 }");
 }

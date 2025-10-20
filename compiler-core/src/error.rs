@@ -12,7 +12,7 @@ use crate::type_::error::{
     IncorrectArityContext, InvalidImportKind, MissingAnnotation, ModuleValueUsageContext, Named,
     UnknownField, UnknownTypeHint, UnsafeRecordUpdateReason,
 };
-use crate::type_::printer::{Names, Printer};
+use crate::type_::printer::{Names, Printer, TypeAnnotation, TypePathStep};
 use crate::type_::{FieldAccessUsage, error::PatternMatchKind};
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
 use crate::{bit_array, diagnostic::Level, type_::UnifyErrorSituation};
@@ -2143,6 +2143,9 @@ But function expects:
                         situation,
                     } => {
                         let mut printer = Printer::new(names);
+                        let expected = collapse_links(expected.clone());
+                        let given = collapse_links(given.clone());
+
                         let mut text = if let Some(description) =
                             situation.as_ref().and_then(|s| s.description())
                         {
@@ -2153,10 +2156,42 @@ But function expects:
                         } else {
                             "".into()
                         };
-                        text.push_str("Expected type:\n\n    ");
-                        text.push_str(&printer.print_type(expected));
-                        text.push_str("\n\nFound type:\n\n    ");
-                        text.push_str(&printer.print_type(given));
+
+                        let expected_display = printer.print_type(&expected);
+                        let (given_display, annotations) =
+                            printer.print_type_with_annotations(&given);
+                        let differences = collect_type_differences(expected.clone(), given.clone());
+
+                        // Only show smart diff suggestions if the type is complex enough
+                        let highlight_lines = if should_show_smart_diff(&differences) {
+                            build_highlight_lines(&differences, &annotations, &mut printer)
+                        } else {
+                            Vec::new()
+                        };
+
+                        // Only show "Expected type:" if there are no smart diff suggestions
+                        if highlight_lines.is_empty() {
+                            text.push_str("Expected type:\n\n    ");
+                            text.push_str(&expected_display);
+                            text.push_str("\n\n");
+                        }
+
+                        text.push_str("Found type:\n\n    ");
+                        text.push_str(&given_display);
+
+                        for highlight in highlight_lines {
+                            text.push('\n');
+                            text.push_str("    ");
+                            for _ in 0..highlight.start {
+                                text.push(' ');
+                            }
+                            let span_len = highlight.end.saturating_sub(highlight.start).max(1);
+                            for _ in 0..span_len {
+                                text.push('^');
+                            }
+                            text.push_str(" expected: ");
+                            text.push_str(&highlight.expected);
+                        }
 
                         let (main_message_location, main_message_text, extra_labels) =
                             match situation {
@@ -2170,9 +2205,11 @@ But function expects:
                                 }) => (clause_location, None, vec![]),
                                 // In all other cases we just highlight the offending expression, optionally
                                 // adding the wrapping hint if it makes sense.
-                                Some(_) | None => {
-                                    (location, hint_wrap_value_in_result(expected, given), vec![])
-                                }
+                                Some(_) | None => (
+                                    location,
+                                    hint_wrap_value_in_result(&expected, &given),
+                                    vec![],
+                                ),
                             };
 
                         Diagnostic {
@@ -4576,6 +4613,205 @@ fn hint_alternative_operator(op: &BinOp, given: &Type) -> Option<String> {
 
         _ => None,
     }
+}
+
+#[derive(Debug, Clone)]
+struct TypeDifference {
+    path: Vec<TypePathStep>,
+    expected: Arc<Type>,
+}
+
+fn collect_type_differences(expected: Arc<Type>, given: Arc<Type>) -> Vec<TypeDifference> {
+    let mut differences = Vec::new();
+    let mut path = Vec::new();
+    collect_type_differences_inner(expected, given, &mut path, &mut differences);
+    differences
+}
+
+fn collect_type_differences_inner(
+    expected: Arc<Type>,
+    given: Arc<Type>,
+    path: &mut Vec<TypePathStep>,
+    differences: &mut Vec<TypeDifference>,
+) {
+    let expected = collapse_links(expected);
+    let given = collapse_links(given);
+
+    if Arc::ptr_eq(&expected, &given) {
+        return;
+    }
+
+    match (&*expected, &*given) {
+        (
+            Type::Named {
+                module: module_expected,
+                name: name_expected,
+                arguments: arguments_expected,
+                ..
+            },
+            Type::Named {
+                module: module_given,
+                name: name_given,
+                arguments: arguments_given,
+                ..
+            },
+        ) if module_expected == module_given
+            && name_expected == name_given
+            && arguments_expected.len() == arguments_given.len() =>
+        {
+            for (index, (expected_argument, given_argument)) in arguments_expected
+                .iter()
+                .zip(arguments_given.iter())
+                .enumerate()
+            {
+                path.push(TypePathStep::NamedArgument(index));
+                collect_type_differences_inner(
+                    expected_argument.clone(),
+                    given_argument.clone(),
+                    path,
+                    differences,
+                );
+                let _ = path.pop();
+            }
+        }
+        (
+            Type::Fn {
+                arguments: arguments_expected,
+                return_: return_expected,
+            },
+            Type::Fn {
+                arguments: arguments_given,
+                return_: return_given,
+            },
+        ) if arguments_expected.len() == arguments_given.len() => {
+            for (index, (expected_argument, given_argument)) in arguments_expected
+                .iter()
+                .zip(arguments_given.iter())
+                .enumerate()
+            {
+                path.push(TypePathStep::FnArgument(index));
+                collect_type_differences_inner(
+                    expected_argument.clone(),
+                    given_argument.clone(),
+                    path,
+                    differences,
+                );
+                let _ = path.pop();
+            }
+            path.push(TypePathStep::FnReturn);
+            collect_type_differences_inner(
+                return_expected.clone(),
+                return_given.clone(),
+                path,
+                differences,
+            );
+            let _ = path.pop();
+        }
+        (
+            Type::Tuple {
+                elements: elements_expected,
+                ..
+            },
+            Type::Tuple {
+                elements: elements_given,
+                ..
+            },
+        ) if elements_expected.len() == elements_given.len() => {
+            for (index, (expected_element, given_element)) in elements_expected
+                .iter()
+                .zip(elements_given.iter())
+                .enumerate()
+            {
+                path.push(TypePathStep::TupleElement(index));
+                collect_type_differences_inner(
+                    expected_element.clone(),
+                    given_element.clone(),
+                    path,
+                    differences,
+                );
+                let _ = path.pop();
+            }
+        }
+        _ => differences.push(TypeDifference {
+            path: path.clone(),
+            expected,
+        }),
+    }
+}
+
+#[derive(Debug)]
+struct HighlightLine {
+    start: usize,
+    end: usize,
+    expected: EcoString,
+}
+
+fn build_highlight_lines(
+    differences: &[TypeDifference],
+    annotations: &[TypeAnnotation],
+    printer: &mut Printer<'_>,
+) -> Vec<HighlightLine> {
+    let mut highlights = Vec::new();
+
+    for difference in differences {
+        if difference.path.is_empty() {
+            continue;
+        }
+
+        if let Some(annotation) = annotations
+            .iter()
+            .find(|annotation| annotation.path == difference.path)
+        {
+            if annotation.range.start == annotation.range.end {
+                continue;
+            }
+            let expected = printer.print_type(&difference.expected);
+            highlights.push(HighlightLine {
+                start: annotation.range.start,
+                end: annotation.range.end,
+                expected,
+            });
+        }
+    }
+
+    highlights.sort_by_key(|highlight| highlight.start);
+    highlights
+}
+
+/// Determines if the type mismatch is "complex enough" to warrant showing smart diff suggestions.
+///
+/// Smart diffs are helpful when:
+/// 1. There are multiple type parameter mismatches (2+)
+/// 2. The mismatch occurs at depth >= 2 (nested within nested types)
+/// 3. The parent type has multiple parameters (2+) with at least one mismatch
+fn should_show_smart_diff(differences: &[TypeDifference]) -> bool {
+    // Filter out empty path differences (top-level mismatches)
+    let nested_diffs: Vec<_> = differences.iter().filter(|d| !d.path.is_empty()).collect();
+
+    if nested_diffs.is_empty() {
+        return false;
+    }
+
+    // Count how many distinct mismatches we have
+    let num_mismatches = nested_diffs.len();
+
+    // Check the maximum depth of mismatches
+    let max_depth = nested_diffs.iter().map(|d| d.path.len()).max().unwrap_or(0);
+
+    // Criterion 1: Multiple mismatches (2+) at any depth
+    if num_mismatches >= 2 {
+        return true;
+    }
+
+    // Criterion 2: Deep nesting (depth >= 2)
+    // For example: Wrapper(List(Int)) has depth 2
+    if max_depth >= 2 {
+        return true;
+    }
+
+    // If we get here, we have exactly 1 mismatch at depth 1
+    // This is like List(Int) vs List(String) - simple enough to not need smart diff
+    false
 }
 
 fn hint_wrap_value_in_result(expected: &Arc<Type>, given: &Arc<Type>) -> Option<String> {

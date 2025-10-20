@@ -1,0 +1,37 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "type Container(a, b) {\n        Container(first: a, second: b)\n    }\n\n    pub fn main() {\n        let container: Container(String, #(Int, Float)) = Container(123, #(2, \"hello\"))\n    }"
+---
+----- SOURCE CODE
+type Container(a, b) {
+        Container(first: a, second: b)
+    }
+
+    pub fn main() {
+        let container: Container(String, #(Int, Float)) = Container(123, #(2, "hello"))
+    }
+
+----- ERROR
+error: Private type used in public interface
+  ┌─ /src/one/two.gleam:5:5
+  │
+5 │     pub fn main() {
+  │     ^^^^^^^^^^^^^
+
+The following type is private, but is being used by this public export.
+
+    Container(Int, #(Int, String))
+
+Private types can only be used within the module that defines them.
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:6:59
+  │
+6 │         let container: Container(String, #(Int, Float)) = Container(123, #(2, "hello"))
+  │                                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Found type:
+
+    Container(Int, #(Int, String))
+              ^^^ expected: String
+                          ^^^^^^ expected: Float

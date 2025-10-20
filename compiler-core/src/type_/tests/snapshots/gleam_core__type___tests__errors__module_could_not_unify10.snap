@@ -15,10 +15,8 @@ error: Type mismatch
 2 │             let #(y, [..x]): #(x, List(x)) = #("one", [1,2,3])
   │                                              ^^^^^^^^^^^^^^^^^
 
-Expected type:
-
-    #(x, List(x))
-
 Found type:
 
     #(String, List(Int))
+      ^^^^^^ expected: x
+                   ^^^ expected: x

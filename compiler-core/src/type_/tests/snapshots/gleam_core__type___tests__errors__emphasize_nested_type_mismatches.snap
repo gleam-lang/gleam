@@ -1,0 +1,36 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "type Wrapper(a) {\n        Wrapper(value: a)\n    }\n\n    pub fn main() {\n        let nested: Wrapper(List(String)) = Wrapper([1, 2, 3])\n    }"
+---
+----- SOURCE CODE
+type Wrapper(a) {
+        Wrapper(value: a)
+    }
+
+    pub fn main() {
+        let nested: Wrapper(List(String)) = Wrapper([1, 2, 3])
+    }
+
+----- ERROR
+error: Private type used in public interface
+  ┌─ /src/one/two.gleam:5:5
+  │
+5 │     pub fn main() {
+  │     ^^^^^^^^^^^^^
+
+The following type is private, but is being used by this public export.
+
+    Wrapper(List(Int))
+
+Private types can only be used within the module that defines them.
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:6:45
+  │
+6 │         let nested: Wrapper(List(String)) = Wrapper([1, 2, 3])
+  │                                             ^^^^^^^^^^^^^^^^^^
+
+Found type:
+
+    Wrapper(List(Int))
+                 ^^^ expected: String
