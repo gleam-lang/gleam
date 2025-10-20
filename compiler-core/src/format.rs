@@ -2548,7 +2548,7 @@ impl<'comments> Formatter<'comments> {
     fn negate_int<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
             UntypedExpr::NegateInt { value, .. } => self.expr(value),
-            UntypedExpr::Int { value, .. } if value.starts_with('-') => self.int(value),
+            UntypedExpr::Int { value, .. } if value.starts_with('-') => self.int(&value[1..]),
             UntypedExpr::BinOp { .. } => "- ".to_doc().append(self.expr(expr)),
 
             _ => docvec!["-", self.expr(expr)],
