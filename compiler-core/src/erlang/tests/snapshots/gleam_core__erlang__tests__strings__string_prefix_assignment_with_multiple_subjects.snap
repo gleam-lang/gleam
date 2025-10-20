@@ -27,7 +27,7 @@ go(X) ->
             Digit;
 
         <<"2"/utf8, _/binary>> ->
-            Digit = <<"1"/utf8>>,
+            Digit = <<"2"/utf8>>,
             Digit;
 
         _ ->

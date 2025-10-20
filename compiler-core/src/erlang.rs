@@ -1551,7 +1551,7 @@ fn record_constructor_function(tag: &EcoString, arity: usize) -> Document<'_> {
 fn clause<'a>(clause: &'a TypedClause, environment: &mut Env<'a>) -> Document<'a> {
     let Clause {
         guard,
-        pattern: pat,
+        pattern,
         alternative_patterns,
         then,
         ..
@@ -1561,51 +1561,46 @@ fn clause<'a>(clause: &'a TypedClause, environment: &mut Env<'a>) -> Document<'a
     // Simply rendering the duplicate erlang clauses breaks the variable
     // rewriting because each pattern would define different (rewritten)
     // variables names.
-    let mut then_doc = None;
     let initial_erlang_vars = environment.erl_function_scope_vars.clone();
-    let mut end_erlang_vars = im::HashMap::new();
+    let initial_scope_vars = environment.current_scope_vars.clone();
 
-    let doc = join(
-        std::iter::once(pat)
-            .chain(alternative_patterns)
-            .map(|patterns| {
-                environment.erl_function_scope_vars = initial_erlang_vars.clone();
-                let mut pattern_printer = PatternPrinter::new(environment);
+    let mut branches_docs = Vec::with_capacity(alternative_patterns.len() + 1);
+    for patterns in std::iter::once(pattern).chain(alternative_patterns) {
+        // Erlang doesn't support alternative patterns, so we turn each
+        // alternative into a branch of its own.
+        // For each alternative, before generating the body, we need to reset
+        // the variables in scope to what they are before the case expression,
+        // so that a branch will not interfere with the other ones!
+        environment.erl_function_scope_vars = initial_erlang_vars.clone();
+        environment.current_scope_vars = initial_scope_vars.clone();
+        let mut pattern_printer = PatternPrinter::new(environment);
 
-                let patterns_doc = if patterns.len() == 1 {
-                    let pattern = patterns.first().expect("Single pattern clause printing");
-                    pattern_printer.print(pattern)
-                } else {
-                    tuple(patterns.iter().map(|pattern| {
-                        pattern_printer.reset_variables();
-                        pattern_printer.print(pattern)
-                    }))
-                };
+        let pattern = match patterns.as_slice() {
+            [pattern] => pattern_printer.print(pattern),
+            _ => tuple(patterns.iter().map(|pattern| {
+                pattern_printer.reset_variables();
+                pattern_printer.print(pattern)
+            })),
+        };
 
-                let PatternPrinter {
-                    environment,
-                    guards,
-                    variables: _,
-                    assignments,
-                } = pattern_printer;
+        let PatternPrinter {
+            environment,
+            guards,
+            variables: _,
+            assignments,
+        } = pattern_printer;
 
-                let guard = optional_clause_guard(guard.as_ref(), guards, environment);
-                if then_doc.is_none() {
-                    then_doc = Some(clause_consequence(then, assignments, environment));
-                    end_erlang_vars = environment.erl_function_scope_vars.clone();
-                }
+        let guard = optional_clause_guard(guard.as_ref(), guards, environment);
+        let then = clause_consequence(then, assignments, environment).group();
+        branches_docs.push(docvec![
+            pattern,
+            guard,
+            " ->",
+            docvec![line(), then].nest(INDENT),
+        ]);
+    }
 
-                patterns_doc.append(
-                    guard
-                        .append(" ->")
-                        .append(line().append(then_doc.clone()).nest(INDENT).group()),
-                )
-            }),
-        ";".to_doc().append(lines(2)),
-    );
-
-    environment.erl_function_scope_vars = end_erlang_vars;
-    doc
+    join(branches_docs, ";".to_doc().append(lines(2)))
 }
 
 fn clause_consequence<'a>(
