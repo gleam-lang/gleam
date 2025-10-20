@@ -2,13 +2,6 @@
 
 ## Unreleased
 
-### Bug fixes
-
-- Fixed a bug where the "Generate function" code action would be incorrectly
-  offered when calling a function unsupported by the current target, leading to
-  invalid code if the code action was accepted.
-  ([Surya Rose](https://github.com/GearsDatapacks))
-
 ### Compiler
 
 - Patterns aliasing a string prefix have been optimised to generate faster code
@@ -30,3 +23,8 @@
 - Fixed a typo in the error message emitted when trying to run a module that
   does not have a main function.
   ([Louis Pilfold](https://github.com/lpil))
+
+- Fixed a bug where the "Generate function" code action would be incorrectly
+  offered when calling a function unsupported by the current target, leading to
+  invalid code if the code action was accepted.
+  ([Surya Rose](https://github.com/GearsDatapacks))
