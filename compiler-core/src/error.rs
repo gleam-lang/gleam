@@ -3985,14 +3985,14 @@ modules should not import them. Perhaps change `{package}` to a regular dependen
                         }),
                     },
 
-                    TypeError::LowcaseBooleanPattern { location } => Diagnostic {
+                    TypeError::LowercaseBooleanPattern { location } => Diagnostic {
                         title: "Lowercase boolean pattern".to_string(),
                         text: "See: https://tour.gleam.run/basics/bools/".into(),
                         hint: Some("In Gleam boolean literals are `True` and `False`.".into()),
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: Some("Did you want a Bool instead of a variabel?".into()),
+                                text: Some("Did you want a Bool instead of a variable?".into()),
                                 span: *location,
                             },
                             path: path.clone(),

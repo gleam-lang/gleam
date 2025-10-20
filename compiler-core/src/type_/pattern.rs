@@ -610,7 +610,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 ..
             } => match name.as_str() {
                 "true" | "false" => {
-                    self.error(Error::LowcaseBooleanPattern { location });
+                    self.error(Error::LowercaseBooleanPattern { location });
                     Pattern::Invalid { location, type_ }
                 }
                 _ => {
