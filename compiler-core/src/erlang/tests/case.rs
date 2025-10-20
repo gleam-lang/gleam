@@ -101,3 +101,18 @@ pub fn main() {
 "#,
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5055
+#[test]
+fn alternative_patter_with_string_alias() {
+    assert_erl!(
+        r#"
+pub fn main(x) {
+  case x {
+    "a" as letter <> _ | "b" as letter <> _ -> letter
+    _ -> "wibble"
+  }
+}
+"#,
+    );
+}
