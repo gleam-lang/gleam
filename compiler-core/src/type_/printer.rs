@@ -1,7 +1,7 @@
 use bimap::BiMap;
 use ecow::{EcoString, eco_format};
 use im::HashMap;
-use std::{collections::HashSet, sync::Arc};
+use std::{collections::HashSet, ops::Range, sync::Arc};
 
 use crate::{
     ast::SrcSpan,
@@ -379,6 +379,20 @@ pub enum PrintMode {
     ExpandAliases,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum TypePathStep {
+    NamedArgument(usize),
+    FnArgument(usize),
+    FnReturn,
+    TupleElement(usize),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypeAnnotation {
+    pub path: Vec<TypePathStep>,
+    pub range: Range<usize>,
+}
+
 /// A type printer that does not wrap and indent, but does take into account the
 /// names that types and modules have been aliased with in the current module.
 #[derive(Debug)]
@@ -460,6 +474,25 @@ impl<'a> Printer<'a> {
         buffer
     }
 
+    pub fn print_type_with_annotations(
+        &mut self,
+        type_: &Type,
+    ) -> (EcoString, Vec<TypeAnnotation>) {
+        self.print_type_with_annotations_mode(type_, PrintMode::Normal)
+    }
+
+    pub fn print_type_with_annotations_mode(
+        &mut self,
+        type_: &Type,
+        print_mode: PrintMode,
+    ) -> (EcoString, Vec<TypeAnnotation>) {
+        let mut buffer = EcoString::new();
+        let mut annotations = Vec::new();
+        let mut path = Vec::new();
+        self.print_with_annotations(type_, &mut buffer, print_mode, &mut path, &mut annotations);
+        (buffer, annotations)
+    }
+
     pub fn print_module(&self, module: &str) -> EcoString {
         match self.names.imported_modules.get(module) {
             Some((module, _)) => module.clone(),
@@ -524,6 +557,104 @@ impl<'a> Printer<'a> {
                 buffer.push(')');
             }
         }
+    }
+
+    fn print_with_annotations(
+        &mut self,
+        type_: &Type,
+        buffer: &mut EcoString,
+        print_mode: PrintMode,
+        path: &mut Vec<TypePathStep>,
+        annotations: &mut Vec<TypeAnnotation>,
+    ) {
+        let start = buffer.len();
+
+        match type_ {
+            Type::Named {
+                name,
+                arguments,
+                module,
+                ..
+            } => {
+                let (module, name) = match self.names.named_type(module, name, print_mode) {
+                    NameContextInformation::Qualified(module, name) => (Some(module), name),
+                    NameContextInformation::Unqualified(name) => (None, name),
+                    NameContextInformation::Unimported(module, name) => {
+                        (module.split('/').next_back(), name)
+                    }
+                };
+
+                if let Some(module) = module {
+                    buffer.push_str(module);
+                    buffer.push('.');
+                }
+                buffer.push_str(name);
+
+                if !arguments.is_empty() {
+                    buffer.push('(');
+                    for (index, argument) in arguments.iter().enumerate() {
+                        if index > 0 {
+                            buffer.push_str(", ");
+                        }
+                        path.push(TypePathStep::NamedArgument(index));
+                        self.print_with_annotations(
+                            argument,
+                            buffer,
+                            print_mode,
+                            path,
+                            annotations,
+                        );
+                        let _ = path.pop();
+                    }
+                    buffer.push(')');
+                }
+            }
+
+            Type::Fn { arguments, return_ } => {
+                buffer.push_str("fn(");
+                for (index, argument) in arguments.iter().enumerate() {
+                    if index > 0 {
+                        buffer.push_str(", ");
+                    }
+                    path.push(TypePathStep::FnArgument(index));
+                    self.print_with_annotations(argument, buffer, print_mode, path, annotations);
+                    let _ = path.pop();
+                }
+                buffer.push_str(") -> ");
+                path.push(TypePathStep::FnReturn);
+                self.print_with_annotations(return_, buffer, print_mode, path, annotations);
+                let _ = path.pop();
+            }
+
+            Type::Var { type_, .. } => match *type_.borrow() {
+                TypeVar::Link { ref type_, .. } => {
+                    self.print_with_annotations(type_, buffer, print_mode, path, annotations);
+                    return;
+                }
+                TypeVar::Unbound { id, .. } | TypeVar::Generic { id, .. } => {
+                    buffer.push_str(&self.type_variable(id))
+                }
+            },
+
+            Type::Tuple { elements, .. } => {
+                buffer.push_str("#(");
+                for (index, element) in elements.iter().enumerate() {
+                    if index > 0 {
+                        buffer.push_str(", ");
+                    }
+                    path.push(TypePathStep::TupleElement(index));
+                    self.print_with_annotations(element, buffer, print_mode, path, annotations);
+                    let _ = path.pop();
+                }
+                buffer.push(')');
+            }
+        }
+
+        let end = buffer.len();
+        annotations.push(TypeAnnotation {
+            path: path.clone(),
+            range: start..end,
+        });
     }
 
     pub fn print_constructor(&mut self, module: &EcoString, name: &EcoString) -> EcoString {
