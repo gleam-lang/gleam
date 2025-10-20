@@ -28,3 +28,7 @@
   offered when calling a function unsupported by the current target, leading to
   invalid code if the code action was accepted.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where the formatter would not remove the right number of double
+  negations from literal integers.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
