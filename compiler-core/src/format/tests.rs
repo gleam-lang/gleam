@@ -6733,3 +6733,46 @@ fn format_panic_as_with_block_message() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5056
+#[test]
+fn remove_redundant_negation_from_literal_int_1() {
+    assert_format_rewrite!(
+        "pub fn main() {
+  --1
+}
+",
+        "pub fn main() {
+  1
+}
+"
+    );
+}
+
+#[test]
+fn remove_redundant_negation_from_literal_int_2() {
+    assert_format_rewrite!(
+        "pub fn main() {
+  ---1
+}
+",
+        "pub fn main() {
+  -1
+}
+"
+    );
+}
+
+#[test]
+fn remove_redundant_negation_from_literal_int_3() {
+    assert_format_rewrite!(
+        "pub fn main() {
+  ----1
+}
+",
+        "pub fn main() {
+  1
+}
+"
+    );
+}
