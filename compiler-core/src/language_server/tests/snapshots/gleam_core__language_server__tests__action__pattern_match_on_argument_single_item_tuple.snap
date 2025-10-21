@@ -13,6 +13,6 @@ pub fn main(tuple: #(Int)) {
 ----- AFTER ACTION
 
 pub fn main(tuple: #(Int)) {
-  let #(value_0) = tuple
+  let #(int) = tuple
   todo
 }

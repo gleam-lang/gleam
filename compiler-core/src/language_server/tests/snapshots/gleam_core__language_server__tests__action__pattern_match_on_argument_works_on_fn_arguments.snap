@@ -18,7 +18,7 @@ fn map(list: List(a), fun: fn(a) -> b) { todo }
 pub fn main() {
   [#(1, 2)]
   |> map(fn(tuple) {
-  let #(value_0, value_1) = tuple
+  let #(int, int_2) = tuple
 })
 }
 

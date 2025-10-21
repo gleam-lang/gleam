@@ -16,7 +16,7 @@ fn f(g) { g(#(1, 2)) }
 
 pub fn main() {
   use var <- f
-  let #(value_0, value_1) = var
+  let #(int, int_2) = var
 }
 
 fn f(g) { g(#(1, 2)) }
