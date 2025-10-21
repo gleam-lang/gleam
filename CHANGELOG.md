@@ -103,3 +103,7 @@
 - Fixed a bug where the "pattern match on variable" code action would generate
   invalid patterns by repeating a variable name already used in the same pattern.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where useless comparison warnings for floats compared literal
+  strings, claiming for example that `1.0 == 1.` was always false.
+  ([fruno](https://github.com/fruno-bulax/))
