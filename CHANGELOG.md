@@ -25,6 +25,10 @@
   keyword of a variable to inline.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The "pattern match on variable" code action can now pick better names when
+  used on tuples.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Bug fixes
@@ -49,3 +53,11 @@
 - Fixed a bug where the BEAM would be shut down abruptly once the program had
   successfully finished running.
   ([Louis Pilfold](https://github.com/lpil))
+
+- Fixed a bug where the "pattern match on variable" code action would generate
+  invalid code when applied on a list's tail.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the "pattern match on variable" code action would generate
+  invalid patterns by repeating a variable name already used in the same pattern.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
