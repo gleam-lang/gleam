@@ -4436,7 +4436,7 @@ pub struct PatternMatchOnValue<'a, A> {
     module: &'a Module,
     params: &'a CodeActionParams,
     compiler: &'a LspProjectCompiler<A>,
-    pattern_variable_under_cursor: Option<(&'a EcoString, SrcSpan, Arc<Type>)>,
+    pattern_variable_under_cursor: Option<(&'a EcoString, PatternLocation, Arc<Type>)>,
     selected_value: Option<PatternMatchedValue<'a>>,
     edits: TextEdits<'a>,
 }
@@ -4478,7 +4478,7 @@ pub enum PatternMatchedValue<'a> {
     ///
     ClausePatternVariable {
         variable_type: Arc<Type>,
-        variable_location: SrcSpan,
+        variable_location: PatternLocation,
         clause_location: SrcSpan,
     },
     UseVariable {
@@ -4489,6 +4489,26 @@ pub enum PatternMatchedValue<'a> {
         ///
         use_location: SrcSpan,
     },
+}
+
+#[derive(Clone)]
+pub enum PatternLocation {
+    /// Any pattern that doesn't need any special handling.
+    ///
+    Regular { location: SrcSpan },
+    /// List tails need some care to not generate invalid syntax when pattern
+    /// matched on in case expressions.
+    ///
+    ListTail {
+        /// This location covers the entire list tail pattern, including the `..`
+        location: SrcSpan,
+    },
+}
+
+impl PatternLocation {
+    fn regular(location: SrcSpan) -> Self {
+        Self::Regular { location }
+    }
 }
 
 impl<'a, IO> PatternMatchOnValue<'a, IO> {
@@ -4660,15 +4680,24 @@ impl<'a, IO> PatternMatchOnValue<'a, IO> {
     fn match_on_clause_variable(
         &mut self,
         variable_type: Arc<Type>,
-        variable_location: SrcSpan,
+        variable_location: PatternLocation,
         clause_location: SrcSpan,
     ) {
-        let Some(patterns) = self.type_to_destructure_patterns(variable_type.as_ref()) else {
+        let patterns = if matches!(variable_location, PatternLocation::ListTail { .. }) {
+            vec1!["".into(), "first, ..rest".into()]
+        } else if let Some(patterns) = self.type_to_destructure_patterns(variable_type.as_ref()) {
+            patterns
+        } else {
             return;
         };
 
         let clause_range = self.edits.src_span_to_lsp_range(clause_location);
         let nesting = " ".repeat(clause_range.start.character as usize);
+
+        let variable_location = match variable_location {
+            PatternLocation::Regular { location } => location,
+            PatternLocation::ListTail { location } => location,
+        };
 
         let variable_start = (variable_location.start - clause_location.start) as usize;
         let variable_end =
@@ -5016,7 +5045,8 @@ impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO> {
             self.params.range,
             self.edits.src_span_to_lsp_range(*location),
         ) {
-            self.pattern_variable_under_cursor = Some((name, *location, type_.clone()));
+            let location = PatternLocation::regular(*location);
+            self.pattern_variable_under_cursor = Some((name, location, type_.clone()));
         }
     }
 
@@ -5027,10 +5057,10 @@ impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO> {
                 self.edits.src_span_to_lsp_range(arg.location),
             )
         {
-            let location = SrcSpan {
+            let location = PatternLocation::regular(SrcSpan {
                 start: arg.location.end,
                 end: arg.location.end,
-            };
+            });
             self.pattern_variable_under_cursor = Some((name, location, arg.value.type_()));
             return;
         }
@@ -5053,15 +5083,56 @@ impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO> {
                 self.edits.src_span_to_lsp_range(*location),
             )
         {
-            self.pattern_variable_under_cursor = Some((name, *location, type_::string()));
+            let location = PatternLocation::regular(*location);
+            self.pattern_variable_under_cursor = Some((name, location, type_::string()));
         } else if let AssignName::Variable(name) = right_side_assignment
             && within(
                 self.params.range,
                 self.edits.src_span_to_lsp_range(*right_location),
             )
         {
-            self.pattern_variable_under_cursor = Some((name, *right_location, type_::string()));
+            let location = PatternLocation::regular(*right_location);
+            self.pattern_variable_under_cursor = Some((name, location, type_::string()));
         }
+    }
+
+    fn visit_typed_pattern_list(
+        &mut self,
+        location: &'ast SrcSpan,
+        elements: &'ast Vec<TypedPattern>,
+        tail: &'ast Option<Box<TypedPattern>>,
+        type_: &'ast Arc<Type>,
+    ) {
+        let (name, location, type_) = if let Some(tail) = tail
+            && let Pattern::Variable {
+                name,
+                location,
+                type_,
+                ..
+            } = tail.as_ref()
+        {
+            (name, location, type_)
+        } else {
+            ast::visit::visit_typed_pattern_list(self, location, elements, tail, type_);
+            return;
+        };
+
+        // TODO: this is a bit of an hack where we hardcode the start of the tail
+        // assuming the code is nicely formatter. Know this will break if there's
+        // any whitespace between the `..` and the tail.
+        // Fixing this would require adding an additional field to `tail` to also
+        // store the byte index of the start of `..`.
+        let tail_location = SrcSpan::new(location.start - 2, location.end);
+        let tail_range = self.edits.src_span_to_lsp_range(tail_location);
+        if !within(self.params.range, tail_range) {
+            ast::visit::visit_typed_pattern_list(self, location, elements, tail, type_);
+            return;
+        }
+
+        let location = PatternLocation::ListTail {
+            location: tail_location,
+        };
+        self.pattern_variable_under_cursor = Some((name, location, type_.clone()))
     }
 }
 
