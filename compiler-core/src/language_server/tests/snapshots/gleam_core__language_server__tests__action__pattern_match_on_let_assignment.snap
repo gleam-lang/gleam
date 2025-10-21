@@ -14,5 +14,5 @@ pub fn main() {
 
 pub fn main() {
   let var = #(1, 2)
-  let #(value_0, value_1) = var
+  let #(int, int_2) = var
 }

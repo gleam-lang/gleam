@@ -12,7 +12,7 @@ pub fn main(arg: #(Int, String)) {
 
 ----- AFTER ACTION
 pub fn main(arg: #(Int, String)) {
-  let #(value_0, value_1) = arg
+  let #(int, string) = arg
   todo
 //^^^^ This should still have two spaces of indentation!
 }
