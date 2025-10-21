@@ -9608,6 +9608,48 @@ fn pattern_match_on_list_variable() {
 }
 
 #[test]
+fn pattern_match_on_list_tail() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "pub fn main(a_list: List(a)) {
+  case a_list {
+    [] -> todo
+    [first, ..rest] -> todo
+  }
+}",
+        find_position_of("rest").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_list_tail_used_in_a_branch() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "pub fn main(a_list: List(a)) {
+  case a_list {
+    [] -> todo
+    [first, ..rest] -> rest
+  }
+}",
+        find_position_of("rest").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_list_tail_with_shadowed_name() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "pub fn main(a_list: List(a)) {
+  case a_list {
+    [] -> todo
+    [rest, ..else_] -> todo
+  }
+}",
+        find_position_of("else_").to_selection()
+    );
+}
+
+#[test]
 fn collapse_nested_case() {
     assert_code_action!(
         COLLAPSE_NESTED_CASE,

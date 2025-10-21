@@ -2360,6 +2360,8 @@ pub enum Pattern<Type> {
         location: SrcSpan,
         elements: Vec<Self>,
         tail: Option<Box<Self>>,
+        /// The type of the list, so this is going to be `List(something)`.
+        ///
         type_: Type,
     },
 
