@@ -2136,7 +2136,7 @@ pub fn main() {
 
 // https://github.com/gleam-lang/gleam/issues/1358
 #[test]
-fn type_unification_does_not_allow_lowercase_booleans_in_match_clause() {
+fn type_unification_does_not_allow_lowercase_bools_in_match_clause() {
     assert_module_error!(
         r#"
 pub fn main() {

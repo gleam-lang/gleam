@@ -13,20 +13,20 @@ pub fn main() {
 
 
 ----- ERROR
-error: Lowercase boolean pattern
+error: Lowercase bool pattern
   ┌─ /src/one/two.gleam:4:5
   │
 4 │     true -> 1
-  │     ^^^^ Did you want a Bool instead of a variable?
+  │     ^^^^ This is not a bool
 
 See: https://tour.gleam.run/basics/bools/
-Hint: In Gleam boolean literals are `True` and `False`.
+Hint: In Gleam bool literals are `True` and `False`.
 
-error: Lowercase boolean pattern
+error: Lowercase bool pattern
   ┌─ /src/one/two.gleam:5:5
   │
 5 │     false -> 2
-  │     ^^^^^ Did you want a Bool instead of a variable?
+  │     ^^^^^ This is not a bool
 
 See: https://tour.gleam.run/basics/bools/
-Hint: In Gleam boolean literals are `True` and `False`.
+Hint: In Gleam bool literals are `True` and `False`.

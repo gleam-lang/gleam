@@ -665,7 +665,7 @@ pub enum Error {
         name: EcoString,
     },
 
-    LowercaseBooleanPattern {
+    LowercaseBoolPattern {
         location: SrcSpan,
     },
 }
@@ -1303,7 +1303,7 @@ impl Error {
             | Error::NonUtf8StringAssignmentInBitArray { location }
             | Error::PrivateOpaqueType { location }
             | Error::SrcImportingDevDependency { location, .. }
-            | Error::LowercaseBooleanPattern { location } => location.start,
+            | Error::LowercaseBoolPattern { location } => location.start,
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
             }
