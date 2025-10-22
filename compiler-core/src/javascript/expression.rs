@@ -1536,12 +1536,73 @@ impl<'module, 'a> Generator<'module, 'a> {
             return docvec![left_doc, operator, right_doc];
         }
 
+        // For comparison with singleton custom types, ie, one with no fields.
+        // If you have some code like this
+        // ```gleam
+        //  pub type Wibble {
+        //    Wibble
+        //    Wobble
+        //  }
+
+        //  pub fn is_wibble(w: Wibble) -> Bool {
+        //    w == Wibble
+        //  }
+        // ```
+        // Instead of `isEqual(w, new Wibble())`, generate `w instanceof Wibble`
+        // because the first approach needs to construct a new Wibble, and then call the isEqual function,
+        // which supports any shape of data, and so does a lot of extra logic which isn't necessary.
+
+        if let Some(doc) = self.singleton_variant_equality(left, right, should_be_equal) {
+            return doc;
+        }
+
+        if let Some(doc) = self.singleton_variant_equality(right, left, should_be_equal) {
+            return doc;
+        }
+
         // Other types must be compared using structural equality
         let left =
             self.not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(left));
         let right =
             self.not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(right));
+
         self.prelude_equal_call(should_be_equal, left, right)
+    }
+
+    fn singleton_variant_equality(
+        &mut self,
+        left: &'a TypedExpr,
+        right: &'a TypedExpr,
+        should_be_equal: bool,
+    ) -> Option<Document<'a>> {
+        if let TypedExpr::Var {
+            constructor:
+                ValueConstructor {
+                    variant: ValueConstructorVariant::Record { arity: 0, name, .. },
+                    ..
+                },
+            ..
+        } = right
+        {
+            let left_doc = self
+                .not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(left));
+            Some(self.singleton_equal(left_doc, name, should_be_equal))
+        } else {
+            None
+        }
+    }
+
+    fn singleton_equal(
+        &self,
+        value: Document<'a>,
+        tag: &EcoString,
+        should_be_equal: bool,
+    ) -> Document<'a> {
+        if should_be_equal {
+            docvec![value, " instanceof ", tag.to_doc()]
+        } else {
+            docvec!["!(", value, " instanceof ", tag.to_doc(), ")"]
+        }
     }
 
     fn equal_with_doc_operands(
@@ -1966,16 +2027,26 @@ impl<'module, 'a> Generator<'module, 'a> {
                 docvec![left, " !== ", right]
             }
 
-            ClauseGuard::Equals { left, right, .. } => {
-                let left = self.guard(left);
-                let right = self.guard(right);
-                self.prelude_equal_call(true, left, right)
-            }
+            ClauseGuard::Equals { left, right, .. }
+            | ClauseGuard::NotEquals { left, right, .. } => {
+                let should_be_equal = matches!(guard, ClauseGuard::Equals { .. });
 
-            ClauseGuard::NotEquals { left, right, .. } => {
-                let left = self.guard(left);
-                let right = self.guard(right);
-                self.prelude_equal_call(false, left, right)
+                // Handle singleton equality optimization for guards
+                if let Some(doc) =
+                    self.singleton_variant_guard_equality(left, right, should_be_equal)
+                {
+                    return doc;
+                }
+
+                if let Some(doc) =
+                    self.singleton_variant_guard_equality(right, left, should_be_equal)
+                {
+                    return doc;
+                }
+
+                let left_doc = self.guard(left);
+                let right_doc = self.guard(right);
+                self.prelude_equal_call(should_be_equal, left_doc, right_doc)
             }
 
             ClauseGuard::GtFloat { left, right, .. } | ClauseGuard::GtInt { left, right, .. } => {
@@ -2076,6 +2147,25 @@ impl<'module, 'a> Generator<'module, 'a> {
 
             ClauseGuard::Constant(constant) => self.guard_constant_expression(constant),
         }
+    }
+
+    fn singleton_variant_guard_equality(
+        &mut self,
+        left: &'a TypedClauseGuard,
+        right: &'a TypedClauseGuard,
+        should_be_equal: bool,
+    ) -> Option<Document<'a>> {
+        if let ClauseGuard::Constant(Constant::Record {
+            record_constructor: Some(constructor),
+            name,
+            ..
+        }) = right
+            && let ValueConstructorVariant::Record { arity: 0, .. } = constructor.variant
+        {
+            let left_doc = self.guard(left);
+            return Some(self.singleton_equal(left_doc, name, should_be_equal));
+        }
+        None
     }
 
     fn wrapped_guard(&mut self, guard: &'a TypedClauseGuard) -> Document<'a> {

@@ -1,0 +1,43 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\npub type Status {\n  Loading\n  Success\n  Error\n}\n\npub fn is_loading(s: Status) -> Bool {\n  s == Loading\n}\n\npub fn is_success(s: Status) -> Bool {\n  s == Success\n}\n"
+---
+----- SOURCE CODE
+
+pub type Status {
+  Loading
+  Success
+  Error
+}
+
+pub fn is_loading(s: Status) -> Bool {
+  s == Loading
+}
+
+pub fn is_success(s: Status) -> Bool {
+  s == Success
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class Loading extends $CustomType {}
+export const Status$Loading = () => new Loading();
+export const Status$isLoading = (value) => value instanceof Loading;
+
+export class Success extends $CustomType {}
+export const Status$Success = () => new Success();
+export const Status$isSuccess = (value) => value instanceof Success;
+
+export class Error extends $CustomType {}
+export const Status$Error = () => new Error();
+export const Status$isError = (value) => value instanceof Error;
+
+export function is_loading(s) {
+  return s instanceof Loading;
+}
+
+export function is_success(s) {
+  return s instanceof Success;
+}
