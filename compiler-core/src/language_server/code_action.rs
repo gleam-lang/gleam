@@ -4582,7 +4582,7 @@ impl<'a, IO> PatternMatchOnValue<'a, IO> {
                     variable_type,
                     variable_location,
                     clause_location,
-                    bound_variables,
+                    &bound_variables,
                 );
                 "Pattern match on variable"
             }
@@ -4708,7 +4708,7 @@ impl<'a, IO> PatternMatchOnValue<'a, IO> {
         variable_type: Arc<Type>,
         variable_location: PatternLocation,
         clause_location: SrcSpan,
-        bound_variables: Vec<BoundVariable>,
+        bound_variables: &[BoundVariable],
     ) {
         let mut names = NameGenerator::new();
         names.reserve_bound_variables(&bound_variables);
@@ -5051,7 +5051,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO> {
                 variable_type: type_,
                 variable_location,
                 clause_location: clause.location(),
-                bound_variables: clause.bound_variables(),
+                bound_variables: clause.bound_variables().collect_vec(),
             });
         } else {
             self.visit_typed_expr(&clause.then);
