@@ -16,6 +16,7 @@ pub enum Constant<T, RecordTag> {
     Float {
         location: SrcSpan,
         value: EcoString,
+        float_value: LiteralFloatValue,
     },
 
     String {

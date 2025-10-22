@@ -34,6 +34,9 @@ expression: "{ 1 { 1.0 2.0 } 3 }"
                                         end: 9,
                                     },
                                     value: "1.0",
+                                    float_value: LiteralFloatValue(
+                                        1.0,
+                                    ),
                                 },
                             ),
                             Expression(
@@ -43,6 +46,9 @@ expression: "{ 1 { 1.0 2.0 } 3 }"
                                         end: 13,
                                     },
                                     value: "2.0",
+                                    float_value: LiteralFloatValue(
+                                        2.0,
+                                    ),
                                 },
                             ),
                         ],
