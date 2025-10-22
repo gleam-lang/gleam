@@ -1670,12 +1670,11 @@ impl TypedClause {
 
     /// This returns the names of all the variables bound in this case clause.
     /// For example if we had `#(a, b) | c` this will return "a", "b", and "c".
-    pub fn bound_variables(&self) -> Vec<BoundVariable> {
+    pub fn bound_variables(&self) -> impl Iterator<Item = BoundVariable> {
         std::iter::once(&self.pattern)
             .chain(&self.alternative_patterns)
             .flatten()
             .flat_map(|pattern| pattern.bound_variables())
-            .collect_vec()
     }
 }
 
