@@ -42,3 +42,6 @@
   negations from literal integers.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Add a missing BitArray constructor return type in the prelude's TypeScript
+  definitions.
+  ([Richard Viney](https://github.com/richard-viney))

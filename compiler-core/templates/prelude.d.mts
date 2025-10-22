@@ -65,7 +65,7 @@ export interface BitArray {
 /** @deprecated */
 export const BitArray: {
   /** @deprecated */
-  new(buffer: Uint8Array, bitSize?: number, bitOffset?: number);
+  new(buffer: Uint8Array, bitSize?: number, bitOffset?: number): BitArray;
 }
 export function BitArray$BitArray(
   buffer: Uint8Array,
