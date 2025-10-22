@@ -8,6 +8,10 @@
   on the Erlang target.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Analysis it now fault tolerant in the presence of errors in field definitions
+  of custom type variants.
+  ([Adi Salimgereyev](https://github.com/abs0luty))
+
 ### Build tool
 
 - The help text displayed by `gleam dev --help`, `gleam test --help`, and
@@ -37,8 +41,4 @@
 - Fixed a bug where the formatter would not remove the right number of double
   negations from literal integers.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
-- Fixed a bug where the record field is forgotten by compiler when its 
-  type is not valid.
-  ([Adi Salimgereyev](https://github.com/abs0luty))
 
