@@ -218,6 +218,17 @@ pub const local = TypeWithALongNameAndSeveralArguments("one", "two", "three", "f
 }
 
 #[test]
+fn long_name_variant_without_arguments() {
+    assert_ts_def!(
+        r#"
+pub type TypeWithALongNameAndNoArguments {
+  TypeWithALongNameAndNoArguments
+}
+"#
+    );
+}
+
+#[test]
 fn custom_type_with_named_fields() {
     assert_js!(
         r#"

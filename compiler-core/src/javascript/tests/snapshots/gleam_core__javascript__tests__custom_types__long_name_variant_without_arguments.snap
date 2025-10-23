@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\npub type TypeWithALongNameAndNoArguments {\n  TypeWithALongNameAndNoArguments\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub type TypeWithALongNameAndNoArguments {
+  TypeWithALongNameAndNoArguments
+}
+
+
+----- TYPESCRIPT DEFINITIONS
+import type * as _ from "../gleam.d.mts";
+
+export class TypeWithALongNameAndNoArguments extends _.CustomType {}
+export function TypeWithALongNameAndNoArguments$TypeWithALongNameAndNoArguments(): TypeWithALongNameAndNoArguments$;
+export function TypeWithALongNameAndNoArguments$isTypeWithALongNameAndNoArguments(
+  value: TypeWithALongNameAndNoArguments$,
+): boolean;
+
+export type TypeWithALongNameAndNoArguments$ = TypeWithALongNameAndNoArguments;

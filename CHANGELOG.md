@@ -117,3 +117,7 @@
 - Fixed a bug where useless comparison warnings for floats compared literal
   strings, claiming for example that `1.0 == 1.` was always false.
   ([fruno](https://github.com/fruno-bulax/))
+
+- Fix invalid TypeScript definition being generated for variant constructors
+  with long names that take no arguments.
+  ([Richard Viney](https://github.com/richard-viney))
