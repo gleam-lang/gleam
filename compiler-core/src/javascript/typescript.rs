@@ -670,12 +670,14 @@ impl<'a> TypeScriptGenerator<'a> {
         )
         .to_doc();
 
+        let has_arguments = !arguments.is_empty();
+
         docvec![
             "export function ",
             name_with_generics(function_name, type_parameters),
             "(",
             docvec![break_("", ""), join(arguments, break_(",", ", ")),].nest(INDENT),
-            break_(",", ""),
+            break_(if has_arguments { "," } else { "" }, ""),
             "): ",
             type_name_with_generics.clone(),
             ";"
