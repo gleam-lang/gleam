@@ -1430,7 +1430,10 @@ impl<'ast> ast::visit::Visit<'ast> for AnnotateTopLevelDefinitions<'_> {
 
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
         // Don't annotate already annotated arguments
-        let arguments_to_annotate = fun.arguments().iter().filter(|argument| argument.annotation.is_none());
+        let arguments_to_annotate = fun
+            .arguments
+            .iter()
+            .filter(|argument| argument.annotation.is_none());
         let return_annotation_needed = fun.return_annotation.is_none();
 
         if arguments_to_annotate.is_empty() && !return_annotation_needed {
