@@ -1433,10 +1433,11 @@ impl<'ast> ast::visit::Visit<'ast> for AnnotateTopLevelDefinitions<'_> {
         let arguments_to_annotate = fun
             .arguments
             .iter()
-            .filter(|argument| argument.annotation.is_none());
-        let return_annotation_needed = fun.return_annotation.is_none();
+            .filter(|argument| argument.annotation.is_none())
+            .collect::<Vec<_>>();
+        let needs_return_annotation = fun.return_annotation.is_none();
 
-        if arguments_to_annotate.is_empty() && !return_annotation_needed {
+        if arguments_to_annotate.is_empty() && !needs_return_annotation {
             return;
         }
 
@@ -1466,7 +1467,7 @@ impl<'ast> ast::visit::Visit<'ast> for AnnotateTopLevelDefinitions<'_> {
         }
 
         // Annotate the return type if it isn't already annotated
-        if return_annotation_needed {
+        if needs_return_annotation {
             self.edits.insert(
                 fun.location.end,
                 format!(" -> {}", printer.print_type(&fun.return_type)),
