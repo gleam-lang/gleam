@@ -1429,6 +1429,14 @@ impl<'ast> ast::visit::Visit<'ast> for AnnotateTopLevelDefinitions<'_> {
     }
 
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+        // Don't annotate already annotated arguments
+        let arguments_to_annotate = fun.arguments().iter().filter(|argument| argument.annotation.is_none());
+        let return_annotation_needed = fun.return_annotation.is_none();
+
+        if arguments_to_annotate.is_empty() && !return_annotation_needed {
+            return;
+        }
+
         // Create new printer to ignore type variables from other definitions
         let mut printer = Printer::new_without_type_variables(&self.module.ast.names);
         collect_type_variables(&mut printer, fun);
@@ -1447,12 +1455,7 @@ impl<'ast> ast::visit::Visit<'ast> for AnnotateTopLevelDefinitions<'_> {
         }
 
         // Annotate each argument separately
-        for argument in fun.arguments.iter() {
-            // Don't annotate the argument if it's already annotated
-            if argument.annotation.is_some() {
-                continue;
-            }
-
+        for argument in arguments_to_annotate {
             self.edits.insert(
                 argument.location.end,
                 format!(": {}", printer.print_type(&argument.type_)),
@@ -1460,7 +1463,7 @@ impl<'ast> ast::visit::Visit<'ast> for AnnotateTopLevelDefinitions<'_> {
         }
 
         // Annotate the return type if it isn't already annotated
-        if fun.return_annotation.is_none() {
+        if return_annotation_needed {
             self.edits.insert(
                 fun.location.end,
                 format!(" -> {}", printer.print_type(&fun.return_type)),
