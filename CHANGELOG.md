@@ -163,3 +163,6 @@
   shadow outer scope variables in other branches when compiling to JavaScript.
   ([Elias Haider](https://github.com/EliasDerHai))
 
+- Fix invalid TypeScript definition being generated for variant constructors
+  with long names that take no arguments.
+  ([Richard Viney](https://github.com/richard-viney))
