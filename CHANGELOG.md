@@ -45,3 +45,7 @@
 - Add a missing BitArray constructor return type in the prelude's TypeScript
   definitions.
   ([Richard Viney](https://github.com/richard-viney))
+
+- Fixed a bug where the BEAM would be shut down abruptly once the program had
+  successfully finished running.
+  ([Louis Pilfold](https://github.com/lpil))
