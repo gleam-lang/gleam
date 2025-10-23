@@ -22,7 +22,7 @@ run_module(Module) ->
         {ok, _} = application:ensure_all_started('{{ application }}'),
         erlang:process_flag(trap_exit, false),
         Module:main(),
-        init:stop(1)
+        init:stop(0)
     catch
         Class:Reason:StackTrace ->
             print_error(Class, Reason, StackTrace),
