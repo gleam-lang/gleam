@@ -1387,8 +1387,8 @@ impl<'a> AnnotateTopLevelDefinitions<'a> {
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
 
-        // We only want to trigger the action if we're over one of the definition in
-        // the module
+        // We only want to trigger the action if we're over one of the definition
+        // which is lacking some annotations in the module
         if !self.is_hovering_definition || self.edits.edits.is_empty() {
             return vec![];
         };
@@ -1407,13 +1407,14 @@ impl<'ast> ast::visit::Visit<'ast> for AnnotateTopLevelDefinitions<'_> {
     fn visit_typed_module_constant(&mut self, constant: &'ast TypedModuleConstant) {
         let code_action_range = self.edits.src_span_to_lsp_range(constant.location);
 
-        if overlaps(code_action_range, self.params.range) {
-            self.is_hovering_definition = true;
-        }
-
         // We don't need to add an annotation if there already is one
         if constant.annotation.is_some() {
             return;
+        }
+
+        // We're hovering definition which needs some annotations
+        if overlaps(code_action_range, self.params.range) {
+            self.is_hovering_definition = true;
         }
 
         self.edits.insert(
