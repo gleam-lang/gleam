@@ -672,8 +672,18 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
 
         // Assert that the inferred type matches the type of any recursive call
-        if let Err(error) = unify(preregistered_type.clone(), type_) {
-            self.problems.error(convert_unify_error(error, location));
+        if let Err(error) = unify(preregistered_type.clone(), type_.clone()) {
+            let mut instantiated_ids = im::HashMap::new();
+            let flexible_hydrator = Hydrator::new();
+            let instantiated_annotation = environment.instantiate(
+                preregistered_type.clone(),
+                &mut instantiated_ids,
+                &flexible_hydrator,
+            );
+
+            if unify(instantiated_annotation, type_.clone()).is_err() {
+                self.problems.error(convert_unify_error(error, location));
+            }
         }
 
         // Ensure that the current target has an implementation for the function.
