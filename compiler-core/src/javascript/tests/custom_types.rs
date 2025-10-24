@@ -687,3 +687,26 @@ pub type Wibble {
 "#
     );
 }
+
+#[test]
+fn external_annotation() {
+    assert_ts_def!(
+        r#"
+@external(javascript, "./gleam_stdlib.d.ts", "Dict")
+pub type Dict(key, value)
+"#
+    );
+}
+
+#[test]
+fn external_annotated_type_used_in_function() {
+    assert_ts_def!(
+        r#"
+@external(javascript, "./gleam_stdlib.d.ts", "Dict")
+pub type Dict(key, value)
+
+@external(javascript, "./gleam_stdlib.mjs", "get")
+pub fn get(dict: Dict(key, value), key: key) -> Result(value, Nil)
+"#
+    );
+}
