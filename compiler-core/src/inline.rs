@@ -125,7 +125,7 @@ use crate::{
     ast::{
         self, ArgNames, Assert, AssignName, Assignment, AssignmentKind, BitArrayOption,
         BitArraySegment, BitArraySize, CallArg, Clause, Definition, FunctionLiteralKind, Pattern,
-        PipelineAssignmentKind, Publicity, SrcSpan, Statement, TypedArg, TypedAssert,
+        PipelineAssignmentKind, Publicity, SrcSpan, Statement, TailPattern, TypedArg, TypedAssert,
         TypedAssignment, TypedBitArraySize, TypedClause, TypedDefinition, TypedExpr,
         TypedExprBitArraySegment, TypedFunction, TypedModule, TypedPattern,
         TypedPipelineAssignment, TypedStatement, TypedUse, visit::Visit,
@@ -369,7 +369,12 @@ impl Inliner<'_> {
                     .into_iter()
                     .map(|element| self.register_pattern_variables(element))
                     .collect(),
-                tail: tail.map(|tail| Box::new(self.register_pattern_variables(*tail))),
+                tail: tail.map(|tail| {
+                    Box::new(TailPattern {
+                        location: tail.location,
+                        pattern: self.register_pattern_variables(tail.pattern),
+                    })
+                }),
                 type_,
             },
             Pattern::Constructor {

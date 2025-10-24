@@ -354,7 +354,7 @@ impl<'a> CallGraphBuilder<'a> {
                     self.pattern(element);
                 }
                 if let Some(tail) = tail {
-                    self.pattern(tail);
+                    self.pattern(&tail.pattern);
                 }
             }
 

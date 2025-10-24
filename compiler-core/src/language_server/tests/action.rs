@@ -9622,6 +9622,20 @@ fn pattern_match_on_list_tail() {
 }
 
 #[test]
+fn pattern_match_on_list_tail_with_strange_whitespace() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "pub fn main(a_list: List(a)) {
+  case a_list {
+    [] -> todo
+    [first, ..        rest] -> todo
+  }
+}",
+        find_position_of("        ").to_selection()
+    );
+}
+
+#[test]
 fn pattern_match_on_list_tail_used_in_a_branch() {
     assert_code_action!(
         PATTERN_MATCH_ON_VARIABLE,

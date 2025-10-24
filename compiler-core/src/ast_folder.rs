@@ -7,13 +7,13 @@ use crate::{
     analyse::Inferred,
     ast::{
         Assert, AssignName, Assignment, BinOp, BitArraySize, CallArg, Constant, Definition,
-        FunctionLiteralKind, Pattern, RecordBeingUpdated, SrcSpan, Statement, TargetedDefinition,
-        TodoKind, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar,
-        UntypedArg, UntypedAssert, UntypedAssignment, UntypedClause, UntypedConstant,
-        UntypedConstantBitArraySegment, UntypedCustomType, UntypedDefinition, UntypedExpr,
-        UntypedExprBitArraySegment, UntypedFunction, UntypedImport, UntypedModule,
+        FunctionLiteralKind, Pattern, RecordBeingUpdated, SrcSpan, Statement, TailPattern,
+        TargetedDefinition, TodoKind, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole,
+        TypeAstTuple, TypeAstVar, UntypedArg, UntypedAssert, UntypedAssignment, UntypedClause,
+        UntypedConstant, UntypedConstantBitArraySegment, UntypedCustomType, UntypedDefinition,
+        UntypedExpr, UntypedExprBitArraySegment, UntypedFunction, UntypedImport, UntypedModule,
         UntypedModuleConstant, UntypedPattern, UntypedPatternBitArraySegment,
-        UntypedRecordUpdateArg, UntypedStatement, UntypedTypeAlias, UntypedUse,
+        UntypedRecordUpdateArg, UntypedStatement, UntypedTailPattern, UntypedTypeAlias, UntypedUse,
         UntypedUseAssignment, Use, UseAssignment,
     },
     build::Target,
@@ -1382,7 +1382,7 @@ pub trait PatternFolder {
         &mut self,
         location: SrcSpan,
         elements: Vec<UntypedPattern>,
-        tail: Option<Box<UntypedPattern>>,
+        tail: Option<Box<UntypedTailPattern>>,
     ) -> UntypedPattern {
         Pattern::List {
             location,
@@ -1490,7 +1490,12 @@ pub trait PatternFolder {
                     .into_iter()
                     .map(|pattern| self.fold_pattern(pattern))
                     .collect();
-                let tail = tail.map(|pattern| Box::new(self.fold_pattern(*pattern)));
+                let tail = tail.map(|tail_pattern| {
+                    Box::new(TailPattern {
+                        location: tail_pattern.location,
+                        pattern: self.fold_pattern(tail_pattern.pattern),
+                    })
+                });
                 Pattern::List {
                     location,
                     elements,

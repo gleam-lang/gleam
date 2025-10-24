@@ -61,11 +61,11 @@ use crate::ast::{
     BitArraySegment, BitArraySize, CAPTURE_VARIABLE, CallArg, Clause, ClauseGuard, Constant,
     CustomType, Definition, Function, FunctionLiteralKind, HasLocation, Import, IntOperator,
     Module, ModuleConstant, Pattern, Publicity, RecordBeingUpdated, RecordConstructor,
-    RecordConstructorArg, SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAlias, TypeAst,
-    TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UnqualifiedImport,
-    UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedDefinition, UntypedExpr,
-    UntypedModule, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, UntypedUseAssignment,
-    Use, UseAssignment,
+    RecordConstructorArg, SrcSpan, Statement, TailPattern, TargetedDefinition, TodoKind, TypeAlias,
+    TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar,
+    UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant,
+    UntypedDefinition, UntypedExpr, UntypedModule, UntypedPattern, UntypedRecordUpdateArg,
+    UntypedStatement, UntypedUseAssignment, Use, UseAssignment,
 };
 use crate::build::Target;
 use crate::error::wrap;
@@ -1447,6 +1447,7 @@ where
                     segments,
                 }
             }
+
             // List
             Some((start, Token::LeftSquare, _)) => {
                 self.advance();
@@ -1471,7 +1472,7 @@ where
                         }
 
                         self.advance();
-                        let pat = self.parse_pattern(position)?;
+                        let tail = self.parse_pattern(position)?;
                         if self.maybe_one(&Token::Comma).is_some() {
                             // See if there's a list of items after the tail,
                             // like `[..wibble, wobble, wabble]`
@@ -1487,12 +1488,12 @@ where
                                 }
                             };
                         };
-                        Some(pat)
+                        Some(tail)
                     }
                     _ => None,
                 };
 
-                let (end, rsqb_e) =
+                let (end, closing_square_bracket_end) =
                     self.expect_one_following_series(&Token::RightSquare, "a pattern")?;
 
                 // If there are elements after the tail, return an error
@@ -1513,17 +1514,17 @@ where
 
                 let tail = match tail {
                     // There is a tail and it has a Pattern::Var or Pattern::Discard
-                    Some(Some(pat @ (Pattern::Variable { .. } | Pattern::Discard { .. }))) => {
-                        Some(pat)
+                    Some(Some(pattern @ (Pattern::Variable { .. } | Pattern::Discard { .. }))) => {
+                        Some(pattern)
                     }
                     // There is a tail and but it has no content, implicit discard
-                    Some(Some(pat)) => {
-                        return parse_error(ParseErrorType::InvalidTailPattern, pat.location());
+                    Some(Some(pattern)) => {
+                        return parse_error(ParseErrorType::InvalidTailPattern, pattern.location());
                     }
                     Some(None) => Some(Pattern::Discard {
                         location: SrcSpan {
-                            start: rsqb_e - 1,
-                            end: rsqb_e,
+                            start: closing_square_bracket_end - 1,
+                            end: closing_square_bracket_end,
                         },
                         name: "_".into(),
                         type_: (),
@@ -1532,17 +1533,33 @@ where
                     None => None,
                 };
 
-                if elements.is_empty() && tail.as_ref().is_some_and(|p| p.is_discard()) {
+                if elements.is_empty() && tail.as_ref().is_some_and(|pattern| pattern.is_discard())
+                {
                     self.warnings
                         .push(DeprecatedSyntaxWarning::DeprecatedListCatchAllPattern {
-                            location: SrcSpan { start, end: rsqb_e },
+                            location: SrcSpan {
+                                start,
+                                end: closing_square_bracket_end,
+                            },
                         })
                 }
 
                 Pattern::List {
-                    location: SrcSpan { start, end: rsqb_e },
+                    location: SrcSpan {
+                        start,
+                        end: closing_square_bracket_end,
+                    },
                     elements,
-                    tail: tail.map(Box::new),
+                    tail: tail.map(|tail_pattern| {
+                        let dot_dot_start = dot_dot_location
+                            .expect("parsed tail with no preceding `..`")
+                            .0;
+
+                        Box::new(TailPattern {
+                            location: SrcSpan::new(dot_dot_start, tail_pattern.location().end),
+                            pattern: tail_pattern,
+                        })
+                    }),
                     type_: (),
                 }
             }
