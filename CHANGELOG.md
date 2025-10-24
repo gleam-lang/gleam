@@ -28,6 +28,10 @@
   `--invert` would be silently ignored if given together with `--package`.
   ([Evan Silberman](https://github.com/silby))
 
+- `gleam new` now creates the project directory using the confirmed project
+  name when a suggested rename is accepted.
+  ([Adi Salimgereyev](https://github.com/abs0luty))
+
 ### Language server
 
 - The "inline variable" code action can now trigger when used over the let

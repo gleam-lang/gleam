@@ -15,6 +15,9 @@ mod tests;
 
 use crate::{NewOptions, fs::get_current_directory};
 
+#[cfg(test)]
+use std::sync::atomic::{AtomicBool, Ordering};
+
 const GLEAM_STDLIB_REQUIREMENT: &str = ">= 0.44.0 and < 2.0.0";
 const GLEEUNIT_REQUIREMENT: &str = ">= 1.0.0 and < 2.0.0";
 const ERLANG_OTP_VERSION: &str = "28";
@@ -204,7 +207,15 @@ jobs:
 
 impl Creator {
     fn new(options: NewOptions, gleam_version: &'static str) -> Result<Self, Error> {
+        let mut options = options;
+
+        // Record the folder-derived starting name so we can detect later renames prompted to the user.
+        let initial_name =
+            derive_initial_project_name(options.name.as_ref(), &options.project_root)?;
         let project_name = get_valid_project_name(options.name.clone(), &options.project_root)?;
+
+        align_project_root_with_project_name(&mut options, &initial_name, &project_name);
+
         let root = get_current_directory()?.join(&options.project_root);
         let src = root.join("src");
         let test = root.join("test");
@@ -407,12 +418,7 @@ fn suggest_valid_name(invalid_name: &str, reason: &InvalidProjectNameReason) -> 
 }
 
 fn get_valid_project_name(name: Option<String>, project_root: &str) -> Result<String, Error> {
-    let initial_name = match name {
-        Some(name) => name,
-        None => get_foldername(project_root)?,
-    }
-    .trim()
-    .to_string();
+    let initial_name = derive_initial_project_name(name.as_ref(), project_root)?;
 
     let invalid_reason = match validate_name(&initial_name) {
         Ok(_) => return Ok(initial_name),
@@ -434,6 +440,12 @@ fn get_valid_project_name(name: Option<String>, project_root: &str) -> Result<St
         &invalid_reason,
         &Some(suggested_name.clone()),
     );
+
+    #[cfg(test)]
+    if should_auto_accept_project_name_suggestion() {
+        return Ok(suggested_name);
+    }
+
     match crate::cli::confirm(&prompt_for_suggested_name)? {
         true => Ok(suggested_name),
         false => Err(Error::InvalidProjectName {
@@ -459,5 +471,54 @@ fn get_foldername(path: &str) -> Result<String, Error> {
             .ok_or(Error::UnableToFindProjectRoot {
                 path: path.to_string(),
             }),
+    }
+}
+
+fn derive_initial_project_name(name: Option<&String>, project_root: &str) -> Result<String, Error> {
+    match name {
+        Some(name) => Ok(name.trim().to_string()),
+        None => get_foldername(project_root).map(|name| name.trim().to_string()),
+    }
+}
+
+fn align_project_root_with_project_name(
+    options: &mut NewOptions,
+    initial_name: &str,
+    project_name: &str,
+) {
+    if options.name.is_none() && options.project_root != "." && initial_name != project_name {
+        // If the generated suggestion was accepted, align the directory path with the new name.
+
+        let original_root = Utf8Path::new(&options.project_root);
+        let new_root = match original_root.parent() {
+            Some(parent) if !parent.as_str().is_empty() => parent.join(project_name),
+            Some(_) | None => Utf8PathBuf::from(project_name),
+        };
+        options.project_root = new_root.as_str().to_owned();
+    }
+}
+
+#[cfg(test)]
+static AUTO_ACCEPT_PROJECT_NAME_SUGGESTION: AtomicBool = AtomicBool::new(false);
+
+#[cfg(test)]
+pub(crate) fn auto_accept_project_name_suggestions_for_test() -> AutoAcceptProjectNameSuggestionGuard
+{
+    let previous = AUTO_ACCEPT_PROJECT_NAME_SUGGESTION.swap(true, Ordering::SeqCst);
+    AutoAcceptProjectNameSuggestionGuard(previous)
+}
+
+#[cfg(test)]
+fn should_auto_accept_project_name_suggestion() -> bool {
+    AUTO_ACCEPT_PROJECT_NAME_SUGGESTION.load(Ordering::SeqCst)
+}
+
+#[cfg(test)]
+pub(crate) struct AutoAcceptProjectNameSuggestionGuard(bool);
+
+#[cfg(test)]
+impl Drop for AutoAcceptProjectNameSuggestionGuard {
+    fn drop(&mut self) {
+        AUTO_ACCEPT_PROJECT_NAME_SUGGESTION.store(self.0, Ordering::SeqCst);
     }
 }
