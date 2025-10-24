@@ -1159,6 +1159,7 @@ fn constant_record() {
                 },
             },
         ],
+        spread: None,
         tag: "thetag".into(),
         type_: type_::int(),
         field_map: None,

@@ -39,6 +39,7 @@ pub enum Constant<T, RecordTag> {
         module: Option<(EcoString, SrcSpan)>,
         name: EcoString,
         arguments: Vec<CallArg<Self>>,
+        spread: Option<Box<Self>>,
         tag: RecordTag,
         type_: T,
         field_map: Option<FieldMap>,
@@ -103,9 +104,12 @@ impl TypedConstant {
                 .iter()
                 .find_map(|element| element.find_node(byte_index))
                 .unwrap_or(Located::Constant(self)),
-            Constant::Record { arguments, .. } => arguments
+            Constant::Record {
+                arguments, spread, ..
+            } => arguments
                 .iter()
                 .find_map(|argument| argument.find_node(byte_index))
+                .or_else(|| spread.as_ref().and_then(|s| s.find_node(byte_index)))
                 .unwrap_or(Located::Constant(self)),
             Constant::BitArray { segments, .. } => segments
                 .iter()
@@ -155,10 +159,18 @@ impl TypedConstant {
                 .map(|element| element.referenced_variables())
                 .fold(im::hashset![], im::HashSet::union),
 
-            Constant::Record { arguments, .. } => arguments
-                .iter()
-                .map(|argument| argument.value.referenced_variables())
-                .fold(im::hashset![], im::HashSet::union),
+            Constant::Record {
+                arguments, spread, ..
+            } => {
+                let arg_vars = arguments
+                    .iter()
+                    .map(|argument| argument.value.referenced_variables())
+                    .fold(im::hashset![], im::HashSet::union);
+                match spread {
+                    Some(spread) => arg_vars.union(spread.referenced_variables()),
+                    None => arg_vars,
+                }
+            }
 
             Constant::BitArray { segments, .. } => segments
                 .iter()
