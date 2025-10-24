@@ -403,6 +403,9 @@ enum Dependencies {
     /// Download all dependency packages
     Download,
 
+    /// List all outdated dependencies
+    Outdated,
+
     /// Update dependency packages to their latest versions
     Update(UpdateOptions),
 
@@ -585,6 +588,11 @@ fn parse_and_run_command() -> Result<(), Error> {
         Command::Deps(Dependencies::Download) => {
             let paths = find_project_paths()?;
             download_dependencies(&paths)
+        }
+
+        Command::Deps(Dependencies::Outdated) => {
+            let paths = find_project_paths()?;
+            dependencies::outdated(&paths)
         }
 
         Command::Deps(Dependencies::Update(options)) => {
