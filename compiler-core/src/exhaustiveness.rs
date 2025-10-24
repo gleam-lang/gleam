@@ -3332,7 +3332,7 @@ impl CaseToCompile {
 
             TypedPattern::List { elements, tail, .. } => {
                 let mut list = match tail {
-                    Some(tail) => self.register(tail),
+                    Some(tail) => self.register(&tail.pattern),
                     None => self.insert(Pattern::EmptyList),
                 };
                 for element in elements.iter().rev() {

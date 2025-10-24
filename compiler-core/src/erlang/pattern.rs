@@ -233,13 +233,13 @@ impl<'a, 'env> PatternPrinter<'a, 'env> {
     fn pattern_list(
         &mut self,
         elements: &'a [TypedPattern],
-        tail: Option<&'a TypedPattern>,
+        tail: Option<&'a TypedTailPattern>,
     ) -> Document<'a> {
         let elements = join(
             elements.iter().map(|element| self.print(element)),
             break_(",", ", "),
         );
-        let tail = tail.map(|tail| self.print(tail));
+        let tail = tail.map(|tail| self.print(&tail.pattern));
         list(elements, tail)
     }
 

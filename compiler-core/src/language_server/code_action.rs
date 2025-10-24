@@ -8,7 +8,7 @@ use crate::{
         PIPE_PRECEDENCE, Pattern, PatternUnusedArguments, PipelineAssignmentKind, Publicity,
         RecordConstructor, SrcSpan, TodoKind, TypedArg, TypedAssignment, TypedClauseGuard,
         TypedExpr, TypedModuleConstant, TypedPattern, TypedPipelineAssignment,
-        TypedRecordConstructor, TypedStatement, TypedUse, visit::Visit as _,
+        TypedRecordConstructor, TypedStatement, TypedTailPattern, TypedUse, visit::Visit as _,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -4711,7 +4711,7 @@ impl<'a, IO> PatternMatchOnValue<'a, IO> {
         bound_variables: &[BoundVariable],
     ) {
         let mut names = NameGenerator::new();
-        names.reserve_bound_variables(&bound_variables);
+        names.reserve_bound_variables(bound_variables);
 
         let patterns = if matches!(variable_location, PatternLocation::ListTail { .. }) {
             // Here we're dealing with a special case: if someone wants to expand the tail
@@ -5161,29 +5161,18 @@ impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO> {
         &mut self,
         location: &'ast SrcSpan,
         elements: &'ast Vec<TypedPattern>,
-        tail: &'ast Option<Box<TypedPattern>>,
+        tail: &'ast Option<Box<TypedTailPattern>>,
         type_: &'ast Arc<Type>,
     ) {
-        let (name, location, type_) = if let Some(tail) = tail
-            && let Pattern::Variable {
-                name,
-                location,
-                type_,
-                ..
-            } = tail.as_ref()
+        let (name, tail_location, tail_type) = if let Some(tail) = tail
+            && let Pattern::Variable { name, type_, .. } = &tail.pattern
         {
-            (name, location, type_)
+            (name, tail.location, type_)
         } else {
             ast::visit::visit_typed_pattern_list(self, location, elements, tail, type_);
             return;
         };
 
-        // TODO: this is a bit of an hack where we hardcode the start of the tail
-        // assuming the code is nicely formatter. Know this will break if there's
-        // any whitespace between the `..` and the tail.
-        // Fixing this would require adding an additional field to `tail` to also
-        // store the byte index of the start of `..`.
-        let tail_location = SrcSpan::new(location.start - 2, location.end);
         let tail_range = self.edits.src_span_to_lsp_range(tail_location);
         if !within(self.params.range, tail_range) {
             ast::visit::visit_typed_pattern_list(self, location, elements, tail, type_);
@@ -5193,7 +5182,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO> {
         let location = PatternLocation::ListTail {
             location: tail_location,
         };
-        self.pattern_variable_under_cursor = Some((name, location, type_.clone()))
+        self.pattern_variable_under_cursor = Some((name, location, tail_type.clone()))
     }
 }
 

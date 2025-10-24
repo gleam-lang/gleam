@@ -2358,11 +2358,11 @@ impl<'comments> Formatter<'comments> {
     fn list_pattern<'a>(
         &mut self,
         elements: &'a [UntypedPattern],
-        tail: &'a Option<Box<UntypedPattern>>,
+        tail: &'a Option<Box<UntypedTailPattern>>,
     ) -> Document<'a> {
         if elements.is_empty() {
             return match tail {
-                Some(tail) => self.pattern(tail),
+                Some(tail) => self.pattern(&tail.pattern),
                 None => "[]".to_doc(),
             };
         }
@@ -2375,6 +2375,7 @@ impl<'comments> Formatter<'comments> {
             None => doc.nest(INDENT).append(break_(",", "")),
 
             Some(tail) => {
+                let tail = &tail.pattern;
                 let comments = self.pop_comments(tail.location().start);
                 let tail = if tail.is_discard() {
                     "..".to_doc()

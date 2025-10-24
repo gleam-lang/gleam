@@ -11,8 +11,8 @@ use super::*;
 use crate::{
     analyse::{self, Inferred, name::check_name_case},
     ast::{
-        AssignName, BitArrayOption, BitArraySize, ImplicitCallArgOrigin, Layer, TypedBitArraySize,
-        UntypedPatternBitArraySegment,
+        AssignName, BitArrayOption, BitArraySize, ImplicitCallArgOrigin, Layer, TailPattern,
+        TypedBitArraySize, UntypedPatternBitArraySegment,
     },
     parse::PatternPosition,
     reference::ReferenceKind,
@@ -776,7 +776,12 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         .collect();
                     let type_ = list(type_);
 
-                    let tail = tail.map(|tail| Box::new(self.unify(*tail, type_.clone(), None)));
+                    let tail = tail.map(|tail| {
+                        Box::new(TailPattern {
+                            location: tail.location,
+                            pattern: self.unify(tail.pattern, type_.clone(), None),
+                        })
+                    });
 
                     Pattern::List {
                         location,

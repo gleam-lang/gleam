@@ -1678,6 +1678,24 @@ impl TypedClause {
     }
 }
 
+/// Returns true if a pattern and an expression are the same: that is the expression
+/// would be building the exact matched value back.
+/// For example, if I had a branch like this:
+///
+/// ```gleam
+/// [a, b, c] -> [a, b, c]
+/// ```
+///
+/// The pattern and the expression would indeed be the same. However, if I had
+/// something like this:
+///
+/// ```gleam
+/// [first, ..rest] -> [first]
+/// ```
+///
+/// They wouldn't be the same! I'm not building back exactly the value the
+/// pattern can match on.
+///
 fn pattern_and_expression_are_the_same(pattern: &TypedPattern, expression: &TypedExpr) -> bool {
     match (pattern, expression) {
         // A pattern could be the same as a block if the block is wrapping just
@@ -1805,8 +1823,8 @@ fn pattern_and_expression_are_the_same(pattern: &TypedPattern, expression: &Type
             let tails_are_the_same = match (pattern_tail, tail) {
                 (None, None) => true,
                 (None, Some(_)) | (Some(_), None) => false,
-                (Some(pattern_tail), Some(tail)) => {
-                    pattern_and_expression_are_the_same(pattern_tail, tail)
+                (Some(tail_pattern), Some(tail_expression)) => {
+                    pattern_and_expression_are_the_same(&tail_pattern.pattern, tail_expression)
                 }
             };
 
@@ -2368,7 +2386,7 @@ pub enum Pattern<Type> {
     List {
         location: SrcSpan,
         elements: Vec<Self>,
-        tail: Option<Box<Self>>,
+        tail: Option<Box<TailPattern<Type>>>,
         /// The type of the list, so this is going to be `List(something)`.
         ///
         type_: Type,
@@ -2497,6 +2515,34 @@ impl Default for Inferred<()> {
     fn default() -> Self {
         Self::Unknown
     }
+}
+
+pub type TypedTailPattern = TailPattern<Arc<Type>>;
+
+pub type UntypedTailPattern = TailPattern<()>;
+
+/// The pattern one can use to match on the rest of a list:
+///
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TailPattern<Type> {
+    /// The entire location of the pattern, covering the `..` as well.
+    ///
+    pub location: SrcSpan,
+
+    /// The name assigned to the rest of the list being matched:
+    ///
+    /// ```gleam
+    /// [wibble, ..]
+    /// //       ^^ no name
+    ///
+    /// [wibble, ..rest]
+    /// //       ^^^^^^ a variable name
+    ///
+    /// [wibble, .._rest]
+    /// //       ^^^^^^^ a discarded name
+    /// ```
+    ///
+    pub pattern: Pattern<Type>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -2694,16 +2740,21 @@ impl TypedPattern {
                     })
                 }
 
-                Some(_) | None => arguments.iter().find_map(|arg| arg.find_node(byte_index)),
+                Some(_) | None => arguments
+                    .iter()
+                    .find_map(|argument| argument.find_node(byte_index)),
             },
             Pattern::List { elements, tail, .. } => elements
                 .iter()
-                .find_map(|p| p.find_node(byte_index))
-                .or_else(|| tail.as_ref().and_then(|p| p.find_node(byte_index))),
+                .find_map(|element| element.find_node(byte_index))
+                .or_else(|| {
+                    tail.as_ref()
+                        .and_then(|tail| tail.pattern.find_node(byte_index))
+                }),
 
-            Pattern::Tuple { elements, .. } => {
-                elements.iter().find_map(|p| p.find_node(byte_index))
-            }
+            Pattern::Tuple { elements, .. } => elements
+                .iter()
+                .find_map(|element| element.find_node(byte_index)),
 
             Pattern::BitArray { segments, .. } => segments
                 .iter()
@@ -2805,7 +2856,7 @@ impl TypedPattern {
                     element.collect_bound_variables(variables);
                 }
                 if let Some(tail) = tail {
-                    tail.collect_bound_variables(variables);
+                    tail.pattern.collect_bound_variables(variables);
                 }
             }
             Pattern::Constructor { arguments, .. } => {

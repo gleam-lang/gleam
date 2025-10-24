@@ -40,7 +40,7 @@
 
 use crate::{
     analyse::Inferred,
-    ast::{BitArraySize, TypedBitArraySize, typed::InvalidExpression},
+    ast::{BitArraySize, TypedBitArraySize, TypedTailPattern, typed::InvalidExpression},
     exhaustiveness::CompiledCase,
     type_::{
         ModuleValueConstructor, PatternConstructor, TypedCallArg, ValueConstructor,
@@ -501,7 +501,7 @@ pub trait Visit<'ast> {
         &mut self,
         location: &'ast SrcSpan,
         elements: &'ast Vec<TypedPattern>,
-        tail: &'ast Option<Box<TypedPattern>>,
+        tail: &'ast Option<Box<TypedTailPattern>>,
         type_: &'ast Arc<Type>,
     ) {
         visit_typed_pattern_list(self, location, elements, tail, type_);
@@ -1733,7 +1733,7 @@ pub fn visit_typed_pattern_list<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
     elements: &'a Vec<TypedPattern>,
-    tail: &'a Option<Box<TypedPattern>>,
+    tail: &'a Option<Box<TypedTailPattern>>,
     _type_: &'a Arc<Type>,
 ) where
     V: Visit<'a> + ?Sized,
@@ -1742,7 +1742,7 @@ pub fn visit_typed_pattern_list<'a, V>(
         v.visit_typed_pattern(element);
     }
     if let Some(tail) = tail {
-        v.visit_typed_pattern(tail);
+        v.visit_typed_pattern(&tail.pattern);
     }
 }
 
