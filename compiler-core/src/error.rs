@@ -3984,6 +3984,22 @@ modules should not import them. Perhaps change `{package}` to a regular dependen
                             extra_labels: vec![],
                         }),
                     },
+
+                    TypeError::LowercaseBoolPattern { location } => Diagnostic {
+                        title: "Lowercase bool pattern".to_string(),
+                        text: "See: https://tour.gleam.run/basics/bools/".into(),
+                        hint: Some("In Gleam bool literals are `True` and `False`.".into()),
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("This is not a bool".into()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    },
                 })
                 .collect_vec(),
 
