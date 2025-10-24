@@ -98,7 +98,7 @@ main() ->
 warning: Empty module
 
 Module 'empty' contains no public definitions.
-Hint: Consider adding public functions, types, or constants, or removing this module.
+Hint: You can safely remove this module.
 
 
 

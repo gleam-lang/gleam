@@ -1497,7 +1497,7 @@ The imported value could not be used in this module anyway."
             Warning::EmptyModule { path: _, name } => Diagnostic {
                 title: "Empty module".into(),
                 text: format!("Module '{name}' contains no public definitions."),
-                hint: Some("Consider adding public functions, types, or constants, or removing this module.".into()),
+                hint: Some("You can safely remove this module.".into()),
                 level: diagnostic::Level::Warning,
                 location: None,
             },
