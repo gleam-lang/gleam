@@ -28,6 +28,10 @@
   `--invert` would be silently ignored if given together with `--package`.
   ([Evan Silberman](https://github.com/silby))
 
+- Update to latest Elixir API, so warning would not be shown when compiling
+  Elixir file in a Gleam project.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The "inline variable" code action can now trigger when used over the let
@@ -70,7 +74,3 @@
 - Fixed a bug where the "pattern match on variable" code action would generate
   invalid patterns by repeating a variable name already used in the same pattern.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
-- Fixed a bug where Elixir compiler warning would be shown when compiling Elixir file
-  in a Gleam project.
-  ([Andrey Kozhev](https://github.com/ankddev))
