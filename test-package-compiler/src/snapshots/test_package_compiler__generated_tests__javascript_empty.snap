@@ -1,5 +1,6 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
+assertion_line: 261
 expression: "./cases/javascript_empty"
 snapshot_kind: text
 ---
@@ -24,4 +25,4 @@ export * from "../prelude.mjs";
 warning: Empty module
 
 Module 'empty' contains no public definitions.
-Hint: Consider adding public functions, types, or constants, or removing this module.
+Hint: You can safely remove this module.
