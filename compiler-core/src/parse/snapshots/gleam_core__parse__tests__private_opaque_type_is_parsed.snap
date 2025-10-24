@@ -43,6 +43,8 @@ Parsed {
                         opaque: true,
                         parameters: [],
                         typed_parameters: [],
+                        external_erlang: None,
+                        external_javascript: None,
                     },
                 ),
                 target: None,

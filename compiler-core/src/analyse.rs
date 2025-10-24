@@ -921,6 +921,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             parameters,
             constructors,
             deprecation,
+            external_erlang,
+            external_javascript,
             ..
         } = t;
 
@@ -1030,6 +1032,15 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 });
         }
 
+        if external_erlang.is_some() || external_javascript.is_some() {
+            self.track_feature_usage(FeatureKind::ExternalCustomType, location);
+
+            if !constructors.is_empty() {
+                self.problems
+                    .error(Error::ExternalTypeWithConstructors { location });
+            }
+        }
+
         Ok(Definition::CustomType(CustomType {
             documentation: doc,
             location,
@@ -1042,6 +1053,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             constructors,
             typed_parameters,
             deprecation,
+            external_erlang,
+            external_javascript,
         }))
     }
 

@@ -363,10 +363,12 @@ where
         }?;
 
         match (def, location) {
-            (Some(definition), _) if definition.is_function() => Ok(Some(TargetedDefinition {
-                definition,
-                target: attributes.target,
-            })),
+            (Some(definition), _) if definition.is_function() || definition.is_custom_type() => {
+                Ok(Some(TargetedDefinition {
+                    definition,
+                    target: attributes.target,
+                }))
+            }
 
             (Some(definition), None) => Ok(Some(TargetedDefinition {
                 definition,
@@ -2559,6 +2561,8 @@ where
             constructors,
             typed_parameters: vec![],
             deprecation: std::mem::take(&mut attributes.deprecated),
+            external_erlang: std::mem::take(&mut attributes.external_erlang),
+            external_javascript: std::mem::take(&mut attributes.external_javascript),
         })))
     }
 
