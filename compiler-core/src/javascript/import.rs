@@ -66,7 +66,7 @@ impl<'a> Imports<'a> {
             .group();
             imports
                 .append(line())
-                .append("export {")
+                .append("export type {")
                 .append(names)
                 .append("};")
                 .append(line())
