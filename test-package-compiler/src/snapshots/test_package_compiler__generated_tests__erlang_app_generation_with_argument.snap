@@ -1,6 +1,6 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 74
+assertion_line: 85
 expression: "./cases/erlang_app_generation_with_argument"
 snapshot_kind: text
 ---
@@ -31,3 +31,10 @@ snapshot_kind: text
     {modules, [main]},
     {registered, []}
 ]}.
+
+
+//// Warning
+warning: Empty module
+
+Module 'main' contains no public definitions.
+Hint: Consider adding public functions, types, or constants, or removing this module.
