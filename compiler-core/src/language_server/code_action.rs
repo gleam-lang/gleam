@@ -1360,6 +1360,114 @@ impl<'a> AddAnnotations<'a> {
     }
 }
 
+/// Code action to add type annotations to all top level definitions
+///
+pub struct AnnotateTopLevelDefinitions<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    is_hovering_definition: bool,
+}
+
+impl<'a> AnnotateTopLevelDefinitions<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            is_hovering_definition: false,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        // We only want to trigger the action if we're over one of the definition
+        // which is lacking some annotations in the module
+        if !self.is_hovering_definition || self.edits.edits.is_empty() {
+            return vec![];
+        };
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Annotate all top level definitions")
+            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(false)
+            .push_to(&mut action);
+        action
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for AnnotateTopLevelDefinitions<'_> {
+    fn visit_typed_module_constant(&mut self, constant: &'ast TypedModuleConstant) {
+        let code_action_range = self.edits.src_span_to_lsp_range(constant.location);
+
+        // We don't need to add an annotation if there already is one
+        if constant.annotation.is_some() {
+            return;
+        }
+
+        // We're hovering definition which needs some annotations
+        if overlaps(code_action_range, self.params.range) {
+            self.is_hovering_definition = true;
+        }
+
+        self.edits.insert(
+            constant.name_location.end,
+            format!(
+                ": {}",
+                // Create new printer to ignore type variables from other definitions
+                Printer::new_without_type_variables(&self.module.ast.names)
+                    .print_type(&constant.type_)
+            ),
+        );
+    }
+
+    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+        // Don't annotate already annotated arguments
+        let arguments_to_annotate = fun
+            .arguments
+            .iter()
+            .filter(|argument| argument.annotation.is_none())
+            .collect::<Vec<_>>();
+        let needs_return_annotation = fun.return_annotation.is_none();
+
+        if arguments_to_annotate.is_empty() && !needs_return_annotation {
+            return;
+        }
+
+        // Create new printer to ignore type variables from other definitions
+        let mut printer = Printer::new_without_type_variables(&self.module.ast.names);
+        collect_type_variables(&mut printer, fun);
+
+        let code_action_range = self.edits.src_span_to_lsp_range(fun.location);
+
+        if overlaps(code_action_range, self.params.range) {
+            self.is_hovering_definition = true;
+        }
+
+        // Annotate each argument separately
+        for argument in arguments_to_annotate {
+            self.edits.insert(
+                argument.location.end,
+                format!(": {}", printer.print_type(&argument.type_)),
+            );
+        }
+
+        // Annotate the return type if it isn't already annotated
+        if needs_return_annotation {
+            self.edits.insert(
+                fun.location.end,
+                format!(" -> {}", printer.print_type(&fun.return_type)),
+            );
+        }
+    }
+}
+
 struct TypeVariableCollector<'a, 'b> {
     printer: &'a mut Printer<'b>,
 }
