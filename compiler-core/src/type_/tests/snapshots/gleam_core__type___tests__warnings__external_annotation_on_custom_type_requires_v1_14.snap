@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\n@external(erlang, \"wibble\", \"wobble\")\npub type Wobble\n"
+---
+----- SOURCE CODE
+
+@external(erlang, "wibble", "wobble")
+pub type Wobble
+
+
+----- WARNING
+warning: Incompatible gleam version range
+  ┌─ /src/warning/wrn.gleam:3:1
+  │
+3 │ pub type Wobble
+  │ ^^^^^^^^^^^^^^^ This requires a Gleam version >= 1.14.0
+
+The `@external` annotation on custom types was introduced in version
+v1.14.0. But the Gleam version range specified in your `gleam.toml` would
+allow this code to run on an earlier version like v1.0.0, resulting in
+compilation errors!
+Hint: Remove the version constraint from your `gleam.toml` or update it to be:
+
+    gleam = ">= 1.14.0"

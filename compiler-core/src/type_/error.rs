@@ -664,6 +664,13 @@ pub enum Error {
         location: SrcSpan,
         name: EcoString,
     },
+
+    /// The `@external` annotation on custom types can only be used for external
+    /// types, types with no constructors.
+    ///
+    ExternalTypeWithConstructors {
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1152,6 +1159,7 @@ pub enum FeatureKind {
     VariantWithDeprecatedAnnotation,
     JavaScriptUnalignedBitArray,
     BoolAssert,
+    ExternalCustomType,
 }
 
 impl FeatureKind {
@@ -1182,6 +1190,8 @@ impl FeatureKind {
             FeatureKind::UnannotatedFloatSegment => Version::new(1, 10, 0),
 
             FeatureKind::BoolAssert => Version::new(1, 11, 0),
+
+            FeatureKind::ExternalCustomType => Version::new(1, 14, 0),
         }
     }
 }
@@ -1298,7 +1308,8 @@ impl Error {
             | Error::DoubleVariableAssignmentInBitArray { location }
             | Error::NonUtf8StringAssignmentInBitArray { location }
             | Error::PrivateOpaqueType { location }
-            | Error::SrcImportingDevDependency { location, .. } => location.start,
+            | Error::SrcImportingDevDependency { location, .. }
+            | Error::ExternalTypeWithConstructors { location, .. } => location.start,
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
             }

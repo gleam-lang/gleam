@@ -4531,3 +4531,14 @@ pub fn main(x: Int) {
 "
     );
 }
+
+#[test]
+fn external_annotation_on_custom_type_requires_v1_14() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        r#"
+@external(erlang, "wibble", "wobble")
+pub type Wobble
+"#,
+    );
+}
