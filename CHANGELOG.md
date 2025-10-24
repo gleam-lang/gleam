@@ -28,6 +28,10 @@
   `--invert` would be silently ignored if given together with `--package`.
   ([Evan Silberman](https://github.com/silby))
 
+- Update to latest Elixir API, so warning would not be shown when compiling
+  Elixir file in a Gleam project.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The "inline variable" code action can now trigger when used over the let
