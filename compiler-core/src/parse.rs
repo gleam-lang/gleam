@@ -2497,6 +2497,7 @@ where
                                 },
                                 name: c_n,
                                 arguments,
+                                type_name: name.clone(),
                                 documentation,
                                 deprecation: attributes.deprecated,
                             }))
