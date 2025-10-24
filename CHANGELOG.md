@@ -16,6 +16,14 @@
   and prevents publishing packages with empty modules to Hex.
   ([Vitor Souza](https://github.com/vit0rr))
 
+- Record update syntax now works with spreading records in type constructors
+  for const values:
+  ```gleam
+  const a = Foo(1, 2)
+  const b = Foo(..a, 3)
+  ```
+  ([Adi Salimgereyev](https://github.com/abs0luty))
+
 ### Build tool
 
 - The help text displayed by `gleam dev --help`, `gleam test --help`, and
