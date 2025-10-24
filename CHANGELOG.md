@@ -70,3 +70,8 @@
 - Fixed a bug where the "pattern match on variable" code action would generate
   invalid patterns by repeating a variable name already used in the same pattern.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The compiler now provides a clearer error message when a function's return type
+  is mistakenly declared using `:` instead of `->`.
+  ([Gurvir Singh](https://github.com/baraich))
+>>>>>>> Stashed changes

@@ -2134,6 +2134,22 @@ where
         )?;
         let (_, rpar_e) =
             self.expect_one_following_series(&Token::RightParen, "a function parameter")?;
+
+        // Check for TypeScript-style return type annotation (:) instead of arrow (->)
+        if let Some((colon_start, colon_end)) = self.maybe_one(&Token::Colon) {
+            return Err(ParseError {
+                error: ParseErrorType::UnexpectedToken {
+                    token: Token::Colon,
+                    expected: vec!["`->`".into()],
+                    hint: Some("Return type annotations are written using `->`, not `:`".into()),
+                },
+                location: SrcSpan {
+                    start: colon_start,
+                    end: colon_end,
+                },
+            });
+        };
+
         let return_annotation = self.parse_type_annotation(&Token::RArrow)?;
 
         let (body_start, body, end, end_position) = match self.maybe_one(&Token::LeftBrace) {
