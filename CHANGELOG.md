@@ -70,3 +70,7 @@
 - Fixed a bug where the "pattern match on variable" code action would generate
   invalid patterns by repeating a variable name already used in the same pattern.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where Elixir compiler warning would be shown when compiling Elixir file
+  in a Gleam project.
+  ([Andrey Kozhev](https://github.com/ankddev))

@@ -129,7 +129,7 @@ do_compile_elixir(Modules, Out) ->
         list_to_binary(Module)
     end, Modules),
     OutBin = list_to_binary(Out),
-    Options = [{dest, OutBin}],
+    Options = [{dest, OutBin}, {return_diagnostics, true}],
     % Silence "redefining module" warnings.
     % Compiled modules in the build directory are added to the code path.
     % These warnings result from recompiling loaded modules.
