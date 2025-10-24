@@ -655,13 +655,21 @@ impl<'a> TypeScriptGenerator<'a> {
         )
         .to_doc();
 
+        let arguments = if arguments.is_empty() {
+            docvec!["(): "]
+        } else {
+            docvec![
+                "(",
+                docvec![break_("", ""), join(arguments, break_(",", ", ")),].nest(INDENT),
+                break_(",", ""),
+                "): ",
+            ]
+        };
+
         docvec![
             "export function ",
             name_with_generics(function_name, type_parameters),
-            "(",
-            docvec![break_("", ""), join(arguments, break_(",", ", ")),].nest(INDENT),
-            break_(",", ""),
-            "): ",
+            arguments,
             type_name_with_generics.clone(),
             ";"
         ]
