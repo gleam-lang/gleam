@@ -1,0 +1,93 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\n@external(erlang, \"gleam_stdlib\", \"dict\")\n@external(javascript, \"./gleam_stdlib.d.ts\", \"Dict\")\npub type Dict(key, value)\n"
+---
+Parsed {
+    module: Module {
+        name: "",
+        documentation: [],
+        type_info: (),
+        definitions: [
+            TargetedDefinition {
+                definition: CustomType(
+                    CustomType {
+                        location: SrcSpan {
+                            start: 96,
+                            end: 121,
+                        },
+                        end_position: 121,
+                        name: "Dict",
+                        name_location: SrcSpan {
+                            start: 105,
+                            end: 109,
+                        },
+                        publicity: Public,
+                        constructors: [],
+                        documentation: None,
+                        deprecation: NotDeprecated,
+                        opaque: false,
+                        parameters: [
+                            (
+                                SrcSpan {
+                                    start: 110,
+                                    end: 113,
+                                },
+                                "key",
+                            ),
+                            (
+                                SrcSpan {
+                                    start: 115,
+                                    end: 120,
+                                },
+                                "value",
+                            ),
+                        ],
+                        typed_parameters: [],
+                        external_erlang: Some(
+                            (
+                                "gleam_stdlib",
+                                "dict",
+                                SrcSpan {
+                                    start: 1,
+                                    end: 42,
+                                },
+                            ),
+                        ),
+                        external_javascript: Some(
+                            (
+                                "./gleam_stdlib.d.ts",
+                                "Dict",
+                                SrcSpan {
+                                    start: 43,
+                                    end: 95,
+                                },
+                            ),
+                        ),
+                    },
+                ),
+                target: None,
+            },
+        ],
+        names: Names {
+            local_types: {},
+            imported_modules: {},
+            type_variables: {},
+            local_value_constructors: {},
+            reexport_aliases: {},
+        },
+        unused_definition_positions: {},
+    },
+    extra: ModuleExtra {
+        module_comments: [],
+        doc_comments: [],
+        comments: [],
+        empty_lines: [],
+        new_lines: [
+            0,
+            42,
+            95,
+            121,
+        ],
+        trailing_commas: [],
+    },
+}

@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/erlang/tests/custom_types.rs
+expression: "\n@external(erlang, \"gleam_stdlib\", \"dict\")\npub type Dict(key, value)\n\n@external(erlang, \"maps\", \"get\")\npub fn get(dict: Dict(key, value), key: key) -> Result(value, Nil)\n"
+---
+----- SOURCE CODE
+
+@external(erlang, "gleam_stdlib", "dict")
+pub type Dict(key, value)
+
+@external(erlang, "maps", "get")
+pub fn get(dict: Dict(key, value), key: key) -> Result(value, Nil)
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([get/2]).
+-export_type([dict/2]).
+
+-type dict(I, J) :: gleam_stdlib:dict(I, J).
+
+-file("project/test/my/mod.gleam", 6).
+-spec get(dict(K, L), K) -> {ok, L} | {error, nil}.
+get(Dict, Key) ->
+    maps:get(Dict, Key).

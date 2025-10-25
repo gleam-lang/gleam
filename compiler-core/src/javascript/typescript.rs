@@ -11,7 +11,8 @@
 //! <https://www.typescriptlang.org/>
 //! <https://www.typescriptlang.org/docs/handbook/declaration-files/introduction.html>
 
-use crate::ast::{AssignName, Publicity};
+use crate::ast::{AssignName, Publicity, SrcSpan};
+use crate::javascript::import::Member;
 use crate::type_::{PRELUDE_MODULE_NAME, RecordAccessor, is_prelude_module};
 use crate::{
     ast::{
@@ -197,7 +198,7 @@ impl<'a> TypeScriptGenerator<'a> {
             .module
             .definitions
             .iter()
-            .flat_map(|definition| self.definition(definition));
+            .flat_map(|definition| self.definition(definition, &mut imports));
 
         // Two lines between each statement
         let mut statements = Itertools::intersperse(statements, lines(2)).collect_vec();
@@ -363,7 +364,11 @@ impl<'a> TypeScriptGenerator<'a> {
         }
     }
 
-    fn definition(&mut self, definition: &'a TypedDefinition) -> Vec<Document<'a>> {
+    fn definition(
+        &mut self,
+        definition: &'a TypedDefinition,
+        imports: &mut Imports<'_>,
+    ) -> Vec<Document<'a>> {
         match definition {
             Definition::TypeAlias(TypeAlias {
                 alias,
@@ -381,14 +386,17 @@ impl<'a> TypeScriptGenerator<'a> {
                 opaque,
                 name,
                 typed_parameters,
+                external_javascript,
                 ..
-            }) => self.custom_type_definition(
+            }) if publicity.is_importable() => self.custom_type_definition(
                 name,
                 typed_parameters,
                 constructors,
                 *opaque,
-                publicity,
+                external_javascript,
+                imports,
             ),
+            Definition::CustomType(CustomType { .. }) => vec![],
 
             Definition::ModuleConstant(ModuleConstant {
                 publicity,
@@ -435,10 +443,11 @@ impl<'a> TypeScriptGenerator<'a> {
         typed_parameters: &'a [Arc<Type>],
         constructors: &'a [TypedRecordConstructor],
         opaque: bool,
-        publicity: &Publicity,
+        external: &'a Option<(EcoString, EcoString, SrcSpan)>,
+        imports: &mut Imports<'_>,
     ) -> Vec<Document<'a>> {
         // Constructors for opaque and private types are not exported
-        let constructor_publicity = if opaque || !publicity.is_importable() {
+        let constructor_publicity = if opaque {
             Publicity::Private
         } else {
             Publicity::Public
@@ -460,7 +469,18 @@ impl<'a> TypeScriptGenerator<'a> {
             .collect_vec();
 
         let definition = if constructors.is_empty() {
-            "any".to_doc()
+            if let Some((module, external_name, _location)) = external {
+                let member = Member {
+                    name: external_name.to_doc(),
+                    alias: Some(eco_format!("{name}$").to_doc()),
+                };
+                imports.register_export(eco_format!("{name}$"));
+
+                imports.register_module(module.clone(), [], [member]);
+                return Vec::new();
+            } else {
+                "any".to_doc()
+            }
         } else {
             let constructors = constructors.iter().map(|x| {
                 name_with_generics(
@@ -472,12 +492,7 @@ impl<'a> TypeScriptGenerator<'a> {
         };
 
         definitions.push(docvec![
-            if publicity.is_importable() {
-                "export ".to_doc()
-            } else {
-                "declare ".to_doc()
-            },
-            "type ",
+            "export type ",
             type_name.clone(),
             " = ",
             definition,

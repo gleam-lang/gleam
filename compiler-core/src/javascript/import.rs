@@ -64,9 +64,15 @@ impl<'a> Imports<'a> {
                 break_(",", " ")
             ]
             .group();
+
+            let export_keyword = match codegen_target {
+                JavaScriptCodegenTarget::JavaScript => "export {",
+                JavaScriptCodegenTarget::TypeScriptDeclarations => "export type {",
+            };
+
             imports
                 .append(line())
-                .append("export {")
+                .append(export_keyword)
                 .append(names)
                 .append("};")
                 .append(line())

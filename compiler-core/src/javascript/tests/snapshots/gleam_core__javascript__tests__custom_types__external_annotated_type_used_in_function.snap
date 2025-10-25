@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\n@external(javascript, \"./gleam_stdlib.d.ts\", \"Dict\")\npub type Dict(key, value)\n\n@external(javascript, \"./gleam_stdlib.mjs\", \"get\")\npub fn get(dict: Dict(key, value), key: key) -> Result(value, Nil)\n"
+---
+----- SOURCE CODE
+
+@external(javascript, "./gleam_stdlib.d.ts", "Dict")
+pub type Dict(key, value)
+
+@external(javascript, "./gleam_stdlib.mjs", "get")
+pub fn get(dict: Dict(key, value), key: key) -> Result(value, Nil)
+
+
+----- TYPESCRIPT DEFINITIONS
+import type * as _ from "../gleam.d.mts";
+import type { Dict as Dict$ } from "./gleam_stdlib.d.ts";
+
+export type { Dict$ };
+
+export function get<K, L>(dict: Dict$<K, L>, key: K): _.Result<L, undefined>;

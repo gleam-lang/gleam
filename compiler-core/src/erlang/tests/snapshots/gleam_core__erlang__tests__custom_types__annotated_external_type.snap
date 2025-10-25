@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/erlang/tests/custom_types.rs
+expression: "\n@external(erlang, \"gleam_stdlib\", \"dict\")\npub type Dict(key, value)\n"
+---
+----- SOURCE CODE
+
+@external(erlang, "gleam_stdlib", "dict")
+pub type Dict(key, value)
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export_type([dict/2]).
+
+-type dict(I, J) :: gleam_stdlib:dict(I, J).

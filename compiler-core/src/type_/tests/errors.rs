@@ -3366,3 +3366,15 @@ pub fn woo(wibble: Wibble) {
 }"#
     );
 }
+
+#[test]
+fn external_annotation_on_custom_type_with_constructors() {
+    assert_module_error!(
+        r#"
+@external(erlang, "gleam_stdlib", "dict")
+pub type Dict(key, value) {
+  Dict(pairs: List(#(key, value)))
+}
+"#
+    );
+}

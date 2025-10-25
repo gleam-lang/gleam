@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\n@external(javascript, \"./gleam_stdlib.d.ts\", \"Dict\")\npub type Dict(key, value)\n"
+---
+----- SOURCE CODE
+
+@external(javascript, "./gleam_stdlib.d.ts", "Dict")
+pub type Dict(key, value)
+
+
+----- TYPESCRIPT DEFINITIONS
+import type { Dict as Dict$ } from "./gleam_stdlib.d.ts";
+
+export type { Dict$ };

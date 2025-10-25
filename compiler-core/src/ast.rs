@@ -813,6 +813,8 @@ pub struct CustomType<T> {
     /// Once type checked this field will contain the type information for the
     /// type parameters.
     pub typed_parameters: Vec<T>,
+    pub external_erlang: Option<(EcoString, EcoString, SrcSpan)>,
+    pub external_javascript: Option<(EcoString, EcoString, SrcSpan)>,
 }
 
 impl<T> CustomType<T> {
@@ -1067,6 +1069,14 @@ impl<A, B, C, E> Definition<A, B, C, E> {
     #[must_use]
     pub fn is_function(&self) -> bool {
         matches!(self, Self::Function(..))
+    }
+
+    /// Returns `true` if the module statement is [`CustomType`].
+    ///
+    /// [`CustomType`]: ModuleStatement::CustomType
+    #[must_use]
+    pub fn is_custom_type(&self) -> bool {
+        matches!(self, Self::CustomType(..))
     }
 
     pub fn put_doc(&mut self, new_doc: (u32, EcoString)) {

@@ -4005,6 +4005,26 @@ modules should not import them. Perhaps change `{package}` to a regular dependen
                             extra_labels: vec![],
                         }),
                     },
+
+                    TypeError::ExternalTypeWithConstructors { location } => Diagnostic {
+                        title: "External type with constructors".to_string(),
+                        text: wrap_format!(
+                            "This type is annotated with the `@external` annotation, \
+but it has constructors. The `@external` annotation is only for external types \
+with no constructors."
+                        ),
+                        hint: Some("Remove the `@external` annotation".into()),
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    },
                 })
                 .collect_vec(),
 

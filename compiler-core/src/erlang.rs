@@ -334,6 +334,7 @@ fn register_imports_and_exports(
             constructors,
             typed_parameters,
             opaque,
+            external_erlang,
             ..
         }) => {
             // Erlang doesn't allow phantom type variables in type definitions but gleam does
@@ -373,9 +374,26 @@ fn register_imports_and_exports(
             );
             // Type definitions
             let definition = if constructors.is_empty() {
-                let constructors =
-                    std::iter::once("any()".to_doc()).chain(phantom_vars_constructor);
-                join(constructors, break_(" |", " | "))
+                if let Some((module, external_type, _location)) = external_erlang {
+                    let printer = TypePrinter::new(module_name);
+                    docvec![
+                        module,
+                        ":",
+                        external_type,
+                        "(",
+                        join(
+                            typed_parameters
+                                .iter()
+                                .map(|parameter| printer.print(parameter)),
+                            ", ".to_doc()
+                        ),
+                        ")"
+                    ]
+                } else {
+                    let constructors =
+                        std::iter::once("any()".to_doc()).chain(phantom_vars_constructor);
+                    join(constructors, break_(" |", " | "))
+                }
             } else {
                 let constructors = constructors
                     .iter()

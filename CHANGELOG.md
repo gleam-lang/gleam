@@ -16,6 +16,19 @@
   and prevents publishing packages with empty modules to Hex.
   ([Vitor Souza](https://github.com/vit0rr))
 
+- The `@external` annotation is now supported for types with no constructors. It
+  allows users to point an external type definition to a specific Erlang or
+  TypeScript type. For example, the `dict.Dict` type from the standard library
+  can now be written as the following:
+
+  ```gleam
+  @external(erlang, "erlang", "map")
+  @external(javascript, "../dict.d.mts", "Dict")
+  pub type Dict(key, value)
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - The help text displayed by `gleam dev --help`, `gleam test --help`, and

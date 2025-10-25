@@ -818,11 +818,22 @@ fn attributes_with_no_definition() {
 }
 
 #[test]
+fn external_attribute_with_custom_type() {
+    assert_parse_module!(
+        r#"
+@external(erlang, "gleam_stdlib", "dict")
+@external(javascript, "./gleam_stdlib.d.ts", "Dict")
+pub type Dict(key, value)
+"#
+    );
+}
+
+#[test]
 fn external_attribute_with_non_fn_definition() {
     assert_module_error!(
         r#"
 @external(erlang, "module", "fun")
-pub type Fun
+pub type Fun = Fun
 "#
     );
 }
