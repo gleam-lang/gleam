@@ -70,3 +70,7 @@
 - Fixed a bug where the "pattern match on variable" code action would generate
   invalid patterns by repeating a variable name already used in the same pattern.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Made link href validation in gleam.toml files less strict so developers can
+  use relative links for internal documentation.
+  ([Tristan-Mihai Radulescu](https://github.com/Courtcircuits))
