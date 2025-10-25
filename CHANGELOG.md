@@ -38,6 +38,10 @@
   used on tuples.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The "generate dynamic decoder" code action now emits `decode.optional_field` for
+  `Option` fields.
+  ([Adi Salimgereyev](https://github.com/abs0luty))
+
 ### Formatter
 
 ### Bug fixes

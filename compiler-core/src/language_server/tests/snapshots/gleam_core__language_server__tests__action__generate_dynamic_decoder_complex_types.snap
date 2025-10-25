@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "\nimport gleam/option\nimport gleam/dynamic\nimport gleam/dict\n\npub type Something\n\npub type Wibble(value) {\n  Wibble(\n    maybe: option.Option(Something),\n    map: dict.Dict(String, List(value)),\n    unknown: List(dynamic.Dynamic),\n  )\n}\n"
+expression: "\nimport gleam/option.{type Option}\nimport gleam/dynamic\nimport gleam/dict\n\npub type Something\n\npub type Wibble(value) {\n  Wibble(\n    maybe: Option(Something),\n    map: dict.Dict(String, List(value)),\n    unknown: List(dynamic.Dynamic),\n  )\n}\n"
 ---
 ----- BEFORE ACTION
 
-import gleam/option
+import gleam/option.{type Option}
 import gleam/dynamic
 import gleam/dict
 
@@ -13,7 +13,7 @@ pub type Something
 pub type Wibble(value) {
     ↑                   
   Wibble(
-    maybe: option.Option(Something),
+    maybe: Option(Something),
     map: dict.Dict(String, List(value)),
     unknown: List(dynamic.Dynamic),
   )
@@ -23,7 +23,7 @@ pub type Wibble(value) {
 ----- AFTER ACTION
 
 import gleam/dynamic/decode
-import gleam/option
+import gleam/option.{type Option}
 import gleam/dynamic
 import gleam/dict
 
@@ -31,14 +31,14 @@ pub type Something
 
 pub type Wibble(value) {
   Wibble(
-    maybe: option.Option(Something),
+    maybe: Option(Something),
     map: dict.Dict(String, List(value)),
     unknown: List(dynamic.Dynamic),
   )
 }
 
 fn wibble_decoder() -> decode.Decoder(Wibble(value)) {
-  use maybe <- decode.field("maybe", decode.optional(todo as "Decoder for Something"))
+  use maybe <- decode.optional_field("maybe", None, decode.optional(todo as "Decoder for Something"))
   use map <- decode.field("map", decode.dict(decode.string, decode.list(todo as "Decoder for value")))
   use unknown <- decode.field("unknown", decode.list(decode.dynamic))
   decode.success(Wibble(maybe:, map:, unknown:))
