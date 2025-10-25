@@ -553,7 +553,12 @@ fn metadata_config<'a>(
         .iter()
         .map(|l| (l.title.as_str(), l.href.clone()))
         .filter(|(_, href)| !href.clone().is_internal())
-        .map(|(title, href)| (title, href.as_uri().expect("Internal link not marked as internal")))
+        .map(|(title, href)| {
+            (
+                title,
+                href.as_uri().expect("Internal link not marked as internal"),
+            )
+        })
         .chain(repo_url.into_iter().map(|u| ("Repository", u)))
         .collect();
 
