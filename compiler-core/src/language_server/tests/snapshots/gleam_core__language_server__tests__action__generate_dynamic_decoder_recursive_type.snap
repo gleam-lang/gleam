@@ -23,6 +23,6 @@ pub type LinkedList {
 
 fn linked_list_decoder() -> decode.Decoder(LinkedList) {
   use value <- decode.field("value", decode.int)
-  use next <- decode.field("next", decode.optional(linked_list_decoder()))
+  use next <- decode.optional_field("next", option.None, decode.optional(linked_list_decoder()))
   decode.success(LinkedList(value:, next:))
 }

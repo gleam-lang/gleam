@@ -20,7 +20,7 @@ use crate::{
     type_::{
         self, FieldMap, ModuleValueConstructor, Type, TypeVar, TypedCallArg, ValueConstructor,
         error::{ModuleSuggestion, VariableDeclaration, VariableOrigin},
-        printer::Printer,
+        printer::{NameContextInformation, Printer},
     },
 };
 use ecow::{EcoString, eco_format};
@@ -3654,9 +3654,12 @@ pub struct GenerateDynamicDecoder<'a> {
     edits: TextEdits<'a>,
     printer: Printer<'a>,
     actions: &'a mut Vec<CodeAction>,
+    option_module_imported: bool,
+    option_type_unqualified: bool,
 }
 
 const DECODE_MODULE: &str = "gleam/dynamic/decode";
+const OPTION_MODULE: &str = "gleam/option";
 
 impl<'a> GenerateDynamicDecoder<'a> {
     pub fn new(
@@ -3668,12 +3671,31 @@ impl<'a> GenerateDynamicDecoder<'a> {
         // Since we are generating a new function, type variables from other
         // functions and constants are irrelevant to the types we print.
         let printer = Printer::new_without_type_variables(&module.ast.names);
+        let mut option_module_imported = false;
+        let mut option_type_unqualified = false;
+        for definition in &module.ast.definitions {
+            if let ast::Definition::Import(import) = definition
+                && import.module == OPTION_MODULE
+            {
+                if import.unqualified_types.iter().any(|unqualified| {
+                    unqualified.name == "Option" && unqualified.as_name.is_none()
+                }) {
+                    option_type_unqualified = true;
+                }
+                if import.unqualified_types.is_empty() && import.unqualified_values.is_empty() {
+                    option_module_imported = true;
+                }
+            }
+        }
+
         Self {
             module,
             params,
             edits: TextEdits::new(line_numbers),
             printer,
             actions,
+            option_module_imported,
+            option_type_unqualified,
         }
     }
 
@@ -3758,6 +3780,8 @@ impl<'a> GenerateDynamicDecoder<'a> {
             &mut self.printer,
             custom_type.name.clone(),
             self.module.name.clone(),
+            self.option_module_imported,
+            self.option_type_unqualified,
         );
 
         let decoders = fields
@@ -3869,6 +3893,8 @@ struct DecoderPrinter<'a, 'b> {
     type_name: EcoString,
     /// The module name of the root type we are printing a decoder for
     type_module: EcoString,
+    option_module_imported: bool,
+    option_type_unqualified: bool,
 }
 
 struct RecordField<'a> {
@@ -3915,11 +3941,19 @@ impl RecordLabel<'_> {
 }
 
 impl<'a, 'b> DecoderPrinter<'a, 'b> {
-    fn new(printer: &'a mut Printer<'b>, type_name: EcoString, type_module: EcoString) -> Self {
+    fn new(
+        printer: &'a mut Printer<'b>,
+        type_name: EcoString,
+        type_module: EcoString,
+        option_module_imported: bool,
+        option_type_unqualified: bool,
+    ) -> Self {
         Self {
             type_name,
             type_module,
             printer,
+            option_module_imported,
+            option_type_unqualified,
         }
     }
 
@@ -4007,12 +4041,53 @@ impl<'a, 'b> DecoderPrinter<'a, 'b> {
     fn decode_field(&mut self, field: &RecordField<'_>, indent: usize) -> EcoString {
         let decoder = self.decoder_for(field.type_, indent);
 
+        let is_optional_field = matches!(field.label, RecordLabel::Labeled(_))
+            && matches!(
+                field
+                    .type_
+                    .named_type_information()
+                    .as_ref()
+                    .map(|(module, name, _)| (module.as_ref(), name.as_ref())),
+                Some((module, name)) if module == OPTION_MODULE && name == "Option"
+            );
+
+        if !is_optional_field {
+            return eco_format!(
+                r#"{indent}use {variable} <- {module}.field({field}, {decoder})"#,
+                indent = " ".repeat(indent),
+                variable = field.label.variable_name(),
+                field = field.label.field_key(),
+                module = self.printer.print_module(DECODE_MODULE),
+                decoder = decoder,
+            );
+        }
+
+        let fallback = if self.option_module_imported {
+            eco_format!(
+                "{module}.None",
+                module = self.printer.print_module(OPTION_MODULE)
+            )
+        } else if self.option_type_unqualified {
+            EcoString::from("None")
+        } else {
+            return eco_format!(
+                r#"{indent}use {variable} <- {module}.field({field}, {decoder})"#,
+                indent = " ".repeat(indent),
+                variable = field.label.variable_name(),
+                field = field.label.field_key(),
+                module = self.printer.print_module(DECODE_MODULE),
+                decoder = decoder,
+            );
+        };
+
         eco_format!(
-            r#"{indent}use {variable} <- {module}.field({field}, {decoder})"#,
+            r#"{indent}use {variable} <- {module}.optional_field({field}, {fallback}, {decoder})"#,
             indent = " ".repeat(indent),
             variable = field.label.variable_name(),
             field = field.label.field_key(),
-            module = self.printer.print_module(DECODE_MODULE)
+            module = self.printer.print_module(DECODE_MODULE),
+            fallback = fallback,
+            decoder = decoder,
         )
     }
 }
@@ -5257,11 +5332,11 @@ fn pretty_constructor_name(
         .names
         .named_constructor(constructor_module, constructor_name)
     {
-        type_::printer::NameContextInformation::Unimported(_, _) => None,
-        type_::printer::NameContextInformation::Unqualified(constructor_name) => {
+        NameContextInformation::Unimported(_, _) => None,
+        NameContextInformation::Unqualified(constructor_name) => {
             Some(eco_format!("{constructor_name}"))
         }
-        type_::printer::NameContextInformation::Qualified(module_name, constructor_name) => {
+        NameContextInformation::Qualified(module_name, constructor_name) => {
             Some(eco_format!("{module_name}.{constructor_name}"))
         }
     }

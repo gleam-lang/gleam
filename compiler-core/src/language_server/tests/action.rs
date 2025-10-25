@@ -6847,7 +6847,7 @@ pub type Person {
 #[test]
 fn generate_dynamic_decoder_complex_types() {
     let src = "
-import gleam/option
+import gleam/option.{type Option}
 import gleam/dynamic
 import gleam/dict
 
@@ -6855,7 +6855,7 @@ pub type Something
 
 pub type Wibble(value) {
   Wibble(
-    maybe: option.Option(Something),
+    maybe: Option(Something),
     map: dict.Dict(String, List(value)),
     unknown: List(dynamic.Dynamic),
   )
