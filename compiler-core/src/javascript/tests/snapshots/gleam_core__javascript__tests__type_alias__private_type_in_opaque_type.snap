@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/type_alias.rs
-assertion_line: 14
 expression: "\ntype PrivateType {\n  PrivateType\n}\n\npub opaque type OpaqueType {\n  OpaqueType(PrivateType)\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -17,10 +15,6 @@ pub opaque type OpaqueType {
 
 ----- TYPESCRIPT DEFINITIONS
 import type * as _ from "../gleam.d.mts";
-
-declare class PrivateType extends _.CustomType {}
-
-declare type PrivateType$ = PrivateType;
 
 declare class OpaqueType extends _.CustomType {
   /** @deprecated */
