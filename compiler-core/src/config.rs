@@ -1001,7 +1001,7 @@ impl Href {
     pub fn is_internal(&self) -> bool {
         match self {
             Href::Internal(_) => true,
-            _ => false,
+            Href::External(_) => false,
         }
     }
 
