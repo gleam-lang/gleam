@@ -15,7 +15,7 @@ fn wibble(a, b, c) {
 
 ----- AFTER ACTION
 
-fn wibble(a: e, b: f, c: g) -> fn(b, c) -> h {
+fn wibble(a: e, b: f, c: g) -> fn(b, c) -> d {
   let x: a = todo
   fn(a: b, b: c) -> d {
     todo

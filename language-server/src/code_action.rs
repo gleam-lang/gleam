@@ -1636,10 +1636,184 @@ fn collect_type_variables(printer: &mut Printer<'_>, function: &TypedFunction) {
 }
 
 impl<'ast, 'a, 'b> ast::visit::Visit<'ast> for TypeVariableCollector<'a, 'b> {
+    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+        for argument in fun.arguments.iter() {
+            if let Some(annotation) = &argument.annotation {
+                register_type_variables_from_annotation(
+                    self.printer,
+                    annotation,
+                    argument.type_.as_ref(),
+                );
+            }
+        }
+
+        if let Some(annotation) = &fun.return_annotation {
+            register_type_variables_from_annotation(
+                self.printer,
+                annotation,
+                fun.return_type.as_ref(),
+            );
+        }
+
+        ast::visit::visit_typed_function(self, fun);
+    }
+
+    fn visit_typed_expr_fn(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        kind: &'ast FunctionLiteralKind,
+        arguments: &'ast [TypedArg],
+        body: &'ast Vec1<TypedStatement>,
+        return_annotation: &'ast Option<ast::TypeAst>,
+    ) {
+        if let Type::Fn {
+            arguments: argument_types,
+            return_: return_type,
+            ..
+        } = type_.as_ref()
+        {
+            for (argument, argument_type) in arguments.iter().zip(argument_types) {
+                if let Some(annotation) = &argument.annotation {
+                    register_type_variables_from_annotation(
+                        self.printer,
+                        annotation,
+                        argument_type.as_ref(),
+                    );
+                }
+            }
+
+            if let Some(annotation) = return_annotation {
+                register_type_variables_from_annotation(
+                    self.printer,
+                    annotation,
+                    return_type.as_ref(),
+                );
+            }
+        }
+
+        ast::visit::visit_typed_expr_fn(
+            self,
+            location,
+            type_,
+            kind,
+            arguments,
+            body,
+            return_annotation,
+        );
+    }
+
     fn visit_type_ast_var(&mut self, _location: &'ast SrcSpan, name: &'ast EcoString) {
         // Register this type variable so that we don't duplicate names when
         // adding annotations.
         self.printer.register_type_variable(name.clone());
+    }
+}
+
+fn register_type_variables_from_annotation(
+    printer: &mut Printer<'_>,
+    annotation: &ast::TypeAst,
+    type_: &Type,
+) {
+    // fn wibble(a, b, c) {
+    //   fn(a: b, b: c) -> d { ... }
+    //                     ^
+    // Without this tracking the printer could rename `d` to a fresh `h`.
+    match (annotation, type_) {
+        (ast::TypeAst::Var(ast::TypeAstVar { name, .. }), Type::Var { type_ }) => {
+            match &*type_.borrow() {
+                TypeVar::Generic { id } | TypeVar::Unbound { id } => {
+                    let id = *id;
+                    printer.register_type_variable(name.clone());
+                    printer.register_type_variable_with_id(id, name.clone());
+                }
+                TypeVar::Link { type_ } => {
+                    register_type_variables_from_annotation(printer, annotation, type_.as_ref());
+                }
+            }
+        }
+
+        (
+            ast::TypeAst::Fn(ast::TypeAstFn {
+                arguments: annotation_arguments,
+                return_: annotation_return,
+                ..
+            }),
+            Type::Fn {
+                arguments: type_arguments,
+                return_: type_return,
+                ..
+            },
+        ) => {
+            for (argument_annotation, argument_type) in
+                annotation_arguments.iter().zip(type_arguments)
+            {
+                // Maintain the names from each `fn(arg: name, ...)` position.
+                register_type_variables_from_annotation(
+                    printer,
+                    argument_annotation,
+                    argument_type.as_ref(),
+                );
+            }
+
+            // And likewise propagate the annotated return variable.
+            register_type_variables_from_annotation(
+                printer,
+                annotation_return.as_ref(),
+                type_return.as_ref(),
+            );
+        }
+
+        (
+            ast::TypeAst::Constructor(ast::TypeAstConstructor {
+                arguments: annotation_arguments,
+                ..
+            }),
+            Type::Named {
+                arguments: type_arguments,
+                ..
+            },
+        ) => {
+            for (argument_annotation, argument_type) in
+                annotation_arguments.iter().zip(type_arguments)
+            {
+                // Track aliases introduced inside named type arguments.
+                register_type_variables_from_annotation(
+                    printer,
+                    argument_annotation,
+                    argument_type.as_ref(),
+                );
+            }
+        }
+
+        (
+            ast::TypeAst::Tuple(ast::TypeAstTuple {
+                elements: annotation_elements,
+                ..
+            }),
+            Type::Tuple {
+                elements: type_elements,
+                ..
+            },
+        ) => {
+            for (element_annotation, element_type) in annotation_elements.iter().zip(type_elements)
+            {
+                // Tuples can hide extra annotations; ensure each slot retains its label.
+                register_type_variables_from_annotation(
+                    printer,
+                    element_annotation,
+                    element_type.as_ref(),
+                );
+            }
+        }
+
+        (_, Type::Var { type_ }) => {
+            if let TypeVar::Link { type_ } = &*type_.borrow() {
+                register_type_variables_from_annotation(printer, annotation, type_.as_ref());
+            }
+        }
+
+        _ => {}
     }
 }
 
