@@ -2156,11 +2156,12 @@ impl<'module, 'a> Generator<'module, 'a> {
         should_be_equal: bool,
     ) -> Option<Document<'a>> {
         if let ClauseGuard::Constant(Constant::Record {
-            record_constructor: Some(constructor),
-            name,
-            ..
+            arguments, name, ..
         }) = right
-            && let ValueConstructorVariant::Record { arity: 0, .. } = constructor.variant
+            && arguments.is_empty()
+            && right.type_().is_named()
+            && let ClauseGuard::Var { type_, .. } = left
+            && !matches!(&**type_, Type::Fn { .. })
         {
             let left_doc = self.guard(left);
             return Some(self.singleton_equal(left_doc, name, should_be_equal));
