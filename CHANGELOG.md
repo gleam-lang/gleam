@@ -29,6 +29,9 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Optimizations for singleton types in the JS backend.
+  ([Nafi](https://github.com/re-masashi))
+
 ### Build tool
 
 - The help text displayed by `gleam dev --help`, `gleam test --help`, and
