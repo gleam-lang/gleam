@@ -71,6 +71,32 @@
   name when a suggested rename is accepted.
   ([Adi Salimgereyev](https://github.com/abs0luty))
 
+- The build tool now provides better error message when trying to build Git
+  dependencies without Git installed. Previously, it would show this error:
+
+  ```text
+  error: Shell command failure
+
+  There was a problem when running the shell command `git`.
+
+  The error from the shell command library was:
+
+      Could not find the stdio stream
+  ```
+
+  Now it will show:
+
+  ```text
+  error: Program not found
+
+  The program `git` was not found. Is it installed?
+
+  Documentation for installing Git can be viewed here:
+  https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
+  ```
+
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The "inline variable" code action can now trigger when used over the let
