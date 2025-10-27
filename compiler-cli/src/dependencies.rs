@@ -3,6 +3,7 @@ mod dependency_manager;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
+    io::ErrorKind,
     process::Command,
     rc::Rc,
     time::Instant,
@@ -37,7 +38,7 @@ use crate::{
     TreeOptions,
     build_lock::{BuildLock, Guard},
     cli,
-    fs::{self, ProjectIO},
+    fs::{self, ProjectIO, get_os},
     http::HttpClient,
     text_layout::space_table,
 };
@@ -785,21 +786,20 @@ fn provide_local_package(
 }
 
 fn execute_command(command: &mut Command) -> Result<std::process::Output> {
-    let output = command.output().map_err(|error| Error::ShellCommand {
-        program: "git".into(),
-        reason: ShellCommandFailureReason::IoError(error.kind()),
-    })?;
-    if output.status.success() {
-        Ok(output)
-    } else {
-        let reason = match String::from_utf8(output.stderr) {
-            Ok(stderr) => ShellCommandFailureReason::ShellCommandError(stderr),
-            Err(_) => ShellCommandFailureReason::Unknown,
-        };
-        Err(Error::ShellCommand {
-            program: "git".into(),
-            reason,
-        })
+    let result = command.output();
+    match result {
+        Ok(output) => Ok(output),
+        Err(error) => Err(match error.kind() {
+            ErrorKind::NotFound => Error::ShellProgramNotFound {
+                program: "git".into(),
+                os: get_os(),
+            },
+
+            other => Error::ShellCommand {
+                program: "git".into(),
+                reason: ShellCommandFailureReason::IoError(other),
+            },
+        }),
     }
 }
 
