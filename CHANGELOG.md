@@ -29,7 +29,7 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- Optimizations for singleton types in the JS backend.
+- Optimizations for singleton types in the JS backend (singleton types get compared using `instanceof` instead of `isEqual(new Variant())`).
   ([Nafi](https://github.com/re-masashi))
 
 ### Build tool
