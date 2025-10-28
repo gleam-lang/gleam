@@ -10321,8 +10321,23 @@ pub type Labelled {
 }
 
 #[test]
-fn add_omitted_labels_does_not_pop_up_if_function_already_has_labels() {
-    assert_no_code_actions!(
+fn add_omitted_labels_works_with_constructors_calls_with_some_labels_1() {
+    assert_code_action!(
+        ADD_OMITTED_LABELS,
+        "
+pub fn main() {
+  labelled(3, 1, b: 2)
+}
+
+pub fn labelled(a a, b b, c c) { todo }
+    ",
+        find_position_of("labelled").to_selection(),
+    );
+}
+
+#[test]
+fn add_omitted_labels_works_with_constructors_calls_with_some_labels() {
+    assert_code_action!(
         ADD_OMITTED_LABELS,
         "
 pub fn main() {
@@ -10331,6 +10346,36 @@ pub fn main() {
 }
 
 pub fn labelled(a a, b b) { todo }
+    ",
+        find_position_of("labelled").to_selection(),
+    );
+}
+
+#[test]
+fn add_omitted_labels_works_on_call_with_wrongly_placed_labels() {
+    assert_code_action!(
+        ADD_OMITTED_LABELS,
+        "
+pub fn main() {
+  labelled(3, b: 2, 1)
+}
+
+pub fn labelled(a a, b b, c c) { todo }
+    ",
+        find_position_of("labelled").to_selection(),
+    );
+}
+
+#[test]
+fn add_omitted_labels_does_not_work_on_call_with_wrong_labels_2() {
+    assert_no_code_actions!(
+        ADD_OMITTED_LABELS,
+        "
+pub fn main() {
+  labelled(3, 1, d: 2)
+}
+
+pub fn labelled(a a, b b, c c) { todo }
     ",
         find_position_of("labelled").to_selection(),
     );
