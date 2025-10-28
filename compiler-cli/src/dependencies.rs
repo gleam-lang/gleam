@@ -3,7 +3,6 @@ mod dependency_manager;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
-    io::Write,
     process::Command,
     rc::Rc,
     time::Instant,
@@ -111,7 +110,7 @@ fn get_manifest_details(paths: &ProjectPaths) -> Result<(PackageConfig, Manifest
     Ok((config, manifest))
 }
 
-fn list_manifest_packages<W: Write>(mut buffer: W, manifest: Manifest) -> Result<()> {
+fn list_manifest_packages<W: std::io::Write>(mut buffer: W, manifest: Manifest) -> Result<()> {
     manifest
         .packages
         .into_iter()
@@ -122,7 +121,7 @@ fn list_manifest_packages<W: Write>(mut buffer: W, manifest: Manifest) -> Result
         })
 }
 
-fn list_package_and_dependencies_tree<W: Write>(
+fn list_package_and_dependencies_tree<W: std::io::Write>(
     mut buffer: W,
     options: TreeOptions,
     packages: Vec<ManifestPackage>,

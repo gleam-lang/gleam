@@ -84,6 +84,9 @@ fn resolve_versions_diffs(
                 .filter(|version| !version.is_pre())
                 .max()?;
 
+            // If we're checking for major version updates, only include the
+            // package if a new major version is available. Otherwise, include
+            // the package if there is any new version available.
             match check_major_versions {
                 true => {
                     if latest.major <= version.major {
