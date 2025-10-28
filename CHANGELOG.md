@@ -45,6 +45,18 @@
   Elixir file in a Gleam project.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The build tool now has a new `gleam deps outdated` command that shows outdated
+  versions for dependencies. For example:
+  
+  ```bash
+  $ gleam deps outdated
+  Package Current Latest
+  wibble  v1.4.0  v1.4.1
+  wobble  v1.0.1  v2.3.0
+  ```
+
+  ([Vladislav Shakitskiy](https://github.com/vshakitskiy))
+
 ### Language server
 
 - The "inline variable" code action can now trigger when used over the let
