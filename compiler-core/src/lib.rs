@@ -5,6 +5,7 @@
     clippy::mem_forget,
     // TODO: enable once the false positive bug is solved
     // clippy::use_self,
+    // NOTE: Requires Rust 2024 for let chains.
     clippy::filter_map_next,
     clippy::needless_continue,
     clippy::needless_borrow,
@@ -56,7 +57,6 @@
 #[cfg(test)]
 #[macro_use]
 extern crate pretty_assertions;
-
 pub mod analyse;
 pub mod ast;
 pub mod bit_array;
@@ -97,13 +97,10 @@ mod exhaustiveness;
 pub(crate) mod graph;
 pub(crate) mod inline;
 mod reference;
-
 pub use error::{Error, Result};
 pub use warning::Warning;
-
 const GLEAM_CORE_PACKAGE_NAME: &str = "";
 const STDLIB_PACKAGE_NAME: &str = "gleam_stdlib";
-
 mod schema_capnp {
     #![allow(
         dead_code,

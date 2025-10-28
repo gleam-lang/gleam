@@ -18,18 +18,18 @@ install: ## Build the Gleam compiler and place it on PATH
 test: ## Run the compiler unit tests
 	cargo test --quiet
 	cargo clippy
-	cd test/language && make
-	cd test/javascript_prelude && make test
+	cd test/language && make -j2
+	cd test/javascript_prelude && make test -j2
 	cd test/project_erlang && cargo run clean && cargo run check && cargo run test
 	cd test/project_javascript && cargo run clean && cargo run check && cargo run test
 	cd test/project_deno && cargo run clean && cargo run check && cargo run test
 	cd test/hextarball && make test
 	cd test/running_modules && make test
-	cd test/subdir_ffi && make
+	cd test/subdir_ffi && make -j2
 
 .PHONY: language-test
 language-test: ## Run the language integration tests for all targets
-	cd test/language && make
+	cd test/language && make -j2
 
 .PHONY: language-test-watch
 language-test-watch: ## Run the language integration tests for all targets when files change
@@ -37,11 +37,11 @@ language-test-watch: ## Run the language integration tests for all targets when 
 
 .PHONY: javascript-prelude-test
 javascript-prelude-test: ## Run the JavaScript prelude core tests
-	cd test/javascript_prelude && make test
+	cd test/javascript_prelude && make test -j2
 
 .PHONY: javascript-prelude-test-watch
 javascript-prelude-test-watch: ## Run the JavaScript prelude core tests when files change
-	watchexec "cd test/javascript_prelude && make test"
+	watchexec "cd test/javascript_prelude && make test -j2"
 
 .PHONY: test-watch
 test-watch: ## Run compiler tests when files change
@@ -49,11 +49,11 @@ test-watch: ## Run compiler tests when files change
 
 .PHONY: export-hex-tarball-test
 export-hex-tarball-test: ## Run `gleam export hex-tarball` and verify it is created
-	cd test/hextarball && make test
+	cd test/hextarball && make test -j2
 
 .PHONY: benchmark
 benchmark: ## Run the benchmarks
-	cd benchmark/list && make
+	cd benchmark/list && make -j2
 
 # Debug print vars with `make print-VAR_NAME`
 print-%: ; @echo $*=$($*)
