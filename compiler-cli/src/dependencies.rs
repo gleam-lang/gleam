@@ -788,7 +788,17 @@ fn provide_local_package(
 fn execute_command(command: &mut Command) -> Result<std::process::Output> {
     let result = command.output();
     match result {
-        Ok(output) => Ok(output),
+        Ok(output) if output.status.success() => Ok(output),
+        Ok(output) => {
+            let reason = match String::from_utf8(output.stderr) {
+                Ok(stderr) => ShellCommandFailureReason::ShellCommandError(stderr),
+                Err(_) => ShellCommandFailureReason::Unknown,
+            };
+            Err(Error::ShellCommand {
+                program: "git".into(),
+                reason,
+            })
+        }
         Err(error) => Err(match error.kind() {
             ErrorKind::NotFound => Error::ShellProgramNotFound {
                 program: "git".into(),
