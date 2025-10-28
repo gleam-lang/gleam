@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-assertion_line: 10596
 expression: "\npub fn main() {\n  case 1 {\n    _ -> {\n      use <- wibble\n      123\n    }\n    _ -> todo\n  }\n}\n\nfn wibble(f: fn() -> Float) -> Float { f() }\n"
-snapshot_kind: text
 ---
 ----- BEFORE ACTION
 
