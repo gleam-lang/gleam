@@ -118,6 +118,10 @@
   used on tuples.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- When renaming, if the new name is invalid, the language server will produce an
+  error message instead of silently doing nothing.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Bug fixes

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use ecow::EcoString;
+use lsp_server::ResponseError;
 use lsp_types::{Range, RenameParams, TextEdit, Url, WorkspaceEdit};
 
 use crate::{
@@ -33,6 +34,34 @@ fn workspace_edit(uri: Url, edits: Vec<TextEdit>) -> WorkspaceEdit {
     }
 }
 
+pub enum RenameOutcome {
+    InvalidName { name: EcoString },
+    NoRenames,
+    Renamed { edit: WorkspaceEdit },
+}
+
+/// Error code for when a request has invalid params as described in:
+/// https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#errorCodes
+///
+const INVALID_PARAMS: i32 = -32602;
+
+impl RenameOutcome {
+    /// Turns the outcome of renaming into a value that's suitable to be used as
+    /// a response in the language server engine.
+    ///
+    pub fn into_result(self) -> Result<Option<WorkspaceEdit>, ResponseError> {
+        match self {
+            RenameOutcome::NoRenames => Ok(None),
+            RenameOutcome::Renamed { edit } => Ok(Some(edit)),
+            RenameOutcome::InvalidName { name } => Err(ResponseError {
+                code: INVALID_PARAMS,
+                message: format!("{name} is not a valid name"),
+                data: None,
+            }),
+        }
+    }
+}
+
 pub fn rename_local_variable(
     module: &Module,
     line_numbers: &LineNumbers,
@@ -40,15 +69,10 @@ pub fn rename_local_variable(
     definition_location: SrcSpan,
     name: EcoString,
     kind: VariableReferenceKind,
-) -> Option<WorkspaceEdit> {
-    if name::check_name_case(
-        Default::default(),
-        &params.new_name.as_str().into(),
-        Named::Variable,
-    )
-    .is_err()
-    {
-        return None;
+) -> RenameOutcome {
+    let new_name = EcoString::from(&params.new_name);
+    if name::check_name_case(Default::default(), &new_name, Named::Variable).is_err() {
+        return RenameOutcome::InvalidName { name: new_name };
     }
 
     let uri = params.text_document_position.text_document.uri.clone();
@@ -77,7 +101,9 @@ pub fn rename_local_variable(
         }
     }
 
-    Some(workspace_edit(uri, edits.edits))
+    RenameOutcome::Renamed {
+        edit: workspace_edit(uri, edits.edits),
+    }
 }
 
 pub enum RenameTarget {
@@ -100,17 +126,18 @@ pub fn rename_module_entity(
     modules: &im::HashMap<EcoString, ModuleInterface>,
     sources: &HashMap<EcoString, ModuleSourceInformation>,
     renamed: Renamed<'_>,
-) -> Option<WorkspaceEdit> {
+) -> RenameOutcome {
+    let new_name = EcoString::from(&params.new_name);
     if name::check_name_case(
         // We don't care about the actual error here, just whether the name is valid,
         // so we just use the default span.
         SrcSpan::default(),
-        &params.new_name.as_str().into(),
+        &new_name,
         renamed.name_kind,
     )
     .is_err()
     {
-        return None;
+        return RenameOutcome::InvalidName { name: new_name };
     }
 
     match renamed.target_kind {
@@ -155,7 +182,9 @@ pub fn rename_module_entity(
         }
     }
 
-    Some(workspace_edit)
+    RenameOutcome::Renamed {
+        edit: workspace_edit,
+    }
 }
 
 fn rename_references_in_module(
@@ -204,13 +233,15 @@ fn alias_references_in_module(
     module_name: &EcoString,
     name: &EcoString,
     layer: ast::Layer,
-) -> Option<WorkspaceEdit> {
+) -> RenameOutcome {
     let reference_map = match layer {
         ast::Layer::Value => &module.ast.type_info.references.value_references,
         ast::Layer::Type => &module.ast.type_info.references.type_references,
     };
 
-    let references = reference_map.get(&(module_name.clone(), name.clone()))?;
+    let Some(references) = reference_map.get(&(module_name.clone(), name.clone())) else {
+        return RenameOutcome::NoRenames;
+    };
 
     let mut edits = TextEdits::new(&module.ast.type_info.line_numbers);
     let mut found_import = false;
@@ -257,10 +288,12 @@ fn alias_references_in_module(
         }
     }
 
-    Some(workspace_edit(
-        params.text_document_position.text_document.uri.clone(),
-        edits.edits,
-    ))
+    RenameOutcome::Renamed {
+        edit: workspace_edit(
+            params.text_document_position.text_document.uri.clone(),
+            edits.edits,
+        ),
+    }
 }
 
 fn add_import(
