@@ -59,6 +59,10 @@
 
 ### Bug fixes
 
+- Fixed a bug where renaming a variable from an alternative pattern would not
+  rename all its occurrences.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Fixed a typo in the error message emitted when trying to run a module that
   does not have a main function.
   ([Louis Pilfold](https://github.com/lpil))
