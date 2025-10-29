@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\npub fn main(x) {\n  case x {\n    [] as list | [_] as list -> list\n    _ -> []\n  }\n}\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+pub fn main(x) {
+  case x {
+    [] as list | [_] as list -> list
+          ↑▔▔▔                      
+    _ -> []
+  }
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+
+pub fn main(x) {
+  case x {
+    [] as new_name | [_] as new_name -> new_name
+    _ -> []
+  }
+}

@@ -1387,6 +1387,119 @@ pub fn main(x) {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/5091
+#[test]
+fn rename_alternative_pattern_aliases() {
+    assert_rename!(
+        "
+pub fn main(x) {
+  case x {
+    [] as list | [_] as list -> list
+    _ -> []
+  }
+}
+",
+        "new_name",
+        find_position_of("list")
+    );
+}
+
+#[test]
+fn rename_alternative_pattern_aliases_from_alternative() {
+    assert_rename!(
+        "
+pub fn main(x) {
+  case x {
+    [] as list | [_] as list -> list
+    _ -> []
+  }
+}
+",
+        "new_name",
+        find_position_of("list").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn rename_alternative_pattern_aliases_from_usage() {
+    assert_rename!(
+        "
+pub fn main(x) {
+  case x {
+    [] as list | [_] as list -> list
+    _ -> []
+  }
+}
+",
+        "new_name",
+        find_position_of("list").nth_occurrence(3)
+    );
+}
+
+#[test]
+fn rename_alternative_pattern_alias_and_variable_1() {
+    assert_rename!(
+        "
+pub fn main(x) {
+  case x {
+    [] as list | [_, ..list] -> list
+    _ -> []
+  }
+}
+",
+        "new_name",
+        find_position_of("list").nth_occurrence(1)
+    );
+}
+
+#[test]
+fn rename_alternative_pattern_alias_and_variable_2() {
+    assert_rename!(
+        "
+pub fn main(x) {
+  case x {
+    [] as list | [_, ..list] -> list
+    _ -> []
+  }
+}
+",
+        "new_name",
+        find_position_of("list").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn rename_alternative_pattern_alias_and_variable_3() {
+    assert_rename!(
+        "
+pub fn main(x) {
+  case x {
+    [_, ..list] | [] as list -> list
+    _ -> []
+  }
+}
+",
+        "new_name",
+        find_position_of("list").nth_occurrence(1)
+    );
+}
+
+#[test]
+fn rename_alternative_pattern_alias_and_variable_4() {
+    assert_rename!(
+        "
+pub fn main(x) {
+  case x {
+    [_, ..list] | [] as list -> list
+    _ -> []
+  }
+}
+",
+        "new_name",
+        find_position_of("list").nth_occurrence(2)
+    );
+}
+
 #[test]
 fn rename_alternative_pattern_from_usage() {
     assert_rename!(
