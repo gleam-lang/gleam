@@ -19,6 +19,7 @@ use crate::{
 use camino::{Utf8Path, Utf8PathBuf};
 use debug_ignore::DebugIgnore;
 use itertools::Itertools;
+use lsp_server::ResponseError;
 use lsp_types::{
     self as lsp, HoverProviderCapability, InitializeParams, Position, PublishDiagnosticsParams,
     Range, RenameOptions, TextEdit, Url,
@@ -98,7 +99,7 @@ where
     }
 
     fn handle_request(&mut self, id: lsp_server::RequestId, request: Request) {
-        let (payload, feedback) = match request {
+        let (outcome, feedback) = match request {
             Request::Format(param) => self.format(param),
             Request::Hover(param) => self.hover(param),
             Request::GoToDefinition(param) => self.goto_definition(param),
@@ -114,11 +115,19 @@ where
 
         self.publish_feedback(feedback);
 
-        let response = lsp_server::Response {
-            id,
-            error: None,
-            result: Some(payload),
+        let response = match outcome {
+            Ok(payload) => lsp_server::Response {
+                id,
+                error: None,
+                result: Some(payload),
+            },
+            Err(error) => lsp_server::Response {
+                id,
+                error: Some(error),
+                result: None,
+            },
         };
+
         self.connection
             .sender
             .send(lsp_server::Message::Response(response))
@@ -236,12 +245,33 @@ where
         &mut self,
         path: Utf8PathBuf,
         handler: Handler,
-    ) -> (Json, Feedback)
+    ) -> (Result<Json, ResponseError>, Feedback)
     where
         T: serde::Serialize,
         Handler: FnOnce(
             &mut LanguageServerEngine<IO, ConnectionProgressReporter<'a>>,
         ) -> engine::Response<T>,
+    {
+        self.fallible_respond_with_engine(path, |engine| {
+            let response = handler(engine);
+            engine::Response {
+                result: response.result.map(Ok),
+                warnings: response.warnings,
+                compilation: response.compilation,
+            }
+        })
+    }
+
+    fn fallible_respond_with_engine<T, Handler>(
+        &mut self,
+        path: Utf8PathBuf,
+        handler: Handler,
+    ) -> (Result<Json, ResponseError>, Feedback)
+    where
+        T: serde::Serialize,
+        Handler: FnOnce(
+            &mut LanguageServerEngine<IO, ConnectionProgressReporter<'a>>,
+        ) -> engine::Response<Result<T, ResponseError>>,
     {
         match self.router.project_for_path(path) {
             Ok(Some(project)) => {
@@ -251,33 +281,47 @@ where
                     compilation,
                 } = handler(&mut project.engine);
                 match result {
-                    Ok(value) => {
+                    Ok(Ok(value)) => {
                         let feedback = project.feedback.response(compilation, warnings);
                         let json = serde_json::to_value(value).expect("response to json");
-                        (json, feedback)
+                        (Ok(json), feedback)
+                    }
+                    Ok(Err(error)) => {
+                        let feedback = project.feedback.response(compilation, warnings);
+                        (Err(error), feedback)
                     }
                     Err(e) => {
                         let feedback = project.feedback.build_with_error(e, compilation, warnings);
-                        (Json::Null, feedback)
+                        (Ok(Json::Null), feedback)
                     }
                 }
             }
 
-            Ok(None) => (Json::Null, Feedback::default()),
+            Ok(None) => (Ok(Json::Null), Feedback::default()),
 
-            Err(error) => (Json::Null, self.outside_of_project_feedback.error(error)),
+            Err(error) => (
+                Ok(Json::Null),
+                self.outside_of_project_feedback.error(error),
+            ),
         }
     }
 
-    fn path_error_response(&mut self, path: Utf8PathBuf, error: crate::Error) -> (Json, Feedback) {
+    fn path_error_response(
+        &mut self,
+        path: Utf8PathBuf,
+        error: crate::Error,
+    ) -> (Result<Json, ResponseError>, Feedback) {
         let feedback = match self.router.project_for_path(path) {
             Ok(Some(project)) => project.feedback.error(error),
             Ok(None) | Err(_) => self.outside_of_project_feedback.error(error),
         };
-        (Json::Null, feedback)
+        (Ok(Json::Null), feedback)
     }
 
-    fn format(&mut self, params: lsp::DocumentFormattingParams) -> (Json, Feedback) {
+    fn format(
+        &mut self,
+        params: lsp::DocumentFormattingParams,
+    ) -> (Result<Json, ResponseError>, Feedback) {
         let path = super::path(&params.text_document.uri);
         let mut new_text = String::new();
 
@@ -298,15 +342,18 @@ where
         };
         let json = serde_json::to_value(vec![edit]).expect("to JSON value");
 
-        (json, Feedback::default())
+        (Ok(json), Feedback::default())
     }
 
-    fn hover(&mut self, params: lsp::HoverParams) -> (Json, Feedback) {
+    fn hover(&mut self, params: lsp::HoverParams) -> (Result<Json, ResponseError>, Feedback) {
         let path = super::path(&params.text_document_position_params.text_document.uri);
         self.respond_with_engine(path, |engine| engine.hover(params))
     }
 
-    fn goto_definition(&mut self, params: lsp::GotoDefinitionParams) -> (Json, Feedback) {
+    fn goto_definition(
+        &mut self,
+        params: lsp::GotoDefinitionParams,
+    ) -> (Result<Json, ResponseError>, Feedback) {
         let path = super::path(&params.text_document_position_params.text_document.uri);
         self.respond_with_engine(path, |engine| engine.goto_definition(params))
     }
@@ -314,12 +361,15 @@ where
     fn goto_type_definition(
         &mut self,
         params: lsp_types::GotoDefinitionParams,
-    ) -> (Json, Feedback) {
+    ) -> (Result<Json, ResponseError>, Feedback) {
         let path = super::path(&params.text_document_position_params.text_document.uri);
         self.respond_with_engine(path, |engine| engine.goto_type_definition(params))
     }
 
-    fn completion(&mut self, params: lsp::CompletionParams) -> (Json, Feedback) {
+    fn completion(
+        &mut self,
+        params: lsp::CompletionParams,
+    ) -> (Result<Json, ResponseError>, Feedback) {
         let path = super::path(&params.text_document_position.text_document.uri);
 
         let src = match self.io.read(&path) {
@@ -331,32 +381,52 @@ where
         })
     }
 
-    fn signature_help(&mut self, params: lsp_types::SignatureHelpParams) -> (Json, Feedback) {
+    fn signature_help(
+        &mut self,
+        params: lsp_types::SignatureHelpParams,
+    ) -> (Result<Json, ResponseError>, Feedback) {
         let path = super::path(&params.text_document_position_params.text_document.uri);
         self.respond_with_engine(path, |engine| engine.signature_help(params))
     }
 
-    fn code_action(&mut self, params: lsp::CodeActionParams) -> (Json, Feedback) {
+    fn code_action(
+        &mut self,
+        params: lsp::CodeActionParams,
+    ) -> (Result<Json, ResponseError>, Feedback) {
         let path = super::path(&params.text_document.uri);
         self.respond_with_engine(path, |engine| engine.code_actions(params))
     }
 
-    fn document_symbol(&mut self, params: lsp::DocumentSymbolParams) -> (Json, Feedback) {
+    fn document_symbol(
+        &mut self,
+        params: lsp::DocumentSymbolParams,
+    ) -> (Result<Json, ResponseError>, Feedback) {
         let path = super::path(&params.text_document.uri);
         self.respond_with_engine(path, |engine| engine.document_symbol(params))
     }
 
-    fn prepare_rename(&mut self, params: lsp::TextDocumentPositionParams) -> (Json, Feedback) {
+    fn prepare_rename(
+        &mut self,
+        params: lsp::TextDocumentPositionParams,
+    ) -> (Result<Json, ResponseError>, Feedback) {
         let path = super::path(&params.text_document.uri);
         self.respond_with_engine(path, |engine| engine.prepare_rename(params))
     }
 
-    fn rename(&mut self, params: lsp::RenameParams) -> (Json, Feedback) {
+    fn rename(&mut self, params: lsp::RenameParams) -> (Result<Json, ResponseError>, Feedback) {
         let path = super::path(&params.text_document_position.text_document.uri);
-        self.respond_with_engine(path, |engine| engine.rename(params))
+        self.fallible_respond_with_engine(
+            path,
+            |engine: &mut LanguageServerEngine<IO, ConnectionProgressReporter<'a>>| {
+                engine.rename(params)
+            },
+        )
     }
 
-    fn find_references(&mut self, params: lsp_types::ReferenceParams) -> (Json, Feedback) {
+    fn find_references(
+        &mut self,
+        params: lsp_types::ReferenceParams,
+    ) -> (Result<Json, ResponseError>, Feedback) {
         let path = super::path(&params.text_document_position.text_document.uri);
         self.respond_with_engine(path, |engine| engine.find_references(params))
     }

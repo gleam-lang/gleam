@@ -20,6 +20,7 @@ use crate::{
         files::FileSystemProxy,
         progress::ProgressReporter,
         reference::FindVariableReferences,
+        rename::RenameOutcome,
     },
     line_numbers::LineNumbers,
     paths::ProjectPaths,
@@ -34,6 +35,7 @@ use camino::Utf8PathBuf;
 use ecow::EcoString;
 use itertools::Itertools;
 use lsp::CodeAction;
+use lsp_server::ResponseError;
 use lsp_types::{
     self as lsp, DocumentSymbol, Hover, HoverContents, MarkedString, Position,
     PrepareRenameResponse, Range, SignatureHelp, SymbolKind, SymbolTag, TextEdit, Url,
@@ -698,17 +700,20 @@ where
         })
     }
 
-    pub fn rename(&mut self, params: lsp::RenameParams) -> Response<Option<WorkspaceEdit>> {
+    pub fn rename(
+        &mut self,
+        params: lsp::RenameParams,
+    ) -> Response<Result<Option<WorkspaceEdit>, ResponseError>> {
         self.respond(|this| {
             let position = &params.text_document_position;
 
             let (lines, found) = match this.node_at_position(position) {
                 Some(value) => value,
-                None => return Ok(None),
+                None => return Ok(RenameOutcome::NoRenames.into_result()),
             };
 
             let Some(module) = this.module_for_uri(&position.text_document.uri) else {
-                return Ok(None);
+                return Ok(RenameOutcome::NoRenames.into_result());
             };
 
             Ok(match reference_for_ast_node(found, &module.name) {
@@ -719,7 +724,9 @@ where
                     ..
                 }) => {
                     let rename_kind = match origin.map(|origin| origin.syntax) {
-                        Some(VariableSyntax::Generated) => return Ok(None),
+                        Some(VariableSyntax::Generated) => {
+                            return Ok(RenameOutcome::NoRenames.into_result());
+                        }
                         Some(VariableSyntax::LabelShorthand(_)) => {
                             VariableReferenceKind::LabelShorthand
                         }
@@ -736,6 +743,7 @@ where
                         name,
                         rename_kind,
                     )
+                    .into_result()
                 }
                 Some(Referenced::ModuleValue {
                     module: module_name,
@@ -755,7 +763,9 @@ where
                         target_kind,
                         layer: ast::Layer::Value,
                     },
-                ),
+                )
+                .into_result(),
+
                 Some(Referenced::ModuleType {
                     module: module_name,
                     target_kind,
@@ -773,8 +783,10 @@ where
                         target_kind,
                         layer: ast::Layer::Type,
                     },
-                ),
-                None => None,
+                )
+                .into_result(),
+
+                None => RenameOutcome::NoRenames.into_result(),
             })
         })
     }
