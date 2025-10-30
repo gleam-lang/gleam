@@ -74,6 +74,7 @@ mod publish;
 mod remove;
 pub mod run;
 mod shell;
+mod text_layout;
 
 use config::root_config;
 use fs::{get_current_directory, get_project_root};

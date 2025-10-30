@@ -39,6 +39,7 @@ use crate::{
     cli,
     fs::{self, ProjectIO},
     http::HttpClient,
+    text_layout::space_table,
 };
 
 struct Symbols {
@@ -111,14 +112,17 @@ fn get_manifest_details(paths: &ProjectPaths) -> Result<(PackageConfig, Manifest
 }
 
 fn list_manifest_packages<W: std::io::Write>(mut buffer: W, manifest: Manifest) -> Result<()> {
-    manifest
+    let packages = manifest
         .packages
         .into_iter()
-        .try_for_each(|package| writeln!(buffer, "{}\t{}", package.name, package.version))
-        .map_err(|e| Error::StandardIo {
-            action: StandardIoAction::Write,
-            err: Some(e.kind()),
-        })
+        .map(|package| vec![package.name.to_string(), package.version.to_string()])
+        .collect_vec();
+    let out = space_table(&["Package", "Version"], packages);
+
+    write!(buffer, "{}", out).map_err(|e| Error::StandardIo {
+        action: StandardIoAction::Write,
+        err: Some(e.kind()),
+    })
 }
 
 fn list_package_and_dependencies_tree<W: std::io::Write>(
@@ -409,104 +413,26 @@ pub fn resolve_and_download<Telem: Telemetry>(
 
 fn format_versions_and_extract_longest_parts(
     versions: dependency::PackageVersionDiffs,
-) -> (
-    impl Iterator<Item = (String, String, String)>,
-    (usize, usize),
-) {
-    let versions = versions
+) -> Vec<Vec<String>> {
+    versions
         .iter()
-        .map(|(name, (v1, v2))| (name.to_string(), v1.to_string(), v2.to_string()))
-        .sorted();
-
-    let longest_parts =
-        versions
-            .clone()
-            .fold((0, 0), |(max_name, max_current), (name, current, _)| {
-                (max_name.max(name.len()), max_current.max(current.len()))
-            });
-
-    (versions, longest_parts)
+        .map(|(name, (v1, v2))| vec![name.to_string(), v1.to_string(), v2.to_string()])
+        .sorted()
+        .collect_vec()
 }
 
 fn pretty_print_major_versions_available(versions: dependency::PackageVersionDiffs) -> String {
-    let (versions, (longest_package_name_length, longest_current_version_length)) =
-        format_versions_and_extract_longest_parts(versions);
+    let versions = format_versions_and_extract_longest_parts(versions);
 
-    let mut output_string = String::new();
-
-    output_string.push_str("\nThe following dependencies have new major versions available:\n\n");
-    for (name, v1, v2) in versions {
-        let name_padding = " ".repeat(longest_package_name_length - name.len());
-        let current_version_padding =
-            " ".repeat(longest_current_version_length - v1.to_string().len());
-
-        output_string.push_str(
-            &[
-                &name,
-                &name_padding,
-                " ",
-                &v1.to_string(),
-                &current_version_padding,
-                " -> ",
-                &v2.to_string(),
-                "\n",
-            ]
-            .concat(),
-        );
-    }
-
-    output_string
+    format!(
+        "\nThe following dependencies have new major versions available:\n\n{}",
+        space_table(&["Package", "Current", "Latest"], &versions)
+    )
 }
 
-fn pretty_print_version_updates(versions: dependency::PackageVersionDiffs) -> String {
-    let (versions, (longest_package_name_length, longest_current_version_length)) =
-        format_versions_and_extract_longest_parts(versions);
-
-    let longest_package_name_length = longest_package_name_length.max(7);
-    let longest_current_version_length = longest_current_version_length.max(8);
-
-    let mut output_string = String::new();
-
-    let name_padding = " ".repeat(longest_package_name_length - 6);
-    let current_version_padding = " ".repeat(longest_current_version_length - 7);
-
-    output_string.push_str(
-        &[
-            "Package",
-            &name_padding,
-            " Current",
-            &current_version_padding,
-            "  Latest\n",
-            "-------",
-            &name_padding,
-            " -------",
-            &current_version_padding,
-            "  ------\n",
-        ]
-        .concat(),
-    );
-
-    for (name, v1, v2) in versions {
-        let name_padding = " ".repeat(longest_package_name_length - name.len());
-        let current_version_padding =
-            " ".repeat(longest_current_version_length - v1.to_string().len());
-
-        output_string.push_str(
-            &[
-                &name,
-                &name_padding,
-                "  ",
-                &v1.to_string(),
-                &current_version_padding,
-                "  ",
-                &v2.to_string(),
-                "\n",
-            ]
-            .concat(),
-        );
-    }
-
-    output_string
+fn pretty_print_version_updates(versions: dependency::PackageVersionDiffs) -> EcoString {
+    let versions = format_versions_and_extract_longest_parts(versions);
+    space_table(&["Package", "Current", "Latest"], &versions)
 }
 
 async fn add_missing_packages<Telem: Telemetry>(

@@ -56,9 +56,11 @@ fn list_manifest_format() {
     list_manifest_packages(&mut buffer, manifest).unwrap();
     assert_eq!(
         std::str::from_utf8(&buffer).unwrap(),
-        "root\t1.0.0
-aaa\t0.4.2
-zzz\t0.4.0
+        "Package  Version
+-------  -------
+root     1.0.0
+aaa      0.4.2
+zzz      0.4.0
 "
     )
 }

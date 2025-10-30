@@ -63,6 +63,10 @@
 
   ([Vladislav Shakitskiy](https://github.com/vshakitskiy))
 
+- The format used for `gleam deps list` and the notice of available major
+  version upgrades has been improved.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ### Language server
 
 - The "inline variable" code action can now trigger when used over the let
