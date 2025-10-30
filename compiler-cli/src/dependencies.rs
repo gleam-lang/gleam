@@ -38,7 +38,7 @@ use crate::{
     TreeOptions,
     build_lock::{BuildLock, Guard},
     cli,
-    fs::{self, ProjectIO, get_os},
+    fs::{self, ProjectIO},
     http::HttpClient,
     text_layout::space_table,
 };
@@ -802,7 +802,7 @@ fn execute_command(command: &mut Command) -> Result<std::process::Output> {
         Err(error) => Err(match error.kind() {
             ErrorKind::NotFound => Error::ShellProgramNotFound {
                 program: "git".into(),
-                os: get_os(),
+                os: fs::get_os(),
             },
 
             other => Error::ShellCommand {
