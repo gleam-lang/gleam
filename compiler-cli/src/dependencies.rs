@@ -411,41 +411,28 @@ fn format_versions_and_extract_longest_parts(
     versions: dependency::PackageVersionDiffs,
 ) -> (
     impl Iterator<Item = (String, String, String)>,
-    (usize, usize, usize),
+    (usize, usize),
 ) {
     let versions = versions
         .iter()
         .map(|(name, (v1, v2))| (name.to_string(), v1.to_string(), v2.to_string()))
         .sorted();
 
-    let longest_parts = versions.clone().fold(
-        (0, 0, 0),
-        |(max_name, max_current, max_latest), (name, current, latest)| {
-            (
-                max_name.max(name.len()),
-                max_current.max(current.len()),
-                max_latest.max(latest.len()),
-            )
-        },
-    );
+    let longest_parts =
+        versions
+            .clone()
+            .fold((0, 0), |(max_name, max_current), (name, current, _)| {
+                (max_name.max(name.len()), max_current.max(current.len()))
+            });
 
     (versions, longest_parts)
 }
 
 fn pretty_print_major_versions_available(versions: dependency::PackageVersionDiffs) -> String {
-    let total_lines = versions.len() + 3;
-    let (
-        versions,
-        (longest_package_name_length, longest_current_version_length, longest_major_version_length),
-    ) = format_versions_and_extract_longest_parts(versions);
+    let (versions, (longest_package_name_length, longest_current_version_length)) =
+        format_versions_and_extract_longest_parts(versions);
 
-    let mut output_string = String::with_capacity(
-        (longest_package_name_length
-            + longest_current_version_length
-            + longest_major_version_length
-            + 5)
-            * total_lines,
-    );
+    let mut output_string = String::new();
 
     output_string.push_str("\nThe following dependencies have new major versions available:\n\n");
     for (name, v1, v2) in versions {
@@ -472,29 +459,15 @@ fn pretty_print_major_versions_available(versions: dependency::PackageVersionDif
 }
 
 fn pretty_print_version_updates(versions: dependency::PackageVersionDiffs) -> String {
-    let total_lines = versions.len() + 1;
-    let (
-        versions,
-        (
-            longest_package_name_length,
-            longest_current_version_length,
-            longest_latest_version_length,
-        ),
-    ) = format_versions_and_extract_longest_parts(versions);
+    let (versions, (longest_package_name_length, longest_current_version_length)) =
+        format_versions_and_extract_longest_parts(versions);
 
     let longest_package_name_length = longest_package_name_length.max(7);
-    let longest_current_version_length = (longest_current_version_length + 1).max(7);
-    let longest_latest_version_length = (longest_latest_version_length + 1).max(6);
+    let longest_current_version_length = longest_current_version_length.max(8);
 
-    let mut output_string = String::with_capacity(
-        (longest_package_name_length
-            + longest_current_version_length
-            + longest_latest_version_length
-            + 3)
-            * total_lines,
-    );
+    let mut output_string = String::new();
 
-    let name_padding = " ".repeat(longest_package_name_length - 7);
+    let name_padding = " ".repeat(longest_package_name_length - 6);
     let current_version_padding = " ".repeat(longest_current_version_length - 7);
 
     output_string.push_str(
@@ -503,7 +476,12 @@ fn pretty_print_version_updates(versions: dependency::PackageVersionDiffs) -> St
             &name_padding,
             " Current",
             &current_version_padding,
-            " Latest\n",
+            "  Latest\n",
+            "-------",
+            &name_padding,
+            " -------",
+            &current_version_padding,
+            "  ------\n",
         ]
         .concat(),
     );
@@ -511,16 +489,16 @@ fn pretty_print_version_updates(versions: dependency::PackageVersionDiffs) -> St
     for (name, v1, v2) in versions {
         let name_padding = " ".repeat(longest_package_name_length - name.len());
         let current_version_padding =
-            " ".repeat(longest_current_version_length - 1 - v1.to_string().len());
+            " ".repeat(longest_current_version_length - v1.to_string().len());
 
         output_string.push_str(
             &[
                 &name,
                 &name_padding,
-                " v",
+                "  ",
                 &v1.to_string(),
                 &current_version_padding,
-                " v",
+                "  ",
                 &v2.to_string(),
                 "\n",
             ]

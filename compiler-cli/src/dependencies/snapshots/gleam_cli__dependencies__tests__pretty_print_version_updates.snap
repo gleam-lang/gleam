@@ -1,8 +1,11 @@
 ---
 source: compiler-cli/src/dependencies/tests.rs
+assertion_line: 1373
 expression: output
+snapshot_kind: text
 ---
-Package                Current   Latest
-gleam_stdlib           v0.45.0   v0.46.0
-very_long_package_name v12.12.12 v120.12.12
-wisp                   v2.1.0    v2.1.1
+Package                 Current   Latest
+-------                 -------   ------
+gleam_stdlib            0.45.0    0.46.0
+very_long_package_name  12.12.12  120.12.12
+wisp                    2.1.0     2.1.1
