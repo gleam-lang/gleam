@@ -51,9 +51,10 @@ use vec1::Vec1;
 
 use self::imports::Importer;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum Inferred<T> {
     Known(T),
+    #[default]
     Unknown,
 }
 

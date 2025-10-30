@@ -2522,12 +2522,6 @@ impl<T> BitArraySize<T> {
     }
 }
 
-impl Default for Inferred<()> {
-    fn default() -> Self {
-        Self::Unknown
-    }
-}
-
 pub type TypedTailPattern = TailPattern<Arc<Type>>;
 
 pub type UntypedTailPattern = TailPattern<()>;

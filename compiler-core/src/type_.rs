@@ -1375,10 +1375,13 @@ pub struct ValueConstructor {
     pub type_: Arc<Type>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Default)]
 pub enum Deprecation {
+    #[default]
     NotDeprecated,
-    Deprecated { message: EcoString },
+    Deprecated {
+        message: EcoString,
+    },
 }
 
 impl Deprecation {
@@ -1388,12 +1391,6 @@ impl Deprecation {
     #[must_use]
     pub fn is_deprecated(&self) -> bool {
         matches!(self, Self::Deprecated { .. })
-    }
-}
-
-impl Default for Deprecation {
-    fn default() -> Self {
-        Self::NotDeprecated
     }
 }
 
