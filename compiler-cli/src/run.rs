@@ -412,91 +412,99 @@ fn get_or_suggest_main_function(
     Err(error)
 }
 
-#[test]
-fn invalid_module_names() {
-    for mod_name in [
-        "",
-        "/mod/name",
-        "/mod/name/",
-        "mod/name/",
-        "/mod/",
-        "mod/",
-        "common-invalid-character",
-    ] {
-        assert!(!is_gleam_module(mod_name));
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn invalid_module_names() {
+        for mod_name in [
+            "",
+            "/mod/name",
+            "/mod/name/",
+            "mod/name/",
+            "/mod/",
+            "mod/",
+            "common-invalid-character",
+        ] {
+            assert!(!is_gleam_module(mod_name));
+        }
     }
-}
 
-#[test]
-fn valid_module_names() {
-    for mod_name in ["valid", "valid/name", "valid/mod/name"] {
-        assert!(is_gleam_module(mod_name));
+    #[test]
+    fn valid_module_names() {
+        for mod_name in ["valid", "valid/name", "valid/mod/name"] {
+            assert!(is_gleam_module(mod_name));
+        }
     }
-}
-///Build a throw-away directory under the system TMP dir.
-fn fresh_tmp_dir() -> Utf8PathBuf {
-    use std::{env, fs, time::*};
-    let mut dir = env::temp_dir();
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
-    dir.push(format!("gleam_run_test_{nanos:x}"));
-    fs::create_dir_all(&dir).unwrap();
-    Utf8PathBuf::from_path_buf(dir).expect("temp dir is valid UTF-8")
-}
 
-/// Create the minimal directory structure that `run_erlang_command` walks
-fn prepare_erlang_build_tree(root: &std::path::Path) {
-    use std::fs;
-    let ebin = root
-        .join("build")
-        .join("dev")
-        .join("erlang")
-        .join("dummy_pkg")
-        .join("ebin");
-    fs::create_dir_all(ebin).unwrap();
-}
+    // Unit tests for #4771 (application_start_module interferes with gleam run -m command)
 
-#[test]
-fn run_erlang_command_uses_entrypoint_when_requested() {
-    use gleam_core::paths::ProjectPaths;
-    let root = fresh_tmp_dir();
-    prepare_erlang_build_tree(root.as_std_path());
-    let paths = ProjectPaths::new(root);
-    //call helper with entry point
-    let cmd = run_erlang_command(&paths, "myApp", "foo/bar", Vec::new(), true)
-        .expect("command build failed");
+    ///Build a throw-away directory under the system TMP dir.
+    fn fresh_tmp_dir() -> Utf8PathBuf {
+        use std::{env, fs, time::*};
+        let mut dir = env::temp_dir();
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        dir.push(format!("gleam_run_test_{nanos:x}"));
+        fs::create_dir_all(&dir).unwrap();
+        Utf8PathBuf::from_path_buf(dir).expect("temp dir is valid UTF-8")
+    }
 
-    let eval_arg = cmd
-        .args
-        .iter()
-        .skip_while(|s| *s != "-eval")
-        .nth(1)
-        .expect("no -eval arg produced");
-    assert!(
-        eval_arg.contains("@@main:run("),
-        "expected entry-point call, got {eval_arg}"
-    );
-}
+    /// Create the minimal directory structure that `run_erlang_command` walks
+    fn prepare_erlang_build_tree(root: &std::path::Path) {
+        use std::fs;
+        let ebin = root
+            .join("build")
+            .join("dev")
+            .join("erlang")
+            .join("dummy_pkg")
+            .join("ebin");
+        fs::create_dir_all(ebin).unwrap();
+    }
 
-#[test]
-fn run_erlang_command_skips_entrypoint_when_module_flag_used() {
-    use gleam_core::paths::ProjectPaths;
-    let root = fresh_tmp_dir();
-    prepare_erlang_build_tree(root.as_std_path());
-    let paths = ProjectPaths::new(root);
-    //call helper without entry point
-    let cmd = run_erlang_command(&paths, "myApp", "foo/bar", Vec::new(), false)
-        .expect("command build failed");
-    let eval_arg = cmd
-        .args
-        .iter()
-        .skip_while(|s| *s != "-eval")
-        .nth(1)
-        .expect("no -eval arg produced");
-    assert!(
-        eval_arg.ends_with(":main(), init:stop()"),
-        "expected direct main/0 call followed by init:stop(), got {eval_arg}"
-    );
+    #[test]
+    fn run_erlang_command_uses_entrypoint_when_requested() {
+        use gleam_core::paths::ProjectPaths;
+        let root = fresh_tmp_dir();
+        prepare_erlang_build_tree(root.as_std_path());
+        let paths = ProjectPaths::new(root);
+        //call helper with entry point
+        let cmd = run_erlang_command(&paths, "myApp", "foo/bar", Vec::new(), true)
+            .expect("command build failed");
+
+        let eval_arg = cmd
+            .args
+            .iter()
+            .skip_while(|s| *s != "-eval")
+            .nth(1)
+            .expect("no -eval arg produced");
+        assert!(
+            eval_arg.contains("@@main:run("),
+            "expected entry-point call, got {eval_arg}"
+        );
+    }
+
+    #[test]
+    fn run_erlang_command_skips_entrypoint_when_module_flag_used() {
+        use gleam_core::paths::ProjectPaths;
+        let root = fresh_tmp_dir();
+        prepare_erlang_build_tree(root.as_std_path());
+        let paths = ProjectPaths::new(root);
+        //call helper without entry point
+        let cmd = run_erlang_command(&paths, "myApp", "foo/bar", Vec::new(), false)
+            .expect("command build failed");
+        let eval_arg = cmd
+            .args
+            .iter()
+            .skip_while(|s| *s != "-eval")
+            .nth(1)
+            .expect("no -eval arg produced");
+        assert!(
+            eval_arg.ends_with(":main(), init:stop()"),
+            "expected direct main/0 call followed by init:stop(), got {eval_arg}"
+        );
+    }
 }
