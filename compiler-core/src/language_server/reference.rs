@@ -366,19 +366,126 @@ pub struct FindVariableReferences {
     // To avoid this, we use a `HashSet` instead of a `Vec` here.
     // See: https://github.com/gleam-lang/gleam/issues/4859 and the linked PR.
     references: HashSet<VariableReference>,
-    definition_location: SrcSpan,
+    definition_location: DefinitionLocation,
     alternative_variable: AlternativeVariable,
     name: EcoString,
+}
+
+/// Where the variable we're finding references for is defined.
+///
+enum DefinitionLocation {
+    /// This is the location where the variable is defined, nothing special is
+    /// going on here. For example:
+    ///
+    /// ```gleam
+    ///    let wibble = 1
+    /// //   ^^^^^^ Definition location for `wibble`
+    ///    wibble + 1
+    ///    ^^^^^^
+    /// // `wibble` used here, defined earlier
+    /// ```
+    ///
+    Regular { location: SrcSpan },
+
+    /// When dealing with alternative patterns and aliases we need special care:
+    /// each usage wil always reference the first alternative where a variable
+    /// is defined and not the following ones. For example:
+    ///
+    /// ```gleam
+    /// case wibble {
+    ///   [] as var | [_] as var -> var
+    ///   //    ^^^                 ^^^ If we look where `var` thinks it's defined
+    ///   //    It will say it's defined here!
+    /// }
+    /// ```
+    ///
+    /// This poses a problem if we start the renaming from the second
+    /// alternative pattern:
+    ///
+    /// ```gleam
+    /// case wibble {
+    ///   [] as var | [_] as var -> var
+    ///   //                 ^^^ Since `var` uses the first alternative as its
+    ///   //                     definition location, this would not be considered
+    ///   //                     a reference to that same var.
+    /// }
+    /// ```
+    ///
+    /// So we keep track of the location of this definition, but we also need
+    /// to store the location of the first definition in the alternative case
+    /// (that's `first_alternative_location`), so that when we look for
+    /// references we can check against this one that is canonically used by
+    /// expressions in the AST
+    ///
+    Alternative {
+        location: SrcSpan,
+        first_alternative_location: SrcSpan,
+    },
 }
 
 impl FindVariableReferences {
     pub fn new(variable_definition_location: SrcSpan, variable_name: EcoString) -> Self {
         Self {
             references: HashSet::new(),
-            definition_location: variable_definition_location,
+            definition_location: DefinitionLocation::Regular {
+                location: variable_definition_location,
+            },
             alternative_variable: AlternativeVariable::Ignore,
             name: variable_name,
         }
+    }
+
+    /// Where the definition for which we're accumulating references is
+    /// originally defined. In case of alternative patterns this will point to
+    /// the first occurrence of that name! Look at the docs for
+    /// `DefinitionLocation` to learn more on why this is needed.
+    ///
+    fn definition_origin_location(&self) -> SrcSpan {
+        match self.definition_location {
+            DefinitionLocation::Regular { location }
+            | DefinitionLocation::Alternative {
+                first_alternative_location: location,
+                ..
+            } => location,
+        }
+    }
+
+    /// This is the location of the definition for which we're accumulating
+    /// references. In most cases you'll want to use `definition_origin_location`.
+    /// The difference between the two is explained in greater detail in the docs
+    /// for `DefinitionLocation`.
+    ///
+    fn definition_location(&self) -> SrcSpan {
+        match self.definition_location {
+            DefinitionLocation::Regular { location }
+            | DefinitionLocation::Alternative { location, .. } => location,
+        }
+    }
+
+    fn update_alternative_origin(&mut self, alternative_location: SrcSpan) {
+        match self.definition_location {
+            // We've found the location of the origin of an alternative pattern.
+            DefinitionLocation::Regular { location } if alternative_location < location => {
+                self.definition_location = DefinitionLocation::Alternative {
+                    location,
+                    first_alternative_location: alternative_location,
+                };
+            }
+
+            // Since the new alternative location we've found is smaller, that
+            // is the actual first one for the alternative pattern!
+            DefinitionLocation::Alternative {
+                location,
+                first_alternative_location,
+            } if alternative_location < first_alternative_location => {
+                self.definition_location = DefinitionLocation::Alternative {
+                    location,
+                    first_alternative_location: alternative_location,
+                };
+            }
+
+            _ => (),
+        };
     }
 
     pub fn find_in_module(mut self, module: &TypedModule) -> HashSet<VariableReference> {
@@ -394,7 +501,10 @@ impl FindVariableReferences {
 
 impl<'ast> Visit<'ast> for FindVariableReferences {
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
-        if fun.full_location().contains(self.definition_location.start) {
+        if fun
+            .full_location()
+            .contains(self.definition_origin_location().start)
+        {
             ast::visit::visit_typed_function(self, fun);
         }
     }
@@ -409,7 +519,7 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
             ValueConstructorVariant::LocalVariable {
                 location: definition_location,
                 ..
-            } if definition_location == self.definition_location => {
+            } if definition_location == self.definition_origin_location() => {
                 _ = self.references.insert(VariableReference {
                     location: *location,
                     kind: VariableReferenceKind::Variable,
@@ -426,7 +536,7 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
         _type_: &'ast std::sync::Arc<Type>,
         definition_location: &'ast SrcSpan,
     ) {
-        if *definition_location == self.definition_location {
+        if *definition_location == self.definition_origin_location() {
             _ = self.references.insert(VariableReference {
                 location: *location,
                 kind: VariableReferenceKind::Variable,
@@ -440,7 +550,7 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
         // of the target variable.
         if clause
             .pattern_location()
-            .contains(self.definition_location.start)
+            .contains(self.definition_origin_location().start)
         {
             self.alternative_variable = AlternativeVariable::Track;
         }
@@ -476,8 +586,10 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
             // the exact variable though, as that would result in a duplicated
             // reference.
             AlternativeVariable::Track
-                if *name == self.name && *location != self.definition_location =>
+                if *name == self.name && *location != self.definition_location() =>
             {
+                self.update_alternative_origin(*location);
+
                 _ = self.references.insert(VariableReference {
                     location: *location,
                     kind: VariableReferenceKind::Variable,
@@ -485,6 +597,34 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
             }
             AlternativeVariable::Track | AlternativeVariable::Ignore => {}
         }
+    }
+
+    fn visit_typed_pattern_assign(
+        &mut self,
+        location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        pattern: &'ast ast::TypedPattern,
+    ) {
+        match self.alternative_variable {
+            // If we are inside the same alternative pattern as the target
+            // variable and the name is the same, this is an alternative definition
+            // of the same variable. We don't register the reference if this is
+            // the exact variable though, as that would result in a duplicated
+            // reference.
+            AlternativeVariable::Track
+                if *name == self.name && *location != self.definition_location() =>
+            {
+                self.update_alternative_origin(*location);
+
+                _ = self.references.insert(VariableReference {
+                    location: *location,
+                    kind: VariableReferenceKind::Variable,
+                });
+            }
+            AlternativeVariable::Track | AlternativeVariable::Ignore => {}
+        }
+
+        ast::visit::visit_typed_pattern_assign(self, location, name, pattern);
     }
 
     fn visit_typed_bit_array_size_variable(
@@ -502,7 +642,7 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
             ValueConstructorVariant::LocalVariable {
                 location: definition_location,
                 ..
-            } if *definition_location == self.definition_location => {
+            } if *definition_location == self.definition_origin_location() => {
                 _ = self.references.insert(VariableReference {
                     location: *location,
                     kind: VariableReferenceKind::Variable,
@@ -524,7 +664,7 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
                     location: definition_location,
                     ..
                 } if arg.uses_label_shorthand()
-                    && *definition_location == self.definition_location =>
+                    && *definition_location == self.definition_origin_location() =>
                 {
                     _ = self.references.insert(VariableReference {
                         location: *location,

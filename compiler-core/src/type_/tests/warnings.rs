@@ -4130,6 +4130,76 @@ fn int_literals_redundant_comparison_8() {
 }
 
 #[test]
+fn float_literals_redundant_comparison() {
+    assert_warning!("pub fn main() { 1.0 == 1.0 }");
+}
+
+#[test]
+fn float_literals_redundant_comparison_2() {
+    assert_warning!("pub fn main() { 1.0 == 2.0 }");
+}
+
+#[test]
+fn float_literals_redundant_comparison_3() {
+    assert_warning!("pub fn main() { 1.0 != 1.0 }");
+}
+
+#[test]
+fn float_literals_redundant_comparison_4() {
+    assert_warning!("pub fn main() { 1.0 != 2.0 }");
+}
+
+#[test]
+fn float_literals_redundant_comparison_5() {
+    assert_warning!("pub fn main() { 1.0 >. 2.0 }");
+}
+
+#[test]
+fn float_literals_redundant_comparison_6() {
+    assert_warning!("pub fn main() { 1.0 <=. 2.0 }");
+}
+
+#[test]
+fn float_literals_redundant_comparison_7() {
+    assert_warning!("pub fn main() { 1.0 <. 2.0 }");
+}
+
+#[test]
+fn float_literals_redundant_comparison_8() {
+    assert_warning!("pub fn main() { 1.0 >=. 2.0 }");
+}
+
+#[test]
+fn float_literals_redundant_comparison_different_repr() {
+    assert_warning!("pub fn main() { 1_0.0 == 10.0 }");
+}
+
+#[test]
+fn float_literals_redundant_comparison_different_repr_2() {
+    assert_warning!("pub fn main() { 10.0 == 1.0e1 }");
+}
+
+#[test]
+fn float_literals_redundant_comparison_precision_loss() {
+    assert_warning!("pub fn main() { 1.0e-500 == 1.0e-600 }");
+}
+
+#[test]
+fn float_literals_redundant_comparison_infinity() {
+    assert_warning!("pub fn main() { 1.0e500 == 1.0e600 }");
+}
+
+#[test]
+fn float_literals_redundant_comparison_signed_zero() {
+    assert_warning!("pub fn main() { 0.0 == -0.0 }");
+}
+
+#[test]
+fn float_literals_redundant_comparison_omitted_zero() {
+    assert_warning!("pub fn main() { 10. == 10.0 }");
+}
+
+#[test]
 fn bool_literals_redundant_comparison() {
     assert_warning!("pub fn main() { True == False }");
 }

@@ -517,11 +517,12 @@ where
                 }
             }
 
-            Some((start, Token::Float { value }, end)) => {
+            Some((start, Token::Float { value, float_value }, end)) => {
                 self.advance();
                 UntypedExpr::Float {
                     location: SrcSpan { start, end },
                     value,
+                    float_value,
                 }
             }
 
@@ -1277,22 +1278,14 @@ where
                         }
                     }
                 } else {
-                    match name.as_str() {
-                        "true" | "false" => {
-                            return parse_error(
-                                ParseErrorType::LowcaseBooleanPattern,
-                                SrcSpan { start, end },
-                            );
-                        }
-                        _ => Pattern::Variable {
-                            origin: VariableOrigin {
-                                syntax: VariableSyntax::Variable(name.clone()),
-                                declaration: position.to_declaration(),
-                            },
-                            location: SrcSpan { start, end },
-                            name,
-                            type_: (),
+                    Pattern::Variable {
+                        origin: VariableOrigin {
+                            syntax: VariableSyntax::Variable(name.clone()),
+                            declaration: position.to_declaration(),
                         },
+                        location: SrcSpan { start, end },
+                        name,
+                        type_: (),
                     }
                 }
             }
@@ -1401,11 +1394,12 @@ where
                     int_value,
                 }
             }
-            Some((start, Token::Float { value }, end)) => {
+            Some((start, Token::Float { value, float_value }, end)) => {
                 self.advance();
                 Pattern::Float {
                     location: SrcSpan { start, end },
                     value,
+                    float_value,
                 }
             }
             Some((start, Token::Hash, _)) => {
@@ -3117,11 +3111,12 @@ where
                 }))
             }
 
-            Some((start, Token::Float { value }, end)) => {
+            Some((start, Token::Float { value, float_value }, end)) => {
                 self.advance();
                 Ok(Some(Constant::Float {
                     value,
                     location: SrcSpan { start, end },
+                    float_value,
                 }))
             }
 
@@ -4715,5 +4710,50 @@ impl PatternPosition {
             PatternPosition::CaseClause => VariableDeclaration::ClausePattern,
             PatternPosition::UsePattern => VariableDeclaration::UsePattern,
         }
+    }
+}
+
+/// A thin f64 wrapper that does not permit NaN.
+/// This allows us to implement `Eq`, which require reflexivity.
+///
+/// Used for gleam float literals, which cannot be NaN.
+/// While there is no syntax for "infinity", float literals
+/// may overflow into (possibly negative) infinity on the JS target.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct LiteralFloatValue(f64);
+
+impl LiteralFloatValue {
+    pub const ONE: Self = LiteralFloatValue(1.0);
+    pub const ZERO: Self = LiteralFloatValue(0.0);
+
+    /// Parse from a string, returning `None` if the string
+    /// is not a valid f64 or the float is `NaN``
+    pub fn parse(value: &str) -> Option<Self> {
+        value
+            .replace("_", "")
+            .parse::<f64>()
+            .ok()
+            .filter(|f| !f.is_nan())
+            .map(LiteralFloatValue)
+    }
+
+    pub fn value(&self) -> f64 {
+        self.0
+    }
+}
+
+impl Eq for LiteralFloatValue {}
+
+impl Ord for LiteralFloatValue {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0
+            .partial_cmp(&other.0)
+            .expect("Only NaN comparisons should fail")
+    }
+}
+
+impl PartialOrd for LiteralFloatValue {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }

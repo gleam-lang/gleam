@@ -65,26 +65,39 @@ where
 */
 pub type PackageVersionDiffs = HashMap<String, (Version, Version)>;
 
-fn resolve_major_versions(
+fn resolve_versions_diffs(
     package_fetcher: &impl PackageFetcher,
     versions: PackageVersions,
+    check_major_versions: bool,
 ) -> PackageVersionDiffs {
     versions
         .iter()
         .filter_map(|(package, version)| {
-            let Ok(hexpackage) = package_fetcher.get_dependencies(package) else {
+            let Ok(hex_package) = package_fetcher.get_dependencies(package) else {
                 return None;
             };
 
-            let latest = hexpackage
+            let latest = hex_package
                 .releases
                 .iter()
                 .map(|release| &release.version)
                 .filter(|version| !version.is_pre())
                 .max()?;
 
-            if latest.major <= version.major {
-                return None;
+            // If we're checking for major version updates, only include the
+            // package if a new major version is available. Otherwise, include
+            // the package if there is any new version available.
+            match check_major_versions {
+                true => {
+                    if latest.major <= version.major {
+                        return None;
+                    }
+                }
+                false => {
+                    if latest <= version {
+                        return None;
+                    }
+                }
             }
 
             Some((package.to_string(), (version.clone(), latest.clone())))
@@ -98,9 +111,7 @@ pub fn check_for_major_version_updates(
     manifest: &manifest::Manifest,
     package_fetcher: &impl PackageFetcher,
 ) -> PackageVersionDiffs {
-    // get the resolved versions of the direct dependencies to check for major
-    // version updates.
-    let versions = manifest
+    let versions: PackageVersions = manifest
         .packages
         .iter()
         .filter(|manifest_package| {
@@ -112,7 +123,28 @@ pub fn check_for_major_version_updates(
         .map(|manifest_pkg| (manifest_pkg.name.to_string(), manifest_pkg.version.clone()))
         .collect();
 
-    resolve_major_versions(package_fetcher, versions)
+    resolve_versions_diffs(package_fetcher, versions, true)
+}
+
+/// Check for version updates for direct and transitive dependencies that are being blocked by some version
+/// constraints.
+pub fn check_for_version_updates(
+    manifest: &manifest::Manifest,
+    package_fetcher: &impl PackageFetcher,
+) -> PackageVersionDiffs {
+    let versions = manifest
+        .packages
+        .iter()
+        .filter(|manifest_package| {
+            matches!(
+                manifest_package.source,
+                manifest::ManifestPackageSource::Hex { .. }
+            )
+        })
+        .map(|manifest_pkg| (manifest_pkg.name.to_string(), manifest_pkg.version.clone()))
+        .collect();
+
+    resolve_versions_diffs(package_fetcher, versions, false)
 }
 
 // If the string would parse to an exact version then return the version

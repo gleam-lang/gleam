@@ -39,6 +39,7 @@ use crate::{
     cli,
     fs::{self, ProjectIO},
     http::HttpClient,
+    text_layout::space_table,
 };
 
 struct Symbols {
@@ -111,14 +112,17 @@ fn get_manifest_details(paths: &ProjectPaths) -> Result<(PackageConfig, Manifest
 }
 
 fn list_manifest_packages<W: std::io::Write>(mut buffer: W, manifest: Manifest) -> Result<()> {
-    manifest
+    let packages = manifest
         .packages
         .into_iter()
-        .try_for_each(|package| writeln!(buffer, "{}\t{}", package.name, package.version))
-        .map_err(|e| Error::StandardIo {
-            action: StandardIoAction::Write,
-            err: Some(e.kind()),
-        })
+        .map(|package| vec![package.name.to_string(), package.version.to_string()])
+        .collect_vec();
+    let out = space_table(&["Package", "Version"], packages);
+
+    write!(buffer, "{}", out).map_err(|e| Error::StandardIo {
+        action: StandardIoAction::Write,
+        err: Some(e.kind()),
+    })
 }
 
 fn list_package_and_dependencies_tree<W: std::io::Write>(
@@ -212,6 +216,21 @@ fn list_dependencies_tree(
     }
 
     tree
+}
+
+pub fn outdated(paths: &ProjectPaths) -> Result<()> {
+    let (_, manifest) = get_manifest_details(paths)?;
+
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let package_fetcher = PackageFetcher::new(runtime.handle().clone());
+
+    let version_updates = dependency::check_for_version_updates(&manifest, &package_fetcher);
+
+    if !version_updates.is_empty() {
+        print!("{}", pretty_print_version_updates(version_updates));
+    }
+
+    Ok(())
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -392,56 +411,28 @@ pub fn resolve_and_download<Telem: Telemetry>(
     dependency_manager.resolve_and_download_versions(paths, new_package, packages_to_update)
 }
 
-fn pretty_print_major_versions_available(versions: dependency::PackageVersionDiffs) -> String {
-    let total_lines = versions.len() + 3;
-    let versions = versions
+fn format_versions_and_extract_longest_parts(
+    versions: dependency::PackageVersionDiffs,
+) -> Vec<Vec<String>> {
+    versions
         .iter()
-        .map(|(name, (v1, v2))| (name, v1.to_string(), v2.to_string()))
-        .sorted();
+        .map(|(name, (v1, v2))| vec![name.to_string(), v1.to_string(), v2.to_string()])
+        .sorted()
+        .collect_vec()
+}
 
-    let longest_parts = versions.clone().fold(
-        (0, 0, 0),
-        |(max_name, max_curr, max_major), (name, curr, major)| {
-            (
-                max_name.max(name.len()),
-                max_curr.max(curr.len()),
-                max_major.max(major.len()),
-            )
-        },
-    );
+fn pretty_print_major_versions_available(versions: dependency::PackageVersionDiffs) -> String {
+    let versions = format_versions_and_extract_longest_parts(versions);
 
-    let (longest_package_name_length, longest_current_version_length, longest_major_version_length) =
-        longest_parts;
+    format!(
+        "\nThe following dependencies have new major versions available:\n\n{}",
+        space_table(&["Package", "Current", "Latest"], &versions)
+    )
+}
 
-    let mut output_string = String::with_capacity(
-        (longest_package_name_length
-            + longest_current_version_length
-            + longest_major_version_length
-            + 5)
-            * total_lines,
-    );
-
-    output_string.push_str("\nThe following dependencies have new major versions available:\n\n");
-    for (name, v1, v2) in versions {
-        let name_padding = " ".repeat(longest_package_name_length - name.len());
-        let curr_ver_padding = " ".repeat(longest_current_version_length - v1.to_string().len());
-
-        output_string.push_str(
-            &[
-                name,
-                &name_padding,
-                " ",
-                &v1.to_string(),
-                &curr_ver_padding,
-                " -> ",
-                &v2.to_string(),
-                "\n",
-            ]
-            .concat(),
-        );
-    }
-
-    output_string
+fn pretty_print_version_updates(versions: dependency::PackageVersionDiffs) -> EcoString {
+    let versions = format_versions_and_extract_longest_parts(versions);
+    space_table(&["Package", "Current", "Latest"], &versions)
 }
 
 async fn add_missing_packages<Telem: Telemetry>(

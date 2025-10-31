@@ -31,6 +31,10 @@
 
 - Optimizations for singleton types in the JS backend (singleton types get compared using `instanceof` instead of `isEqual(new Variant())`).
   ([Nafi](https://github.com/re-masashi))
+- The lowercase bool pattern error is no longer a syntax error, but instead a
+  part of the analysis step. This allows the entire module to be analyzed, rather
+  than stopping at the syntax error.
+  ([mxtthias](https://github.com/mxtthias))
 
 ### Build tool
 
@@ -48,6 +52,23 @@
   Elixir file in a Gleam project.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The build tool now has a new `gleam deps outdated` command that shows outdated
+  versions for dependencies. For example:
+
+  ```sh
+  $ gleam deps outdated
+  Package  Current  Latest
+  -------  -------  ------
+  wibble   1.4.0    1.4.1
+  wobble   1.0.1    2.3.0
+  ```
+
+  ([Vladislav Shakitskiy](https://github.com/vshakitskiy))
+
+- The format used for `gleam deps list` and the notice of available major
+  version upgrades has been improved.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ### Language server
 
 - The "inline variable" code action can now trigger when used over the let
@@ -61,6 +82,10 @@
 ### Formatter
 
 ### Bug fixes
+
+- Fixed a bug where renaming a variable from an alternative pattern would not
+  rename all its occurrences.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - Fixed a typo in the error message emitted when trying to run a module that
   does not have a main function.
@@ -90,3 +115,7 @@
 - Fixed a bug where the "pattern match on variable" code action would generate
   invalid patterns by repeating a variable name already used in the same pattern.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where useless comparison warnings for floats compared literal
+  strings, claiming for example that `1.0 == 1.` was always false.
+  ([fruno](https://github.com/fruno-bulax/))

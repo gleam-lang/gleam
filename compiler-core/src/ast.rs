@@ -15,7 +15,7 @@ use crate::analyse::Inferred;
 use crate::bit_array;
 use crate::build::{ExpressionPosition, Located, Target, module_erlang_name};
 use crate::exhaustiveness::CompiledCase;
-use crate::parse::SpannedString;
+use crate::parse::{LiteralFloatValue, SpannedString};
 use crate::type_::error::VariableOrigin;
 use crate::type_::expression::{Implementations, Purity};
 use crate::type_::printer::Names;
@@ -1739,11 +1739,11 @@ fn pattern_and_expression_are_the_same(pattern: &TypedPattern, expression: &Type
         // `"wibble" -> "wibble"`
         (
             TypedPattern::Float {
-                value: pattern_value,
+                float_value: pattern_value,
                 ..
             },
-            TypedExpr::Float { value, .. },
-        ) => pattern_value == value,
+            TypedExpr::Float { float_value, .. },
+        ) => pattern_value == float_value,
         (TypedPattern::Float { .. }, _) => false,
 
         (
@@ -2356,6 +2356,7 @@ pub enum Pattern<Type> {
     Float {
         location: SrcSpan,
         value: EcoString,
+        float_value: LiteralFloatValue,
     },
 
     String {

@@ -56,9 +56,11 @@ fn list_manifest_format() {
     list_manifest_packages(&mut buffer, manifest).unwrap();
     assert_eq!(
         std::str::from_utf8(&buffer).unwrap(),
-        "root\t1.0.0
-aaa\t0.4.2
-zzz\t0.4.0
+        "Package  Version
+-------  -------
+root     1.0.0
+aaa      0.4.2
+zzz      0.4.0
 "
     )
 }
@@ -1345,6 +1347,30 @@ fn test_pretty_print_major_versions_available() {
     .collect();
 
     let output = pretty_print_major_versions_available(versions);
+
+    insta::assert_snapshot!(output);
+}
+
+#[test]
+fn test_pretty_print_version_updates() {
+    let versions = vec![
+        (
+            "gleam_stdlib".to_string(),
+            (Version::new(0, 45, 0), Version::new(0, 46, 0)),
+        ),
+        (
+            "wisp".to_string(),
+            (Version::new(2, 1, 0), Version::new(2, 1, 1)),
+        ),
+        (
+            "very_long_package_name".to_string(),
+            (Version::new(12, 12, 12), Version::new(120, 12, 12)),
+        ),
+    ]
+    .into_iter()
+    .collect();
+
+    let output = pretty_print_version_updates(versions);
 
     insta::assert_snapshot!(output);
 }

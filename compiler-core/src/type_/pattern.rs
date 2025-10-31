@@ -608,16 +608,22 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 location,
                 origin,
                 ..
-            } => {
-                self.insert_variable(&name, type_.clone(), location, origin.clone());
-
-                Pattern::Variable {
-                    type_,
-                    name,
-                    location,
-                    origin,
+            } => match name.as_str() {
+                "true" | "false" => {
+                    self.error(Error::LowercaseBoolPattern { location });
+                    Pattern::Invalid { location, type_ }
                 }
-            }
+                _ => {
+                    self.insert_variable(&name, type_.clone(), location, origin.clone());
+
+                    Pattern::Variable {
+                        type_,
+                        name,
+                        location,
+                        origin,
+                    }
+                }
+            },
 
             Pattern::BitArraySize(size) => {
                 let location = size.location();
@@ -735,16 +741,24 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 }
             }
 
-            Pattern::Float { location, value } => {
+            Pattern::Float {
+                location,
+                value,
+                float_value,
+            } => {
                 self.unify_types(type_, float(), location);
 
                 if self.environment.target == Target::Erlang
                     && !self.implementations.uses_erlang_externals
                 {
-                    check_erlang_float_safety(&value, location, self.problems)
+                    check_erlang_float_safety(float_value, location, self.problems)
                 }
 
-                Pattern::Float { location, value }
+                Pattern::Float {
+                    location,
+                    value,
+                    float_value,
+                }
             }
 
             Pattern::String { location, value } => {

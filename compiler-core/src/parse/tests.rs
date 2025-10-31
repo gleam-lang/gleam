@@ -363,18 +363,6 @@ fn pointless_spread() {
     );
 }
 
-// https://github.com/gleam-lang/gleam/issues/1358
-#[test]
-fn lowcase_bool_in_pattern() {
-    assert_error!(
-        "case 42 > 42 { true -> 1; false -> 2; }",
-        ParseError {
-            error: ParseErrorType::LowcaseBooleanPattern,
-            location: SrcSpan { start: 15, end: 19 },
-        }
-    );
-}
-
 // https://github.com/gleam-lang/gleam/issues/1613
 #[test]
 fn anonymous_function_labeled_arguments() {
