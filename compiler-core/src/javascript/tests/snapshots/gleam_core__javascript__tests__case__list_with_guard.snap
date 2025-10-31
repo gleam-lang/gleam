@@ -24,8 +24,8 @@ export function go(x) {
     if (first < 10) {
       return first * 2;
     } else {
-      let first$1 = x.head;
-      return first$1;
+      let first = x.head;
+      return first;
     }
   }
 }

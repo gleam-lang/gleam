@@ -20,8 +20,8 @@ export function main() {
   if (i === 1) {
     return true;
   } else {
-    let i$1 = $;
-    if (i$1 < 2) {
+    let i = $;
+    if (i < 2) {
       return true;
     } else {
       return false;
