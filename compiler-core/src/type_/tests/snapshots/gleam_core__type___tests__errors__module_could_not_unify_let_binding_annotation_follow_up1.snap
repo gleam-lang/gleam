@@ -1,12 +1,10 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 748
-expression: "\npub fn main() {\n  let x: String = 5\n  let y: Int = x\n  let z: String = x\n}\n"
-snapshot_kind: text
+expression: "\nfn main() {\n  let x: String = 5\n  let y: Int = x\n  let z: String = x\n}\n"
 ---
 ----- SOURCE CODE
 
-pub fn main() {
+fn main() {
   let x: String = 5
   let y: Int = x
   let z: String = x
