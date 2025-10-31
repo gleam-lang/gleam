@@ -1,0 +1,64 @@
+---
+source: compiler-core/src/javascript/tests/case_clause_guards.rs
+expression: "\npub type Option(a) {\n  Some(a)\n  None\n}\n\npub type Container {\n  Container(x: Option(Int))\n}\n\npub fn main() {\n  let x: Option(Int) = Some(42)\n  case Some(1) {\n    Some(x) if x < 0 -> Container(None)\n    _ -> {\n      Container(x:)\n    }\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub type Option(a) {
+  Some(a)
+  None
+}
+
+pub type Container {
+  Container(x: Option(Int))
+}
+
+pub fn main() {
+  let x: Option(Int) = Some(42)
+  case Some(1) {
+    Some(x) if x < 0 -> Container(None)
+    _ -> {
+      Container(x:)
+    }
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class Some extends $CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+}
+export const Option$Some = ($0) => new Some($0);
+export const Option$isSome = (value) => value instanceof Some;
+export const Option$Some$0 = (value) => value[0];
+
+export class None extends $CustomType {}
+export const Option$None = () => new None();
+export const Option$isNone = (value) => value instanceof None;
+
+export class Container extends $CustomType {
+  constructor(x) {
+    super();
+    this.x = x;
+  }
+}
+export const Container$Container = (x) => new Container(x);
+export const Container$isContainer = (value) => value instanceof Container;
+export const Container$Container$x = (value) => value.x;
+export const Container$Container$0 = (value) => value.x;
+
+export function main() {
+  let x = new Some(42);
+  let $ = new Some(1);
+  let x$1 = $[0];
+  if (x$1 < 0) {
+    return new Container(new None());
+  } else {
+    return new Container(x);
+  }
+}
