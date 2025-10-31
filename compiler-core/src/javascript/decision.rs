@@ -584,20 +584,24 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
             .iter()
             .partition(|(variable, _)| guard_variables.contains(variable));
 
-        let check_bindings = self.variables.bindings_ref_doc(&check_bindings);
-        let check = self.variables.expression_generator.guard(guard);
-        let if_true = self.inside_new_scope(|this| {
+        let (check_bindings, check, if_true) = self.inside_new_scope(|this| {
+            // check_bindings and if_true generation have to be in this scope so that pattern-bound
+            // variables used in guards don't leak into other case branches (if_false).
+            let check_bindings = this.variables.bindings_ref_doc(&check_bindings);
+            let check = this.variables.expression_generator.guard(guard);
             // All the other bindings that are not needed by the guard check will
             // end up directly in the body of the if clause.
             let if_true_bindings = this.variables.bindings_ref_doc(&if_true_bindings);
             let if_true_body = this.body_expression(if_true.clause_index);
-            match if_true_body {
+            let if_true = match if_true_body {
                 BodyExpression::Variable(variable) => variable,
                 BodyExpression::Expressions(if_true_body) => {
                     join_with_line(if_true_bindings, if_true_body)
                 }
-            }
+            };
+            (check_bindings, check, if_true)
         });
+
         let if_false_body = self.inside_new_scope(|this| this.decision(if_false));
 
         // We can now piece everything together into a case body!
