@@ -972,11 +972,12 @@ pub trait UntypedConstantFolder {
                 module,
                 name,
                 arguments,
+                spread,
                 tag: (),
                 type_: (),
                 field_map: _,
                 record_constructor: _,
-            } => self.fold_constant_record(location, module, name, arguments),
+            } => self.fold_constant_record(location, module, name, arguments, spread),
 
             Constant::BitArray { location, segments } => {
                 self.fold_constant_bit_array(location, segments)
@@ -1059,12 +1060,14 @@ pub trait UntypedConstantFolder {
         module: Option<(EcoString, SrcSpan)>,
         name: EcoString,
         arguments: Vec<CallArg<UntypedConstant>>,
+        spread: Option<Box<UntypedConstant>>,
     ) -> UntypedConstant {
         Constant::Record {
             location,
             module,
             name,
             arguments,
+            spread,
             tag: (),
             type_: (),
             field_map: None,
@@ -1146,6 +1149,7 @@ pub trait UntypedConstantFolder {
                 module,
                 name,
                 arguments,
+                spread,
                 tag,
                 type_,
                 field_map,
@@ -1158,11 +1162,13 @@ pub trait UntypedConstantFolder {
                         argument
                     })
                     .collect();
+                let spread = spread.map(|s| Box::new(self.fold_constant(*s)));
                 Constant::Record {
                     location,
                     module,
                     name,
                     arguments,
+                    spread,
                     tag,
                     type_,
                     field_map,
