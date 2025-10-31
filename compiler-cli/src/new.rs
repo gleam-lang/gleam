@@ -204,7 +204,18 @@ jobs:
 
 impl Creator {
     fn new(options: NewOptions, gleam_version: &'static str) -> Result<Self, Error> {
-        let project_name = get_valid_project_name(options.name.clone(), &options.project_root)?;
+        Self::new_with_confirmation(options, gleam_version, crate::cli::confirm)
+    }
+
+    fn new_with_confirmation(
+        mut options: NewOptions,
+        gleam_version: &'static str,
+        confirm: impl Fn(&str) -> Result<bool, Error>,
+    ) -> Result<Self, Error> {
+        let name =
+            get_valid_project_name(options.name.as_deref(), &options.project_root, &confirm)?;
+        options.project_root = name.project_root(&options.project_root);
+
         let root = get_current_directory()?.join(&options.project_root);
         let src = root.join("src");
         let test = root.join("test");
@@ -218,7 +229,7 @@ impl Creator {
             workflows,
             gleam_version,
             options,
-            project_name,
+            project_name: name.decided().to_string(),
         };
 
         validate_root_folder(&me)?;
@@ -406,16 +417,28 @@ fn suggest_valid_name(invalid_name: &str, reason: &InvalidProjectNameReason) -> 
     }
 }
 
-fn get_valid_project_name(name: Option<String>, project_root: &str) -> Result<String, Error> {
-    let initial_name = match name {
-        Some(name) => name,
-        None => get_foldername(project_root)?,
-    }
-    .trim()
-    .to_string();
+fn get_valid_project_name(
+    provided_name: Option<&str>,
+    project_root: &str,
+    confirm: impl Fn(&str) -> Result<bool, Error>,
+) -> Result<ProjectName, Error> {
+    let initial_name = match provided_name {
+        Some(name) => name.trim().to_string(),
+        None => get_foldername(project_root)?.trim().to_string(),
+    };
 
     let invalid_reason = match validate_name(&initial_name) {
-        Ok(_) => return Ok(initial_name),
+        Ok(_) => {
+            return Ok(match provided_name {
+                Some(_) => ProjectName::Provided {
+                    decided: initial_name,
+                },
+                None => ProjectName::Derived {
+                    folder: initial_name.clone(),
+                    decided: initial_name,
+                },
+            });
+        }
         Err(Error::InvalidProjectName { reason, .. }) => reason,
         Err(error) => return Err(error),
     };
@@ -429,18 +452,29 @@ fn get_valid_project_name(name: Option<String>, project_root: &str) -> Result<St
             });
         }
     };
+
     let prompt_for_suggested_name = error::format_invalid_project_name_error(
         &initial_name,
         &invalid_reason,
         &Some(suggested_name.clone()),
     );
-    match crate::cli::confirm(&prompt_for_suggested_name)? {
-        true => Ok(suggested_name),
-        false => Err(Error::InvalidProjectName {
-            name: initial_name,
-            reason: invalid_reason,
-        }),
+
+    if confirm(&prompt_for_suggested_name)? {
+        return Ok(match provided_name {
+            Some(_) => ProjectName::Provided {
+                decided: suggested_name,
+            },
+            None => ProjectName::Derived {
+                folder: initial_name,
+                decided: suggested_name,
+            },
+        });
     }
+
+    Err(Error::InvalidProjectName {
+        name: initial_name,
+        reason: invalid_reason,
+    })
 }
 
 fn get_foldername(path: &str) -> Result<String, Error> {
@@ -459,5 +493,39 @@ fn get_foldername(path: &str) -> Result<String, Error> {
             .ok_or(Error::UnableToFindProjectRoot {
                 path: path.to_string(),
             }),
+    }
+}
+
+#[derive(Debug, Clone)]
+enum ProjectName {
+    Provided { decided: String },
+    Derived { folder: String, decided: String },
+}
+
+impl ProjectName {
+    fn decided(&self) -> &str {
+        match self {
+            Self::Provided { decided } | Self::Derived { decided, .. } => decided,
+        }
+    }
+
+    fn project_root(&self, current_root: &str) -> String {
+        match self {
+            Self::Provided { .. } => current_root.to_string(),
+            Self::Derived { folder, decided } => {
+                if current_root == "." || folder == decided {
+                    return current_root.to_string();
+                }
+
+                // If the name was invalid and generated suggestion was accepted,
+                // align the directory path with the new name.
+                let original_root = Utf8Path::new(current_root);
+                let new_root = match original_root.parent() {
+                    Some(parent) if !parent.as_str().is_empty() => parent.join(decided),
+                    Some(_) | None => Utf8PathBuf::from(decided),
+                };
+                new_root.to_string()
+            }
+        }
     }
 }
