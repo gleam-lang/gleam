@@ -29,6 +29,8 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Optimizations for singleton types in the JS backend (singleton types get compared using `instanceof` instead of `isEqual(new Variant())`).
+  ([Nafi](https://github.com/re-masashi))
 - The lowercase bool pattern error is no longer a syntax error, but instead a
   part of the analysis step. This allows the entire module to be analyzed, rather
   than stopping at the syntax error.
