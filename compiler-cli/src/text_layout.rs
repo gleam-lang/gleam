@@ -33,15 +33,14 @@ where
         }
     }
 
-    for (index, header) in headers.iter().enumerate() {
+    for (index, (header, width)) in headers.iter().zip(column_widths.iter()).enumerate() {
         if index > 0 {
             output.push_str("  ");
         }
         let header = header.as_ref();
         output.push_str(header);
-        // Add padding only if this is NOT the final column
         if index < headers.len() - 1 {
-            let padding = column_widths[index] - header.len();
+            let padding = width - header.len();
             if padding > 0 {
                 output.push_str(&" ".repeat(padding));
             }
@@ -49,14 +48,14 @@ where
     }
     output.push('\n');
 
-    for (index, header) in headers.iter().enumerate() {
+    for (index, (header, width)) in headers.iter().zip(column_widths.iter()).enumerate() {
         if index > 0 {
             output.push_str("  ");
         }
         let header = header.as_ref();
         output.push_str(&"-".repeat(header.len()));
         if index < headers.len() - 1 {
-            let padding = column_widths[index] - header.len();
+            let padding = width - header.len();
             if padding > 0 {
                 output.push_str(&" ".repeat(padding));
             }
@@ -65,14 +64,14 @@ where
     output.push('\n');
 
     for row in data.as_ref() {
-        for (index, cell) in row.as_ref().iter().enumerate() {
+        for (index, (cell, width)) in row.as_ref().iter().zip(column_widths.iter()).enumerate() {
             if index > 0 {
                 output.push_str("  ");
             }
             let cell = cell.as_ref();
             output.push_str(cell);
             if index < headers.len() - 1 {
-                let padding = column_widths[index] - cell.len();
+                let padding = width - cell.len();
                 if padding > 0 {
                     output.push_str(&" ".repeat(padding));
                 }
