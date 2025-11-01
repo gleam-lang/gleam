@@ -576,3 +576,30 @@ pub fn main() {
 "#,
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5094
+#[test]
+fn guard_pattern_does_not_shadow_outer_scope() {
+    assert_js!(
+        r#"
+pub type Option(a) {
+  Some(a)
+  None
+}
+
+pub type Container {
+  Container(x: Option(Int))
+}
+
+pub fn main() {
+  let x: Option(Int) = Some(42)
+  case Some(1) {
+    Some(x) if x < 0 -> Container(None)
+    _ -> {
+      Container(x:)
+    }
+  }
+}
+"#,
+    );
+}
