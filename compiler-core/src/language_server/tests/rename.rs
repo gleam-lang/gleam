@@ -34,7 +34,7 @@ fn rename(
             new_name: new_name.to_string(),
             work_done_progress_params: WorkDoneProgressParams::default(),
         };
-        engine.rename(params).result.unwrap()
+        engine.rename(params).result.unwrap().unwrap_or(None)
     })?;
 
     Some((range, edit))
