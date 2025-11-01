@@ -400,7 +400,7 @@ jobs:
       - run: cargo build
 
       - name: Upload artifact (Ubuntu)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: gleam
           path: target/debug/gleam
