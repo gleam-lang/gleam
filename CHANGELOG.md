@@ -29,8 +29,10 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- The performance of `==` and `!=` has been improved for single-variant custom types
-  compared using `instanceof` instead of `isEqual(new Variant())`).
+- The performance of `==` and `!=` has been improved for single-variant custom
+  types when compiling to JavaScript. This was done by generating comparison
+  code specific to the custom type rather than using the generic equality check
+  code.
   ([Nafi](https://github.com/re-masashi))
 
 - The lowercase bool pattern error is no longer a syntax error, but instead a
