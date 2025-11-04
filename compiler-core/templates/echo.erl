@@ -94,7 +94,7 @@ inspect@atom(Atom) ->
     Binary = erlang:atom_to_binary(Atom),
     case inspect@maybe_gleam_atom(Binary, none, <<>>) of
         {ok, Inspected} -> Inspected;
-        {error, _} -> ["atom.create_from_string(\"", Binary, "\")"]
+        {error, _} -> ["atom.create(\"", Binary, "\")"]
     end.
 
 inspect@list(List) ->
