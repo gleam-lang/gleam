@@ -17,8 +17,8 @@ pub fn to_atom(string: String) -> Atom
 
 --- gleam run output ----------------
 [90msrc/main.gleam:2[39m
-#(atom.create_from_string("UP"), 1, 2)
+#(atom.create("UP"), 1, 2)
 [90msrc/main.gleam:3[39m
 Down(12.34)
 [90msrc/main.gleam:4[39m
-#(atom.create_from_string("Both"), "ok")
+#(atom.create("Both"), "ok")
