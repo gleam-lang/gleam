@@ -4,6 +4,11 @@
 
 ### Compiler
 
+- Update error message that arises when calling `echo` on an atom that lacks a
+  gleam representation to use `atom.create("__struct__")` instead of
+  `atom.create_from_string("__struct__")`.
+  ([Patrick Dewey](https://github.com/ptdewey))
+
 - Patterns aliasing a string prefix have been optimised to generate faster code
   on the Erlang target.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
