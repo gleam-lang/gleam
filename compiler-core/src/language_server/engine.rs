@@ -272,7 +272,7 @@ where
                 None => return Ok(None),
             };
 
-            let completer = Completer::new(&src, &params, &this.compiler, module);
+            let mut completer = Completer::new(&src, &params, &this.compiler, module);
             let byte_index = completer.module_line_numbers.byte_index(params.position);
 
             // If in comment context, do not provide completions
@@ -280,7 +280,7 @@ where
                 return Ok(None);
             }
 
-            // Check current filercontents if the user is writing an import
+            // Check current file contents if the user is writing an import
             // and handle separately from the rest of the completion flow
             // Check if an import is being written
             if let Some(value) = completer.import_completions() {
@@ -310,9 +310,10 @@ where
                     Some(completions)
                 }
                 Located::Expression {
-                    expression: TypedExpr::RecordAccess { record, .. },
+                    expression: TypedExpr::RecordAccess { record, type_, .. },
                     ..
                 } => {
+                    completer.expected_type = Some(type_.clone());
                     let mut completions = vec![];
                     completions.append(&mut completer.completion_values());
                     completions.append(&mut completer.completion_field_accessors(record.type_()));
@@ -333,9 +334,11 @@ where
                     );
                     Some(completions)
                 }
-                Located::Statement(_) | Located::Expression { .. } => {
+                Located::Expression { expression, .. } => {
+                    completer.expected_type = Some(expression.type_());
                     Some(completer.completion_values())
                 }
+                Located::Statement(_) => Some(completer.completion_values()),
                 Located::ModuleStatement(Definition::Function(_)) => {
                     Some(completer.completion_types())
                 }
@@ -354,7 +357,12 @@ where
                         completer.unqualified_completions_from_module(importing_module, true)
                     }),
 
-                Located::ModuleStatement(Definition::ModuleConstant(_)) | Located::Constant(_) => {
+                Located::ModuleStatement(Definition::ModuleConstant(constant)) => {
+                    completer.expected_type = Some(constant.type_.clone());
+                    Some(completer.completion_values())
+                }
+                Located::Constant(constant) => {
+                    completer.expected_type = Some(constant.type_());
                     Some(completer.completion_values())
                 }
 
