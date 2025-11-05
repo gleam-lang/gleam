@@ -20,7 +20,7 @@ Error
 False
   kind:   EnumMember
   detail: gleam
-  sort:   4_False
+  sort:   04_False
 Nil
   kind:   EnumMember
   detail: gleam
@@ -32,7 +32,7 @@ Ok
 True
   kind:   EnumMember
   detail: gleam
-  sort:   4_True
+  sort:   04_True
 Wobble
   kind:   Constructor
   detail: fn(List(#(Bool))) -> Wibble
@@ -43,7 +43,7 @@ Wobble
 wibble
   kind:   Variable
   detail: Bool
-  sort:   2_wibble
+  sort:   02_wibble
   desc:   app
   docs:   "A locally defined variable."
   edits:

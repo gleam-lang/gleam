@@ -33,7 +33,7 @@ True
 add_one
   kind:   Variable
   detail: fn(Int) -> Int
-  sort:   2_add_one
+  sort:   02_add_one
   desc:   app
   docs:   "A locally defined variable."
   edits:

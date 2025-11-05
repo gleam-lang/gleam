@@ -16,4 +16,4 @@ fn fun(some_wibble: Wibble) {
 a
   kind:   Field
   detail: Int
-  sort:   1_a
+  sort:   01_a

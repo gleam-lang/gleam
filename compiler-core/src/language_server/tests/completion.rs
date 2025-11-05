@@ -2252,3 +2252,17 @@ const x = "io."
     );
     assert_eq!(completions, vec![],);
 }
+
+#[test]
+fn prefer_values_matching_expected_type() {
+    let code = "
+pub fn main() -> Bool {
+  let wibble = 123
+  let wubble = True
+  let Wobble = 1.5
+  w
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(5, 3));
+}

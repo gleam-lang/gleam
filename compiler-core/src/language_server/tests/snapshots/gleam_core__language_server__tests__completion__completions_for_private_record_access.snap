@@ -17,8 +17,8 @@ fn fun() {
 wibble
   kind:   Field
   detail: Int
-  sort:   1_wibble
+  sort:   01_wibble
 wobble
   kind:   Field
   detail: Int
-  sort:   1_wobble
+  sort:   01_wobble
