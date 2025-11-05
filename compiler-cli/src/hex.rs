@@ -10,6 +10,47 @@ use gleam_core::{
 
 pub use auth::HexAuthentication;
 
+/// Environment variable name for configuring the Hex API base URL
+pub const HEX_API_URL_ENV_NAME: &str = "HEX_API_URL";
+
+/// Environment variable name for configuring the Hex repository base URL
+pub const HEX_REPOSITORY_URL_ENV_NAME: &str = "HEX_REPOSITORY_URL";
+
+/// Creates a hexpm::Config, reading custom URLs from environment variables if set.
+///
+/// If `HEX_API_URL` is set, it will be used as the API base URL.
+/// If `HEX_REPOSITORY_URL` is set, it will be used as the repository base URL.
+/// Otherwise, the default values (https://hex.pm/api/ and https://repo.hex.pm/) are used.
+pub fn hex_config() -> hexpm::Config {
+    let mut config = hexpm::Config::new();
+
+    // Override API URL if environment variable is set
+    if let Ok(api_url) = std::env::var(HEX_API_URL_ENV_NAME) {
+        if let Ok(uri) = api_url.parse() {
+            config.api_base = uri;
+        } else {
+            tracing::warn!(
+                url = api_url,
+                "Invalid URL in {HEX_API_URL_ENV_NAME} environment variable, using default"
+            );
+        }
+    }
+
+    // Override repository URL if environment variable is set
+    if let Ok(repo_url) = std::env::var(HEX_REPOSITORY_URL_ENV_NAME) {
+        if let Ok(uri) = repo_url.parse() {
+            config.repository_base = uri;
+        } else {
+            tracing::warn!(
+                url = repo_url,
+                "Invalid URL in {HEX_REPOSITORY_URL_ENV_NAME} environment variable, using default"
+            );
+        }
+    }
+
+    config
+}
+
 pub fn retire(
     package: String,
     version: String,
@@ -17,7 +58,7 @@ pub fn retire(
     message: Option<String>,
 ) -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
-    let config = hexpm::Config::new();
+    let config = hex_config();
     let api_key = HexAuthentication::new(&runtime, config.clone()).get_or_create_api_key()?;
 
     runtime.block_on(hex::retire_release(
@@ -35,7 +76,7 @@ pub fn retire(
 
 pub fn unretire(package: String, version: String) -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
-    let config = hexpm::Config::new();
+    let config = hex_config();
     let api_key = HexAuthentication::new(&runtime, config.clone()).get_or_create_api_key()?;
 
     runtime.block_on(hex::unretire_release(
@@ -76,12 +117,12 @@ pub fn revert(
     }
 
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
-    let hex_config = hexpm::Config::new();
-    let api_key = HexAuthentication::new(&runtime, hex_config.clone()).get_or_create_api_key()?;
+    let config = hex_config();
+    let api_key = HexAuthentication::new(&runtime, config.clone()).get_or_create_api_key()?;
     let http = HttpClient::new();
 
     // Revert release from API
-    let request = hexpm::api_revert_release_request(&package, &version, &api_key, &hex_config)
+    let request = hexpm::api_revert_release_request(&package, &version, &api_key, &config)
         .map_err(Error::hex)?;
     let response = runtime.block_on(http.send(request))?;
     hexpm::api_revert_release_response(response).map_err(Error::hex)?;
@@ -94,7 +135,7 @@ pub fn revert(
 pub(crate) fn authenticate() -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let http = HttpClient::new();
-    let config = hexpm::Config::new();
+    let config = hex_config();
     let mut auth = HexAuthentication::new(&runtime, config.clone());
     let previous = auth.read_stored_api_key()?;
 

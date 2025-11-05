@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Build tool
+
+- Added support for configuring Hex API and repository URLs via environment
+  variables. Set `HEX_API_URL` to configure the Hex API base URL and
+  `HEX_REPOSITORY_URL` to configure the Hex repository base URL. This is useful
+  for using self-hosted Hex instances or mirrors.
+  ([diemogebhardt](https://github.com/diemogebhardt))
+
 ### Compiler
 
 - Patterns aliasing a string prefix have been optimised to generate faster code

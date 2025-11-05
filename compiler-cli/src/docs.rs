@@ -23,7 +23,7 @@ use gleam_core::{
 
 pub fn remove(package: String, version: String) -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
-    let hex_config = hexpm::Config::new();
+    let hex_config = crate::hex::hex_config();
     let api_key =
         crate::hex::HexAuthentication::new(&runtime, hex_config.clone()).get_or_create_api_key()?;
     let http = HttpClient::new();
@@ -169,7 +169,7 @@ pub fn publish(paths: &ProjectPaths) -> Result<()> {
     let config = crate::config::root_config(paths)?;
 
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
-    let hex_config = hexpm::Config::new();
+    let hex_config = crate::hex::hex_config();
     let api_key =
         crate::hex::HexAuthentication::new(&runtime, hex_config.clone()).get_or_create_api_key()?;
 

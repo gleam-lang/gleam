@@ -15,7 +15,7 @@ Do you wish to transfer ownership of `{package}` to {new_owner_username_or_email
     }
 
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
-    let hex_config = hexpm::Config::new();
+    let hex_config = crate::hex::hex_config();
     let api_key =
         crate::hex::HexAuthentication::new(&runtime, hex_config.clone()).get_or_create_api_key()?;
 

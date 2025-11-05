@@ -23,6 +23,47 @@ J1i2xWFndWa6nfFnRxZmCStCOZWYYPlaxr+FZceFbpMwzTNs4g3d4tLNUcbKAIH4
 -----END PUBLIC KEY-----
 ";
 
+/// Environment variable name for configuring the Hex API base URL
+pub const HEX_API_URL_ENV_NAME: &str = "HEX_API_URL";
+
+/// Environment variable name for configuring the Hex repository base URL
+pub const HEX_REPOSITORY_URL_ENV_NAME: &str = "HEX_REPOSITORY_URL";
+
+/// Creates a hexpm::Config, reading custom URLs from environment variables if set.
+///
+/// If `HEX_API_URL` is set, it will be used as the API base URL.
+/// If `HEX_REPOSITORY_URL` is set, it will be used as the repository base URL.
+/// Otherwise, the default values (https://hex.pm/api/ and https://repo.hex.pm/) are used.
+pub fn hex_config() -> hexpm::Config {
+    let mut config = hexpm::Config::new();
+
+    // Override API URL if environment variable is set
+    if let Ok(api_url) = std::env::var(HEX_API_URL_ENV_NAME) {
+        if let Ok(uri) = api_url.parse() {
+            config.api_base = uri;
+        } else {
+            tracing::warn!(
+                url = api_url,
+                "Invalid URL in {HEX_API_URL_ENV_NAME} environment variable, using default"
+            );
+        }
+    }
+
+    // Override repository URL if environment variable is set
+    if let Ok(repo_url) = std::env::var(HEX_REPOSITORY_URL_ENV_NAME) {
+        if let Ok(uri) = repo_url.parse() {
+            config.repository_base = uri;
+        } else {
+            tracing::warn!(
+                url = repo_url,
+                "Invalid URL in {HEX_REPOSITORY_URL_ENV_NAME} environment variable, using default"
+            );
+        }
+    }
+
+    config
+}
+
 fn key_name(hostname: &str) -> String {
     format!("gleam-{hostname}")
 }
@@ -172,7 +213,7 @@ impl Downloader {
             fs_writer: DebugIgnore(fs_writer),
             http: DebugIgnore(http),
             untar: DebugIgnore(untar),
-            hex_config: hexpm::Config::new(),
+            hex_config: hex_config(),
             paths,
         }
     }
