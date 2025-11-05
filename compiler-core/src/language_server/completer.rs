@@ -51,10 +51,17 @@ enum CompletionKind {
     ImportableModule,
 }
 
+#[derive(Copy, Clone)]
+enum TypeMatch {
+    Matching,
+    Incompatible,
+    Unknown,
+}
+
 // Gives the sort text for a completion item based on the kind and label.
 // This ensures that more specific kinds of completions are placed before
 // less specific ones..
-fn sort_text(kind: CompletionKind, label: &str) -> String {
+fn sort_text(kind: CompletionKind, label: &str, type_match: TypeMatch) -> String {
     let priority: u8 = match kind {
         CompletionKind::Label => 0,
         CompletionKind::FieldAccessor => 1,
@@ -63,7 +70,12 @@ fn sort_text(kind: CompletionKind, label: &str) -> String {
         CompletionKind::Prelude => 4,
         CompletionKind::ImportableModule => 5,
     };
-    format!("{priority}_{label}")
+    match type_match {
+        // We want to prioritise type which match what is expected in the completion
+        // as those are more likely to be what the user wants.
+        TypeMatch::Matching => format!("0{priority}_{label}"),
+        TypeMatch::Incompatible | TypeMatch::Unknown => format!("{priority}_{label}"),
+    }
 }
 
 // The form in which a type completion is needed in context.
@@ -91,6 +103,11 @@ pub struct Completer<'a, IO> {
     /// This is not necessarily the same as src_line_numbers if the module
     /// is in a non-compiling state
     pub module_line_numbers: LineNumbers,
+
+    /// The expected type of the value we are completing. `None` if we are
+    /// completing a type annotation or label, where this information is not
+    /// applicable.
+    pub expected_type: Option<Arc<Type>>,
 }
 
 impl<'a, IO> Completer<'a, IO> {
@@ -107,6 +124,25 @@ impl<'a, IO> Completer<'a, IO> {
             compiler,
             module,
             module_line_numbers: LineNumbers::new(&module.code),
+            expected_type: None,
+        }
+    }
+
+    fn match_type(&self, type_: &Type) -> TypeMatch {
+        if let Some(expected_type) = &self.expected_type {
+            // If the type of the value we are completing is unbound, that
+            // technically means that all types match, which doesn't give us
+            // any useful information so we treat it as not knowing what the
+            // type is, which generally is the case.
+            if expected_type.is_unbound() {
+                TypeMatch::Unknown
+            } else if expected_type.same_as(type_) {
+                TypeMatch::Matching
+            } else {
+                TypeMatch::Incompatible
+            }
+        } else {
+            TypeMatch::Unknown
         }
     }
 
@@ -296,7 +332,7 @@ impl<'a, IO> Completer<'a, IO> {
             if already_imported_values.contains(name) {
                 continue;
             }
-            completions.push(value_completion(
+            completions.push(self.value_completion(
                 None,
                 &module_being_imported_from.name,
                 name,
@@ -415,7 +451,11 @@ impl<'a, IO> Completer<'a, IO> {
 
             for type_ in PreludeType::iter() {
                 let label: String = type_.name().into();
-                let sort_text = Some(sort_text(CompletionKind::Prelude, &label));
+                let sort_text = Some(sort_text(
+                    CompletionKind::Prelude,
+                    &label,
+                    TypeMatch::Unknown,
+                ));
                 completions.push(CompletionItem {
                     label,
                     detail: Some("Type".into()),
@@ -564,7 +604,8 @@ impl<'a, IO> Completer<'a, IO> {
                 .peek()
             {
                 completions.extend(
-                    LocalCompletion::new(mod_name, insert_range, cursor).fn_completions(function),
+                    LocalCompletion::new(mod_name, insert_range, cursor, self)
+                        .fn_completions(function),
                 );
             }
 
@@ -572,7 +613,7 @@ impl<'a, IO> Completer<'a, IO> {
                 // Here we do not check for the internal attribute: we always want
                 // to show autocompletions for values defined in the same module,
                 // even if those are internal.
-                completions.push(value_completion(
+                completions.push(self.value_completion(
                     None,
                     mod_name,
                     name,
@@ -582,9 +623,13 @@ impl<'a, IO> Completer<'a, IO> {
                 ));
             }
 
-            let mut push_prelude_completion = |label: &str, kind| {
+            let mut push_prelude_completion = |label: &str, kind, type_: Arc<Type>| {
                 let label = label.to_string();
-                let sort_text = Some(sort_text(CompletionKind::Prelude, &label));
+                let sort_text = Some(sort_text(
+                    CompletionKind::Prelude,
+                    &label,
+                    self.match_type(&type_),
+                ));
                 completions.push(CompletionItem {
                     label,
                     detail: Some(PRELUDE_MODULE_NAME.into()),
@@ -597,15 +642,35 @@ impl<'a, IO> Completer<'a, IO> {
             for type_ in PreludeType::iter() {
                 match type_ {
                     PreludeType::Bool => {
-                        push_prelude_completion("True", CompletionItemKind::ENUM_MEMBER);
-                        push_prelude_completion("False", CompletionItemKind::ENUM_MEMBER);
+                        push_prelude_completion(
+                            "True",
+                            CompletionItemKind::ENUM_MEMBER,
+                            type_::bool(),
+                        );
+                        push_prelude_completion(
+                            "False",
+                            CompletionItemKind::ENUM_MEMBER,
+                            type_::bool(),
+                        );
                     }
                     PreludeType::Nil => {
-                        push_prelude_completion("Nil", CompletionItemKind::ENUM_MEMBER);
+                        push_prelude_completion(
+                            "Nil",
+                            CompletionItemKind::ENUM_MEMBER,
+                            type_::nil(),
+                        );
                     }
                     PreludeType::Result => {
-                        push_prelude_completion("Ok", CompletionItemKind::CONSTRUCTOR);
-                        push_prelude_completion("Error", CompletionItemKind::CONSTRUCTOR);
+                        push_prelude_completion(
+                            "Ok",
+                            CompletionItemKind::CONSTRUCTOR,
+                            type_::result(type_::unbound_var(0), type_::unbound_var(0)),
+                        );
+                        push_prelude_completion(
+                            "Error",
+                            CompletionItemKind::CONSTRUCTOR,
+                            type_::result(type_::unbound_var(0), type_::unbound_var(0)),
+                        );
                     }
                     PreludeType::BitArray
                     | PreludeType::Float
@@ -639,7 +704,7 @@ impl<'a, IO> Completer<'a, IO> {
                     {
                         continue;
                     }
-                    completions.push(value_completion(
+                    completions.push(self.value_completion(
                         Some(&module),
                         mod_name,
                         name,
@@ -657,7 +722,7 @@ impl<'a, IO> Completer<'a, IO> {
                 for unqualified in &import.unqualified_values {
                     if let Some(value) = module.get_public_value(&unqualified.name) {
                         let name = unqualified.used_name();
-                        completions.push(value_completion(
+                        completions.push(self.value_completion(
                             None,
                             mod_name,
                             name,
@@ -705,7 +770,7 @@ impl<'a, IO> Completer<'a, IO> {
                     continue;
                 }
 
-                let mut completion = value_completion(
+                let mut completion = self.value_completion(
                     Some(qualifier),
                     module_full_name,
                     name,
@@ -759,7 +824,7 @@ impl<'a, IO> Completer<'a, IO> {
         .map(|accessors| {
             accessors
                 .values()
-                .map(|accessor| field_completion(&accessor.label, accessor.type_.clone()))
+                .map(|accessor| self.field_completion(&accessor.label, accessor.type_.clone()))
                 .collect_vec()
         })
         .unwrap_or_default()
@@ -811,7 +876,7 @@ impl<'a, IO> Completer<'a, IO> {
                         .map(|argument| Printer::new().pretty_print(argument, 0))
                 });
                 let label = format!("{label}:");
-                let sort_text = Some(sort_text(CompletionKind::Label, &label));
+                let sort_text = Some(sort_text(CompletionKind::Label, &label, TypeMatch::Unknown));
                 CompletionItem {
                     label,
                     detail,
@@ -839,6 +904,70 @@ impl<'a, IO> Completer<'a, IO> {
             Publicity::Internal { .. } => true,
             // We never skip public types.
             Publicity::Public => true,
+        }
+    }
+
+    fn value_completion(
+        &self,
+        module_qualifier: Option<&str>,
+        module_name: &str,
+        name: &str,
+        value: &type_::ValueConstructor,
+        insert_range: Range,
+        priority: CompletionKind,
+    ) -> CompletionItem {
+        let type_match = self.match_type(&value.type_);
+        let label = match module_qualifier {
+            Some(module) => format!("{module}.{name}"),
+            None => name.to_string(),
+        };
+
+        let type_ = Printer::new().pretty_print(&value.type_, 0);
+
+        let kind = Some(match value.variant {
+            ValueConstructorVariant::LocalVariable { .. } => CompletionItemKind::VARIABLE,
+            ValueConstructorVariant::ModuleConstant { .. } => CompletionItemKind::CONSTANT,
+            ValueConstructorVariant::LocalConstant { .. } => CompletionItemKind::CONSTANT,
+            ValueConstructorVariant::ModuleFn { .. } => CompletionItemKind::FUNCTION,
+            ValueConstructorVariant::Record { arity: 0, .. } => CompletionItemKind::ENUM_MEMBER,
+            ValueConstructorVariant::Record { .. } => CompletionItemKind::CONSTRUCTOR,
+        });
+
+        let documentation = value.get_documentation().map(|d| {
+            Documentation::MarkupContent(MarkupContent {
+                kind: MarkupKind::Markdown,
+                value: d.into(),
+            })
+        });
+
+        CompletionItem {
+            label: label.clone(),
+            kind,
+            detail: Some(type_),
+            label_details: Some(CompletionItemLabelDetails {
+                detail: None,
+                description: Some(module_name.into()),
+            }),
+            documentation,
+            sort_text: Some(sort_text(priority, &label, type_match)),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: insert_range,
+                new_text: label.clone(),
+            })),
+            ..Default::default()
+        }
+    }
+
+    fn field_completion(&self, label: &str, type_: Arc<Type>) -> CompletionItem {
+        let type_match = self.match_type(&type_);
+        let type_ = Printer::new().pretty_print(&type_, 0);
+
+        CompletionItem {
+            label: label.into(),
+            kind: Some(CompletionItemKind::FIELD),
+            detail: Some(type_),
+            sort_text: Some(sort_text(CompletionKind::FieldAccessor, label, type_match)),
+            ..Default::default()
         }
     }
 }
@@ -879,7 +1008,7 @@ fn type_completion(
         label: label.clone(),
         kind,
         detail: Some("Type".into()),
-        sort_text: Some(sort_text(priority, &label)),
+        sort_text: Some(sort_text(priority, &label, TypeMatch::Unknown)),
         text_edit: Some(CompletionTextEdit::Edit(TextEdit {
             range: insert_range,
             new_text: match include_type_in_completion {
@@ -892,113 +1021,27 @@ fn type_completion(
     }
 }
 
-fn value_completion(
-    module_qualifier: Option<&str>,
-    module_name: &str,
-    name: &str,
-    value: &type_::ValueConstructor,
-    insert_range: Range,
-    priority: CompletionKind,
-) -> CompletionItem {
-    let label = match module_qualifier {
-        Some(module) => format!("{module}.{name}"),
-        None => name.to_string(),
-    };
-
-    let type_ = Printer::new().pretty_print(&value.type_, 0);
-
-    let kind = Some(match value.variant {
-        ValueConstructorVariant::LocalVariable { .. } => CompletionItemKind::VARIABLE,
-        ValueConstructorVariant::ModuleConstant { .. } => CompletionItemKind::CONSTANT,
-        ValueConstructorVariant::LocalConstant { .. } => CompletionItemKind::CONSTANT,
-        ValueConstructorVariant::ModuleFn { .. } => CompletionItemKind::FUNCTION,
-        ValueConstructorVariant::Record { arity: 0, .. } => CompletionItemKind::ENUM_MEMBER,
-        ValueConstructorVariant::Record { .. } => CompletionItemKind::CONSTRUCTOR,
-    });
-
-    let documentation = value.get_documentation().map(|d| {
-        Documentation::MarkupContent(MarkupContent {
-            kind: MarkupKind::Markdown,
-            value: d.into(),
-        })
-    });
-
-    CompletionItem {
-        label: label.clone(),
-        kind,
-        detail: Some(type_),
-        label_details: Some(CompletionItemLabelDetails {
-            detail: None,
-            description: Some(module_name.into()),
-        }),
-        documentation,
-        sort_text: Some(sort_text(priority, &label)),
-        text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-            range: insert_range,
-            new_text: label.clone(),
-        })),
-        ..Default::default()
-    }
-}
-
-fn local_value_completion(
-    module_name: &str,
-    name: &str,
-    type_: Arc<Type>,
-    insert_range: Range,
-) -> CompletionItem {
-    let label = name.to_string();
-    let type_ = Printer::new().pretty_print(&type_, 0);
-
-    let documentation = Documentation::MarkupContent(MarkupContent {
-        kind: MarkupKind::Markdown,
-        value: String::from("A locally defined variable."),
-    });
-
-    CompletionItem {
-        label: label.clone(),
-        kind: Some(CompletionItemKind::VARIABLE),
-        detail: Some(type_),
-        label_details: Some(CompletionItemLabelDetails {
-            detail: None,
-            description: Some(module_name.into()),
-        }),
-        documentation: Some(documentation),
-        sort_text: Some(sort_text(CompletionKind::LocallyDefined, &label)),
-        text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-            range: insert_range,
-            new_text: label.clone(),
-        })),
-        ..Default::default()
-    }
-}
-
-fn field_completion(label: &str, type_: Arc<Type>) -> CompletionItem {
-    let type_ = Printer::new().pretty_print(&type_, 0);
-
-    CompletionItem {
-        label: label.into(),
-        kind: Some(CompletionItemKind::FIELD),
-        detail: Some(type_),
-        sort_text: Some(sort_text(CompletionKind::FieldAccessor, label)),
-        ..Default::default()
-    }
-}
-
-pub struct LocalCompletion<'a> {
+pub struct LocalCompletion<'a, IO> {
     mod_name: &'a str,
     insert_range: Range,
     cursor: u32,
     completions: HashMap<EcoString, CompletionItem>,
+    completer: &'a Completer<'a, IO>,
 }
 
-impl<'a> LocalCompletion<'a> {
-    pub fn new(mod_name: &'a str, insert_range: Range, cursor: u32) -> Self {
+impl<'a, IO> LocalCompletion<'a, IO> {
+    pub fn new(
+        mod_name: &'a str,
+        insert_range: Range,
+        cursor: u32,
+        completer: &'a Completer<'a, IO>,
+    ) -> Self {
         Self {
             mod_name,
             insert_range,
             cursor,
             completions: HashMap::new(),
+            completer,
         }
     }
 
@@ -1035,12 +1078,51 @@ impl<'a> LocalCompletion<'a> {
 
         _ = self.completions.insert(
             name.clone(),
-            local_value_completion(self.mod_name, name, type_, self.insert_range),
+            self.local_value_completion(self.mod_name, name, type_, self.insert_range),
         );
+    }
+
+    fn local_value_completion(
+        &self,
+        module_name: &str,
+        name: &str,
+        type_: Arc<Type>,
+        insert_range: Range,
+    ) -> CompletionItem {
+        let type_match = self.completer.match_type(&type_);
+
+        let label = name.to_string();
+        let type_ = Printer::new().pretty_print(&type_, 0);
+
+        let documentation = Documentation::MarkupContent(MarkupContent {
+            kind: MarkupKind::Markdown,
+            value: String::from("A locally defined variable."),
+        });
+
+        CompletionItem {
+            label: label.clone(),
+            kind: Some(CompletionItemKind::VARIABLE),
+            detail: Some(type_),
+            label_details: Some(CompletionItemLabelDetails {
+                detail: None,
+                description: Some(module_name.into()),
+            }),
+            documentation: Some(documentation),
+            sort_text: Some(sort_text(
+                CompletionKind::LocallyDefined,
+                &label,
+                type_match,
+            )),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: insert_range,
+                new_text: label.clone(),
+            })),
+            ..Default::default()
+        }
     }
 }
 
-impl<'ast> Visit<'ast> for LocalCompletion<'_> {
+impl<'ast, IO> Visit<'ast> for LocalCompletion<'_, IO> {
     fn visit_typed_statement(&mut self, statement: &'ast ast::TypedStatement) {
         // We only want to suggest local variables that are defined before
         // the cursor

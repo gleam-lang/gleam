@@ -19,16 +19,16 @@ fn fun(some_wibble: Wibble) {
 a
   kind:   Field
   detail: Int
-  sort:   1_a
+  sort:   01_a
 b
   kind:   Field
   detail: Int
-  sort:   1_b
+  sort:   01_b
 c
   kind:   Field
   detail: Int
-  sort:   1_c
+  sort:   01_c
 d
   kind:   Field
   detail: Int
-  sort:   1_d
+  sort:   01_d
