@@ -1210,7 +1210,8 @@ impl TypeVar {
     pub fn is_unbound(&self) -> bool {
         match self {
             Self::Unbound { .. } => true,
-            Self::Link { .. } | Self::Generic { .. } => false,
+            Self::Link { type_ } => type_.is_unbound(),
+            Self::Generic { .. } => false,
         }
     }
 

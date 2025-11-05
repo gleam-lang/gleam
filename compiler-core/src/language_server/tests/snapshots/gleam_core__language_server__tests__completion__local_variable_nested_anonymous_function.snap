@@ -43,7 +43,7 @@ main
 wabble
   kind:   Variable
   detail: Int
-  sort:   2_wabble
+  sort:   02_wabble
   desc:   app
   docs:   "A locally defined variable."
   edits:
@@ -51,7 +51,7 @@ wabble
 wibble
   kind:   Variable
   detail: Int
-  sort:   2_wibble
+  sort:   02_wibble
   desc:   app
   docs:   "A locally defined variable."
   edits:
@@ -59,7 +59,7 @@ wibble
 wobble
   kind:   Variable
   detail: Int
-  sort:   2_wobble
+  sort:   02_wobble
   desc:   app
   docs:   "A locally defined variable."
   edits:

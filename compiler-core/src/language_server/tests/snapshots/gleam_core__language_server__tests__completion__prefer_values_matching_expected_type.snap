@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-expression: "\npub fn main() {\n  let add_one = fn(wibble: Int) { wibble + 1 }\n  add_one(1)\n}\n"
+expression: "\npub fn main() -> Bool {\n  let wibble = 123\n  let wubble = True\n  let Wobble = 1.5\n  w\n}\n"
 ---
-pub fn main() {
-  let add_one = fn(wibble: Int) { wibble| + 1 }
-  add_one(1)
+pub fn main() -> Bool {
+  let wibble = 123
+  let wubble = True
+  let Wobble = 1.5
+  w|
 }
 
 
@@ -16,7 +18,7 @@ Error
 False
   kind:   EnumMember
   detail: gleam
-  sort:   4_False
+  sort:   04_False
 Nil
   kind:   EnumMember
   detail: gleam
@@ -28,19 +30,27 @@ Ok
 True
   kind:   EnumMember
   detail: gleam
-  sort:   4_True
+  sort:   04_True
 main
   kind:   Function
-  detail: fn() -> Int
+  detail: fn() -> Bool
   sort:   2_main
   desc:   app
   edits:
-    [2:34-2:34]: "main"
+    [5:2-5:2]: "main"
 wibble
   kind:   Variable
   detail: Int
-  sort:   02_wibble
+  sort:   2_wibble
   desc:   app
   docs:   "A locally defined variable."
   edits:
-    [2:34-2:34]: "wibble"
+    [5:2-5:2]: "wibble"
+wubble
+  kind:   Variable
+  detail: Bool
+  sort:   02_wubble
+  desc:   app
+  docs:   "A locally defined variable."
+  edits:
+    [5:2-5:2]: "wubble"
