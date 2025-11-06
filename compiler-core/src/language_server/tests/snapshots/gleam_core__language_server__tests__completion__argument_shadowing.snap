@@ -33,7 +33,7 @@ True
 main
   kind:   Function
   detail: fn(Int) -> fn(Float) -> a
-  sort:   2_main
+  sort:   02_main
   desc:   app
   edits:
     [3:0-3:0]: "main"
