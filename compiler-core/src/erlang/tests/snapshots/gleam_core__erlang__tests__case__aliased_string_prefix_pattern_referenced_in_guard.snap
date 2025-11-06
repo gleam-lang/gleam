@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/erlang/tests/case.rs
+expression: "\npub fn main(x) {\n  case x {\n    \"a\" as letter <> _ if letter == x -> letter\n    _ -> \"wibble\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main(x) {
+  case x {
+    "a" as letter <> _ if letter == x -> letter
+    _ -> "wibble"
+  }
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/1]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec main(binary()) -> binary().
+main(X) ->
+    case X of
+        <<"a"/utf8, _/binary>> when <<"a"/utf8>> =:= X ->
+            Letter = <<"a"/utf8>>,
+            Letter;
+
+        _ ->
+            <<"wibble"/utf8>>
+    end.
