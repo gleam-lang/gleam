@@ -1209,9 +1209,9 @@ checksum = "d231dfb89cfffdbc30e7fc41579ed6066ad03abda9e567ccafae602b97ec5024"
 
 [[package]]
 name = "hexpm"
-version = "5.0.0"
+version = "5.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ce8e2213e16eb879d50d9db4001f62b485e3ac96140bfa886f6c79bbfa97aef"
+checksum = "c8c4602a00338ac15645f458173551562c1e7664e0472047e3ce2e3e8e0e00cb"
 dependencies = [
  "base16",
  "bytes",

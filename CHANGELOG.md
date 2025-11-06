@@ -163,3 +163,5 @@
   shadow outer scope variables in other branches when compiling to JavaScript.
   ([Elias Haider](https://github.com/EliasDerHai))
 
+- Fixed a bug where some dependency version ranges would fail to parse.
+  ([Yoshie](https://github.com/yoshi-monster))
