@@ -7,7 +7,7 @@ mod pattern;
 mod tests;
 
 use crate::build::{Target, module_erlang_name};
-use crate::erlang::pattern::PatternPrinter;
+use crate::erlang::pattern::{PatternPrinter, StringPatternAssignment};
 use crate::strings::{convert_string_escape_chars, to_snake_case};
 use crate::type_::is_prelude_module;
 use crate::{
@@ -1283,7 +1283,11 @@ fn let_assert<'a>(
         assignments,
     } = pattern_printer;
 
-    let clause_guard = optional_clause_guard(None, guards, environment);
+    let assignments_map = assignments
+        .iter()
+        .map(|assignment| (assignment.gleam_name.clone(), assignment))
+        .collect();
+    let clause_guard = optional_clause_guard(None, guards, environment, &assignments_map);
 
     let value_document = match variables.as_slice() {
         _ if is_tail => subject.clone(),
@@ -1351,7 +1355,16 @@ fn let_assert<'a>(
     let assignments = if assignments.is_empty() {
         nil()
     } else {
-        docvec![",", line(), join(assignments, ",".to_doc().append(line()))]
+        docvec![
+            ",",
+            line(),
+            join(
+                assignments
+                    .iter()
+                    .map(|assignment| assignment.to_assignment_doc()),
+                ",".to_doc().append(line())
+            )
+        ]
     };
 
     docvec![
@@ -1608,7 +1621,12 @@ fn clause<'a>(clause: &'a TypedClause, environment: &mut Env<'a>) -> Document<'a
             assignments,
         } = pattern_printer;
 
-        let guard = optional_clause_guard(guard.as_ref(), guards, environment);
+        let assignments_map = assignments
+            .iter()
+            .map(|assignment| (assignment.gleam_name.clone(), assignment))
+            .collect();
+
+        let guard = optional_clause_guard(guard.as_ref(), guards, environment, &assignments_map);
         let then = clause_consequence(then, assignments, environment).group();
         branches_docs.push(docvec![
             pattern,
@@ -1625,14 +1643,20 @@ fn clause_consequence<'a>(
     consequence: &'a TypedExpr,
     // Further assignments that the pattern might need to introduce at the start
     // of the new block.
-    assignments: Vec<Document<'a>>,
+    assignments: Vec<StringPatternAssignment<'a>>,
     env: &mut Env<'a>,
 ) -> Document<'a> {
     let assignment_doc = if assignments.is_empty() {
         nil()
     } else {
         let separator = ",".to_doc().append(line());
-        join(assignments, separator.clone()).append(separator)
+        join(
+            assignments
+                .iter()
+                .map(|assignment| assignment.to_assignment_doc()),
+            separator.clone(),
+        )
+        .append(separator)
     };
 
     let consequence = match consequence {
@@ -1646,8 +1670,9 @@ fn optional_clause_guard<'a>(
     guard: Option<&'a TypedClauseGuard>,
     additional_guards: Vec<Document<'a>>,
     env: &mut Env<'a>,
+    assignments: &HashMap<EcoString, &StringPatternAssignment<'a>>,
 ) -> Document<'a> {
-    let guard_doc = guard.map(|guard| bare_clause_guard(guard, env));
+    let guard_doc = guard.map(|guard| bare_clause_guard(guard, env, assignments));
 
     let guards_count = guard_doc.iter().len() + additional_guards.len();
     let guards_docs = additional_guards.into_iter().chain(guard_doc).map(|guard| {
@@ -1665,99 +1690,116 @@ fn optional_clause_guard<'a>(
     }
 }
 
-fn bare_clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<'a> {
+fn bare_clause_guard<'a>(
+    guard: &'a TypedClauseGuard,
+    env: &mut Env<'a>,
+    assignments: &HashMap<EcoString, &StringPatternAssignment<'a>>,
+) -> Document<'a> {
     match guard {
-        ClauseGuard::Block { value, .. } => bare_clause_guard(value, env).surround("(", ")"),
+        ClauseGuard::Block { value, .. } => {
+            bare_clause_guard(value, env, assignments).surround("(", ")")
+        }
 
-        ClauseGuard::Not { expression, .. } => docvec!["not ", bare_clause_guard(expression, env)],
+        ClauseGuard::Not { expression, .. } => {
+            docvec!["not ", bare_clause_guard(expression, env, assignments)]
+        }
 
-        ClauseGuard::Or { left, right, .. } => clause_guard(left, env)
+        ClauseGuard::Or { left, right, .. } => clause_guard(left, env, assignments)
             .append(" orelse ")
-            .append(clause_guard(right, env)),
+            .append(clause_guard(right, env, assignments)),
 
-        ClauseGuard::And { left, right, .. } => clause_guard(left, env)
+        ClauseGuard::And { left, right, .. } => clause_guard(left, env, assignments)
             .append(" andalso ")
-            .append(clause_guard(right, env)),
+            .append(clause_guard(right, env, assignments)),
 
-        ClauseGuard::Equals { left, right, .. } => clause_guard(left, env)
+        ClauseGuard::Equals { left, right, .. } => clause_guard(left, env, assignments)
             .append(" =:= ")
-            .append(clause_guard(right, env)),
+            .append(clause_guard(right, env, assignments)),
 
-        ClauseGuard::NotEquals { left, right, .. } => clause_guard(left, env)
+        ClauseGuard::NotEquals { left, right, .. } => clause_guard(left, env, assignments)
             .append(" =/= ")
-            .append(clause_guard(right, env)),
+            .append(clause_guard(right, env, assignments)),
 
-        ClauseGuard::GtInt { left, right, .. } => clause_guard(left, env)
+        ClauseGuard::GtInt { left, right, .. } => clause_guard(left, env, assignments)
             .append(" > ")
-            .append(clause_guard(right, env)),
+            .append(clause_guard(right, env, assignments)),
 
-        ClauseGuard::GtEqInt { left, right, .. } => clause_guard(left, env)
+        ClauseGuard::GtEqInt { left, right, .. } => clause_guard(left, env, assignments)
             .append(" >= ")
-            .append(clause_guard(right, env)),
+            .append(clause_guard(right, env, assignments)),
 
-        ClauseGuard::LtInt { left, right, .. } => clause_guard(left, env)
+        ClauseGuard::LtInt { left, right, .. } => clause_guard(left, env, assignments)
             .append(" < ")
-            .append(clause_guard(right, env)),
+            .append(clause_guard(right, env, assignments)),
 
-        ClauseGuard::LtEqInt { left, right, .. } => clause_guard(left, env)
+        ClauseGuard::LtEqInt { left, right, .. } => clause_guard(left, env, assignments)
             .append(" =< ")
-            .append(clause_guard(right, env)),
+            .append(clause_guard(right, env, assignments)),
 
-        ClauseGuard::GtFloat { left, right, .. } => clause_guard(left, env)
+        ClauseGuard::GtFloat { left, right, .. } => clause_guard(left, env, assignments)
             .append(" > ")
-            .append(clause_guard(right, env)),
+            .append(clause_guard(right, env, assignments)),
 
-        ClauseGuard::GtEqFloat { left, right, .. } => clause_guard(left, env)
+        ClauseGuard::GtEqFloat { left, right, .. } => clause_guard(left, env, assignments)
             .append(" >= ")
-            .append(clause_guard(right, env)),
+            .append(clause_guard(right, env, assignments)),
 
-        ClauseGuard::LtFloat { left, right, .. } => clause_guard(left, env)
+        ClauseGuard::LtFloat { left, right, .. } => clause_guard(left, env, assignments)
             .append(" < ")
-            .append(clause_guard(right, env)),
+            .append(clause_guard(right, env, assignments)),
 
-        ClauseGuard::LtEqFloat { left, right, .. } => clause_guard(left, env)
+        ClauseGuard::LtEqFloat { left, right, .. } => clause_guard(left, env, assignments)
             .append(" =< ")
-            .append(clause_guard(right, env)),
+            .append(clause_guard(right, env, assignments)),
 
-        ClauseGuard::AddInt { left, right, .. } => clause_guard(left, env)
+        ClauseGuard::AddInt { left, right, .. } => clause_guard(left, env, assignments)
             .append(" + ")
-            .append(clause_guard(right, env)),
+            .append(clause_guard(right, env, assignments)),
 
-        ClauseGuard::AddFloat { left, right, .. } => clause_guard(left, env)
+        ClauseGuard::AddFloat { left, right, .. } => clause_guard(left, env, assignments)
             .append(" + ")
-            .append(clause_guard(right, env)),
+            .append(clause_guard(right, env, assignments)),
 
-        ClauseGuard::SubInt { left, right, .. } => clause_guard(left, env)
+        ClauseGuard::SubInt { left, right, .. } => clause_guard(left, env, assignments)
             .append(" - ")
-            .append(clause_guard(right, env)),
+            .append(clause_guard(right, env, assignments)),
 
-        ClauseGuard::SubFloat { left, right, .. } => clause_guard(left, env)
+        ClauseGuard::SubFloat { left, right, .. } => clause_guard(left, env, assignments)
             .append(" - ")
-            .append(clause_guard(right, env)),
+            .append(clause_guard(right, env, assignments)),
 
-        ClauseGuard::MultInt { left, right, .. } => clause_guard(left, env)
+        ClauseGuard::MultInt { left, right, .. } => clause_guard(left, env, assignments)
             .append(" * ")
-            .append(clause_guard(right, env)),
+            .append(clause_guard(right, env, assignments)),
 
-        ClauseGuard::MultFloat { left, right, .. } => clause_guard(left, env)
+        ClauseGuard::MultFloat { left, right, .. } => clause_guard(left, env, assignments)
             .append(" * ")
-            .append(clause_guard(right, env)),
+            .append(clause_guard(right, env, assignments)),
 
-        ClauseGuard::DivInt { left, right, .. } => clause_guard(left, env)
+        ClauseGuard::DivInt { left, right, .. } => clause_guard(left, env, assignments)
             .append(" div ")
-            .append(clause_guard(right, env)),
+            .append(clause_guard(right, env, assignments)),
 
-        ClauseGuard::DivFloat { left, right, .. } => clause_guard(left, env)
+        ClauseGuard::DivFloat { left, right, .. } => clause_guard(left, env, assignments)
             .append(" / ")
-            .append(clause_guard(right, env)),
+            .append(clause_guard(right, env, assignments)),
 
-        ClauseGuard::RemainderInt { left, right, .. } => clause_guard(left, env)
+        ClauseGuard::RemainderInt { left, right, .. } => clause_guard(left, env, assignments)
             .append(" rem ")
-            .append(clause_guard(right, env)),
+            .append(clause_guard(right, env, assignments)),
 
         // Only local variables are supported and the typer ensures that all
         // ClauseGuard::Vars are local variables
-        ClauseGuard::Var { name, .. } => env.local_var_name(name),
+        ClauseGuard::Var { name, .. } => {
+            // If we're referencing a variable introduced by a string pattern
+            // assignment we need to replace it with its actual literal value:
+            // in the generated code the variable is only defined later, so
+            // just referencing its name would result in an error.
+            assignments
+                .get(name)
+                .map(|assignment| assignment.literal_value.clone())
+                .unwrap_or_else(|| env.local_var_name(name))
+        }
 
         ClauseGuard::TupleIndex { tuple, index, .. } => tuple_index_inline(tuple, *index, env),
 
@@ -1777,13 +1819,17 @@ fn tuple_index_inline<'a>(
     env: &mut Env<'a>,
 ) -> Document<'a> {
     let index_doc = eco_format!("{}", (index + 1)).to_doc();
-    let tuple_doc = bare_clause_guard(tuple, env);
+    let tuple_doc = bare_clause_guard(tuple, env, &HashMap::new());
     "erlang:element"
         .to_doc()
         .append(wrap_arguments([index_doc, tuple_doc]))
 }
 
-fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<'a> {
+fn clause_guard<'a>(
+    guard: &'a TypedClauseGuard,
+    env: &mut Env<'a>,
+    assignments: &HashMap<EcoString, &StringPatternAssignment<'a>>,
+) -> Document<'a> {
     match guard {
         // Binary operators are wrapped in parens
         ClauseGuard::Or { .. }
@@ -1808,7 +1854,7 @@ fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<
         | ClauseGuard::DivFloat { .. }
         | ClauseGuard::RemainderInt { .. } => "("
             .to_doc()
-            .append(bare_clause_guard(guard, env))
+            .append(bare_clause_guard(guard, env, assignments))
             .append(")"),
 
         // Other expressions are not
@@ -1818,7 +1864,7 @@ fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<
         | ClauseGuard::TupleIndex { .. }
         | ClauseGuard::FieldAccess { .. }
         | ClauseGuard::ModuleSelect { .. }
-        | ClauseGuard::Block { .. } => bare_clause_guard(guard, env),
+        | ClauseGuard::Block { .. } => bare_clause_guard(guard, env, assignments),
     }
 }
 

@@ -13,7 +13,40 @@ pub(super) struct PatternPrinter<'a, 'env> {
     /// `<<"a"/utf8, rest/binary>>` and then bind a variable to `"a"`.
     /// This way it's easier for the erlang compiler to optimise the pattern
     /// matching.
-    pub assignments: Vec<Document<'a>>,
+    ///
+    /// Here we store a list of gleam variable name to its name used in the
+    /// Erlang code and its literal value.
+    pub assignments: Vec<StringPatternAssignment<'a>>,
+}
+
+/// This is used to hold data about string patterns with an alias like:
+/// `"a" as letter <> _`
+pub struct StringPatternAssignment<'a> {
+    /// The name assigned to the pattern in the Gleam code:
+    ///
+    /// ```gleam
+    /// "a" as letter <> _
+    /// //     ^^^^^^ This one
+    /// ```
+    ///
+    pub gleam_name: EcoString,
+    /// The name we're using for that same variable in the generated Erlang
+    /// code, could have numbers added to it to make sure it's unique, like
+    /// `Letter@1`.
+    ///
+    pub erlang_name: Document<'a>,
+    /// The document representing the literal value of that variable. For
+    /// example, if we had this pattern `"a" <> letter` it's literal value in
+    /// Erlang is going to be a document with the following string
+    /// `<<"a"/utf8>>`.
+    ///
+    pub literal_value: Document<'a>,
+}
+
+impl<'a> StringPatternAssignment<'a> {
+    pub fn to_assignment_doc(&self) -> Document<'a> {
+        docvec![self.erlang_name.clone(), " = ", self.literal_value.clone()]
+    }
 }
 
 impl<'a, 'env> PatternPrinter<'a, 'env> {
@@ -109,9 +142,12 @@ impl<'a, 'env> PatternPrinter<'a, 'env> {
                     //     ...
                     //
                     self.variables.push(left_name);
-                    let name = self.environment.next_local_var_name(left_name);
-                    self.assignments
-                        .push(docvec![name, " = ", string(left_side_string)]);
+
+                    self.assignments.push(StringPatternAssignment {
+                        gleam_name: left_name.clone(),
+                        erlang_name: self.environment.next_local_var_name(left_name),
+                        literal_value: string(left_side_string),
+                    });
                 }
 
                 docvec![
