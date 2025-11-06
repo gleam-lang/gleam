@@ -1,5 +1,9 @@
 # Changelog
 
+## v5.0.1 - 2025-11-06
+
+- Fixed a bug where ranges with `~>` and `and` or `or` would fail to parse.
+
 ## v5.0.0 - 2025-09-19
 
 - Functions renamed to make it more clear if the JSON API is used or if the
