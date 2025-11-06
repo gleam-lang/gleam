@@ -2266,3 +2266,31 @@ pub fn main() -> Bool {
 
     assert_completion!(TestProject::for_source(code), Position::new(5, 3));
 }
+
+#[test]
+fn prefer_function_which_returns_expected_type() {
+    let code = "
+pub fn main() -> Int {
+  a
+}
+
+fn add(a, b) { a + b }
+fn sub(a, b) { a - b }
+fn addf(a, b) { a +. b }
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(2, 3));
+}
+
+#[test]
+fn prefer_function_which_returns_expected_generic_type() {
+    let code = "
+pub fn main() -> Result(Int, Nil) {
+  let result = Ok(12)
+  let result2 = Error(True)
+  r
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(4, 3));
+}

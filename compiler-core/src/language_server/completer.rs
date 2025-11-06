@@ -136,6 +136,13 @@ impl<'a, IO> Completer<'a, IO> {
             // type is, which generally is the case.
             if expected_type.is_unbound() {
                 TypeMatch::Unknown
+            }
+            // We also want to prioritise functions which return the desired type,
+            // as often the user's intention will be to write a function call.
+            else if let Some((_, return_)) = type_.fn_types()
+                && expected_type.same_as(&return_)
+            {
+                TypeMatch::Matching
             } else if expected_type.same_as(type_) {
                 TypeMatch::Matching
             } else {
