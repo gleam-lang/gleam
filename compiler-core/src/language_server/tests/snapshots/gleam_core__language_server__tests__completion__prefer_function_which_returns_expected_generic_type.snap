@@ -1,12 +1,11 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-expression: "\npub fn main() -> Bool {\n  let wibble = 123\n  let wubble = True\n  let Wobble = 1.5\n  w\n}\n"
+expression: "\npub fn main() -> Result(Int, Nil) {\n  let result = Ok(12)\n  let result2 = Error(True)\n  r\n}\n"
 ---
-pub fn main() -> Bool {
-  let wibble = 123
-  let wubble = True
-  let Wobble = 1.5
-  w|
+pub fn main() -> Result(Int, Nil) {
+  let result = Ok(12)
+  let result2 = Error(True)
+  r|
 }
 
 
@@ -14,11 +13,11 @@ pub fn main() -> Bool {
 Error
   kind:   Constructor
   detail: gleam
-  sort:   4_Error
+  sort:   04_Error
 False
   kind:   EnumMember
   detail: gleam
-  sort:   04_False
+  sort:   4_False
 Nil
   kind:   EnumMember
   detail: gleam
@@ -26,31 +25,31 @@ Nil
 Ok
   kind:   Constructor
   detail: gleam
-  sort:   4_Ok
+  sort:   04_Ok
 True
   kind:   EnumMember
   detail: gleam
-  sort:   04_True
+  sort:   4_True
 main
   kind:   Function
-  detail: fn() -> Bool
+  detail: fn() -> Result(Int, Nil)
   sort:   02_main
   desc:   app
   edits:
-    [5:2-5:2]: "main"
-wibble
+    [4:2-4:2]: "main"
+result
   kind:   Variable
-  detail: Int
-  sort:   2_wibble
+  detail: Result(Int, a)
+  sort:   02_result
   desc:   app
   docs:   "A locally defined variable."
   edits:
-    [5:2-5:2]: "wibble"
-wubble
+    [4:2-4:2]: "result"
+result2
   kind:   Variable
-  detail: Bool
-  sort:   02_wubble
+  detail: Result(a, Bool)
+  sort:   2_result2
   desc:   app
   docs:   "A locally defined variable."
   edits:
-    [5:2-5:2]: "wubble"
+    [4:2-4:2]: "result2"
