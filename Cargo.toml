@@ -1,6 +1,6 @@
 [package]
 name = "hexpm"
-version = "5.0.1"
+version = "5.1.0"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2024"
 
@@ -13,7 +13,7 @@ categories = ["api-bindings"]
 
 [dependencies]
 # Derive Error trait
-thiserror = "1.0"
+thiserror = "2"
 # JSON (de)serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -31,7 +31,7 @@ flate2 = "1.0"
 # RSA signature and SHA256 checksum verification
 ring = "0.17"
 # PEM -> DER conversion
-x509-parser = "0.15"
+x509-parser = "0.18"
 # Pubgrub dependency resolution algorithm
 pubgrub = "0.3"
 # Basic auth HTTP helper

@@ -1,5 +1,9 @@
 # Changelog
 
+## v5.1.0 - 2025-11-06
+
+- Updated dependencies.
+
 ## v5.0.1 - 2025-11-06
 
 - Fixed a bug where ranges with `~>` and `and` or `or` would fail to parse.
