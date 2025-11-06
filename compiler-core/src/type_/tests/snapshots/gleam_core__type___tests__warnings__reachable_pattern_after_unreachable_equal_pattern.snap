@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn wibble(bits) {\n  case bits {\n    <<97:3>> -> 1\n    <<\"a\">> -> 2\n    _ -> 3\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn wibble(bits) {
+  case bits {
+    <<97:3>> -> 1
+    <<"a">> -> 2
+    _ -> 3
+  }
+}
+
+
+----- WARNING
+warning: Unreachable pattern
+  ┌─ /src/warning/wrn.gleam:4:5
+  │
+4 │     <<97:3>> -> 1
+  │     ^^^^^^^^
+  │       │
+  │       A 3 bits unsigned integer will never match this value
+
+This pattern cannot be reached as it contains segments that will never
+match.
+
+Hint: It can be safely removed.
