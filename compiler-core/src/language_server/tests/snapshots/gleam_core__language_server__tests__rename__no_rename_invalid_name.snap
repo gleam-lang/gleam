@@ -1,0 +1,7 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\npub fn main() {\n  let wibble = 10\n  wibble\n}\n"
+---
+Error response message:
+
+Not_AValid_Name is not a valid name
