@@ -108,6 +108,9 @@
 
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- Added `gleam hex deauthenticate` command.
+  ([Samuel Cristobal](https://github.com/scristobal))
+
 ### Language server
 
 - The "inline variable" code action can now trigger when used over the let
