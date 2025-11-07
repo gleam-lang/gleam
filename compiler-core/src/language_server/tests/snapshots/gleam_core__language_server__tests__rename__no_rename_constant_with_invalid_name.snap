@@ -1,0 +1,7 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\nconst value = 10\n"
+---
+Error response message:
+
+Ten is not a valid name

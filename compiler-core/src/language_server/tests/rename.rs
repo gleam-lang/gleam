@@ -8,24 +8,28 @@ use crate::language_server::tests::{TestProject, find_position_of};
 
 use super::hover;
 
+/// Returns the rename range and edit to apply if the rename is valid and can be
+/// carried out.
+/// However if the rename produces an error response from the language server,
+/// the error message is returned.
 fn rename(
     tester: &TestProject<'_>,
     new_name: &str,
     position: Position,
-) -> Option<(Range, lsp_types::WorkspaceEdit)> {
+) -> Result<Option<(Range, lsp_types::WorkspaceEdit)>, String> {
     let prepare_rename_response = tester.at(position, |engine, params, _| {
         let params = TextDocumentPositionParams {
             text_document: params.text_document,
             position,
         };
         engine.prepare_rename(params).result.unwrap()
-    })?;
+    });
 
-    let lsp_types::PrepareRenameResponse::Range(range) = prepare_rename_response else {
-        return None;
+    let Some(lsp_types::PrepareRenameResponse::Range(range)) = prepare_rename_response else {
+        return Ok(None);
     };
 
-    let edit = tester.at(position, |engine, params, _| {
+    let outcome = tester.at(position, |engine, params, _| {
         let params = RenameParams {
             text_document_position: TextDocumentPositionParams {
                 text_document: params.text_document,
@@ -34,10 +38,14 @@ fn rename(
             new_name: new_name.to_string(),
             work_done_progress_params: WorkDoneProgressParams::default(),
         };
-        engine.rename(params).result.unwrap().unwrap_or(None)
-    })?;
+        engine.rename(params).result.unwrap()
+    });
 
-    Some((range, edit))
+    match outcome {
+        Ok(Some(edit)) => Ok(Some((range, edit))),
+        Ok(None) => Ok(None),
+        Err(error) => Err(error.message),
+    }
 }
 
 fn apply_rename(
@@ -45,7 +53,9 @@ fn apply_rename(
     new_name: &str,
     position: Position,
 ) -> (Range, HashMap<String, String>) {
-    let (range, edit) = rename(tester, new_name, position).expect("Rename failed");
+    let (range, edit) = rename(tester, new_name, position)
+        .expect("Rename failed")
+        .expect("No rename produced");
     let changes = edit.changes.expect("No text edit found");
     (range, apply_code_edit(tester, changes))
 }
@@ -123,7 +133,22 @@ macro_rules! assert_no_rename {
         let src = $project.src;
         let position = $position.find_position(src);
         let result = rename($project, $new_name, position);
-        assert_eq!(result, None);
+        assert_eq!(result, Ok(None));
+    };
+}
+
+macro_rules! assert_rename_error {
+    ($code:literal, $new_name:literal, $position:expr $(,)?) => {
+        let project = TestProject::for_source($code);
+        assert_rename_error!(&project, $new_name, $position);
+    };
+
+    ($project:expr, $new_name:literal, $position:expr $(,)?) => {
+        let src = $project.src;
+        let position = $position.find_position(src);
+        let error = rename($project, $new_name, position).unwrap_err();
+        let snapshot = format!("Error response message:\n\n{error}");
+        insta::assert_snapshot!(insta::internals::AutoName, snapshot, src);
     };
 }
 
@@ -392,7 +417,7 @@ pub fn main() {}
 
 #[test]
 fn no_rename_invalid_name() {
-    assert_no_rename!(
+    assert_rename_error!(
         "
 pub fn main() {
   let wibble = 10
@@ -583,7 +608,7 @@ pub fn something() {
 
 #[test]
 fn no_rename_function_with_invalid_name() {
-    assert_no_rename!(
+    assert_rename_error!(
         "
 pub fn main() {
   let wibble = 10
@@ -784,7 +809,7 @@ pub const something = 10
 
 #[test]
 fn no_rename_constant_with_invalid_name() {
-    assert_no_rename!(
+    assert_rename_error!(
         "
 const value = 10
 ",
@@ -947,7 +972,7 @@ pub fn main() {
 
 #[test]
 fn no_rename_type_variant_with_invalid_name() {
-    assert_no_rename!(
+    assert_rename_error!(
         "
 pub type Wibble {
   Constructor(Int)
@@ -1270,7 +1295,7 @@ pub fn main(w: Wibble) -> Wibble { todo }
 
 #[test]
 fn no_rename_type_with_invalid_name() {
-    assert_no_rename!(
+    assert_rename_error!(
         "
 type Wibble { Wobble }
 ",
