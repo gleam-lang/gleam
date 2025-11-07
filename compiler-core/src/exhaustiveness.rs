@@ -71,6 +71,7 @@ use crate::{
         self, AssignName, BitArraySize, Endianness, IntOperator, SrcSpan, TypedBitArraySize,
         TypedClause, TypedPattern, TypedPatternBitArraySegment,
     },
+    parse::LiteralFloatValue,
     strings::{
         convert_string_escape_chars, length_utf16, length_utf32, string_to_utf16_bytes,
         string_to_utf32_bytes,
@@ -442,10 +443,10 @@ impl Body {
 pub enum Pattern {
     Discard,
     Int {
-        value: EcoString,
+        int_value: BigInt,
     },
     Float {
-        value: EcoString,
+        float_value: LiteralFloatValue,
     },
     String {
         value: EcoString,
@@ -492,11 +493,11 @@ impl Pattern {
             // out of a branch's checks. So there's no corresponding runtime check
             // we can perform for them.
             Pattern::Discard | Pattern::Variable { .. } | Pattern::Assign { .. } => return None,
-            Pattern::Int { value } => RuntimeCheckKind::Int {
-                value: value.clone(),
+            Pattern::Int { int_value, .. } => RuntimeCheckKind::Int {
+                int_value: int_value.clone(),
             },
-            Pattern::Float { value } => RuntimeCheckKind::Float {
-                value: value.clone(),
+            Pattern::Float { float_value, .. } => RuntimeCheckKind::Float {
+                float_value: *float_value,
             },
             Pattern::String { value } => RuntimeCheckKind::String {
                 value: value.clone(),
@@ -596,10 +597,10 @@ struct PatternCheck {
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum RuntimeCheck {
     Int {
-        value: EcoString,
+        int_value: BigInt,
     },
     Float {
-        value: EcoString,
+        float_value: LiteralFloatValue,
     },
     String {
         value: EcoString,
@@ -631,11 +632,11 @@ pub enum RuntimeCheck {
 impl RuntimeCheck {
     fn kind(&self) -> Option<RuntimeCheckKind> {
         let kind = match self {
-            RuntimeCheck::Int { value } => RuntimeCheckKind::Int {
-                value: value.clone(),
+            RuntimeCheck::Int { int_value, .. } => RuntimeCheckKind::Int {
+                int_value: int_value.clone(),
             },
-            RuntimeCheck::Float { value } => RuntimeCheckKind::Float {
-                value: value.clone(),
+            RuntimeCheck::Float { float_value, .. } => RuntimeCheckKind::Float {
+                float_value: *float_value,
             },
             RuntimeCheck::String { value } => RuntimeCheckKind::String {
                 value: value.clone(),
@@ -683,8 +684,8 @@ impl RuntimeCheck {
 
 #[derive(Eq, PartialEq, Clone, Hash, Debug)]
 pub enum RuntimeCheckKind {
-    Int { value: EcoString },
-    Float { value: EcoString },
+    Int { int_value: BigInt },
+    Float { float_value: LiteralFloatValue },
     String { value: EcoString },
     StringPrefix { prefix: EcoString },
     Tuple { size: usize },
@@ -2486,12 +2487,10 @@ impl<'a> Compiler<'a> {
         branch_mode: &BranchMode,
     ) -> RuntimeCheck {
         match (kind, branch_mode) {
-            (RuntimeCheckKind::Int { value }, _) => RuntimeCheck::Int {
-                value: value.clone(),
+            (RuntimeCheckKind::Int { int_value }, _) => RuntimeCheck::Int {
+                int_value: int_value.clone(),
             },
-            (RuntimeCheckKind::Float { value }, _) => RuntimeCheck::Float {
-                value: value.clone(),
-            },
+            (RuntimeCheckKind::Float { float_value }, _) => RuntimeCheck::Float { float_value },
             (RuntimeCheckKind::String { value }, _) => RuntimeCheck::String {
                 value: value.clone(),
             },
@@ -3296,14 +3295,14 @@ impl CaseToCompile {
             TypedPattern::Invalid { .. } => self.insert(Pattern::Discard),
             TypedPattern::Discard { .. } => self.insert(Pattern::Discard),
 
-            TypedPattern::Int { value, .. } => {
-                let value = value.clone();
-                self.insert(Pattern::Int { value })
+            TypedPattern::Int { int_value, .. } => {
+                let int_value = int_value.clone();
+                self.insert(Pattern::Int { int_value })
             }
 
-            TypedPattern::Float { value, .. } => {
-                let value = value.clone();
-                self.insert(Pattern::Float { value })
+            TypedPattern::Float { float_value, .. } => {
+                let float_value = *float_value;
+                self.insert(Pattern::Float { float_value })
             }
 
             TypedPattern::String { value, .. } => {

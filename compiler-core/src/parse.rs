@@ -80,8 +80,10 @@ use ecow::EcoString;
 use error::{LexicalError, ParseError, ParseErrorType};
 use lexer::{LexResult, Spanned};
 use num_bigint::BigInt;
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::VecDeque;
+use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 pub use token::Token;
 use vec1::{Vec1, vec1};
@@ -4755,5 +4757,34 @@ impl Ord for LiteralFloatValue {
 impl PartialOrd for LiteralFloatValue {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+impl Hash for LiteralFloatValue {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.to_bits().hash(state)
+    }
+}
+
+impl Serialize for LiteralFloatValue {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_f64(self.0)
+    }
+}
+
+impl<'de> Deserialize<'de> for LiteralFloatValue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = f64::deserialize(deserializer)?;
+        if value.is_nan() {
+            Err(serde::de::Error::custom("NaN is not allowed"))
+        } else {
+            Ok(LiteralFloatValue(value))
+        }
     }
 }

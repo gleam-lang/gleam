@@ -1,6 +1,6 @@
 use super::{
     INDENT, bit_array_segment_int_value_to_bytes,
-    expression::{self, Generator, Ordering, float, int},
+    expression::{self, Generator, Ordering, float},
 };
 use crate::{
     ast::{AssignmentKind, Endianness, SrcSpan, TypedClause, TypedExpr, TypedPattern},
@@ -1022,8 +1022,12 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
 
         match runtime_check {
             RuntimeCheck::String { value: expected } => docvec![value, equality, string(expected)],
-            RuntimeCheck::Float { value: expected } => docvec![value, equality, float(expected)],
-            RuntimeCheck::Int { value: expected } => docvec![value, equality, int(expected)],
+            RuntimeCheck::Float {
+                float_value: expected,
+            } => docvec![value, equality, expected.value()],
+            RuntimeCheck::Int {
+                int_value: expected,
+            } => docvec![value, equality, expected.clone()],
             RuntimeCheck::StringPrefix { prefix, .. } => {
                 docvec![value, ".startsWith(", string(prefix), ")"]
             }
