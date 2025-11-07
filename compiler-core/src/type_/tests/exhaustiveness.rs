@@ -896,6 +896,111 @@ _ -> 3
 }
 
 #[test]
+fn redundant_int_with_underscores() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    10 -> "ten"
+    1_0 -> "also ten"
+    _ -> "other"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn redundant_int_with_multiple_underscores() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    1_000_000 -> "one million"
+    1000000 -> "also one million"
+    _ -> "other"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn redundant_float_with_different_formatting() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    1.0 -> "one"
+    1.00 -> "also one"
+    _ -> "other"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn redundant_float_with_no_trailing_decimal() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    1.0 -> "one"
+    1. -> "another one"
+    _ -> "other"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn redundant_float_with_underscore() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    10.0 -> "ten"
+    1_0.0 -> "also ten"
+    _ -> "other"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn redundant_float_scientific_notation() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    10.0 -> "ten"
+    1.0e1 -> "also ten"
+    _ -> "other"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn redundant_float_scientific_notation_and_underscore() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    1.0e2 -> "one hundred"
+    1_0_0.0 -> "one hundred again"
+    _ -> "other"
+  }
+}
+"#
+    );
+}
+
+#[test]
 fn let_1() {
     assert_module_error!(
         r#"
