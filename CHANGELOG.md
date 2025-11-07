@@ -292,6 +292,10 @@
   error message instead of silently doing nothing.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- When providing autocomplete suggestions, the language server will now
+  prioritise values which match the expected type of the value being completed.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Formatter
 
 ### Bug fixes
