@@ -45,6 +45,12 @@
   than stopping at the syntax error.
   ([mxtthias](https://github.com/mxtthias))
 
+- Exhaustiveness checks for ints and floats now correctly handle unreachable
+  cases in which the numbers contain underscores (i.e. `10` and `1_0`).
+  Float exhaustiveness checks also now correctly identify unreachable cases
+  containing scientific notation or trailing zeros (i.e. `100` and `1e2`).
+  ([ptdewey](https://github.com/ptdewey))
+
 ### Build tool
 
 - The help text displayed by `gleam dev --help`, `gleam test --help`, and
