@@ -86,7 +86,7 @@ use bitvec::{order::Msb0, slice::BitSlice, view::BitView};
 use ecow::EcoString;
 use id_arena::{Arena, Id};
 use itertools::Itertools;
-use num_bigint::BigInt;
+use num_bigint::{BigInt, Sign};
 use num_traits::ToPrimitive;
 use radix_trie::{Trie, TrieCommon};
 use std::{
@@ -1270,7 +1270,7 @@ impl BitArrayMatchedValue {
             BitArrayMatchedValue::Assign { value, .. } => value.is_impossible_segment(read_action),
             BitArrayMatchedValue::LiteralInt { value, location } => {
                 let size = read_action.size.constant_bits()?.to_u32()?;
-                if representable_with_bits(value.clone(), size, read_action.signed) {
+                if representable_with_bits(value, size, read_action.signed) {
                     None
                 } else {
                     Some(ImpossibleBitArraySegmentPattern::UnrepresentableInteger {
@@ -3674,18 +3674,35 @@ fn superset(
 }
 
 #[must_use]
-fn representable_with_bits(value: BigInt, bits: u32, signed: bool) -> bool {
+fn representable_with_bits(value: &BigInt, bits: u32, signed: bool) -> bool {
     // No number is representable in 0 bits.
     if bits == 0 {
         return false;
     };
-    if signed {
-        // Signed numbers range in [-2^(bits-1), 2^(bits-1)[
-        let power = BigInt::from(2).pow(bits - 1);
-        -&power <= value && value < power
+    let is_negative = value.sign() == Sign::Minus;
+    if is_negative && !signed {
+        return false;
+    }
+
+    let bits_unsigned = value.bits();
+    let required_bits = if !signed {
+        bits_unsigned
+    } else if !is_negative {
+        // The minimal representation of an unsigned number always has 1 as its most
+        // significant bit and thus always needs an extra bit for the sign.
+        bits_unsigned + 1
+    } else if let Some(trailing_zeros) = value.trailing_zeros() {
+        // Negative powers of two don't need an extra sign bit. E.g. `-2 == 0b10`
+        let is_power_of_2 = trailing_zeros == bits_unsigned - 1;
+        bits_unsigned + (!is_power_of_2 as u64)
     } else {
-        // Unsigned numbers range in [0, 2^bits[
-        BigInt::from(0) <= value && value < BigInt::from(2).pow(bits)
+        // The value is 0
+        1
+    };
+
+    match required_bits.to_u32() {
+        Some(r) => bits >= r,
+        None => false,
     }
 }
 
@@ -3697,32 +3714,50 @@ mod representable_with_bits_test {
     #[test]
     fn positive_number_representable_with_bits_test() {
         // 9 can be represented as a >=4 bits unsigned number.
-        assert!(representable_with_bits(9.into(), 4, false));
-        assert!(representable_with_bits(9.into(), 5, false));
+        assert!(representable_with_bits(&9.into(), 4, false));
+        assert!(representable_with_bits(&9.into(), 5, false));
         // But not in <=3 bits as an unsigned number.
-        assert!(!representable_with_bits(9.into(), 3, false));
-        assert!(!representable_with_bits(9.into(), 2, false));
+        assert!(!representable_with_bits(&9.into(), 3, false));
+        assert!(!representable_with_bits(&9.into(), 2, false));
 
         // It can be represented as a >=5 bit signed number.
-        assert!(representable_with_bits(9.into(), 5, true));
-        assert!(representable_with_bits(9.into(), 6, true));
+        assert!(representable_with_bits(&9.into(), 5, true));
+        assert!(representable_with_bits(&9.into(), 6, true));
         // But not in <= 4 bits as a signed number.
-        assert!(!representable_with_bits(9.into(), 4, true));
-        assert!(!representable_with_bits(9.into(), 3, true));
+        assert!(!representable_with_bits(&9.into(), 4, true));
+        assert!(!representable_with_bits(&9.into(), 3, true));
     }
 
     #[test]
     fn negative_number_representable_with_bits_test() {
         // A negative number will never be representable as an unsigned number,
         // no matter the number of bits!
-        assert!(!representable_with_bits(BigInt::from(-9), 1, false));
-        assert!(!representable_with_bits(BigInt::from(-9), 500, false));
+        assert!(!representable_with_bits(&BigInt::from(-9), 1, false));
+        assert!(!representable_with_bits(&BigInt::from(-9), 500, false));
 
         // -9 can be represented in >=5 bits as a signed number.
-        assert!(representable_with_bits(BigInt::from(-9), 5, true));
-        assert!(representable_with_bits(BigInt::from(-9), 6, true));
+        assert!(representable_with_bits(&BigInt::from(-9), 5, true));
+        assert!(representable_with_bits(&BigInt::from(-9), 6, true));
         // But not in <= 4 bits as a signed number.
-        assert!(!representable_with_bits(BigInt::from(-9), 4, true));
-        assert!(!representable_with_bits(BigInt::from(-9), 3, true));
+        assert!(!representable_with_bits(&BigInt::from(-9), 4, true));
+        assert!(!representable_with_bits(&BigInt::from(-9), 3, true));
+    }
+
+    #[test]
+    fn number_representable_with_sign_test() {
+        // Sign needs one additional bit
+        assert!(representable_with_bits(&8.into(), 4, false));
+        assert!(!representable_with_bits(&8.into(), 4, true));
+        assert!(representable_with_bits(&8.into(), 5, true));
+
+        // Negative number must be signed
+        assert!(!representable_with_bits(&BigInt::from(-8), 100, false));
+
+        // Negative powers of two don't need an extra sign bit
+        assert!(!representable_with_bits(&BigInt::from(-8), 3, true));
+        assert!(representable_with_bits(&BigInt::from(-8), 4, true));
+
+        assert!(!representable_with_bits(&BigInt::from(-9), 4, true));
+        assert!(representable_with_bits(&BigInt::from(-9), 5, true));
     }
 }
