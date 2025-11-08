@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/javascript/tests/numbers.rs
+expression: "\npub fn main(x) {\n  -100.001e123_456_789 /. 100.001e123_456_789\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main(x) {
+  -100.001e123_456_789 /. 100.001e123_456_789
+}
+
+
+----- COMPILED JAVASCRIPT
+export function main(x) {
+  return -Infinity / Infinity;
+}

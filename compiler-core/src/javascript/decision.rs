@@ -1,6 +1,6 @@
 use super::{
     INDENT, bit_array_segment_int_value_to_bytes,
-    expression::{self, Generator, Ordering, float},
+    expression::{self, Generator, Ordering, float, float_from_value},
 };
 use crate::{
     ast::{AssignmentKind, Endianness, SrcSpan, TypedClause, TypedExpr, TypedPattern},
@@ -1024,7 +1024,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             RuntimeCheck::String { value: expected } => docvec![value, equality, string(expected)],
             RuntimeCheck::Float {
                 float_value: expected,
-            } => docvec![value, equality, expected.value()],
+            } => docvec![value, equality, float_from_value(expected.value())],
             RuntimeCheck::Int {
                 int_value: expected,
             } => docvec![value, equality, expected.clone()],

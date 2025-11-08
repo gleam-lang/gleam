@@ -288,7 +288,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             TypedExpr::String { value, .. } => string(value),
 
             TypedExpr::Int { value, .. } => int(value),
-            TypedExpr::Float { value, .. } => float(value),
+            TypedExpr::Float { float_value, .. } => float_from_value(float_value.value()),
 
             TypedExpr::List { elements, tail, .. } => {
                 self.not_in_tail_position(Some(Ordering::Strict), |this| match tail {
@@ -2351,6 +2351,22 @@ pub fn float(value: &str) -> Document<'_> {
     out.push_str(value);
 
     out.to_doc()
+}
+
+pub fn float_from_value(value: f64) -> Document<'static> {
+    if value.is_infinite() {
+        if value.is_sign_positive() {
+            "Infinity".to_doc()
+        } else {
+            "-Infinity".to_doc()
+        }
+    } else if value.is_nan() {
+        // NOTE: this case is probably unnecessary, as this function is only
+        // invoked with `LiteralFloatValue` values, which cannot be nan.
+        "NaN".to_doc()
+    } else {
+        value.to_doc()
+    }
 }
 
 /// The context where the constant expression is used, it might be inside a
