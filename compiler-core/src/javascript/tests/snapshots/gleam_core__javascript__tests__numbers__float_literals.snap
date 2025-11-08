@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-assertion_line: 23
 expression: "\npub fn go() {\n  1.5\n  2.0\n  -0.1\n  1.\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -19,5 +17,5 @@ export function go() {
   1.5;
   2.0;
   -0.1;
-  return 1.;
+  return 1.0;
 }
