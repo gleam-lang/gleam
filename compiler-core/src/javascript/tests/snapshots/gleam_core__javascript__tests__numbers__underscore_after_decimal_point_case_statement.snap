@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/javascript/tests/numbers.rs
+expression: "\npub fn main(x) {\n  case x {\n    0._1 -> \"bar\"\n    _ -> \"foo\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main(x) {
+  case x {
+    0._1 -> "bar"
+    _ -> "foo"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function main(x) {
+  if (x === 0.1) {
+    return "bar";
+  } else {
+    return "foo";
+  }
+}

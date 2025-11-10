@@ -176,3 +176,6 @@
 - Fix invalid TypeScript definition being generated for variant constructors
   with long names that take no arguments.
   ([Richard Viney](https://github.com/richard-viney))
+
+- Fix invalid JavaScript codegen in cases where underscores follow a decimal.
+  ([Patrick Dewey](https://github.com/ptdewey))

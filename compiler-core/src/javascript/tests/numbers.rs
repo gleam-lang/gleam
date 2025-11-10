@@ -432,6 +432,56 @@ pub fn main() {
 }
 
 #[test]
+fn underscore_after_decimal_point() {
+    assert_js!(
+        "
+pub fn main() {
+  0._1
+}
+"
+    );
+}
+
+#[test]
+fn underscore_after_decimal_point_case_statement() {
+    assert_js!(
+        "
+pub fn main(x) {
+  case x {
+    0._1 -> \"bar\"
+    _ -> \"foo\"
+  }
+}
+"
+    );
+}
+
+#[test]
+fn inf_float_case_statement() {
+    assert_js!(
+        "
+pub fn main(x) {
+  case x {
+  100.001e123_456_789 -> \"bar\"
+    _ -> \"foo\"
+  }
+}
+"
+    );
+}
+
+#[test]
+fn division_inf_by_inf_float() {
+    assert_js!(
+        "
+pub fn main(x) {
+  -100.001e123_456_789 /. 100.001e123_456_789
+}
+"
+    );
+}
+
+#[test]
 fn division_by_zero_float() {
     assert_js!(
         "pub fn main() {
