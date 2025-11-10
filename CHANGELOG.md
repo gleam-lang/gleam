@@ -230,3 +230,6 @@
 - Fixed a bug where the formatter would remove the `@deprecated` attribute from
   constants.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fix invalid JavaScript codegen in cases where underscores follow a decimal.
+  ([Patrick Dewey](https://github.com/ptdewey))
