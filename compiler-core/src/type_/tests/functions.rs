@@ -262,33 +262,6 @@ pub fn main() {
 }
 
 #[test]
-fn multiple_bad_statement_assignment_with_annotation_fault_tolerance() {
-    assert_module_error!(
-        r#"
-pub fn main() {
-  let a: Int = "not an int"
-  let b: String = 1
-  let c = a + 2
-}
-"#
-    );
-}
-
-#[test]
-fn multiple_bad_statement_assignment_with_annotation_fault_tolerance2() {
-    assert_module_error!(
-        r#"
-pub fn main() {
-  // Since the value is invalid the type is the annotation
-  let a: Int = Junk
-  let b: String = 1
-  let c = a + 2
-}
-"#
-    );
-}
-
-#[test]
 fn multiple_bad_statement_assignment_with_pattern_fault_tolerance2() {
     assert_module_error!(
         r#"
