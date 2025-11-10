@@ -23,10 +23,12 @@ expression: "\n        pub type Person {\n          Person(username: String, nam
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
--export([main/0]).
+-export(['person$person'/3, main/0]).
 -export_type([person/0]).
 
 -type person() :: {person, binary(), binary(), integer()}.
+
+'person$person'(Field@0, Field@1, Field@2) -> {person, Field@0, Field@1, Field@2}.
 
 -file("project/test/my/mod.gleam", 6).
 -spec main() -> binary().

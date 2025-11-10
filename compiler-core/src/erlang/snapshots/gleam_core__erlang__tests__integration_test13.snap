@@ -11,10 +11,14 @@ pub type State{ Start(Int) End(Int) }
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
--export([build/1, main/0]).
+-export(['state$start'/1, 'state$end'/1, build/1, main/0]).
 -export_type([state/0]).
 
 -type state() :: {start, integer()} | {'end', integer()}.
+
+'state$start'(Field@0) -> {start, Field@0}.
+
+'state$end'(Field@0) -> {'end', Field@0}.
 
 -file("project/test/my/mod.gleam", 2).
 -spec build(fun((integer()) -> I)) -> I.
@@ -24,4 +28,4 @@ build(Constructor) ->
 -file("project/test/my/mod.gleam", 3).
 -spec main() -> state().
 main() ->
-    build(fun(Field@0) -> {'end', Field@0} end).
+    build(fun 'state$end'/1).

@@ -960,3 +960,20 @@ pub fn get(dict: Dict(key, value), key: key) -> Result(value, Nil)
 "#
     );
 }
+
+#[test]
+fn constructor_equality() {
+    assert_js!(
+        r#"
+pub type Comparison {
+  Wibble
+  Wobble(String)
+}
+
+pub fn main() {
+  echo Wibble == Wibble
+  echo Wobble == Wobble
+}
+"#
+    );
+}

@@ -20,10 +20,12 @@ pub fn main() {
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
--export([main/0]).
+-export(['triple$triple'/3, main/0]).
 -export_type([triple/0]).
 
 -type triple() :: {triple, integer(), integer(), integer()}.
+
+'triple$triple'(Field@0, Field@1, Field@2) -> {triple, Field@0, Field@1, Field@2}.
 
 -file("project/test/my/mod.gleam", 6).
 -spec main() -> integer().

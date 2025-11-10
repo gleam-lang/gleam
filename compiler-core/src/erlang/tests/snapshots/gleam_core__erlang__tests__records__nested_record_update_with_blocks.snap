@@ -19,7 +19,7 @@ pub fn main(a: A) {
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
--export([main/1]).
+-export(['a$a'/1, 'b$b'/1, 'c$c'/1, main/1]).
 -export_type([a/0, b/0, c/0]).
 
 -type a() :: {a, b()}.
@@ -27,6 +27,12 @@ pub fn main(a: A) {
 -type b() :: {b, c()}.
 
 -type c() :: {c, integer()}.
+
+'a$a'(Field@0) -> {a, Field@0}.
+
+'b$b'(Field@0) -> {b, Field@0}.
+
+'c$c'(Field@0) -> {c, Field@0}.
 
 -file("project/test/my/mod.gleam", 5).
 -spec main(a()) -> a().

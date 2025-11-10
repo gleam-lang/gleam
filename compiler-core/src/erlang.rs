@@ -335,8 +335,20 @@ fn register_imports_and_exports(
             typed_parameters,
             opaque,
             external_erlang,
+            publicity: _,
             ..
         }) => {
+            // Export constructor functions for constructors with arguments
+            // We need to export even for private types since they're used within the module
+            for constructor in constructors {
+                let arity = constructor.arguments.len();
+                if arity > 0 {
+                    let constructor_name = constructor_function_name(name, &constructor.name);
+
+                    exports.push(atom_string(constructor_name).append("/").append(arity));
+                }
+            }
+
             // Erlang doesn't allow phantom type variables in type definitions but gleam does
             // so we check the type declaratinon against its constroctors and generate a phantom
             // value that uses the unused type variables.
@@ -460,8 +472,11 @@ fn module_statement<'a>(
             module_function(function, module, is_internal_module, line_numbers, src_path)
         }
 
+        Definition::CustomType(CustomType {
+            name, constructors, ..
+        }) => module_constructors(name, constructors, module, line_numbers),
+
         Definition::TypeAlias(TypeAlias { .. })
-        | Definition::CustomType(CustomType { .. })
         | Definition::Import(Import { .. })
         | Definition::ModuleConstant(ModuleConstant { .. }) => None,
     }
@@ -560,6 +575,45 @@ fn module_function<'a>(
         ],
         env,
     ))
+}
+
+fn module_constructors<'a>(
+    type_name: &'a EcoString,
+    constructors: &'a [RecordConstructor<Arc<Type>>],
+    module: &'a str,
+    line_numbers: &'a LineNumbers,
+) -> Option<(Document<'a>, Env<'a>)> {
+    let constructor_functions: Vec<_> = constructors
+        .iter()
+        .filter_map(|constructor| {
+            let arity = constructor.arguments.len();
+            if arity == 0 {
+                return None;
+            }
+
+            let constructor_name = constructor_function_name(type_name, &constructor.name);
+            let record_name = to_snake_case(&constructor.name);
+            let args = incrementing_arguments_list(arity);
+
+            Some(docvec![
+                atom_string(constructor_name),
+                "(",
+                args.clone(),
+                ") -> {",
+                atom_string(record_name),
+                ", ",
+                args,
+                "}.",
+            ])
+        })
+        .collect();
+
+    if constructor_functions.is_empty() {
+        return None;
+    }
+
+    let env = Env::new(module, "", line_numbers);
+    Some((join(constructor_functions, lines(2)), env))
 }
 
 fn file_attribute<'a>(
@@ -1439,18 +1493,28 @@ fn list<'a>(elements: Document<'a>, tail: Option<Document<'a>>) -> Document<'a> 
 fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) -> Document<'a> {
     match &constructor.variant {
         ValueConstructorVariant::Record {
-            name: record_name, ..
+            name: record_name,
+            module,
+            ..
         } => match constructor.type_.deref() {
-            Type::Fn { arguments, .. } => {
-                let chars = incrementing_arguments_list(arguments.len());
-                "fun("
-                    .to_doc()
-                    .append(chars.clone())
-                    .append(") -> {")
-                    .append(atom_string(to_snake_case(record_name)))
-                    .append(", ")
-                    .append(chars)
-                    .append("} end")
+            Type::Fn {
+                arguments, return_, ..
+            } => {
+                // Extract the type name from the return type
+                let type_name = return_
+                    .named_type_name()
+                    .map(|(_, name)| name)
+                    .unwrap_or_else(|| record_name.clone());
+                let constructor_name = constructor_function_name(&type_name, record_name);
+                let module_prefix = if module == env.module {
+                    "fun ".to_doc()
+                } else {
+                    "fun ".to_doc().append(module_name_atom(module)).append(":")
+                };
+                module_prefix
+                    .append(atom_string(constructor_name))
+                    .append("/")
+                    .append(arguments.len())
             }
             _ => atom_string(to_snake_case(record_name)),
         },
@@ -2866,6 +2930,16 @@ fn variable_name(name: &str) -> EcoString {
     let first_uppercased = first_char.into_iter().flat_map(char::to_uppercase);
 
     first_uppercased.chain(chars).collect::<EcoString>()
+}
+
+fn constructor_function_name(type_name: &EcoString, constructor_name: &EcoString) -> EcoString {
+    // Use type$constructor naming to avoid collisions with regular functions
+    // e.g., SizedChunk.Last -> sized_chunk$last
+    eco_format!(
+        "{}${}",
+        to_snake_case(type_name),
+        to_snake_case(constructor_name)
+    )
 }
 
 /// When rendering a type variable to an erlang type spec we need all type variables with the

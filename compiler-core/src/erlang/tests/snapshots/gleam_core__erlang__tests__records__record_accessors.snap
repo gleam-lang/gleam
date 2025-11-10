@@ -13,10 +13,12 @@ pub fn get_name(person: Person) { person.name }
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
--export([get_age/1, get_name/1]).
+-export(['person$person'/2, get_age/1, get_name/1]).
 -export_type([person/0]).
 
 -type person() :: {person, binary(), integer()}.
+
+'person$person'(Field@0, Field@1) -> {person, Field@0, Field@1}.
 
 -file("project/test/my/mod.gleam", 3).
 -spec get_age(person()) -> integer().

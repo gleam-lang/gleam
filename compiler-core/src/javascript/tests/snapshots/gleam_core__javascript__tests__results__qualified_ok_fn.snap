@@ -10,5 +10,5 @@ pub fn main() { gleam.Ok }
 import * as $gleam from "../gleam.mjs";
 
 export function main() {
-  return (var0) => { return new $gleam.Ok(var0); };
+  return $gleam.Result$Ok;
 }

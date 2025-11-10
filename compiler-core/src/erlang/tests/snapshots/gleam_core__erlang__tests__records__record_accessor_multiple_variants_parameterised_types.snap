@@ -15,11 +15,15 @@ pub fn get_age(person: Person) { person.age }
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
--export([get_name/1, get_age/1]).
+-export(['person$teacher'/3, 'person$student'/2, get_name/1, get_age/1]).
 -export_type([person/0]).
 
 -type person() :: {teacher, binary(), list(integer()), binary()} |
     {student, binary(), list(integer())}.
+
+'person$teacher'(Field@0, Field@1, Field@2) -> {teacher, Field@0, Field@1, Field@2}.
+
+'person$student'(Field@0, Field@1) -> {student, Field@0, Field@1}.
 
 -file("project/test/my/mod.gleam", 6).
 -spec get_name(person()) -> binary().

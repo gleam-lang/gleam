@@ -24,8 +24,8 @@ export const X$Ok = () => new Ok();
 export const X$isOk = (value) => value instanceof Ok;
 
 export function func(x) {
-  let $ = (var0) => { return new $gleam.Ok(var0); };
-  if (isEqual(toList([]), toList([(var0) => { return new Ok(var0); }]))) {
+  let $ = $gleam.Result$Ok;
+  if (isEqual(toList([]), toList([Result$Ok]))) {
     return true;
   } else {
     return false;

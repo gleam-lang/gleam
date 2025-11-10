@@ -17,10 +17,12 @@ pub fn go() {
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
--export([go/0]).
+-export(['wibble$wibble'/2, go/0]).
 -export_type([wibble/0]).
 
 -type wibble() :: {wibble, integer(), float()}.
+
+'wibble$wibble'(Field@0, Field@1) -> {wibble, Field@0, Field@1}.
 
 -file("project/test/my/mod.gleam", 6).
 -spec go() -> integer().

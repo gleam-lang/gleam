@@ -2648,19 +2648,20 @@ pub(crate) fn record_constructor<'a>(
             None => docvec!["new ", name, "()"],
         }
     } else {
-        let vars = (0..arity).map(|i| eco_format!("var{i}").to_doc());
-        let body = docvec![
-            "return ",
-            construct_record(qualifier, name, vars.clone()),
-            ";"
-        ];
-        docvec![
-            docvec![wrap_arguments(vars), " => {", break_("", " "), body]
-                .nest(INDENT)
-                .append(break_("", " "))
-                .group(),
-            "}",
-        ]
+        // Reference the exported constructor function to ensure identity equality
+        // Extract the type name from the function's return type
+        let type_name = match type_.as_ref() {
+            Type::Fn { return_, .. } => return_
+                .named_type_name()
+                .map(|(_, name)| name)
+                .unwrap_or_else(|| name.into()),
+            _ => name.into(),
+        };
+
+        match qualifier {
+            Some(module) => docvec!["$", module, ".", type_name, "$", name],
+            None => docvec![type_name, "$", name],
+        }
     }
 }
 

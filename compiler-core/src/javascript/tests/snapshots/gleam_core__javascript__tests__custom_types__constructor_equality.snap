@@ -1,0 +1,56 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\npub type Comparison {\n  Wibble\n  Wobble(String)\n}\n\npub fn main() {\n  echo Wibble == Wibble\n  echo Wobble == Wobble\n}\n"
+---
+----- SOURCE CODE
+
+pub type Comparison {
+  Wibble
+  Wobble(String)
+}
+
+pub fn main() {
+  echo Wibble == Wibble
+  echo Wobble == Wobble
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
+import {
+  Empty as $Empty,
+  NonEmpty as $NonEmpty,
+  CustomType as $CustomType,
+  isEqual,
+  bitArraySlice,
+  bitArraySliceToInt,
+  BitArray as $BitArray,
+  List as $List,
+  UtfCodepoint as $UtfCodepoint,
+} from "../gleam.mjs";
+
+export class Wibble extends $CustomType {}
+export const Comparison$Wibble = () => new Wibble();
+export const Comparison$isWibble = (value) => value instanceof Wibble;
+
+export class Wobble extends $CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+}
+export const Comparison$Wobble = ($0) => new Wobble($0);
+export const Comparison$isWobble = (value) => value instanceof Wobble;
+export const Comparison$Wobble$0 = (value) => value[0];
+
+export function main() {
+  echo(new Wibble() instanceof Wibble, undefined, "src/module.gleam", 8);
+  return echo(
+    isEqual(Comparison$Wobble, Comparison$Wobble),
+    undefined,
+    "src/module.gleam",
+    9,
+  );
+}
+
+// ...omitted code from `templates/echo.mjs`...

@@ -16,12 +16,14 @@ pub type Box {
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
--export([main/1]).
+-export(['box$box'/1, main/1]).
 -export_type([box/0]).
 
 -type box() :: {box, integer()}.
 
+'box$box'(Field@0) -> {box, Field@0}.
+
 -file("project/test/my/mod.gleam", 1).
 -spec main(any()) -> fun((integer()) -> box()).
 main(A) ->
-    fun(Field@0) -> {box, Field@0} end.
+    fun 'box$box'/1.

@@ -9,5 +9,5 @@ pub fn main() { Ok }
 import { Ok } from "../gleam.mjs";
 
 export function main() {
-  return (var0) => { return new Ok(var0); };
+  return Result$Ok;
 }

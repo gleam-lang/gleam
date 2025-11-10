@@ -17,5 +17,5 @@ import * as $other from "../other.mjs";
 import { Two } from "../other.mjs";
 
 export function main() {
-  return (var0, var1, var2) => { return new Two(var0, var1, var2); };
+  return One$Two;
 }

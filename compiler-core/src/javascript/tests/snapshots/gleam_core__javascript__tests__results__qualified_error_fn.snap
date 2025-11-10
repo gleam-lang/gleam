@@ -10,5 +10,5 @@ pub fn main() { gleam.Error }
 import * as $gleam from "../gleam.mjs";
 
 export function main() {
-  return (var0) => { return new $gleam.Error(var0); };
+  return $gleam.Result$Error;
 }

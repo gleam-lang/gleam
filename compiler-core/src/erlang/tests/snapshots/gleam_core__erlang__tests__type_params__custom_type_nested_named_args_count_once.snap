@@ -17,10 +17,12 @@ expression: "\n        pub type Wibble(a, b) {\n            Wibble(a, b)\n      
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
--export([wibble/0]).
+-export(['wibble$wibble'/2, wibble/0]).
 -export_type([wibble/2]).
 
 -type wibble(I, J) :: {wibble, I, J}.
+
+'wibble$wibble'(Field@0, Field@1) -> {wibble, Field@0, Field@1}.
 
 -file("project/test/my/mod.gleam", 6).
 -spec wibble() -> wibble(K, wibble(K, any())).

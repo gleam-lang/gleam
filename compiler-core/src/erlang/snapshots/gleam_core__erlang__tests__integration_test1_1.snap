@@ -10,10 +10,12 @@ pub fn pound(x) { Pound(x) }
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
--export([pound/1]).
+-export(['money$pound'/1, pound/1]).
 -export_type([money/0]).
 
 -type money() :: {pound, integer()}.
+
+'money$pound'(Field@0) -> {pound, Field@0}.
 
 -file("project/test/my/mod.gleam", 2).
 -spec pound(integer()) -> money().
