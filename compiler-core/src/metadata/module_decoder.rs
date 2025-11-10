@@ -437,6 +437,7 @@ impl ModuleDecoder {
             module: Default::default(),
             name: Default::default(),
             arguments,
+            spread: None,
             tag,
             type_,
             field_map: None,
