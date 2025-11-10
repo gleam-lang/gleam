@@ -10,10 +10,12 @@ pub fn y() { fn() { Point }()(4, 6) }
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
--export([y/0]).
+-export(['point$point'/2, y/0]).
 -export_type([point/0]).
 
 -type point() :: {point, integer(), integer()}.
+
+'point$point'(Field@0, Field@1) -> {point, Field@0, Field@1}.
 
 -file("project/test/my/mod.gleam", 2).
 -spec y() -> point().

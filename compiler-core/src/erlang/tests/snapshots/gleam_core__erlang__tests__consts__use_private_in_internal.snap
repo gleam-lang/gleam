@@ -20,10 +20,12 @@ expression: "\n              fn identity(a) {\n                a\n              
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
--export([identity/1]).
+-export(['mapper$mapper'/1, identity/1]).
 -export_type([mapper/1]).
 
 -type mapper(I) :: {mapper, fun((I) -> I)}.
+
+'mapper$mapper'(Field@0) -> {mapper, Field@0}.
 
 -file("project/test/my/mod.gleam", 2).
 -spec identity(J) -> J.

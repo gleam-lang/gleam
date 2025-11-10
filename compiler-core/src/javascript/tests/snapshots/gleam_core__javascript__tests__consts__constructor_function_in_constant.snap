@@ -8,4 +8,4 @@ pub const a = Ok
 ----- COMPILED JAVASCRIPT
 import { Ok } from "../gleam.mjs";
 
-export const a = (var0) => { return new Ok(var0); };
+export const a = Result$Ok;

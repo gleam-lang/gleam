@@ -43,13 +43,5 @@ export const TypeWithALongNameAndSeveralArguments$TypeWithALongNameAndSeveralArg
   value[4];
 
 export function go() {
-  return (var0, var1, var2, var3, var4) => {
-    return new TypeWithALongNameAndSeveralArguments(
-      var0,
-      var1,
-      var2,
-      var3,
-      var4,
-    );
-  };
+  return TypeWithALongNameAndSeveralArguments$TypeWithALongNameAndSeveralArguments;
 }

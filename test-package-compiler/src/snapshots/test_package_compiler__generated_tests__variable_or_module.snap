@@ -41,10 +41,12 @@ record_field(Power) ->
 -module(power).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "src/power.gleam").
--export([to_int/1]).
+-export(['power$power'/1, to_int/1]).
 -export_type([power/0]).
 
 -type power() :: {power, integer()}.
+
+'power$power'(Field@0) -> {power, Field@0}.
 
 -file("src/power.gleam", 6).
 -spec to_int(power()) -> integer().

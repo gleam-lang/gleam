@@ -37,11 +37,12 @@ unbox(X) ->
 -module(two).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "src/two.gleam").
+-export(['box$box'/1]).
 -export_type([box/0]).
 
 -type box() :: {box, integer()}.
 
-
+'box$box'(Field@0) -> {box, Field@0}.
 
 
 //// /out/lib/the_package/ebin/importy.app

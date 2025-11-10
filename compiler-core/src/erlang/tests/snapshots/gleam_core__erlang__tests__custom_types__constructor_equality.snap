@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/erlang/tests/custom_types.rs
+expression: "\npub type Comparison {\n  Wibble\n  Wobble(String)\n}\n\npub fn main() {\n  echo Wibble == Wibble\n  echo Wobble == Wobble\n}\n"
+---
+----- SOURCE CODE
+
+pub type Comparison {
+  Wibble
+  Wobble(String)
+}
+
+pub fn main() {
+  echo Wibble == Wibble
+  echo Wobble == Wobble
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export(['comparison$wobble'/1, main/0]).
+-export_type([comparison/0]).
+
+-type comparison() :: wibble | {wobble, binary()}.
+
+'comparison$wobble'(Field@0) -> {wobble, Field@0}.
+
+-file("project/test/my/mod.gleam", 7).
+-spec main() -> boolean().
+main() ->
+    echo(wibble =:= wibble, nil, 8),
+    echo(fun 'comparison$wobble'/1 =:= fun 'comparison$wobble'/1, nil, 9).
+
+% ...omitted code from `templates/echo.erl`...

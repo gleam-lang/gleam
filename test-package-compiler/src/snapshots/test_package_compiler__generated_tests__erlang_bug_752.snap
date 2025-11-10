@@ -15,11 +15,12 @@ expression: "./cases/erlang_bug_752"
 -module(one).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "src/one.gleam").
+-export(['one$one'/1]).
 -export_type([one/1]).
 
 -type one(I) :: {one, I}.
 
-
+'one$one'(Field@0) -> {one, Field@0}.
 
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache
@@ -35,11 +36,12 @@ expression: "./cases/erlang_bug_752"
 -module(two).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "src/two.gleam").
+-export(['two$two'/1]).
 -export_type([two/1]).
 
 -type two(K) :: {two, one:one(integer())} | {gleam_phantom, K}.
 
-
+'two$two'(Field@0) -> {two, Field@0}.
 
 
 //// /out/lib/the_package/ebin/importy.app

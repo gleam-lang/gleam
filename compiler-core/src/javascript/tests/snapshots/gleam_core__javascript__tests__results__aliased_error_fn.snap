@@ -11,5 +11,5 @@ import * as $gleam from "../gleam.mjs";
 import { Error as Thing } from "../gleam.mjs";
 
 export function main() {
-  return (var0) => { return new Thing(var0); };
+  return Result$Thing;
 }

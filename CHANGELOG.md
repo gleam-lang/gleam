@@ -51,6 +51,24 @@
   containing scientific notation or trailing zeros (i.e. `100` and `1e2`).
   ([ptdewey](https://github.com/ptdewey))
 
+- Code generation for record constructor functions with arguments has been
+  changed. They are now generated as named functions instead of anonymous
+  functions, which allows them to compare equal when referenced. For example:
+
+  ```gleam
+  pub type Foo {
+    Wibble
+    Wobble(String)
+  }
+
+  pub fn main() {
+    echo Wibble == Wibble  // True
+    echo Wobble == Wobble  // False (previously) -> True
+  }
+  ```
+
+  ([Adi Salimgereyev](https://github.com/abs0luty))
+
 ### Build tool
 
 - The help text displayed by `gleam dev --help`, `gleam test --help`, and

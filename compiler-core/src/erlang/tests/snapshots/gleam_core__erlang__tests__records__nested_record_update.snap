@@ -20,12 +20,16 @@ pub fn main() {
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
--export([main/0]).
+-export(['wibble$wibble'/3, 'wobble$wobble'/2, main/0]).
 -export_type([wibble/0, wobble/0]).
 
 -type wibble() :: {wibble, integer(), wobble(), integer()}.
 
 -type wobble() :: {wobble, integer(), integer()}.
+
+'wibble$wibble'(Field@0, Field@1, Field@2) -> {wibble, Field@0, Field@1, Field@2}.
+
+'wobble$wobble'(Field@0, Field@1) -> {wobble, Field@0, Field@1}.
 
 -file("project/test/my/mod.gleam", 9).
 -spec main() -> wibble().

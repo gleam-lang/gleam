@@ -18,12 +18,16 @@ pub fn main() {
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
--export([main/0]).
+-export(['car$car'/3, 'person$person'/2, main/0]).
 -export_type([car/0, person/0]).
 
 -type car() :: {car, binary(), binary(), person()}.
 
 -type person() :: {person, binary(), integer()}.
+
+'car$car'(Field@0, Field@1, Field@2) -> {car, Field@0, Field@1, Field@2}.
+
+'person$person'(Field@0, Field@1) -> {person, Field@0, Field@1}.
 
 -file("project/test/my/mod.gleam", 5).
 -spec main() -> person().

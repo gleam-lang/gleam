@@ -9,5 +9,5 @@ pub fn main() { Error }
 import { Error } from "../gleam.mjs";
 
 export function main() {
-  return (var0) => { return new Error(var0); };
+  return Result$Error;
 }
