@@ -3598,19 +3598,17 @@ fn int_to_bits(
     let mut bytes = int_to_bytes(value, endianness, signed);
     let bytes_size = bytes.len() * 8;
 
-    // There are 3 cases, which are easier to handle separately by endianness
-    // If the size of the bigint bytes equals the expected bits, we can return them as-is
-    // If there are more bits than we need, we need to trim some of the most significant bits.
-    // E.g. `6:3` yields one byte of which we need to trim the 5 most significant bits.
-    // Values like 999:3 are illegal and caught by the guard at the start of the function.
-    // If there are fewer bits than we need, we need to add some.
-    // E.g. `6:13` yields one byte which we need to pad with 5 bits
     let bits = match (endianness, bytes_size.cmp(&size)) {
         (_, Ordering::Equal) => BitVec::from_vec(bytes),
 
+        // Even though we return an error if `value` cannot be represented in `size` bits,
+        // we may need to slice off up a couple bits if the read size is not a multiple of 8.
+        // <3:4> yields the bytes [0b0000_0011]. We slice off 4 bits and get 0011
         (Endianness::Big, Ordering::Greater) => {
             BitVec::from_bitslice(&bytes.view_bits()[bytes_size - size..])
         }
+        // If the number needs fewer bits than the read size, we pad it.
+        // <3:9> yields the bytes [0b0000_0011]. We add one digit and get 0_0000_0011
         (Endianness::Big, Ordering::Less) => {
             let mut bits = BitVec::repeat(pad_digit, size - bytes_size);
             bits.extend_from_raw_slice(&bytes);
@@ -3782,29 +3780,36 @@ fn representable_with_bits(value: &BigInt, bits: u32, signed: bool) -> bool {
     if bits == 0 {
         return false;
     };
-    let is_negative = value.sign() == Sign::Minus;
-    if is_negative && !signed {
-        return false;
-    }
 
-    let bits_unsigned = value.bits();
-    let required_bits = if !signed {
-        bits_unsigned
-    } else if !is_negative {
-        // The minimal representation of an unsigned number always has 1 as its most
-        // significant bit and thus always needs an extra bit for the sign.
-        bits_unsigned + 1
-    } else if let Some(trailing_zeros) = value.trailing_zeros() {
-        // Negative powers of two don't need an extra sign bit. E.g. `-2 == 0b10`
-        let is_power_of_2 = trailing_zeros == bits_unsigned - 1;
-        bits_unsigned + (!is_power_of_2 as u64)
-    } else {
-        // The value is 0
-        1
+    let required_bits = match (value.sign(), signed) {
+        // Zero always needs one bit.
+        (Sign::NoSign, _) => 1,
+
+        // `BigInt::bits` does not consider the sign!
+        (Sign::Plus, false) => value.bits(),
+        // Therefore we need to add the sign bit here: `10` -> `010`
+        (Sign::Plus, true) => value.bits() + 1,
+
+        // A negative number must be signed
+        (Sign::Minus, false) => return false,
+        (Sign::Minus, true) => {
+            let bits_unsigned = value.bits();
+            let trailing_zeros = value
+                .trailing_zeros()
+                .expect("trailing_zeros to return a value for non-zero numbers");
+            let is_power_of_2 = trailing_zeros == bits_unsigned - 1;
+
+            // Negative powers of two don't need an extra sign bit. E.g. `-2 == 0b10`
+            if is_power_of_2 {
+                bits_unsigned
+            } else {
+                bits_unsigned + 1
+            }
+        }
     };
 
     match required_bits.to_u32() {
-        Some(r) => bits >= r,
+        Some(required_bits) => bits >= required_bits,
         None => false,
     }
 }
@@ -3844,6 +3849,18 @@ mod representable_with_bits_test {
         // But not in <= 4 bits as a signed number.
         assert!(!representable_with_bits(&BigInt::from(-9), 4, true));
         assert!(!representable_with_bits(&BigInt::from(-9), 3, true));
+    }
+
+    #[test]
+    fn zero_representable_with_bits_test() {
+        for i in 0..12 {
+            println!("{i}: {}", BigInt::from(i).bits());
+        }
+        assert!(!representable_with_bits(&BigInt::ZERO, 0, false));
+        assert!(!representable_with_bits(&BigInt::ZERO, 0, true));
+
+        assert!(representable_with_bits(&BigInt::ZERO, 1, false));
+        assert!(representable_with_bits(&BigInt::ZERO, 1, true));
     }
 
     #[test]
