@@ -51,6 +51,17 @@
   containing scientific notation or trailing zeros (i.e. `100` and `1e2`).
   ([ptdewey](https://github.com/ptdewey))
 
+- Let bindings now continue to assume their annotated type after mismatches,
+  preventing misleading follow-up errors:
+  ```gleam
+  pub fn main() {
+    let x: String = 5 // type error: expected String, got Int
+    let y: Int = x    // valid
+    let z: String = x // type error: expected String, got Int
+  }
+  ```
+  ([Adi Salimgereyev](https://github.com/abs0luty))
+
 ### Build tool
 
 - The help text displayed by `gleam dev --help`, `gleam test --help`, and
