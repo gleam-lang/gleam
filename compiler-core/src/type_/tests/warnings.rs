@@ -4516,6 +4516,49 @@ pub fn wibble(bits) {
 }
 
 #[test]
+fn unreachable_int_pattern_with_string_of_same_value() {
+    assert_warning!(
+        r#"
+pub fn wibble(bits) {
+  case bits {
+    <<"a">> -> 1
+    <<97>> -> 2
+    _ -> 3
+  }
+}"#
+    );
+}
+
+#[test]
+fn unreachable_int_pattern_with_prefix_int() {
+    assert_warning!(
+        r#"
+pub fn wibble(bits) {
+  case bits {
+    <<0b1:1, _:1>> -> 1
+    <<0b11:2>> -> 2
+    _ -> 3
+  }
+}"#
+    );
+}
+
+#[test]
+fn reachable_pattern_after_unreachable_equal_pattern() {
+    assert_warning!(
+        r#"
+pub fn wibble(bits) {
+  case bits {
+    <<97:3>> -> 1
+    <<"a">> -> 2
+    _ -> 3
+  }
+}
+"#
+    );
+}
+
+#[test]
 fn unused_recursive_function_argument() {
     assert_warning!(
         "

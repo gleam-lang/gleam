@@ -51,6 +51,25 @@
   containing scientific notation or trailing zeros (i.e. `100` and `1e2`).
   ([ptdewey](https://github.com/ptdewey))
 
+- The [interference-based pruning](https://gleam.run/news/formalising-external-apis/#Improved-bit-array-exhaustiveness-checking)
+  from 1.13 has been extended to integer segments!
+  Aside from the various performance improvements, this allows the compiler to
+  mark more branches as unreachable.
+  ```gleam
+  case bits {
+    <<"a">> -> 0
+    <<97>> -> 1
+    // ^- This branch is unreachable because it's equal to "a".
+
+    <<0b1:1, _:1>> -> 2
+    <<0b11:2>> -> 3
+    // ^- This branch is unreachable because the branch before it already covers it.
+
+    _ -> 99
+  }
+  ```
+  ([fruno](https://github.com/fruno-bulax/))
+
 ### Build tool
 
 - The help text displayed by `gleam dev --help`, `gleam test --help`, and
