@@ -34,6 +34,18 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- When matching the wrong number of subjects, the compiler now pinpoints the
+  error location instead of marking the entire branch.
+  ```
+  case wibble {
+    0, _ -> 1
+    ^^^^ Expected 1 patterns, got 2
+    0 |  -> 1
+      ^ I was expecting a pattern after this
+  }
+  ```
+  ([fruno](https://github.com/fruno-bulax/))
+
 - The performance of `==` and `!=` has been improved for single-variant custom
   types when compiling to JavaScript. This was done by generating comparison
   code specific to the custom type rather than using the generic equality check
