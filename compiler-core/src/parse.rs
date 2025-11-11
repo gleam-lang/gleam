@@ -1609,11 +1609,18 @@ where
         match &patterns.first() {
             Some(lead) => {
                 let mut alternative_patterns = vec![];
-                loop {
-                    if self.maybe_one(&Token::Vbar).is_none() {
-                        break;
+                while let Some((vbar_start, vbar_end)) = self.maybe_one(&Token::Vbar) {
+                    let patterns = self.parse_patterns(PatternPosition::CaseClause)?;
+                    if patterns.is_empty() {
+                        return parse_error(
+                            ParseErrorType::ExpectedPattern,
+                            SrcSpan {
+                                start: vbar_start,
+                                end: vbar_end,
+                            },
+                        );
                     }
-                    alternative_patterns.push(self.parse_patterns(PatternPosition::CaseClause)?);
+                    alternative_patterns.push(patterns);
                 }
                 let guard = self.parse_case_clause_guard()?;
                 let (arr_s, arr_e) = self
