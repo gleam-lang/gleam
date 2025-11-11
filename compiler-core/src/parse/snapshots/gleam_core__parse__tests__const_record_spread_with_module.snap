@@ -23,7 +23,7 @@ Parsed {
                             end: 18,
                         },
                         annotation: None,
-                        value: Record {
+                        value: RecordUpdate {
                             location: SrcSpan {
                                 start: 21,
                                 end: 61,
@@ -38,11 +38,27 @@ Parsed {
                                 ),
                             ),
                             name: "Record",
-                            arguments: [
-                                CallArg {
-                                    label: Some(
-                                        "field",
+                            record: Var {
+                                location: SrcSpan {
+                                    start: 36,
+                                    end: 46,
+                                },
+                                module: Some(
+                                    (
+                                        "other",
+                                        SrcSpan {
+                                            start: 36,
+                                            end: 41,
+                                        },
                                     ),
+                                ),
+                                name: "base",
+                                constructor: None,
+                                type_: (),
+                            },
+                            arguments: [
+                                ConstantRecordUpdateArg {
+                                    label: "field",
                                     location: SrcSpan {
                                         start: 48,
                                         end: 60,
@@ -57,33 +73,11 @@ Parsed {
                                         constructor: None,
                                         type_: (),
                                     },
-                                    implicit: None,
                                 },
                             ],
-                            spread: Some(
-                                Var {
-                                    location: SrcSpan {
-                                        start: 36,
-                                        end: 46,
-                                    },
-                                    module: Some(
-                                        (
-                                            "other",
-                                            SrcSpan {
-                                                start: 36,
-                                                end: 41,
-                                            },
-                                        ),
-                                    ),
-                                    name: "base",
-                                    constructor: None,
-                                    type_: (),
-                                },
-                            ),
                             tag: (),
                             type_: (),
                             field_map: None,
-                            record_constructor: None,
                         },
                         type_: (),
                         deprecation: NotDeprecated,
