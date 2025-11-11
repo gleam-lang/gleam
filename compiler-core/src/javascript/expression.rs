@@ -1839,6 +1839,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                     return record_constructor(type_.clone(), None, name, arity, self.tracker);
                 }
 
+                // Spreads are fully expanded during type checking, so we just handle arguments
                 let field_values = arguments
                     .iter()
                     .map(|argument| self.constant_expression(context, &argument.value))
@@ -1853,6 +1854,12 @@ impl<'module, 'a> Generator<'module, 'a> {
                     Context::Constant => docvec!["/* @__PURE__ */ ", constructor],
                     Context::Function => constructor,
                 }
+            }
+
+            Constant::RecordUpdate { .. } => {
+                panic!(
+                    "Encountered RecordUpdate in code generation - this should have been expanded during type checking"
+                )
             }
 
             Constant::BitArray { segments, .. } => {
@@ -2253,6 +2260,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                     return record_constructor(type_.clone(), None, name, arity, self.tracker);
                 }
 
+                // Spreads are fully expanded during type checking, so we just handle arguments
                 let field_values = arguments
                     .iter()
                     .map(|argument| self.guard_constant_expression(&argument.value))

@@ -6,15 +6,15 @@ use vec1::Vec1;
 use crate::{
     analyse::Inferred,
     ast::{
-        Assert, AssignName, Assignment, BinOp, BitArraySize, CallArg, Constant, Definition,
-        FunctionLiteralKind, Pattern, RecordBeingUpdated, SrcSpan, Statement, TailPattern,
-        TargetedDefinition, TodoKind, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole,
-        TypeAstTuple, TypeAstVar, UntypedArg, UntypedAssert, UntypedAssignment, UntypedClause,
-        UntypedConstant, UntypedConstantBitArraySegment, UntypedCustomType, UntypedDefinition,
-        UntypedExpr, UntypedExprBitArraySegment, UntypedFunction, UntypedImport, UntypedModule,
-        UntypedModuleConstant, UntypedPattern, UntypedPatternBitArraySegment,
-        UntypedRecordUpdateArg, UntypedStatement, UntypedTailPattern, UntypedTypeAlias, UntypedUse,
-        UntypedUseAssignment, Use, UseAssignment,
+        Assert, AssignName, Assignment, BinOp, BitArraySize, CallArg, Constant,
+        ConstantRecordUpdateArg, Definition, FunctionLiteralKind, Pattern, RecordBeingUpdated,
+        SrcSpan, Statement, TailPattern, TargetedDefinition, TodoKind, TypeAst, TypeAstConstructor,
+        TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UntypedArg, UntypedAssert,
+        UntypedAssignment, UntypedClause, UntypedConstant, UntypedConstantBitArraySegment,
+        UntypedCustomType, UntypedDefinition, UntypedExpr, UntypedExprBitArraySegment,
+        UntypedFunction, UntypedImport, UntypedModule, UntypedModuleConstant, UntypedPattern,
+        UntypedPatternBitArraySegment, UntypedRecordUpdateArg, UntypedStatement,
+        UntypedTailPattern, UntypedTypeAlias, UntypedUse, UntypedUseAssignment, Use, UseAssignment,
     },
     build::Target,
     parse::LiteralFloatValue,
@@ -978,6 +978,17 @@ pub trait UntypedConstantFolder {
                 record_constructor: _,
             } => self.fold_constant_record(location, module, name, arguments),
 
+            Constant::RecordUpdate {
+                location,
+                module,
+                name,
+                record,
+                arguments,
+                tag: (),
+                type_: (),
+                field_map: _,
+            } => self.fold_constant_record_update(location, module, name, record, arguments),
+
             Constant::BitArray { location, segments } => {
                 self.fold_constant_bit_array(location, segments)
             }
@@ -1069,6 +1080,26 @@ pub trait UntypedConstantFolder {
             type_: (),
             field_map: None,
             record_constructor: None,
+        }
+    }
+
+    fn fold_constant_record_update(
+        &mut self,
+        location: SrcSpan,
+        module: Option<(EcoString, SrcSpan)>,
+        name: EcoString,
+        record: Box<UntypedConstant>,
+        arguments: Vec<ConstantRecordUpdateArg<UntypedConstant>>,
+    ) -> UntypedConstant {
+        Constant::RecordUpdate {
+            location,
+            module,
+            name,
+            record,
+            arguments,
+            tag: (),
+            type_: (),
+            field_map: None,
         }
     }
 
@@ -1167,6 +1198,37 @@ pub trait UntypedConstantFolder {
                     type_,
                     field_map,
                     record_constructor,
+                }
+            }
+
+            Constant::RecordUpdate {
+                location,
+                module,
+                name,
+                record,
+                arguments,
+                tag,
+                type_,
+                field_map,
+            } => {
+                let record = Box::new(self.fold_constant(*record));
+                let arguments = arguments
+                    .into_iter()
+                    .map(|arg| ConstantRecordUpdateArg {
+                        label: arg.label,
+                        location: arg.location,
+                        value: self.fold_constant(arg.value),
+                    })
+                    .collect();
+                Constant::RecordUpdate {
+                    location,
+                    module,
+                    name,
+                    record,
+                    arguments,
+                    tag,
+                    type_,
+                    field_map,
                 }
             }
 

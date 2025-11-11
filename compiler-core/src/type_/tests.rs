@@ -2306,6 +2306,187 @@ fn custom_type_module_constants() {
 }
 
 #[test]
+fn const_record_spread_basic() {
+    assert_module_infer!(
+        "pub type Person { Person(name: String, age: Int) }
+        pub const alice = Person(\"Alice\", 30)
+        pub const bob = Person(..alice, name: \"Bob\")",
+        vec![
+            ("Person", "fn(String, Int) -> Person"),
+            ("alice", "Person"),
+            ("bob", "Person")
+        ],
+    );
+}
+
+#[test]
+fn const_record_spread_all_fields() {
+    assert_module_infer!(
+        "pub type Person { Person(name: String, age: Int, city: String) }
+        pub const base = Person(\"Alice\", 30, \"London\")
+        pub const updated = Person(..base, name: \"Bob\", age: 25)",
+        vec![
+            ("Person", "fn(String, Int, String) -> Person"),
+            ("base", "Person"),
+            ("updated", "Person")
+        ],
+    );
+}
+
+#[test]
+fn const_record_spread_only() {
+    assert_module_infer!(
+        "pub type Person { Person(name: String, age: Int) }
+        pub const alice = Person(\"Alice\", 30)
+        pub const bob = Person(..alice)",
+        vec![
+            ("Person", "fn(String, Int) -> Person"),
+            ("alice", "Person"),
+            ("bob", "Person")
+        ],
+    );
+}
+
+#[test]
+fn const_record_spread_chain() {
+    assert_module_infer!(
+        "pub type Person { Person(name: String, age: Int, city: String) }
+        pub const alice = Person(\"Alice\", 30, \"London\")
+        pub const bob = Person(..alice, name: \"Bob\")
+        pub const charlie = Person(..bob, age: 25)",
+        vec![
+            ("Person", "fn(String, Int, String) -> Person"),
+            ("alice", "Person"),
+            ("bob", "Person"),
+            ("charlie", "Person")
+        ],
+    );
+}
+
+#[test]
+fn const_record_spread_with_labeled_args() {
+    assert_module_infer!(
+        "pub type Person { Person(name: String, age: Int, city: String) }
+        pub const alice = Person(name: \"Alice\", age: 30, city: \"London\")
+        pub const bob = Person(..alice, name: \"Bob\")",
+        vec![
+            ("Person", "fn(String, Int, String) -> Person"),
+            ("alice", "Person"),
+            ("bob", "Person")
+        ],
+    );
+}
+
+#[test]
+fn const_record_spread_type_error() {
+    assert_module_error!(
+        "pub type Person { Person(name: String, age: Int) }
+        pub type Animal { Animal(species: String) }
+        pub const alice = Person(\"Alice\", 30)
+        pub const dog = Animal(..alice)"
+    );
+}
+
+#[test]
+fn const_record_spread_field_type_error() {
+    assert_module_error!(
+        "pub type Person { Person(name: String, age: Int) }
+        pub const alice = Person(\"Alice\", 30)
+        pub const bob = Person(..alice, age: \"not a number\")"
+    );
+}
+
+#[test]
+fn const_record_spread_nonexistent_field() {
+    assert_module_error!(
+        "pub type Person { Person(name: String, age: Int) }
+        pub const alice = Person(\"Alice\", 30)
+        pub const bob = Person(..alice, nonexistent: \"value\")"
+    );
+}
+
+#[test]
+fn const_record_spread_non_record() {
+    assert_module_error!(
+        "pub type Person { Person(name: String, age: Int) }
+        pub const not_a_record = 42
+        pub const bob = Person(..not_a_record, name: \"Bob\")"
+    );
+}
+
+#[test]
+fn const_record_spread_fieldless_warning() {
+    // Test that spreading without any field overrides emits a warning
+    assert_module_infer!(
+        "pub type Animal { Animal(species: String) }
+        pub const alice = Animal(\"Cat\")
+        pub const dog = Animal(..alice)",
+        vec![
+            ("Animal", "fn(String) -> Animal"),
+            ("alice", "Animal"),
+            ("dog", "Animal"),
+        ]
+    );
+}
+
+#[test]
+fn const_record_spread_multi_variant() {
+    // Test spreading with multi-variant custom types
+    assert_module_infer!(
+        "pub type Pet { Dog(name: String, age: Int) Cat(name: String, breed: String) }
+        pub const my_dog = Dog(\"Rex\", 5)
+        pub const another_dog = Dog(..my_dog, name: \"Max\")",
+        vec![
+            ("Cat", "fn(String, String) -> Pet"),
+            ("Dog", "fn(String, Int) -> Pet"),
+            ("another_dog", "Pet"),
+            ("my_dog", "Pet"),
+        ]
+    );
+}
+
+#[test]
+fn const_record_spread_variant_without_args() {
+    // Test spreading with variants that have no arguments
+    assert_module_infer!(
+        "pub type Status { Active Inactive }
+        pub const status1 = Active
+        pub const status2 = Active(..status1)",
+        vec![
+            ("Active", "Status"),
+            ("Inactive", "Status"),
+            ("status1", "Status"),
+            ("status2", "Status"),
+        ]
+    );
+}
+
+#[test]
+fn const_record_spread_variant_without_args_warning() {
+    // Test that spreading 0-arity constructors produces a warning
+    assert_warning!(
+        "pub type Status { Active Inactive }
+        pub const status1 = Active
+        pub const status2 = Active(..status1)"
+    );
+}
+
+#[test]
+fn const_record_spread_unlabelled_fields() {
+    // Test spreading with tuple-like constructors (unlabelled fields)
+    assert_module_infer!(
+        "pub type Point { Point(Int, Int) }
+        pub const origin = Point(0, 0)
+        pub const point = Point(..origin)",
+        vec![
+            ("Point", "fn(Int, Int) -> Point"),
+            ("origin", "Point"),
+            ("point", "Point"),
+        ]
+    );
+}
+
+#[test]
 fn module_constant_functions() {
     assert_module_infer!(
         "pub fn int_identity(i: Int) -> Int { i }
