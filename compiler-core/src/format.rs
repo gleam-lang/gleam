@@ -543,6 +543,12 @@ impl<'comments> Formatter<'comments> {
                     .group()
             }
 
+            Constant::RecordUpdate { .. } => {
+                panic!(
+                    "Encountered RecordUpdate in code generation - this should have been expanded during type checking"
+                )
+            }
+
             Constant::Var {
                 name, module: None, ..
             } => name.to_doc(),

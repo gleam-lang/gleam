@@ -1514,6 +1514,13 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
             tuple(std::iter::once(tag).chain(arguments_doc))
         }
 
+        Constant::RecordUpdate { .. } => {
+            // RecordUpdate should be expanded to Record during type checking, so this should never happen
+            panic!(
+                "Encountered RecordUpdate in code generation - this should have been expanded during type checking"
+            )
+        }
+
         Constant::Var {
             name, constructor, ..
         } => var(
@@ -3267,6 +3274,12 @@ fn find_referenced_private_functions(
         TypedConstant::Record { arguments, .. } => arguments
             .iter()
             .for_each(|argument| find_referenced_private_functions(&argument.value, already_found)),
+
+        TypedConstant::RecordUpdate { .. } => {
+            panic!(
+                "Encountered RecordUpdate in code generation - this should have been expanded during type checking"
+            )
+        }
 
         TypedConstant::StringConcatenation { left, right, .. } => {
             find_referenced_private_functions(left, already_found);

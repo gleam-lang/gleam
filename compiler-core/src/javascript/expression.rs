@@ -1856,6 +1856,12 @@ impl<'module, 'a> Generator<'module, 'a> {
                 }
             }
 
+            Constant::RecordUpdate { .. } => {
+                panic!(
+                    "Encountered RecordUpdate in code generation - this should have been expanded during type checking"
+                )
+            }
+
             Constant::BitArray { segments, .. } => {
                 let bit_array = self.constant_bit_array(segments, context);
                 match context {

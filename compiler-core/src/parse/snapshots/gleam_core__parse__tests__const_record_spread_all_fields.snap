@@ -219,7 +219,6 @@ Parsed {
                                     implicit: None,
                                 },
                             ],
-                            spread: None,
                             tag: (),
                             type_: (),
                             field_map: None,
@@ -253,18 +252,26 @@ Parsed {
                             end: 121,
                         },
                         annotation: None,
-                        value: Record {
+                        value: RecordUpdate {
                             location: SrcSpan {
                                 start: 124,
                                 end: 160,
                             },
                             module: None,
                             name: "Person",
+                            record: Var {
+                                location: SrcSpan {
+                                    start: 133,
+                                    end: 137,
+                                },
+                                module: None,
+                                name: "base",
+                                constructor: None,
+                                type_: (),
+                            },
                             arguments: [
-                                CallArg {
-                                    label: Some(
-                                        "name",
-                                    ),
+                                ConstantRecordUpdateArg {
+                                    label: "name",
                                     location: SrcSpan {
                                         start: 139,
                                         end: 150,
@@ -276,12 +283,9 @@ Parsed {
                                         },
                                         value: "Bob",
                                     },
-                                    implicit: None,
                                 },
-                                CallArg {
-                                    label: Some(
-                                        "age",
-                                    ),
+                                ConstantRecordUpdateArg {
+                                    label: "age",
                                     location: SrcSpan {
                                         start: 152,
                                         end: 159,
@@ -294,25 +298,11 @@ Parsed {
                                         value: "25",
                                         int_value: 25,
                                     },
-                                    implicit: None,
                                 },
                             ],
-                            spread: Some(
-                                Var {
-                                    location: SrcSpan {
-                                        start: 133,
-                                        end: 137,
-                                    },
-                                    module: None,
-                                    name: "base",
-                                    constructor: None,
-                                    type_: (),
-                                },
-                            ),
                             tag: (),
                             type_: (),
                             field_map: None,
-                            record_constructor: None,
                         },
                         type_: (),
                         deprecation: NotDeprecated,

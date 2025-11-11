@@ -2415,6 +2415,78 @@ fn const_record_spread_non_record() {
 }
 
 #[test]
+fn const_record_spread_fieldless_warning() {
+    // Test that spreading without any field overrides emits a warning
+    assert_module_infer!(
+        "pub type Animal { Animal(species: String) }
+        pub const alice = Animal(\"Cat\")
+        pub const dog = Animal(..alice)",
+        vec![
+            ("Animal", "fn(String) -> Animal"),
+            ("alice", "Animal"),
+            ("dog", "Animal"),
+        ]
+    );
+}
+
+#[test]
+fn const_record_spread_multi_variant() {
+    // Test spreading with multi-variant custom types
+    assert_module_infer!(
+        "pub type Pet { Dog(name: String, age: Int) Cat(name: String, breed: String) }
+        pub const my_dog = Dog(\"Rex\", 5)
+        pub const another_dog = Dog(..my_dog, name: \"Max\")",
+        vec![
+            ("Cat", "fn(String, String) -> Pet"),
+            ("Dog", "fn(String, Int) -> Pet"),
+            ("another_dog", "Pet"),
+            ("my_dog", "Pet"),
+        ]
+    );
+}
+
+#[test]
+fn const_record_spread_variant_without_args() {
+    // Test spreading with variants that have no arguments
+    assert_module_infer!(
+        "pub type Status { Active Inactive }
+        pub const status1 = Active
+        pub const status2 = Active(..status1)",
+        vec![
+            ("Active", "Status"),
+            ("Inactive", "Status"),
+            ("status1", "Status"),
+            ("status2", "Status"),
+        ]
+    );
+}
+
+#[test]
+fn const_record_spread_variant_without_args_warning() {
+    // Test that spreading 0-arity constructors produces a warning
+    assert_warning!(
+        "pub type Status { Active Inactive }
+        pub const status1 = Active
+        pub const status2 = Active(..status1)"
+    );
+}
+
+#[test]
+fn const_record_spread_unlabelled_fields() {
+    // Test spreading with tuple-like constructors (unlabelled fields)
+    assert_module_infer!(
+        "pub type Point { Point(Int, Int) }
+        pub const origin = Point(0, 0)
+        pub const point = Point(..origin)",
+        vec![
+            ("Point", "fn(Int, Int) -> Point"),
+            ("origin", "Point"),
+            ("point", "Point"),
+        ]
+    );
+}
+
+#[test]
 fn module_constant_functions() {
     assert_module_infer!(
         "pub fn int_identity(i: Int) -> Int { i }

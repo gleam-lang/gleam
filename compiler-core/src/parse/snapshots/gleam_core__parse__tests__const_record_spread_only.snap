@@ -171,7 +171,6 @@ Parsed {
                                     implicit: None,
                                 },
                             ],
-                            spread: None,
                             tag: (),
                             type_: (),
                             field_map: None,
@@ -205,30 +204,27 @@ Parsed {
                             end: 94,
                         },
                         annotation: None,
-                        value: Record {
+                        value: RecordUpdate {
                             location: SrcSpan {
                                 start: 97,
                                 end: 112,
                             },
                             module: None,
                             name: "Person",
-                            arguments: [],
-                            spread: Some(
-                                Var {
-                                    location: SrcSpan {
-                                        start: 106,
-                                        end: 111,
-                                    },
-                                    module: None,
-                                    name: "alice",
-                                    constructor: None,
-                                    type_: (),
+                            record: Var {
+                                location: SrcSpan {
+                                    start: 106,
+                                    end: 111,
                                 },
-                            ),
+                                module: None,
+                                name: "alice",
+                                constructor: None,
+                                type_: (),
+                            },
+                            arguments: [],
                             tag: (),
                             type_: (),
                             field_map: None,
-                            record_constructor: None,
                         },
                         type_: (),
                         deprecation: NotDeprecated,

@@ -541,6 +541,12 @@ impl<'a> ModuleEncoder<'a> {
                 self.build_type(builder.reborrow().init_type(), type_);
             }
 
+            Constant::RecordUpdate { .. } => {
+                panic!(
+                    "Encountered RecordUpdate in code generation - this should have been expanded during type checking"
+                )
+            }
+
             Constant::Var {
                 module,
                 name,
