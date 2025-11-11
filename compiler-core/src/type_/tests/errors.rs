@@ -386,6 +386,11 @@ fn wrong_number_of_subjects() {
 }
 
 #[test]
+fn wrong_number_of_subjects_alternative_patterns() {
+    assert_error!("case 1 { _, _ | _ | _, _, _ -> 1 }");
+}
+
+#[test]
 fn recursive_var() {
     assert_error!("let id = fn(x) { x(x) } 1");
 }

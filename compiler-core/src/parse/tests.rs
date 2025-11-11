@@ -1145,6 +1145,34 @@ fn main() {
 }
 
 #[test]
+fn case_clause_no_subject() {
+    assert_module_error!(
+        "
+fn main() {
+    case 1 {
+      -> 1
+      _ -> 2
+    }
+}
+"
+    );
+}
+
+#[test]
+fn case_alternative_clause_no_subject() {
+    assert_module_error!(
+        "
+fn main() {
+    case 1 {
+      1 | -> 1
+      _ -> 1
+    }
+}
+"
+    );
+}
+
+#[test]
 fn use_invalid_assignments() {
     assert_module_error!(
         "

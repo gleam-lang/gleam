@@ -266,7 +266,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         location: &SrcSpan,
     ) -> Vec<TypedPattern> {
         self.mode = PatternMode::Alternative(vec![]);
-        let typed_multi = self.infer_multi_pattern(multi_pattern, subjects, location);
+        let typed_multi = self.infer_multi_pattern(multi_pattern, subjects);
 
         if self.error_encountered {
             return typed_multi;
@@ -300,12 +300,18 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         &mut self,
         multi_pattern: UntypedMultiPattern,
         subjects: &[TypedExpr],
-        location: &SrcSpan,
     ) -> Vec<TypedPattern> {
         // If there are N subjects the multi-pattern is expected to be N patterns
         if subjects.len() != multi_pattern.len() {
+            let first = multi_pattern
+                .first()
+                .expect("multi-pattern to contain at least one pattern");
+            let last = multi_pattern
+                .last()
+                .expect("multi-pattern to contain at least one pattern");
+
             self.error(Error::IncorrectNumClausePatterns {
-                location: *location,
+                location: first.location().merge(&last.location()),
                 expected: subjects.len(),
                 given: multi_pattern.len(),
             });

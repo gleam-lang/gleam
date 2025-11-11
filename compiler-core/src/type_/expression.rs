@@ -2339,7 +2339,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             PatternPosition::CaseClause,
         );
 
-        let typed_pattern = pattern_typer.infer_multi_pattern(pattern, subjects, location);
+        let typed_pattern = pattern_typer.infer_multi_pattern(pattern, subjects);
 
         // Each case clause has one or more patterns that may match the
         // subject in order for the clause to be selected, so we must type
