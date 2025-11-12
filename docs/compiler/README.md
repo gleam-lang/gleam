@@ -127,7 +127,7 @@ expected output when we make changes to the output format of the compiler or
 error messaging is time-consuming and very dull. With snapshot testing it takes
 seconds.
 
-```shell
+```sh
 # Run the tests
 make test
 
