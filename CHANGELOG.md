@@ -157,6 +157,7 @@
 
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- Typos in the error message shown when trying to install a non-existent package have been fixed
 ### Language server
 
 - The "inline variable" code action can now trigger when used over the let
