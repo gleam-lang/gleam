@@ -760,7 +760,7 @@ struct Variables<'generator, 'module, 'a> {
     /// generate assignments for each of them, because that could lead to wasted
     /// work. Let's consider the following check:
     ///
-    /// ```txt
+    /// ```text
     /// a is Wibble(3, c, 1) -> c
     /// a is _ -> 1
     /// ```
@@ -883,14 +883,14 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     /// Records that a given pattern `variable` has been assigned a runtime
     /// `value`. For example if we had something like this:
     ///
-    /// ```txt
+    /// ```text
     /// a is Wibble(1, b) -> todo
     /// ```
     ///
     /// After a successful `is Wibble` check, we know we'd end up with two
     /// additional checks that look like this:
     ///
-    /// ```txt
+    /// ```text
     /// a0 is 1, a1 is b -> todo
     /// ```
     ///

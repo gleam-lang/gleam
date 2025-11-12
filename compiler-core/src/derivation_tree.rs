@@ -34,7 +34,7 @@ pub struct DerivationTreePrinter {
     /// The graph of dependencies built from the derivation tree. The nodes are
     /// packages and the arcs connecting them represent a dependency:
     ///
-    /// ```txt
+    /// ```text
     /// wibble ---- (range1, range2) ---> wobble
     /// ```
     ///

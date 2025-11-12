@@ -7242,7 +7242,7 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveEchos<'ast> {
             // that is not echo itself and delete everything from its end until the
             // end of the echo keyword:
             //
-            // ```txt
+            // ```text
             // wibble |> echo |> wobble
             //       ^^^^^^^^ This span right here
             // ```
