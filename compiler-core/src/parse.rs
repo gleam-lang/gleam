@@ -173,6 +173,14 @@ pub fn parse_module(
         });
     }
 
+    for detached in parser.detached_doc_comments {
+        warnings.emit(Warning::DetachedDocComment {
+            path: path.clone(),
+            src: src.clone(),
+            location: detached,
+        });
+    }
+
     Ok(parsed)
 }
 
@@ -218,6 +226,7 @@ pub struct Parser<T: Iterator<Item = LexResult>> {
     tok1: Option<Spanned>,
     extra: ModuleExtra,
     doc_comments: VecDeque<(u32, EcoString)>,
+    detached_doc_comments: Vec<SrcSpan>,
 }
 impl<T> Parser<T>
 where
@@ -232,6 +241,7 @@ where
             tok1: None,
             extra: ModuleExtra::new(),
             doc_comments: VecDeque::new(),
+            detached_doc_comments: Vec::new(),
         };
         parser.advance();
         parser.advance();
@@ -4061,9 +4071,12 @@ functions are declared separately from types.";
             if *start >= until {
                 break;
             }
+
             if self.extra.has_comment_between(*start, until) {
                 // We ignore doc comments that come before a regular comment.
+                let location = SrcSpan::new(*start, start + line.len() as u32);
                 _ = self.doc_comments.pop_front();
+                self.detached_doc_comments.push(location);
                 continue;
             }
 

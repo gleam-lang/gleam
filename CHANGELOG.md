@@ -51,6 +51,35 @@
   containing scientific notation or trailing zeros (i.e. `100` and `1e2`).
   ([ptdewey](https://github.com/ptdewey))
 
+- The compiler now emits a warning when a doc comment is not attached to a
+  definition due to a regular comment in between. For example, in the following
+  code:
+
+  ```gleam
+  /// This documentation is not attached
+  // This is not a doc comment
+  /// This is actual documentation
+  pub fn wibble() {
+    todo
+  }
+  ```
+
+  Will now produce the following warning:
+
+  ```txt
+    warning: Detached doc comment
+    ┌─ src/main.gleam:1:4
+    │
+  1 │ /// This documentation is not attached
+    │    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ This is not attached to a definition
+
+  This doc comment is followed by a regular comment so it is not attached to
+  any definition.
+  Hint: Move the comment above the doc comment
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - The help text displayed by `gleam dev --help`, `gleam test --help`, and
