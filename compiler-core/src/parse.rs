@@ -104,7 +104,7 @@ pub struct Parsed {
 /// used on a private definition (it doesn't make sense to mark something
 /// private as internal):
 ///
-/// ```txt
+/// ```text
 /// @internal
 /// ^^^^^^^^^ we first get to the annotation
 /// fn wibble() {}

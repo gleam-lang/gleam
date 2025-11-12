@@ -26,7 +26,7 @@ These features are not tested yet
 
 ## Quick start
 
-```sh
+```shell
 gleam run
 gleam test
 ```

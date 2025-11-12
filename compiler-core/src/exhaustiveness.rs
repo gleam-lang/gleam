@@ -874,7 +874,7 @@ impl Variable {
 ///
 /// Let's look at a simple example to get started:
 ///
-/// ```txt
+/// ```text
 /// <<0:size(12), 1, rest:bits>>
 ///   ─┬────────
 ///    ╰── This first segment requires that the bit array must have at least
@@ -888,7 +888,7 @@ impl Variable {
 /// pattern. This is no big deal: as you'll discover in more detail in the
 /// `SizeExpression`'s doc we can also represent those variable sizes:
 ///
-/// ```txt
+/// ```text
 /// <<len, payload:size(len), rest:bits>>
 ///   ─┬─  ─┬───────────────
 ///    │    ╰── For this segment to match the bit array must have enough bits
@@ -1529,7 +1529,7 @@ pub enum SizeOperator {
 /// Notice how the starting position and number of bits to read might not be
 /// known at compile time but also include variables! For example here:
 ///
-/// ```txt
+/// ```text
 // <<len, payload:size(len), rest:bits>>
 ///  ─┬─  ─┬───────────────
 ///   │    ╰── Here payload has a variable size, given by the `len` variable
@@ -1610,7 +1610,7 @@ impl Confidence {
 
 /// An offset, in bits, into a bit array. An offset contains three parts. For
 /// example, in the following pattern:
-/// ```txt
+/// ```text
 /// <<a, b:size(a), c:size(b - 1), payload:size(c)>>
 /// ```
 ///
@@ -1787,7 +1787,7 @@ impl Offset {
 pub enum ReadSize {
     /// Read a constant, compile-time-known number of bits.
     ///
-    /// ```txt
+    /// ```text
     /// <<tag:size(8)>>
     ///   ─┬─────────
     ///    ╰─ Here we know that we have to read exactly 8 bits
@@ -1796,7 +1796,7 @@ pub enum ReadSize {
     ConstantBits(BigInt),
     /// Read a variable number of bits.
     ///
-    /// ```txt
+    /// ```text
     /// <<len, payload:size(len)>>
     ///        ─┬───────────────
     ///         ╰─ Here we will know how many bits to read only at runtime since
@@ -1810,7 +1810,7 @@ pub enum ReadSize {
 
     /// A maths expression calculating the read size from one or more variables.
     ///
-    /// ```txt
+    /// ```text
     /// <<len, payload:size(len * 8)>>
     ///        ─┬───────────────────
     ///         ╰─ Here we have to calculate the length by performing the
@@ -1825,7 +1825,7 @@ pub enum ReadSize {
     /// Read all the remaining bits in the bit array when using a catch all
     /// pattern.
     ///
-    /// ```txt
+    /// ```text
     /// <<_, rest:bits>>
     ///      ─┬───────
     ///       ╰─ We take all the remaining bits from the bit array
@@ -1981,7 +1981,7 @@ pub enum FallbackCheck {
     /// This corresponds to the catch all added at the end of a case expression
     /// matching on an infinite type.
     ///
-    /// ```txt
+    /// ```text
     /// case todo {
     ///   1 -> todo
     ///   _ -> todo
@@ -1994,7 +1994,7 @@ pub enum FallbackCheck {
     /// This happens when we're matching on a variant whose checks are all
     /// explicitly written down:
     ///
-    /// ```txt
+    /// ```text
     /// case todo {
     ///   Ok(_) -> todo
     ///   Error(Nil) -> todo
@@ -2013,7 +2013,7 @@ pub enum FallbackCheck {
     /// This is a special case for a catch all! It happens when we're matching
     /// on a variant and use a catch all pattern:
     ///
-    /// ```txt
+    /// ```text
     /// case todo {
     ///   Ok(_) -> todo
     ///   _ -> todo

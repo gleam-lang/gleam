@@ -6,7 +6,7 @@ use ecow::EcoString;
 ///
 /// ## Example
 ///
-/// ```txt
+/// ```text
 /// Package  Current  Latest
 /// -------  -------  ------
 /// wibble   1.4.0    1.4.1

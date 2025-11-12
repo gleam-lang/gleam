@@ -816,7 +816,7 @@ fn execute_command(command: &mut Command) -> Result<std::process::Output> {
 /// Downloads a git package from a remote repository. The commands that are run
 /// looks like this:
 ///
-/// ```sh
+/// ```shell
 /// git init
 /// git remote remove origin
 /// git remote add origin <repo>
