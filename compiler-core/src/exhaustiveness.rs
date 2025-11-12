@@ -27,7 +27,7 @@
 //! contain multiple pattern checks. With a psedo-Gleam syntax, this is what it
 //! would look like:
 //!
-//! ```text
+//! ```txt
 //! case {
 //!   a is Some, b is 1, c is _ -> todo
 //!   a is wibble -> todo
@@ -47,7 +47,7 @@
 //! >
 //! > In out representation that would turn into:
 //! >
-//! > ```text
+//! > ```txt
 //! > case {
 //! >   a is Some(_) -> todo
 //! >   a is None -> todo
@@ -104,7 +104,7 @@ use std::{
 /// multiple checks (each on a different variable, which appears in the check
 /// itself!):
 ///
-/// ```text
+/// ```txt
 /// a is Some, b is 1 if condition -> todo
 /// ─┬───────  ─┬──── ─┬──────────    ─┬──
 ///  │          │      │               ╰── body: an arbitrary expression
@@ -179,7 +179,7 @@ impl Branch {
     ///
     /// In our internal representation this would become:
     ///
-    /// ```text
+    /// ```txt
     /// case {
     ///   a is Some(1) -> Some(2)
     ///   a is otherwise -> otherwise
@@ -192,7 +192,7 @@ impl Branch {
     /// by keeping track in its body of the correspondence. So it would end up
     /// looking like this:
     ///
-    /// ```text
+    /// ```txt
     /// case {
     ///   a is Some(1) -> Some(2)
     ///   ∅ -> {
@@ -563,7 +563,7 @@ impl Pattern {
 /// A single check making up a branch, checking that a variable matches with a
 /// given pattern. For example, the following branch has 2 checks:
 ///
-/// ```text
+/// ```txt
 /// a is Some, b is 1 -> todo
 /// ┬    ─┬──
 /// │     ╰── This is the pattern being checked
@@ -746,7 +746,7 @@ impl Variable {
 
     /// Builds a `PatternCheck` that checks this variable matches the given pattern.
     /// So we can build pattern checks the same way we informally describe them:
-    /// ```text
+    /// ```txt
     /// var is pattern
     /// ```
     /// With this builder method would become:
@@ -1089,7 +1089,7 @@ impl MatchTest {
     /// with the given number of bits (in the example I'm also showing the bits
     /// that the read action matches against):
     ///
-    /// ```text
+    /// ```txt
     ///          o1         (o1+s1)
     ///         ┄├0001010110┤┄
     ///               ┄├1101000000111011┤┄
@@ -1102,7 +1102,7 @@ impl MatchTest {
     /// So the example above showcases two interfering read actions, here's an
     /// example of two read actions that are not interfering with each other:
     ///
-    /// ```text
+    /// ```txt
     ///          o1      (o1+s1)
     ///         ┄├0110101┤┄
     ///                      ┄├0101110101┤┄
@@ -1119,7 +1119,7 @@ impl MatchTest {
     ///
     /// 1. We know the first action succeeded, so the binary has the expected
     ///    bits in the matched segment
-    ///    ```text
+    ///    ```txt
     ///             o1         (o1+s1)
     ///            ┄├0110101111┤┄  ← This check succeded!
     ///                   ┄├0001110101┤┄
@@ -1132,7 +1132,7 @@ impl MatchTest {
     ///
     /// 2. We know the first action succeeded, and the second action is fully
     ///    contained inside it:
-    ///    ```text
+    ///    ```txt
     ///             o1              (o1+s1)
     ///            ┄├011010000001111┤┄  ← This check succeded!
     ///               ┄├0100000┤┄
@@ -1144,7 +1144,7 @@ impl MatchTest {
     ///
     /// 3. We know that the first action failed, and the second one is
     ///    fully enclosing it:
-    ///    ```text
+    ///    ```txt
     ///             o1  (o1+s1)
     ///            ┄├010┤┄  ← This check failed!
     ///            ┄├01000001010000001111┤┄
@@ -1506,7 +1506,7 @@ impl BitArrayTest {
 /// specific number of bits (for example if we're matching the last segment
 /// of a bit array) or that it has at least some number of bits. For example:
 ///
-/// ```text
+/// ```txt
 /// <<0:size(12), 1:size(8)>>
 ///   ─┬────────  ─┬───────
 ///    │           ╰── For this segment to successfully match the bit array must
@@ -2608,7 +2608,7 @@ impl<'a> Compiler<'a> {
             // String prefixes are similar to strings, but a bit more involved. Let's say we're
             // checking the pattern:
             //
-            // ```text
+            // ```txt
             // "wibblest" <> rest1
             // ─┬────────
             //  ╰── We will refer to this as `prefix1`
@@ -2616,7 +2616,7 @@ impl<'a> Compiler<'a> {
             //
             // And we know that the following overlapping runtime check has already succeeded:
             //
-            // ```text
+            // ```txt
             // "wibble" <> rest0
             // ─┬──────
             //  ╰── We will refer to this as `prefix0`

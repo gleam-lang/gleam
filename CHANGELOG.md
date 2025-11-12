@@ -91,7 +91,7 @@
 - The build tool now provides better error message when trying to build Git
   dependencies without Git installed. Previously, it would show this error:
 
-  ```text
+  ```txt
   error: Shell command failure
 
   There was a problem when running the shell command `git`.
@@ -103,7 +103,7 @@
 
   Now it will show:
 
-  ```text
+  ```txt
   error: Program not found
 
   The program `git` was not found. Is it installed?
