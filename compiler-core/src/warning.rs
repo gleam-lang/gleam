@@ -174,6 +174,12 @@ pub enum Warning {
         path: Utf8PathBuf,
         name: EcoString,
     },
+
+    DetachedDocComment {
+        path: Utf8PathBuf,
+        src: EcoString,
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
@@ -423,6 +429,29 @@ To have a clause without a guard, remove this.",
                     }),
                 }
             }
+
+            Warning::DetachedDocComment {
+                path,
+                src,
+                location,
+            } => Diagnostic {
+                title: "Detached doc comment".into(),
+                text: wrap(
+                    "This doc comment is followed by a regular \
+comment so it is not attached to any definition.",
+                ),
+                level: diagnostic::Level::Warning,
+                location: Some(Location {
+                    path: path.to_path_buf(),
+                    src: src.clone(),
+                    label: diagnostic::Label {
+                        text: Some("This is not attached to a definition".into()),
+                        span: *location,
+                    },
+                    extra_labels: Vec::new(),
+                }),
+                hint: Some("Move the comment above the doc comment".into()),
+            },
 
             Warning::Type { path, warning, src } => match warning {
                 type_::Warning::Todo {

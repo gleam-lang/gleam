@@ -4612,3 +4612,16 @@ pub type Wobble
 "#,
     );
 }
+
+#[test]
+fn detached_doc_comment() {
+    assert_warning!(
+        "
+/// This comment is detached
+//
+
+/// This is actual documentation
+pub const pi = 3.14
+"
+    );
+}

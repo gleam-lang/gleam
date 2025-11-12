@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\n/// This comment is detached\n//\n\n/// This is actual documentation\npub const pi = 3.14\n"
+---
+----- SOURCE CODE
+
+/// This comment is detached
+//
+
+/// This is actual documentation
+pub const pi = 3.14
+
+
+----- WARNING
+warning: Detached doc comment
+  ┌─ test/path:2:4
+  │
+2 │ /// This comment is detached
+  │    ^^^^^^^^^^^^^^^^^^^^^^^^^ This is not attached to a definition
+
+This doc comment is followed by a regular comment so it is not attached to
+any definition.
+Hint: Move the comment above the doc comment
