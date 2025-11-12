@@ -70,7 +70,7 @@
 - The build tool now has a new `gleam deps outdated` command that shows outdated
   versions for dependencies. For example:
 
-  ```sh
+  ```shell
   $ gleam deps outdated
   Package  Current  Latest
   -------  -------  ------

@@ -9,7 +9,7 @@ It covers these features:
 
 ## Quick start
 
-```sh
+```shell
 gleam run
 gleam test
 ```

@@ -90,7 +90,7 @@ impl FileToCreate {
 [![Package Version](https://img.shields.io/hexpm/v/{project_name})](https://hex.pm/packages/{project_name})
 [![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/{project_name}/)
 
-```sh
+```shell
 gleam add {project_name}@1
 ```
 ```gleam
@@ -105,7 +105,7 @@ Further documentation can be found at <https://hexdocs.pm/{project_name}>.
 
 ## Development
 
-```sh
+```shell
 gleam run   # Run the project
 gleam test  # Run the tests
 ```
