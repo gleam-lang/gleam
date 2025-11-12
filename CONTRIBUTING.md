@@ -51,7 +51,7 @@ Erlang, Elixir, NodeJS, Deno, and Bun to be installed.
 If you are using the Nix package manager, there's a [gleam-nix flake](https://github.com/vic/gleam-nix)
 you can use for running any Gleam version or quickly obtaining a development environment for Gleam.
 
-```shell
+```sh
 cargo test
 
 # Or if you have watchexec installed you can run them automatically
@@ -62,14 +62,14 @@ make test-watch
 To run the language integration tests. This will require a recent stable
 version of Rust, Erlang, and NodeJS to be installed.
 
-```shell
+```sh
 make language-test
 ```
 
 If you don't have Rust or Cargo installed you can run the above command in a docker sandbox.
 Run the command below from this directory.
 
-```shell
+```sh
 docker run -v $(pwd):/opt/app -it -w /opt/app rust:latest bash
 ```
 
@@ -85,7 +85,7 @@ print more information for debugging and introspection. i.e.
 
 Your PR may fail on CI due to clippy errors. Clippy can be run locally like so:
 
-```shell
+```sh
 cargo clean -p gleam
 cargo clippy
 ```
@@ -93,7 +93,7 @@ cargo clippy
 If you have lint errors on CI but not locally upgrade your Rust version to the
 latest stable.
 
-```shell
+```sh
 rustup upgrade stable
 ```
 
@@ -105,7 +105,7 @@ you need to re-generate `compiler-core/generated/schema_capnp.rs`. To do that,
 [install Cap'n Proto](https://capnproto.org/install.html) and un-comment appropriate lines
 in `compiler-core/build.rs`. Then you should be able to re-generate that file with:
 
-```shell
+```sh
 cd compiler-core
 cargo build
 ```
