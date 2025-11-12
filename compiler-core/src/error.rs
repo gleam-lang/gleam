@@ -472,7 +472,7 @@ impl Error {
 
             ResolutionError::ErrorChoosingVersion { package, source } => {
                 Self::DependencyResolutionError(format!(
-                    "An error occured while chosing the version of {package}: {source}",
+                    "An error occurred while choosing the version of {package}: {source}",
                 ))
             }
 
