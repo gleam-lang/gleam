@@ -185,6 +185,31 @@
 
 ### Language server
 
+- The language server can now offer a code action to merge consecutive case
+  branches with the same body. For example:
+
+  ```gleam
+  case user {
+    Admin(name:, ..) -> todo
+  //^^^^^^^^^^^^^^^^^^^^^^^^
+    Guest(name:, ..) -> todo
+  //^^^^^^^^^^^^^^^^ Selecting these two branches you can
+  //                 trigger the "Merge case branches" code action
+    _ -> todo
+  }
+  ```
+
+  Triggering the code action would result in the following code:
+
+  ```gleam
+  case user {
+    Admin(name:, ..) | Guest(name:, ..) -> todo
+    _ -> todo
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The "inline variable" code action can now trigger when used over the let
   keyword of a variable to inline.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

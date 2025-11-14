@@ -12,7 +12,7 @@ use crate::{
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
         code_action::{
-            AddOmittedLabels, CollapseNestedCase, ExtractFunction, RemoveBlock,
+            AddOmittedLabels, CollapseNestedCase, ExtractFunction, MergeCaseBranches, RemoveBlock,
             RemovePrivateOpaque, RemoveUnreachableCaseClauses,
         },
         compiler::LspProjectCompiler,
@@ -417,6 +417,7 @@ where
                 &this.error,
                 &mut actions,
             );
+            actions.extend(MergeCaseBranches::new(module, &lines, &params).code_actions());
             actions.extend(FixBinaryOperation::new(module, &lines, &params).code_actions());
             actions
                 .extend(FixTruncatedBitArraySegment::new(module, &lines, &params).code_actions());

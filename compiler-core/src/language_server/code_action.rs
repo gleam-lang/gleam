@@ -9236,3 +9236,251 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
         }
     }
 }
+
+/// Code action to merge two identical branches together.
+///
+pub struct MergeCaseBranches<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    /// These are the positions of the patterns of all the consecutive branches
+    /// we've determined can be merged, for example if we're mergin the first
+    /// two branches here:
+    ///
+    /// ```gleam
+    ///   case wibble {
+    ///     1 -> todo
+    /// //  ^ this location here
+    ///     20 -> todo
+    /// //  ^^ and this location here
+    ///   _ -> todo
+    /// }
+    /// ```
+    ///
+    /// We need those to delete all the space between each consecutive pattern,
+    /// replacing it with the `|` for alternatives
+    ///
+    patterns_to_merge: Option<MergeableBranches>,
+}
+
+struct MergeableBranches {
+    /// The span of the body to keep when merging multiple branches. For
+    /// example:
+    ///
+    /// ```gleam
+    /// case n {
+    ///   // Imagine we're merging the first three branches together...
+    ///   1 -> todo
+    ///   2 -> n * 2
+    /// //     ^^^^^ This would be the location of the one body to keep
+    ///   3 -> todo
+    ///   _ -> todo
+    /// }
+    /// ```
+    ///
+    body_to_keep: SrcSpan,
+
+    /// The location body of the last of the branches that are going to be
+    /// merged; that is where we're going to place the code of the body to keep
+    /// once the action is done. For example:
+    ///
+    /// ```gleam
+    /// case n {
+    ///   // Imagine we're merging the first three branches together...
+    ///   1 -> todo
+    ///   2 -> n * 2
+    ///   3 -> todo
+    /// //     ^^^^ This would be the location of the final body
+    ///   _ -> todo
+    /// }
+    /// ```
+    ///
+    final_body: SrcSpan,
+
+    /// The span of the patterns whose branches are going to be merged. For
+    /// example:
+    ///
+    /// ```gleam
+    /// case n {
+    ///   // Imagine we're merging the first three branches together...
+    ///    1 -> todo
+    /// // ^
+    ///    2 -> n * 2
+    /// // ^
+    ///    3 -> todo
+    /// // ^ These would be the locations of the patterns
+    ///   _ -> todo
+    /// }
+    /// ```
+    ///
+    patterns_to_merge: Vec<SrcSpan>,
+}
+
+impl<'a> MergeCaseBranches<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            patterns_to_merge: None,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let Some(mergeable_branches) = self.patterns_to_merge else {
+            return vec![];
+        };
+
+        for (one, next) in mergeable_branches.patterns_to_merge.iter().tuple_windows() {
+            self.edits
+                .replace(SrcSpan::new(one.end, next.start), " | ".into());
+        }
+
+        self.edits.replace(
+            mergeable_branches.final_body,
+            code_at(self.module, mergeable_branches.body_to_keep).into(),
+        );
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Merge case branches")
+            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(false)
+            .push_to(&mut action);
+        action
+    }
+
+    fn select_mergeable_branches(
+        &self,
+        clauses: &'a [ast::TypedClause],
+    ) -> Option<MergeableBranches> {
+        let mut clauses = clauses
+            .iter()
+            // We want to skip all the branches at the beginning of the case
+            // expression that the cursor is not hovering over. For example:
+            //
+            // ```gleam
+            // case wibble {
+            //   a -> 1   <- we want to skip this one here that is not selected
+            //   b -> 2
+            //     ^^^^   this is the selection
+            //   _ -> 3
+            //   ^^
+            // }
+            // ```
+            .skip_while(|clause| {
+                let clause_range = self.edits.src_span_to_lsp_range(clause.location);
+                !overlaps(self.params.range, clause_range)
+            })
+            // Then we only want to take the clauses that we're hovering over
+            // with our selection (even partially!)
+            // In the provious example they would be `b -> 2` and `_ -> 3`.
+            .take_while(|clause| {
+                let clause_range = self.edits.src_span_to_lsp_range(clause.location);
+                overlaps(self.params.range, clause_range)
+            });
+
+        let first_hovered_clause = clauses.next()?;
+
+        // This is the clause we're comparing all the others with. We need to
+        // make sure that all the clauses we're going to join can be merged with
+        // this one.
+        let mut reference_clause = first_hovered_clause;
+        let mut clause_patterns_to_merge = vec![reference_clause.pattern_location()];
+        let mut final_body = first_hovered_clause.then.location();
+
+        for clause in clauses {
+            // As soon as we find a clause that can't be merged with the current
+            // reference we know we're done looking for consecutive clauses to
+            // merge.
+            if !clauses_can_be_merged(reference_clause, clause) {
+                break;
+            }
+
+            clause_patterns_to_merge.push(clause.pattern_location());
+            final_body = clause.then.location();
+
+            // If the current reference is a `todo` expression, we want to use
+            // the newly found mergeable clause as the next reference. The
+            // reference clause is the one whose body will be kept around, so if
+            // we can we avoid keeping `todo`s
+            if reference_clause.then.is_todo_with_no_message() {
+                reference_clause = clause;
+            }
+        }
+
+        // We only offer the code action if we have found two or more clauses
+        // to merge.
+        if clause_patterns_to_merge.len() >= 2 {
+            Some(MergeableBranches {
+                final_body,
+                body_to_keep: reference_clause.then.location(),
+                patterns_to_merge: clause_patterns_to_merge,
+            })
+        } else {
+            None
+        }
+    }
+}
+
+fn clauses_can_be_merged(one: &ast::TypedClause, other: &ast::TypedClause) -> bool {
+    // Two clauses cannot be merged if any of those has an if guard
+    if one.guard.is_some() || other.guard.is_some() {
+        return false;
+    }
+
+    // Two clauses can only be merged if they define the same variables,
+    // otherwise joining them would result in invalid code.
+    let variables_one = one
+        .bound_variables()
+        .map(|variable| variable.name())
+        .collect::<HashSet<_>>();
+
+    let variables_other = other
+        .bound_variables()
+        .map(|variable| variable.name())
+        .collect::<HashSet<_>>();
+
+    if variables_one != variables_other {
+        return false;
+    }
+
+    // Anything can be merged with a simple todo, or the two bodies must be
+    // syntactically equal.
+    one.then.is_todo_with_no_message()
+        || other.then.is_todo_with_no_message()
+        || one.then.syntactically_eq(&other.then)
+}
+
+impl<'ast> ast::visit::Visit<'ast> for MergeCaseBranches<'ast> {
+    fn visit_typed_expr_case(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        subjects: &'ast [TypedExpr],
+        clauses: &'ast [ast::TypedClause],
+        compiled_case: &'ast CompiledCase,
+    ) {
+        // We only trigger the code action if we are within a case expression,
+        // otherwise there's no point in exploring the expression any further.
+        let case_range = self.edits.src_span_to_lsp_range(*location);
+        if !within(self.params.range, case_range) {
+            return;
+        }
+
+        if let result @ Some(_) = self.select_mergeable_branches(clauses) {
+            self.patterns_to_merge = result
+        }
+
+        // We still need to visit the case expression in case we want to apply
+        // the code action to some case expression that is nested in one of its
+        // branches!
+        ast::visit::visit_typed_expr_case(self, location, type_, subjects, clauses, compiled_case);
+    }
+}

@@ -177,6 +177,117 @@ impl TypedConstant {
                 .union(right.referenced_variables()),
         }
     }
+
+    pub(crate) fn syntactically_eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Constant::Int { int_value: n, .. }, Constant::Int { int_value: m, .. }) => n == m,
+            (Constant::Int { .. }, _) => false,
+
+            (Constant::Float { float_value: n, .. }, Constant::Float { float_value: m, .. }) => {
+                n == m
+            }
+            (Constant::Float { .. }, _) => false,
+
+            (
+                Constant::String { value, .. },
+                Constant::String {
+                    value: other_value, ..
+                },
+            ) => value == other_value,
+            (Constant::String { .. }, _) => false,
+
+            (
+                Constant::Tuple { elements, .. },
+                Constant::Tuple {
+                    elements: other_elements,
+                    ..
+                },
+            ) => pairwise_all(elements, other_elements, |(one, other)| {
+                one.syntactically_eq(other)
+            }),
+            (Constant::Tuple { .. }, _) => false,
+
+            (
+                Constant::List { elements, .. },
+                Constant::List {
+                    elements: other_elements,
+                    ..
+                },
+            ) => pairwise_all(elements, other_elements, |(one, other)| {
+                one.syntactically_eq(other)
+            }),
+            (Constant::List { .. }, _) => false,
+
+            (
+                Constant::Record {
+                    module,
+                    name,
+                    arguments,
+                    ..
+                },
+                Constant::Record {
+                    module: other_module,
+                    name: other_name,
+                    arguments: other_arguments,
+                    ..
+                },
+            ) => {
+                let modules_are_equal = match (module, other_module) {
+                    (None, None) => true,
+                    (None, Some(_)) | (Some(_), None) => false,
+                    (Some((one, _)), Some((other, _))) => one == other,
+                };
+
+                modules_are_equal
+                    && name == other_name
+                    && pairwise_all(arguments, other_arguments, |(one, other)| {
+                        one.label == other.label && one.value.syntactically_eq(&other.value)
+                    })
+            }
+            (Constant::Record { .. }, _) => false,
+
+            (
+                Constant::BitArray { segments, .. },
+                Constant::BitArray {
+                    segments: other_segments,
+                    ..
+                },
+            ) => pairwise_all(segments, other_segments, |(one, other)| {
+                one.syntactically_eq(other)
+            }),
+            (Constant::BitArray { .. }, _) => false,
+
+            (
+                Constant::Var { module, name, .. },
+                Constant::Var {
+                    module: other_module,
+                    name: other_name,
+                    ..
+                },
+            ) => {
+                let modules_are_equal = match (module, other_module) {
+                    (None, None) => true,
+                    (None, Some(_)) | (Some(_), None) => false,
+                    (Some((one, _)), Some((other, _))) => one == other,
+                };
+
+                modules_are_equal && name == other_name
+            }
+            (Constant::Var { .. }, _) => false,
+
+            (
+                Constant::StringConcatenation { left, right, .. },
+                Constant::StringConcatenation {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (Constant::StringConcatenation { .. }, _) => false,
+
+            (Constant::Invalid { .. }, _) => false,
+        }
+    }
 }
 
 impl HasType for TypedConstant {
