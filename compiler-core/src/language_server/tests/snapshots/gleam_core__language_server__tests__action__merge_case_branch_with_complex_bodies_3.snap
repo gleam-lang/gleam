@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn go(n: Int) {\n  case n {\n    1 -> go(n - 1)\n    2 -> go(n - 1)\n    _ -> 10\n  }\n}"
+---
+----- BEFORE ACTION
+pub fn go(n: Int) {
+  case n {
+    1 -> go(n - 1)
+    ▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    2 -> go(n - 1)
+▔▔▔▔↑             
+    _ -> 10
+  }
+}
+
+
+----- AFTER ACTION
+pub fn go(n: Int) {
+  case n {
+    1 | 2 -> go(n - 1)
+    _ -> 10
+  }
+}

@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn go(n: Int) {\n  case n {\n    1 -> Ok(\"one or two\")\n    2 -> Ok(\"one or two\")\n    _ -> Error(\"neither one or two\")\n  }\n  }"
+---
+----- BEFORE ACTION
+pub fn go(n: Int) {
+  case n {
+    1 -> Ok("one or two")
+    ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    2 -> Ok("one or two")
+▔▔▔▔↑                    
+    _ -> Error("neither one or two")
+  }
+  }
+
+
+----- AFTER ACTION
+pub fn go(n: Int) {
+  case n {
+    1 | 2 -> Ok("one or two")
+    _ -> Error("neither one or two")
+  }
+  }

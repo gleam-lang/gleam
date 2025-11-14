@@ -98,6 +98,7 @@
   from 1.13 has been extended to int segments!
   Aside from the various performance improvements, this allows the compiler to
   mark more branches as unreachable.
+
   ```gleam
   case bits {
     <<"a">> -> 0
@@ -111,6 +112,7 @@
     _ -> 99
   }
   ```
+
   ([fruno](https://github.com/fruno-bulax/))
 
 ### Build tool
@@ -177,6 +179,31 @@
   ([Andrey Kozhev](https://github.com/ankddev))
 
 ### Language server
+
+- The language server can now offer a code action to merge consecutive case
+  branches with the same body. For example:
+
+  ```gleam
+  case user {
+    Admin(name:, ..) -> todo
+  //^^^^^^^^^^^^^^^^^^^^^^^^
+    Guest(name:, ..) -> todo
+  //^^^^^^^^^^^^^^^^ Selecting these two branches you can
+  //                 trigger the "Merge case branches" code action
+    _ -> todo
+  }
+  ```
+
+  Triggering the code action would result in the following code:
+
+  ```gleam
+  case user {
+    Admin(name:, ..) | Guest(name:, ..) -> todo
+    _ -> todo
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - The "inline variable" code action can now trigger when used over the let
   keyword of a variable to inline.

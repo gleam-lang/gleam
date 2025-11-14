@@ -12,6 +12,7 @@ pub use self::untyped::{FunctionLiteralKind, UntypedExpr};
 pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
 use crate::analyse::Inferred;
+use crate::ast::typed::pairwise_all;
 use crate::bit_array;
 use crate::build::{ExpressionPosition, Located, Target, module_erlang_name};
 use crate::exhaustiveness::CompiledCase;
@@ -1686,6 +1687,38 @@ impl TypedClause {
             .flatten()
             .flat_map(|pattern| pattern.bound_variables())
     }
+
+    fn syntactically_eq(&self, other: &Self) -> bool {
+        //pub pattern: MultiPattern<Type>,
+        //pub alternative_patterns: Vec<MultiPattern<Type>>,
+        //pub guard: Option<ClauseGuard<Type, RecordTag>>,
+        //pub then: Expr,
+        //
+        let patterns_are_equal = pairwise_all(&self.pattern, &other.pattern, |(one, other)| {
+            one.syntactically_eq(other)
+        });
+
+        let alternatives_are_equal = pairwise_all(
+            &self.alternative_patterns,
+            &other.alternative_patterns,
+            |(patterns_one, patterns_other)| {
+                pairwise_all(patterns_one, patterns_other, |(one, other)| -> bool {
+                    one.syntactically_eq(other)
+                })
+            },
+        );
+
+        let guards_are_equal = match (&self.guard, &other.guard) {
+            (None, None) => true,
+            (None, Some(_)) | (Some(_), None) => false,
+            (Some(one), Some(other)) => one.syntactically_eq(other),
+        };
+
+        patterns_are_equal
+            && alternatives_are_equal
+            && guards_are_equal
+            && self.then.syntactically_eq(&other.then)
+    }
 }
 
 /// Returns true if a pattern and an expression are the same: that is the expression
@@ -2284,6 +2317,286 @@ impl TypedClauseGuard {
                 .union(right.referenced_variables()),
         }
     }
+
+    fn syntactically_eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (
+                ClauseGuard::Block { value, .. },
+                ClauseGuard::Block {
+                    value: other_value, ..
+                },
+            ) => value.syntactically_eq(other_value),
+            (ClauseGuard::Block { .. }, _) => false,
+
+            (
+                ClauseGuard::Equals { left, right, .. },
+                ClauseGuard::Equals {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::Equals { .. }, _) => false,
+
+            (
+                ClauseGuard::NotEquals { left, right, .. },
+                ClauseGuard::NotEquals {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::NotEquals { .. }, _) => false,
+
+            (
+                ClauseGuard::GtInt { left, right, .. },
+                ClauseGuard::GtInt {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::GtInt { .. }, _) => false,
+
+            (
+                ClauseGuard::GtEqInt { left, right, .. },
+                ClauseGuard::GtEqInt {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::GtEqInt { .. }, _) => false,
+
+            (
+                ClauseGuard::LtInt { left, right, .. },
+                ClauseGuard::LtInt {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::LtInt { .. }, _) => false,
+
+            (
+                ClauseGuard::LtEqInt { left, right, .. },
+                ClauseGuard::LtEqInt {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::LtEqInt { .. }, _) => false,
+
+            (
+                ClauseGuard::GtFloat { left, right, .. },
+                ClauseGuard::GtFloat {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::GtFloat { .. }, _) => false,
+
+            (
+                ClauseGuard::GtEqFloat { left, right, .. },
+                ClauseGuard::GtEqFloat {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::GtEqFloat { .. }, _) => false,
+
+            (
+                ClauseGuard::LtFloat { left, right, .. },
+                ClauseGuard::LtFloat {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::LtFloat { .. }, _) => false,
+
+            (
+                ClauseGuard::LtEqFloat { left, right, .. },
+                ClauseGuard::LtEqFloat {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::LtEqFloat { .. }, _) => false,
+
+            (
+                ClauseGuard::AddInt { left, right, .. },
+                ClauseGuard::AddInt {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::AddInt { .. }, _) => false,
+
+            (
+                ClauseGuard::AddFloat { left, right, .. },
+                ClauseGuard::AddFloat {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::AddFloat { .. }, _) => false,
+
+            (
+                ClauseGuard::SubInt { left, right, .. },
+                ClauseGuard::SubInt {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::SubInt { .. }, _) => false,
+
+            (
+                ClauseGuard::SubFloat { left, right, .. },
+                ClauseGuard::SubFloat {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::SubFloat { .. }, _) => false,
+
+            (
+                ClauseGuard::MultInt { left, right, .. },
+                ClauseGuard::MultInt {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::MultInt { .. }, _) => false,
+
+            (
+                ClauseGuard::MultFloat { left, right, .. },
+                ClauseGuard::MultFloat {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::MultFloat { .. }, _) => false,
+
+            (
+                ClauseGuard::DivInt { left, right, .. },
+                ClauseGuard::DivInt {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::DivInt { .. }, _) => false,
+
+            (
+                ClauseGuard::DivFloat { left, right, .. },
+                ClauseGuard::DivFloat {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::DivFloat { .. }, _) => false,
+
+            (
+                ClauseGuard::RemainderInt { left, right, .. },
+                ClauseGuard::RemainderInt {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::RemainderInt { .. }, _) => false,
+
+            (
+                ClauseGuard::Or { left, right, .. },
+                ClauseGuard::Or {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::Or { .. }, _) => false,
+
+            (
+                ClauseGuard::And { left, right, .. },
+                ClauseGuard::And {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::And { .. }, _) => false,
+
+            (
+                ClauseGuard::Not { expression, .. },
+                ClauseGuard::Not {
+                    expression: other_expression,
+                    ..
+                },
+            ) => expression.syntactically_eq(other_expression),
+            (ClauseGuard::Not { .. }, _) => false,
+
+            (
+                ClauseGuard::Var { name, .. },
+                ClauseGuard::Var {
+                    name: other_name, ..
+                },
+            ) => name == other_name,
+            (ClauseGuard::Var { .. }, _) => false,
+
+            (
+                ClauseGuard::TupleIndex { index, tuple, .. },
+                ClauseGuard::TupleIndex {
+                    index: other_index,
+                    tuple: other_tuple,
+                    ..
+                },
+            ) => index == other_index && tuple.syntactically_eq(other_tuple),
+            (ClauseGuard::TupleIndex { .. }, _) => false,
+
+            (
+                ClauseGuard::FieldAccess {
+                    label, container, ..
+                },
+                ClauseGuard::FieldAccess {
+                    label: other_label,
+                    container: other_container,
+                    ..
+                },
+            ) => label == other_label && container.syntactically_eq(other_container),
+            (ClauseGuard::FieldAccess { .. }, _) => false,
+
+            (
+                ClauseGuard::ModuleSelect {
+                    label,
+                    module_alias,
+                    ..
+                },
+                ClauseGuard::ModuleSelect {
+                    label: other_label,
+                    module_alias: other_module_alias,
+                    ..
+                },
+            ) => label == other_label && module_alias == other_module_alias,
+            (ClauseGuard::ModuleSelect { .. }, _) => false,
+
+            (ClauseGuard::Constant(one), ClauseGuard::Constant(other)) => {
+                one.syntactically_eq(other)
+            }
+            (ClauseGuard::Constant(_), _) => false,
+        }
+    }
 }
 
 #[derive(
@@ -2520,6 +2833,51 @@ impl<T> BitArraySize<T> {
             BitArraySize::Variable { .. } | BitArraySize::BinaryOperator { .. } => false,
         }
     }
+
+    fn syntactically_eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (BitArraySize::Int { int_value: n, .. }, BitArraySize::Int { int_value: m, .. }) => {
+                n == m
+            }
+            (BitArraySize::Int { .. }, _) => false,
+
+            (
+                BitArraySize::Variable { name, .. },
+                BitArraySize::Variable {
+                    name: other_name, ..
+                },
+            ) => name == other_name,
+            (BitArraySize::Variable { .. }, _) => false,
+
+            (
+                BitArraySize::BinaryOperator {
+                    operator,
+                    left,
+                    right,
+                    ..
+                },
+                BitArraySize::BinaryOperator {
+                    operator: other_operator,
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => {
+                operator == other_operator
+                    && left.syntactically_eq(other_left)
+                    && right.syntactically_eq(other_right)
+            }
+            (BitArraySize::BinaryOperator { .. }, _) => false,
+
+            (
+                BitArraySize::Block { inner, .. },
+                BitArraySize::Block {
+                    inner: other_inner, ..
+                },
+            ) => inner.syntactically_eq(other_inner),
+            (BitArraySize::Block { .. }, _) => false,
+        }
+    }
 }
 
 pub type TypedTailPattern = TailPattern<Arc<Type>>;
@@ -2618,6 +2976,163 @@ impl<A> Pattern<A> {
     #[must_use]
     pub fn is_string(&self) -> bool {
         matches!(self, Self::String { .. })
+    }
+}
+
+impl TypedPattern {
+    fn syntactically_eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Pattern::Int { int_value: n, .. }, Pattern::Int { int_value: m, .. }) => n == m,
+            (Pattern::Int { .. }, _) => false,
+
+            (Pattern::Float { float_value: n, .. }, Pattern::Float { float_value: m, .. }) => {
+                n == m
+            }
+            (Pattern::Float { .. }, _) => false,
+
+            (
+                Pattern::String { value, .. },
+                Pattern::String {
+                    value: other_value, ..
+                },
+            ) => value == other_value,
+            (Pattern::String { .. }, _) => false,
+
+            (
+                Pattern::Variable { name, .. },
+                Pattern::Variable {
+                    name: other_name, ..
+                },
+            ) => name == other_name,
+            (Pattern::Variable { .. }, _) => false,
+
+            (Pattern::BitArraySize(one), Pattern::BitArraySize(other)) => {
+                one.syntactically_eq(other)
+            }
+            (Pattern::BitArraySize(..), _) => false,
+
+            (
+                Pattern::Assign { name, pattern, .. },
+                Pattern::Assign {
+                    name: other_name,
+                    pattern: other_pattern,
+                    ..
+                },
+            ) => name == other_name && pattern.syntactically_eq(other_pattern),
+            (Pattern::Assign { .. }, _) => false,
+
+            (
+                Pattern::Discard { name, .. },
+                Pattern::Discard {
+                    name: other_name, ..
+                },
+            ) => name == other_name,
+            (Pattern::Discard { .. }, _) => false,
+
+            (
+                Pattern::List { elements, tail, .. },
+                Pattern::List {
+                    elements: other_elements,
+                    tail: other_tail,
+                    ..
+                },
+            ) => {
+                let tails_are_equal = match (tail, other_tail) {
+                    (None, None) => true,
+                    (None, Some(_)) | (Some(_), None) => false,
+                    (Some(one), Some(other)) => one.pattern.syntactically_eq(&other.pattern),
+                };
+                tails_are_equal
+                    && pairwise_all(elements, other_elements, |(one, other)| {
+                        one.syntactically_eq(other)
+                    })
+            }
+            (Pattern::List { .. }, _) => false,
+
+            (
+                Pattern::Constructor {
+                    name,
+                    arguments,
+                    module,
+                    ..
+                },
+                Pattern::Constructor {
+                    name: other_name,
+                    arguments: other_arguments,
+                    module: other_module,
+                    ..
+                },
+            ) => {
+                let modules_are_equal = match (module, other_module) {
+                    (None, None) => true,
+                    (None, Some(_)) | (Some(_), None) => false,
+                    (Some((one, _)), Some((other, _))) => one == other,
+                };
+                modules_are_equal
+                    && name == other_name
+                    && pairwise_all(arguments, other_arguments, |(one, other)| {
+                        one.label == other.label && one.value.syntactically_eq(&other.value)
+                    })
+            }
+            (Pattern::Constructor { .. }, _) => false,
+
+            (
+                Pattern::Tuple { elements, .. },
+                Pattern::Tuple {
+                    elements: other_elements,
+                    ..
+                },
+            ) => pairwise_all(elements, other_elements, |(one, other)| {
+                one.syntactically_eq(other)
+            }),
+            (Pattern::Tuple { .. }, _) => false,
+
+            (
+                Pattern::BitArray { segments, .. },
+                Pattern::BitArray {
+                    segments: other_segments,
+                    ..
+                },
+            ) => pairwise_all(segments, other_segments, |(one, other)| {
+                one.syntactically_eq(other)
+            }),
+            (Pattern::BitArray { .. }, _) => false,
+
+            (
+                Pattern::StringPrefix {
+                    left_side_assignment,
+                    left_side_string,
+                    right_side_assignment,
+                    ..
+                },
+                Pattern::StringPrefix {
+                    left_side_assignment: other_left_side_assignment,
+                    left_side_string: other_left_side_string,
+                    right_side_assignment: other_right_side_assignment,
+                    ..
+                },
+            ) => {
+                let left_side_assignments_are_equal =
+                    match (left_side_assignment, other_left_side_assignment) {
+                        (None, None) => true,
+                        (None, Some(_)) | (Some(_), None) => false,
+                        (Some((one, _)), Some((other, _))) => one == other,
+                    };
+                let right_side_assignments_are_equal =
+                    match (right_side_assignment, other_right_side_assignment) {
+                        (AssignName::Variable(one), AssignName::Variable(other)) => one == other,
+                        (AssignName::Variable(_), AssignName::Discard(_)) => false,
+                        (AssignName::Discard(one), AssignName::Discard(other)) => one == other,
+                        (AssignName::Discard(_), AssignName::Variable(_)) => false,
+                    };
+                left_side_string == other_left_side_string
+                    && left_side_assignments_are_equal
+                    && right_side_assignments_are_equal
+            }
+            (Pattern::StringPrefix { .. }, _) => false,
+
+            (Pattern::Invalid { .. }, _) => false,
+        }
     }
 }
 
@@ -3129,6 +3644,15 @@ impl TypedExprBitArraySegment {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         self.value.find_node(byte_index)
     }
+
+    fn syntactically_eq(&self, other: &Self) -> bool {
+        self.value.syntactically_eq(&other.value)
+            && pairwise_all(&self.options, &other.options, |(option, other_option)| {
+                option.syntactically_eq(other_option, |size, other_size| {
+                    size.syntactically_eq(other_size)
+                })
+            })
+    }
 }
 
 impl<TypedValue> BitArraySegment<TypedValue, Arc<Type>>
@@ -3214,6 +3738,15 @@ impl TypedPatternBitArraySegment {
                 .find_map(|option| option.find_node(byte_index))
         })
     }
+
+    fn syntactically_eq(&self, other: &Self) -> bool {
+        self.value.syntactically_eq(&other.value)
+            && pairwise_all(&self.options, &other.options, |(option, other_option)| {
+                option.syntactically_eq(other_option, |size, other_size| {
+                    size.syntactically_eq(other_size)
+                })
+            })
+    }
 }
 
 impl TypedConstantBitArraySegment {
@@ -3223,6 +3756,15 @@ impl TypedConstantBitArraySegment {
                 .iter()
                 .find_map(|option| option.find_node(byte_index))
         })
+    }
+
+    fn syntactically_eq(&self, other: &Self) -> bool {
+        self.value.syntactically_eq(&other.value)
+            && pairwise_all(&self.options, &other.options, |(option, other_option)| {
+                option.syntactically_eq(other_option, |size, other_size| {
+                    size.syntactically_eq(other_size)
+                })
+            })
     }
 }
 
@@ -3374,6 +3916,75 @@ impl<A> BitArrayOption<A> {
             | BitArrayOption::Native { .. }
             | BitArrayOption::Size { .. }
             | BitArrayOption::Unit { .. } => false,
+        }
+    }
+
+    fn syntactically_eq(&self, other: &Self, compare_sizes: impl Fn(&A, &A) -> bool) -> bool {
+        match (self, other) {
+            (BitArrayOption::Bytes { .. }, BitArrayOption::Bytes { .. }) => true,
+            (BitArrayOption::Bytes { .. }, _) => false,
+
+            (BitArrayOption::Int { .. }, BitArrayOption::Int { .. }) => true,
+            (BitArrayOption::Int { .. }, _) => false,
+
+            (BitArrayOption::Float { .. }, BitArrayOption::Float { .. }) => true,
+            (BitArrayOption::Float { .. }, _) => false,
+
+            (BitArrayOption::Bits { .. }, BitArrayOption::Bits { .. }) => true,
+            (BitArrayOption::Bits { .. }, _) => false,
+
+            (BitArrayOption::Utf8 { .. }, BitArrayOption::Utf8 { .. }) => true,
+            (BitArrayOption::Utf8 { .. }, _) => false,
+
+            (BitArrayOption::Utf16 { .. }, BitArrayOption::Utf16 { .. }) => true,
+            (BitArrayOption::Utf16 { .. }, _) => false,
+
+            (BitArrayOption::Utf32 { .. }, BitArrayOption::Utf32 { .. }) => true,
+            (BitArrayOption::Utf32 { .. }, _) => false,
+
+            (BitArrayOption::Utf8Codepoint { .. }, BitArrayOption::Utf8Codepoint { .. }) => true,
+            (BitArrayOption::Utf8Codepoint { .. }, _) => false,
+
+            (BitArrayOption::Utf16Codepoint { .. }, BitArrayOption::Utf16Codepoint { .. }) => true,
+            (BitArrayOption::Utf16Codepoint { .. }, _) => false,
+
+            (BitArrayOption::Utf32Codepoint { .. }, BitArrayOption::Utf32Codepoint { .. }) => true,
+            (BitArrayOption::Utf32Codepoint { .. }, _) => false,
+
+            (BitArrayOption::Signed { .. }, BitArrayOption::Signed { .. }) => true,
+            (BitArrayOption::Signed { .. }, _) => false,
+
+            (BitArrayOption::Unsigned { .. }, BitArrayOption::Unsigned { .. }) => true,
+            (BitArrayOption::Unsigned { .. }, _) => false,
+
+            (BitArrayOption::Big { .. }, BitArrayOption::Big { .. }) => true,
+            (BitArrayOption::Big { .. }, _) => false,
+
+            (BitArrayOption::Little { .. }, BitArrayOption::Little { .. }) => true,
+            (BitArrayOption::Little { .. }, _) => false,
+
+            (BitArrayOption::Native { .. }, BitArrayOption::Native { .. }) => true,
+            (BitArrayOption::Native { .. }, _) => false,
+
+            (
+                BitArrayOption::Unit { value, .. },
+                BitArrayOption::Unit {
+                    value: other_value, ..
+                },
+            ) => value == other_value,
+            (BitArrayOption::Unit { .. }, _) => false,
+
+            (
+                BitArrayOption::Size {
+                    value, short_form, ..
+                },
+                BitArrayOption::Size {
+                    value: other_value,
+                    short_form: other_short_form,
+                    ..
+                },
+            ) => short_form == other_short_form && compare_sizes(value, other_value),
+            (BitArrayOption::Size { .. }, _) => false,
         }
     }
 }
@@ -3766,6 +4377,34 @@ impl TypedStatement {
             Statement::Use(Use { call, .. }) => call.is_pure_value_constructor(),
             // Assert statements by definition are not pure
             Statement::Assert(_) => false,
+        }
+    }
+
+    fn syntactically_eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Statement::Expression(one), Statement::Expression(other)) => {
+                one.syntactically_eq(other)
+            }
+            (Statement::Expression(_), _) => false,
+
+            (Statement::Assignment(one), Statement::Assignment(other)) => {
+                one.pattern.syntactically_eq(&other.pattern)
+                    && one.value.syntactically_eq(&other.value)
+            }
+            (Statement::Assignment(_), _) => false,
+
+            (Statement::Use(one), Statement::Use(other)) => one.call.syntactically_eq(&other.call),
+            (Statement::Use(_), _) => false,
+
+            (Statement::Assert(one), Statement::Assert(other)) => {
+                let messages_are_equal = match (&one.message, &other.message) {
+                    (None, None) => true,
+                    (None, Some(_)) | (Some(_), None) => false,
+                    (Some(one), Some(other)) => one.syntactically_eq(other),
+                };
+                messages_are_equal && one.value.syntactically_eq(&other.value)
+            }
+            (Statement::Assert(_), _) => false,
         }
     }
 }

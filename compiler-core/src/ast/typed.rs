@@ -1136,6 +1136,321 @@ impl TypedExpr {
             _ => false,
         }
     }
+
+    /// Checks that two expressions are written in the same (ignoring
+    /// whitespace).
+    ///
+    /// This is useful for the language server to know when it is possible to
+    /// merge two blocks of code together because they are the same.
+    /// Simply checking for equality of the AST nodes wouldn't work as those
+    /// also contain the source location (meaning that two expression that look
+    /// the same but are in different places would be considered different)!
+    ///
+    pub(crate) fn syntactically_eq(&self, other: &TypedExpr) -> bool {
+        match (self, other) {
+            (TypedExpr::Int { int_value: n, .. }, TypedExpr::Int { int_value: m, .. }) => n == m,
+            (TypedExpr::Int { .. }, _) => false,
+
+            (TypedExpr::Float { float_value: n, .. }, TypedExpr::Float { float_value: m, .. }) => {
+                n == m
+            }
+            (TypedExpr::Float { .. }, _) => false,
+
+            (TypedExpr::String { value, .. }, TypedExpr::String { value: other, .. }) => {
+                value == other
+            }
+            (TypedExpr::String { .. }, _) => false,
+
+            (
+                TypedExpr::Block { statements, .. },
+                TypedExpr::Block {
+                    statements: other, ..
+                },
+            ) => pairwise_all(statements, other, |(one, other)| {
+                one.syntactically_eq(other)
+            }),
+
+            (TypedExpr::Block { .. }, _) => false,
+
+            (
+                TypedExpr::List { elements, tail, .. },
+                TypedExpr::List {
+                    elements: other_elements,
+                    tail: other_tail,
+                    ..
+                },
+            ) => {
+                let tails_are_equal = match (tail, other_tail) {
+                    (Some(one), Some(other)) => one.syntactically_eq(other),
+                    (None, Some(_)) | (Some(_), None) => false,
+                    (None, None) => true,
+                };
+
+                tails_are_equal
+                    && pairwise_all(elements, other_elements, |(one, other)| {
+                        one.syntactically_eq(other)
+                    })
+            }
+            (TypedExpr::List { .. }, _) => false,
+
+            (TypedExpr::Var { name, .. }, TypedExpr::Var { name: other, .. }) => name == other,
+            (TypedExpr::Var { .. }, _) => false,
+
+            (
+                TypedExpr::Fn {
+                    arguments, body, ..
+                },
+                TypedExpr::Fn {
+                    arguments: other_arguments,
+                    body: other_body,
+                    ..
+                },
+            ) => {
+                let arguments_are_equal =
+                    pairwise_all(arguments, other_arguments, |(one, other)| {
+                        one.get_variable_name() == other.get_variable_name()
+                    });
+
+                let bodies_are_equal =
+                    pairwise_all(body, other_body, |(one, other)| one.syntactically_eq(other));
+
+                arguments_are_equal && bodies_are_equal
+            }
+            (TypedExpr::Fn { .. }, _) => false,
+
+            (
+                TypedExpr::Pipeline {
+                    first_value,
+                    assignments,
+                    finally,
+                    ..
+                },
+                TypedExpr::Pipeline {
+                    first_value: other_first_value,
+                    assignments: other_assignments,
+                    finally: other_finally,
+                    ..
+                },
+            ) => {
+                first_value.value.syntactically_eq(&other_first_value.value)
+                    && pairwise_all(assignments, other_assignments, |(one, other)| {
+                        one.0.value.syntactically_eq(&other.0.value)
+                    })
+                    && finally.syntactically_eq(other_finally)
+            }
+            (TypedExpr::Pipeline { .. }, _) => false,
+
+            (
+                TypedExpr::Call { fun, arguments, .. },
+                TypedExpr::Call {
+                    fun: other_fun,
+                    arguments: other_arguments,
+                    ..
+                },
+            ) => {
+                fun.syntactically_eq(other_fun)
+                    && pairwise_all(arguments, other_arguments, |(one, other)| {
+                        one.label == other.label && one.value.syntactically_eq(&other.value)
+                    })
+            }
+            (TypedExpr::Call { .. }, _) => false,
+
+            (
+                TypedExpr::BinOp {
+                    name, left, right, ..
+                },
+                TypedExpr::BinOp {
+                    name: other_name,
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => {
+                name == other_name
+                    && left.syntactically_eq(other_left)
+                    && right.syntactically_eq(other_right)
+            }
+            (TypedExpr::BinOp { .. }, _) => false,
+
+            (
+                TypedExpr::Case {
+                    subjects, clauses, ..
+                },
+                TypedExpr::Case {
+                    subjects: other_subjects,
+                    clauses: other_clauses,
+                    ..
+                },
+            ) => {
+                pairwise_all(subjects, other_subjects, |(one, other)| {
+                    one.syntactically_eq(other)
+                }) && pairwise_all(clauses, other_clauses, |(one, other)| {
+                    one.syntactically_eq(other)
+                })
+            }
+            (TypedExpr::Case { .. }, _) => false,
+
+            (
+                TypedExpr::RecordAccess { label, record, .. },
+                TypedExpr::RecordAccess {
+                    label: other_label,
+                    record: other_record,
+                    ..
+                },
+            ) => label == other_label && record.syntactically_eq(other_record),
+            (TypedExpr::RecordAccess { .. }, _) => false,
+
+            (
+                TypedExpr::ModuleSelect {
+                    label,
+                    module_alias,
+                    ..
+                },
+                TypedExpr::ModuleSelect {
+                    label: other_label,
+                    module_alias: other_module_alias,
+                    ..
+                },
+            ) => label == other_label && module_alias == other_module_alias,
+            (TypedExpr::ModuleSelect { .. }, _) => false,
+
+            (
+                TypedExpr::Tuple { elements, .. },
+                TypedExpr::Tuple {
+                    elements: other_elements,
+                    ..
+                },
+            ) => pairwise_all(elements, other_elements, |(one, other)| {
+                one.syntactically_eq(other)
+            }),
+            (TypedExpr::Tuple { .. }, _) => false,
+
+            (
+                TypedExpr::TupleIndex { index, tuple, .. },
+                TypedExpr::TupleIndex {
+                    index: other_index,
+                    tuple: other_tuple,
+                    ..
+                },
+            ) => index == other_index && tuple.syntactically_eq(other_tuple),
+            (TypedExpr::TupleIndex { .. }, _) => false,
+
+            (
+                TypedExpr::Todo { message, kind, .. },
+                TypedExpr::Todo {
+                    message: other_message,
+                    kind: other_kind,
+                    ..
+                },
+            ) => {
+                let messages_are_equal = match (message, other_message) {
+                    (Some(one), Some(other)) => one.syntactically_eq(other),
+                    (None, None) => true,
+                    (None, Some(_)) | (Some(_), None) => false,
+                };
+                messages_are_equal && kind == other_kind
+            }
+            (TypedExpr::Todo { .. }, _) => false,
+
+            (
+                TypedExpr::Panic { message, .. },
+                TypedExpr::Panic {
+                    message: message_other,
+                    ..
+                },
+            ) => match (message, message_other) {
+                (None, None) => true,
+                (None, Some(_)) | (Some(_), None) => false,
+                (Some(one), Some(other)) => one.syntactically_eq(other),
+            },
+            (TypedExpr::Panic { .. }, _) => false,
+
+            (
+                TypedExpr::Echo {
+                    expression,
+                    message,
+                    ..
+                },
+                TypedExpr::Echo {
+                    expression: other_expression,
+                    message: other_message,
+                    ..
+                },
+            ) => {
+                let messages_are_equal = match (message, other_message) {
+                    (None, None) => true,
+                    (None, Some(_)) | (Some(_), None) => false,
+                    (Some(one), Some(other)) => one.syntactically_eq(other),
+                };
+                let expressions_are_equal = match (expression, other_expression) {
+                    (None, None) => true,
+                    (None, Some(_)) | (Some(_), None) => false,
+                    (Some(one), Some(other)) => one.syntactically_eq(other),
+                };
+                messages_are_equal && expressions_are_equal
+            }
+            (TypedExpr::Echo { .. }, _) => false,
+
+            (
+                TypedExpr::BitArray { segments, .. },
+                TypedExpr::BitArray {
+                    segments: other_segments,
+                    ..
+                },
+            ) => pairwise_all(segments, other_segments, |(one, other)| {
+                one.syntactically_eq(other)
+            }),
+            (TypedExpr::BitArray { .. }, _) => false,
+
+            (
+                TypedExpr::RecordUpdate {
+                    constructor,
+                    arguments,
+                    ..
+                },
+                TypedExpr::RecordUpdate {
+                    constructor: other_constructor,
+                    arguments: other_arguments,
+                    ..
+                },
+            ) => {
+                constructor.syntactically_eq(other_constructor)
+                    && pairwise_all(arguments, other_arguments, |(one, other)| {
+                        one.label == other.label && one.value.syntactically_eq(&other.value)
+                    })
+            }
+            (TypedExpr::RecordUpdate { .. }, _) => false,
+
+            (
+                TypedExpr::NegateBool { value, .. },
+                TypedExpr::NegateBool {
+                    value: other_value, ..
+                },
+            ) => value.syntactically_eq(other_value),
+            (TypedExpr::NegateBool { .. }, _) => false,
+
+            (TypedExpr::NegateInt { value: n, .. }, TypedExpr::NegateInt { value: m, .. }) => {
+                n.syntactically_eq(m)
+            }
+            (TypedExpr::NegateInt { .. }, _) => false,
+
+            (TypedExpr::Invalid { .. }, _) => false,
+        }
+    }
+
+    pub(crate) fn is_todo_with_no_message(&self) -> bool {
+        match self {
+            TypedExpr::Todo { message: None, .. } => true,
+            _ => false,
+        }
+    }
+}
+
+/// Checks that two slices have the same number of item and that the given
+/// predicate holds for all pairs of items.
+///
+pub(crate) fn pairwise_all<A>(one: &[A], other: &[A], function: impl Fn((&A, &A)) -> bool) -> bool {
+    one.len() == other.len() && one.iter().zip(other).all(function)
 }
 
 fn is_non_zero_number(value: &EcoString) -> bool {
