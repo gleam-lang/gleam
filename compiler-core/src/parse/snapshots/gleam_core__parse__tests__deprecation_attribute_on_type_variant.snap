@@ -33,6 +33,7 @@ Parsed {
                                     end: 47,
                                 },
                                 name: "Wibble1",
+                                type_name: "Wibble",
                                 arguments: [],
                                 documentation: None,
                                 deprecation: Deprecated {
@@ -49,6 +50,7 @@ Parsed {
                                     end: 59,
                                 },
                                 name: "Wibble2",
+                                type_name: "Wibble",
                                 arguments: [],
                                 documentation: None,
                                 deprecation: NotDeprecated,
