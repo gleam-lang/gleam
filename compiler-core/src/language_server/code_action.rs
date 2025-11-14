@@ -8562,10 +8562,18 @@ impl<'ast> ast::visit::Visit<'ast> for AddOmittedLabels<'ast> {
 
         let mut omitted_labels = Vec::with_capacity(arguments.len());
         for (index, argument) in arguments.iter().enumerate() {
-            // We can't apply this code action to calls where any of the
-            // arguments have a label explicitly provided.
-            if argument.label.is_some() {
-                return;
+            // If the argument already has a label we don't want to add a label
+            // for it, so we skip it.
+            if let Some(label) = &argument.label {
+                // Though, before skipping, we want to make sure that the label
+                // is actually right for the function call. If it's not then we
+                // give up on adding labels because there wouldn't be no way of
+                // knowing which label to add.
+                if !field_map.fields.contains_key(label) {
+                    return;
+                } else {
+                    continue;
+                }
             }
 
             let label = argument_index_to_label

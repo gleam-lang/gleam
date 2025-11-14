@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-assertion_line: 2004
 expression: "\npub fn main() {\n  let assert Ok(Wibble   ()) = Wibble(1, \"2\")\n}\n\npub type Wibble { Wibble(arg1: Int, arg2: String) }\n "
-snapshot_kind: text
 ---
 ----- BEFORE ACTION
 

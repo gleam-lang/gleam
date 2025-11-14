@@ -120,6 +120,10 @@
   keyword of a variable to inline.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The "add omitted labels" code action can now be used in function calls where
+  some of the labels have been provided already.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The "pattern match on variable" code action can now pick better names when
   used on tuples.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
