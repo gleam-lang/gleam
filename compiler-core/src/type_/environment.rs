@@ -976,7 +976,7 @@ pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
             TypeVar::Link { type_ } => Action::Unify(type_.clone()),
 
             TypeVar::Unbound { id } => {
-                unify_unbound_type(t2.clone(), *id)?;
+                unify_unbound_type(&t2, *id)?;
                 Action::Link
             }
 
