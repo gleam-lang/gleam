@@ -1001,7 +1001,23 @@ pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
                 Ok(())
             }
 
-            Action::Unify(t) => unify(t, t2),
+            Action::Unify(t) => {
+                unify(t.clone(), t2)?;
+
+                // Note that type_ is always a Link in this branch.
+                // unify may replace t's inner value with another link
+                // (See the Action::Link branch just above)
+                // This can cause the compiler to build up an ever-growing chain of links.
+                // Therefore, we try to collapse the links. However, the RefCell in type_
+                // may already be borrowed by collapsing the links in t2 at the start
+                // of the function, in which case accept the extra link.
+                if let Ok(mut type_) = type_.try_borrow_mut() {
+                    *type_ = TypeVar::Link {
+                        type_: collapse_links(t.clone()),
+                    }
+                }
+                Ok(())
+            }
 
             Action::CouldNotUnify => Err(UnifyError::CouldNotUnify {
                 expected: t1.clone(),
