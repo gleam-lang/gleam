@@ -1105,3 +1105,54 @@ pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
         }),
     }
 }
+
+#[cfg(test)]
+mod unify_tests {
+    use std::{cell::RefCell, ops::Deref, sync::Arc};
+
+    use crate::type_::{Type, TypeVar, unify};
+
+    // Repeated unification used to add a link to t1 for each branch
+    // See https://github.com/gleam-lang/gleam/issues/4805
+    #[test]
+    fn repeated_unify_does_not_add_extra_links() {
+        // The case's return type starts unbound
+        let t1 = unbound(0);
+        // In practice, this would usually be something like Result(String, _),
+        // but unify recurses into the type parameters and only the unbound one matters
+        let t2 = unbound(1);
+
+        // After unifying with the first clause, we have a direct link to the clause's return type
+        assert!(unify(t1.clone(), t2).is_ok());
+        assert_direct_link_to_unbound(t1.deref(), 1);
+
+        // Before the fix, this used to _add a new link_ into the nested Var
+        let t2 = unbound(2);
+        assert!(unify(t1.clone(), t2).is_ok());
+        assert_direct_link_to_unbound(t1.deref(), 2);
+
+        // And this would add a link to the var of the new link
+        // As unify is recursive, this eventually cause a stack overflow
+        let t2 = unbound(3);
+        assert!(unify(t1.clone(), t2).is_ok());
+        assert_direct_link_to_unbound(t1.deref(), 3);
+    }
+
+    fn assert_direct_link_to_unbound(t1: &Type, expect_id: u64) {
+        if let Type::Var { type_: var } = t1
+            && let TypeVar::Link { type_: link } = var.borrow().deref()
+            && let Type::Var { type_: var } = link.deref()
+            && let TypeVar::Unbound { id } = var.borrow().deref()
+        {
+            assert_eq!(*id, expect_id, "Expected unbound id to be unified")
+        } else {
+            panic!("Expected t1 to be a direct link but found: {t1:?}")
+        }
+    }
+
+    fn unbound(id: u64) -> Arc<Type> {
+        Arc::new(Type::Var {
+            type_: Arc::new(RefCell::new(TypeVar::Unbound { id })),
+        })
+    }
+}
