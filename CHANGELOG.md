@@ -199,6 +199,10 @@
 - Fixed a typo for the "Invalid number of patterns" error.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a stack overflow when type checking some case expressions with
+  thousands of branches.
+  ([fruno](https://github.com/fruno-bulax/))
+
 - Add a missing BitArray constructor return type in the prelude's TypeScript
   definitions.
   ([Richard Viney](https://github.com/richard-viney))
