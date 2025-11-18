@@ -2713,8 +2713,18 @@ to variables, pass them to functions, or anything else that you would do with a 
                         expected,
                         given,
                     } => {
+                        let subject = if *expected == 1 {
+                            "subject"
+                        } else {
+                            "subjects"
+                        };
+                        let pattern = if *expected == 1 {
+                            "pattern"
+                        } else {
+                            "patterns"
+                        };
                         let text = wrap_format!(
-                            "This case expression has {expected} subjects, \
+                            "This case expression has {expected} {subject}, \
 but this pattern matches {given}.
 Each clause must have a pattern for every subject value.",
                         );
@@ -2726,7 +2736,7 @@ Each clause must have a pattern for every subject value.",
                             location: Some(Location {
                                 label: Label {
                                     text: Some(format!(
-                                        "Expected {expected} patterns, got {given}"
+                                        "Expected {expected} {pattern}, got {given}"
                                     )),
                                     span: *location,
                                 },

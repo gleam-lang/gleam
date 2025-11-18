@@ -36,6 +36,7 @@
 
 - When matching the wrong number of subjects, the compiler now pinpoints the
   error location instead of marking the entire branch.
+
   ```
   case wibble {
     0, _ -> 1
@@ -44,6 +45,7 @@
       ^ I was expecting a pattern after this
   }
   ```
+
   ([fruno](https://github.com/fruno-bulax/))
 
 - The performance of `==` and `!=` has been improved for single-variant custom
@@ -192,6 +194,9 @@
 
 - Fixed a bug where the formatter would not remove the right number of double
   negations from literal integers.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a typo for the "Invalid number of patterns" error.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - Add a missing BitArray constructor return type in the prelude's TypeScript
