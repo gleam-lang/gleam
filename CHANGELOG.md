@@ -157,9 +157,6 @@
 
   ([Andrey Kozhev](https://github.com/ankddev))
 
-- Typos in the error message shown when trying to install a non-existent package have been fixed.
-  ([Ioan Clarke](https://github.com/ioanclarke))
-  
 ### Language server
 
 - The "inline variable" code action can now trigger when used over the let
@@ -245,3 +242,7 @@
 
 - Fix invalid JavaScript codegen in cases where underscores follow a decimal.
   ([Patrick Dewey](https://github.com/ptdewey))
+
+- Typos in the error message shown when trying to install a non-existent package
+  have been fixed.
+  ([Ioan Clarke](https://github.com/ioanclarke))
