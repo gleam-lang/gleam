@@ -132,7 +132,7 @@ pub fn setup(
     let warnings = Rc::new(ConsoleWarningEmitter);
     let warning_emitter = WarningEmitter::new(warnings.clone());
 
-    let built = crate::build::main(paths, options, manifest, warnings)?;
+    let built = crate::build::main_with_warnings(paths, options, manifest, warnings)?;
 
     // Warn incase the module being run has been as internal
     let internal_module = built.is_internal(&module).unwrap();

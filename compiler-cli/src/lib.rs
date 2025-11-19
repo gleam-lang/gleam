@@ -77,7 +77,7 @@ mod shell;
 mod text_layout;
 
 use config::root_config;
-use fs::{ConsoleWarningEmitter, get_current_directory, get_project_root};
+use fs::{get_current_directory, get_project_root};
 pub use gleam_core::error::{Error, Result};
 
 use gleam_core::{
@@ -87,7 +87,7 @@ use gleam_core::{
     paths::ProjectPaths,
     version::COMPILER_VERSION,
 };
-use std::{rc::Rc, str::FromStr};
+use std::str::FromStr;
 
 use camino::Utf8PathBuf;
 
@@ -755,7 +755,6 @@ fn command_check(paths: &ProjectPaths, target: Option<Target>) -> Result<()> {
             no_print_progress: false,
         },
         build::download_dependencies(paths, cli::Reporter::new())?,
-        Rc::new(ConsoleWarningEmitter)
     )?;
     Ok(())
 }
@@ -783,7 +782,6 @@ fn command_build(
             no_print_progress,
         },
         manifest,
-        Rc::new(ConsoleWarningEmitter)
     )?;
     Ok(())
 }
