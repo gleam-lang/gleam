@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{
     Result,
-    diagnostic::{Diagnostic, Level},
+    diagnostic::{Diagnostic, Label, Level, Location},
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
         DownloadDependencies, MakeLocker,
@@ -15,6 +15,7 @@ use crate::{
         src_span_to_lsp_range,
     },
     line_numbers::LineNumbers,
+    strings::to_snake_case,
 };
 use camino::{Utf8Path, Utf8PathBuf};
 use debug_ignore::DebugIgnore;
@@ -436,7 +437,16 @@ where
         if let Err(error) = self.io.write_mem_cache(&path, &text) {
             return self.outside_of_project_feedback.error(error);
         }
-        Feedback::none()
+        // Validate the module filename and emit a diagnostic if invalid.
+        // If now valid, explicitly unset any previous file-name diagnostics for this file.
+        match self.validate_module_filename(&path, &text) {
+            Some(feedback) => feedback,
+            None => {
+                let mut feedback = Feedback::none();
+                feedback.unset_existing_diagnostics(path);
+                feedback
+            }
+        }
     }
 
     fn discard_in_memory_cache(&mut self, path: Utf8PathBuf) -> Feedback {
@@ -444,7 +454,10 @@ where
         if let Err(error) = self.io.delete_mem_cache(&path) {
             return self.outside_of_project_feedback.error(error);
         }
-        Feedback::none()
+        // File closed or saved to disk. Unset any inline diagnostics for this file.
+        let mut feedback = Feedback::none();
+        feedback.unset_existing_diagnostics(path);
+        feedback
     }
 
     fn watched_files_changed(&mut self, path: Utf8PathBuf) -> Feedback {
@@ -467,6 +480,87 @@ where
         if let Some(project_path) = project_path {
             _ = self.changed_projects.insert(project_path);
         }
+    }
+
+    fn validate_module_filename(&self, path: &Utf8Path, src: &str) -> Option<Feedback> {
+        // Only validate .gleam files
+        if path.extension().map(|e| e != "gleam").unwrap_or(true) {
+            return None;
+        }
+
+        // Only validate inside a Gleam project. Outside projects the LS may only provide formatting.
+        let project_root = self.router.project_path(path)?;
+
+        let rel = match path.strip_prefix(&project_root) {
+            Ok(p) => p,
+            Err(_) => return None,
+        };
+        let rel_str = rel.as_str();
+        // Trim the leading project area (src/test/dev)
+        let module_rel = if let Some(rest) = rel_str.strip_prefix("src/") {
+            rest
+        } else if let Some(rest) = rel_str.strip_prefix("test/") {
+            rest
+        } else if let Some(rest) = rel_str.strip_prefix("dev/") {
+            rest
+        } else {
+            return None;
+        };
+        let module_name = module_rel.strip_suffix(".gleam")?;
+
+        // A valid module filename is snake_case, starting with a lowercase letter
+        // and containing only [a-z0-9_] for each path segment
+        fn is_valid_module_basename(s: &str) -> bool {
+            let mut iter = s.chars();
+            match iter.next() {
+                Some(c) if c.is_ascii_lowercase() => {}
+                _ => return false,
+            }
+            iter.all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+        }
+
+        let is_valid_full = module_name.split('/').all(is_valid_module_basename);
+        if is_valid_full {
+            return None;
+        }
+
+        // Compute a suggested valid name for each segment and join with '/'
+        let suggestion = module_name
+            .split('/')
+            .map(|seg| {
+                let mut s = to_snake_case(&ecow::EcoString::from(seg)).to_string();
+                if s.is_empty() {
+                    s = "module".into();
+                }
+                if !s.chars().next().map(|c| c.is_ascii_lowercase()).unwrap_or(false) {
+                    s = format!("m{}", s);
+                }
+                s
+            })
+            .collect::<Vec<_>>()
+            .join("/");
+
+        let mut feedback = Feedback::default();
+        // Highlight the first line to ensure the diagnostic is visible in editors
+        let first_line_end = src.find('\n').unwrap_or(src.len());
+        let span_end: u32 = first_line_end.max(1).try_into().unwrap_or(1);
+        let diagnostic = Diagnostic {
+            title: format!("{module_name} is not a valid name for a Gleam module"),
+            text: format!("You should switch to {suggestion} instead."),
+            level: Level::Error,
+            location: Some(Location {
+                src: src.into(),
+                path: path.to_path_buf(),
+                label: Label {
+                    text: None,
+                    span: crate::ast::SrcSpan::new(0, span_end),
+                },
+                extra_labels: vec![],
+            }),
+            hint: None,
+        };
+        feedback.append_diagnostic(path.to_path_buf(), diagnostic);
+        Some(feedback)
     }
 }
 
