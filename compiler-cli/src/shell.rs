@@ -4,9 +4,7 @@ use gleam_core::{
     error::{Error, ShellCommandFailureReason},
     paths::ProjectPaths,
 };
-use std::{process::Command, rc::Rc};
-
-use crate::fs::ConsoleWarningEmitter;
+use std::process::Command;
 
 pub fn command(paths: &ProjectPaths) -> Result<(), Error> {
     // Build project
@@ -22,7 +20,6 @@ pub fn command(paths: &ProjectPaths) -> Result<(), Error> {
             no_print_progress: false,
         },
         crate::build::download_dependencies(paths, crate::cli::Reporter::new())?,
-        Rc::new(ConsoleWarningEmitter),
     )?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell

@@ -278,7 +278,7 @@ and is not recommended for public use",
                     location: None,
                     hint: None,
                 }
-            },
+            }
             Warning::InvalidSource { path } => Diagnostic {
                 title: "Invalid module name".into(),
                 text: wrap(
