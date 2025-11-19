@@ -83,7 +83,7 @@ pub fn setup(
     };
 
     // Get the config for the module that is being run to check the target.
-    // Also get the kind of the package the module belongs to: wether the module
+    // Also get the kind of the package the module belongs to: whether the module
     // belongs to a dependency or to the root package.
     let (mod_config, package_kind) = match &module {
         Some(mod_path) => {
@@ -129,26 +129,28 @@ pub fn setup(
         no_print_progress,
     };
 
-    // Warn incase the module being run has been as internal
     let warnings = Rc::new(ConsoleWarningEmitter);
     let warning_emitter = WarningEmitter::new(warnings.clone());
-
     let built = crate::build::main_with_warnings(paths, options, manifest, warnings)?;
 
     // Warn incase the module being run has been as internal
     let internal_module = built.is_internal(&module).unwrap();
     if internal_module {
-        let warning = Warning::InternalMain {
-            module: module.clone(),
-        };
-        warning_emitter.emit(warning);
+        match package_kind {
+            PackageKind::Root => {}
+            _ => {
+                let warning = Warning::InternalMain {
+                    module: module.clone(),
+                };
+                warning_emitter.emit(warning);
+            }
+        }
     }
 
     // A module can not be run if it does not exist or does not have a public main function.
     let main_function = get_or_suggest_main_function(built, &module, target)?;
 
-    // Warn incase the main function being run has been deprecated
-
+    // Warn if the main function being run has been deprecated
     match main_function.deprecation {
         gleam_core::type_::Deprecation::Deprecated { message } => {
             let warning = Warning::DeprecatedMain { message };

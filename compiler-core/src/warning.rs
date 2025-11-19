@@ -290,9 +290,8 @@ impl Warning {
             },
             Warning::InternalMain { module } => {
                 let message = format!(
-                    "The module {} has been marked internal.\
-It is intended for use within the library\
-and is not recommended for public use",
+                    "The main function's module {} has been marked internal.\
++It is not recommended for public use.",
                     module
                 );
                 Diagnostic {
