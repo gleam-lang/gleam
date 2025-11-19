@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    time::{Instant, SystemTime},
+    time::SystemTime,
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
