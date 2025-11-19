@@ -36,6 +36,7 @@ expression: "./cases/import_shadowed_name_warning"
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "src/two.gleam").
 -export([use_type/1]).
+-export_type([shadowing/0]).
 
 -if(?OTP_RELEASE >= 27).
 -define(MODULEDOC(Str), -moduledoc(Str)).
@@ -46,6 +47,8 @@ expression: "./cases/import_shadowed_name_warning"
 -endif.
 
 ?MODULEDOC(" https://github.com/gleam-lang/otp/pull/22\n").
+
+-type shadowing() :: port.
 
 -file("src/two.gleam", 14).
 -spec use_type(one:port_()) -> nil.
