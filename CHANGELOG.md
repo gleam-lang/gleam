@@ -265,3 +265,7 @@
 - Typos in the error message shown when trying to install a non-existent package
   have been fixed.
   ([Ioan Clarke](https://github.com/ioanclarke))
+
+- Fixed a bug where the compiler would generate invalid Erlang and TypeScript
+  code for unused opaque types referencing private types.
+  ([Surya Rose](https://github.com/GearsDatapacks))

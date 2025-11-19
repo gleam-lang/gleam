@@ -18,9 +18,13 @@ pub fn main(x: Int) -> Int {
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/1]).
--export_type([a/0]).
+-export_type([a/0, b/0, c/0]).
 
 -type a() :: {a, integer()}.
+
+-type b() :: {b, binary()}.
+
+-type c() :: {c, integer()}.
 
 -file("project/test/my/mod.gleam", 5).
 -spec main(integer()) -> integer().
