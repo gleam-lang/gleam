@@ -124,6 +124,7 @@
 
   ([fruno](https://github.com/fruno-bulax/))
 
+<<<<<<< HEAD
 - Comparison of record constructors with non-zero arity always produces `False`,
   because under the hood during code generation they become anonymous functions:
 
@@ -151,6 +152,10 @@
   ```
 
   ([Adi Salimgereyev](https://github.com/abs0luty))
+=======
+- Gleam will now warn when running a deprecated or internal module main function
+  ([Lioncat2002](https://github.com/Lioncat2002))
+>>>>>>> 800441331 (wip: adds warnings for using deprecated or internal mod main)
 
 ### Build tool
 
