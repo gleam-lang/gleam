@@ -16,7 +16,8 @@ use gleam_core::{
 
 use crate::{
     config::PackageKind, 
-    fs::{ConsoleWarningEmitter, ProjectIO};
+    fs::{ConsoleWarningEmitter, ProjectIO}
+};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Which {
@@ -155,9 +156,6 @@ pub fn setup(
         }
         gleam_core::type_::Deprecation::NotDeprecated => {}
     }
-
-    // Don't exit on ctrl+c as it is used by child erlang shell
-    ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");
 
     telemetry.running(&format!("{module}.main"));
 
