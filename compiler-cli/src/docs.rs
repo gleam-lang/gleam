@@ -1,9 +1,16 @@
-use std::{collections::HashMap, time::SystemTime};
+use std::{
+    collections::HashMap,
+    rc::Rc,
+    time::{Instant, SystemTime},
+};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use ecow::EcoString;
 
-use crate::{cli, fs::ProjectIO, http::HttpClient};
+use crate::{cli, 
+    fs::{ConsoleWarningEmitter, ProjectIO}, 
+    http::HttpClient,
+};
 use gleam_core::{
     Result,
     analyse::TargetSupport,
@@ -98,6 +105,7 @@ pub fn build(paths: &ProjectPaths, options: BuildOptions) -> Result<()> {
             no_print_progress: false,
         },
         manifest,
+        Rc::new(ConsoleWarningEmitter),
     )?;
     let outputs = build_documentation(
         paths,
@@ -220,6 +228,7 @@ pub fn publish(paths: &ProjectPaths) -> Result<()> {
             no_print_progress: false,
         },
         manifest,
+        Rc::new(ConsoleWarningEmitter),
     )?;
     let outputs = build_documentation(
         paths,

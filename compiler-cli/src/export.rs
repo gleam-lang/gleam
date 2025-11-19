@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use camino::Utf8PathBuf;
 use gleam_core::{
     Result,
@@ -5,6 +7,8 @@ use gleam_core::{
     build::{Codegen, Compile, Mode, Options, Target},
     paths::ProjectPaths,
 };
+
+use crate::fs::ConsoleWarningEmitter;
 
 static ENTRYPOINT_FILENAME_POWERSHELL: &str = "entrypoint.ps1";
 static ENTRYPOINT_FILENAME_POSIX_SHELL: &str = "entrypoint.sh";
@@ -50,6 +54,7 @@ pub(crate) fn erlang_shipment(paths: &ProjectPaths) -> Result<()> {
             no_print_progress: false,
         },
         crate::build::download_dependencies(paths, crate::cli::Reporter::new())?,
+        Rc::new(ConsoleWarningEmitter),
     )?;
 
     for entry in crate::fs::read_dir(&build)?.filter_map(Result::ok) {
@@ -156,6 +161,7 @@ pub fn package_interface(paths: &ProjectPaths, out: Utf8PathBuf) -> Result<()> {
             no_print_progress: false,
         },
         crate::build::download_dependencies(paths, crate::cli::Reporter::new())?,
+        Rc::new(ConsoleWarningEmitter),
     )?;
     built.root_package.attach_doc_and_module_comments();
 

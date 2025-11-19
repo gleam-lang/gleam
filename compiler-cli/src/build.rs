@@ -11,7 +11,7 @@ use gleam_core::{
 use crate::{
     build_lock::BuildLock,
     cli, dependencies,
-    fs::{self, ConsoleWarningEmitter},
+    fs::{self},
 };
 
 pub fn download_dependencies(paths: &ProjectPaths, telemetry: impl Telemetry) -> Result<Manifest> {
@@ -27,8 +27,13 @@ pub fn download_dependencies(paths: &ProjectPaths, telemetry: impl Telemetry) ->
     )
 }
 
-pub fn main(paths: &ProjectPaths, options: Options, manifest: Manifest) -> Result<Built> {
-    main_with_warnings(paths, options, manifest, Rc::new(ConsoleWarningEmitter))
+pub fn main(
+    paths: &ProjectPaths,
+    options: Options,
+    manifest: Manifest,
+    warnings: Rc<dyn WarningEmitterIO>,
+) -> Result<Built> {
+    main_with_warnings(paths, options, manifest, warnings)
 }
 
 pub(crate) fn main_with_warnings(

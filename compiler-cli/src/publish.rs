@@ -18,9 +18,13 @@ use gleam_core::{
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
 use sha2::Digest;
-use std::{collections::HashMap, io::Write, path::PathBuf};
+use std::{collections::HashMap, io::Write, path::PathBuf, rc::Rc, time::Instant};
 
-use crate::{build, cli, docs, fs, http::HttpClient, new::default_readme};
+use crate::{build, cli, docs, 
+    fs::{self, ConsoleWarningEmitter}, 
+    http::HttpClient,
+    new::default_readme
+};
 
 const CORE_TEAM_PUBLISH_PASSWORD: &str = "Trans rights are human rights";
 
@@ -434,6 +438,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
             no_print_progress: false,
         },
         manifest,
+        Rc::new(ConsoleWarningEmitter)
     )?;
 
     let minimum_required_version = built.minimum_required_version();
