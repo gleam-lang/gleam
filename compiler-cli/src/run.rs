@@ -134,7 +134,7 @@ pub fn setup(
     let built = crate::build::main_with_warnings(paths, options, manifest, warnings)?;
 
     // Warn incase the module being run has been as internal
-    let internal_module = built.is_internal(&module).unwrap();
+    let internal_module = built.is_internal(&module)?;
     if internal_module {
         match package_kind {
             PackageKind::Root => {}
