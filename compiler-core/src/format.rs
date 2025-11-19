@@ -440,9 +440,13 @@ impl<'comments> Formatter<'comments> {
                 name,
                 annotation,
                 value,
+                deprecation,
                 ..
             }) => {
-                let attributes = AttributesPrinter::new().set_internal(*publicity).to_doc();
+                let attributes = AttributesPrinter::new()
+                    .set_internal(*publicity)
+                    .set_deprecation(deprecation)
+                    .to_doc();
                 let head = attributes
                     .append(pub_(*publicity))
                     .append("const ")

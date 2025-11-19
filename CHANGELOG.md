@@ -226,3 +226,7 @@
 - Fix invalid TypeScript definition being generated for variant constructors
   with long names that take no arguments.
   ([Richard Viney](https://github.com/richard-viney))
+
+- Fixed a bug where the formatter would remove the `@deprecated` attribute from
+  constants.
+  ([Surya Rose](https://github.com/GearsDatapacks))

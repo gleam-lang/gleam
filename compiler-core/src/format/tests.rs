@@ -6,6 +6,7 @@ mod bit_array;
 mod blocks;
 mod cases;
 mod conditional_compilation;
+mod constant;
 mod custom_type;
 mod echo;
 mod external_fn;
