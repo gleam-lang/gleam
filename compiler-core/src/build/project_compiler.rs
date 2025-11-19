@@ -96,6 +96,16 @@ impl Built {
             .map(|minimum_required_version| minimum_required_version.clone())
             .unwrap_or(Version::new(0, 1, 0))
     }
+
+    pub fn is_internal(&self, module: &EcoString) -> Result<bool, Error> {
+        match self.module_interfaces.get(module) {
+            Some(module_data) => Ok(module_data.is_internal),
+            None => Err(Error::ModuleDoesNotExist {
+                module: module.clone(),
+                suggestion: None,
+            }),
+        }
+    }
 }
 
 #[derive(Debug)]

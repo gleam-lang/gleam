@@ -113,6 +113,9 @@
   ```
   ([fruno](https://github.com/fruno-bulax/))
 
+- Gleam will now warn when running a deprecated or internal module main function
+  ([Lioncat2002](https://github.com/Lioncat2002))
+
 ### Build tool
 
 - The help text displayed by `gleam dev --help`, `gleam test --help`, and
