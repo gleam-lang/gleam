@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{
     Result,
-    diagnostic::{Diagnostic, Level},
+    diagnostic::{Diagnostic, ExtraLabel, Level},
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
         DownloadDependencies, MakeLocker,
@@ -18,7 +18,6 @@ use crate::{
 };
 use camino::{Utf8Path, Utf8PathBuf};
 use debug_ignore::DebugIgnore;
-use itertools::Itertools;
 use lsp_server::ResponseError;
 use lsp_types::{
     self as lsp, HoverProviderCapability, InitializeParams, Position, PublishDiagnosticsParams,
@@ -581,28 +580,6 @@ fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
     let path = path_to_uri(location.path);
     let range = src_span_to_lsp_range(location.label.span, &line_numbers);
 
-    let related_info = location
-        .extra_labels
-        .iter()
-        .map(|extra| {
-            let message = extra.label.text.clone().unwrap_or_default();
-            let location = match &extra.src_info {
-                Some((src, path)) => {
-                    let line_numbers = LineNumbers::new(src);
-                    lsp::Location {
-                        uri: path_to_uri(path.clone()),
-                        range: src_span_to_lsp_range(extra.label.span, &line_numbers),
-                    }
-                }
-                _ => lsp::Location {
-                    uri: path.clone(),
-                    range: src_span_to_lsp_range(extra.label.span, &line_numbers),
-                },
-            };
-            lsp::DiagnosticRelatedInformation { location, message }
-        })
-        .collect_vec();
-
     let main = lsp::Diagnostic {
         range,
         severity: Some(severity),
@@ -610,11 +587,13 @@ fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
         code_description: None,
         source: None,
         message: text,
-        related_information: if related_info.is_empty() {
-            None
-        } else {
-            Some(related_info)
-        },
+        related_information: related_information(
+            &hint,
+            &location.extra_labels,
+            &path,
+            &line_numbers,
+            range,
+        ),
         tags: None,
         data: None,
     };
@@ -624,11 +603,66 @@ fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
             let hint = lsp::Diagnostic {
                 severity: Some(lsp::DiagnosticSeverity::HINT),
                 message: hint,
+                // Some editors require this kind of "link" to group diagnostics.
+                // For example, in Zed "go to next diagnostic" would move you from
+                // the warning to the hint in the same location without this.
+                related_information: Some(vec![lsp::DiagnosticRelatedInformation {
+                    location: lsp::Location { uri: path, range },
+                    message: String::new(),
+                }]),
                 ..main.clone()
             };
             vec![main, hint]
         }
         None => vec![main],
+    }
+}
+
+fn related_information(
+    hint: &Option<String>,
+    extra_labels: &[ExtraLabel],
+    path: &Url,
+    line_numbers: &LineNumbers,
+    range: Range,
+) -> Option<Vec<lsp::DiagnosticRelatedInformation>> {
+    let mut related_info = Vec::with_capacity(extra_labels.len() + 1);
+
+    // The hint is included as a dedicated diagnostic _and_ the related information
+    // to maximize compatibility
+    if let Some(hint) = hint {
+        let hint = lsp::DiagnosticRelatedInformation {
+            message: hint.clone(),
+            location: lsp::Location {
+                uri: path.clone(),
+                range,
+            },
+        };
+        related_info.push(hint);
+    }
+
+    let additional_info = extra_labels.iter().map(|extra| {
+        let message = extra.label.text.clone().unwrap_or_default();
+        let location = match &extra.src_info {
+            Some((src, path)) => {
+                let line_numbers = LineNumbers::new(src);
+                lsp::Location {
+                    uri: path_to_uri(path.clone()),
+                    range: src_span_to_lsp_range(extra.label.span, &line_numbers),
+                }
+            }
+            _ => lsp::Location {
+                uri: path.clone(),
+                range: src_span_to_lsp_range(extra.label.span, line_numbers),
+            },
+        };
+        lsp::DiagnosticRelatedInformation { location, message }
+    });
+    related_info.extend(additional_info);
+
+    if related_info.is_empty() {
+        None
+    } else {
+        Some(related_info)
     }
 }
 
