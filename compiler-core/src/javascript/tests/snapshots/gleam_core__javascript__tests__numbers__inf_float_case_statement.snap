@@ -12,11 +12,13 @@ pub fn main(x) {
 }
 
 
------ COMPILED JAVASCRIPT
-export function main(x) {
-  if (x === Infinity) {
-    return "bar";
-  } else {
-    return "foo";
-  }
-}
+----- ERROR
+error: Float outside of valid range
+  ┌─ /src/one/two.gleam:4:3
+  │
+4 │   100.001e123_456_789 -> "bar"
+  │   ^^^^^^^^^^^^^^^^^^^
+
+This float value is too large to be represented by a floating point type:
+float values must be in the range -1.7976931348623157e308 -
+1.7976931348623157e308.

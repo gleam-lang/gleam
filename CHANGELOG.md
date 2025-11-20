@@ -214,6 +214,11 @@
   rename all its occurrences.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler now reports an error for literal floats that are outside the
+  floating point representable range on both targets. Previously it would only
+  do that when compiling on the Erlang target.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Fixed a typo in the error message emitted when trying to run a module that
   does not have a main function.
   ([Louis Pilfold](https://github.com/lpil))

@@ -6,12 +6,12 @@ expression: "-1.8e308"
 -1.8e308
 
 ----- ERROR
-error: Float is outside Erlang's floating point range
+error: Float outside of valid range
   ┌─ /src/one/two.gleam:1:1
   │
 1 │ -1.8e308
   │ ^^^^^^^^
 
-This float value is too large to be represented by Erlang's floating point
-type. To avoid this error float values must be in the range
--1.7976931348623157e308 - 1.7976931348623157e308.
+This float value is too large to be represented by a floating point type:
+float values must be in the range -1.7976931348623157e308 -
+1.7976931348623157e308.
