@@ -11,7 +11,7 @@ use gleam_core::{
     io::{Command, CommandExecutor, Stdio},
     paths::ProjectPaths,
     type_::ModuleFunction,
-    warning::WarningEmitter
+    warning::{WarningEmitter, WarningEmitterIO}
 };
 
 use crate::{
@@ -129,19 +129,19 @@ pub fn setup(
         no_print_progress,
     };
 
-    let warnings = Rc::new(ConsoleWarningEmitter);
-    let warning_emitter = WarningEmitter::new(warnings.clone());
-    let built = crate::build::main_with_warnings(paths, options, manifest, warnings)?;
+    let console_warning_emitter = Rc::new(ConsoleWarningEmitter);
+    let warning_emitter_with_counter = Rc::new(WarningEmitter::new(console_warning_emitter.clone()));
+    let built = crate::build::main_with_warnings(paths, options, manifest, warning_emitter_with_counter.clone())?;
 
     // Warn if the module being run is internal and NOT in the root package
     if mod_config.is_internal_module(&module) {
         match package_kind {
             PackageKind::Root => {}
-            _ => {
+            PackageKind::Dependency => {
                 let warning = Warning::InternalModuleMainFunction {
                     module: module.clone(),
                 };
-                warning_emitter.emit(warning);
+                console_warning_emitter.emit_warning(warning);
             }
         }
     }
@@ -156,7 +156,13 @@ pub fn setup(
                 module: module.clone(),
                 message,
             };
-            warning_emitter.emit(warning);
+            // warning_emitter.emit also increments a counter. However, we only want to
+            // increment that counter for root package warnings. For dependencies,
+            // we just print the warning directly to console.
+            match package_kind {
+                PackageKind::Root => warning_emitter_with_counter.emit(warning),
+                PackageKind::Dependency => console_warning_emitter.emit_warning(warning)
+            }
         }
         gleam_core::type_::Deprecation::NotDeprecated => {}
     }
