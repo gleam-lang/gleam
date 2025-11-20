@@ -112,7 +112,6 @@
   }
   ```
   ([fruno](https://github.com/fruno-bulax/))
->>>>>>> 956f7802d (📝 Update changelog)
 
 ### Build tool
 
