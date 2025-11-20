@@ -128,31 +128,6 @@ impl<'a, IO> Completer<'a, IO> {
         }
     }
 
-    fn match_type(&self, type_: &Type) -> TypeMatch {
-        if let Some(expected_type) = &self.expected_type {
-            // If the type of the value we are completing is unbound, that
-            // technically means that all types match, which doesn't give us
-            // any useful information so we treat it as not knowing what the
-            // type is, which generally is the case.
-            if expected_type.is_unbound() {
-                TypeMatch::Unknown
-            }
-            // We also want to prioritise functions which return the desired type,
-            // as often the user's intention will be to write a function call.
-            else if let Some((_, return_)) = type_.fn_types()
-                && expected_type.same_as(&return_)
-            {
-                TypeMatch::Matching
-            } else if expected_type.same_as(type_) {
-                TypeMatch::Matching
-            } else {
-                TypeMatch::Incompatible
-            }
-        } else {
-            TypeMatch::Unknown
-        }
-    }
-
     // Gets the current range around the cursor to place a completion
     // and the phrase surrounding the cursor to use for completion.
     // This method takes in a helper to determine what qualifies as
@@ -611,8 +586,13 @@ impl<'a, IO> Completer<'a, IO> {
                 .peek()
             {
                 completions.extend(
-                    LocalCompletion::new(mod_name, insert_range, cursor, self)
-                        .fn_completions(function),
+                    LocalCompletion::new(
+                        mod_name,
+                        insert_range,
+                        cursor,
+                        self.expected_type.clone(),
+                    )
+                    .fn_completions(function),
                 );
             }
 
@@ -635,7 +615,7 @@ impl<'a, IO> Completer<'a, IO> {
                 let sort_text = Some(sort_text(
                     CompletionKind::Prelude,
                     &label,
-                    self.match_type(&type_),
+                    match_type(&self.expected_type, &type_),
                 ));
                 completions.push(CompletionItem {
                     label,
@@ -923,7 +903,7 @@ impl<'a, IO> Completer<'a, IO> {
         insert_range: Range,
         priority: CompletionKind,
     ) -> CompletionItem {
-        let type_match = self.match_type(&value.type_);
+        let type_match = match_type(&self.expected_type, &value.type_);
         let label = match module_qualifier {
             Some(module) => format!("{module}.{name}"),
             None => name.to_string(),
@@ -966,7 +946,7 @@ impl<'a, IO> Completer<'a, IO> {
     }
 
     fn field_completion(&self, label: &str, type_: Arc<Type>) -> CompletionItem {
-        let type_match = self.match_type(&type_);
+        let type_match = match_type(&self.expected_type, &type_);
         let type_ = Printer::new().pretty_print(&type_, 0);
 
         CompletionItem {
@@ -1028,27 +1008,52 @@ fn type_completion(
     }
 }
 
-pub struct LocalCompletion<'a, IO> {
+fn match_type(expected_type: &Option<Arc<Type>>, type_: &Type) -> TypeMatch {
+    if let Some(expected_type) = expected_type {
+        // If the type of the value we are completing is unbound, that
+        // technically means that all types match, which doesn't give us
+        // any useful information so we treat it as not knowing what the
+        // type is, which generally is the case.
+        if expected_type.is_unbound() {
+            TypeMatch::Unknown
+        }
+        // We also want to prioritise functions which return the desired type,
+        // as often the user's intention will be to write a function call.
+        else if let Some((_, return_)) = type_.fn_types()
+            && expected_type.same_as(&return_)
+        {
+            TypeMatch::Matching
+        } else if expected_type.same_as(type_) {
+            TypeMatch::Matching
+        } else {
+            TypeMatch::Incompatible
+        }
+    } else {
+        TypeMatch::Unknown
+    }
+}
+
+pub struct LocalCompletion<'a> {
     mod_name: &'a str,
     insert_range: Range,
     cursor: u32,
     completions: HashMap<EcoString, CompletionItem>,
-    completer: &'a Completer<'a, IO>,
+    expected_type: Option<Arc<Type>>,
 }
 
-impl<'a, IO> LocalCompletion<'a, IO> {
+impl<'a> LocalCompletion<'a> {
     pub fn new(
         mod_name: &'a str,
         insert_range: Range,
         cursor: u32,
-        completer: &'a Completer<'a, IO>,
+        expected_type: Option<Arc<Type>>,
     ) -> Self {
         Self {
             mod_name,
             insert_range,
             cursor,
             completions: HashMap::new(),
-            completer,
+            expected_type,
         }
     }
 
@@ -1096,7 +1101,7 @@ impl<'a, IO> LocalCompletion<'a, IO> {
         type_: Arc<Type>,
         insert_range: Range,
     ) -> CompletionItem {
-        let type_match = self.completer.match_type(&type_);
+        let type_match = match_type(&self.expected_type, &type_);
 
         let label = name.to_string();
         let type_ = Printer::new().pretty_print(&type_, 0);
@@ -1129,7 +1134,7 @@ impl<'a, IO> LocalCompletion<'a, IO> {
     }
 }
 
-impl<'ast, IO> Visit<'ast> for LocalCompletion<'_, IO> {
+impl<'ast> Visit<'ast> for LocalCompletion<'_> {
     fn visit_typed_statement(&mut self, statement: &'ast ast::TypedStatement) {
         // We only want to suggest local variables that are defined before
         // the cursor
