@@ -11,12 +11,12 @@ use gleam_core::{
     io::{Command, CommandExecutor, Stdio},
     paths::ProjectPaths,
     type_::ModuleFunction,
-    warning::{WarningEmitter, WarningEmitterIO}
+    warning::{WarningEmitter, WarningEmitterIO},
 };
 
 use crate::{
-    config::PackageKind, 
-    fs::{ConsoleWarningEmitter, ProjectIO}
+    config::PackageKind,
+    fs::{ConsoleWarningEmitter, ProjectIO},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -130,8 +130,14 @@ pub fn setup(
     };
 
     let console_warning_emitter = Rc::new(ConsoleWarningEmitter);
-    let warning_emitter_with_counter = Rc::new(WarningEmitter::new(console_warning_emitter.clone()));
-    let built = crate::build::main_with_warnings(paths, options, manifest, warning_emitter_with_counter.clone())?;
+    let warning_emitter_with_counter =
+        Rc::new(WarningEmitter::new(console_warning_emitter.clone()));
+    let built = crate::build::main_with_warnings(
+        paths,
+        options,
+        manifest,
+        warning_emitter_with_counter.clone(),
+    )?;
 
     // Warn if the module being run is internal and NOT in the root package
     match package_kind {
@@ -152,7 +158,7 @@ pub fn setup(
     // Warn if the main function being run has been deprecated
     match main_function.deprecation {
         gleam_core::type_::Deprecation::Deprecated { message } => {
-            let warning = Warning::DeprecatedMainFunction { 
+            let warning = Warning::DeprecatedMainFunction {
                 module: module.clone(),
                 message,
             };
@@ -161,7 +167,7 @@ pub fn setup(
             // we just print the warning directly to console.
             match package_kind {
                 PackageKind::Root => warning_emitter_with_counter.emit(warning),
-                PackageKind::Dependency => console_warning_emitter.emit_warning(warning)
+                PackageKind::Dependency => console_warning_emitter.emit_warning(warning),
             }
         }
         gleam_core::type_::Deprecation::NotDeprecated => {}
