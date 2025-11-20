@@ -180,10 +180,11 @@ pub enum Warning {
         src: EcoString,
         location: SrcSpan,
     },
-    InternalMain {
+    InternalModuleMainFunction {
         module: EcoString,
     },
-    DeprecatedMain {
+    DeprecatedMainFunction {
+        module: EcoString,
         message: EcoString,
     },
 }
@@ -281,22 +282,24 @@ pub enum DeprecatedSyntaxWarning {
 impl Warning {
     pub fn to_diagnostic(&self) -> Diagnostic {
         match self {
-            Warning::DeprecatedMain { message } => Diagnostic {
-                title: "Deprecated main function".into(),
-                text: message.into(),
-                level: diagnostic::Level::Warning,
-                location: None,
-                hint: None,
-            },
-            Warning::InternalMain { module } => {
-                let message = format!(
-                    "The main function's module {} has been marked internal.\
-+It is not recommended for public use.",
-                    module
-                );
+            Warning::DeprecatedMainFunction { module, message } => {
+                let text = wrap(&format!("The main function in module `{module}`\
+was deprecated with this message: {message}"));
                 Diagnostic {
-                    title: "Internal main function".into(),
-                    text: wrap(message.as_str()),
+                    title: "Deprecated main function".into(),
+                    text,
+                    level: diagnostic::Level::Warning,
+                    location: None,
+                    hint: None,
+                }
+            },
+            Warning::InternalModuleMainFunction { module } => {
+                let text = wrap(&format!(
+                    "The main function in module `{module}` has been marked internal.\
+It is not recommended for public use."));
+                Diagnostic {
+                    title: "Main function in internal module".into(),
+                    text,
                     level: diagnostic::Level::Warning,
                     location: None,
                     hint: None,
@@ -1228,7 +1231,6 @@ Your code will crash before reaching this point."
                             "This function call is unreachable because its last argument always panics. \
 Your code will crash before reaching this point."
                         }
-
                         PanicPosition::EchoExpression => {
                             "This `echo` won't print anything because the expression it \
 should be printing always panics."

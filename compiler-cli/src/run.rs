@@ -138,7 +138,7 @@ pub fn setup(
         match package_kind {
             PackageKind::Root => {}
             _ => {
-                let warning = Warning::InternalMain {
+                let warning = Warning::InternalModuleMainFunction {
                     module: module.clone(),
                 };
                 warning_emitter.emit(warning);
@@ -152,7 +152,10 @@ pub fn setup(
     // Warn if the main function being run has been deprecated
     match main_function.deprecation {
         gleam_core::type_::Deprecation::Deprecated { message } => {
-            let warning = Warning::DeprecatedMain { message };
+            let warning = Warning::DeprecatedMainFunction { 
+                module: module.clone(),
+                message,
+            };
             warning_emitter.emit(warning);
         }
         gleam_core::type_::Deprecation::NotDeprecated => {}
