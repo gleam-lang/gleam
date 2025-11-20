@@ -98,6 +98,7 @@
   from 1.13 has been extended to int segments!
   Aside from the various performance improvements, this allows the compiler to
   mark more branches as unreachable.
+
   ```gleam
   case bits {
     <<"a">> -> 0
@@ -111,6 +112,7 @@
     _ -> 99
   }
   ```
+
   ([fruno](https://github.com/fruno-bulax/))
 
 ### Build tool
@@ -205,6 +207,11 @@
 
 - Fixed a bug where renaming a variable from an alternative pattern would not
   rename all its occurrences.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The compiler now reports an error for literal floats that are outside the
+  floating point representable range on both targets. Previously it would only
+  do that when compiling on the Erlang target.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - Fixed a typo in the error message emitted when trying to run a module that

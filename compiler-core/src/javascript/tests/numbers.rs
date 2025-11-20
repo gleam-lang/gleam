@@ -1,4 +1,4 @@
-use crate::assert_js;
+use crate::{assert_js, assert_js_module_error};
 
 #[test]
 fn int_literals() {
@@ -41,9 +41,7 @@ pub fn go() {
   0.01e-0
   -10.01e-1
   -10.01e-0
-  100.001e523
   -100.001e-523
-  100.001e123_456_789
   -100.001e-123_456_789
 }
 "#,
@@ -458,7 +456,7 @@ pub fn main(x) {
 
 #[test]
 fn inf_float_case_statement() {
-    assert_js!(
+    assert_js_module_error!(
         "
 pub fn main(x) {
   case x {
@@ -472,7 +470,7 @@ pub fn main(x) {
 
 #[test]
 fn division_inf_by_inf_float() {
-    assert_js!(
+    assert_js_module_error!(
         "
 pub fn main(x) {
   -100.001e123_456_789 /. 100.001e123_456_789

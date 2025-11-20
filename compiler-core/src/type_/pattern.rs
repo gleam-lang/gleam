@@ -753,13 +753,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 float_value,
             } => {
                 self.unify_types(type_, float(), location);
-
-                if self.environment.target == Target::Erlang
-                    && !self.implementations.uses_erlang_externals
-                {
-                    check_erlang_float_safety(float_value, location, self.problems)
-                }
-
+                check_float_safety(float_value, location, self.problems);
                 Pattern::Float {
                     location,
                     value,
