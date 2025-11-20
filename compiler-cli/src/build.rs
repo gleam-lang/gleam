@@ -5,7 +5,7 @@ use gleam_core::{
     build::{Built, Codegen, NullTelemetry, Options, ProjectCompiler, Telemetry},
     manifest::Manifest,
     paths::ProjectPaths,
-    warning::WarningEmitterIO,
+    warning::WarningEmitter,
 };
 
 use crate::{
@@ -28,14 +28,16 @@ pub fn download_dependencies(paths: &ProjectPaths, telemetry: impl Telemetry) ->
 }
 
 pub fn main(paths: &ProjectPaths, options: Options, manifest: Manifest) -> Result<Built> {
-    main_with_warnings(paths, options, manifest, Rc::new(ConsoleWarningEmitter))
+    let console_warning_emitter = Rc::new(ConsoleWarningEmitter);
+    let warnings = Rc::new(WarningEmitter::new(console_warning_emitter));
+    main_with_warnings(paths, options, manifest, warnings)
 }
 
 pub(crate) fn main_with_warnings(
     paths: &ProjectPaths,
     options: Options,
     manifest: Manifest,
-    warnings: Rc<dyn WarningEmitterIO>,
+    warnings: Rc<WarningEmitter>,
 ) -> Result<Built> {
     let perform_codegen = options.codegen;
     let root_config = crate::config::root_config(paths)?;
@@ -55,7 +57,7 @@ pub(crate) fn main_with_warnings(
     tracing::info!("Compiling packages");
     let result = {
         let _guard = lock.lock(telemetry);
-        let compiler = ProjectCompiler::new(
+        let compiler = ProjectCompiler::new_with_warning_emitter(
             root_config,
             options,
             manifest.packages,
