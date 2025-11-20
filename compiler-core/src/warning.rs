@@ -259,8 +259,10 @@ impl Warning {
     pub fn to_diagnostic(&self) -> Diagnostic {
         match self {
             Warning::DeprecatedMainFunction { module, message } => {
-                let text = wrap(&format!("The main function in module `{module}` \
-was deprecated with this message: {message}"));
+                let text = wrap(&format!(
+                    "The main function in module `{module}` \
+was deprecated with this message: {message}"
+                ));
                 Diagnostic {
                     title: "Deprecated main function".into(),
                     text,
@@ -268,11 +270,12 @@ was deprecated with this message: {message}"));
                     location: None,
                     hint: None,
                 }
-            },
+            }
             Warning::InternalModuleMainFunction { module } => {
                 let text = wrap(&format!(
                     "The main function is in internal module `{module}`. \
-It is not recommended for public use."));
+It is not recommended for public use."
+                ));
                 Diagnostic {
                     title: "Main function in internal module".into(),
                     text,
@@ -1575,13 +1578,10 @@ fn pluralise(string: String, quantity: i64) -> String {
 fn deprecated_main_function_pretty() {
     let warning = Warning::DeprecatedMainFunction {
         module: "apple".into(),
-        message: "Use some other method please!".into()
+        message: "Use some other method please!".into(),
     };
 
-    insta::assert_snapshot!(
-        insta::internals::AutoName,
-        warning.to_pretty_string()
-    );
+    insta::assert_snapshot!(insta::internals::AutoName, warning.to_pretty_string());
 }
 
 #[test]
@@ -1590,8 +1590,5 @@ fn internal_module_main_function_pretty() {
         module: "internal/picking".into(),
     };
 
-    insta::assert_snapshot!(
-        insta::internals::AutoName,
-        warning.to_pretty_string()
-    );
+    insta::assert_snapshot!(insta::internals::AutoName, warning.to_pretty_string());
 }

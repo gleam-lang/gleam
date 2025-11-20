@@ -7,7 +7,7 @@ use gleam_core::{
     error::{FileIoAction, FileKind},
     paths::ProjectPaths,
     type_,
-    warning::{WarningEmitter, VectorWarningEmitterIO},
+    warning::{VectorWarningEmitterIO, WarningEmitter},
 };
 use hexpm::version::Version;
 

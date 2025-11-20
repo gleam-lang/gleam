@@ -136,8 +136,15 @@ where
         paths: ProjectPaths,
         io: IO,
     ) -> Self {
-        Self::new_with_warning_emitter(config, options, packages, telemetry, 
-            Rc::new(WarningEmitter::new(warning_emitter)), paths, io)
+        Self::new_with_warning_emitter(
+            config,
+            options,
+            packages,
+            telemetry,
+            Rc::new(WarningEmitter::new(warning_emitter)),
+            paths,
+            io,
+        )
     }
 
     pub fn new_with_warning_emitter(
@@ -148,7 +155,7 @@ where
         warning_emitter: Rc<WarningEmitter>,
         paths: ProjectPaths,
         io: IO,
-    )  -> Self {
+    ) -> Self {
         let packages = packages
             .into_iter()
             .map(|p| (p.name.to_string(), p))
