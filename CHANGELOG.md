@@ -51,7 +51,7 @@
   ([Daniele Scaratti](https://github.com/lupodevelop))
 
 - Gleam will now warn when running a deprecated or internal module main function
-  ([Lioncat2002](https://github.com/Lioncat2002))
+  ([Kevin Chen](https://github.com/kfc35) & [Lioncat2002](https://github.com/Lioncat2002))
 
 ### Build tool
 
