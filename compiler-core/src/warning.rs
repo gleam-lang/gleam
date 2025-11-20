@@ -1609,7 +1609,7 @@ fn pluralise(string: String, quantity: i64) -> String {
 }
 
 #[test]
-fn warning_deprecated_main_function_pretty() {
+fn deprecated_main_function_pretty() {
     let warning = Warning::DeprecatedMainFunction {
         module: "apple".into(),
         message: "Use some other method please!".into()
@@ -1622,7 +1622,7 @@ fn warning_deprecated_main_function_pretty() {
 }
 
 #[test]
-fn warning_internal_module_main_function_pretty() {
+fn internal_module_main_function_pretty() {
     let warning: Warning = Warning::InternalModuleMainFunction {
         module: "internal/picking".into(),
     };
