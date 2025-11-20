@@ -283,7 +283,7 @@ impl Warning {
     pub fn to_diagnostic(&self) -> Diagnostic {
         match self {
             Warning::DeprecatedMainFunction { module, message } => {
-                let text = wrap(&format!("The main function in module `{module}`\
+                let text = wrap(&format!("The main function in module `{module}` \
 was deprecated with this message: {message}"));
                 Diagnostic {
                     title: "Deprecated main function".into(),
@@ -295,7 +295,7 @@ was deprecated with this message: {message}"));
             },
             Warning::InternalModuleMainFunction { module } => {
                 let text = wrap(&format!(
-                    "The main function in module `{module}` has been marked internal.\
+                    "The main function is in internal module `{module}`. \
 It is not recommended for public use."));
                 Diagnostic {
                     title: "Main function in internal module".into(),
@@ -1606,4 +1606,29 @@ fn pluralise(string: String, quantity: i64) -> String {
     } else {
         format!("{string}s")
     }
+}
+
+#[test]
+fn warning_deprecated_main_function_pretty() {
+    let warning = Warning::DeprecatedMainFunction {
+        module: "apple".into(),
+        message: "Use some other method please!".into()
+    };
+
+    insta::assert_snapshot!(
+        insta::internals::AutoName,
+        warning.to_pretty_string()
+    );
+}
+
+#[test]
+fn warning_internal_module_main_function_pretty() {
+    let warning: Warning = Warning::InternalModuleMainFunction {
+        module: "internal/picking".into(),
+    };
+
+    insta::assert_snapshot!(
+        insta::internals::AutoName,
+        warning.to_pretty_string()
+    );
 }

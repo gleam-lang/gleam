@@ -1,0 +1,8 @@
+---
+source: compiler-core/src/warning.rs
+expression: warning.to_pretty_string()
+---
+warning: Main function in internal module
+
+The main function is in internal module `internal/picking`. It is not
+recommended for public use.
