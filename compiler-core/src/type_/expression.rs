@@ -1998,7 +1998,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // Ensure the pattern matches the type of the value
         let mut pattern_typer = pattern::PatternTyper::new(
             self.environment,
-            &self.implementations,
             &self.current_function_definition,
             &self.hydrator,
             self.problems,
@@ -2327,7 +2326,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> (TypedMultiPattern, Vec<TypedMultiPattern>, bool) {
         let mut pattern_typer = pattern::PatternTyper::new(
             self.environment,
-            &self.implementations,
             &self.current_function_definition,
             &self.hydrator,
             self.problems,
