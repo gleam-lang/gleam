@@ -134,10 +134,10 @@ pub fn setup(
     let built = crate::build::main_with_warnings(paths, options, manifest, warning_emitter_with_counter.clone())?;
 
     // Warn if the module being run is internal and NOT in the root package
-    if mod_config.is_internal_module(&module) {
-        match package_kind {
-            PackageKind::Root => {}
-            PackageKind::Dependency => {
+    match package_kind {
+        PackageKind::Root => {}
+        PackageKind::Dependency => {
+            if mod_config.is_internal_module(&module) {
                 let warning = Warning::InternalModuleMainFunction {
                     module: module.clone(),
                 };
