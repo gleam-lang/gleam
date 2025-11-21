@@ -628,11 +628,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 Some(prereg_return_type.clone()),
             )?;
             let arguments_types = arguments.iter().map(|a| a.type_.clone()).collect();
-            let type_ = fn_(
-                arguments_types,
-                body.last()
-                    .map_or(prereg_return_type.clone(), |last| last.type_()),
-            );
+            let return_type = body
+                .last()
+                .map_or(prereg_return_type.clone(), |last| last.type_());
+
+            let type_ = fn_(arguments_types, return_type);
             Ok((
                 type_,
                 body,
