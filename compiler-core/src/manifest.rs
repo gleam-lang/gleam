@@ -500,6 +500,12 @@ zzz = { version = "> 0.0.0" }
 #[derive(Debug)]
 pub struct Resolved {
     pub manifest: Manifest,
+    pub package_changes: PackageChanges,
+    pub requirements_changed: bool,
+}
+
+#[derive(Debug)]
+pub struct PackageChanges {
     pub added: Vec<(EcoString, Version)>,
     pub changed: Vec<Changed>,
     /// When updating git dependencies, it is possible to update to a newer commit
@@ -526,10 +532,7 @@ pub struct ChangedGit {
 
 impl Resolved {
     pub fn any_changes(&self) -> bool {
-        !self.added.is_empty()
-            || !self.changed.is_empty()
-            || !self.changed_git.is_empty()
-            || !self.removed.is_empty()
+        self.requirements_changed || self.package_changes.any_changes()
     }
 
     pub fn all_added(manifest: Manifest) -> Resolved {
@@ -540,26 +543,40 @@ impl Resolved {
             .collect();
         Self {
             manifest,
-            added,
-            changed: vec![],
-            changed_git: vec![],
-            removed: vec![],
+            requirements_changed: true,
+            package_changes: PackageChanges {
+                added,
+                changed: vec![],
+                changed_git: vec![],
+                removed: vec![],
+            },
         }
     }
 
     pub fn no_change(manifest: Manifest) -> Self {
         Self {
             manifest,
-            added: vec![],
-            changed: vec![],
-            changed_git: vec![],
-            removed: vec![],
+            requirements_changed: false,
+            package_changes: PackageChanges {
+                added: vec![],
+                changed: vec![],
+                changed_git: vec![],
+                removed: vec![],
+            },
         }
     }
+}
 
-    /// Create a `Resolved`, comparing the old and new versions of the manifest to work out
-    /// if resolution resulted in any changes.
-    pub fn with_updates(old: &Manifest, new: Manifest) -> Self {
+impl PackageChanges {
+    pub fn any_changes(&self) -> bool {
+        !self.added.is_empty()
+            || !self.changed.is_empty()
+            || !self.changed_git.is_empty()
+            || !self.removed.is_empty()
+    }
+
+    /// Compare the old and new versions of the manifest and determine the package changes
+    pub fn between_manifests(old: &Manifest, new: &Manifest) -> Self {
         let mut added = vec![];
         let mut changed = vec![];
         let mut changed_git = vec![];
@@ -613,7 +630,6 @@ impl Resolved {
         removed.extend(old.into_keys().cloned());
 
         Self {
-            manifest: new,
             added,
             changed,
             changed_git,
@@ -629,8 +645,8 @@ mod manifest_update_tests {
     use ecow::EcoString;
     use hexpm::version::Version;
 
-    use crate::manifest::{Base16Checksum, ManifestPackage, ManifestPackageSource};
-    use crate::manifest::{Changed, Manifest, Resolved};
+    use crate::manifest::{Base16Checksum, ManifestPackage, ManifestPackageSource, PackageChanges};
+    use crate::manifest::{Changed, Manifest};
 
     #[test]
     fn resolved_with_updated() {
@@ -669,13 +685,13 @@ mod manifest_update_tests {
             ],
         };
 
-        let mut resolved = Resolved::with_updates(&old, new);
-        resolved.added.sort();
-        resolved.changed.sort_by(|a, b| a.name.cmp(&b.name));
-        resolved.removed.sort();
+        let mut changes = PackageChanges::between_manifests(&old, &new);
+        changes.added.sort();
+        changes.changed.sort_by(|a, b| a.name.cmp(&b.name));
+        changes.removed.sort();
 
         assert_eq!(
-            resolved.added,
+            changes.added,
             vec![
                 ("new1".into(), Version::new(1, 0, 0)),
                 ("new2".into(), Version::new(2, 1, 0)),
@@ -683,7 +699,7 @@ mod manifest_update_tests {
         );
 
         assert_eq!(
-            resolved.changed,
+            changes.changed,
             vec![
                 Changed {
                     name: "changed1".into(),
@@ -699,7 +715,7 @@ mod manifest_update_tests {
         );
 
         assert_eq!(
-            resolved.removed,
+            changes.removed,
             vec![EcoString::from("removed1"), EcoString::from("removed2")]
         );
     }
@@ -731,9 +747,9 @@ mod manifest_update_tests {
             })],
         };
 
-        let resolved = Resolved::with_updates(&old, new);
-        assert!(resolved.changed.is_empty());
-        assert_eq!(resolved.removed, vec![name.clone()]);
-        assert_eq!(resolved.added, vec![(name.clone(), version.clone())]);
+        let changes = PackageChanges::between_manifests(&old, &new);
+        assert!(changes.changed.is_empty());
+        assert_eq!(changes.removed, vec![name.clone()]);
+        assert_eq!(changes.added, vec![(name.clone(), version.clone())]);
     }
 }
