@@ -1,7 +1,7 @@
 use gleam_core::{
     build::Telemetry,
     error::{Error, StandardIoAction},
-    manifest::{Changed, ChangedGit, Resolved},
+    manifest::{Changed, ChangedGit, PackageChanges},
 };
 use hexpm::version::Version;
 use itertools::Itertools as _;
@@ -57,8 +57,8 @@ impl Telemetry for Reporter {
         print_waiting_for_build_directory_lock()
     }
 
-    fn resolved_package_versions(&self, resolved: &Resolved) {
-        print_resolved(resolved)
+    fn resolved_package_versions(&self, changes: &PackageChanges) {
+        print_package_changes(changes)
     }
 }
 
@@ -154,22 +154,22 @@ pub(crate) fn print_running(text: &str) {
     print_colourful_prefix("Running", text)
 }
 
-pub(crate) fn print_resolved(resolved: &Resolved) {
-    for (name, version) in resolved.added.iter().sorted() {
+pub(crate) fn print_package_changes(changes: &PackageChanges) {
+    for (name, version) in changes.added.iter().sorted() {
         print_added(&format!("{name} v{version}"));
     }
-    for Changed { name, old, new } in resolved.changed.iter().sorted_by_key(|p| &p.name) {
+    for Changed { name, old, new } in changes.changed.iter().sorted_by_key(|p| &p.name) {
         print_changed(&format!("{name} v{old} -> v{new}"));
     }
     for ChangedGit {
         name,
         old_hash,
         new_hash,
-    } in resolved.changed_git.iter().sorted_by_key(|p| &p.name)
+    } in changes.changed_git.iter().sorted_by_key(|p| &p.name)
     {
         print_changed(&format!("{name} {old_hash} -> {new_hash}"));
     }
-    for name in resolved.removed.iter().sorted() {
+    for name in changes.removed.iter().sorted() {
         print_removed(name);
     }
 }

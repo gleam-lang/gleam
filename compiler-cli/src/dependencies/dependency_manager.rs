@@ -5,7 +5,7 @@ use gleam_core::{
     build::{Mode, Telemetry},
     config::PackageConfig,
     dependency,
-    manifest::{Manifest, ManifestPackageSource, Resolved},
+    manifest::{Manifest, ManifestPackageSource, PackageChanges, Resolved},
     paths::ProjectPaths,
     requirement::Requirement,
 };
@@ -87,24 +87,24 @@ where
         let existing_manifest = read_manifest_from_disc(paths)?;
 
         // If we have been asked not to use the manifest then
-        let manifest_for_resolver = match self.use_manifest {
-            UseManifest::No => None,
+        let (requirements_changed, manifest_for_resolver) = match self.use_manifest {
+            UseManifest::No => (true, None),
             UseManifest::Yes => {
+                let same_requirements = is_same_requirements(
+                    &existing_manifest.requirements,
+                    &config.all_direct_dependencies()?,
+                    paths.root(),
+                )?;
+
                 // If the manifest is to be used and the requirements have not changed then there's
                 // no point in performing resolution, it'll always result in the same versions
                 // already specified in the manifest.
-                if packages_to_update.is_empty()
-                    && is_same_requirements(
-                        &existing_manifest.requirements,
-                        &config.all_direct_dependencies()?,
-                        paths.root(),
-                    )?
-                {
+                if packages_to_update.is_empty() && same_requirements {
                     return Ok(Resolved::no_change(existing_manifest));
                 }
 
                 // Otherwise, use the manifest to inform resolution.
-                Some(&existing_manifest)
+                (!same_requirements, Some(&existing_manifest))
             }
         };
 
@@ -115,7 +115,12 @@ where
             manifest_for_resolver,
             packages_to_update,
         )?;
-        Ok(Resolved::with_updates(&existing_manifest, new_manifest))
+        let resolved = Resolved {
+            package_changes: PackageChanges::between_manifests(&existing_manifest, &new_manifest),
+            manifest: new_manifest,
+            requirements_changed,
+        };
+        Ok(resolved)
     }
 
     pub fn resolve_and_download_versions(
@@ -177,7 +182,8 @@ where
         LocalPackages::from_manifest(&resolved.manifest).write_to_disc(paths)?;
 
         // Display the changes in versions to the user.
-        self.telemetry.resolved_package_versions(&resolved);
+        self.telemetry
+            .resolved_package_versions(&resolved.package_changes);
 
         // If requested to do so, check if there are major upgrades that could be performed with
         // more relaxed version requirements, and inform the user if so.

@@ -20,7 +20,7 @@ use gleam_core::{
     error::{FileIoAction, FileKind, ShellCommandFailureReason, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
     io::{HttpClient as _, TarUnpacker, WrappedReader},
-    manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource, Resolved},
+    manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource, PackageChanges},
     paths::ProjectPaths,
     requirement::Requirement,
 };
@@ -291,10 +291,10 @@ pub fn cleanup<Telem: Telemetry>(paths: &ProjectPaths, telemetry: Telem) -> Resu
     write_manifest_to_disc(paths, &manifest)?;
     LocalPackages::from_manifest(&manifest).write_to_disc(paths)?;
 
-    let resolved = Resolved::with_updates(&old_manifest, manifest);
-    telemetry.resolved_package_versions(&resolved);
+    let changes = PackageChanges::between_manifests(&old_manifest, &manifest);
+    telemetry.resolved_package_versions(&changes);
 
-    Ok(resolved.manifest)
+    Ok(manifest)
 }
 
 /// Remove requirements and unneeded packages from manifest that are no longer present in config.

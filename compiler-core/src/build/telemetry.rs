@@ -3,13 +3,16 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::{Warning, manifest::Resolved};
+use crate::{
+    Warning,
+    manifest::{PackageChanges, Resolved},
+};
 
 pub trait Telemetry: Debug {
     fn waiting_for_build_directory_lock(&self);
     fn running(&self, name: &str);
     fn resolving_package_versions(&self);
-    fn resolved_package_versions(&self, resolved: &Resolved);
+    fn resolved_package_versions(&self, changes: &PackageChanges);
     fn downloading_package(&self, name: &str);
     fn packages_downloaded(&self, start: Instant, count: usize);
     fn compiled_package(&self, duration: Duration);
@@ -31,5 +34,5 @@ impl Telemetry for NullTelemetry {
     fn checked_package(&self, _duration: Duration) {}
     fn checking_package(&self, _name: &str) {}
     fn packages_downloaded(&self, _start: Instant, _count: usize) {}
-    fn resolved_package_versions(&self, _resolved: &Resolved) {}
+    fn resolved_package_versions(&self, _changes: &PackageChanges) {}
 }
