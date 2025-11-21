@@ -4739,8 +4739,10 @@ impl PatternPosition {
 /// This allows us to implement `Eq`, which require reflexivity.
 ///
 /// Used for gleam float literals, which cannot be NaN.
-/// While there is no syntax for "infinity", float literals
-/// may overflow into (possibly negative) infinity on the JS target.
+///
+/// While there is no syntax for "infinity", float literals might be too big and
+/// overflow into infinity. This is still allowed so we can parse big literal
+/// numbers and the error will be raised during the analysis phase.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct LiteralFloatValue(f64);
 
@@ -4755,7 +4757,7 @@ impl LiteralFloatValue {
             .replace("_", "")
             .parse::<f64>()
             .ok()
-            .filter(|f| !f.is_nan())
+            .filter(|float| !float.is_nan())
             .map(LiteralFloatValue)
     }
 
