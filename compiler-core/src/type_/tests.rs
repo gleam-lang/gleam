@@ -3273,3 +3273,38 @@ pub fn get_int(w: Wibble) {
         ]
     );
 }
+
+#[test]
+fn correct_type_check_for_multiple_mutually_recursive_functions() {
+    assert_module_error!(
+        r#"
+pub fn wibble(id) {
+  wobble(id, True)
+}
+
+pub fn wobble(id, bool) {
+  case bool {
+    True -> wibble(id)
+    False -> wubble(id, bool)
+  }
+}
+
+pub fn wubble(id, bool) {
+  case bool {
+    True -> final(id)
+    False -> wobble(id, bool)
+  }
+}
+
+pub fn final(id) {
+  let #(a, b) = id
+  echo #(a, b)
+}
+
+pub fn main() {
+  wibble(#("a", "b"))
+  wibble(2)
+}
+"#
+    );
+}

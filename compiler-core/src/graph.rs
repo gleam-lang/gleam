@@ -43,7 +43,7 @@ fn pop_leaf_or_cycle<N, E>(graph: &mut StableGraph<N, E>) -> Vec<NodeIndex> {
     nodes
 }
 
-/// Return a leaf from the graph. If there are no leaves then the smallest cycle
+/// Return a leaf from the graph. If there are no leaves then the largest cycle
 /// is returned instead.
 ///
 /// If there are no leaves or cycles then an empty vector is returned.
@@ -125,7 +125,7 @@ fn leaf_or_cycle<N, E>(graph: &StableGraph<N, E>) -> Vec<NodeIndex> {
 
     cycles
         .into_iter()
-        .min_by(|x, y| x.len().cmp(&y.len()))
+        .max_by_key(|x| x.len())
         .expect("Could not find cycle for toposort returned start node")
 }
 
