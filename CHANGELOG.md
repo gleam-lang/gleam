@@ -369,3 +369,7 @@
 - Fixed a bug where the compiler would generate invalid Erlang and TypeScript
   code for unused opaque types referencing private types.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where the type checker would allow invalid programs when a large
+  group of functions were all mutually recursive.
+  ([Surya Rose](https://github.com/GearsDatapacks))
