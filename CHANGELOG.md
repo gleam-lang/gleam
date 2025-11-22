@@ -428,3 +428,7 @@
 - The compiler now provides a clearer error message when a function's return type
   is mistakenly declared using `:` instead of `->`.
   ([Gurvir Singh](https://github.com/baraich))
+
+- Fixed a bug where the data generated for searching documentation was in the
+  wrong format, preventing it from being used by Hexdocs search.
+  ([Surya Rose](https://github.com/GearsDatapacks))
