@@ -12,17 +12,17 @@ pub const compound: #(fn(Int) -> Int, fn(Int) -> Int) = #(int_identity, int_iden
 pub fn use_compound() { compound.0(compound.1(42)) }
 
 ----- COMPILED JAVASCRIPT
+export const int_identity_alias = int_identity;
+
+export const compound = [int_identity, int_identity_alias];
+
 export function int_identity(i) {
   return i;
 }
 
-export const int_identity_alias = int_identity;
-
 export function use_int_identity_alias() {
   return int_identity_alias(42);
 }
-
-export const compound = [int_identity, int_identity_alias];
 
 export function use_compound() {
   return compound[0](compound[1](42));

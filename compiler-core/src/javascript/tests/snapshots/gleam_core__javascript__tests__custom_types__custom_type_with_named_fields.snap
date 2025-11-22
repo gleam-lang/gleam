@@ -66,6 +66,10 @@ export const Box$isBox = (value) => value instanceof Box;
 export const Box$Box$occupant = (value) => value.occupant;
 export const Box$Box$0 = (value) => value.occupant;
 
+export const felix = /* @__PURE__ */ new Cat("Felix", 12);
+
+export const tom = /* @__PURE__ */ new Cat("Tom", 1);
+
 export function go() {
   new Cat("Nubi", 1);
   new Cat("Nubi", 2);
@@ -89,7 +93,3 @@ export function update(cat) {
   let _record$1 = box.occupant;
   return new Cat(_record$1.name, box.occupant.cuteness + 1);
 }
-
-export const felix = /* @__PURE__ */ new Cat("Felix", 12);
-
-export const tom = /* @__PURE__ */ new Cat("Tom", 1);

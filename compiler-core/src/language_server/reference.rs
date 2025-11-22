@@ -6,7 +6,7 @@ use lsp_types::Location;
 use crate::{
     analyse,
     ast::{
-        self, ArgNames, BitArraySize, CustomType, Definition, Function, ModuleConstant, Pattern,
+        self, ArgNames, BitArraySize, CustomType, Function, ModuleConstant, Pattern,
         RecordConstructor, SrcSpan, TypedExpr, TypedModule, visit::Visit,
     },
     build::Located,
@@ -164,17 +164,16 @@ pub fn reference_for_ast_node(
             name_kind: Named::Function,
             target_kind: RenameTarget::Qualified,
         }),
-        Located::ModuleStatement(
-            Definition::Function(Function {
-                name: Some((location, name)),
-                ..
-            })
-            | Definition::ModuleConstant(ModuleConstant {
-                name,
-                name_location: location,
-                ..
-            }),
-        ) => Some(Referenced::ModuleValue {
+
+        Located::ModuleFunction(Function {
+            name: Some((location, name)),
+            ..
+        })
+        | Located::ModuleConstant(ModuleConstant {
+            name,
+            name_location: location,
+            ..
+        }) => Some(Referenced::ModuleValue {
             module: current_module.clone(),
             name: name.clone(),
             location: *location,
@@ -270,11 +269,11 @@ pub fn reference_for_ast_node(
             }
             None => None,
         },
-        Located::ModuleStatement(Definition::CustomType(CustomType {
+        Located::ModuleCustomType(CustomType {
             name,
             name_location,
             ..
-        })) => Some(Referenced::ModuleType {
+        }) => Some(Referenced::ModuleType {
             module: current_module.clone(),
             name: name.clone(),
             location: *name_location,

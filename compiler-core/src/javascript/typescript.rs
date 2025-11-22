@@ -11,14 +11,13 @@
 //! <https://www.typescriptlang.org/>
 //! <https://www.typescriptlang.org/docs/handbook/declaration-files/introduction.html>
 
-use crate::ast::{AssignName, Publicity, TypedCustomType};
+use crate::ast::{
+    AssignName, Publicity, TypedCustomType, TypedFunction, TypedModuleConstant, TypedTypeAlias,
+};
 use crate::javascript::import::Member;
 use crate::type_::{PRELUDE_MODULE_NAME, RecordAccessor, is_prelude_module};
 use crate::{
-    ast::{
-        CustomType, Definition, Function, Import, ModuleConstant, TypeAlias, TypedArg,
-        TypedConstant, TypedDefinition, TypedModule, TypedRecordConstructor,
-    },
+    ast::{TypedModule, TypedRecordConstructor},
     docvec,
     javascript::JavaScriptCodegenTarget,
     pretty::{Document, Documentable, break_},
@@ -194,14 +193,10 @@ impl<'a> TypeScriptGenerator<'a> {
 
     pub fn compile(&mut self) -> Document<'a> {
         let mut imports = self.collect_imports();
-        let statements = self
-            .module
-            .definitions
-            .iter()
-            .flat_map(|definition| self.definition(definition, &mut imports));
+        let statements = self.definitions(&mut imports);
 
         // Two lines between each statement
-        let mut statements = Itertools::intersperse(statements, lines(2)).collect_vec();
+        let mut statements = Itertools::intersperse(statements.into_iter(), lines(2)).collect_vec();
 
         // Put it all together
 
@@ -230,52 +225,39 @@ impl<'a> TypeScriptGenerator<'a> {
     fn collect_imports(&mut self) -> Imports<'a> {
         let mut imports = Imports::new();
 
-        for statement in &self.module.definitions {
-            match statement {
-                Definition::Function(Function {
-                    arguments,
-                    return_type,
-                    ..
-                }) => {
-                    for a in arguments {
-                        self.collect_imports_for_type(&a.type_, &mut imports);
-                    }
+        for function in &self.module.definitions.functions {
+            for argument in &function.arguments {
+                self.collect_imports_for_type(&argument.type_, &mut imports);
+            }
+            self.collect_imports_for_type(&function.return_type, &mut imports);
+        }
 
-                    self.collect_imports_for_type(return_type, &mut imports);
+        for type_alias in &self.module.definitions.type_aliases {
+            self.collect_imports_for_type(&type_alias.type_, &mut imports);
+        }
+
+        for custom_type in &self.module.definitions.custom_types {
+            for type_ in &custom_type.typed_parameters {
+                self.collect_imports_for_type(type_, &mut imports);
+            }
+
+            for constructor in &custom_type.constructors {
+                for argument in &constructor.arguments {
+                    self.collect_imports_for_type(&argument.type_, &mut imports);
                 }
+            }
+        }
 
-                Definition::TypeAlias(TypeAlias { type_, .. }) => {
-                    self.collect_imports_for_type(type_, &mut imports)
+        for constant in &self.module.definitions.constants {
+            self.collect_imports_for_type(&constant.type_, &mut imports);
+        }
+
+        for import in &self.module.definitions.imports {
+            match &import.as_name {
+                Some((AssignName::Variable(name), _)) => {
+                    let _ = self.aliased_module_names.insert(&import.module, name);
                 }
-
-                Definition::CustomType(CustomType {
-                    constructors,
-                    typed_parameters,
-                    ..
-                }) => {
-                    for t in typed_parameters {
-                        self.collect_imports_for_type(t, &mut imports);
-                    }
-
-                    for constructor in constructors {
-                        for arg in constructor.arguments.as_slice() {
-                            self.collect_imports_for_type(&arg.type_, &mut imports);
-                        }
-                    }
-                }
-
-                Definition::ModuleConstant(ModuleConstant { type_, .. }) => {
-                    self.collect_imports_for_type(type_, &mut imports)
-                }
-
-                Definition::Import(Import {
-                    module, as_name, ..
-                }) => match as_name {
-                    Some((AssignName::Variable(name), _)) => {
-                        let _ = self.aliased_module_names.insert(module, name);
-                    }
-                    Some((AssignName::Discard(_), _)) | None => (),
-                },
+                Some((AssignName::Discard(_), _)) | None => (),
             }
         }
 
@@ -364,53 +346,48 @@ impl<'a> TypeScriptGenerator<'a> {
         }
     }
 
-    fn definition(
-        &mut self,
-        definition: &'a TypedDefinition,
-        imports: &mut Imports<'_>,
-    ) -> Vec<Document<'a>> {
-        match definition {
-            Definition::TypeAlias(TypeAlias {
-                alias,
-                publicity,
-                type_,
-                ..
-            }) if publicity.is_importable() => vec![self.type_alias(alias, type_)],
-            Definition::TypeAlias(TypeAlias { .. }) => vec![],
+    fn definitions(&mut self, imports: &mut Imports<'_>) -> Vec<Document<'a>> {
+        let mut documents = vec![];
 
-            Definition::Import(Import { .. }) => vec![],
-
-            Definition::CustomType(type_) => self.custom_type_definition(type_, imports),
-
-            Definition::ModuleConstant(ModuleConstant {
-                publicity,
-                name,
-                value,
-                ..
-            }) if publicity.is_importable() => vec![self.module_constant(name, value)],
-            Definition::ModuleConstant(ModuleConstant { .. }) => vec![],
-
-            Definition::Function(Function {
-                arguments,
-                name: Some((_, name)),
-                publicity,
-                return_type,
-                ..
-            }) if publicity.is_importable() => {
-                vec![self.module_function(name, arguments, return_type)]
+        for type_alias in &self.module.definitions.type_aliases {
+            if let Some(document) = self.type_alias(type_alias) {
+                documents.push(document);
             }
-            Definition::Function(Function { .. }) => vec![],
         }
+
+        for custom_type in &self.module.definitions.custom_types {
+            if let Some(mut new_documents) = self.custom_type_definition(custom_type, imports) {
+                documents.append(&mut new_documents);
+            }
+        }
+
+        for constant in &self.module.definitions.constants {
+            if let Some(document) = self.module_constant(constant) {
+                documents.push(document);
+            }
+        }
+
+        for function in &self.module.definitions.functions {
+            if let Some(document) = self.module_function(function) {
+                documents.push(document);
+            }
+        }
+
+        documents
     }
 
-    fn type_alias(&mut self, alias: &str, type_: &Type) -> Document<'a> {
-        docvec![
+    fn type_alias(&mut self, type_alias: &TypedTypeAlias) -> Option<Document<'a>> {
+        if !type_alias.publicity.is_importable() {
+            return None;
+        }
+
+        Some(docvec![
             "export type ",
-            ts_safe_type_name(alias.to_string()),
+            ts_safe_type_name(type_alias.alias.to_string()),
             " = ",
-            self.print_type(type_),
+            self.print_type(&type_alias.type_),
             ";"
-        ]
+        ])
     }
 
     /// Converts a Gleam custom type definition into the TypeScript equivalent.
@@ -423,18 +400,18 @@ impl<'a> TypeScriptGenerator<'a> {
     ///
     fn custom_type_definition(
         &mut self,
-        type_: &'a TypedCustomType,
+        custom_type: &'a TypedCustomType,
         imports: &mut Imports<'_>,
-    ) -> Vec<Document<'a>> {
-        let CustomType {
+    ) -> Option<Vec<Document<'a>>> {
+        let TypedCustomType {
+            name,
             publicity,
             constructors,
             opaque,
-            name,
             typed_parameters,
             external_javascript,
             ..
-        } = type_;
+        } = custom_type;
 
         // Constructors for opaque and private types are not exported
         let constructor_publicity = if publicity.is_private() || *opaque {
@@ -467,7 +444,7 @@ impl<'a> TypeScriptGenerator<'a> {
                 imports.register_export(eco_format!("{name}$"));
 
                 imports.register_module(module.clone(), [], [member]);
-                return Vec::new();
+                return Some(Vec::new());
             } else {
                 "any".to_doc()
             }
@@ -506,7 +483,7 @@ impl<'a> TypeScriptGenerator<'a> {
             ));
         }
 
-        definitions
+        Some(definitions)
     }
 
     fn variant_definition(
@@ -796,22 +773,36 @@ impl<'a> TypeScriptGenerator<'a> {
         join(accessors, line())
     }
 
-    fn module_constant(&mut self, name: &'a EcoString, value: &'a TypedConstant) -> Document<'a> {
-        docvec![
+    fn module_constant(&mut self, constant: &TypedModuleConstant) -> Option<Document<'a>> {
+        if !constant.publicity.is_importable() {
+            return None;
+        }
+
+        Some(docvec![
             "export const ",
-            super::maybe_escape_identifier(name),
+            super::maybe_escape_identifier(&constant.name),
             ": ",
-            self.print_type(&value.type_()),
+            self.print_type(&constant.value.type_()),
             ";",
-        ]
+        ])
     }
 
-    fn module_function(
-        &mut self,
-        name: &'a EcoString,
-        arguments: &'a [TypedArg],
-        return_type: &'a Arc<Type>,
-    ) -> Document<'a> {
+    fn module_function(&mut self, function: &'a TypedFunction) -> Option<Document<'a>> {
+        let TypedFunction {
+            name: Some((_, name)),
+            arguments,
+            publicity,
+            return_type,
+            ..
+        } = function
+        else {
+            return None;
+        };
+
+        if !publicity.is_importable() {
+            return None;
+        }
+
         let generic_usages = collect_generic_usages(
             HashMap::new(),
             std::iter::once(return_type).chain(arguments.iter().map(|a| &a.type_)),
@@ -823,7 +814,7 @@ impl<'a> TypeScriptGenerator<'a> {
             .map(|(id, _use_count)| id_to_type_var(*id))
             .collect();
 
-        docvec![
+        Some(docvec![
             "export function ",
             super::maybe_escape_identifier(name),
             if generic_names.is_empty() {
@@ -851,7 +842,7 @@ impl<'a> TypeScriptGenerator<'a> {
             ": ",
             self.print_type_with_generic_usages(return_type, &generic_usages),
             ";",
-        ]
+        ])
     }
 
     /// Converts a Gleam type into a TypeScript type string
