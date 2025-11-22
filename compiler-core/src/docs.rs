@@ -223,12 +223,14 @@ pub fn generate_html<IO: FileSystemReader>(
                     let arguments = constructor
                         .arguments
                         .iter()
-                        .map(|argument| format!("{}\n{}", argument.name, argument.doc))
+                        .map(|argument| {
+                            format!("{}\n{}", argument.name, argument.text_documentation)
+                        })
                         .join("\n");
 
                     format!(
                         "{}\n{}\n{}",
-                        constructor.definition, constructor.text_documentation, arguments
+                        constructor.raw_definition, constructor.text_documentation, arguments
                     )
                 })
                 .join("\n");
@@ -239,7 +241,7 @@ pub fn generate_html<IO: FileSystemReader>(
                 title: type_.name.to_string(),
                 content: format!(
                     "{}\n{}\n{}\n{}",
-                    type_.definition,
+                    type_.raw_definition,
                     type_.text_documentation,
                     constructors,
                     import_synonyms(&module.name, type_.name)
@@ -247,18 +249,18 @@ pub fn generate_html<IO: FileSystemReader>(
                 reference: format!("{}.html#{}", module.name, type_.name),
             })
         });
-        values.iter().for_each(|constant| {
+        values.iter().for_each(|value| {
             search_items.push(SearchItem {
                 type_: SearchItemType::Value,
                 parent_title: module.name.to_string(),
-                title: constant.name.to_string(),
+                title: value.name.to_string(),
                 content: format!(
                     "{}\n{}\n{}",
-                    constant.definition,
-                    constant.text_documentation,
-                    import_synonyms(&module.name, constant.name)
+                    value.raw_definition,
+                    value.text_documentation,
+                    import_synonyms(&module.name, value.name)
                 ),
-                reference: format!("{}.html#{}", module.name, constant.name),
+                reference: format!("{}.html#{}", module.name, value.name),
             })
         });
 
@@ -368,7 +370,7 @@ pub fn generate_html<IO: FileSystemReader>(
         ),
     });
 
-    // lunr.min.js, search_data.json and index.js
+    // lunr.min.js, search-data.json and index.js
 
     files.push(OutputFile {
         path: Utf8PathBuf::from("js/lunr.min.js"),
@@ -382,7 +384,7 @@ pub fn generate_html<IO: FileSystemReader>(
     .expect("search index serialization");
 
     files.push(OutputFile {
-        path: Utf8PathBuf::from("search_data.json"),
+        path: Utf8PathBuf::from("search-data.json"),
         content: Content::Text(search_data_json.to_string()),
     });
 
@@ -599,6 +601,7 @@ struct Link {
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
 struct TypeConstructor {
     definition: String,
+    raw_definition: String,
     documentation: String,
     text_documentation: String,
     arguments: Vec<TypeConstructorArg>,
@@ -608,12 +611,14 @@ struct TypeConstructor {
 struct TypeConstructorArg {
     name: String,
     doc: String,
+    text_documentation: String,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
 struct TypeDefinition<'a> {
     name: &'a str,
     definition: String,
+    raw_definition: String,
     documentation: String,
     constructors: Vec<TypeConstructor>,
     text_documentation: String,
@@ -626,6 +631,7 @@ struct TypeDefinition<'a> {
 struct DocsValues<'a> {
     name: &'a str,
     definition: String,
+    raw_definition: String,
     documentation: String,
     text_documentation: String,
     source_url: String,

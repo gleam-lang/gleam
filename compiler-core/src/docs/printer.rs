@@ -111,6 +111,8 @@ impl Printer<'_> {
             type_definitions.push(TypeDefinition {
                 name,
                 definition: print(self.custom_type(name, parameters, constructors, *opaque)),
+                raw_definition: self
+                    .raw(|this| this.custom_type(name, parameters, constructors, *opaque)),
                 documentation: markdown_documentation(documentation),
                 text_documentation: text_documentation(documentation),
                 deprecation_message: match deprecation {
@@ -124,6 +126,7 @@ impl Printer<'_> {
                         .iter()
                         .map(|constructor| TypeConstructor {
                             definition: print(self.record_constructor(constructor)),
+                            raw_definition: self.raw(|this| this.record_constructor(constructor)),
                             documentation: markdown_documentation(&constructor.documentation),
                             text_documentation: text_documentation(&constructor.documentation),
                             arguments: constructor
@@ -133,6 +136,7 @@ impl Printer<'_> {
                                 .map(|(argument, label)| TypeConstructorArg {
                                     name: label.trim_end().to_string(),
                                     doc: markdown_documentation(&argument.doc),
+                                    text_documentation: text_documentation(&argument.doc),
                                 })
                                 .filter(|arg| !arg.doc.is_empty())
                                 .collect(),
@@ -161,6 +165,7 @@ impl Printer<'_> {
             type_definitions.push(TypeDefinition {
                 name,
                 definition: print(self.type_alias(name, type_, parameters).group()),
+                raw_definition: self.raw(|this| this.type_alias(name, type_, parameters).group()),
                 documentation: markdown_documentation(documentation),
                 text_documentation: text_documentation(documentation),
                 constructors: vec![],
@@ -175,6 +180,23 @@ impl Printer<'_> {
 
         type_definitions.sort();
         type_definitions
+    }
+
+    /// Print a definition without HTML highlighting, such as for search data
+    fn raw<'a, F>(&mut self, definition: F) -> String
+    where
+        F: FnOnce(&mut Self) -> Document<'a>,
+    {
+        let options = self.options;
+        // Turn off highlighting for this definition
+        self.options = PrintOptions {
+            print_highlighting: false,
+            print_html: false,
+        };
+        let result = print(definition(self));
+        // Restore previous options
+        self.options = options;
+        format!("```\n{result}\n```")
     }
 
     pub fn value_definitions<'a>(
@@ -209,6 +231,8 @@ impl Printer<'_> {
             value_definitions.push(DocsValues {
                 name,
                 definition: print(self.function_signature(name, arguments, return_type)),
+                raw_definition: self
+                    .raw(|this| this.function_signature(name, arguments, return_type)),
                 documentation: markdown_documentation(documentation),
                 text_documentation: text_documentation(documentation),
                 source_url: source_links.url(*location),
@@ -236,6 +260,7 @@ impl Printer<'_> {
             value_definitions.push(DocsValues {
                 name,
                 definition: print(self.constant(name, type_)),
+                raw_definition: self.raw(|this| this.constant(name, type_)),
                 documentation: markdown_documentation(documentation),
                 text_documentation: text_documentation(documentation),
                 source_url: source_links.url(*location),
