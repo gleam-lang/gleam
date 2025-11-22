@@ -7,12 +7,13 @@ mod tests;
 use crate::{
     GLEAM_CORE_PACKAGE_NAME,
     ast::{
-        self, Arg, BitArrayOption, CustomType, Definition, DefinitionLocation, Function,
-        GroupedDefinitions, Import, ModuleConstant, Publicity, RecordConstructor,
-        RecordConstructorArg, SrcSpan, Statement, TypeAlias, TypeAst, TypeAstConstructor,
-        TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, TypedDefinition, TypedExpr,
-        TypedFunction, TypedModule, UntypedArg, UntypedCustomType, UntypedFunction, UntypedImport,
-        UntypedModule, UntypedModuleConstant, UntypedStatement, UntypedTypeAlias,
+        self, Arg, BitArrayOption, CustomType, DefinitionLocation, Function, GroupedDefinitions,
+        Import, ModuleConstant, Publicity, RecordConstructor, RecordConstructorArg, SrcSpan,
+        Statement, TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple,
+        TypeAstVar, TypedCustomType, TypedDefinitions, TypedExpr, TypedFunction, TypedImport,
+        TypedModule, TypedModuleConstant, TypedTypeAlias, UntypedArg, UntypedCustomType,
+        UntypedFunction, UntypedImport, UntypedModule, UntypedModuleConstant, UntypedStatement,
+        UntypedTypeAlias,
     },
     build::{Origin, Outcome, Target},
     call_graph::{CallGraphNode, into_dependency_order},
@@ -233,7 +234,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         .build();
 
         let definitions = GroupedDefinitions::new(module.into_iter_definitions(self.target));
-        let definitions_count = definitions.len();
 
         // Register any modules, types, and values being imported
         // We process imports first so that anything imported can be referenced
@@ -261,53 +261,75 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
 
         // Infer the types of each statement in the module
-        let mut typed_definitions = Vec::with_capacity(definitions_count);
-        for import in definitions.imports {
-            optionally_push(&mut typed_definitions, self.analyse_import(import, &env));
-        }
-        for type_ in definitions.custom_types {
-            optionally_push(
-                &mut typed_definitions,
-                self.analyse_custom_type(type_, &mut env),
-            );
-        }
-        for type_alias in definitions.type_aliases {
-            typed_definitions.push(analyse_type_alias(type_alias, &mut env));
-        }
+        let typed_imports = definitions
+            .imports
+            .into_iter()
+            .filter_map(|import| self.analyse_import(import, &env))
+            .collect_vec();
+
+        let typed_custom_types = definitions
+            .custom_types
+            .into_iter()
+            .filter_map(|custom_type| self.analyse_custom_type(custom_type, &mut env))
+            .collect_vec();
+
+        let typed_type_aliases = definitions
+            .type_aliases
+            .into_iter()
+            .map(|type_alias| analyse_type_alias(type_alias, &mut env))
+            .collect_vec();
 
         // Sort functions and constants into dependency order for inference.
         // Definitions that do not depend on other definitions are inferred
         // first, then ones that depend on those, etc.
+        let mut typed_functions = Vec::with_capacity(definitions.functions.len());
+        let mut typed_constants = Vec::with_capacity(definitions.constants.len());
         let definition_groups =
             match into_dependency_order(definitions.functions, definitions.constants) {
                 Ok(definition_groups) => definition_groups,
                 Err(error) => return self.all_errors(error),
             };
-        let mut working_group = vec![];
 
+        let mut working_constants = vec![];
+        let mut working_functions = vec![];
         for group in definition_groups {
-            // A group may have multiple functions that depend on each other
-            // through mutual recursion.
-
+            // A group may have multiple functions and constants that depend on
+            // each other by mutual reference.
             for definition in group {
-                let definition = match definition {
-                    CallGraphNode::Function(function) => self.infer_function(function, &mut env),
+                match definition {
+                    CallGraphNode::Function(function) => {
+                        working_functions.push(self.infer_function(function, &mut env))
+                    }
                     CallGraphNode::ModuleConstant(constant) => {
-                        self.infer_module_constant(constant, &mut env)
+                        working_constants.push(self.infer_module_constant(constant, &mut env))
                     }
                 };
-                working_group.push(definition);
             }
 
             // Now that the entire group has been inferred, generalise their types.
-            for inferred in working_group.drain(..) {
-                typed_definitions.push(generalise_definition(
-                    inferred,
-                    &self.module_name,
+            for inferred_constant in working_constants.drain(..) {
+                typed_constants.push(generalise_module_constant(
+                    inferred_constant,
                     &mut env,
+                    &self.module_name,
+                ))
+            }
+            for inferred_function in working_functions.drain(..) {
+                typed_functions.push(generalise_function(
+                    inferred_function,
+                    &mut env,
+                    &self.module_name,
                 ));
             }
         }
+
+        let typed_definitions = TypedDefinitions {
+            imports: typed_imports,
+            constants: typed_constants,
+            custom_types: typed_custom_types,
+            type_aliases: typed_type_aliases,
+            functions: typed_functions,
+        };
 
         // Generate warnings for unused items
         let unused_definition_positions = env.handle_unused(&mut self.problems);
@@ -399,7 +421,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         &mut self,
         c: UntypedModuleConstant,
         environment: &mut Environment<'_>,
-    ) -> TypedDefinition {
+    ) -> TypedModuleConstant {
         let ModuleConstant {
             documentation: doc,
             location,
@@ -479,7 +501,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             ReferenceKind::Definition,
         );
 
-        Definition::ModuleConstant(ModuleConstant {
+        ModuleConstant {
             documentation: doc,
             location,
             name,
@@ -490,7 +512,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             type_,
             deprecation,
             implementations,
-        })
+        }
     }
 
     // TODO: Extract this into a class of its own! Or perhaps it just wants some
@@ -500,7 +522,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         &mut self,
         f: UntypedFunction,
         environment: &mut Environment<'_>,
-    ) -> TypedDefinition {
+    ) -> TypedFunction {
         let Function {
             documentation: doc,
             location,
@@ -759,7 +781,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             _ = self.inline_functions.insert(name, inline_function);
         }
 
-        Definition::Function(function)
+        function
     }
 
     fn assert_valid_javascript_external(
@@ -842,7 +864,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         &mut self,
         i: UntypedImport,
         environment: &Environment<'_>,
-    ) -> Option<TypedDefinition> {
+    ) -> Option<TypedImport> {
         let Import {
             documentation,
             location,
@@ -874,7 +896,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             })
         }
 
-        Some(Definition::Import(Import {
+        Some(Import {
             documentation,
             location,
             module,
@@ -882,16 +904,16 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             unqualified_values,
             unqualified_types,
             package: module_info.package.clone(),
-        }))
+        })
     }
 
     fn analyse_custom_type(
         &mut self,
         t: UntypedCustomType,
         environment: &mut Environment<'_>,
-    ) -> Option<TypedDefinition> {
+    ) -> Option<TypedCustomType> {
         match self.do_analyse_custom_type(t, environment) {
-            Ok(t) => Some(t),
+            Ok(custom_type) => Some(custom_type),
             Err(error) => {
                 self.problems.error(error);
                 None
@@ -904,7 +926,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         &mut self,
         t: UntypedCustomType,
         environment: &mut Environment<'_>,
-    ) -> Result<TypedDefinition, Error> {
+    ) -> Result<TypedCustomType, Error> {
         self.register_values_from_custom_type(
             &t,
             environment,
@@ -1042,7 +1064,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             }
         }
 
-        Ok(Definition::CustomType(CustomType {
+        Ok(CustomType {
             documentation: doc,
             location,
             end_position,
@@ -1056,7 +1078,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             deprecation,
             external_erlang,
             external_javascript,
-        }))
+        })
     }
 
     fn register_values_from_custom_type(
@@ -1660,12 +1682,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
     }
 }
 
-fn optionally_push<T>(vector: &mut Vec<T>, item: Option<T>) {
-    if let Some(item) = item {
-        vector.push(item)
-    }
-}
-
 fn validate_module_name(name: &EcoString) -> Result<(), Error> {
     if is_prelude_module(name) {
         return Err(Error::ReservedModuleName { name: name.clone() });
@@ -1692,7 +1708,7 @@ fn target_function_implementation<'a>(
     }
 }
 
-fn analyse_type_alias(t: UntypedTypeAlias, environment: &mut Environment<'_>) -> TypedDefinition {
+fn analyse_type_alias(t: UntypedTypeAlias, environment: &mut Environment<'_>) -> TypedTypeAlias {
     let TypeAlias {
         documentation: doc,
         location,
@@ -1713,7 +1729,8 @@ fn analyse_type_alias(t: UntypedTypeAlias, environment: &mut Environment<'_>) ->
         Ok(constructor) => constructor.type_.clone(),
         Err(_) => environment.new_generic_var(),
     };
-    Definition::TypeAlias(TypeAlias {
+
+    TypeAlias {
         documentation: doc,
         location,
         publicity,
@@ -1723,7 +1740,7 @@ fn analyse_type_alias(t: UntypedTypeAlias, environment: &mut Environment<'_>) ->
         type_ast: resolved_type,
         type_,
         deprecation,
-    })
+    }
 }
 
 pub fn infer_bit_array_option<UntypedValue, TypedValue, Typer>(
@@ -1774,27 +1791,11 @@ where
     }
 }
 
-fn generalise_definition(
-    definition: TypedDefinition,
-    module_name: &EcoString,
-    environment: &mut Environment<'_>,
-) -> TypedDefinition {
-    match definition {
-        Definition::Function(function) => generalise_function(function, environment, module_name),
-        Definition::ModuleConstant(constant) => {
-            generalise_module_constant(constant, environment, module_name)
-        }
-        definition @ (Definition::TypeAlias(TypeAlias { .. })
-        | Definition::CustomType(CustomType { .. })
-        | Definition::Import(Import { .. })) => definition,
-    }
-}
-
 fn generalise_module_constant(
     constant: ModuleConstant<Arc<Type>, EcoString>,
     environment: &mut Environment<'_>,
     module_name: &EcoString,
-) -> TypedDefinition {
+) -> TypedModuleConstant {
     let ModuleConstant {
         documentation: doc,
         location,
@@ -1835,7 +1836,7 @@ fn generalise_module_constant(
         },
     );
 
-    Definition::ModuleConstant(ModuleConstant {
+    ModuleConstant {
         documentation: doc,
         location,
         name,
@@ -1846,14 +1847,14 @@ fn generalise_module_constant(
         type_,
         deprecation,
         implementations,
-    })
+    }
 }
 
 fn generalise_function(
     function: TypedFunction,
     environment: &mut Environment<'_>,
     module_name: &EcoString,
-) -> TypedDefinition {
+) -> TypedFunction {
     let Function {
         documentation: doc,
         location,
@@ -1917,7 +1918,7 @@ fn generalise_function(
         },
     );
 
-    Definition::Function(Function {
+    Function {
         documentation: doc,
         location,
         name: Some((name_location, name)),
@@ -1933,7 +1934,7 @@ fn generalise_function(
         external_javascript,
         implementations,
         purity,
-    })
+    }
 }
 
 fn assert_unique_name(

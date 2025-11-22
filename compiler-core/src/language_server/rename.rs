@@ -6,7 +6,7 @@ use lsp_types::{Range, RenameParams, TextEdit, Url, WorkspaceEdit};
 
 use crate::{
     analyse::name,
-    ast::{self, Definition, SrcSpan},
+    ast::{self, SrcSpan},
     build::Module,
     language_server::{
         edits::{
@@ -268,16 +268,12 @@ fn alias_references_in_module(
             ast::Layer::Type => format!("type {name} as {}", params.new_name),
         };
 
-        let mut import = None;
-        for definition in module.ast.definitions.iter() {
-            match definition {
-                Definition::Import(this_import) if this_import.module == *module_name => {
-                    import = Some(this_import);
-                    break;
-                }
-                _ => {}
-            }
-        }
+        let import = module
+            .ast
+            .definitions
+            .imports
+            .iter()
+            .find(|import| import.module == *module_name);
 
         if let Some(import) = import {
             let (position, new_text) =

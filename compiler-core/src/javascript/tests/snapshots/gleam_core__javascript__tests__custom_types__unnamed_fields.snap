@@ -38,6 +38,8 @@ export const Ip$Ip = ($0) => new Ip($0);
 export const Ip$isIp = (value) => value instanceof Ip;
 export const Ip$Ip$0 = (value) => value[0];
 
+export const local = /* @__PURE__ */ new Ip("0.0.0.0");
+
 export function build(x) {
   return x("1.2.3.4");
 }
@@ -52,5 +54,3 @@ export function destructure(x) {
   raw = x[0];
   return raw;
 }
-
-export const local = /* @__PURE__ */ new Ip("0.0.0.0");

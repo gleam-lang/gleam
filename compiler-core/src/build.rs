@@ -18,8 +18,8 @@ pub use self::telemetry::{NullTelemetry, Telemetry};
 
 use crate::ast::{
     self, CallArg, CustomType, DefinitionLocation, TypeAst, TypedArg, TypedConstant,
-    TypedDefinition, TypedExpr, TypedFunction, TypedPattern, TypedRecordConstructor,
-    TypedStatement,
+    TypedCustomType, TypedDefinitions, TypedExpr, TypedFunction, TypedImport, TypedModuleConstant,
+    TypedPattern, TypedRecordConstructor, TypedStatement, TypedTypeAlias,
 };
 use crate::type_::{Type, TypedCallArg};
 use crate::{
@@ -246,6 +246,49 @@ pub struct Module {
     pub dependencies: Vec<(EcoString, SrcSpan)>,
 }
 
+#[derive(Debug)]
+/// A data structure used to store all definitions in a single homogeneous
+/// vector and sort them by their position in order to attach to each the right
+/// documentation.
+///
+enum DocumentableDefinition<'a> {
+    Constant(&'a mut TypedModuleConstant),
+    TypeAlias(&'a mut TypedTypeAlias),
+    CustomType(&'a mut TypedCustomType),
+    Function(&'a mut TypedFunction),
+    Import(&'a mut TypedImport),
+}
+
+impl<'a> DocumentableDefinition<'a> {
+    pub fn location(&self) -> SrcSpan {
+        match self {
+            Self::Constant(module_constant) => module_constant.location,
+            Self::TypeAlias(type_alias) => type_alias.location,
+            Self::CustomType(custom_type) => custom_type.location,
+            Self::Function(function) => function.location,
+            Self::Import(import) => import.location,
+        }
+    }
+
+    pub fn put_doc(&mut self, new_documentation: (u32, EcoString)) {
+        match self {
+            Self::Import(_import) => (),
+            Self::Function(function) => {
+                let _ = function.documentation.replace(new_documentation);
+            }
+            Self::TypeAlias(type_alias) => {
+                let _ = type_alias.documentation.replace(new_documentation);
+            }
+            Self::CustomType(custom_type) => {
+                let _ = custom_type.documentation.replace(new_documentation);
+            }
+            Self::Constant(constant) => {
+                let _ = constant.documentation.replace(new_documentation);
+            }
+        }
+    }
+}
+
 impl Module {
     pub fn erlang_name(&self) -> EcoString {
         module_erlang_name(&self.name)
@@ -274,8 +317,21 @@ impl Module {
 
         // Order definitions to avoid misassociating doc comments after the
         // order has changed during compilation.
-        let mut definitions: Vec<_> = self.ast.definitions.iter_mut().collect();
-        definitions.sort_by(|a, b| a.location().start.cmp(&b.location().start));
+        let TypedDefinitions {
+            imports,
+            constants,
+            custom_types,
+            type_aliases,
+            functions,
+        } = &mut self.ast.definitions;
+
+        let mut definitions = ((imports.iter_mut()).map(DocumentableDefinition::Import))
+            .chain((constants.iter_mut()).map(DocumentableDefinition::Constant))
+            .chain((custom_types.iter_mut()).map(DocumentableDefinition::CustomType))
+            .chain((type_aliases.iter_mut()).map(DocumentableDefinition::TypeAlias))
+            .chain((functions.iter_mut()).map(DocumentableDefinition::Function))
+            .sorted_by_key(|definition| definition.location())
+            .collect_vec();
 
         // Doc Comments
         let mut doc_comments = self.extra.doc_comments.iter().peekable();
@@ -291,7 +347,8 @@ impl Module {
                 definition.put_doc((docs_start, doc));
             }
 
-            if let Definition::CustomType(CustomType { constructors, .. }) = definition {
+            if let DocumentableDefinition::CustomType(CustomType { constructors, .. }) = definition
+            {
                 for constructor in constructors {
                     let (docs_start, docs): (u32, Vec<&str>) = doc_comments_before(
                         &mut doc_comments,
@@ -358,7 +415,6 @@ pub enum Located<'a> {
         expression: &'a TypedExpr,
         position: ExpressionPosition<'a>,
     },
-    ModuleStatement(&'a TypedDefinition),
     VariantConstructorDefinition(&'a TypedRecordConstructor),
     FunctionBody(&'a TypedFunction),
     Arg(&'a TypedArg),
@@ -374,6 +430,13 @@ pub enum Located<'a> {
         layer: ast::Layer,
     },
     Constant(&'a TypedConstant),
+
+    // A module's top level definitions
+    ModuleFunction(&'a TypedFunction),
+    ModuleConstant(&'a TypedModuleConstant),
+    ModuleImport(&'a TypedImport),
+    ModuleCustomType(&'a TypedCustomType),
+    ModuleTypeAlias(&'a TypedTypeAlias),
 }
 
 impl<'a> Located<'a> {
@@ -399,14 +462,28 @@ impl<'a> Located<'a> {
             Self::Statement(statement) => statement.definition_location(),
             Self::FunctionBody(statement) => None,
             Self::Expression { expression, .. } => expression.definition_location(),
-            Self::ModuleStatement(Definition::Import(import)) => Some(DefinitionLocation {
+
+            Self::ModuleImport(import) => Some(DefinitionLocation {
                 module: Some(import.module.clone()),
                 span: SrcSpan { start: 0, end: 0 },
             }),
-            Self::ModuleStatement(statement) => Some(DefinitionLocation {
+            Self::ModuleConstant(constant) => Some(DefinitionLocation {
                 module: None,
-                span: statement.location(),
+                span: constant.location,
             }),
+            Self::ModuleCustomType(custom_type) => Some(DefinitionLocation {
+                module: None,
+                span: custom_type.location,
+            }),
+            Self::ModuleFunction(function) => Some(DefinitionLocation {
+                module: None,
+                span: function.location,
+            }),
+            Self::ModuleTypeAlias(type_alias) => Some(DefinitionLocation {
+                module: None,
+                span: type_alias.location,
+            }),
+
             Self::VariantConstructorDefinition(record) => Some(DefinitionLocation {
                 module: None,
                 span: record.location,
@@ -449,12 +526,16 @@ impl<'a> Located<'a> {
             Located::Label(_, type_) | Located::Annotation { type_, .. } => Some(type_.clone()),
             Located::Constant(constant) => Some(constant.type_()),
 
-            Located::PatternSpread { .. } => None,
-            Located::ModuleStatement(definition) => None,
-            Located::VariantConstructorDefinition(_) => None,
-            Located::FunctionBody(function) => None,
-            Located::UnqualifiedImport(unqualified_import) => None,
-            Located::ModuleName { .. } => None,
+            Located::PatternSpread { .. }
+            | Located::ModuleConstant(_)
+            | Located::ModuleCustomType(_)
+            | Located::ModuleFunction(_)
+            | Located::ModuleImport(_)
+            | Located::ModuleTypeAlias(_)
+            | Located::VariantConstructorDefinition(_)
+            | Located::FunctionBody(_)
+            | Located::UnqualifiedImport(_)
+            | Located::ModuleName { .. } => None,
         }
     }
 

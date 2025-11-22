@@ -40,7 +40,10 @@
 
 use crate::{
     analyse::Inferred,
-    ast::{BitArraySize, TypedBitArraySize, TypedTailPattern, typed::InvalidExpression},
+    ast::{
+        BitArraySize, TypedBitArraySize, TypedDefinitions, TypedTailPattern,
+        typed::InvalidExpression,
+    },
     exhaustiveness::CompiledCase,
     type_::{
         ModuleValueConstructor, PatternConstructor, TypedCallArg, ValueConstructor,
@@ -55,21 +58,16 @@ use vec1::Vec1;
 use crate::type_::Type;
 
 use super::{
-    AssignName, BinOp, BitArrayOption, CallArg, Definition, Pattern, PipelineAssignmentKind,
-    SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssert, TypedAssignment, TypedClause,
-    TypedClauseGuard, TypedConstant, TypedCustomType, TypedDefinition, TypedExpr,
-    TypedExprBitArraySegment, TypedFunction, TypedModule, TypedModuleConstant, TypedPattern,
-    TypedPatternBitArraySegment, TypedPipelineAssignment, TypedStatement, TypedUse,
-    untyped::FunctionLiteralKind,
+    AssignName, BinOp, BitArrayOption, CallArg, Pattern, PipelineAssignmentKind, SrcSpan,
+    Statement, TodoKind, TypeAst, TypedArg, TypedAssert, TypedAssignment, TypedClause,
+    TypedClauseGuard, TypedConstant, TypedCustomType, TypedExpr, TypedExprBitArraySegment,
+    TypedFunction, TypedModule, TypedModuleConstant, TypedPattern, TypedPatternBitArraySegment,
+    TypedPipelineAssignment, TypedStatement, TypedUse, untyped::FunctionLiteralKind,
 };
 
 pub trait Visit<'ast> {
     fn visit_typed_module(&mut self, module: &'ast TypedModule) {
         visit_typed_module(self, module);
-    }
-
-    fn visit_typed_definition(&mut self, def: &'ast TypedDefinition) {
-        visit_typed_definition(self, def);
     }
 
     fn visit_typed_function(&mut self, fun: &'ast TypedFunction) {
@@ -621,23 +619,27 @@ pub fn visit_typed_module<'a, V>(v: &mut V, module: &'a TypedModule)
 where
     V: Visit<'a> + ?Sized,
 {
-    for definition in &module.definitions {
-        v.visit_typed_definition(definition);
+    let TypedDefinitions {
+        imports: _, // TODO
+        constants,
+        custom_types,
+        type_aliases: _, // TODO
+        functions,
+    } = &module.definitions;
+
+    for constant in constants {
+        v.visit_typed_module_constant(constant);
+    }
+
+    for custom_type in custom_types {
+        v.visit_typed_custom_type(custom_type);
+    }
+
+    for function in functions {
+        v.visit_typed_function(function);
     }
 }
 
-pub fn visit_typed_definition<'a, V>(v: &mut V, def: &'a TypedDefinition)
-where
-    V: Visit<'a> + ?Sized,
-{
-    match def {
-        Definition::Function(fun) => v.visit_typed_function(fun),
-        Definition::TypeAlias(_typealias) => { /* TODO */ }
-        Definition::CustomType(custom_type) => v.visit_typed_custom_type(custom_type),
-        Definition::Import(_import) => { /* TODO */ }
-        Definition::ModuleConstant(constant) => v.visit_typed_module_constant(constant),
-    }
-}
 pub fn visit_typed_function<'a, V>(v: &mut V, fun: &'a TypedFunction)
 where
     V: Visit<'a> + ?Sized,
