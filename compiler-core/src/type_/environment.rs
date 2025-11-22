@@ -628,6 +628,14 @@ impl Environment<'_> {
                                 // Check this in the hydrator, i.e. is it a created type
                                 let v = self.new_unbound_var();
                                 let _ = ids.insert(*id, v.clone());
+
+                                // Preserve any user-provided name from the original generic variable
+                                // for the new unbound variable. This ensures error messages and type
+                                // displays continue to use meaningful names (e.g., "something") rather
+                                // than auto-generated ones (e.g., "a", "b").
+                                let v_id = self.previous_uid();
+                                self.names.reassign_type_variable_alias(*id, v_id);
+
                                 return v;
                             }
                         }
