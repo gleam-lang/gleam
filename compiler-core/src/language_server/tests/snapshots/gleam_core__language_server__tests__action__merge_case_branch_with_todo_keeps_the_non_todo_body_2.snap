@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn go(n: Int) {\n  case n {\n    1 -> n * 2\n    2 -> todo\n    3 -> todo\n    _ -> todo\n  }\n  }"
+---
+----- BEFORE ACTION
+pub fn go(n: Int) {
+  case n {
+    1 -> n * 2
+    ▔▔▔▔▔▔▔▔▔▔
+    2 -> todo
+▔▔▔▔▔▔▔▔▔▔▔▔▔
+    3 -> todo
+▔▔▔▔↑        
+    _ -> todo
+  }
+  }
+
+
+----- AFTER ACTION
+pub fn go(n: Int) {
+  case n {
+    1 | 2 | 3 -> n * 2
+    _ -> todo
+  }
+  }

@@ -136,6 +136,7 @@ const COLLAPSE_NESTED_CASE: &str = "Collapse nested case";
 const REMOVE_UNREACHABLE_CLAUSES: &str = "Remove unreachable clauses";
 const ADD_OMITTED_LABELS: &str = "Add omitted labels";
 const EXTRACT_FUNCTION: &str = "Extract function";
+const MERGE_CASE_BRANCHES: &str = "Merge case branches";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -10874,5 +10875,226 @@ pub fn main() {
 fn wibble() -> Nil
 "#,
         find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn merge_case_branch() {
+    assert_code_action!(
+        MERGE_CASE_BRANCHES,
+        r#"pub fn go(n: Int) {
+  case n {
+    1 -> todo
+    2 -> todo
+    _ -> todo
+  }
+  }"#,
+        find_position_of("1").select_until(find_position_of("2"))
+    );
+}
+
+#[test]
+fn merge_case_branch_with_todo_keeps_the_non_todo_body() {
+    assert_code_action!(
+        MERGE_CASE_BRANCHES,
+        r#"pub fn go(n: Int) {
+  case n {
+    1 -> todo
+    2 -> n * 2
+    3 -> todo
+    _ -> todo
+  }
+  }"#,
+        find_position_of("1").select_until(find_position_of("3"))
+    );
+}
+
+#[test]
+fn merge_case_branch_with_todo_keeps_the_non_todo_body_1() {
+    assert_code_action!(
+        MERGE_CASE_BRANCHES,
+        r#"pub fn go(n: Int) {
+  case n {
+    1 -> todo
+    2 -> todo
+    3 -> n * 2
+    _ -> todo
+  }
+  }"#,
+        find_position_of("1").select_until(find_position_of("3"))
+    );
+}
+
+#[test]
+fn merge_case_branch_with_todo_keeps_the_non_todo_body_2() {
+    assert_code_action!(
+        MERGE_CASE_BRANCHES,
+        r#"pub fn go(n: Int) {
+  case n {
+    1 -> n * 2
+    2 -> todo
+    3 -> todo
+    _ -> todo
+  }
+  }"#,
+        find_position_of("1").select_until(find_position_of("3"))
+    );
+}
+
+#[test]
+fn merge_case_branch_with_complex_bodies_1() {
+    assert_code_action!(
+        MERGE_CASE_BRANCHES,
+        r#"pub fn go(n: Int) {
+  case n {
+    1 -> Ok("one or two")
+    2 -> Ok("one or two")
+    _ -> Error("neither one or two")
+  }
+  }"#,
+        find_position_of("1").select_until(find_position_of("2"))
+    );
+}
+
+#[test]
+fn merge_case_branch_with_complex_bodies_2() {
+    assert_code_action!(
+        MERGE_CASE_BRANCHES,
+        r#"pub fn go(n: Int) {
+  case n {
+    1 -> n
+    2 -> n
+    _ -> panic as "neither one nor two"
+  }
+  }"#,
+        find_position_of("1").select_until(find_position_of("2"))
+    );
+}
+
+#[test]
+fn merge_case_branch_with_complex_bodies_3() {
+    assert_code_action!(
+        MERGE_CASE_BRANCHES,
+        r#"pub fn go(n: Int) {
+  case n {
+    1 -> go(n - 1)
+    2 -> go(n - 1)
+    _ -> 10
+  }
+}"#,
+        find_position_of("1").select_until(find_position_of("2"))
+    );
+}
+
+#[test]
+fn merge_case_branch_with_complex_bodies_4() {
+    assert_code_action!(
+        MERGE_CASE_BRANCHES,
+        r#"pub fn go(n: Int) {
+  case n {
+    1 -> {
+      let a = go(n - 1)
+      a * 10
+    }
+    2 -> {
+      let a = go(n - 1)
+      a * 10
+    }
+    _ -> 10
+  }
+}"#,
+        find_position_of("1").select_until(find_position_of("2"))
+    );
+}
+
+#[test]
+fn merge_case_branch_will_not_merge_branches_with_guards() {
+    assert_no_code_actions!(
+        MERGE_CASE_BRANCHES,
+        r#"pub fn go(n: Int) {
+  case n {
+    1 if True -> todo
+    2 -> todo
+    _ -> todo
+  }
+  }"#,
+        find_position_of("1").select_until(find_position_of("2"))
+    );
+}
+
+#[test]
+fn merge_case_branch_will_not_merge_branches_defining_different_variables() {
+    assert_no_code_actions!(
+        MERGE_CASE_BRANCHES,
+        r#"pub fn go(result) {
+  case result {
+    Ok(value) -> todo
+    Error(error) -> todo
+    _ -> todo
+  }
+  }"#,
+        find_position_of("Ok").select_until(find_position_of("error"))
+    );
+}
+
+#[test]
+fn merge_case_branch_can_merge_branches_defining_the_same_variables() {
+    assert_code_action!(
+        MERGE_CASE_BRANCHES,
+        r#"pub fn go(result) {
+  case result {
+    [Ok(value), ..] -> todo
+    [_, Error(value)] -> todo
+    _ -> todo
+  }
+}"#,
+        find_position_of("Ok").select_until(find_position_of("todo").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn merge_case_branch_can_merge_multiple_branches() {
+    assert_code_action!(
+        MERGE_CASE_BRANCHES,
+        r#"pub fn go(result) {
+  case result {
+    [_] -> 1
+    [Ok(value), ..] -> todo
+    [_, Error(value)] -> todo
+    [_, _, Error(value)] -> todo
+    [_, _] -> 1
+    _ -> 2
+  }
+}"#,
+        find_position_of("todo").select_until(find_position_of("todo").nth_occurrence(3))
+    );
+}
+
+#[test]
+fn merge_case_branch_does_not_pop_up_with_a_single_selected_branch() {
+    assert_no_code_actions!(
+        MERGE_CASE_BRANCHES,
+        r#"pub fn go(result) {
+  case result {
+    [] -> todo
+    _ -> 2
+  }
+}"#,
+        find_position_of("[]").to_selection()
+    );
+}
+
+#[test]
+fn merge_case_branch_works_with_existing_alternative_patterns() {
+    assert_code_action!(
+        MERGE_CASE_BRANCHES,
+        r#"pub fn go(result) {
+  case result {
+    [] | [_, _, ..]-> todo
+    [_] -> todo
+    _ -> 2
+  }
+}"#,
+        find_position_of("[]").select_until(find_position_of("[_]"))
     );
 }
