@@ -103,6 +103,7 @@
   from 1.13 has been extended to int segments!
   Aside from the various performance improvements, this allows the compiler to
   mark more branches as unreachable.
+
   ```gleam
   case bits {
     <<"a">> -> 0
@@ -116,6 +117,7 @@
     _ -> 99
   }
   ```
+
   ([fruno](https://github.com/fruno-bulax/))
 
 ### Build tool
@@ -235,6 +237,11 @@
 - The "add omitted label" code action no longer adds labels to arguments
   being piped in or the callbacks of `use`.
   ([fruno](https://github.com/fruno-bulax))
+
+- Fixed a bug that caused the compiler to incorrectly optimise away runtime
+  size checks in bit array patterns on the javascript target if they used
+  calculations in the size of a segment (`_:size(wibble - wobble)`).
+  ([fruno](https://github.com/fruno-bulax/))
 
 - Add a missing BitArray constructor return type in the prelude's TypeScript
   definitions.
