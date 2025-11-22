@@ -8575,6 +8575,10 @@ impl<'ast> ast::visit::Visit<'ast> for AddOmittedLabels<'ast> {
                     continue;
                 }
             }
+            // No labels for pipes, uses, etc!
+            if argument.is_implicit() {
+                continue;
+            }
 
             let label = argument_index_to_label
                 .get(&(index as u32))

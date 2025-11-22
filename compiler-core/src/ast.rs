@@ -1400,7 +1400,7 @@ pub enum ImplicitCallArgOrigin {
     /// right hand side of `use` is being called with the wrong arity.
     ///
     IncorrectArityUse,
-    /// An argument adde by the compiler to fill in the missing args when using
+    /// An argument added by the compiler to fill in the missing args when using
     /// the record update synax.
     ///
     RecordUpdate,

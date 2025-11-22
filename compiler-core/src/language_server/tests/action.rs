@@ -10398,6 +10398,37 @@ pub fn labelled(a, b) { todo }
 }
 
 #[test]
+fn add_omitted_labels_does_not_label_piped_argument() {
+    assert_code_action!(
+        ADD_OMITTED_LABELS,
+        "
+pub fn main() {
+  1 |> labelled(2)
+}
+
+pub fn labelled(a a, b b) { todo }
+    ",
+        find_position_of("labelled").to_selection(),
+    );
+}
+
+#[test]
+fn add_omitted_labels_does_not_label_use() {
+    assert_code_action!(
+        ADD_OMITTED_LABELS,
+        "
+pub fn main() {
+  use <- labelled(1)
+  todo
+}
+
+pub fn labelled(a a, b b) { todo }
+    ",
+        find_position_of("labelled").to_selection(),
+    );
+}
+
+#[test]
 fn extract_function() {
     assert_code_action!(
         EXTRACT_FUNCTION,

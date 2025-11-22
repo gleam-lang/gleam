@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  use <- labelled(1)\n  todo\n}\n\npub fn labelled(a a, b b) { todo }\n    "
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  use <- labelled(1)
+         ↑          
+  todo
+}
+
+pub fn labelled(a a, b b) { todo }
+    
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  use <- labelled(a: 1)
+  todo
+}
+
+pub fn labelled(a a, b b) { todo }
