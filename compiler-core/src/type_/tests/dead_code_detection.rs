@@ -595,3 +595,36 @@ pub fn main() -> Wibble {
 "
     );
 }
+
+#[test]
+//  https://github.com/gleam-lang/gleam/issues/5145
+fn imported_module_aliased_to_avoid_conflict_with_another_import() {
+    assert_no_warnings!(
+        (
+            "wobble",
+            "
+pub fn womble() {
+    Nil
+}
+"
+        ),
+        (
+            "wibble/wobble",
+            "
+pub fn wimble() {
+    Nil
+}
+"
+        ),
+        "
+import wibble/wobble
+import wobble as wob
+
+pub fn main() {
+    let _ = wobble.wimble()
+    let _ = wob.womble()
+    Nil
+}
+        "
+    );
+}

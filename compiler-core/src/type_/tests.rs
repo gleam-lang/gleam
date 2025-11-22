@@ -331,11 +331,11 @@ macro_rules! assert_js_no_warnings_with_gleam_version {
 
 #[macro_export]
 macro_rules! assert_no_warnings {
-    ($src:expr $(,)?) => {
+    ($src:literal $(,)?) => {
         let warnings = $crate::type_::tests::get_warnings($src, vec![], crate::build::Target::Erlang, None);
         assert_eq!(warnings, vec![]);
     };
-    ($(($name:expr, $module_src:literal)),+, $src:expr $(,)?) => {
+    ($(($name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
         let warnings = $crate::type_::tests::get_warnings(
             $src,
             vec![$(("thepackage", $name, $module_src)),*],
@@ -344,7 +344,7 @@ macro_rules! assert_no_warnings {
         );
         assert_eq!(warnings, vec![]);
     };
-    ($(($package:expr, $name:expr, $module_src:literal)),+, $src:expr $(,)?) => {
+    ($(($package:expr, $name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
         let warnings = $crate::type_::tests::get_warnings(
             $src,
             vec![$(($package, $name, $module_src)),*],
