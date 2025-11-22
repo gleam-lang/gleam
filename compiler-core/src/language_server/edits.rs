@@ -2,7 +2,7 @@ use ecow::EcoString;
 use lsp_types::{Position, Range, TextEdit};
 
 use crate::{
-    ast::{Definition, Import, SrcSpan, TypedDefinition},
+    ast::{Import, SrcSpan, TypedDefinitions},
     build::Module,
     line_numbers::LineNumbers,
 };
@@ -14,20 +14,33 @@ pub fn position_of_first_definition_if_import(
     module: &Module,
     line_numbers: &LineNumbers,
 ) -> Option<Position> {
-    // As "self.module.ast.definitions"  could be sorted, let's find the actual first definition by position.
-    let first_definition = module
-        .ast
-        .definitions
-        .iter()
-        .min_by(|a, b| a.location().start.cmp(&b.location().start));
-    let import = first_definition.and_then(get_import);
-    import.map(|import| src_span_to_lsp_range(import.location, line_numbers).start)
-}
+    let TypedDefinitions {
+        imports,
+        constants,
+        custom_types,
+        type_aliases,
+        functions,
+    } = &module.ast.definitions;
 
-pub fn get_import(statement: &TypedDefinition) -> Option<&Import<EcoString>> {
-    match statement {
-        Definition::Import(import) => Some(import),
-        _ => None,
+    // We first find the firts import by position
+    let first_import = imports.iter().min_by_key(|import| import.location)?;
+
+    // Then we need to make sure it actually comes before any other definition.
+    let import_is_first_definition = constants
+        .iter()
+        .map(|constant| constant.location)
+        .chain(custom_types.iter().map(|custom_type| custom_type.location))
+        .chain(type_aliases.iter().map(|type_alias| type_alias.location))
+        .chain(functions.iter().map(|function| function.location))
+        .filter(|location| location.lt(&first_import.location))
+        .peekable()
+        .peek()
+        .is_none();
+
+    if import_is_first_definition {
+        Some(src_span_to_lsp_range(first_import.location, line_numbers).start)
+    } else {
+        None
     }
 }
 

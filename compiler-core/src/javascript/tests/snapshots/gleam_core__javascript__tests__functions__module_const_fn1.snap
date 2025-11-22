@@ -10,8 +10,8 @@ pub const compound: #(fn(Int) -> Int, fn(Int) -> Int) =
     #(int_identity, int_identity_alias)
 
 ----- TYPESCRIPT DEFINITIONS
-export function int_identity(i: number): number;
-
 export const int_identity_alias: (x0: number) => number;
 
 export const compound: [(x0: number) => number, (x0: number) => number];
+
+export function int_identity(i: number): number;

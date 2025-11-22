@@ -47,16 +47,15 @@ pub trait HasLocation {
     fn location(&self) -> SrcSpan;
 }
 
-pub type TypedModule = Module<type_::ModuleInterface, TypedDefinition>;
-
-pub type UntypedModule = Module<(), TargetedDefinition>;
+pub type UntypedModule = Module<(), Vec<TargetedDefinition>>;
+pub type TypedModule = Module<type_::ModuleInterface, TypedDefinitions>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module<Info, Definitions> {
     pub name: EcoString,
     pub documentation: Vec<EcoString>,
     pub type_info: Info,
-    pub definitions: Vec<Definitions>,
+    pub definitions: Definitions,
     pub names: Names,
     /// The source byte locations of definition that are unused.
     /// This is used in code generation to know when definitions can be safely omitted.
@@ -71,16 +70,52 @@ impl<Info, Definitions> Module<Info, Definitions> {
 
 impl TypedModule {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
-        self.definitions
+        let TypedDefinitions {
+            imports,
+            constants,
+            custom_types,
+            type_aliases,
+            functions,
+        } = &self.definitions;
+
+        imports
             .iter()
-            .find_map(|definition| definition.find_node(byte_index))
+            .find_map(|import| import.find_node(byte_index))
+            .or_else(|| (constants.iter()).find_map(|constant| constant.find_node(byte_index)))
+            .or_else(|| (custom_types.iter()).find_map(|type_| type_.find_node(byte_index)))
+            .or_else(|| (type_aliases.iter()).find_map(|alias| alias.find_node(byte_index)))
+            .or_else(|| (functions.iter()).find_map(|function| function.find_node(byte_index)))
     }
 
     pub fn find_statement(&self, byte_index: u32) -> Option<&TypedStatement> {
+        // Statements can only be found inside a module function, there's no
+        // need to go over all the other module definitions.
         self.definitions
+            .functions
             .iter()
-            .find_map(|definition| definition.find_statement(byte_index))
+            .find_map(|function| function.find_statement(byte_index))
     }
+
+    pub fn count_definitions(&self) -> usize {
+        let TypedDefinitions {
+            imports,
+            constants,
+            custom_types,
+            type_aliases,
+            functions,
+        } = &self.definitions;
+
+        imports.len() + constants.len() + custom_types.len() + type_aliases.len() + functions.len()
+    }
+}
+
+#[derive(Debug)]
+pub struct TypedDefinitions {
+    pub imports: Vec<TypedImport>,
+    pub constants: Vec<TypedModuleConstant>,
+    pub custom_types: Vec<TypedCustomType>,
+    pub type_aliases: Vec<TypedTypeAlias>,
+    pub functions: Vec<TypedFunction>,
 }
 
 /// The `@target(erlang)` and `@target(javascript)` attributes can be used to
@@ -715,7 +750,81 @@ impl<T, E> Function<T, E> {
     }
 }
 
+impl TypedFunction {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        // Search for the corresponding node inside the function
+        // only if the index falls within the function's full location.
+        if !self.full_location().contains(byte_index) {
+            return None;
+        }
+
+        if let Some(found) = self
+            .body
+            .iter()
+            .find_map(|statement| statement.find_node(byte_index))
+        {
+            return Some(found);
+        }
+
+        if let Some(found_arg) = self
+            .arguments
+            .iter()
+            .find_map(|arg| arg.find_node(byte_index))
+        {
+            return Some(found_arg);
+        };
+
+        if let Some(found_statement) = self
+            .body
+            .iter()
+            .find(|statement| statement.location().contains(byte_index))
+        {
+            return Some(Located::Statement(found_statement));
+        };
+
+        // Check if location is within the return annotation.
+        if let Some(located) = self
+            .return_annotation
+            .iter()
+            .find_map(|annotation| annotation.find_node(byte_index, self.return_type.clone()))
+        {
+            return Some(located);
+        };
+
+        // Note that the fn `.location` covers the function head, not
+        // the entire statement.
+        if self.location.contains(byte_index) {
+            Some(Located::ModuleFunction(self))
+        } else if self.full_location().contains(byte_index) {
+            Some(Located::FunctionBody(self))
+        } else {
+            None
+        }
+    }
+
+    pub fn find_statement(&self, byte_index: u32) -> Option<&TypedStatement> {
+        if !self.full_location().contains(byte_index) {
+            return None;
+        }
+
+        self.body
+            .iter()
+            .find_map(|statement| statement.find_statement(byte_index))
+    }
+
+    pub fn main_function(&self) -> Option<&TypedFunction> {
+        if let Some((_, name)) = &self.name
+            && name == "main"
+        {
+            Some(self)
+        } else {
+            None
+        }
+    }
+}
+
 pub type UntypedImport = Import<()>;
+pub type TypedImport = Import<EcoString>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// Import another Gleam module so the current module can use the types and
@@ -752,6 +861,46 @@ impl<T> Import<T> {
     }
 }
 
+impl TypedImport {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        if !self.location.contains(byte_index) {
+            return None;
+        }
+
+        if let Some(unqualified) = self
+            .unqualified_values
+            .iter()
+            .find(|unqualified_value| unqualified_value.location.contains(byte_index))
+        {
+            return Some(Located::UnqualifiedImport(
+                crate::build::UnqualifiedImport {
+                    name: &unqualified.name,
+                    module: &self.module,
+                    is_type: false,
+                    location: &unqualified.location,
+                },
+            ));
+        }
+
+        if let Some(unqualified) = self
+            .unqualified_types
+            .iter()
+            .find(|unqualified_value| unqualified_value.location.contains(byte_index))
+        {
+            return Some(Located::UnqualifiedImport(
+                crate::build::UnqualifiedImport {
+                    name: &unqualified.name,
+                    module: &self.module,
+                    is_type: true,
+                    location: &unqualified.location,
+                },
+            ));
+        }
+
+        Some(Located::ModuleImport(self))
+    }
+}
+
 pub type UntypedModuleConstant = ModuleConstant<(), ()>;
 pub type TypedModuleConstant = ModuleConstant<Arc<Type>, EcoString>;
 
@@ -777,6 +926,27 @@ pub struct ModuleConstant<T, ConstantRecordTag> {
     pub type_: T,
     pub deprecation: Deprecation,
     pub implementations: Implementations,
+}
+
+impl TypedModuleConstant {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        // Check if location is within the annotation.
+        if let Some(annotation) = &self.annotation
+            && let Some(located) = annotation.find_node(byte_index, self.type_.clone())
+        {
+            return Some(located);
+        }
+
+        if let Some(located) = self.value.find_node(byte_index) {
+            return Some(located);
+        }
+
+        if self.location.contains(byte_index) {
+            Some(Located::ModuleConstant(self))
+        } else {
+            None
+        }
+    }
 }
 
 pub type UntypedCustomType = CustomType<()>;
@@ -826,7 +996,38 @@ impl<T> CustomType<T> {
     }
 }
 
+impl TypedCustomType {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        // Check if location is within the type of one of the arguments of a constructor.
+        if let Some(constructor) = self
+            .constructors
+            .iter()
+            .find(|constructor| constructor.location.contains(byte_index))
+        {
+            if let Some(annotation) = constructor
+                .arguments
+                .iter()
+                .find(|arg| arg.location.contains(byte_index))
+                .and_then(|arg| arg.ast.find_node(byte_index, arg.type_.clone()))
+            {
+                return Some(annotation);
+            }
+
+            return Some(Located::VariantConstructorDefinition(constructor));
+        }
+
+        // Note that the custom type `.location` covers the function
+        // head, not the entire statement.
+        if self.full_location().contains(byte_index) {
+            Some(Located::ModuleCustomType(self))
+        } else {
+            None
+        }
+    }
+}
+
 pub type UntypedTypeAlias = TypeAlias<()>;
+pub type TypedTypeAlias = TypeAlias<Arc<Type>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A new name for an existing type
@@ -849,199 +1050,30 @@ pub struct TypeAlias<T> {
     pub deprecation: Deprecation,
 }
 
-pub type TypedDefinition = Definition<Arc<Type>, TypedExpr, EcoString, EcoString>;
+impl TypedTypeAlias {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        // Check if location is within the type being aliased.
+        if let Some(located) = self.type_ast.find_node(byte_index, self.type_.clone()) {
+            return Some(located);
+        }
+
+        if self.location.contains(byte_index) {
+            Some(Located::ModuleTypeAlias(self))
+        } else {
+            None
+        }
+    }
+}
+
 pub type UntypedDefinition = Definition<(), UntypedExpr, (), ()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Definition<T, Expr, ConstantRecordTag, PackageName> {
     Function(Function<T, Expr>),
-
     TypeAlias(TypeAlias<T>),
-
     CustomType(CustomType<T>),
-
     Import(Import<PackageName>),
-
     ModuleConstant(ModuleConstant<T, ConstantRecordTag>),
-}
-
-impl TypedDefinition {
-    pub fn main_function(&self) -> Option<&TypedFunction> {
-        match self {
-            Definition::Function(f) if f.name.as_ref().is_some_and(|(_, name)| name == "main") => {
-                Some(f)
-            }
-            _ => None,
-        }
-    }
-
-    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
-        match self {
-            Definition::Function(function) => {
-                // Search for the corresponding node inside the function
-                // only if the index falls within the function's full location.
-                if !function.full_location().contains(byte_index) {
-                    return None;
-                }
-
-                if let Some(found) = function
-                    .body
-                    .iter()
-                    .find_map(|statement| statement.find_node(byte_index))
-                {
-                    return Some(found);
-                }
-
-                if let Some(found_arg) = function
-                    .arguments
-                    .iter()
-                    .find_map(|arg| arg.find_node(byte_index))
-                {
-                    return Some(found_arg);
-                };
-
-                if let Some(found_statement) = function
-                    .body
-                    .iter()
-                    .find(|statement| statement.location().contains(byte_index))
-                {
-                    return Some(Located::Statement(found_statement));
-                };
-
-                // Check if location is within the return annotation.
-                if let Some(located) = function.return_annotation.iter().find_map(|annotation| {
-                    annotation.find_node(byte_index, function.return_type.clone())
-                }) {
-                    return Some(located);
-                };
-
-                // Note that the fn `.location` covers the function head, not
-                // the entire statement.
-                if function.location.contains(byte_index) {
-                    Some(Located::ModuleStatement(self))
-                } else if function.full_location().contains(byte_index) {
-                    Some(Located::FunctionBody(function))
-                } else {
-                    None
-                }
-            }
-
-            Definition::CustomType(custom) => {
-                // Check if location is within the type of one of the arguments of a constructor.
-                if let Some(constructor) = custom
-                    .constructors
-                    .iter()
-                    .find(|constructor| constructor.location.contains(byte_index))
-                {
-                    if let Some(annotation) = constructor
-                        .arguments
-                        .iter()
-                        .find(|arg| arg.location.contains(byte_index))
-                        .and_then(|arg| arg.ast.find_node(byte_index, arg.type_.clone()))
-                    {
-                        return Some(annotation);
-                    }
-
-                    return Some(Located::VariantConstructorDefinition(constructor));
-                }
-
-                // Note that the custom type `.location` covers the function
-                // head, not the entire statement.
-                if custom.full_location().contains(byte_index) {
-                    Some(Located::ModuleStatement(self))
-                } else {
-                    None
-                }
-            }
-
-            Definition::TypeAlias(alias) => {
-                // Check if location is within the type being aliased.
-                if let Some(located) = alias.type_ast.find_node(byte_index, alias.type_.clone()) {
-                    return Some(located);
-                }
-
-                if alias.location.contains(byte_index) {
-                    Some(Located::ModuleStatement(self))
-                } else {
-                    None
-                }
-            }
-
-            Definition::ModuleConstant(constant) => {
-                // Check if location is within the annotation.
-                if let Some(annotation) = &constant.annotation
-                    && let Some(l) = annotation.find_node(byte_index, constant.type_.clone())
-                {
-                    return Some(l);
-                }
-
-                if let Some(located) = constant.value.find_node(byte_index) {
-                    return Some(located);
-                }
-
-                if constant.location.contains(byte_index) {
-                    Some(Located::ModuleStatement(self))
-                } else {
-                    None
-                }
-            }
-
-            Definition::Import(import) => {
-                if self.location().contains(byte_index) {
-                    if let Some(unqualified) = import
-                        .unqualified_values
-                        .iter()
-                        .find(|i| i.location.contains(byte_index))
-                    {
-                        return Some(Located::UnqualifiedImport(
-                            crate::build::UnqualifiedImport {
-                                name: &unqualified.name,
-                                module: &import.module,
-                                is_type: false,
-                                location: &unqualified.location,
-                            },
-                        ));
-                    }
-
-                    if let Some(unqualified) = import
-                        .unqualified_types
-                        .iter()
-                        .find(|i| i.location.contains(byte_index))
-                    {
-                        return Some(Located::UnqualifiedImport(
-                            crate::build::UnqualifiedImport {
-                                name: &unqualified.name,
-                                module: &import.module,
-                                is_type: true,
-                                location: &unqualified.location,
-                            },
-                        ));
-                    }
-
-                    Some(Located::ModuleStatement(self))
-                } else {
-                    None
-                }
-            }
-        }
-    }
-
-    pub fn find_statement(&self, byte_index: u32) -> Option<&TypedStatement> {
-        match self {
-            Definition::Function(function) => {
-                if !function.full_location().contains(byte_index) {
-                    return None;
-                }
-
-                function
-                    .body
-                    .iter()
-                    .find_map(|statement| statement.find_statement(byte_index))
-            }
-
-            _ => None,
-        }
-    }
 }
 
 impl<A, B, C, E> Definition<A, B, C, E> {
@@ -1077,19 +1109,6 @@ impl<A, B, C, E> Definition<A, B, C, E> {
     #[must_use]
     pub fn is_custom_type(&self) -> bool {
         matches!(self, Self::CustomType(..))
-    }
-
-    pub fn put_doc(&mut self, new_doc: (u32, EcoString)) {
-        match self {
-            Definition::Import(Import { .. }) => (),
-
-            Definition::Function(Function { documentation, .. })
-            | Definition::TypeAlias(TypeAlias { documentation, .. })
-            | Definition::CustomType(CustomType { documentation, .. })
-            | Definition::ModuleConstant(ModuleConstant { documentation, .. }) => {
-                let _ = documentation.replace(new_doc);
-            }
-        }
     }
 
     pub fn get_doc(&self) -> Option<EcoString> {
