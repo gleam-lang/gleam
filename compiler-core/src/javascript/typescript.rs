@@ -11,7 +11,7 @@
 //! <https://www.typescriptlang.org/>
 //! <https://www.typescriptlang.org/docs/handbook/declaration-files/introduction.html>
 
-use crate::ast::{AssignName, Publicity, SrcSpan};
+use crate::ast::{AssignName, Publicity, TypedCustomType};
 use crate::javascript::import::Member;
 use crate::type_::{PRELUDE_MODULE_NAME, RecordAccessor, is_prelude_module};
 use crate::{
@@ -380,23 +380,7 @@ impl<'a> TypeScriptGenerator<'a> {
 
             Definition::Import(Import { .. }) => vec![],
 
-            Definition::CustomType(CustomType {
-                publicity,
-                constructors,
-                opaque,
-                name,
-                typed_parameters,
-                external_javascript,
-                ..
-            }) if publicity.is_importable() => self.custom_type_definition(
-                name,
-                typed_parameters,
-                constructors,
-                *opaque,
-                external_javascript,
-                imports,
-            ),
-            Definition::CustomType(CustomType { .. }) => vec![],
+            Definition::CustomType(type_) => self.custom_type_definition(type_, imports),
 
             Definition::ModuleConstant(ModuleConstant {
                 publicity,
@@ -439,15 +423,21 @@ impl<'a> TypeScriptGenerator<'a> {
     ///
     fn custom_type_definition(
         &mut self,
-        name: &'a str,
-        typed_parameters: &'a [Arc<Type>],
-        constructors: &'a [TypedRecordConstructor],
-        opaque: bool,
-        external: &'a Option<(EcoString, EcoString, SrcSpan)>,
+        type_: &'a TypedCustomType,
         imports: &mut Imports<'_>,
     ) -> Vec<Document<'a>> {
+        let CustomType {
+            publicity,
+            constructors,
+            opaque,
+            name,
+            typed_parameters,
+            external_javascript,
+            ..
+        } = type_;
+
         // Constructors for opaque and private types are not exported
-        let constructor_publicity = if opaque {
+        let constructor_publicity = if publicity.is_private() || *opaque {
             Publicity::Private
         } else {
             Publicity::Public
@@ -469,7 +459,7 @@ impl<'a> TypeScriptGenerator<'a> {
             .collect_vec();
 
         let definition = if constructors.is_empty() {
-            if let Some((module, external_name, _location)) = external {
+            if let Some((module, external_name, _location)) = external_javascript {
                 let member = Member {
                     name: external_name.to_doc(),
                     alias: Some(eco_format!("{name}$").to_doc()),
@@ -491,13 +481,13 @@ impl<'a> TypeScriptGenerator<'a> {
             join(constructors, break_("| ", " | "))
         };
 
-        definitions.push(docvec![
-            "export type ",
-            type_name.clone(),
-            " = ",
-            definition,
-            ";",
-        ]);
+        let head = if publicity.is_private() {
+            "type "
+        } else {
+            "export type "
+        };
+
+        definitions.push(docvec![head, type_name.clone(), " = ", definition, ";",]);
 
         // Generate getters for fields shared between variants
         if let Some(accessors_map) = self.module.type_info.accessors.get(name)

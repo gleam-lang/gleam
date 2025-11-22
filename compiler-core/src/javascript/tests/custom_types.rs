@@ -960,3 +960,19 @@ pub fn get(dict: Dict(key, value), key: key) -> Result(value, Nil)
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5127
+#[test]
+fn unused_opaque_constructor_is_generated_correctly() {
+    assert_ts_def!(
+        "
+type Wibble {
+  Wibble
+}
+
+pub opaque type Wobble {
+  Wobble(Wibble)
+}
+"
+    );
+}

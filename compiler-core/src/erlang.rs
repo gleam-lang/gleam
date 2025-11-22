@@ -181,7 +181,6 @@ fn module_document<'a>(
             &mut type_defs,
             &module.name,
             &overridden_publicity,
-            &module.unused_definition_positions,
         );
     }
 
@@ -303,13 +302,7 @@ fn register_imports_and_exports(
     type_defs: &mut Vec<Document<'_>>,
     module_name: &str,
     overridden_publicity: &im::HashSet<EcoString>,
-    unused_definition_positions: &HashSet<u32>,
 ) {
-    // Do not generate any code for unused items
-    if unused_definition_positions.contains(&definition.location().start) {
-        return;
-    }
-
     match definition {
         Definition::Function(Function {
             publicity,

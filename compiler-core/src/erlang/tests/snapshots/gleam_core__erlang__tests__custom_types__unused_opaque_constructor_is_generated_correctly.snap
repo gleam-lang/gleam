@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/erlang/tests/custom_types.rs
+expression: "\ntype Wibble {\n  Wibble\n}\n\npub opaque type Wobble {\n  Wobble(Wibble)\n}\n"
+---
+----- SOURCE CODE
+
+type Wibble {
+  Wibble
+}
+
+pub opaque type Wobble {
+  Wobble(Wibble)
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export_type([wibble/0, wobble/0]).
+
+-type wibble() :: wibble.
+
+-opaque wobble() :: {wobble, wibble()}.
