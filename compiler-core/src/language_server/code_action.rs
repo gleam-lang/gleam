@@ -7,7 +7,7 @@ use crate::{
         CallArg, CustomType, FunctionLiteralKind, ImplicitCallArgOrigin, Import, InvalidExpression,
         PIPE_PRECEDENCE, Pattern, PatternUnusedArguments, PipelineAssignmentKind, Publicity,
         RecordConstructor, SrcSpan, TodoKind, TypedArg, TypedAssignment, TypedClauseGuard,
-        TypedExpr, TypedModuleConstant, TypedPattern, TypedPipelineAssignment,
+        TypedDefinitions, TypedExpr, TypedModuleConstant, TypedPattern, TypedPipelineAssignment,
         TypedRecordConstructor, TypedStatement, TypedTailPattern, TypedUse, visit::Visit as _,
     },
     build::{Located, Module},
@@ -1427,11 +1427,7 @@ impl<'a, IO> QualifiedToUnqualifiedImportFirstPass<'a, IO> {
     ) -> Option<&'a Import<EcoString>> {
         let mut matching_import = None;
 
-        for definition in &self.module.ast.definitions {
-            let ast::Definition::Import(import) = definition else {
-                continue;
-            };
-
+        for import in &self.module.ast.definitions.imports {
             if import.used_name().as_deref() == Some(module_name)
                 && let Some(module) = self.compiler.get_module_interface(&import.module)
             {
@@ -1831,49 +1827,41 @@ impl<'a> UnqualifiedToQualifiedImportFirstPass<'a> {
         module_name: &EcoString,
         constructor_name: &EcoString,
     ) {
-        self.unqualified_constructor =
-            self.module
-                .ast
-                .definitions
-                .iter()
-                .find_map(|definition| match definition {
-                    ast::Definition::Import(import) if import.module == *module_name => import
-                        .unqualified_values
-                        .iter()
-                        .find(|value| value.used_name() == constructor_name)
-                        .and_then(|value| {
-                            Some(UnqualifiedConstructor {
-                                constructor: value,
-                                module_name: import.used_name()?,
-                                layer: ast::Layer::Value,
-                            })
-                        }),
-                    _ => None,
-                })
+        self.unqualified_constructor = (self.module.ast.definitions.imports)
+            .iter()
+            .filter(|import| import.module == *module_name)
+            .find_map(|import| {
+                import
+                    .unqualified_values
+                    .iter()
+                    .find(|value| value.used_name() == constructor_name)
+                    .and_then(|value| {
+                        Some(UnqualifiedConstructor {
+                            constructor: value,
+                            module_name: import.used_name()?,
+                            layer: ast::Layer::Value,
+                        })
+                    })
+            })
     }
 
     fn get_module_import_from_type_constructor(&mut self, constructor_name: &EcoString) {
         self.unqualified_constructor =
-            self.module
-                .ast
-                .definitions
+            (self.module.ast.definitions.imports)
                 .iter()
-                .find_map(|definition| match definition {
-                    ast::Definition::Import(import) => {
-                        if let Some(ty) = import
-                            .unqualified_types
-                            .iter()
-                            .find(|ty| ty.used_name() == constructor_name)
-                        {
-                            return Some(UnqualifiedConstructor {
-                                constructor: ty,
-                                module_name: import.used_name()?,
-                                layer: ast::Layer::Type,
-                            });
-                        }
-                        None
+                .find_map(|import| {
+                    if let Some(ty) = import
+                        .unqualified_types
+                        .iter()
+                        .find(|ty| ty.used_name() == constructor_name)
+                    {
+                        return Some(UnqualifiedConstructor {
+                            constructor: ty,
+                            module_name: import.used_name()?,
+                            layer: ast::Layer::Type,
+                        });
                     }
-                    _ => None,
+                    None
                 })
     }
 }
@@ -2835,28 +2823,9 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         // We reset the name generator to purge the variable names from other scopes.
         // We then add the reserve the constant names.
         self.name_generator = NameGenerator::new();
-        self.module
-            .ast
-            .definitions
-            .iter()
-            .for_each(|def| match def {
-                ast::Definition::ModuleConstant(constant) => {
-                    self.name_generator.add_used_name(constant.name.clone());
-                }
-                ast::Definition::Function(function) => {
-                    if let Some((_, function_name)) = &function.name {
-                        self.name_generator.add_used_name(function_name.clone());
-                    }
-                }
-                ast::Definition::Import(import) => {
-                    let module_name = match &import.used_name() {
-                        Some(used_name) => used_name.clone(),
-                        _ => import.module.clone(),
-                    };
-                    self.name_generator.add_used_name(module_name);
-                }
-                ast::Definition::TypeAlias(_) | ast::Definition::CustomType(_) => (),
-            });
+        self.name_generator
+            .reserve_module_value_names(&self.module.ast.definitions);
+
         ast::visit::visit_typed_function(self, fun);
     }
 
@@ -3191,21 +3160,15 @@ fn can_be_constant(
     module_constants: Option<&HashSet<&EcoString>>,
 ) -> bool {
     // We pass the `module_constants` on recursion to not compute them each time
-    let mc = match module_constants {
+    let module_constants = match module_constants {
+        Some(module_constants) => module_constants,
         None => &module
             .ast
             .definitions
+            .constants
             .iter()
-            .filter_map(|definition| match definition {
-                ast::Definition::ModuleConstant(module_constant) => Some(&module_constant.name),
-
-                ast::Definition::Function(_)
-                | ast::Definition::TypeAlias(_)
-                | ast::Definition::CustomType(_)
-                | ast::Definition::Import(_) => None,
-            })
+            .map(|constant| &constant.name)
             .collect(),
-        Some(mc) => mc,
     };
 
     match expr {
@@ -3213,7 +3176,7 @@ fn can_be_constant(
         TypedExpr::List { elements, tail, .. } => {
             elements
                 .iter()
-                .all(|element| can_be_constant(module, element, Some(mc)))
+                .all(|element| can_be_constant(module, element, Some(module_constants)))
                 && tail.is_none()
         }
 
@@ -3221,11 +3184,11 @@ fn can_be_constant(
         TypedExpr::BitArray { segments, .. } => {
             segments
                 .iter()
-                .all(|segment| can_be_constant(module, &segment.value, Some(mc)))
+                .all(|segment| can_be_constant(module, &segment.value, Some(module_constants)))
                 && segments.iter().all(|segment| {
                     segment.options.iter().all(|option| match option {
                         ast::BitArrayOption::Size { value, .. } => {
-                            can_be_constant(module, value, Some(mc))
+                            can_be_constant(module, value, Some(module_constants))
                         }
 
                         ast::BitArrayOption::Bytes { .. }
@@ -3251,7 +3214,7 @@ fn can_be_constant(
         // Attempt to extract whole tuple as long as it's comprised of only literals
         TypedExpr::Tuple { elements, .. } => elements
             .iter()
-            .all(|element| can_be_constant(module, element, Some(mc))),
+            .all(|element| can_be_constant(module, element, Some(module_constants))),
 
         // Extract literals directly
         TypedExpr::Int { .. } | TypedExpr::Float { .. } | TypedExpr::String { .. } => true,
@@ -3263,7 +3226,7 @@ fn can_be_constant(
             matches!(
                 constructor.variant,
                 type_::ValueConstructorVariant::Record { arity: 0, .. }
-            ) || mc.contains(name)
+            ) || module_constants.contains(name)
         }
 
         // Extract record types as long as arguments can be constant
@@ -3271,7 +3234,7 @@ fn can_be_constant(
             fun.is_record_builder()
                 && arguments
                     .iter()
-                    .all(|arg| can_be_constant(module, &arg.value, module_constants))
+                    .all(|arg| can_be_constant(module, &arg.value, Some(module_constants)))
         }
 
         // Extract concat binary operation if both sides can be constants
@@ -3279,8 +3242,8 @@ fn can_be_constant(
             name, left, right, ..
         } => {
             matches!(name, ast::BinOp::Concatenate)
-                && can_be_constant(module, left, Some(mc))
-                && can_be_constant(module, right, Some(mc))
+                && can_be_constant(module, left, Some(module_constants))
+                && can_be_constant(module, right, Some(module_constants))
         }
 
         TypedExpr::Block { .. }
@@ -3305,23 +3268,7 @@ fn can_be_constant(
 ///
 fn generate_new_name_for_constant(module: &Module, expr: &TypedExpr) -> EcoString {
     let mut name_generator = NameGenerator::new();
-    let already_taken_names = VariablesNames {
-        names: module
-            .ast
-            .definitions
-            .iter()
-            .filter_map(|definition| match definition {
-                ast::Definition::ModuleConstant(constant) => Some(constant.name.clone()),
-                ast::Definition::Function(function) => function.name.as_ref().map(|n| n.1.clone()),
-
-                ast::Definition::TypeAlias(_)
-                | ast::Definition::CustomType(_)
-                | ast::Definition::Import(_) => None,
-            })
-            .collect(),
-    };
-    name_generator.reserve_variable_names(already_taken_names);
-
+    name_generator.reserve_module_value_names(&module.ast.definitions);
     name_generator.generate_name_from_type(&expr.type_())
 }
 
@@ -5798,27 +5745,25 @@ impl<'a, IO> GenerateVariant<'a, IO> {
 
         let (module_name, type_name, _) = custom_type.named_type_information()?;
         let module = self.compiler.modules.get(&module_name)?;
-        let (end_position, type_braces) =
-            (module.ast.definitions.iter()).find_map(|definition| match definition {
-                ast::Definition::CustomType(custom_type) if custom_type.name == type_name => {
-                    // If there's already a variant with this name then we definitely
-                    // don't want to generate a new variant with the same name!
-                    let variant_with_this_name_already_exists = custom_type
-                        .constructors
-                        .iter()
-                        .map(|constructor| &constructor.name)
-                        .any(|existing_constructor_name| existing_constructor_name == name);
-                    if variant_with_this_name_already_exists {
-                        return None;
-                    }
-                    let type_braces = if custom_type.end_position == custom_type.location.end {
-                        TypeBraces::NoBraces
-                    } else {
-                        TypeBraces::HasBraces
-                    };
-                    Some((custom_type.end_position, type_braces))
+        let (end_position, type_braces) = (module.ast.definitions.custom_types.iter())
+            .filter(|custom_type| custom_type.name == type_name)
+            .find_map(|custom_type| {
+                // If there's already a variant with this name then we definitely
+                // don't want to generate a new variant with the same name!
+                let variant_with_this_name_already_exists = custom_type
+                    .constructors
+                    .iter()
+                    .map(|constructor| &constructor.name)
+                    .any(|existing_constructor_name| existing_constructor_name == name);
+                if variant_with_this_name_already_exists {
+                    return None;
                 }
-                _ => None,
+                let type_braces = if custom_type.end_position == custom_type.location.end {
+                    TypeBraces::NoBraces
+                } else {
+                    TypeBraces::HasBraces
+                };
+                Some((custom_type.end_position, type_braces))
             })?;
 
         Some(VariantToGenerate {
@@ -6030,6 +5975,29 @@ impl NameGenerator {
                 Some(self.rename_to_avoid_shadowing(name.clone()))
             }
             _ => None,
+        }
+    }
+
+    /// Given some typed definitions this reserves all the value names defined
+    /// by all the top level definitions. That is: all function names, constant
+    /// names, and imported modules names.
+    pub fn reserve_module_value_names(&mut self, definitions: &TypedDefinitions) {
+        for constant in &definitions.constants {
+            self.add_used_name(constant.name.clone());
+        }
+
+        for function in &definitions.functions {
+            if let Some((_, name)) = &function.name {
+                self.add_used_name(name.clone());
+            }
+        }
+
+        for import in &definitions.imports {
+            let module_name = match &import.used_name() {
+                Some(used_name) => used_name.clone(),
+                None => import.module.clone(),
+            };
+            self.add_used_name(module_name);
         }
     }
 
@@ -7577,7 +7545,6 @@ impl<'ast> ast::visit::Visit<'ast> for FixTruncatedBitArraySegment<'ast> {
 pub struct RemoveUnusedImports<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
-    imports: Vec<&'a Import<EcoString>>,
     edits: TextEdits<'a>,
 }
 
@@ -7608,7 +7575,6 @@ impl<'a> RemoveUnusedImports<'a> {
             module,
             params,
             edits: TextEdits::new(line_numbers),
-            imports: vec![],
         }
     }
 
@@ -7616,7 +7582,7 @@ impl<'a> RemoveUnusedImports<'a> {
     /// unqualified values it's importing. Sorted by SrcSpan location.
     ///
     fn imported_values(&self, import_location: SrcSpan) -> Vec<SrcSpan> {
-        self.imports
+        (self.module.ast.definitions.imports)
             .iter()
             .find(|import| import.location.contains(import_location.start))
             .map(|import| {
@@ -7633,8 +7599,7 @@ impl<'a> RemoveUnusedImports<'a> {
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         // If there's no import in the module then there can't be any unused
         // import to remove.
-        self.visit_typed_module(&self.module.ast);
-        if self.imports.is_empty() {
+        if self.module.ast.definitions.imports.is_empty() {
             return vec![];
         }
 
@@ -7765,19 +7730,6 @@ impl<'a> RemoveUnusedImports<'a> {
             .preferred(true)
             .push_to(&mut action);
         action
-    }
-}
-
-impl<'ast> ast::visit::Visit<'ast> for RemoveUnusedImports<'ast> {
-    fn visit_typed_module(&mut self, module: &'ast ast::TypedModule) {
-        self.imports = module
-            .definitions
-            .iter()
-            .filter_map(|definition| match definition {
-                ast::Definition::Import(import) => Some(import),
-                _ => None,
-            })
-            .collect_vec();
     }
 }
 
@@ -7949,20 +7901,6 @@ impl<'a> RemovePrivateOpaque<'a> {
 }
 
 impl<'ast> ast::visit::Visit<'ast> for RemovePrivateOpaque<'ast> {
-    fn visit_typed_definition(&mut self, def: &'ast ast::TypedDefinition) {
-        // This code action is only relevant for type definitions, so we don't
-        // waste any time visiting definitions that are not relevant.
-        match def {
-            ast::Definition::Function(_)
-            | ast::Definition::TypeAlias(_)
-            | ast::Definition::Import(_)
-            | ast::Definition::ModuleConstant(_) => (),
-            ast::Definition::CustomType(custom_type) => {
-                self.visit_typed_custom_type(custom_type);
-            }
-        }
-    }
-
     fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
         let custom_type_range = self.edits.src_span_to_lsp_range(custom_type.location);
         if !within(self.params.range, custom_type_range) {

@@ -8,9 +8,8 @@ use itertools::Itertools;
 
 use crate::{
     ast::{
-        ArgNames, CustomType, Definition, Function, ModuleConstant, Publicity,
-        RecordConstructorArg, SrcSpan, TypeAlias, TypedArg, TypedDefinition,
-        TypedRecordConstructor,
+        ArgNames, CustomType, Function, Publicity, RecordConstructorArg, SrcSpan, TypeAlias,
+        TypedArg, TypedDefinitions, TypedModuleConstant, TypedRecordConstructor,
     },
     docvec,
     pretty::{Document, Documentable, break_, join, line, nil, zero_width_string},
@@ -86,23 +85,30 @@ impl Printer<'_> {
         self.options = options;
     }
 
-    pub fn type_definition<'a>(
+    pub fn type_definitions<'a>(
         &mut self,
         source_links: &SourceLinker,
-        statement: &'a TypedDefinition,
-    ) -> Option<TypeDefinition<'a>> {
-        match statement {
-            Definition::CustomType(CustomType {
-                publicity: Publicity::Public,
-                location,
-                name,
-                constructors,
-                documentation,
-                deprecation,
-                opaque,
-                parameters,
-                ..
-            }) => Some(TypeDefinition {
+        definitions: &'a TypedDefinitions,
+    ) -> Vec<TypeDefinition<'a>> {
+        let mut type_definitions = vec![];
+
+        for CustomType {
+            location,
+            name,
+            publicity,
+            constructors,
+            documentation,
+            deprecation,
+            opaque,
+            parameters,
+            ..
+        } in &definitions.custom_types
+        {
+            if !publicity.is_public() {
+                continue;
+            }
+
+            type_definitions.push(TypeDefinition {
                 name,
                 definition: print(self.custom_type(name, parameters, constructors, *opaque)),
                 documentation: markdown_documentation(documentation),
@@ -135,18 +141,24 @@ impl Printer<'_> {
                 },
                 source_url: source_links.url(*location),
                 opaque: *opaque,
-            }),
+            })
+        }
 
-            Definition::TypeAlias(TypeAlias {
-                publicity: Publicity::Public,
-                location,
-                alias: name,
-                parameters,
-                type_,
-                documentation,
-                deprecation,
-                ..
-            }) => Some(TypeDefinition {
+        for TypeAlias {
+            location,
+            alias: name,
+            parameters,
+            type_,
+            publicity,
+            documentation,
+            deprecation,
+            ..
+        } in &definitions.type_aliases
+        {
+            if !publicity.is_public() {
+                continue;
+            }
+            type_definitions.push(TypeDefinition {
                 name,
                 definition: print(self.type_alias(name, type_, parameters).group()),
                 documentation: markdown_documentation(documentation),
@@ -158,58 +170,70 @@ impl Printer<'_> {
                     Deprecation::Deprecated { message } => message.to_string(),
                 },
                 opaque: false,
-            }),
-
-            Definition::TypeAlias(_)
-            | Definition::CustomType(_)
-            | Definition::Function(_)
-            | Definition::Import(_)
-            | Definition::ModuleConstant(_) => None,
+            })
         }
+
+        type_definitions.sort();
+        type_definitions
     }
 
-    pub fn value<'a>(
+    pub fn value_definitions<'a>(
         &mut self,
         source_links: &SourceLinker,
-        statement: &'a TypedDefinition,
-    ) -> Option<DocsValues<'a>> {
-        // Ensure that any type variables we printed in previous definitions don't
-        // affect our printing of this definition. Two type variables in different
-        // definitions can have the same name without clashing.
-        self.printed_type_variable_names.clear();
-        self.next_type_variable_id = 0;
+        definitions: &'a TypedDefinitions,
+    ) -> Vec<DocsValues<'a>> {
+        let mut value_definitions = vec![];
 
-        match statement {
-            Definition::Function(Function {
-                publicity: Publicity::Public,
-                name: Some((_, name)),
-                documentation: doc,
-                location,
-                deprecation,
-                arguments,
-                return_type,
-                ..
-            }) => Some(DocsValues {
+        for Function {
+            location,
+            name,
+            arguments,
+            publicity,
+            deprecation,
+            return_type,
+            documentation,
+            ..
+        } in &definitions.functions
+        {
+            let Some((_, name)) = name else { continue };
+            if !publicity.is_public() {
+                continue;
+            }
+
+            // Ensure that any type variables we printed in previous definitions don't
+            // affect our printing of this definition. Two type variables in different
+            // definitions can have the same name without clashing.
+            self.printed_type_variable_names.clear();
+            self.next_type_variable_id = 0;
+
+            value_definitions.push(DocsValues {
                 name,
                 definition: print(self.function_signature(name, arguments, return_type)),
-                documentation: markdown_documentation(doc),
-                text_documentation: text_documentation(doc),
+                documentation: markdown_documentation(documentation),
+                text_documentation: text_documentation(documentation),
                 source_url: source_links.url(*location),
                 deprecation_message: match deprecation {
                     Deprecation::NotDeprecated => "".to_string(),
                     Deprecation::Deprecated { message } => message.to_string(),
                 },
-            }),
+            })
+        }
 
-            Definition::ModuleConstant(ModuleConstant {
-                publicity: Publicity::Public,
-                documentation,
-                location,
-                name,
-                type_,
-                deprecation,
-                ..
-            }) => Some(DocsValues {
+        for TypedModuleConstant {
+            documentation,
+            location,
+            publicity,
+            name,
+            type_,
+            deprecation,
+            ..
+        } in &definitions.constants
+        {
+            if !publicity.is_public() {
+                continue;
+            }
+
+            value_definitions.push(DocsValues {
                 name,
                 definition: print(self.constant(name, type_)),
                 documentation: markdown_documentation(documentation),
@@ -219,14 +243,11 @@ impl Printer<'_> {
                     Deprecation::NotDeprecated => "".to_string(),
                     Deprecation::Deprecated { message } => message.to_string(),
                 },
-            }),
-
-            Definition::TypeAlias(_)
-            | Definition::CustomType(_)
-            | Definition::Function(_)
-            | Definition::Import(_)
-            | Definition::ModuleConstant(_) => None,
+            })
         }
+
+        value_definitions.sort();
+        value_definitions
     }
 
     fn custom_type<'a>(

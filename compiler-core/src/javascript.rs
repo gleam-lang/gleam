@@ -15,7 +15,7 @@ use crate::build::package_compiler::StdlibPackage;
 use crate::codegen::TypeScriptDeclarations;
 use crate::type_::{PRELUDE_MODULE_NAME, RecordAccessor};
 use crate::{
-    ast::{CustomType, Function, Import, ModuleConstant, TypeAlias, *},
+    ast::{Import, *},
     docvec,
     line_numbers::LineNumbers,
     pretty::*,
@@ -110,16 +110,11 @@ impl<'a> Generator<'a> {
         // names.
         self.register_module_definitions_in_scope();
 
-        // Generate JavaScript code for each statement
-        let statements = self.collect_definitions().into_iter().chain(
-            self.module
-                .definitions
-                .iter()
-                .flat_map(|definition| self.definition(definition)),
-        );
+        // Generate JavaScript code for each statement.
+        let statements = self.definitions();
 
         // Two lines between each statement
-        let mut statements = Itertools::intersperse(statements, lines(2)).collect_vec();
+        let mut statements = Itertools::intersperse(statements.into_iter(), lines(2)).collect_vec();
 
         // Import any prelude functions that have been used
 
@@ -293,68 +288,34 @@ impl<'a> Generator<'a> {
         imports.register_module(path, [], [member]);
     }
 
-    pub fn definition(&mut self, definition: &'a TypedDefinition) -> Option<Document<'a>> {
-        match definition {
-            Definition::TypeAlias(TypeAlias { .. }) => None,
-
-            // Handled in collect_imports
-            Definition::Import(Import { .. }) => None,
-
-            // Handled in collect_definitions
-            Definition::CustomType(CustomType { .. }) => None,
-
-            // If a definition is unused then we don't need to generate code for it
-            Definition::ModuleConstant(ModuleConstant { location, .. })
-            | Definition::Function(Function { location, .. })
-                if self
-                    .module
-                    .unused_definition_positions
-                    .contains(&location.start) =>
-            {
-                None
-            }
-
-            Definition::ModuleConstant(ModuleConstant {
-                publicity,
-                name,
-                value,
-                documentation,
-                ..
-            }) => Some(self.module_constant(*publicity, name, value, documentation)),
-
-            Definition::Function(function) => {
-                // If there's an external JavaScript implementation then it will be imported,
-                // so we don't need to generate a function definition.
-                if function.external_javascript.is_some() {
-                    return None;
-                }
-
-                // If the function does not support JavaScript then we don't need to generate
-                // a function definition.
-                if !function.implementations.supports(Target::JavaScript) {
-                    return None;
-                }
-
-                Some(self.module_function(function))
-            }
-        }
-    }
-
     fn custom_type_definition(
         &mut self,
-        name: &'a str,
-        constructors: &'a [TypedRecordConstructor],
-        publicity: Publicity,
-        opaque: bool,
-    ) -> Vec<Document<'a>> {
+        custom_type: &'a TypedCustomType,
+    ) -> Option<Vec<Document<'a>>> {
+        if self
+            .module
+            .unused_definition_positions
+            .contains(&custom_type.location.start)
+        {
+            return None;
+        }
+
+        let TypedCustomType {
+            name,
+            publicity,
+            constructors,
+            opaque,
+            ..
+        } = custom_type;
+
         // If there's no constructors then there's nothing to do here.
         if constructors.is_empty() {
-            return vec![];
+            return Some(vec![]);
         }
 
         self.tracker.custom_type_used = true;
 
-        let constructor_publicity = if opaque || publicity.is_private() {
+        let constructor_publicity = if *opaque || publicity.is_private() {
             Publicity::Private
         } else {
             Publicity::Public
@@ -377,7 +338,7 @@ impl<'a> Generator<'a> {
             definitions.push(self.shared_custom_type_fields(name, &accessors_map.shared_accessors));
         }
 
-        definitions
+        Some(definitions)
     }
 
     fn variant_definition(
@@ -606,71 +567,55 @@ impl<'a> Generator<'a> {
         docvec![doc, head, class_body, line(), "}"]
     }
 
-    fn collect_definitions(&mut self) -> Vec<Document<'a>> {
-        self.module
-            .definitions
-            .iter()
-            .flat_map(|definition| match definition {
-                // If a custom type is unused then we don't need to generate code for it
-                Definition::CustomType(CustomType { location, .. })
-                    if self
-                        .module
-                        .unused_definition_positions
-                        .contains(&location.start) =>
-                {
-                    vec![]
-                }
+    fn definitions(&mut self) -> Vec<Document<'a>> {
+        let mut definitions = vec![];
 
-                Definition::CustomType(CustomType {
-                    publicity,
-                    constructors,
-                    opaque,
-                    name,
-                    ..
-                }) => self.custom_type_definition(name, constructors, *publicity, *opaque),
+        for custom_type in &self.module.definitions.custom_types {
+            if let Some(mut new_definitions) = self.custom_type_definition(custom_type) {
+                definitions.append(&mut new_definitions)
+            }
+        }
 
-                Definition::Function(Function { .. })
-                | Definition::TypeAlias(TypeAlias { .. })
-                | Definition::Import(Import { .. })
-                | Definition::ModuleConstant(ModuleConstant { .. }) => vec![],
-            })
-            .collect()
+        for constant in &self.module.definitions.constants {
+            if let Some(definition) = self.module_constant(constant) {
+                definitions.push(definition)
+            }
+        }
+
+        for function in &self.module.definitions.functions {
+            if let Some(definition) = self.module_function(function) {
+                definitions.push(definition)
+            }
+        }
+
+        definitions
     }
 
     fn collect_imports(&mut self) -> Imports<'a> {
         let mut imports = Imports::new();
 
-        for definition in &self.module.definitions {
-            match definition {
-                Definition::Import(Import {
+        for Import {
+            module,
+            as_name,
+            unqualified_values,
+            package,
+            ..
+        } in &self.module.definitions.imports
+        {
+            self.register_import(&mut imports, package, module, as_name, unqualified_values);
+        }
+
+        for function in &self.module.definitions.functions {
+            if let Some((_, name)) = &function.name
+                && let Some((module, external_function, _)) = &function.external_javascript
+            {
+                self.register_external_function(
+                    &mut imports,
+                    function.publicity,
+                    name,
                     module,
-                    as_name,
-                    unqualified_values: unqualified,
-                    package,
-                    ..
-                }) => {
-                    self.register_import(&mut imports, package, module, as_name, unqualified);
-                }
-
-                Definition::Function(Function {
-                    name: Some((_, name)),
-                    publicity,
-                    external_javascript: Some((module, function, _location)),
-                    ..
-                }) => {
-                    self.register_external_function(
-                        &mut imports,
-                        *publicity,
-                        name,
-                        module,
-                        function,
-                    );
-                }
-
-                Definition::Function(Function { .. })
-                | Definition::TypeAlias(TypeAlias { .. })
-                | Definition::CustomType(CustomType { .. })
-                | Definition::ModuleConstant(ModuleConstant { .. }) => (),
+                    external_function,
+                )
             }
         }
 
@@ -757,13 +702,25 @@ impl<'a> Generator<'a> {
         imports.register_module(EcoString::from(module), [], [member]);
     }
 
-    fn module_constant(
-        &mut self,
-        publicity: Publicity,
-        name: &'a EcoString,
-        value: &'a TypedConstant,
-        documentation: &'a Option<(u32, EcoString)>,
-    ) -> Document<'a> {
+    fn module_constant(&mut self, constant: &'a TypedModuleConstant) -> Option<Document<'a>> {
+        let TypedModuleConstant {
+            documentation,
+            location,
+            publicity,
+            name,
+            value,
+            ..
+        } = constant;
+
+        // We don't generate any code for unused constants.
+        if self
+            .module
+            .unused_definition_positions
+            .contains(&location.start)
+        {
+            return None;
+        }
+
         let head = if publicity.is_private() {
             "const "
         } else {
@@ -783,26 +740,47 @@ impl<'a> Generator<'a> {
         let document = generator.constant_expression(Context::Constant, value);
 
         let jsdoc = if let Some((_, documentation)) = documentation {
-            jsdoc_comment(documentation, publicity).append(line())
+            jsdoc_comment(documentation, *publicity).append(line())
         } else {
             nil()
         };
 
-        docvec![
+        Some(docvec![
             jsdoc,
             head,
             maybe_escape_identifier(name),
             " = ",
             document,
             ";",
-        ]
+        ])
     }
 
     fn register_in_scope(&mut self, name: &str) {
         let _ = self.module_scope.insert(name.into(), 0);
     }
 
-    fn module_function(&mut self, function: &'a TypedFunction) -> Document<'a> {
+    fn module_function(&mut self, function: &'a TypedFunction) -> Option<Document<'a>> {
+        // We don't generate any code for unused functions.
+        if self
+            .module
+            .unused_definition_positions
+            .contains(&function.location.start)
+        {
+            return None;
+        }
+
+        // If there's an external JavaScript implementation then it will be imported,
+        // so we don't need to generate a function definition.
+        if function.external_javascript.is_some() {
+            return None;
+        }
+
+        // If the function does not support JavaScript then we don't need to generate
+        // a function definition.
+        if !function.implementations.supports(Target::JavaScript) {
+            return None;
+        }
+
         let (_, name) = function
             .name
             .as_ref()
@@ -837,7 +815,7 @@ impl<'a> Generator<'a> {
 
         let body = generator.function_body(function.body.as_slice(), function.arguments.as_slice());
 
-        docvec![
+        Some(docvec![
             function_doc,
             head,
             maybe_escape_identifier(name.as_str()),
@@ -846,31 +824,23 @@ impl<'a> Generator<'a> {
             docvec![line(), body].nest(INDENT).group(),
             line(),
             "}",
-        ]
+        ])
     }
 
     fn register_module_definitions_in_scope(&mut self) {
-        for definition in self.module.definitions.iter() {
-            match definition {
-                Definition::ModuleConstant(ModuleConstant { name, .. }) => {
-                    self.register_in_scope(name)
-                }
+        for constant in &self.module.definitions.constants {
+            self.register_in_scope(&constant.name)
+        }
 
-                Definition::Function(Function { name, .. }) => self.register_in_scope(
-                    name.as_ref()
-                        .map(|(_, name)| name)
-                        .expect("Function in a definition must be named"),
-                ),
+        for function in &self.module.definitions.functions {
+            if let Some((_, name)) = &function.name {
+                self.register_in_scope(name);
+            }
+        }
 
-                Definition::Import(Import {
-                    unqualified_values: unqualified,
-                    ..
-                }) => unqualified
-                    .iter()
-                    .for_each(|unq_import| self.register_in_scope(unq_import.used_name())),
-
-                Definition::TypeAlias(TypeAlias { .. })
-                | Definition::CustomType(CustomType { .. }) => (),
+        for import in &self.module.definitions.imports {
+            for unqualified_value in &import.unqualified_values {
+                self.register_in_scope(unqualified_value.used_name())
             }
         }
     }

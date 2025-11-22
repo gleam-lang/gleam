@@ -12,7 +12,7 @@ use crate::strings::{convert_string_escape_chars, to_snake_case};
 use crate::type_::is_prelude_module;
 use crate::{
     Result,
-    ast::{CustomType, Function, Import, ModuleConstant, TypeAlias, *},
+    ast::{Function, *},
     docvec,
     line_numbers::LineNumbers,
     pretty::*,
@@ -90,19 +90,15 @@ impl<'env> Env<'env> {
 pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
     module
         .definitions
+        .custom_types
         .iter()
-        .filter_map(|definition| match definition {
-            Definition::CustomType(CustomType {
-                publicity: Publicity::Public,
-                constructors,
-                location,
-                ..
-            }) if !module.unused_definition_positions.contains(&location.start) => {
-                Some(constructors)
-            }
-            _ => None,
+        .filter(|custom_type| {
+            custom_type.publicity.is_public()
+                && !module
+                    .unused_definition_positions
+                    .contains(&custom_type.location.start)
         })
-        .flatten()
+        .flat_map(|custom_type| &custom_type.constructors)
         .filter(|constructor| !constructor.arguments.is_empty())
         .filter_map(|constructor| {
             constructor
@@ -173,15 +169,12 @@ fn module_document<'a>(
     // would result in an error as it tries to reference this private function.
     let overridden_publicity = find_private_functions_referenced_in_importable_constants(module);
 
-    for definition in &module.definitions {
-        register_imports_and_exports(
-            definition,
-            &mut exports,
-            &mut type_exports,
-            &mut type_defs,
-            &module.name,
-            &overridden_publicity,
-        );
+    for function in &module.definitions.functions {
+        register_function_exports(function, &mut exports, &overridden_publicity);
+    }
+
+    for custom_type in &module.definitions.custom_types {
+        register_custom_type_exports(custom_type, &mut type_exports, &mut type_defs, &module.name);
     }
 
     let exports = match (!exports.is_empty(), !type_exports.is_empty()) {
@@ -227,10 +220,10 @@ fn module_document<'a>(
 
     let mut needs_function_docs = false;
     let mut echo_used = false;
-    let mut statements = Vec::with_capacity(module.definitions.len());
-    for definition in module.definitions.iter() {
-        if let Some((statement_document, env)) = module_statement(
-            definition,
+    let mut statements = vec![];
+    for function in &module.definitions.functions {
+        if let Some((statement_document, env)) = module_function(
+            function,
             &module.name,
             module.type_info.is_internal,
             line_numbers,
@@ -295,169 +288,141 @@ fn module_document<'a>(
     Ok(module.append(line()))
 }
 
-fn register_imports_and_exports(
-    definition: &TypedDefinition,
+fn register_function_exports(
+    function: &TypedFunction,
     exports: &mut Vec<Document<'_>>,
-    type_exports: &mut Vec<Document<'_>>,
-    type_defs: &mut Vec<Document<'_>>,
-    module_name: &str,
     overridden_publicity: &im::HashSet<EcoString>,
 ) {
-    match definition {
-        Definition::Function(Function {
-            publicity,
-            name: Some((_, name)),
-            arguments,
-            implementations,
-            ..
-        }) if publicity.is_importable() || overridden_publicity.contains(name) => {
-            // If the function isn't for this target then don't attempt to export it
-            if implementations.supports(Target::Erlang) {
-                let function_name = escape_erlang_existing_name(name);
-                exports.push(
-                    atom_string(function_name.into())
-                        .append("/")
-                        .append(arguments.len()),
-                )
-            }
-        }
+    let Function {
+        publicity,
+        name: Some((_, name)),
+        arguments,
+        implementations,
+        ..
+    } = function
+    else {
+        return;
+    };
 
-        Definition::CustomType(CustomType {
-            name,
-            constructors,
-            typed_parameters,
-            opaque,
-            external_erlang,
-            ..
-        }) => {
-            // Erlang doesn't allow phantom type variables in type definitions but gleam does
-            // so we check the type declaratinon against its constroctors and generate a phantom
-            // value that uses the unused type variables.
-            let type_var_usages = collect_type_var_usages(HashMap::new(), typed_parameters);
-            let mut constructor_var_usages = HashMap::new();
-            for c in constructors {
-                constructor_var_usages = collect_type_var_usages(
-                    constructor_var_usages,
-                    c.arguments.iter().map(|a| &a.type_),
-                );
-            }
-            let phantom_vars: Vec<_> = type_var_usages
-                .keys()
-                .filter(|&id| !constructor_var_usages.contains_key(id))
-                .sorted()
-                .map(|&id| Type::Var {
-                    type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id })),
-                })
-                .collect();
-            let phantom_vars_constructor = if !phantom_vars.is_empty() {
-                let type_printer = TypePrinter::new(module_name);
-                Some(tuple(
-                    std::iter::once("gleam_phantom".to_doc())
-                        .chain(phantom_vars.iter().map(|pv| type_printer.print(pv))),
-                ))
-            } else {
-                None
-            };
-            // Type Exports
-            type_exports.push(
-                erl_safe_type_name(to_snake_case(name))
-                    .to_doc()
-                    .append("/")
-                    .append(typed_parameters.len()),
-            );
-            // Type definitions
-            let definition = if constructors.is_empty() {
-                if let Some((module, external_type, _location)) = external_erlang {
-                    let printer = TypePrinter::new(module_name);
-                    docvec![
-                        module,
-                        ":",
-                        external_type,
-                        "(",
-                        join(
-                            typed_parameters
-                                .iter()
-                                .map(|parameter| printer.print(parameter)),
-                            ", ".to_doc()
-                        ),
-                        ")"
-                    ]
-                } else {
-                    let constructors =
-                        std::iter::once("any()".to_doc()).chain(phantom_vars_constructor);
-                    join(constructors, break_(" |", " | "))
-                }
-            } else {
-                let constructors = constructors
-                    .iter()
-                    .map(|constructor| {
-                        let name = atom_string(to_snake_case(&constructor.name));
-                        if constructor.arguments.is_empty() {
-                            name
-                        } else {
-                            let type_printer = TypePrinter::new(module_name);
-                            let arguments = constructor
-                                .arguments
-                                .iter()
-                                .map(|argument| type_printer.print(&argument.type_));
-                            tuple(std::iter::once(name).chain(arguments))
-                        }
-                    })
-                    .chain(phantom_vars_constructor);
-                join(constructors, break_(" |", " | "))
-            }
-            .nest(INDENT);
-            let type_printer = TypePrinter::new(module_name);
-            let params = join(
-                typed_parameters
-                    .iter()
-                    .map(|type_| type_printer.print(type_)),
-                ", ".to_doc(),
-            );
-            let doc = if *opaque { "-opaque " } else { "-type " }
-                .to_doc()
-                .append(erl_safe_type_name(to_snake_case(name)))
-                .append("(")
-                .append(params)
-                .append(") :: ")
-                .append(definition)
-                .group()
-                .append(".");
-            type_defs.push(doc);
-        }
-
-        Definition::Function(Function { .. })
-        | Definition::Import(Import { .. })
-        | Definition::TypeAlias(TypeAlias { .. })
-        | Definition::ModuleConstant(ModuleConstant { .. }) => (),
+    // If the function isn't for this target then don't attempt to export it
+    if implementations.supports(Target::Erlang)
+        && (publicity.is_importable() || overridden_publicity.contains(name))
+    {
+        let function_name = escape_erlang_existing_name(name);
+        exports.push(
+            atom_string(function_name.into())
+                .append("/")
+                .append(arguments.len()),
+        )
     }
 }
 
-fn module_statement<'a>(
-    statement: &'a TypedDefinition,
-    module: &'a str,
-    is_internal_module: bool,
-    line_numbers: &'a LineNumbers,
-    src_path: EcoString,
-    unused_definition_positions: &HashSet<u32>,
-) -> Option<(Document<'a>, Env<'a>)> {
-    match statement {
-        // Do not generate any code for unused items
-        Definition::Function(function)
-            if unused_definition_positions.contains(&function.location.start) =>
-        {
-            None
-        }
+fn register_custom_type_exports(
+    custom_type: &TypedCustomType,
+    type_exports: &mut Vec<Document<'_>>,
+    type_defs: &mut Vec<Document<'_>>,
+    module_name: &str,
+) {
+    let TypedCustomType {
+        name,
+        constructors,
+        opaque,
+        typed_parameters,
+        external_erlang,
+        ..
+    } = custom_type;
 
-        Definition::Function(function) => {
-            module_function(function, module, is_internal_module, line_numbers, src_path)
-        }
-
-        Definition::TypeAlias(TypeAlias { .. })
-        | Definition::CustomType(CustomType { .. })
-        | Definition::Import(Import { .. })
-        | Definition::ModuleConstant(ModuleConstant { .. }) => None,
+    // Erlang doesn't allow phantom type variables in type definitions but gleam does
+    // so we check the type declaratinon against its constroctors and generate a phantom
+    // value that uses the unused type variables.
+    let type_var_usages = collect_type_var_usages(HashMap::new(), typed_parameters);
+    let mut constructor_var_usages = HashMap::new();
+    for c in constructors {
+        constructor_var_usages =
+            collect_type_var_usages(constructor_var_usages, c.arguments.iter().map(|a| &a.type_));
     }
+    let phantom_vars: Vec<_> = type_var_usages
+        .keys()
+        .filter(|&id| !constructor_var_usages.contains_key(id))
+        .sorted()
+        .map(|&id| Type::Var {
+            type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id })),
+        })
+        .collect();
+    let phantom_vars_constructor = if !phantom_vars.is_empty() {
+        let type_printer = TypePrinter::new(module_name);
+        Some(tuple(
+            std::iter::once("gleam_phantom".to_doc())
+                .chain(phantom_vars.iter().map(|pv| type_printer.print(pv))),
+        ))
+    } else {
+        None
+    };
+    // Type Exports
+    type_exports.push(
+        erl_safe_type_name(to_snake_case(name))
+            .to_doc()
+            .append("/")
+            .append(typed_parameters.len()),
+    );
+    // Type definitions
+    let definition = if constructors.is_empty() {
+        if let Some((module, external_type, _location)) = external_erlang {
+            let printer = TypePrinter::new(module_name);
+            docvec![
+                module,
+                ":",
+                external_type,
+                "(",
+                join(
+                    typed_parameters
+                        .iter()
+                        .map(|parameter| printer.print(parameter)),
+                    ", ".to_doc()
+                ),
+                ")"
+            ]
+        } else {
+            let constructors = std::iter::once("any()".to_doc()).chain(phantom_vars_constructor);
+            join(constructors, break_(" |", " | "))
+        }
+    } else {
+        let constructors = constructors
+            .iter()
+            .map(|constructor| {
+                let name = atom_string(to_snake_case(&constructor.name));
+                if constructor.arguments.is_empty() {
+                    name
+                } else {
+                    let type_printer = TypePrinter::new(module_name);
+                    let arguments = constructor
+                        .arguments
+                        .iter()
+                        .map(|argument| type_printer.print(&argument.type_));
+                    tuple(std::iter::once(name).chain(arguments))
+                }
+            })
+            .chain(phantom_vars_constructor);
+        join(constructors, break_(" |", " | "))
+    }
+    .nest(INDENT);
+    let type_printer = TypePrinter::new(module_name);
+    let params = join(
+        typed_parameters
+            .iter()
+            .map(|type_| type_printer.print(type_)),
+        ", ".to_doc(),
+    );
+    let doc = if *opaque { "-opaque " } else { "-type " }
+        .to_doc()
+        .append(erl_safe_type_name(to_snake_case(name)))
+        .append("(")
+        .append(params)
+        .append(") :: ")
+        .append(definition)
+        .group()
+        .append(".");
+    type_defs.push(doc);
 }
 
 fn module_function<'a>(
@@ -466,7 +431,13 @@ fn module_function<'a>(
     is_internal_module: bool,
     line_numbers: &'a LineNumbers,
     src_path: EcoString,
+    unused_definition_positions: &HashSet<u32>,
 ) -> Option<(Document<'a>, Env<'a>)> {
+    // We don't generate any code for unused functions.
+    if unused_definition_positions.contains(&function.location.start) {
+        return None;
+    }
+
     // Private external functions don't need to render anything, the underlying
     // Erlang implementation is used directly at the call site.
     if function.external_erlang.is_some() && function.publicity.is_private() {
@@ -3262,10 +3233,8 @@ fn find_private_functions_referenced_in_importable_constants(
 ) -> im::HashSet<EcoString> {
     let mut overridden_publicity = im::HashSet::new();
 
-    for definition in module.definitions.iter() {
-        if let Definition::ModuleConstant(constant) = definition
-            && constant.publicity.is_importable()
-        {
+    for constant in &module.definitions.constants {
+        if constant.publicity.is_importable() {
             find_referenced_private_functions(&constant.value, &mut overridden_publicity)
         }
     }

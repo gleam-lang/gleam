@@ -124,9 +124,9 @@ use crate::{
     analyse::Inferred,
     ast::{
         self, ArgNames, Assert, AssignName, Assignment, AssignmentKind, BitArrayOption,
-        BitArraySegment, BitArraySize, CallArg, Clause, Definition, FunctionLiteralKind, Pattern,
+        BitArraySegment, BitArraySize, CallArg, Clause, FunctionLiteralKind, Pattern,
         PipelineAssignmentKind, Publicity, SrcSpan, Statement, TailPattern, TypedArg, TypedAssert,
-        TypedAssignment, TypedBitArraySize, TypedClause, TypedDefinition, TypedExpr,
+        TypedAssignment, TypedBitArraySize, TypedClause, TypedDefinitions, TypedExpr,
         TypedExprBitArraySegment, TypedFunction, TypedModule, TypedPattern,
         TypedPipelineAssignment, TypedStatement, TypedUse, visit::Visit,
     },
@@ -148,11 +148,16 @@ pub fn module(
 ) -> TypedModule {
     let mut inliner = Inliner::new(modules);
 
-    module.definitions = module
-        .definitions
-        .into_iter()
-        .map(|definition| inliner.definition(definition))
-        .collect();
+    module.definitions = TypedDefinitions {
+        functions: module
+            .definitions
+            .functions
+            .into_iter()
+            .map(|function| inliner.function(function))
+            .collect(),
+        ..module.definitions
+    };
+
     module
 }
 
@@ -242,19 +247,6 @@ impl Inliner<'_> {
     /// Get the name we are using for a variable, in case it is renamed.
     fn variable_name(&self, name: EcoString) -> EcoString {
         self.renamed_variables.get(&name).cloned().unwrap_or(name)
-    }
-
-    /// Perform inlining over a single definition. This only does anything for
-    /// function definitions as none of the other definitions can contain call
-    /// expressions to be inlined.
-    fn definition(&mut self, definition: TypedDefinition) -> TypedDefinition {
-        match definition {
-            Definition::Function(function_ast) => Definition::Function(self.function(function_ast)),
-            Definition::TypeAlias(_)
-            | Definition::CustomType(_)
-            | Definition::Import(_)
-            | Definition::ModuleConstant(_) => definition,
-        }
     }
 
     fn function(&mut self, mut function: TypedFunction) -> TypedFunction {
