@@ -1,0 +1,49 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "\npub fn wibble(id) {\n  wobble(id, True)\n}\n\npub fn wobble(id, bool) {\n  case bool {\n    True -> wibble(id)\n    False -> wubble(id, bool)\n  }\n}\n\npub fn wubble(id, bool) {\n  case bool {\n    True -> final(id)\n    False -> wobble(id, bool)\n  }\n}\n\npub fn final(id) {\n  let #(a, b) = id\n  echo #(a, b)\n}\n\npub fn main() {\n  wibble(#(\"a\", \"b\"))\n  wibble(2)\n}\n"
+---
+----- SOURCE CODE
+
+pub fn wibble(id) {
+  wobble(id, True)
+}
+
+pub fn wobble(id, bool) {
+  case bool {
+    True -> wibble(id)
+    False -> wubble(id, bool)
+  }
+}
+
+pub fn wubble(id, bool) {
+  case bool {
+    True -> final(id)
+    False -> wobble(id, bool)
+  }
+}
+
+pub fn final(id) {
+  let #(a, b) = id
+  echo #(a, b)
+}
+
+pub fn main() {
+  wibble(#("a", "b"))
+  wibble(2)
+}
+
+
+----- ERROR
+error: Type mismatch
+   ┌─ /src/one/two.gleam:27:10
+   │
+27 │   wibble(2)
+   │          ^
+
+Expected type:
+
+    #(a, b)
+
+Found type:
+
+    Int

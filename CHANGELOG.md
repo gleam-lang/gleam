@@ -274,3 +274,7 @@
 - Typos in the error message shown when trying to install a non-existent package
   have been fixed.
   ([Ioan Clarke](https://github.com/ioanclarke))
+
+- Fixed a bug where the type checker would allow invalid programs when a large
+  group of functions were all mutually recursive.
+  ([Surya Rose](https://github.com/GearsDatapacks))

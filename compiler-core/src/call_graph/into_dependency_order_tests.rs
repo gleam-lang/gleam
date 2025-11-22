@@ -653,7 +653,7 @@ fn more_complex_cycle() {
     ];
     assert_eq!(
         parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
-        vec![vec!["a2", "a1"], vec!["a3"]]
+        vec![vec!["a2", "a3", "a1"]]
     );
 }
 
