@@ -1714,6 +1714,7 @@ impl Offset {
         // we can only be certain about one being greater if there are no calculations
         if self.constant > other.constant
             && self.calculations.is_empty()
+            && other.calculations.is_empty()
             && superset(&self.variables, &other.variables)
         {
             Confidence::Certain
@@ -1730,6 +1731,7 @@ impl Offset {
         if self == other
             || (self.constant >= other.constant
                 && self.calculations.is_empty()
+                && other.calculations.is_empty()
                 && superset(&self.variables, &other.variables))
         {
             Confidence::Certain

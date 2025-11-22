@@ -2645,3 +2645,17 @@ pub fn go(x, n) {
 "#
     );
 }
+
+#[test]
+fn pattern_match_size_arithmetic() {
+    assert_js!(
+        r#"
+pub fn wibble(bits, wobble) {
+  case bits {
+    <<_:size(1), _:size(wobble - 1), _:bits>> -> 0
+    _ -> 1
+  }
+}
+"#
+    );
+}

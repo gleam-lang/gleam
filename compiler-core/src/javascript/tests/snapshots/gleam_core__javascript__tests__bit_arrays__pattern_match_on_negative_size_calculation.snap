@@ -21,7 +21,7 @@ export function main() {
   let c;
   if ($.bitSize >= 8) {
     let a = $.byteAt(0);
-    if (a - 100000 >= 0) {
+    if (a - 100000 >= 0 && $.bitSize >= 8 + a - 100000) {
       let b = bitArraySliceToInt($, 8, 8 + a - 100000, true, false);
       if ($.bitSize === 8 + b + a - 100000) {
         a$1 = a;

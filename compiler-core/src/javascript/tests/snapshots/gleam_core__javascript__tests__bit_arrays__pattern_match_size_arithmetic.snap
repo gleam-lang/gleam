@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn wibble(bits, wobble) {\n  case bits {\n    <<_:size(1), _:size(wobble - 1), _:bits>> -> 0\n    _ -> 1\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn wibble(bits, wobble) {
+  case bits {
+    <<_:size(1), _:size(wobble - 1), _:bits>> -> 0
+    _ -> 1
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function wibble(bits, wobble) {
+  if (bits.bitSize >= 1 && wobble - 1 >= 0 && bits.bitSize >= 1 + wobble - 1) {
+    return 0;
+  } else {
+    return 1;
+  }
+}
