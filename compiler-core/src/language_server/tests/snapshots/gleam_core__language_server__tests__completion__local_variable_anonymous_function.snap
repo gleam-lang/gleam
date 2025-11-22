@@ -32,14 +32,14 @@ True
 main
   kind:   Function
   detail: fn() -> Int
-  sort:   2_main
+  sort:   02_main
   desc:   app
   edits:
     [2:34-2:34]: "main"
 wibble
   kind:   Variable
   detail: Int
-  sort:   2_wibble
+  sort:   02_wibble
   desc:   app
   docs:   "A locally defined variable."
   edits:

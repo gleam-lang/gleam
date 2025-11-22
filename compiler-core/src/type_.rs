@@ -565,7 +565,11 @@ impl Type {
                     && package == other_package
                     && module == other_module
                     && name == other_name
-                    && arguments == other_arguments
+                    && arguments.len() == other_arguments.len()
+                    && arguments
+                        .iter()
+                        .zip(other_arguments)
+                        .all(|(one, other)| one.same_as(other))
             }
 
             (Type::Fn { .. }, Type::Named { .. } | Type::Tuple { .. }) => false,
@@ -1210,7 +1214,8 @@ impl TypeVar {
     pub fn is_unbound(&self) -> bool {
         match self {
             Self::Unbound { .. } => true,
-            Self::Link { .. } | Self::Generic { .. } => false,
+            Self::Link { type_ } => type_.is_unbound(),
+            Self::Generic { .. } => false,
         }
     }
 

@@ -23,7 +23,7 @@ False
 Nil
   kind:   EnumMember
   detail: gleam
-  sort:   4_Nil
+  sort:   04_Nil
 Ok
   kind:   Constructor
   detail: gleam
@@ -42,7 +42,7 @@ main
 something_else
   kind:   Variable
   detail: a
-  sort:   2_something_else
+  sort:   02_something_else
   desc:   app
   docs:   "A locally defined variable."
   edits:

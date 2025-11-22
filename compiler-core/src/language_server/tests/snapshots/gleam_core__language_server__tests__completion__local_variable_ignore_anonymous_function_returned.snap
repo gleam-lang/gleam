@@ -35,7 +35,7 @@ True
 add_two
   kind:   Variable
   detail: fn(Int) -> Int
-  sort:   2_add_two
+  sort:   02_add_two
   desc:   app
   docs:   "A locally defined variable."
   edits:
@@ -50,7 +50,7 @@ main
 wabble
   kind:   Variable
   detail: Int
-  sort:   2_wabble
+  sort:   02_wabble
   desc:   app
   docs:   "A locally defined variable."
   edits:
@@ -58,7 +58,7 @@ wabble
 wibble
   kind:   Variable
   detail: Int
-  sort:   2_wibble
+  sort:   02_wibble
   desc:   app
   docs:   "A locally defined variable."
   edits:
