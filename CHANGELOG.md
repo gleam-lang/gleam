@@ -227,6 +227,10 @@
   thousands of branches.
   ([fruno](https://github.com/fruno-bulax/))
 
+- The "add omitted label" code action no longer adds labels to arguments
+  being piped in or the callbacks of `use`.
+  ([fruno](https://github.com/fruno-bulax))
+
 - Add a missing BitArray constructor return type in the prelude's TypeScript
   definitions.
   ([Richard Viney](https://github.com/richard-viney))
