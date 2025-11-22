@@ -458,12 +458,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 value,
                 float_value,
             } => {
-                if self.environment.target == Target::Erlang
-                    && !self.current_function_definition.has_erlang_external
-                {
-                    check_erlang_float_safety(float_value, location, self.problems)
-                }
-
+                check_float_safety(float_value, location, self.problems);
                 Ok(self.infer_float(value, float_value, location))
             }
 
@@ -2003,7 +1998,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // Ensure the pattern matches the type of the value
         let mut pattern_typer = pattern::PatternTyper::new(
             self.environment,
-            &self.implementations,
             &self.current_function_definition,
             &self.hydrator,
             self.problems,
@@ -2332,7 +2326,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> (TypedMultiPattern, Vec<TypedMultiPattern>, bool) {
         let mut pattern_typer = pattern::PatternTyper::new(
             self.environment,
-            &self.implementations,
             &self.current_function_definition,
             &self.hydrator,
             self.problems,
@@ -3801,10 +3794,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 value,
                 float_value,
             } => {
-                if self.environment.target == Target::Erlang {
-                    check_erlang_float_safety(float_value, location, self.problems)
-                }
-
+                check_float_safety(float_value, location, self.problems);
                 Ok(Constant::Float {
                     location,
                     value,

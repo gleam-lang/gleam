@@ -22,7 +22,6 @@ use std::sync::Arc;
 
 pub struct PatternTyper<'a, 'b> {
     environment: &'a mut Environment<'b>,
-    implementations: &'a Implementations,
     current_function: &'a FunctionDefinition,
     hydrator: &'a Hydrator,
     mode: PatternMode,
@@ -98,7 +97,6 @@ enum PatternMode {
 impl<'a, 'b> PatternTyper<'a, 'b> {
     pub fn new(
         environment: &'a mut Environment<'b>,
-        implementations: &'a Implementations,
         current_function: &'a FunctionDefinition,
         hydrator: &'a Hydrator,
         problems: &'a mut Problems,
@@ -106,7 +104,6 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
     ) -> Self {
         Self {
             environment,
-            implementations,
             current_function,
             hydrator,
             mode: PatternMode::Initial,
@@ -753,13 +750,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 float_value,
             } => {
                 self.unify_types(type_, float(), location);
-
-                if self.environment.target == Target::Erlang
-                    && !self.implementations.uses_erlang_externals
-                {
-                    check_erlang_float_safety(float_value, location, self.problems)
-                }
-
+                check_float_safety(float_value, location, self.problems);
                 Pattern::Float {
                     location,
                     value,

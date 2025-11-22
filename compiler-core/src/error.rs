@@ -1558,12 +1558,12 @@ The error from the encryption library was:
             } => error
                 .iter()
                 .map(|error| match error {
-                    TypeError::ErlangFloatUnsafe { location, .. } => Diagnostic {
-                        title: "Float is outside Erlang's floating point range".into(),
+                    TypeError::LiteralFloatOutOfRange { location, .. } => Diagnostic {
+                        title: "Float outside of valid range".into(),
                         text: wrap(
                             "This float value is too large to be represented by \
-Erlang's floating point type. To avoid this error float values must be in the range \
--1.7976931348623157e308 - 1.7976931348623157e308.",
+a floating point type: float values must be in the range -1.7976931348623157e308 \
+- 1.7976931348623157e308.",
                         ),
                         hint: None,
                         level: Level::Error,

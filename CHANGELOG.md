@@ -40,7 +40,7 @@
   ```
   case wibble {
     0, _ -> 1
-    ^^^^ Expected 1 patterns, got 2
+    ^^^^ Expected 1 pattern, got 2
     0 |  -> 1
       ^ I was expecting a pattern after this
   }
@@ -60,8 +60,8 @@
   ([Nafi](https://github.com/re-masashi))
 
 - The lowercase bool pattern error is no longer a syntax error, but instead a
-  part of the analysis step. This allows the entire module to be analyzed, rather
-  than stopping at the syntax error.
+  part of the analysis step. This allows the entire module to be analyzed,
+  rather than stopping at the syntax error.
   ([mxtthias](https://github.com/mxtthias))
 
 - Exhaustiveness checks for ints and floats now correctly handle unreachable
@@ -103,6 +103,7 @@
   from 1.13 has been extended to int segments!
   Aside from the various performance improvements, this allows the compiler to
   mark more branches as unreachable.
+
   ```gleam
   case bits {
     <<"a">> -> 0
@@ -116,6 +117,7 @@
     _ -> 99
   }
   ```
+
   ([fruno](https://github.com/fruno-bulax/))
 
 ### Build tool
@@ -212,6 +214,11 @@
   rename all its occurrences.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler now reports an error for literal floats that are outside the
+  floating point representable range on both targets. Previously it would only
+  do that when compiling on the Erlang target.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Fixed a typo in the error message emitted when trying to run a module that
   does not have a main function.
   ([Louis Pilfold](https://github.com/lpil))
@@ -249,7 +256,8 @@
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - Fixed a bug where the "pattern match on variable" code action would generate
-  invalid patterns by repeating a variable name already used in the same pattern.
+  invalid patterns by repeating a variable name already used in the same
+  pattern.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - Fixed a bug where useless comparison warnings for floats compared literal
