@@ -57,7 +57,7 @@ fn show_references(code: &str, position: Option<Position>, ranges: &[Range]) -> 
                 if Some(current_position) == position {
                     underline_empty = false;
                     underline.push('↑');
-                } else if start.le(&current_position) && current_position.lt(&end) {
+                } else if start <= &current_position && current_position < *end {
                     underline_empty = false;
                     underline.push('▔');
                 } else {

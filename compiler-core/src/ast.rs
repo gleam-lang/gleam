@@ -96,7 +96,7 @@ impl TypedModule {
             .find_map(|function| function.find_statement(byte_index))
     }
 
-    pub fn count_definitions(&self) -> usize {
+    pub fn definitions_len(&self) -> usize {
         let TypedDefinitions {
             imports,
             constants,

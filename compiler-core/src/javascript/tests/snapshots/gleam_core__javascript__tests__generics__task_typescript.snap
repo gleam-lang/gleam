@@ -7,6 +7,6 @@ pub type Promise(value)
     pub type Task(a) = fn() -> Promise(a)
 
 ----- TYPESCRIPT DEFINITIONS
-export type Task = () => Promise$<any>;
-
 export type Promise$<I> = any;
+
+export type Task = () => Promise$<any>;
