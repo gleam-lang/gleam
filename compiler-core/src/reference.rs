@@ -281,7 +281,12 @@ impl ReferenceTracker {
         // We first record a node for the module being aliased. We use its entire
         // name to identify it in this case and keep track of the node it's
         // associated with.
-        self.register_module(module_name.clone(), module_name.clone(), import_location);
+        self.register_module(
+            module_name.clone(),
+            module_name.clone(),
+            EntityLayer::Shadowed,
+            import_location,
+        );
 
         // Then we create a node for the alias, as the alias itself might be
         // unused!
@@ -289,7 +294,7 @@ impl ReferenceTracker {
         // Also we want to register the fact that if this alias is used then the
         // import is used: so we add a reference from the alias to the import
         // we've just added.
-        self.register_module_reference(module_name.clone());
+        self.register_module_reference_for_unqualified_imports_and_aliases(module_name.clone());
 
         // Finally we can add information for this alias:
         let entity = Entity {
@@ -307,20 +312,30 @@ impl ReferenceTracker {
         );
     }
 
-    pub fn register_module(
+    pub fn register_unaliased_module(
         &mut self,
         used_name: EcoString,
         module_name: EcoString,
         location: SrcSpan,
     ) {
-        self.current_node = self.create_node(used_name.clone(), EntityLayer::Module);
+        self.register_module(used_name, module_name, EntityLayer::Module, location);
+    }
+
+    fn register_module(
+        &mut self,
+        used_name: EcoString,
+        module_name: EcoString,
+        layer: EntityLayer,
+        location: SrcSpan,
+    ) {
+        self.current_node = self.create_node(used_name.clone(), layer);
         let _ = self
             .module_name_to_node
             .insert(module_name.clone(), self.current_node);
 
         let entity = Entity {
             name: used_name,
-            layer: EntityLayer::Module,
+            layer,
         };
 
         _ = self.entity_information.insert(
@@ -344,7 +359,7 @@ impl ReferenceTracker {
             EntityKind::ImportedConstructor { module }
             | EntityKind::ImportedType { module }
             | EntityKind::ImportedValue { module } => {
-                self.register_module_reference(module.clone())
+                self.register_module_reference_for_unqualified_imports_and_aliases(module.clone())
             }
         }
     }
@@ -403,11 +418,19 @@ impl ReferenceTracker {
         _ = self.graph.add_edge(self.current_node, target, ());
     }
 
-    pub fn register_module_reference(&mut self, name: EcoString) {
+    pub fn register_module_reference_for_unqualified_imports_and_aliases(
+        &mut self,
+        name: EcoString,
+    ) {
         let target = match self.module_name_to_node.get(&name) {
             Some(target) => *target,
             None => self.get_or_create_node(name, EntityLayer::Module),
         };
+        _ = self.graph.add_edge(self.current_node, target, ());
+    }
+
+    pub fn register_module_reference(&mut self, name: EcoString) {
+        let target = self.get_or_create_node(name, EntityLayer::Module);
         _ = self.graph.add_edge(self.current_node, target, ());
     }
 

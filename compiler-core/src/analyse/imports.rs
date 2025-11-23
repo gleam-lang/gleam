@@ -297,7 +297,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                 import.location,
             );
         } else {
-            self.environment.references.register_module(
+            self.environment.references.register_unaliased_module(
                 used_name.clone(),
                 import.module.clone(),
                 import.location,
