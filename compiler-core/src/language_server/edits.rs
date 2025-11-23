@@ -32,10 +32,7 @@ pub fn position_of_first_definition_if_import(
         .chain(custom_types.iter().map(|custom_type| custom_type.location))
         .chain(type_aliases.iter().map(|type_alias| type_alias.location))
         .chain(functions.iter().map(|function| function.location))
-        .filter(|location| location.lt(&first_import.location))
-        .peekable()
-        .peek()
-        .is_none();
+        .all(|location| location >= first_import.location);
 
     if import_is_first_definition {
         Some(src_span_to_lsp_range(first_import.location, line_numbers).start)

@@ -30,7 +30,7 @@ pub fn show_hover(code: &str, range: Range, position: Position) -> String {
             if current_position == position {
                 underline_empty = false;
                 underline.push('↑');
-            } else if start.le(&current_position) && current_position.lt(&end) {
+            } else if start <= current_position && current_position < end {
                 underline_empty = false;
                 underline.push('▔');
             } else {

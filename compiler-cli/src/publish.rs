@@ -142,7 +142,7 @@ fn check_for_name_squatting(package: &Package) -> Result<(), Error> {
         return Ok(());
     }
 
-    if module.ast.count_definitions() > 2 {
+    if module.ast.definitions_len() > 2 {
         return Ok(());
     }
 

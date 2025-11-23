@@ -1827,7 +1827,11 @@ impl<'a> UnqualifiedToQualifiedImportFirstPass<'a> {
         module_name: &EcoString,
         constructor_name: &EcoString,
     ) {
-        self.unqualified_constructor = (self.module.ast.definitions.imports)
+        self.unqualified_constructor = self
+            .module
+            .ast
+            .definitions
+            .imports
             .iter()
             .filter(|import| import.module == *module_name)
             .find_map(|import| {
@@ -1847,7 +1851,10 @@ impl<'a> UnqualifiedToQualifiedImportFirstPass<'a> {
 
     fn get_module_import_from_type_constructor(&mut self, constructor_name: &EcoString) {
         self.unqualified_constructor =
-            (self.module.ast.definitions.imports)
+            self.module
+                .ast
+                .definitions
+                .imports
                 .iter()
                 .find_map(|import| {
                     if let Some(ty) = import
@@ -7582,7 +7589,10 @@ impl<'a> RemoveUnusedImports<'a> {
     /// unqualified values it's importing. Sorted by SrcSpan location.
     ///
     fn imported_values(&self, import_location: SrcSpan) -> Vec<SrcSpan> {
-        (self.module.ast.definitions.imports)
+        self.module
+            .ast
+            .definitions
+            .imports
             .iter()
             .find(|import| import.location.contains(import_location.start))
             .map(|import| {
@@ -7603,7 +7613,12 @@ impl<'a> RemoveUnusedImports<'a> {
             return vec![];
         }
 
-        let unused_imports = (self.module.ast.type_info.warnings.iter())
+        let unused_imports = self
+            .module
+            .ast
+            .type_info
+            .warnings
+            .iter()
             .filter_map(|warning| match warning {
                 type_::Warning::UnusedImportedValue { location, .. } => {
                     Some(UnusedImport::ValueOrType(*location))

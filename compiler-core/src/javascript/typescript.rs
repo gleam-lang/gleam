@@ -349,15 +349,15 @@ impl<'a> TypeScriptGenerator<'a> {
     fn definitions(&mut self, imports: &mut Imports<'_>) -> Vec<Document<'a>> {
         let mut documents = vec![];
 
-        for type_alias in &self.module.definitions.type_aliases {
-            if let Some(document) = self.type_alias(type_alias) {
-                documents.push(document);
-            }
-        }
-
         for custom_type in &self.module.definitions.custom_types {
             if let Some(mut new_documents) = self.custom_type_definition(custom_type, imports) {
                 documents.append(&mut new_documents);
+            }
+        }
+
+        for type_alias in &self.module.definitions.type_aliases {
+            if let Some(document) = self.type_alias(type_alias) {
+                documents.push(document);
             }
         }
 
