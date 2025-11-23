@@ -208,6 +208,11 @@
 
 ### Bug fixes
 
+- Fixed a bug where aliasing a top-level module import to avoid conflict with
+  a nested module import would cause the nested import to be wrongly marked as
+  unused.
+  ([Hari Mohan](https://github.com/seafoamteal))
+
 - Fixed a bug where renaming a variable from an alternative pattern would not
   rename all its occurrences.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
