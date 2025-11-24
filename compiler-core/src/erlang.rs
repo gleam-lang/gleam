@@ -1506,11 +1506,12 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
         },
 
         Constant::Record { tag, arguments, .. } => {
-            let arguments = arguments
+            // Spreads are fully expanded during type checking, so we just handle arguments
+            let arguments_doc = arguments
                 .iter()
                 .map(|argument| const_inline(&argument.value, env));
             let tag = atom_string(to_snake_case(tag));
-            tuple(std::iter::once(tag).chain(arguments))
+            tuple(std::iter::once(tag).chain(arguments_doc))
         }
 
         Constant::Var {

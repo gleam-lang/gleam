@@ -3327,23 +3327,54 @@ where
     ) -> Result<Option<UntypedConstant>, ParseError> {
         match self.maybe_one(&Token::LeftParen) {
             Some((par_s, _)) => {
-                let arguments =
-                    Parser::series_of(self, &Parser::parse_const_record_arg, Some(&Token::Comma))?;
+                // Check for spread syntax: Record(..base, ...)
+                let spread = match self.maybe_one(&Token::DotDot) {
+                    Some(_) => {
+                        // Parse the spread target constant
+                        let spread_value = self.parse_const_value()?;
+                        match spread_value {
+                            Some(value) => Some(Box::new(value)),
+                            None => {
+                                return parse_error(
+                                    ParseErrorType::UnexpectedEof,
+                                    SrcSpan::new(par_s, par_s + 2),
+                                );
+                            }
+                        }
+                    }
+                    None => None,
+                };
+
+                // Parse remaining arguments after the spread (if any)
+                let mut arguments = vec![];
+                if (spread.is_some() && self.maybe_one(&Token::Comma).is_some()) || spread.is_none()
+                {
+                    arguments = Parser::series_of(
+                        self,
+                        &Parser::parse_const_record_arg,
+                        Some(&Token::Comma),
+                    )?;
+                }
+
                 let (_, par_e) = self.expect_one_following_series(
                     &Token::RightParen,
                     "a constant record argument",
                 )?;
-                if arguments.is_empty() {
+
+                // Validate that we have either arguments or a spread
+                if arguments.is_empty() && spread.is_none() {
                     return parse_error(
                         ParseErrorType::ConstantRecordConstructorNoArguments,
                         SrcSpan::new(par_s, par_e),
                     );
                 }
+
                 Ok(Some(Constant::Record {
                     location: SrcSpan { start, end: par_e },
                     module,
                     name,
                     arguments,
+                    spread,
                     tag: (),
                     type_: (),
                     field_map: None,
@@ -3355,6 +3386,7 @@ where
                 module,
                 name,
                 arguments: vec![],
+                spread: None,
                 tag: (),
                 type_: (),
                 field_map: None,

@@ -3818,14 +3818,157 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 self.infer_constant_bit_array(segments, location)
             }
 
+            // Handle constant records with spread separately
             Constant::Record {
                 module,
                 location,
                 name,
                 arguments,
+                spread: Some(spread_const),
+                ..
+            } => {
+                let constructor = self.infer_value_constructor(&module, &name, &location)?;
+
+                let (tag, field_map, _variant_index) = match &constructor.variant {
+                    ValueConstructorVariant::Record {
+                        name,
+                        field_map,
+                        variant_index,
+                        ..
+                    } => (name.clone(), field_map.clone(), *variant_index),
+
+                    ValueConstructorVariant::ModuleFn { .. }
+                    | ValueConstructorVariant::LocalVariable { .. } => {
+                        return Err(Error::NonLocalClauseGuardVariable { location, name });
+                    }
+
+                    ValueConstructorVariant::ModuleConstant { literal, .. }
+                    | ValueConstructorVariant::LocalConstant { literal } => {
+                        return Ok(literal.clone());
+                    }
+                };
+
+                // Type-check the spread constant
+                let typed_spread = self.infer_const(&None, *spread_const);
+
+                // Unify types - the spread should have the same type as what the constructor returns
+                let expected_type = match constructor.type_.as_ref() {
+                    Type::Fn { return_: ret, .. } => ret.clone(),
+                    _ => constructor.type_.clone(),
+                };
+                unify(expected_type.clone(), typed_spread.type_())
+                    .map_err(|e| convert_unify_error(e, typed_spread.location()))?;
+
+                // Resolve the spread if it's a constant variable
+                let resolved_spread = match &typed_spread {
+                    Constant::Var {
+                        constructor: Some(value_constructor),
+                        ..
+                    } => match &value_constructor.variant {
+                        ValueConstructorVariant::LocalConstant { literal }
+                        | ValueConstructorVariant::ModuleConstant { literal, .. } => {
+                            literal.clone()
+                        }
+                        _ => typed_spread,
+                    },
+                    _ => typed_spread,
+                };
+
+                // Extract spread arguments
+                let spread_args = match resolved_spread {
+                    Constant::Record {
+                        arguments: spread_args,
+                        ..
+                    } => spread_args,
+                    _ => {
+                        return Err(Error::RecordUpdateInvalidConstructor { location });
+                    }
+                };
+
+                // Type-check explicit override arguments
+                let mut typed_overrides = Vec::new();
+                for arg in arguments {
+                    if arg.uses_label_shorthand() {
+                        self.track_feature_usage(FeatureKind::LabelShorthandSyntax, arg.location);
+                    }
+
+                    let label = arg.label.clone();
+                    let typed_value = self.infer_const(&None, arg.value);
+
+                    // Find expected type for this field and validate field exists
+                    if let Some(label_name) = &label
+                        && let Some(field_map) = &field_map
+                    {
+                        match field_map.fields.get(label_name) {
+                            Some(&index) => {
+                                if let Type::Fn {
+                                    arguments: field_types,
+                                    ..
+                                } = constructor.type_.as_ref()
+                                    && let Some(expected_type) = field_types.get(index as usize)
+                                {
+                                    unify(expected_type.clone(), typed_value.type_()).map_err(
+                                        |e| convert_unify_error(e, typed_value.location()),
+                                    )?;
+                                }
+                            }
+                            None => {
+                                // Field doesn't exist in the record
+                                return Err(self.unknown_field_error(
+                                    field_map.fields.keys().cloned().collect(),
+                                    expected_type.clone(),
+                                    arg.location,
+                                    label_name.clone(),
+                                    FieldAccessUsage::Other,
+                                ));
+                            }
+                        }
+                    }
+
+                    typed_overrides.push(CallArg {
+                        label,
+                        value: typed_value,
+                        location: arg.location,
+                        implicit: arg.implicit,
+                    });
+                }
+
+                // Merge: start with spread args, override with explicit args
+                let mut final_arguments = spread_args;
+                for override_arg in typed_overrides {
+                    if let Some(label) = &override_arg.label
+                        && let Some(field_map) = &field_map
+                        && let Some(&index) = field_map.fields.get(label)
+                        && (index as usize) < final_arguments.len()
+                    {
+                        *final_arguments
+                            .get_mut(index as usize)
+                            .expect("Index out of bounds") = override_arg;
+                    }
+                }
+
+                Ok(Constant::Record {
+                    module,
+                    location,
+                    name,
+                    arguments: final_arguments,
+                    spread: None,
+                    type_: expected_type,
+                    tag,
+                    field_map,
+                    record_constructor: Some(Box::new(constructor)),
+                })
+            }
+
+            Constant::Record {
+                module,
+                location,
+                name,
+                arguments,
+                spread,
                 // field_map, is always None here because untyped not yet unified
                 ..
-            } if arguments.is_empty() => {
+            } if arguments.is_empty() && spread.is_none() => {
                 // Type check the record constructor
                 let constructor = self.infer_value_constructor(&module, &name, &location)?;
 
@@ -3851,6 +3994,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     location,
                     name,
                     arguments: vec![],
+                    spread: None,
                     type_: constructor.type_.clone(),
                     tag,
                     field_map,
@@ -3858,11 +4002,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 })
             }
 
+            // Handle constant records without spread (normal case)
             Constant::Record {
                 module,
                 location,
                 name,
                 mut arguments,
+                spread: None,
                 // field_map, is always None here because untyped not yet unified
                 ..
             } => {
@@ -3994,6 +4140,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     location,
                     name,
                     arguments,
+                    spread: None,
                     type_: return_type,
                     tag,
                     field_map,
