@@ -749,6 +749,19 @@ fn module_could_not_unify6() {
 }
 
 #[test]
+fn module_could_not_unify_let_binding_annotation_follow_up() {
+    assert_module_error!(
+        "
+pub fn main() {
+  let x: String = 5
+  let y: Int = x
+  let z: String = x
+}
+"
+    );
+}
+
+#[test]
 fn module_could_not_unify7() {
     assert_module_error!("fn main() { let assert 5 = \"\" }");
 }
