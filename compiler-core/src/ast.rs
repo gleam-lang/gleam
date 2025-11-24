@@ -1708,11 +1708,6 @@ impl TypedClause {
     }
 
     fn syntactically_eq(&self, other: &Self) -> bool {
-        //pub pattern: MultiPattern<Type>,
-        //pub alternative_patterns: Vec<MultiPattern<Type>>,
-        //pub guard: Option<ClauseGuard<Type, RecordTag>>,
-        //pub then: Expr,
-        //
         let patterns_are_equal = pairwise_all(&self.pattern, &other.pattern, |(one, other)| {
             one.syntactically_eq(other)
         });
