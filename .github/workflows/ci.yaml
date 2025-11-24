@@ -368,7 +368,7 @@ jobs:
       - name: Install cargo-deny
         run: |
           set -e
-          curl -L https://github.com/EmbarkStudios/cargo-deny/releases/download/0.14.18/cargo-deny-0.14.18-x86_64-unknown-linux-musl.tar.gz | tar xzf -
+          curl -L https://github.com/EmbarkStudios/cargo-deny/releases/download/0.18.6/cargo-deny-0.18.6-x86_64-unknown-linux-musl.tar.gz | tar xzf -
           mv cargo-deny-*-x86_64-unknown-linux-musl/cargo-deny cargo-deny
           echo `pwd` >> $GITHUB_PATH
 
