@@ -4265,6 +4265,21 @@ fn variables_not_redundant_comparison() {
 }
 
 #[test]
+fn constructor_functions_not_redundant_comparison() {
+    assert_no_warnings!(
+        "
+type Comparison {
+  Wobble(String)
+}
+
+pub fn main() {
+  Wobble == Wobble
+}
+"
+    );
+}
+
+#[test]
 fn record_select_redundant_comparison() {
     assert_warning!(
         "

@@ -120,6 +120,34 @@
 
   ([fruno](https://github.com/fruno-bulax/))
 
+- Comparison of record constructors with non-zero arity always produces `False`,
+  because under the hood during code generation they become anonymous functions:
+
+  ```gleam
+  pub type Foo {
+    Wobble(String)
+  }
+
+  pub fn main() {
+    echo Wobble == Wobble // False
+  }
+  ```
+
+  Previously compiler produced false-positive redundant comparison warning, which
+  is now removed:
+
+  ```
+  warning: Redundant comparison
+    ┌─ ...
+    │
+  6 │   echo Wobble == Wobble
+    │        ^^^^^^^^^^^^^^^^ This is always `True`
+
+  This comparison is redundant since it always succeeds.
+  ```
+
+  ([Adi Salimgereyev](https://github.com/abs0luty))
+
 ### Build tool
 
 - The help text displayed by `gleam dev --help`, `gleam test --help`, and
