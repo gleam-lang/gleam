@@ -11043,7 +11043,7 @@ fn merge_case_branch_will_not_merge_branches_with_guards() {
 fn merge_case_branch_will_not_merge_branches_defining_different_variables() {
     assert_no_code_actions!(
         MERGE_CASE_BRANCHES,
-        r#"pub fn go(result) {
+        r#"pub fn go(result: Result(Int, Int)) {
   case result {
     Ok(value) -> todo
     Error(error) -> todo
@@ -11113,5 +11113,19 @@ fn merge_case_branch_works_with_existing_alternative_patterns() {
   }
 }"#,
         find_position_of("[]").select_until(find_position_of("[_]"))
+    );
+}
+
+#[test]
+fn merge_case_branch_does_not_merge_branches_with_variables_with_same_name_and_different_types() {
+    assert_no_code_actions!(
+        MERGE_CASE_BRANCHES,
+        r#"pub fn go(result: Result(Int, String)) {
+  case result {
+    Ok(one) -> todo
+    Error(one) -> todo
+  }
+}"#,
+        find_position_of("Ok").select_until(find_position_of("Error"))
     );
 }
