@@ -3152,26 +3152,26 @@ impl TypedPattern {
 
 /// A variable bound inside a pattern.
 #[derive(Debug, Clone)]
-pub enum BoundVariable {
+pub struct BoundVariable {
+    pub name: BoundVariableName,
+    pub location: SrcSpan,
+    pub type_: Arc<Type>,
+}
+
+#[derive(Debug, Clone)]
+pub enum BoundVariableName {
     /// A record's labelled field introduced with the shorthand syntax.
-    ShorthandLabel { name: EcoString, location: SrcSpan },
-    /// Any other variable.
-    Regular { name: EcoString, location: SrcSpan },
+    ShorthandLabel { name: EcoString },
+    /// Any other variable name.
+    Regular { name: EcoString },
 }
 
 impl BoundVariable {
     pub fn name(&self) -> EcoString {
-        match self {
-            BoundVariable::ShorthandLabel { name, .. } | BoundVariable::Regular { name, .. } => {
+        match &self.name {
+            BoundVariableName::ShorthandLabel { name } | BoundVariableName::Regular { name } => {
                 name.clone()
             }
-        }
-    }
-
-    pub fn location(&self) -> SrcSpan {
-        match self {
-            BoundVariable::ShorthandLabel { location, .. }
-            | BoundVariable::Regular { location, .. } => *location,
         }
     }
 }
@@ -3369,9 +3369,15 @@ impl TypedPattern {
             | Pattern::Discard { .. }
             | Pattern::Invalid { .. } => {}
 
-            Pattern::Variable { name, location, .. } => variables.push(BoundVariable::Regular {
-                name: name.clone(),
+            Pattern::Variable {
+                name,
+                location,
+                type_,
+                ..
+            } => variables.push(BoundVariable {
+                name: BoundVariableName::Regular { name: name.clone() },
                 location: *location,
+                type_: type_.clone(),
             }),
             Pattern::BitArraySize { .. } => {}
             Pattern::Assign {
@@ -3379,9 +3385,10 @@ impl TypedPattern {
                 pattern,
                 location,
             } => {
-                variables.push(BoundVariable::Regular {
-                    name: name.clone(),
+                variables.push(BoundVariable {
+                    name: BoundVariableName::Regular { name: name.clone() },
                     location: *location,
+                    type_: pattern.type_(),
                 });
                 pattern.collect_bound_variables(variables);
             }
@@ -3396,9 +3403,10 @@ impl TypedPattern {
             Pattern::Constructor { arguments, .. } => {
                 for argument in arguments {
                     if let Some(name) = argument.label_shorthand_name() {
-                        variables.push(BoundVariable::ShorthandLabel {
-                            name: name.clone(),
+                        variables.push(BoundVariable {
+                            name: BoundVariableName::ShorthandLabel { name: name.clone() },
                             location: argument.location,
+                            type_: argument.value.type_(),
                         })
                     } else {
                         argument.value.collect_bound_variables(variables);
@@ -3422,15 +3430,17 @@ impl TypedPattern {
                 ..
             } => {
                 if let Some((name, location)) = left_side_assignment {
-                    variables.push(BoundVariable::Regular {
-                        name: name.clone(),
+                    variables.push(BoundVariable {
+                        name: BoundVariableName::Regular { name: name.clone() },
                         location: *location,
+                        type_: type_::string(),
                     });
                 }
                 match right_side_assignment {
-                    AssignName::Variable(name) => variables.push(BoundVariable::Regular {
-                        name: name.clone(),
+                    AssignName::Variable(name) => variables.push(BoundVariable {
+                        name: BoundVariableName::Regular { name: name.clone() },
                         location: *right_location,
+                        type_: type_::string(),
                     }),
                     AssignName::Discard(_) => {}
                 }

@@ -4,11 +4,12 @@ use crate::{
     Error, STDLIB_PACKAGE_NAME, analyse,
     ast::{
         self, ArgNames, AssignName, AssignmentKind, BitArraySegmentTruncation, BoundVariable,
-        CallArg, CustomType, FunctionLiteralKind, ImplicitCallArgOrigin, Import, InvalidExpression,
-        PIPE_PRECEDENCE, Pattern, PatternUnusedArguments, PipelineAssignmentKind, Publicity,
-        RecordConstructor, SrcSpan, TodoKind, TypedArg, TypedAssignment, TypedClauseGuard,
-        TypedDefinitions, TypedExpr, TypedModuleConstant, TypedPattern, TypedPipelineAssignment,
-        TypedRecordConstructor, TypedStatement, TypedTailPattern, TypedUse, visit::Visit as _,
+        BoundVariableName, CallArg, CustomType, FunctionLiteralKind, ImplicitCallArgOrigin, Import,
+        InvalidExpression, PIPE_PRECEDENCE, Pattern, PatternUnusedArguments,
+        PipelineAssignmentKind, Publicity, RecordConstructor, SrcSpan, TodoKind, TypedArg,
+        TypedAssignment, TypedClauseGuard, TypedDefinitions, TypedExpr, TypedModuleConstant,
+        TypedPattern, TypedPipelineAssignment, TypedRecordConstructor, TypedStatement,
+        TypedTailPattern, TypedUse, visit::Visit as _,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -8112,13 +8113,16 @@ impl<'a> CollapseNestedCase<'a> {
         // can't simply write `Ok(2 | 3)` but we have to write `Ok(2) | Ok(3)`!
 
         let pattern_text: String = code_at(self.module, matched_pattern_span).into();
-        let matched_variable_span = matched_variable.location();
+        let matched_variable_span = matched_variable.location;
 
         let pattern_with_variable = |new_content: String| {
             let mut new_pattern = pattern_text.clone();
 
             match matched_variable {
-                BoundVariable::Regular { .. } => {
+                BoundVariable {
+                    name: BoundVariableName::Regular { .. },
+                    ..
+                } => {
                     // If the variable is a regular variable we'll have to replace
                     // it entirely with the new pattern taking its place.
                     let variable_start_in_pattern =
@@ -8131,7 +8135,10 @@ impl<'a> CollapseNestedCase<'a> {
                     new_pattern.replace_range(replaced_range, &new_content);
                 }
 
-                BoundVariable::ShorthandLabel { .. } => {
+                BoundVariable {
+                    name: BoundVariableName::ShorthandLabel { .. },
+                    ..
+                } => {
                     // But if it's introduced using the shorthand syntax we can't
                     // just replace it's location with the new pattern: we would be
                     // removing the label!!
@@ -9439,16 +9446,33 @@ fn clauses_can_be_merged(one: &ast::TypedClause, other: &ast::TypedClause) -> bo
     // otherwise joining them would result in invalid code.
     let variables_one = one
         .bound_variables()
-        .map(|variable| variable.name())
-        .collect::<HashSet<_>>();
+        .map(|variable| (variable.name(), variable.type_))
+        .collect::<HashMap<_, _>>();
 
     let variables_other = other
         .bound_variables()
-        .map(|variable| variable.name())
-        .collect::<HashSet<_>>();
+        .map(|variable| (variable.name(), variable.type_))
+        .collect::<HashMap<_, _>>();
 
-    if variables_one != variables_other {
+    for (name, type_) in variables_one.iter() {
+        if let Some(type_other) = variables_other.get(name)
+            && type_other.same_as(type_)
+        {
+            continue;
+        }
+
+        // There's a variable that is not defined in the second branch but
+        // is defined in the first one, or it's defined in the second branch
+        // but it has an incompatible type.
         return false;
+    }
+
+    for (name, _) in variables_other.iter() {
+        if !variables_one.contains_key(name) {
+            // There's some variables defined in the second branch that are not
+            // defined in the first one, so they can't be merged!
+            return false;
+        }
     }
 
     // Anything can be merged with a simple todo, or the two bodies must be
