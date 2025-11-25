@@ -488,7 +488,7 @@ where
             };
             let line_numbers = LineNumbers::new(&module.code);
 
-            for function in &module.ast.definitions.functions {
+            for function in module.ast.definitions.functions.iter().flatten() {
                 // By default, the function's location ends right after the return type.
                 // For the full symbol range, have it end at the end of the body.
                 // Also include the documentation, if available.

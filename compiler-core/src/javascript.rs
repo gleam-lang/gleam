@@ -582,7 +582,7 @@ impl<'a> Generator<'a> {
             }
         }
 
-        for function in &self.module.definitions.functions {
+        for function in self.module.definitions.functions.iter().flatten() {
             if let Some(definition) = self.module_function(function) {
                 definitions.push(definition)
             }
@@ -605,7 +605,7 @@ impl<'a> Generator<'a> {
             self.register_import(&mut imports, package, module, as_name, unqualified_values);
         }
 
-        for function in &self.module.definitions.functions {
+        for function in self.module.definitions.functions.iter().flatten() {
             if let Some((_, name)) = &function.name
                 && let Some((module, external_function, _)) = &function.external_javascript
             {
@@ -832,7 +832,7 @@ impl<'a> Generator<'a> {
             self.register_in_scope(&constant.name)
         }
 
-        for function in &self.module.definitions.functions {
+        for function in self.module.definitions.functions.iter().flatten() {
             if let Some((_, name)) = &function.name {
                 self.register_in_scope(name);
             }

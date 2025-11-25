@@ -581,6 +581,7 @@ impl<'a, IO> Completer<'a, IO> {
                 .definitions
                 .functions
                 .iter()
+                .flatten()
                 .filter(|function| function.full_location().contains(cursor))
                 .peekable()
                 .peek()

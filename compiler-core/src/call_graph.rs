@@ -4,15 +4,19 @@
 #[cfg(test)]
 mod into_dependency_order_tests;
 
+#[cfg(test)]
+mod into_mutual_recursion_groups_tests;
+
 use crate::{
     Result,
     ast::{
-        AssignName, AssignmentKind, BitArrayOption, BitArraySize, ClauseGuard, Constant, Pattern,
-        SrcSpan, Statement, UntypedClauseGuard, UntypedExpr, UntypedFunction,
-        UntypedModuleConstant, UntypedPattern, UntypedStatement,
+        self, AssignName, AssignmentKind, BitArrayOption, BitArraySize, ClauseGuard, Constant,
+        Pattern, SrcSpan, Statement, TypedFunction, UntypedClauseGuard, UntypedExpr,
+        UntypedFunction, UntypedModuleConstant, UntypedPattern, UntypedStatement, visit::Visit,
     },
     type_::Error,
 };
+use ecow::EcoString;
 use itertools::Itertools;
 use petgraph::stable_graph::NodeIndex;
 use petgraph::{Directed, stable_graph::StableGraph};
@@ -575,4 +579,245 @@ pub fn into_dependency_order(
         .collect_vec();
 
     Ok(ordered)
+}
+
+pub(crate) fn into_mutually_recursive_groups(
+    functions: Vec<TypedFunction>,
+) -> Vec<Vec<TypedFunction>> {
+    let mut builder = MutualRecursionGraphBuilder::new();
+    for function in &functions {
+        builder.register_module_function_existence(function);
+    }
+    for function in &functions {
+        builder.visit_typed_function(function);
+    }
+
+    // Determine the order in which the functions should be compiled by looking
+    // at which other functions they depend on.
+    let indices = crate::graph::into_dependency_order(builder.graph);
+
+    // We got node indices back, so we need to map them back to the functions
+    // they represent.
+    // We wrap them each with `Some` so we can use `.take()`.
+    let mut definitions = functions.into_iter().map(Some).collect_vec();
+
+    indices
+        .into_iter()
+        .map(|indices| {
+            indices
+                .into_iter()
+                .map(|index| {
+                    definitions
+                        .get_mut(index.index())
+                        .expect("Index out of bounds")
+                        .take()
+                        .expect("Function already taken")
+                })
+                .collect_vec()
+        })
+        .collect_vec()
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum Position {
+    /// This is the positions of expressions in tail call position.
+    ///
+    Tail,
+
+    /// The position of everything else.
+    ///
+    NotTail,
+}
+
+struct MutualRecursionGraphBuilder {
+    names: im::HashMap<EcoString, Option<NodeIndex>>,
+    graph: StableGraph<(), (), Directed>,
+    current_function: NodeIndex,
+    position: Position,
+}
+
+impl MutualRecursionGraphBuilder {
+    fn new() -> Self {
+        MutualRecursionGraphBuilder {
+            names: im::HashMap::new(),
+            graph: StableGraph::new(),
+            current_function: NodeIndex::default(),
+            position: Position::NotTail,
+        }
+    }
+
+    fn assign(&mut self, name: &EcoString) {
+        let _ = self.names.insert(name.clone(), None);
+    }
+
+    fn referenced(&mut self, name: &EcoString) {
+        // If we don't know what the target is then it's either a programmer
+        // error to be detected later, or it's not a module function and as such
+        // is not a value we are tracking.
+        let Some(target) = self.names.get(name) else {
+            return;
+        };
+
+        // If the target is known but registered as None then it's local value
+        // that shadows a module function.
+        let Some(target) = target else { return };
+
+        _ = self.graph.add_edge(self.current_function, *target, ());
+    }
+
+    fn register_module_function_existence(&mut self, function: &TypedFunction) {
+        let (_, name) = function
+            .name
+            .as_ref()
+            .expect("A module's function must be named");
+
+        let index = self.graph.add_node(());
+        let _ = self.names.insert(name.clone(), Some(index));
+    }
+}
+
+impl<'a> Visit<'a> for MutualRecursionGraphBuilder {
+    fn visit_typed_function(&mut self, fun: &'a TypedFunction) {
+        self.current_function = self
+            .names
+            .get(
+                fun.name
+                    .as_ref()
+                    .map(|(_, name)| name.as_str())
+                    .expect("A module's function must be named"),
+            )
+            .expect("Function must already have been registered as existing")
+            .expect("Function must not be shadowed at module level");
+
+        let names = self.names.clone();
+
+        for (i, statement) in fun.body.iter().enumerate() {
+            if i == fun.body.len() - 1 {
+                // If the statement is the last one in a function's body, then
+                // we know it's in tail position.
+                self.position = Position::Tail;
+                self.visit_typed_statement(statement);
+            } else {
+                self.position = Position::NotTail;
+                self.visit_typed_statement(statement);
+            }
+        }
+
+        self.names = names;
+    }
+
+    fn visit_typed_expr(&mut self, expr: &'a ast::TypedExpr) {
+        // If an expression is not in tail position we can just ignore it.
+        if self.position == Position::NotTail {
+            return;
+        }
+
+        match expr {
+            // Any expression that is not a call or a case in tail position is
+            // not relevant to detecting mutually recursive functions, so we can
+            // safely ignore them and not visit any further!
+            ast::TypedExpr::Int { .. }
+            | ast::TypedExpr::Float { .. }
+            | ast::TypedExpr::String { .. }
+            | ast::TypedExpr::Pipeline { .. }
+            | ast::TypedExpr::Var { .. }
+            | ast::TypedExpr::Fn { .. }
+            | ast::TypedExpr::List { .. }
+            | ast::TypedExpr::BinOp { .. }
+            | ast::TypedExpr::RecordAccess { .. }
+            | ast::TypedExpr::ModuleSelect { .. }
+            | ast::TypedExpr::Tuple { .. }
+            | ast::TypedExpr::TupleIndex { .. }
+            | ast::TypedExpr::Todo { .. }
+            | ast::TypedExpr::Panic { .. }
+            | ast::TypedExpr::Echo { .. }
+            | ast::TypedExpr::BitArray { .. }
+            | ast::TypedExpr::RecordUpdate { .. }
+            | ast::TypedExpr::NegateBool { .. }
+            | ast::TypedExpr::NegateInt { .. }
+            | ast::TypedExpr::Invalid { .. } => (),
+
+            // If we're here we've already checked that we are in tail position,
+            // so that means that the final statement in the block is going to
+            // be in tail position as well!
+            ast::TypedExpr::Block { statements, .. } => {
+                let names = self.names.clone();
+                for (i, statement) in statements.iter().enumerate() {
+                    if i == statements.len() - 1 {
+                        // If the statement is the last one in the block, then
+                        // we know it's in tail position.
+                        self.position = Position::Tail;
+                        self.visit_typed_statement(statement);
+                    } else {
+                        // Otherwise all the other statements are not in tail
+                        // position.
+                        self.position = Position::NotTail;
+                        self.visit_typed_statement(statement);
+                    }
+                }
+                self.names = names;
+            }
+
+            ast::TypedExpr::Call { fun, .. } => {
+                // Here we might be calling a top level function and so have a
+                // mutually recursive call!
+                if let ast::TypedExpr::Var { name, .. } = fun.as_ref() {
+                    self.referenced(name)
+                }
+            }
+
+            ast::TypedExpr::Case { clauses, .. } => {
+                for clause in clauses {
+                    // We need to keep separate scopes for each of the branches
+                    // so we will clone the names and restore them afterwards.
+                    let names = self.names.clone();
+                    ast::visit::visit_typed_clause(self, clause);
+                    self.names = names;
+                }
+            }
+        }
+    }
+
+    // When visiting a variable, assignment, or string prefix pattern; we need
+    // to remember the variables they're defining so that we can tell if they
+    // are shadowing existing functions defined in the outer scope.
+
+    fn visit_typed_pattern_variable(
+        &mut self,
+        _location: &'a SrcSpan,
+        name: &'a EcoString,
+        _type_: &'a std::sync::Arc<crate::type_::Type>,
+        _origin: &'a crate::type_::error::VariableOrigin,
+    ) {
+        self.assign(name);
+    }
+
+    fn visit_typed_pattern_assign(
+        &mut self,
+        _location: &'a SrcSpan,
+        name: &'a EcoString,
+        pattern: &'a ast::TypedPattern,
+    ) {
+        self.assign(name);
+        ast::visit::visit_typed_pattern(self, pattern);
+    }
+
+    fn visit_typed_pattern_string_prefix(
+        &mut self,
+        _location: &'a SrcSpan,
+        _left_location: &'a SrcSpan,
+        left_side_assignment: &'a Option<(EcoString, SrcSpan)>,
+        _right_location: &'a SrcSpan,
+        _left_side_string: &'a EcoString,
+        right_side_assignment: &'a AssignName,
+    ) {
+        if let Some((name, _)) = left_side_assignment {
+            self.assign(name);
+        }
+
+        match right_side_assignment {
+            AssignName::Variable(name) => self.assign(name),
+            AssignName::Discard(_) => (),
+        }
+    }
 }

@@ -153,8 +153,13 @@ pub fn module(
             .definitions
             .functions
             .into_iter()
-            .map(|function| inliner.function(function))
-            .collect(),
+            .map(|group| {
+                group
+                    .into_iter()
+                    .map(|function| inliner.function(function))
+                    .collect_vec()
+            })
+            .collect_vec(),
         ..module.definitions
     };
 
