@@ -22,7 +22,7 @@ fn parse_and_order(
             arguments: arguments
                 .iter()
                 .map(|name| Arg {
-                    names: crate::ast::ArgNames::Named {
+                    names: ast::ArgNames::Named {
                         name: EcoString::from(*name),
                         location: Default::default(),
                     },
