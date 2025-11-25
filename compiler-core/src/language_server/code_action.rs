@@ -28,6 +28,7 @@ use ecow::{EcoString, eco_format};
 use im::HashMap;
 use itertools::Itertools;
 use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, Position, Range, TextEdit, Url};
+use regex::Regex;
 use vec1::{Vec1, vec1};
 
 use super::{
@@ -8264,22 +8265,42 @@ impl<'a> CollapseNestedCase<'a> {
         let pattern_text: String = code_at(self.module, matched_pattern_span).into();
         let matched_variable_span = matched_variable.location;
 
-        let pattern_with_variable = |new_content: String| {
+        let pattern_with_variable = |mut new_content: String| {
             let mut new_pattern = pattern_text.clone();
 
             match matched_variable {
                 BoundVariable {
-                    name: BoundVariableName::Regular { .. },
+                    name: BoundVariableName::Regular { .. } | BoundVariableName::ListTail { .. },
                     ..
                 } => {
                     // If the variable is a regular variable we'll have to replace
                     // it entirely with the new pattern taking its place.
+
+                    let variable_span_to_use = if let BoundVariableName::ListTail {
+                        tail_prefix_location: prefix_and_variable_span,
+                        ..
+                    } = matched_variable.name
+                    {
+                        // We need to un-nest the list when replacing the tail
+                        let surrounding_brackets = Regex::new(r"(^\[|\]$)").expect("a valid regex");
+                        new_content = surrounding_brackets
+                            .replace_all(new_content.trim(), "")
+                            .to_string();
+
+                        // We need to also remove the prefix when replacing the variable
+                        // at the tail of the list
+                        prefix_and_variable_span
+                    } else {
+                        matched_variable_span
+                    };
+
                     let variable_start_in_pattern =
-                        matched_variable_span.start - matched_pattern_span.start;
-                    let variable_length = matched_variable_span.end - matched_variable_span.start;
+                        (variable_span_to_use.start - matched_pattern_span.start) as usize;
+                    let variable_length =
+                        (variable_span_to_use.end - variable_span_to_use.start) as usize;
+
                     let variable_end_in_pattern = variable_start_in_pattern + variable_length;
-                    let replaced_range =
-                        variable_start_in_pattern as usize..variable_end_in_pattern as usize;
+                    let replaced_range = variable_start_in_pattern..variable_end_in_pattern;
 
                     new_pattern.replace_range(replaced_range, &new_content);
                 }

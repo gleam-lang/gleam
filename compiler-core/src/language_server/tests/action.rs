@@ -9947,6 +9947,49 @@ fn collapse_nested_case_combines_inner_and_outer_guards_and_adds_parentheses_whe
     );
 }
 
+#[test]
+fn collapse_nested_case_combines_list_with_unformatted_tail() {
+    assert_code_action!(
+        COLLAPSE_NESTED_CASE,
+        r#"pub fn main(elems: List(String)) {
+  case elems {
+    [first, .. rest_of_list] ->
+      case rest_of_list {
+        [] -> 0
+        ["first"] -> 1
+        [_, "second"] -> 2
+        [_, "second", "third", _] -> 4
+        _ -> -1
+      }
+    _ -> -1
+  }
+}"#,
+        find_position_of("rest").to_selection()
+    );
+}
+
+#[test]
+fn collapse_nested_case_combines_list_with_tail() {
+    assert_code_action!(
+        COLLAPSE_NESTED_CASE,
+        r#"pub fn main(elems: List(List(Int))) {
+  case elems {
+    [] -> 0
+    [_, ..tail] ->
+      case tail {
+        [] -> -1
+        [[1]] -> 1
+        [_, [3, 4]] -> 3
+        [_, _, [5, 6, 7], _] -> 5
+        _ -> -1
+      }
+    _ -> -1
+  }
+}"#,
+        find_position_of("tail").to_selection()
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/3786
 #[test]
 fn type_variables_from_other_functions_do_not_change_annotations() {
