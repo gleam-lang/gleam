@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub type User {\n    User(id: Int, name: String)\n}\n\npub fn go(user: User) {\n  authenticate(user.id, user.name)\n}\n"
+---
+----- BEFORE ACTION
+
+pub type User {
+    User(id: Int, name: String)
+}
+
+pub fn go(user: User) {
+  authenticate(user.id, user.name)
+  ↑                               
+}
+
+
+----- AFTER ACTION
+
+pub type User {
+    User(id: Int, name: String)
+}
+
+pub fn go(user: User) {
+  authenticate(user.id, user.name)
+}
+
+fn authenticate(id: Int, name: String) -> a {
+  todo
+}
