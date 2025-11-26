@@ -210,6 +210,31 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The "generate function" code action can now pick better names for arguments
+  that use the record access syntax. For example:
+
+  ```gleam
+  pub type User {
+    User(id: Int, name: String)
+  }
+
+  pub fn go(user: User) {
+    authenticate(user.id, user.name)
+    todo
+  }
+  ```
+
+  Having the language server generate the missing `authenticate` function will
+  produce the following code:
+
+  ```gleam
+  pub fn authenticate(id: Int, name: String) {
+    todo
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The "inline variable" code action can now trigger when used over the let
   keyword of a variable to inline.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

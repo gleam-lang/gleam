@@ -7636,6 +7636,23 @@ pub fn main() {
 }
 
 #[test]
+fn generate_function_picks_argument_name_based_on_record_access() {
+    assert_code_action!(
+        GENERATE_FUNCTION,
+        "
+pub type User {
+    User(id: Int, name: String)
+}
+
+pub fn go(user: User) {
+  authenticate(user.id, user.name)
+}
+",
+        find_position_of("authenticate").to_selection()
+    );
+}
+
+#[test]
 fn generate_function_wont_generate_two_arguments_with_the_same_name_if_they_have_the_same_type() {
     assert_code_action!(
         GENERATE_FUNCTION,

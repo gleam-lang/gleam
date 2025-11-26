@@ -5981,6 +5981,14 @@ impl NameGenerator {
             {
                 Some(self.rename_to_avoid_shadowing(name.clone()))
             }
+
+            // If the argument is a record access, we generate a name from the
+            // label used.
+            // For example if we have `wibble.id` we would end up picking `id`.
+            TypedExpr::RecordAccess { label, .. } => {
+                Some(self.rename_to_avoid_shadowing(label.clone()))
+            }
+
             _ => None,
         }
     }
