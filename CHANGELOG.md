@@ -341,3 +341,7 @@
 - Fixed a bug where the compiler would generate invalid Erlang and TypeScript
   code for unused opaque types referencing private types.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where variable sized string segment patterns that are discarded
+  are not disallowed by the compiler.
+  ([Lily Rose](https://github.com/LilyRose2798))
