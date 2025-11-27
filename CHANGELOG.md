@@ -341,3 +341,8 @@
 - Fixed a bug where the compiler would generate invalid Erlang and TypeScript
   code for unused opaque types referencing private types.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where enabling `typescript_declarations = true` wouldn't generate
+  TypeScript declarations unless the build directory was manually deleted. The
+  compiler now automatically rebuilds the project when this configuration changes.
+  ([daniellionel01](https://github.com/daniellionel01))
