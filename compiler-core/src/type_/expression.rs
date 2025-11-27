@@ -3818,6 +3818,187 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 self.infer_constant_bit_array(segments, location)
             }
 
+            // Handle constant record updates
+            Constant::RecordUpdate {
+                module,
+                location,
+                name,
+                record,
+                arguments,
+                ..
+            } => {
+                let constructor = self.infer_value_constructor(&module, &name, &location)?;
+
+                let (tag, field_map) = match &constructor.variant {
+                    ValueConstructorVariant::Record {
+                        name, field_map, ..
+                    } => (name.clone(), field_map.clone()),
+
+                    ValueConstructorVariant::ModuleFn { .. }
+                    | ValueConstructorVariant::LocalVariable { .. } => {
+                        return Err(Error::NonLocalClauseGuardVariable { location, name });
+                    }
+
+                    ValueConstructorVariant::ModuleConstant { literal, .. }
+                    | ValueConstructorVariant::LocalConstant { literal } => {
+                        return Ok(literal.clone());
+                    }
+                };
+
+                // Type-check the record being updated
+                let typed_record = self.infer_const(&None, *record);
+
+                // Unify types - the record being updated should have the same type as what the constructor returns
+                let expected_type = match constructor.type_.as_ref() {
+                    Type::Fn { return_: ret, .. } => ret.clone(),
+                    _ => constructor.type_.clone(),
+                };
+                unify(expected_type.clone(), typed_record.type_())
+                    .map_err(|e| convert_unify_error(e, typed_record.location()))?;
+
+                // If the record being updated is a reference to a constant variable, resolve it to get the actual record value
+                let resolved_record = match &typed_record {
+                    Constant::Var {
+                        constructor: Some(value_constructor),
+                        ..
+                    } => match &value_constructor.variant {
+                        ValueConstructorVariant::LocalConstant { literal }
+                        | ValueConstructorVariant::ModuleConstant { literal, .. } => {
+                            literal.clone()
+                        }
+                        _ => typed_record,
+                    },
+                    _ => typed_record,
+                };
+
+                // Get the field arguments from the record that we'll use as the base
+                let base_args = match resolved_record {
+                    Constant::Record {
+                        arguments: base_args,
+                        ..
+                    } => base_args,
+                    _ => {
+                        return Err(Error::RecordUpdateInvalidConstructor { location });
+                    }
+                };
+
+                // Handle 0-arity constructors (constructors with no fields)
+                // For these, the type is not Fn, it's just the record type itself
+                if !matches!(constructor.type_.as_ref(), Type::Fn { .. }) {
+                    // For 0-arity constructors, there are no fields to update
+                    // If there are any override arguments, that's an error
+                    if !arguments.is_empty() {
+                        // The user is trying to update fields on a constructor with no fields
+                        return Err(Error::RecordUpdateInvalidConstructor { location });
+                    }
+
+                    // Emit warning if no fields are being overridden (spreading with no updates)
+                    self.problems
+                        .warning(Warning::NoFieldsRecordUpdate { location });
+
+                    // Just return the constructor itself
+                    return Ok(Constant::Record {
+                        module,
+                        location,
+                        name,
+                        arguments: vec![],
+                        type_: expected_type,
+                        tag,
+                        field_map,
+                        record_constructor: Some(Box::new(constructor)),
+                    });
+                }
+
+                // Extract the field types from the constructor function type
+                // Record constructors have type Fn(field1_type, field2_type, ...) -> RecordType
+                let field_types = match constructor.type_.as_ref() {
+                    Type::Fn {
+                        arguments: field_types,
+                        ..
+                    } => field_types,
+                    _ => {
+                        // This shouldn't happen for record constructors with fields
+                        return Err(Error::RecordUpdateInvalidConstructor { location });
+                    }
+                };
+
+                // Emit warning if no fields are being overridden
+                if arguments.is_empty() {
+                    self.problems
+                        .warning(Warning::NoFieldsRecordUpdate { location });
+                }
+
+                // Type-check explicit override arguments
+                let mut typed_overrides = Vec::new();
+                for arg in arguments {
+                    if arg.uses_label_shorthand() {
+                        self.track_feature_usage(FeatureKind::LabelShorthandSyntax, arg.location);
+                    }
+
+                    let label = &arg.label;
+                    let typed_value = self.infer_const(&None, arg.value);
+
+                    // Validate field exists and type check the override value
+                    // field_map is None for tuple-like constructors (unlabelled fields)
+                    // and Some for record constructors with named fields
+                    if let Some(field_map) = &field_map {
+                        match field_map.fields.get(label) {
+                            Some(&index) => {
+                                // Type check: the override value must match the field type
+                                if let Some(expected_type) = field_types.get(index as usize) {
+                                    unify(expected_type.clone(), typed_value.type_()).map_err(
+                                        |e| convert_unify_error(e, typed_value.location()),
+                                    )?;
+                                }
+                            }
+                            None => {
+                                // Field doesn't exist in the record
+                                return Err(self.unknown_field_error(
+                                    field_map.fields.keys().cloned().collect(),
+                                    expected_type.clone(),
+                                    arg.location,
+                                    label.clone(),
+                                    FieldAccessUsage::Other,
+                                ));
+                            }
+                        }
+                    }
+
+                    typed_overrides.push(CallArg {
+                        label: Some(label.clone()),
+                        value: typed_value,
+                        location: arg.location,
+                        implicit: None,
+                    });
+                }
+
+                // Merge: start with base record args, override with explicit update args
+                let mut final_arguments = base_args;
+                for override_arg in typed_overrides {
+                    if let Some(label) = &override_arg.label
+                        && let Some(field_map) = &field_map
+                        && let Some(&index) = field_map.fields.get(label)
+                        && (index as usize) < final_arguments.len()
+                    {
+                        *final_arguments
+                            .get_mut(index as usize)
+                            .expect("Index out of bounds") = override_arg;
+                    }
+                }
+
+                // Return a fully expanded Record (not RecordUpdate)
+                Ok(Constant::Record {
+                    module,
+                    location,
+                    name,
+                    arguments: final_arguments,
+                    type_: expected_type,
+                    tag,
+                    field_map,
+                    record_constructor: Some(Box::new(constructor)),
+                })
+            }
+
             Constant::Record {
                 module,
                 location,
@@ -3858,6 +4039,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 })
             }
 
+            // Handle constant records (normal case)
             Constant::Record {
                 module,
                 location,
