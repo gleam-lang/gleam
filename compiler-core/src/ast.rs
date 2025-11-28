@@ -3155,6 +3155,13 @@ impl TypedPattern {
 pub enum BoundVariable {
     /// A record's labelled field introduced with the shorthand syntax.
     ShorthandLabel { name: EcoString, location: SrcSpan },
+    /// The variable as the tail of a list.
+    ListTail {
+        name: EcoString,
+        location: SrcSpan,
+        /// The location of the whole tail, from the `..` prefix until the end of the variable.
+        location_including_prefix: SrcSpan,
+    },
     /// Any other variable.
     Regular { name: EcoString, location: SrcSpan },
 }
@@ -3162,15 +3169,16 @@ pub enum BoundVariable {
 impl BoundVariable {
     pub fn name(&self) -> EcoString {
         match self {
-            BoundVariable::ShorthandLabel { name, .. } | BoundVariable::Regular { name, .. } => {
-                name.clone()
-            }
+            BoundVariable::ShorthandLabel { name, .. }
+            | BoundVariable::ListTail { name, .. }
+            | BoundVariable::Regular { name, .. } => name.clone(),
         }
     }
 
     pub fn location(&self) -> SrcSpan {
         match self {
             BoundVariable::ShorthandLabel { location, .. }
+            | BoundVariable::ListTail { location, .. }
             | BoundVariable::Regular { location, .. } => *location,
         }
     }
@@ -3389,9 +3397,15 @@ impl TypedPattern {
                 for element in elements {
                     element.collect_bound_variables(variables);
                 }
-                if let Some(tail) = tail {
-                    tail.pattern.collect_bound_variables(variables);
-                }
+                if let Some(tail) = tail
+                    && let Pattern::Variable { name, location, .. } = tail.pattern.to_owned()
+                {
+                    variables.push(BoundVariable::ListTail {
+                        name,
+                        location,
+                        location_including_prefix: tail.location,
+                    })
+                };
             }
             Pattern::Constructor { arguments, .. } => {
                 for argument in arguments {

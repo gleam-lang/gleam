@@ -341,3 +341,7 @@
 - Fixed a bug where the compiler would generate invalid Erlang and TypeScript
   code for unused opaque types referencing private types.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where the collapse nested case would produce invalid code on a
+  list tail pattern.
+  ([Matias Carlander](https://github.com/matiascr))
