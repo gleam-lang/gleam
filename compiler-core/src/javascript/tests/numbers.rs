@@ -446,8 +446,8 @@ fn underscore_after_decimal_point_case_statement() {
         "
 pub fn main(x) {
   case x {
-    0._1 -> \"bar\"
-    _ -> \"foo\"
+    0._1 -> \"wobble\"
+    _ -> \"wibble\"
   }
 }
 "
@@ -460,8 +460,8 @@ fn inf_float_case_statement() {
         "
 pub fn main(x) {
   case x {
-  100.001e123_456_789 -> \"bar\"
-    _ -> \"foo\"
+  100.001e123_456_789 -> \"wobble\"
+    _ -> \"wibble\"
   }
 }
 "
