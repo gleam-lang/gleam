@@ -373,3 +373,7 @@
 - Fixed a bug where the type checker would allow invalid programs when a large
   group of functions were all mutually recursive.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where the data generated for searching documentation was in the
+  wrong format, preventing it from being used by Hexdocs search.
+  ([Surya Rose](https://github.com/GearsDatapacks))

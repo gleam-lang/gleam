@@ -320,7 +320,7 @@ expression: "compile_with_markdown_pages(config, vec![], pages,\nCompileWithMark
     <script src="./js/lunr.min.js?v=GLEAM_VERSION_HERE"></script>
     <script src="./js/index.js?v=0"></script>
     <script>
-      fetch("./search_data.json?v=0")
+      fetch("./search-data.json?v=0")
         .then(response => response.json())
         .then(data => window.Gleam.initSearch(data));
     </script>
