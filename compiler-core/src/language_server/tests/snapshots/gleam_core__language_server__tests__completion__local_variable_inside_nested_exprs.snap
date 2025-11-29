@@ -1,25 +1,18 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-expression: "\ntype Foo { Bar(List(#(Bool))) }\nfn wibble() {\n  Bar([#(!{\n    let foo = True\n    foo\n  })])\n  todo\n}\n"
+expression: "\ntype Wibble { Wobble(List(#(Bool))) }\nfn wibble() {\n  Wobble([#(!{\n    let wibble = True\n    wibble\n  })])\n  todo\n}\n"
 ---
-type Foo { Bar(List(#(Bool))) }
+type Wibble { Wobble(List(#(Bool))) }
 fn wibble() {
-  Bar([#(!{
-    let foo = True
-    foo|
+  Wobble([#(!{
+    let wibble = True
+    wib|ble
   })])
   todo
 }
 
 
 ----- Completion content -----
-Bar
-  kind:   Constructor
-  detail: fn(List(#(Bool))) -> Foo
-  sort:   2_Bar
-  desc:   app
-  edits:
-    [5:4-5:4]: "Bar"
 Error
   kind:   Constructor
   detail: gleam
@@ -40,14 +33,21 @@ True
   kind:   EnumMember
   detail: gleam
   sort:   4_True
-foo
+Wobble
+  kind:   Constructor
+  detail: fn(List(#(Bool))) -> Wibble
+  sort:   2_Wobble
+  desc:   app
+  edits:
+    [5:4-5:4]: "Wobble"
+wibble
   kind:   Variable
   detail: Bool
-  sort:   2_foo
+  sort:   2_wibble
   desc:   app
   docs:   "A locally defined variable."
   edits:
-    [5:4-5:4]: "foo"
+    [5:4-5:4]: "wibble"
 wibble
   kind:   Function
   detail: fn() -> a

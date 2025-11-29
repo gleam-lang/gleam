@@ -124,7 +124,7 @@
   because under the hood during code generation they become anonymous functions:
 
   ```gleam
-  pub type Foo {
+  pub type Wibble {
     Wobble(String)
   }
 

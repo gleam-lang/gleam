@@ -405,13 +405,13 @@ fn importable_adds_extra_new_line_if_import_exists_below_other_definitions() {
 #[test]
 fn importable_does_not_add_extra_new_line_if_imports_exist() {
     let dep = "pub fn wobble() {\nNil\n}";
-    let prefix = "import foo\n\n";
+    let prefix = "import wibble\n\n";
     let code = "";
 
     assert_completion_with_prefix!(
         TestProject::for_source(code)
             .add_module("dep", dep)
-            .add_module("foo", ""),
+            .add_module("wibble", ""),
         prefix
     );
 }
@@ -425,7 +425,7 @@ fn importable_does_not_add_extra_new_line_if_newline_exists() {
     assert_completion_with_prefix!(
         TestProject::for_source(code)
             .add_module("dep", dep)
-            .add_module("foo", ""),
+            .add_module("wibble", ""),
         prefix
     );
 }
@@ -972,11 +972,11 @@ pub fn main() {
 #[test]
 fn local_variable_inside_nested_exprs() {
     let code = r#"
-type Foo { Bar(List(#(Bool))) }
+type Wibble { Wobble(List(#(Bool))) }
 fn wibble() {
-  Bar([#(!{
-    let foo = True
-    foo
+  Wobble([#(!{
+    let wibble = True
+    wibble
   })])
   todo
 }
