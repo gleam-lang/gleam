@@ -1461,9 +1461,9 @@ impl<'module, 'a> Generator<'module, 'a> {
 
         // If we have a constant value divided by zero then it's safe to replace
         // it directly with 0.
-        if left.is_literal() && right.zero_compile_time_number() {
+        if left.is_literal() && right.is_zero_compile_time_number() {
             "0".to_doc()
-        } else if right.non_zero_compile_time_number() {
+        } else if right.is_non_zero_compile_time_number() {
             let division = if let TypedExpr::BinOp { .. } = left {
                 docvec![left_doc.surround("(", ")"), " / ", right_doc]
             } else {
@@ -1484,9 +1484,9 @@ impl<'module, 'a> Generator<'module, 'a> {
 
         // If we have a constant value divided by zero then it's safe to replace
         // it directly with 0.
-        if left.is_literal() && right.zero_compile_time_number() {
+        if left.is_literal() && right.is_zero_compile_time_number() {
             "0".to_doc()
-        } else if right.non_zero_compile_time_number() {
+        } else if right.is_non_zero_compile_time_number() {
             if let TypedExpr::BinOp { .. } = left {
                 docvec![left_doc.surround("(", ")"), " % ", right_doc]
             } else {
@@ -1506,9 +1506,9 @@ impl<'module, 'a> Generator<'module, 'a> {
 
         // If we have a constant value divided by zero then it's safe to replace
         // it directly with 0.
-        if left.is_literal() && right.zero_compile_time_number() {
+        if left.is_literal() && right.is_zero_compile_time_number() {
             "0.0".to_doc()
-        } else if right.non_zero_compile_time_number() {
+        } else if right.is_non_zero_compile_time_number() {
             if let TypedExpr::BinOp { .. } = left {
                 docvec![left_doc.surround("(", ")"), " / ", right_doc]
             } else {

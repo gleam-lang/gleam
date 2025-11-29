@@ -5167,30 +5167,8 @@ enum StaticComparison {
     CantTell,
 }
 
-/// Returns true if the expression is a record constructor function/record constructor
-/// with non-zero arity.
-fn is_record_constructor_function(expr: &TypedExpr) -> bool {
-    match expr {
-        TypedExpr::Var {
-            constructor:
-                ValueConstructor {
-                    variant: ValueConstructorVariant::Record { arity, .. },
-                    ..
-                },
-            ..
-        } => *arity > 0,
-
-        TypedExpr::ModuleSelect {
-            constructor: ModuleValueConstructor::Record { arity, .. },
-            ..
-        } => *arity > 0,
-
-        _ => false,
-    }
-}
-
 fn static_compare(one: &TypedExpr, other: &TypedExpr) -> StaticComparison {
-    if is_record_constructor_function(one) && is_record_constructor_function(other) {
+    if one.is_record_constructor_function() && other.is_record_constructor_function() {
         return StaticComparison::CantTell;
     }
 

@@ -586,7 +586,7 @@ impl TypedExpr {
         }
     }
 
-    pub fn non_zero_compile_time_number(&self) -> bool {
+    pub fn is_non_zero_compile_time_number(&self) -> bool {
         match self {
             Self::Int { int_value, .. } => int_value != &BigInt::ZERO,
             Self::Float { value, .. } => is_non_zero_number(value),
@@ -594,7 +594,7 @@ impl TypedExpr {
         }
     }
 
-    pub fn zero_compile_time_number(&self) -> bool {
+    pub fn is_zero_compile_time_number(&self) -> bool {
         match self {
             Self::Int { int_value, .. } => int_value == &BigInt::ZERO,
             Self::Float { value, .. } => !is_non_zero_number(value),
@@ -742,7 +742,7 @@ impl TypedExpr {
 
             // Calls are literals if they are records and all the arguemnts are also literals.
             Self::Call { fun, arguments, .. } => {
-                fun.is_record_builder()
+                fun.is_record_literal()
                     && arguments.iter().all(|argument| argument.value.is_literal())
             }
 
@@ -881,7 +881,7 @@ impl TypedExpr {
             }
 
             TypedExpr::Call { fun, arguments, .. } => {
-                (fun.is_record_builder() || fun.called_function_purity().is_pure())
+                (fun.is_record_literal() || fun.called_function_purity().is_pure())
                     && arguments
                         .iter()
                         .all(|argument| argument.value.is_pure_value_constructor())
@@ -982,14 +982,37 @@ impl TypedExpr {
     /// Returns true if the value is a literal record builder like
     /// `Wibble(1, 2)`, `module.Wobble("a")`
     ///
-    pub fn is_record_builder(&self) -> bool {
+    pub fn is_record_literal(&self) -> bool {
         match self {
-            TypedExpr::Call { fun, .. } => fun.is_record_builder(),
+            TypedExpr::Call { fun, .. } => fun.is_record_literal(),
             TypedExpr::Var { constructor, .. } => constructor.variant.is_record(),
             TypedExpr::ModuleSelect {
                 constructor: ModuleValueConstructor::Record { .. },
                 ..
             } => true,
+            _ => false,
+        }
+    }
+
+    /// Returns true if the expression is a record constructor function/record constructor
+    /// with non-zero arity.
+    ///
+    pub fn is_record_constructor_function(&self) -> bool {
+        match self {
+            TypedExpr::Var {
+                constructor:
+                    ValueConstructor {
+                        variant: ValueConstructorVariant::Record { arity, .. },
+                        ..
+                    },
+                ..
+            } => *arity > 0,
+
+            TypedExpr::ModuleSelect {
+                constructor: ModuleValueConstructor::Record { arity, .. },
+                ..
+            } => *arity > 0,
+
             _ => false,
         }
     }

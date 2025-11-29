@@ -1055,7 +1055,7 @@ fn statement_sequence<'a>(statements: &'a [TypedStatement], env: &mut Env<'a>) -
 }
 
 fn float_div<'a>(left: &'a TypedExpr, right: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
-    if right.non_zero_compile_time_number() {
+    if right.is_non_zero_compile_time_number() {
         return binop_exprs(left, "/", right, env);
     }
 
@@ -1081,13 +1081,13 @@ fn int_div<'a>(
     op: &'static str,
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    if right.non_zero_compile_time_number() {
+    if right.is_non_zero_compile_time_number() {
         return binop_exprs(left, op, right, env);
     }
 
     // If we have a constant value divided by zero then it's safe to replace it
     // directly with 0.
-    if left.is_literal() && right.zero_compile_time_number() {
+    if left.is_literal() && right.is_zero_compile_time_number() {
         return "0".to_doc();
     }
 
