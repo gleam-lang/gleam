@@ -3111,7 +3111,7 @@ where
     //   "hi"
     //   True
     //   [1,2,3]
-    //   foo <> "bar"
+    //   wibble <> "wobble"
     fn parse_const_value(&mut self) -> Result<Option<UntypedConstant>, ParseError> {
         let constant_result = self.parse_const_value_unit();
         match constant_result {

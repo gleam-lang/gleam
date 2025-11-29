@@ -1,13 +1,13 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-expression: "\npub fn main(x) {\n  case x {\n  100.001e123_456_789 -> \"bar\"\n    _ -> \"foo\"\n  }\n}\n"
+expression: "\npub fn main(x) {\n  case x {\n  100.001e123_456_789 -> \"wobble\"\n    _ -> \"wibble\"\n  }\n}\n"
 ---
 ----- SOURCE CODE
 
 pub fn main(x) {
   case x {
-  100.001e123_456_789 -> "bar"
-    _ -> "foo"
+  100.001e123_456_789 -> "wobble"
+    _ -> "wibble"
   }
 }
 
@@ -16,7 +16,7 @@ pub fn main(x) {
 error: Float outside of valid range
   ┌─ /src/one/two.gleam:4:3
   │
-4 │   100.001e123_456_789 -> "bar"
+4 │   100.001e123_456_789 -> "wobble"
   │   ^^^^^^^^^^^^^^^^^^^
 
 This float value is too large to be represented by a floating point type:
