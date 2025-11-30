@@ -215,6 +215,13 @@
 
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- You can now set the `HEXPM_REPOSITORY_URL` and `HEXPM_API_URL` environment
+  variables to use Hex mirrors.
+  Note that this strictly supports _mirrors_. Publishing and other write
+  operations will still target the main Hex instance.
+  Authentication is also not supported.
+  ([fruno](https://github.com/fruno-bulax/))
+
 ### Language server
 
 - The language server can now offer a code action to merge consecutive case
