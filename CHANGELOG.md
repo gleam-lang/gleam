@@ -428,3 +428,7 @@
 - The compiler now provides a clearer error message when a function's return type
   is mistakenly declared using `:` instead of `->`.
   ([Gurvir Singh](https://github.com/baraich))
+
+- Added an error message when attempting to update packages that are not dependencies
+  of the project, instead of failing silently.
+  ([Etienne Boutet](https://github.com/EtienneBoutet)) and ([Vladislav Shakitskiy](https://github.com/vshakitskiy))
