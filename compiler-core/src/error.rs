@@ -337,6 +337,13 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
 
     #[error("Cannot add a package with the same name as a dependency")]
     CannotAddSelfAsDependency { name: EcoString },
+
+    #[error("Invalid environment variable '{name}': {problem}")]
+    InvalidEnvironmentVariable {
+        name: String,
+        value: String,
+        problem: String,
+    },
 }
 
 // A wrapper that ignores the inner value for equality:
@@ -4568,6 +4575,18 @@ or you can publish it using a different version number"
                     "A package cannot depend on itself, so you cannot \
 add `gleam add {name}` in this project."
                 ),
+                level: Level::Error,
+                location: None,
+                hint: None,
+            }],
+
+            Error::InvalidEnvironmentVariable { name, value, problem } => vec![Diagnostic {
+                title: "Invalid environment variable".into(),
+                text: wrap_format!(
+                    "You provided the environment variable `{name}` with an invalid value of `{value}`.
+
+{problem}"
+            ),
                 level: Level::Error,
                 location: None,
                 hint: None,

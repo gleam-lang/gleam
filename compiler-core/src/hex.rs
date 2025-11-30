@@ -165,6 +165,7 @@ impl Downloader {
         fs_writer: Box<dyn FileSystemWriter>,
         http: Box<dyn HttpClient>,
         untar: Box<dyn TarUnpacker>,
+        hex_config: hexpm::Config,
         paths: ProjectPaths,
     ) -> Self {
         Self {
@@ -172,7 +173,7 @@ impl Downloader {
             fs_writer: DebugIgnore(fs_writer),
             http: DebugIgnore(http),
             untar: DebugIgnore(untar),
-            hex_config: hexpm::Config::new(),
+            hex_config,
             paths,
         }
     }
