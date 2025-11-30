@@ -487,3 +487,7 @@
   it to hit hex for version resolution on every operation and quickly reach
   request limits in large projects.
   ([fruno](https://github.com/fruno-bulax/))
+
+- Added an error message when attempting to update packages that are not dependencies
+  of the project, instead of failing silently.
+  ([Etienne Boutet](https://github.com/EtienneBoutet)) and ([Vladislav Shakitskiy](https://github.com/vshakitskiy))
