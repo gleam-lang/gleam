@@ -31,7 +31,7 @@ pub fn position_of_first_definition_if_import(
         .map(|constant| constant.location)
         .chain(custom_types.iter().map(|custom_type| custom_type.location))
         .chain(type_aliases.iter().map(|type_alias| type_alias.location))
-        .chain(functions.iter().map(|function| function.location))
+        .chain(functions.iter().flatten().map(|function| function.location))
         .all(|location| location >= first_import.location);
 
     if import_is_first_definition {

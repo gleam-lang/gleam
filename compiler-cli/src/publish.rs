@@ -151,6 +151,7 @@ fn check_for_name_squatting(package: &Package) -> Result<(), Error> {
         .definitions
         .functions
         .iter()
+        .flatten()
         .find_map(|function| function.main_function())
     else {
         return Ok(());
@@ -173,7 +174,7 @@ fn check_for_default_main(package: &Package) -> Result<(), Error> {
     let has_default_main = package
         .modules
         .iter()
-        .flat_map(|module| module.ast.definitions.functions.iter())
+        .flat_map(|module| module.ast.definitions.functions.iter().flatten())
         .filter_map(|function| function.main_function())
         .any(|main| main.documentation.is_none() && is_default_main(main, package_name));
 
