@@ -81,10 +81,12 @@ where
         if !paths.manifest().exists() {
             tracing::debug!("manifest_not_present");
             let manifest = self.perform_version_resolution(paths, config, None, Vec::new())?;
+            self.ensure_packages_exist_locally(&manifest, packages_to_update.clone())?;
             return Ok(Resolved::all_added(manifest));
         }
 
         let existing_manifest = read_manifest_from_disc(paths)?;
+        self.ensure_packages_exist_locally(&existing_manifest, packages_to_update.clone())?;
 
         // If we have been asked not to use the manifest then
         let (requirements_changed, manifest_for_resolver) = match self.use_manifest {
@@ -121,6 +123,25 @@ where
             requirements_changed,
         };
         Ok(resolved)
+    }
+
+    fn ensure_packages_exist_locally(
+        &self,
+        manifest: &Manifest,
+        packages: Vec<EcoString>,
+    ) -> Result<()> {
+        let missing_packages: Vec<String> = packages
+            .iter()
+            .filter(|package_name| !manifest.packages.iter().any(|p| &p.name == *package_name))
+            .map(|eco| eco.to_string())
+            .collect();
+
+        if !missing_packages.is_empty() {
+            return Err(Error::PackagesToUpdateNotExist {
+                packages: missing_packages,
+            });
+        }
+        Ok(())
     }
 
     pub fn resolve_and_download_versions(
