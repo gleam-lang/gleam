@@ -76,7 +76,16 @@ fn make_request(
     let mut parts = base.into_parts();
     parts.path_and_query = Some(
         match parts.path_and_query {
-            Some(path) => format!("{}{}", path, path_suffix).try_into(),
+            Some(path_and_query) => {
+                let mut path = path_and_query.path().to_owned();
+                if !path.ends_with('/') {
+                    path.push('/');
+                }
+                path += path_suffix;
+
+                // Drop query parameters
+                path.try_into()
+            }
             None => path_suffix.try_into(),
         }
         .expect("api_uri path"),
