@@ -373,3 +373,7 @@
 - Fixed a bug where the type checker would allow invalid programs when a large
   group of functions were all mutually recursive.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Added an error message when attempting to update packages that are not dependencies
+  of the project, instead of failing silently.
+  ([Etienne Boutet](https://github.com/EtienneBoutet)) and ([Vladislav Shakitskiy](https://github.com/vshakitskiy))
