@@ -206,7 +206,7 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     RemovedPackagesNotExist { packages: Vec<String> },
 
     #[error("Packages to update not exist: {}", packages.iter().join(", "))]
-    PackagesToUpdateNotExist { packages: Vec<String> },
+    PackagesToUpdateNotExist { packages: Vec<EcoString> },
 
     #[error("unable to find project root")]
     UnableToFindProjectRoot { path: String },
