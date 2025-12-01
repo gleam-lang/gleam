@@ -60,7 +60,7 @@ jobs:
             cargo-tool: wasm-pack
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: "Build Archive"
         id: build
