@@ -1342,3 +1342,17 @@ async fn get_package_release_ok() {
         }
     )
 }
+
+#[test]
+fn make_request_base_trailing_slash_is_optional() {
+    let slash = http::Uri::from_static("http://host/path/");
+    let no_slash = http::Uri::from_static("http://host/path");
+    let suffix = "suffix";
+    let expect = "/path/suffix";
+
+    let slash = make_request(slash, http::Method::GET, suffix, None);
+    assert_eq!(slash.uri_ref().unwrap().path(), expect);
+
+    let no_slash = make_request(no_slash, http::Method::GET, suffix, None);
+    assert_eq!(no_slash.uri_ref().unwrap().path(), expect);
+}
