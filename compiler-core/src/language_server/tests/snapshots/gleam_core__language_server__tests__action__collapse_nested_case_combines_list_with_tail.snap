@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "pub fn main(elems: List(List(Int))) {\n  case elems {\n    [] -> 0\n    [_, ..tail] ->\n      case tail {\n        [] -> -1\n        [[1]] -> 1\n        [_, [3, 4]] -> 3\n        [_, _, [5, 6, 7], _] -> 5\n        _ -> -1\n      }\n    _ -> -1\n  }\n}"
+expression: "pub fn main(elems: List(List(Int))) {\n  case elems {\n    [] -> 0\n    [_, ..tail] ->\n      case tail {\n        [] -> -1\n        [[1]] -> 1\n        [_, [3, 4]] -> 3\n        [_, _, [5, 6, 7], _] -> 5\n        tail_list -> {\n            echo tail_list\n            -1\n        }\n      }\n    _ -> -1\n  }\n}"
 ---
 ----- BEFORE ACTION
 pub fn main(elems: List(List(Int))) {
@@ -13,7 +13,10 @@ pub fn main(elems: List(List(Int))) {
         [[1]] -> 1
         [_, [3, 4]] -> 3
         [_, _, [5, 6, 7], _] -> 5
-        _ -> -1
+        tail_list -> {
+            echo tail_list
+            -1
+        }
       }
     _ -> -1
   }
@@ -28,7 +31,10 @@ pub fn main(elems: List(List(Int))) {
     [_, [1]] -> 1
     [_, _, [3, 4]] -> 3
     [_, _, _, [5, 6, 7], _] -> 5
-    [_, _] -> -1
+    [_, ..tail_list] -> {
+            echo tail_list
+            -1
+        }
     _ -> -1
   }
 }
