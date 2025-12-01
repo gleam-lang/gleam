@@ -27,7 +27,7 @@ jobs:
     # TODO: Re-add
     # if: ${{ github.repository == 'gleam-lang/gleam' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: print latest_commit
         run: echo ${{ github.sha }}
 
@@ -100,7 +100,7 @@ jobs:
             cargo-tool: wasm-pack
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Update versions
         shell: bash
@@ -159,7 +159,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           sparse-checkout: |
             .github/actions
