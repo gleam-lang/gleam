@@ -20,6 +20,38 @@
 
   ([Adi Salimgereyev](https://github.com/abs0luty))
 
+- Type inference now preserves generic type parameters when constructors or functions are used without explicit annotations, eliminating false errors in mutually recursive code:
+  ```gleam
+  type Test(a) {
+    Test(a)
+  }
+
+  fn it(value: Test(a)) {
+    it2(value)
+  }
+
+  fn it2(value: Test(a)) -> Test(a) {
+    it(value)
+  }
+  ```
+  Previously this could fail with an incorrect "Type mismatch" error:
+  ```
+  Type mismatch
+
+  The type of this returned value doesn't match the return type
+  annotation of this function.
+
+  Expected type:
+
+    Test(a)
+
+  Found type:
+
+    Test(a)
+  ```
+
+  ([Adi Salimgereyev](https://github.com/abs0luty))
+
 ### Build tool
 
 - When adding a package that does not exist on Hex, the message is a bit
