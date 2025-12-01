@@ -5329,8 +5329,16 @@ impl<'a> GenerateFunction<'a> {
             ..
         } = function_to_generate;
 
-        // Labels do not share the same namespace as argument so we use two separate
-        // generators to avoid renaming a label in case it shares a name with an argument.
+        // This might be triggered on variants as well, in that case we don't
+        // want to offer this action. The "generate variant" action will be
+        // offered instead.
+        if !is_valid_lowercase_name(name) {
+            return vec![];
+        }
+
+        // Labels do not share the same namespace as argument so we use two
+        // separate generators to avoid renaming a label in case it shares a
+        // name with an argument.
         let mut label_names = NameGenerator::new();
         let mut argument_names = NameGenerator::new();
 

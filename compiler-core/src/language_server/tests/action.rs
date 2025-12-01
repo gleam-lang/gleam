@@ -10019,6 +10019,21 @@ pub fn main() {
 }
 
 #[test]
+fn generate_function_is_not_offered_for_variants() {
+    assert_no_code_actions!(
+        GENERATE_FUNCTION,
+        "
+pub type Wibble
+
+pub fn main() -> Wibble {
+  Wobble(1)
+}
+",
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
 fn generating_function_in_other_module_uses_local_names() {
     let src = r#"
 import wibble
