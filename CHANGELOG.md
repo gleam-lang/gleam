@@ -1,5 +1,9 @@
 # Changelog
 
+## v5.1.1 - 2025-12-01
+
+- Fixed a bug with request path construction.
+
 ## v5.1.0 - 2025-11-06
 
 - Updated dependencies.
