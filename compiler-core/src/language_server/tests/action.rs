@@ -9981,7 +9981,10 @@ fn collapse_nested_case_combines_list_with_tail() {
         [[1]] -> 1
         [_, [3, 4]] -> 3
         [_, _, [5, 6, 7], _] -> 5
-        _ -> -1
+        tail_list -> {
+            echo tail_list
+            -1
+        }
       }
     _ -> -1
   }

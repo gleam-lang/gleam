@@ -2661,6 +2661,14 @@ impl SrcSpan {
             end: self.end.max(with.end),
         }
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn len(&self) -> usize {
+        (self.end - self.start) as usize
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -3165,7 +3173,7 @@ pub enum BoundVariableName {
     ListTail {
         name: EcoString,
         /// The location of the whole tail, from the `..` prefix until the end of the variable.
-        tail_prefix_location: SrcSpan,
+        tail_location: SrcSpan,
     },
     /// Any other variable name.
     Regular { name: EcoString },
@@ -3412,7 +3420,7 @@ impl TypedPattern {
                     variables.push(BoundVariable {
                         name: BoundVariableName::ListTail {
                             name,
-                            tail_prefix_location: tail.location,
+                            tail_location: tail.location,
                         },
                         location,
                         type_: type_.clone(),
