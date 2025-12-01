@@ -169,6 +169,56 @@ pub fn two(x) {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/2550
+#[test]
+fn mutual_recursion_keeps_generic_return_annotation() {
+    assert_module_infer!(
+        r#"
+pub type Test(a) {
+  Test(a)
+}
+
+pub fn it(value: Test(a)) {
+  it2(value)
+}
+
+pub fn it2(value: Test(a)) -> Test(a) {
+  it(value)
+}
+
+pub fn main() {
+  it(Test(1))
+}
+"#,
+        vec![
+            (r#"Test"#, r#"fn(a) -> Test(a)"#),
+            (r#"it"#, r#"fn(Test(a)) -> Test(a)"#),
+            (r#"it2"#, r#"fn(Test(a)) -> Test(a)"#),
+            (r#"main"#, r#"fn() -> Test(Int)"#)
+        ]
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2533
+#[test]
+fn unbound_type_variable_in_top_level_definition() {
+    assert_module_infer!(
+        r#"
+pub type Foo(a) {
+  Foo(value: Int)
+}
+
+pub fn main() {
+  Foo(1)
+}
+"#,
+        vec![
+            (r#"Foo"#, r#"fn(Int) -> Foo(a)"#),
+            (r#"main"#, r#"fn() -> Foo(a)"#),
+        ]
+    );
+}
+
 #[test]
 fn no_impl_function_fault_tolerance() {
     // A function not having an implementation does not stop analysis.
