@@ -51,12 +51,12 @@ pub fn setup(
     arguments: Vec<String>,
     target: Option<Target>,
     runtime: Option<Runtime>,
-    module_arg: Option<String>,
+    module: Option<String>,
     which: Which,
     no_print_progress: bool,
 ) -> Result<Command, Error> {
     // Validate the module path
-    if let Some(mod_path) = &module_arg
+    if let Some(mod_path) = &module
         && !is_gleam_module(mod_path)
     {
         return Err(Error::InvalidModuleName {
@@ -80,7 +80,7 @@ pub fn setup(
     // Get the config for the module that is being run to check the target.
     // Also get the kind of the package the module belongs to: wether the module
     // belongs to a dependency or to the root package.
-    let (mod_config, package_kind) = match &module_arg {
+    let (mod_config, package_kind) = match &module {
         Some(mod_path) => {
             crate::config::find_package_config_for_module(mod_path, &manifest, paths)?
         }
@@ -90,8 +90,9 @@ pub fn setup(
     // The root config is required to run the project.
     let root_config = crate::config::root_config(paths)?;
 
+    let use_entrypoint = module.is_none();
     // Determine which module to run
-    let module = module_arg.clone().unwrap_or(match which {
+    let module = module.clone().unwrap_or(match which {
         Which::Src => root_config.name.to_string(),
         Which::Test => format!("{}_test", &root_config.name),
         Which::Dev => format!("{}_dev", &root_config.name),
@@ -141,7 +142,7 @@ pub fn setup(
                 &root_config.name,
                 &module,
                 arguments,
-                module_arg.is_none(),
+                use_entrypoint,
             ),
         },
         Target::JavaScript => match runtime.unwrap_or(mod_config.javascript.runtime) {
