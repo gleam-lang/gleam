@@ -502,8 +502,15 @@ impl<'a> ModuleEncoder<'a> {
             Constant::Float { value, .. } => builder.set_float(value),
             Constant::String { value, .. } => builder.set_string(value),
 
-            Constant::Tuple { elements, .. } => {
-                self.build_constants(builder.init_tuple(elements.len() as u32), elements)
+            Constant::Tuple {
+                elements, type_, ..
+            } => {
+                let mut builder = builder.init_tuple();
+                self.build_constants(
+                    builder.reborrow().init_elements(elements.len() as u32),
+                    elements,
+                );
+                self.build_type(builder.init_type(), type_);
             }
 
             Constant::List {

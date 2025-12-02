@@ -20,3 +20,17 @@ Expected type:
 Found type:
 
     Float
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:2:44
+  │
+2 │ fn x() { case X(1, 2.0) { x if x == X(2.0, 1) -> 1 _ -> 2 } }
+  │                                            ^
+
+Expected type:
+
+    Float
+
+Found type:
+
+    Int

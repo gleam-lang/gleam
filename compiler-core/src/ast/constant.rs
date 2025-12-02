@@ -27,6 +27,7 @@ pub enum Constant<T, RecordTag> {
     Tuple {
         location: SrcSpan,
         elements: Vec<Self>,
+        type_: T,
     },
 
     List {
@@ -70,6 +71,10 @@ pub enum Constant<T, RecordTag> {
     Invalid {
         location: SrcSpan,
         type_: T,
+        /// Extra information about the invalid expression, useful for providing
+        /// addition help or information, such as code actions to fix invalid
+        /// states.
+        extra_information: Option<InvalidExpression>,
     },
 }
 
@@ -80,10 +85,9 @@ impl TypedConstant {
             Constant::Float { .. } => type_::float(),
             Constant::String { .. } | Constant::StringConcatenation { .. } => type_::string(),
             Constant::BitArray { .. } => type_::bit_array(),
-            Constant::Tuple { elements, .. } => {
-                type_::tuple(elements.iter().map(|element| element.type_()).collect())
-            }
+
             Constant::List { type_, .. }
+            | Constant::Tuple { type_, .. }
             | Constant::Record { type_, .. }
             | Constant::Var { type_, .. }
             | Constant::Invalid { type_, .. } => type_.clone(),

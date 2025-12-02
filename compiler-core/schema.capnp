@@ -263,7 +263,12 @@ struct Constant {
     int @0 :Text;
     float @1 :Text;
     string @2 :Text;
-    tuple @3 :List(Constant);
+
+
+    tuple :group {
+      elements @3 :List(Constant);
+      type @16 :Type;
+    }
 
     list :group {
       elements @4 :List(Constant);

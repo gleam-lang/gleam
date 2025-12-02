@@ -13,6 +13,10 @@
   on the Erlang target.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Type inference for constants is now fault tolerant, meaning the compiler won't
+  stop at the first error as it is typing constants.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Analysis is now fault tolerant in the presence of errors in field definitions
   of custom type variants.
   ([Adi Salimgereyev](https://github.com/abs0luty))

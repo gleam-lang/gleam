@@ -1075,8 +1075,14 @@ fn constant_string() {
 
 #[test]
 fn constant_tuple() {
+    let int_float_tuple_type = type_::tuple(vec![type_::int(), type_::float()]);
     let module = constant_module(Constant::Tuple {
         location: Default::default(),
+        type_: type_::tuple(vec![
+            type_::int(),
+            type_::float(),
+            int_float_tuple_type.clone(),
+        ]),
         elements: vec![
             Constant::Int {
                 location: Default::default(),
@@ -1090,6 +1096,7 @@ fn constant_tuple() {
             },
             Constant::Tuple {
                 location: Default::default(),
+                type_: int_float_tuple_type,
                 elements: vec![
                     Constant::Int {
                         location: Default::default(),

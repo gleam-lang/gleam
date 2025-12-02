@@ -7,12 +7,12 @@ use crate::{
     analyse::Inferred,
     ast::{
         Assert, AssignName, Assignment, BinOp, BitArraySize, CallArg, Constant, Definition,
-        FunctionLiteralKind, Pattern, RecordBeingUpdated, SrcSpan, Statement, TailPattern,
-        TargetedDefinition, TodoKind, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole,
-        TypeAstTuple, TypeAstVar, UntypedArg, UntypedAssert, UntypedAssignment, UntypedClause,
-        UntypedConstant, UntypedConstantBitArraySegment, UntypedCustomType, UntypedDefinition,
-        UntypedExpr, UntypedExprBitArraySegment, UntypedFunction, UntypedImport, UntypedModule,
-        UntypedModuleConstant, UntypedPattern, UntypedPatternBitArraySegment,
+        FunctionLiteralKind, InvalidExpression, Pattern, RecordBeingUpdated, SrcSpan, Statement,
+        TailPattern, TargetedDefinition, TodoKind, TypeAst, TypeAstConstructor, TypeAstFn,
+        TypeAstHole, TypeAstTuple, TypeAstVar, UntypedArg, UntypedAssert, UntypedAssignment,
+        UntypedClause, UntypedConstant, UntypedConstantBitArraySegment, UntypedCustomType,
+        UntypedDefinition, UntypedExpr, UntypedExprBitArraySegment, UntypedFunction, UntypedImport,
+        UntypedModule, UntypedModuleConstant, UntypedPattern, UntypedPatternBitArraySegment,
         UntypedRecordUpdateArg, UntypedStatement, UntypedTailPattern, UntypedTypeAlias, UntypedUse,
         UntypedUseAssignment, Use, UseAssignment,
     },
@@ -959,7 +959,11 @@ pub trait UntypedConstantFolder {
 
             Constant::String { location, value } => self.fold_constant_string(location, value),
 
-            Constant::Tuple { location, elements } => self.fold_constant_tuple(location, elements),
+            Constant::Tuple {
+                location,
+                elements,
+                type_: (),
+            } => self.fold_constant_tuple(location, elements),
 
             Constant::List {
                 location,
@@ -999,7 +1003,8 @@ pub trait UntypedConstantFolder {
             Constant::Invalid {
                 location,
                 type_: (),
-            } => self.fold_constant_invalid(location),
+                extra_information,
+            } => self.fold_constant_invalid(location, extra_information),
         }
     }
 
@@ -1038,7 +1043,11 @@ pub trait UntypedConstantFolder {
         location: SrcSpan,
         elements: Vec<UntypedConstant>,
     ) -> UntypedConstant {
-        Constant::Tuple { location, elements }
+        Constant::Tuple {
+            location,
+            elements,
+            type_: (),
+        }
     }
 
     fn fold_constant_list(
@@ -1108,10 +1117,15 @@ pub trait UntypedConstantFolder {
         }
     }
 
-    fn fold_constant_invalid(&mut self, location: SrcSpan) -> UntypedConstant {
+    fn fold_constant_invalid(
+        &mut self,
+        location: SrcSpan,
+        extra_information: Option<InvalidExpression>,
+    ) -> UntypedConstant {
         Constant::Invalid {
             location,
             type_: (),
+            extra_information,
         }
     }
 
