@@ -376,7 +376,7 @@ impl ModuleDecoder {
             Which::Int(reader) => Ok(self.constant_int(self.str(reader?)?)),
             Which::Float(reader) => Ok(self.constant_float(self.str(reader?)?)),
             Which::String(reader) => Ok(self.constant_string(self.str(reader?)?)),
-            Which::Tuple(reader) => self.constant_tuple(&reader?),
+            Which::Tuple(reader) => self.constant_tuple(&reader),
             Which::List(reader) => self.constant_list(&reader),
             Which::Record(reader) => self.constant_record(&reader),
             Which::BitArray(reader) => self.constant_bit_array(&reader?),
@@ -409,13 +409,12 @@ impl ModuleDecoder {
         }
     }
 
-    fn constant_tuple(
-        &mut self,
-        reader: &capnp::struct_list::Reader<'_, constant::Owned>,
-    ) -> Result<TypedConstant> {
+    fn constant_tuple(&mut self, reader: &constant::tuple::Reader<'_>) -> Result<TypedConstant> {
+        let type_ = self.type_(&reader.get_type()?)?;
         Ok(Constant::Tuple {
             location: Default::default(),
-            elements: read_vec!(reader, self, constant),
+            elements: read_vec!(reader.get_elements()?, self, constant),
+            type_,
         })
     }
 

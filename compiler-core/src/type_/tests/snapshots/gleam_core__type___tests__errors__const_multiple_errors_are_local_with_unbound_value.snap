@@ -38,3 +38,17 @@ error: Unknown variable
   │                                ^^^^^^^^^^^^^
 
 The custom type variant constructor `MyInvalidType` is not in scope here.
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:29
+  │
+3 │ const assignment1: String = lst
+  │                             ^^^
+
+Expected type:
+
+    String
+
+Found type:
+
+    List(Int)

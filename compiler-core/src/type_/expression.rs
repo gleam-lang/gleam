@@ -3771,7 +3771,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     }
 
     // helper for infer_const to get the value of a constant ignoring annotations
-    fn infer_const_value(&mut self, value: UntypedConstant) -> Result<TypedConstant, Error> {
+    fn infer_const_value(&mut self, value: UntypedConstant) -> TypedConstant {
         match value {
             Constant::Int {
                 location,
@@ -3782,11 +3782,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     check_javascript_int_safety(&int_value, location, self.problems);
                 }
 
-                Ok(Constant::Int {
+                Constant::Int {
                     location,
                     value,
                     int_value,
-                })
+                }
             }
 
             Constant::Float {
@@ -3795,16 +3795,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 float_value,
             } => {
                 check_float_safety(float_value, location, self.problems);
-                Ok(Constant::Float {
+                Constant::Float {
                     location,
                     value,
                     float_value,
-                })
+                }
             }
 
             Constant::String {
                 location, value, ..
-            } => Ok(Constant::String { location, value }),
+            } => Constant::String { location, value },
 
             Constant::Tuple {
                 elements, location, ..
@@ -3815,7 +3815,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } => self.infer_const_list(elements, location),
 
             Constant::BitArray { location, segments } => {
-                self.infer_constant_bit_array(segments, location)
+                match self.infer_constant_bit_array(segments, location) {
+                    Ok(inferred) => inferred,
+                    Err(error) => {
+                        self.problems.error(error);
+                        Constant::Invalid {
+                            location,
+                            type_: bit_array(),
+                            extra_information: None,
+                        }
+                    }
+                }
             }
 
             Constant::Record {
@@ -3827,7 +3837,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } if arguments.is_empty() => {
                 // Type check the record constructor
-                let constructor = self.infer_value_constructor(&module, &name, &location)?;
+                let constructor = match self.infer_value_constructor(&module, &name, &location) {
+                    Ok(constructor) => constructor,
+                    Err(error) => {
+                        self.problems.error(error);
+                        return self.new_invalid_constant(location);
+                    }
+                };
 
                 let (tag, field_map) = match &constructor.variant {
                     ValueConstructorVariant::Record {
@@ -3836,17 +3852,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable { .. } => {
-                        return Err(Error::NonLocalClauseGuardVariable { location, name });
+                        self.problems
+                            .error(Error::NonLocalClauseGuardVariable { location, name });
+                        return self.new_invalid_constant(location);
                     }
 
                     // TODO: remove this clone. Could use an rc instead
                     ValueConstructorVariant::ModuleConstant { literal, .. }
                     | ValueConstructorVariant::LocalConstant { literal } => {
-                        return Ok(literal.clone());
+                        return literal.clone();
                     }
                 };
 
-                Ok(Constant::Record {
+                Constant::Record {
                     module,
                     location,
                     name,
@@ -3855,7 +3873,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     tag,
                     field_map,
                     record_constructor: Some(Box::new(constructor)),
-                })
+                }
             }
 
             Constant::Record {
@@ -3866,7 +3884,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // field_map, is always None here because untyped not yet unified
                 ..
             } => {
-                let constructor = self.infer_value_constructor(&module, &name, &location)?;
+                let constructor = match self.infer_value_constructor(&module, &name, &location) {
+                    Ok(constructor) => constructor,
+                    Err(error) => {
+                        self.problems.error(error);
+                        return self.new_invalid_constant(location);
+                    }
+                };
 
                 let (tag, field_map, variant_index) = match &constructor.variant {
                     ValueConstructorVariant::Record {
@@ -3878,13 +3902,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable { .. } => {
-                        return Err(Error::NonLocalClauseGuardVariable { location, name });
+                        self.problems
+                            .error(Error::NonLocalClauseGuardVariable { location, name });
+                        return self.new_invalid_constant(location);
                     }
 
                     // TODO: remove this clone. Could be an rc instead
                     ValueConstructorVariant::ModuleConstant { literal, .. }
                     | ValueConstructorVariant::LocalConstant { literal } => {
-                        return Ok(literal.clone());
+                        return literal.clone();
                     }
                 };
 
@@ -3937,29 +3963,44 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // except the args are typed with infer_clause_guard() here.
                 // This duplication is a bit awkward but it works!
                 // Potentially this could be improved later
-                match self
-                    .get_field_map(&fun)
-                    .map_err(|e| convert_get_value_constructor_error(e, location, None))?
-                {
-                    // The fun has a field map so labelled arguments may be present and need to be reordered.
-                    Some(field_map) => field_map.reorder(
-                        &mut arguments,
-                        location,
-                        IncorrectArityContext::Function,
-                    )?,
+                let result = match self.get_field_map(&fun) {
+                    // There's an error retrieving the field map, in that case we
+                    // return an invalid constant.
+                    Err(error) => {
+                        self.problems
+                            .error(convert_get_value_constructor_error(error, location, None));
+                        return self.new_invalid_constant(location);
+                    }
+                    // The fun has a field map so labelled arguments may be present
+                    // and need to be reordered.
+                    Ok(Some(field_map)) => {
+                        field_map.reorder(&mut arguments, location, IncorrectArityContext::Function)
+                    }
+                    // The fun has no field map and so we error if arguments
+                    // have been labelled.
+                    Ok(None) => assert_no_labelled_arguments(&arguments),
+                };
 
-                    // The fun has no field map and so we error if arguments have been labelled
-                    None => assert_no_labelled_arguments(&arguments)?,
+                // If there's an error reordering the fields, or there's labelled
+                // arguments with no field map, then we return an invalid expression.
+                if let Err(error) = result {
+                    self.problems.error(error);
+                    return self.new_invalid_constant(location);
                 }
 
-                let (mut arguments_types, return_type) = match_fun_type(
-                    fun.type_(),
-                    arguments.len(),
-                    self.environment,
-                )
-                .map_err(|error| {
-                    convert_not_fun_error(error, fun.location(), location, CallKind::Function)
-                })?;
+                let (mut arguments_types, return_type) =
+                    match match_fun_type(fun.type_(), arguments.len(), self.environment) {
+                        Ok((arguments_types, return_type)) => (arguments_types, return_type),
+                        Err(error) => {
+                            self.problems.error(convert_not_fun_error(
+                                error,
+                                fun.location(),
+                                location,
+                                CallKind::Function,
+                            ));
+                            return self.new_invalid_constant(location);
+                        }
+                    };
 
                 let arguments = arguments_types
                     .iter_mut()
@@ -3978,18 +4019,20 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             implicit,
                         } = argument;
                         let value = self.infer_const(&None, value);
-                        unify(type_.clone(), value.type_())
-                            .map_err(|error| convert_unify_error(error, value.location()))?;
-                        Ok(CallArg {
+                        if let Err(error) = unify(type_.clone(), value.type_()) {
+                            self.problems
+                                .error(convert_unify_error(error, value.location()))
+                        }
+                        CallArg {
                             label,
                             value,
                             implicit,
                             location,
-                        })
+                        }
                     })
-                    .try_collect()?;
+                    .collect_vec();
 
-                Ok(Constant::Record {
+                Constant::Record {
                     module,
                     location,
                     name,
@@ -3998,7 +4041,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     tag,
                     field_map,
                     record_constructor: Some(Box::new(constructor)),
-                })
+                }
             }
 
             Constant::Var {
@@ -4008,18 +4051,35 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 // Infer the type of this constant
-                let constructor = self.infer_value_constructor(&module, &name, &location)?;
+                let constructor = match self.infer_value_constructor(&module, &name, &location) {
+                    Ok(constructor) => constructor,
+                    Err(error) => {
+                        self.problems.error(error);
+                        return Constant::Invalid {
+                            location,
+                            type_: self.new_unbound_var(),
+                            extra_information: Some(match module {
+                                Some((module_name, _)) => InvalidExpression::ModuleSelect {
+                                    module_name,
+                                    label: name,
+                                },
+                                None => InvalidExpression::UnknownVariable { name },
+                            }),
+                        };
+                    }
+                };
+
                 match constructor.variant {
                     ValueConstructorVariant::ModuleConstant { .. }
                     | ValueConstructorVariant::LocalConstant { .. }
                     | ValueConstructorVariant::ModuleFn { .. }
-                    | ValueConstructorVariant::LocalVariable { .. } => Ok(Constant::Var {
+                    | ValueConstructorVariant::LocalVariable { .. } => Constant::Var {
                         location,
                         module,
                         name,
                         type_: Arc::clone(&constructor.type_),
                         constructor: Some(Box::from(constructor)),
-                    }),
+                    },
                     // It cannot be a Record because then this constant would have been
                     // parsed as a Constant::Record. Therefore this code is unreachable.
                     ValueConstructorVariant::Record { .. } => unreachable!(),
@@ -4033,24 +4093,42 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } => {
                 self.track_feature_usage(FeatureKind::ConstantStringConcatenation, location);
                 let left = self.infer_const(&None, *left);
-                unify(string(), left.type_()).map_err(|e| {
-                    e.operator_situation(BinOp::Concatenate)
-                        .into_error(left.location())
-                })?;
-                let right = self.infer_const(&None, *right);
-                unify(string(), right.type_()).map_err(|e| {
-                    e.operator_situation(BinOp::Concatenate)
-                        .into_error(right.location())
-                })?;
 
-                Ok(Constant::StringConcatenation {
+                if let Err(error) = unify(string(), left.type_()) {
+                    self.problems.error(
+                        error
+                            .operator_situation(BinOp::Concatenate)
+                            .into_error(left.location()),
+                    )
+                };
+
+                let right = self.infer_const(&None, *right);
+                if let Err(error) = unify(string(), right.type_()) {
+                    self.problems.error(
+                        error
+                            .operator_situation(BinOp::Concatenate)
+                            .into_error(right.location()),
+                    )
+                };
+
+                Constant::StringConcatenation {
                     location,
                     left: Box::new(left),
                     right: Box::new(right),
-                })
+                }
             }
 
             Constant::Invalid { .. } => panic!("invalid constants can not be in an untyped ast"),
+        }
+    }
+
+    /// Returns an invalid constant with an unbound type and no extra information
+    /// attached.
+    fn new_invalid_constant(&mut self, location: SrcSpan) -> TypedConstant {
+        Constant::Invalid {
+            location,
+            type_: self.new_unbound_var(),
+            extra_information: None,
         }
     }
 
@@ -4059,62 +4137,30 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         annotation: &Option<TypeAst>,
         value: UntypedConstant,
     ) -> TypedConstant {
-        let loc = value.location();
         let inferred = self.infer_const_value(value);
 
-        // Get the type of the annotation if it exists and validate it against the inferred value.
-        let annotation = annotation.as_ref().map(|a| self.type_from_ast(a));
-        match (annotation, inferred) {
-            // No annotation and valid inferred value.
-            (None, Ok(inferred)) => inferred,
-            // No annotation and invalid inferred value. Use an unbound variable hole.
-            (None, Err(e)) => {
-                self.problems.error(e);
-                Constant::Invalid {
-                    location: loc,
-                    type_: self.new_unbound_var(),
-                }
-            }
-            // Type annotation and inferred value are valid. Ensure they are unifiable.
-            // NOTE: if the types are not unifiable we use the annotated type.
-            (Some(Ok(const_ann)), Ok(inferred)) => {
-                match unify(const_ann.clone(), inferred.type_())
-                    .map_err(|e| convert_unify_error(e, inferred.location()))
-                {
-                    Err(e) => {
-                        self.problems.error(e);
-                        Constant::Invalid {
-                            location: loc,
-                            type_: const_ann,
-                        }
-                    }
-                    _ => inferred,
-                }
-            }
-            // Type annotation is valid but not the inferred value. Place a placeholder constant with the annotation type.
-            // This should limit the errors to only the definition.
-            (Some(Ok(const_ann)), Err(value_err)) => {
-                self.problems.error(value_err);
-                Constant::Invalid {
-                    location: loc,
-                    type_: const_ann,
-                }
-            }
-            // Type annotation is invalid but the inferred value is ok. Use the inferred type.
-            (Some(Err(annotation_err)), Ok(inferred)) => {
-                self.problems.error(annotation_err);
+        match annotation
+            .as_ref()
+            .map(|annotation| self.type_from_ast(annotation))
+        {
+            Some(Err(error)) => {
+                self.problems.error(error);
                 inferred
             }
-            // Type annotation and inferred value are invalid. Place a placeholder constant with an unbound type.
-            // This should limit the errors to only the definition assuming the constant is used consistently.
-            (Some(Err(annotation_err)), Err(value_err)) => {
-                self.problems.error(annotation_err);
-                self.problems.error(value_err);
-                Constant::Invalid {
-                    location: loc,
-                    type_: self.new_unbound_var(),
+
+            // If there's an annotation we try and unify it with the inferred
+            // type.
+            Some(Ok(annotated_type)) => {
+                if let Err(error) = unify(annotated_type.clone(), inferred.type_()) {
+                    self.problems
+                        .error(convert_unify_error(error, inferred.location()));
+                    invalid_with_annotated_type(inferred, annotated_type)
+                } else {
+                    inferred
                 }
             }
+
+            None => inferred,
         }
     }
 
@@ -4122,7 +4168,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         untyped_elements: Vec<UntypedConstant>,
         location: SrcSpan,
-    ) -> Result<TypedConstant, Error> {
+    ) -> TypedConstant {
         let mut elements = Vec::with_capacity(untyped_elements.len());
 
         for element in untyped_elements {
@@ -4130,29 +4176,38 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             elements.push(element);
         }
 
-        Ok(Constant::Tuple { elements, location })
+        let type_ = tuple(elements.iter().map(HasType::type_).collect_vec());
+
+        Constant::Tuple {
+            elements,
+            location,
+            type_,
+        }
     }
 
     fn infer_const_list(
         &mut self,
         untyped_elements: Vec<UntypedConstant>,
         location: SrcSpan,
-    ) -> Result<TypedConstant, Error> {
+    ) -> TypedConstant {
         let type_ = self.new_unbound_var();
         let mut elements = Vec::with_capacity(untyped_elements.len());
 
         for element in untyped_elements {
             let element = self.infer_const(&None, element);
-            unify(type_.clone(), element.type_())
-                .map_err(|e| convert_unify_error(e, element.location()))?;
+            if let Err(error) = unify(type_.clone(), element.type_()) {
+                self.problems
+                    .error(convert_unify_error(error, element.location()));
+            }
+
             elements.push(element);
         }
 
-        Ok(Constant::List {
+        Constant::List {
             elements,
             location,
             type_: list(type_),
-        })
+        }
     }
 
     fn get_field_map(
@@ -4839,6 +4894,96 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         if minimum_required_version > self.minimum_required_version {
             self.minimum_required_version = minimum_required_version;
         }
+    }
+}
+
+/// Given a constants, this will change its type into the given one, turning
+/// the constant into an `Invalid` one if necessary.
+///
+fn invalid_with_annotated_type(constant: TypedConstant, new_type: Arc<Type>) -> TypedConstant {
+    // In case the types cannot be unified we change the inferred we
+    // return a constant where the type matches the annotated one.
+    // This can help minimise fals positive later on!
+    match constant {
+        // For simple variants that don't carry their own type we
+        // replace them with an invalid constant with the same
+        // location and the new annotated type.
+        Constant::Int { location, .. }
+        | Constant::Float { location, .. }
+        | Constant::String { location, .. }
+        | Constant::BitArray { location, .. }
+        | Constant::StringConcatenation { location, .. } => TypedConstant::Invalid {
+            location,
+            type_: new_type,
+            extra_information: None,
+        },
+
+        // In all other cases we don't want to lose information on
+        // the actual structure of the invalid expression. So we just
+        // replace the type with the annotated one.
+        Constant::Invalid {
+            location,
+            type_: _,
+            extra_information,
+        } => Constant::Invalid {
+            location,
+            type_: new_type,
+            extra_information,
+        },
+
+        Constant::Tuple {
+            location,
+            elements,
+            type_: _,
+        } => Constant::Tuple {
+            location,
+            elements,
+            type_: new_type,
+        },
+
+        Constant::List {
+            location,
+            elements,
+            type_: _,
+        } => Constant::List {
+            location,
+            elements,
+            type_: new_type,
+        },
+
+        Constant::Record {
+            location,
+            module,
+            name,
+            arguments,
+            tag,
+            type_: _,
+            field_map,
+            record_constructor,
+        } => Constant::Record {
+            location,
+            module,
+            name,
+            arguments,
+            tag,
+            type_: new_type,
+            field_map,
+            record_constructor,
+        },
+
+        Constant::Var {
+            location,
+            module,
+            name,
+            constructor,
+            type_: _,
+        } => Constant::Var {
+            location,
+            module,
+            name,
+            constructor,
+            type_: new_type,
+        },
     }
 }
 

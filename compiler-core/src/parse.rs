@@ -3158,6 +3158,7 @@ where
                 Ok(Some(Constant::Tuple {
                     elements,
                     location: SrcSpan { start, end },
+                    type_: (),
                 }))
             }
 

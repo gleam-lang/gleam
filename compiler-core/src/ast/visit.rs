@@ -547,7 +547,7 @@ pub trait Visit<'ast> {
     fn visit_typed_pattern_bit_array(
         &mut self,
         location: &'ast SrcSpan,
-        segments: &'ast Vec<TypedPatternBitArraySegment>,
+        segments: &'ast [TypedPatternBitArraySegment],
     ) {
         visit_typed_pattern_bit_array(self, location, segments);
     }
@@ -646,8 +646,9 @@ pub trait Visit<'ast> {
         &mut self,
         location: &'ast SrcSpan,
         elements: &'ast Vec<TypedConstant>,
+        type_: &'ast Arc<Type>,
     ) {
-        visit_typed_constant_tuple(self, location, elements);
+        visit_typed_constant_tuple(self, location, elements, type_);
     }
 
     fn visit_typed_constant_list(
@@ -659,6 +660,7 @@ pub trait Visit<'ast> {
         visit_typed_constant_list(self, location, elements, type_);
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn visit_typed_constant_record(
         &mut self,
         location: &'ast SrcSpan,
@@ -686,7 +688,7 @@ pub trait Visit<'ast> {
     fn visit_typed_constant_bit_array(
         &mut self,
         location: &'ast SrcSpan,
-        segments: &'ast Vec<TypedConstantBitArraySegment>,
+        segments: &'ast [TypedConstantBitArraySegment],
     ) {
         visit_typed_constant_bit_array(self, location, segments);
     }
@@ -711,8 +713,13 @@ pub trait Visit<'ast> {
         visit_typed_constant_string_concatenation(self, location, left, right);
     }
 
-    fn visit_typed_constant_invalid(&mut self, location: &'ast SrcSpan, type_: &'ast Arc<Type>) {
-        visit_typed_constant_invalid(self, location, type_);
+    fn visit_typed_constant_invalid(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        extra_information: &'ast Option<InvalidExpression>,
+    ) {
+        visit_typed_constant_invalid(self, location, type_, extra_information);
     }
 }
 
@@ -720,6 +727,7 @@ fn visit_typed_constant_invalid<'a, V: Visit<'a> + ?Sized>(
     _v: &mut V,
     _location: &'a SrcSpan,
     _type_: &'a Type,
+    _extra_information: &'a Option<InvalidExpression>,
 ) {
     // No further traversal needed for constant invalid expressions
 }
@@ -748,11 +756,12 @@ fn visit_typed_constant_var<'a, V: Visit<'a> + ?Sized>(
 fn visit_typed_constant_bit_array<'a, V: Visit<'a> + ?Sized>(
     _v: &mut V,
     _location: &'a SrcSpan,
-    _segments: &'a Vec<TypedConstantBitArraySegment>,
+    _segments: &'a [TypedConstantBitArraySegment],
 ) {
     // TODO
 }
 
+#[allow(clippy::too_many_arguments)]
 fn visit_typed_constant_record<'a, V: Visit<'a> + ?Sized>(
     v: &mut V,
     _location: &'a SrcSpan,
@@ -784,6 +793,7 @@ fn visit_typed_constant_tuple<'a, V: Visit<'a> + ?Sized>(
     v: &mut V,
     _location: &'a SrcSpan,
     elements: &'a Vec<TypedConstant>,
+    _type_: &'a Arc<Type>,
 ) {
     for element in elements {
         v.visit_typed_constant(element)
@@ -967,9 +977,11 @@ pub fn visit_typed_constant<'a, V: Visit<'a> + ?Sized>(v: &mut V, constant: &'a 
         super::Constant::String { location, value } => {
             v.visit_typed_constant_string(location, value)
         }
-        super::Constant::Tuple { location, elements } => {
-            v.visit_typed_constant_tuple(location, elements)
-        }
+        super::Constant::Tuple {
+            location,
+            elements,
+            type_,
+        } => v.visit_typed_constant_tuple(location, elements, type_),
         super::Constant::List {
             location,
             elements,
@@ -1009,9 +1021,11 @@ pub fn visit_typed_constant<'a, V: Visit<'a> + ?Sized>(v: &mut V, constant: &'a 
             left,
             right,
         } => v.visit_typed_constant_string_concatenation(location, left, right),
-        super::Constant::Invalid { location, type_ } => {
-            v.visit_typed_constant_invalid(location, type_)
-        }
+        super::Constant::Invalid {
+            location,
+            type_,
+            extra_information,
+        } => v.visit_typed_constant_invalid(location, type_, extra_information),
     }
 }
 
@@ -2059,7 +2073,7 @@ pub fn visit_typed_pattern_tuple<'a, V>(
 pub fn visit_typed_pattern_bit_array<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
-    segments: &'a Vec<TypedPatternBitArraySegment>,
+    segments: &'a [TypedPatternBitArraySegment],
 ) where
     V: Visit<'a> + ?Sized,
 {
