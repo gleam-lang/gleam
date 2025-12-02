@@ -5247,7 +5247,7 @@ pub struct GenerateFunction<'a> {
     modules: &'a std::collections::HashMap<EcoString, Module>,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
-    last_visited_function_end: Option<u32>,
+    last_visited_definition_end: Option<u32>,
     function_to_generate: Option<FunctionToGenerate<'a>>,
 }
 
@@ -5262,7 +5262,7 @@ struct FunctionToGenerate<'a> {
     /// have any actual arguments!
     given_arguments: Option<&'a [TypedCallArg]>,
     return_type: Arc<Type>,
-    previous_function_end: Option<u32>,
+    previous_definition_end: Option<u32>,
 }
 
 impl<'a> GenerateFunction<'a> {
@@ -5277,7 +5277,7 @@ impl<'a> GenerateFunction<'a> {
             modules,
             params,
             edits: TextEdits::new(line_numbers),
-            last_visited_function_end: None,
+            last_visited_definition_end: None,
             function_to_generate: None,
         }
     }
@@ -5288,7 +5288,7 @@ impl<'a> GenerateFunction<'a> {
         let Some(
             function_to_generate @ FunctionToGenerate {
                 module,
-                previous_function_end: Some(insert_at),
+                previous_definition_end: Some(insert_at),
                 ..
             },
         ) = self.function_to_generate.take()
@@ -5401,7 +5401,7 @@ impl<'a> GenerateFunction<'a> {
                     arguments_types,
                     given_arguments,
                     return_type,
-                    previous_function_end: self.last_visited_function_end,
+                    previous_definition_end: self.last_visited_definition_end,
                     module: None,
                 })
             }
@@ -5423,7 +5423,7 @@ impl<'a> GenerateFunction<'a> {
                 arguments_types,
                 given_arguments,
                 return_type,
-                previous_function_end: self.last_visited_function_end,
+                previous_definition_end: self.last_visited_definition_end,
                 module: Some(module),
             })
         }
@@ -5432,8 +5432,13 @@ impl<'a> GenerateFunction<'a> {
 
 impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
-        self.last_visited_function_end = Some(fun.end_position);
+        self.last_visited_definition_end = Some(fun.end_position);
         ast::visit::visit_typed_function(self, fun);
+    }
+
+    fn visit_typed_module_constant(&mut self, constant: &'ast TypedModuleConstant) {
+        self.last_visited_definition_end = Some(constant.value.location().end);
+        ast::visit::visit_typed_module_constant(self, constant);
     }
 
     fn visit_typed_expr_invalid(
@@ -5456,6 +5461,27 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
         }
 
         ast::visit::visit_typed_expr_invalid(self, location, type_, extra_information);
+    }
+
+    fn visit_typed_constant_invalid(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        extra_information: &'ast Option<InvalidExpression>,
+    ) {
+        let constant_range = self.edits.src_span_to_lsp_range(*location);
+        if let Some(extra_information) = extra_information
+            && within(self.params.range, constant_range)
+        {
+            match extra_information {
+                InvalidExpression::ModuleSelect { module_name, label } => {
+                    self.try_save_function_from_other_module(module_name, label, type_, None)
+                }
+                InvalidExpression::UnknownVariable { name } => {
+                    self.try_save_function_to_generate(name, type_, None)
+                }
+            }
+        }
     }
 
     fn visit_typed_expr_call(

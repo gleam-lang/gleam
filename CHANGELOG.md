@@ -275,6 +275,10 @@
   some of the labels have been provided already.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The "generate function" code action can now trigger when used over constant
+  values as well.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Grouping of related diagnostics should now work across more editors.
   Warnings will display together with their hints and you no longer have
   "go to next diagnostic" twice in a row. Zedlings rejoice!

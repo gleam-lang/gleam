@@ -7580,6 +7580,30 @@ pub fn main() -> Bool {
 }
 
 #[test]
+fn generate_function_works_with_constants() {
+    assert_code_action!(
+        GENERATE_FUNCTION,
+        "const wibble: fn(Int) -> String = wobble",
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn generate_function_works_with_constants_2() {
+    assert_code_action!(
+        GENERATE_FUNCTION,
+        "
+type Wibble(a) {
+    Wibble(fun: fn(Int) -> a)
+}
+
+const wibble: Wibble(Int) = Wibble(missing)
+",
+        find_position_of("missing").to_selection()
+    );
+}
+
+#[test]
 fn generate_function_works_with_pipeline_steps() {
     assert_code_action!(
         GENERATE_FUNCTION,
