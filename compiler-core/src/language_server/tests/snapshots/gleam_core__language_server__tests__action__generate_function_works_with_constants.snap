@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "const wibble: fn(Int) -> String = wobble"
+---
+----- BEFORE ACTION
+const wibble: fn(Int) -> String = wobble
+                                  ↑     
+
+
+----- AFTER ACTION
+const wibble: fn(Int) -> String = wobble
+
+fn wobble(int: Int) -> String {
+  todo
+}
