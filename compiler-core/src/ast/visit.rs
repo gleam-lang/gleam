@@ -60,11 +60,12 @@ use vec1::Vec1;
 use crate::type_::Type;
 
 use super::{
-    AssignName, BinOp, BitArrayOption, CallArg, Pattern, PipelineAssignmentKind, SrcSpan,
-    Statement, TodoKind, TypeAst, TypedArg, TypedAssert, TypedAssignment, TypedClause,
-    TypedClauseGuard, TypedConstant, TypedCustomType, TypedExpr, TypedExprBitArraySegment,
-    TypedFunction, TypedModule, TypedModuleConstant, TypedPattern, TypedPatternBitArraySegment,
-    TypedPipelineAssignment, TypedStatement, TypedUse, untyped::FunctionLiteralKind,
+    AssignName, BinOp, BitArrayOption, CallArg, ConstantRecordUpdateArg, Pattern,
+    PipelineAssignmentKind, SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssert,
+    TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant, TypedCustomType, TypedExpr,
+    TypedExprBitArraySegment, TypedFunction, TypedModule, TypedModuleConstant, TypedPattern,
+    TypedPatternBitArraySegment, TypedPipelineAssignment, TypedStatement, TypedUse,
+    untyped::FunctionLiteralKind,
 };
 
 pub trait Visit<'ast> {
@@ -669,7 +670,7 @@ pub trait Visit<'ast> {
         arguments: &'ast Vec<CallArg<TypedConstant>>,
         tag: &'ast EcoString,
         type_: &'ast Arc<Type>,
-        field_map: &'ast Option<FieldMap>,
+        field_map: &'ast Inferred<FieldMap>,
         record_constructor: &'ast Option<Box<ValueConstructor>>,
     ) {
         visit_typed_constant_record(
@@ -682,6 +683,23 @@ pub trait Visit<'ast> {
             type_,
             field_map,
             record_constructor,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn visit_typed_constant_record_update(
+        &mut self,
+        location: &'ast SrcSpan,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        name: &'ast EcoString,
+        record: &'ast TypedConstant,
+        arguments: &'ast [ConstantRecordUpdateArg<TypedConstant>],
+        tag: &'ast EcoString,
+        type_: &'ast Arc<Type>,
+        field_map: &'ast Inferred<FieldMap>,
+    ) {
+        visit_typed_constant_record_update(
+            self, location, module, name, record, arguments, tag, type_, field_map,
         )
     }
 
@@ -770,11 +788,29 @@ pub fn visit_typed_constant_record<'a, V: Visit<'a> + ?Sized>(
     arguments: &'a Vec<CallArg<TypedConstant>>,
     _tag: &'a EcoString,
     _type_: &'a Arc<Type>,
-    _field_map: &'a Option<FieldMap>,
+    _field_map: &'a Inferred<FieldMap>,
     _record_constructor: &'a Option<Box<ValueConstructor>>,
 ) {
     for argument in arguments {
         v.visit_typed_constant(&argument.value)
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn visit_typed_constant_record_update<'a, V: Visit<'a> + ?Sized>(
+    v: &mut V,
+    _location: &'a SrcSpan,
+    _module: &'a Option<(EcoString, SrcSpan)>,
+    _name: &'a EcoString,
+    record: &'a TypedConstant,
+    arguments: &'a [ConstantRecordUpdateArg<TypedConstant>],
+    _tag: &'a EcoString,
+    _type_: &'a Arc<Type>,
+    _field_map: &'a Inferred<FieldMap>,
+) {
+    v.visit_typed_constant(record);
+    for argument in arguments {
+        v.visit_typed_constant(&argument.value);
     }
 }
 
@@ -1005,6 +1041,18 @@ pub fn visit_typed_constant<'a, V: Visit<'a> + ?Sized>(v: &mut V, constant: &'a 
             type_,
             field_map,
             record_constructor,
+        ),
+        super::Constant::RecordUpdate {
+            location,
+            module,
+            name,
+            record,
+            arguments,
+            tag,
+            type_,
+            field_map,
+        } => v.visit_typed_constant_record_update(
+            location, module, name, record, arguments, tag, type_, field_map,
         ),
         super::Constant::BitArray { location, segments } => {
             v.visit_typed_constant_bit_array(location, segments)
