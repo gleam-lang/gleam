@@ -2052,7 +2052,7 @@ type Person {
 }
 
 const base = Person("Alice", 30, "London")
-const updated = Person(..base, name: "Bob", age: 25)
+const updated = Person(..base, name: "Bob", age: 25, city: "Paris")
 "#
     );
 }
