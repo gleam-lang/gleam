@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "pub type Subject {\n            Person(name: String, age: Int)\n            Animal(species: String)\n        }\n\n        pub const alice = Person(\"Alice\", 30)\n        pub const dog = Animal(..alice)"
+---
+----- SOURCE CODE
+pub type Subject {
+            Person(name: String, age: Int)
+            Animal(species: String)
+        }
+
+        pub const alice = Person("Alice", 30)
+        pub const dog = Animal(..alice)
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:7:25
+  │
+7 │         pub const dog = Animal(..alice)
+  │                         ^^^^^^^^^^^^^^^ This is a `Person`, not a `Animal`
+
+The record being spread is a `Person` but you are trying to construct a
+`Animal`.

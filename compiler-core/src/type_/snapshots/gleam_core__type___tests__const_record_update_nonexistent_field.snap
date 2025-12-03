@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "pub type Person { Person(name: String, age: Int) }\n\n        pub const alice = Person(\"Alice\", 30)\n        pub const bob = Person(..alice, nonexistent: \"value\")"
+---
+----- SOURCE CODE
+pub type Person { Person(name: String, age: Int) }
+
+        pub const alice = Person("Alice", 30)
+        pub const bob = Person(..alice, nonexistent: "value")
+
+----- ERROR
+error: Unknown record field
+  ┌─ /src/one/two.gleam:4:41
+  │
+4 │         pub const bob = Person(..alice, nonexistent: "value")
+  │                                         ^^^^^^^^^^^^^^^^^^^^ This field does not exist
+
+The value being accessed has this type:
+
+    Person
+
+It has these accessible fields:
+
+    .age
+    .name

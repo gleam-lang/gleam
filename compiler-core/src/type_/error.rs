@@ -140,18 +140,16 @@ impl ModuleSuggestion {
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub enum RecordUpdateInvalidReason {
-    /// Constructor has no fields (0-arity)
-    NoFields,
+pub enum InvalidRecordUpdateReason {
     /// Constructor has only unlabelled fields (tuple-like)
     UnlabelledFields,
+    /// Not a record constructor at all (e.g., a function or variable)
+    NotARecordConstructor,
     /// Spreading a different variant (e.g., Dog to create Cat)
     WrongVariant {
         expected: EcoString,
         given: EcoString,
     },
-    /// Not a record constructor at all (e.g., a function or variable)
-    NotARecordConstructor,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -357,7 +355,7 @@ pub enum Error {
 
     InvalidRecordUpdate {
         location: SrcSpan,
-        reason: RecordUpdateInvalidReason,
+        reason: InvalidRecordUpdateReason,
     },
 
     UnexpectedTypeHole {

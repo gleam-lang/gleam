@@ -2176,40 +2176,6 @@ pub fn increase_y(vector, by increase) {
 }
 
 #[test]
-fn record_update_non_constructor() {
-    // Test that using record update syntax with a function (not a constructor) gives a clear error
-    assert_module_error!(
-        "
-        pub type Person {
-            Person(name: String, age: Int)
-        }
-
-        pub fn some_function(name: String, age: Int) -> Person {
-            Person(name: name, age: age)
-        }
-
-        pub fn test_update(p: Person) {
-            some_function(..p, name: \"Bob\")
-        }"
-    );
-}
-
-#[test]
-fn record_update_unlabelled_fields() {
-    // Test that using record update syntax with a tuple-like constructor gives a clear error
-    assert_module_error!(
-        "
-        pub type Pair {
-            Pair(Int, String)
-        }
-
-        pub fn wibble(p: Pair) {
-            Pair(..p, a: 20)
-        }"
-    );
-}
-
-#[test]
 fn variant_inference_does_not_escape_clause_scope() {
     assert_module_error!(
         "
@@ -2340,7 +2306,7 @@ fn custom_type_module_constants() {
 }
 
 #[test]
-fn const_record_spread() {
+fn const_record_update() {
     assert_module_infer!(
         "pub type Person { Person(name: String, age: Int) }
 
@@ -2355,22 +2321,17 @@ fn const_record_spread() {
 }
 
 #[test]
-fn const_record_spread_all_fields() {
-    assert_module_infer!(
+fn const_record_update_all_fields() {
+    assert_warning!(
         "pub type Person { Person(name: String, age: Int, city: String) }
 
         pub const base = Person(\"Alice\", 30, \"London\")
-        pub const updated = Person(..base, name: \"Bob\", age: 25)",
-        vec![
-            ("Person", "fn(String, Int, String) -> Person"),
-            ("base", "Person"),
-            ("updated", "Person")
-        ],
+        pub const updated = Person(..base, name: \"Bob\", age: 25, city: \"Paris\")"
     );
 }
 
 #[test]
-fn const_record_spread_only() {
+fn const_record_update_only() {
     assert_module_infer!(
         "pub type Person { Person(name: String, age: Int) }
 
@@ -2385,7 +2346,7 @@ fn const_record_spread_only() {
 }
 
 #[test]
-fn const_record_spread_chain() {
+fn const_record_update_chain() {
     assert_module_infer!(
         "pub type Person { Person(name: String, age: Int, city: String) }
 
@@ -2402,10 +2363,9 @@ fn const_record_spread_chain() {
 }
 
 #[test]
-fn const_record_spread_with_labeled_args() {
+fn const_record_update_with_labeled_args() {
     assert_module_infer!(
         "pub type Person { Person(name: String, age: Int, city: String) }
-
         pub const alice = Person(name: \"Alice\", age: 30, city: \"London\")
         pub const bob = Person(..alice, name: \"Bob\")",
         vec![
@@ -2417,7 +2377,7 @@ fn const_record_spread_with_labeled_args() {
 }
 
 #[test]
-fn const_record_spread_type_error() {
+fn const_record_update_type_mismatch_error() {
     assert_module_error!(
         "pub type Person { Person(name: String, age: Int) }
         pub type Animal { Animal(species: String) }
@@ -2428,7 +2388,20 @@ fn const_record_spread_type_error() {
 }
 
 #[test]
-fn const_record_spread_field_type_error() {
+fn const_record_update_variant_mismatch_error() {
+    assert_module_error!(
+        "pub type Subject {
+            Person(name: String, age: Int)
+            Animal(species: String)
+        }
+
+        pub const alice = Person(\"Alice\", 30)
+        pub const dog = Animal(..alice)"
+    );
+}
+
+#[test]
+fn const_record_update_field_type_mismatch_error() {
     assert_module_error!(
         "pub type Person { Person(name: String, age: Int) }
 
@@ -2438,7 +2411,7 @@ fn const_record_spread_field_type_error() {
 }
 
 #[test]
-fn const_record_spread_nonexistent_field() {
+fn const_record_update_nonexistent_field() {
     assert_module_error!(
         "pub type Person { Person(name: String, age: Int) }
 
@@ -2448,33 +2421,27 @@ fn const_record_spread_nonexistent_field() {
 }
 
 #[test]
-fn const_record_spread_non_record() {
+fn const_record_update_non_record() {
     assert_module_error!(
         "pub type Person { Person(name: String, age: Int) }
 
-        pub const not_a_record = 42
-        pub const bob = Person(..not_a_record, name: \"Bob\")"
+        pub const number = 42
+        pub const bob = Person(..number, name: \"Bob\")"
     );
 }
 
 #[test]
-fn const_record_spread_fieldless_warning() {
-    // Test that spreading without any field overrides emits a warning
-    assert_module_infer!(
+fn const_record_update_fieldless_warning() {
+    assert_warning!(
         "pub type Animal { Animal(species: String) }
 
         pub const alice = Animal(\"Cat\")
-        pub const dog = Animal(..alice)",
-        vec![
-            ("Animal", "fn(String) -> Animal"),
-            ("alice", "Animal"),
-            ("dog", "Animal"),
-        ]
+        pub const dog = Animal(..alice)"
     );
 }
 
 #[test]
-fn const_record_spread_multi_variant() {
+fn const_record_update_multi_variant() {
     assert_module_infer!(
         "pub type Pet {
           Dog(name: String, age: Int)
@@ -2493,20 +2460,7 @@ fn const_record_spread_multi_variant() {
 }
 
 #[test]
-fn const_record_spread_multi_variant_wrong_variant() {
-    assert_module_error!(
-        "pub type Pet {
-          Dog(name: String, age: Int)
-          Cat(name: String, breed: String)
-        }
-
-        pub const my_dog = Dog(\"Rex\", 5)
-        pub const my_cat = Cat(..my_dog, breed: \"Siamese\")"
-    );
-}
-
-#[test]
-fn const_record_spread_variant_without_args() {
+fn const_record_update_variant_without_args() {
     assert_module_error!(
         "pub type Status { Active Inactive }
         pub const status1 = Active
@@ -2515,17 +2469,7 @@ fn const_record_spread_variant_without_args() {
 }
 
 #[test]
-fn const_record_spread_variant_without_args_warning() {
-    assert_module_error!(
-        "pub type Status { Active Inactive }
-
-        pub const status1 = Active
-        pub const status2 = Active(..status1)"
-    );
-}
-
-#[test]
-fn const_record_spread_unlabelled_fields() {
+fn const_record_update_unlabelled_fields() {
     assert_module_error!(
         "pub type Point { Point(Int, Int) }
 

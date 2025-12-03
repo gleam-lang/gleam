@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "pub type Person { Person(name: String, age: Int) }\n\n        pub const number = 42\n        pub const bob = Person(..number, name: \"Bob\")"
+---
+----- SOURCE CODE
+pub type Person { Person(name: String, age: Int) }
+
+        pub const number = 42
+        pub const bob = Person(..number, name: "Bob")
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:4:34
+  │
+4 │         pub const bob = Person(..number, name: "Bob")
+  │                                  ^^^^^^
+
+Expected type:
+
+    Person
+
+Found type:
+
+    Int

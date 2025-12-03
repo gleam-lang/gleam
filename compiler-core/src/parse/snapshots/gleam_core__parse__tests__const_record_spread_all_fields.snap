@@ -1,6 +1,7 @@
 ---
 source: compiler-core/src/parse/tests.rs
-expression: "\ntype Person {\n  Person(name: String, age: Int, city: String)\n}\n\nconst base = Person(\"Alice\", 30, \"London\")\nconst updated = Person(..base, name: \"Bob\", age: 25)\n"
+expression: "\ntype Person {\n  Person(name: String, age: Int, city: String)\n}\n\nconst base = Person(\"Alice\", 30, \"London\")\nconst updated = Person(..base, name: \"Bob\", age: 25, city: \"Paris\")\n"
+snapshot_kind: text
 ---
 Parsed {
     module: Module {
@@ -255,7 +256,7 @@ Parsed {
                         value: RecordUpdate {
                             location: SrcSpan {
                                 start: 124,
-                                end: 160,
+                                end: 175,
                             },
                             module: None,
                             name: "Person",
@@ -297,6 +298,20 @@ Parsed {
                                         },
                                         value: "25",
                                         int_value: 25,
+                                    },
+                                },
+                                ConstantRecordUpdateArg {
+                                    label: "city",
+                                    location: SrcSpan {
+                                        start: 161,
+                                        end: 174,
+                                    },
+                                    value: String {
+                                        location: SrcSpan {
+                                            start: 167,
+                                            end: 174,
+                                        },
+                                        value: "Paris",
                                     },
                                 },
                             ],
@@ -341,7 +356,7 @@ Parsed {
             63,
             64,
             107,
-            160,
+            175,
         ],
         trailing_commas: [],
     },
