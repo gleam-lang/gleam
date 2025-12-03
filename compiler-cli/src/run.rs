@@ -90,8 +90,9 @@ pub fn setup(
     // The root config is required to run the project.
     let root_config = crate::config::root_config(paths)?;
 
+    let use_entrypoint = module.is_none();
     // Determine which module to run
-    let module = module.unwrap_or(match which {
+    let module = module.clone().unwrap_or(match which {
         Which::Src => root_config.name.to_string(),
         Which::Test => format!("{}_test", &root_config.name),
         Which::Dev => format!("{}_dev", &root_config.name),
@@ -136,7 +137,13 @@ pub fn setup(
                 target: Target::Erlang,
                 invalid_runtime: r,
             }),
-            _ => run_erlang_command(paths, &root_config.name, &module, arguments),
+            _ => run_erlang_command(
+                paths,
+                &root_config.name,
+                &module,
+                arguments,
+                use_entrypoint,
+            ),
         },
         Target::JavaScript => match runtime.unwrap_or(mod_config.javascript.runtime) {
             Runtime::Deno => run_javascript_deno_command(
@@ -161,6 +168,7 @@ fn run_erlang_command(
     package: &str,
     module: &str,
     arguments: Vec<String>,
+    use_entrypoint: bool,
 ) -> Result<Command, Error> {
     let mut args = vec![];
 
@@ -174,9 +182,14 @@ fn run_erlang_command(
 
     // gleam modules are separated by `/`. Erlang modules are separated by `@`.
     let module = module.replace('/', "@");
-
+    // Decide what to evaluate
+    let erl_eval = if use_entrypoint {
+        format!("{package}@@main:run({module})")
+    } else {
+        format!("{module}:main(), init:stop()")
+    };
     args.push("-eval".into());
-    args.push(format!("{package}@@main:run({module})"));
+    args.push(erl_eval);
 
     // Don't run the Erlang shell
     args.push("-noshell".into());
@@ -400,24 +413,29 @@ fn get_or_suggest_main_function(
     Err(error)
 }
 
-#[test]
-fn invalid_module_names() {
-    for mod_name in [
-        "",
-        "/mod/name",
-        "/mod/name/",
-        "mod/name/",
-        "/mod/",
-        "mod/",
-        "common-invalid-character",
-    ] {
-        assert!(!is_gleam_module(mod_name));
-    }
-}
+#[cfg(test)]
+mod test {
+    use super::*;
 
-#[test]
-fn valid_module_names() {
-    for mod_name in ["valid", "valid/name", "valid/mod/name"] {
-        assert!(is_gleam_module(mod_name));
+    #[test]
+    fn invalid_module_names() {
+        for mod_name in [
+            "",
+            "/mod/name",
+            "/mod/name/",
+            "mod/name/",
+            "/mod/",
+            "mod/",
+            "common-invalid-character",
+        ] {
+            assert!(!is_gleam_module(mod_name));
+        }
+    }
+
+    #[test]
+    fn valid_module_names() {
+        for mod_name in ["valid", "valid/name", "valid/mod/name"] {
+            assert!(is_gleam_module(mod_name));
+        }
     }
 }

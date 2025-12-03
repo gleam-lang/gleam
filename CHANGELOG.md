@@ -385,3 +385,11 @@
 - Fixed a bug where the type checker would allow invalid programs when a large
   group of functions were all mutually recursive.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- `gleam run -m <module>` now calls the requested module’s `main` function
+  directly rather than first starting the project’s `erlang.application_start_module`.
+    
+  This prevents crashes when the start module isn’t meant to be run in that
+  context.
+
+  ([Aayush Tripathi](https://github.com/aayush-tripathi))
