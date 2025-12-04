@@ -11,6 +11,8 @@ use gleam_core::{
     paths::ProjectPaths,
     type_::ModuleFunction,
 };
+use tracing::field::debug;
+use tracing_subscriber::fmt::format;
 
 use crate::{config::PackageKind, fs::ProjectIO};
 
@@ -92,7 +94,7 @@ pub fn setup(
 
     let use_entrypoint = module.is_none();
     // Determine which module to run
-    let module = module.clone().unwrap_or(match which {
+    let module = module.unwrap_or(match which {
         Which::Src => root_config.name.to_string(),
         Which::Test => format!("{}_test", &root_config.name),
         Which::Dev => format!("{}_dev", &root_config.name),
