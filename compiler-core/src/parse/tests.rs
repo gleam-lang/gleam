@@ -2028,3 +2028,54 @@ pub fn main(): Nil {}
         "#
     );
 }
+
+#[test]
+fn const_record_spread_basic() {
+    assert_parse_module!(
+        r#"
+type Person {
+  Person(name: String, age: Int)
+}
+
+const alice = Person("Alice", 30)
+const bob = Person(..alice, name: "Bob")
+"#
+    );
+}
+
+#[test]
+fn const_record_spread_all_fields() {
+    assert_parse_module!(
+        r#"
+type Person {
+  Person(name: String, age: Int, city: String)
+}
+
+const base = Person("Alice", 30, "London")
+const updated = Person(..base, name: "Bob", age: 25)
+"#
+    );
+}
+
+#[test]
+fn const_record_spread_only() {
+    assert_parse_module!(
+        r#"
+type Person {
+  Person(name: String, age: Int)
+}
+
+const alice = Person("Alice", 30)
+const bob = Person(..alice)
+"#
+    );
+}
+
+#[test]
+fn const_record_spread_with_module() {
+    assert_parse_module!(
+        r#"
+const local_const = other.Record(..other.base, field: value)
+"#
+    );
+}

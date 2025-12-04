@@ -6,6 +6,7 @@ use itertools::Itertools;
 
 use crate::{
     Result,
+    analyse::Inferred,
     ast::{
         BitArrayOption, BitArraySegment, CallArg, Constant, Publicity, SrcSpan, TypedConstant,
         TypedConstantBitArraySegment, TypedConstantBitArraySegmentOption,
@@ -438,7 +439,7 @@ impl ModuleDecoder {
             arguments,
             tag,
             type_,
-            field_map: None,
+            field_map: Inferred::Unknown,
             record_constructor: None,
         })
     }

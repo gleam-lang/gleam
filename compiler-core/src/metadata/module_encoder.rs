@@ -547,7 +547,6 @@ impl<'a> ModuleEncoder<'a> {
                 builder.reborrow().set_tag(tag);
                 self.build_type(builder.reborrow().init_type(), type_);
             }
-
             Constant::Var {
                 module,
                 name,
@@ -574,6 +573,10 @@ impl<'a> ModuleEncoder<'a> {
                 let mut builder = builder.init_string_concatenation();
                 self.build_constant(builder.reborrow().init_right(), right);
                 self.build_constant(builder.reborrow().init_left(), left);
+            }
+
+            Constant::RecordUpdate { .. } => {
+                panic!("record updates should not reach code generation")
             }
 
             Constant::Invalid { .. } => {

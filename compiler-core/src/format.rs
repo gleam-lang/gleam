@@ -560,9 +560,8 @@ impl<'comments> Formatter<'comments> {
                 .append(" ")
                 .append(self.const_expr(right)),
 
-            Constant::Invalid { .. } => {
-                panic!("invalid constants can not be in an untyped ast")
-            }
+            Constant::RecordUpdate { .. } => panic!("record updates can not be in an untyped ast"),
+            Constant::Invalid { .. } => panic!("invalid constants can not be in an untyped ast"),
         };
         commented(document, comments)
     }

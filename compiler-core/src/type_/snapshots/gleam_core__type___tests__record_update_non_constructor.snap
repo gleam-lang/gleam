@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "\n        pub type Person {\n            Person(name: String, age: Int)\n        }\n\n        pub fn some_function(name: String, age: Int) -> Person {\n            Person(name: name, age: age)\n        }\n\n        pub fn test_update(p: Person) {\n            some_function(..p, name: \"Bob\")\n        }"
+---
+----- SOURCE CODE
+
+        pub type Person {
+            Person(name: String, age: Int)
+        }
+
+        pub fn some_function(name: String, age: Int) -> Person {
+            Person(name: name, age: age)
+        }
+
+        pub fn test_update(p: Person) {
+            some_function(..p, name: "Bob")
+        }
+
+----- ERROR
+error: Invalid record update
+   ┌─ /src/one/two.gleam:11:13
+   │
+11 │             some_function(..p, name: "Bob")
+   │             ^^^^^^^^^^^^^ This is not a record constructor
+
+Only record constructors can be used with the update syntax.
