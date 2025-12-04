@@ -1367,7 +1367,7 @@ pub struct AnnotateTopLevelDefinitions<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
-    is_hovering_definition: bool,
+    is_hovering_definition_requiring_annotations: bool,
 }
 
 impl<'a> AnnotateTopLevelDefinitions<'a> {
@@ -1380,7 +1380,7 @@ impl<'a> AnnotateTopLevelDefinitions<'a> {
             module,
             params,
             edits: TextEdits::new(line_numbers),
-            is_hovering_definition: false,
+            is_hovering_definition_requiring_annotations: false,
         }
     }
 
@@ -1389,7 +1389,7 @@ impl<'a> AnnotateTopLevelDefinitions<'a> {
 
         // We only want to trigger the action if we're over one of the definition
         // which is lacking some annotations in the module
-        if !self.is_hovering_definition || self.edits.edits.is_empty() {
+        if !self.is_hovering_definition_requiring_annotations {
             return vec![];
         };
 
@@ -1414,7 +1414,7 @@ impl<'ast> ast::visit::Visit<'ast> for AnnotateTopLevelDefinitions<'_> {
 
         // We're hovering definition which needs some annotations
         if overlaps(code_action_range, self.params.range) {
-            self.is_hovering_definition = true;
+            self.is_hovering_definition_requiring_annotations = true;
         }
 
         self.edits.insert(
@@ -1441,15 +1441,14 @@ impl<'ast> ast::visit::Visit<'ast> for AnnotateTopLevelDefinitions<'_> {
             return;
         }
 
+        let code_action_range = self.edits.src_span_to_lsp_range(fun.location);
+        if overlaps(code_action_range, self.params.range) {
+            self.is_hovering_definition_requiring_annotations = true;
+        }
+
         // Create new printer to ignore type variables from other definitions
         let mut printer = Printer::new_without_type_variables(&self.module.ast.names);
         collect_type_variables(&mut printer, fun);
-
-        let code_action_range = self.edits.src_span_to_lsp_range(fun.location);
-
-        if overlaps(code_action_range, self.params.range) {
-            self.is_hovering_definition = true;
-        }
 
         // Annotate each argument separately
         for argument in arguments_to_annotate {
