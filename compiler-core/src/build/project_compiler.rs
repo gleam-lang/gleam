@@ -184,6 +184,10 @@ where
         // verify that this version is appropriate.
         self.check_gleam_version()?;
 
+        // Checks if JavaScript configuration has changed since the last build (particularly TypeScript declarations)
+        // and rebuilds the project if necessary to ensure consistent compilation with current settings
+        self.rebuild_if_javascript_config_changed()?;
+
         // The JavaScript target requires a prelude module to be written.
         self.write_prelude()?;
 
@@ -255,6 +259,41 @@ where
                 path: version_path,
                 err: Some(e.to_string()),
             })
+    }
+
+    /// Checks if JavaScript configuration has changed since the last build.
+    /// If it has changed (e.g., TypeScript declarations setting), we clear the build directory
+    /// to ensure a clean rebuild with the new settings.
+    pub fn rebuild_if_javascript_config_changed(&self) -> Result<(), Error> {
+        if !self.target().is_javascript() || !self.options.codegen.should_codegen(true) {
+            return Ok(());
+        }
+
+        let build_path = self
+            .paths
+            .build_directory_for_target(self.mode(), self.target());
+
+        let ts_indicator_path = build_path.join("typescript-declarations");
+        let ts_enabled = self.config.javascript.typescript_declarations;
+
+        let needs_rebuild = if ts_enabled {
+            !self.io.is_file(&ts_indicator_path)
+        } else {
+            self.io.is_file(&ts_indicator_path)
+        };
+
+        if needs_rebuild {
+            tracing::info!("removing_build_state_due_to_javascript_config_change");
+            self.io.delete_directory(&build_path)?;
+
+            self.io.mkdir(&build_path)?;
+
+            if ts_enabled {
+                self.io.write(&ts_indicator_path, "")?;
+            }
+        }
+
+        Ok(())
     }
 
     pub fn compile_dependencies(&mut self) -> Result<Vec<Module>, Error> {
