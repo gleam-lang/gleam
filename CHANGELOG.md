@@ -215,6 +215,9 @@
 
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- Added `gleam hex deauthenticate` command.
+  ([Samuel Cristobal](https://github.com/scristobal))
+
 ### Language server
 
 - The language server can now offer a code action to merge consecutive case
