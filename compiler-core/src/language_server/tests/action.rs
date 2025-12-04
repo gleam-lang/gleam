@@ -11318,3 +11318,16 @@ fn wobble(other) { todo }
         find_position_of("wobble").to_selection()
     );
 }
+
+#[test]
+fn annotate_all_top_level_definitions_not_suggested_if_annotations_present() {
+    assert_no_code_actions!(
+        ANNOTATE_TOP_LEVEL_DEFINITIONS,
+        r#"
+fn wibble(one: Int) -> Int { one }
+
+fn wobble(one) { wibble(one) }
+"#,
+        find_position_of("wibble").to_selection()
+    );
+}
