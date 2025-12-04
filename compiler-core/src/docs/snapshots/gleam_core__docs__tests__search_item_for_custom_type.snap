@@ -1,0 +1,63 @@
+---
+source: compiler-core/src/docs/tests.rs
+expression: output
+---
+------ SOURCE CODE
+
+/// # The `Option` type
+/// Represents an optional value, either `Some` or `None`.
+/// If it is None, the value is absent
+/// [Read more](https://example.com)
+pub type Option(inner) {
+  /// Here is some
+  /// documentation for the `Some` constructor
+  Some(
+    /// And even documentation on a **field**!
+    value: inner
+  )
+  None
+}
+
+------------------------------------
+
+TITLE:         main
+PARENT TITLE:  main
+TYPE:          Module
+REFERENCE:     main.html
+CONTENT:
+
+------------------------------------
+TITLE:         Option
+PARENT TITLE:  module
+TYPE:          Type
+REFERENCE:     module.html#Option
+CONTENT:
+```
+pub type Option(inner) {
+  Some(value: inner)
+  None
+}
+```
+ # The `Option` type
+ Represents an optional value, either `Some` or `None`.
+ If it is None, the value is absent
+ [Read more](https://example.com)
+
+```
+Some(value: inner)
+```
+ Here is some
+ documentation for the `Some` constructor
+
+value
+ And even documentation on a **field**!
+
+```
+None
+```
+
+
+Synonyms:
+module.Option
+module Option
+------------------------------------

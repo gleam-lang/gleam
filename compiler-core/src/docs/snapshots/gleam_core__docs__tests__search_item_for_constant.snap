@@ -1,0 +1,45 @@
+---
+source: compiler-core/src/docs/tests.rs
+expression: output
+---
+------ SOURCE CODE
+
+/// Reverses a `List`, and returns the list in reverse.
+/// ```
+/// reverse([1, 2, 3])
+/// // [3, 2, 1]
+/// ```
+pub fn reverse(list: List(a), out: List(a)) -> List(a) {
+  case list {
+    [] -> out
+    [first, ..rest] -> reverse(rest, [first, ..out])
+  }
+}
+
+------------------------------------
+
+TITLE:         main
+PARENT TITLE:  main
+TYPE:          Module
+REFERENCE:     main.html
+CONTENT:
+
+------------------------------------
+TITLE:         reverse
+PARENT TITLE:  module
+TYPE:          Value
+REFERENCE:     module.html#reverse
+CONTENT:
+```
+pub fn reverse(list: List(a), out: List(a)) -> List(a)
+```
+ Reverses a `List`, and returns the list in reverse.
+ 
+ reverse([1, 2, 3])
+ // [3, 2, 1]
+ 
+
+Synonyms:
+module.reverse
+module reverse
+------------------------------------

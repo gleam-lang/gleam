@@ -15,7 +15,7 @@ use crate::{
         TargetCodegenConfiguration,
     },
     config::{DocsPage, PackageConfig, Repository},
-    docs::DocContext,
+    docs::{DocContext, search_item_for_module, search_item_for_type, search_item_for_value},
     io::{FileSystemWriter, memory::InMemoryFileSystem},
     paths::ProjectPaths,
     type_,
@@ -24,7 +24,7 @@ use crate::{
     warning::WarningEmitter,
 };
 use camino::Utf8PathBuf;
-use ecow::EcoString;
+use ecow::{EcoString, eco_format};
 use hexpm::version::Version;
 use http::Uri;
 use itertools::Itertools;
@@ -1278,4 +1278,161 @@ fn forgejo_multiple_line_definition() {
     assert!(
         html.contains("https://code.example.org/wibble/wobble/src/tag/v0.1.0/src/app.gleam#L1-L3")
     );
+}
+
+fn generate_search_data(module_name: &str, module_src: &str) -> EcoString {
+    let module = type_::tests::compile_module(module_name, module_src, None, Vec::new())
+        .expect("Module should compile successfully");
+
+    let mut config = PackageConfig::default();
+    config.name = "thepackage".into();
+    let paths = ProjectPaths::new("/".into());
+    let build_module = build::Module {
+        name: "main".into(),
+        code: module_src.into(),
+        mtime: SystemTime::now(),
+        input_path: "/".into(),
+        origin: Origin::Src,
+        ast: module,
+        extra: Default::default(),
+        dependencies: Default::default(),
+    };
+
+    let source_links = SourceLinker::new(&paths, &config, &build_module);
+
+    let module = &build_module.ast;
+
+    dbg!(&module.documentation);
+
+    let dependencies = HashMap::new();
+    let mut printer = Printer::new(
+        module.type_info.package.clone(),
+        module.name.clone(),
+        &module.names,
+        &dependencies,
+    );
+
+    let mut search_items = Vec::new();
+
+    let types = printer.type_definitions(&source_links, &module.definitions);
+    let values = printer.value_definitions(&source_links, &module.definitions);
+
+    search_items.push(search_item_for_module(&build_module));
+
+    for type_ in types {
+        search_items.push(search_item_for_type(module_name, &type_));
+    }
+    for value in values {
+        search_items.push(search_item_for_value(module_name, &value));
+    }
+
+    let mut output = EcoString::new();
+
+    output.push_str("------ SOURCE CODE\n");
+    output.push_str(module_src);
+    output.push_str("\n------------------------------------\n\n");
+
+    for item in search_items {
+        let SearchItem {
+            type_,
+            parent_title,
+            title,
+            content,
+            reference,
+        } = item;
+
+        let type_ = match type_ {
+            SearchItemType::Value => "Value",
+            SearchItemType::Module => "Module",
+            SearchItemType::Page => "Page",
+            SearchItemType::Type => "Type",
+        };
+
+        output.push_str(&eco_format!(
+            "TITLE:         {title}
+PARENT TITLE:  {parent_title}
+TYPE:          {type_}
+REFERENCE:     {reference}
+CONTENT:
+{content}
+------------------------------------
+"
+        ));
+    }
+
+    output
+}
+
+#[test]
+fn search_item_for_custom_type() {
+    let output = generate_search_data(
+        "module",
+        "
+/// # The `Option` type
+/// Represents an optional value, either `Some` or `None`.
+/// If it is None, the value is absent
+/// [Read more](https://example.com)
+pub type Option(inner) {
+  /// Here is some
+  /// documentation for the `Some` constructor
+  Some(
+    /// And even documentation on a **field**!
+    value: inner
+  )
+  None
+}
+",
+    );
+    insta::assert_snapshot!(output);
+}
+
+#[test]
+fn search_item_for_type_alias() {
+    let output = generate_search_data(
+        "module",
+        "
+/// This is a type alias to a list
+/// of integer values.
+/// ## Examples
+/// ```
+/// // Examples
+/// ```
+pub type IntList = List(Int)
+",
+    );
+    insta::assert_snapshot!(output);
+}
+
+#[test]
+fn search_item_for_function() {
+    let output = generate_search_data(
+        "module",
+        "
+/// Pi is the ration between a circle's **radius** and its
+/// *circumference*. Pretty cool!
+pub const pi = 3.14
+",
+    );
+    insta::assert_snapshot!(output);
+}
+
+#[test]
+fn search_item_for_constant() {
+    let output = generate_search_data(
+        "module",
+        "
+/// Reverses a `List`, and returns the list in reverse.
+/// ```
+/// reverse([1, 2, 3])
+/// // [3, 2, 1]
+/// ```
+pub fn reverse(list: List(a), out: List(a)) -> List(a) {
+  case list {
+    [] -> out
+    [first, ..rest] -> reverse(rest, [first, ..out])
+  }
+}
+",
+    );
+    insta::assert_snapshot!(output);
 }
