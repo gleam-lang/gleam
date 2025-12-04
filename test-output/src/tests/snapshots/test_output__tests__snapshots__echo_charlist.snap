@@ -1,8 +1,6 @@
 ---
-source: test-output/src/tests/echo.rs
-assertion_line: 139
+source: test-output/src/tests/snapshots.rs
 expression: output
-snapshot_kind: text
 ---
 --- main.gleam ----------------------
 pub fn main() {
@@ -11,5 +9,6 @@ pub fn main() {
 
 
 --- gleam run output ----------------
+--- gleam run err output ------------
 [90msrc/main.gleam:2[39m
 charlist.from_string("Hello, Joe!")

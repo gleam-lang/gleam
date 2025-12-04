@@ -1,5 +1,5 @@
 ---
-source: test-output/src/tests/echo.rs
+source: test-output/src/tests/snapshots.rs
 expression: output
 ---
 --- main.gleam ----------------------
@@ -11,9 +11,10 @@ pub fn main() {
 
 
 --- gleam run output ----------------
+--- gleam run err output ------------
 [90msrc/main.gleam:2[39m
-""
+<<>>
 [90msrc/main.gleam:3[39m
-"\u{0001}\u{0002}\u{0003}"
+<<1, 2, 3>>
 [90msrc/main.gleam:4[39m
 <<1, 2, 3:size(2)>>

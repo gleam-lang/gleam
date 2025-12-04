@@ -1,0 +1,15 @@
+---
+source: test-output/src/tests/snapshots.rs
+expression: output
+---
+--- external_dependency.gleam ----------------------
+import gleam/io
+
+pub fn main() {
+  io.println("Hello from other_mod!")
+}
+
+
+--- gleam run output ----------------
+Hello from other_mod!
+--- gleam run err output ------------

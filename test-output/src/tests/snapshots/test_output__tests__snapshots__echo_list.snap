@@ -1,16 +1,17 @@
 ---
-source: test-output/src/tests/echo.rs
+source: test-output/src/tests/snapshots.rs
 expression: output
 ---
 --- main.gleam ----------------------
 pub fn main() {
-  echo True
-  echo False
+  echo []
+  echo [1, 2, 3]
 }
 
 
 --- gleam run output ----------------
+--- gleam run err output ------------
 [90msrc/main.gleam:2[39m
-True
+[]
 [90msrc/main.gleam:3[39m
-False
+[1, 2, 3]

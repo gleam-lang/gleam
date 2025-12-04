@@ -1,16 +1,20 @@
 ---
-source: test-output/src/tests/echo.rs
+source: test-output/src/tests/snapshots.rs
 expression: output
 ---
 --- main.gleam ----------------------
 pub fn main() {
-  echo []
-  echo [1, 2, 3]
+  echo 1
+  echo 2
+  echo 100_000
 }
 
 
 --- gleam run output ----------------
+--- gleam run err output ------------
 [90msrc/main.gleam:2[39m
-[]
+1
 [90msrc/main.gleam:3[39m
-[1, 2, 3]
+2
+[90msrc/main.gleam:4[39m
+100000

@@ -1,19 +1,17 @@
 ---
-source: test-output/src/tests/echo.rs
+source: test-output/src/tests/snapshots.rs
 expression: output
 ---
 --- main.gleam ----------------------
 pub fn main() {
-  echo <<>>
-  echo <<1, 2, 3>>
-  echo <<1, 2, 3:2>>
+  echo #()
+  echo #(True, 1, "hello")
 }
 
 
 --- gleam run output ----------------
+--- gleam run err output ------------
 [90msrc/main.gleam:2[39m
-<<>>
+#()
 [90msrc/main.gleam:3[39m
-<<1, 2, 3>>
-[90msrc/main.gleam:4[39m
-<<1, 2, 3:size(2)>>
+#(True, 1, "hello")

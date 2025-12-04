@@ -1,0 +1,15 @@
+name = "otp_app" 
+
+version = "1.0.0"              
+description = "It's very cool" 
+
+target = "erlang"
+
+[dependencies]
+gleam_stdlib = ">= 0.18.0 and < 2.0.0"
+gleam_erlang = ">= 0.2.0 and < 2.0.0"
+other_mod = {path = "external_dependency"}
+gleam_otp = ">= 1.2.0 and < 2.0.0"
+
+[erlang]
+application_start_module = "otp_application" 

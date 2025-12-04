@@ -1,5 +1,5 @@
 ---
-source: test-output/src/tests/echo.rs
+source: test-output/src/tests/snapshots.rs
 expression: output
 ---
 --- main.gleam ----------------------
@@ -16,6 +16,7 @@ pub fn to_atom(string: String) -> Atom
 
 
 --- gleam run output ----------------
+--- gleam run err output ------------
 [90msrc/main.gleam:2[39m
 #(atom.create("UP"), 1, 2)
 [90msrc/main.gleam:3[39m

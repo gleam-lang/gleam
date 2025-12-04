@@ -1,5 +1,5 @@
 ---
-source: test-output/src/tests/echo.rs
+source: test-output/src/tests/snapshots.rs
 expression: output
 ---
 --- main.gleam ----------------------
@@ -12,6 +12,7 @@ pub fn main() {
 
 
 --- gleam run output ----------------
+--- gleam run err output ------------
 [90msrc/main.gleam:4[39m
 dict.from_list([])
 [90msrc/main.gleam:5[39m

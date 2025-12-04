@@ -1,5 +1,5 @@
 ---
-source: test-output/src/tests/echo.rs
+source: test-output/src/tests/snapshots.rs
 expression: output
 ---
 --- main.gleam ----------------------
@@ -17,6 +17,7 @@ pub fn main() {
 
 
 --- gleam run output ----------------
+--- gleam run err output ------------
 [90msrc/main.gleam:8[39m
 Wibble(1, "hello")
 [90msrc/main.gleam:9[39m

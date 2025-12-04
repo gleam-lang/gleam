@@ -1,8 +1,6 @@
 ---
-source: test-output/src/tests/echo.rs
-assertion_line: 206
+source: test-output/src/tests/snapshots.rs
 expression: output
-snapshot_kind: text
 ---
 --- main.gleam ----------------------
 import thing
@@ -19,5 +17,6 @@ fn singleton() -> thing.Thing {
 
 
 --- gleam run output ----------------
+--- gleam run err output ------------
 [90msrc/main.gleam:4[39m
 #(1, Thing, Thing)
