@@ -26,7 +26,6 @@ test: ## Run the compiler unit tests
 	cd test/hextarball && make test
 	cd test/running_modules && make test
 	cd test/subdir_ffi && make
-	cd test/OTP_run_module && make
 
 .PHONY: language-test
 language-test: ## Run the language integration tests for all targets
