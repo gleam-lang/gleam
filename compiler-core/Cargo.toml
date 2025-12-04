@@ -25,7 +25,7 @@ dirs-next = "2"
 # SPDX license parsing
 spdx = "0"
 # Binary format de-serialization
-bincode = "1"
+bincode = "2"
 # cross platform single glob and glob set matching
 globset = { version = "0", features = ["serde1"] }
 # Checksums
