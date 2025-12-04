@@ -494,6 +494,16 @@ impl<'a> CallGraphBuilder<'a> {
                 }
             }
 
+            Constant::RecordUpdate {
+                record, arguments, ..
+            } => {
+                self.constant(record);
+
+                for argument in arguments {
+                    self.constant(&argument.value);
+                }
+            }
+
             Constant::Var {
                 module: None, name, ..
             } => self.referenced(name),
