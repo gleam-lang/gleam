@@ -1,4 +1,5 @@
 use super::*;
+use crate::analyse::Inferred;
 use crate::type_::{FieldMap, HasType};
 
 pub type TypedConstant = Constant<Arc<Type>, EcoString>;
@@ -43,8 +44,19 @@ pub enum Constant<T, RecordTag> {
         arguments: Vec<CallArg<Self>>,
         tag: RecordTag,
         type_: T,
-        field_map: Option<FieldMap>,
+        field_map: Inferred<FieldMap>,
         record_constructor: Option<Box<ValueConstructor>>,
+    },
+
+    RecordUpdate {
+        location: SrcSpan,
+        module: Option<(EcoString, SrcSpan)>,
+        name: EcoString,
+        record: Box<Self>,
+        arguments: Vec<ConstantRecordUpdateArg<Self>>,
+        tag: RecordTag,
+        type_: T,
+        field_map: Inferred<FieldMap>,
     },
 
     BitArray {
@@ -89,6 +101,7 @@ impl TypedConstant {
             Constant::List { type_, .. }
             | Constant::Tuple { type_, .. }
             | Constant::Record { type_, .. }
+            | Constant::RecordUpdate { type_, .. }
             | Constant::Var { type_, .. }
             | Constant::Invalid { type_, .. } => type_.clone(),
         }
@@ -111,6 +124,16 @@ impl TypedConstant {
             Constant::Record { arguments, .. } => arguments
                 .iter()
                 .find_map(|argument| argument.find_node(byte_index))
+                .unwrap_or(Located::Constant(self)),
+            Constant::RecordUpdate {
+                record, arguments, ..
+            } => record
+                .find_node(byte_index)
+                .or_else(|| {
+                    arguments
+                        .iter()
+                        .find_map(|arg| arg.value.find_node(byte_index))
+                })
                 .unwrap_or(Located::Constant(self)),
             Constant::BitArray { segments, .. } => segments
                 .iter()
@@ -143,6 +166,7 @@ impl TypedConstant {
             } => value_constructor
                 .as_ref()
                 .map(|constructor| constructor.definition_location()),
+            Constant::RecordUpdate { .. } => None,
         }
     }
 
@@ -164,6 +188,17 @@ impl TypedConstant {
                 .iter()
                 .map(|argument| argument.value.referenced_variables())
                 .fold(im::hashset![], im::HashSet::union),
+
+            Constant::RecordUpdate {
+                record, arguments, ..
+            } => {
+                let record_vars = record.referenced_variables();
+                let arg_vars = arguments
+                    .iter()
+                    .map(|arg| arg.value.referenced_variables())
+                    .fold(im::hashset![], im::HashSet::union);
+                record_vars.union(arg_vars)
+            }
 
             Constant::BitArray { segments, .. } => segments
                 .iter()
@@ -251,6 +286,37 @@ impl TypedConstant {
             (Constant::Record { .. }, _) => false,
 
             (
+                Constant::RecordUpdate {
+                    module,
+                    name,
+                    record,
+                    arguments,
+                    ..
+                },
+                Constant::RecordUpdate {
+                    module: other_module,
+                    name: other_name,
+                    record: other_record,
+                    arguments: other_arguments,
+                    ..
+                },
+            ) => {
+                let modules_are_equal = match (module, other_module) {
+                    (None, None) => true,
+                    (None, Some(_)) | (Some(_), None) => false,
+                    (Some((one, _)), Some((other, _))) => one == other,
+                };
+
+                modules_are_equal
+                    && name == other_name
+                    && record.syntactically_eq(other_record)
+                    && pairwise_all(arguments, other_arguments, |(one, other)| {
+                        one.label == other.label && one.value.syntactically_eq(&other.value)
+                    })
+            }
+            (Constant::RecordUpdate { .. }, _) => false,
+
+            (
                 Constant::BitArray { segments, .. },
                 Constant::BitArray {
                     segments: other_segments,
@@ -309,6 +375,7 @@ impl<A, B> Constant<A, B> {
             | Constant::Tuple { location, .. }
             | Constant::String { location, .. }
             | Constant::Record { location, .. }
+            | Constant::RecordUpdate { location, .. }
             | Constant::BitArray { location, .. }
             | Constant::Var { location, .. }
             | Constant::Invalid { location, .. }
@@ -327,6 +394,7 @@ impl<A, B> Constant<A, B> {
             Constant::Tuple { .. }
             | Constant::List { .. }
             | Constant::Record { .. }
+            | Constant::RecordUpdate { .. }
             | Constant::BitArray { .. }
             | Constant::StringConcatenation { .. }
             | Constant::Invalid { .. } => false,
@@ -347,5 +415,28 @@ impl<A, B> bit_array::GetLiteralValue for Constant<A, B> {
         } else {
             None
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConstantRecordUpdateArg<Constant> {
+    pub label: EcoString,
+    pub location: SrcSpan,
+    pub value: Constant,
+}
+
+impl<Constant> ConstantRecordUpdateArg<Constant> {
+    #[must_use]
+    pub fn uses_label_shorthand(&self) -> bool
+    where
+        Constant: HasLocation,
+    {
+        self.value.location() == self.location
+    }
+}
+
+impl<Constant> HasLocation for ConstantRecordUpdateArg<Constant> {
+    fn location(&self) -> SrcSpan {
+        self.location
     }
 }

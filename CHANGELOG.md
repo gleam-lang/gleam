@@ -154,6 +154,14 @@
     │        ^^^^^^^^^^^^^^^^ This is always `True`
 
   This comparison is redundant since it always succeeds.
+
+  ([Adi Salimgereyev](https://github.com/abs0luty))
+
+- Record update syntax now works with spreading records in type constructors
+  for const values:
+  ```gleam
+  const a = Foo(1, 2)
+  const b = Foo(..a, 3)
   ```
 
   ([Adi Salimgereyev](https://github.com/abs0luty))

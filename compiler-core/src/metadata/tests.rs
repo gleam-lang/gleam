@@ -4,6 +4,7 @@ use type_::{AccessorsMap, FieldMap, RecordAccessor};
 
 use super::*;
 use crate::{
+    analyse::Inferred,
     ast::{
         BitArrayOption, BitArraySegment, CallArg, Constant, Publicity, SrcSpan, TypedConstant,
         TypedConstantBitArraySegmentOption,
@@ -1173,7 +1174,7 @@ fn constant_record() {
         ],
         tag: "thetag".into(),
         type_: type_::int(),
-        field_map: None,
+        field_map: Inferred::Unknown,
         record_constructor: None,
     });
 

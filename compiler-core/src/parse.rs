@@ -59,11 +59,11 @@ use crate::analyse::Inferred;
 use crate::ast::{
     Arg, ArgNames, Assert, AssignName, Assignment, AssignmentKind, BinOp, BitArrayOption,
     BitArraySegment, BitArraySize, CAPTURE_VARIABLE, CallArg, Clause, ClauseGuard, Constant,
-    CustomType, Definition, Function, FunctionLiteralKind, HasLocation, Import, IntOperator,
-    Module, ModuleConstant, Pattern, Publicity, RecordBeingUpdated, RecordConstructor,
-    RecordConstructorArg, SrcSpan, Statement, TailPattern, TargetedDefinition, TodoKind, TypeAlias,
-    TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar,
-    UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant,
+    ConstantRecordUpdateArg, CustomType, Definition, Function, FunctionLiteralKind, HasLocation,
+    Import, IntOperator, Module, ModuleConstant, Pattern, Publicity, RecordBeingUpdated,
+    RecordConstructor, RecordConstructorArg, SrcSpan, Statement, TailPattern, TargetedDefinition,
+    TodoKind, TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple,
+    TypeAstVar, UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant,
     UntypedDefinition, UntypedExpr, UntypedModule, UntypedPattern, UntypedRecordUpdateArg,
     UntypedStatement, UntypedUseAssignment, Use, UseAssignment,
 };
@@ -3344,28 +3344,71 @@ where
     ) -> Result<Option<UntypedConstant>, ParseError> {
         match self.maybe_one(&Token::LeftParen) {
             Some((par_s, _)) => {
-                let arguments =
-                    Parser::series_of(self, &Parser::parse_const_record_arg, Some(&Token::Comma))?;
-                let (_, par_e) = self.expect_one_following_series(
-                    &Token::RightParen,
-                    "a constant record argument",
-                )?;
-                if arguments.is_empty() {
-                    return parse_error(
-                        ParseErrorType::ConstantRecordConstructorNoArguments,
-                        SrcSpan::new(par_s, par_e),
-                    );
+                if self.maybe_one(&Token::DotDot).is_some() {
+                    let record = match self.parse_const_value()? {
+                        Some(value) => Box::new(value),
+                        None => {
+                            return parse_error(
+                                ParseErrorType::UnexpectedEof,
+                                SrcSpan::new(par_s, par_s + 2),
+                            );
+                        }
+                    };
+
+                    let mut update_arguments = vec![];
+                    if self.maybe_one(&Token::Comma).is_some() {
+                        update_arguments = Parser::series_of(
+                            self,
+                            &Parser::parse_const_record_update_arg,
+                            Some(&Token::Comma),
+                        )?;
+                    }
+
+                    let (_, par_e) = self.expect_one_following_series(
+                        &Token::RightParen,
+                        "a constant record update argument",
+                    )?;
+
+                    Ok(Some(Constant::RecordUpdate {
+                        location: SrcSpan { start, end: par_e },
+                        module,
+                        name,
+                        record,
+                        arguments: update_arguments,
+                        tag: (),
+                        type_: (),
+                        field_map: Inferred::Unknown,
+                    }))
+                } else {
+                    let arguments = Parser::series_of(
+                        self,
+                        &Parser::parse_const_record_arg,
+                        Some(&Token::Comma),
+                    )?;
+
+                    let (_, par_e) = self.expect_one_following_series(
+                        &Token::RightParen,
+                        "a constant record argument",
+                    )?;
+
+                    if arguments.is_empty() {
+                        return parse_error(
+                            ParseErrorType::ConstantRecordConstructorNoArguments,
+                            SrcSpan::new(par_s, par_e),
+                        );
+                    }
+
+                    Ok(Some(Constant::Record {
+                        location: SrcSpan { start, end: par_e },
+                        module,
+                        name,
+                        arguments,
+                        tag: (),
+                        type_: (),
+                        field_map: Inferred::Unknown,
+                        record_constructor: None,
+                    }))
                 }
-                Ok(Some(Constant::Record {
-                    location: SrcSpan { start, end: par_e },
-                    module,
-                    name,
-                    arguments,
-                    tag: (),
-                    type_: (),
-                    field_map: None,
-                    record_constructor: None,
-                }))
             }
             _ => Ok(Some(Constant::Record {
                 location: SrcSpan { start, end },
@@ -3374,7 +3417,7 @@ where
                 arguments: vec![],
                 tag: (),
                 type_: (),
-                field_map: None,
+                field_map: Inferred::Unknown,
                 record_constructor: None,
             })),
         }
@@ -3438,6 +3481,78 @@ where
                     }
                     _ => Ok(None),
                 }
+            }
+        }
+    }
+
+    fn parse_const_record_update_arg(
+        &mut self,
+    ) -> Result<Option<ConstantRecordUpdateArg<UntypedConstant>>, ParseError> {
+        let (start, label, label_end) = match (self.tok0.take(), self.tok1.take()) {
+            // Named arg - required for record updates
+            (Some((start, Token::Name { name }, _)), Some((_, Token::Colon, end))) => {
+                self.advance();
+                self.advance();
+                (start, name, end)
+            }
+
+            // Unnamed arg or other - return error since record updates require labels
+            (Some((start, Token::Name { name }, end)), t1) => {
+                self.tok0 = Some((start, Token::Name { name: name.clone() }, end));
+                self.tok1 = t1;
+
+                // Check if this is label shorthand (name without colon)
+                // In this case, use the name as both label and value
+                match self.parse_const_value()? {
+                    Some(value) if value.location() == SrcSpan { start, end } => {
+                        return Ok(Some(ConstantRecordUpdateArg {
+                            label: name.clone(),
+                            location: SrcSpan { start, end },
+                            value,
+                        }));
+                    }
+                    _ => {
+                        self.tok0 = Some((start, Token::Name { name }, end));
+                        return parse_error(ParseErrorType::ExpectedName, SrcSpan { start, end });
+                    }
+                }
+            }
+
+            (t0, t1) => {
+                self.tok0 = t0;
+                self.tok1 = t1;
+                return Ok(None);
+            }
+        };
+
+        match self.parse_const_value()? {
+            Some(value) => Ok(Some(ConstantRecordUpdateArg {
+                label,
+                location: SrcSpan {
+                    start,
+                    end: value.location().end,
+                },
+                value,
+            })),
+            _ => {
+                // Label shorthand: field without value means field: field
+                Ok(Some(ConstantRecordUpdateArg {
+                    label: label.clone(),
+                    location: SrcSpan {
+                        start,
+                        end: label_end,
+                    },
+                    value: UntypedConstant::Var {
+                        location: SrcSpan {
+                            start,
+                            end: label_end,
+                        },
+                        constructor: None,
+                        module: None,
+                        name: label,
+                        type_: (),
+                    },
+                }))
             }
         }
     }
