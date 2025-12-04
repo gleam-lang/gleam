@@ -11167,8 +11167,10 @@ fn merge_case_branch_does_not_merge_branches_with_variables_with_same_name_and_d
   }
 }"#,
         find_position_of("Ok").select_until(find_position_of("Error"))
+    );
 }
 
+#[test]
 fn annotate_all_top_level_definitions_dont_affect_local_vars() {
     assert_code_action!(
         ANNOTATE_TOP_LEVEL_DEFINITIONS,
@@ -11177,13 +11179,15 @@ pub const answer = 42
 
 pub fn add_two(thing) {
   thing + 2
+}
 
 pub fn add_one(thing) {
   let result = thing + 1
   result
 }
 "#,
-        find_position_of("fn").select_until(find_position_of("("));
+        find_position_of("fn").select_until(find_position_of("("))
+    );
 }
 
 #[test]

@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+assertion_line: 11175
+expression: "\npub const answer = 42\n\npub fn add_two(thing) {\n  thing + 2\n}\n\npub fn add_one(thing) {\n  let result = thing + 1\n  result\n}\n"
+snapshot_kind: text
+---
+----- BEFORE ACTION
+
+pub const answer = 42
+
+pub fn add_two(thing) {
+    ▔▔▔▔▔▔▔▔▔▔↑        
+  thing + 2
+}
+
+pub fn add_one(thing) {
+  let result = thing + 1
+  result
+}
+
+
+----- AFTER ACTION
+
+pub const answer: Int = 42
+
+pub fn add_two(thing: Int) -> Int {
+  thing + 2
+}
+
+pub fn add_one(thing: Int) -> Int {
+  let result = thing + 1
+  result
+}
