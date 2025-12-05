@@ -329,7 +329,12 @@ impl Module {
             .chain((constants.iter_mut()).map(DocumentableDefinition::Constant))
             .chain((custom_types.iter_mut()).map(DocumentableDefinition::CustomType))
             .chain((type_aliases.iter_mut()).map(DocumentableDefinition::TypeAlias))
-            .chain((functions.iter_mut()).map(DocumentableDefinition::Function))
+            .chain(
+                functions
+                    .iter_mut()
+                    .flatten()
+                    .map(DocumentableDefinition::Function),
+            )
             .sorted_by_key(|definition| definition.location())
             .collect_vec();
 
