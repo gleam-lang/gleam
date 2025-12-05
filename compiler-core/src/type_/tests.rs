@@ -2331,21 +2331,6 @@ fn const_record_update_all_fields() {
 }
 
 #[test]
-fn const_record_update_only() {
-    assert_module_infer!(
-        "pub type Person { Person(name: String, age: Int) }
-
-        pub const alice = Person(\"Alice\", 30)
-        pub const bob = Person(..alice)",
-        vec![
-            ("Person", "fn(String, Int) -> Person"),
-            ("alice", "Person"),
-            ("bob", "Person")
-        ],
-    );
-}
-
-#[test]
 fn const_record_update_chain() {
     assert_module_infer!(
         "pub type Person { Person(name: String, age: Int, city: String) }

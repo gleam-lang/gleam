@@ -140,19 +140,6 @@ impl ModuleSuggestion {
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub enum InvalidRecordUpdateReason {
-    /// Constructor has only unlabelled fields (tuple-like)
-    UnlabelledFields,
-    /// Not a record constructor at all (e.g., a function or variable)
-    NotARecordConstructor,
-    /// Spreading a different variant (e.g., Dog to create Cat)
-    WrongVariant {
-        expected: EcoString,
-        given: EcoString,
-    },
-}
-
-#[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Error {
     InvalidImport {
         location: SrcSpan,
@@ -353,9 +340,8 @@ pub enum Error {
         location: SrcSpan,
     },
 
-    InvalidRecordUpdate {
+    InvalidRecordConstructor {
         location: SrcSpan,
-        reason: InvalidRecordUpdateReason,
     },
 
     UnexpectedTypeHole {
@@ -1295,7 +1281,7 @@ impl Error {
             | Error::NotATuple { location, .. }
             | Error::NotATupleUnbound { location, .. }
             | Error::RecordAccessUnknownType { location, .. }
-            | Error::InvalidRecordUpdate { location, .. }
+            | Error::InvalidRecordConstructor { location, .. }
             | Error::UnexpectedTypeHole { location, .. }
             | Error::NotExhaustivePatternMatch { location, .. }
             | Error::ArgumentNameAlreadyUsed { location, .. }

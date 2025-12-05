@@ -3371,6 +3371,7 @@ where
 
                     Ok(Some(Constant::RecordUpdate {
                         location: SrcSpan { start, end: par_e },
+                        constructor_location: SrcSpan { start, end },
                         module,
                         name,
                         record,

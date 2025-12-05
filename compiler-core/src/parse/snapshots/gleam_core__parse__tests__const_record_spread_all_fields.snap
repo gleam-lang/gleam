@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
 expression: "\ntype Person {\n  Person(name: String, age: Int, city: String)\n}\n\nconst base = Person(\"Alice\", 30, \"London\")\nconst updated = Person(..base, name: \"Bob\", age: 25, city: \"Paris\")\n"
-snapshot_kind: text
 ---
 Parsed {
     module: Module {
@@ -257,6 +256,10 @@ Parsed {
                             location: SrcSpan {
                                 start: 124,
                                 end: 175,
+                            },
+                            constructor_location: SrcSpan {
+                                start: 124,
+                                end: 130,
                             },
                             module: None,
                             name: "Person",

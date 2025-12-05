@@ -9,8 +9,8 @@ use crate::parse::error::ParseErrorDetails;
 use crate::strings::{to_snake_case, to_upper_camel_case};
 use crate::type_::collapse_links;
 use crate::type_::error::{
-    IncorrectArityContext, InvalidImportKind, InvalidRecordUpdateReason, MissingAnnotation,
-    ModuleValueUsageContext, Named, UnknownField, UnknownTypeHint, UnsafeRecordUpdateReason,
+    IncorrectArityContext, InvalidImportKind, MissingAnnotation, ModuleValueUsageContext, Named,
+    UnknownField, UnknownTypeHint, UnsafeRecordUpdateReason,
 };
 use crate::type_::printer::{Names, Printer};
 use crate::type_::{FieldAccessUsage, error::PatternMatchKind};
@@ -3096,43 +3096,21 @@ UTF-codepoint pattern matching."
                             }),
                         }
                     }
-                    TypeError::InvalidRecordUpdate { location, reason } => {
-                        let (title, text, label_text) = match reason {
-                            InvalidRecordUpdateReason::UnlabelledFields => (
-                                "Invalid record update".into(),
-                                "Only constructors with labelled fields can be used with the update syntax.".into(),
-                                "This constructor has no labelled fields".into(),
-                            ),
-                            InvalidRecordUpdateReason::WrongVariant { expected, given } => (
-                                "Type mismatch".into(),
-                                wrap(&format!(
-                                    "The record being spread is a `{}` but you are trying to construct a `{}`.",
-                                    given, expected
-                                )),
-                                format!("This is a `{}`, not a `{}`", given, expected),
-                            ),
-                            InvalidRecordUpdateReason::NotARecordConstructor => (
-                                "Invalid record update".into(),
-                                "Only record constructors can be used with the update syntax.".into(),
-                                "This is not a record constructor".into(),
-                            ),
-                        };
-                        Diagnostic {
-                            title,
-                            text,
-                            hint: None,
-                            level: Level::Error,
-                            location: Some(Location {
-                                label: Label {
-                                    text: Some(label_text),
-                                    span: *location,
-                                },
-                                path: path.clone(),
-                                src: src.clone(),
-                                extra_labels: vec![],
-                            }),
-                        }
-                    }
+                    TypeError::InvalidRecordConstructor { location } => Diagnostic {
+                        title: "Invalid record constructor".into(),
+                        text: "Only record constructors can be used with the update syntax.".into(),
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("This is not a record constructor".into()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    },
 
                     TypeError::UnexpectedTypeHole { location } => Diagnostic {
                         title: "Unexpected type hole".into(),
