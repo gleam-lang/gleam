@@ -57,6 +57,12 @@
   request limits in large projects.
   ([fruno](https://github.com/fruno-bulax/))
 
+- Missing patterns in error messages and the "Add missing patterns" code action
+  are no longer sorted lexicographically. Instead, they now consider the order
+  in which variants were defined. As programmers often group "related" variants
+  together, this should mean less reshuffling after inserting missing patterns!
+  ([fruno](https://github.com/fruno-bulax/))
+
 - The performance of `==` and `!=` has been improved for single-variant custom
   types when compiling to JavaScript. This was done by generating comparison
   code specific to the custom type rather than using the generic equality check
