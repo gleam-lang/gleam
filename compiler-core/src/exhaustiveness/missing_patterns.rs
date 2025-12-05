@@ -1,8 +1,8 @@
 use super::{CompileCaseResult, Decision, FallbackCheck, RuntimeCheck, Variable, printer::Printer};
 use crate::type_::environment::Environment;
 use ecow::EcoString;
-use itertools::Itertools;
-use std::collections::{HashMap, HashSet};
+use indexmap::IndexSet;
+use std::collections::HashMap;
 
 /// Returns a list of patterns not covered by the match expression.
 pub fn missing_patterns(
@@ -12,11 +12,8 @@ pub fn missing_patterns(
     let subjects = &result.compiled_case.subject_variables;
     let mut generator = MissingPatternsGenerator::new(subjects, environment);
     generator.add_missing_patterns(&result.compiled_case.tree);
-    let mut missing = generator.missing.into_iter().collect_vec();
 
-    // Sorting isn't necessary, but it makes it a bit easier to write tests.
-    missing.sort();
-    missing
+    generator.missing.into_iter().collect()
 }
 
 #[derive(Debug, Clone)]
@@ -67,7 +64,7 @@ impl Term {
 struct MissingPatternsGenerator<'a, 'env> {
     subjects: &'a Vec<Variable>,
     terms: Vec<Term>,
-    missing: HashSet<EcoString>,
+    missing: IndexSet<EcoString>,
     environment: &'a Environment<'env>,
     printer: Printer<'a>,
 }
@@ -77,7 +74,7 @@ impl<'a, 'env> MissingPatternsGenerator<'a, 'env> {
         MissingPatternsGenerator {
             subjects,
             terms: vec![],
-            missing: HashSet::new(),
+            missing: IndexSet::new(),
             environment,
             printer: Printer::new(&environment.names),
         }
@@ -113,6 +110,7 @@ impl<'a, 'env> MissingPatternsGenerator<'a, 'env> {
                     _ = mapping.insert(step.variable().id, index);
                 }
                 let pattern = self.print_terms(mapping);
+
                 _ = self.missing.insert(pattern);
             }
 

@@ -20,10 +20,10 @@ pub fn main() {
   case list {
     [a, b, c, 4 as d] -> d
     [] -> todo
-    [_, _, _, _, _, ..] -> todo
-    [_, _, _, _] -> todo
-    [_, _, _] -> todo
-    [_, _] -> todo
     [_] -> todo
+    [_, _] -> todo
+    [_, _, _] -> todo
+    [_, _, _, _] -> todo
+    [_, _, _, _, _, ..] -> todo
   }
 }

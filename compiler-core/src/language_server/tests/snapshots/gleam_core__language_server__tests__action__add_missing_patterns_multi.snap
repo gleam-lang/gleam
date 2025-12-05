@@ -18,7 +18,7 @@ pub fn main(a: Bool) {
 pub fn main(a: Bool) {
   let b = 1
   case a, b {
-    False, _ -> todo
     True, _ -> todo
+    False, _ -> todo
   }
 }
