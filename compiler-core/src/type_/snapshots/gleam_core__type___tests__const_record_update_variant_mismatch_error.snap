@@ -12,11 +12,14 @@ pub type Subject {
         pub const dog = Animal(..alice)
 
 ----- ERROR
-error: Type mismatch
-  ┌─ /src/one/two.gleam:7:25
+error: Incorrect record update
+  ┌─ /src/one/two.gleam:7:34
   │
 7 │         pub const dog = Animal(..alice)
-  │                         ^^^^^^^^^^^^^^^ This is a `Person`, not a `Animal`
+  │                                  ^^^^^ This is a `Person`
 
-The record being spread is a `Person` but you are trying to construct a
-`Animal`.
+This value is a `Person` so it cannot be used to build a `Animal`, even if
+they share some fields.
+
+Note: If you want to change one variant of a type into another, you should
+specify all fields explicitly instead of using the record update syntax.

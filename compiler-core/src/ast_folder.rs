@@ -985,6 +985,7 @@ pub trait UntypedConstantFolder {
 
             Constant::RecordUpdate {
                 location,
+                constructor_location,
                 module,
                 name,
                 record,
@@ -992,7 +993,14 @@ pub trait UntypedConstantFolder {
                 tag: (),
                 type_: (),
                 field_map: _,
-            } => self.fold_constant_record_update(location, module, name, record, arguments),
+            } => self.fold_constant_record_update(
+                location,
+                constructor_location,
+                module,
+                name,
+                record,
+                arguments,
+            ),
 
             Constant::BitArray { location, segments } => {
                 self.fold_constant_bit_array(location, segments)
@@ -1096,6 +1104,7 @@ pub trait UntypedConstantFolder {
     fn fold_constant_record_update(
         &mut self,
         location: SrcSpan,
+        constructor_location: SrcSpan,
         module: Option<(EcoString, SrcSpan)>,
         name: EcoString,
         record: Box<UntypedConstant>,
@@ -1103,6 +1112,7 @@ pub trait UntypedConstantFolder {
     ) -> UntypedConstant {
         Constant::RecordUpdate {
             location,
+            constructor_location,
             module,
             name,
             record,
@@ -1218,6 +1228,7 @@ pub trait UntypedConstantFolder {
 
             Constant::RecordUpdate {
                 location,
+                constructor_location,
                 module,
                 name,
                 record,
@@ -1237,6 +1248,7 @@ pub trait UntypedConstantFolder {
                     .collect();
                 Constant::RecordUpdate {
                     location,
+                    constructor_location,
                     module,
                     name,
                     record,

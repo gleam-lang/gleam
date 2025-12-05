@@ -690,6 +690,7 @@ pub trait Visit<'ast> {
     fn visit_typed_constant_record_update(
         &mut self,
         location: &'ast SrcSpan,
+        constructor_location: &'ast SrcSpan,
         module: &'ast Option<(EcoString, SrcSpan)>,
         name: &'ast EcoString,
         record: &'ast TypedConstant,
@@ -699,7 +700,16 @@ pub trait Visit<'ast> {
         field_map: &'ast Inferred<FieldMap>,
     ) {
         visit_typed_constant_record_update(
-            self, location, module, name, record, arguments, tag, type_, field_map,
+            self,
+            location,
+            constructor_location,
+            module,
+            name,
+            record,
+            arguments,
+            tag,
+            type_,
+            field_map,
         )
     }
 
@@ -800,6 +810,7 @@ pub fn visit_typed_constant_record<'a, V: Visit<'a> + ?Sized>(
 fn visit_typed_constant_record_update<'a, V: Visit<'a> + ?Sized>(
     v: &mut V,
     _location: &'a SrcSpan,
+    _constructor_location: &'a SrcSpan,
     _module: &'a Option<(EcoString, SrcSpan)>,
     _name: &'a EcoString,
     record: &'a TypedConstant,
@@ -1044,6 +1055,7 @@ pub fn visit_typed_constant<'a, V: Visit<'a> + ?Sized>(v: &mut V, constant: &'a 
         ),
         super::Constant::RecordUpdate {
             location,
+            constructor_location,
             module,
             name,
             record,
@@ -1052,7 +1064,15 @@ pub fn visit_typed_constant<'a, V: Visit<'a> + ?Sized>(v: &mut V, constant: &'a 
             type_,
             field_map,
         } => v.visit_typed_constant_record_update(
-            location, module, name, record, arguments, tag, type_, field_map,
+            location,
+            constructor_location,
+            module,
+            name,
+            record,
+            arguments,
+            tag,
+            type_,
+            field_map,
         ),
         super::Constant::BitArray { location, segments } => {
             v.visit_typed_constant_bit_array(location, segments)

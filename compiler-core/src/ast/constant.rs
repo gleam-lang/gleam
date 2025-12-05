@@ -50,6 +50,7 @@ pub enum Constant<T, RecordTag> {
 
     RecordUpdate {
         location: SrcSpan,
+        constructor_location: SrcSpan,
         module: Option<(EcoString, SrcSpan)>,
         name: EcoString,
         record: Box<Self>,

@@ -28,6 +28,10 @@ Parsed {
                                 start: 21,
                                 end: 61,
                             },
+                            constructor_location: SrcSpan {
+                                start: 21,
+                                end: 33,
+                            },
                             module: Some(
                                 (
                                     "other",

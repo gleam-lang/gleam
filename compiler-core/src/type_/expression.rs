@@ -3195,9 +3195,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             TypedExpr::Var { name, .. } => (None, name),
 
             constructor => {
-                return Err(Error::InvalidRecordUpdate {
+                return Err(Error::InvalidRecordConstructor {
                     location: constructor.location(),
-                    reason: InvalidRecordUpdateReason::NotARecordConstructor,
                 });
             }
         };
@@ -3410,9 +3409,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let (arguments_types, return_type) = match constructor.type_().as_ref() {
             Type::Fn { arguments, return_ } => (arguments.clone(), return_.clone()),
             _ => {
-                return Err(Error::InvalidRecordUpdate {
+                return Err(Error::InvalidRecordConstructor {
                     location: constructor.location(),
-                    reason: InvalidRecordUpdateReason::NotARecordConstructor,
                 });
             }
         };
@@ -3429,15 +3427,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             ValueConstructorVariant::Record {
                 field_map: None, ..
             } => {
-                return Err(Error::InvalidRecordUpdate {
+                return Err(Error::InvalidRecordConstructor {
                     location: constructor.location(),
-                    reason: InvalidRecordUpdateReason::UnlabelledFields,
                 });
             }
             _ => {
-                return Err(Error::InvalidRecordUpdate {
+                return Err(Error::InvalidRecordConstructor {
                     location: constructor.location(),
-                    reason: InvalidRecordUpdateReason::NotARecordConstructor,
                 });
             }
         };
@@ -3448,9 +3444,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let return_type_copy = match value_constructor.type_.as_ref() {
             Type::Fn { return_, .. } => self.instantiate(return_.clone(), &mut hashmap![]),
             _ => {
-                return Err(Error::InvalidRecordUpdate {
+                return Err(Error::InvalidRecordConstructor {
                     location: constructor.location(),
-                    reason: InvalidRecordUpdateReason::NotARecordConstructor,
                 });
             }
         };
@@ -3843,6 +3838,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             Constant::RecordUpdate {
                 module,
                 location,
+                constructor_location,
                 name,
                 record,
                 arguments,
@@ -3881,14 +3877,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 };
 
                 // Type-check the record being updated
-                let typed_record = self.infer_const(&None, *record);
+                let typed_record = self.infer_const(&None, *record.clone());
+                let typed_record_type = typed_record.type_();
 
                 // Unify types - the record being updated should have the same type as what the constructor returns
                 let expected_type = match constructor.type_.as_ref() {
                     Type::Fn { return_: ret, .. } => ret.clone(),
                     _ => constructor.type_.clone(),
                 };
-                if let Err(error) = unify(expected_type.clone(), typed_record.type_()) {
+                if let Err(error) = unify(expected_type.clone(), typed_record_type.clone()) {
                     self.problems
                         .error(convert_unify_error(error, typed_record.location()));
                     return self.new_invalid_constant(location);
@@ -3922,11 +3919,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // Check that the variant being spread matches the constructor variant
                 // For multi-variant custom types, you can't spread Dog to create Cat
                 if tag != base_tag {
-                    self.problems.error(Error::InvalidRecordUpdate {
-                        location,
-                        reason: InvalidRecordUpdateReason::WrongVariant {
-                            expected: tag,
-                            given: base_tag,
+                    self.problems.error(Error::UnsafeRecordUpdate {
+                        location: record.location(),
+                        reason: UnsafeRecordUpdateReason::WrongVariant {
+                            constructed_variant: tag,
+                            spread_variant: base_tag,
                         },
                     });
                     return self.new_invalid_constant(location);
@@ -3945,9 +3942,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 let field_types = match field_types {
                     Some(field_types) => field_types,
                     None => {
-                        self.problems.error(Error::InvalidRecordUpdate {
-                            location,
-                            reason: InvalidRecordUpdateReason::NotARecordConstructor,
+                        self.problems.error(Error::InvalidRecordConstructor {
+                            location: constructor_location,
                         });
 
                         return Constant::Record {
@@ -3966,9 +3962,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // Check if the constructor has labelled fields
                 // Tuple-like constructors (unlabelled fields) cannot be spread
                 if matches!(field_map, Inferred::Unknown) {
-                    self.problems.error(Error::InvalidRecordUpdate {
-                        location,
-                        reason: InvalidRecordUpdateReason::UnlabelledFields,
+                    self.problems.error(Error::InvalidRecordConstructor {
+                        location: constructor_location,
                     });
                     return self.new_invalid_constant(location);
                 }
@@ -4066,6 +4061,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         *final_arguments
                             .get_mut(index as usize)
                             .expect("Index out of bounds") = override_arg;
+                    }
+                }
+
+                // Check that implicit fields (fields copied from base) have compatible types
+                for (_label, index) in remaining_fields.iter() {
+                    if let Some(field_arg) = final_arguments.get(*index as usize)
+                        && let Some(expected_field_type) = field_types.get(*index as usize)
+                        && let Err(unify_error) =
+                            unify(expected_field_type.clone(), field_arg.value.type_())
+                    {
+                        self.problems
+                            .error(convert_unify_error(unify_error, location));
+                        return self.new_invalid_constant(location);
                     }
                 }
 
@@ -5240,6 +5248,7 @@ fn invalid_with_annotated_type(constant: TypedConstant, new_type: Arc<Type>) -> 
 
         Constant::RecordUpdate {
             location,
+            constructor_location,
             module,
             name,
             record,
@@ -5249,6 +5258,7 @@ fn invalid_with_annotated_type(constant: TypedConstant, new_type: Arc<Type>) -> 
             field_map,
         } => Constant::RecordUpdate {
             location,
+            constructor_location,
             module,
             name,
             record,

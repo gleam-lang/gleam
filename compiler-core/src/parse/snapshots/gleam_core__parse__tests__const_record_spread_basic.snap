@@ -209,6 +209,10 @@ Parsed {
                                 start: 97,
                                 end: 125,
                             },
+                            constructor_location: SrcSpan {
+                                start: 97,
+                                end: 103,
+                            },
                             module: None,
                             name: "Person",
                             record: Var {
