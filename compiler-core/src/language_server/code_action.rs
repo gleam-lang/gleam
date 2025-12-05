@@ -1696,6 +1696,65 @@ impl<'ast, IO> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass
             type_,
         );
     }
+
+    fn visit_typed_constant_record(
+        &mut self,
+        location: &'ast SrcSpan,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        name: &'ast EcoString,
+        arguments: &'ast Vec<CallArg<ast::TypedConstant>>,
+        tag: &'ast EcoString,
+        type_: &'ast Arc<Type>,
+        field_map: &'ast Option<FieldMap>,
+        record_constructor: &'ast Option<Box<ValueConstructor>>,
+    ) {
+        let range = src_span_to_lsp_range(*location, self.line_numbers);
+        if overlaps(self.params.range, range)
+            && let Some((module_alias, _)) = module
+            && let Some(import) = self.get_module_import(module_alias, name, ast::Layer::Value)
+        {
+            self.qualified_constructor = Some(QualifiedConstructor {
+                import,
+                used_name: module_alias.clone(),
+                constructor: name.clone(),
+                layer: ast::Layer::Value,
+            });
+        }
+        ast::visit::visit_typed_constant_record(
+            self,
+            location,
+            module,
+            name,
+            arguments,
+            tag,
+            type_,
+            field_map,
+            record_constructor,
+        );
+    }
+
+    fn visit_typed_constant_var(
+        &mut self,
+        location: &'ast SrcSpan,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        name: &'ast EcoString,
+        constructor: &'ast Option<Box<ValueConstructor>>,
+        type_: &'ast Arc<Type>,
+    ) {
+        let range = src_span_to_lsp_range(*location, self.line_numbers);
+        if overlaps(self.params.range, range)
+            && let Some((module_alias, _)) = module
+            && let Some(import) = self.get_module_import(module_alias, name, ast::Layer::Value)
+        {
+            self.qualified_constructor = Some(QualifiedConstructor {
+                import,
+                used_name: module_alias.clone(),
+                constructor: name.clone(),
+                layer: ast::Layer::Value,
+            });
+        }
+        ast::visit::visit_typed_constant_var(self, location, module, name, constructor, type_);
+    }
 }
 
 pub struct QualifiedToUnqualifiedImportSecondPass<'a> {
@@ -1877,6 +1936,65 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
             spread,
             type_,
         );
+    }
+
+    fn visit_typed_constant_record(
+        &mut self,
+        location: &'ast SrcSpan,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        name: &'ast EcoString,
+        arguments: &'ast Vec<CallArg<ast::TypedConstant>>,
+        tag: &'ast EcoString,
+        type_: &'ast Arc<Type>,
+        field_map: &'ast Option<FieldMap>,
+        record_constructor: &'ast Option<Box<ValueConstructor>>,
+    ) {
+        if let Some((module_alias, _)) = module {
+            let QualifiedConstructor {
+                used_name,
+                constructor,
+                layer,
+                ..
+            } = &self.qualified_constructor;
+
+            if layer.is_value() && used_name == module_alias && name == constructor {
+                self.remove_module_qualifier(*location);
+            }
+        }
+        ast::visit::visit_typed_constant_record(
+            self,
+            location,
+            module,
+            name,
+            arguments,
+            tag,
+            type_,
+            field_map,
+            record_constructor,
+        );
+    }
+
+    fn visit_typed_constant_var(
+        &mut self,
+        location: &'ast SrcSpan,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        name: &'ast EcoString,
+        constructor: &'ast Option<Box<ValueConstructor>>,
+        type_: &'ast Arc<Type>,
+    ) {
+        if let Some((module_alias, _)) = module {
+            let QualifiedConstructor {
+                used_name,
+                constructor: wanted_constructor,
+                layer,
+                ..
+            } = &self.qualified_constructor;
+
+            if layer.is_value() && used_name == module_alias && name == wanted_constructor {
+                self.remove_module_qualifier(*location);
+            }
+        }
+        ast::visit::visit_typed_constant_var(self, location, module, name, constructor, type_);
     }
 }
 
@@ -2064,6 +2182,75 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
             type_,
         );
     }
+
+    fn visit_typed_constant_record(
+        &mut self,
+        location: &'ast SrcSpan,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        name: &'ast EcoString,
+        arguments: &'ast Vec<CallArg<ast::TypedConstant>>,
+        _tag: &'ast EcoString,
+        _type_: &'ast Arc<Type>,
+        _field_map: &'ast Option<FieldMap>,
+        record_constructor: &'ast Option<Box<ValueConstructor>>,
+    ) {
+        if module.is_none()
+            && overlaps(
+                self.params.range,
+                src_span_to_lsp_range(*location, self.line_numbers),
+            )
+            && let Some(record_constructor) = record_constructor
+            && let Some(module_name) = match &record_constructor.variant {
+                type_::ValueConstructorVariant::ModuleConstant { module, .. }
+                | type_::ValueConstructorVariant::ModuleFn { module, .. }
+                | type_::ValueConstructorVariant::Record { module, .. } => Some(module),
+
+                type_::ValueConstructorVariant::LocalVariable { .. }
+                | type_::ValueConstructorVariant::LocalConstant { .. } => None,
+            }
+        {
+            self.get_module_import_from_value_constructor(module_name, name);
+        }
+        ast::visit::visit_typed_constant_record(
+            self,
+            location,
+            module,
+            name,
+            arguments,
+            _tag,
+            _type_,
+            _field_map,
+            record_constructor,
+        );
+    }
+
+    fn visit_typed_constant_var(
+        &mut self,
+        location: &'ast SrcSpan,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        name: &'ast EcoString,
+        constructor: &'ast Option<Box<ValueConstructor>>,
+        type_: &'ast Arc<Type>,
+    ) {
+        if module.is_none()
+            && overlaps(
+                self.params.range,
+                src_span_to_lsp_range(*location, self.line_numbers),
+            )
+            && let Some(constructor) = constructor
+            && let Some(module_name) = match &constructor.variant {
+                type_::ValueConstructorVariant::ModuleConstant { module, .. }
+                | type_::ValueConstructorVariant::ModuleFn { module, .. }
+                | type_::ValueConstructorVariant::Record { module, .. } => Some(module),
+
+                type_::ValueConstructorVariant::LocalVariable { .. }
+                | type_::ValueConstructorVariant::LocalConstant { .. } => None,
+            }
+        {
+            self.get_module_import_from_value_constructor(module_name, name);
+        }
+        ast::visit::visit_typed_constant_var(self, location, module, name, constructor, type_);
+    }
 }
 
 struct UnqualifiedToQualifiedImportSecondPass<'a> {
@@ -2237,6 +2424,61 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
             spread,
             type_,
         );
+    }
+
+    fn visit_typed_constant_record(
+        &mut self,
+        location: &'ast SrcSpan,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        name: &'ast EcoString,
+        arguments: &'ast Vec<CallArg<ast::TypedConstant>>,
+        tag: &'ast EcoString,
+        type_: &'ast Arc<Type>,
+        field_map: &'ast Option<FieldMap>,
+        record_constructor: &'ast Option<Box<ValueConstructor>>,
+    ) {
+        if module.is_none() {
+            let UnqualifiedConstructor {
+                constructor: wanted_constructor,
+                layer,
+                ..
+            } = &self.unqualified_constructor;
+            if layer.is_value() && wanted_constructor.used_name() == name {
+                self.add_module_qualifier(*location);
+            }
+        }
+        ast::visit::visit_typed_constant_record(
+            self,
+            location,
+            module,
+            name,
+            arguments,
+            tag,
+            type_,
+            field_map,
+            record_constructor,
+        );
+    }
+
+    fn visit_typed_constant_var(
+        &mut self,
+        location: &'ast SrcSpan,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        name: &'ast EcoString,
+        constructor: &'ast Option<Box<ValueConstructor>>,
+        type_: &'ast Arc<Type>,
+    ) {
+        if module.is_none() {
+            let UnqualifiedConstructor {
+                constructor: wanted_constructor,
+                layer,
+                ..
+            } = &self.unqualified_constructor;
+            if layer.is_value() && wanted_constructor.used_name() == name {
+                self.add_module_qualifier(*location);
+            }
+        }
+        ast::visit::visit_typed_constant_var(self, location, module, name, constructor, type_);
     }
 }
 
