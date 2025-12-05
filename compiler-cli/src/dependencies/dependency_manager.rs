@@ -141,25 +141,6 @@ where
         Ok(resolved)
     }
 
-    fn ensure_packages_exist_locally(
-        &self,
-        manifest: &Manifest,
-        packages: Vec<EcoString>,
-    ) -> Result<()> {
-        let missing_packages: Vec<String> = packages
-            .iter()
-            .filter(|package_name| !manifest.packages.iter().any(|p| &p.name == *package_name))
-            .map(|eco| eco.to_string())
-            .collect();
-
-        if !missing_packages.is_empty() {
-            return Err(Error::PackagesToUpdateNotExist {
-                packages: missing_packages,
-            });
-        }
-        Ok(())
-    }
-
     pub fn resolve_and_download_versions(
         &self,
         paths: &ProjectPaths,
