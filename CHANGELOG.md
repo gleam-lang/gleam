@@ -337,6 +337,10 @@
 
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- Qualify and unqualify code actions can now trigger when used over constant
+  values as well.
+  ([Vladislav Shakitskiy](https://github.com/vshakitskiy))
+
 ### Formatter
 
 ### Bug fixes

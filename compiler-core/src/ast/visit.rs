@@ -742,7 +742,7 @@ fn visit_typed_constant_string_concatenation<'a, V: Visit<'a> + ?Sized>(
     v.visit_typed_constant(right);
 }
 
-fn visit_typed_constant_var<'a, V: Visit<'a> + ?Sized>(
+pub fn visit_typed_constant_var<'a, V: Visit<'a> + ?Sized>(
     _v: &mut V,
     _location: &'a SrcSpan,
     _module: &'a Option<(EcoString, SrcSpan)>,
@@ -762,7 +762,7 @@ fn visit_typed_constant_bit_array<'a, V: Visit<'a> + ?Sized>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn visit_typed_constant_record<'a, V: Visit<'a> + ?Sized>(
+pub fn visit_typed_constant_record<'a, V: Visit<'a> + ?Sized>(
     v: &mut V,
     _location: &'a SrcSpan,
     _module: &'a Option<(EcoString, SrcSpan)>,

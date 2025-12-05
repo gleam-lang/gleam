@@ -3949,6 +3949,76 @@ import option.{type Option}
         find_position_of("opt.").select_until(find_position_of(".Option(")),
     );
 }
+
+#[test]
+fn test_qualified_to_unqualified_import_in_constant_var() {
+    let src = r#"
+import option
+
+const none = option.None
+"#;
+    let title = "Unqualify option.None";
+    assert_code_action!(
+        title,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("None").to_selection(),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_in_constant_record() {
+    let src = r#"
+import option
+
+const some = option.Some(1)
+"#;
+    let title = "Unqualify option.Some";
+    assert_code_action!(
+        title,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("Some").to_selection(),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_in_nested_constant() {
+    let src = r#"
+import option
+
+type Result(a) {
+  Result(expected: a, actual: option.Option(a))
+}
+
+const zero = Result(0, option.None)
+"#;
+    let title = "Unqualify option.None";
+    assert_code_action!(
+        title,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("None").to_selection(),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_constant_multiple_occurrences() {
+    let src = r#"
+import option
+
+const a = option.None
+const b = option.Some(option.None)
+"#;
+    let title = "Unqualify option.None";
+    assert_code_action!(
+        title,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("None").nth_occurrence(1).to_selection(),
+    );
+}
+
 #[test]
 fn test_unqualified_to_qualified_import_function() {
     let src = r#"
@@ -4370,6 +4440,58 @@ pub fn example() {
         find_position_of("wob")
             .nth_occurrence(2)
             .select_until(find_position_of("ble").nth_occurrence(3))
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_in_constant_var() {
+    let src = r#"
+import option.{None}
+
+const none = None
+"#;
+    let title = "Qualify None as option.None";
+    assert_code_action!(
+        title,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("None").nth_occurrence(2).to_selection(),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_in_constant_record() {
+    let src = r#"
+import option.{Some}
+
+const some = Some(1)
+"#;
+    let title = "Qualify Some as option.Some";
+    assert_code_action!(
+        title,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("Some").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_in_nested_constant() {
+    let src = r#"
+import option.{type Option, None}
+
+type Result(a) {
+  Result(expected: a, actual: Option(a))
+}
+
+const zero = Result(0, None)
+"#;
+    let title = "Qualify None as option.None";
+    assert_code_action!(
+        title,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("None").nth_occurrence(2).to_selection(),
     );
 }
 

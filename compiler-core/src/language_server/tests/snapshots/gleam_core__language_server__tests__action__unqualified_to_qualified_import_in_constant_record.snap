@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport option.{Some}\n\nconst some = Some(1)\n"
+---
+----- BEFORE ACTION
+
+import option.{Some}
+
+const some = Some(1)
+             ↑      
+
+
+----- AFTER ACTION
+
+import option.{}
+
+const some = option.Some(1)
