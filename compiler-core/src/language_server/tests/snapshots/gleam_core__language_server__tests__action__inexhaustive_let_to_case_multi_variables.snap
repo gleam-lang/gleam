@@ -14,9 +14,9 @@ pub fn main() {
   let #(var1, var2, var4) = case [1, 2, 3, 4] {
     [var1, var2, _var3, var4] -> #(var1, var2, var4)
     [] -> todo
-    [_, _, _, _, _, ..] -> todo
-    [_, _, _] -> todo
-    [_, _] -> todo
     [_] -> todo
+    [_, _] -> todo
+    [_, _, _] -> todo
+    [_, _, _, _, _, ..] -> todo
   }
 }

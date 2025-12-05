@@ -21,9 +21,9 @@ one of the other values is used then the assignment will crash.
 The missing patterns are:
 
     []
-    [_, _, _, _, ..]
-    [_, _, _]
-    [_, _]
     [_]
+    [_, _]
+    [_, _, _]
+    [_, _, _, _, ..]
 
 Hint: Use a more general pattern or use `let assert` instead.

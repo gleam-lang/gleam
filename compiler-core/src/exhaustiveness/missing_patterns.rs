@@ -1,7 +1,6 @@
 use super::{CompileCaseResult, Decision, FallbackCheck, RuntimeCheck, Variable, printer::Printer};
 use crate::type_::environment::Environment;
 use ecow::EcoString;
-use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 
 /// Returns a list of patterns not covered by the match expression.
@@ -12,11 +11,8 @@ pub fn missing_patterns(
     let subjects = &result.compiled_case.subject_variables;
     let mut generator = MissingPatternsGenerator::new(subjects, environment);
     generator.add_missing_patterns(&result.compiled_case.tree);
-    let mut missing = generator.missing.into_iter().collect_vec();
 
-    // Sorting isn't necessary, but it makes it a bit easier to write tests.
-    missing.sort();
-    missing
+    generator.missing
 }
 
 #[derive(Debug, Clone)]
@@ -67,7 +63,10 @@ impl Term {
 struct MissingPatternsGenerator<'a, 'env> {
     subjects: &'a Vec<Variable>,
     terms: Vec<Term>,
-    missing: HashSet<EcoString>,
+    /// The pretty-printed missing patterns, in order
+    missing: Vec<EcoString>,
+    /// Same as `missing`, but as a set to prevent duplicates
+    seen_missing: HashSet<EcoString>,
     environment: &'a Environment<'env>,
     printer: Printer<'a>,
 }
@@ -77,7 +76,8 @@ impl<'a, 'env> MissingPatternsGenerator<'a, 'env> {
         MissingPatternsGenerator {
             subjects,
             terms: vec![],
-            missing: HashSet::new(),
+            missing: Vec::new(),
+            seen_missing: HashSet::new(),
             environment,
             printer: Printer::new(&environment.names),
         }
@@ -113,7 +113,10 @@ impl<'a, 'env> MissingPatternsGenerator<'a, 'env> {
                     _ = mapping.insert(step.variable().id, index);
                 }
                 let pattern = self.print_terms(mapping);
-                _ = self.missing.insert(pattern);
+
+                if self.seen_missing.insert(pattern.clone()) {
+                    self.missing.push(pattern);
+                }
             }
 
             Decision::Switch {
