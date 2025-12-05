@@ -189,7 +189,7 @@ where
         if self.io.exists(&cache_files.inline_path) {
             let bytes = self.io.read_bytes(&cache_files.inline_path)?;
             module.inline_functions =
-                match bincode::serde::decode_from_slice(&bytes, bincode::config::standard()) {
+                match bincode::serde::decode_from_slice(&bytes, bincode::config::legacy()) {
                     Ok((data, _)) => data,
                     Err(e) => {
                         return Err(Error::FileIo {
@@ -208,7 +208,7 @@ where
             if self.io.exists(&path) {
                 let bytes = self.io.read_bytes(&path)?;
                 module.warnings =
-                    match bincode::serde::decode_from_slice(&bytes, bincode::config::standard()) {
+                    match bincode::serde::decode_from_slice(&bytes, bincode::config::legacy()) {
                         Ok((data, _)) => data,
                         Err(e) => {
                             return Err(Error::FileIo {

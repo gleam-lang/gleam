@@ -8,10 +8,10 @@ snapshot_kind: text
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/hello.cache_inline
-<1 byte binary>
+<8 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/hello.cache_meta
-<28 byte binary>
+<81 byte binary>
 
 //// /out/lib/the_package/gleam.d.mts
 export * from "../prelude.mjs";

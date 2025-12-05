@@ -8,10 +8,10 @@ snapshot_kind: text
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_inline
-<1 byte binary>
+<8 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
-<27 byte binary>
+<77 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
@@ -34,10 +34,10 @@ escaped_thing() ->
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/three.cache_inline
-<1 byte binary>
+<8 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/three.cache_meta
-<27 byte binary>
+<77 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/three.erl
 -module(three).
@@ -60,10 +60,10 @@ escaped_thing() ->
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_inline
-<1 byte binary>
+<8 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<312 byte binary>
+<489 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).

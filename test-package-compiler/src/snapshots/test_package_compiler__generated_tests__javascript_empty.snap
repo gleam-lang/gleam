@@ -8,10 +8,10 @@ snapshot_kind: text
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/empty.cache_inline
-<1 byte binary>
+<8 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/empty.cache_meta
-<22 byte binary>
+<57 byte binary>
 
 //// /out/lib/the_package/empty.mjs
 export {}
