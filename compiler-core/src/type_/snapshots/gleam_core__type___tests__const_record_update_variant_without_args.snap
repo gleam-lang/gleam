@@ -8,10 +8,10 @@ pub type Status { Active Inactive }
         pub const status2 = Active(..status1)
 
 ----- ERROR
-error: Invalid record update
+error: Invalid record constructor
   ┌─ /src/one/two.gleam:3:29
   │
 3 │         pub const status2 = Active(..status1)
-  │                             ^^^^^^^^^^^^^^^^^ This is not a record constructor
+  │                             ^^^^^^ This is not a record constructor
 
 Only record constructors can be used with the update syntax.

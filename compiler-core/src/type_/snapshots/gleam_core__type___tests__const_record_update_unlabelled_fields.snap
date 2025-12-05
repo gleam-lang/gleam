@@ -9,10 +9,10 @@ pub type Point { Point(Int, Int) }
         pub const point = Point(..origin)
 
 ----- ERROR
-error: Invalid record update
+error: Invalid record constructor
   ┌─ /src/one/two.gleam:4:27
   │
 4 │         pub const point = Point(..origin)
-  │                           ^^^^^^^^^^^^^^^ This constructor has no labelled fields
+  │                           ^^^^^ This is not a record constructor
 
-Only constructors with labelled fields can be used with the update syntax.
+Only record constructors can be used with the update syntax.

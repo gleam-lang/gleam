@@ -13,7 +13,7 @@ pub fn update_person(person: Person) {
 }
 
 ----- ERROR
-error: Invalid record update
+error: Invalid record constructor
   ┌─ /src/one/two.gleam:7:3
   │
 7 │   constructor(..person)
