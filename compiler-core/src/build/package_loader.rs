@@ -188,12 +188,18 @@ where
 
         if self.io.exists(&cache_files.inline_path) {
             let bytes = self.io.read_bytes(&cache_files.inline_path)?;
-            module.inline_functions = bincode::deserialize(&bytes).map_err(|e| Error::FileIo {
-                kind: FileKind::File,
-                action: FileIoAction::Parse,
-                path: cache_files.inline_path,
-                err: Some(e.to_string()),
-            })?;
+            module.inline_functions =
+                match bincode::serde::decode_from_slice(&bytes, bincode::config::standard()) {
+                    Ok((data, _)) => data,
+                    Err(e) => {
+                        return Err(Error::FileIo {
+                            kind: FileKind::File,
+                            action: FileIoAction::Parse,
+                            path: cache_files.inline_path,
+                            err: Some(e.to_string()),
+                        });
+                    }
+                };
         }
 
         // Load warnings
@@ -201,12 +207,18 @@ where
             let path = cache_files.warnings_path;
             if self.io.exists(&path) {
                 let bytes = self.io.read_bytes(&path)?;
-                module.warnings = bincode::deserialize(&bytes).map_err(|e| Error::FileIo {
-                    kind: FileKind::File,
-                    action: FileIoAction::Parse,
-                    path,
-                    err: Some(e.to_string()),
-                })?;
+                module.warnings =
+                    match bincode::serde::decode_from_slice(&bytes, bincode::config::standard()) {
+                        Ok((data, _)) => data,
+                        Err(e) => {
+                            return Err(Error::FileIo {
+                                kind: FileKind::File,
+                                action: FileIoAction::Parse,
+                                path,
+                                err: Some(e.to_string()),
+                            });
+                        }
+                    };
             }
         }
 

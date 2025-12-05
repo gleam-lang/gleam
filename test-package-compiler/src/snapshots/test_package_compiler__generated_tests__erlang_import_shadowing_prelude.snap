@@ -1,15 +1,17 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
+assertion_line: 140
 expression: "./cases/erlang_import_shadowing_prelude"
+snapshot_kind: text
 ---
 //// /out/lib/the_package/_gleam_artefacts/one.cache
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_inline
-<8 byte binary>
+<1 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
-<69 byte binary>
+<25 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
@@ -26,10 +28,10 @@ expression: "./cases/erlang_import_shadowing_prelude"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_inline
-<8 byte binary>
+<1 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<96 byte binary>
+<33 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).

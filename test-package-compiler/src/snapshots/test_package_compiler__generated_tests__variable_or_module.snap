@@ -1,15 +1,17 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
+assertion_line: 382
 expression: "./cases/variable_or_module"
+snapshot_kind: text
 ---
 //// /out/lib/the_package/_gleam_artefacts/main.cache
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/main.cache_inline
-<8 byte binary>
+<1 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/main.cache_meta
-<126 byte binary>
+<52 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/main.erl
 -module(main).
@@ -32,10 +34,10 @@ record_field(Power) ->
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/power.cache_inline
-<8 byte binary>
+<1 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/power.cache_meta
-<85 byte binary>
+<29 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/power.erl
 -module(power).

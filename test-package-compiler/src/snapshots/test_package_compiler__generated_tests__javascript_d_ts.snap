@@ -1,15 +1,17 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
+assertion_line: 250
 expression: "./cases/javascript_d_ts"
+snapshot_kind: text
 ---
 //// /out/lib/the_package/_gleam_artefacts/hello.cache
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/hello.cache_inline
-<8 byte binary>
+<1 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/hello.cache_meta
-<81 byte binary>
+<28 byte binary>
 
 //// /out/lib/the_package/gleam.d.mts
 export * from "../prelude.mjs";

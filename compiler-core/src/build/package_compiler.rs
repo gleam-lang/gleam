@@ -327,8 +327,11 @@ where
             self.io
                 .write_bytes(&cache_files.meta_path, &info.to_binary())?;
 
-            let cache_inline = bincode::serialize(&module.ast.type_info.inline_functions)
-                .expect("Failed to serialise inline functions");
+            let cache_inline = bincode::serde::encode_to_vec(
+                &module.ast.type_info.inline_functions,
+                bincode::config::standard(),
+            )
+            .expect("Failed to serialise inline functions");
             self.io.write_bytes(&cache_files.inline_path, &cache_inline);
 
             // Write warnings.
@@ -337,7 +340,8 @@ where
             // cannot fix directly.
             if self.cached_warnings.should_use() {
                 let warnings = &module.ast.type_info.warnings;
-                let data = bincode::serialize(warnings).expect("Serialise warnings");
+                let data = bincode::serde::encode_to_vec(warnings, bincode::config::standard())
+                    .expect("Serialise warnings");
                 self.io.write_bytes(&cache_files.warnings_path, &data)?;
             }
         }
@@ -696,11 +700,15 @@ pub(crate) struct CacheMetadata {
 
 impl CacheMetadata {
     pub fn to_binary(&self) -> Vec<u8> {
-        bincode::serialize(self).expect("Serializing cache info")
+        bincode::serde::encode_to_vec(self, bincode::config::standard())
+            .expect("Serializing cache info")
     }
 
     pub fn from_binary(bytes: &[u8]) -> Result<Self, String> {
-        bincode::deserialize(bytes).map_err(|e| e.to_string())
+        match bincode::serde::decode_from_slice(bytes, bincode::config::standard()) {
+            Ok((data, _)) => Ok(data),
+            Err(e) => Err(e.to_string()),
+        }
     }
 }
 

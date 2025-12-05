@@ -1,15 +1,17 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
+assertion_line: 96
 expression: "./cases/erlang_bug_752"
+snapshot_kind: text
 ---
 //// /out/lib/the_package/_gleam_artefacts/one.cache
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_inline
-<8 byte binary>
+<1 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
-<65 byte binary>
+<24 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
@@ -26,10 +28,10 @@ expression: "./cases/erlang_bug_752"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_inline
-<8 byte binary>
+<1 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<92 byte binary>
+<32 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).

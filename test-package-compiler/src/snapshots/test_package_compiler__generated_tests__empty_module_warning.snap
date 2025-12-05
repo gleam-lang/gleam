@@ -8,10 +8,10 @@ snapshot_kind: text
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/empty.cache_inline
-<8 byte binary>
+<1 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/empty.cache_meta
-<53 byte binary>
+<21 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/empty.erl
 -module(empty).
@@ -21,10 +21,10 @@ snapshot_kind: text
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/internal.cache_inline
-<8 byte binary>
+<1 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/internal.cache_meta
-<69 byte binary>
+<25 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/internal.erl
 -module(internal).
@@ -51,10 +51,10 @@ private_function() ->
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/private.cache_inline
-<8 byte binary>
+<1 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/private.cache_meta
-<65 byte binary>
+<24 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/private.erl
 -module(private).
@@ -64,10 +64,10 @@ private_function() ->
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/public.cache_inline
-<8 byte binary>
+<1 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/public.cache_meta
-<65 byte binary>
+<24 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/public.erl
 -module(public).
