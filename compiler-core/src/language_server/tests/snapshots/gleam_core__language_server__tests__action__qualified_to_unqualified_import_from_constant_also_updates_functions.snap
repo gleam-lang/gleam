@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport option\n\nconst default = option.None\n\npub fn get_or_default(value: a) {\n  case value {\n    option.Some(x) -> x\n    option.None -> value\n  }\n}\n"
+---
+----- BEFORE ACTION
+
+import option
+
+const default = option.None
+                       ↑   
+
+pub fn get_or_default(value: a) {
+  case value {
+    option.Some(x) -> x
+    option.None -> value
+  }
+}
+
+
+----- AFTER ACTION
+
+import option.{None}
+
+const default = None
+
+pub fn get_or_default(value: a) {
+  case value {
+    option.Some(x) -> x
+    None -> value
+  }
+}

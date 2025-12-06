@@ -1744,6 +1744,8 @@ impl<'ast, IO> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass
         let range = src_span_to_lsp_range(*location, self.line_numbers);
         if overlaps(self.params.range, range)
             && let Some((module_alias, _)) = module
+            && let Some(constructor) = constructor
+            && let type_::ValueConstructorVariant::Record { .. } = &constructor.variant
             && let Some(import) = self.get_module_import(module_alias, name, ast::Layer::Value)
         {
             self.qualified_constructor = Some(QualifiedConstructor {
