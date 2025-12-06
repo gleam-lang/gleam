@@ -4020,6 +4020,84 @@ const b = option.Some(option.None)
 }
 
 #[test]
+fn test_qualified_to_unqualified_import_not_offered_for_function_in_constant() {
+    let src = r#"
+import list
+
+const mapper = list.map
+"#;
+
+    let title = "Unqualify list.map";
+    assert_no_code_actions!(
+        title,
+        TestProject::for_source(src).add_hex_module("list", "pub fn map(list, f) { todo }"),
+        find_position_of("map").to_selection(),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_not_offered_for_module_constant_in_constant() {
+    let src = r#"
+import mymath
+
+const x = mymath.pi
+"#;
+
+    let title = "Unqualify mymath.pi";
+    assert_no_code_actions!(
+        title,
+        TestProject::for_source(src).add_hex_module("mymath", "pub const pi = 3.14159"),
+        find_position_of("pi").to_selection(),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_from_constant_also_updates_functions() {
+    let src = r#"
+import option
+
+const default = option.None
+
+pub fn get_or_default(value: a) {
+  case value {
+    option.Some(x) -> x
+    option.None -> value
+  }
+}
+"#;
+    let title = "Unqualify option.None";
+    assert_code_action!(
+        title,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("None").nth_occurrence(1).to_selection(),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_from_function_also_updates_constants() {
+    let src = r#"
+import option
+
+const default = option.None
+
+pub fn get_or_default(value: a) {
+  case value {
+    option.Some(x) -> x
+    option.None -> value
+  }
+}
+"#;
+    let title = "Unqualify option.None";
+    assert_code_action!(
+        title,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("None").nth_occurrence(2).to_selection(),
+    );
+}
+
+#[test]
 fn test_unqualified_to_qualified_import_function() {
     let src = r#"
 import list.{map}
