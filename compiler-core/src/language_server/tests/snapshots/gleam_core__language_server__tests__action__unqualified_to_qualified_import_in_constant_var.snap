@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport option.{None}\n\nconst none = None\n"
+---
+----- BEFORE ACTION
+
+import option.{None}
+
+const none = None
+             ↑   
+
+
+----- AFTER ACTION
+
+import option.{}
+
+const none = option.None

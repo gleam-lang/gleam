@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport option\n\ntype Result(a) {\n  Result(expected: a, actual: option.Option(a))\n}\n\nconst zero = Result(0, option.None)\n"
+---
+----- BEFORE ACTION
+
+import option
+
+type Result(a) {
+  Result(expected: a, actual: option.Option(a))
+}
+
+const zero = Result(0, option.None)
+                              ↑    
+
+
+----- AFTER ACTION
+
+import option.{None}
+
+type Result(a) {
+  Result(expected: a, actual: option.Option(a))
+}
+
+const zero = Result(0, None)
