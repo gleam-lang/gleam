@@ -59,7 +59,6 @@ where
         // The build caches do not contain all the information we need in the
         // LSP (e.g. the typed AST) so delete the caches for the top level
         // package before we run for the first time.
-        // TODO: remove this once the caches have contain all the information
         {
             let _guard: LockGuard = locker.lock_for_build()?;
             let path = paths.build_directory_for_package(Mode::Lsp, target, &name);
