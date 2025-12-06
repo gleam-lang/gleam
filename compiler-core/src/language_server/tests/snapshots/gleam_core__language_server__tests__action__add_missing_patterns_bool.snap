@@ -14,7 +14,7 @@ pub fn main(bool: Bool) {
 
 pub fn main(bool: Bool) {
   case bool {
-    False -> todo
     True -> todo
+    False -> todo
   }
 }
