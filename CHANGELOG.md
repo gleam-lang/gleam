@@ -432,3 +432,7 @@
 - Fixed a bug where the data generated for searching documentation was in the
   wrong format, preventing it from being used by Hexdocs search.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where variable sized string segment patterns that are discarded
+  are not disallowed by the compiler.
+  ([Lily Rose](https://github.com/LilyRose2798))

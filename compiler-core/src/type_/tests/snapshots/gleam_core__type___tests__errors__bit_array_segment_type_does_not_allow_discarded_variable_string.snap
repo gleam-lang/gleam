@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "case <<>> { <<_:utf8>> -> 1 _ -> 2 }"
+---
+----- SOURCE CODE
+case <<>> { <<_:utf8>> -> 1 _ -> 2 }
+
+----- ERROR
+error: Invalid bit array segment
+  ┌─ /src/one/two.gleam:1:15
+  │
+1 │ case <<>> { <<_:utf8>> -> 1 _ -> 2 }
+  │               ^^^^^^ This cannot be a variable
+
+Hint: in patterns utf8, utf16, and utf32  must be an exact string.
+See: https://tour.gleam.run/data-types/bit-arrays/
