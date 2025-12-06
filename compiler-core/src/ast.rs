@@ -9,7 +9,7 @@ pub mod visit;
 pub use self::typed::{InvalidExpression, TypedExpr};
 pub use self::untyped::{FunctionLiteralKind, UntypedExpr};
 
-pub use self::constant::{Constant, TypedConstant, UntypedConstant};
+pub use self::constant::{Constant, ConstantRecordUpdateArg, TypedConstant, UntypedConstant};
 
 use crate::analyse::Inferred;
 use crate::ast::typed::pairwise_all;

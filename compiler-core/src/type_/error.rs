@@ -340,7 +340,7 @@ pub enum Error {
         location: SrcSpan,
     },
 
-    RecordUpdateInvalidConstructor {
+    InvalidRecordConstructor {
         location: SrcSpan,
     },
 
@@ -1281,7 +1281,7 @@ impl Error {
             | Error::NotATuple { location, .. }
             | Error::NotATupleUnbound { location, .. }
             | Error::RecordAccessUnknownType { location, .. }
-            | Error::RecordUpdateInvalidConstructor { location, .. }
+            | Error::InvalidRecordConstructor { location, .. }
             | Error::UnexpectedTypeHole { location, .. }
             | Error::NotExhaustivePatternMatch { location, .. }
             | Error::ArgumentNameAlreadyUsed { location, .. }
