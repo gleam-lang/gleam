@@ -40,6 +40,7 @@ impl DependencyManagerConfig {
         package_fetcher: P,
         telemetry: Telem,
         mode: Mode,
+        hex_config: hexpm::Config,
     ) -> DependencyManager<Telem, P> {
         DependencyManager {
             runtime,
@@ -49,6 +50,8 @@ impl DependencyManagerConfig {
             mode,
             use_manifest: self.use_manifest,
             check_major_versions: self.check_major_versions,
+
+            hex_config,
         }
     }
 }
@@ -60,6 +63,7 @@ pub struct DependencyManager<Telem, P> {
     use_manifest: UseManifest,
     telemetry: Telem,
     check_major_versions: CheckMajorVersions,
+    hex_config: hexpm::Config,
 }
 
 impl<Telem, P> DependencyManager<Telem, P>
@@ -171,6 +175,7 @@ where
             &local,
             project_name,
             &self.telemetry,
+            &self.hex_config,
         ))?;
 
         if resolved.any_changes() {
@@ -281,11 +286,13 @@ where
         )?;
 
         // Convert the hex packages and local packages into manifest packages
-        let manifest_packages = self.runtime.block_on(future::try_join_all(
-            resolved
-                .into_iter()
-                .map(|(name, version)| lookup_package(name, version, &provided_packages)),
-        ))?;
+        let manifest_packages =
+            self.runtime
+                .block_on(future::try_join_all(resolved.into_iter().map(
+                    |(name, version)| {
+                        lookup_package(name, version, &provided_packages, &self.hex_config)
+                    },
+                )))?;
 
         let manifest = Manifest {
             packages: manifest_packages,

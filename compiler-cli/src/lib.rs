@@ -818,6 +818,36 @@ fn project_paths_at_current_directory_without_toml() -> ProjectPaths {
     ProjectPaths::new(current_dir)
 }
 
+fn get_hex_config() -> Result<hexpm::Config> {
+    let mut config = hexpm::Config::new();
+
+    if let Some(url) = parse_url_from_env_variable("HEXPM_API_URL")? {
+        config.api_base = url;
+    }
+
+    if let Some(url) = parse_url_from_env_variable("HEXPM_REPOSITORY_URL")? {
+        config.repository_base = url;
+    }
+
+    Ok(config)
+}
+
+fn parse_url_from_env_variable(name: &str) -> Result<Option<::http::Uri>> {
+    let Ok(url) = std::env::var(name) else {
+        return Ok(None);
+    };
+    let url = ::http::Uri::from_str(&url)
+        .ok()
+        .filter(|uri| uri.scheme().is_some())
+        .ok_or(Error::InvalidEnvironmentVariable {
+            name: name.into(),
+            value: url,
+            problem: "Expected a valid URL with a scheme.".into(),
+        })?;
+
+    Ok(Some(url))
+}
+
 fn download_dependencies(paths: &ProjectPaths) -> Result<()> {
     _ = dependencies::resolve_and_download(
         paths,
