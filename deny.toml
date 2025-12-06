@@ -9,15 +9,16 @@ ignore = [
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]
 allow = [
-    "MIT",
     "Apache-2.0",
-    "MPL-2.0",
-    "ISC",
-    "CC0-1.0",
     "BSD-3-Clause",
-    "Unicode-DFS-2016",
     "BSL-1.0",
+    "CC0-1.0",
+    "CDLA-Permissive-2.0",
+    "ISC",
+    "MIT",
+    "MPL-2.0",
     "Unicode-3.0",
+    "Unicode-DFS-2016",
     "Zlib",
 ]
 confidence-threshold = 0.8
