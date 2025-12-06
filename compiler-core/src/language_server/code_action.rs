@@ -4800,8 +4800,7 @@ impl<'a, IO> PatternMatchOnValue<'a, IO> {
         };
 
         let variable_start = (variable_location.start - clause_location.start) as usize;
-        let variable_end =
-            variable_start + (variable_location.end - variable_location.start) as usize;
+        let variable_end = variable_start + variable_location.len();
 
         let clause_code = code_at(self.module, clause_location);
         let patterns = patterns
@@ -8264,22 +8263,51 @@ impl<'a> CollapseNestedCase<'a> {
         let pattern_text: String = code_at(self.module, matched_pattern_span).into();
         let matched_variable_span = matched_variable.location;
 
-        let pattern_with_variable = |new_content: String| {
+        let pattern_with_variable = |mut new_content: String| {
             let mut new_pattern = pattern_text.clone();
 
             match matched_variable {
                 BoundVariable {
-                    name: BoundVariableName::Regular { .. },
+                    name: BoundVariableName::Regular { .. } | BoundVariableName::ListTail { .. },
                     ..
                 } => {
-                    // If the variable is a regular variable we'll have to replace
-                    // it entirely with the new pattern taking its place.
-                    let variable_start_in_pattern =
-                        matched_variable_span.start - matched_pattern_span.start;
-                    let variable_length = matched_variable_span.end - matched_variable_span.start;
-                    let variable_end_in_pattern = variable_start_in_pattern + variable_length;
-                    let replaced_range =
-                        variable_start_in_pattern as usize..variable_end_in_pattern as usize;
+                    let trimmed_contents = new_content.trim();
+
+                    let pattern_is_literal_list =
+                        trimmed_contents.starts_with("[") && trimmed_contents.ends_with("]");
+                    let pattern_is_discard = trimmed_contents == "_";
+
+                    let span_to_replace = match (
+                        &matched_variable.name,
+                        // We verify whether the pattern is compatible with the list prefix `..`.
+                        // For example, `..var` is valid syntax, but `..[]` and `.._` are not.
+                        pattern_is_literal_list || pattern_is_discard,
+                    ) {
+                        // We normally replace the selected variable with the pattern.
+                        (BoundVariableName::Regular { .. }, _) => matched_variable_span,
+
+                        // If the selected pattern is not a list, we also replace it normally.
+                        (BoundVariableName::ListTail { .. }, false) => matched_variable_span,
+                        // If the pattern is a list to also remove the list tail prefix.
+                        (BoundVariableName::ListTail { tail_location, .. }, true) => {
+                            // When it's a list literal, we remove the surrounding brackets.
+                            let len = trimmed_contents.len();
+                            if let Some(slice) = new_content.trim().get(1..(len - 1)) {
+                                new_content = slice.to_string()
+                            };
+
+                            *tail_location
+                        }
+
+                        (BoundVariableName::ShorthandLabel { .. }, _) => unreachable!(),
+                    };
+
+                    let start_of_pattern =
+                        (span_to_replace.start - matched_pattern_span.start) as usize;
+                    let pattern_length = span_to_replace.len();
+
+                    let end_of_pattern = start_of_pattern + pattern_length;
+                    let replaced_range = start_of_pattern..end_of_pattern;
 
                     new_pattern.replace_range(replaced_range, &new_content);
                 }

@@ -1469,7 +1469,7 @@ fn code_action_unused_values(
     }
 
     // Sort spans by start position, with longer spans coming first
-    unused_values.sort_by_key(|span| (span.start, -(span.end as i64 - span.start as i64)));
+    unused_values.sort_by_key(|span| (span.start, -(span.len() as i64)));
 
     let mut processed_lsp_range = Vec::new();
 

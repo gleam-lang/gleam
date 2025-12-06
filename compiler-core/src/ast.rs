@@ -2661,6 +2661,14 @@ impl SrcSpan {
             end: self.end.max(with.end),
         }
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn len(&self) -> usize {
+        (self.end - self.start) as usize
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -3162,6 +3170,11 @@ pub struct BoundVariable {
 pub enum BoundVariableName {
     /// A record's labelled field introduced with the shorthand syntax.
     ShorthandLabel { name: EcoString },
+    ListTail {
+        name: EcoString,
+        /// The location of the whole tail, from the `..` prefix until the end of the variable.
+        tail_location: SrcSpan,
+    },
     /// Any other variable name.
     Regular { name: EcoString },
 }
@@ -3169,9 +3182,9 @@ pub enum BoundVariableName {
 impl BoundVariable {
     pub fn name(&self) -> EcoString {
         match &self.name {
-            BoundVariableName::ShorthandLabel { name } | BoundVariableName::Regular { name } => {
-                name.clone()
-            }
+            BoundVariableName::ShorthandLabel { name }
+            | BoundVariableName::ListTail { name, .. }
+            | BoundVariableName::Regular { name } => name.clone(),
         }
     }
 }
@@ -3392,13 +3405,27 @@ impl TypedPattern {
                 });
                 pattern.collect_bound_variables(variables);
             }
-            Pattern::List { elements, tail, .. } => {
+            Pattern::List {
+                elements,
+                tail,
+                type_,
+                ..
+            } => {
                 for element in elements {
                     element.collect_bound_variables(variables);
                 }
-                if let Some(tail) = tail {
-                    tail.pattern.collect_bound_variables(variables);
-                }
+                if let Some(tail) = tail
+                    && let Pattern::Variable { name, location, .. } = tail.pattern.to_owned()
+                {
+                    variables.push(BoundVariable {
+                        name: BoundVariableName::ListTail {
+                            name,
+                            tail_location: tail.location,
+                        },
+                        location,
+                        type_: type_.clone(),
+                    })
+                };
             }
             Pattern::Constructor { arguments, .. } => {
                 for argument in arguments {

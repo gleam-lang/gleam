@@ -432,3 +432,7 @@
 - Fixed a bug where the data generated for searching documentation was in the
   wrong format, preventing it from being used by Hexdocs search.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where the collapse nested case would produce invalid code on a
+  list tail pattern.
+  ([Matias Carlander](https://github.com/matiascr))
