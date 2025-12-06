@@ -1995,6 +1995,29 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let type_ = value.type_();
         let kind = self.infer_assignment_kind(kind.clone());
 
+        let mut annotation_type_override = None;
+
+        // Check that any type annotation is accurate.
+        if let Some(annotation) = &annotation {
+            match self
+                .type_from_ast(annotation)
+                .map(|type_| self.instantiate(type_, &mut hashmap![]))
+            {
+                Ok(annotated_type) => {
+                    let annotation_type_for_pattern = annotated_type.clone();
+                    if let Err(error) = unify(annotated_type, type_.clone())
+                        .map_err(|e| convert_unify_error(e, value.type_defining_location()))
+                    {
+                        self.problems.error(error);
+                    }
+                    annotation_type_override = Some(annotation_type_for_pattern);
+                }
+                Err(error) => {
+                    self.problems.error(error);
+                }
+            }
+        }
+
         // Ensure the pattern matches the type of the value
         let mut pattern_typer = pattern::PatternTyper::new(
             self.environment,
@@ -2004,7 +2027,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             PatternPosition::LetAssignment,
         );
 
-        let pattern = pattern_typer.infer_single_pattern(pattern, &value);
+        let pattern =
+            pattern_typer.infer_single_pattern(pattern, &value, annotation_type_override.clone());
 
         let minimum_required_version = pattern_typer.minimum_required_version;
         if minimum_required_version > self.minimum_required_version {
@@ -2012,25 +2036,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         let pattern_typechecked_successfully = !pattern_typer.error_encountered;
-
-        // Check that any type annotation is accurate.
-        if let Some(annotation) = &annotation {
-            match self
-                .type_from_ast(annotation)
-                .map(|type_| self.instantiate(type_, &mut hashmap![]))
-            {
-                Ok(annotated_type) => {
-                    if let Err(error) = unify(annotated_type, type_.clone())
-                        .map_err(|e| convert_unify_error(e, value.type_defining_location()))
-                    {
-                        self.problems.error(error);
-                    }
-                }
-                Err(error) => {
-                    self.problems.error(error);
-                }
-            }
-        }
 
         // The exhaustiveness checker expects patterns to be valid and to type check;
         // if they are invalid, it will crash. Therefore, if any errors were found
@@ -2047,7 +2052,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         let (output, not_exhaustive_error) =
-            self.check_let_exhaustiveness(location, value.type_(), &pattern);
+            self.check_let_exhaustiveness(location, type_.clone(), &pattern);
 
         match (&kind, not_exhaustive_error) {
             // The pattern is exhaustive in a let assignment, there's no problem here.
