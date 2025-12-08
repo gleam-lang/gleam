@@ -4031,7 +4031,7 @@ const mapper = list.map
     assert_no_code_actions!(
         title,
         TestProject::for_source(src).add_hex_module("list", "pub fn map(list, f) { todo }"),
-        find_position_of("map").to_selection(),
+        find_position_of("list.map").to_selection(),
     );
 }
 
