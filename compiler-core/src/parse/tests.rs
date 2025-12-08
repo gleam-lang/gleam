@@ -2030,7 +2030,7 @@ pub fn main(): Nil {}
 }
 
 #[test]
-fn const_record_spread_basic() {
+fn const_record_update_basic() {
     assert_parse_module!(
         r#"
 type Person {
@@ -2044,7 +2044,7 @@ const bob = Person(..alice, name: "Bob")
 }
 
 #[test]
-fn const_record_spread_all_fields() {
+fn const_record_update_all_fields() {
     assert_parse_module!(
         r#"
 type Person {
@@ -2058,7 +2058,7 @@ const updated = Person(..base, name: "Bob", age: 25, city: "Paris")
 }
 
 #[test]
-fn const_record_spread_only() {
+fn const_record_update_only() {
     assert_parse_module!(
         r#"
 type Person {
@@ -2072,7 +2072,7 @@ const bob = Person(..alice)
 }
 
 #[test]
-fn const_record_spread_with_module() {
+fn const_record_update_with_module() {
     assert_parse_module!(
         r#"
 const local_const = other.Record(..other.base, field: value)

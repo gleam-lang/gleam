@@ -59,9 +59,9 @@ use crate::analyse::Inferred;
 use crate::ast::{
     Arg, ArgNames, Assert, AssignName, Assignment, AssignmentKind, BinOp, BitArrayOption,
     BitArraySegment, BitArraySize, CAPTURE_VARIABLE, CallArg, Clause, ClauseGuard, Constant,
-    ConstantRecordUpdateArg, CustomType, Definition, Function, FunctionLiteralKind, HasLocation,
-    Import, IntOperator, Module, ModuleConstant, Pattern, Publicity, RecordBeingUpdated,
-    RecordConstructor, RecordConstructorArg, SrcSpan, Statement, TailPattern, TargetedDefinition,
+    CustomType, Definition, Function, FunctionLiteralKind, HasLocation, Import, IntOperator,
+    Module, ModuleConstant, Pattern, Publicity, RecordBeingUpdated, RecordConstructor,
+    RecordConstructorArg, RecordUpdateArg, SrcSpan, Statement, TailPattern, TargetedDefinition,
     TodoKind, TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple,
     TypeAstVar, UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant,
     UntypedDefinition, UntypedExpr, UntypedModule, UntypedPattern, UntypedRecordUpdateArg,
@@ -3488,7 +3488,7 @@ where
 
     fn parse_const_record_update_arg(
         &mut self,
-    ) -> Result<Option<ConstantRecordUpdateArg<UntypedConstant>>, ParseError> {
+    ) -> Result<Option<RecordUpdateArg<UntypedConstant>>, ParseError> {
         let (start, label, label_end) = match (self.tok0.take(), self.tok1.take()) {
             // Named arg - required for record updates
             (Some((start, Token::Name { name }, _)), Some((_, Token::Colon, end))) => {
@@ -3506,7 +3506,7 @@ where
                 // In this case, use the name as both label and value
                 match self.parse_const_value()? {
                     Some(value) if value.location() == SrcSpan { start, end } => {
-                        return Ok(Some(ConstantRecordUpdateArg {
+                        return Ok(Some(RecordUpdateArg {
                             label: name.clone(),
                             location: SrcSpan { start, end },
                             value,
@@ -3527,7 +3527,7 @@ where
         };
 
         match self.parse_const_value()? {
-            Some(value) => Ok(Some(ConstantRecordUpdateArg {
+            Some(value) => Ok(Some(RecordUpdateArg {
                 label,
                 location: SrcSpan {
                     start,
@@ -3537,7 +3537,7 @@ where
             })),
             _ => {
                 // Label shorthand: field without value means field: field
-                Ok(Some(ConstantRecordUpdateArg {
+                Ok(Some(RecordUpdateArg {
                     label: label.clone(),
                     location: SrcSpan {
                         start,

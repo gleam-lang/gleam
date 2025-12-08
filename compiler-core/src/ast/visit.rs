@@ -60,12 +60,11 @@ use vec1::Vec1;
 use crate::type_::Type;
 
 use super::{
-    AssignName, BinOp, BitArrayOption, CallArg, ConstantRecordUpdateArg, Pattern,
-    PipelineAssignmentKind, SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssert,
-    TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant, TypedCustomType, TypedExpr,
-    TypedExprBitArraySegment, TypedFunction, TypedModule, TypedModuleConstant, TypedPattern,
-    TypedPatternBitArraySegment, TypedPipelineAssignment, TypedStatement, TypedUse,
-    untyped::FunctionLiteralKind,
+    AssignName, BinOp, BitArrayOption, CallArg, Pattern, PipelineAssignmentKind, RecordUpdateArg,
+    SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssert, TypedAssignment, TypedClause,
+    TypedClauseGuard, TypedConstant, TypedCustomType, TypedExpr, TypedExprBitArraySegment,
+    TypedFunction, TypedModule, TypedModuleConstant, TypedPattern, TypedPatternBitArraySegment,
+    TypedPipelineAssignment, TypedStatement, TypedUse, untyped::FunctionLiteralKind,
 };
 
 pub trait Visit<'ast> {
@@ -694,7 +693,7 @@ pub trait Visit<'ast> {
         module: &'ast Option<(EcoString, SrcSpan)>,
         name: &'ast EcoString,
         record: &'ast TypedConstant,
-        arguments: &'ast [ConstantRecordUpdateArg<TypedConstant>],
+        arguments: &'ast [RecordUpdateArg<TypedConstant>],
         tag: &'ast EcoString,
         type_: &'ast Arc<Type>,
         field_map: &'ast Inferred<FieldMap>,
@@ -814,7 +813,7 @@ fn visit_typed_constant_record_update<'a, V: Visit<'a> + ?Sized>(
     _module: &'a Option<(EcoString, SrcSpan)>,
     _name: &'a EcoString,
     record: &'a TypedConstant,
-    arguments: &'a [ConstantRecordUpdateArg<TypedConstant>],
+    arguments: &'a [RecordUpdateArg<TypedConstant>],
     _tag: &'a EcoString,
     _type_: &'a Arc<Type>,
     _field_map: &'a Inferred<FieldMap>,

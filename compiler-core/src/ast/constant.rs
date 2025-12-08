@@ -54,7 +54,7 @@ pub enum Constant<T, RecordTag> {
         module: Option<(EcoString, SrcSpan)>,
         name: EcoString,
         record: Box<Self>,
-        arguments: Vec<ConstantRecordUpdateArg<Self>>,
+        arguments: Vec<RecordUpdateArg<Self>>,
         tag: RecordTag,
         type_: T,
         field_map: Inferred<FieldMap>,
@@ -416,28 +416,5 @@ impl<A, B> bit_array::GetLiteralValue for Constant<A, B> {
         } else {
             None
         }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ConstantRecordUpdateArg<Constant> {
-    pub label: EcoString,
-    pub location: SrcSpan,
-    pub value: Constant,
-}
-
-impl<Constant> ConstantRecordUpdateArg<Constant> {
-    #[must_use]
-    pub fn uses_label_shorthand(&self) -> bool
-    where
-        Constant: HasLocation,
-    {
-        self.value.location() == self.location
-    }
-}
-
-impl<Constant> HasLocation for ConstantRecordUpdateArg<Constant> {
-    fn location(&self) -> SrcSpan {
-        self.location
     }
 }
