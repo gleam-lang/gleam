@@ -3096,7 +3096,7 @@ UTF-codepoint pattern matching."
                             }),
                         }
                     }
-                    TypeError::InvalidRecordConstructor { location } => Diagnostic {
+                    TypeError::RecordUpdateInvalidConstructor { location } => Diagnostic {
                         title: "Invalid record constructor".into(),
                         text: "Only record constructors can be used with the update syntax.".into(),
                         hint: None,

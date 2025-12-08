@@ -10,16 +10,14 @@ pub type Person { Person(name: String, age: Int) }
         pub const dog = Animal(..alice)
 
 ----- ERROR
-error: Type mismatch
+error: Incorrect record update
   ┌─ /src/one/two.gleam:5:34
   │
 5 │         pub const dog = Animal(..alice)
-  │                                  ^^^^^
+  │                                  ^^^^^ This is a `Person`
 
-Expected type:
+This value is a `Person` so it cannot be used to build a `Animal`, even if
+they share some fields.
 
-    Animal
-
-Found type:
-
-    Person
+Note: If you want to change one variant of a type into another, you should
+specify all fields explicitly instead of using the record update syntax.

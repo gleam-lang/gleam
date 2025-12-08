@@ -9,7 +9,7 @@ pub mod visit;
 pub use self::typed::{InvalidExpression, TypedExpr};
 pub use self::untyped::{FunctionLiteralKind, UntypedExpr};
 
-pub use self::constant::{Constant, ConstantRecordUpdateArg, TypedConstant, UntypedConstant};
+pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
 use crate::analyse::Inferred;
 use crate::ast::typed::pairwise_all;
@@ -1593,22 +1593,24 @@ pub struct RecordBeingUpdated {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct UntypedRecordUpdateArg {
+pub struct RecordUpdateArg<A> {
     pub label: EcoString,
     pub location: SrcSpan,
-    pub value: UntypedExpr,
+    pub value: A,
 }
 
-impl UntypedRecordUpdateArg {
-    #[must_use]
-    pub fn uses_label_shorthand(&self) -> bool {
-        self.value.location() == self.location
+pub type UntypedRecordUpdateArg = RecordUpdateArg<UntypedExpr>;
+
+impl<A> HasLocation for RecordUpdateArg<A> {
+    fn location(&self) -> SrcSpan {
+        self.location
     }
 }
 
-impl HasLocation for UntypedRecordUpdateArg {
-    fn location(&self) -> SrcSpan {
-        self.location
+impl<A: HasLocation> RecordUpdateArg<A> {
+    #[must_use]
+    pub fn uses_label_shorthand(&self) -> bool {
+        self.value.location() == self.location
     }
 }
 

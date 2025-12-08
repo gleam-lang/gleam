@@ -2464,6 +2464,23 @@ fn const_record_update_unlabelled_fields() {
 }
 
 #[test]
+fn const_record_update_generic_respecialization() {
+    assert_module_infer!(
+        "pub type Box(a) {
+            Box(name: String, value: a)
+        }
+
+        pub const base = Box(\"score\", 50)
+        pub const updated = Box(..base, value: \"Hello\")",
+        vec![
+            ("Box", "fn(String, a) -> Box(a)"),
+            ("base", "Box(Int)"),
+            ("updated", "Box(String)")
+        ],
+    );
+}
+
+#[test]
 fn module_constant_functions() {
     assert_module_infer!(
         "pub fn int_identity(i: Int) -> Int { i }

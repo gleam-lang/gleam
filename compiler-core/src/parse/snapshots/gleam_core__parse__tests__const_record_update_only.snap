@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-expression: "\ntype Person {\n  Person(name: String, age: Int)\n}\n\nconst alice = Person(\"Alice\", 30)\nconst bob = Person(..alice, name: \"Bob\")\n"
+expression: "\ntype Person {\n  Person(name: String, age: Int)\n}\n\nconst alice = Person(\"Alice\", 30)\nconst bob = Person(..alice)\n"
 ---
 Parsed {
     module: Module {
@@ -207,7 +207,7 @@ Parsed {
                         value: RecordUpdate {
                             location: SrcSpan {
                                 start: 97,
-                                end: 125,
+                                end: 112,
                             },
                             constructor_location: SrcSpan {
                                 start: 97,
@@ -225,22 +225,7 @@ Parsed {
                                 constructor: None,
                                 type_: (),
                             },
-                            arguments: [
-                                RecordUpdateArg {
-                                    label: "name",
-                                    location: SrcSpan {
-                                        start: 113,
-                                        end: 124,
-                                    },
-                                    value: String {
-                                        location: SrcSpan {
-                                            start: 119,
-                                            end: 124,
-                                        },
-                                        value: "Bob",
-                                    },
-                                },
-                            ],
+                            arguments: [],
                             tag: (),
                             type_: (),
                             field_map: Unknown,
@@ -282,7 +267,7 @@ Parsed {
             49,
             50,
             84,
-            125,
+            112,
         ],
         trailing_commas: [],
     },

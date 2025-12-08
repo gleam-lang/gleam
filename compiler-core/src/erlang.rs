@@ -1506,7 +1506,7 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
         },
 
         Constant::Record { tag, arguments, .. } => {
-            // Spreads are fully expanded during type checking, so we just handle arguments
+            // Record updates are fully expanded during type checking, so we just handle arguments
             let arguments_doc = arguments
                 .iter()
                 .map(|argument| const_inline(&argument.value, env));
