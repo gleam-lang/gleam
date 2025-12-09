@@ -3346,7 +3346,10 @@ where
             Some((par_s, _)) => {
                 if self.maybe_one(&Token::DotDot).is_some() {
                     let record = match self.parse_const_value()? {
-                        Some(value) => Box::new(value),
+                        Some(value) => RecordBeingUpdated {
+                            location: value.location(),
+                            base: Box::new(value),
+                        },
                         None => {
                             return parse_error(
                                 ParseErrorType::UnexpectedEof,
@@ -3369,9 +3372,11 @@ where
                         "a constant record update argument",
                     )?;
 
+                    let constructor_location = SrcSpan { start, end };
+
                     Ok(Some(Constant::RecordUpdate {
                         location: SrcSpan { start, end: par_e },
-                        constructor_location: SrcSpan { start, end },
+                        constructor_location,
                         module,
                         name,
                         record,

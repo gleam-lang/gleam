@@ -42,23 +42,29 @@ Parsed {
                                 ),
                             ),
                             name: "Record",
-                            record: Var {
+                            record: RecordBeingUpdated {
+                                base: Var {
+                                    location: SrcSpan {
+                                        start: 36,
+                                        end: 46,
+                                    },
+                                    module: Some(
+                                        (
+                                            "other",
+                                            SrcSpan {
+                                                start: 36,
+                                                end: 41,
+                                            },
+                                        ),
+                                    ),
+                                    name: "base",
+                                    constructor: None,
+                                    type_: (),
+                                },
                                 location: SrcSpan {
                                     start: 36,
                                     end: 46,
                                 },
-                                module: Some(
-                                    (
-                                        "other",
-                                        SrcSpan {
-                                            start: 36,
-                                            end: 41,
-                                        },
-                                    ),
-                                ),
-                                name: "base",
-                                constructor: None,
-                                type_: (),
                             },
                             arguments: [
                                 RecordUpdateArg {

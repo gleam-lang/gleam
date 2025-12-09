@@ -3178,7 +3178,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_record_update(
         &mut self,
         constructor: UntypedExpr,
-        record: RecordBeingUpdated,
+        record: RecordBeingUpdated<UntypedExpr>,
         arguments: Vec<UntypedRecordUpdateArg>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
@@ -3836,9 +3836,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
 
             Constant::RecordUpdate {
+                constructor_location,
                 module,
                 location,
-                constructor_location,
                 name,
                 record,
                 arguments,
@@ -3882,7 +3882,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 };
 
                 // Type-check the record being updated
-                let typed_record = self.infer_const(&None, *record.clone());
+                let typed_record = self.infer_const(&None, *record.base.clone());
                 let typed_record_type = typed_record.type_();
 
                 // Instantiate the constructor type to enable generic re-specialization.
@@ -3926,7 +3926,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                                 given: typed_record_type,
                                 situation: None,
                             },
-                            record.location(),
+                            record.location,
                         ));
                         return self.new_invalid_constant(location);
                     }
@@ -3936,7 +3936,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // For multi-variant custom types, you can't spread Dog to create Cat
                 if tag != base_tag {
                     self.problems.error(Error::UnsafeRecordUpdate {
-                        location: record.location(),
+                        location: record.location,
                         reason: UnsafeRecordUpdateReason::WrongVariant {
                             constructed_variant: tag,
                             spread_variant: base_tag,

@@ -132,7 +132,7 @@ pub enum UntypedExpr {
     RecordUpdate {
         location: SrcSpan,
         constructor: Box<Self>,
-        record: RecordBeingUpdated,
+        record: RecordBeingUpdated<UntypedExpr>,
         arguments: Vec<UntypedRecordUpdateArg>,
     },
 

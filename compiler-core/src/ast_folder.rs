@@ -902,7 +902,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         &mut self,
         location: SrcSpan,
         constructor: Box<UntypedExpr>,
-        record: RecordBeingUpdated,
+        record: RecordBeingUpdated<UntypedExpr>,
         arguments: Vec<UntypedRecordUpdateArg>,
     ) -> UntypedExpr {
         UntypedExpr::RecordUpdate {
@@ -1106,7 +1106,7 @@ pub trait UntypedConstantFolder {
         constructor_location: SrcSpan,
         module: Option<(EcoString, SrcSpan)>,
         name: EcoString,
-        record: Box<UntypedConstant>,
+        record: RecordBeingUpdated<UntypedConstant>,
         arguments: Vec<RecordUpdateArg<UntypedConstant>>,
     ) -> UntypedConstant {
         Constant::RecordUpdate {
@@ -1236,7 +1236,10 @@ pub trait UntypedConstantFolder {
                 type_,
                 field_map,
             } => {
-                let record = Box::new(self.fold_constant(*record));
+                let record = RecordBeingUpdated {
+                    base: Box::new(self.fold_constant(*record.base)),
+                    location: record.location,
+                };
                 let arguments = arguments
                     .into_iter()
                     .map(|argument| RecordUpdateArg {

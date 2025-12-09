@@ -82,12 +82,12 @@ enum FnCapturePosition {
 /// One of the pieces making a record update arg list: it could be the starting
 /// record being updated, or one of the subsequent arguments.
 ///
-enum RecordUpdatePiece<'a> {
-    Record(&'a RecordBeingUpdated),
-    Argument(&'a UntypedRecordUpdateArg),
+enum RecordUpdatePiece<'a, A> {
+    Record(&'a RecordBeingUpdated<A>),
+    Argument(&'a RecordUpdateArg<A>),
 }
 
-impl HasLocation for RecordUpdatePiece<'_> {
+impl<A> HasLocation for RecordUpdatePiece<'_, A> {
     fn location(&self) -> SrcSpan {
         match self {
             RecordUpdatePiece::Record(record) => record.location,
@@ -95,6 +95,8 @@ impl HasLocation for RecordUpdatePiece<'_> {
         }
     }
 }
+
+type UntypedRecordUpdatePiece<'a> = RecordUpdatePiece<'a, UntypedExpr>;
 
 /// Hayleigh's bane
 #[derive(Debug, Clone, Default)]
@@ -560,7 +562,15 @@ impl<'comments> Formatter<'comments> {
                 .append(" ")
                 .append(self.const_expr(right)),
 
-            Constant::RecordUpdate { .. } => panic!("record updates can not be in an untyped ast"),
+            Constant::RecordUpdate {
+                module,
+                name,
+                record,
+                arguments,
+                location,
+                ..
+            } => self.const_record_update(module, name, record, arguments, location),
+
             Constant::Invalid { .. } => panic!("invalid constants can not be in an untyped ast"),
         };
         commented(document, comments)
@@ -1426,13 +1436,13 @@ impl<'comments> Formatter<'comments> {
     pub fn record_update<'a>(
         &mut self,
         constructor: &'a UntypedExpr,
-        record: &'a RecordBeingUpdated,
+        record: &'a RecordBeingUpdated<UntypedExpr>,
         arguments: &'a [UntypedRecordUpdateArg],
         location: &SrcSpan,
     ) -> Document<'a> {
         let constructor_doc: Document<'a> = self.expr(constructor);
-        let pieces = std::iter::once(RecordUpdatePiece::Record(record))
-            .chain(arguments.iter().map(RecordUpdatePiece::Argument))
+        let pieces = std::iter::once(UntypedRecordUpdatePiece::Record(record))
+            .chain(arguments.iter().map(UntypedRecordUpdatePiece::Argument))
             .collect_vec();
 
         self.append_inlinable_wrapped_arguments(
@@ -1440,17 +1450,66 @@ impl<'comments> Formatter<'comments> {
             &pieces,
             location,
             |arg| match arg {
-                RecordUpdatePiece::Argument(arg) => &arg.value,
-                RecordUpdatePiece::Record(record) => record.base.as_ref(),
+                UntypedRecordUpdatePiece::Argument(arg) => &arg.value,
+                UntypedRecordUpdatePiece::Record(record) => record.base.as_ref(),
             },
             |this, arg| match arg {
-                RecordUpdatePiece::Argument(arg) => this.record_update_arg(arg),
-                RecordUpdatePiece::Record(record) => {
-                    let comments = this.pop_comments(record.base.location().start);
+                UntypedRecordUpdatePiece::Argument(arg) => this.record_update_arg(arg),
+                UntypedRecordUpdatePiece::Record(record) => {
+                    let comments = this.pop_comments(record.location.start);
                     commented("..".to_doc().append(this.expr(&record.base)), comments)
                 }
             },
         )
+    }
+
+    pub fn const_record_update<'a, A, B>(
+        &mut self,
+        module: &Option<(EcoString, SrcSpan)>,
+        name: &'a EcoString,
+        record: &'a RecordBeingUpdated<Constant<A, B>>,
+        arguments: &'a [RecordUpdateArg<Constant<A, B>>],
+        location: &SrcSpan,
+    ) -> Document<'a> {
+        let constructor_doc = match module {
+            Some((m, _)) => m.to_doc().append(".").append(name.as_str()),
+            None => name.to_doc(),
+        };
+
+        let pieces = std::iter::once(RecordUpdatePiece::Record(record))
+            .chain(arguments.iter().map(RecordUpdatePiece::Argument))
+            .collect_vec();
+
+        let docs = pieces
+            .iter()
+            .map(|piece| match piece {
+                RecordUpdatePiece::Argument(arg) => {
+                    let comments = self.pop_comments(arg.location.start);
+                    let doc = match arg {
+                        _ if arg.uses_label_shorthand() => arg.label.as_str().to_doc().append(":"),
+                        _ => arg
+                            .label
+                            .as_str()
+                            .to_doc()
+                            .append(": ")
+                            .append(self.const_expr(&arg.value))
+                            .group(),
+                    };
+                    commented(doc, comments)
+                }
+                RecordUpdatePiece::Record(record) => {
+                    let comments = self.pop_comments(record.location.start);
+                    commented(
+                        "..".to_doc().append(self.const_expr(&record.base)),
+                        comments,
+                    )
+                }
+            })
+            .collect_vec();
+
+        constructor_doc
+            .append(self.wrap_arguments(docs, location.end))
+            .group()
     }
 
     pub fn bin_op<'a>(

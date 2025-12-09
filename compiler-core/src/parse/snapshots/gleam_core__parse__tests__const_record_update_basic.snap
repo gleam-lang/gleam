@@ -215,15 +215,21 @@ Parsed {
                             },
                             module: None,
                             name: "Person",
-                            record: Var {
+                            record: RecordBeingUpdated {
+                                base: Var {
+                                    location: SrcSpan {
+                                        start: 106,
+                                        end: 111,
+                                    },
+                                    module: None,
+                                    name: "alice",
+                                    constructor: None,
+                                    type_: (),
+                                },
                                 location: SrcSpan {
                                     start: 106,
                                     end: 111,
                                 },
-                                module: None,
-                                name: "alice",
-                                constructor: None,
-                                type_: (),
                             },
                             arguments: [
                                 RecordUpdateArg {

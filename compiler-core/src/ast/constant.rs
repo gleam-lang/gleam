@@ -53,7 +53,7 @@ pub enum Constant<T, RecordTag> {
         constructor_location: SrcSpan,
         module: Option<(EcoString, SrcSpan)>,
         name: EcoString,
-        record: Box<Self>,
+        record: RecordBeingUpdated<Self>,
         arguments: Vec<RecordUpdateArg<Self>>,
         tag: RecordTag,
         type_: T,
@@ -129,6 +129,7 @@ impl TypedConstant {
             Constant::RecordUpdate {
                 record, arguments, ..
             } => record
+                .base
                 .find_node(byte_index)
                 .or_else(|| {
                     arguments
@@ -192,14 +193,12 @@ impl TypedConstant {
 
             Constant::RecordUpdate {
                 record, arguments, ..
-            } => {
-                let record_vars = record.referenced_variables();
-                let arg_vars = arguments
+            } => record.base.referenced_variables().union(
+                arguments
                     .iter()
                     .map(|arg| arg.value.referenced_variables())
-                    .fold(im::hashset![], im::HashSet::union);
-                record_vars.union(arg_vars)
-            }
+                    .fold(im::hashset![], im::HashSet::union),
+            ),
 
             Constant::BitArray { segments, .. } => segments
                 .iter()
@@ -310,7 +309,7 @@ impl TypedConstant {
 
                 modules_are_equal
                     && name == other_name
-                    && record.syntactically_eq(other_record)
+                    && record.base.syntactically_eq(&other_record.base)
                     && pairwise_all(arguments, other_arguments, |(one, other)| {
                         one.label == other.label && one.value.syntactically_eq(&other.value)
                     })
