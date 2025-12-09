@@ -1587,8 +1587,8 @@ impl<T> HasLocation for CallArg<T> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RecordBeingUpdated {
-    pub base: Box<UntypedExpr>,
+pub struct RecordBeingUpdated<A> {
+    pub base: Box<A>,
     pub location: SrcSpan,
 }
 

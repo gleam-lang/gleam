@@ -497,7 +497,7 @@ impl<'a> CallGraphBuilder<'a> {
             Constant::RecordUpdate {
                 record, arguments, ..
             } => {
-                self.constant(record);
+                self.constant(&record.base);
 
                 for argument in arguments {
                     self.constant(&argument.value);

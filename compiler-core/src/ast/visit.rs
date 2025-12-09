@@ -41,8 +41,8 @@
 use crate::{
     analyse::Inferred,
     ast::{
-        BitArraySize, TypedBitArraySize, TypedConstantBitArraySegment, TypedDefinitions,
-        TypedTailPattern, typed::InvalidExpression,
+        BitArraySize, RecordBeingUpdated, TypedBitArraySize, TypedConstantBitArraySegment,
+        TypedDefinitions, TypedTailPattern, typed::InvalidExpression,
     },
     exhaustiveness::CompiledCase,
     parse::LiteralFloatValue,
@@ -692,7 +692,7 @@ pub trait Visit<'ast> {
         constructor_location: &'ast SrcSpan,
         module: &'ast Option<(EcoString, SrcSpan)>,
         name: &'ast EcoString,
-        record: &'ast TypedConstant,
+        record: &'ast RecordBeingUpdated<TypedConstant>,
         arguments: &'ast [RecordUpdateArg<TypedConstant>],
         tag: &'ast EcoString,
         type_: &'ast Arc<Type>,
@@ -812,13 +812,13 @@ fn visit_typed_constant_record_update<'a, V: Visit<'a> + ?Sized>(
     _constructor_location: &'a SrcSpan,
     _module: &'a Option<(EcoString, SrcSpan)>,
     _name: &'a EcoString,
-    record: &'a TypedConstant,
+    record: &'a RecordBeingUpdated<TypedConstant>,
     arguments: &'a [RecordUpdateArg<TypedConstant>],
     _tag: &'a EcoString,
     _type_: &'a Arc<Type>,
     _field_map: &'a Inferred<FieldMap>,
 ) {
-    v.visit_typed_constant(record);
+    v.visit_typed_constant(&record.base);
     for argument in arguments {
         v.visit_typed_constant(&argument.value);
     }
