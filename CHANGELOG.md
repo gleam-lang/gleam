@@ -157,11 +157,27 @@
 
   ([Adi Salimgereyev](https://github.com/abs0luty))
 
-- Record update syntax now works with spreading records in type constructors
-  for const values:
+- Record update syntax can now be used in constant definitions, so constant records can be derived from other records using the spread operator:
   ```gleam
-  const a = Foo(1, 2)
-  const b = Foo(..a, 3)
+  pub const base_http_config = HttpConfig(
+    host: "0.0.0.0",
+    port: 8080,
+    use_tls: False,
+    log_level: Info,
+  )
+
+  pub const dev_http_config = HttpConfig(
+    ..base_http_config,
+    port: 4000,
+    log_level: Debug,
+  )
+
+  pub const prod_http_config = HttpConfig(
+    ..base_http_config,
+    port: 80,
+    use_tls: True,
+    log_level: Warn,
+  )
   ```
 
   ([Adi Salimgereyev](https://github.com/abs0luty))
