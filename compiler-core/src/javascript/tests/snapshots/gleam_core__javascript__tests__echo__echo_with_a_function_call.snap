@@ -12,7 +12,7 @@ fn wibble(n: Int, m: Int) { n + m }
 
 
 ----- COMPILED JAVASCRIPT
-import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
+import * as $stdlib$dict from "../../gleam_stdlib/gleam/dict.mjs";
 import {
   Empty as $Empty,
   NonEmpty as $NonEmpty,

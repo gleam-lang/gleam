@@ -14,7 +14,7 @@ pub fn wibble(n) { n }
 
 
 ----- COMPILED JAVASCRIPT
-import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
+import * as $stdlib$dict from "../../gleam_stdlib/gleam/dict.mjs";
 import {
   toList,
   Empty as $Empty,
