@@ -34,10 +34,10 @@ class Echo$Inspector {
       // We import the public gleam/dict module, so to check if something is a
       // dict we compare the `constructor` field on the object with that of a
       // new dict.
-      const emptyDict = $stdlib$dict.new$();
-      const dictClass = emptyDict.constructor;
-      return value instanceof dictClass;
-    } catch (e) {
+      const empty_dict = $stdlib$dict.new$();
+      const dict_class = empty_dict.constructor;
+      return value instanceof dict_class;
+    } catch {
       // If stdlib is not one of the project's dependencies then `$stdlib$dict`
       // will not have been imported and the check will throw an exception meaning
       // we can't check if something is actually a `Dict`.
@@ -118,7 +118,7 @@ class Echo$Inspector {
     let body = "dict.from_list([";
     let first = true;
 
-    const key_value_pairs = $stdlib$dict.fold(map, [], (pairs, key, value) => {
+    let key_value_pairs = $stdlib$dict.fold(map, [], (pairs, key, value) => {
       pairs.push([key, value]);
       return pairs;
     });
