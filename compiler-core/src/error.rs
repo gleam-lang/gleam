@@ -10,7 +10,7 @@ use crate::strings::{to_snake_case, to_upper_camel_case};
 use crate::type_::collapse_links;
 use crate::type_::error::{
     IncorrectArityContext, InvalidImportKind, MissingAnnotation, ModuleValueUsageContext, Named,
-    UnknownField, UnknownTypeHint, UnsafeRecordUpdateReason,
+    RecordField, UnknownField, UnknownTypeHint, UnsafeRecordUpdateReason,
 };
 use crate::type_::printer::{Names, Printer};
 use crate::type_::{FieldAccessUsage, error::PatternMatchKind};
@@ -808,6 +808,15 @@ fn did_you_mean(name: &str, options: &[EcoString]) -> Option<String> {
         })
         .min_by_key(|&(_, distance)| distance)
         .map(|(option, _)| format!("Did you mean `{option}`?"))
+}
+
+fn to_ordinal(value: u32) -> String {
+    match value % 10 {
+        1 => format!("{value}st"),
+        2 => format!("{value}nd"),
+        3 => format!("{value}rd"),
+        _ => format!("{value}th"),
+    }
 }
 
 impl Error {
@@ -2403,21 +2412,32 @@ specify all fields explicitly instead of using the record update syntax."
                             expected_field_type,
                             record_field_type,
                             record_variant,
-                            field_name,
+                            field,
                             ..
                         } => {
                             let mut printer = Printer::new(names);
                             let expected_field_type = printer.print_type(expected_field_type);
                             let record_field_type = printer.print_type(record_field_type);
                             let record_variant = printer.print_type(record_variant);
-                            let text = wrap_format!(
-                                "The `{field_name}` field \
+                            let text = match field {
+                                RecordField::Labelled(label) => wrap_format!(
+                                    "The `{label}` field \
 of this value is a `{record_field_type}`, but the arguments given to the record \
 update indicate that it should be a `{expected_field_type}`.
 
 Note: If the same type variable is used for multiple fields, all those fields \
 need to be updated at the same time if their type changes."
-                            );
+                                ),
+                                RecordField::Unlabelled(index) => wrap_format!(
+                                    "The {} field \
+of this value is a `{record_field_type}`, but the arguments given to the record \
+update indicate that it should be a `{expected_field_type}`.
+
+Note: Unlabelled fields cannot be updated in a record update, so either add \
+a label or use a record constructor.",
+                                    to_ordinal(*index + 1),
+                                ),
+                            };
 
                             Diagnostic {
                                 title: "Incomplete record update".into(),

@@ -322,7 +322,20 @@ impl<'module, 'a> Generator<'module, 'a> {
                 arguments, body, ..
             } => self.fn_(arguments, body),
 
-            TypedExpr::RecordAccess { record, label, .. } => self.record_access(record, label),
+            TypedExpr::RecordAccess {
+                record,
+                label,
+                kind: RecordAccessKind::Labelled,
+                ..
+            } => self.record_access(record, label),
+
+            TypedExpr::RecordAccess {
+                record,
+                index,
+                kind: RecordAccessKind::Positional,
+                ..
+            } => self.positional_record_access(record, *index),
+
             TypedExpr::RecordUpdate {
                 record_assignment,
                 constructor,
@@ -1401,6 +1414,13 @@ impl<'module, 'a> Generator<'module, 'a> {
         self.not_in_tail_position(None, |this| {
             let record = this.wrap_expression(record);
             docvec![record, ".", maybe_escape_property(label)]
+        })
+    }
+
+    fn positional_record_access(&mut self, record: &'a TypedExpr, index: u64) -> Document<'a> {
+        self.not_in_tail_position(None, |this| {
+            let record = this.wrap_expression(record);
+            docvec![record, "[", index, "]"]
         })
     }
 

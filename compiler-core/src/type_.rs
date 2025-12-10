@@ -664,6 +664,7 @@ pub struct AccessorsMap {
     pub type_: Arc<Type>,
     pub shared_accessors: HashMap<EcoString, RecordAccessor>,
     pub variant_specific_accessors: Vec<HashMap<EcoString, RecordAccessor>>,
+    pub variant_positional_accessors: Vec<Vec<Arc<Type>>>,
 }
 
 impl AccessorsMap {
@@ -674,6 +675,11 @@ impl AccessorsMap {
         inferred_variant
             .and_then(|index| self.variant_specific_accessors.get(index as usize))
             .unwrap_or(&self.shared_accessors)
+    }
+
+    pub fn positional_accessors(&self, inferred_variant: u16) -> Option<&Vec<Arc<Type>>> {
+        self.variant_positional_accessors
+            .get(inferred_variant as usize)
     }
 }
 

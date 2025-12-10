@@ -105,6 +105,7 @@ pub enum TypedExpr {
         index: u64,
         record: Box<Self>,
         documentation: Option<EcoString>,
+        kind: RecordAccessKind,
     },
 
     ModuleSelect {
@@ -1525,4 +1526,13 @@ pub enum InvalidExpression {
     UnknownVariable {
         name: EcoString,
     },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RecordAccessKind {
+    /// A regular record access using the `value.label` syntax.
+    Labelled,
+    /// Access of an unlabelled field, generated internally by the compiler, such
+    /// as in record updates.
+    Positional,
 }

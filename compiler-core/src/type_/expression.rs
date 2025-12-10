@@ -5,7 +5,7 @@ use crate::{
     ast::{
         Arg, Assert, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment,
         CAPTURE_VARIABLE, CallArg, Clause, ClauseGuard, Constant, FunctionLiteralKind, HasLocation,
-        ImplicitCallArgOrigin, InvalidExpression, Layer, RECORD_UPDATE_VARIABLE,
+        ImplicitCallArgOrigin, InvalidExpression, Layer, RECORD_UPDATE_VARIABLE, RecordAccessKind,
         RecordBeingUpdated, SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssert,
         TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant, TypedExpr,
         TypedMultiPattern, TypedStatement, USE_ASSIGNMENT_VARIABLE, UntypedArg, UntypedAssert,
@@ -1476,6 +1476,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         index: u64::MAX,
                         record: Box::new(record),
                         documentation: None,
+                        kind: RecordAccessKind::Labelled,
                     },
                     Err(_) => TypedExpr::Invalid {
                         location,
@@ -3075,6 +3076,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             location,
             type_,
             documentation,
+            kind: RecordAccessKind::Labelled,
         })
     }
 
@@ -3262,7 +3264,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         Ok(TypedExpr::RecordUpdate {
             location,
-            type_: variant.retn,
+            type_: variant.return_type,
             record_assignment,
             constructor: Box::new(typed_constructor),
             arguments,
@@ -3278,10 +3280,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> Result<Vec<TypedCallArg>, Error> {
         let record_location = record.location();
         let record_type = record.type_();
-        let return_type = variant.retn.clone();
+        let return_type = variant.return_type.clone();
 
         // We clone the fields to remove all explicitly mentioned fields in the record update.
-        let mut fields = variant.fields.clone();
+        let mut fields = variant.field_map.fields.clone();
 
         // collect explicit arguments given in the record update
         let explicit_arguments = arguments
@@ -3335,7 +3337,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .collect::<Result<Vec<_>, _>>()?;
 
         // Generate the remaining copied arguments, making sure they unify with our return type.
-        let convert_incompatible_fields_error = |e: UnifyError, label: EcoString| match e {
+        let convert_incompatible_fields_error = |e: UnifyError, field: RecordField| match e {
             UnifyError::CouldNotUnify {
                 expected, given, ..
             } => Error::UnsafeRecordUpdate {
@@ -3345,15 +3347,21 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     record_variant: record_type.clone(),
                     expected_field_type: expected,
                     record_field_type: given,
-                    field_name: label,
+                    field,
                 },
             },
             _ => convert_unify_error(e, record_location),
         };
 
-        let implicit_arguments = fields
-            .into_iter()
-            .map(|(label, index)| {
+        let indices_to_labels = variant.field_map.indices_to_labels();
+        let mut implicit_arguments = Vec::new();
+
+        for index in 0..variant.field_map.arity {
+            if let Some(&label) = indices_to_labels.get(&index) {
+                if !fields.contains_key(label) {
+                    continue;
+                }
+
                 let record_access = self.infer_known_record_expression_access(
                     record.clone(),
                     label.clone(),
@@ -3363,20 +3371,107 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     FieldAccessUsage::RecordUpdate,
                 )?;
 
-                unify(variant.arg_type(index), record_access.type_())
-                    .map_err(|e| convert_incompatible_fields_error(e, label.clone()))?;
+                unify(variant.arg_type(index), record_access.type_()).map_err(|e| {
+                    convert_incompatible_fields_error(e, RecordField::Labelled(label.clone()))
+                })?;
 
-                Ok((
+                implicit_arguments.push((
                     index,
                     CallArg {
                         location: record_location,
-                        label: Some(label),
+                        label: Some(label.clone()),
                         value: record_access,
                         implicit: Some(ImplicitCallArgOrigin::RecordUpdate),
                     },
                 ))
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+            } else {
+                let (accessor_type, positional_fields) =
+                    match collapse_links(record.type_()).as_ref() {
+                        // A type in the current module
+                        Type::Named {
+                            module,
+                            name,
+                            inferred_variant,
+                            ..
+                        } if module == &self.environment.current_module => {
+                            self.environment
+                                .accessors
+                                .get(name)
+                                .and_then(|accessors_map| {
+                                    Some((
+                                        accessors_map.type_.clone(),
+                                        // For record updates we must know the variant of the record, so if the
+                                        // variant has not been inferred, that means there must only be one.
+                                        accessors_map
+                                            .positional_accessors(inferred_variant.unwrap_or(0))?,
+                                    ))
+                                })
+                        }
+
+                        // A type in another module
+                        Type::Named {
+                            module,
+                            name,
+                            inferred_variant,
+                            ..
+                        } => self
+                            .environment
+                            .importable_modules
+                            .get(module)
+                            .and_then(|module| module.accessors.get(name))
+                            .filter(|a| {
+                                a.publicity.is_importable()
+                                    || module == &self.environment.current_module
+                            })
+                            .and_then(|accessors_map| {
+                                Some((
+                                    accessors_map.type_.clone(),
+                                    accessors_map
+                                        .positional_accessors(inferred_variant.unwrap_or(0))?,
+                                ))
+                            }),
+
+                        _ => panic!("Type has already checked to be valid"),
+                    }
+                    .expect("Variant has already checked to be valid");
+
+                let type_ = positional_fields
+                    .get(index as usize)
+                    .expect("Field exists")
+                    .clone();
+                let mut type_vars = im::HashMap::new();
+                let accessor_type = self.instantiate(accessor_type, &mut type_vars);
+                let type_ = self.instantiate(type_, &mut type_vars);
+                unify(accessor_type, record_type.clone()).map_err(|e| {
+                    convert_incompatible_fields_error(e, RecordField::Unlabelled(index))
+                })?;
+
+                let record_access = TypedExpr::RecordAccess {
+                    record: Box::new(record.clone()),
+                    label: "".into(),
+                    field_start: record_location.start,
+                    index: index as u64,
+                    location: record_location,
+                    type_: type_.clone(),
+                    documentation: None,
+                    kind: RecordAccessKind::Positional,
+                };
+
+                unify(variant.arg_type(index), type_.clone()).map_err(|e| {
+                    convert_incompatible_fields_error(e, RecordField::Unlabelled(index))
+                })?;
+
+                implicit_arguments.push((
+                    index,
+                    CallArg {
+                        location: record_location,
+                        label: None,
+                        value: record_access,
+                        implicit: Some(ImplicitCallArgOrigin::RecordUpdate),
+                    },
+                ))
+            }
+        }
 
         if explicit_arguments.is_empty() {
             self.problems
@@ -3458,8 +3553,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         if variants_count == 1 {
             return Ok(RecordUpdateVariant {
                 arguments: arguments_types,
-                retn: return_type,
-                fields: &field_map.fields,
+                return_type,
+                field_map,
             });
         }
 
@@ -3469,8 +3564,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             self.track_feature_usage(FeatureKind::RecordUpdateVariantInference, record.location());
             return Ok(RecordUpdateVariant {
                 arguments: arguments_types,
-                retn: return_type,
-                fields: &field_map.fields,
+                return_type,
+                field_map,
             });
         }
 
@@ -5529,8 +5624,8 @@ impl UseAssignments {
 #[derive(Debug)]
 struct RecordUpdateVariant<'a> {
     arguments: Vec<Arc<Type>>,
-    retn: Arc<Type>,
-    fields: &'a HashMap<EcoString, u32>,
+    return_type: Arc<Type>,
+    field_map: &'a FieldMap,
 }
 
 impl RecordUpdateVariant<'_> {
@@ -5542,11 +5637,11 @@ impl RecordUpdateVariant<'_> {
     }
 
     fn has_field(&self, str: &EcoString) -> bool {
-        self.fields.contains_key(str)
+        self.field_map.fields.contains_key(str)
     }
 
     fn field_names(&self) -> Vec<EcoString> {
-        self.fields.keys().cloned().collect()
+        self.field_map.fields.keys().cloned().collect()
     }
 }
 
