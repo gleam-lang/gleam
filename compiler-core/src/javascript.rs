@@ -266,7 +266,8 @@ impl<'a> Generator<'a> {
                 AssignName::Variable("stdlib$dict".into()),
                 SrcSpan::default(),
             ));
-            self.register_import(imports, "gleam_stdlib", "dict", &value, &[]);
+
+            self.register_import(imports, "gleam_stdlib", "gleam/dict", &value, &[]);
         }
         self.register_prelude_usage(imports, "BitArray", Some("$BitArray"));
         self.register_prelude_usage(imports, "List", Some("$List"));
