@@ -1,0 +1,34 @@
+---
+source: compiler-core/src/erlang/tests/records.rs
+expression: "\npub type Wibble {\n  Wibble(Int, Float, b: Bool, s: String)\n}\n\npub fn main() {\n  let record = Wibble(1, 3.14, True, \"Hello\")\n  Wibble(..record, b: False)\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(Int, Float, b: Bool, s: String)
+}
+
+pub fn main() {
+  let record = Wibble(1, 3.14, True, "Hello")
+  Wibble(..record, b: False)
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
+-export_type([wibble/0]).
+
+-type wibble() :: {wibble, integer(), float(), boolean(), binary()}.
+
+-file("project/test/my/mod.gleam", 6).
+-spec main() -> wibble().
+main() ->
+    Record = {wibble, 1, 3.14, true, <<"Hello"/utf8>>},
+    {wibble,
+        erlang:element(2, Record),
+        erlang:element(3, Record),
+        false,
+        erlang:element(5, Record)}.

@@ -3383,3 +3383,19 @@ pub type Dict(key, value) {
 "#
     );
 }
+
+#[test]
+fn generic_unlabelled_field_in_updated_record_wrong_type() {
+    assert_module_error!(
+        "
+pub type Wibble(a) {
+  Wibble(a, b: Int, c: a)
+}
+
+pub fn main() {
+  let w = Wibble(1, 2, 3)
+  Wibble(..w, c: False)
+}
+"
+    );
+}

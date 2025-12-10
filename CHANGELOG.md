@@ -8,6 +8,10 @@
   custom types.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where updating records with unlabelled fields would result in
+  invalid code.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.14.0-rc1 - 2025-12-15
 
 ### Compiler

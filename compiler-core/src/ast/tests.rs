@@ -150,6 +150,7 @@ fn compile_expression(src: &str) -> TypedStatement {
             type_: cat_type,
             shared_accessors: accessors.clone().into(),
             variant_specific_accessors: vec![accessors.into()],
+            variant_positional_accessors: vec![vec![]],
         },
     );
     let mut problems = Problems::new();

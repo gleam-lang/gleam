@@ -686,6 +686,11 @@ impl ModuleDecoder {
                 self,
                 variant_specific_accessors
             ),
+            variant_positional_accessors: read_vec!(
+                &reader.get_positional_accessors()?,
+                self,
+                positional_accessors
+            ),
         })
     }
 
@@ -698,6 +703,13 @@ impl ModuleDecoder {
             self,
             record_accessor
         ))
+    }
+
+    fn positional_accessors(
+        &mut self,
+        reader: &positional_accessors::Reader<'_>,
+    ) -> Result<Vec<Arc<Type>>> {
+        Ok(read_vec!(&reader.get_accessors()?, self, type_))
     }
 
     fn record_accessor(&mut self, reader: &record_accessor::Reader<'_>) -> Result<RecordAccessor> {

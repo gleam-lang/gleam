@@ -1189,6 +1189,7 @@ where
             index,
             record,
             documentation,
+            kind: _,
         } => v.visit_typed_expr_record_access(
             location,
             field_start,

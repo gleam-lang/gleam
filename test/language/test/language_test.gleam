@@ -1942,6 +1942,10 @@ type Person {
   Person(name: String, age: Int, country: String)
 }
 
+type MixedRecord {
+  MixedRecord(Int, Float, labelled_1: Int, labelled_2: String)
+}
+
 fn record_update_tests() {
   [
     "unqualified record update"
@@ -1967,6 +1971,13 @@ fn record_update_tests() {
               |> id,
           )
         assert_equal(record_update.Box("a", 6), updated)
+      }),
+    "unlabelled field in record update"
+      |> example(fn() {
+        let record =
+          MixedRecord(1, 3.14, labelled_1: 3982, labelled_2: "Something")
+        let updated = MixedRecord(..record, labelled_1: 12)
+        assert_equal(MixedRecord(1, 3.14, 12, "Something"), updated)
       }),
   ]
 }

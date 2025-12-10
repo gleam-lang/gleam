@@ -115,14 +115,21 @@ impl<'a> ModuleEncoder<'a> {
             self.build_record_accessor(property.init_value(), accessor)
         }
 
-        let mut builder = builder
+        let mut variant_accessors = builder
+            .reborrow()
             .init_variant_specific_accessors(accessors.variant_specific_accessors.len() as u32);
         for (i, map) in accessors.variant_specific_accessors.iter().enumerate() {
-            self.build_constructor_accessors(builder.reborrow().get(i as u32), map);
+            self.build_variant_accessors(variant_accessors.reborrow().get(i as u32), map);
+        }
+
+        let mut positional_accessors =
+            builder.init_positional_accessors(accessors.variant_positional_accessors.len() as u32);
+        for (i, fields) in accessors.variant_positional_accessors.iter().enumerate() {
+            self.build_positional_accessors(positional_accessors.reborrow().get(i as u32), fields);
         }
     }
 
-    fn build_constructor_accessors(
+    fn build_variant_accessors(
         &mut self,
         builder: variant_specific_accessors::Builder<'_>,
         accessors: &HashMap<EcoString, RecordAccessor>,
@@ -132,6 +139,17 @@ impl<'a> ModuleEncoder<'a> {
             let mut property = builder.reborrow().get(i as u32);
             property.set_key(name);
             self.build_record_accessor(property.init_value(), accessor)
+        }
+    }
+
+    fn build_positional_accessors(
+        &mut self,
+        builder: positional_accessors::Builder<'_>,
+        accessors: &[Arc<Type>],
+    ) {
+        let mut builder = builder.init_accessors(accessors.len() as u32);
+        for (i, type_) in accessors.iter().enumerate() {
+            self.build_type(builder.reborrow().get(i as u32), type_);
         }
     }
 

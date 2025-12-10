@@ -116,10 +116,15 @@ struct AccessorsMap {
   sharedAccessors @1 :List(Property(RecordAccessor));
   variantSpecificAccessors @2 :List(VariantSpecificAccessors);
   publicity @3 :Publicity;
+  positionalAccessors @4 :List(PositionalAccessors);
 }
 
 struct VariantSpecificAccessors {
   accessors @0 :List(Property(RecordAccessor));
+}
+
+struct PositionalAccessors {
+  accessors @0 :List(Type);
 }
 
 struct RecordAccessor {

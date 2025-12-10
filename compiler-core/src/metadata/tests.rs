@@ -939,6 +939,7 @@ fn accessors() {
                     type_: type_::int(),
                     shared_accessors: accessors1.clone().into(),
                     variant_specific_accessors: vec![accessors1.into()],
+                    variant_positional_accessors: vec![vec![type_::int(), type_::float()]],
                 },
             ),
             (
@@ -948,6 +949,7 @@ fn accessors() {
                     type_: type_::int(),
                     shared_accessors: accessors2.clone().into(),
                     variant_specific_accessors: vec![accessors2.into()],
+                    variant_positional_accessors: vec![vec![]],
                 },
             ),
         ]
@@ -1017,6 +1019,7 @@ fn private_accessors() {
                     type_: type_::int(),
                     shared_accessors: accessors1.clone().into(),
                     variant_specific_accessors: vec![accessors1.into()],
+                    variant_positional_accessors: vec![vec![type_::int(), type_::float()]],
                 },
             ),
             (
@@ -1026,6 +1029,7 @@ fn private_accessors() {
                     type_: type_::int(),
                     shared_accessors: accessors2.clone().into(),
                     variant_specific_accessors: vec![accessors2.into()],
+                    variant_positional_accessors: vec![vec![]],
                 },
             ),
         ]

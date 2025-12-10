@@ -1477,8 +1477,14 @@ pub enum UnsafeRecordUpdateReason {
         record_variant: Arc<Type>,
         expected_field_type: Arc<Type>,
         record_field_type: Arc<Type>,
-        field_name: EcoString,
+        field: RecordField,
     },
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub enum RecordField {
+    Labelled(EcoString),
+    Unlabelled(u32),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

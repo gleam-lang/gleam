@@ -9,7 +9,9 @@ use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FieldMap {
+    /// Number of accepted arguments, including unlabelled fields.
     pub arity: u32,
+    /// Map of labels to argument indices
     pub fields: HashMap<EcoString, u32>,
 }
 
