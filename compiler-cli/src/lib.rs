@@ -44,7 +44,8 @@
 #![allow(
     clippy::match_single_binding,
     clippy::inconsistent_struct_constructor,
-    clippy::assign_op_pattern
+    clippy::assign_op_pattern,
+    clippy::len_without_is_empty
 )]
 
 #[cfg(test)]
