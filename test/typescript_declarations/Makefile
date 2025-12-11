@@ -5,4 +5,4 @@ clean:
 .PHONY: test
 test:
 	cargo run --quiet -- build
-	npx tsc ./main.ts --strict --noEmit --lib es2015,dom
+	tsc ./main.ts --strict --noEmit --lib es2015,dom
