@@ -7,7 +7,7 @@ pub type IntAlias =
 /// Int constant
 pub const const_int: Int = 0
 
-/// Constant with type of Int alias
+/// Constat with type of Int alias
 pub const const_int_alias: IntAlias = 0
 
 /// String list constant
@@ -26,6 +26,10 @@ pub fn function_int_int_returns_int(first a: Int, second b: Int) -> Int {
 
 /// Alias to add function
 pub const function_int_int_returns_int_alias = function_int_int_returns_int
+
+// /// Create alert on browser target
+// @external(javascript, "globalThis", "alert")
+// pub fn js_alert_external(text: String) -> Nil
 
 /// Return function that will add one to given number
 pub fn function_closure_returns_fn_int_which_returns_int_alias() -> fn(Int) ->
