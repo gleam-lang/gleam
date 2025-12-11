@@ -14,7 +14,7 @@ const add_one: (_: number) => number = Gleam.add_one()
 const two: number = add_one(1)
 
 // Check UserId type alias
-const first_moderator: Gleam.UserId = Gleam.moders.toArray()[ 0];
+const first_moderator: Gleam.UserId = Gleam.moders[ 0];
 const first_moderator_num: number = first_moderator;
 const me: UserID = 84738;
 type UserID = Gleam.UserId;
@@ -46,7 +46,7 @@ const user: Gleam.User$ = new Gleam.User("King", 83874, new Gleam.PlainUser());
 const guest: Gleam.User$ = new Gleam.Guest();
 const user_username: Option$<string> = Gleam.user_name(user);
 const guest_username: Option$<string> = Gleam.user_name(guest);
-const plain_user_string: string = Gleam.role_string((user as Gleam.User).role);
+const plain_user_string: string = Gleam.role_string(user.withFields["role"]);
 
 // Check Either type
 const left_either: Gleam.Either$<string, number> = new Gleam.Left("Hello!");
