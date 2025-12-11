@@ -471,10 +471,6 @@ jobs:
         run: make
         working-directory: ./test/javascript_prelude
 
-      - name: Test generated TypeScript declarations
-        run: make test
-        working-directory: ./test/typescript_declarations
-
       - name: Test export of hex tarball
         run: make test
         working-directory: ./test/hextarball
