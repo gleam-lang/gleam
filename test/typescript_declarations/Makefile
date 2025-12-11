@@ -5,4 +5,4 @@ clean:
 .PHONY: test
 test:
 	cargo run --quiet -- build
-	tsc ./main.ts --noEmit --lib es2015,dom
+	tsc ./build/dev/javascript/typescript_declarations/typescript_declarations.d.mts --noEmit --lib es2015
