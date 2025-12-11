@@ -1,7 +1,8 @@
 use std::{collections::HashSet, iter, sync::Arc};
 
 use crate::{
-    Error, STDLIB_PACKAGE_NAME, analyse,
+    Error, STDLIB_PACKAGE_NAME,
+    analyse::Inferred,
     ast::{
         self, ArgNames, AssignName, AssignmentKind, BitArraySegmentTruncation, BoundVariable,
         BoundVariableName, CallArg, CustomType, FunctionLiteralKind, ImplicitCallArgOrigin, Import,
@@ -902,7 +903,7 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
         name: &'ast EcoString,
         arguments: &'ast Vec<CallArg<TypedPattern>>,
         module: &'ast Option<(EcoString, SrcSpan)>,
-        constructor: &'ast analyse::Inferred<type_::PatternConstructor>,
+        constructor: &'ast Inferred<type_::PatternConstructor>,
         spread: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
     ) {
@@ -1667,14 +1668,14 @@ impl<'ast, IO> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass
         name: &'ast EcoString,
         arguments: &'ast Vec<CallArg<TypedPattern>>,
         module: &'ast Option<(EcoString, SrcSpan)>,
-        constructor: &'ast analyse::Inferred<type_::PatternConstructor>,
+        constructor: &'ast Inferred<type_::PatternConstructor>,
         spread: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
     ) {
         let range = src_span_to_lsp_range(*location, self.line_numbers);
         if overlaps(self.params.range, range)
             && let Some((module_alias, _)) = module
-            && let analyse::Inferred::Known(_) = constructor
+            && let Inferred::Known(_) = constructor
             && let Some(import) = self.get_module_import(module_alias, name, ast::Layer::Value)
         {
             self.qualified_constructor = Some(QualifiedConstructor {
@@ -1705,7 +1706,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass
         arguments: &'ast Vec<CallArg<ast::TypedConstant>>,
         tag: &'ast EcoString,
         type_: &'ast Arc<Type>,
-        field_map: &'ast Option<FieldMap>,
+        field_map: &'ast Inferred<FieldMap>,
         record_constructor: &'ast Option<Box<ValueConstructor>>,
     ) {
         let range = src_span_to_lsp_range(*location, self.line_numbers);
@@ -1909,12 +1910,12 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
         name: &'ast EcoString,
         arguments: &'ast Vec<CallArg<TypedPattern>>,
         module: &'ast Option<(EcoString, SrcSpan)>,
-        constructor: &'ast analyse::Inferred<type_::PatternConstructor>,
+        constructor: &'ast Inferred<type_::PatternConstructor>,
         spread: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
     ) {
         if let Some((module_alias, _)) = module
-            && let analyse::Inferred::Known(_) = constructor
+            && let Inferred::Known(_) = constructor
         {
             let QualifiedConstructor {
                 used_name,
@@ -1948,7 +1949,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
         arguments: &'ast Vec<CallArg<ast::TypedConstant>>,
         tag: &'ast EcoString,
         type_: &'ast Arc<Type>,
-        field_map: &'ast Option<FieldMap>,
+        field_map: &'ast Inferred<FieldMap>,
         record_constructor: &'ast Option<Box<ValueConstructor>>,
     ) {
         if let Some((module_alias, _)) = module {
@@ -2158,7 +2159,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
         name: &'ast EcoString,
         arguments: &'ast Vec<CallArg<TypedPattern>>,
         module: &'ast Option<(EcoString, SrcSpan)>,
-        constructor: &'ast analyse::Inferred<type_::PatternConstructor>,
+        constructor: &'ast Inferred<type_::PatternConstructor>,
         spread: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
     ) {
@@ -2167,7 +2168,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
                 self.params.range,
                 src_span_to_lsp_range(*location, self.line_numbers),
             )
-            && let analyse::Inferred::Known(constructor) = constructor
+            && let Inferred::Known(constructor) = constructor
         {
             self.get_module_import_from_value_constructor(&constructor.module, name);
         }
@@ -2193,7 +2194,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
         arguments: &'ast Vec<CallArg<ast::TypedConstant>>,
         _tag: &'ast EcoString,
         _type_: &'ast Arc<Type>,
-        _field_map: &'ast Option<FieldMap>,
+        _field_map: &'ast Inferred<FieldMap>,
         record_constructor: &'ast Option<Box<ValueConstructor>>,
     ) {
         if module.is_none()
@@ -2401,7 +2402,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
         name: &'ast EcoString,
         arguments: &'ast Vec<CallArg<TypedPattern>>,
         module: &'ast Option<(EcoString, SrcSpan)>,
-        constructor: &'ast analyse::Inferred<type_::PatternConstructor>,
+        constructor: &'ast Inferred<type_::PatternConstructor>,
         spread: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
     ) {
@@ -2436,7 +2437,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
         arguments: &'ast Vec<CallArg<ast::TypedConstant>>,
         tag: &'ast EcoString,
         type_: &'ast Arc<Type>,
-        field_map: &'ast Option<FieldMap>,
+        field_map: &'ast Inferred<FieldMap>,
         record_constructor: &'ast Option<Box<ValueConstructor>>,
     ) {
         if module.is_none() {
@@ -6222,7 +6223,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for GenerateVariant<'ast, IO> {
         name: &'ast EcoString,
         arguments: &'ast Vec<CallArg<TypedPattern>>,
         module: &'ast Option<(EcoString, SrcSpan)>,
-        constructor: &'ast analyse::Inferred<type_::PatternConstructor>,
+        constructor: &'ast Inferred<type_::PatternConstructor>,
         spread: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
     ) {
