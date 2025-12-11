@@ -1,4 +1,4 @@
-use std::{env, io::Read, process::Stdio};
+use std::{io::Read, process::Stdio};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use gleam_core::{

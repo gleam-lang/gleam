@@ -786,18 +786,15 @@ impl<'a> FillInMissingLabelledArgs<'a> {
             //   call(one|)
             //           ^ Cursor here, no comma behind, we'll have to add one!
             //
-            let has_comma_after_last_argument = if let Some(last_arg) = arguments
-                .iter()
-                .filter(|arg| !arg.is_implicit())
-                .next_back()
-            {
-                self.module
-                    .code
-                    .get(last_arg.location.end as usize..=label_insertion_start as usize)
-                    .is_some_and(|text| text.contains(','))
-            } else {
-                false
-            };
+            let has_comma_after_last_argument =
+                if let Some(last_arg) = arguments.iter().rfind(|arg| !arg.is_implicit()) {
+                    self.module
+                        .code
+                        .get(last_arg.location.end as usize..=label_insertion_start as usize)
+                        .is_some_and(|text| text.contains(','))
+                } else {
+                    false
+                };
 
             let format_label = match kind {
                 SelectedCallKind::Value => |label| format!("{label}: todo"),
@@ -2365,10 +2362,7 @@ impl<'a> ConvertFromUse<'a> {
             .get(use_line_end as usize - 1..use_line_end as usize)
             == Some(")");
 
-        let last_explicit_arg = arguments
-            .iter()
-            .filter(|argument| !argument.is_implicit())
-            .next_back();
+        let last_explicit_arg = arguments.iter().rfind(|argument| !argument.is_implicit());
         let last_arg_end = last_explicit_arg.map_or(use_line_end - 1, |arg| arg.location.end);
 
         // This is the piece of code between the end of the last argument and
@@ -7159,8 +7153,7 @@ impl<'ast> ast::visit::Visit<'ast> for FillUnusedFields<'ast> {
 
             let last_argument_end = arguments
                 .iter()
-                .filter(|arg| !arg.is_implicit())
-                .next_back()
+                .rfind(|arg| !arg.is_implicit())
                 .map(|arg| arg.location.end);
 
             self.data = Some(FillUnusedFieldsData {
