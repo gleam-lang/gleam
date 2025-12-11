@@ -39,6 +39,7 @@ use crate::{
     build_lock::{BuildLock, Guard},
     cli,
     fs::{self, ProjectIO},
+    get_hex_config,
     http::HttpClient,
     text_layout::space_table,
 };
@@ -66,12 +67,12 @@ pub enum CheckMajorVersions {
 }
 
 pub fn list(paths: &ProjectPaths) -> Result<()> {
-    let (_, manifest) = get_manifest_details(paths)?;
+    let (_, manifest) = get_manifest_details(paths, &get_hex_config()?)?;
     list_manifest_packages(std::io::stdout(), manifest)
 }
 
 pub fn tree(paths: &ProjectPaths, options: TreeOptions) -> Result<()> {
-    let (config, manifest) = get_manifest_details(paths)?;
+    let (config, manifest) = get_manifest_details(paths, &get_hex_config()?)?;
 
     // Initialize the root package since it is not part of the manifest
     let root_package = ManifestPackage {
@@ -92,10 +93,13 @@ pub fn tree(paths: &ProjectPaths, options: TreeOptions) -> Result<()> {
     list_package_and_dependencies_tree(std::io::stdout(), options, packages.clone(), config.name)
 }
 
-fn get_manifest_details(paths: &ProjectPaths) -> Result<(PackageConfig, Manifest)> {
+fn get_manifest_details(
+    paths: &ProjectPaths,
+    hex_config: &hexpm::Config,
+) -> Result<(PackageConfig, Manifest)> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let config = crate::config::root_config(paths)?;
-    let package_fetcher = PackageFetcher::new(runtime.handle().clone());
+    let package_fetcher = PackageFetcher::new(runtime.handle().clone(), hex_config.clone());
     let dependency_manager = DependencyManagerConfig {
         use_manifest: UseManifest::Yes,
         check_major_versions: CheckMajorVersions::No,
@@ -105,6 +109,7 @@ fn get_manifest_details(paths: &ProjectPaths) -> Result<(PackageConfig, Manifest
         package_fetcher,
         cli::Reporter::new(),
         Mode::Dev,
+        hex_config.clone(),
     );
     let manifest = dependency_manager
         .resolve_versions(paths, &config, Vec::new())?
@@ -220,10 +225,11 @@ fn list_dependencies_tree(
 }
 
 pub fn outdated(paths: &ProjectPaths) -> Result<()> {
-    let (_, manifest) = get_manifest_details(paths)?;
+    let hex_config = get_hex_config()?;
+    let (_, manifest) = get_manifest_details(paths, &hex_config)?;
 
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
-    let package_fetcher = PackageFetcher::new(runtime.handle().clone());
+    let package_fetcher = PackageFetcher::new(runtime.handle().clone(), hex_config);
 
     let version_updates = dependency::check_for_version_updates(&manifest, &package_fetcher);
 
@@ -400,13 +406,15 @@ pub fn resolve_and_download<Telem: Telemetry>(
 ) -> Result<Manifest> {
     // Start event loop so we can run async functions to call the Hex API
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
-    let package_fetcher = PackageFetcher::new(runtime.handle().clone());
+    let hex_config = get_hex_config()?;
+    let package_fetcher = PackageFetcher::new(runtime.handle().clone(), hex_config.clone());
 
     let dependency_manager = config.into_dependency_manager(
         runtime.handle().clone(),
         package_fetcher,
         telemetry,
         Mode::Dev,
+        hex_config,
     );
 
     dependency_manager.resolve_and_download_versions(paths, new_package, packages_to_update)
@@ -443,6 +451,7 @@ async fn add_missing_packages<Telem: Telemetry>(
     local: &LocalPackages,
     project_name: EcoString,
     telemetry: &Telem,
+    hex_config: &hexpm::Config,
 ) -> Result<(), Error> {
     let missing_packages = local.missing_local_packages(manifest, &project_name);
 
@@ -469,7 +478,14 @@ async fn add_missing_packages<Telem: Telemetry>(
     // If we need to download at-least one package
     if missing_hex_packages.peek().is_some() || !missing_git_packages.is_empty() {
         let http = HttpClient::boxed();
-        let downloader = hex::Downloader::new(fs.clone(), fs, http, Untar::boxed(), paths.clone());
+        let downloader = hex::Downloader::new(
+            fs.clone(),
+            fs,
+            http,
+            Untar::boxed(),
+            hex_config.clone(),
+            paths.clone(),
+        );
         let start = Instant::now();
         telemetry.downloading_package("packages");
         downloader
@@ -1089,13 +1105,13 @@ async fn lookup_package(
     name: String,
     version: Version,
     provided: &HashMap<EcoString, ProvidedPackage>,
+    hex_config: &hexpm::Config,
 ) -> Result<ManifestPackage> {
     match provided.get(name.as_str()) {
         Some(provided_package) => Ok(provided_package.to_manifest_package(name.as_str())),
         None => {
-            let config = hexpm::Config::new();
             let release =
-                hex::get_package_release(&name, &version, &config, &HttpClient::new()).await?;
+                hex::get_package_release(&name, &version, hex_config, &HttpClient::new()).await?;
             let build_tools = release
                 .meta
                 .build_tools
@@ -1125,14 +1141,16 @@ struct PackageFetcher {
     runtime_cache: RefCell<HashMap<String, Rc<hexpm::Package>>>,
     runtime: tokio::runtime::Handle,
     http: HttpClient,
+    hex_config: hexpm::Config,
 }
 
 impl PackageFetcher {
-    pub fn new(runtime: tokio::runtime::Handle) -> Self {
+    pub fn new(runtime: tokio::runtime::Handle, hex_config: hexpm::Config) -> Self {
         Self {
             runtime_cache: RefCell::new(HashMap::new()),
             runtime,
             http: HttpClient::new(),
+            hex_config,
         }
     }
 
@@ -1183,8 +1201,7 @@ impl dependency::PackageFetcher for PackageFetcher {
         }
 
         tracing::debug!(package = package, "looking_up_hex_package");
-        let config = hexpm::Config::new();
-        let request = hexpm::repository_v2_get_package_request(package, None, &config);
+        let request = hexpm::repository_v2_get_package_request(package, None, &self.hex_config);
         let response = self
             .runtime
             .block_on(self.http.send(request))
