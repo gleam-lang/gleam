@@ -113,3 +113,21 @@ pub type Wibble {
 "
     );
 }
+
+#[test]
+fn const_record_update_generic_respecialization() {
+    assert_js!(
+        "
+pub type Box(a) {
+  Box(name: String, value: a)
+}
+
+pub const base = Box(\"score\", 50)
+pub const updated = Box(..base, value: \"Hello\")
+
+pub fn main() {
+  #(base, updated)
+}
+",
+    );
+}
