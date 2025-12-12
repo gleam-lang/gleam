@@ -1,0 +1,41 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nfn main() {\n  let x: String = 5\n  let y: Int = x\n  let z: String = x\n}\n"
+---
+----- SOURCE CODE
+
+fn main() {
+  let x: String = 5
+  let y: Int = x
+  let z: String = x
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:19
+  │
+3 │   let x: String = 5
+  │                   ^
+
+Expected type:
+
+    String
+
+Found type:
+
+    Int
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:4:16
+  │
+4 │   let y: Int = x
+  │                ^
+
+Expected type:
+
+    Int
+
+Found type:
+
+    String

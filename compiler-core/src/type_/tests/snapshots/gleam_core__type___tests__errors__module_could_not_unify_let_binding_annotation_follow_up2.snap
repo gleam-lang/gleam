@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nfn main() {\n    let assert #(\n        a, \n        [[_, ..] as b, ..], \n        _ as c\n    ): #(String, List(List(Int)), String) = #(1, [[\"Hello\"]], 3)\n\n    let d: String = a <> c\n    let e: List(Int) = [0, ..b]\n}\n"
+---
+----- SOURCE CODE
+
+fn main() {
+    let assert #(
+        a, 
+        [[_, ..] as b, ..], 
+        _ as c
+    ): #(String, List(List(Int)), String) = #(1, [["Hello"]], 3)
+
+    let d: String = a <> c
+    let e: List(Int) = [0, ..b]
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:7:45
+  │
+7 │     ): #(String, List(List(Int)), String) = #(1, [["Hello"]], 3)
+  │                                             ^^^^^^^^^^^^^^^^^^^^
+
+Expected type:
+
+    #(String, List(List(Int)), String)
+
+Found type:
+
+    #(Int, List(List(String)), Int)
