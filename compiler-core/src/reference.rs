@@ -51,7 +51,7 @@ pub enum EntityKind {
 /// scope all at once!
 ///
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum EntityLayer {
+pub enum EntityLayer {
     /// An entity which exists in the type layer: a custom type, type variable
     /// or type alias.
     Type,
@@ -281,7 +281,12 @@ impl ReferenceTracker {
         // We first record a node for the module being aliased. We use its entire
         // name to identify it in this case and keep track of the node it's
         // associated with.
-        self.register_module(module_name.clone(), module_name.clone(), import_location);
+        self.register_module(
+            module_name.clone(),
+            module_name.clone(),
+            EntityLayer::Shadowed,
+            import_location,
+        );
 
         // Then we create a node for the alias, as the alias itself might be
         // unused!
@@ -289,7 +294,7 @@ impl ReferenceTracker {
         // Also we want to register the fact that if this alias is used then the
         // import is used: so we add a reference from the alias to the import
         // we've just added.
-        self.register_module_reference(module_name.clone());
+        self.register_module_reference_with_module_name(module_name.clone());
 
         // Finally we can add information for this alias:
         let entity = Entity {
@@ -311,16 +316,17 @@ impl ReferenceTracker {
         &mut self,
         used_name: EcoString,
         module_name: EcoString,
+        layer: EntityLayer,
         location: SrcSpan,
     ) {
-        self.current_node = self.create_node(used_name.clone(), EntityLayer::Module);
+        self.current_node = self.create_node(used_name.clone(), layer);
         let _ = self
             .module_name_to_node
             .insert(module_name.clone(), self.current_node);
 
         let entity = Entity {
             name: used_name,
-            layer: EntityLayer::Module,
+            layer,
         };
 
         _ = self.entity_information.insert(
@@ -344,7 +350,7 @@ impl ReferenceTracker {
             EntityKind::ImportedConstructor { module }
             | EntityKind::ImportedType { module }
             | EntityKind::ImportedValue { module } => {
-                self.register_module_reference(module.clone())
+                self.register_module_reference_with_module_name(module.clone())
             }
         }
     }
@@ -403,11 +409,25 @@ impl ReferenceTracker {
         _ = self.graph.add_edge(self.current_node, target, ());
     }
 
-    pub fn register_module_reference(&mut self, name: EcoString) {
-        let target = match self.module_name_to_node.get(&name) {
+    /// Register a module reference when we have information about the full
+    /// name of a module e.g. `wibble/wobble` instead of just `wobble`. This
+    /// function can be used when processing imports (aliases, unqualified
+    /// imports) as that is the only time we know the full module name. Since
+    /// full module names are not necessarily the name used to refer to the
+    /// module, this should NOT be used when inferring module access.
+    pub fn register_module_reference_with_module_name(&mut self, module_name: EcoString) {
+        let target = match self.module_name_to_node.get(&module_name) {
             Some(target) => *target,
-            None => self.get_or_create_node(name, EntityLayer::Module),
+            None => self.get_or_create_node(module_name, EntityLayer::Module),
         };
+        _ = self.graph.add_edge(self.current_node, target, ());
+    }
+
+    /// Register a module reference when we only know the name used to refer
+    /// to the module and not the full name of the module. This is the case
+    /// when inferring module access.
+    pub fn register_module_reference_with_used_name(&mut self, used_name: EcoString) {
+        let target = self.get_or_create_node(used_name, EntityLayer::Module);
         _ = self.graph.add_edge(self.current_node, target, ());
     }
 

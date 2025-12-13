@@ -3,7 +3,7 @@ use ecow::EcoString;
 use crate::{
     ast::{Publicity, SrcSpan, UnqualifiedImport, UntypedImport},
     build::Origin,
-    reference::{EntityKind, ReferenceKind},
+    reference::{EntityKind, EntityLayer, ReferenceKind},
     type_::{
         Environment, Error, ModuleInterface, Problems, ValueConstructorVariant, Warning,
         error::InvalidImportKind,
@@ -300,6 +300,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             self.environment.references.register_module(
                 used_name.clone(),
                 import.module.clone(),
+                EntityLayer::Module,
                 import.location,
             );
         }
