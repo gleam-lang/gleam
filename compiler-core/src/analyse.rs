@@ -16,7 +16,7 @@ use crate::{
         UntypedTypeAlias,
     },
     build::{Origin, Outcome, Target},
-    call_graph::{CallGraphNode, into_dependency_order},
+    call_graph::{CallGraphNode, into_dependency_order, into_mutually_recursive_groups},
     config::PackageConfig,
     dep_tree,
     inline::{self, InlinableFunction},
@@ -282,7 +282,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // Sort functions and constants into dependency order for inference.
         // Definitions that do not depend on other definitions are inferred
         // first, then ones that depend on those, etc.
-        let mut typed_functions = Vec::with_capacity(definitions.functions.len());
+        let mut typed_functions_groups = Vec::with_capacity(definitions.functions.len());
         let mut typed_constants = Vec::with_capacity(definitions.constants.len());
         let definition_groups =
             match into_dependency_order(definitions.functions, definitions.constants) {
@@ -314,13 +314,19 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     &self.module_name,
                 ))
             }
-            for inferred_function in working_functions.drain(..) {
-                typed_functions.push(generalise_function(
-                    inferred_function,
-                    &mut env,
-                    &self.module_name,
-                ));
-            }
+
+            let generalised_functions = working_functions
+                .drain(..)
+                .map(|function| generalise_function(function, &mut env, &self.module_name))
+                .collect_vec();
+
+            // After analysing a group of functions that depend on each other we
+            // further split them in groups of mutually recursive functions.
+            // We work on these smaller already existing groups as two functions
+            // that don't depend on each other are never going to be mutually
+            // recursive.
+            typed_functions_groups
+                .append(&mut into_mutually_recursive_groups(generalised_functions));
         }
 
         let typed_definitions = TypedDefinitions {
@@ -328,7 +334,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             constants: typed_constants,
             custom_types: typed_custom_types,
             type_aliases: typed_type_aliases,
-            functions: typed_functions,
+            functions: typed_functions_groups,
         };
 
         // Generate warnings for unused items

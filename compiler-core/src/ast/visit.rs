@@ -892,7 +892,7 @@ where
         v.visit_typed_custom_type(custom_type);
     }
 
-    for function in functions {
+    for function in functions.iter().flatten() {
         v.visit_typed_function(function);
     }
 }
