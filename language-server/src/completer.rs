@@ -10,7 +10,7 @@ use lsp_types::{
 use strum::IntoEnumIterator;
 use vec1::Vec1;
 
-use crate::{
+use gleam_core::{
     Result,
     ast::{
         self, Arg, CallArg, Function, FunctionLiteralKind, Pattern, Publicity, TypedExpr,
@@ -797,6 +797,7 @@ impl<'a, IO> Completer<'a, IO> {
                 .and_then(|i| i.accessors.get(name))
                 .filter(|a| a.publicity.is_importable() || module == &self.module.name)
                 .map(|a| a.accessors_for_variant(*inferred_variant)),
+
             Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => None,
         }
     }

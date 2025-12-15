@@ -18,11 +18,11 @@ mod tests;
 
 pub use server::LanguageServer;
 
-use crate::{
+use camino::Utf8PathBuf;
+use gleam_core::{
     Result, ast::SrcSpan, build::Target, line_numbers::LineNumbers, manifest::Manifest,
     paths::ProjectPaths,
 };
-use camino::Utf8PathBuf;
 use lsp_types::{Position, Range, TextEdit, Url};
 use std::any::Any;
 

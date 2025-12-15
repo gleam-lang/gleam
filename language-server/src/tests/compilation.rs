@@ -1,4 +1,4 @@
-use crate::language_server::engine::Compilation;
+use crate::engine::Compilation;
 
 use super::*;
 

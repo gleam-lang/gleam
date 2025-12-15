@@ -2,13 +2,12 @@ use debug_ignore::DebugIgnore;
 use ecow::EcoString;
 use itertools::Itertools;
 
-use crate::{
+use gleam_core::{
     Error, Result, Warning,
     analyse::TargetSupport,
     build::{self, Mode, Module, NullTelemetry, Outcome, ProjectCompiler},
     config::PackageConfig,
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
-    language_server::Locker,
     line_numbers::LineNumbers,
     manifest::Manifest,
     paths::ProjectPaths,
@@ -19,7 +18,7 @@ use std::{collections::HashMap, rc::Rc};
 
 use camino::Utf8PathBuf;
 
-use super::LockGuard;
+use super::{LockGuard, Locker};
 
 /// A wrapper around the project compiler which makes it possible to repeatedly
 /// recompile the top level package, reusing the information about the already

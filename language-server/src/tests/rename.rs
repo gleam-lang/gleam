@@ -4,9 +4,7 @@ use lsp_types::{
     Position, Range, RenameParams, TextDocumentPositionParams, Url, WorkDoneProgressParams,
 };
 
-use crate::language_server::tests::{TestProject, find_position_of};
-
-use super::hover;
+use super::{TestProject, find_position_of, hover};
 
 /// Returns the rename range and edit to apply if the rename is valid and can be
 /// carried out.

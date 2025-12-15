@@ -1,12 +1,8 @@
-use crate::{
+use gleam_core::{
     Error, Result,
     build::SourceFingerprint,
     error::{FileIoAction, FileKind},
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
-    language_server::{
-        DownloadDependencies, MakeLocker, engine::LanguageServerEngine, files::FileSystemProxy,
-        progress::ProgressReporter,
-    },
     paths::ProjectPaths,
 };
 use std::{
@@ -16,7 +12,10 @@ use std::{
 
 use camino::{Utf8Path, Utf8PathBuf};
 
-use super::feedback::FeedbackBookKeeper;
+use super::{
+    DownloadDependencies, MakeLocker, engine::LanguageServerEngine, feedback::FeedbackBookKeeper,
+    files::FileSystemProxy, progress::ProgressReporter,
+};
 
 /// The language server instance serves a language client, typically a text
 /// editor. The editor could have multiple Gleam projects open at once, so run
@@ -202,7 +201,7 @@ pub(crate) struct Project<A, B> {
 #[cfg(test)]
 mod find_gleam_project_parent_tests {
     use super::*;
-    use crate::io::{FileSystemWriter, memory::InMemoryFileSystem};
+    use gleam_core::io::{FileSystemWriter, memory::InMemoryFileSystem};
 
     #[test]
     fn root() {

@@ -1,23 +1,21 @@
 use super::{
+    DownloadDependencies, MakeLocker,
+    engine::{self, LanguageServerEngine},
+    feedback::{Feedback, FeedbackBookKeeper},
+    files::FileSystemProxy,
     messages::{Message, MessageBuffer, Next, Notification, Request},
     progress::ConnectionProgressReporter,
-};
-use crate::{
-    Result,
-    diagnostic::{Diagnostic, ExtraLabel, Level},
-    io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
-    language_server::{
-        DownloadDependencies, MakeLocker,
-        engine::{self, LanguageServerEngine},
-        feedback::{Feedback, FeedbackBookKeeper},
-        files::FileSystemProxy,
-        router::Router,
-        src_span_to_lsp_range,
-    },
-    line_numbers::LineNumbers,
+    router::Router,
+    src_span_to_lsp_range,
 };
 use camino::{Utf8Path, Utf8PathBuf};
 use debug_ignore::DebugIgnore;
+use gleam_core::{
+    Result,
+    diagnostic::{Diagnostic, ExtraLabel, Level},
+    io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
+    line_numbers::LineNumbers,
+};
 use lsp_server::ResponseError;
 use lsp_types::{
     self as lsp, HoverProviderCapability, InitializeParams, Position, PublishDiagnosticsParams,
@@ -308,7 +306,7 @@ where
     fn path_error_response(
         &mut self,
         path: Utf8PathBuf,
-        error: crate::Error,
+        error: gleam_core::Error,
     ) -> (Result<Json, ResponseError>, Feedback) {
         let feedback = match self.router.project_for_path(path) {
             Ok(Some(project)) => project.feedback.error(error),
@@ -329,7 +327,7 @@ where
             Err(error) => return self.path_error_response(path, error),
         };
 
-        if let Err(error) = crate::format::pretty(&mut new_text, &src, &path) {
+        if let Err(error) = gleam_core::format::pretty(&mut new_text, &src, &path) {
             return self.path_error_response(path, error);
         }
 

@@ -3,7 +3,7 @@ use std::time::SystemTime;
 
 use debug_ignore::DebugIgnore;
 
-use crate::{
+use gleam_core::{
     Result,
     error::Error,
     io::{

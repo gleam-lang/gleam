@@ -8,6 +8,8 @@ license-file = "LICENCE"
 [dependencies]
 # The pure compiler
 gleam-core = { path = "../compiler-core" }
+# The language server
+gleam-language-server = { path = "../language-server" }
 # OS SIGINT and SIGTERM signal handling
 ctrlc = { version = "3", features = ["termination"] }
 # Command line interface
