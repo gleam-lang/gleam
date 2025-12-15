@@ -383,16 +383,7 @@ version = "0.21.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4e92edec8974fcd7ece90bb021db782abe14a61c10c817f197f700fef7430eb8"
 dependencies = [
- "embedded-io 0.6.1",
-]
-
-[[package]]
-name = "capnp"
-version = "0.23.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbffb6e69e1ea2cf518ac5037a78a223ecb82b4ac81e7ab33cb5211b43d712ac"
-dependencies = [
- "embedded-io 0.7.1",
+ "embedded-io",
 ]
 
 [[package]]
@@ -401,7 +392,7 @@ version = "0.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6da96dcb0a0e0c526daf42bac55e1550f18ad973df9ef9ba75204f332c80ad16"
 dependencies = [
- "capnp 0.21.7",
+ "capnp",
 ]
 
 [[package]]
@@ -777,12 +768,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "edd0f118536f44f5ccd48bcb8b111bdc3de888b58c74639dfb034a357d0f206d"
 
 [[package]]
-name = "embedded-io"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9eb1aa714776b75c7e67e1da744b81a129b3ff919c8712b5e1b32252c1f07cc7"
-
-[[package]]
 name = "encode_unicode"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1072,7 +1057,7 @@ dependencies = [
 
 [[package]]
 name = "gleam"
-version = "1.13.0"
+version = "1.14.0-rc1"
 dependencies = [
  "gleam-cli",
  "static_vcruntime",
@@ -1080,7 +1065,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-cli"
-version = "1.13.0"
+version = "1.14.0-rc1"
 dependencies = [
  "async-trait",
  "base16",
@@ -1126,7 +1111,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-core"
-version = "1.13.0"
+version = "1.14.0-rc1"
 dependencies = [
  "age",
  "askama",
@@ -1136,7 +1121,7 @@ dependencies = [
  "bincode",
  "bitvec",
  "camino",
- "capnp 0.23.0",
+ "capnp",
  "capnpc",
  "codespan-reporting",
  "debug-ignore",
@@ -1182,7 +1167,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-wasm"
-version = "1.13.0"
+version = "1.14.0-rc1"
 dependencies = [
  "camino",
  "console_error_panic_hook",
@@ -3145,7 +3130,7 @@ dependencies = [
 
 [[package]]
 name = "test-output"
-version = "1.13.0"
+version = "1.14.0-rc1"
 dependencies = [
  "camino",
  "gleam-cli",
@@ -3156,7 +3141,7 @@ dependencies = [
 
 [[package]]
 name = "test-package-compiler"
-version = "1.13.0"
+version = "1.14.0-rc1"
 dependencies = [
  "camino",
  "gleam-core",
@@ -3170,7 +3155,7 @@ dependencies = [
 
 [[package]]
 name = "test-project-compiler"
-version = "1.13.0"
+version = "1.14.0-rc1"
 dependencies = [
  "camino",
  "gleam-core",
