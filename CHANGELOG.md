@@ -141,15 +141,6 @@
   Previously compiler produced false-positive redundant comparison warning, which
   is now removed:
 
-  ```
-  warning: Redundant comparison
-    ┌─ ...
-    │
-  6 │   echo Wobble == Wobble
-    │        ^^^^^^^^^^^^^^^^ This is always `True`
-
-  This comparison is redundant since it always succeeds.
-
   ([Adi Salimgereyev](https://github.com/abs0luty))
 
 - Record update syntax can now be used in constant definitions, so constant records can be derived from other records using the spread operator:
