@@ -25,10 +25,10 @@
   and prevents publishing packages with empty modules to Hex.
   ([Vitor Souza](https://github.com/vit0rr))
 
-- The `@external` annotation is now supported for types with no constructors. It
-  allows users to point an external type definition to a specific Erlang or
-  TypeScript type. For example, the `dict.Dict` type from the standard library
-  can now be written as the following:
+- The `@external` annotation is now supported for external types. It allows
+  users to point an external type definition to a specific Erlang or TypeScript
+  type. For example, the `dict.Dict` type from the standard library can now be
+  written as the following:
 
   ```gleam
   @external(erlang, "erlang", "map")
@@ -233,8 +233,8 @@
 
 ### Language server
 
-- The language server can now offer a code action to merge consecutive case
-  branches with the same body. For example:
+- The language server can now offer a code action to merge case clauses with
+  the same body. For example:
 
   ```gleam
   case user {
