@@ -4,9 +4,8 @@
 
 ### Compiler
 
-- Update error message that arises when calling `echo` on an atom that lacks a
-  gleam representation to use `atom.create("__struct__")` instead of
-  `atom.create_from_string("__struct__")`.
+- The output of `echo` when printing atoms has been updated to use
+  `atom.create("...")` instead of `atom.create_from_string("...")`.
   ([Patrick Dewey](https://github.com/ptdewey))
 
 - Patterns aliasing a string prefix have been optimised to generate faster code
@@ -143,7 +142,8 @@
 
   ([Adi Salimgereyev](https://github.com/abs0luty))
 
-- Record update syntax can now be used in constant definitions, so constant records can be derived from other records using the spread operator:
+- Record update syntax can now be used in constant definitions. For example:
+
   ```gleam
   pub const base_http_config = HttpConfig(
     host: "0.0.0.0",
@@ -180,8 +180,8 @@
   `--invert` would be silently ignored if given together with `--package`.
   ([Evan Silberman](https://github.com/silby))
 
-- Update to latest Elixir API, so warning would not be shown when compiling
-  Elixir file in a Gleam project.
+- Updated to use the latest Elixir API, so a warning would not be shown when
+  compiling Elixir file in a Gleam project.
   ([Andrey Kozhev](https://github.com/ankddev))
 
 - The build tool now has a new `gleam deps outdated` command that shows outdated
@@ -283,7 +283,7 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The "inline variable" code action can now trigger when used over the let
+- The "inline variable" code action can now trigger when used over the `let`
   keyword of a variable to inline.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
@@ -435,7 +435,8 @@
   constants.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- Fix invalid JavaScript codegen in cases where underscores follow a decimal.
+- Fixed a bug where invalid code would be generated on the JavaScript target in
+  cases where an underscore followed the decimal point in a float literal.
   ([Patrick Dewey](https://github.com/ptdewey))
 
 - Typos in the error message shown when trying to install a non-existent package
@@ -458,6 +459,11 @@
   wrong format, preventing it from being used by Hexdocs search.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- Fixed a bug where the collapse nested case would produce invalid code on a
-  list tail pattern.
+- Fixed a bug where the "collapse nested case" code action would produce invalid
+  code on a list tail pattern.
   ([Matias Carlander](https://github.com/matiascr))
+
+- Fixed two bugs that made gleam not update the manifest correctly, causing
+  it to hit hex for version resolution on every operation and quickly reach
+  request limits in large projects.
+  ([fruno](https://github.com/fruno-bulax/))
