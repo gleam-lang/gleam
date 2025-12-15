@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.14.0-rc1 - 2025-12-15
 
 ### Compiler
 
@@ -63,8 +63,8 @@
   together, this should mean less reshuffling after inserting missing patterns!
   ([fruno](https://github.com/fruno-bulax/))
 
-- The performance of `==` and `!=` has been improved for single-variant custom
-  types when compiling to JavaScript. This was done by generating comparison
+- The performance of `==` and `!=` has been improved for fieldless custom type
+  variants when compiling to JavaScript. This was done by generating comparison
   code specific to the custom type rather than using the generic equality check
   code.
   ([Nafi](https://github.com/re-masashi))
