@@ -864,7 +864,7 @@ pub struct Import<PackageName> {
 }
 
 impl<T> Import<T> {
-    pub(crate) fn used_name(&self) -> Option<EcoString> {
+    pub fn used_name(&self) -> Option<EcoString> {
         match self.as_name.as_ref() {
             Some((AssignName::Variable(name), _)) => Some(name.clone()),
             Some((AssignName::Discard(_), _)) => None,
@@ -1318,7 +1318,7 @@ impl BinOp {
         self.operator_kind() == other.operator_kind()
     }
 
-    pub(crate) fn is_float_operator(&self) -> bool {
+    pub fn is_float_operator(&self) -> bool {
         match self {
             BinOp::LtFloat
             | BinOp::LtEqFloat
@@ -1372,7 +1372,7 @@ impl BinOp {
         }
     }
 
-    pub(crate) fn is_int_operator(&self) -> bool {
+    pub fn is_int_operator(&self) -> bool {
         match self {
             BinOp::LtInt
             | BinOp::LtEqInt
@@ -3437,7 +3437,7 @@ impl TypedPattern {
     /// If the pattern is a `Constructor` with a spread, it returns a tuple with
     /// all the ignored fields. Split in unlabelled and labelled ones.
     ///
-    pub(crate) fn unused_arguments(&self) -> Option<PatternUnusedArguments> {
+    pub fn unused_arguments(&self) -> Option<PatternUnusedArguments> {
         let TypedPattern::Constructor {
             arguments,
             spread: Some(_),
@@ -3860,7 +3860,7 @@ impl<TypedValue> BitArraySegment<TypedValue, Arc<Type>>
 where
     TypedValue: HasType + HasLocation + Clone + bit_array::GetLiteralValue,
 {
-    pub(crate) fn check_for_truncated_value(&self) -> Option<BitArraySegmentTruncation> {
+    pub fn check_for_truncated_value(&self) -> Option<BitArraySegmentTruncation> {
         // Both the size and the value must be two compile-time known constants.
         let segment_bits = self.bits_size()?.to_i64()?;
         let literal_value = self.value.as_int_literal()?;
@@ -4446,7 +4446,7 @@ impl<T, E> Statement<T, E> {
     }
 
     #[must_use]
-    pub(crate) fn is_use(&self) -> bool {
+    pub fn is_use(&self) -> bool {
         matches!(self, Self::Use(_))
     }
 }

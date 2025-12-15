@@ -1079,6 +1079,7 @@ dependencies = [
  "fslock",
  "futures",
  "gleam-core",
+ "gleam-language-server",
  "hexpm",
  "hostname",
  "http",
@@ -1163,6 +1164,28 @@ dependencies = [
  "unicode-segmentation",
  "vec1",
  "xxhash-rust",
+]
+
+[[package]]
+name = "gleam-language-server"
+version = "1.14.0-rc1"
+dependencies = [
+ "camino",
+ "debug-ignore",
+ "ecow",
+ "gleam-core",
+ "hexpm",
+ "im",
+ "insta",
+ "itertools",
+ "lsp-server",
+ "lsp-types",
+ "serde",
+ "serde_json",
+ "strum",
+ "toml 0.9.7",
+ "tracing",
+ "vec1",
 ]
 
 [[package]]

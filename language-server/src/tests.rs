@@ -22,21 +22,22 @@ use camino::{Utf8Path, Utf8PathBuf};
 use itertools::Itertools;
 use lsp_types::{Position, TextDocumentIdentifier, TextDocumentPositionParams, Url};
 
-use crate::{
+use gleam_core::{
     Result,
     config::PackageConfig,
     io::{
         BeamCompiler, Command, CommandExecutor, FileSystemReader, FileSystemWriter, ReadDir,
         WrappedReader, memory::InMemoryFileSystem,
     },
-    language_server::{
-        DownloadDependencies, LockGuard, Locker, MakeLocker, engine::LanguageServerEngine,
-        files::FileSystemProxy, progress::ProgressReporter,
-    },
     line_numbers::LineNumbers,
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
     paths::ProjectPaths,
     requirement::Requirement,
+};
+
+use super::{
+    DownloadDependencies, LockGuard, Locker, MakeLocker, engine::LanguageServerEngine,
+    files::FileSystemProxy, progress::ProgressReporter,
 };
 
 pub const LSP_TEST_ROOT_PACKAGE_NAME: &str = "app";
@@ -58,6 +59,19 @@ struct LanguageServerTestIO {
     paths: ProjectPaths,
     actions: Arc<Mutex<Vec<Action>>>,
     manifest: Manifest,
+}
+
+fn default_manifest_package() -> ManifestPackage {
+    ManifestPackage {
+        name: Default::default(),
+        build_tools: Default::default(),
+        otp_app: Default::default(),
+        requirements: Default::default(),
+        version: Version::new(1, 0, 0),
+        source: ManifestPackageSource::Hex {
+            outer_checksum: Base16Checksum(vec![]),
+        },
+    }
 }
 
 impl LanguageServerTestIO {
@@ -120,13 +134,15 @@ impl LanguageServerTestIO {
                 outer_checksum: Base16Checksum(vec![]),
             },
             build_tools: vec!["gleam".into()],
-            ..Default::default()
+            ..default_manifest_package()
         });
     }
 
     fn module(&self, path: &Utf8Path, code: &str) {
         self.io.write(path, code).unwrap();
-        self.io.set_modification_time(path, SystemTime::now());
+        self.io
+            .try_set_modification_time(path, SystemTime::now())
+            .unwrap();
     }
 
     fn record(&self, action: Action) {
@@ -163,7 +179,7 @@ impl FileSystemReader for LanguageServerTestIO {
         self.io.modification_time(path)
     }
 
-    fn canonicalise(&self, path: &Utf8Path) -> Result<Utf8PathBuf, crate::Error> {
+    fn canonicalise(&self, path: &Utf8Path) -> Result<Utf8PathBuf, gleam_core::Error> {
         self.io.canonicalise(path)
     }
 }
@@ -197,11 +213,11 @@ impl FileSystemWriter for LanguageServerTestIO {
         self.io.delete_file(path)
     }
 
-    fn write(&self, path: &Utf8Path, content: &str) -> Result<(), crate::Error> {
+    fn write(&self, path: &Utf8Path, content: &str) -> Result<(), gleam_core::Error> {
         self.io.write(path, content)
     }
 
-    fn write_bytes(&self, path: &Utf8Path, content: &[u8]) -> Result<(), crate::Error> {
+    fn write_bytes(&self, path: &Utf8Path, content: &[u8]) -> Result<(), gleam_core::Error> {
         self.io.write_bytes(path, content)
     }
 
@@ -236,7 +252,7 @@ impl BeamCompiler for LanguageServerTestIO {
         out: &Utf8Path,
         lib: &Utf8Path,
         modules: &HashSet<Utf8PathBuf>,
-        stdio: crate::io::Stdio,
+        stdio: gleam_core::io::Stdio,
     ) -> Result<Vec<String>> {
         panic!(
             "compile_beam({:?}, {:?}, {:?}, {:?}) is not implemented",
@@ -249,7 +265,7 @@ impl MakeLocker for LanguageServerTestIO {
     fn make_locker(
         &self,
         _paths: &ProjectPaths,
-        _target: crate::build::Target,
+        _target: gleam_core::build::Target,
     ) -> Result<Box<dyn Locker>> {
         Ok(Box::new(TestLocker {
             actions: self.actions.clone(),
@@ -563,7 +579,7 @@ impl<'a> TestProject<'a> {
                     outer_checksum: Base16Checksum(vec![]),
                 },
                 build_tools: vec!["gleam".into()],
-                ..Default::default()
+                ..default_manifest_package()
             },
         );
 
@@ -578,7 +594,7 @@ impl<'a> TestProject<'a> {
                     outer_checksum: Base16Checksum(vec![]),
                 },
                 build_tools: vec!["gleam".into()],
-                ..Default::default()
+                ..default_manifest_package()
             },
         );
 

@@ -2104,6 +2104,7 @@ struct Compiler<'a> {
 
 /// The result of compiling a pattern match expression.
 ///
+#[derive(Debug)]
 pub struct CompileCaseResult {
     pub compiled_case: CompiledCase,
     pub diagnostics: Diagnostics,
@@ -3111,6 +3112,7 @@ fn ancestors_values(trie: &Trie<String, usize>, key: &str) -> impl Iterator<Item
         .flat_map(|ancestor| ancestor.values().copied())
 }
 
+#[derive(Debug)]
 pub struct ConstructorSpecialiser {
     specialised_types: HashMap<u64, Arc<Type>>,
 }
@@ -3232,6 +3234,7 @@ impl ConstructorSpecialiser {
 /// the pattern matching compiler and get a case expression ready to be compiled,
 /// while hiding the intricacies of handling an arena to record different patterns.
 ///
+#[derive(Debug)]
 pub struct CaseToCompile {
     patterns: Arena<Pattern>,
     branches: Vec<Branch>,

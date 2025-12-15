@@ -539,7 +539,7 @@ impl<'a> Located<'a> {
         }
     }
 
-    pub(crate) fn type_definition_locations(
+    pub fn type_definition_locations(
         &self,
         importable_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
     ) -> Option<Vec<DefinitionLocation>> {
@@ -716,10 +716,10 @@ fn doc_comments_before<'a>(
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub(crate) struct SourceFingerprint(u64);
+pub struct SourceFingerprint(u64);
 
 impl SourceFingerprint {
-    pub(crate) fn new(source: &str) -> Self {
+    pub fn new(source: &str) -> Self {
         SourceFingerprint(xxhash_rust::xxh3::xxh3_64(source.as_bytes()))
     }
 }

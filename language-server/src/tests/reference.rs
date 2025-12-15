@@ -5,7 +5,7 @@ use lsp_types::{
     TextDocumentPositionParams, WorkDoneProgressParams,
 };
 
-use crate::language_server::tests::{TestProject, find_position_of};
+use super::{TestProject, find_position_of};
 
 fn find_references(
     tester: &TestProject<'_>,

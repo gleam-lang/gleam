@@ -40,7 +40,7 @@ impl ModuleExtra {
         self.first_comment_between(start, end).is_some()
     }
 
-    pub(crate) fn first_comment_between(&self, start: u32, end: u32) -> Option<SrcSpan> {
+    pub fn first_comment_between(&self, start: u32, end: u32) -> Option<SrcSpan> {
         self.comments
             .binary_search_by(|comment| {
                 if comment.end < start {

@@ -101,8 +101,8 @@ impl Built {
 #[derive(Debug)]
 pub struct ProjectCompiler<IO> {
     // The gleam.toml config for the root package of the project
-    pub(crate) config: PackageConfig,
-    pub(crate) packages: HashMap<String, ManifestPackage>,
+    pub config: PackageConfig,
+    pub packages: HashMap<String, ManifestPackage>,
     importable_modules: im::HashMap<EcoString, type_::ModuleInterface>,
     pub(crate) defined_modules: im::HashMap<EcoString, Utf8PathBuf>,
     stale_modules: StaleTracker,
@@ -114,7 +114,7 @@ pub struct ProjectCompiler<IO> {
     options: Options,
     paths: ProjectPaths,
     ids: UniqueIdGenerator,
-    pub(crate) io: IO,
+    pub io: IO,
     /// We may want to silence subprocess stdout if we are running in LSP mode.
     /// The language server talks over stdio so printing would break that.
     pub subprocess_stdio: Stdio,

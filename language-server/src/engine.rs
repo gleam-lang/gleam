@@ -1,4 +1,6 @@
-use crate::{
+use camino::Utf8PathBuf;
+use ecow::EcoString;
+use gleam_core::{
     Error, Result, Warning,
     analyse::name::correct_name_case,
     ast::{
@@ -10,17 +12,6 @@ use crate::{
     },
     config::PackageConfig,
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
-    language_server::{
-        code_action::{
-            AddOmittedLabels, CollapseNestedCase, ExtractFunction, MergeCaseBranches, RemoveBlock,
-            RemovePrivateOpaque, RemoveUnreachableCaseClauses,
-        },
-        compiler::LspProjectCompiler,
-        files::FileSystemProxy,
-        progress::ProgressReporter,
-        reference::FindVariableReferences,
-        rename::RenameOutcome,
-    },
     line_numbers::LineNumbers,
     paths::ProjectPaths,
     type_::{
@@ -30,8 +21,6 @@ use crate::{
         printer::Printer,
     },
 };
-use camino::Utf8PathBuf;
-use ecow::EcoString;
 use itertools::Itertools;
 use lsp::CodeAction;
 use lsp_server::ResponseError;
@@ -45,25 +34,30 @@ use std::{collections::HashSet, sync::Arc};
 use super::{
     DownloadDependencies, MakeLocker,
     code_action::{
-        AddAnnotations, AnnotateTopLevelDefinitions, CodeActionBuilder, ConvertFromUse,
-        ConvertToFunctionCall, ConvertToPipe, ConvertToUse, ExpandFunctionCapture, ExtractConstant,
-        ExtractVariable, FillInMissingLabelledArgs, FillUnusedFields, FixBinaryOperation,
+        AddAnnotations, AddOmittedLabels, AnnotateTopLevelDefinitions, CodeActionBuilder,
+        CollapseNestedCase, ConvertFromUse, ConvertToFunctionCall, ConvertToPipe, ConvertToUse,
+        ExpandFunctionCapture, ExtractConstant, ExtractFunction, ExtractVariable,
+        FillInMissingLabelledArgs, FillUnusedFields, FixBinaryOperation,
         FixTruncatedBitArraySegment, GenerateDynamicDecoder, GenerateFunction, GenerateJsonEncoder,
-        GenerateVariant, InlineVariable, InterpolateString, LetAssertToCase, PatternMatchOnValue,
-        RedundantTupleInCaseSubject, RemoveEchos, RemoveUnusedImports, UseLabelShorthandSyntax,
-        WrapInBlock, code_action_add_missing_patterns,
+        GenerateVariant, InlineVariable, InterpolateString, LetAssertToCase, MergeCaseBranches,
+        PatternMatchOnValue, RedundantTupleInCaseSubject, RemoveBlock, RemoveEchos,
+        RemovePrivateOpaque, RemoveUnreachableCaseClauses, RemoveUnusedImports,
+        UseLabelShorthandSyntax, WrapInBlock, code_action_add_missing_patterns,
         code_action_convert_qualified_constructor_to_unqualified,
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
         code_action_inexhaustive_let_to_case,
     },
+    compiler::LspProjectCompiler,
     completer::Completer,
+    files::FileSystemProxy,
+    progress::ProgressReporter,
     reference::{
-        Referenced, VariableReferenceKind, find_module_references, reference_for_ast_node,
+        FindVariableReferences, Referenced, VariableReferenceKind, find_module_references,
+        reference_for_ast_node,
     },
-    rename::{RenameTarget, Renamed, rename_local_variable, rename_module_entity},
+    rename::{RenameOutcome, RenameTarget, Renamed, rename_local_variable, rename_module_entity},
     signature_help, src_span_to_lsp_range,
 };
-
 #[derive(Debug, PartialEq, Eq)]
 pub struct Response<T> {
     pub result: Result<T, Error>,
@@ -140,12 +134,12 @@ where
             .packages
             .iter()
             .flat_map(|(k, v)| match &v.source {
-                crate::manifest::ManifestPackageSource::Hex { .. } => {
+                gleam_core::manifest::ManifestPackageSource::Hex { .. } => {
                     Some(EcoString::from(k.as_str()))
                 }
 
-                crate::manifest::ManifestPackageSource::Git { .. }
-                | crate::manifest::ManifestPackageSource::Local { .. } => None,
+                gleam_core::manifest::ManifestPackageSource::Git { .. }
+                | gleam_core::manifest::ManifestPackageSource::Local { .. } => None,
             })
             .collect();
 

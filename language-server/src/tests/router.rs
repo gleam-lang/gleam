@@ -1,15 +1,12 @@
 use std::time::SystemTime;
 
-use crate::{
-    Error,
-    io::FileSystemWriter,
-    language_server::{files::FileSystemProxy, tests::Action},
-    paths::ProjectPaths,
-};
+use gleam_core::{Error, io::FileSystemWriter, paths::ProjectPaths};
+
+use crate::{files::FileSystemProxy, tests::Action};
 
 use super::LanguageServerTestIO;
 
-type Router = crate::language_server::router::Router<LanguageServerTestIO, LanguageServerTestIO>;
+type Router = crate::router::Router<LanguageServerTestIO, LanguageServerTestIO>;
 
 #[test]
 fn recompile_after_no_changes_does_not_redownload_dependencies() {
@@ -82,7 +79,8 @@ fn changing_config_redownloads_dependencies() {
     version = "1.0.0""#;
     io.write(&paths.root_config(), toml).unwrap();
     io.io
-        .set_modification_time(&paths.root_config(), SystemTime::now());
+        .try_set_modification_time(&paths.root_config(), SystemTime::now())
+        .unwrap();
 
     assert_eq!(
         compile(&mut router, &paths),
