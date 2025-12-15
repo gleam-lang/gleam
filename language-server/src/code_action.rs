@@ -1,6 +1,7 @@
 use std::{collections::HashSet, iter, sync::Arc};
 
-use crate::{
+use ecow::{EcoString, eco_format};
+use gleam_core::{
     Error, STDLIB_PACKAGE_NAME,
     analyse::Inferred,
     ast::{
@@ -15,7 +16,6 @@ use crate::{
     build::{Located, Module},
     config::PackageConfig,
     exhaustiveness::CompiledCase,
-    language_server::{edits, reference::FindVariableReferences},
     line_numbers::LineNumbers,
     parse::{extra::ModuleExtra, lexer::str_to_keyword},
     strings::to_snake_case,
@@ -25,7 +25,6 @@ use crate::{
         printer::Printer,
     },
 };
-use ecow::{EcoString, eco_format};
 use im::HashMap;
 use itertools::Itertools;
 use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, Position, Range, TextEdit, Url};
@@ -34,10 +33,11 @@ use vec1::{Vec1, vec1};
 use super::{
     TextEdits,
     compiler::LspProjectCompiler,
+    edits,
     edits::{add_newlines_after_import, get_import_edit, position_of_first_definition_if_import},
     engine::{overlaps, within},
     files::FileSystemProxy,
-    reference::VariableReferenceKind,
+    reference::{FindVariableReferences, VariableReferenceKind},
     src_span_to_lsp_range, url_from_path,
 };
 
@@ -8941,7 +8941,11 @@ impl<'a> RemoveUnreachableCaseClauses<'a> {
         line_numbers: &'a LineNumbers,
         params: &'a CodeActionParams,
     ) -> Self {
-        let unreachable_clauses = (module.ast.type_info.warnings.iter())
+        let unreachable_clauses = module
+            .ast
+            .type_info
+            .warnings
+            .iter()
             .filter_map(|warning| {
                 if let type_::Warning::UnreachableCasePattern { location, .. } = warning {
                     Some(*location)

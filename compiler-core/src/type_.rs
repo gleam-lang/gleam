@@ -1,5 +1,5 @@
 pub(crate) mod environment;
-pub(crate) mod error;
+pub mod error;
 pub(crate) mod expression;
 pub(crate) mod fields;
 pub(crate) mod hydrator;
@@ -7,7 +7,7 @@ pub(crate) mod pattern;
 pub(crate) mod pipe;
 pub(crate) mod prelude;
 pub mod pretty;
-pub(crate) mod printer;
+pub mod printer;
 #[cfg(test)]
 pub mod tests;
 
@@ -1439,7 +1439,7 @@ impl ValueConstructor {
         }
     }
 
-    pub(crate) fn get_documentation(&self) -> Option<&str> {
+    pub fn get_documentation(&self) -> Option<&str> {
         match &self.variant {
             ValueConstructorVariant::LocalVariable { .. } => Some("A locally defined variable."),
 

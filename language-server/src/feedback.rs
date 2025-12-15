@@ -1,4 +1,4 @@
-use crate::{Error, Warning, diagnostic::Diagnostic};
+use gleam_core::{Error, Warning, diagnostic::Diagnostic};
 use std::collections::{HashMap, HashSet};
 
 use camino::Utf8PathBuf;
@@ -157,7 +157,7 @@ mod tests {
     use std::assert_eq;
 
     use super::*;
-    use crate::{
+    use gleam_core::{
         ast::SrcSpan,
         diagnostic::Level,
         parse::error::{ParseError, ParseErrorType},

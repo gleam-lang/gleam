@@ -1,5 +1,5 @@
 mod imports;
-pub(crate) mod name;
+pub mod name;
 
 #[cfg(test)]
 mod tests;
