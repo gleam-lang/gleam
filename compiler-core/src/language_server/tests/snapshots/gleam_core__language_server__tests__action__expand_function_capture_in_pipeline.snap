@@ -20,7 +20,7 @@ fn wobble(i) {
 
 ----- AFTER ACTION
 pub fn main() {
-  1 |> fn(int) { wibble(2, _)(int) } |> wobble
+  1 |> fn(int) { wibble(2, int) } |> wobble
 }
 
 fn wibble(a, b) {

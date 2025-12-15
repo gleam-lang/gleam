@@ -7036,6 +7036,27 @@ pub fn add(n, m) { n + m }
 }
 
 #[test]
+fn expand_function_capture_in_pipeline() {
+    assert_code_action!(
+        EXPAND_FUNCTION_CAPTURE,
+        "pub fn main() {
+  1 |> wibble(2, _) |> wobble
+}
+
+fn wibble(a, b) {
+  todo
+}
+
+fn wobble(i) {
+  todo
+}
+
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
 fn generate_dynamic_decoder() {
     assert_code_action!(
         GENERATE_DYNAMIC_DECODER,
@@ -11703,48 +11724,6 @@ fn wrap_pipeline_step_in_anonymous_function() {
 }
 
 fn wibble(i) {
-  todo
-}
-
-fn wobble(i) {
-  todo
-}
-
-",
-        find_position_of("wibble").to_selection()
-    );
-}
-
-#[test]
-fn wrap_multiargument_pipeline_step_in_anonymous_function() {
-    assert_code_action!(
-        WRAP_IN_ANONYMOUS_FUNCTION,
-        "pub fn main() {
-  1 |> wibble(2) |> wobble
-}
-
-fn wibble(a, b) {
-  todo
-}
-
-fn wobble(i) {
-  todo
-}
-
-",
-        find_position_of("wibble").to_selection()
-    );
-}
-
-#[test]
-fn wrap_capturing_pipeline_step_in_anonymous_function() {
-    assert_code_action!(
-        WRAP_IN_ANONYMOUS_FUNCTION,
-        "pub fn main() {
-  1 |> wibble(2, _) |> wobble
-}
-
-fn wibble(a, b) {
   todo
 }
 

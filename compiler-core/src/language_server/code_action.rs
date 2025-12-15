@@ -10054,9 +10054,10 @@ impl<'ast> ast::visit::Visit<'ast> for WrapInAnonymousFunction<'ast> {
             return;
         }
 
-        let is_excluded = match expression {
-            TypedExpr::Fn { kind, .. } if kind.is_anonymous() => true,
-            _ => false,
+        let is_excluded = if let TypedExpr::Fn { kind, .. } = expression {
+            kind.is_anonymous() || kind.is_capture()
+        } else {
+            false
         };
 
         if let Type::Fn { arguments, .. } = &*expression.type_()
