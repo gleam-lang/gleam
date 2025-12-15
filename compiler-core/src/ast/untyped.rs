@@ -277,7 +277,7 @@ impl HasLocation for UntypedExpr {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FunctionLiteralKind {
     Capture { hole: SrcSpan },
-    Anonymous { head: SrcSpan, body: SrcSpan },
+    Anonymous { head: SrcSpan },
     Use { location: SrcSpan },
 }
 

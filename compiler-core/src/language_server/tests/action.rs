@@ -11835,6 +11835,28 @@ fn op(i: Int) -> Int {
 }
 
 #[test]
+fn unwrap_trivial_anonymous_function_with_bad_spacing() {
+    assert_code_action!(
+        UNWRAP_ANONYMOUS_FUNCTION,
+        "import gleam/list
+
+pub fn main() {
+  list.map([1, 2, 3], fn (int)  {
+
+    op(int)
+
+        })
+}
+
+fn op(i: Int) -> Int {
+  todo
+}
+",
+        find_position_of("fn (int)").to_selection()
+    );
+}
+
+#[test]
 fn unwrap_nested_anonymous_function() {
     assert_code_action!(
         UNWRAP_ANONYMOUS_FUNCTION,

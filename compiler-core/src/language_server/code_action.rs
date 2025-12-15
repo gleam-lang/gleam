@@ -10207,7 +10207,10 @@ impl<'a> UnwrapAnonymousFunction<'a> {
         body: &'a Vec1<TypedStatement>,
     ) {
         let outer_body = match kind {
-            FunctionLiteralKind::Anonymous { body, .. } => body,
+            FunctionLiteralKind::Anonymous { head, .. } => SrcSpan::new(
+                next_nonwhitespace(&self.module.code, head.end),
+                location.end,
+            ),
             _ => return,
         };
 

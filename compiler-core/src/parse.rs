@@ -754,7 +754,6 @@ where
                         arguments,
                         body,
                         return_annotation,
-                        body_start: Some(body_start),
                         end_position,
                         ..
                     })) => {
@@ -765,13 +764,7 @@ where
                         UntypedExpr::Fn {
                             location: SrcSpan::new(location.start, end_position),
                             end_of_head_byte_index: location.end,
-                            kind: FunctionLiteralKind::Anonymous {
-                                head: location,
-                                body: SrcSpan {
-                                    start: body_start,
-                                    end: end_position,
-                                },
-                            },
+                            kind: FunctionLiteralKind::Anonymous { head: location },
                             arguments,
                             body,
                             return_annotation,
