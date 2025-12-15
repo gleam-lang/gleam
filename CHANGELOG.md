@@ -52,11 +52,6 @@
 
   ([fruno](https://github.com/fruno-bulax/))
 
-- Fixed two bugs that made gleam not update the manifest correctly, causing
-  it to hit hex for version resolution on every operation and quickly reach
-  request limits in large projects.
-  ([fruno](https://github.com/fruno-bulax/))
-
 - Missing patterns in error messages and the "Add missing patterns" code action
   are no longer sorted lexicographically. Instead, they now consider the order
   in which variants were defined. As programmers often group "related" variants
@@ -368,6 +363,11 @@
 ### Formatter
 
 ### Bug fixes
+
+- Fixed two bugs that made gleam not update the manifest correctly, causing
+  it to hit hex for version resolution on every operation and quickly reach
+  request limits in large projects.
+  ([fruno](https://github.com/fruno-bulax/))
 
 - Fixed a bug where renaming a variable from an alternative pattern would not
   rename all its occurrences.
