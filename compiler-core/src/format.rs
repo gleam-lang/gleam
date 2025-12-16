@@ -838,10 +838,10 @@ impl<'comments> Formatter<'comments> {
         } = function;
 
         let attributes = AttributesPrinter::new()
-            .set_deprecation(&deprecation)
+            .set_deprecation(deprecation)
             .set_internal(*publicity)
-            .set_external_erlang(&external_erlang)
-            .set_external_javascript(&external_javascript)
+            .set_external_erlang(external_erlang)
+            .set_external_javascript(external_javascript)
             .to_doc();
 
         // Fn name and args
@@ -883,7 +883,7 @@ impl<'comments> Formatter<'comments> {
 
         // Format body
 
-        let body = self.statements(&body);
+        let body = self.statements(body);
 
         // Add any trailing comments
         let body = match printed_comments(self.pop_comments(*end_position), false) {
@@ -1816,10 +1816,10 @@ impl<'comments> Formatter<'comments> {
         let _ = self.pop_empty_lines(location.end);
 
         let attributes = AttributesPrinter::new()
-            .set_deprecation(&deprecation)
+            .set_deprecation(deprecation)
             .set_internal(*publicity)
-            .set_external_erlang(&external_erlang)
-            .set_external_javascript(&external_javascript)
+            .set_external_erlang(external_erlang)
+            .set_external_javascript(external_javascript)
             .to_doc();
 
         let doc = attributes
