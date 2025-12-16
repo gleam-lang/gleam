@@ -4034,11 +4034,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     return self.new_invalid_constant(location);
                 }
 
-                let mut remaining_fields = field_map.fields.clone();
-                let explicit_arguments_count = arguments.len();
+                // Emit warning if no fields are being overridden
+                if arguments.is_empty() {
+                    self.problems
+                        .warning(Warning::NoFieldsRecordUpdate { location });
+                }
 
-                // Type-check explicit override arguments
-                let mut typed_overrides = Vec::new();
+                let mut implicit_labelled_arguments = field_map.fields.clone();
+                let mut update_argument_indices = HashSet::new();
+
+                let mut final_arguments = base_arguments;
                 for argument in arguments {
                     if argument.uses_label_shorthand() {
                         self.track_feature_usage(
@@ -4050,7 +4055,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     let label = &argument.label;
                     let typed_value = self.infer_const(&None, argument.value);
 
-                    let Some(index) = remaining_fields.remove(label) else {
+                    let Some(index) = implicit_labelled_arguments.remove(label) else {
                         if field_map.fields.contains_key(label) {
                             self.problems.error(Error::DuplicateArgument {
                                 location: argument.location,
@@ -4069,7 +4074,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         return self.new_invalid_constant(location);
                     };
 
-                    // Type check: the override value must match the field type
+                    // Record update argument value must match the field type
                     if let Some(expected_type) = field_types.get(index as usize)
                         && let Err(error) = unify(expected_type.clone(), typed_value.type_())
                     {
@@ -4078,49 +4083,57 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         return self.new_invalid_constant(location);
                     }
 
-                    typed_overrides.push(CallArg {
+                    let _ = update_argument_indices.insert(index as usize);
+
+                    *final_arguments
+                        .get_mut(index as usize)
+                        .expect("Index out of bounds") = CallArg {
                         label: Some(label.clone()),
                         value: typed_value,
                         location: argument.location,
                         implicit: None,
-                    });
-                }
-
-                // Emit warning if no fields are being overridden
-                if explicit_arguments_count == 0 {
-                    self.problems
-                        .warning(Warning::NoFieldsRecordUpdate { location });
+                    };
                 }
 
                 // Emit warning if all fields are being overriden
-                if remaining_fields.is_empty() {
+                if implicit_labelled_arguments.is_empty() {
                     self.problems
                         .warning(Warning::AllFieldsRecordUpdate { location });
                 }
 
-                // Merge: start with base record arguments, override with explicit
-                // update arguments
-                let mut final_arguments = base_arguments;
-                for override_argument in typed_overrides {
-                    if let Some(label) = &override_argument.label
-                        && let Some(&index) = field_map.fields.get(label)
-                        && (index as usize) < final_arguments.len()
-                    {
-                        *final_arguments
-                            .get_mut(index as usize)
-                            .expect("Index out of bounds") = override_argument;
+                // Check that fields implicitly overridden (including unlabelled ones) have compatible types.
+                for (index, field_arg) in final_arguments.iter().enumerate() {
+                    // Skip fields that were record update arguments, as they've already been type-checked above
+                    if update_argument_indices.contains(&index) {
+                        continue;
                     }
-                }
 
-                // Check that implicit fields (fields copied from base) have compatible types
-                for (_label, index) in remaining_fields.iter() {
-                    if let Some(field_arg) = final_arguments.get(*index as usize)
-                        && let Some(expected_field_type) = field_types.get(*index as usize)
+                    if let Some(expected_field_type) = field_types.get(index)
                         && let Err(unify_error) =
                             unify(expected_field_type.clone(), field_arg.value.type_())
                     {
-                        self.problems
-                            .error(convert_unify_error(unify_error, location));
+                        let field = field_map
+                            .fields
+                            .iter()
+                            .find(|(_, i)| **i == index as u32)
+                            .map(|(name, _)| RecordField::Labelled(name.clone()))
+                            .unwrap_or_else(|| RecordField::Unlabelled(index as u32));
+
+                        self.problems.error(match unify_error {
+                            UnifyError::CouldNotUnify {
+                                expected, given, ..
+                            } => Error::UnsafeRecordUpdate {
+                                location: record.location,
+                                reason: UnsafeRecordUpdateReason::IncompatibleFieldTypes {
+                                    constructed_variant: expected_type.clone(),
+                                    record_variant: typed_record_type.clone(),
+                                    expected_field_type: expected,
+                                    record_field_type: given,
+                                    field,
+                                },
+                            },
+                            _ => convert_unify_error(unify_error, location),
+                        });
                         return self.new_invalid_constant(location);
                     }
                 }

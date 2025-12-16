@@ -2481,6 +2481,18 @@ fn const_record_update_generic_respecialization() {
 }
 
 #[test]
+fn generic_unlabelled_field_in_updated_const_record_wrong_type() {
+    assert_module_error!(
+        "pub type Wibble(a) {
+            Wibble(a, b: Int, c: a)
+        }
+
+        const w = Wibble(1, 2, 3)
+        const w2 = Wibble(..w, c: False)"
+    );
+}
+
+#[test]
 fn module_constant_functions() {
     assert_module_infer!(
         "pub fn int_identity(i: Int) -> Int { i }
