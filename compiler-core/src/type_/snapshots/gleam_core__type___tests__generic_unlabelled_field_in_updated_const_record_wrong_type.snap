@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "pub type Wibble(a) {\n            Wibble(a, b: Int, c: a)\n        }\n\n        const w = Wibble(1, 2, 3)\n        const w2 = Wibble(..w, c: False)"
+---
+----- SOURCE CODE
+pub type Wibble(a) {
+            Wibble(a, b: Int, c: a)
+        }
+
+        const w = Wibble(1, 2, 3)
+        const w2 = Wibble(..w, c: False)
+
+----- ERROR
+error: Incomplete record update
+  ┌─ /src/one/two.gleam:6:29
+  │
+6 │         const w2 = Wibble(..w, c: False)
+  │                             ^ This is a `Wibble(Int)`
+
+The 1st field of this value is a `Int`, but the arguments given to the
+record update indicate that it should be a `Bool`.
+
+Note: Unlabelled fields cannot be updated in a record update, so either add
+a label or use a record constructor.
