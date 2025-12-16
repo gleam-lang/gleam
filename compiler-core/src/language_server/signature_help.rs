@@ -53,7 +53,7 @@ pub fn for_expression(expr: &TypedExpr) -> Option<SignatureHelp> {
             signature_help(name, fun, arguments, field_map)
         }
 
-        // If the function bein called is an invalid node we don't want to
+        // If the function being called is an invalid node we don't want to
         // provide any hint, otherwise one might be under the impression that
         // that function actually exists somewhere.
         //
@@ -67,7 +67,27 @@ pub fn for_expression(expr: &TypedExpr) -> Option<SignatureHelp> {
         //                  ^ When the cursor is here we are going to show
         //                    "fn(a: a) -> a" as the help signature.
         //
-        _ => signature_help("fn".into(), fun, arguments, None),
+        TypedExpr::Int { .. }
+        | TypedExpr::Float { .. }
+        | TypedExpr::String { .. }
+        | TypedExpr::Block { .. }
+        | TypedExpr::Pipeline { .. }
+        | TypedExpr::Fn { .. }
+        | TypedExpr::List { .. }
+        | TypedExpr::Call { .. }
+        | TypedExpr::BinOp { .. }
+        | TypedExpr::Case { .. }
+        | TypedExpr::RecordAccess { .. }
+        | TypedExpr::PositionalAccess { .. }
+        | TypedExpr::Tuple { .. }
+        | TypedExpr::TupleIndex { .. }
+        | TypedExpr::Todo { .. }
+        | TypedExpr::Panic { .. }
+        | TypedExpr::Echo { .. }
+        | TypedExpr::BitArray { .. }
+        | TypedExpr::RecordUpdate { .. }
+        | TypedExpr::NegateBool { .. }
+        | TypedExpr::NegateInt { .. } => signature_help("fn".into(), fun, arguments, None),
     }
 }
 

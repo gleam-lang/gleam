@@ -3758,7 +3758,76 @@ where
                     IntOperator::Remainder,
                 ))
             }
-            _ => {
+            Token::Name { .. }
+            | Token::UpName { .. }
+            | Token::DiscardName { .. }
+            | Token::Int { .. }
+            | Token::Float { .. }
+            | Token::String { .. }
+            | Token::CommentDoc { .. }
+            | Token::LeftParen
+            | Token::RightParen
+            | Token::LeftSquare
+            | Token::RightSquare
+            | Token::LeftBrace
+            | Token::RightBrace
+            | Token::Less
+            | Token::Greater
+            | Token::LessEqual
+            | Token::GreaterEqual
+            | Token::PlusDot
+            | Token::MinusDot
+            | Token::StarDot
+            | Token::SlashDot
+            | Token::LessDot
+            | Token::GreaterDot
+            | Token::LessEqualDot
+            | Token::GreaterEqualDot
+            | Token::LtGt
+            | Token::Colon
+            | Token::Comma
+            | Token::Hash
+            | Token::Bang
+            | Token::Equal
+            | Token::EqualEqual
+            | Token::NotEqual
+            | Token::Vbar
+            | Token::VbarVbar
+            | Token::AmperAmper
+            | Token::LtLt
+            | Token::GtGt
+            | Token::Pipe
+            | Token::Dot
+            | Token::RArrow
+            | Token::LArrow
+            | Token::DotDot
+            | Token::At
+            | Token::EndOfFile
+            | Token::CommentNormal
+            | Token::CommentModule
+            | Token::NewLine
+            | Token::As
+            | Token::Assert
+            | Token::Auto
+            | Token::Case
+            | Token::Const
+            | Token::Delegate
+            | Token::Derive
+            | Token::Echo
+            | Token::Else
+            | Token::Fn
+            | Token::If
+            | Token::Implement
+            | Token::Import
+            | Token::Let
+            | Token::Macro
+            | Token::Opaque
+            | Token::Panic
+            | Token::Pub
+            | Token::Test
+            | Token::Todo
+            | Token::Type
+            | Token::Use => {
                 self.tok0 = Some((start, token, end));
                 Ok(left)
             }
@@ -3883,31 +3952,29 @@ where
                     // If provided a Name, map to a more detailed error
                     // message to nudge the user.
                     // Else, handle as an unexpected token.
-                    let field = match token {
-                        Token::Name { name } => name,
-                        token => {
-                            let hint = match (&token, self.tok0.take()) {
-                                (&Token::Fn, _) | (&Token::Pub, Some((_, Token::Fn, _))) => {
-                                    let text =
-                                        "Gleam is not an object oriented programming language so
+                    let field = if let Token::Name { name } = token {
+                        name
+                    } else {
+                        let hint = match (&token, self.tok0.take()) {
+                            (&Token::Fn, _) | (&Token::Pub, Some((_, Token::Fn, _))) => {
+                                let text = "Gleam is not an object oriented programming language so
 functions are declared separately from types.";
-                                    Some(wrap(text).into())
-                                }
-                                (_, _) => None,
-                            };
+                                Some(wrap(text).into())
+                            }
+                            (_, _) => None,
+                        };
 
-                            return parse_error(
-                                ParseErrorType::UnexpectedToken {
-                                    token,
-                                    expected: vec![
-                                        Token::RightBrace.to_string().into(),
-                                        "a record constructor".into(),
-                                    ],
-                                    hint,
-                                },
-                                SrcSpan { start, end },
-                            );
-                        }
+                        return parse_error(
+                            ParseErrorType::UnexpectedToken {
+                                token,
+                                expected: vec![
+                                    Token::RightBrace.to_string().into(),
+                                    "a record constructor".into(),
+                                ],
+                                hint,
+                            },
+                            SrcSpan { start, end },
+                        );
                     };
                     let field_type = match self.parse_type_annotation(&Token::Colon) {
                         Ok(Some(annotation)) => Some(Box::new(annotation)),
@@ -3952,7 +4019,78 @@ functions are declared separately from types.";
                     ParseErrorType::UnexpectedReservedWord,
                     SrcSpan { start, end },
                 ),
-                _ => parse_error(ParseErrorType::ExpectedName, SrcSpan { start, end }),
+                Token::Int { .. }
+                | Token::Float { .. }
+                | Token::String { .. }
+                | Token::CommentDoc { .. }
+                | Token::LeftParen
+                | Token::RightParen
+                | Token::LeftSquare
+                | Token::RightSquare
+                | Token::LeftBrace
+                | Token::RightBrace
+                | Token::Plus
+                | Token::Minus
+                | Token::Star
+                | Token::Slash
+                | Token::Less
+                | Token::Greater
+                | Token::LessEqual
+                | Token::GreaterEqual
+                | Token::Percent
+                | Token::PlusDot
+                | Token::MinusDot
+                | Token::StarDot
+                | Token::SlashDot
+                | Token::LessDot
+                | Token::GreaterDot
+                | Token::LessEqualDot
+                | Token::GreaterEqualDot
+                | Token::LtGt
+                | Token::Colon
+                | Token::Comma
+                | Token::Hash
+                | Token::Bang
+                | Token::Equal
+                | Token::EqualEqual
+                | Token::NotEqual
+                | Token::Vbar
+                | Token::VbarVbar
+                | Token::AmperAmper
+                | Token::LtLt
+                | Token::GtGt
+                | Token::Pipe
+                | Token::Dot
+                | Token::RArrow
+                | Token::LArrow
+                | Token::DotDot
+                | Token::At
+                | Token::EndOfFile
+                | Token::CommentNormal
+                | Token::CommentModule
+                | Token::NewLine
+                | Token::As
+                | Token::Assert
+                | Token::Auto
+                | Token::Case
+                | Token::Const
+                | Token::Delegate
+                | Token::Derive
+                | Token::Echo
+                | Token::Else
+                | Token::Fn
+                | Token::If
+                | Token::Implement
+                | Token::Import
+                | Token::Let
+                | Token::Macro
+                | Token::Opaque
+                | Token::Panic
+                | Token::Pub
+                | Token::Test
+                | Token::Todo
+                | Token::Type
+                | Token::Use => parse_error(ParseErrorType::ExpectedName, SrcSpan { start, end }),
             },
             None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
         }
@@ -3963,18 +4101,82 @@ functions are declared separately from types.";
         let t = self.next_tok();
         match t {
             Some((start, tok, end)) => match tok {
-                Token::Name { .. } => {
+                Token::Name { .. } | Token::DiscardName { .. } => {
                     parse_error(ParseErrorType::IncorrectUpName, SrcSpan { start, end })
                 }
-                _ => match tok {
-                    Token::UpName { name } => Ok((start, name, end)),
-                    _ => match tok {
-                        Token::DiscardName { .. } => {
-                            parse_error(ParseErrorType::IncorrectUpName, SrcSpan { start, end })
-                        }
-                        _ => parse_error(ParseErrorType::ExpectedUpName, SrcSpan { start, end }),
-                    },
-                },
+                Token::UpName { name } => Ok((start, name, end)),
+                Token::Int { .. }
+                | Token::Float { .. }
+                | Token::String { .. }
+                | Token::CommentDoc { .. }
+                | Token::LeftParen
+                | Token::RightParen
+                | Token::LeftSquare
+                | Token::RightSquare
+                | Token::LeftBrace
+                | Token::RightBrace
+                | Token::Plus
+                | Token::Minus
+                | Token::Star
+                | Token::Slash
+                | Token::Less
+                | Token::Greater
+                | Token::LessEqual
+                | Token::GreaterEqual
+                | Token::Percent
+                | Token::PlusDot
+                | Token::MinusDot
+                | Token::StarDot
+                | Token::SlashDot
+                | Token::LessDot
+                | Token::GreaterDot
+                | Token::LessEqualDot
+                | Token::GreaterEqualDot
+                | Token::LtGt
+                | Token::Colon
+                | Token::Comma
+                | Token::Hash
+                | Token::Bang
+                | Token::Equal
+                | Token::EqualEqual
+                | Token::NotEqual
+                | Token::Vbar
+                | Token::VbarVbar
+                | Token::AmperAmper
+                | Token::LtLt
+                | Token::GtGt
+                | Token::Pipe
+                | Token::Dot
+                | Token::RArrow
+                | Token::LArrow
+                | Token::DotDot
+                | Token::At
+                | Token::EndOfFile
+                | Token::CommentNormal
+                | Token::CommentModule
+                | Token::NewLine
+                | Token::As
+                | Token::Assert
+                | Token::Auto
+                | Token::Case
+                | Token::Const
+                | Token::Delegate
+                | Token::Derive
+                | Token::Echo
+                | Token::Else
+                | Token::Fn
+                | Token::If
+                | Token::Implement
+                | Token::Import
+                | Token::Let
+                | Token::Macro
+                | Token::Opaque
+                | Token::Panic
+                | Token::Pub
+                | Token::Test
+                | Token::Todo
+                | Token::Type
+                | Token::Use => parse_error(ParseErrorType::ExpectedUpName, SrcSpan { start, end }),
             },
             None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
         }
@@ -3990,8 +4192,8 @@ functions are declared separately from types.";
                 return parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 });
             }
         };
-        match t {
-            Token::Name { name } => match name.as_str() {
+        if let Token::Name { name } = t {
+            match name.as_str() {
                 "javascript" => Ok(Target::JavaScript),
                 "erlang" => Ok(Target::Erlang),
                 "js" => {
@@ -4011,8 +4213,9 @@ functions are declared separately from types.";
                     Ok(Target::Erlang)
                 }
                 _ => parse_error(ParseErrorType::UnknownTarget, SrcSpan::new(start, end)),
-            },
-            _ => parse_error(ParseErrorType::ExpectedTargetName, paren_location),
+            }
+        } else {
+            parse_error(ParseErrorType::ExpectedTargetName, paren_location)
         }
     }
 
@@ -4462,7 +4665,59 @@ fn tok_to_binop(t: &Token) -> Option<BinOp> {
         Token::Slash => Some(BinOp::DivInt),
         Token::SlashDot => Some(BinOp::DivFloat),
         Token::LtGt => Some(BinOp::Concatenate),
-        _ => None,
+        Token::Name { .. }
+        | Token::UpName { .. }
+        | Token::DiscardName { .. }
+        | Token::Int { .. }
+        | Token::Float { .. }
+        | Token::String { .. }
+        | Token::CommentDoc { .. }
+        | Token::LeftParen
+        | Token::RightParen
+        | Token::LeftSquare
+        | Token::RightSquare
+        | Token::LeftBrace
+        | Token::RightBrace
+        | Token::Colon
+        | Token::Comma
+        | Token::Hash
+        | Token::Bang
+        | Token::Equal
+        | Token::Vbar
+        | Token::LtLt
+        | Token::GtGt
+        | Token::Pipe
+        | Token::Dot
+        | Token::RArrow
+        | Token::LArrow
+        | Token::DotDot
+        | Token::At
+        | Token::EndOfFile
+        | Token::CommentNormal
+        | Token::CommentModule
+        | Token::NewLine
+        | Token::As
+        | Token::Assert
+        | Token::Auto
+        | Token::Case
+        | Token::Const
+        | Token::Delegate
+        | Token::Derive
+        | Token::Echo
+        | Token::Else
+        | Token::Fn
+        | Token::If
+        | Token::Implement
+        | Token::Import
+        | Token::Let
+        | Token::Macro
+        | Token::Opaque
+        | Token::Panic
+        | Token::Pub
+        | Token::Test
+        | Token::Todo
+        | Token::Type
+        | Token::Use => None,
     }
 }
 /// Simple-Precedence-Parser, perform reduction for expression
@@ -4493,14 +4748,11 @@ fn expr_op_reduction(
     r: UntypedExpr,
 ) -> UntypedExpr {
     if token == Token::Pipe {
-        let expressions = match l {
-            UntypedExpr::PipeLine { mut expressions } => {
-                expressions.push(r);
-                expressions
-            }
-            _ => {
-                vec1![l, r]
-            }
+        let expressions = if let UntypedExpr::PipeLine { mut expressions } = l {
+            expressions.push(r);
+            expressions
+        } else {
+            vec1![l, r]
         };
         UntypedExpr::PipeLine { expressions }
     } else {
@@ -4663,7 +4915,60 @@ fn clause_guard_reduction(
             right,
         },
 
-        _ => panic!("Token could not be converted to Guard Op."),
+        Token::Name { .. }
+        | Token::UpName { .. }
+        | Token::DiscardName { .. }
+        | Token::Int { .. }
+        | Token::Float { .. }
+        | Token::String { .. }
+        | Token::CommentDoc { .. }
+        | Token::LeftParen
+        | Token::RightParen
+        | Token::LeftSquare
+        | Token::RightSquare
+        | Token::LeftBrace
+        | Token::RightBrace
+        | Token::LtGt
+        | Token::Colon
+        | Token::Comma
+        | Token::Hash
+        | Token::Bang
+        | Token::Equal
+        | Token::Vbar
+        | Token::LtLt
+        | Token::GtGt
+        | Token::Pipe
+        | Token::Dot
+        | Token::RArrow
+        | Token::LArrow
+        | Token::DotDot
+        | Token::At
+        | Token::EndOfFile
+        | Token::CommentNormal
+        | Token::CommentModule
+        | Token::NewLine
+        | Token::As
+        | Token::Assert
+        | Token::Auto
+        | Token::Case
+        | Token::Const
+        | Token::Delegate
+        | Token::Derive
+        | Token::Echo
+        | Token::Else
+        | Token::Fn
+        | Token::If
+        | Token::Implement
+        | Token::Import
+        | Token::Let
+        | Token::Macro
+        | Token::Opaque
+        | Token::Panic
+        | Token::Pub
+        | Token::Test
+        | Token::Todo
+        | Token::Type
+        | Token::Use => panic!("Token could not be converted to Guard Op."),
     }
 }
 

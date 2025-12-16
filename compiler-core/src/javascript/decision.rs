@@ -1221,7 +1221,9 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             }
             ReadType::Float => self.bit_array_slice_to_float(bit_array, start, end, endianness),
             ReadType::BitArray => self.bit_array_slice_with_end(bit_array, from, end),
-            _ => panic!("invalid slice type made it to code generation: {type_:#?}"),
+            ReadType::String | ReadType::UtfCodepoint => {
+                panic!("invalid slice type made it to code generation: {type_:#?}")
+            }
         }
     }
 
@@ -1735,26 +1737,26 @@ fn assign_subject<'a>(
 ) -> SubjectAssignment<'a> {
     static ASSIGNMENT_VAR_ECO_STR: OnceLock<EcoString> = OnceLock::new();
 
-    match subject {
-        // If the value is a variable we don't need to assign it to a new
-        // variable, we can use the value expression safely without worrying about
-        // performing computation or side effects multiple times.
-        TypedExpr::Var {
-            name, constructor, ..
-        } if constructor.is_local_variable() => SubjectAssignment::AlreadyAVariable {
+    // If the value is a variable we don't need to assign it to a new
+    // variable, we can use the value expression safely without worrying about
+    // performing computation or side effects multiple times.
+    if let TypedExpr::Var {
+        name, constructor, ..
+    } = subject
+        && constructor.is_local_variable()
+    {
+        SubjectAssignment::AlreadyAVariable {
             name: expression_generator.local_var(name),
-        },
-
+        }
+    } else {
         // If it's not a variable we need to assign it to a variable
         // to avoid rendering the subject expression multiple times
-        _ => {
-            let name = expression_generator
-                .next_local_var(ASSIGNMENT_VAR_ECO_STR.get_or_init(|| ASSIGNMENT_VAR.into()));
-            let value = expression_generator
-                .not_in_tail_position(Some(ordering), |this| this.wrap_expression(subject));
+        let name = expression_generator
+            .next_local_var(ASSIGNMENT_VAR_ECO_STR.get_or_init(|| ASSIGNMENT_VAR.into()));
+        let value = expression_generator
+            .not_in_tail_position(Some(ordering), |this| this.wrap_expression(subject));
 
-            SubjectAssignment::BindToVariable { value, name }
-        }
+        SubjectAssignment::BindToVariable { value, name }
     }
 }
 

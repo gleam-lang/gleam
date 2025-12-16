@@ -144,7 +144,8 @@ where
                     Some(EcoString::from(k.as_str()))
                 }
 
-                _ => None,
+                crate::manifest::ManifestPackageSource::Git { .. }
+                | crate::manifest::ManifestPackageSource::Local { .. } => None,
             })
             .collect();
 
@@ -1458,9 +1459,12 @@ fn code_action_unused_values(
         .type_info
         .warnings
         .iter()
-        .filter_map(|warning| match warning {
-            type_::Warning::ImplicitlyDiscardedResult { location } => Some(location),
-            _ => None,
+        .filter_map(|warning| {
+            if let type_::Warning::ImplicitlyDiscardedResult { location } = warning {
+                Some(location)
+            } else {
+                None
+            }
         })
         .collect();
 
@@ -1522,16 +1526,20 @@ fn code_action_fix_names(
     };
     let name_corrections = errors
         .iter()
-        .filter_map(|error| match error {
-            type_::Error::BadName {
+        .filter_map(|error| {
+            if let type_::Error::BadName {
                 location,
                 name,
                 kind,
-            } => Some(NameCorrection {
-                correction: correct_name_case(name, *kind),
-                location: *location,
-            }),
-            _ => None,
+            } = error
+            {
+                Some(NameCorrection {
+                    correction: correct_name_case(name, *kind),
+                    location: *location,
+                })
+            } else {
+                None
+            }
         })
         .collect_vec();
 
@@ -1577,14 +1585,37 @@ fn get_expr_qualified_name(expression: &TypedExpr) -> Option<(&EcoString, &EcoSt
                 ..
             } => Some((module_name, name)),
 
-            _ => None,
+            ValueConstructorVariant::LocalVariable { .. }
+            | ValueConstructorVariant::Record { .. } => None,
         },
 
         TypedExpr::ModuleSelect {
             label, module_name, ..
         } => Some((module_name, label)),
 
-        _ => None,
+        TypedExpr::Int { .. }
+        | TypedExpr::Float { .. }
+        | TypedExpr::String { .. }
+        | TypedExpr::Block { .. }
+        | TypedExpr::Pipeline { .. }
+        | TypedExpr::Var { .. }
+        | TypedExpr::Fn { .. }
+        | TypedExpr::List { .. }
+        | TypedExpr::Call { .. }
+        | TypedExpr::BinOp { .. }
+        | TypedExpr::Case { .. }
+        | TypedExpr::RecordAccess { .. }
+        | TypedExpr::PositionalAccess { .. }
+        | TypedExpr::Tuple { .. }
+        | TypedExpr::TupleIndex { .. }
+        | TypedExpr::Todo { .. }
+        | TypedExpr::Panic { .. }
+        | TypedExpr::Echo { .. }
+        | TypedExpr::BitArray { .. }
+        | TypedExpr::RecordUpdate { .. }
+        | TypedExpr::NegateBool { .. }
+        | TypedExpr::NegateInt { .. }
+        | TypedExpr::Invalid { .. } => None,
     }
 }
 

@@ -1242,7 +1242,15 @@ impl<'comments> Formatter<'comments> {
             match expr {
                 Pattern::Tuple { .. } | Pattern::List { .. } | Pattern::BitArray { .. } => true,
                 Pattern::Constructor { arguments, .. } => !arguments.is_empty(),
-                _ => false,
+                Pattern::Int { .. }
+                | Pattern::Float { .. }
+                | Pattern::String { .. }
+                | Pattern::Variable { .. }
+                | Pattern::BitArraySize(_)
+                | Pattern::Assign { .. }
+                | Pattern::Discard { .. }
+                | Pattern::StringPrefix { .. }
+                | Pattern::Invalid { .. } => false,
             }
         }
 
@@ -1556,7 +1564,25 @@ impl<'comments> Formatter<'comments> {
             UntypedExpr::BinOp {
                 name, left, right, ..
             } => self.bin_op(name, left, right, nest_steps),
-            _ => self.expr(side),
+            UntypedExpr::Int { .. }
+            | UntypedExpr::Float { .. }
+            | UntypedExpr::Block { .. }
+            | UntypedExpr::Var { .. }
+            | UntypedExpr::Fn { .. }
+            | UntypedExpr::List { .. }
+            | UntypedExpr::Call { .. }
+            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::Case { .. }
+            | UntypedExpr::FieldAccess { .. }
+            | UntypedExpr::Tuple { .. }
+            | UntypedExpr::TupleIndex { .. }
+            | UntypedExpr::Todo { .. }
+            | UntypedExpr::Panic { .. }
+            | UntypedExpr::Echo { .. }
+            | UntypedExpr::BitArray { .. }
+            | UntypedExpr::RecordUpdate { .. }
+            | UntypedExpr::NegateBool { .. }
+            | UntypedExpr::NegateInt { .. } => self.expr(side),
         };
         match side.bin_op_name() {
             // In case the other side is a binary operation as well and it can
@@ -1636,11 +1662,12 @@ impl<'comments> Formatter<'comments> {
 
         for expr in expressions.iter().skip(1) {
             let comments = self.pop_comments(expr.location().start);
-            let doc = match expr {
-                UntypedExpr::Fn { kind, body, .. } if kind.is_capture() => {
-                    self.fn_capture(body, FnCapturePosition::RightHandSideOfPipe)
-                }
-                _ => self.expr(expr),
+            let doc = if let UntypedExpr::Fn { kind, body, .. } = expr
+                && kind.is_capture()
+            {
+                self.fn_capture(body, FnCapturePosition::RightHandSideOfPipe)
+            } else {
+                self.expr(expr)
             };
             let doc = if nest_pipe { doc.nest(INDENT) } else { doc };
             let space = if try_to_keep_on_one_line {
@@ -1925,14 +1952,14 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn tuple_index<'a>(&mut self, tuple: &'a UntypedExpr, index: u64) -> Document<'a> {
-        match tuple {
-            // In case we have a block with a single variable tuple access we
-            // remove that redundat wrapper:
-            //
-            //     {tuple.1}.0 becomes
-            //     tuple.1.0
-            //
-            UntypedExpr::Block { statements, .. } => match statements.as_slice() {
+        // In case we have a block with a single variable tuple access we
+        // remove that redundant wrapper:
+        //
+        //     {tuple.1}.0 becomes
+        //     tuple.1.0
+        //
+        if let UntypedExpr::Block { statements, .. } = tuple {
+            match statements.as_slice() {
                 [Statement::Expression(tuple @ UntypedExpr::TupleIndex { tuple: inner, .. })]
                     // We can't apply this change if the inner thing is a
                     // literal tuple because the compiler cannot currently parse
@@ -1942,8 +1969,9 @@ impl<'comments> Formatter<'comments> {
                     self.expr(tuple)
                 }
                 _ => self.expr(tuple),
-            },
-            _ => self.expr(tuple),
+            }
+        } else {
+            self.expr(tuple)
         }
         .append(".")
         .append(index)
@@ -1971,7 +1999,23 @@ impl<'comments> Formatter<'comments> {
                 ..
             } => " ".to_doc().append(self.block(location, statements, true)),
 
-            _ => break_("", " ").append(self.expr(expr).group()).nest(INDENT),
+            UntypedExpr::Int { .. }
+            | UntypedExpr::Float { .. }
+            | UntypedExpr::String { .. }
+            | UntypedExpr::Var { .. }
+            | UntypedExpr::Call { .. }
+            | UntypedExpr::BinOp { .. }
+            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::FieldAccess { .. }
+            | UntypedExpr::TupleIndex { .. }
+            | UntypedExpr::Todo { .. }
+            | UntypedExpr::Panic { .. }
+            | UntypedExpr::Echo { .. }
+            | UntypedExpr::RecordUpdate { .. }
+            | UntypedExpr::NegateBool { .. }
+            | UntypedExpr::NegateInt { .. } => {
+                break_("", " ").append(self.expr(expr).group()).nest(INDENT)
+            }
         }
         .next_break_fits(NextBreakFitsMode::Disabled)
         .group()
@@ -1980,7 +2024,26 @@ impl<'comments> Formatter<'comments> {
     fn assigned_value<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
             UntypedExpr::Case { .. } => " ".to_doc().append(self.expr(expr)).group(),
-            _ => self.case_clause_value(expr),
+            UntypedExpr::Int { .. }
+            | UntypedExpr::Float { .. }
+            | UntypedExpr::String { .. }
+            | UntypedExpr::Block { .. }
+            | UntypedExpr::Var { .. }
+            | UntypedExpr::Fn { .. }
+            | UntypedExpr::List { .. }
+            | UntypedExpr::Call { .. }
+            | UntypedExpr::BinOp { .. }
+            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::FieldAccess { .. }
+            | UntypedExpr::Tuple { .. }
+            | UntypedExpr::TupleIndex { .. }
+            | UntypedExpr::Todo { .. }
+            | UntypedExpr::Panic { .. }
+            | UntypedExpr::Echo { .. }
+            | UntypedExpr::BitArray { .. }
+            | UntypedExpr::RecordUpdate { .. }
+            | UntypedExpr::NegateBool { .. }
+            | UntypedExpr::NegateInt { .. } => self.case_clause_value(expr),
         }
     }
 
@@ -2338,7 +2401,27 @@ impl<'comments> Formatter<'comments> {
                 let doc = self.pipeline(expressions, true).group();
                 commented(doc, comments)
             }
-            _ => self.expr(expression).group(),
+            UntypedExpr::Int { .. }
+            | UntypedExpr::Float { .. }
+            | UntypedExpr::String { .. }
+            | UntypedExpr::Block { .. }
+            | UntypedExpr::Var { .. }
+            | UntypedExpr::Fn { .. }
+            | UntypedExpr::List { .. }
+            | UntypedExpr::Call { .. }
+            | UntypedExpr::BinOp { .. }
+            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::Case { .. }
+            | UntypedExpr::FieldAccess { .. }
+            | UntypedExpr::Tuple { .. }
+            | UntypedExpr::TupleIndex { .. }
+            | UntypedExpr::Todo { .. }
+            | UntypedExpr::Panic { .. }
+            | UntypedExpr::Echo { .. }
+            | UntypedExpr::BitArray { .. }
+            | UntypedExpr::RecordUpdate { .. }
+            | UntypedExpr::NegateBool { .. }
+            | UntypedExpr::NegateInt { .. } => self.expr(expression).group(),
         }
     }
 
@@ -2636,7 +2719,25 @@ impl<'comments> Formatter<'comments> {
         match expr {
             UntypedExpr::NegateBool { value, .. } => self.expr(value),
             UntypedExpr::BinOp { .. } => "!".to_doc().append(wrap_block(self.expr(expr))),
-            _ => docvec!["!", self.expr(expr)],
+            UntypedExpr::Int { .. }
+            | UntypedExpr::Float { .. }
+            | UntypedExpr::String { .. }
+            | UntypedExpr::Block { .. }
+            | UntypedExpr::Var { .. }
+            | UntypedExpr::Fn { .. }
+            | UntypedExpr::List { .. }
+            | UntypedExpr::Call { .. }
+            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::Case { .. }
+            | UntypedExpr::FieldAccess { .. }
+            | UntypedExpr::Tuple { .. }
+            | UntypedExpr::TupleIndex { .. }
+            | UntypedExpr::Todo { .. }
+            | UntypedExpr::Panic { .. }
+            | UntypedExpr::Echo { .. }
+            | UntypedExpr::BitArray { .. }
+            | UntypedExpr::RecordUpdate { .. }
+            | UntypedExpr::NegateInt { .. } => docvec!["!", self.expr(expr)],
         }
     }
 
@@ -2646,7 +2747,25 @@ impl<'comments> Formatter<'comments> {
             UntypedExpr::Int { value, .. } if value.starts_with('-') => self.int(&value[1..]),
             UntypedExpr::BinOp { .. } => "- ".to_doc().append(self.expr(expr)),
 
-            _ => docvec!["-", self.expr(expr)],
+            UntypedExpr::Int { .. }
+            | UntypedExpr::Float { .. }
+            | UntypedExpr::String { .. }
+            | UntypedExpr::Block { .. }
+            | UntypedExpr::Var { .. }
+            | UntypedExpr::Fn { .. }
+            | UntypedExpr::List { .. }
+            | UntypedExpr::Call { .. }
+            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::Case { .. }
+            | UntypedExpr::FieldAccess { .. }
+            | UntypedExpr::Tuple { .. }
+            | UntypedExpr::TupleIndex { .. }
+            | UntypedExpr::Todo { .. }
+            | UntypedExpr::Panic { .. }
+            | UntypedExpr::Echo { .. }
+            | UntypedExpr::BitArray { .. }
+            | UntypedExpr::RecordUpdate { .. }
+            | UntypedExpr::NegateBool { .. } => docvec!["-", self.expr(expr)],
         }
     }
 
@@ -3432,7 +3551,21 @@ fn is_breakable_argument(expr: &UntypedExpr, arity: usize) -> bool {
         | UntypedExpr::List { .. }
         | UntypedExpr::Tuple { .. }
         | UntypedExpr::BitArray { .. } => true,
-        _ => false,
+
+        UntypedExpr::Int { .. }
+        | UntypedExpr::Float { .. }
+        | UntypedExpr::String { .. }
+        | UntypedExpr::Var { .. }
+        | UntypedExpr::BinOp { .. }
+        | UntypedExpr::PipeLine { .. }
+        | UntypedExpr::FieldAccess { .. }
+        | UntypedExpr::TupleIndex { .. }
+        | UntypedExpr::Todo { .. }
+        | UntypedExpr::Panic { .. }
+        | UntypedExpr::Echo { .. }
+        | UntypedExpr::RecordUpdate { .. }
+        | UntypedExpr::NegateBool { .. }
+        | UntypedExpr::NegateInt { .. } => false,
     }
 }
 

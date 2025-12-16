@@ -797,7 +797,7 @@ impl<'a, IO> Completer<'a, IO> {
                 .and_then(|i| i.accessors.get(name))
                 .filter(|a| a.publicity.is_importable() || module == &self.module.name)
                 .map(|a| a.accessors_for_variant(*inferred_variant)),
-            _ => None,
+            Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => None,
         }
     }
 
@@ -830,7 +830,28 @@ impl<'a, IO> Completer<'a, IO> {
                 .get(module_name)
                 .and_then(|i| i.values.get(label))
                 .and_then(|a| a.field_map()),
-            _ => None,
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => None,
         }
     }
 

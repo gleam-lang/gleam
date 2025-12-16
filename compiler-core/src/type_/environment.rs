@@ -870,7 +870,7 @@ impl Environment<'_> {
                     Imported::Value(name) if module_info.get_public_value(name).is_some() => {
                         Some(ModuleSuggestion::Importable(importable.clone()))
                     }
-                    _ => None,
+                    Imported::Module | Imported::Type(_) | Imported::Value(_) => None,
                 }
             })
             .collect_vec();

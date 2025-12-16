@@ -185,7 +185,25 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 }
 
                 // right(left)
-                call => (
+                UntypedExpr::Int { .. }
+                | UntypedExpr::Float { .. }
+                | UntypedExpr::String { .. }
+                | UntypedExpr::Block { .. }
+                | UntypedExpr::Var { .. }
+                | UntypedExpr::List { .. }
+                | UntypedExpr::BinOp { .. }
+                | UntypedExpr::PipeLine { .. }
+                | UntypedExpr::Case { .. }
+                | UntypedExpr::FieldAccess { .. }
+                | UntypedExpr::Tuple { .. }
+                | UntypedExpr::TupleIndex { .. }
+                | UntypedExpr::Todo { .. }
+                | UntypedExpr::Panic { .. }
+                | UntypedExpr::Echo { .. }
+                | UntypedExpr::BitArray { .. }
+                | UntypedExpr::RecordUpdate { .. }
+                | UntypedExpr::NegateBool { .. }
+                | UntypedExpr::NegateInt { .. } => (
                     PipelineAssignmentKind::FunctionCall,
                     self.infer_apply_pipe(call),
                 ),
@@ -367,7 +385,10 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             UnifyError::CouldNotUnify {
                 expected, given, ..
             } => (expected.as_ref(), given.as_ref()),
-            _ => return false,
+            UnifyError::ExtraVarInAlternativePattern { .. }
+            | UnifyError::MissingVarInAlternativePattern { .. }
+            | UnifyError::DuplicateVarInPattern { .. }
+            | UnifyError::RecursiveType => return false,
         };
 
         match types {

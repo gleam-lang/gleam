@@ -347,7 +347,18 @@ impl GetLiteralValue for ast::TypedPattern {
             | ast::Pattern::BitArraySize(ast::BitArraySize::Int { int_value, .. }) => {
                 Some(int_value.clone())
             }
-            _ => None,
+            ast::Pattern::Float { .. }
+            | ast::Pattern::String { .. }
+            | ast::Pattern::Variable { .. }
+            | ast::Pattern::BitArraySize(_)
+            | ast::Pattern::Assign { .. }
+            | ast::Pattern::Discard { .. }
+            | ast::Pattern::List { .. }
+            | ast::Pattern::Constructor { .. }
+            | ast::Pattern::Tuple { .. }
+            | ast::Pattern::BitArray { .. }
+            | ast::Pattern::StringPrefix { .. }
+            | ast::Pattern::Invalid { .. } => None,
         }
     }
 }

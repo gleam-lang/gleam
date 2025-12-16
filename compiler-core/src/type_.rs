@@ -118,8 +118,8 @@ impl Type {
     pub fn is_result_constructor(&self) -> bool {
         match self {
             Type::Fn { return_, .. } => return_.is_result(),
-            Type::Var { type_ } => type_.borrow().is_result(),
-            _ => false,
+            Type::Var { type_ } => type_.borrow().is_result_constructor(),
+            Type::Named { .. } | Type::Tuple { .. } => false,
         }
     }
 
@@ -127,14 +127,14 @@ impl Type {
         match self {
             Self::Named { name, module, .. } => "Result" == name && is_prelude_module(module),
             Self::Var { type_ } => type_.borrow().is_result(),
-            _ => false,
+            Self::Fn { .. } | Self::Tuple { .. } => false,
         }
     }
 
     pub fn is_named(&self) -> bool {
         match self {
             Self::Named { .. } => true,
-            _ => false,
+            Self::Var { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
         }
     }
 
@@ -169,14 +169,14 @@ impl Type {
     pub fn is_unbound(&self) -> bool {
         match self {
             Self::Var { type_ } => type_.borrow().is_unbound(),
-            _ => false,
+            Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
         }
     }
 
     pub fn is_variable(&self) -> bool {
         match self {
             Self::Var { type_ } => type_.borrow().is_variable(),
-            _ => false,
+            Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
         }
     }
 
@@ -184,7 +184,7 @@ impl Type {
         match self {
             Self::Fn { return_, .. } => Some(return_.clone()),
             Self::Var { type_ } => type_.borrow().return_type(),
-            _ => None,
+            Self::Named { .. } | Self::Tuple { .. } => None,
         }
     }
 
@@ -194,7 +194,7 @@ impl Type {
                 arguments, return_, ..
             } => Some((arguments.clone(), return_.clone())),
             Self::Var { type_ } => type_.borrow().fn_types(),
-            _ => None,
+            Self::Named { .. } | Self::Tuple { .. } => None,
         }
     }
 
@@ -203,7 +203,7 @@ impl Type {
         match self {
             Self::Tuple { elements } => Some(elements.clone()),
             Self::Var { type_, .. } => type_.borrow().tuple_types(),
-            _ => None,
+            Self::Named { .. } | Self::Fn { .. } => None,
         }
     }
 
@@ -213,7 +213,7 @@ impl Type {
         match self {
             Self::Named { arguments, .. } => Some(arguments.clone()),
             Self::Var { type_, .. } => type_.borrow().constructor_types(),
-            _ => None,
+            Self::Fn { .. } | Self::Tuple { .. } => None,
         }
     }
 
@@ -237,7 +237,7 @@ impl Type {
                     [] | [_, _, ..] => None,
                 }
             }
-            _ => None,
+            Type::Named { .. } | Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => None,
         }
     }
 
@@ -256,8 +256,8 @@ impl Type {
     fn is_fun(&self) -> bool {
         match self {
             Self::Fn { .. } => true,
-            Type::Var { type_ } => type_.borrow().is_fun(),
-            _ => false,
+            Self::Var { type_ } => type_.borrow().is_fun(),
+            Self::Named { .. } | Self::Tuple { .. } => false,
         }
     }
 
@@ -265,7 +265,7 @@ impl Type {
         match self {
             Self::Named { module, name, .. } if "Nil" == name && is_prelude_module(module) => true,
             Self::Var { type_ } => type_.borrow().is_nil(),
-            _ => false,
+            Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
         }
     }
 
@@ -275,7 +275,7 @@ impl Type {
                 true
             }
             Self::Var { type_ } => type_.borrow().is_nil(),
-            _ => false,
+            Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
         }
     }
 
@@ -287,7 +287,7 @@ impl Type {
                 true
             }
             Self::Var { type_ } => type_.borrow().is_nil(),
-            _ => false,
+            Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
         }
     }
 
@@ -295,7 +295,7 @@ impl Type {
         match self {
             Self::Named { module, name, .. } if "Bool" == name && is_prelude_module(module) => true,
             Self::Var { type_ } => type_.borrow().is_bool(),
-            _ => false,
+            Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
         }
     }
 
@@ -303,7 +303,7 @@ impl Type {
         match self {
             Self::Named { module, name, .. } if "Int" == name && is_prelude_module(module) => true,
             Self::Var { type_ } => type_.borrow().is_int(),
-            _ => false,
+            Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
         }
     }
 
@@ -313,7 +313,7 @@ impl Type {
                 true
             }
             Self::Var { type_ } => type_.borrow().is_float(),
-            _ => false,
+            Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
         }
     }
 
@@ -323,7 +323,7 @@ impl Type {
                 true
             }
             Self::Var { type_ } => type_.borrow().is_string(),
-            _ => false,
+            Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
         }
     }
 
@@ -331,7 +331,7 @@ impl Type {
         match self {
             Self::Named { module, name, .. } if "List" == name && is_prelude_module(module) => true,
             Self::Var { type_ } => type_.borrow().is_list(),
-            _ => false,
+            Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
         }
     }
 
@@ -339,7 +339,7 @@ impl Type {
         match self {
             Self::Named { module, name, .. } => Some((module.clone(), name.clone())),
             Self::Var { type_ } => type_.borrow().named_type_name(),
-            _ => None,
+            Self::Fn { .. } | Self::Tuple { .. } => None,
         }
     }
 
@@ -352,7 +352,7 @@ impl Type {
                 ..
             } => Some((module.clone(), name.clone(), arguments.clone())),
             Self::Var { type_ } => type_.borrow().named_type_information(),
-            _ => None,
+            Self::Fn { .. } | Self::Tuple { .. } => None,
         }
     }
 
@@ -396,13 +396,13 @@ impl Type {
         }
     }
 
-    /// Get the args for the type if the type is a specific `Type::App`.
-    /// Returns None if the type is not a `Type::App` or is an incorrect `Type:App`
+    /// Get the args for the type if the type is a specific `Type::Named`.
+    /// Returns None if the type is not a `Type::Named` or is an incorrect `Type:Named`
     ///
     /// This function is currently only used for finding the `List` type.
     ///
     // TODO: specialise this to just List.
-    pub fn get_app_arguments(
+    pub fn named_type_arguments(
         &self,
         publicity: Publicity,
         package: &str,
@@ -428,7 +428,7 @@ impl Type {
             Self::Var { type_ } => {
                 let arguments: Vec<_> = match type_.borrow().deref() {
                     TypeVar::Link { type_ } => {
-                        return type_.get_app_arguments(
+                        return type_.named_type_arguments(
                             publicity,
                             package,
                             module,
@@ -460,7 +460,7 @@ impl Type {
                 Some(arguments)
             }
 
-            _ => None,
+            Self::Fn { .. } | Self::Tuple { .. } => None,
         }
     }
 
@@ -525,7 +525,7 @@ impl Type {
     pub fn fn_arity(&self) -> Option<usize> {
         match self {
             Self::Fn { arguments, .. } => Some(arguments.len()),
-            _ => None,
+            Self::Named { .. } | Self::Var { .. } | Self::Tuple { .. } => None,
         }
     }
 
@@ -845,10 +845,7 @@ impl ValueConstructorVariant {
     }
 
     pub fn is_record(&self) -> bool {
-        match self {
-            Self::Record { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Record { .. })
     }
 
     pub fn implementations(&self) -> Implementations {
@@ -1068,9 +1065,11 @@ impl TypeVariantConstructors {
                 match t.type_.as_ref() {
                     Type::Var { type_ } => match type_.borrow().deref() {
                         TypeVar::Generic { id } => *id,
-                        _ => panic!("{}", error),
+                        TypeVar::Unbound { .. } | TypeVar::Link { .. } => panic!("{}", error),
                     },
-                    _ => panic!("{}", error),
+                    Type::Named { .. } | Type::Fn { .. } | Type::Tuple { .. } => {
+                        panic!("{}", error)
+                    }
                 }
             })
             .collect_vec();
@@ -1248,6 +1247,13 @@ impl TypeVar {
     pub fn is_result(&self) -> bool {
         match self {
             Self::Link { type_ } => type_.is_result(),
+            Self::Unbound { .. } | Self::Generic { .. } => false,
+        }
+    }
+
+    pub fn is_result_constructor(&self) -> bool {
+        match self {
+            Self::Link { type_ } => type_.is_result_constructor(),
             Self::Unbound { .. } | Self::Generic { .. } => false,
         }
     }
@@ -1496,7 +1502,8 @@ impl ValueConstructor {
         match &self.variant {
             ValueConstructorVariant::ModuleFn { field_map, .. }
             | ValueConstructorVariant::Record { field_map, .. } => field_map.as_ref(),
-            _ => None,
+            ValueConstructorVariant::LocalVariable { .. }
+            | ValueConstructorVariant::ModuleConstant { .. } => None,
         }
     }
 }
