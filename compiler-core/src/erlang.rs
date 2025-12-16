@@ -2082,6 +2082,7 @@ fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
         | TypedExpr::BinOp { .. }
         | TypedExpr::Case { .. }
         | TypedExpr::RecordAccess { .. }
+        | TypedExpr::PositionalAccess { .. }
         | TypedExpr::Block { .. }
         | TypedExpr::ModuleSelect { .. }
         | TypedExpr::Tuple { .. }
@@ -2256,6 +2257,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         } => module_select_fn(type_.clone(), module, name),
 
         TypedExpr::RecordAccess { record, index, .. } => tuple_index(record, index + 1, env),
+        TypedExpr::PositionalAccess { record, index, .. } => tuple_index(record, index + 1, env),
 
         TypedExpr::RecordUpdate {
             record_assignment,

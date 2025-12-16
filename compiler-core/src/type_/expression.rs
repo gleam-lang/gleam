@@ -5,7 +5,7 @@ use crate::{
     ast::{
         Arg, Assert, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment,
         CAPTURE_VARIABLE, CallArg, Clause, ClauseGuard, Constant, FunctionLiteralKind, HasLocation,
-        ImplicitCallArgOrigin, InvalidExpression, Layer, RECORD_UPDATE_VARIABLE, RecordAccessKind,
+        ImplicitCallArgOrigin, InvalidExpression, Layer, RECORD_UPDATE_VARIABLE,
         RecordBeingUpdated, SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssert,
         TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant, TypedExpr,
         TypedMultiPattern, TypedStatement, USE_ASSIGNMENT_VARIABLE, UntypedArg, UntypedAssert,
@@ -1476,7 +1476,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         index: u64::MAX,
                         record: Box::new(record),
                         documentation: None,
-                        kind: RecordAccessKind::Labelled,
                     },
                     Err(_) => TypedExpr::Invalid {
                         location,
@@ -3076,7 +3075,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             location,
             type_,
             documentation,
-            kind: RecordAccessKind::Labelled,
         })
     }
 
@@ -3446,15 +3444,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     convert_incompatible_fields_error(e, RecordField::Unlabelled(index))
                 })?;
 
-                let record_access = TypedExpr::RecordAccess {
+                let record_access = TypedExpr::PositionalAccess {
                     record: Box::new(record.clone()),
-                    label: "".into(),
-                    field_start: record_location.start,
                     index: index as u64,
                     location: record_location,
                     type_: type_.clone(),
-                    documentation: None,
-                    kind: RecordAccessKind::Positional,
                 };
 
                 unify(variant.arg_type(index), type_.clone()).map_err(|e| {

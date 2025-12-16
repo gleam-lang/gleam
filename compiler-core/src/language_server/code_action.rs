@@ -3288,6 +3288,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
             | TypedExpr::Block { .. }
             | TypedExpr::ModuleSelect { .. }
             | TypedExpr::Invalid { .. }
+            | TypedExpr::PositionalAccess { .. }
             | TypedExpr::Var { .. } => (),
 
             TypedExpr::Int { location, .. }
@@ -3605,6 +3606,7 @@ fn can_be_constant(
         | TypedExpr::Fn { .. }
         | TypedExpr::Case { .. }
         | TypedExpr::RecordAccess { .. }
+        | TypedExpr::PositionalAccess { .. }
         | TypedExpr::ModuleSelect { .. }
         | TypedExpr::TupleIndex { .. }
         | TypedExpr::Todo { .. }
@@ -3797,6 +3799,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractConstant<'ast> {
                 | TypedExpr::Fn { .. }
                 | TypedExpr::Case { .. }
                 | TypedExpr::RecordAccess { .. }
+                | TypedExpr::PositionalAccess { .. }
                 | TypedExpr::ModuleSelect { .. }
                 | TypedExpr::TupleIndex { .. }
                 | TypedExpr::Todo { .. }
@@ -7742,6 +7745,7 @@ impl<'ast> ast::visit::Visit<'ast> for WrapInBlock<'ast> {
             // To avoid wrapping the same expression in multiple, nested blocks.
             TypedExpr::Block { .. } => {}
             TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
             | TypedExpr::Int { .. }
             | TypedExpr::Float { .. }
             | TypedExpr::String { .. }
@@ -8234,6 +8238,7 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveBlock<'ast> {
                     | TypedExpr::Call { .. }
                     | TypedExpr::Case { .. }
                     | TypedExpr::RecordAccess { .. }
+                    | TypedExpr::PositionalAccess { .. }
                     | TypedExpr::ModuleSelect { .. }
                     | TypedExpr::Tuple { .. }
                     | TypedExpr::TupleIndex { .. }

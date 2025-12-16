@@ -105,7 +105,15 @@ pub enum TypedExpr {
         index: u64,
         record: Box<Self>,
         documentation: Option<EcoString>,
-        kind: RecordAccessKind,
+    },
+
+    /// Generated internally for accessing unlabelled fields of a custom type,
+    /// such as for record updates.
+    PositionalAccess {
+        location: SrcSpan,
+        type_: Arc<Type>,
+        index: u64,
+        record: Box<Self>,
     },
 
     ModuleSelect {
@@ -219,7 +227,8 @@ impl TypedExpr {
             | Self::Int { .. }
             | Self::Float { .. }
             | Self::String { .. }
-            | Self::Invalid { .. } => self.self_if_contains_location(byte_index),
+            | Self::Invalid { .. }
+            | Self::PositionalAccess { .. } => self.self_if_contains_location(byte_index),
 
             Self::ModuleSelect {
                 location,
@@ -425,7 +434,8 @@ impl TypedExpr {
             | Self::Float { .. }
             | Self::String { .. }
             | Self::ModuleSelect { .. }
-            | Self::Invalid { .. } => None,
+            | Self::Invalid { .. }
+            | Self::PositionalAccess { .. } => None,
 
             Self::Pipeline {
                 first_value,
@@ -626,6 +636,7 @@ impl TypedExpr {
             | Self::TupleIndex { location, .. }
             | Self::ModuleSelect { location, .. }
             | Self::RecordAccess { location, .. }
+            | Self::PositionalAccess { location, .. }
             | Self::RecordUpdate { location, .. }
             | Self::Invalid { location, .. } => *location,
         }
@@ -653,6 +664,7 @@ impl TypedExpr {
             | Self::TupleIndex { location, .. }
             | Self::ModuleSelect { location, .. }
             | Self::RecordAccess { location, .. }
+            | Self::PositionalAccess { location, .. }
             | Self::RecordUpdate { location, .. }
             | Self::Invalid { location, .. } => *location,
             Self::Block { statements, .. } => statements.last().location(),
@@ -680,6 +692,7 @@ impl TypedExpr {
             | TypedExpr::BitArray { .. }
             | TypedExpr::TupleIndex { .. }
             | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
             | Self::Invalid { .. } => None,
 
             // TODO: test
@@ -722,6 +735,7 @@ impl TypedExpr {
             | Self::TupleIndex { type_, .. }
             | Self::ModuleSelect { type_, .. }
             | Self::RecordAccess { type_, .. }
+            | Self::PositionalAccess { type_, .. }
             | Self::RecordUpdate { type_, .. }
             | Self::Invalid { type_, .. } => type_.clone(),
             Self::Pipeline { finally, .. } => finally.type_(),
@@ -814,6 +828,7 @@ impl TypedExpr {
             | TypedExpr::RecordUpdate { .. }
             | TypedExpr::NegateBool { .. }
             | TypedExpr::NegateInt { .. }
+            | TypedExpr::PositionalAccess { .. }
             | TypedExpr::Invalid { .. } => None,
         }
     }
@@ -851,6 +866,7 @@ impl TypedExpr {
             | TypedExpr::Var { .. }
             | TypedExpr::BinOp { .. }
             | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
             | TypedExpr::TupleIndex { .. }
             | TypedExpr::RecordUpdate { .. }
             | TypedExpr::Fn { .. } => true,
@@ -975,6 +991,7 @@ impl TypedExpr {
             | TypedExpr::RecordUpdate { .. }
             | TypedExpr::NegateBool { .. }
             | TypedExpr::NegateInt { .. }
+            | TypedExpr::PositionalAccess { .. }
             | TypedExpr::Invalid { .. } => Purity::Unknown,
         }
     }
@@ -1103,6 +1120,7 @@ impl TypedExpr {
             | TypedExpr::BinOp { location, .. }
             | TypedExpr::Case { location, .. }
             | TypedExpr::RecordAccess { location, .. }
+            | TypedExpr::PositionalAccess { location, .. }
             | TypedExpr::ModuleSelect { location, .. }
             | TypedExpr::Tuple { location, .. }
             | TypedExpr::TupleIndex { location, .. }
@@ -1134,6 +1152,7 @@ impl TypedExpr {
             | TypedExpr::BinOp { .. }
             | TypedExpr::Case { .. }
             | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
             | TypedExpr::Tuple { .. }
             | TypedExpr::TupleIndex { .. }
             | TypedExpr::Todo { .. }
@@ -1458,6 +1477,7 @@ impl TypedExpr {
             }
             (TypedExpr::NegateInt { .. }, _) => false,
 
+            (TypedExpr::PositionalAccess { .. }, _) => false,
             (TypedExpr::Invalid { .. }, _) => false,
         }
     }
@@ -1526,13 +1546,4 @@ pub enum InvalidExpression {
     UnknownVariable {
         name: EcoString,
     },
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RecordAccessKind {
-    /// A regular record access using the `value.label` syntax.
-    Labelled,
-    /// Access of an unlabelled field, generated internally by the compiler, such
-    /// as in record updates.
-    Positional,
 }
