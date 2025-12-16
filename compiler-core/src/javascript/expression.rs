@@ -322,19 +322,11 @@ impl<'module, 'a> Generator<'module, 'a> {
                 arguments, body, ..
             } => self.fn_(arguments, body),
 
-            TypedExpr::RecordAccess {
-                record,
-                label,
-                kind: RecordAccessKind::Labelled,
-                ..
-            } => self.record_access(record, label),
+            TypedExpr::RecordAccess { record, label, .. } => self.record_access(record, label),
 
-            TypedExpr::RecordAccess {
-                record,
-                index,
-                kind: RecordAccessKind::Positional,
-                ..
-            } => self.positional_record_access(record, *index),
+            TypedExpr::PositionalAccess { record, index, .. } => {
+                self.positional_access(record, *index)
+            }
 
             TypedExpr::RecordUpdate {
                 record_assignment,
@@ -1417,7 +1409,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         })
     }
 
-    fn positional_record_access(&mut self, record: &'a TypedExpr, index: u64) -> Document<'a> {
+    fn positional_access(&mut self, record: &'a TypedExpr, index: u64) -> Document<'a> {
         self.not_in_tail_position(None, |this| {
             let record = this.wrap_expression(record);
             docvec![record, "[", index, "]"]
@@ -2573,6 +2565,7 @@ impl TypedExpr {
             | TypedExpr::List { .. }
             | TypedExpr::BinOp { .. }
             | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
             | TypedExpr::ModuleSelect { .. }
             | TypedExpr::Tuple { .. }
             | TypedExpr::TupleIndex { .. }
@@ -2635,6 +2628,7 @@ fn requires_semicolon(statement: &TypedStatement) -> bool {
             | TypedExpr::TupleIndex { .. }
             | TypedExpr::NegateBool { .. }
             | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
             | TypedExpr::ModuleSelect { .. }
             | TypedExpr::Block { .. },
         ) => true,

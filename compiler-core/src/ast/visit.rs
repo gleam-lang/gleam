@@ -1189,7 +1189,6 @@ where
             index,
             record,
             documentation,
-            kind: _,
         } => v.visit_typed_expr_record_access(
             location,
             field_start,
@@ -1271,6 +1270,7 @@ where
             message,
             type_,
         } => v.visit_typed_expr_echo(location, type_, expression, message),
+        TypedExpr::PositionalAccess { .. } => {}
     }
 }
 
