@@ -172,7 +172,10 @@ impl<'a> Printer<'a> {
 
                     match term {
                         Term::EmptyList { .. } => {}
-                        _ => {
+                        Term::Variant { .. }
+                        | Term::Tuple { .. }
+                        | Term::Infinite { .. }
+                        | Term::List { .. } => {
                             buffer.push_str(", ");
                             self.print_list(term, terms, mapping, buffer)
                         }

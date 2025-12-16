@@ -439,7 +439,74 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     Token::DiscardName { .. } => "a discard name".to_string(),
                     Token::Name { .. } | Token::UpName { .. } => "a name".to_string(),
                     _ if token.is_reserved_word() => format!("the keyword {token}"),
-                    _ => token.to_string(),
+                    Token::LeftParen
+                    | Token::RightParen
+                    | Token::LeftSquare
+                    | Token::RightSquare
+                    | Token::LeftBrace
+                    | Token::RightBrace
+                    | Token::Plus
+                    | Token::Minus
+                    | Token::Star
+                    | Token::Slash
+                    | Token::Less
+                    | Token::Greater
+                    | Token::LessEqual
+                    | Token::GreaterEqual
+                    | Token::Percent
+                    | Token::PlusDot
+                    | Token::MinusDot
+                    | Token::StarDot
+                    | Token::SlashDot
+                    | Token::LessDot
+                    | Token::GreaterDot
+                    | Token::LessEqualDot
+                    | Token::GreaterEqualDot
+                    | Token::LtGt
+                    | Token::Colon
+                    | Token::Comma
+                    | Token::Hash
+                    | Token::Bang
+                    | Token::Equal
+                    | Token::EqualEqual
+                    | Token::NotEqual
+                    | Token::Vbar
+                    | Token::VbarVbar
+                    | Token::AmperAmper
+                    | Token::LtLt
+                    | Token::GtGt
+                    | Token::Pipe
+                    | Token::Dot
+                    | Token::RArrow
+                    | Token::LArrow
+                    | Token::DotDot
+                    | Token::At
+                    | Token::EndOfFile
+                    | Token::CommentNormal
+                    | Token::CommentModule
+                    | Token::NewLine
+                    | Token::As
+                    | Token::Assert
+                    | Token::Auto
+                    | Token::Case
+                    | Token::Const
+                    | Token::Delegate
+                    | Token::Derive
+                    | Token::Echo
+                    | Token::Else
+                    | Token::Fn
+                    | Token::If
+                    | Token::Implement
+                    | Token::Import
+                    | Token::Let
+                    | Token::Macro
+                    | Token::Opaque
+                    | Token::Panic
+                    | Token::Pub
+                    | Token::Test
+                    | Token::Todo
+                    | Token::Type
+                    | Token::Use => token.to_string(),
                 };
 
                 let messages = std::iter::once(format!("Found {found}, expected one of: "))

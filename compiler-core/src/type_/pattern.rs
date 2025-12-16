@@ -360,7 +360,29 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 expression: Some(subject),
                 ..
             } => Self::subject_variable(subject),
-            _ => None,
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => None,
         }
     }
 
@@ -444,7 +466,17 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     })
                 }
 
-                _ => (),
+                Pattern::Int { .. }
+                | Pattern::Variable { .. }
+                | Pattern::BitArraySize(_)
+                | Pattern::Assign { .. }
+                | Pattern::Discard { .. }
+                | Pattern::List { .. }
+                | Pattern::Constructor { .. }
+                | Pattern::Tuple { .. }
+                | Pattern::BitArray { .. }
+                | Pattern::StringPrefix { .. }
+                | Pattern::Invalid { .. } => (),
             }
         }
 
@@ -484,7 +516,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             for option in options.iter() {
                 match option {
                     // Use of the `bits` segment type
-                    BitArrayOption::<TypedPattern>::Bits { location } => {
+                    BitArrayOption::Bits { location } => {
                         self.track_feature_usage(
                             FeatureKind::JavaScriptUnalignedBitArray,
                             *location,
@@ -492,23 +524,48 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     }
 
                     // Int segments that aren't a whole number of bytes
-                    BitArrayOption::<TypedPattern>::Size { value, .. } if segment_type.is_int() => {
-                        match &**value {
-                            Pattern::BitArraySize(BitArraySize::Int {
-                                location,
-                                int_value,
-                                ..
-                            }) if int_value % 8 != BigInt::ZERO => {
-                                self.track_feature_usage(
-                                    FeatureKind::JavaScriptUnalignedBitArray,
-                                    *location,
-                                );
-                            }
-                            _ => (),
+                    BitArrayOption::Size { value, .. } if segment_type.is_int() => match &**value {
+                        Pattern::BitArraySize(BitArraySize::Int {
+                            location,
+                            int_value,
+                            ..
+                        }) if int_value % 8 != BigInt::ZERO => {
+                            self.track_feature_usage(
+                                FeatureKind::JavaScriptUnalignedBitArray,
+                                *location,
+                            );
                         }
-                    }
+                        Pattern::Int { .. }
+                        | Pattern::Float { .. }
+                        | Pattern::String { .. }
+                        | Pattern::Variable { .. }
+                        | Pattern::BitArraySize(_)
+                        | Pattern::Assign { .. }
+                        | Pattern::Discard { .. }
+                        | Pattern::List { .. }
+                        | Pattern::Constructor { .. }
+                        | Pattern::Tuple { .. }
+                        | Pattern::BitArray { .. }
+                        | Pattern::StringPrefix { .. }
+                        | Pattern::Invalid { .. } => (),
+                    },
 
-                    _ => (),
+                    BitArrayOption::Bytes { .. }
+                    | BitArrayOption::Int { .. }
+                    | BitArrayOption::Float { .. }
+                    | BitArrayOption::Utf8 { .. }
+                    | BitArrayOption::Utf16 { .. }
+                    | BitArrayOption::Utf32 { .. }
+                    | BitArrayOption::Utf8Codepoint { .. }
+                    | BitArrayOption::Utf16Codepoint { .. }
+                    | BitArrayOption::Utf32Codepoint { .. }
+                    | BitArrayOption::Signed { .. }
+                    | BitArrayOption::Unsigned { .. }
+                    | BitArrayOption::Big { .. }
+                    | BitArrayOption::Little { .. }
+                    | BitArrayOption::Native { .. }
+                    | BitArrayOption::Size { .. }
+                    | BitArrayOption::Unit { .. } => (),
                 }
             }
         }
@@ -528,7 +585,19 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 });
                 self.environment.new_unbound_var()
             }
-            _ => segment_type,
+            Pattern::Int { .. }
+            | Pattern::Float { .. }
+            | Pattern::String { .. }
+            | Pattern::Variable { .. }
+            | Pattern::BitArraySize(_)
+            | Pattern::Assign { .. }
+            | Pattern::Discard { .. }
+            | Pattern::List { .. }
+            | Pattern::Constructor { .. }
+            | Pattern::Tuple { .. }
+            | Pattern::BitArray { .. }
+            | Pattern::StringPrefix { .. }
+            | Pattern::Invalid { .. } => segment_type,
         };
 
         let typed_value = self.unify(*segment.value, type_.clone(), None);
@@ -553,7 +622,19 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     location: *location,
                 });
             }
-            _ => {}
+            Pattern::Int { .. }
+            | Pattern::Float { .. }
+            | Pattern::String { .. }
+            | Pattern::Variable { .. }
+            | Pattern::BitArraySize(_)
+            | Pattern::Assign { .. }
+            | Pattern::Discard { .. }
+            | Pattern::List { .. }
+            | Pattern::Constructor { .. }
+            | Pattern::Tuple { .. }
+            | Pattern::BitArray { .. }
+            | Pattern::StringPrefix { .. }
+            | Pattern::Invalid { .. } => {}
         };
 
         BitArraySegment {
@@ -767,7 +848,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 elements,
                 tail,
                 ..
-            } => match type_.get_app_arguments(
+            } => match type_.named_type_arguments(
                 Publicity::Public,
                 PRELUDE_PACKAGE_NAME,
                 PRELUDE_MODULE_NAME,
@@ -850,7 +931,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     Pattern::Tuple { elements, location }
                 }
 
-                _ => {
+                Type::Named { .. } | Type::Fn { .. } => {
                     let elements_types = (0..(elements.len()))
                         .map(|_| self.environment.new_unbound_var())
                         .collect();
@@ -1182,7 +1263,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         }
                     }
 
-                    _ => panic!("Unexpected constructor type for a constructor pattern."),
+                    Type::Var { .. } | Type::Tuple { .. } => {
+                        panic!("Unexpected constructor type for a constructor pattern.")
+                    }
                 }
             }
         }

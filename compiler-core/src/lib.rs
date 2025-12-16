@@ -29,6 +29,7 @@
     unexpected_cfgs,
     unused_import_braces,
     unused_qualifications,
+    clippy::wildcard_enum_match_arm
 )]
 #![deny(
     clippy::await_holding_lock,

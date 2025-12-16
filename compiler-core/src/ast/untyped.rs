@@ -182,7 +182,25 @@ impl UntypedExpr {
         match self {
             Self::Block { location, .. } => location.start,
             Self::PipeLine { expressions, .. } => expressions.first().start_byte_index(),
-            _ => self.location().start,
+            Self::Int { .. }
+            | Self::Float { .. }
+            | Self::String { .. }
+            | Self::Var { .. }
+            | Self::Fn { .. }
+            | Self::List { .. }
+            | Self::Call { .. }
+            | Self::BinOp { .. }
+            | Self::Case { .. }
+            | Self::FieldAccess { .. }
+            | Self::Tuple { .. }
+            | Self::TupleIndex { .. }
+            | Self::Todo { .. }
+            | Self::Panic { .. }
+            | Self::Echo { .. }
+            | Self::BitArray { .. }
+            | Self::RecordUpdate { .. }
+            | Self::NegateBool { .. }
+            | Self::NegateInt { .. } => self.location().start,
         }
     }
 
@@ -190,14 +208,33 @@ impl UntypedExpr {
         match self {
             Self::BinOp { name, .. } => name.precedence(),
             Self::PipeLine { .. } => 5,
-            _ => u8::MAX,
+            Self::Int { .. }
+            | Self::Float { .. }
+            | Self::String { .. }
+            | Self::Block { .. }
+            | Self::Var { .. }
+            | Self::Fn { .. }
+            | Self::List { .. }
+            | Self::Call { .. }
+            | Self::Case { .. }
+            | Self::FieldAccess { .. }
+            | Self::Tuple { .. }
+            | Self::TupleIndex { .. }
+            | Self::Todo { .. }
+            | Self::Panic { .. }
+            | Self::Echo { .. }
+            | Self::BitArray { .. }
+            | Self::RecordUpdate { .. }
+            | Self::NegateBool { .. }
+            | Self::NegateInt { .. } => u8::MAX,
         }
     }
 
     pub fn bin_op_name(&self) -> Option<&BinOp> {
-        match self {
-            UntypedExpr::BinOp { name, .. } => Some(name),
-            _ => None,
+        if let UntypedExpr::BinOp { name, .. } = self {
+            Some(name)
+        } else {
+            None
         }
     }
 
@@ -232,10 +269,7 @@ impl UntypedExpr {
     }
 
     pub fn is_tuple(&self) -> bool {
-        match self {
-            UntypedExpr::Tuple { .. } => true,
-            _ => false,
-        }
+        matches!(self, UntypedExpr::Tuple { .. })
     }
 
     /// Returns `true` if the untyped expr is [`Call`].

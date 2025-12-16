@@ -179,7 +179,11 @@ impl<'a, 'env> PatternPrinter<'a, 'env> {
                     ValueConstructorVariant::ModuleConstant { literal, .. } => {
                         const_inline(literal, self.environment)
                     }
-                    _ => self.environment.local_var_name(name),
+                    ValueConstructorVariant::LocalVariable { .. }
+                    | ValueConstructorVariant::ModuleFn { .. }
+                    | ValueConstructorVariant::Record { .. } => {
+                        self.environment.local_var_name(name)
+                    }
                 }
             }
             BitArraySize::BinaryOperator {
@@ -239,13 +243,15 @@ impl<'a, 'env> PatternPrinter<'a, 'env> {
         operator: &'static str,
         right: &'a TypedBitArraySize,
     ) -> Document<'a> {
-        let left = match left {
-            BitArraySize::BinaryOperator { .. } => self.bit_array_size(left).surround("(", ")"),
-            _ => self.bit_array_size(left),
+        let left = if let BitArraySize::BinaryOperator { .. } = left {
+            self.bit_array_size(left).surround("(", ")")
+        } else {
+            self.bit_array_size(left)
         };
-        let right = match right {
-            BitArraySize::BinaryOperator { .. } => self.bit_array_size(right).surround("(", ")"),
-            _ => self.bit_array_size(right),
+        let right = if let BitArraySize::BinaryOperator { .. } = right {
+            self.bit_array_size(right).surround("(", ")")
+        } else {
+            self.bit_array_size(right)
         };
         binop_documents(left, operator, right)
     }
@@ -327,11 +333,25 @@ impl<'a, 'env> PatternPrinter<'a, 'env> {
 
                     // Any other pattern is invalid as a bit array segment. We already handle the case
                     // of `<<a as b>>` in the type-checker, and assignment patterns cannot be nested.
-                    _ => panic!("Pattern segment match not recognised"),
+                    Pattern::Variable { .. }
+                    | Pattern::BitArraySize(_)
+                    | Pattern::Assign { .. }
+                    | Pattern::List { .. }
+                    | Pattern::Constructor { .. }
+                    | Pattern::Tuple { .. }
+                    | Pattern::BitArray { .. }
+                    | Pattern::StringPrefix { .. }
+                    | Pattern::Invalid { .. } => panic!("Pattern segment match not recognised"),
                 }
             }
 
-            _ => panic!("Pattern segment match not recognised"),
+            Pattern::BitArraySize(_)
+            | Pattern::List { .. }
+            | Pattern::Constructor { .. }
+            | Pattern::Tuple { .. }
+            | Pattern::BitArray { .. }
+            | Pattern::StringPrefix { .. }
+            | Pattern::Invalid { .. } => panic!("Pattern segment match not recognised"),
         };
 
         let size = |value: &'a TypedPattern, this: &mut PatternPrinter<'a, 'env>| {

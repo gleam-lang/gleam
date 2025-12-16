@@ -762,14 +762,25 @@ fn const_string_concatenate_argument<'a>(
                 literal: Constant::StringConcatenation { left, right, .. },
                 ..
             } => const_string_concatenate_inner(left, right, env),
-            _ => const_inline(value, env),
+            ValueConstructorVariant::LocalVariable { .. }
+            | ValueConstructorVariant::ModuleConstant { .. }
+            | ValueConstructorVariant::ModuleFn { .. }
+            | ValueConstructorVariant::Record { .. } => const_inline(value, env),
         },
 
         Constant::StringConcatenation { left, right, .. } => {
             const_string_concatenate_inner(left, right, env)
         }
 
-        _ => const_inline(value, env),
+        Constant::Int { .. }
+        | Constant::Float { .. }
+        | Constant::Tuple { .. }
+        | Constant::List { .. }
+        | Constant::Record { .. }
+        | Constant::RecordUpdate { .. }
+        | Constant::BitArray { .. }
+        | Constant::Var { .. }
+        | Constant::Invalid { .. } => const_inline(value, env),
     }
 }
 
@@ -814,7 +825,29 @@ fn string_concatenate_argument<'a>(value: &'a TypedExpr, env: &mut Env<'a>) -> D
             ..
         } => docvec![expr(value, env), "/binary"],
 
-        _ => docvec!["(", maybe_block_expr(value, env), ")/binary"],
+        TypedExpr::Int { .. }
+        | TypedExpr::Float { .. }
+        | TypedExpr::Block { .. }
+        | TypedExpr::Pipeline { .. }
+        | TypedExpr::Var { .. }
+        | TypedExpr::Fn { .. }
+        | TypedExpr::List { .. }
+        | TypedExpr::Call { .. }
+        | TypedExpr::BinOp { .. }
+        | TypedExpr::Case { .. }
+        | TypedExpr::RecordAccess { .. }
+        | TypedExpr::PositionalAccess { .. }
+        | TypedExpr::ModuleSelect { .. }
+        | TypedExpr::Tuple { .. }
+        | TypedExpr::TupleIndex { .. }
+        | TypedExpr::Todo { .. }
+        | TypedExpr::Panic { .. }
+        | TypedExpr::Echo { .. }
+        | TypedExpr::BitArray { .. }
+        | TypedExpr::RecordUpdate { .. }
+        | TypedExpr::NegateBool { .. }
+        | TypedExpr::NegateInt { .. }
+        | TypedExpr::Invalid { .. } => docvec!["(", maybe_block_expr(value, env), ")/binary"],
     }
 }
 
@@ -843,16 +876,25 @@ fn const_segment<'a>(
             }
 
             // Wrap anything else in parentheses
-            value => const_inline(value, env).surround("(", ")"),
+            Constant::Tuple { .. }
+            | Constant::List { .. }
+            | Constant::Record { .. }
+            | Constant::RecordUpdate { .. }
+            | Constant::Var { .. }
+            | Constant::StringConcatenation { .. }
+            | Constant::Invalid { .. } => const_inline(value, env).surround("(", ")"),
         }
     };
 
-    let size = |value: &'a TypedConstant, env: &mut Env<'a>| match value {
-        Constant::Int { .. } => Some(":".to_doc().append(const_inline(value, env))),
-        _ => Some(
-            ":".to_doc()
-                .append(const_inline(value, env).surround("(", ")")),
-        ),
+    let size = |value: &'a TypedConstant, env: &mut Env<'a>| {
+        if let Constant::Int { .. } = value {
+            Some(":".to_doc().append(const_inline(value, env)))
+        } else {
+            Some(
+                ":".to_doc()
+                    .append(const_inline(value, env).surround("(", ")")),
+            )
+        }
     };
 
     let unit = |value: &'a u8| Some(eco_format!("unit:{value}").to_doc());
@@ -905,18 +947,34 @@ fn expr_segment<'a>(
             | TypedExpr::BitArray { .. } => expr(value, env),
 
             // Wrap anything else in parentheses
-            value => expr(value, env).surround("(", ")"),
+            TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => expr(value, env).surround("(", ")"),
         }
     };
 
-    let size = |expression: &'a TypedExpr, env: &mut Env<'a>| match expression {
-        TypedExpr::Int { value, .. } => {
+    let size = |expression: &'a TypedExpr, env: &mut Env<'a>| {
+        if let TypedExpr::Int { value, .. } = expression {
             let v = value.replace("_", "");
             let v = u64::from_str(&v).unwrap_or(0);
             Some(eco_format!(":{v}").to_doc())
-        }
-
-        _ => {
+        } else {
             let inner_expr = maybe_block_expr(expression, env).surround("(", ")");
             // The value of size must be a non-negative integer, we use lists:max here to ensure
             // it is at least 0;
@@ -1141,13 +1199,15 @@ fn binop_exprs<'a>(
     right: &'a TypedExpr,
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    let left = match left {
-        TypedExpr::BinOp { .. } => expr(left, env).surround("(", ")"),
-        _ => maybe_block_expr(left, env),
+    let left = if let TypedExpr::BinOp { .. } = left {
+        expr(left, env).surround("(", ")")
+    } else {
+        maybe_block_expr(left, env)
     };
-    let right = match right {
-        TypedExpr::BinOp { .. } => expr(right, env).surround("(", ")"),
-        _ => maybe_block_expr(right, env),
+    let right = if let TypedExpr::BinOp { .. } = right {
+        expr(right, env).surround("(", ")")
+    } else {
+        maybe_block_expr(right, env)
     };
     binop_documents(left, op, right)
 }
@@ -1416,7 +1476,9 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
                     .append(chars)
                     .append("} end")
             }
-            _ => atom_string(to_snake_case(record_name)),
+            Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
+                atom_string(to_snake_case(record_name))
+            }
         },
 
         ValueConstructorVariant::LocalVariable { .. } => env.local_var_name(name),
@@ -1501,7 +1563,9 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
             ..
         } if arguments.is_empty() => match type_.deref() {
             Type::Fn { arguments, .. } => record_constructor_function(tag, arguments.len()),
-            _ => atom_string(to_snake_case(tag)),
+            Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
+                atom_string(to_snake_case(tag))
+            }
         },
 
         Constant::Record { tag, arguments, .. } => {
@@ -1624,9 +1688,10 @@ fn clause_consequence<'a>(
         .append(separator)
     };
 
-    let consequence = match consequence {
-        TypedExpr::Block { statements, .. } => statement_sequence(statements, env),
-        _ => expr(consequence, env),
+    let consequence = if let TypedExpr::Block { statements, .. } = consequence {
+        statement_sequence(statements, env)
+    } else {
+        expr(consequence, env)
     };
     assignment_doc.append(consequence)
 }
@@ -1956,7 +2021,9 @@ fn docs_arguments_call<'a>(
             | ValueConstructorVariant::ModuleFn { module, name, .. } => {
                 module_fn_with_arguments(module, name, arguments, env)
             }
-            _ => {
+            ValueConstructorVariant::LocalVariable { .. }
+            | ValueConstructorVariant::ModuleConstant { .. }
+            | ValueConstructorVariant::Record { .. } => {
                 unreachable!("The above clause guard ensures that this is a module fn")
             }
         },
@@ -1995,11 +2062,12 @@ fn docs_arguments_call<'a>(
             {
                 let mut merged_arguments = Vec::with_capacity(inner_arguments.len());
                 for arg in inner_arguments {
-                    match &arg.value {
-                        TypedExpr::Var { name, .. } if name == CAPTURE_VARIABLE => {
-                            merged_arguments.push(arguments.swap_remove(0))
-                        }
-                        e => merged_arguments.push(maybe_block_expr(e, env)),
+                    if let TypedExpr::Var { name, .. } = &arg.value
+                        && name == CAPTURE_VARIABLE
+                    {
+                        merged_arguments.push(arguments.swap_remove(0))
+                    } else {
+                        merged_arguments.push(maybe_block_expr(&arg.value, env))
                     }
                 }
                 docs_arguments_call(fun, merged_arguments, env)
@@ -2018,9 +2086,26 @@ fn docs_arguments_call<'a>(
             expr(fun, env).surround("(", ")").append(arguments)
         }
 
-        other => {
+        TypedExpr::Int { .. }
+        | TypedExpr::Float { .. }
+        | TypedExpr::String { .. }
+        | TypedExpr::Block { .. }
+        | TypedExpr::Pipeline { .. }
+        | TypedExpr::Var { .. }
+        | TypedExpr::List { .. }
+        | TypedExpr::BinOp { .. }
+        | TypedExpr::Case { .. }
+        | TypedExpr::PositionalAccess { .. }
+        | TypedExpr::ModuleSelect { .. }
+        | TypedExpr::Tuple { .. }
+        | TypedExpr::Echo { .. }
+        | TypedExpr::BitArray { .. }
+        | TypedExpr::RecordUpdate { .. }
+        | TypedExpr::NegateBool { .. }
+        | TypedExpr::NegateInt { .. }
+        | TypedExpr::Invalid { .. } => {
             let arguments = wrap_arguments(arguments);
-            maybe_block_expr(other, env).append(arguments)
+            maybe_block_expr(fun, env).append(arguments)
         }
     }
 }
@@ -2314,46 +2399,47 @@ fn pipeline<'a>(
 
     let mut prev_local_var_name = None;
     for a in all_assignments {
-        match a.value.as_ref() {
-            // An echo in a pipeline won't result in an assignment, instead it
-            // just prints the previous variable assigned in the pipeline.
-            TypedExpr::Echo {
-                expression: None,
-                message,
-                location,
-                ..
-            } => documents.push(echo_doc(
+        // An echo in a pipeline won't result in an assignment, instead it
+        // just prints the previous variable assigned in the pipeline.
+        if let TypedExpr::Echo {
+            expression: None,
+            message,
+            location,
+            ..
+        } = a.value.as_ref()
+        {
+            documents.push(echo_doc(
                 &prev_local_var_name,
                 message.as_deref(),
                 location,
                 env,
-            )),
-
+            ))
+        } else {
             // Otherwise we assign the intermediate pipe value to a variable.
-            _ => {
-                let body = maybe_block_expr(&a.value, env).group();
-                let name = env.next_local_var_name(&a.name);
-                prev_local_var_name = Some(name.clone());
-                documents.push(docvec![name, " = ", body]);
-            }
+            let body = maybe_block_expr(&a.value, env).group();
+            let name = env.next_local_var_name(&a.name);
+            prev_local_var_name = Some(name.clone());
+            documents.push(docvec![name, " = ", body]);
         };
         documents.push(",".to_doc());
         documents.push(line());
     }
 
-    match finally {
-        TypedExpr::Echo {
-            expression: None,
-            message,
-            location,
-            ..
-        } => documents.push(echo_doc(
+    if let TypedExpr::Echo {
+        expression: None,
+        message,
+        location,
+        ..
+    } = finally
+    {
+        documents.push(echo_doc(
             &prev_local_var_name,
             message.as_deref(),
             location,
             env,
-        )),
-        _ => documents.push(expr(finally, env)),
+        ))
+    } else {
+        documents.push(expr(finally, env))
     }
 
     env.current_scope_vars = vars;
@@ -2458,7 +2544,28 @@ fn assert<'a>(assert: &'a TypedAssert, env: &mut Env<'a>) -> Document<'a> {
             )
         }
 
-        _ => (
+        TypedExpr::Int { .. }
+        | TypedExpr::Float { .. }
+        | TypedExpr::String { .. }
+        | TypedExpr::Block { .. }
+        | TypedExpr::Pipeline { .. }
+        | TypedExpr::Var { .. }
+        | TypedExpr::Fn { .. }
+        | TypedExpr::List { .. }
+        | TypedExpr::Case { .. }
+        | TypedExpr::RecordAccess { .. }
+        | TypedExpr::PositionalAccess { .. }
+        | TypedExpr::ModuleSelect { .. }
+        | TypedExpr::Tuple { .. }
+        | TypedExpr::TupleIndex { .. }
+        | TypedExpr::Todo { .. }
+        | TypedExpr::Panic { .. }
+        | TypedExpr::Echo { .. }
+        | TypedExpr::BitArray { .. }
+        | TypedExpr::RecordUpdate { .. }
+        | TypedExpr::NegateBool { .. }
+        | TypedExpr::NegateInt { .. }
+        | TypedExpr::Invalid { .. } => (
             maybe_block_expr(value, env),
             vec![
                 ("kind", atom("expression")),
@@ -2792,7 +2899,7 @@ fn module_select_fn<'a>(type_: Arc<Type>, module_name: &'a str, label: &'a str) 
     match crate::type_::collapse_links(type_).as_ref() {
         Type::Fn { arguments, .. } => function_reference(Some(module_name), label, arguments.len()),
 
-        _ => module_name_atom(module_name)
+        Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => module_name_atom(module_name)
             .append(":")
             .append(atom(label))
             .append("()"),

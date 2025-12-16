@@ -97,7 +97,9 @@ pub fn reference_for_ast_node(
                     origin: Some(origin.clone()),
                     name: name.clone(),
                 }),
-                _ => None,
+                ValueConstructorVariant::ModuleConstant { .. }
+                | ValueConstructorVariant::ModuleFn { .. }
+                | ValueConstructorVariant::Record { .. } => None,
             }),
         Located::Pattern(Pattern::Assign { location, name, .. }) => {
             Some(Referenced::LocalVariable {
@@ -279,7 +281,18 @@ pub fn reference_for_ast_node(
             location: *name_location,
             target_kind: RenameTarget::Definition,
         }),
-        _ => None,
+        Located::Pattern(_)
+        | Located::PatternSpread { .. }
+        | Located::Statement(_)
+        | Located::Expression { .. }
+        | Located::FunctionBody(_)
+        | Located::UnqualifiedImport(_)
+        | Located::Label(..)
+        | Located::ModuleName { .. }
+        | Located::Constant(_)
+        | Located::ModuleFunction(_)
+        | Located::ModuleImport(_)
+        | Located::ModuleTypeAlias(_) => None,
     }
 }
 
@@ -483,7 +496,7 @@ impl FindVariableReferences {
                 };
             }
 
-            _ => (),
+            DefinitionLocation::Regular { .. } | DefinitionLocation::Alternative { .. } => (),
         };
     }
 
@@ -524,7 +537,10 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
                     kind: VariableReferenceKind::Variable,
                 });
             }
-            _ => {}
+            ValueConstructorVariant::LocalVariable { .. }
+            | ValueConstructorVariant::ModuleConstant { .. }
+            | ValueConstructorVariant::ModuleFn { .. }
+            | ValueConstructorVariant::Record { .. } => {}
         }
     }
 
@@ -647,7 +663,10 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
                     kind: VariableReferenceKind::Variable,
                 });
             }
-            _ => {}
+            ValueConstructorVariant::LocalVariable { .. }
+            | ValueConstructorVariant::ModuleConstant { .. }
+            | ValueConstructorVariant::ModuleFn { .. }
+            | ValueConstructorVariant::Record { .. } => {}
         }
     }
 
@@ -671,7 +690,10 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
                     });
                     return;
                 }
-                _ => {}
+                ValueConstructorVariant::LocalVariable { .. }
+                | ValueConstructorVariant::ModuleConstant { .. }
+                | ValueConstructorVariant::ModuleFn { .. }
+                | ValueConstructorVariant::Record { .. } => {}
             }
         }
 

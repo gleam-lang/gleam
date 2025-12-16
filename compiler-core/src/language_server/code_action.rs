@@ -488,11 +488,12 @@ pub fn code_action_inexhaustive_let_to_case(
     };
     let inexhaustive_assignments = errors
         .iter()
-        .filter_map(|error| match error {
-            type_::Error::InexhaustiveLetAssignment { location, missing } => {
+        .filter_map(|error| {
+            if let type_::Error::InexhaustiveLetAssignment { location, missing } = error {
                 Some((*location, missing))
+            } else {
+                None
             }
-            _ => None,
         })
         .collect_vec();
 
@@ -958,13 +959,17 @@ pub fn code_action_import_module(
 
     let missing_imports = errors
         .into_iter()
-        .filter_map(|e| match e {
-            type_::Error::UnknownModule {
+        .filter_map(|e| {
+            if let type_::Error::UnknownModule {
                 location,
                 suggestions,
                 ..
-            } => suggest_imports(*location, suggestions),
-            _ => None,
+            } = e
+            {
+                suggest_imports(*location, suggestions)
+            } else {
+                None
+            }
         })
         .collect_vec();
 
@@ -1056,11 +1061,12 @@ pub fn code_action_add_missing_patterns(
     };
     let missing_patterns = errors
         .iter()
-        .filter_map(|error| match error {
-            type_::Error::InexhaustiveCaseExpression { location, missing } => {
+        .filter_map(|error| {
+            if let type_::Error::InexhaustiveCaseExpression { location, missing } = error {
                 Some((*location, missing))
+            } else {
+                None
             }
-            _ => None,
         })
         .collect_vec();
 
@@ -3742,9 +3748,10 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractConstant<'ast> {
         {
             self.variant_of_extractable = Some(ExtractableToConstant::Assignment);
             self.selected_expression = Some(expr_location);
-            self.name_to_use = match &assignment.pattern {
-                Pattern::Variable { name, .. } => Some(name.clone()),
-                _ => None,
+            self.name_to_use = if let Pattern::Variable { name, .. } = &assignment.pattern {
+                Some(name.clone())
+            } else {
+                None
             };
             self.value_to_use = Some(EcoString::from(
                 self.module
@@ -4956,7 +4963,10 @@ impl<'a, IO> PatternMatchOnValue<'a, IO> {
                 kind: TodoKind::EmptyFunction { .. },
                 ..
             }) => true,
-            _ => false,
+            ast::Statement::Expression(_)
+            | ast::Statement::Assignment(_)
+            | ast::Statement::Use(_)
+            | ast::Statement::Assert(_) => false,
         };
 
         // If the pattern matching is added to a function with an empty
@@ -5865,7 +5875,30 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
                 } => {
                     return self.try_save_function_to_generate(name, type_, Some(arguments));
                 }
-                _ => {}
+                TypedExpr::Int { .. }
+                | TypedExpr::Float { .. }
+                | TypedExpr::String { .. }
+                | TypedExpr::Block { .. }
+                | TypedExpr::Pipeline { .. }
+                | TypedExpr::Var { .. }
+                | TypedExpr::Fn { .. }
+                | TypedExpr::List { .. }
+                | TypedExpr::Call { .. }
+                | TypedExpr::BinOp { .. }
+                | TypedExpr::Case { .. }
+                | TypedExpr::RecordAccess { .. }
+                | TypedExpr::PositionalAccess { .. }
+                | TypedExpr::ModuleSelect { .. }
+                | TypedExpr::Tuple { .. }
+                | TypedExpr::TupleIndex { .. }
+                | TypedExpr::Todo { .. }
+                | TypedExpr::Panic { .. }
+                | TypedExpr::Echo { .. }
+                | TypedExpr::BitArray { .. }
+                | TypedExpr::RecordUpdate { .. }
+                | TypedExpr::NegateBool { .. }
+                | TypedExpr::NegateInt { .. }
+                | TypedExpr::Invalid { .. } => {}
             }
         }
 
@@ -6369,7 +6402,29 @@ impl NameGenerator {
                 Some(self.rename_to_avoid_shadowing(label.clone()))
             }
 
-            _ => None,
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => None,
         }
     }
 
@@ -6901,14 +6956,15 @@ impl<'a> ConvertToPipe<'a> {
         };
 
         let arg_text = code_at(self.module, arg_location);
-        let arg_text = match arg.value {
-            // If the expression being piped is a binary operation with
-            // precedence lower than pipes then we have to wrap it in curly
-            // braces to not mess with the order of operations.
-            TypedExpr::BinOp { name, .. } if name.precedence() < PIPE_PRECEDENCE => {
-                &format!("{{ {arg_text} }}")
-            }
-            _ => arg_text,
+        // If the expression being piped is a binary operation with
+        // precedence lower than pipes then we have to wrap it in curly
+        // braces to not mess with the order of operations.
+        let arg_text = if let TypedExpr::BinOp { name, .. } = arg.value
+            && name.precedence() < PIPE_PRECEDENCE
+        {
+            &format!("{{ {arg_text} }}")
+        } else {
+            arg_text
         };
 
         match next_arg {
@@ -8022,7 +8078,41 @@ impl<'a> RemoveUnusedImports<'a> {
                 type_::Warning::UnusedImportedModuleAlias { location, .. } => {
                     Some(UnusedImport::ModuleAlias(*location))
                 }
-                _ => None,
+                type_::Warning::Todo { .. }
+                | type_::Warning::ImplicitlyDiscardedResult { .. }
+                | type_::Warning::UnusedLiteral { .. }
+                | type_::Warning::UnusedValue { .. }
+                | type_::Warning::NoFieldsRecordUpdate { .. }
+                | type_::Warning::AllFieldsRecordUpdate { .. }
+                | type_::Warning::UnusedType { .. }
+                | type_::Warning::UnusedConstructor { .. }
+                | type_::Warning::UnusedPrivateModuleConstant { .. }
+                | type_::Warning::UnusedPrivateFunction { .. }
+                | type_::Warning::UnusedVariable { .. }
+                | type_::Warning::UnnecessaryDoubleIntNegation { .. }
+                | type_::Warning::UnnecessaryDoubleBoolNegation { .. }
+                | type_::Warning::InefficientEmptyListCheck { .. }
+                | type_::Warning::TransitiveDependencyImported { .. }
+                | type_::Warning::DeprecatedItem { .. }
+                | type_::Warning::UnreachableCasePattern { .. }
+                | type_::Warning::UnusedDiscardPattern { .. }
+                | type_::Warning::CaseMatchOnLiteralCollection { .. }
+                | type_::Warning::CaseMatchOnLiteralValue { .. }
+                | type_::Warning::OpaqueExternalType { .. }
+                | type_::Warning::InternalTypeLeak { .. }
+                | type_::Warning::RedundantAssertAssignment { .. }
+                | type_::Warning::AssertAssignmentOnImpossiblePattern { .. }
+                | type_::Warning::TodoOrPanicUsedAsFunction { .. }
+                | type_::Warning::UnreachableCodeAfterPanic { .. }
+                | type_::Warning::RedundantPipeFunctionCapture { .. }
+                | type_::Warning::FeatureRequiresHigherGleamVersion { .. }
+                | type_::Warning::JavaScriptIntUnsafe { .. }
+                | type_::Warning::AssertLiteralBool { .. }
+                | type_::Warning::BitArraySegmentTruncatedValue { .. }
+                | type_::Warning::ModuleImportedTwice { .. }
+                | type_::Warning::TopLevelDefinitionShadowsImport { .. }
+                | type_::Warning::RedundantComparison { .. }
+                | type_::Warning::UnusedRecursiveArgument { .. } => None,
             })
             .sorted_by_key(|import| import.location())
             .collect_vec();
@@ -8757,7 +8847,29 @@ fn single_expression(expression: &TypedExpr) -> Option<&TypedExpr> {
         // into a single expression.
         TypedExpr::Block { .. } => None,
 
-        expression => Some(expression),
+        TypedExpr::Int { .. }
+        | TypedExpr::Float { .. }
+        | TypedExpr::String { .. }
+        | TypedExpr::Pipeline { .. }
+        | TypedExpr::Var { .. }
+        | TypedExpr::Fn { .. }
+        | TypedExpr::List { .. }
+        | TypedExpr::Call { .. }
+        | TypedExpr::BinOp { .. }
+        | TypedExpr::Case { .. }
+        | TypedExpr::RecordAccess { .. }
+        | TypedExpr::PositionalAccess { .. }
+        | TypedExpr::ModuleSelect { .. }
+        | TypedExpr::Tuple { .. }
+        | TypedExpr::TupleIndex { .. }
+        | TypedExpr::Todo { .. }
+        | TypedExpr::Panic { .. }
+        | TypedExpr::Echo { .. }
+        | TypedExpr::BitArray { .. }
+        | TypedExpr::RecordUpdate { .. }
+        | TypedExpr::NegateBool { .. }
+        | TypedExpr::NegateInt { .. }
+        | TypedExpr::Invalid { .. } => Some(expression),
     }
 }
 
@@ -8781,9 +8893,12 @@ impl<'a> RemoveUnreachableCaseClauses<'a> {
         params: &'a CodeActionParams,
     ) -> Self {
         let unreachable_clauses = (module.ast.type_info.warnings.iter())
-            .filter_map(|warning| match warning {
-                type_::Warning::UnreachableCasePattern { location, .. } => Some(*location),
-                _ => None,
+            .filter_map(|warning| {
+                if let type_::Warning::UnreachableCasePattern { location, .. } = warning {
+                    Some(*location)
+                } else {
+                    None
+                }
             })
             .collect();
 
@@ -9202,13 +9317,15 @@ impl<'a> ExtractFunction<'a> {
                 )
             }
             ExtractedValue::Expression(expression) => {
-                let expression_type = match expression {
-                    TypedExpr::Fn {
-                        type_,
-                        kind: FunctionLiteralKind::Use { .. },
-                        ..
-                    } => type_.fn_types().expect("use callback to be a function").1,
-                    _ => expression.type_(),
+                let expression_type = if let TypedExpr::Fn {
+                    type_,
+                    kind: FunctionLiteralKind::Use { .. },
+                    ..
+                } = expression
+                {
+                    type_.fn_types().expect("use callback to be a function").1
+                } else {
+                    expression.type_()
                 };
                 self.extract_code_in_tail_position(
                     expression.location(),

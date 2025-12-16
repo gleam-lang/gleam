@@ -129,7 +129,60 @@ impl Token {
 
             Self::Star | Self::StarDot | Self::Slash | Self::SlashDot | Self::Percent => Some(6),
 
-            _ => None,
+            Self::Name { .. }
+            | Self::UpName { .. }
+            | Self::DiscardName { .. }
+            | Self::Int { .. }
+            | Self::Float { .. }
+            | Self::String { .. }
+            | Self::CommentDoc { .. }
+            | Self::LeftParen
+            | Self::RightParen
+            | Self::LeftSquare
+            | Self::RightSquare
+            | Self::LeftBrace
+            | Self::RightBrace
+            | Self::LtGt
+            | Self::Colon
+            | Self::Comma
+            | Self::Hash
+            | Self::Bang
+            | Self::Equal
+            | Self::Vbar
+            | Self::LtLt
+            | Self::GtGt
+            | Self::Pipe
+            | Self::Dot
+            | Self::RArrow
+            | Self::LArrow
+            | Self::DotDot
+            | Self::At
+            | Self::EndOfFile
+            | Self::CommentNormal
+            | Self::CommentModule
+            | Self::NewLine
+            | Self::As
+            | Self::Assert
+            | Self::Auto
+            | Self::Case
+            | Self::Const
+            | Self::Delegate
+            | Self::Derive
+            | Self::Echo
+            | Self::Else
+            | Self::Fn
+            | Self::If
+            | Self::Implement
+            | Self::Import
+            | Self::Let
+            | Self::Macro
+            | Self::Opaque
+            | Self::Panic
+            | Self::Pub
+            | Self::Test
+            | Self::Todo
+            | Self::Type
+            | Self::Use => None,
         }
     }
 

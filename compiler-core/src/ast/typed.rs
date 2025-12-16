@@ -208,16 +208,21 @@ pub enum TypedExpr {
 
 impl TypedExpr {
     pub fn is_println(&self) -> bool {
-        let fun = match self {
-            TypedExpr::Call { fun, arguments, .. } if arguments.len() == 1 => fun.as_ref(),
-            _ => return false,
+        let fun = if let TypedExpr::Call { fun, arguments, .. } = self
+            && arguments.len() == 1
+        {
+            fun.as_ref()
+        } else {
+            return false;
         };
 
-        match fun {
-            TypedExpr::ModuleSelect {
-                label, module_name, ..
-            } => label == "println" && module_name == "gleam/io",
-            _ => false,
+        if let TypedExpr::ModuleSelect {
+            label, module_name, ..
+        } = fun
+        {
+            label == "println" && module_name == "gleam/io"
+        } else {
+            false
         }
     }
 
@@ -601,7 +606,28 @@ impl TypedExpr {
         match self {
             Self::Int { int_value, .. } => int_value != &BigInt::ZERO,
             Self::Float { value, .. } => is_non_zero_number(value),
-            _ => false,
+            Self::String { .. }
+            | Self::Block { .. }
+            | Self::Pipeline { .. }
+            | Self::Var { .. }
+            | Self::Fn { .. }
+            | Self::List { .. }
+            | Self::Call { .. }
+            | Self::BinOp { .. }
+            | Self::Case { .. }
+            | Self::RecordAccess { .. }
+            | Self::PositionalAccess { .. }
+            | Self::ModuleSelect { .. }
+            | Self::Tuple { .. }
+            | Self::TupleIndex { .. }
+            | Self::Todo { .. }
+            | Self::Panic { .. }
+            | Self::Echo { .. }
+            | Self::BitArray { .. }
+            | Self::RecordUpdate { .. }
+            | Self::NegateBool { .. }
+            | Self::NegateInt { .. }
+            | Self::Invalid { .. } => false,
         }
     }
 
@@ -609,7 +635,28 @@ impl TypedExpr {
         match self {
             Self::Int { int_value, .. } => int_value == &BigInt::ZERO,
             Self::Float { value, .. } => !is_non_zero_number(value),
-            _ => false,
+            Self::String { .. }
+            | Self::Block { .. }
+            | Self::Pipeline { .. }
+            | Self::Var { .. }
+            | Self::Fn { .. }
+            | Self::List { .. }
+            | Self::Call { .. }
+            | Self::BinOp { .. }
+            | Self::Case { .. }
+            | Self::RecordAccess { .. }
+            | Self::PositionalAccess { .. }
+            | Self::ModuleSelect { .. }
+            | Self::Tuple { .. }
+            | Self::TupleIndex { .. }
+            | Self::Todo { .. }
+            | Self::Panic { .. }
+            | Self::Echo { .. }
+            | Self::BitArray { .. }
+            | Self::RecordUpdate { .. }
+            | Self::NegateBool { .. }
+            | Self::NegateInt { .. }
+            | Self::Invalid { .. } => false,
         }
     }
 
@@ -771,7 +818,23 @@ impl TypedExpr {
                 ..
             } => true,
 
-            _ => false,
+            Self::Block { .. }
+            | Self::Pipeline { .. }
+            | Self::Var { .. }
+            | Self::Fn { .. }
+            | Self::BinOp { .. }
+            | Self::Case { .. }
+            | Self::RecordAccess { .. }
+            | Self::PositionalAccess { .. }
+            | Self::ModuleSelect { .. }
+            | Self::TupleIndex { .. }
+            | Self::Todo { .. }
+            | Self::Panic { .. }
+            | Self::Echo { .. }
+            | Self::RecordUpdate { .. }
+            | Self::NegateBool { .. }
+            | Self::NegateInt { .. }
+            | Self::Invalid { .. } => false,
         }
     }
 
@@ -781,15 +844,34 @@ impl TypedExpr {
                 left, right, name, ..
             } if name.is_bool_operator() => left.is_known_bool() && right.is_known_bool(),
             TypedExpr::NegateBool { value, .. } => value.is_known_bool(),
-            _ => self.is_literal(),
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => self.is_literal(),
         }
     }
 
     pub fn is_literal_string(&self) -> bool {
-        match self {
-            Self::String { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::String { .. })
     }
 
     /// Returns `true` if the typed expr is [`Var`].
@@ -797,10 +879,7 @@ impl TypedExpr {
     /// [`Var`]: TypedExpr::Var
     #[must_use]
     pub fn is_var(&self) -> bool {
-        match self {
-            Self::Var { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Var { .. })
     }
 
     pub(crate) fn get_documentation(&self) -> Option<&str> {
@@ -838,10 +917,7 @@ impl TypedExpr {
     /// [`Case`]: TypedExpr::Case
     #[must_use]
     pub fn is_case(&self) -> bool {
-        match self {
-            Self::Case { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Case { .. })
     }
 
     /// Returns `true` if the typed expr is [`Pipeline`].
@@ -849,10 +925,7 @@ impl TypedExpr {
     /// [`Pipeline`]: TypedExpr::Pipeline
     #[must_use]
     pub fn is_pipeline(&self) -> bool {
-        match self {
-            Self::Pipeline { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Pipeline { .. })
     }
 
     pub fn is_pure_value_constructor(&self) -> bool {
@@ -1008,7 +1081,28 @@ impl TypedExpr {
                 constructor: ModuleValueConstructor::Record { .. },
                 ..
             } => true,
-            _ => false,
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => false,
         }
     }
 
@@ -1031,7 +1125,30 @@ impl TypedExpr {
                 ..
             } => *arity > 0,
 
-            _ => false,
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => false,
         }
     }
 
@@ -1053,12 +1170,34 @@ impl TypedExpr {
                 constructor: ModuleValueConstructor::Record { variant_index, .. },
                 ..
             } => Some(*variant_index),
-            _ => None,
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => None,
         }
     }
 
     #[must_use]
-    /// If `self` is a record constructor, returns the nuber of arguments it
+    /// If `self` is a record constructor, returns the number of arguments it
     /// needs to be called. Otherwise, returns `None`.
     ///
     pub fn record_constructor_arity(&self) -> Option<u16> {
@@ -1072,38 +1211,61 @@ impl TypedExpr {
                     },
                 ..
             } => Some(*arity),
-            _ => None,
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => None,
         }
     }
 
     pub fn var_constructor(&self) -> Option<(&ValueConstructor, &EcoString)> {
-        match self {
-            TypedExpr::Var {
-                constructor, name, ..
-            } => Some((constructor, name)),
-            _ => None,
+        if let TypedExpr::Var {
+            constructor, name, ..
+        } = self
+        {
+            Some((constructor, name))
+        } else {
+            None
         }
     }
 
     #[must_use]
     pub(crate) fn is_panic(&self) -> bool {
-        match self {
-            TypedExpr::Panic { .. } => true,
-            _ => false,
-        }
+        matches!(self, TypedExpr::Panic { .. })
     }
 
     pub(crate) fn call_arguments(&self) -> Option<&Vec<TypedCallArg>> {
-        match self {
-            TypedExpr::Call { arguments, .. } => Some(arguments),
-            _ => None,
+        if let TypedExpr::Call { arguments, .. } = self {
+            Some(arguments)
+        } else {
+            None
         }
     }
 
     pub(crate) fn fn_expression_body(&self) -> Option<&Vec1<TypedStatement>> {
-        match self {
-            TypedExpr::Fn { body, .. } => Some(body),
-            _ => None,
+        if let TypedExpr::Fn { body, .. } = self {
+            Some(body)
+        } else {
+            None
         }
     }
 
@@ -1174,10 +1336,7 @@ impl TypedExpr {
     }
 
     pub(crate) fn is_invalid(&self) -> bool {
-        match self {
-            TypedExpr::Invalid { .. } => true,
-            _ => false,
-        }
+        matches!(self, TypedExpr::Invalid { .. })
     }
 
     /// Checks that two expressions are written in the same (ignoring
@@ -1483,10 +1642,7 @@ impl TypedExpr {
     }
 
     pub(crate) fn is_todo_with_no_message(&self) -> bool {
-        match self {
-            TypedExpr::Todo { message: None, .. } => true,
-            _ => false,
-        }
+        matches!(self, TypedExpr::Todo { message: None, .. })
     }
 }
 

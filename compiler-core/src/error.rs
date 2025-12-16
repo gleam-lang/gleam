@@ -1182,7 +1182,7 @@ your app.src file \"{app_ver}\"."
                             Distro::Other => (),
                         }
                     }
-                    _ => (),
+                    OS::Windows | OS::Other => (),
                 }
 
                 text.push('\n');
@@ -4620,7 +4620,29 @@ fn std_io_error_kind_text(kind: &std::io::ErrorKind) -> String {
         }
         ErrorKind::Interrupted => "The operation was interrupted".into(),
         ErrorKind::UnexpectedEof => "The end of file was reached before it was expected".into(),
-        _ => "An unknown error occurred".into(),
+        ErrorKind::HostUnreachable
+        | ErrorKind::NetworkUnreachable
+        | ErrorKind::NetworkDown
+        | ErrorKind::NotADirectory
+        | ErrorKind::IsADirectory
+        | ErrorKind::DirectoryNotEmpty
+        | ErrorKind::ReadOnlyFilesystem
+        | ErrorKind::StaleNetworkFileHandle
+        | ErrorKind::StorageFull
+        | ErrorKind::NotSeekable
+        | ErrorKind::QuotaExceeded
+        | ErrorKind::FileTooLarge
+        | ErrorKind::ResourceBusy
+        | ErrorKind::ExecutableFileBusy
+        | ErrorKind::Deadlock
+        | ErrorKind::CrossesDevices
+        | ErrorKind::TooManyLinks
+        | ErrorKind::InvalidFilename
+        | ErrorKind::ArgumentListTooLong
+        | ErrorKind::Unsupported
+        | ErrorKind::OutOfMemory
+        | ErrorKind::Other
+        | _ => "An unknown error occurred".into(),
     }
 }
 
@@ -4663,7 +4685,28 @@ fn hint_alternative_operator(op: &BinOp, given: &Type) -> Option<String> {
         BinOp::AddInt if given.is_string() => Some(hint_string_message()),
         BinOp::AddFloat if given.is_string() => Some(hint_string_message()),
 
-        _ => None,
+        BinOp::And
+        | BinOp::Or
+        | BinOp::Eq
+        | BinOp::NotEq
+        | BinOp::LtInt
+        | BinOp::LtEqInt
+        | BinOp::LtFloat
+        | BinOp::LtEqFloat
+        | BinOp::GtEqInt
+        | BinOp::GtInt
+        | BinOp::GtEqFloat
+        | BinOp::GtFloat
+        | BinOp::AddInt
+        | BinOp::AddFloat
+        | BinOp::SubInt
+        | BinOp::SubFloat
+        | BinOp::MultInt
+        | BinOp::MultFloat
+        | BinOp::DivInt
+        | BinOp::DivFloat
+        | BinOp::RemainderInt
+        | BinOp::Concatenate => None,
     }
 }
 
