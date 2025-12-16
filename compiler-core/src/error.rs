@@ -812,6 +812,8 @@ fn did_you_mean(name: &str, options: &[EcoString]) -> Option<String> {
 
 fn to_ordinal(value: u32) -> String {
     match value % 10 {
+        // All numbers starting with 1 end in `th` (11th, 12th, 13th, etc.)
+        _ if value / 10 == 1 => format!("{value}th"),
         1 => format!("{value}st"),
         2 => format!("{value}nd"),
         3 => format!("{value}rd"),
