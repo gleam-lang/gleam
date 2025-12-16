@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Bug fixes
+
+- Fixed a bug where the formatter would remove `@external` attributes from
+  custom types.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.14.0-rc1 - 2025-12-15
 
 ### Compiler

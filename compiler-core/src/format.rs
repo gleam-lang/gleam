@@ -1793,6 +1793,8 @@ impl<'comments> Formatter<'comments> {
         let attributes = AttributesPrinter::new()
             .set_deprecation(&ct.deprecation)
             .set_internal(ct.publicity)
+            .set_external_erlang(&ct.external_erlang)
+            .set_external_javascript(&ct.external_javascript)
             .to_doc();
 
         let doc = attributes
