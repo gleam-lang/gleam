@@ -2583,7 +2583,7 @@ but no type in scope with that name."
                             Diagnostic {
                                 title,
                                 text,
-                                hint: None,
+                                hint: suggestions.first().map(|suggestion| suggestion.suggest_unqualified_import(name, Layer::Value)),
                                 level: Level::Error,
                                 location: Some(Location {
                                     label: Label {
