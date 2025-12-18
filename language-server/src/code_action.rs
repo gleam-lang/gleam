@@ -1371,7 +1371,7 @@ pub fn code_action_import_module_for_type_or_value(
                             new_text: suggestion.last_name_component().to_string() + ".",
                         },
                     ],
-                    &format!("Import `{module_name}` and qualifier"),
+                    &format!("Import `{module_name}` and qualify it"),
                 ),
                 ModuleSuggestion::Imported(module_name) => {
                     let matching_import = module
@@ -1433,7 +1433,7 @@ pub fn code_action_import_module_for_type_or_value(
 
                     (
                         add_unqualified_import(name, layer, module, import, line_numbers),
-                        &format!("Import `{name}` from `{module_name}"),
+                        &format!("Import `{name}` from `{module_name}`"),
                     )
                 }
             };
