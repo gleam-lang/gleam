@@ -2680,7 +2680,7 @@ but no type in scope with that name."
                         name,
                         type_with_name_in_scope,
                         discarded_location,
-                        ..
+                        suggestions
                     } => {
                         let title = String::from("Unknown variable");
                         if let Some(ignored_location) = discarded_location {
@@ -2728,7 +2728,7 @@ but no type in scope with that name."
                             Diagnostic {
                                 title,
                                 text,
-                                hint: None,
+                                hint: suggestions.first().map(|suggestion| suggestion.suggest_unqualified_import(name, Layer::Value)),
                                 level: Level::Error,
                                 location: Some(Location {
                                     label: Label {
