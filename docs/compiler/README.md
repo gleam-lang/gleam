@@ -23,8 +23,10 @@ The project is made up of several Rust crates (projects):
 - `compiler-core`: This project parses, analyses, and compiles Gleam projects.
   It is entirely pure and has no IO so that is provided by the other Rust crates
   that wrap this one.
+- `language-server`: This project contains code for the Gleam language server,
+  including autocomplete, code actions, hover and other features.
 - `compiler-cli`: A command line interface that wraps the core compiler and
-  provides IO to files and to the console.
+  language server, providing IO to files and to the console.
 - `compiler-wasm`: A JavaScript interface to the core compiler via web assembly.
   Suitable for running in a web browser.
 
