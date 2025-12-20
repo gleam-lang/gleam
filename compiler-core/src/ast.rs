@@ -499,8 +499,8 @@ impl TypeAst {
             TypeAst::Constructor(TypeAstConstructor {
                 arguments, module, ..
             }) => type_
-                .constructor_types()
-                .and_then(|arg_types| {
+                .named_type_information()
+                .and_then(|(module_name, _, arg_types)| {
                     if let Some(arg) = arguments
                         .iter()
                         .zip(arg_types)
@@ -509,19 +509,19 @@ impl TypeAst {
                         return Some(arg);
                     }
 
+                    if let Some((module_alias, location)) = module {
+                        if location.contains(byte_index) {
+                            return Some(Located::ModuleName {
+                                location: *location,
+                                module_name,
+                                module_alias: module_alias.clone(),
+                                layer: Layer::Type,
+                            });
+                        }
+                    }
+
                     None
                 })
-                .or(module.as_ref().and_then(|(name, location)| {
-                    if location.contains(byte_index) {
-                        Some(Located::ModuleName {
-                            location: *location,
-                            name,
-                            layer: Layer::Type,
-                        })
-                    } else {
-                        None
-                    }
-                }))
                 .or(Some(Located::Annotation { ast: self, type_ })),
             TypeAst::Tuple(TypeAstTuple { elements, .. }) => type_
                 .tuple_types()
