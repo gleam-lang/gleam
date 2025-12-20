@@ -1587,33 +1587,74 @@ impl<'module, 'a> Generator<'module, 'a> {
         right: &'a TypedExpr,
         should_be_equal: bool,
     ) -> Option<Document<'a>> {
-        if let TypedExpr::Var {
-            constructor:
-                ValueConstructor {
-                    variant: ValueConstructorVariant::Record { arity: 0, name, .. },
-                    ..
-                },
-            ..
-        } = right
-        {
-            let left_doc = self
-                .not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(left));
-            Some(self.singleton_equal(left_doc, name, should_be_equal))
-        } else {
-            None
+        match right {
+            TypedExpr::Var {
+                constructor:
+                    ValueConstructor {
+                        variant: ValueConstructorVariant::Record { arity: 0, name, .. },
+                        ..
+                    },
+                ..
+            } => {
+                let left_doc = self.not_in_tail_position(Some(Ordering::Strict), |this| {
+                    this.wrap_expression(left)
+                });
+                Some(self.singleton_equal(left_doc, None, name, should_be_equal))
+            }
+            TypedExpr::ModuleSelect {
+                module_alias,
+                constructor: ModuleValueConstructor::Record { arity: 0, name, .. },
+                ..
+            } => {
+                let left_doc = self.not_in_tail_position(Some(Ordering::Strict), |this| {
+                    this.wrap_expression(left)
+                });
+                Some(self.singleton_equal(left_doc, Some(module_alias), name, should_be_equal))
+            }
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => None,
         }
     }
 
     fn singleton_equal(
         &self,
         value: Document<'a>,
-        tag: &EcoString,
+        module: Option<&'a str>,
+        name: &'a str,
         should_be_equal: bool,
     ) -> Document<'a> {
-        if should_be_equal {
-            docvec![value, " instanceof ", tag.to_doc()]
+        let record = if let Some(module) = module {
+            docvec!["$", module, ".", name]
         } else {
-            docvec!["!(", value, " instanceof ", tag.to_doc(), ")"]
+            name.to_doc()
+        };
+
+        if should_be_equal {
+            docvec![value, " instanceof ", record]
+        } else {
+            docvec!["!(", value, " instanceof ", record, ")"]
         }
     }
 
@@ -2173,13 +2214,19 @@ impl<'module, 'a> Generator<'module, 'a> {
     ) -> Option<Document<'a>> {
         if let ClauseGuard::Constant(Constant::Record {
             record_constructor: Some(constructor),
+            module,
             name,
             ..
         }) = right
             && let ValueConstructorVariant::Record { arity: 0, .. } = constructor.variant
         {
             let left_doc = self.guard(left);
-            return Some(self.singleton_equal(left_doc, name, should_be_equal));
+            return Some(self.singleton_equal(
+                left_doc,
+                module.as_ref().map(|(module, _)| module.as_str()),
+                name,
+                should_be_equal,
+            ));
         }
         None
     }
