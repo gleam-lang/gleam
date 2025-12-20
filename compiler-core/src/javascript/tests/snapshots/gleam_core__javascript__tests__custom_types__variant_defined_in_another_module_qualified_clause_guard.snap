@@ -23,7 +23,7 @@ import * as $other_module from "../other_module.mjs";
 
 export function process(e) {
   let value = e;
-  if (value instanceof Variant) {
+  if (value instanceof $other_module.Variant) {
     return "match";
   } else {
     return "no match";

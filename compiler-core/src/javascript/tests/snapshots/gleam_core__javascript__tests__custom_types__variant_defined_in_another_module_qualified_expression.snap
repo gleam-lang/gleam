@@ -16,9 +16,8 @@ pub fn check(x) -> Bool {
 
 
 ----- COMPILED JAVASCRIPT
-import { isEqual } from "../gleam.mjs";
 import * as $other_module from "../other_module.mjs";
 
 export function check(x) {
-  return isEqual(x, new $other_module.Variant());
+  return x instanceof $other_module.Variant;
 }
