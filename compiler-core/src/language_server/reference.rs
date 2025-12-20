@@ -6,8 +6,8 @@ use lsp_types::Location;
 use crate::{
     analyse,
     ast::{
-        self, ArgNames, BitArraySize, Constant, CustomType, Function, ModuleConstant, Pattern,
-        RecordConstructor, SrcSpan, TypedExpr, TypedModule, visit::Visit,
+        self, ArgNames, AssignName, BitArraySize, Constant, CustomType, Function, ModuleConstant,
+        Pattern, RecordConstructor, SrcSpan, TypedExpr, TypedModule, visit::Visit,
     },
     build::Located,
     type_::{
@@ -736,9 +736,31 @@ pub struct FindModuleNameReferences<'a> {
 }
 
 impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
-    // TODO: handle imports
     // TODO: handle clause guard in pattern match (if i named it correctly just now)
     // TODO: handle alias
+
+    fn visit_typed_import(&mut self, import: &'ast ast::TypedImport) {
+        match import.as_name.as_ref() {
+            None => {
+                if import.module == *self.module_name {
+                    self.references.push(ModuleNameReference {
+                        location: import.location,
+                        kind: ModuleNameReferenceKind::Import,
+                    })
+                }
+            }
+            Some((AssignName::Variable(alias) | AssignName::Discard(alias), alias_location)) => {
+                if alias == self.module_alias {
+                    self.references.push(ModuleNameReference {
+                        location: *alias_location,
+                        kind: ModuleNameReferenceKind::AliasedImport,
+                    })
+                }
+            }
+        }
+
+        ast::visit::visit_typed_import(self, import);
+    }
 
     fn visit_typed_clause_guard_module_select(
         &mut self,

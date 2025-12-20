@@ -42,7 +42,7 @@ use crate::{
     analyse::Inferred,
     ast::{
         BitArraySize, RecordBeingUpdated, TypedBitArraySize, TypedConstantBitArraySegment,
-        TypedDefinitions, TypedTailPattern, typed::InvalidExpression,
+        TypedDefinitions, TypedImport, TypedTailPattern, typed::InvalidExpression,
     },
     exhaustiveness::CompiledCase,
     parse::LiteralFloatValue,
@@ -82,6 +82,10 @@ pub trait Visit<'ast> {
 
     fn visit_typed_custom_type(&mut self, custom_type: &'ast TypedCustomType) {
         visit_typed_custom_type(self, custom_type);
+    }
+
+    fn visit_typed_import(&mut self, import: &'ast TypedImport) {
+        visit_typed_import(self, import)
     }
 
     fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
@@ -877,12 +881,16 @@ where
     V: Visit<'a> + ?Sized,
 {
     let TypedDefinitions {
-        imports: _, // TODO
+        imports,
         constants,
         custom_types,
         type_aliases: _, // TODO
         functions,
     } = &module.definitions;
+
+    for import in imports {
+        v.visit_typed_import(import);
+    }
 
     for constant in constants {
         v.visit_typed_module_constant(constant);
@@ -1105,6 +1113,12 @@ where
             v.visit_type_ast(&argument.ast);
         }
     }
+}
+
+pub fn visit_typed_import<'a, V>(_v: &mut V, _import: &'a TypedImport)
+where
+    V: Visit<'a> + ?Sized,
+{
 }
 
 pub fn visit_typed_expr<'a, V>(v: &mut V, node: &'a TypedExpr)
