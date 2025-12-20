@@ -19,7 +19,7 @@ use crate::{
         files::FileSystemProxy,
         progress::ProgressReporter,
         reference::FindVariableReferences,
-        rename::RenameOutcome,
+        rename::{RenameOutcome, rename_module_alias},
     },
     line_numbers::LineNumbers,
     paths::ProjectPaths,
@@ -645,7 +645,9 @@ where
 
             let byte_index = lines.byte_index(params.position);
 
-            Ok(match reference_for_ast_node(found, &current_module.name) {
+            let referenced = reference_for_ast_node(found, &current_module.name);
+
+            Ok(match referenced {
                 Some(Referenced::LocalVariable {
                     location, origin, ..
                 }) if location.contains(byte_index) => match origin.map(|origin| origin.syntax) {
@@ -687,6 +689,8 @@ where
                         None
                     }
                 }
+                Some(Referenced::ModuleName { location, .. }) => success_response(location),
+
                 _ => None,
             })
         })
@@ -708,7 +712,9 @@ where
                 return Ok(RenameOutcome::NoRenames.into_result());
             };
 
-            Ok(match reference_for_ast_node(found, &module.name) {
+            let referenced = reference_for_ast_node(found, &module.name);
+
+            Ok(match referenced {
                 Some(Referenced::LocalVariable {
                     origin,
                     definition_location,
@@ -778,6 +784,13 @@ where
                 )
                 .into_result(),
 
+                Some(Referenced::ModuleName {
+                    module_name,
+                    module_alias,
+                    ..
+                }) => rename_module_alias(module, &lines, &params, &module_name, &module_alias)
+                    .into_result(),
+
                 None => RenameOutcome::NoRenames.into_result(),
             })
         })
@@ -803,7 +816,9 @@ where
 
             let byte_index = lines.byte_index(position.position);
 
-            Ok(match reference_for_ast_node(found, &module.name) {
+            let referenced = reference_for_ast_node(found, &module.name);
+
+            Ok(match referenced {
                 Some(Referenced::LocalVariable {
                     origin,
                     definition_location,
@@ -1017,8 +1032,12 @@ Unused labelled fields:
                 Located::Label(location, type_) => {
                     Some(hover_for_label(location, type_, lines, module))
                 }
-                Located::ModuleName { location, name, .. } => {
-                    let Some(module) = this.compiler.get_module_interface(name) else {
+                Located::ModuleName {
+                    location,
+                    module_name,
+                    ..
+                } => {
+                    let Some(module) = this.compiler.get_module_interface(&module_name) else {
                         return Ok(None);
                     };
                     Some(hover_for_module(module, location, &lines, &this.hex_deps))

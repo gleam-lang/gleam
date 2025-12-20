@@ -426,7 +426,8 @@ pub enum Located<'a> {
     Label(SrcSpan, std::sync::Arc<Type>),
     ModuleName {
         location: SrcSpan,
-        name: &'a EcoString,
+        module_name: EcoString,
+        module_alias: EcoString,
         layer: ast::Layer,
     },
     Constant(&'a TypedConstant),
@@ -509,8 +510,8 @@ impl<'a> Located<'a> {
             Self::Arg(_) => None,
             Self::Annotation { type_, .. } => self.type_location(importable_modules, type_.clone()),
             Self::Label(_, _) => None,
-            Self::ModuleName { name, .. } => Some(DefinitionLocation {
-                module: Some((*name).clone()),
+            Self::ModuleName { module_name, .. } => Some(DefinitionLocation {
+                module: Some(module_name.clone()),
                 span: SrcSpan::new(0, 0),
             }),
             Self::Constant(constant) => constant.definition_location(),

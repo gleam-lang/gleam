@@ -666,7 +666,8 @@ fn find_node_module_select() {
         expr.find_node(1),
         Some(Located::ModuleName {
             location: SrcSpan::new(1, 1),
-            name: &"name".into(),
+            module_name: "name".into(),
+            module_alias: "alias".into(),
             layer: super::Layer::Value
         })
     );

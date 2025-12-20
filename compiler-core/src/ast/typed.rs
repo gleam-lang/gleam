@@ -234,6 +234,7 @@ impl TypedExpr {
                 location,
                 field_start,
                 module_name,
+                module_alias,
                 ..
             } => {
                 // We want to return the `ModuleSelect` only when we're hovering
@@ -251,7 +252,8 @@ impl TypedExpr {
                 } else if module_span.contains(byte_index) {
                     Some(Located::ModuleName {
                         location: module_span,
-                        name: module_name,
+                        module_name: module_name.clone(),
+                        module_alias: module_alias.clone(),
                         layer: Layer::Value,
                     })
                 } else {

@@ -6,7 +6,7 @@ use lsp_types::Location;
 use crate::{
     analyse,
     ast::{
-        self, ArgNames, BitArraySize, CustomType, Function, ModuleConstant, Pattern,
+        self, ArgNames, BitArraySize, Constant, CustomType, Function, ModuleConstant, Pattern,
         RecordConstructor, SrcSpan, TypedExpr, TypedModule, visit::Visit,
     },
     build::Located,
@@ -26,6 +26,11 @@ pub enum Referenced {
         location: SrcSpan,
         origin: Option<VariableOrigin>,
         name: EcoString,
+    },
+    ModuleName {
+        module_name: EcoString,
+        module_alias: EcoString,
+        location: SrcSpan,
     },
     ModuleValue {
         module: EcoString,
@@ -279,6 +284,40 @@ pub fn reference_for_ast_node(
             location: *name_location,
             target_kind: RenameTarget::Definition,
         }),
+        Located::ModuleName {
+            location,
+            module_name,
+            module_alias,
+            ..
+        } => Some(Referenced::ModuleName {
+            module_name,
+            module_alias,
+            location,
+        }),
+        // TODO: figure this out (previous PR):
+        // Located::ModuleStatement(Definition::Import(import)) => Some(match &import.as_name {
+        //     Some((
+        //         AssignName::Variable(module_alias) | AssignName::Discard(module_alias),
+        //         alias_location,
+        //     )) => Referenced::ModuleName {
+        //         module_name: import.module.clone(),
+        //         module_alias: module_alias.clone(),
+        //         location: SrcSpan {
+        //             start: alias_location.end - (module_alias.len() as u32),
+        //             end: alias_location.end,
+        //         },
+        //     },
+        //     None => Referenced::ModuleName {
+        //         module_name: import.module.clone(),
+        //         module_alias: import
+        //             .module
+        //             .split('/')
+        //             .next_back()
+        //             .map(EcoString::from)
+        //             .unwrap(),
+        //         location: import.module_location,
+        //     },
+        // }),
         _ => None,
     }
 }
@@ -676,5 +715,168 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
         }
 
         ast::visit::visit_typed_call_arg(self, arg);
+    }
+}
+
+pub struct ModuleNameReference {
+    pub location: SrcSpan,
+    pub kind: ModuleNameReferenceKind,
+}
+
+pub enum ModuleNameReferenceKind {
+    Import,
+    AliasedImport,
+    ModuleSelect,
+}
+
+pub struct FindModuleNameReferences<'a> {
+    pub references: Vec<ModuleNameReference>,
+    pub module_name: &'a EcoString,
+    pub module_alias: &'a EcoString,
+}
+
+impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
+    // TODO: handle imports
+    // TODO: handle clause guard in pattern match (if i named it correctly just now)
+    // TODO: handle alias
+
+    fn visit_typed_clause_guard_module_select(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast std::sync::Arc<Type>,
+        label: &'ast EcoString,
+        module_name: &'ast EcoString,
+        module_alias: &'ast EcoString,
+        literal: &'ast ast::TypedConstant,
+    ) {
+        if module_alias == self.module_alias {
+            self.references.push(ModuleNameReference {
+                location: SrcSpan::new(
+                    location.start,
+                    location.start + (module_alias.len() as u32),
+                ),
+                kind: ModuleNameReferenceKind::ModuleSelect,
+            });
+        }
+
+        ast::visit::visit_typed_clause_guard_module_select(
+            self,
+            location,
+            type_,
+            label,
+            module_name,
+            module_alias,
+            literal,
+        );
+    }
+
+    fn visit_typed_expr_module_select(
+        &mut self,
+        location: &'ast SrcSpan,
+        field_start: &'ast u32,
+        type_: &'ast std::sync::Arc<Type>,
+        label: &'ast EcoString,
+        module_name: &'ast EcoString,
+        module_alias: &'ast EcoString,
+        constructor: &'ast ModuleValueConstructor,
+    ) {
+        if module_alias == self.module_alias {
+            self.references.push(ModuleNameReference {
+                location: SrcSpan::new(
+                    location.start,
+                    location.start + (module_alias.len() as u32),
+                ),
+                kind: ModuleNameReferenceKind::ModuleSelect,
+            });
+        }
+
+        ast::visit::visit_typed_expr_module_select(
+            self,
+            location,
+            field_start,
+            type_,
+            label,
+            module_name,
+            module_alias,
+            constructor,
+        );
+    }
+
+    fn visit_type_ast_constructor(
+        &mut self,
+        location: &'ast SrcSpan,
+        name_location: &'ast SrcSpan,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        name: &'ast EcoString,
+        arguments: &'ast Vec<ast::TypeAst>,
+    ) {
+        if let Some((module_alias, module_location)) = module {
+            if module_alias == self.module_alias {
+                self.references.push(ModuleNameReference {
+                    location: *module_location,
+                    kind: ModuleNameReferenceKind::ModuleSelect,
+                })
+            }
+        }
+
+        ast::visit::visit_type_ast_constructor(
+            self,
+            location,
+            name_location,
+            module,
+            name,
+            arguments,
+        );
+    }
+
+    fn visit_typed_constant(&mut self, constant: &'ast ast::TypedConstant) {
+        match constant {
+            Constant::Record { module, .. } | Constant::Var { module, .. } => {
+                if let Some((module_alias, module_location)) = module {
+                    if module_alias == self.module_alias {
+                        self.references.push(ModuleNameReference {
+                            location: *module_location,
+                            kind: ModuleNameReferenceKind::ModuleSelect,
+                        })
+                    }
+                }
+            }
+            _ => {}
+        }
+
+        ast::visit::visit_typed_constant(self, constant);
+    }
+
+    fn visit_typed_pattern_constructor(
+        &mut self,
+        location: &'ast SrcSpan,
+        name_location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        arguments: &'ast Vec<ast::CallArg<ast::TypedPattern>>,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        constructor: &'ast analyse::Inferred<crate::type_::PatternConstructor>,
+        spread: &'ast Option<SrcSpan>,
+        type_: &'ast std::sync::Arc<Type>,
+    ) {
+        if let Some((module_alias, module_location)) = module {
+            if module_alias == self.module_alias {
+                self.references.push(ModuleNameReference {
+                    location: *module_location,
+                    kind: ModuleNameReferenceKind::ModuleSelect,
+                });
+            }
+        }
+
+        ast::visit::visit_typed_pattern_constructor(
+            self,
+            location,
+            name_location,
+            name,
+            arguments,
+            module,
+            constructor,
+            spread,
+            type_,
+        );
     }
 }
