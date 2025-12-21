@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.14.0-rc3 - 2025-12-21
+
+### Bug fixes
+
+- Fixed a bug where checking for equality with a variant with no fields using
+  qualified syntax would generate invalid code on the JavaScript target.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.14.0-rc2 - 2025-12-19
 
 ### Bug fixes
@@ -10,10 +18,6 @@
 
 - Fixed a bug where updating records with unlabelled fields would result in
   invalid code.
-  ([Surya Rose](https://github.com/GearsDatapacks))
-
-- Fixed a bug where checking for equality with a variant with no fields using
-  qualified syntax would generate invalid code on the JavaScript target.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 ## v1.14.0-rc1 - 2025-12-15
