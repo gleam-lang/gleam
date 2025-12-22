@@ -294,6 +294,33 @@ pub fn reference_for_ast_node(
             module_alias,
             location,
         }),
+        Located::ModuleImport(import) => {
+            let module_name = match &import.as_name {
+                Some((
+                    AssignName::Variable(module_alias) | AssignName::Discard(module_alias),
+                    alias_location,
+                )) => Referenced::ModuleName {
+                    module_name: import.module.clone(),
+                    module_alias: module_alias.clone(),
+                    location: SrcSpan {
+                        start: alias_location.end - (module_alias.len() as u32),
+                        end: alias_location.end,
+                    },
+                },
+                None => Referenced::ModuleName {
+                    module_name: import.module.clone(),
+                    module_alias: import
+                        .module
+                        .split('/')
+                        .next_back()
+                        .map(EcoString::from)
+                        .unwrap(),
+                    location: import.location,
+                },
+            };
+
+            Some(module_name)
+        }
         _ => None,
     }
 }
