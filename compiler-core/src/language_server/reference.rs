@@ -736,8 +736,13 @@ pub struct FindModuleNameReferences<'a> {
 }
 
 impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
-    // TODO: handle clause guard in pattern match (if i named it correctly just now)
-    // TODO: handle alias
+    fn visit_typed_module(&mut self, module: &'ast TypedModule) {
+        ast::visit::visit_typed_module(self, module);
+    }
+
+    fn visit_typed_clause_guard(&mut self, guard: &'ast ast::TypedClauseGuard) {
+        ast::visit::visit_typed_clause_guard(self, guard);
+    }
 
     fn visit_typed_import(&mut self, import: &'ast ast::TypedImport) {
         match import.as_name.as_ref() {

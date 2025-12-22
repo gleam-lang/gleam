@@ -17,9 +17,9 @@ pub use self::project_compiler::{Built, Options, ProjectCompiler};
 pub use self::telemetry::{NullTelemetry, Telemetry};
 
 use crate::ast::{
-    self, CallArg, CustomType, DefinitionLocation, TypeAst, TypedArg, TypedConstant,
-    TypedCustomType, TypedDefinitions, TypedExpr, TypedFunction, TypedImport, TypedModuleConstant,
-    TypedPattern, TypedRecordConstructor, TypedStatement, TypedTypeAlias,
+    self, CallArg, CustomType, DefinitionLocation, TypeAst, TypedArg, TypedClauseGuard,
+    TypedConstant, TypedCustomType, TypedDefinitions, TypedExpr, TypedFunction, TypedImport,
+    TypedModuleConstant, TypedPattern, TypedRecordConstructor, TypedStatement, TypedTypeAlias,
 };
 use crate::type_::{Type, TypedCallArg};
 use crate::{
