@@ -294,30 +294,6 @@ pub fn reference_for_ast_node(
             module_alias,
             location,
         }),
-        // TODO: figure this out (previous PR):
-        // Located::ModuleStatement(Definition::Import(import)) => Some(match &import.as_name {
-        //     Some((
-        //         AssignName::Variable(module_alias) | AssignName::Discard(module_alias),
-        //         alias_location,
-        //     )) => Referenced::ModuleName {
-        //         module_name: import.module.clone(),
-        //         module_alias: module_alias.clone(),
-        //         location: SrcSpan {
-        //             start: alias_location.end - (module_alias.len() as u32),
-        //             end: alias_location.end,
-        //         },
-        //     },
-        //     None => Referenced::ModuleName {
-        //         module_name: import.module.clone(),
-        //         module_alias: import
-        //             .module
-        //             .split('/')
-        //             .next_back()
-        //             .map(EcoString::from)
-        //             .unwrap(),
-        //         location: import.module_location,
-        //     },
-        // }),
         _ => None,
     }
 }
@@ -868,7 +844,15 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
                     }
                 }
             }
-            _ => {}
+            Constant::Int { .. }
+            | Constant::Float { .. }
+            | Constant::String { .. }
+            | Constant::Tuple { .. }
+            | Constant::List { .. }
+            | Constant::RecordUpdate { .. }
+            | Constant::BitArray { .. }
+            | Constant::StringConcatenation { .. }
+            | Constant::Invalid { .. } => {}
         }
 
         ast::visit::visit_typed_constant(self, constant);

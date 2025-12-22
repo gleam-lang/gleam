@@ -355,7 +355,6 @@ pub fn rename_module_alias(
             }
             ModuleNameReferenceKind::AliasedImport => {
                 if params.new_name == original_module_name {
-                    // Subtract 1 from start to remove the leading space added in the import match
                     edits.delete(SrcSpan::new(
                         reference.location.start - 1,
                         reference.location.end,
