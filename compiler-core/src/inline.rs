@@ -537,7 +537,6 @@ impl Inliner<'_> {
                     }
                 }
                 ValueConstructorVariant::ModuleConstant { .. }
-                | ValueConstructorVariant::LocalConstant { .. }
                 | ValueConstructorVariant::ModuleFn { .. }
                 | ValueConstructorVariant::Record { .. } => expression,
             },
@@ -861,7 +860,6 @@ impl Inliner<'_> {
                 // function calls, so they also cannot be inlined.
                 ValueConstructorVariant::LocalVariable { .. }
                 | ValueConstructorVariant::ModuleConstant { .. }
-                | ValueConstructorVariant::LocalConstant { .. }
                 | ValueConstructorVariant::Record { .. } => function,
             },
             TypedExpr::ModuleSelect {
@@ -1587,7 +1585,6 @@ impl FunctionToInlinable {
                         }
                     }
                     ValueConstructorVariant::ModuleConstant { .. }
-                    | ValueConstructorVariant::LocalConstant { .. }
                     | ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::Record { .. } => {}
                 }
@@ -1691,8 +1688,7 @@ impl FunctionToInlinable {
             ValueConstructorVariant::LocalVariable { .. } => {
                 Some(InlinableValueConstructor::LocalVariable)
             }
-            ValueConstructorVariant::ModuleConstant { .. }
-            | ValueConstructorVariant::LocalConstant { .. } => None,
+            ValueConstructorVariant::ModuleConstant { .. } => None,
             ValueConstructorVariant::ModuleFn { name, module, .. } => {
                 Some(InlinableValueConstructor::Function {
                     name: name.clone(),

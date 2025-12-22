@@ -2140,8 +2140,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
                 | type_::ValueConstructorVariant::ModuleFn { module, .. }
                 | type_::ValueConstructorVariant::Record { module, .. } => Some(module),
 
-                type_::ValueConstructorVariant::LocalVariable { .. }
-                | type_::ValueConstructorVariant::LocalConstant { .. } => None,
+                type_::ValueConstructorVariant::LocalVariable { .. } => None,
             }
         {
             self.get_module_import_from_value_constructor(module_name, name);
@@ -2205,8 +2204,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
                 | type_::ValueConstructorVariant::ModuleFn { module, .. }
                 | type_::ValueConstructorVariant::Record { module, .. } => Some(module),
 
-                type_::ValueConstructorVariant::LocalVariable { .. }
-                | type_::ValueConstructorVariant::LocalConstant { .. } => None,
+                type_::ValueConstructorVariant::LocalVariable { .. } => None,
             }
         {
             self.get_module_import_from_value_constructor(module_name, name);
@@ -2243,8 +2241,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
                 | type_::ValueConstructorVariant::ModuleFn { module, .. }
                 | type_::ValueConstructorVariant::Record { module, .. } => Some(module),
 
-                type_::ValueConstructorVariant::LocalVariable { .. }
-                | type_::ValueConstructorVariant::LocalConstant { .. } => None,
+                type_::ValueConstructorVariant::LocalVariable { .. } => None,
             }
         {
             self.get_module_import_from_value_constructor(module_name, name);

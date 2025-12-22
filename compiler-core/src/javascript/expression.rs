@@ -677,9 +677,6 @@ impl<'module, 'a> Generator<'module, 'a> {
 
     fn variable(&mut self, name: &'a EcoString, constructor: &'a ValueConstructor) -> Document<'a> {
         match &constructor.variant {
-            ValueConstructorVariant::LocalConstant { literal } => {
-                self.constant_expression(Context::Function, literal)
-            }
             ValueConstructorVariant::Record { arity, .. } => {
                 let type_ = constructor.type_.clone();
                 let tracker = &mut self.tracker;
