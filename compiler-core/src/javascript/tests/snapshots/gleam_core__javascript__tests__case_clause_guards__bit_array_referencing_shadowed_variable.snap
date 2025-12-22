@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/javascript/tests/case_clause_guards.rs
+expression: "\npub fn main() {\n  let a = 1\n  let a = 2\n\n  case Nil {\n    _ if <<a>> == <<1>> -> False\n    _ if <<a>> == <<2>> -> True\n    _ -> False\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let a = 1
+  let a = 2
+
+  case Nil {
+    _ if <<a>> == <<1>> -> False
+    _ if <<a>> == <<2>> -> True
+    _ -> False
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { isEqual, toBitArray } from "../gleam.mjs";
+
+export function main() {
+  let a = 1;
+  let a$1 = 2;
+  let $ = undefined;
+  if (isEqual(toBitArray([a$1]), toBitArray([1]))) {
+    return false;
+  } else if (isEqual(toBitArray([a$1]), toBitArray([2]))) {
+    return true;
+  } else {
+    return false;
+  }
+}
