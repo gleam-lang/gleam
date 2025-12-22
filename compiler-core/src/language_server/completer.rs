@@ -914,7 +914,6 @@ impl<'a, IO> Completer<'a, IO> {
         let kind = Some(match value.variant {
             ValueConstructorVariant::LocalVariable { .. } => CompletionItemKind::VARIABLE,
             ValueConstructorVariant::ModuleConstant { .. } => CompletionItemKind::CONSTANT,
-            ValueConstructorVariant::LocalConstant { .. } => CompletionItemKind::CONSTANT,
             ValueConstructorVariant::ModuleFn { .. } => CompletionItemKind::FUNCTION,
             ValueConstructorVariant::Record { arity: 0, .. } => CompletionItemKind::ENUM_MEMBER,
             ValueConstructorVariant::Record { .. } => CompletionItemKind::CONSTRUCTOR,

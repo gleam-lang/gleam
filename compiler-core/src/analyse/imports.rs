@@ -220,7 +220,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     ReferenceKind::Import,
                 );
             }
-            _ => {}
+            ValueConstructorVariant::LocalVariable { .. } => {}
         };
 
         // Check if value already was imported

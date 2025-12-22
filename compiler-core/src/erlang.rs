@@ -1421,8 +1421,7 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
 
         ValueConstructorVariant::LocalVariable { .. } => env.local_var_name(name),
 
-        ValueConstructorVariant::ModuleConstant { literal, .. }
-        | ValueConstructorVariant::LocalConstant { literal } => const_inline(literal, env),
+        ValueConstructorVariant::ModuleConstant { literal, .. } => const_inline(literal, env),
 
         ValueConstructorVariant::ModuleFn {
             arity,

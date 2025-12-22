@@ -286,25 +286,6 @@ impl Environment<'_> {
         );
     }
 
-    /// Insert a constant in the current scope
-    pub fn insert_local_constant(
-        &mut self,
-        name: EcoString,
-        literal: Constant<Arc<Type>, EcoString>,
-    ) {
-        let _ = self.scope.insert(
-            name,
-            ValueConstructor {
-                deprecation: Deprecation::NotDeprecated,
-                publicity: Publicity::Private,
-                variant: ValueConstructorVariant::LocalConstant {
-                    literal: literal.clone(),
-                },
-                type_: literal.type_(),
-            },
-        );
-    }
-
     /// Insert a variable in the current scope.
     ///
     pub fn insert_variable(

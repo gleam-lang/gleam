@@ -218,7 +218,6 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 let origin = match &variable.variant {
                     ValueConstructorVariant::LocalVariable { origin, .. } => origin.clone(),
                     ValueConstructorVariant::ModuleConstant { .. }
-                    | ValueConstructorVariant::LocalConstant { .. }
                     | ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::Record { .. } => VariableOrigin::generated(),
                 };
@@ -1078,7 +1077,6 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         constructor
                     }
                     ValueConstructorVariant::LocalVariable { .. }
-                    | ValueConstructorVariant::LocalConstant { .. }
                     | ValueConstructorVariant::ModuleConstant { .. }
                     | ValueConstructorVariant::ModuleFn { .. } => {
                         panic!("Unexpected value constructor type for a constructor pattern.")

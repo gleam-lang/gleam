@@ -710,11 +710,6 @@ pub enum ValueConstructorVariant {
         implementations: Implementations,
     },
 
-    /// A constant defined locally, for example when pattern matching on string literals
-    LocalConstant {
-        literal: Constant<Arc<Type>, EcoString>,
-    },
-
     /// A function belonging to the module
     ModuleFn {
         name: EcoString,
@@ -780,12 +775,6 @@ impl ValueConstructorVariant {
                 documentation: documentation.clone(),
             },
 
-            Self::LocalConstant { literal } => ModuleValueConstructor::Constant {
-                literal: literal.clone(),
-                location: literal.location(),
-                documentation: None,
-            },
-
             Self::LocalVariable { location, .. } => ModuleValueConstructor::Fn {
                 name: function_name.clone(),
                 module: module_name.clone(),
@@ -826,7 +815,6 @@ impl ValueConstructorVariant {
             | ValueConstructorVariant::ModuleConstant { location, .. }
             | ValueConstructorVariant::ModuleFn { location, .. }
             | ValueConstructorVariant::Record { location, .. } => *location,
-            ValueConstructorVariant::LocalConstant { literal } => literal.location(),
         }
     }
 
@@ -843,7 +831,6 @@ impl ValueConstructorVariant {
                 matches!(origin.syntax, VariableSyntax::Generated)
             }
             ValueConstructorVariant::ModuleConstant { .. }
-            | ValueConstructorVariant::LocalConstant { .. }
             | ValueConstructorVariant::ModuleFn { .. }
             | ValueConstructorVariant::Record { .. } => false,
         }
@@ -867,7 +854,6 @@ impl ValueConstructorVariant {
     pub fn implementations(&self) -> Implementations {
         match self {
             ValueConstructorVariant::Record { .. }
-            | ValueConstructorVariant::LocalConstant { .. }
             | ValueConstructorVariant::LocalVariable { .. } => Implementations {
                 gleam: true,
                 can_run_on_erlang: true,
@@ -889,7 +875,6 @@ impl ValueConstructorVariant {
         match self {
             ValueConstructorVariant::LocalVariable { .. }
             | ValueConstructorVariant::ModuleConstant { .. }
-            | ValueConstructorVariant::LocalConstant { .. }
             | ValueConstructorVariant::ModuleFn { .. } => None,
             ValueConstructorVariant::Record { field_map, .. } => field_map.as_ref(),
         }
@@ -1441,11 +1426,6 @@ impl ValueConstructor {
                 span: *location,
             },
 
-            ValueConstructorVariant::LocalConstant { literal } => DefinitionLocation {
-                module: None,
-                span: literal.location(),
-            },
-
             ValueConstructorVariant::LocalVariable { location, .. } => DefinitionLocation {
                 module: None,
                 span: *location,
@@ -1455,8 +1435,7 @@ impl ValueConstructor {
 
     pub(crate) fn get_documentation(&self) -> Option<&str> {
         match &self.variant {
-            ValueConstructorVariant::LocalConstant { .. }
-            | ValueConstructorVariant::LocalVariable { .. } => Some("A locally defined variable."),
+            ValueConstructorVariant::LocalVariable { .. } => Some("A locally defined variable."),
 
             ValueConstructorVariant::ModuleFn { documentation, .. }
             | ValueConstructorVariant::Record { documentation, .. }
@@ -1490,8 +1469,7 @@ impl ValueConstructor {
             // `Purity::Unknown`. See the documentation for the `Purity` type
             // for more information on why this is the case.
             ValueConstructorVariant::LocalVariable { .. }
-            | ValueConstructorVariant::ModuleConstant { .. }
-            | ValueConstructorVariant::LocalConstant { .. } => Purity::Unknown,
+            | ValueConstructorVariant::ModuleConstant { .. } => Purity::Unknown,
 
             // Constructing records is always pure
             ValueConstructorVariant::Record { .. } => Purity::Pure,

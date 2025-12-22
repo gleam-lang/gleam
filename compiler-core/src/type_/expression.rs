@@ -1274,8 +1274,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 implementations, ..
             } => implementations,
             ValueConstructorVariant::Record { .. }
-            | ValueConstructorVariant::LocalVariable { .. }
-            | ValueConstructorVariant::LocalConstant { .. } => return Ok(()),
+            | ValueConstructorVariant::LocalVariable { .. } => return Ok(()),
         };
 
         self.implementations
@@ -2386,8 +2385,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         return Err(Error::NonLocalClauseGuardVariable { location, name });
                     }
 
-                    ValueConstructorVariant::ModuleConstant { literal, .. }
-                    | ValueConstructorVariant::LocalConstant { literal } => {
+                    ValueConstructorVariant::ModuleConstant { literal, .. } => {
                         return Ok(ClauseGuard::Constant(literal.clone()));
                     }
                 };
@@ -3027,7 +3025,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             variant @ (ValueConstructorVariant::LocalVariable { .. }
             | ValueConstructorVariant::ModuleConstant { .. }
-            | ValueConstructorVariant::LocalConstant { .. }
             | ValueConstructorVariant::Record { .. }) => {
                 variant.to_module_value_constructor(Arc::clone(&type_), &module_name, &label)
             }
@@ -3833,7 +3830,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             ValueConstructorVariant::LocalVariable { .. } => {
                 self.environment.increment_usage(referenced_name)
             }
-            ValueConstructorVariant::LocalConstant { .. } => {}
         }
     }
 
@@ -3964,8 +3960,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         return self.new_invalid_constant(location);
                     }
 
-                    ValueConstructorVariant::ModuleConstant { literal, .. }
-                    | ValueConstructorVariant::LocalConstant { literal } => {
+                    ValueConstructorVariant::ModuleConstant { literal, .. } => {
                         return literal.clone();
                     }
                 };
@@ -3996,10 +3991,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         constructor: Some(value_constructor),
                         ..
                     } => match &value_constructor.variant {
-                        ValueConstructorVariant::LocalConstant { literal }
-                        | ValueConstructorVariant::ModuleConstant { literal, .. } => {
-                            literal.clone()
-                        }
+                        ValueConstructorVariant::ModuleConstant { literal, .. } => literal.clone(),
                         _ => typed_record,
                     },
                     _ => typed_record,
@@ -4185,8 +4177,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     }
 
                     // TODO: remove this clone. Could use an rc instead
-                    ValueConstructorVariant::ModuleConstant { literal, .. }
-                    | ValueConstructorVariant::LocalConstant { literal } => {
+                    ValueConstructorVariant::ModuleConstant { literal, .. } => {
                         return literal.clone();
                     }
                 };
@@ -4241,8 +4232,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     }
 
                     // TODO: remove this clone. Could be an rc instead
-                    ValueConstructorVariant::ModuleConstant { literal, .. }
-                    | ValueConstructorVariant::LocalConstant { literal } => {
+                    ValueConstructorVariant::ModuleConstant { literal, .. } => {
                         return literal.clone();
                     }
                 };
@@ -4407,7 +4397,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                 match constructor.variant {
                     ValueConstructorVariant::ModuleConstant { .. }
-                    | ValueConstructorVariant::LocalConstant { .. }
                     | ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable { .. } => Constant::Var {
                         location,
@@ -5695,10 +5684,6 @@ fn static_compare(one: &TypedExpr, other: &TypedExpr) -> StaticComparison {
                 ValueConstructorVariant::ModuleConstant { .. },
                 ValueConstructorVariant::ModuleConstant { .. },
             )
-            | (
-                ValueConstructorVariant::LocalConstant { .. },
-                ValueConstructorVariant::LocalConstant { .. },
-            )
             | (ValueConstructorVariant::Record { .. }, ValueConstructorVariant::Record { .. })
                 if one == other =>
             {
@@ -5719,7 +5704,6 @@ fn static_compare(one: &TypedExpr, other: &TypedExpr) -> StaticComparison {
             (
                 ValueConstructorVariant::LocalVariable { .. }
                 | ValueConstructorVariant::ModuleConstant { .. }
-                | ValueConstructorVariant::LocalConstant { .. }
                 | ValueConstructorVariant::ModuleFn { .. }
                 | ValueConstructorVariant::Record { .. },
                 _,
