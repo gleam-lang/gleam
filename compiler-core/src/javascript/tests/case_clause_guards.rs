@@ -603,3 +603,22 @@ pub fn main() {
 "#,
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5214
+#[test]
+fn bit_array_referencing_shadowed_variable() {
+    assert_js!(
+        "
+pub fn main() {
+  let a = 1
+  let a = 2
+
+  case Nil {
+    _ if <<a>> == <<1>> -> False
+    _ if <<a>> == <<2>> -> True
+    _ -> False
+  }
+}
+"
+    );
+}

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Bug fixes
+
+- Fixed a bug where using bit array segments in guard clauses could cause
+  incorrect code to be generated on the JavaScript target.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.14.0-rc3 - 2025-12-21
 
 ### Bug fixes

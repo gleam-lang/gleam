@@ -1850,7 +1850,7 @@ impl<'module, 'a> Generator<'module, 'a> {
 
                 match context {
                     Context::Constant => docvec!["/* @__PURE__ */ ", list],
-                    Context::Function => list,
+                    Context::Guard => list,
                 }
             }
 
@@ -1902,21 +1902,22 @@ impl<'module, 'a> Generator<'module, 'a> {
                 );
                 match context {
                     Context::Constant => docvec!["/* @__PURE__ */ ", constructor],
-                    Context::Function => constructor,
+                    Context::Guard => constructor,
                 }
             }
             Constant::BitArray { segments, .. } => {
                 let bit_array = self.constant_bit_array(segments, context);
                 match context {
                     Context::Constant => docvec!["/* @__PURE__ */ ", bit_array],
-                    Context::Function => bit_array,
+                    Context::Guard => bit_array,
                 }
             }
 
             Constant::Var { name, module, .. } => {
-                match module {
-                    None => maybe_escape_identifier(name).to_doc(),
-                    Some((module, _)) => {
+                match (module, context) {
+                    (None, Context::Guard) => self.local_var(name).to_doc(),
+                    (None, Context::Constant) => maybe_escape_identifier(name).to_doc(),
+                    (Some((module, _)), _) => {
                         // JS keywords can be accessed here, but we must escape anyway
                         // as we escape when exporting such names in the first place,
                         // and the imported name has to match the exported name.
@@ -1948,7 +1949,10 @@ impl<'module, 'a> Generator<'module, 'a> {
     ) -> Document<'a> {
         self.tracker.bit_array_literal_used = true;
         let segments_array = array(segments.iter().map(|segment| {
-            let value = self.constant_expression(Context::Constant, &segment.value);
+            let value = match context {
+                Context::Constant => self.constant_expression(context, &segment.value),
+                Context::Guard => self.guard_constant_expression(&segment.value),
+            };
 
             let details = self.constant_bit_array_segment_details(segment, context);
 
@@ -2041,7 +2045,10 @@ impl<'module, 'a> Generator<'module, 'a> {
             }
 
             Some(size) => {
-                let mut size = self.constant_expression(context, size);
+                let mut size = match context {
+                    Context::Constant => self.constant_expression(context, size),
+                    Context::Guard => self.guard_constant_expression(size),
+                };
                 if unit != 1 {
                     size = size.group().append(" * ".to_doc().append(unit.to_doc()));
                 }
@@ -2327,12 +2334,12 @@ impl<'module, 'a> Generator<'module, 'a> {
             }
 
             Constant::BitArray { segments, .. } => {
-                self.constant_bit_array(segments, Context::Function)
+                self.constant_bit_array(segments, Context::Guard)
             }
 
             Constant::Var { name, .. } => self.local_var(name).to_doc(),
 
-            expression => self.constant_expression(Context::Function, expression),
+            expression => self.constant_expression(Context::Guard, expression),
         }
     }
 }
@@ -2440,7 +2447,7 @@ pub fn float_from_value(value: f64) -> Document<'static> {
 #[derive(Debug, Clone, Copy)]
 pub enum Context {
     Constant,
-    Function,
+    Guard,
 }
 
 #[derive(Debug)]
