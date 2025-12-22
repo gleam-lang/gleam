@@ -2317,11 +2317,15 @@ impl TypedClauseGuard {
             | ClauseGuard::And { left, right, .. } => left
                 .find_node(byte_index)
                 .or_else(|| right.find_node(byte_index)),
-            ClauseGuard::Not { expression, .. } => expression.find_node(byte_index),
+            ClauseGuard::Not {
+                expression: value, ..
+            }
+            | ClauseGuard::TupleIndex { tuple: value, .. }
+            | ClauseGuard::FieldAccess {
+                container: value, ..
+            }
+            | ClauseGuard::Block { value, .. } => value.find_node(byte_index),
             ClauseGuard::Constant(constant) => constant.find_node(byte_index),
-            ClauseGuard::TupleIndex { tuple, .. } => tuple.find_node(byte_index),
-            ClauseGuard::FieldAccess { container, .. } => container.find_node(byte_index),
-            ClauseGuard::Block { value, .. } => value.find_node(byte_index),
             ClauseGuard::Var { .. } => None,
         }
     }
