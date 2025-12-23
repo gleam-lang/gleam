@@ -1740,16 +1740,300 @@ fn wibble() -> Nil {
 }
 
 #[test]
+fn rename_module_from_import() {
+    assert_rename!(
+        TestProject::for_source("import      option")
+            .add_module("option", "pub type Option(a) { Some(a) None }"),
+        "opt",
+        find_position_of("option"),
+    );
+}
+
+#[test]
+fn rename_module_from_import_with_alias() {
+    assert_rename!(
+        TestProject::for_source("import   option    as      opt")
+            .add_module("option", "pub type Option(a) { Some(a) None }"),
+        "o",
+        find_position_of("opt"),
+    );
+}
+
+#[test]
+fn reanem_module_from_import_with_unqualified_values() {
+    assert_rename!(
+        TestProject::for_source("import   option   .   {    Some, None }")
+            .add_module("option", "pub type Option(a) { Some(a) None }"),
+        "opt",
+        find_position_of("option"),
+    );
+}
+
+#[test]
+fn rename_module_from_import_with_unqualified_value_and_alias() {
+    assert_rename!(
+        TestProject::for_source("import   option  .     {Some, None}   as     opt")
+            .add_module("option", "pub type Option(a) { Some(a) None }"),
+        "o",
+        find_position_of("opt"),
+    );
+}
+
+#[test]
+fn rename_module_from_import_namespaced() {
+    assert_rename!(
+        TestProject::for_source("import   std /   option  ")
+            .add_module("std/option", "pub type Option(a) { Some(a) None }"),
+        "opt",
+        find_position_of("option"),
+    );
+}
+
+#[test]
+fn rename_module_from_import_namespaced_with_alias() {
+    assert_rename!(
+        TestProject::for_source("import   std /   option   as     opt")
+            .add_module("std/option", "pub type Option(a) { Some(a) None }"),
+        "o",
+        find_position_of("opt"),
+    );
+}
+
+#[test]
+fn rename_module_from_import_namespaced_with_unqualified_values() {
+    assert_rename!(
+        TestProject::for_source("import   std /   option   .   {    Some, None }")
+            .add_module("std/option", "pub type Option(a) { Some(a) None }"),
+        "opt",
+        find_position_of("option"),
+    );
+}
+
+#[test]
+fn rename_module_from_import_namespaced_with_unqualified_value_and_alias() {
+    assert_rename!(
+        TestProject::for_source("import   std /   option   .   {    Some, None }   as     opt")
+            .add_module("std/option", "pub type Option(a) { Some(a) None }"),
+        "o",
+        find_position_of("opt"),
+    );
+}
+
+#[test]
+fn rename_module_from_import_with_alias_to_original_name() {
+    assert_rename!(
+        TestProject::for_source("import   option   as     opt")
+            .add_module("option", "pub type Option(a) { Some(a) None }"),
+        "option",
+        find_position_of("opt"),
+    );
+}
+
+#[test]
 fn rename_module_from_variant_in_expression() {
     let src = r#"
 import option
 
 pub fn main() {
-  echo option.None
-}"#;
+  echo option     . None
+}
+"#;
     assert_rename!(
         TestProject::for_source(src).add_module("option", "pub type Option(a) { Some(a) None }"),
         "opt",
         find_position_of("option").nth_occurrence(2)
     );
 }
+
+#[test]
+fn rename_module_from_constant_in_expression() {
+    let src = r#"
+import math
+
+pub fn main() {
+  echo math  .    pi
+}
+"#;
+
+    assert_rename!(
+        TestProject::for_source(src).add_module("math", "pub const pi = 3.14"),
+        "m",
+        find_position_of("math").nth_occurrence(2),
+    );
+}
+
+#[test]
+fn rename_module_from_variant_in_const() {
+    let src = r#"
+import option
+
+const x = option   .None
+"#;
+
+    assert_rename!(
+        TestProject::for_source(src).add_module("option", "pub type Option(a) { Some(a) None }"),
+        "opt",
+        find_position_of("option").nth_occurrence(2),
+    );
+}
+
+#[test]
+fn rename_module_from_constant_in_const() {
+    let src = r#"
+import math
+
+const x = math   .  pi
+"#;
+
+    assert_rename!(
+        TestProject::for_source(src).add_module("math", "pub const pi = 3.14"),
+        "m",
+        find_position_of("math").nth_occurrence(2),
+    );
+}
+
+#[test]
+fn rename_module_from_variant_in_pattern() {
+    let src = r#"
+import option
+
+pub fn is_some(option) {
+  case option {
+    option.  Some(_) -> True
+    option  .None -> False
+  }
+}
+"#;
+
+    assert_rename!(
+        TestProject::for_source(src).add_module("option", "pub type Option(a) { Some(a) None }"),
+        "opt",
+        find_position_of("option").nth_occurrence(4),
+    );
+}
+
+#[test]
+fn rename_module_from_variant_in_clause_guard() {
+    let src = r#"
+import option
+
+pub fn count_none(list) {
+  case list {
+    [option, ..rest] if option == option  . None -> 1 + count_none(rest)
+    [_, ..rest] -> count_none(rest)
+    [] -> 0
+  }
+}
+"#;
+
+    assert_rename!(
+        TestProject::for_source(src).add_module("option", "pub type Option(a) { Some(a) None }"),
+        "opt",
+        find_position_of("option").nth_occurrence(4),
+    );
+}
+
+#[test]
+fn rename_module_from_constant_in_clause_guard() {
+    let src = r#"
+import math
+
+pub fn count_pi(list) {
+  case list {
+    [number, ..rest] if number == math.pi -> 1 + count_pi(rest)
+    [_, ..rest] -> count_pi(rest)
+    [] -> 0
+  }
+}
+"#;
+
+    assert_rename!(
+        TestProject::for_source(src).add_module("math", "pub const pi = 3.14"),
+        "m",
+        find_position_of("math").nth_occurrence(2),
+    );
+}
+
+#[test]
+fn rename_module_from_type_in_custom_type() {
+    let src = r#"
+import option
+
+type Value(a) {
+  Value(option.Option(a))
+}
+"#;
+
+    assert_rename!(
+        TestProject::for_source(src).add_module("option", "pub type Option(a) { Some(a) None }"),
+        "opt",
+        find_position_of("option").nth_occurrence(2),
+    );
+}
+
+#[test]
+fn rename_module_from_type_in_type_alias() {
+    let src = r#"
+import option
+
+type Option(a) =
+  option.Option(a)
+"#;
+
+    assert_rename!(
+        TestProject::for_source(src).add_module("option", "pub type Option(a) { Some(a) None }"),
+        "opt",
+        find_position_of("option").nth_occurrence(2),
+    );
+}
+
+// TODO: This test is failing!
+#[test]
+fn rename_module_from_type_in_annotation() {
+    let src = r#"
+import option
+
+const x: option.Option(Int) = option.Some(1)
+"#;
+
+    assert_rename!(
+        TestProject::for_source(src).add_module("option", "pub type Option(a) { Some(a) None }"),
+        "opt",
+        find_position_of("option").nth_occurrence(2),
+    );
+}
+
+#[test]
+fn rename_module_from_function_call() {
+    let src = r#"
+import option
+
+pub fn main() {
+  option.is_some(option.Some(1))
+}
+"#;
+
+    let option_module = r#"
+pub type Option(a) { 
+  Some(a)
+  None
+}
+
+pub fn is_some(option: Option(a)) -> Bool {
+  case option {
+    Some(_) -> True
+    None -> False
+  }
+}
+"#;
+
+    assert_rename!(
+        TestProject::for_source(src).add_module("option", option_module),
+        "opt",
+        find_position_of("option").nth_occurrence(2),
+    );
+}
+
+// TODO: alias use
+// TODO: with namespace
+// TODO: module in function's type annotations

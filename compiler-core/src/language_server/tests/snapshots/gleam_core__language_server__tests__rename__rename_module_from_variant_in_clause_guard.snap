@@ -1,0 +1,37 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\nimport option\n\npub fn count_none(list) {\n  case list {\n    [option, ..rest] if option == option  . None -> 1 + count_none(rest)\n    [_, ..rest] -> count_none(rest)\n    [] -> 0\n  }\n}\n"
+---
+----- BEFORE RENAME
+-- option.gleam
+pub type Option(a) { Some(a) None }
+
+-- app.gleam
+
+import option
+
+pub fn count_none(list) {
+  case list {
+    [option, ..rest] if option == option  . None -> 1 + count_none(rest)
+                                  ↑▔▔▔▔▔                                
+    [_, ..rest] -> count_none(rest)
+    [] -> 0
+  }
+}
+
+
+----- AFTER RENAME
+-- option.gleam
+pub type Option(a) { Some(a) None }
+
+-- app.gleam
+
+import option as opt
+
+pub fn count_none(list) {
+  case list {
+    [option, ..rest] if option == opt  . None -> 1 + count_none(rest)
+    [_, ..rest] -> count_none(rest)
+    [] -> 0
+  }
+}

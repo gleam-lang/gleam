@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/rename.rs
-expression: "\nimport option\n\npub fn main() {\n  echo option     . None\n}\n"
+expression: "\nimport option\n\ntype Option(a) =\n  option.Option(a)\n"
 ---
 ----- BEFORE RENAME
 -- option.gleam
@@ -10,10 +10,9 @@ pub type Option(a) { Some(a) None }
 
 import option
 
-pub fn main() {
-  echo option     . None
-       ↑▔▔▔▔▔           
-}
+type Option(a) =
+  option.Option(a)
+  ↑▔▔▔▔▔          
 
 
 ----- AFTER RENAME
@@ -24,6 +23,5 @@ pub type Option(a) { Some(a) None }
 
 import option as opt
 
-pub fn main() {
-  echo opt     . None
-}
+type Option(a) =
+  opt.Option(a)

@@ -1,19 +1,14 @@
 ---
 source: compiler-core/src/language_server/tests/rename.rs
-expression: "\nimport option\n\npub fn main() {\n  echo option     . None\n}\n"
+expression: import      option
 ---
 ----- BEFORE RENAME
 -- option.gleam
 pub type Option(a) { Some(a) None }
 
 -- app.gleam
-
-import option
-
-pub fn main() {
-  echo option     . None
-       ↑▔▔▔▔▔           
-}
+import      option
+            ↑▔▔▔▔▔
 
 
 ----- AFTER RENAME
@@ -21,9 +16,4 @@ pub fn main() {
 pub type Option(a) { Some(a) None }
 
 -- app.gleam
-
-import option as opt
-
-pub fn main() {
-  echo opt     . None
-}
+import      option as opt
