@@ -6,8 +6,8 @@ use lsp_types::Location;
 use crate::{
     analyse,
     ast::{
-        self, ArgNames, AssignName, BitArraySize, Constant, CustomType, Function, ModuleConstant,
-        Pattern, RecordConstructor, SrcSpan, TypedExpr, TypedModule, visit::Visit,
+        self, ArgNames, AssignName, BitArraySize, CustomType, Function, ModuleConstant, Pattern,
+        RecordConstructor, SrcSpan, TypedExpr, TypedModule, visit::Visit,
     },
     build::Located,
     type_::{
@@ -859,30 +859,98 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
         );
     }
 
-    fn visit_typed_constant(&mut self, constant: &'ast ast::TypedConstant) {
-        match constant {
-            Constant::Record { module, .. } | Constant::Var { module, .. } => {
-                if let Some((module_alias, module_location)) = module {
-                    if module_alias == self.module_alias {
-                        self.references.push(ModuleNameReference {
-                            location: *module_location,
-                            kind: ModuleNameReferenceKind::ModuleSelect,
-                        })
-                    }
-                }
+    fn visit_typed_constant_record(
+        &mut self,
+        location: &'ast SrcSpan,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        name: &'ast EcoString,
+        arguments: &'ast Vec<ast::CallArg<ast::TypedConstant>>,
+        tag: &'ast EcoString,
+        type_: &'ast std::sync::Arc<Type>,
+        field_map: &'ast analyse::Inferred<crate::type_::FieldMap>,
+        record_constructor: &'ast Option<Box<ValueConstructor>>,
+    ) {
+        if let Some((module_alias, module_location)) = module {
+            if module_alias == self.module_alias {
+                self.references.push(ModuleNameReference {
+                    location: *module_location,
+                    kind: ModuleNameReferenceKind::ModuleSelect,
+                })
             }
-            Constant::Int { .. }
-            | Constant::Float { .. }
-            | Constant::String { .. }
-            | Constant::Tuple { .. }
-            | Constant::List { .. }
-            | Constant::RecordUpdate { .. }
-            | Constant::BitArray { .. }
-            | Constant::StringConcatenation { .. }
-            | Constant::Invalid { .. } => {}
         }
 
-        ast::visit::visit_typed_constant(self, constant);
+        ast::visit::visit_typed_constant_record(
+            self,
+            location,
+            module,
+            name,
+            arguments,
+            tag,
+            type_,
+            field_map,
+            record_constructor,
+        );
+    }
+
+    fn visit_typed_constant_record_update(
+        &mut self,
+        location: &'ast SrcSpan,
+        constructor_location: &'ast SrcSpan,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        name: &'ast EcoString,
+        record: &'ast ast::RecordBeingUpdated<ast::TypedConstant>,
+        arguments: &'ast [ast::RecordUpdateArg<ast::TypedConstant>],
+        tag: &'ast EcoString,
+        type_: &'ast std::sync::Arc<Type>,
+        field_map: &'ast analyse::Inferred<crate::type_::FieldMap>,
+    ) {
+        if let Some((module_alias, module_location)) = module {
+            if module_alias == self.module_alias {
+                self.references.push(ModuleNameReference {
+                    location: *module_location,
+                    kind: ModuleNameReferenceKind::ModuleSelect,
+                })
+            }
+        }
+
+        ast::visit::visit_typed_constant_record_update(
+            self,
+            location,
+            constructor_location,
+            module,
+            name,
+            record,
+            arguments,
+            tag,
+            type_,
+            field_map,
+        )
+    }
+
+    fn visit_typed_module_constant(&mut self, constant: &'ast ast::TypedModuleConstant) {
+        if let Some(annotation) = &constant.annotation {
+            ast::visit::visit_type_ast(self, annotation);
+        }
+
+        ast::visit::visit_typed_constant(self, &constant.value);
+    }
+
+    fn visit_typed_constant_var(
+        &mut self,
+        _location: &'ast SrcSpan,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        _name: &'ast EcoString,
+        _constructor: &'ast Option<Box<ValueConstructor>>,
+        _type_: &'ast std::sync::Arc<Type>,
+    ) {
+        if let Some((module_alias, module_location)) = module {
+            if module_alias == self.module_alias {
+                self.references.push(ModuleNameReference {
+                    location: *module_location,
+                    kind: ModuleNameReferenceKind::ModuleSelect,
+                })
+            }
+        }
     }
 
     fn visit_typed_pattern_constructor(

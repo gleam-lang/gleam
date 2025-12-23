@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\nimport option\n\nconst x: option.Option(Int) = option.Some(1)\n"
+---
+----- BEFORE RENAME
+-- option.gleam
+pub type Option(a) { Some(a) None }
+
+-- app.gleam
+
+import option
+
+const x: option.Option(Int) = option.Some(1)
+         ↑▔▔▔▔▔                             
+
+
+----- AFTER RENAME
+-- option.gleam
+pub type Option(a) { Some(a) None }
+
+-- app.gleam
+
+import option as opt
+
+const x: opt.Option(Int) = opt.Some(1)

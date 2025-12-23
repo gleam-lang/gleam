@@ -1848,17 +1848,17 @@ pub fn main() {
 #[test]
 fn rename_module_from_constant_in_expression() {
     let src = r#"
-import math
+import maths
 
 pub fn main() {
-  echo math  .    pi
+  echo maths  .    pi
 }
 "#;
 
     assert_rename!(
-        TestProject::for_source(src).add_module("math", "pub const pi = 3.14"),
+        TestProject::for_source(src).add_module("maths", "pub const pi = 3.14"),
         "m",
-        find_position_of("math").nth_occurrence(2),
+        find_position_of("maths").nth_occurrence(2),
     );
 }
 
@@ -1880,15 +1880,15 @@ const x = option   .None
 #[test]
 fn rename_module_from_constant_in_const() {
     let src = r#"
-import math
+import maths
 
-const x = math   .  pi
+const x = maths   .  pi
 "#;
 
     assert_rename!(
-        TestProject::for_source(src).add_module("math", "pub const pi = 3.14"),
+        TestProject::for_source(src).add_module("maths", "pub const pi = 3.14"),
         "m",
-        find_position_of("math").nth_occurrence(2),
+        find_position_of("maths").nth_occurrence(2),
     );
 }
 
@@ -1936,11 +1936,11 @@ pub fn count_none(list) {
 #[test]
 fn rename_module_from_constant_in_clause_guard() {
     let src = r#"
-import math
+import maths
 
 pub fn count_pi(list) {
   case list {
-    [number, ..rest] if number == math.pi -> 1 + count_pi(rest)
+    [number, ..rest] if number == maths  . pi -> 1 + count_pi(rest)
     [_, ..rest] -> count_pi(rest)
     [] -> 0
   }
@@ -1948,9 +1948,9 @@ pub fn count_pi(list) {
 "#;
 
     assert_rename!(
-        TestProject::for_source(src).add_module("math", "pub const pi = 3.14"),
+        TestProject::for_source(src).add_module("maths", "pub const pi = 3.14"),
         "m",
-        find_position_of("math").nth_occurrence(2),
+        find_position_of("maths").nth_occurrence(2),
     );
 }
 
@@ -1987,7 +1987,6 @@ type Option(a) =
     );
 }
 
-// TODO: This test is failing!
 #[test]
 fn rename_module_from_type_in_annotation() {
     let src = r#"
@@ -2034,6 +2033,19 @@ pub fn is_some(option: Option(a)) -> Bool {
     );
 }
 
-// TODO: alias use
-// TODO: with namespace
-// TODO: module in function's type annotations
+#[test]
+fn rename_module_from_alias_use() {
+    let src = r#"
+import maths  as     m
+
+pub fn main() {
+  echo m      .pi
+}
+"#;
+
+    assert_rename!(
+        TestProject::for_source(src).add_module("maths", "pub const pi = 3.14"),
+        "mth",
+        find_position_of("m").nth_occurrence(5)
+    );
+}
