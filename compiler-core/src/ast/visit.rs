@@ -814,7 +814,7 @@ pub fn visit_typed_constant_record<'a, V: Visit<'a> + ?Sized>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn visit_typed_constant_record_update<'a, V: Visit<'a> + ?Sized>(
+pub fn visit_typed_constant_record_update<'a, V: Visit<'a> + ?Sized>(
     v: &mut V,
     _location: &'a SrcSpan,
     _constructor_location: &'a SrcSpan,

@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\nimport maths\n\nconst x = maths   .  pi\n"
+---
+----- BEFORE RENAME
+-- maths.gleam
+pub const pi = 3.14
+
+-- app.gleam
+
+import maths
+
+const x = maths   .  pi
+          ↑▔▔▔▔        
+
+
+----- AFTER RENAME
+-- maths.gleam
+pub const pi = 3.14
+
+-- app.gleam
+
+import maths as m
+
+const x = m   .  pi
