@@ -1,0 +1,37 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\nimport maths\n\npub fn count_pi(list) {\n  case list {\n    [number, ..rest] if number == maths  . pi -> 1 + count_pi(rest)\n    [_, ..rest] -> count_pi(rest)\n    [] -> 0\n  }\n}\n"
+---
+----- BEFORE RENAME
+-- maths.gleam
+pub const pi = 3.14
+
+-- app.gleam
+
+import maths
+
+pub fn count_pi(list) {
+  case list {
+    [number, ..rest] if number == maths  . pi -> 1 + count_pi(rest)
+                                  ↑▔▔▔▔                            
+    [_, ..rest] -> count_pi(rest)
+    [] -> 0
+  }
+}
+
+
+----- AFTER RENAME
+-- maths.gleam
+pub const pi = 3.14
+
+-- app.gleam
+
+import maths as m
+
+pub fn count_pi(list) {
+  case list {
+    [number, ..rest] if number == m  . pi -> 1 + count_pi(rest)
+    [_, ..rest] -> count_pi(rest)
+    [] -> 0
+  }
+}

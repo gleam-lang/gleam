@@ -630,7 +630,9 @@ where
         self.respond(|this| {
             let (lines, found) = match this.node_at_position(&params) {
                 Some(value) => value,
-                None => return Ok(None),
+                None => {
+                    return Ok(None);
+                }
             };
 
             let Some(current_module) = this.module_for_uri(&params.text_document.uri) else {
