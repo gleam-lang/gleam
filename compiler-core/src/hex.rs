@@ -28,6 +28,7 @@ fn key_name(hostname: &str) -> String {
 }
 
 pub async fn publish_package<Http: HttpClient>(
+    name: &ecow::EcoString,
     release_tarball: Vec<u8>,
     version: String,
     api_key: &str,
@@ -40,6 +41,10 @@ pub async fn publish_package<Http: HttpClient>(
     let response = http.send(request).await?;
     hexpm::api_publish_package_response(response).map_err(|e| match e {
         ApiError::NotReplacing => Error::HexPublishReplaceRequired { version },
+        ApiError::Forbidden => Error::HexPublishForbidden {
+            version,
+            package: name.clone(),
+        },
         err => Error::hex(err),
     })
 }

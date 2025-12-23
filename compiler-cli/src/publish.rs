@@ -87,6 +87,7 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
     cli::print_publishing(&config.name, &config.version);
 
     runtime.block_on(hex::publish_package(
+        &config.name,
         package_tarball,
         config.version.to_string(),
         &api_key,

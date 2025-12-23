@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Build tool
+
+- The build tool now prints a better error message when the user does not have
+  permission to publish a package which already exists on Hex.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.14.0-rc3 - 2025-12-21
 
 ### Bug fixes
