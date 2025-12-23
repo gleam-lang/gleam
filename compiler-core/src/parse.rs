@@ -2892,6 +2892,9 @@ where
         let mut start = 0;
         let mut end;
         let mut module = EcoString::new();
+        let mut last_segment_start;
+        let mut last_segment_end;
+
         // Gather module names
         loop {
             let (s, name, e) = self.expect_name()?;
@@ -2902,6 +2905,8 @@ where
             }
             module.push_str(&name);
             end = e;
+            last_segment_start = s;
+            last_segment_end = e;
 
             // Useful error for : import a/.{b}
             if let Some((s, _)) = self.maybe_one(&Token::SlashDot) {
@@ -2979,6 +2984,10 @@ where
             location: SrcSpan {
                 start: import_start,
                 end,
+            },
+            module_location: SrcSpan {
+                start: last_segment_start,
+                end: last_segment_end,
             },
             unqualified_values,
             unqualified_types,

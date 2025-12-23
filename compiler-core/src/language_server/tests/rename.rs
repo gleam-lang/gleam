@@ -25,8 +25,10 @@ fn rename(
         engine.prepare_rename(params).result.unwrap()
     });
 
-    let Some(lsp_types::PrepareRenameResponse::Range(range)) = prepare_rename_response else {
-        return Ok(None);
+    let range = match prepare_rename_response {
+        Some(lsp_types::PrepareRenameResponse::Range(range)) => range,
+        Some(lsp_types::PrepareRenameResponse::RangeWithPlaceholder { range, .. }) => range,
+        _ => return Ok(None),
     };
 
     let outcome = tester.at(position, |engine, params, _| {
@@ -1734,5 +1736,20 @@ fn wibble() -> Nil {
 "#,
         "new_name",
         find_position_of("wibble").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn rename_module_from_variant_in_expression() {
+    let src = r#"
+import option
+
+pub fn main() {
+  echo option.None
+}"#;
+    assert_rename!(
+        TestProject::for_source(src).add_module("option", "pub type Option(a) { Some(a) None }"),
+        "opt",
+        find_position_of("option").nth_occurrence(2)
     );
 }
