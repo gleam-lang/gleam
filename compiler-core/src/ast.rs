@@ -856,6 +856,7 @@ pub type TypedImport = Import<EcoString>;
 pub struct Import<PackageName> {
     pub documentation: Option<EcoString>,
     pub location: SrcSpan,
+    pub module_location: SrcSpan,
     pub module: EcoString,
     pub as_name: Option<(AssignName, SrcSpan)>,
     pub unqualified_values: Vec<UnqualifiedImport>,
