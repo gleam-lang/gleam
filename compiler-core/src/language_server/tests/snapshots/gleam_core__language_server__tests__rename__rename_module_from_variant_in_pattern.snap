@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\nimport option\n\npub fn is_some(option) {\n  case option {\n    option.  Some(_) -> True\n    option  .None -> False\n  }\n}\n"
+---
+----- BEFORE RENAME
+-- option.gleam
+pub type Option(a) { Some(a) None }
+
+-- app.gleam
+
+import option
+
+pub fn is_some(option) {
+  case option {
+    option.  Some(_) -> True
+    ↑▔▔▔▔▔                  
+    option  .None -> False
+  }
+}
+
+
+----- AFTER RENAME
+-- option.gleam
+pub type Option(a) { Some(a) None }
+
+-- app.gleam
+
+import option as opt
+
+pub fn is_some(option) {
+  case option {
+    opt.  Some(_) -> True
+    opt  .None -> False
+  }
+}

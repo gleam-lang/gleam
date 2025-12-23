@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: import   std /   option   as     opt
+---
+----- BEFORE RENAME
+-- std/option.gleam
+pub type Option(a) { Some(a) None }
+
+-- app.gleam
+import   std /   option   as     opt
+                                 ↑▔▔
+
+
+----- AFTER RENAME
+-- std/option.gleam
+pub type Option(a) { Some(a) None }
+
+-- app.gleam
+import   std /   option   as o

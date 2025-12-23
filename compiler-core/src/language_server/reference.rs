@@ -314,7 +314,7 @@ pub fn reference_for_ast_node(
                         .split('/')
                         .next_back()
                         .map(EcoString::from)
-                        .unwrap(),
+                        .unwrap_or_else(|| import.module.clone()),
                     location: import.module_location,
                 },
             };
