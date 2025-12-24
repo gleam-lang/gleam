@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/rename.rs
+source: language-server/src/tests/rename.rs
 expression: "\nimport maths  as     m\n\npub fn main() {\n  echo m      .pi\n}\n"
 ---
 ----- BEFORE RENAME

@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/rename.rs
+source: language-server/src/tests/rename.rs
 expression: "\nimport option\n\nconst x: option.Option(Int) = option.Some(1)\n"
 ---
 ----- BEFORE RENAME

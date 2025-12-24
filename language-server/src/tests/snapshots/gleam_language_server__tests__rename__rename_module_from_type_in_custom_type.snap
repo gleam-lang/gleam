@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/rename.rs
+source: language-server/src/tests/rename.rs
 expression: "\nimport option\n\ntype Value(a) {\n  Value(option.Option(a))\n}\n"
 ---
 ----- BEFORE RENAME

@@ -857,7 +857,7 @@ const my_constant = wibble.value
 
     assert_goto!(
         TestProject::for_source(src).add_hex_module("wibble", "pub const value = 10"),
-        find_position_of("= wibble").under_char('w')
+        find_position_of("value").under_char('v')
     );
 }
 
@@ -871,7 +871,7 @@ const my_constant = wibble.Wibble(10)
 
     assert_goto!(
         TestProject::for_source(src).add_hex_module("wibble", "pub type Wibble { Wibble(Int) }"),
-        find_position_of("= wibble").under_char('w')
+        find_position_of("Wibble(10)").under_char('W')
     );
 }
 

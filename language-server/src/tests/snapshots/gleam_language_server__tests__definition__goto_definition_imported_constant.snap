@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/definition.rs
+source: language-server/src/tests/definition.rs
 expression: output
 ---
 ----- Jumping from `src/app.gleam`
@@ -7,7 +7,7 @@ expression: output
 import wibble
 
 const my_constant = wibble.value
-                    ↑           
+                           ↑    
 
 ----- Jumped to `build/packages/hex/src/wibble.gleam`
 pub const value = 10

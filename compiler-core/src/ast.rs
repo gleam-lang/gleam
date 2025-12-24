@@ -509,15 +509,15 @@ impl TypeAst {
                         return Some(arg);
                     }
 
-                    if let Some((module_alias, location)) = module {
-                        if location.contains(byte_index) {
-                            return Some(Located::ModuleName {
-                                location: *location,
-                                module_name,
-                                module_alias: module_alias.clone(),
-                                layer: Layer::Type,
-                            });
-                        }
+                    if let Some((module_alias, location)) = module
+                        && location.contains(byte_index)
+                    {
+                        return Some(Located::ModuleName {
+                            location: *location,
+                            module_name,
+                            module_alias: module_alias.clone(),
+                            layer: Layer::Type,
+                        });
                     }
 
                     None
@@ -2295,29 +2295,11 @@ impl TypedClauseGuard {
                     None
                 }
             }
-            ClauseGuard::Equals { left, right, .. }
-            | ClauseGuard::NotEquals { left, right, .. }
-            | ClauseGuard::GtInt { left, right, .. }
-            | ClauseGuard::GtEqInt { left, right, .. }
-            | ClauseGuard::LtInt { left, right, .. }
-            | ClauseGuard::LtEqInt { left, right, .. }
-            | ClauseGuard::GtFloat { left, right, .. }
-            | ClauseGuard::GtEqFloat { left, right, .. }
-            | ClauseGuard::LtFloat { left, right, .. }
-            | ClauseGuard::LtEqFloat { left, right, .. }
-            | ClauseGuard::AddInt { left, right, .. }
-            | ClauseGuard::AddFloat { left, right, .. }
-            | ClauseGuard::SubInt { left, right, .. }
-            | ClauseGuard::SubFloat { left, right, .. }
-            | ClauseGuard::MultInt { left, right, .. }
-            | ClauseGuard::MultFloat { left, right, .. }
-            | ClauseGuard::DivInt { left, right, .. }
-            | ClauseGuard::DivFloat { left, right, .. }
-            | ClauseGuard::RemainderInt { left, right, .. }
-            | ClauseGuard::Or { left, right, .. }
-            | ClauseGuard::And { left, right, .. } => left
+
+            ClauseGuard::BinaryOperator { left, right, .. } => left
                 .find_node(byte_index)
                 .or_else(|| right.find_node(byte_index)),
+
             ClauseGuard::Not {
                 expression: value, ..
             }
