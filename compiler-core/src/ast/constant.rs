@@ -135,8 +135,7 @@ impl TypedConstant {
                     module_alias: module_alias.clone(),
                     layer: Layer::Value,
                 },
-                ValueConstructorVariant::LocalVariable { .. }
-                | ValueConstructorVariant::LocalConstant { .. } => Located::Constant(self),
+                ValueConstructorVariant::LocalVariable { .. } => Located::Constant(self),
             },
             Constant::Var { .. } => Located::Constant(self),
             Constant::Tuple { elements, .. } | Constant::List { elements, .. } => elements

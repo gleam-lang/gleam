@@ -1,11 +1,13 @@
 ---
-source: compiler-core/src/language_server/tests/rename.rs
+source: language-server/src/tests/rename.rs
+assertion_line: 2130
 expression: "\nimport option\n\npub fn main() {\n  option.is_some(option.Some(1))\n}\n"
+snapshot_kind: text
 ---
 ----- BEFORE RENAME
 -- option.gleam
 
-pub type Option(a) { 
+pub type Option(a) {
   Some(a)
   None
 }
@@ -31,7 +33,7 @@ pub fn main() {
 ----- AFTER RENAME
 -- option.gleam
 
-pub type Option(a) { 
+pub type Option(a) {
   Some(a)
   None
 }

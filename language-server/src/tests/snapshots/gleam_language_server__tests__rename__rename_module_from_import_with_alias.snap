@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/rename.rs
+source: language-server/src/tests/rename.rs
 expression: import   option    as      opt
 ---
 ----- BEFORE RENAME

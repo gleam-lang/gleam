@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/rename.rs
+source: language-server/src/tests/rename.rs
 expression: "\nimport option\n\npub fn main() {\n  echo option     . None\n}\n"
 ---
 ----- BEFORE RENAME

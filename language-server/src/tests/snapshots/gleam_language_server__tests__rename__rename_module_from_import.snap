@@ -1,14 +1,14 @@
 ---
-source: compiler-core/src/language_server/tests/rename.rs
-expression: import   option   as     opt
+source: language-server/src/tests/rename.rs
+expression: import      option
 ---
 ----- BEFORE RENAME
 -- option.gleam
 pub type Option(a) { Some(a) None }
 
 -- app.gleam
-import   option   as     opt
-                         ↑▔▔
+import      option
+            ↑▔▔▔▔▔
 
 
 ----- AFTER RENAME
@@ -16,4 +16,4 @@ import   option   as     opt
 pub type Option(a) { Some(a) None }
 
 -- app.gleam
-import   option
+import      option as opt

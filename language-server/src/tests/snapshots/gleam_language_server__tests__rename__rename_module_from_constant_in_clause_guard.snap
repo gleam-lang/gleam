@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/rename.rs
+source: language-server/src/tests/rename.rs
 expression: "\nimport maths\n\npub fn count_pi(list) {\n  case list {\n    [number, ..rest] if number == maths  . pi -> 1 + count_pi(rest)\n    [_, ..rest] -> count_pi(rest)\n    [] -> 0\n  }\n}\n"
 ---
 ----- BEFORE RENAME

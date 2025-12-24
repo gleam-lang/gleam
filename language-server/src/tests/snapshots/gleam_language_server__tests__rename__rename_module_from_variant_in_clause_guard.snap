@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/rename.rs
+source: language-server/src/tests/rename.rs
 expression: "\nimport option\n\npub fn count_none(list) {\n  case list {\n    [option, ..rest] if option == option  . None -> 1 + count_none(rest)\n    [_, ..rest] -> count_none(rest)\n    [] -> 0\n  }\n}\n"
 ---
 ----- BEFORE RENAME
