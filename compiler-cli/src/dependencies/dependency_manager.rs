@@ -23,6 +23,22 @@ use super::{
     remove_extra_packages, unlock_packages,
 };
 
+/// Verifies that all specified packages exist in the manifest.
+pub fn ensure_packages_exist_locally(manifest: &Manifest, packages: &[EcoString]) -> Result<()> {
+    let missing_packages: Vec<EcoString> = packages
+        .iter()
+        .filter(|package_name| !manifest.packages.iter().any(|p| &p.name == *package_name))
+        .cloned()
+        .collect();
+
+    if !missing_packages.is_empty() {
+        return Err(Error::PackagesToUpdateNotExist {
+            packages: missing_packages,
+        });
+    }
+    Ok(())
+}
+
 pub struct DependencyManagerConfig {
     // If `Yes` we read the manifest from disc. If not set then we ignore any
     // manifest which will result in the latest versions of the dependency
@@ -81,10 +97,12 @@ where
         if !paths.manifest().exists() {
             tracing::debug!("manifest_not_present");
             let manifest = self.perform_version_resolution(paths, config, None, Vec::new())?;
+            ensure_packages_exist_locally(&manifest, &packages_to_update)?;
             return Ok(Resolved::all_added(manifest));
         }
 
         let existing_manifest = read_manifest_from_disc(paths)?;
+        ensure_packages_exist_locally(&existing_manifest, &packages_to_update)?;
 
         // If we have been asked not to use the manifest then
         let (requirements_changed, manifest_for_resolver) = match self.use_manifest {

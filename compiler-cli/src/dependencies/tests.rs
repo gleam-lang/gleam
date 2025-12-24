@@ -1374,3 +1374,48 @@ fn test_pretty_print_version_updates() {
 
     insta::assert_snapshot!(output);
 }
+
+#[test]
+fn test_ensure_packages_exist_locally_all_present() {
+    let manifest = Manifest {
+        requirements: HashMap::new(),
+        packages: vec![
+            manifest_package("package_a", "1.0.0", vec![]),
+            manifest_package("package_b", "2.0.0", vec![]),
+            manifest_package("package_c", "3.0.0", vec![]),
+        ],
+    };
+
+    let packages_to_check = vec!["package_a".into(), "package_b".into()];
+    let result = dependency_manager::ensure_packages_exist_locally(&manifest, &packages_to_check);
+
+    assert!(result.is_ok(), "All packages exist, should return Ok");
+}
+
+#[test]
+fn test_ensure_packages_exist_locally_some_missing() {
+    let manifest = Manifest {
+        requirements: HashMap::new(),
+        packages: vec![
+            manifest_package("package_a", "1.0.0", vec![]),
+            manifest_package("package_b", "2.0.0", vec![]),
+        ],
+    };
+
+    let packages_to_check = vec![
+        "package_a".into(),
+        "package_b".into(),
+        "missing_package".into(),
+        "another_missing".into(),
+    ];
+    let result = dependency_manager::ensure_packages_exist_locally(&manifest, &packages_to_check);
+
+    match result {
+        Err(Error::PackagesToUpdateNotExist { packages }) => {
+            assert_eq!(packages.len(), 2);
+            assert!(packages.contains(&"missing_package".into()));
+            assert!(packages.contains(&"another_missing".into()));
+        }
+        _ => panic!("Expected PackagesToUpdateNotExist error"),
+    }
+}
