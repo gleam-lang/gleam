@@ -494,15 +494,15 @@ impl TypeAst {
                         return Some(arg);
                     }
 
-                    if let Some((module_alias, location)) = module {
-                        if location.contains(byte_index) {
-                            return Some(Located::ModuleName {
-                                location: *location,
-                                module_name,
-                                module_alias: module_alias.clone(),
-                                layer: Layer::Type,
-                            });
-                        }
+                    if let Some((module_alias, location)) = module
+                        && location.contains(byte_index)
+                    {
+                        return Some(Located::ModuleName {
+                            location: *location,
+                            module_name,
+                            module_alias: module_alias.clone(),
+                            layer: Layer::Type,
+                        });
                     }
 
                     None

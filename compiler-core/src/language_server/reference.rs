@@ -840,13 +840,13 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
         name: &'ast EcoString,
         arguments: &'ast Vec<ast::TypeAst>,
     ) {
-        if let Some((module_alias, module_location)) = module {
-            if module_alias == self.module_alias {
-                self.references.push(ModuleNameReference {
-                    location: *module_location,
-                    kind: ModuleNameReferenceKind::ModuleSelect,
-                })
-            }
+        if let Some((module_alias, module_location)) = module
+            && module_alias == self.module_alias
+        {
+            self.references.push(ModuleNameReference {
+                location: *module_location,
+                kind: ModuleNameReferenceKind::ModuleSelect,
+            })
         }
 
         ast::visit::visit_type_ast_constructor(
@@ -870,13 +870,13 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
         field_map: &'ast analyse::Inferred<crate::type_::FieldMap>,
         record_constructor: &'ast Option<Box<ValueConstructor>>,
     ) {
-        if let Some((module_alias, module_location)) = module {
-            if module_alias == self.module_alias {
-                self.references.push(ModuleNameReference {
-                    location: *module_location,
-                    kind: ModuleNameReferenceKind::ModuleSelect,
-                })
-            }
+        if let Some((module_alias, module_location)) = module
+            && module_alias == self.module_alias
+        {
+            self.references.push(ModuleNameReference {
+                location: *module_location,
+                kind: ModuleNameReferenceKind::ModuleSelect,
+            })
         }
 
         ast::visit::visit_typed_constant_record(
@@ -904,13 +904,13 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
         type_: &'ast std::sync::Arc<Type>,
         field_map: &'ast analyse::Inferred<crate::type_::FieldMap>,
     ) {
-        if let Some((module_alias, module_location)) = module {
-            if module_alias == self.module_alias {
-                self.references.push(ModuleNameReference {
-                    location: *module_location,
-                    kind: ModuleNameReferenceKind::ModuleSelect,
-                })
-            }
+        if let Some((module_alias, module_location)) = module
+            && module_alias == self.module_alias
+        {
+            self.references.push(ModuleNameReference {
+                location: *module_location,
+                kind: ModuleNameReferenceKind::ModuleSelect,
+            })
         }
 
         ast::visit::visit_typed_constant_record_update(
@@ -943,13 +943,13 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
         _constructor: &'ast Option<Box<ValueConstructor>>,
         _type_: &'ast std::sync::Arc<Type>,
     ) {
-        if let Some((module_alias, module_location)) = module {
-            if module_alias == self.module_alias {
-                self.references.push(ModuleNameReference {
-                    location: *module_location,
-                    kind: ModuleNameReferenceKind::ModuleSelect,
-                })
-            }
+        if let Some((module_alias, module_location)) = module
+            && module_alias == self.module_alias
+        {
+            self.references.push(ModuleNameReference {
+                location: *module_location,
+                kind: ModuleNameReferenceKind::ModuleSelect,
+            })
         }
     }
 
@@ -964,13 +964,13 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
         spread: &'ast Option<SrcSpan>,
         type_: &'ast std::sync::Arc<Type>,
     ) {
-        if let Some((module_alias, module_location)) = module {
-            if module_alias == self.module_alias {
-                self.references.push(ModuleNameReference {
-                    location: *module_location,
-                    kind: ModuleNameReferenceKind::ModuleSelect,
-                });
-            }
+        if let Some((module_alias, module_location)) = module
+            && module_alias == self.module_alias
+        {
+            self.references.push(ModuleNameReference {
+                location: *module_location,
+                kind: ModuleNameReferenceKind::ModuleSelect,
+            });
         }
 
         ast::visit::visit_typed_pattern_constructor(
