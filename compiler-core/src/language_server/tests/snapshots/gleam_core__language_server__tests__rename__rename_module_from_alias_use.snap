@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\nimport maths  as     m\n\npub fn main() {\n  echo m      .pi\n}\n"
+---
+----- BEFORE RENAME
+-- maths.gleam
+pub const pi = 3.14
+
+-- app.gleam
+
+import maths  as     m
+
+pub fn main() {
+  echo m      .pi
+       ↑         
+}
+
+
+----- AFTER RENAME
+-- maths.gleam
+pub const pi = 3.14
+
+-- app.gleam
+
+import maths  as mth
+
+pub fn main() {
+  echo mth      .pi
+}

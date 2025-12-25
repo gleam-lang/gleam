@@ -868,6 +868,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let Import {
             documentation,
             location,
+            module_location,
             module,
             as_name,
             unqualified_values,
@@ -899,6 +900,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         Some(Import {
             documentation,
             location,
+            module_location,
             module,
             as_name,
             unqualified_values,

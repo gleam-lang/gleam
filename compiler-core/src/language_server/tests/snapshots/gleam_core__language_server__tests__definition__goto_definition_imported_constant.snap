@@ -7,7 +7,7 @@ expression: output
 import wibble
 
 const my_constant = wibble.value
-                    ↑           
+                           ↑    
 
 ----- Jumped to `build/packages/hex/src/wibble.gleam`
 pub const value = 10

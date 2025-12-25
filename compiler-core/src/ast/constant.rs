@@ -116,8 +116,29 @@ impl TypedConstant {
             Constant::Int { .. }
             | Constant::Float { .. }
             | Constant::String { .. }
-            | Constant::Var { .. }
             | Constant::Invalid { .. } => Located::Constant(self),
+            Constant::Var {
+                module: Some((module_alias, location)),
+                constructor: Some(constructor),
+                ..
+            }
+            | Constant::Record {
+                module: Some((module_alias, location)),
+                record_constructor: Some(constructor),
+                ..
+            } if location.contains(byte_index) => match &constructor.variant {
+                ValueConstructorVariant::ModuleConstant { module, .. }
+                | ValueConstructorVariant::ModuleFn { module, .. }
+                | ValueConstructorVariant::Record { module, .. } => Located::ModuleName {
+                    location: *location,
+                    module_name: module.clone(),
+                    module_alias: module_alias.clone(),
+                    layer: Layer::Value,
+                },
+                ValueConstructorVariant::LocalVariable { .. }
+                | ValueConstructorVariant::LocalConstant { .. } => Located::Constant(self),
+            },
+            Constant::Var { .. } => Located::Constant(self),
             Constant::Tuple { elements, .. } | Constant::List { elements, .. } => elements
                 .iter()
                 .find_map(|element| element.find_node(byte_index))

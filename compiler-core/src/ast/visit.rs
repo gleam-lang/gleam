@@ -42,7 +42,7 @@ use crate::{
     analyse::Inferred,
     ast::{
         BitArraySize, RecordBeingUpdated, TypedBitArraySize, TypedConstantBitArraySegment,
-        TypedDefinitions, TypedTailPattern, typed::InvalidExpression,
+        TypedDefinitions, TypedImport, TypedTailPattern, TypedTypeAlias, typed::InvalidExpression,
     },
     exhaustiveness::CompiledCase,
     parse::LiteralFloatValue,
@@ -82,6 +82,14 @@ pub trait Visit<'ast> {
 
     fn visit_typed_custom_type(&mut self, custom_type: &'ast TypedCustomType) {
         visit_typed_custom_type(self, custom_type);
+    }
+
+    fn visit_typed_type_alias(&mut self, type_alias: &'ast TypedTypeAlias) {
+        visit_typed_type_alias(self, type_alias)
+    }
+
+    fn visit_typed_import(&mut self, import: &'ast TypedImport) {
+        visit_typed_import(self, import)
     }
 
     fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
@@ -806,7 +814,7 @@ pub fn visit_typed_constant_record<'a, V: Visit<'a> + ?Sized>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn visit_typed_constant_record_update<'a, V: Visit<'a> + ?Sized>(
+pub fn visit_typed_constant_record_update<'a, V: Visit<'a> + ?Sized>(
     v: &mut V,
     _location: &'a SrcSpan,
     _constructor_location: &'a SrcSpan,
@@ -877,12 +885,16 @@ where
     V: Visit<'a> + ?Sized,
 {
     let TypedDefinitions {
-        imports: _, // TODO
+        imports,
         constants,
         custom_types,
-        type_aliases: _, // TODO
+        type_aliases,
         functions,
     } = &module.definitions;
+
+    for import in imports {
+        v.visit_typed_import(import);
+    }
 
     for constant in constants {
         v.visit_typed_module_constant(constant);
@@ -890,6 +902,10 @@ where
 
     for custom_type in custom_types {
         v.visit_typed_custom_type(custom_type);
+    }
+
+    for type_alias in type_aliases {
+        v.visit_typed_type_alias(type_alias);
     }
 
     for function in functions {
@@ -1105,6 +1121,19 @@ where
             v.visit_type_ast(&argument.ast);
         }
     }
+}
+
+pub fn visit_typed_type_alias<'a, V>(v: &mut V, type_alias: &'a TypedTypeAlias)
+where
+    V: Visit<'a> + ?Sized,
+{
+    v.visit_type_ast(&type_alias.type_ast);
+}
+
+pub fn visit_typed_import<'a, V>(_v: &mut V, _import: &'a TypedImport)
+where
+    V: Visit<'a> + ?Sized,
+{
 }
 
 pub fn visit_typed_expr<'a, V>(v: &mut V, node: &'a TypedExpr)
@@ -1811,7 +1840,7 @@ where
             module_alias,
             literal,
         ),
-        super::ClauseGuard::Constant(_constant) => {}
+        super::ClauseGuard::Constant(constant) => v.visit_typed_constant(constant),
     }
 }
 
