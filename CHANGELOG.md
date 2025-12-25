@@ -11,3 +11,7 @@
 ### Formatter
 
 ### Bug fixes
+
+- The compiler now correctly tracks the minimum required version for constant
+  record updates to be `>= 1.14.0`.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

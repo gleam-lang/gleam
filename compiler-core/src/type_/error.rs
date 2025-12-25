@@ -1168,6 +1168,8 @@ pub enum FeatureKind {
     JavaScriptUnalignedBitArray,
     BoolAssert,
     ExternalCustomType,
+    ConstantRecordUpdate,
+    //BitArrayNonConstantSegmentSize
 }
 
 impl FeatureKind {
@@ -1199,7 +1201,9 @@ impl FeatureKind {
 
             FeatureKind::BoolAssert => Version::new(1, 11, 0),
 
-            FeatureKind::ExternalCustomType => Version::new(1, 14, 0),
+            FeatureKind::ExternalCustomType | FeatureKind::ConstantRecordUpdate => {
+                Version::new(1, 14, 0)
+            }
         }
     }
 }

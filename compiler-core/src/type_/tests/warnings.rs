@@ -4683,3 +4683,15 @@ pub const pi = 3.14
 "
     );
 }
+
+#[test]
+fn const_record_update_requires_v1_14_warning() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub type Wibble { Wibble(a: Int, b: Int) }
+const base = Wibble(1, 2)
+pub const wobble = Wibble(..base, b: 3)
+",
+    );
+}

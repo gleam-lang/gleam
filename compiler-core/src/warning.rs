@@ -1288,6 +1288,9 @@ See: https://tour.gleam.run/functions/pipelines/",
                         FeatureKind::ExternalCustomType => {
                             "The `@external` annotation on custom types was"
                         }
+                        FeatureKind::ConstantRecordUpdate => {
+                            "The record update syntax for constants was"
+                        }
                     };
 
                     Diagnostic {
