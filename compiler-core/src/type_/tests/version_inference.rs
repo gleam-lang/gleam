@@ -385,3 +385,29 @@ pub fn main() {
     );
     assert_eq!(version, Version::new(1, 11, 0));
 }
+
+#[test]
+fn expression_in_expression_segment_size_requires_v1_12() {
+    let version = infer_version(
+        "
+pub fn main() {
+  <<1:size(3 * 8)>>
+}
+",
+    );
+    assert_eq!(version, Version::new(1, 12, 0));
+}
+
+#[test]
+fn expression_in_pattern_segment_size_requires_v1_12() {
+    let version = infer_version(
+        "
+pub fn main(x) {
+  case x {
+    <<_:size(3*8)>> -> 1
+    _ -> 2
+  }
+}",
+    );
+    assert_eq!(version, Version::new(1, 12, 0));
+}

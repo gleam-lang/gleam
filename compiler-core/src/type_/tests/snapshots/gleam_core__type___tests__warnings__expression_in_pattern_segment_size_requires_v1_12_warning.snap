@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn main(x) {\n  case x {\n    <<_:size(3*8)>> -> 1\n    _ -> 2\n  }\n}"
+---
+----- SOURCE CODE
+
+pub fn main(x) {
+  case x {
+    <<_:size(3*8)>> -> 1
+    _ -> 2
+  }
+}
+
+----- WARNING
+warning: Incompatible gleam version range
+  ┌─ /src/warning/wrn.gleam:4:14
+  │
+4 │     <<_:size(3*8)>> -> 1
+  │              ^^^ This requires a Gleam version >= 1.12.0
+
+Expressions in segment sizes were introduced in version v1.12.0. But the
+Gleam version range specified in your `gleam.toml` would allow this code to
+run on an earlier version like v1.0.0, resulting in compilation errors!
+Hint: Remove the version constraint from your `gleam.toml` or update it to be:
+
+    gleam = ">= 1.12.0"

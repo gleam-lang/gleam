@@ -1600,12 +1600,21 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     }
                 }
 
-                self.infer_bit_segment(
+                let segment = self.infer_bit_segment(
                     *segment.value,
                     segment.options,
                     segment.location,
                     |env, expr| env.infer_or_error(expr),
-                )
+                );
+
+                if let Ok(segment) = &segment {
+                    // If we could successfully infer the segment we need to
+                    // check if it's `size` option uses any feature that has to
+                    // be tracked!
+                    self.check_segment_size_expression(&segment.options);
+                };
+
+                segment
             })
             .try_collect()?;
 
@@ -1662,12 +1671,21 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     }
                 }
 
-                self.infer_bit_segment(
+                let segment = self.infer_bit_segment(
                     *segment.value,
                     segment.options,
                     segment.location,
                     |env, expr| Ok(env.infer_const(&None, expr)),
-                )
+                );
+
+                if let Ok(segment) = &segment {
+                    // If we could successfully infer the segment we need to
+                    // check if it's `size` option uses any feature that has to
+                    // be tracked!
+                    self.check_constant_segment_size_expression(&segment.options);
+                }
+
+                segment
             })
             .try_collect()?;
 
@@ -5388,6 +5406,113 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         if minimum_required_version > self.minimum_required_version {
             self.minimum_required_version = minimum_required_version;
+        }
+    }
+
+    /// Checks if one of the options is a size option using an expression.
+    /// This needs to be tracked as it was introduced in Gleam 1.12.0.
+    fn check_segment_size_expression(&mut self, options: &[BitArrayOption<TypedExpr>]) {
+        let Some(size_value) = options.iter().find_map(|option| match option {
+            BitArrayOption::Size { value, .. } => Some(value),
+
+            BitArrayOption::Bytes { .. }
+            | BitArrayOption::Int { .. }
+            | BitArrayOption::Float { .. }
+            | BitArrayOption::Bits { .. }
+            | BitArrayOption::Utf8 { .. }
+            | BitArrayOption::Utf16 { .. }
+            | BitArrayOption::Utf32 { .. }
+            | BitArrayOption::Utf8Codepoint { .. }
+            | BitArrayOption::Utf16Codepoint { .. }
+            | BitArrayOption::Utf32Codepoint { .. }
+            | BitArrayOption::Signed { .. }
+            | BitArrayOption::Unsigned { .. }
+            | BitArrayOption::Big { .. }
+            | BitArrayOption::Little { .. }
+            | BitArrayOption::Native { .. }
+            | BitArrayOption::Unit { .. } => None,
+        }) else {
+            return;
+        };
+
+        match size_value.as_ref() {
+            // Ints and vars were always allowed from the start
+            TypedExpr::Int { .. } | TypedExpr::Var { .. } => (),
+
+            // Blocks and binops were added in Gleam 1.12.0!
+            TypedExpr::Block { location, .. } | TypedExpr::BinOp { location, .. } => {
+                self.track_feature_usage(FeatureKind::ExpressionInSegmentSize, *location)
+            }
+
+            // None of these are currently supported... for now!
+            TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => (),
+        }
+    }
+
+    /// Checks if one of the options is a size option using an expression.
+    /// This needs to be tracked as it was introduced in Gleam 1.12.0.
+    ///
+    /// This is basically the same as the function above working on expressions!
+    fn check_constant_segment_size_expression(&self, options: &[BitArrayOption<TypedConstant>]) {
+        let Some(size_value) = options.iter().find_map(|option| match option {
+            BitArrayOption::Size { value, .. } => Some(value),
+
+            BitArrayOption::Bytes { .. }
+            | BitArrayOption::Int { .. }
+            | BitArrayOption::Float { .. }
+            | BitArrayOption::Bits { .. }
+            | BitArrayOption::Utf8 { .. }
+            | BitArrayOption::Utf16 { .. }
+            | BitArrayOption::Utf32 { .. }
+            | BitArrayOption::Utf8Codepoint { .. }
+            | BitArrayOption::Utf16Codepoint { .. }
+            | BitArrayOption::Utf32Codepoint { .. }
+            | BitArrayOption::Signed { .. }
+            | BitArrayOption::Unsigned { .. }
+            | BitArrayOption::Big { .. }
+            | BitArrayOption::Little { .. }
+            | BitArrayOption::Native { .. }
+            | BitArrayOption::Unit { .. } => None,
+        }) else {
+            return;
+        };
+
+        // Expressions are not allowed in constants so for now nothing needs
+        // tracking. Though this is handy to have already in place if we were to
+        // lift this restriction for constant bit arrays as well!
+        match size_value.as_ref() {
+            // Ints and vars were always allowed from the start
+            TypedConstant::Int { .. } | TypedConstant::Var { .. } => (),
+
+            // None of these are currently supported... for now!
+            Constant::Float { .. }
+            | Constant::String { .. }
+            | Constant::Tuple { .. }
+            | Constant::List { .. }
+            | Constant::Record { .. }
+            | Constant::RecordUpdate { .. }
+            | Constant::BitArray { .. }
+            | Constant::StringConcatenation { .. }
+            | Constant::Invalid { .. } => (),
         }
     }
 }

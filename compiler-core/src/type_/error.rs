@@ -1169,7 +1169,7 @@ pub enum FeatureKind {
     BoolAssert,
     ExternalCustomType,
     ConstantRecordUpdate,
-    //BitArrayNonConstantSegmentSize
+    ExpressionInSegmentSize,
 }
 
 impl FeatureKind {
@@ -1200,6 +1200,8 @@ impl FeatureKind {
             FeatureKind::UnannotatedFloatSegment => Version::new(1, 10, 0),
 
             FeatureKind::BoolAssert => Version::new(1, 11, 0),
+
+            FeatureKind::ExpressionInSegmentSize => Version::new(1, 12, 0),
 
             FeatureKind::ExternalCustomType | FeatureKind::ConstantRecordUpdate => {
                 Version::new(1, 14, 0)

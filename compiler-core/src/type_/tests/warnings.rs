@@ -4695,3 +4695,29 @@ pub const wobble = Wibble(..base, b: 3)
 ",
     );
 }
+
+#[test]
+fn expression_in_expression_segment_size_requires_v1_12_warning() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub fn main() {
+  <<1:size(3 * 8)>>
+}
+",
+    );
+}
+
+#[test]
+fn expression_in_pattern_segment_size_requires_v1_12_warning() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub fn main(x) {
+  case x {
+    <<_:size(3*8)>> -> 1
+    _ -> 2
+  }
+}",
+    );
+}

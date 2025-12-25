@@ -1285,6 +1285,7 @@ See: https://tour.gleam.run/functions/pipelines/",
                             "Use of unaligned bit arrays on the JavaScript target was"
                         }
                         FeatureKind::BoolAssert => "The bool `assert` statement was",
+                        FeatureKind::ExpressionInSegmentSize => "Expressions in segment sizes were",
                         FeatureKind::ExternalCustomType => {
                             "The `@external` annotation on custom types was"
                         }
