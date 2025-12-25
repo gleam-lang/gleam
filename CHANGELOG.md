@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.14.0 - 2025-12-25 🎁
 
 ### Bug fixes
 
