@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub type Wibble { Wibble(a: Int, b: Int) }\nconst base = Wibble(1, 2)\npub const wobble = Wibble(..base, b: 3)\n"
+---
+----- SOURCE CODE
+
+pub type Wibble { Wibble(a: Int, b: Int) }
+const base = Wibble(1, 2)
+pub const wobble = Wibble(..base, b: 3)
+
+
+----- WARNING
+warning: Incompatible gleam version range
+  ┌─ /src/warning/wrn.gleam:4:20
+  │
+4 │ pub const wobble = Wibble(..base, b: 3)
+  │                    ^^^^^^^^^^^^^^^^^^^^ This requires a Gleam version >= 1.14.0
+
+The record update syntax for constants was introduced in version v1.14.0.
+But the Gleam version range specified in your `gleam.toml` would allow this
+code to run on an earlier version like v1.0.0, resulting in compilation
+errors!
+Hint: Remove the version constraint from your `gleam.toml` or update it to be:
+
+    gleam = ">= 1.14.0"

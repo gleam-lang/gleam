@@ -333,6 +333,18 @@ pub fn main() {
 }
 
 #[test]
+fn const_record_update_requires_v1_14() {
+    let version = infer_version(
+        "
+pub type Wibble { Wibble(a: Int, b: Int) }
+const base = Wibble(1, 2)
+const wobble = Wibble(..base, a: 3)
+",
+    );
+    assert_eq!(version, Version::new(1, 14, 0));
+}
+
+#[test]
 fn inference_picks_the_bigger_of_two_versions() {
     let version = infer_version(
         "
