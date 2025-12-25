@@ -493,6 +493,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             .try_collect()
             .expect("The function always returns Ok");
 
+        self.check_pattern_segment_size_expression(&options);
+
         let segment_type = match bit_array::type_options_for_pattern(
             &options,
             !is_last_segment,
@@ -1454,6 +1456,44 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
         if minimum_required_version > self.minimum_required_version {
             self.minimum_required_version = minimum_required_version;
+        }
+    }
+
+    /// Checks if one of the options is a size option using an expression.
+    /// This needs to be tracked as it was introduced in Gleam 1.12.0.
+    fn check_pattern_segment_size_expression(&mut self, options: &[BitArrayOption<TypedPattern>]) {
+        let Some(size_value) = options.iter().find_map(|option| match option {
+            BitArrayOption::Size { value, .. } => Some(value),
+
+            BitArrayOption::Bytes { .. }
+            | BitArrayOption::Int { .. }
+            | BitArrayOption::Float { .. }
+            | BitArrayOption::Bits { .. }
+            | BitArrayOption::Utf8 { .. }
+            | BitArrayOption::Utf16 { .. }
+            | BitArrayOption::Utf32 { .. }
+            | BitArrayOption::Utf8Codepoint { .. }
+            | BitArrayOption::Utf16Codepoint { .. }
+            | BitArrayOption::Utf32Codepoint { .. }
+            | BitArrayOption::Signed { .. }
+            | BitArrayOption::Unsigned { .. }
+            | BitArrayOption::Big { .. }
+            | BitArrayOption::Little { .. }
+            | BitArrayOption::Native { .. }
+            | BitArrayOption::Unit { .. } => None,
+        }) else {
+            return;
+        };
+
+        let Pattern::BitArraySize(size) = size_value.as_ref() else {
+            return;
+        };
+        match size {
+            BitArraySize::Int { .. } | BitArraySize::Variable { .. } => (),
+            BitArraySize::BinaryOperator { location, .. }
+            | BitArraySize::Block { location, .. } => {
+                self.track_feature_usage(FeatureKind::ExpressionInSegmentSize, *location)
+            }
         }
     }
 }
