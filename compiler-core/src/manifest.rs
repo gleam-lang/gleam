@@ -204,6 +204,22 @@ impl ManifestPackage {
     }
 }
 
+#[cfg(test)]
+impl Default for ManifestPackage {
+    fn default() -> Self {
+        Self {
+            name: Default::default(),
+            build_tools: Default::default(),
+            otp_app: Default::default(),
+            requirements: Default::default(),
+            version: Version::new(1, 0, 0),
+            source: ManifestPackageSource::Hex {
+                outer_checksum: Base16Checksum(vec![]),
+            },
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "source")]
 pub enum ManifestPackageSource {
@@ -479,21 +495,6 @@ gleeunit = { version = "~> 0.1" }
 zzz = { version = "> 0.0.0" }
 "#
         );
-    }
-
-    impl Default for ManifestPackage {
-        fn default() -> Self {
-            Self {
-                name: Default::default(),
-                build_tools: Default::default(),
-                otp_app: Default::default(),
-                requirements: Default::default(),
-                version: Version::new(1, 0, 0),
-                source: ManifestPackageSource::Hex {
-                    outer_checksum: Base16Checksum(vec![]),
-                },
-            }
-        }
     }
 }
 

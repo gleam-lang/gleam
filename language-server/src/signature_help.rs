@@ -9,7 +9,7 @@ use lsp_types::{
     SignatureInformation,
 };
 
-use crate::{
+use gleam_core::{
     ast::{CallArg, ImplicitCallArgOrigin, TypedExpr},
     type_::{FieldMap, ModuleValueConstructor, Type, pretty::Printer},
 };

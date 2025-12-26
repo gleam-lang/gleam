@@ -1,7 +1,7 @@
 use ecow::EcoString;
 use lsp_types::{Position, Range, TextEdit};
 
-use crate::{
+use gleam_core::{
     ast::{Import, SrcSpan, TypedDefinitions},
     build::Module,
     line_numbers::LineNumbers,

@@ -4,23 +4,22 @@ use ecow::EcoString;
 use lsp_server::ResponseError;
 use lsp_types::{Range, RenameParams, TextEdit, Url, WorkspaceEdit};
 
-use crate::{
+use gleam_core::{
     analyse::name,
     ast::{self, SrcSpan},
     build::Module,
-    language_server::{
-        edits::{
-            self, Newlines, add_newlines_after_import, position_of_first_definition_if_import,
-        },
-        reference::FindVariableReferences,
-    },
     line_numbers::LineNumbers,
     reference::ReferenceKind,
     type_::{ModuleInterface, error::Named},
 };
 
 use super::{
-    TextEdits, compiler::ModuleSourceInformation, reference::VariableReferenceKind, url_from_path,
+    TextEdits,
+    compiler::ModuleSourceInformation,
+    edits::{self, Newlines, add_newlines_after_import, position_of_first_definition_if_import},
+    reference::FindVariableReferences,
+    reference::VariableReferenceKind,
+    url_from_path,
 };
 
 fn workspace_edit(uri: Url, edits: Vec<TextEdit>) -> WorkspaceEdit {

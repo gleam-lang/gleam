@@ -6,11 +6,11 @@ use gleam_core::{
         BeamCompiler, Command, CommandExecutor, Content, DirEntry, FileSystemReader,
         FileSystemWriter, OutputFile, ReadDir, Stdio, WrappedReader, is_native_file_extension,
     },
-    language_server::{DownloadDependencies, Locker, MakeLocker},
     manifest::Manifest,
     paths::ProjectPaths,
     warning::WarningEmitterIO,
 };
+use gleam_language_server::{DownloadDependencies, Locker, MakeLocker};
 use std::{
     collections::HashSet,
     fmt::Debug,

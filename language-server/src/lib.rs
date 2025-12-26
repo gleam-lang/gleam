@@ -1,3 +1,55 @@
+#![warn(
+    clippy::all,
+    clippy::dbg_macro,
+    clippy::todo,
+    clippy::mem_forget,
+    clippy::filter_map_next,
+    clippy::needless_continue,
+    clippy::needless_borrow,
+    clippy::match_wildcard_for_single_variants,
+    clippy::imprecise_flops,
+    clippy::suboptimal_flops,
+    clippy::lossy_float_literal,
+    clippy::rest_pat_in_fully_bound_structs,
+    clippy::fn_params_excessive_bools,
+    clippy::inefficient_to_string,
+    clippy::linkedlist,
+    clippy::macro_use_imports,
+    clippy::option_option,
+    clippy::verbose_file_reads,
+    clippy::unnested_or_patterns,
+    rust_2018_idioms,
+    missing_debug_implementations,
+    missing_copy_implementations,
+    trivial_casts,
+    trivial_numeric_casts,
+    nonstandard_style,
+    unexpected_cfgs,
+    unused_import_braces,
+    unused_qualifications
+)]
+#![deny(
+    clippy::await_holding_lock,
+    clippy::disallowed_methods,
+    clippy::if_let_mutex,
+    clippy::indexing_slicing,
+    clippy::mem_forget,
+    clippy::ok_expect,
+    clippy::unimplemented,
+    clippy::unwrap_used,
+    unsafe_code,
+    unstable_features,
+    unused_results
+)]
+#![allow(
+    clippy::assign_op_pattern,
+    clippy::to_string_trait_impl,
+    clippy::match_single_binding,
+    clippy::match_like_matches_macro,
+    clippy::inconsistent_struct_constructor,
+    clippy::len_without_is_empty
+)]
+
 mod code_action;
 mod compiler;
 mod completer;
@@ -18,11 +70,11 @@ mod tests;
 
 pub use server::LanguageServer;
 
-use crate::{
+use camino::Utf8PathBuf;
+use gleam_core::{
     Result, ast::SrcSpan, build::Target, line_numbers::LineNumbers, manifest::Manifest,
     paths::ProjectPaths,
 };
-use camino::Utf8PathBuf;
 use lsp_types::{Position, Range, TextEdit, Url};
 use std::any::Any;
 

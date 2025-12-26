@@ -76,7 +76,6 @@ pub mod format;
 pub mod hex;
 pub mod io;
 pub mod javascript;
-pub mod language_server;
 pub mod line_numbers;
 pub mod manifest;
 pub mod metadata;
@@ -95,16 +94,16 @@ pub(crate) mod ast_folder;
 mod call_graph;
 mod dep_tree;
 pub(crate) mod derivation_tree;
-mod exhaustiveness;
+pub mod exhaustiveness;
 pub(crate) mod graph;
 pub(crate) mod inline;
-mod reference;
+pub mod reference;
 
 pub use error::{Error, Result};
 pub use warning::Warning;
 
 const GLEAM_CORE_PACKAGE_NAME: &str = "";
-const STDLIB_PACKAGE_NAME: &str = "gleam_stdlib";
+pub const STDLIB_PACKAGE_NAME: &str = "gleam_stdlib";
 
 mod schema_capnp {
     #![allow(

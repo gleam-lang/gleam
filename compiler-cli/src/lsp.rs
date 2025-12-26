@@ -5,9 +5,9 @@ use crate::{
 use gleam_core::{
     Result,
     build::{Mode, NullTelemetry, Target},
-    language_server::{LanguageServer, LockGuard, Locker},
     paths::ProjectPaths,
 };
+use gleam_language_server::{LanguageServer, LockGuard, Locker};
 
 pub fn main() -> Result<()> {
     tracing::info!("language_server_starting");

@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use ecow::EcoString;
 use lsp_types::Location;
 
-use crate::{
+use gleam_core::{
     analyse,
     ast::{
         self, ArgNames, BitArraySize, CustomType, Function, ModuleConstant, Pattern,
@@ -670,7 +670,7 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
         }
     }
 
-    fn visit_typed_call_arg(&mut self, arg: &'ast crate::type_::TypedCallArg) {
+    fn visit_typed_call_arg(&mut self, arg: &'ast gleam_core::type_::TypedCallArg) {
         if let TypedExpr::Var {
             location,
             constructor,

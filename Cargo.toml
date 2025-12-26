@@ -9,6 +9,7 @@ members = [
   "test-output",
   "test-package-compiler",
   "test-project-compiler",
+  "language-server",
 ]
 
 # common dependencies
@@ -62,3 +63,5 @@ insta = { version = "1", features = ["glob"] }
 # A transitive dependency needed to compile into wasm32-unknown-unknown
 # See https://docs.rs/getrandom/latest/getrandom/index.html#webassembly-support
 getrandom = { version = "0.2", features = ["js"] }
+# Non-empty vectors
+vec1 = "1"

@@ -882,7 +882,7 @@ impl TypedExpr {
         matches!(self, Self::Var { .. })
     }
 
-    pub(crate) fn get_documentation(&self) -> Option<&str> {
+    pub fn get_documentation(&self) -> Option<&str> {
         match self {
             TypedExpr::Var { constructor, .. } => constructor.get_documentation(),
             TypedExpr::ModuleSelect { constructor, .. } => constructor.get_documentation(),
@@ -1335,7 +1335,7 @@ impl TypedExpr {
         }
     }
 
-    pub(crate) fn is_invalid(&self) -> bool {
+    pub fn is_invalid(&self) -> bool {
         matches!(self, TypedExpr::Invalid { .. })
     }
 
@@ -1348,7 +1348,7 @@ impl TypedExpr {
     /// also contain the source location (meaning that two expression that look
     /// the same but are in different places would be considered different)!
     ///
-    pub(crate) fn syntactically_eq(&self, other: &TypedExpr) -> bool {
+    pub fn syntactically_eq(&self, other: &TypedExpr) -> bool {
         match (self, other) {
             (TypedExpr::Int { int_value: n, .. }, TypedExpr::Int { int_value: m, .. }) => n == m,
             (TypedExpr::Int { .. }, _) => false,
@@ -1641,7 +1641,7 @@ impl TypedExpr {
         }
     }
 
-    pub(crate) fn is_todo_with_no_message(&self) -> bool {
+    pub fn is_todo_with_no_message(&self) -> bool {
         matches!(self, TypedExpr::Todo { message: None, .. })
     }
 }
