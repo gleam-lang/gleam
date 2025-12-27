@@ -3085,10 +3085,7 @@ impl<'a> ExtractVariable<'a> {
             | ExtractedToVariable::StartOfPipeline { location, .. } => location,
         };
 
-        let variable_name = self
-            .name_generator
-            .generate_name_from_type(&expression_type);
-
+        let variable_name = self.name_generator.generate_name_from_type(expression_type);
         let content = self
             .module
             .code
