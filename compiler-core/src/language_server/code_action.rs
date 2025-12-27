@@ -3021,11 +3021,16 @@ pub struct ExtractVariable<'a> {
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
     position: Option<ExtractVariablePosition>,
-    selected_expression: Option<(SrcSpan, Arc<Type>)>,
+    selected_expression: Option<ExtractedToVariable>,
     statement_before_selected_expression: Option<SrcSpan>,
     latest_statement: Option<SrcSpan>,
     to_be_wrapped: bool,
     name_generator: NameGenerator,
+}
+
+pub enum ExtractedToVariable {
+    Expression { location: SrcSpan, type_: Arc<Type> },
+    StartOfPipeline { location: SrcSpan, type_: Arc<Type> },
 }
 
 /// The Position of the selected code
@@ -3064,11 +3069,20 @@ impl<'a> ExtractVariable<'a> {
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
 
-        let (Some((expression_span, expression_type)), Some(insert_location)) = (
+        let (Some(extracted_value), Some(insert_location)) = (
             self.selected_expression,
             self.statement_before_selected_expression,
         ) else {
             return vec![];
+        };
+
+        let expression_type = match &extracted_value {
+            ExtractedToVariable::Expression { type_, .. }
+            | ExtractedToVariable::StartOfPipeline { type_, .. } => type_,
+        };
+        let expression_span = match &extracted_value {
+            ExtractedToVariable::Expression { location, .. }
+            | ExtractedToVariable::StartOfPipeline { location, .. } => location,
         };
 
         let variable_name = self
@@ -3090,7 +3104,13 @@ impl<'a> ExtractVariable<'a> {
 
         // We insert the variable declaration
         // Wrap in a block if needed
-        let mut insertion = format!("let {variable_name} = {content}");
+        let mut insertion = match extracted_value {
+            ExtractedToVariable::Expression { .. } => format!("let {variable_name} = {content}"),
+            ExtractedToVariable::StartOfPipeline { .. } => {
+                format!("let {variable_name} =\n{indent}  {content}\n")
+            }
+        };
+
         if self.to_be_wrapped {
             let line_end = self
                 .edits
@@ -3103,10 +3123,12 @@ impl<'a> ExtractVariable<'a> {
             indent += "  ";
             insertion = format!("{{\n{indent}{insertion}");
         };
+
         self.edits
-            .insert(insert_location.start, insertion + &format!("\n{indent}"));
+            .insert(insert_location.start, format!("{insertion}\n{indent}"));
+
         self.edits
-            .replace(expression_span, String::from(variable_name));
+            .replace(*expression_span, String::from(variable_name));
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Extract variable")
@@ -3214,12 +3236,39 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
             return;
         };
 
-        // When visiting the assignments or the final pipeline call we want to
-        // keep track of out position so that we can avoid extracting those.
+        // Visiting a pipeline requires a bit of care, we don't want to extract
+        // intermediate steps as variables (those are function calls)!
+        // So we start by checking if the selected section contains multiple
+        // steps including the first one: in that case we can extract all those
+        // steps as a single variable.
+        let selection = self.edits.lsp_range_to_src_span(self.params.range);
+        let is_inside_first_step = first_value.location.contains(selection.start);
+        let last_included_step = assignments.iter().find_map(|(assignment, _kind)| {
+            if assignment.location.contains(selection.end) {
+                Some(assignment)
+            } else {
+                None
+            }
+        });
+
+        if let Some(last) = last_included_step
+            && is_inside_first_step
+        {
+            let location = first_value.location.merge(&last.value.location());
+            self.selected_expression = Some(ExtractedToVariable::StartOfPipeline {
+                location,
+                type_: last.type_(),
+            });
+            return;
+        }
+
+        // Otherwise we visit all the steps individually to see  if there's
+        // something _inside_ a step that might be extracted.
         let all_assignments =
             iter::once(first_value).chain(assignments.iter().map(|(assignment, _kind)| assignment));
-
         for assignment in all_assignments {
+            // With the position as "PipelineCall" we know we can't extract the
+            // pipeline step itself!
             self.at_position(ExtractVariablePosition::PipelineCall, |this| {
                 this.visit_typed_pipeline_assignment(assignment);
             });
@@ -3317,7 +3366,10 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
                 } else {
                     self.statement_before_selected_expression = self.latest_statement;
                 };
-                self.selected_expression = Some((*location, expr.type_()));
+                self.selected_expression = Some(ExtractedToVariable::Expression {
+                    location: *location,
+                    type_: expr.type_(),
+                });
             }
         }
 
