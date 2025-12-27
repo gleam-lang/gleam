@@ -352,3 +352,31 @@ fn comment_in_tuple_return_type() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5225
+#[test]
+fn comments_between_function_params() {
+  assert_format!(
+    r#"pub fn main(
+  // a is some useful string
+  a: String,
+  // b is some useful int
+  b: Int,
+  // c is some useful bool
+  c: Bool,
+  // d is some useful function
+  d: fn(
+    // Int,
+    String,
+    Int,
+    // this is A
+    String,
+    // this is B
+    String,
+  ) -> Nil,
+) {
+  todo
+}
+"#
+    );
+}
