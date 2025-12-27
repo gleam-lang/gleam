@@ -120,7 +120,7 @@ fn list_manifest_packages<W: std::io::Write>(mut buffer: W, manifest: Manifest) 
         .collect_vec();
     let out = space_table(&["Package", "Version"], packages);
 
-    write!(buffer, "{}", out).map_err(|e| Error::StandardIo {
+    write!(buffer, "{out}").map_err(|e| Error::StandardIo {
         action: StandardIoAction::Write,
         err: Some(e.kind()),
     })
