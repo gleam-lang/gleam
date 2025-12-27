@@ -225,7 +225,7 @@ impl<'a> TypeScriptGenerator<'a> {
     fn collect_imports(&mut self) -> Imports<'a> {
         let mut imports = Imports::new();
 
-        for function in &self.module.definitions.functions {
+        for function in self.module.definitions.functions.iter().flatten() {
             for argument in &function.arguments {
                 self.collect_imports_for_type(&argument.type_, &mut imports);
             }
@@ -367,7 +367,7 @@ impl<'a> TypeScriptGenerator<'a> {
             }
         }
 
-        for function in &self.module.definitions.functions {
+        for function in self.module.definitions.functions.iter().flatten() {
             if let Some(document) = self.module_function(function) {
                 documents.push(document);
             }

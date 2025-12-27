@@ -169,7 +169,7 @@ fn module_document<'a>(
     // would result in an error as it tries to reference this private function.
     let overridden_publicity = find_private_functions_referenced_in_importable_constants(module);
 
-    for function in &module.definitions.functions {
+    for function in module.definitions.functions.iter().flatten() {
         register_function_exports(function, &mut exports, &overridden_publicity);
     }
 
@@ -221,7 +221,7 @@ fn module_document<'a>(
     let mut needs_function_docs = false;
     let mut echo_used = false;
     let mut statements = vec![];
-    for function in &module.definitions.functions {
+    for function in module.definitions.functions.iter().flatten() {
         if let Some((statement_document, env)) = module_function(
             function,
             &module.name,

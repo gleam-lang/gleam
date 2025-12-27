@@ -85,7 +85,12 @@ impl TypedModule {
             .or_else(|| (constants.iter()).find_map(|constant| constant.find_node(byte_index)))
             .or_else(|| (custom_types.iter()).find_map(|type_| type_.find_node(byte_index)))
             .or_else(|| (type_aliases.iter()).find_map(|alias| alias.find_node(byte_index)))
-            .or_else(|| (functions.iter()).find_map(|function| function.find_node(byte_index)))
+            .or_else(|| {
+                functions
+                    .iter()
+                    .flatten()
+                    .find_map(|function| function.find_node(byte_index))
+            })
     }
 
     pub fn find_statement(&self, byte_index: u32) -> Option<&TypedStatement> {
@@ -94,6 +99,7 @@ impl TypedModule {
         self.definitions
             .functions
             .iter()
+            .flatten()
             .find_map(|function| function.find_statement(byte_index))
     }
 
@@ -106,7 +112,11 @@ impl TypedModule {
             functions,
         } = &self.definitions;
 
-        imports.len() + constants.len() + custom_types.len() + type_aliases.len() + functions.len()
+        imports.len()
+            + constants.len()
+            + custom_types.len()
+            + type_aliases.len()
+            + functions.iter().map(|group| group.len()).sum::<usize>()
     }
 }
 
@@ -116,7 +126,11 @@ pub struct TypedDefinitions {
     pub constants: Vec<TypedModuleConstant>,
     pub custom_types: Vec<TypedCustomType>,
     pub type_aliases: Vec<TypedTypeAlias>,
-    pub functions: Vec<TypedFunction>,
+
+    /// All the functions in the module. Instead of just using a flat vector of
+    /// functions, we divide them in groups of functions that are mutually
+    /// recursive.
+    pub functions: Vec<Vec<TypedFunction>>,
 }
 
 /// The `@target(erlang)` and `@target(javascript)` attributes can be used to

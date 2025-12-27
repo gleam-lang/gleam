@@ -6436,7 +6436,7 @@ impl NameGenerator {
             self.add_used_name(constant.name.clone());
         }
 
-        for function in &definitions.functions {
+        for function in definitions.functions.iter().flatten() {
             if let Some((_, name)) = &function.name {
                 self.add_used_name(name.clone());
             }

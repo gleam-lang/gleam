@@ -215,7 +215,7 @@ impl Printer<'_> {
             return_type,
             documentation,
             ..
-        } in &definitions.functions
+        } in definitions.functions.iter().flatten()
         {
             let Some((_, name)) = name else { continue };
             if !publicity.is_public() {
