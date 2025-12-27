@@ -9615,6 +9615,21 @@ pub fn main() {
 }
 
 #[test]
+fn extract_variable_starting_pipeline_steps() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        "fn map(value, fn_over_value) { todo }
+
+pub fn main() {
+  1
+  |> Ok
+  |> map(fn(value) { value + 2 })
+}",
+        find_position_of("1").select_until(find_position_of("Ok"))
+    );
+}
+
+#[test]
 fn do_not_extract_top_level_variable_in_anonymous_fn_in_argument() {
     assert_no_code_actions!(
         EXTRACT_VARIABLE,
