@@ -8,6 +8,10 @@
 
 ### Language server
 
+- The language server now allows extracting the start of a pipeline into a
+  variable.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Bug fixes
