@@ -145,6 +145,7 @@ Parsed {
                                                 implicit: None,
                                             },
                                         ],
+                                        arguments_start: 67,
                                     },
                                 },
                             ),
