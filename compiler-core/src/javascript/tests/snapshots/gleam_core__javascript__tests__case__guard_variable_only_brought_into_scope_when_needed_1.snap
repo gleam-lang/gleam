@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\npub fn main() {\n  case 1 {\n    i if i == 1 -> True\n    i if i < 2 -> True\n    _ -> False\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  case 1 {
+    i if i == 1 -> True
+    i if i < 2 -> True
+    _ -> False
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function main() {
+  let $ = 1;
+  let i = $;
+  if (i === 1) {
+    return true;
+  } else {
+    let i = $;
+    if (i < 2) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+}

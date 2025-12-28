@@ -52,7 +52,7 @@ fn module_types() {
                 package: "package".into(),
                 module: module_name,
                 name: "my_type".into(),
-                args: vec![],
+                arguments: vec![],
                 inferred_variant: None,
             })
         )]
@@ -157,11 +157,11 @@ fn record_spread() {
     // Test binding to a record field with the spread operator
     assert_erl!(
         r#"
-type Triple {
+pub type Triple {
     Triple(a: Int, b: Int, c: Int)
 }
 
-fn main() {
+pub fn main() {
   let triple = Triple(1,2,3)
   let Triple(the_a, ..) = triple
   the_a
@@ -176,11 +176,11 @@ fn record_spread1() {
     // Test binding to a record field with the spread operator and a labelled argument
     assert_erl!(
         r#"
-type Triple {
+pub type Triple {
   Triple(a: Int, b: Int, c: Int)
 }
 
-fn main() {
+pub fn main() {
   let triple = Triple(1,2,3)
   let Triple(b: the_b, ..) = triple
   the_b
@@ -194,11 +194,11 @@ fn record_spread2() {
     // Test binding to a record field with the spread operator with both a labelled argument and a positional argument
     assert_erl!(
         r#"
-type Triple {
+pub type Triple {
   Triple(a: Int, b: Int, c: Int)
 }
 
-fn main() {
+pub fn main() {
   let triple = Triple(1,2,3)
   let Triple(the_a, c: the_c, ..) = triple
   the_c
@@ -212,11 +212,11 @@ fn record_spread3() {
     // Test binding to a record field with the spread operator in a match
     assert_erl!(
         r#"
-type Triple {
+pub type Triple {
   Triple(a: Int, b: Int, c: Int)
 }
 
-fn main() {
+pub fn main() {
   let triple = Triple(1,2,3)
   case triple {
     Triple(b: the_b, ..) -> the_b
@@ -233,7 +233,7 @@ fn record_updates() {
         r#"
 pub type Person { Person(name: String, age: Int) }
 
-fn main() {
+pub fn main() {
     let p = Person("Quinn", 27)
     let new_p = Person(..p, age: 28)
     new_p
@@ -249,7 +249,7 @@ fn record_updates1() {
         r#"
 pub type Person { Person(name: String, age: Int) }
 
-fn main() {
+pub fn main() {
     let p = Person("Quinn", 27)
     let new_p = Person(..p, age: p.age + 1)
     new_p
@@ -265,7 +265,7 @@ fn record_updates2() {
         r#"
 pub type Person { Person(name: String, age: Int) }
 
-fn main() {
+pub fn main() {
     let p = Person("Quinn", 27)
     let new_p = Person(..p, age: 28, name: "Riley")
     new_p
@@ -281,7 +281,7 @@ fn record_updates3() {
         r#"
 pub type Person { Person(name: String, age: Int) }
 
-fn main() {
+pub fn main() {
     let new_p = Person(..return_person(), age: 28)
     new_p
 }
@@ -301,7 +301,7 @@ fn record_updates4() {
 pub type Car { Car(make: String, model: String, driver: Person) }
 pub type Person { Person(name: String, age: Int) }
 
-fn main() {
+pub fn main() {
     let car = Car(make: "Amphicar", model: "Model 770", driver: Person(name: "John Doe", age: 27))
     let new_p = Person(..car.driver, age: 28)
     new_p
@@ -399,4 +399,71 @@ pub fn main(a: A) {
     })
 }"
     )
+}
+
+#[test]
+fn private_unused_records() {
+    assert_erl!(
+        "type A { A(inner: Int) }
+type B { B(String) }
+type C { C(Int) }
+
+pub fn main(x: Int) -> Int {
+  let a = A(x)
+  a.inner
+}
+"
+    )
+}
+
+#[test]
+fn const_record_update_generic_respecialization() {
+    assert_erl!(
+        "
+pub type Box(a) {
+  Box(name: String, value: a)
+}
+
+pub const base = Box(\"score\", 50)
+pub const updated = Box(..base, value: \"Hello\")
+
+pub fn main() {
+  #(base, updated)
+}
+",
+    );
+}
+
+#[test]
+fn record_update_with_unlabelled_fields() {
+    assert_erl!(
+        r#"
+pub type Wibble {
+  Wibble(Int, Float, b: Bool, s: String)
+}
+
+pub fn main() {
+  let record = Wibble(1, 3.14, True, "Hello")
+  Wibble(..record, b: False)
+}
+"#
+    );
+}
+
+#[test]
+fn constant_record_update_with_unlabelled_fields() {
+    assert_erl!(
+        r#"
+pub type Wibble {
+  Wibble(Int, Float, b: Bool, s: String)
+}
+
+pub const record = Wibble(1, 3.14, True, "Hello")
+pub const updated = Wibble(..record, b: False)
+
+pub fn main() {
+  updated
+}
+"#
+    );
 }

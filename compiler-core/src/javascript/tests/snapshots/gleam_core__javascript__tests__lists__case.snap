@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/lists.rs
-expression: "\nfn go(xs) {\n  case xs {\n    [] -> 0\n    [_] -> 1\n    [_, _] -> 2\n    _ -> 9999\n  }\n}\n"
+assertion_line: 89
+expression: "\npub fn go(xs) {\n  case xs {\n    [] -> 0\n    [_] -> 1\n    [_, _] -> 2\n    _ -> 9999\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(xs) {
+pub fn go(xs) {
   case xs {
     [] -> 0
     [_] -> 1
@@ -15,14 +17,22 @@ fn go(xs) {
 
 
 ----- COMPILED JAVASCRIPT
-function go(xs) {
-  if (xs.hasLength(0)) {
+import { Empty as $Empty } from "../gleam.mjs";
+
+export function go(xs) {
+  if (xs instanceof $Empty) {
     return 0;
-  } else if (xs.hasLength(1)) {
-    return 1;
-  } else if (xs.hasLength(2)) {
-    return 2;
   } else {
-    return 9999;
+    let $ = xs.tail;
+    if ($ instanceof $Empty) {
+      return 1;
+    } else {
+      let $1 = $.tail;
+      if ($1 instanceof $Empty) {
+        return 2;
+      } else {
+        return 9999;
+      }
+    }
   }
 }

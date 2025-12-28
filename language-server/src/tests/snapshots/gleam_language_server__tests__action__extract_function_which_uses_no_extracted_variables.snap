@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn do_things(a, b) {\n  let x = a + b\n  echo x\n  a\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn do_things(a, b) {
+  let x = a + b
+  ▔▔▔▔▔▔▔▔▔▔▔▔▔
+  echo x
+▔▔↑     
+  a
+}
+
+
+----- AFTER ACTION
+
+pub fn do_things(a, b) {
+  function(a, b)
+  a
+}
+
+fn function(a: Int, b: Int) -> Nil {
+  let x = a + b
+  echo x
+  Nil
+}

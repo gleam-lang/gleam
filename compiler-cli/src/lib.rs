@@ -8,7 +8,6 @@
     clippy::needless_continue,
     clippy::needless_borrow,
     clippy::match_wildcard_for_single_variants,
-    clippy::match_on_vec_items,
     clippy::imprecise_flops,
     clippy::suboptimal_flops,
     clippy::lossy_float_literal,
@@ -45,7 +44,8 @@
 #![allow(
     clippy::match_single_binding,
     clippy::inconsistent_struct_constructor,
-    clippy::assign_op_pattern
+    clippy::assign_op_pattern,
+    clippy::len_without_is_empty
 )]
 
 #[cfg(test)]
@@ -69,14 +69,15 @@ mod hex;
 mod http;
 mod lsp;
 mod new;
+mod owner;
 mod panic;
 mod publish;
 mod remove;
 pub mod run;
 mod shell;
+mod text_layout;
 
 use config::root_config;
-use dependencies::UseManifest;
 use fs::{get_current_directory, get_project_root};
 pub use gleam_core::error::{Error, Result};
 
@@ -112,6 +113,7 @@ struct TreeOptions {
         short,
         long,
         ignore_case = true,
+        conflicts_with = "invert",
         help = "Package to be used as the root of the tree"
     )]
     package: Option<String>,
@@ -120,6 +122,7 @@ struct TreeOptions {
         short,
         long,
         ignore_case = true,
+        conflicts_with = "package",
         help = "Invert the tree direction and focus on the given package",
         value_name = "PACKAGE"
     )]
@@ -165,11 +168,10 @@ enum Command {
 
     /// Publish the project to the Hex package manager
     ///
-    /// This command uses this environment variables:
+    /// This command uses the environment variable:
     ///
-    /// - HEXPM_USER: (optional) The Hex username to authenticate with.
-    /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
-    /// - HEXPM_API_KEY: (optional) A Hex API key to use instead of authenticating.
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate with the Hex package manager.
+    ///
     #[command(verbatim_doc_comment)]
     Publish {
         #[arg(long)]
@@ -217,6 +219,8 @@ enum Command {
     Shell,
 
     /// Run the project
+    ///
+    /// This command runs the `main` function from the `<PROJECT_NAME>` module.
     #[command(trailing_var_arg = true)]
     Run {
         #[arg(short, long, ignore_case = true, help = target_doc())]
@@ -237,8 +241,24 @@ enum Command {
     },
 
     /// Run the project tests
+    ///
+    /// This command runs the `main` function from the `<PROJECT_NAME>_test` module.
     #[command(trailing_var_arg = true)]
     Test {
+        #[arg(short, long, ignore_case = true, help = target_doc())]
+        target: Option<Target>,
+
+        #[arg(long, ignore_case = true, help = runtime_doc())]
+        runtime: Option<Runtime>,
+
+        arguments: Vec<String>,
+    },
+
+    /// Run the project development entrypoint
+    ///
+    /// This command runs the `main` function from the `<PROJECT_NAME>_dev` module.
+    #[command(trailing_var_arg = true)]
+    Dev {
         #[arg(short, long, ignore_case = true, help = target_doc())]
         target: Option<Target>,
 
@@ -314,6 +334,12 @@ pub enum ExportTarget {
         /// The path to write the JSON file to
         output: Utf8PathBuf,
     },
+    /// Package information (gleam.toml) in JSON format
+    PackageInformation {
+        #[arg(long = "out", required = true)]
+        /// The path to write the JSON file to
+        output: Utf8PathBuf,
+    },
 }
 
 #[derive(Args, Debug, Clone)]
@@ -379,6 +405,9 @@ enum Dependencies {
     /// Download all dependency packages
     Download,
 
+    /// List all outdated dependencies
+    Outdated,
+
     /// Update dependency packages to their latest versions
     Update(UpdateOptions),
 
@@ -390,11 +419,10 @@ enum Dependencies {
 enum Hex {
     /// Retire a release from Hex
     ///
-    /// This command uses this environment variables:
+    /// This command uses the environment variable:
     ///
-    /// - HEXPM_USER: (optional) The Hex username to authenticate with.
-    /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
-    /// - HEXPM_API_KEY: (optional) A Hex API key to use instead of authenticating.
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate with the Hex package manager.
+    ///
     #[command(verbatim_doc_comment)]
     Retire {
         package: String,
@@ -409,21 +437,19 @@ enum Hex {
 
     /// Un-retire a release from Hex
     ///
-    /// This command uses this environment variables:
+    /// This command uses this environment variable:
     ///
-    /// - HEXPM_USER: (optional) The Hex username to authenticate with.
-    /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
-    /// - HEXPM_API_KEY: (optional) A Hex API key to use instead of authenticating.
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate with the Hex package manager.
+    ///
     #[command(verbatim_doc_comment)]
     Unretire { package: String, version: String },
 
     /// Revert a release from Hex
     ///
-    /// This command uses this environment variables:
+    /// This command uses this environment variable:
     ///
-    /// - HEXPM_USER: (optional) The Hex username to authenticate with.
-    /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
-    /// - HEXPM_API_KEY: (optional) A Hex API key to use instead of authenticating.
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate with the Hex package manager.
+    ///
     #[command(verbatim_doc_comment)]
     Revert {
         #[arg(long)]
@@ -433,8 +459,30 @@ enum Hex {
         version: Option<String>,
     },
 
+    /// Deal with package ownership
+    #[command(subcommand)]
+    Owner(Owner),
+
     /// Authenticate with Hex
     Authenticate,
+}
+
+#[derive(Subcommand, Debug)]
+enum Owner {
+    /// Transfers ownership of the given package to a new Hex user
+    ///
+    /// This command uses this environment variable:
+    ///
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate against the Hex package manager.
+    ///
+    #[command(verbatim_doc_comment)]
+    Transfer {
+        package: String,
+
+        /// The username or email of the new owner
+        #[arg(long = "to")]
+        username_or_email: String,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -451,21 +499,19 @@ enum Docs {
 
     /// Publish HTML docs to HexDocs
     ///
-    /// This command uses this environment variables:
+    /// This command uses this environment variable:
     ///
-    /// - HEXPM_USER: (optional) The Hex username to authenticate with.
-    /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
-    /// - HEXPM_API_KEY: (optional) A Hex API key to use instead of authenticating.
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate with the Hex package manager.
+    ///
     #[command(verbatim_doc_comment)]
     Publish,
 
     /// Remove HTML docs from HexDocs
     ///
-    /// This command uses this environment variables:
+    /// This command uses this environment variable:
     ///
-    /// - HEXPM_USER: (optional) The Hex username to authenticate with.
-    /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
-    /// - HEXPM_API_KEY: (optional) A Hex API key to use instead of authenticating.
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate with the Hex package manager.
+    ///
     #[command(verbatim_doc_comment)]
     Remove {
         /// The name of the package
@@ -546,6 +592,11 @@ fn parse_and_run_command() -> Result<(), Error> {
             download_dependencies(&paths)
         }
 
+        Command::Deps(Dependencies::Outdated) => {
+            let paths = find_project_paths()?;
+            dependencies::outdated(&paths)
+        }
+
         Command::Deps(Dependencies::Update(options)) => {
             let paths = find_project_paths()?;
             dependencies::update(&paths, options.packages)
@@ -601,6 +652,23 @@ fn parse_and_run_command() -> Result<(), Error> {
             )
         }
 
+        Command::Dev {
+            target,
+            arguments,
+            runtime,
+        } => {
+            let paths = find_project_paths()?;
+            run::command(
+                &paths,
+                arguments,
+                target,
+                runtime,
+                None,
+                run::Which::Dev,
+                false,
+            )
+        }
+
         Command::CompilePackage(opts) => compile_package::command(opts),
 
         Command::Publish { replace, yes } => {
@@ -626,6 +694,11 @@ fn parse_and_run_command() -> Result<(), Error> {
             let paths = find_project_paths()?;
             hex::revert(&paths, package, version)
         }
+
+        Command::Hex(Hex::Owner(Owner::Transfer {
+            package,
+            username_or_email,
+        })) => owner::transfer(package, username_or_email),
 
         Command::Add { packages, dev } => {
             let paths = find_project_paths()?;
@@ -662,6 +735,10 @@ fn parse_and_run_command() -> Result<(), Error> {
         Command::Export(ExportTarget::PackageInterface { output }) => {
             let paths = find_project_paths()?;
             export::package_interface(&paths, output)
+        }
+        Command::Export(ExportTarget::PackageInformation { output }) => {
+            let paths = find_project_paths()?;
+            export::package_information(&paths, output)
         }
     }
 }
@@ -743,12 +820,15 @@ fn project_paths_at_current_directory_without_toml() -> ProjectPaths {
 }
 
 fn download_dependencies(paths: &ProjectPaths) -> Result<()> {
-    _ = dependencies::download(
+    _ = dependencies::resolve_and_download(
         paths,
         cli::Reporter::new(),
         None,
         Vec::new(),
-        UseManifest::Yes,
+        dependencies::DependencyManagerConfig {
+            use_manifest: dependencies::UseManifest::Yes,
+            check_major_versions: dependencies::CheckMajorVersions::No,
+        },
     )?;
     Ok(())
 }

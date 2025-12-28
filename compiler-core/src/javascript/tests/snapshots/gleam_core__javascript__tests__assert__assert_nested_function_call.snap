@@ -1,0 +1,50 @@
+---
+source: compiler-core/src/javascript/tests/assert.rs
+assertion_line: 92
+expression: "\nfn and(x, y) {\n  x && y\n}\n\npub fn main() {\n  assert and(and(True, False), True)\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+fn and(x, y) {
+  x && y
+}
+
+pub fn main() {
+  assert and(and(True, False), True)
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+function and(x, y) {
+  return x && y;
+}
+
+export function main() {
+  let $ = and(true, false);
+  if (!and($, true)) {
+    throw makeError(
+      "assert",
+      FILEPATH,
+      "my/mod",
+      7,
+      "main",
+      "Assertion failed.",
+      {
+        kind: "function_call",
+        arguments: [
+          { kind: "expression", value: $, start: 57, end: 73 },
+          { kind: "literal", value: true, start: 75, end: 79 },
+        ],
+        start: 46,
+        end: 80,
+        expression_start: 53
+      }
+    )
+  }
+  return undefined;
+}

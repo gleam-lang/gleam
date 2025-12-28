@@ -1,0 +1,43 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn go(x) {\n  let assert <<\"Hello\":utf16, _rest:bytes>> = x\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  let assert <<"Hello":utf16, _rest:bytes>> = x
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+export function go(x) {
+  if (!(
+    x.bitSize >= 80 &&
+    x.byteAt(0) === 0 &&
+      x.byteAt(1) === 72 &&
+      x.byteAt(2) === 0 &&
+      x.byteAt(3) === 101 &&
+      x.byteAt(4) === 0 &&
+      x.byteAt(5) === 108 &&
+      x.byteAt(6) === 0 &&
+      x.byteAt(7) === 108 &&
+      x.byteAt(8) === 0 &&
+      x.byteAt(9) === 111 &&
+    (x.bitSize - 80) % 8 === 0
+  )) {
+    throw makeError(
+      "let_assert",
+      FILEPATH,
+      "my/mod",
+      3,
+      "go",
+      "Pattern match failed, no pattern matched the value.",
+      { value: x, start: 18, end: 63, pattern_start: 29, pattern_end: 59 }
+    )
+  }
+  return x;
+}

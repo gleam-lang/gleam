@@ -1,6 +1,4 @@
-use crate::{
-    assert_error, assert_module_error, assert_no_warnings, assert_warning, assert_with_module_error,
-};
+use crate::{assert_error, assert_module_error, assert_no_warnings, assert_warning};
 
 #[test]
 fn whatever() {
@@ -898,6 +896,111 @@ _ -> 3
 }
 
 #[test]
+fn redundant_int_with_underscores() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    10 -> "ten"
+    1_0 -> "also ten"
+    _ -> "other"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn redundant_int_with_multiple_underscores() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    1_000_000 -> "one million"
+    1000000 -> "also one million"
+    _ -> "other"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn redundant_float_with_different_formatting() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    1.0 -> "one"
+    1.00 -> "also one"
+    _ -> "other"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn redundant_float_with_no_trailing_decimal() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    1.0 -> "one"
+    1. -> "another one"
+    _ -> "other"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn redundant_float_with_underscore() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    10.0 -> "ten"
+    1_0.0 -> "also ten"
+    _ -> "other"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn redundant_float_scientific_notation() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    10.0 -> "ten"
+    1.0e1 -> "also ten"
+    _ -> "other"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn redundant_float_scientific_notation_and_underscore() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    1.0e2 -> "one hundred"
+    1_0_0.0 -> "one hundred again"
+    _ -> "other"
+  }
+}
+"#
+    );
+}
+
+#[test]
 fn let_1() {
     assert_module_error!(
         r#"
@@ -991,7 +1094,7 @@ pub fn main(wibble) {
 
 #[test]
 fn case_error_prints_module_names() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "pub type Wibble { Wibble Wobble }"),
         "
 import wibble
@@ -1007,7 +1110,7 @@ pub fn main(wobble_thing) {
 
 #[test]
 fn case_error_prints_module_alias() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "pub type Wibble { Wibble Wobble }"),
         "
 import wibble as wobble
@@ -1022,7 +1125,7 @@ pub fn main(wibble) {
 
 #[test]
 fn case_error_prints_unqualified_value() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "pub type Wibble { Wibble Wobble }"),
         "
 import wibble.{Wibble, Wobble}
@@ -1037,7 +1140,7 @@ pub fn main(wibble) {
 
 #[test]
 fn case_error_prints_aliased_unqualified_value() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "pub type Wibble { Wibble Wobble }"),
         "
 import wibble.{Wibble, Wobble as Wubble}
@@ -1080,7 +1183,7 @@ pub fn main(res: Result(Int, Nil)) {
 
 #[test]
 fn case_error_prints_module_when_shadowed() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("mod", "pub type Wibble { Wibble Wobble }"),
         "
 import mod.{Wibble}
@@ -1097,7 +1200,7 @@ pub fn main() {
 
 #[test]
 fn case_error_prints_module_when_aliased_and_shadowed() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("mod", "pub type Wibble { Wibble Wobble }"),
         "
 import mod.{Wibble as Wobble}
@@ -1114,7 +1217,7 @@ pub fn main() {
 
 #[test]
 fn case_error_prints_unqualifed_when_aliased() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("mod", "pub type Wibble { Wibble Wobble }"),
         "
 import mod.{Wibble as Wobble}
@@ -1369,5 +1472,439 @@ pub fn main() {
   }
 }
 "
+    );
+}
+
+#[test]
+fn unreachable_string_pattern_after_prefix() {
+    assert_warning!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "wib" <> rest -> rest
+    "wibble" -> "a"
+    _ -> "b"
+  }
+}"#
+    );
+}
+
+#[test]
+fn reachable_string_pattern_after_prefix() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "wib" <> rest if True -> rest
+    "wibble" -> "a"
+    _ -> "b"
+  }
+}"#
+    );
+}
+
+#[test]
+fn reachable_string_pattern_after_prefix_1() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "wibble" <> rest -> rest
+    "wib" -> "a"
+    _ -> "b"
+  }
+}"#
+    );
+}
+
+#[test]
+fn unreachable_prefix_pattern_after_prefix() {
+    assert_warning!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "wib" <> rest -> rest
+    "wibble" <> rest -> rest
+    _ -> "a"
+  }
+}"#
+    );
+}
+
+#[test]
+fn reachable_prefix_pattern_after_prefix() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "wib" <> rest if True -> rest
+    "wibble" <> rest -> rest
+    _ -> "a"
+  }
+}"#
+    );
+}
+
+#[test]
+fn reachable_prefix_pattern_after_prefix_1() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "wibble" <> rest -> rest
+    "wib" <> rest -> rest
+    _ -> "a"
+  }
+}"#
+    );
+}
+
+#[test]
+fn multiple_unreachable_prefix_patterns() {
+    assert_warning!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "wib" <> rest -> rest
+    "wibble" <> rest -> rest
+    "wibblest" <> rest -> rest
+    _ -> "a"
+  }
+}"#
+    );
+}
+
+#[test]
+fn multiple_unreachable_prefix_patterns_1() {
+    assert_warning!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "wib" <> rest if True -> rest
+    "wibble" <> rest -> rest
+    "wibblest" <> rest -> rest
+    _ -> "a"
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_bits_catches_everything() {
+    assert_warning!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<_:bits>> -> 1
+    <<1>> -> 2
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_bytes_needs_catch_all() {
+    assert_module_error!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<_:bytes>> -> 1
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_overlapping_patterns_are_redundant() {
+    assert_warning!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<1, a:size(16)>> -> a
+    <<1, b:size(8)-unit(2)>> -> b
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_similar_overlapping_patterns_are_not_redundant() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<1, a:size(16)>> -> a
+    <<2, b:size(8)-unit(2)>> -> b
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_overlapping_redundant_patterns_with_variable_size() {
+    assert_warning!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  let len = 3
+  case bit_array {
+    <<a:size(len), _:size(16)>> -> a
+    <<_:size(len), b:size(8)-unit(2)>> -> b
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_overlapping_redundant_patterns_with_variable_size_2() {
+    assert_warning!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<len, _:size(len)-unit(3)>> -> 1
+    <<len, _:size(len)-unit(2), 1:size(len)>> -> 2
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_overlapping_patterns_with_variable_size_not_redundant() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<len, 1:size(len)-unit(3)>> -> 1
+    <<len, _:size(len)-unit(2), 1:size(len)>> -> 2
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_patterns_with_different_length_with_same_name_are_not_redundant() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  let len = 10
+  case bit_array {
+    <<_, _:size(len)-unit(3)>> -> 1
+    // Down here len is not the same as the len above, so the branch below is
+    // not redundant!
+    <<len, _:size(len)-unit(3)>> -> 2
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_patterns_with_different_length_with_same_name_are_not_redundant_1() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  let len = 10
+  case bit_array {
+    <<len, _:size(len)-unit(3)>> -> 1
+    // Down here len is not the same as the len above, so the branch below is
+    // not redundant!
+    <<_, _:size(len)-unit(3)>> -> 2
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn bit_array_patterns_with_different_length_with_same_name_are_not_redundant_2() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<_, len, _:size(len)>> -> 1
+    // Down here len is not the same as the len above, so the branch below is
+    // not redundant!
+    <<len, _, _:size(len)>> -> 2
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
+fn same_catch_all_bytes_are_redundant() {
+    assert_warning!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<_:bytes>> -> <<>>
+    <<a:bytes>> -> a
+    _ -> <<>>
+  }
+}"#
+    );
+}
+
+#[test]
+fn different_catch_all_bytes_are_not_redundant() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let bit_array = <<>>
+  case bit_array {
+    <<_, _:bytes>> -> <<>>
+    <<_:bytes>> -> <<>>
+    _ -> <<>>
+  }
+}"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2616
+#[test]
+fn duplicated_alternative_patterns() {
+    assert_warning!(
+        "
+pub fn main() {
+  let x = 1
+  case x {
+    2 | 2 -> 2
+    _ -> panic
+  }
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2616
+#[test]
+fn duplicated_pattern_in_alternative() {
+    assert_warning!(
+        "
+pub fn main() {
+  let x = 1
+  case x {
+    2 -> x
+    1 | 2 -> x - 4
+    _ -> panic
+  }
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2616
+#[test]
+fn duplicated_pattern_with_multiple_alternatives() {
+    assert_warning!(
+        "
+pub fn main() {
+  let x = 1
+  case x {
+    1 -> 1
+    3 -> 3
+    5 -> 5
+    1 | 2 | 3 | 4 | 5 -> x - 1
+    _ -> panic
+  }
+}
+"
+    );
+}
+
+#[test]
+fn unreachable_multi_pattern() {
+    assert_warning!(
+        "
+pub fn main() {
+  let x = 1
+  let y = 2
+  case x, y {
+    1, 2 -> True
+    1, 2 -> False
+    _, _ -> panic
+  }
+}
+"
+    );
+}
+
+#[test]
+fn unreachable_alternative_multi_pattern() {
+    assert_warning!(
+        "
+pub fn main() {
+  let x = 1
+  let y = 2
+  case x, y {
+    1, 2 -> True
+    3, 4 | 1, 2 -> False
+    _, _ -> panic
+  }
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4586
+#[test]
+fn compiler_does_not_crash_when_defining_duplicate_alternative_variables() {
+    assert_error!(
+        "
+case todo {
+  #(a, b) | #(a, a as b) -> todo
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4626
+#[test]
+fn correct_missing_patterns_for_opaque_type() {
+    assert_module_error!(
+        (
+            "mod",
+            "pub opaque type Wibble { Wibble(Int) Wobble(String) }"
+        ),
+        "
+import mod
+
+pub fn main(w: mod.Wibble) {
+  case w {}
+}
+"
+    );
+}
+
+#[test]
+fn correct_missing_patterns_for_opaque_type_in_definition_module() {
+    assert_module_error!(
+        "
+pub opaque type Wibble { Wibble(Int) Wobble(String) }
+
+pub fn main(w: Wibble) {
+  case w {}
+}
+"
+    );
+}
+
+#[test]
+// https://github.com/gleam-lang/gleam/issues/4278
+fn redundant_missing_patterns() {
+    assert_module_error!(
+        r#"
+fn wibble(b: Bool, i: Int) {
+  case b, i {
+    False, 1 -> todo
+    True, 2 -> todo
+  }
+}
+
+pub fn main() { wibble(False, 1) }"#
     );
 }

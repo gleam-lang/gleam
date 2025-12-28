@@ -35,6 +35,7 @@ impl TestCompileOutput {
             buffer.push('\n');
 
             let extension = path.extension();
+
             match content {
                 _ if extension == Some("cache") => buffer.push_str("<.cache binary>"),
                 Content::Binary(data) => write!(buffer, "<{} byte binary>", data.len()).unwrap(),
@@ -44,15 +45,21 @@ impl TestCompileOutput {
                 }
 
                 Content::Text(text) => {
-                    let text = FILE_LINE_REGEX
-                        .replace_all(text, |caps: &regex::Captures| {
-                            let path = caps
-                                .get(1)
-                                .expect("file path")
-                                .as_str()
-                                .replace("\\\\", "/");
-                            let line_number = caps.get(2).expect("line number").as_str();
-                            format!("-file(\"{path}\", {line_number}).")
+                    let format_path = |caps: &regex::Captures| {
+                        caps.get(1)
+                            .expect("file path")
+                            .as_str()
+                            .replace("\\\\", "/")
+                    };
+                    let text = FILE_LINE_REGEX.replace_all(text, |caps: &regex::Captures| {
+                        let path = format_path(caps);
+                        let line_number = caps.get(2).expect("line number").as_str();
+                        format!("-file(\"{path}\", {line_number}).")
+                    });
+                    let text = FILEPATH_MACRO_REGEX
+                        .replace_all(text.to_string().as_str(), |caps: &regex::Captures| {
+                            let path = format_path(caps);
+                            format!("-define(FILEPATH, \"{path}\").")
                         })
                         .replace(COMPILER_VERSION, "<gleam compiler version string>");
                     buffer.push_str(&text)
@@ -79,8 +86,8 @@ pub fn to_in_memory_filesystem(path: &Utf8Path) -> InMemoryFileSystem {
         .follow_links(true)
         .into_iter()
         .filter_map(Result::ok)
-        .filter(|e| e.file_type().is_file())
-        .map(|d| d.into_path());
+        .filter(|entry| entry.file_type().is_file())
+        .map(|entry| entry.into_path());
 
     for fullpath in files {
         let content = std::fs::read(&fullpath).unwrap();
@@ -94,6 +101,9 @@ pub fn to_in_memory_filesystem(path: &Utf8Path) -> InMemoryFileSystem {
 
 static FILE_LINE_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r#"-file\("([^"]+)", (\d+)\)\."#).expect("Invalid regex"));
+
+static FILEPATH_MACRO_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"-define\(FILEPATH, "([^"]+)"\)\."#).expect("Invalid regex"));
 
 pub fn normalise_diagnostic(text: &str) -> String {
     // There is an extra ^ on Windows in some error messages' code

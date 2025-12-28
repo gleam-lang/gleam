@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\npub fn main() { wibble() }\n\n@external(erlang, \"a\", \"a\")\nfn wibble() -> Nil\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+pub fn main() { wibble() }
+
+@external(erlang, "a", "a")
+fn wibble() -> Nil
+   ↑▔▔▔▔▔         
+
+
+----- AFTER RENAME
+-- app.gleam
+
+pub fn main() { new_name() }
+
+@external(erlang, "a", "a")
+fn new_name() -> Nil

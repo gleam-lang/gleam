@@ -18,8 +18,8 @@ pub fn wibble(n) { n }
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
 -export([wibble/1, main/0]).
 
 -file("project/test/my/mod.gleam", 11).
@@ -31,10 +31,10 @@ wibble(N) ->
 -spec main() -> list(integer()).
 main() ->
     _pipe = [1, 2, 3],
-    echo(_pipe, "project/test/my/mod.gleam", 4),
+    echo(_pipe, nil, 4),
     _pipe@1 = wibble(_pipe),
-    echo(_pipe@1, "project/test/my/mod.gleam", 6),
+    echo(_pipe@1, nil, 6),
     _pipe@2 = wibble(_pipe@1),
-    echo(_pipe@2, "project/test/my/mod.gleam", 8).
+    echo(_pipe@2, nil, 8).
 
 % ...omitted code from `templates/echo.erl`...

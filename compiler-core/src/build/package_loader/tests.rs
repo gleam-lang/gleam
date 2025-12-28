@@ -45,7 +45,9 @@ fn write_cache(
         fingerprint: SourceFingerprint::new(src),
         line_numbers: line_numbers.clone(),
     };
-    let path = Utf8Path::new("/artefact").join(format!("{name}.cache_meta"));
+
+    let artefact_name = name.replace("/", "@");
+    let path = Utf8Path::new("/artefact").join(format!("{artefact_name}.cache_meta"));
     fs.write_bytes(&path, &cache_metadata.to_binary()).unwrap();
 
     let cache = crate::type_::ModuleInterface {
@@ -65,8 +67,9 @@ fn write_cache(
         documentation: Default::default(),
         contains_echo: false,
         references: Default::default(),
+        inline_functions: Default::default(),
     };
-    let path = Utf8Path::new("/artefact").join(format!("{name}.cache"));
+    let path = Utf8Path::new("/artefact").join(format!("{artefact_name}.cache"));
     fs.write_bytes(
         &path,
         &metadata::ModuleEncoder::new(&cache).encode().unwrap(),
@@ -83,7 +86,7 @@ fn run_loader(fs: InMemoryFileSystem, root: &Utf8Path, artefact: &Utf8Path) -> L
         io: fs.clone(),
         ids,
         mode: Mode::Dev,
-        root: &root,
+        paths: ProjectPaths::new(root.into()),
         warnings: &emitter,
         codegen: CodegenRequired::Yes,
         artefact_directory: &artefact,
@@ -134,6 +137,19 @@ fn one_test_module() {
     let artefact = Utf8Path::new("/artefact");
 
     write_src(&fs, "/test/main.gleam", 0, "const x = 1");
+
+    let loaded = run_loader(fs, root, artefact);
+    assert_eq!(loaded.to_compile, vec![EcoString::from("main")]);
+    assert!(loaded.cached.is_empty());
+}
+
+#[test]
+fn one_dev_module() {
+    let fs = InMemoryFileSystem::new();
+    let root = Utf8Path::new("/");
+    let artefact = Utf8Path::new("/artefact");
+
+    write_src(&fs, "/dev/main.gleam", 0, "const x = 1");
 
     let loaded = run_loader(fs, root, artefact);
     assert_eq!(loaded.to_compile, vec![EcoString::from("main")]);
@@ -229,7 +245,7 @@ fn module_is_stale_if_deps_removed() {
     let artefact = Utf8Path::new("/artefact");
 
     // Source is removed, cache is present
-    write_cache(&fs, "one", 0, vec![], TEST_SOURCE_1);
+    write_cache(&fs, "nested/one", 0, vec![], TEST_SOURCE_1);
 
     // Cache is fresh but dep is removed
     write_src(&fs, "/src/two.gleam", 1, "import one");
@@ -237,8 +253,8 @@ fn module_is_stale_if_deps_removed() {
         &fs,
         "two",
         2,
-        vec![(EcoString::from("one"), SrcSpan { start: 0, end: 0 })],
-        "import one",
+        vec![(EcoString::from("nested/one"), SrcSpan { start: 0, end: 0 })],
+        "import nested/one",
     );
 
     let loaded = run_loader(fs, root, artefact);
@@ -360,4 +376,58 @@ fn invalid_nested_module_name_in_test() {
             path: Utf8PathBuf::from("/test/1/one.gleam"),
         }],
     );
+}
+
+#[test]
+fn invalid_module_name_in_dev() {
+    let fs = InMemoryFileSystem::new();
+    let root = Utf8Path::new("/");
+    let artefact = Utf8Path::new("/artefact");
+
+    // Cache is stale
+    write_src(&fs, "/dev/One.gleam", 1, TEST_SOURCE_2);
+
+    let loaded = run_loader(fs, root, artefact);
+    assert!(loaded.to_compile.is_empty());
+    assert!(loaded.cached.is_empty());
+    assert_eq!(
+        loaded.warnings,
+        vec![Warning::InvalidSource {
+            path: Utf8PathBuf::from("/dev/One.gleam"),
+        }],
+    );
+}
+
+#[test]
+fn invalid_nested_module_name_in_dev() {
+    let fs = InMemoryFileSystem::new();
+    let root = Utf8Path::new("/");
+    let artefact = Utf8Path::new("/artefact");
+
+    // Cache is stale
+    write_src(&fs, "/dev/1/one.gleam", 1, TEST_SOURCE_2);
+
+    let loaded = run_loader(fs, root, artefact);
+    assert!(loaded.to_compile.is_empty());
+    assert!(loaded.cached.is_empty());
+    assert_eq!(
+        loaded.warnings,
+        vec![Warning::InvalidSource {
+            path: Utf8PathBuf::from("/dev/1/one.gleam"),
+        }],
+    );
+}
+
+#[test]
+fn cache_files_are_removed_when_source_removed() {
+    let fs = InMemoryFileSystem::new();
+    let root = Utf8Path::new("/");
+    let artefact = Utf8Path::new("/artefact");
+
+    // Source is removed, cache is present
+    write_cache(&fs, "nested/one", 0, vec![], TEST_SOURCE_1);
+
+    _ = run_loader(fs.clone(), root, artefact);
+
+    assert_eq!(fs.files().len(), 0);
 }

@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn f(result) {\n  case result {\n    Ok(reresult) -> {\n      case reresult {\n        Ok(w) -> w\n        Error(_) -> panic\n      }\n    }\n    Error(_) -> panic\n  }\n}"
+---
+----- BEFORE ACTION
+
+pub fn f(result) {
+  case result {
+    Ok(reresult) -> {
+      case reresult {
+        Ok(w) -> w
+                 ↑
+        Error(_) -> panic
+      }
+    }
+    Error(_) -> panic
+  }
+}
+
+
+----- AFTER ACTION
+
+pub fn f(result) {
+  case result {
+    Ok(reresult) -> {
+      case reresult {
+        Ok(w) -> {
+          w
+        }
+        Error(_) -> panic
+      }
+    }
+    Error(_) -> panic
+  }
+}

@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-expression: "\nfn go(x, f) {\n  case x |> f {\n    0 -> 1\n    _ -> 2\n  }\n}\n"
+assertion_line: 183
+expression: "\npub fn go(x, f) {\n  case x |> f {\n    0 -> 1\n    _ -> 2\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(x, f) {
+pub fn go(x, f) {
   case x |> f {
     0 -> 1
     _ -> 2
@@ -13,7 +15,7 @@ fn go(x, f) {
 
 
 ----- COMPILED JAVASCRIPT
-function go(x, f) {
+export function go(x, f) {
   let $ = (() => {
     let _pipe = x;
     return f(_pipe);

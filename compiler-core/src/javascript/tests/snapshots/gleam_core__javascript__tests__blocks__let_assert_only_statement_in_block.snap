@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/javascript/tests/blocks.rs
+assertion_line: 284
+expression: "\npub fn main() {\n  {\n    let assert Ok(1) = Error(Nil)\n  }\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub fn main() {
+  {
+    let assert Ok(1) = Error(Nil)
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { Error, makeError } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+export function main() {
+  {
+    let $ = new Error(undefined);
+    throw makeError(
+      "let_assert",
+      FILEPATH,
+      "my/mod",
+      4,
+      "main",
+      "Pattern match failed, no pattern matched the value.",
+      { value: $, start: 25, end: 54, pattern_start: 36, pattern_end: 41 }
+    )
+    return $;
+  }
+}

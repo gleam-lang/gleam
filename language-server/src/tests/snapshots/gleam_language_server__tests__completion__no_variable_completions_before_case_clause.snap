@@ -1,0 +1,49 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: "\npub fn main() {\n  case todo {\n    something -> s\n    something_else -> Nil\n  }\n  s\n}\n"
+---
+pub fn main() {
+  case todo {
+    something -> s|
+    something_else -> Nil
+  }
+  s
+}
+
+
+----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   04_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True
+main
+  kind:   Function
+  detail: fn() -> a
+  sort:   2_main
+  desc:   app
+  edits:
+    [3:17-3:17]: "main"
+something
+  kind:   Variable
+  detail: a
+  sort:   02_something
+  desc:   app
+  docs:   "A locally defined variable."
+  edits:
+    [3:17-3:17]: "something"

@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nfn bug() {\n    bool.guard(1 == 2 || 2 == 3, Nil, fn() { Nil })\n}\n"
+---
+----- BEFORE ACTION
+
+fn bug() {
+    bool.guard(1 == 2 || 2 == 3, Nil, fn() { Nil })
+                      ↑                            
+}
+
+
+----- AFTER ACTION
+
+fn bug() {
+    { 1 == 2 || 2 == 3 } |> bool.guard(Nil, fn() { Nil })
+}

@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn main() {\n    let wibble = 10\n    case wibble {\n        10 if -> True\n        _ -> False\n    }\n\n}"
+---
+----- SOURCE CODE
+
+pub fn main() {
+    let wibble = 10
+    case wibble {
+        10 if -> True
+        _ -> False
+    }
+
+}
+
+----- WARNING
+warning: Deprecated empty guard syntax
+  ┌─ test/path:5:12
+  │
+5 │         10 if -> True
+  │            ^^ This can be removed.
+
+This syntax for an empty guard is deprecated. To have a clause without a
+guard, remove this.

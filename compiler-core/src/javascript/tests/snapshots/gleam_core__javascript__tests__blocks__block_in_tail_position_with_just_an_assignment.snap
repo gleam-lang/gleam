@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/blocks.rs
-expression: "\nfn b() {\n  let x = 1\n  {\n    let x = x\n  }\n}\n"
+assertion_line: 251
+expression: "\npub fn b() {\n  let x = 1\n  {\n    let x = x\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn b() {
+pub fn b() {
   let x = 1
   {
     let x = x
@@ -13,7 +15,7 @@ fn b() {
 
 
 ----- COMPILED JAVASCRIPT
-function b() {
+export function b() {
   let x = 1;
   return x;
 }

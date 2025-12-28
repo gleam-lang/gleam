@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  100\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  100
+  ▔▔↑
+}
+
+
+----- AFTER ACTION
+const int = 100
+
+pub fn main() {
+  int
+}

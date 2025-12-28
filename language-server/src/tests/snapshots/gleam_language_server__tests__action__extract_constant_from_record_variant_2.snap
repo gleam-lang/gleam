@@ -1,0 +1,39 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub type Auth {\n  Verified(Int)\n  Unverified\n}\n\nconst auth = True\n\nconst id = 1234\n\npub fn main() {\n  let v = verify(auth, Verified(id))\n\n  v\n}"
+---
+----- BEFORE ACTION
+pub type Auth {
+  Verified(Int)
+  Unverified
+}
+
+const auth = True
+
+const id = 1234
+
+pub fn main() {
+  let v = verify(auth, Verified(id))
+                       ▔▔▔▔▔▔▔▔↑    
+
+  v
+}
+
+
+----- AFTER ACTION
+pub type Auth {
+  Verified(Int)
+  Unverified
+}
+
+const auth = True
+
+const id = 1234
+
+const auth_2 = Verified(id)
+
+pub fn main() {
+  let v = verify(auth, auth_2)
+
+  v
+}

@@ -1,0 +1,40 @@
+---
+source: compiler-core/src/javascript/tests/assert.rs
+assertion_line: 40
+expression: "\npub fn eq(a, b) {\n  assert a == b\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub fn eq(a, b) {
+  assert a == b
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError, isEqual } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+export function eq(a, b) {
+  if (!(isEqual(a, b))) {
+    throw makeError(
+      "assert",
+      FILEPATH,
+      "my/mod",
+      3,
+      "eq",
+      "Assertion failed.",
+      {
+        kind: "binary_operator",
+        operator: "==",
+        left: { kind: "expression", value: a, start: 28, end: 29 },
+        right: { kind: "expression", value: b, start: 33, end: 34 },
+        start: 21,
+        end: 34,
+        expression_start: 28
+      }
+    )
+  }
+  return undefined;
+}

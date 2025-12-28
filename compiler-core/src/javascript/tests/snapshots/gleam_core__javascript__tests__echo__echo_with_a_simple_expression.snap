@@ -10,8 +10,10 @@ pub fn main() {
 
 
 ----- COMPILED JAVASCRIPT
-import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
+import * as $stdlib$dict from "../../gleam_stdlib/gleam/dict.mjs";
 import {
+  Empty as $Empty,
+  NonEmpty as $NonEmpty,
   CustomType as $CustomType,
   bitArraySlice,
   bitArraySliceToInt,
@@ -21,7 +23,7 @@ import {
 } from "../gleam.mjs";
 
 export function main() {
-  return echo(1, "src/module.gleam", 3);
+  return echo(1, undefined, "src/module.gleam", 3);
 }
 
 // ...omitted code from `templates/echo.mjs`...

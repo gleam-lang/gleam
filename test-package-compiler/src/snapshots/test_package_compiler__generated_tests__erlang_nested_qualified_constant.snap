@@ -1,17 +1,22 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
+assertion_line: 162
 expression: "./cases/erlang_nested_qualified_constant"
+snapshot_kind: text
 ---
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache
 <.cache binary>
 
+//// /out/lib/the_package/_gleam_artefacts/one@two.cache_inline
+<8 byte binary>
+
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache_meta
-<57 byte binary>
+<65 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@two.erl
 -module(one@two).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "src/one/two.gleam").
 -export_type([a/0]).
 
 -type a() :: a.
@@ -22,8 +27,11 @@ expression: "./cases/erlang_nested_qualified_constant"
 //// /out/lib/the_package/_gleam_artefacts/two.cache
 <.cache binary>
 
+//// /out/lib/the_package/_gleam_artefacts/two.cache_inline
+<8 byte binary>
+
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<100 byte binary>
+<108 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).

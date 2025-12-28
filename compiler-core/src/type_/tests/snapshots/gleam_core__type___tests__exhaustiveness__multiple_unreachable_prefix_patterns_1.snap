@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/type_/tests/exhaustiveness.rs
+expression: "pub fn main() {\n  let string = \"\"\n  case string {\n    \"wib\" <> rest if True -> rest\n    \"wibble\" <> rest -> rest\n    \"wibblest\" <> rest -> rest\n    _ -> \"a\"\n  }\n}"
+---
+----- SOURCE CODE
+pub fn main() {
+  let string = ""
+  case string {
+    "wib" <> rest if True -> rest
+    "wibble" <> rest -> rest
+    "wibblest" <> rest -> rest
+    _ -> "a"
+  }
+}
+
+----- WARNING
+warning: Unreachable pattern
+  ┌─ /src/warning/wrn.gleam:6:5
+  │
+6 │     "wibblest" <> rest -> rest
+  │     ^^^^^^^^^^^^^^^^^^
+
+This pattern cannot be reached as a previous pattern matches the same
+values.
+
+Hint: It can be safely removed.

@@ -15,18 +15,20 @@ pub fn go(x) {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
 -export([go/1]).
 
 -file("project/test/my/mod.gleam", 2).
 -spec go(binary()) -> binary().
 go(X) ->
     case X of
-        <<Greeting:7/binary, Name/binary>> when (Greeting =:= <<"Hello, "/utf8>>) andalso (Name =:= <<"Dude"/utf8>>) ->
+        <<"Hello, "/utf8, Name/binary>> when Name =:= <<"Dude"/utf8>> ->
+            Greeting = <<"Hello, "/utf8>>,
             <<Greeting/binary, "Mate"/utf8>>;
 
-        <<Greeting@1:7/binary, Name@1/binary>> when Greeting@1 =:= <<"Hello, "/utf8>> ->
+        <<"Hello, "/utf8, Name@1/binary>> ->
+            Greeting@1 = <<"Hello, "/utf8>>,
             Greeting@1;
 
         _ ->

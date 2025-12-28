@@ -234,9 +234,7 @@ expression: "compile(config, modules)"
 
 
 
-
-
-<h2>Functions</h2>
+<h2>Values</h2>
 <ul>
   
   <li><a href="#main">main</a></li>
@@ -274,8 +272,8 @@ expression: "compile(config, modules)"
     
     <div class="custom-type-constructors">
       <div class="rendered-markdown"></div>
-      <pre><code class="hljs gleam">pub type Wibble {
-  Wobble(wabble: Int)
+      <pre><code class="hljs hljs-ignore"><span class="hljs-keyword">pub type </span><span class="hljs-title">Wibble</span> {
+  <span class="hljs-title">Wobble</span>(<span class="hljs-variable">wabble</span>: <span class="hljs-title">Int</span>)
 }</code></pre>
       
       <h3>
@@ -286,7 +284,7 @@ expression: "compile(config, modules)"
         <li class="constructor-item">
           <div class="constructor-row">
             <svg class="icon icon-star"><use xlink:href="#icon-star"></use></svg>
-            <pre class="constructor-name"><code class="hljs gleam">Wobble(wabble: Int)</code></pre>
+            <pre class="constructor-name"><code class="hljs hljs-ignore"><span class="hljs-title">Wobble</span>(<span class="hljs-variable">wabble</span>: <span class="hljs-title">Int</span>)</code></pre>
           </div>
 
           <div class="constructor-item-docs">
@@ -321,11 +319,9 @@ expression: "compile(config, modules)"
 
 
 
-
-
 <section class="module-members">
-  <h1 id="module-functions" class="module-member-kind">
-    <a href="#module-functions">Functions</a>
+  <h1 id="module-values" class="module-member-kind">
+    <a href="#module-values">Values</a>
     <svg class="icon icon-gleam-chasse"><use xlink:href="#icon-gleam-chasse"></use></svg>
   </h1>
   
@@ -339,7 +335,7 @@ expression: "compile(config, modules)"
       
     </div>
 
-    <pre><code class="hljs gleam">pub fn main() -&gt; a</code></pre>
+    <pre><code class="hljs hljs-ignore"><span class="hljs-keyword">pub fn </span><span class="hljs-title">main</span>() -> <span class="hljs-variable">a</span></code></pre>
     
     <div class="rendered-markdown"></div>
   </div>
@@ -418,13 +414,16 @@ expression: "compile(config, modules)"
           elem.classList.add("gleam");
         }
       });
+      hljs.configure({
+        cssSelector: 'pre code:not(.hljs-ignore)'
+      })
       hljs.highlightAll();
     </script>
 
     <script src="./js/lunr.min.js?v=GLEAM_VERSION_HERE"></script>
     <script src="./js/index.js?v=0"></script>
     <script>
-      fetch("./search_data.json?v=0")
+      fetch("./search-data.json?v=0")
         .then(response => response.json())
         .then(data => window.Gleam.initSearch(data));
     </script>

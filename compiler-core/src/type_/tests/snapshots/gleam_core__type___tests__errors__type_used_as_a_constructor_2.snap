@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "pub fn main() {\n  let a: Int() = todo\n}"
+---
+----- SOURCE CODE
+pub fn main() {
+  let a: Int() = todo
+}
+
+----- ERROR
+error: Type used as a type constructor
+  ┌─ /src/one/two.gleam:2:13
+  │
+2 │   let a: Int() = todo
+  │             ^^ You can remove this
+
+`Int` is a type with no parameters, but here it's being used as a type
+constructor.

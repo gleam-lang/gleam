@@ -1,0 +1,37 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn do_things(a, b) {\n  let result = case Nil {\n    _ if a > b -> 17\n    _ if a < b -> 12\n    _ -> panic\n  }\n\n  result % 4\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn do_things(a, b) {
+  let result = case Nil {
+               ▔▔▔▔▔▔▔▔▔▔
+    _ if a > b -> 17
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    _ if a < b -> 12
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    _ -> panic
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  }
+▔▔↑
+
+  result % 4
+}
+
+
+----- AFTER ACTION
+
+pub fn do_things(a, b) {
+  let result = function(a, b)
+
+  result % 4
+}
+
+fn function(a: Int, b: Int) -> Int {
+  case Nil {
+    _ if a > b -> 17
+    _ if a < b -> 12
+    _ -> panic
+  }
+}

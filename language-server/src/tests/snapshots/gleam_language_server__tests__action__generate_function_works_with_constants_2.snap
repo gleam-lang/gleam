@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\ntype Wibble(a) {\n    Wibble(fun: fn(Int) -> a)\n}\n\nconst wibble: Wibble(Int) = Wibble(missing)\n"
+---
+----- BEFORE ACTION
+
+type Wibble(a) {
+    Wibble(fun: fn(Int) -> a)
+}
+
+const wibble: Wibble(Int) = Wibble(missing)
+                                   ↑       
+
+
+----- AFTER ACTION
+
+type Wibble(a) {
+    Wibble(fun: fn(Int) -> a)
+}
+
+const wibble: Wibble(Int) = Wibble(missing)
+
+fn missing(int: Int) -> Int {
+  todo
+}

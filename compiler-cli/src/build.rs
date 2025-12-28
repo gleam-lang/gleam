@@ -10,13 +10,21 @@ use gleam_core::{
 
 use crate::{
     build_lock::BuildLock,
-    cli,
-    dependencies::UseManifest,
+    cli, dependencies,
     fs::{self, ConsoleWarningEmitter},
 };
 
 pub fn download_dependencies(paths: &ProjectPaths, telemetry: impl Telemetry) -> Result<Manifest> {
-    crate::dependencies::download(paths, telemetry, None, Vec::new(), UseManifest::Yes)
+    dependencies::resolve_and_download(
+        paths,
+        telemetry,
+        None,
+        Vec::new(),
+        dependencies::DependencyManagerConfig {
+            use_manifest: dependencies::UseManifest::Yes,
+            check_major_versions: dependencies::CheckMajorVersions::No,
+        },
+    )
 }
 
 pub fn main(paths: &ProjectPaths, options: Options, manifest: Manifest) -> Result<Built> {

@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/language_server/tests/reference.rs
+expression: "\npub fn wibble() {\n  123\n}\n\npub fn main() {\n  wibble()\n}\n"
+---
+-- mod.gleam
+
+import app.{wibble as other}
+            ▔▔▔▔▔▔          
+
+fn wobble() {
+  other()
+  ▔▔▔▔▔  
+}
+
+
+-- app.gleam
+
+pub fn wibble() {
+       ▔▔▔▔▔▔    
+  123
+}
+
+pub fn main() {
+  wibble()
+  ↑▔▔▔▔▔  
+}

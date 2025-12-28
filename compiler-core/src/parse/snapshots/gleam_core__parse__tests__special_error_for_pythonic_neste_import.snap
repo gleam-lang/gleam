@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: import one.two.three
+---
+----- SOURCE CODE
+import one.two.three
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:1:11
+  │
+1 │ import one.two.three
+  │           ^ I was expecting either `/` or `.{` here.
+
+Perhaps you meant one of:
+
+    import one/two
+    import one.{item}

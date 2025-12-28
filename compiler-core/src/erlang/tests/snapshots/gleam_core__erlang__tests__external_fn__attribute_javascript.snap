@@ -12,8 +12,8 @@ pub fn one(x: Int) -> Int {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
 -export([one/1]).
 
 -file("project/test/my/mod.gleam", 3).
@@ -21,6 +21,7 @@ pub fn one(x: Int) -> Int {
 one(X) ->
     erlang:error(#{gleam_error => todo,
             message => <<"`todo` expression evaluated. This code has not yet been implemented."/utf8>>,
+            file => <<?FILEPATH/utf8>>,
             module => <<"my/mod"/utf8>>,
             function => <<"one"/utf8>>,
             line => 4}).

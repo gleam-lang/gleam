@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/javascript/tests/strings.rs
-expression: "\nfn go(x) {\n  let assert \"Hello\" = x\n}\n"
+expression: "\npub fn go(x) {\n  let assert \"Hello\" = x\n}\n"
 ---
 ----- SOURCE CODE
 
-fn go(x) {
+pub fn go(x) {
   let assert "Hello" = x
 }
 
@@ -12,15 +12,18 @@ fn go(x) {
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
-function go(x) {
-  if (x !== "Hello") {
+const FILEPATH = "src/module.gleam";
+
+export function go(x) {
+  if (!(x === "Hello")) {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       3,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x }
+      { value: x, start: 18, end: 40, pattern_start: 29, pattern_end: 36 }
     )
   }
   return x;

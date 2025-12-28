@@ -1,0 +1,3 @@
+name = "duplicate_module"
+version = "0.1.0"
+target = "erlang"

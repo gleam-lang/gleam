@@ -1,0 +1,8 @@
+name = "list"
+version = "1.0.0"
+description = "Benchmarks for lists"
+licenses = ["Apache-2.0"]
+
+[dependencies]
+gleam_stdlib = "~> 0.28"
+gleamy_bench = ">= 0.6.0 and < 1.0.0"

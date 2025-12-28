@@ -34,12 +34,4 @@ Expected type:
 
 Found type:
 
-    Result(a, b)
-
-error: Unknown variable
-  ┌─ /src/one/two.gleam:7:11
-  │
-7 │   let c = a + b
-  │           ^ Did you mean `b`?
-
-The name `a` is not in scope here.
+    Result(Int, a)

@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport wibble\n\npub fn main() {\n  wibble.wibble()\n  wibble.wobble()\n}\n"
+---
+----- BEFORE ACTION
+
+import wibble
+
+pub fn main() {
+  wibble.wibble()
+  wibble.wobble()
+         ↑       
+}
+
+
+----- AFTER ACTION
+// --- Edits applied to module 'wibble'
+pub fn wibble() {}
+
+pub fn wobble() -> a {
+  todo
+}

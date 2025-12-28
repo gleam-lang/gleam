@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\ntype Wibble {\n  Wibble\n}\n\npub opaque type Wobble {\n  Wobble(Wibble)\n}\n"
+---
+----- SOURCE CODE
+
+type Wibble {
+  Wibble
+}
+
+pub opaque type Wobble {
+  Wobble(Wibble)
+}
+
+
+----- TYPESCRIPT DEFINITIONS
+import type * as _ from "../gleam.d.mts";
+
+declare class Wibble extends _.CustomType {}
+
+type Wibble$ = Wibble;
+
+declare class Wobble extends _.CustomType {
+  /** @deprecated */
+  constructor(argument$0: Wibble$);
+  /** @deprecated */
+  0: Wibble$;
+}
+
+export type Wobble$ = Wobble;

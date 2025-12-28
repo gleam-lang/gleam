@@ -38,10 +38,11 @@ struct Module {
 
 struct References {
   importedModules @0 :List(Text);
-  valueReferences @1 :List(ValueReference);
+  valueReferences @1 :List(ReferenceMap);
+  typeReferences @2 :List(ReferenceMap);
 }
 
-struct ValueReference {
+struct ReferenceMap {
   module @0 :Text;
   name @1 :Text;
   references @2 :List(Reference);
@@ -70,6 +71,7 @@ struct TypeAliasConstructor {
     deprecation @4 :Text;
     documentation @5 :Text;
     origin @6 :SrcSpan;
+    parameters @7 :List(Type);
 }
 
 struct Version {
@@ -93,6 +95,7 @@ struct TypeValueConstructor {
 struct TypeValueConstructorParameter {
   type @0 :Type;
   label @1 :Text;
+  documentation @2 :Text;
 }
 
 struct TypeConstructor {
@@ -113,16 +116,22 @@ struct AccessorsMap {
   sharedAccessors @1 :List(Property(RecordAccessor));
   variantSpecificAccessors @2 :List(VariantSpecificAccessors);
   publicity @3 :Publicity;
+  positionalAccessors @4 :List(PositionalAccessors);
 }
 
 struct VariantSpecificAccessors {
   accessors @0 :List(Property(RecordAccessor));
 }
 
+struct PositionalAccessors {
+  accessors @0 :List(Type);
+}
+
 struct RecordAccessor {
   type @0 :Type;
   index @1 :UInt16;
   label @2 :Text;
+  documentation @3 :Text;
 }
 
 # UInt16 cannot be used as a generic parameter to Option,
@@ -142,6 +151,7 @@ struct Type {
       parameters @2 :List(Type);
       package @7 :Text;
       inferredVariant @8 :InferredVariant;
+      publicity @9 :Publicity;
     }
 
     fn :group {
@@ -203,6 +213,7 @@ struct ValueConstructorVariant {
       implementations @18 :Implementations;
       externalErlang @20 :Option(External);
       externalJavascript @21 :Option(External);
+      purity @23 :Purity;
     }
 
     record :group {
@@ -215,6 +226,15 @@ struct ValueConstructorVariant {
       documentation @16 :Text;
       constructorIndex @17 :UInt16;
     }
+  }
+}
+
+struct Purity {
+  union {
+    pure @0 :Void;
+    trustedPure @1 :Void;
+    impure @2 :Void;
+    unknown @3 :Void;
   }
 }
 
@@ -248,7 +268,12 @@ struct Constant {
     int @0 :Text;
     float @1 :Text;
     string @2 :Text;
-    tuple @3 :List(Constant);
+
+
+    tuple :group {
+      elements @3 :List(Constant);
+      type @16 :Type;
+    }
 
     list :group {
       elements @4 :List(Constant);
@@ -330,4 +355,11 @@ struct BitArraySegmentOption {
 struct LineNumbers {
   lineStarts @0 :List(UInt32);
   length @1 :UInt32;
+  mapping @2 :List(Character);
+}
+
+struct Character {
+  byteIndex @0 :UInt64;
+  lengthUtf8 @1 :UInt8;
+  lengthUtf16 @2 :UInt8;
 }

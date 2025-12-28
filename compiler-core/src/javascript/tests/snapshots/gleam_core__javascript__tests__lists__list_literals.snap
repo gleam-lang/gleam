@@ -1,21 +1,23 @@
 ---
 source: compiler-core/src/javascript/tests/lists.rs
-expression: "\nfn go(x) {\n    []\n    [1]\n    [1, 2]\n    [1, 2, ..x]\n}\n"
+assertion_line: 5
+expression: "\npub fn go(x) {\n  []\n  [1]\n  [1, 2]\n  [1, 2, ..x]\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(x) {
-    []
-    [1]
-    [1, 2]
-    [1, 2, ..x]
+pub fn go(x) {
+  []
+  [1]
+  [1, 2]
+  [1, 2, ..x]
 }
 
 
 ----- COMPILED JAVASCRIPT
 import { toList, prepend as listPrepend } from "../gleam.mjs";
 
-function go(x) {
+export function go(x) {
   toList([]);
   toList([1]);
   toList([1, 2]);

@@ -1,0 +1,72 @@
+---
+source: compiler-core/src/javascript/tests/assignments.rs
+expression: "\ntype Wibble {\n    Wibble(Int)\n    Wobble(Int)\n    Woo(Int)\n}\n\npub fn go() {\n  let assert Wobble(n) = todo\n  n\n}\n"
+---
+----- SOURCE CODE
+
+type Wibble {
+    Wibble(Int)
+    Wobble(Int)
+    Woo(Int)
+}
+
+pub fn go() {
+  let assert Wobble(n) = todo
+  n
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType, makeError } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+class Wibble extends $CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+}
+
+class Wobble extends $CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+}
+
+class Woo extends $CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+}
+
+export function go() {
+  let _block;
+  throw makeError(
+    "todo",
+    FILEPATH,
+    "my/mod",
+    9,
+    "go",
+    "`todo` expression evaluated. This code has not yet been implemented.",
+    {}
+  )
+  let $ = _block;
+  let n;
+  if ($ instanceof Wobble) {
+    n = $[0];
+  } else {
+    throw makeError(
+      "let_assert",
+      FILEPATH,
+      "my/mod",
+      9,
+      "go",
+      "Pattern match failed, no pattern matched the value.",
+      { value: $, start: 79, end: 106, pattern_start: 90, pattern_end: 99 }
+    )
+  }
+  return n;
+}

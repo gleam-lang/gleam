@@ -19,34 +19,17 @@ pub fn main() {
 
 ----- ERROR
 error: Type mismatch
-  ┌─ /src/one/two.gleam:6:7
+  ┌─ /src/one/two.gleam:6:11
   │
 6 │       1.0 + 1.0
-  │       ^^^
+  │           ^ Use +. instead
 
-The + operator expects arguments of this type:
-
-    Int
-
-But this argument has this type:
-
-    Float
-
-Hint: the +. operator can be used with Floats
-
+The + operator can only be used on Ints.
 
 error: Type mismatch
-  ┌─ /src/one/two.gleam:9:7
+  ┌─ /src/one/two.gleam:9:11
   │
 9 │       1.0 + 1.0
-  │       ^^^
+  │           ^ Use +. instead
 
-The + operator expects arguments of this type:
-
-    Int
-
-But this argument has this type:
-
-    Float
-
-Hint: the +. operator can be used with Floats
+The + operator can only be used on Ints.

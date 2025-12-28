@@ -1,7 +1,10 @@
 use super::*;
 use crate::{
     ast::{Arg, Function, ModuleConstant, Publicity},
-    type_::{Deprecation, expression::Implementations},
+    type_::{
+        Deprecation,
+        expression::{Implementations, Purity},
+    },
 };
 use ecow::EcoString;
 
@@ -28,8 +31,11 @@ fn parse_and_order(
                     type_: (),
                 })
                 .collect_vec(),
-            body: crate::parse::parse_statement_sequence(src).expect("syntax error"),
+            body: crate::parse::parse_statement_sequence(src)
+                .expect("syntax error")
+                .to_vec(),
             location: Default::default(),
+            body_start: None,
             return_annotation: None,
             publicity: Publicity::Public,
             deprecation: Deprecation::NotDeprecated,
@@ -45,6 +51,7 @@ fn parse_and_order(
                 can_run_on_erlang: true,
                 can_run_on_javascript: true,
             },
+            purity: Purity::Impure,
         })
         .collect_vec();
     let constants = constants
@@ -646,7 +653,7 @@ fn more_complex_cycle() {
     ];
     assert_eq!(
         parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
-        vec![vec!["a2", "a1"], vec!["a3"]]
+        vec![vec!["a2", "a3", "a1"]]
     );
 }
 
@@ -685,5 +692,41 @@ fn bug_2275() {
     assert_eq!(
         parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["two"], vec!["one"]]
+    );
+}
+
+#[test]
+fn let_assert_message() {
+    let functions = [
+        ("a", [].as_slice(), r#"{ let assert True = False as b() }"#),
+        ("b", [].as_slice(), r#"a()"#),
+    ];
+    assert_eq!(
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
+        vec![vec!["b", "a"]]
+    );
+}
+
+#[test]
+fn assert_subject() {
+    let functions = [
+        ("a", [].as_slice(), r#"{ assert b() }"#),
+        ("b", [].as_slice(), r#"a()"#),
+    ];
+    assert_eq!(
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
+        vec![vec!["b", "a"]]
+    );
+}
+
+#[test]
+fn assert_message() {
+    let functions = [
+        ("a", [].as_slice(), r#"{ assert False as b() }"#),
+        ("b", [].as_slice(), r#"a()"#),
+    ];
+    assert_eq!(
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
+        vec![vec!["b", "a"]]
     );
 }

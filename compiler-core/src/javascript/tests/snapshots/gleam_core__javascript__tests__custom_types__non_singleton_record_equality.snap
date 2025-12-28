@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\npub type Person {\n  Person(name: String, age: Int)\n}\n\npub fn same_person(p1: Person, p2: Person) -> Bool {\n  p1 == p2\n}\n"
+---
+----- SOURCE CODE
+
+pub type Person {
+  Person(name: String, age: Int)
+}
+
+pub fn same_person(p1: Person, p2: Person) -> Bool {
+  p1 == p2
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType, isEqual } from "../gleam.mjs";
+
+export class Person extends $CustomType {
+  constructor(name, age) {
+    super();
+    this.name = name;
+    this.age = age;
+  }
+}
+export const Person$Person = (name, age) => new Person(name, age);
+export const Person$isPerson = (value) => value instanceof Person;
+export const Person$Person$name = (value) => value.name;
+export const Person$Person$0 = (value) => value.name;
+export const Person$Person$age = (value) => value.age;
+export const Person$Person$1 = (value) => value.age;
+
+export function same_person(p1, p2) {
+  return isEqual(p1, p2);
+}

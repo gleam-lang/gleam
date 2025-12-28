@@ -1,0 +1,38 @@
+---
+source: compiler-core/src/javascript/tests/assert.rs
+assertion_line: 17
+expression: "\npub fn main() {\n  assert False\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub fn main() {
+  assert False
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+export function main() {
+  if (!false) {
+    throw makeError(
+      "assert",
+      FILEPATH,
+      "my/mod",
+      3,
+      "main",
+      "Assertion failed.",
+      {
+        kind: "expression",
+        expression: { kind: "literal", value: false, start: 26, end: 31 },
+        start: 19,
+        end: 31,
+        expression_start: 26
+      }
+    )
+  }
+  return undefined;
+}

@@ -4,7 +4,7 @@ use crate::{assert_js, assert_ts_def};
 fn bare() {
     assert_js!(
         r#"
-fn go() {
+pub fn go() {
   panic
 }
 "#,
@@ -15,7 +15,7 @@ fn go() {
 fn panic_as() {
     assert_js!(
         r#"
-fn go() {
+pub fn go() {
   let x = "wibble"
   panic as x
 }
@@ -38,7 +38,7 @@ pub fn go() {
 fn as_expression() {
     assert_js!(
         r#"
-fn go(f) {
+pub fn go(f) {
   let boop = panic
   f(panic)
 }
@@ -50,7 +50,7 @@ fn go(f) {
 fn pipe() {
     assert_js!(
         r#"
-fn go(f) {
+pub fn go(f) {
   f |> panic
 }
 "#,
@@ -61,7 +61,7 @@ fn go(f) {
 fn sequence() {
     assert_js!(
         r#"
-fn go(at_the_disco) {
+pub fn go(at_the_disco) {
   panic
   at_the_disco
 }
@@ -73,11 +73,26 @@ fn go(at_the_disco) {
 fn case() {
     assert_js!(
         r#"
-fn go(x) {
+pub fn go(x) {
   case x {
     _ -> panic
   }
 }
 "#,
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4471
+#[test]
+fn case_message() {
+    assert_js!(
+        r#"
+pub fn crash(message) {
+  panic as case message {
+    Ok(message) -> message
+    Error(_) -> "No message provided"
+  }
+}
+"#
     );
 }

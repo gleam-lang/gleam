@@ -90,7 +90,7 @@ pub fn main() { wibble() }
     assert!(
         compile_package(0, "javascript")
             .unwrap_err()
-            .contains("Unsupported feature for compilation target")
+            .contains("The javascript target does not support")
     );
 }
 

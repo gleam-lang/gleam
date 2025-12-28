@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/language_server/tests/reference.rs
+expression: "\npub const wibble = 123\n\npub fn main() {\n  wibble\n}\n"
+---
+-- mod.gleam
+
+import app.{wibble as other}
+            ▔▔▔▔▔▔          
+
+fn wobble() {
+  other
+  ▔▔▔▔▔
+}
+
+
+-- app.gleam
+
+pub const wibble = 123
+          ▔▔▔▔▔▔      
+
+pub fn main() {
+  wibble
+  ↑▔▔▔▔▔
+}

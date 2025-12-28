@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub type Wibble {\n  Wibble\n  Wobble\n  Woo\n}\n"
+---
+----- BEFORE ACTION
+
+pub type Wibble {
+    ↑            
+  Wibble
+  Wobble
+  Woo
+}
+
+
+----- AFTER ACTION
+import gleam/json
+
+pub type Wibble {
+  Wibble
+  Wobble
+  Woo
+}
+
+fn wibble_to_json(wibble: Wibble) -> json.Json {
+  case wibble {
+    Wibble -> json.string("wibble")
+    Wobble -> json.string("wobble")
+    Woo -> json.string("woo")
+  }
+}

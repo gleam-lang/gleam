@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\nfn add(a, b) { a + b }\n\npub fn main() {\n  1 |> add(2)\n  Nil\n}\n"
+---
+----- SOURCE CODE
+
+fn add(a, b) { a + b }
+
+pub fn main() {
+  1 |> add(2)
+  Nil
+}
+
+
+----- WARNING
+warning: Unused value
+  ┌─ /src/warning/wrn.gleam:5:3
+  │
+5 │   1 |> add(2)
+  │   ^^^^^^^^^^^ This value is never used
+
+This expression computes a value without any side effects, but then the
+value isn't used at all. You might want to assign it to a variable, or
+delete the expression entirely if it's not needed.

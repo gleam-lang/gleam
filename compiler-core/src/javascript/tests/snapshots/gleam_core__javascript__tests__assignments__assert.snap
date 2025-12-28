@@ -1,22 +1,25 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
-expression: "fn go(x) { let assert 1 = x }"
+expression: "pub fn go(x) { let assert 1 = x }"
 ---
 ----- SOURCE CODE
-fn go(x) { let assert 1 = x }
+pub fn go(x) { let assert 1 = x }
 
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
-function go(x) {
-  if (x !== 1) {
+const FILEPATH = "src/module.gleam";
+
+export function go(x) {
+  if (!(x === 1)) {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       1,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x }
+      { value: x, start: 15, end: 31, pattern_start: 26, pattern_end: 27 }
     )
   }
   return x;

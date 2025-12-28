@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub type Person {\n  Person(name: String, age: Int, height: Float, is_cool: Bool)\n}\n"
+---
+----- BEFORE ACTION
+
+pub type Person {
+    ↑            
+  Person(name: String, age: Int, height: Float, is_cool: Bool)
+}
+
+
+----- AFTER ACTION
+import gleam/json
+
+pub type Person {
+  Person(name: String, age: Int, height: Float, is_cool: Bool)
+}
+
+fn person_to_json(person: Person) -> json.Json {
+  let Person(name:, age:, height:, is_cool:) = person
+  json.object([
+    #("name", json.string(name)),
+    #("age", json.int(age)),
+    #("height", json.float(height)),
+    #("is_cool", json.bool(is_cool)),
+  ])
+}

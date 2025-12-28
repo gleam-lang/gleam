@@ -6,19 +6,22 @@ use itertools::Itertools;
 
 use crate::{
     Result,
+    analyse::Inferred,
     ast::{
         BitArrayOption, BitArraySegment, CallArg, Constant, Publicity, SrcSpan, TypedConstant,
         TypedConstantBitArraySegment, TypedConstantBitArraySegmentOption,
     },
     build::Origin,
-    line_numbers::LineNumbers,
+    line_numbers::{Character, LineNumbers},
+    parse::LiteralFloatValue,
     reference::{Reference, ReferenceKind, ReferenceMap},
     schema_capnp::{self as schema, *},
     type_::{
         self, AccessorsMap, Deprecation, FieldMap, ModuleInterface, Opaque, RecordAccessor,
         References, Type, TypeAliasConstructor, TypeConstructor, TypeValueConstructor,
         TypeValueConstructorField, TypeVariantConstructors, ValueConstructor,
-        ValueConstructorVariant, expression::Implementations,
+        ValueConstructorVariant,
+        expression::{Implementations, Purity},
     },
     uid::UniqueIdGenerator,
 };
@@ -89,6 +92,7 @@ impl ModuleDecoder {
             documentation: self.string_list(reader.get_documentation()?)?,
             contains_echo: reader.get_contains_echo(),
             references: self.references(reader.get_references()?)?,
+            inline_functions: HashMap::new(),
         })
     }
 
@@ -113,7 +117,8 @@ impl ModuleDecoder {
     fn references(&self, reader: references::Reader<'_>) -> Result<References> {
         Ok(References {
             imported_modules: self.string_set(reader.get_imported_modules()?)?,
-            value_references: self.value_references(reader.get_value_references()?)?,
+            value_references: self.reference_map(reader.get_value_references()?)?,
+            type_references: self.reference_map(reader.get_type_references()?)?,
         })
     }
 
@@ -125,9 +130,9 @@ impl ModuleDecoder {
         Ok(set)
     }
 
-    fn value_references(
+    fn reference_map(
         &self,
-        reader: capnp::struct_list::Reader<'_, value_reference::Owned>,
+        reader: capnp::struct_list::Reader<'_, reference_map::Owned>,
     ) -> Result<ReferenceMap> {
         let mut map = HashMap::with_capacity(reader.len() as usize);
         for prop in reader.into_iter() {
@@ -194,6 +199,7 @@ impl ModuleDecoder {
                 message: self.string(deprecation)?,
             }
         };
+        let parameters = read_vec!(&reader.get_parameters()?, self, type_);
         Ok(TypeAliasConstructor {
             publicity: self.publicity(reader.get_publicity()?)?,
             origin: self.src_span(&reader.get_origin()?)?,
@@ -202,6 +208,7 @@ impl ModuleDecoder {
             deprecation,
             documentation: self.optional_string(self.str(reader.get_documentation()?)?),
             arity: reader.get_arity() as usize,
+            parameters,
         })
     }
 
@@ -219,28 +226,29 @@ impl ModuleDecoder {
         let package = self.string(reader.get_package()?)?;
         let module = self.string(reader.get_module()?)?;
         let name = self.string(reader.get_name()?)?;
-        let args = read_vec!(&reader.get_parameters()?, self, type_);
+        let arguments = read_vec!(&reader.get_parameters()?, self, type_);
         let inferred_variant = self.inferred_variant(&reader.get_inferred_variant()?)?;
+        let publicity = self.publicity(reader.get_publicity()?)?;
 
         Ok(Arc::new(Type::Named {
-            publicity: Publicity::Public,
+            publicity,
             package,
             module,
             name,
-            args,
+            arguments,
             inferred_variant,
         }))
     }
 
     fn type_fn(&mut self, reader: &schema::type_::fn_::Reader<'_>) -> Result<Arc<Type>> {
-        let retrn = self.type_(&reader.get_return()?)?;
-        let args = read_vec!(&reader.get_arguments()?, self, type_);
-        Ok(Arc::new(Type::Fn { args, retrn }))
+        let return_ = self.type_(&reader.get_return()?)?;
+        let arguments = read_vec!(&reader.get_arguments()?, self, type_);
+        Ok(Arc::new(Type::Fn { arguments, return_ }))
     }
 
     fn type_tuple(&mut self, reader: &schema::type_::tuple::Reader<'_>) -> Result<Arc<Type>> {
-        let elems = read_vec!(&reader.get_elements()?, self, type_);
-        Ok(Arc::new(Type::Tuple { elems }))
+        let elements = read_vec!(&reader.get_elements()?, self, type_);
+        Ok(Arc::new(Type::Tuple { elements }))
     }
 
     fn type_var(&mut self, reader: &schema::type_::var::Reader<'_>) -> Result<Arc<Type>> {
@@ -313,6 +321,7 @@ impl ModuleDecoder {
         Ok(TypeValueConstructorField {
             type_: self.type_(&reader.get_type()?)?,
             label: self.optional_string(self.str(reader.get_label()?)?),
+            documentation: self.optional_string(self.str(reader.get_documentation()?)?),
         })
     }
 
@@ -368,7 +377,7 @@ impl ModuleDecoder {
             Which::Int(reader) => Ok(self.constant_int(self.str(reader?)?)),
             Which::Float(reader) => Ok(self.constant_float(self.str(reader?)?)),
             Which::String(reader) => Ok(self.constant_string(self.str(reader?)?)),
-            Which::Tuple(reader) => self.constant_tuple(&reader?),
+            Which::Tuple(reader) => self.constant_tuple(&reader),
             Which::List(reader) => self.constant_list(&reader),
             Which::Record(reader) => self.constant_record(&reader),
             Which::BitArray(reader) => self.constant_bit_array(&reader?),
@@ -389,6 +398,8 @@ impl ModuleDecoder {
         Constant::Float {
             location: Default::default(),
             value: value.into(),
+            float_value: LiteralFloatValue::parse(value)
+                .expect("float value to parse as non-NaN f64"),
         }
     }
 
@@ -399,13 +410,12 @@ impl ModuleDecoder {
         }
     }
 
-    fn constant_tuple(
-        &mut self,
-        reader: &capnp::struct_list::Reader<'_, constant::Owned>,
-    ) -> Result<TypedConstant> {
+    fn constant_tuple(&mut self, reader: &constant::tuple::Reader<'_>) -> Result<TypedConstant> {
+        let type_ = self.type_(&reader.get_type()?)?;
         Ok(Constant::Tuple {
             location: Default::default(),
-            elements: read_vec!(reader, self, constant),
+            elements: read_vec!(reader.get_elements()?, self, constant),
+            type_,
         })
     }
 
@@ -421,15 +431,16 @@ impl ModuleDecoder {
     fn constant_record(&mut self, reader: &constant::record::Reader<'_>) -> Result<TypedConstant> {
         let type_ = self.type_(&reader.get_type()?)?;
         let tag = self.string(reader.get_tag()?)?;
-        let args = read_vec!(reader.get_args()?, self, constant_call_arg);
+        let arguments = read_vec!(reader.get_args()?, self, constant_call_arg);
         Ok(Constant::Record {
             location: Default::default(),
             module: Default::default(),
             name: Default::default(),
-            args,
+            arguments,
             tag,
             type_,
-            field_map: None,
+            field_map: Inferred::Unknown,
+            record_constructor: None,
         })
     }
 
@@ -600,6 +611,13 @@ impl ModuleDecoder {
         &self,
         reader: &value_constructor_variant::module_fn::Reader<'_>,
     ) -> Result<ValueConstructorVariant> {
+        let purity = match reader.get_purity()?.which()? {
+            purity::Which::Pure(()) => Purity::Pure,
+            purity::Which::TrustedPure(()) => Purity::TrustedPure,
+            purity::Which::Impure(()) => Purity::Impure,
+            purity::Which::Unknown(()) => Purity::Unknown,
+        };
+
         Ok(ValueConstructorVariant::ModuleFn {
             name: self.string(reader.get_name()?)?,
             module: self.string(reader.get_module()?)?,
@@ -610,6 +628,7 @@ impl ModuleDecoder {
             implementations: self.implementations(reader.get_implementations()?),
             external_erlang: self.optional_external(reader.get_external_erlang()?)?,
             external_javascript: self.optional_external(reader.get_external_javascript()?)?,
+            purity,
         })
     }
 
@@ -667,6 +686,11 @@ impl ModuleDecoder {
                 self,
                 variant_specific_accessors
             ),
+            variant_positional_accessors: read_vec!(
+                &reader.get_positional_accessors()?,
+                self,
+                positional_accessors
+            ),
         })
     }
 
@@ -681,11 +705,19 @@ impl ModuleDecoder {
         ))
     }
 
+    fn positional_accessors(
+        &mut self,
+        reader: &positional_accessors::Reader<'_>,
+    ) -> Result<Vec<Arc<Type>>> {
+        Ok(read_vec!(&reader.get_accessors()?, self, type_))
+    }
+
     fn record_accessor(&mut self, reader: &record_accessor::Reader<'_>) -> Result<RecordAccessor> {
         Ok(RecordAccessor {
             index: reader.get_index() as u64,
             label: self.string(reader.get_label()?)?,
             type_: self.type_(&reader.get_type()?)?,
+            documentation: self.optional_string(self.str(reader.get_documentation()?)?),
         })
     }
 
@@ -697,7 +729,28 @@ impl ModuleDecoder {
         Ok(LineNumbers {
             length: reader.get_length(),
             line_starts: read_vec!(reader.get_line_starts()?, self, line_starts),
+            mapping: self.mapping(reader.get_mapping()?),
         })
+    }
+
+    fn mapping(
+        &self,
+        reader: capnp::struct_list::Reader<'_, character::Owned>,
+    ) -> HashMap<usize, Character> {
+        let mut map = HashMap::with_capacity(reader.len() as usize);
+        for character in reader.into_iter() {
+            let byte_index = character.get_byte_index() as usize;
+            let length_utf8 = character.get_length_utf8();
+            let length_utf16 = character.get_length_utf16();
+            _ = map.insert(
+                byte_index,
+                Character {
+                    length_utf16,
+                    length_utf8,
+                },
+            )
+        }
+        map
     }
 
     fn version(&self, reader: &version::Reader<'_>) -> hexpm::version::Version {

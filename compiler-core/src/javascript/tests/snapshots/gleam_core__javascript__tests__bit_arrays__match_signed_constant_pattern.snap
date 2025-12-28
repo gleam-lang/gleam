@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-expression: "\nfn go(x) {\n  let assert <<-1:signed>> = x\n}\n"
+expression: "\npub fn go(x) {\n  let assert <<-1:signed>> = x\n}\n"
 ---
 ----- SOURCE CODE
 
-fn go(x) {
+pub fn go(x) {
   let assert <<-1:signed>> = x
 }
 
@@ -12,15 +12,18 @@ fn go(x) {
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
-function go(x) {
-  if (x.byteAt(0) !== 255 || !(x.bitSize == 8)) {
+const FILEPATH = "src/module.gleam";
+
+export function go(x) {
+  if (!(x.bitSize === 8 && x.byteAt(0) === 255)) {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       3,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x }
+      { value: x, start: 18, end: 46, pattern_start: 29, pattern_end: 42 }
     )
   }
   return x;

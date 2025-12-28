@@ -17,11 +17,14 @@ pub fn main() {
 import { toList, CustomType as $CustomType } from "../gleam.mjs";
 
 export class Function extends $CustomType {
-  constructor(x0) {
+  constructor($0) {
     super();
-    this[0] = x0;
+    this[0] = $0;
   }
 }
+export const Function$Function = ($0) => new Function($0);
+export const Function$isFunction = (value) => value instanceof Function;
+export const Function$Function$0 = (value) => value[0];
 
 export function main() {
   return toList([

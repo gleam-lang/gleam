@@ -8,7 +8,7 @@ use pretty_assertions::assert_eq;
 use gleam_core::{
     Error,
     build::Runtime,
-    config::{DenoConfig, DenoFlag, Docs, ErlangConfig, JavaScriptConfig, Repository},
+    config::{DenoConfig, DenoFlag, Docs, ErlangConfig, JavaScriptConfig},
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
     requirement::Requirement,
 };
@@ -56,10 +56,12 @@ fn list_manifest_format() {
     list_manifest_packages(&mut buffer, manifest).unwrap();
     assert_eq!(
         std::str::from_utf8(&buffer).unwrap(),
-        r#"root 1.0.0
-aaa 0.4.2
-zzz 0.4.0
-"#
+        "Package  Version
+-------  -------
+root     1.0.0
+aaa      0.4.2
+zzz      0.4.0
+"
     )
 }
 
@@ -320,60 +322,36 @@ fn parse_gleam_add_specifier_non_numeric_version() {
 #[test]
 fn parse_gleam_add_specifier_default() {
     let provided = "some_package";
-    let expected = ">= 0.0.0";
+    let expected = Requirement::hex(">= 0.0.0").unwrap();
     let (package, version) = parse_gleam_add_specifier(provided).unwrap();
-    match &version {
-        Requirement::Hex { version: v } => {
-            assert!(v.to_pubgrub().is_ok(), "failed pubgrub parse: {v}");
-        }
-        _ => assert!(false, "failed hexpm version parse: {provided}"),
-    }
-    assert_eq!(version, Requirement::hex(expected));
+    assert_eq!(version, expected);
     assert_eq!("some_package", package);
 }
 
 #[test]
 fn parse_gleam_add_specifier_major_only() {
     let provided = "wobble@1";
-    let expected = ">= 1.0.0 and < 2.0.0";
+    let expected = Requirement::hex(">= 1.0.0 and < 2.0.0").unwrap();
     let (package, version) = parse_gleam_add_specifier(provided).unwrap();
-    match &version {
-        Requirement::Hex { version: v } => {
-            assert!(v.to_pubgrub().is_ok(), "failed pubgrub parse: {v}");
-        }
-        _ => assert!(false, "failed hexpm version parse: {provided}"),
-    }
-    assert_eq!(version, Requirement::hex(expected));
+    assert_eq!(version, expected);
     assert_eq!("wobble", package);
 }
 
 #[test]
 fn parse_gleam_add_specifier_major_and_minor() {
     let provided = "wibble@1.2";
-    let expected = ">= 1.2.0 and < 2.0.0";
+    let expected = Requirement::hex(">= 1.2.0 and < 2.0.0").unwrap();
     let (package, version) = parse_gleam_add_specifier(provided).unwrap();
-    match &version {
-        Requirement::Hex { version: v } => {
-            assert!(v.to_pubgrub().is_ok(), "failed pubgrub parse: {v}");
-        }
-        _ => assert!(false, "failed hexpm version parse: {provided}"),
-    }
-    assert_eq!(version, Requirement::hex(expected));
+    assert_eq!(version, expected);
     assert_eq!("wibble", package);
 }
 
 #[test]
 fn parse_gleam_add_specifier_major_minor_and_patch() {
     let provided = "bobble@1.2.3";
-    let expected = "1.2.3";
+    let expected = Requirement::hex("1.2.3").unwrap();
     let (package, version) = parse_gleam_add_specifier(provided).unwrap();
-    match &version {
-        Requirement::Hex { version: v } => {
-            assert!(v.to_pubgrub().is_ok(), "failed pubgrub parse: {v}");
-        }
-        _ => assert!(false, "failed hexpm version parse: {provided}"),
-    }
-    assert_eq!(version, Requirement::hex(expected));
+    assert_eq!(version, expected);
     assert_eq!("bobble", package);
 }
 
@@ -533,7 +511,10 @@ fn provide_existing_package() {
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
-    assert_eq!(result, Ok(hexpm::version::Range::new("== 0.1.0".into())));
+    assert_eq!(
+        result,
+        Ok(hexpm::version::Range::new("== 0.1.0".into()).unwrap())
+    );
 
     let result = provide_local_package(
         "hello_world".into(),
@@ -543,7 +524,10 @@ fn provide_existing_package() {
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
-    assert_eq!(result, Ok(hexpm::version::Range::new("== 0.1.0".into())));
+    assert_eq!(
+        result,
+        Ok(hexpm::version::Range::new("== 0.1.0".into()).unwrap())
+    );
 }
 
 #[test]
@@ -558,7 +542,10 @@ fn provide_conflicting_package() {
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
-    assert_eq!(result, Ok(hexpm::version::Range::new("== 0.1.0".into())));
+    assert_eq!(
+        result,
+        Ok(hexpm::version::Range::new("== 0.1.0".into()).unwrap())
+    );
 
     let result = provide_package(
         "hello_world".into(),
@@ -592,7 +579,10 @@ fn provided_is_absolute() {
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
-    assert_eq!(result, Ok(hexpm::version::Range::new("== 0.1.0".into())));
+    assert_eq!(
+        result,
+        Ok(hexpm::version::Range::new("== 0.1.0".into()).unwrap())
+    );
     let package = provided.get("hello_world").unwrap().clone();
     match package.source {
         ProvidedPackageSource::Local { path } => {
@@ -634,11 +624,11 @@ fn provided_local_to_hex() {
         requirements: [
             (
                 "req_1".into(),
-                hexpm::version::Range::new("~> 1.0.0".into()),
+                hexpm::version::Range::new("~> 1.0.0".into()).unwrap(),
             ),
             (
                 "req_2".into(),
-                hexpm::version::Range::new("== 1.0.0".into()),
+                hexpm::version::Range::new("== 1.0.0".into()).unwrap(),
             ),
         ]
         .into(),
@@ -656,7 +646,7 @@ fn provided_local_to_hex() {
                 (
                     "req_1".into(),
                     hexpm::Dependency {
-                        requirement: hexpm::version::Range::new("~> 1.0.0".into()),
+                        requirement: hexpm::version::Range::new("~> 1.0.0".into()).unwrap(),
                         optional: false,
                         app: None,
                         repository: None,
@@ -665,7 +655,7 @@ fn provided_local_to_hex() {
                 (
                     "req_2".into(),
                     hexpm::Dependency {
-                        requirement: hexpm::version::Range::new("== 1.0.0".into()),
+                        requirement: hexpm::version::Range::new("== 1.0.0".into()).unwrap(),
                         optional: false,
                         app: None,
                         repository: None,
@@ -693,11 +683,11 @@ fn provided_git_to_hex() {
         requirements: [
             (
                 "req_1".into(),
-                hexpm::version::Range::new("~> 1.0.0".into()),
+                hexpm::version::Range::new("~> 1.0.0".into()).unwrap(),
             ),
             (
                 "req_2".into(),
-                hexpm::version::Range::new("== 1.0.0".into()),
+                hexpm::version::Range::new("== 1.0.0".into()).unwrap(),
             ),
         ]
         .into(),
@@ -715,7 +705,7 @@ fn provided_git_to_hex() {
                 (
                     "req_1".into(),
                     hexpm::Dependency {
-                        requirement: hexpm::version::Range::new("~> 1.0.0".into()),
+                        requirement: hexpm::version::Range::new("~> 1.0.0".into()).unwrap(),
                         optional: false,
                         app: None,
                         repository: None,
@@ -724,7 +714,7 @@ fn provided_git_to_hex() {
                 (
                     "req_2".into(),
                     hexpm::Dependency {
-                        requirement: hexpm::version::Range::new("== 1.0.0".into()),
+                        requirement: hexpm::version::Range::new("== 1.0.0".into()).unwrap(),
                         optional: false,
                         app: None,
                         repository: None,
@@ -751,11 +741,11 @@ fn provided_local_to_manifest() {
         requirements: [
             (
                 "req_1".into(),
-                hexpm::version::Range::new("~> 1.0.0".into()),
+                hexpm::version::Range::new("~> 1.0.0".into()).unwrap(),
             ),
             (
                 "req_2".into(),
-                hexpm::version::Range::new("== 1.0.0".into()),
+                hexpm::version::Range::new("== 1.0.0".into()).unwrap(),
             ),
         ]
         .into(),
@@ -789,11 +779,11 @@ fn provided_git_to_manifest() {
         requirements: [
             (
                 "req_1".into(),
-                hexpm::version::Range::new("~> 1.0.0".into()),
+                hexpm::version::Range::new("~> 1.0.0".into()).unwrap(),
             ),
             (
                 "req_2".into(),
-                hexpm::version::Range::new("== 1.0.0".into()),
+                hexpm::version::Range::new("== 1.0.0".into()).unwrap(),
             ),
         ]
         .into(),
@@ -875,7 +865,7 @@ fn create_testable_unlock_manifest(
             (
                 name,
                 Requirement::Hex {
-                    version: hexpm::version::Range::new(range.into()),
+                    version: hexpm::version::Range::new(range.into()).unwrap(),
                 },
             )
         })
@@ -1188,10 +1178,11 @@ fn package_config(
         documentation: Docs { pages: vec![] },
         dependencies,
         dev_dependencies,
-        repository: Repository::None,
+        repository: None,
         links: vec![],
         erlang: ErlangConfig {
             application_start_module: None,
+            application_start_argument: None,
             extra_applications: vec![],
         },
         javascript: JavaScriptConfig {
@@ -1219,14 +1210,14 @@ fn package_config(
 #[test]
 fn test_remove_do_nothing() {
     let config = package_config(
-        HashMap::from([("a".into(), Requirement::hex("~>1"))]),
-        HashMap::from([("b".into(), Requirement::hex("~>2"))]),
+        HashMap::from([("a".into(), Requirement::hex("~>1.0").unwrap())]),
+        HashMap::from([("b".into(), Requirement::hex("~>2.0").unwrap())]),
     );
 
     let mut manifest = Manifest {
         requirements: HashMap::from([
-            ("a".into(), Requirement::hex("~>1")),
-            ("b".into(), Requirement::hex("~>2")),
+            ("a".into(), Requirement::hex("~>1.0").unwrap()),
+            ("b".into(), Requirement::hex("~>2.0").unwrap()),
         ]),
         packages: vec![
             manifest_package("a", "1.0.0", vec![]),
@@ -1247,7 +1238,7 @@ fn test_remove_simple() {
     let config = package_config(HashMap::new(), HashMap::new());
 
     let mut manifest = Manifest {
-        requirements: HashMap::from([("a".into(), Requirement::hex("~>1"))]),
+        requirements: HashMap::from([("a".into(), Requirement::hex("~>1.0").unwrap())]),
         packages: vec![manifest_package("a", "1.0.0", vec![])],
     };
 
@@ -1262,7 +1253,7 @@ fn test_remove_package_with_transitive_dependencies() {
     let config = package_config(HashMap::new(), HashMap::new());
 
     let mut manifest = Manifest {
-        requirements: HashMap::from([("a".into(), Requirement::hex("~>1"))]),
+        requirements: HashMap::from([("a".into(), Requirement::hex("~>1.0").unwrap())]),
         packages: vec![
             manifest_package("a", "1.0.0", vec!["b".into()]),
             manifest_package("b", "1.2.3", vec!["c".into()]),
@@ -1279,14 +1270,14 @@ fn test_remove_package_with_transitive_dependencies() {
 #[test]
 fn test_remove_package_with_shared_transitive_dependencies() {
     let config = package_config(
-        HashMap::from([("a".into(), Requirement::hex("~>1"))]),
+        HashMap::from([("a".into(), Requirement::hex("~>1.0").unwrap())]),
         HashMap::new(),
     );
 
     let mut manifest = Manifest {
         requirements: HashMap::from([
-            ("a".into(), Requirement::hex("~>1")),
-            ("b".into(), Requirement::hex("~>1")),
+            ("a".into(), Requirement::hex("~>1.0").unwrap()),
+            ("b".into(), Requirement::hex("~>1.0").unwrap()),
         ]),
         packages: vec![
             manifest_package("a", "1.0.0", vec!["c".into()]),
@@ -1311,14 +1302,14 @@ fn test_remove_package_with_shared_transitive_dependencies() {
 #[test]
 fn test_remove_package_that_is_also_a_transitive_dependency() {
     let config = package_config(
-        HashMap::from([("a".into(), Requirement::hex("~>1"))]),
+        HashMap::from([("a".into(), Requirement::hex("~>1.0").unwrap())]),
         HashMap::new(),
     );
 
     let mut manifest = Manifest {
         requirements: HashMap::from([
-            ("a".into(), Requirement::hex("~>1")),
-            ("b".into(), Requirement::hex("~>1")),
+            ("a".into(), Requirement::hex("~>1.0").unwrap()),
+            ("b".into(), Requirement::hex("~>1.0").unwrap()),
         ]),
         packages: vec![
             manifest_package("a", "1.0.0", vec!["b".into(), "c".into()]),
@@ -1334,4 +1325,52 @@ fn test_remove_package_that_is_also_a_transitive_dependency() {
 
     assert_eq!(manifest.requirements, config.dependencies);
     assert_eq!(manifest.packages, manifest_copy.packages);
+}
+
+#[test]
+fn test_pretty_print_major_versions_available() {
+    let versions = vec![
+        (
+            "very_long_package_name".to_string(),
+            (Version::new(18, 382, 43), Version::new(19, 0, 38)),
+        ),
+        (
+            "gleam_stdlib".to_string(),
+            (Version::new(0, 45, 0), Version::new(1, 0, 0)),
+        ),
+        (
+            "short_name".to_string(),
+            (Version::new(1, 0, 0), Version::new(2, 0, 0)),
+        ),
+    ]
+    .into_iter()
+    .collect();
+
+    let output = pretty_print_major_versions_available(versions);
+
+    insta::assert_snapshot!(output);
+}
+
+#[test]
+fn test_pretty_print_version_updates() {
+    let versions = vec![
+        (
+            "gleam_stdlib".to_string(),
+            (Version::new(0, 45, 0), Version::new(0, 46, 0)),
+        ),
+        (
+            "wisp".to_string(),
+            (Version::new(2, 1, 0), Version::new(2, 1, 1)),
+        ),
+        (
+            "very_long_package_name".to_string(),
+            (Version::new(12, 12, 12), Version::new(120, 12, 12)),
+        ),
+    ]
+    .into_iter()
+    .collect();
+
+    let output = pretty_print_version_updates(versions);
+
+    insta::assert_snapshot!(output);
 }

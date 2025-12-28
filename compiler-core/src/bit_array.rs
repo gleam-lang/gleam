@@ -1,6 +1,8 @@
 use ecow::EcoString;
+use num_bigint::BigInt;
 
-use crate::ast::{BitArrayOption, SrcSpan};
+use crate::ast::{self, BitArrayOption, SrcSpan};
+use crate::build::Target;
 use crate::type_::Type;
 use std::sync::Arc;
 
@@ -10,21 +12,28 @@ use std::sync::Arc;
 
 pub fn type_options_for_value<TypedValue>(
     input_options: &[BitArrayOption<TypedValue>],
+    target: Target,
 ) -> Result<Arc<Type>, Error>
 where
     TypedValue: GetLiteralValue,
 {
-    type_options(input_options, true, false)
+    type_options(input_options, TypeOptionsMode::Expression, false, target)
 }
 
 pub fn type_options_for_pattern<TypedValue>(
     input_options: &[BitArrayOption<TypedValue>],
     must_have_size: bool,
+    target: Target,
 ) -> Result<Arc<Type>, Error>
 where
     TypedValue: GetLiteralValue,
 {
-    type_options(input_options, false, must_have_size)
+    type_options(
+        input_options,
+        TypeOptionsMode::Pattern,
+        must_have_size,
+        target,
+    )
 }
 
 struct SegmentOptionCategories<'a, T> {
@@ -56,7 +65,7 @@ impl<T> SegmentOptionCategories<'_, T> {
             Int { .. } => crate::type_::int(),
             Float { .. } => crate::type_::float(),
             Utf8 { .. } | Utf16 { .. } | Utf32 { .. } => crate::type_::string(),
-            Bytes { .. } | Bits { .. } => crate::type_::bits(),
+            Bytes { .. } | Bits { .. } => crate::type_::bit_array(),
             Utf8Codepoint { .. } | Utf16Codepoint { .. } | Utf32Codepoint { .. } => {
                 crate::type_::utf_codepoint()
             }
@@ -72,10 +81,20 @@ impl<T> SegmentOptionCategories<'_, T> {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
+/// Whether we're typing options for a bit array segment that's part of a pattern
+/// or an expression.
+///
+enum TypeOptionsMode {
+    Expression,
+    Pattern,
+}
+
 fn type_options<TypedValue>(
     input_options: &[BitArrayOption<TypedValue>],
-    value_mode: bool,
+    mode: TypeOptionsMode,
     must_have_size: bool,
+    target: Target,
 ) -> Result<Arc<Type>, Error>
 where
     TypedValue: GetLiteralValue,
@@ -86,6 +105,18 @@ where
     // Basic category checking
     for option in input_options {
         match option {
+            Utf8Codepoint { .. } | Utf16Codepoint { .. } | Utf32Codepoint { .. }
+                if mode == TypeOptionsMode::Pattern && target == Target::JavaScript =>
+            {
+                return err(
+                    ErrorType::OptionNotSupportedForTarget {
+                        target,
+                        option: UnsupportedOption::UtfCodepointPattern,
+                    },
+                    option.location(),
+                );
+            }
+
             Bytes { .. }
             | Int { .. }
             | Float { .. }
@@ -121,6 +152,16 @@ where
                 }
             }
 
+            Native { .. } if target == Target::JavaScript => {
+                return err(
+                    ErrorType::OptionNotSupportedForTarget {
+                        target,
+                        option: UnsupportedOption::NativeEndianness,
+                    },
+                    option.location(),
+                );
+            }
+
             Big { .. } | Little { .. } | Native { .. } => {
                 if let Some(previous) = categories.endian {
                     return err(
@@ -153,7 +194,7 @@ where
     }
 
     // Some options are not allowed in value mode
-    if value_mode {
+    if mode == TypeOptionsMode::Expression {
         match categories {
             SegmentOptionCategories {
                 signed: Some(opt), ..
@@ -167,21 +208,30 @@ where
     }
 
     // All but the last segment in a pattern must have an exact size
-    if must_have_size {
-        if let SegmentOptionCategories {
+    if must_have_size
+        && let SegmentOptionCategories {
             type_: Some(opt @ (Bytes { .. } | Bits { .. })),
             size: None,
             ..
         } = categories
-        {
-            return err(ErrorType::SegmentMustHaveSize, opt.location());
-        }
+    {
+        return err(ErrorType::SegmentMustHaveSize, opt.location());
     }
 
-    // Endianness is only valid for int, utf16, utf32 and float
+    // Endianness is only valid for int, utf16, utf16_codepoint, utf32,
+    // utf32_codepoint and float
     match categories {
         SegmentOptionCategories {
-            type_: None | Some(Int { .. } | Utf16 { .. } | Utf32 { .. } | Float { .. }),
+            type_:
+                None
+                | Some(
+                    Int { .. }
+                    | Utf16 { .. }
+                    | Utf32 { .. }
+                    | Utf16Codepoint { .. }
+                    | Utf32Codepoint { .. }
+                    | Float { .. },
+                ),
             ..
         } => {}
 
@@ -261,15 +311,25 @@ where
         size: Some(size),
         ..
     } = categories
+        && let Some(abox) = size.value()
     {
-        if let Some(abox) = size.value() {
-            match abox.as_int_literal() {
-                None => (),
-                Some(16) => (),
-                Some(32) => (),
-                Some(64) => (),
-                _ => return err(ErrorType::FloatWithSize, size.location()),
+        match abox.as_int_literal() {
+            None => (),
+            Some(value) if value == 16.into() || value == 32.into() || value == 64.into() => (),
+            _ => return err(ErrorType::FloatWithSize, size.location()),
+        }
+    }
+
+    // Segment patterns with a zero or negative constant size must be rejected,
+    // we know they will never match!
+    // A negative size is still allowed in expressions as it will just result
+    // in an empty segment.
+    if let (Some(size @ Size { value, .. }), TypeOptionsMode::Pattern) = (categories.size, mode) {
+        match value.as_int_literal() {
+            Some(n) if n <= BigInt::ZERO => {
+                return err(ErrorType::ConstantSizeNotPositive, size.location());
             }
+            Some(_) | None => (),
         }
     }
 
@@ -277,21 +337,29 @@ where
 }
 
 pub trait GetLiteralValue {
-    fn as_int_literal(&self) -> Option<i64>;
+    fn as_int_literal(&self) -> Option<BigInt>;
 }
 
-impl GetLiteralValue for crate::ast::TypedPattern {
-    fn as_int_literal(&self) -> Option<i64> {
+impl GetLiteralValue for ast::TypedPattern {
+    fn as_int_literal(&self) -> Option<BigInt> {
         match self {
-            crate::ast::Pattern::Int { value, .. } => {
-                if let Ok(val) = value.parse::<i64>() {
-                    return Some(val);
-                }
+            ast::Pattern::Int { int_value, .. }
+            | ast::Pattern::BitArraySize(ast::BitArraySize::Int { int_value, .. }) => {
+                Some(int_value.clone())
             }
-            crate::ast::Pattern::VarUsage { .. } => return None,
-            _ => (),
+            ast::Pattern::Float { .. }
+            | ast::Pattern::String { .. }
+            | ast::Pattern::Variable { .. }
+            | ast::Pattern::BitArraySize(_)
+            | ast::Pattern::Assign { .. }
+            | ast::Pattern::Discard { .. }
+            | ast::Pattern::List { .. }
+            | ast::Pattern::Constructor { .. }
+            | ast::Pattern::Tuple { .. }
+            | ast::Pattern::BitArray { .. }
+            | ast::Pattern::StringPrefix { .. }
+            | ast::Pattern::Invalid { .. } => None,
         }
-        None
     }
 }
 
@@ -321,18 +389,41 @@ pub struct Error {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ErrorType {
-    ConflictingEndiannessOptions { existing_endianness: EcoString },
-    ConflictingSignednessOptions { existing_signed: EcoString },
+    ConflictingEndiannessOptions {
+        existing_endianness: EcoString,
+    },
+    ConflictingSignednessOptions {
+        existing_signed: EcoString,
+    },
     ConflictingSizeOptions,
-    ConflictingTypeOptions { existing_type: EcoString },
+    ConflictingTypeOptions {
+        existing_type: EcoString,
+    },
     ConflictingUnitOptions,
     FloatWithSize,
     InvalidEndianness,
     OptionNotAllowedInValue,
     SegmentMustHaveSize,
-    SignednessUsedOnNonInt { type_: EcoString },
-    TypeDoesNotAllowSize { type_: EcoString },
-    TypeDoesNotAllowUnit { type_: EcoString },
+    SignednessUsedOnNonInt {
+        type_: EcoString,
+    },
+    TypeDoesNotAllowSize {
+        type_: EcoString,
+    },
+    TypeDoesNotAllowUnit {
+        type_: EcoString,
+    },
     UnitMustHaveSize,
     VariableUtfSegmentInPattern,
+    ConstantSizeNotPositive,
+    OptionNotSupportedForTarget {
+        target: Target,
+        option: UnsupportedOption,
+    },
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum UnsupportedOption {
+    UtfCodepointPattern,
+    NativeEndianness,
 }

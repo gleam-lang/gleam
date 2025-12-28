@@ -1,8 +1,10 @@
 use gleam_core::{
     build::Telemetry,
     error::{Error, StandardIoAction},
+    manifest::{Changed, ChangedGit, PackageChanges},
 };
 use hexpm::version::Version;
+use itertools::Itertools as _;
 use std::{
     io::{IsTerminal, Write},
     time::{Duration, Instant},
@@ -53,6 +55,10 @@ impl Telemetry for Reporter {
 
     fn waiting_for_build_directory_lock(&self) {
         print_waiting_for_build_directory_lock()
+    }
+
+    fn resolved_package_versions(&self, changes: &PackageChanges) {
+        print_package_changes(changes)
     }
 }
 
@@ -148,16 +154,48 @@ pub(crate) fn print_running(text: &str) {
     print_colourful_prefix("Running", text)
 }
 
-pub(crate) fn print_added(text: &str) {
+pub(crate) fn print_package_changes(changes: &PackageChanges) {
+    for (name, version) in changes.added.iter().sorted() {
+        print_added(&format!("{name} v{version}"));
+    }
+    for Changed { name, old, new } in changes.changed.iter().sorted_by_key(|p| &p.name) {
+        print_changed(&format!("{name} v{old} -> v{new}"));
+    }
+    for ChangedGit {
+        name,
+        old_hash,
+        new_hash,
+    } in changes.changed_git.iter().sorted_by_key(|p| &p.name)
+    {
+        print_changed(&format!("{name} {old_hash} -> {new_hash}"));
+    }
+    for name in changes.removed.iter().sorted() {
+        print_removed(name);
+    }
+}
+
+fn print_added(text: &str) {
     print_colourful_prefix("Added", text)
 }
 
-pub(crate) fn print_removed(text: &str) {
+fn print_changed(text: &str) {
+    print_colourful_prefix("Changed", text)
+}
+
+fn print_removed(text: &str) {
     print_colourful_prefix("Removed", text)
 }
 
 pub(crate) fn print_generating_documentation() {
     print_colourful_prefix("Generating", "documentation")
+}
+
+pub(crate) fn print_transferring_ownership() {
+    print_colourful_prefix("Transferring", "ownership");
+}
+
+pub(crate) fn print_transferred_ownership() {
+    print_colourful_prefix("Transferred", "ownership");
 }
 
 fn print_packages_downloaded(start: Instant, count: usize) {

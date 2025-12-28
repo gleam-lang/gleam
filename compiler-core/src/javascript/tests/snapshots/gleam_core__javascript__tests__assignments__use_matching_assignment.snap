@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/javascript/tests/assignments.rs
+expression: "\nfn fun(f) { f(#(2, 4)) }\n\npub fn go() {\n  use #(_, n) <- fun\n  n\n}\n"
+---
+----- SOURCE CODE
+
+fn fun(f) { f(#(2, 4)) }
+
+pub fn go() {
+  use #(_, n) <- fun
+  n
+}
+
+
+----- COMPILED JAVASCRIPT
+function fun(f) {
+  return f([2, 4]);
+}
+
+export function go() {
+  return fun(
+    (_use0) => {
+      let n;
+      n = _use0[1];
+      return n;
+    },
+  );
+}

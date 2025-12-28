@@ -1,0 +1,70 @@
+---
+source: compiler-core/src/javascript/tests/assert.rs
+assertion_line: 123
+expression: "\nfn wibble(a, b) {\n  let result = a + b\n  result == 10\n}\n\npub fn go(x) {\n  assert wibble(5, 5) && wibble(4, 6)\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+fn wibble(a, b) {
+  let result = a + b
+  result == 10
+}
+
+pub fn go(x) {
+  assert wibble(5, 5) && wibble(4, 6)
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+function wibble(a, b) {
+  let result = a + b;
+  return result === 10;
+}
+
+export function go(x) {
+  if (wibble(5, 5)) {
+    if (!wibble(4, 6)) {
+      throw makeError(
+        "assert",
+        FILEPATH,
+        "my/mod",
+        8,
+        "go",
+        "Assertion failed.",
+        {
+          kind: "binary_operator",
+          operator: "&&",
+          left: { kind: "expression", value: true, start: 82, end: 94 },
+          right: { kind: "expression", value: false, start: 98, end: 110 },
+          start: 75,
+          end: 110,
+          expression_start: 82
+        }
+      )
+    }
+  } else {
+    throw makeError(
+      "assert",
+      FILEPATH,
+      "my/mod",
+      8,
+      "go",
+      "Assertion failed.",
+      {
+        kind: "binary_operator",
+        operator: "&&",
+        left: { kind: "expression", value: false, start: 82, end: 94 },
+        right: { kind: "unevaluated", start: 98, end: 110 },
+        start: 75,
+        end: 110,
+        expression_start: 82
+      }
+    )
+  }
+  return undefined;
+}

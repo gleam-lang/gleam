@@ -1,0 +1,43 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\n\nimport wibble.{wobble}\n\npub fn example() {\n  echo wobble\n\n  let wobble = 1\n\n  echo wobble\n\n  let _ = fn(wobble) {\n    echo wobble\n  }\n\n  todo\n}\n"
+---
+----- BEFORE ACTION
+
+
+import wibble.{wobble}
+
+pub fn example() {
+  echo wobble
+       ▔▔▔↑  
+
+  let wobble = 1
+
+  echo wobble
+
+  let _ = fn(wobble) {
+    echo wobble
+  }
+
+  todo
+}
+
+
+----- AFTER ACTION
+
+
+import wibble.{}
+
+pub fn example() {
+  echo wibble.wobble
+
+  let wobble = 1
+
+  echo wobble
+
+  let _ = fn(wobble) {
+    echo wobble
+  }
+
+  todo
+}

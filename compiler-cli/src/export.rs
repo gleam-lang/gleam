@@ -6,15 +6,13 @@ use gleam_core::{
     paths::ProjectPaths,
 };
 
-#[cfg(target_os = "windows")]
-static ENTRYPOINT_FILENAME: &str = "entrypoint.ps1";
-#[cfg(not(target_os = "windows"))]
-static ENTRYPOINT_FILENAME: &str = "entrypoint.sh";
+static ENTRYPOINT_FILENAME_POWERSHELL: &str = "entrypoint.ps1";
+static ENTRYPOINT_FILENAME_POSIX_SHELL: &str = "entrypoint.sh";
 
-#[cfg(target_os = "windows")]
-static ENTRYPOINT_TEMPLATE: &str = include_str!("../templates/erlang-shipment-entrypoint.ps1");
-#[cfg(not(target_os = "windows"))]
-static ENTRYPOINT_TEMPLATE: &str = include_str!("../templates/erlang-shipment-entrypoint.sh");
+static ENTRYPOINT_TEMPLATE_POWERSHELL: &str =
+    include_str!("../templates/erlang-shipment-entrypoint.ps1");
+static ENTRYPOINT_TEMPLATE_POSIX_SHELL: &str =
+    include_str!("../templates/erlang-shipment-entrypoint.sh");
 
 // TODO: start in embedded mode
 // TODO: test
@@ -78,12 +76,19 @@ pub(crate) fn erlang_shipment(paths: &ProjectPaths) -> Result<()> {
         }
     }
 
-    // Write entrypoint script
-    let entrypoint = out.join(ENTRYPOINT_FILENAME);
-    let text =
-        ENTRYPOINT_TEMPLATE.replace("$PACKAGE_NAME_FROM_GLEAM", &built.root_package.config.name);
-    crate::fs::write(&entrypoint, &text)?;
-    crate::fs::make_executable(&entrypoint)?;
+    // PowerShell entry point script.
+    write_entrypoint_script(
+        &out.join(ENTRYPOINT_FILENAME_POWERSHELL),
+        ENTRYPOINT_TEMPLATE_POWERSHELL,
+        &built.root_package.config.name,
+    )?;
+
+    // POSIX Shell entry point script.
+    write_entrypoint_script(
+        &out.join(ENTRYPOINT_FILENAME_POSIX_SHELL),
+        ENTRYPOINT_TEMPLATE_POSIX_SHELL,
+        &built.root_package.config.name,
+    )?;
 
     crate::cli::print_exported(&built.root_package.config.name);
 
@@ -92,12 +97,23 @@ pub(crate) fn erlang_shipment(paths: &ProjectPaths) -> Result<()> {
 Your Erlang shipment has been generated to {out}.
 
 It can be copied to a compatible server with Erlang installed and run with
-the {ENTRYPOINT_FILENAME} script.
-
-    {entrypoint}
+one of the following scripts:
+    - {ENTRYPOINT_FILENAME_POWERSHELL} (PowerShell script)
+    - {ENTRYPOINT_FILENAME_POSIX_SHELL} (POSIX Shell script)
 ",
     );
 
+    Ok(())
+}
+
+fn write_entrypoint_script(
+    entrypoint_output_path: &Utf8PathBuf,
+    entrypoint_template_path: &str,
+    package_name: &str,
+) -> Result<()> {
+    let text = entrypoint_template_path.replace("$PACKAGE_NAME_FROM_GLEAM", package_name);
+    crate::fs::write(entrypoint_output_path, &text)?;
+    crate::fs::make_executable(entrypoint_output_path)?;
     Ok(())
 }
 
@@ -148,6 +164,13 @@ pub fn package_interface(paths: &ProjectPaths, out: Utf8PathBuf) -> Result<()> {
         &built.root_package,
         &built.module_interfaces,
     );
+    crate::fs::write_outputs_under(&[out], paths.root())?;
+    Ok(())
+}
+
+pub fn package_information(paths: &ProjectPaths, out: Utf8PathBuf) -> Result<()> {
+    let config = crate::config::root_config(paths)?;
+    let out = gleam_core::docs::generate_json_package_information(out, config);
     crate::fs::write_outputs_under(&[out], paths.root())?;
     Ok(())
 }

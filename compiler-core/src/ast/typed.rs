@@ -3,7 +3,12 @@ use std::sync::OnceLock;
 use type_::{FieldMap, TypedCallArg};
 
 use super::*;
-use crate::type_::{HasType, Type, ValueConstructorVariant, bool};
+use crate::{
+    build::ExpressionPosition,
+    exhaustiveness::CompiledCase,
+    parse::LiteralFloatValue,
+    type_::{HasType, Type, ValueConstructorVariant, bool},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypedExpr {
@@ -18,6 +23,7 @@ pub enum TypedExpr {
         location: SrcSpan,
         type_: Arc<Type>,
         value: EcoString,
+        float_value: LiteralFloatValue,
     },
 
     String {
@@ -54,9 +60,10 @@ pub enum TypedExpr {
         location: SrcSpan,
         type_: Arc<Type>,
         kind: FunctionLiteralKind,
-        args: Vec<TypedArg>,
+        arguments: Vec<TypedArg>,
         body: Vec1<TypedStatement>,
         return_annotation: Option<TypeAst>,
+        purity: Purity,
     },
 
     List {
@@ -70,13 +77,14 @@ pub enum TypedExpr {
         location: SrcSpan,
         type_: Arc<Type>,
         fun: Box<Self>,
-        args: Vec<CallArg<Self>>,
+        arguments: Vec<CallArg<Self>>,
     },
 
     BinOp {
         location: SrcSpan,
         type_: Arc<Type>,
         name: BinOp,
+        name_location: SrcSpan,
         left: Box<Self>,
         right: Box<Self>,
     },
@@ -86,12 +94,24 @@ pub enum TypedExpr {
         type_: Arc<Type>,
         subjects: Vec<Self>,
         clauses: Vec<Clause<Self, Arc<Type>, EcoString>>,
+        compiled_case: CompiledCase,
     },
 
     RecordAccess {
         location: SrcSpan,
+        field_start: u32,
         type_: Arc<Type>,
         label: EcoString,
+        index: u64,
+        record: Box<Self>,
+        documentation: Option<EcoString>,
+    },
+
+    /// Generated internally for accessing unlabelled fields of a custom type,
+    /// such as for record updates.
+    PositionalAccess {
+        location: SrcSpan,
+        type_: Arc<Type>,
         index: u64,
         record: Box<Self>,
     },
@@ -109,7 +129,7 @@ pub enum TypedExpr {
     Tuple {
         location: SrcSpan,
         type_: Arc<Type>,
-        elems: Vec<Self>,
+        elements: Vec<Self>,
     },
 
     TupleIndex {
@@ -136,6 +156,7 @@ pub enum TypedExpr {
         location: SrcSpan,
         type_: Arc<Type>,
         expression: Option<Box<Self>>,
+        message: Option<Box<Self>>,
     },
 
     BitArray {
@@ -156,9 +177,11 @@ pub enum TypedExpr {
     RecordUpdate {
         location: SrcSpan,
         type_: Arc<Type>,
-        record: TypedAssignment,
+        /// If the record is an expression that is not a variable we will need to assign to a
+        /// variable so it can be referred multiple times.
+        record_assignment: Option<Box<TypedAssignment>>,
         constructor: Box<Self>,
-        args: Vec<CallArg<Self>>,
+        arguments: Vec<CallArg<Self>>,
     },
 
     NegateBool {
@@ -176,21 +199,30 @@ pub enum TypedExpr {
     Invalid {
         location: SrcSpan,
         type_: Arc<Type>,
+        /// Extra information about the invalid expression, useful for providing
+        /// addition help or information, such as code actions to fix invalid
+        /// states.
+        extra_information: Option<InvalidExpression>,
     },
 }
 
 impl TypedExpr {
     pub fn is_println(&self) -> bool {
-        let fun = match self {
-            TypedExpr::Call { fun, args, .. } if args.len() == 1 => fun.as_ref(),
-            _ => return false,
+        let fun = if let TypedExpr::Call { fun, arguments, .. } = self
+            && arguments.len() == 1
+        {
+            fun.as_ref()
+        } else {
+            return false;
         };
 
-        match fun {
-            TypedExpr::ModuleSelect {
-                label, module_name, ..
-            } => label == "println" && module_name == "gleam/io",
-            _ => false,
+        if let TypedExpr::ModuleSelect {
+            label, module_name, ..
+        } = fun
+        {
+            label == "println" && module_name == "gleam/io"
+        } else {
+            false
         }
     }
 
@@ -198,10 +230,10 @@ impl TypedExpr {
         match self {
             Self::Var { .. }
             | Self::Int { .. }
-            | Self::Panic { .. }
             | Self::Float { .. }
             | Self::String { .. }
-            | Self::Invalid { .. } => self.self_if_contains_location(byte_index),
+            | Self::Invalid { .. }
+            | Self::PositionalAccess { .. } => self.self_if_contains_location(byte_index),
 
             Self::ModuleSelect {
                 location,
@@ -232,13 +264,30 @@ impl TypedExpr {
                 }
             }
 
-            Self::Echo { expression, .. } => expression
+            Self::Echo {
+                expression,
+                message,
+                ..
+            } => expression
                 .as_ref()
-                .and_then(|e| e.find_node(byte_index))
+                .and_then(|expression| expression.find_node(byte_index))
+                .or_else(|| {
+                    message
+                        .as_ref()
+                        .and_then(|message| message.find_node(byte_index))
+                })
                 .or_else(|| self.self_if_contains_location(byte_index)),
 
-            Self::Todo { kind, .. } => match kind {
-                TodoKind::Keyword => self.self_if_contains_location(byte_index),
+            Self::Panic { message, .. } => message
+                .as_ref()
+                .and_then(|message| message.find_node(byte_index))
+                .or_else(|| self.self_if_contains_location(byte_index)),
+
+            Self::Todo { kind, message, .. } => match kind {
+                TodoKind::Keyword => message
+                    .as_ref()
+                    .and_then(|message| message.find_node(byte_index))
+                    .or_else(|| self.self_if_contains_location(byte_index)),
                 // We don't want to match on todos that were implicitly inserted
                 // by the compiler as it would result in confusing suggestions
                 // from the LSP.
@@ -281,7 +330,8 @@ impl TypedExpr {
             // if during iteration, an element is encountered with a start index
             // beyond the index under search.
             Self::Tuple {
-                elems: expressions, ..
+                elements: expressions,
+                ..
             } => {
                 for expression in expressions {
                     if expression.location().start > byte_index {
@@ -311,10 +361,10 @@ impl TypedExpr {
                     }
                 }
 
-                if let Some(tail) = tail {
-                    if let Some(node) = tail.find_node(byte_index) {
-                        return Some(node);
-                    }
+                if let Some(tail) = tail
+                    && let Some(node) = tail.find_node(byte_index)
+                {
+                    return Some(node);
                 }
                 self.self_if_contains_location(byte_index)
             }
@@ -323,15 +373,17 @@ impl TypedExpr {
                 .find_node(byte_index)
                 .or_else(|| self.self_if_contains_location(byte_index)),
 
-            Self::Fn { body, args, .. } => args
+            Self::Fn {
+                body, arguments, ..
+            } => arguments
                 .iter()
                 .find_map(|arg| arg.find_node(byte_index))
                 .or_else(|| body.iter().find_map(|s| s.find_node(byte_index)))
                 .or_else(|| self.self_if_contains_location(byte_index)),
 
-            Self::Call { fun, args, .. } => args
+            Self::Call { fun, arguments, .. } => arguments
                 .iter()
-                .find_map(|arg| arg.find_node(byte_index))
+                .find_map(|argument| argument.find_node(byte_index, fun, arguments))
                 .or_else(|| fun.find_node(byte_index))
                 .or_else(|| self.self_if_contains_location(byte_index)),
 
@@ -361,11 +413,21 @@ impl TypedExpr {
                 .find_map(|arg| arg.find_node(byte_index))
                 .or_else(|| self.self_if_contains_location(byte_index)),
 
-            Self::RecordUpdate { record, args, .. } => args
+            Self::RecordUpdate {
+                record_assignment,
+                constructor,
+                arguments,
+                ..
+            } => arguments
                 .iter()
-                .filter(|arg| arg.implicit.is_none())
-                .find_map(|arg| arg.find_node(byte_index))
-                .or_else(|| record.find_node(byte_index))
+                .filter(|argument| argument.implicit.is_none())
+                .find_map(|argument| argument.find_node(byte_index, constructor, arguments))
+                .or_else(|| constructor.find_node(byte_index))
+                .or_else(|| {
+                    record_assignment
+                        .as_ref()
+                        .and_then(|assignment| assignment.find_node(byte_index))
+                })
                 .or_else(|| self.self_if_contains_location(byte_index)),
         }
     }
@@ -374,12 +436,11 @@ impl TypedExpr {
         match self {
             Self::Var { .. }
             | Self::Int { .. }
-            | Self::Panic { .. }
             | Self::Float { .. }
             | Self::String { .. }
             | Self::ModuleSelect { .. }
             | Self::Invalid { .. }
-            | Self::Todo { .. } => None,
+            | Self::PositionalAccess { .. } => None,
 
             Self::Pipeline {
                 first_value,
@@ -415,7 +476,8 @@ impl TypedExpr {
             // if during iteration, an element is encountered with a start index
             // beyond the index under search.
             Self::Tuple {
-                elems: expressions, ..
+                elements: expressions,
+                ..
             } => {
                 for expression in expressions {
                     if expression.location().start > byte_index {
@@ -445,10 +507,10 @@ impl TypedExpr {
                     }
                 }
 
-                if let Some(tail) = tail {
-                    if let Some(node) = tail.find_statement(byte_index) {
-                        return Some(node);
-                    }
+                if let Some(tail) = tail
+                    && let Some(node) = tail.find_statement(byte_index)
+                {
+                    return Some(node);
                 }
                 None
             }
@@ -459,9 +521,9 @@ impl TypedExpr {
 
             Self::Fn { body, .. } => body.iter().find_map(|s| s.find_statement(byte_index)),
 
-            Self::Call { fun, args, .. } => args
+            Self::Call { fun, arguments, .. } => arguments
                 .iter()
-                .find_map(|arg| arg.find_statement(byte_index))
+                .find_map(|argument| argument.find_statement(byte_index))
                 .or_else(|| fun.find_statement(byte_index)),
 
             Self::BinOp { left, right, .. } => left
@@ -486,19 +548,49 @@ impl TypedExpr {
                 tuple: expression, ..
             } => expression.find_statement(byte_index),
 
-            Self::Echo { expression, .. } => expression
+            Self::Echo {
+                expression,
+                message,
+                ..
+            } => expression
                 .as_ref()
-                .and_then(|e| e.find_statement(byte_index)),
+                .and_then(|expression| expression.find_statement(byte_index))
+                .or_else(|| {
+                    message
+                        .as_ref()
+                        .and_then(|message| message.find_statement(byte_index))
+                }),
+
+            Self::Todo { message, kind, .. } => match kind {
+                TodoKind::EmptyFunction { .. } | TodoKind::IncompleteUse | TodoKind::EmptyBlock => {
+                    None
+                }
+                TodoKind::Keyword => message
+                    .as_ref()
+                    .and_then(|message| message.find_statement(byte_index)),
+            },
+
+            Self::Panic { message, .. } => message
+                .as_ref()
+                .and_then(|message| message.find_statement(byte_index)),
 
             Self::BitArray { segments, .. } => segments
                 .iter()
                 .find_map(|arg| arg.value.find_statement(byte_index)),
 
-            Self::RecordUpdate { record, args, .. } => args
+            Self::RecordUpdate {
+                record_assignment,
+                arguments,
+                ..
+            } => arguments
                 .iter()
                 .filter(|arg| arg.implicit.is_none())
                 .find_map(|arg| arg.find_statement(byte_index))
-                .or_else(|| record.value.find_statement(byte_index)),
+                .or_else(|| {
+                    record_assignment
+                        .as_ref()
+                        .and_then(|r| r.value.find_statement(byte_index))
+                }),
         }
     }
 
@@ -510,15 +602,62 @@ impl TypedExpr {
         }
     }
 
-    pub fn non_zero_compile_time_number(&self) -> bool {
-        use regex::Regex;
-        static NON_ZERO: OnceLock<Regex> = OnceLock::new();
+    pub fn is_non_zero_compile_time_number(&self) -> bool {
+        match self {
+            Self::Int { int_value, .. } => int_value != &BigInt::ZERO,
+            Self::Float { value, .. } => is_non_zero_number(value),
+            Self::String { .. }
+            | Self::Block { .. }
+            | Self::Pipeline { .. }
+            | Self::Var { .. }
+            | Self::Fn { .. }
+            | Self::List { .. }
+            | Self::Call { .. }
+            | Self::BinOp { .. }
+            | Self::Case { .. }
+            | Self::RecordAccess { .. }
+            | Self::PositionalAccess { .. }
+            | Self::ModuleSelect { .. }
+            | Self::Tuple { .. }
+            | Self::TupleIndex { .. }
+            | Self::Todo { .. }
+            | Self::Panic { .. }
+            | Self::Echo { .. }
+            | Self::BitArray { .. }
+            | Self::RecordUpdate { .. }
+            | Self::NegateBool { .. }
+            | Self::NegateInt { .. }
+            | Self::Invalid { .. } => false,
+        }
+    }
 
-        matches!(
-            self,
-            Self::Int{ value, .. } | Self::Float { value, .. } if NON_ZERO.get_or_init(||
-                Regex::new(r"[1-9]").expect("NON_ZERO regex")).is_match(value)
-        )
+    pub fn is_zero_compile_time_number(&self) -> bool {
+        match self {
+            Self::Int { int_value, .. } => int_value == &BigInt::ZERO,
+            Self::Float { value, .. } => !is_non_zero_number(value),
+            Self::String { .. }
+            | Self::Block { .. }
+            | Self::Pipeline { .. }
+            | Self::Var { .. }
+            | Self::Fn { .. }
+            | Self::List { .. }
+            | Self::Call { .. }
+            | Self::BinOp { .. }
+            | Self::Case { .. }
+            | Self::RecordAccess { .. }
+            | Self::PositionalAccess { .. }
+            | Self::ModuleSelect { .. }
+            | Self::Tuple { .. }
+            | Self::TupleIndex { .. }
+            | Self::Todo { .. }
+            | Self::Panic { .. }
+            | Self::Echo { .. }
+            | Self::BitArray { .. }
+            | Self::RecordUpdate { .. }
+            | Self::NegateBool { .. }
+            | Self::NegateInt { .. }
+            | Self::Invalid { .. } => false,
+        }
     }
 
     pub fn location(&self) -> SrcSpan {
@@ -544,6 +683,7 @@ impl TypedExpr {
             | Self::TupleIndex { location, .. }
             | Self::ModuleSelect { location, .. }
             | Self::RecordAccess { location, .. }
+            | Self::PositionalAccess { location, .. }
             | Self::RecordUpdate { location, .. }
             | Self::Invalid { location, .. } => *location,
         }
@@ -571,6 +711,7 @@ impl TypedExpr {
             | Self::TupleIndex { location, .. }
             | Self::ModuleSelect { location, .. }
             | Self::RecordAccess { location, .. }
+            | Self::PositionalAccess { location, .. }
             | Self::RecordUpdate { location, .. }
             | Self::Invalid { location, .. } => *location,
             Self::Block { statements, .. } => statements.last().location(),
@@ -598,6 +739,7 @@ impl TypedExpr {
             | TypedExpr::BitArray { .. }
             | TypedExpr::TupleIndex { .. }
             | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
             | Self::Invalid { .. } => None,
 
             // TODO: test
@@ -640,6 +782,7 @@ impl TypedExpr {
             | Self::TupleIndex { type_, .. }
             | Self::ModuleSelect { type_, .. }
             | Self::RecordAccess { type_, .. }
+            | Self::PositionalAccess { type_, .. }
             | Self::RecordUpdate { type_, .. }
             | Self::Invalid { type_, .. } => type_.clone(),
             Self::Pipeline { finally, .. } => finally.type_(),
@@ -649,21 +792,86 @@ impl TypedExpr {
 
     pub fn is_literal(&self) -> bool {
         match self {
-            Self::Int { .. }
-            | Self::List { .. }
-            | Self::Float { .. }
-            | Self::Tuple { .. }
-            | Self::String { .. }
-            | Self::BitArray { .. } => true,
-            _ => false,
+            Self::Int { .. } | Self::Float { .. } | Self::String { .. } => true,
+
+            Self::List { elements, .. } | Self::Tuple { elements, .. } => {
+                elements.iter().all(|value| value.is_literal())
+            }
+
+            Self::BitArray { segments, .. } => {
+                segments.iter().all(|segment| segment.value.is_literal())
+            }
+
+            // Calls are literals if they are records and all the arguemnts are also literals.
+            Self::Call { fun, arguments, .. } => {
+                fun.is_record_literal()
+                    && arguments.iter().all(|argument| argument.value.is_literal())
+            }
+
+            // Variables are literals if they are record constructors that take no arguments.
+            Self::Var {
+                constructor:
+                    ValueConstructor {
+                        variant: ValueConstructorVariant::Record { arity: 0, .. },
+                        ..
+                    },
+                ..
+            } => true,
+
+            Self::Block { .. }
+            | Self::Pipeline { .. }
+            | Self::Var { .. }
+            | Self::Fn { .. }
+            | Self::BinOp { .. }
+            | Self::Case { .. }
+            | Self::RecordAccess { .. }
+            | Self::PositionalAccess { .. }
+            | Self::ModuleSelect { .. }
+            | Self::TupleIndex { .. }
+            | Self::Todo { .. }
+            | Self::Panic { .. }
+            | Self::Echo { .. }
+            | Self::RecordUpdate { .. }
+            | Self::NegateBool { .. }
+            | Self::NegateInt { .. }
+            | Self::Invalid { .. } => false,
+        }
+    }
+
+    pub fn is_known_bool(&self) -> bool {
+        match self {
+            TypedExpr::BinOp {
+                left, right, name, ..
+            } if name.is_bool_operator() => left.is_known_bool() && right.is_known_bool(),
+            TypedExpr::NegateBool { value, .. } => value.is_known_bool(),
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => self.is_literal(),
         }
     }
 
     pub fn is_literal_string(&self) -> bool {
-        match self {
-            Self::String { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::String { .. })
     }
 
     /// Returns `true` if the typed expr is [`Var`].
@@ -671,16 +879,14 @@ impl TypedExpr {
     /// [`Var`]: TypedExpr::Var
     #[must_use]
     pub fn is_var(&self) -> bool {
-        match self {
-            Self::Var { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Var { .. })
     }
 
-    pub(crate) fn get_documentation(&self) -> Option<&str> {
+    pub fn get_documentation(&self) -> Option<&str> {
         match self {
             TypedExpr::Var { constructor, .. } => constructor.get_documentation(),
             TypedExpr::ModuleSelect { constructor, .. } => constructor.get_documentation(),
+            TypedExpr::RecordAccess { documentation, .. } => documentation.as_deref(),
 
             TypedExpr::Int { .. }
             | TypedExpr::Float { .. }
@@ -699,9 +905,9 @@ impl TypedExpr {
             | TypedExpr::Panic { .. }
             | TypedExpr::BitArray { .. }
             | TypedExpr::RecordUpdate { .. }
-            | TypedExpr::RecordAccess { .. }
             | TypedExpr::NegateBool { .. }
             | TypedExpr::NegateInt { .. }
+            | TypedExpr::PositionalAccess { .. }
             | TypedExpr::Invalid { .. } => None,
         }
     }
@@ -711,10 +917,7 @@ impl TypedExpr {
     /// [`Case`]: TypedExpr::Case
     #[must_use]
     pub fn is_case(&self) -> bool {
-        match self {
-            Self::Case { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Case { .. })
     }
 
     /// Returns `true` if the typed expr is [`Pipeline`].
@@ -722,10 +925,7 @@ impl TypedExpr {
     /// [`Pipeline`]: TypedExpr::Pipeline
     #[must_use]
     pub fn is_pipeline(&self) -> bool {
-        match self {
-            Self::Pipeline { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Pipeline { .. })
     }
 
     pub fn is_pure_value_constructor(&self) -> bool {
@@ -739,6 +939,7 @@ impl TypedExpr {
             | TypedExpr::Var { .. }
             | TypedExpr::BinOp { .. }
             | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
             | TypedExpr::TupleIndex { .. }
             | TypedExpr::RecordUpdate { .. }
             | TypedExpr::Fn { .. } => true,
@@ -753,23 +954,28 @@ impl TypedExpr {
             TypedExpr::ModuleSelect { .. } => true,
 
             // A pipeline is a pure value constructor if its last step is a record builder,
-            // or a call to a fn expression that has a body comprised of just pure value
-            // constructors. For example:
+            // or a call to a pure function. For example:
             //  - `wibble() |> wobble() |> Ok`
             //  - `"hello" |> fn(s) { s <> " world!" }`
-            TypedExpr::Pipeline { finally, .. } => match finally.as_ref() {
-                TypedExpr::Fn { body, .. } => body.iter().all(|s| s.is_pure_value_constructor()),
-                fun => fun.is_pure_value_constructor(),
-            },
+            TypedExpr::Pipeline {
+                first_value,
+                assignments,
+                finally,
+                ..
+            } => {
+                first_value.value.is_pure_value_constructor()
+                    && assignments
+                        .iter()
+                        .all(|(assignment, _)| assignment.value.is_pure_value_constructor())
+                    && finally.is_pure_value_constructor()
+            }
 
-            TypedExpr::Call { fun, .. } => match fun.as_ref() {
-                // Immediately calling a fn expression that has a body comprised of just
-                // pure value constructors is in itself pure.
-                TypedExpr::Fn { body, .. } => body.iter().all(|s| s.is_pure_value_constructor()),
-                // And calling a record builder is a pure value constructor:
-                // `Some(1)`
-                fun => fun.is_record_builder(),
-            },
+            TypedExpr::Call { fun, arguments, .. } => {
+                (fun.is_record_literal() || fun.called_function_purity().is_pure())
+                    && arguments
+                        .iter()
+                        .all(|argument| argument.value.is_pure_value_constructor())
+            }
 
             // A block is pure if all the statements it's made of are pure.
             // For example `{ True 1 }`
@@ -802,20 +1008,196 @@ impl TypedExpr {
         }
     }
 
-    #[must_use]
-    pub fn is_record_builder(&self) -> bool {
+    /// Returns the purity of the left hand side of a function call. For example:
+    ///
+    /// ```gleam
+    /// io.println("Hello, world!")
+    /// ```
+    ///
+    /// Here, the left hand side is `io.println`, which is an impure function,
+    /// so we would return `Purity::Impure`.
+    ///
+    /// This does not check whether an expression is pure on its own; for that
+    /// see `is_pure_value_constructor`.
+    ///
+    pub fn called_function_purity(&self) -> Purity {
         match self {
-            TypedExpr::Call { fun, .. } => fun.is_record_builder(),
+            TypedExpr::Var { constructor, .. } => constructor.called_function_purity(),
+            TypedExpr::ModuleSelect { constructor, .. } => constructor.called_function_purity(),
+            TypedExpr::Fn { purity, .. } => *purity,
+
+            // While we can infer the purity of some of these expressions, such
+            // as `Case`, in this example:
+            //  ```gleam
+            // case x {
+            //   True -> io.println
+            //   False -> function.identity
+            // }("Hello")
+            // ```
+            //
+            // This kind of code is rare in real Gleam applications, and as this
+            // system is just used for warnings, it is unlikely that supporting
+            // them will provide any significant benefit to developer experience,
+            // so we just return `Unknown` for simplicity.
+            //
+            TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Echo { .. } => Purity::Unknown,
+
+            // The following expressions are all invalid on the left hand side
+            // of a call expression: `10()` is not valid Gleam. Therefore, we
+            // don't really care about any of these as they shouldn't appear in
+            // well typed Gleam code, and so we can just return `Unknown`.
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::Invalid { .. } => Purity::Unknown,
+        }
+    }
+
+    #[must_use]
+    /// Returns true if the value is a literal record builder like
+    /// `Wibble(1, 2)`, `module.Wobble("a")`
+    ///
+    pub fn is_record_literal(&self) -> bool {
+        match self {
+            TypedExpr::Call { fun, .. } => fun.is_record_literal(),
             TypedExpr::Var { constructor, .. } => constructor.variant.is_record(),
             TypedExpr::ModuleSelect {
                 constructor: ModuleValueConstructor::Record { .. },
                 ..
             } => true,
-            _ => false,
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => false,
         }
     }
 
-    /// If `self` is a record constructor, returns the nuber of arguments it
+    /// Returns true if the expression is a record constructor function/record constructor
+    /// with non-zero arity.
+    ///
+    pub fn is_record_constructor_function(&self) -> bool {
+        match self {
+            TypedExpr::Var {
+                constructor:
+                    ValueConstructor {
+                        variant: ValueConstructorVariant::Record { arity, .. },
+                        ..
+                    },
+                ..
+            } => *arity > 0,
+
+            TypedExpr::ModuleSelect {
+                constructor: ModuleValueConstructor::Record { arity, .. },
+                ..
+            } => *arity > 0,
+
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => false,
+        }
+    }
+
+    /// If the given expression is a literal record builder, this will return
+    /// index of the variant being built.
+    ///
+    pub fn variant_index(&self) -> Option<u16> {
+        match self {
+            TypedExpr::Call { fun, .. } => fun.variant_index(),
+            TypedExpr::Var {
+                constructor:
+                    ValueConstructor {
+                        variant: ValueConstructorVariant::Record { variant_index, .. },
+                        ..
+                    },
+                ..
+            }
+            | TypedExpr::ModuleSelect {
+                constructor: ModuleValueConstructor::Record { variant_index, .. },
+                ..
+            } => Some(*variant_index),
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => None,
+        }
+    }
+
+    #[must_use]
+    /// If `self` is a record constructor, returns the number of arguments it
     /// needs to be called. Otherwise, returns `None`.
     ///
     pub fn record_constructor_arity(&self) -> Option<u16> {
@@ -829,29 +1211,61 @@ impl TypedExpr {
                     },
                 ..
             } => Some(*arity),
-            _ => None,
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => None,
+        }
+    }
+
+    pub fn var_constructor(&self) -> Option<(&ValueConstructor, &EcoString)> {
+        if let TypedExpr::Var {
+            constructor, name, ..
+        } = self
+        {
+            Some((constructor, name))
+        } else {
+            None
         }
     }
 
     #[must_use]
     pub(crate) fn is_panic(&self) -> bool {
-        match self {
-            TypedExpr::Panic { .. } => true,
-            _ => false,
-        }
+        matches!(self, TypedExpr::Panic { .. })
     }
 
     pub(crate) fn call_arguments(&self) -> Option<&Vec<TypedCallArg>> {
-        match self {
-            TypedExpr::Call { args, .. } => Some(args),
-            _ => None,
+        if let TypedExpr::Call { arguments, .. } = self {
+            Some(arguments)
+        } else {
+            None
         }
     }
 
     pub(crate) fn fn_expression_body(&self) -> Option<&Vec1<TypedStatement>> {
-        match self {
-            TypedExpr::Fn { body, .. } => Some(body),
-            _ => None,
+        if let TypedExpr::Fn { body, .. } = self {
+            Some(body)
+        } else {
+            None
         }
     }
 
@@ -868,6 +1282,7 @@ impl TypedExpr {
             | TypedExpr::BinOp { location, .. }
             | TypedExpr::Case { location, .. }
             | TypedExpr::RecordAccess { location, .. }
+            | TypedExpr::PositionalAccess { location, .. }
             | TypedExpr::ModuleSelect { location, .. }
             | TypedExpr::Tuple { location, .. }
             | TypedExpr::TupleIndex { location, .. }
@@ -899,6 +1314,7 @@ impl TypedExpr {
             | TypedExpr::BinOp { .. }
             | TypedExpr::Case { .. }
             | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
             | TypedExpr::Tuple { .. }
             | TypedExpr::TupleIndex { .. }
             | TypedExpr::Todo { .. }
@@ -919,17 +1335,339 @@ impl TypedExpr {
         }
     }
 
-    pub(crate) fn is_invalid(&self) -> bool {
-        match self {
-            TypedExpr::Invalid { .. } => true,
-            _ => false,
+    pub fn is_invalid(&self) -> bool {
+        matches!(self, TypedExpr::Invalid { .. })
+    }
+
+    /// Checks that two expressions are written in the same (ignoring
+    /// whitespace).
+    ///
+    /// This is useful for the language server to know when it is possible to
+    /// merge two blocks of code together because they are the same.
+    /// Simply checking for equality of the AST nodes wouldn't work as those
+    /// also contain the source location (meaning that two expression that look
+    /// the same but are in different places would be considered different)!
+    ///
+    pub fn syntactically_eq(&self, other: &TypedExpr) -> bool {
+        match (self, other) {
+            (TypedExpr::Int { int_value: n, .. }, TypedExpr::Int { int_value: m, .. }) => n == m,
+            (TypedExpr::Int { .. }, _) => false,
+
+            (TypedExpr::Float { float_value: n, .. }, TypedExpr::Float { float_value: m, .. }) => {
+                n == m
+            }
+            (TypedExpr::Float { .. }, _) => false,
+
+            (TypedExpr::String { value, .. }, TypedExpr::String { value: other, .. }) => {
+                value == other
+            }
+            (TypedExpr::String { .. }, _) => false,
+
+            (
+                TypedExpr::Block { statements, .. },
+                TypedExpr::Block {
+                    statements: other, ..
+                },
+            ) => pairwise_all(statements, other, |(one, other)| {
+                one.syntactically_eq(other)
+            }),
+
+            (TypedExpr::Block { .. }, _) => false,
+
+            (
+                TypedExpr::List { elements, tail, .. },
+                TypedExpr::List {
+                    elements: other_elements,
+                    tail: other_tail,
+                    ..
+                },
+            ) => {
+                let tails_are_equal = match (tail, other_tail) {
+                    (Some(one), Some(other)) => one.syntactically_eq(other),
+                    (None, Some(_)) | (Some(_), None) => false,
+                    (None, None) => true,
+                };
+
+                tails_are_equal
+                    && pairwise_all(elements, other_elements, |(one, other)| {
+                        one.syntactically_eq(other)
+                    })
+            }
+            (TypedExpr::List { .. }, _) => false,
+
+            (TypedExpr::Var { name, .. }, TypedExpr::Var { name: other, .. }) => name == other,
+            (TypedExpr::Var { .. }, _) => false,
+
+            (
+                TypedExpr::Fn {
+                    arguments, body, ..
+                },
+                TypedExpr::Fn {
+                    arguments: other_arguments,
+                    body: other_body,
+                    ..
+                },
+            ) => {
+                let arguments_are_equal =
+                    pairwise_all(arguments, other_arguments, |(one, other)| {
+                        one.get_variable_name() == other.get_variable_name()
+                    });
+
+                let bodies_are_equal =
+                    pairwise_all(body, other_body, |(one, other)| one.syntactically_eq(other));
+
+                arguments_are_equal && bodies_are_equal
+            }
+            (TypedExpr::Fn { .. }, _) => false,
+
+            (
+                TypedExpr::Pipeline {
+                    first_value,
+                    assignments,
+                    finally,
+                    ..
+                },
+                TypedExpr::Pipeline {
+                    first_value: other_first_value,
+                    assignments: other_assignments,
+                    finally: other_finally,
+                    ..
+                },
+            ) => {
+                first_value.value.syntactically_eq(&other_first_value.value)
+                    && pairwise_all(assignments, other_assignments, |(one, other)| {
+                        one.0.value.syntactically_eq(&other.0.value)
+                    })
+                    && finally.syntactically_eq(other_finally)
+            }
+            (TypedExpr::Pipeline { .. }, _) => false,
+
+            (
+                TypedExpr::Call { fun, arguments, .. },
+                TypedExpr::Call {
+                    fun: other_fun,
+                    arguments: other_arguments,
+                    ..
+                },
+            ) => {
+                fun.syntactically_eq(other_fun)
+                    && pairwise_all(arguments, other_arguments, |(one, other)| {
+                        one.label == other.label && one.value.syntactically_eq(&other.value)
+                    })
+            }
+            (TypedExpr::Call { .. }, _) => false,
+
+            (
+                TypedExpr::BinOp {
+                    name, left, right, ..
+                },
+                TypedExpr::BinOp {
+                    name: other_name,
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => {
+                name == other_name
+                    && left.syntactically_eq(other_left)
+                    && right.syntactically_eq(other_right)
+            }
+            (TypedExpr::BinOp { .. }, _) => false,
+
+            (
+                TypedExpr::Case {
+                    subjects, clauses, ..
+                },
+                TypedExpr::Case {
+                    subjects: other_subjects,
+                    clauses: other_clauses,
+                    ..
+                },
+            ) => {
+                pairwise_all(subjects, other_subjects, |(one, other)| {
+                    one.syntactically_eq(other)
+                }) && pairwise_all(clauses, other_clauses, |(one, other)| {
+                    one.syntactically_eq(other)
+                })
+            }
+            (TypedExpr::Case { .. }, _) => false,
+
+            (
+                TypedExpr::RecordAccess { label, record, .. },
+                TypedExpr::RecordAccess {
+                    label: other_label,
+                    record: other_record,
+                    ..
+                },
+            ) => label == other_label && record.syntactically_eq(other_record),
+            (TypedExpr::RecordAccess { .. }, _) => false,
+
+            (
+                TypedExpr::ModuleSelect {
+                    label,
+                    module_alias,
+                    ..
+                },
+                TypedExpr::ModuleSelect {
+                    label: other_label,
+                    module_alias: other_module_alias,
+                    ..
+                },
+            ) => label == other_label && module_alias == other_module_alias,
+            (TypedExpr::ModuleSelect { .. }, _) => false,
+
+            (
+                TypedExpr::Tuple { elements, .. },
+                TypedExpr::Tuple {
+                    elements: other_elements,
+                    ..
+                },
+            ) => pairwise_all(elements, other_elements, |(one, other)| {
+                one.syntactically_eq(other)
+            }),
+            (TypedExpr::Tuple { .. }, _) => false,
+
+            (
+                TypedExpr::TupleIndex { index, tuple, .. },
+                TypedExpr::TupleIndex {
+                    index: other_index,
+                    tuple: other_tuple,
+                    ..
+                },
+            ) => index == other_index && tuple.syntactically_eq(other_tuple),
+            (TypedExpr::TupleIndex { .. }, _) => false,
+
+            (
+                TypedExpr::Todo { message, kind, .. },
+                TypedExpr::Todo {
+                    message: other_message,
+                    kind: other_kind,
+                    ..
+                },
+            ) => {
+                let messages_are_equal = match (message, other_message) {
+                    (Some(one), Some(other)) => one.syntactically_eq(other),
+                    (None, None) => true,
+                    (None, Some(_)) | (Some(_), None) => false,
+                };
+                messages_are_equal && kind == other_kind
+            }
+            (TypedExpr::Todo { .. }, _) => false,
+
+            (
+                TypedExpr::Panic { message, .. },
+                TypedExpr::Panic {
+                    message: message_other,
+                    ..
+                },
+            ) => match (message, message_other) {
+                (None, None) => true,
+                (None, Some(_)) | (Some(_), None) => false,
+                (Some(one), Some(other)) => one.syntactically_eq(other),
+            },
+            (TypedExpr::Panic { .. }, _) => false,
+
+            (
+                TypedExpr::Echo {
+                    expression,
+                    message,
+                    ..
+                },
+                TypedExpr::Echo {
+                    expression: other_expression,
+                    message: other_message,
+                    ..
+                },
+            ) => {
+                let messages_are_equal = match (message, other_message) {
+                    (None, None) => true,
+                    (None, Some(_)) | (Some(_), None) => false,
+                    (Some(one), Some(other)) => one.syntactically_eq(other),
+                };
+                let expressions_are_equal = match (expression, other_expression) {
+                    (None, None) => true,
+                    (None, Some(_)) | (Some(_), None) => false,
+                    (Some(one), Some(other)) => one.syntactically_eq(other),
+                };
+                messages_are_equal && expressions_are_equal
+            }
+            (TypedExpr::Echo { .. }, _) => false,
+
+            (
+                TypedExpr::BitArray { segments, .. },
+                TypedExpr::BitArray {
+                    segments: other_segments,
+                    ..
+                },
+            ) => pairwise_all(segments, other_segments, |(one, other)| {
+                one.syntactically_eq(other)
+            }),
+            (TypedExpr::BitArray { .. }, _) => false,
+
+            (
+                TypedExpr::RecordUpdate {
+                    constructor,
+                    arguments,
+                    ..
+                },
+                TypedExpr::RecordUpdate {
+                    constructor: other_constructor,
+                    arguments: other_arguments,
+                    ..
+                },
+            ) => {
+                constructor.syntactically_eq(other_constructor)
+                    && pairwise_all(arguments, other_arguments, |(one, other)| {
+                        one.label == other.label && one.value.syntactically_eq(&other.value)
+                    })
+            }
+            (TypedExpr::RecordUpdate { .. }, _) => false,
+
+            (
+                TypedExpr::NegateBool { value, .. },
+                TypedExpr::NegateBool {
+                    value: other_value, ..
+                },
+            ) => value.syntactically_eq(other_value),
+            (TypedExpr::NegateBool { .. }, _) => false,
+
+            (TypedExpr::NegateInt { value: n, .. }, TypedExpr::NegateInt { value: m, .. }) => {
+                n.syntactically_eq(m)
+            }
+            (TypedExpr::NegateInt { .. }, _) => false,
+
+            (TypedExpr::PositionalAccess { .. }, _) => false,
+            (TypedExpr::Invalid { .. }, _) => false,
         }
+    }
+
+    pub fn is_todo_with_no_message(&self) -> bool {
+        matches!(self, TypedExpr::Todo { message: None, .. })
     }
 }
 
+/// Checks that two slices have the same number of item and that the given
+/// predicate holds for all pairs of items.
+///
+pub(crate) fn pairwise_all<A>(one: &[A], other: &[A], function: impl Fn((&A, &A)) -> bool) -> bool {
+    one.len() == other.len() && one.iter().zip(other).all(function)
+}
+
+fn is_non_zero_number(value: &EcoString) -> bool {
+    use regex::Regex;
+    static NON_ZERO: OnceLock<Regex> = OnceLock::new();
+
+    NON_ZERO
+        .get_or_init(|| Regex::new(r"[1-9]").expect("NON_ZERO regex"))
+        .is_match(value)
+}
+
 impl<'a> From<&'a TypedExpr> for Located<'a> {
-    fn from(value: &'a TypedExpr) -> Self {
-        Located::Expression(value)
+    fn from(expression: &'a TypedExpr) -> Self {
+        Located::Expression {
+            expression,
+            position: ExpressionPosition::Expression,
+        }
     }
 }
 
@@ -945,13 +1683,23 @@ impl HasType for TypedExpr {
     }
 }
 
-impl crate::bit_array::GetLiteralValue for TypedExpr {
-    fn as_int_literal(&self) -> Option<i64> {
-        if let TypedExpr::Int { value: val, .. } = self {
-            if let Ok(val) = val.parse::<i64>() {
-                return Some(val);
-            }
+impl bit_array::GetLiteralValue for TypedExpr {
+    fn as_int_literal(&self) -> Option<BigInt> {
+        if let TypedExpr::Int { int_value, .. } = self {
+            Some(int_value.clone())
+        } else {
+            None
         }
-        None
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum InvalidExpression {
+    ModuleSelect {
+        module_name: EcoString,
+        label: EcoString,
+    },
+    UnknownVariable {
+        name: EcoString,
+    },
 }

@@ -15,8 +15,10 @@ pub fn main() {
 
 
 ----- WARNING
-warning: Unused value
+warning: Unused literal
   ┌─ /src/warning/wrn.gleam:7:3
   │
 7 │   Thing(1)
   │   ^^^^^^^^ This value is never used
+
+Hint: You can safely remove it.

@@ -14,10 +14,10 @@ pub type X = One
 
 ----- ERROR
 error: Duplicate type definition
-  ┌─ /src/one/two.gleam:1:13
+  ┌─ /src/one/two.gleam:1:32
   │
 1 │ import one.{type One as MyOne, type One as MyOne}
-  │             ^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^ Redefined here
+  │             -----------------  ^^^^^^^^^^^^^^^^^ Redefined here
   │             │                   
   │             First defined here
 

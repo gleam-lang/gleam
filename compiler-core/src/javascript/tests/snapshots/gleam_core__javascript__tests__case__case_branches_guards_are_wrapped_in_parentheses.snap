@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-expression: "\nfn anything() -> a {\n  case [] {\n    [a] if False || True -> a\n    _ -> anything()\n  }\n}\n"
+expression: "\npub fn anything() -> a {\n  case [] {\n    [a] if False || True -> a\n    _ -> anything()\n  }\n}\n"
 ---
 ----- SOURCE CODE
 
-fn anything() -> a {
+pub fn anything() -> a {
   case [] {
     [a] if False || True -> a
     _ -> anything()
@@ -13,16 +13,17 @@ fn anything() -> a {
 
 
 ----- COMPILED JAVASCRIPT
-import { toList } from "../gleam.mjs";
+import { toList, Empty as $Empty } from "../gleam.mjs";
 
-function anything() {
+export function anything() {
   while (true) {
     let $ = toList([]);
-    if ($.hasLength(1) && (false || true)) {
-      let a = $.head;
-      return a;
-    } else {
-      
+    if (!($ instanceof $Empty)) {
+      let $1 = $.tail;
+      if ($1 instanceof $Empty && false || true) {
+        let a = $.head;
+        return a;
+      }
     }
   }
 }

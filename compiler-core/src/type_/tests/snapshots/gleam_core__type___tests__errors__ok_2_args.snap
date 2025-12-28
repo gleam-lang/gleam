@@ -6,6 +6,20 @@ expression: "let Ok(1, x) = 1"
 let Ok(1, x) = 1
 
 ----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:5
+  │
+1 │ let Ok(1, x) = 1
+  │     ^^^^^^^^
+
+Expected type:
+
+    Int
+
+Found type:
+
+    Result(Int, a)
+
 error: Incorrect arity
   ┌─ /src/one/two.gleam:1:5
   │

@@ -1,5 +1,5 @@
 import one/one.{A, A as C, B, B as D, User, User as XUser}
-import one/one as xone
+import one/two as aliased
 
 /// For these statements we use the records in a qualified fashion
 pub const qualified_const_a = one.A
@@ -14,13 +14,13 @@ pub fn qualified_fn_b() {
   qualified_const_b
 }
 
-pub const qualified_aliased_const_a = xone.A
+pub const qualified_aliased_const_a = aliased.A
 
 pub fn qualified_aliased_fn_a() {
   qualified_aliased_const_a
 }
 
-pub const qualified_aliased_const_b = xone.B(xone.A, xone.A)
+pub const qualified_aliased_const_b = aliased.B(aliased.A, aliased.A)
 
 pub fn qualified_aliased_fn_b() {
   qualified_aliased_const_b
@@ -68,7 +68,7 @@ pub fn destructure_qualified(user) {
 }
 
 pub fn destructure_qualified_aliased(user) {
-  let xone.User(name: name, score: score) = user
+  let aliased.User(name: name, score: score) = user
   #(name, score)
 }
 
@@ -88,7 +88,7 @@ pub fn update_qualified(user) {
 }
 
 pub fn update_qualified_aliased(user) {
-  xone.User(..user, name: "wibble")
+  aliased.User(..user, name: "wibble")
 }
 
 pub fn update_unqualified(user) {

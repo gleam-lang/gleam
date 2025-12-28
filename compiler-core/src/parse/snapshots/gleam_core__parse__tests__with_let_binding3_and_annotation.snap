@@ -39,9 +39,12 @@ expression: "let assert [x]: List(Int) = [2]"
                         },
                         name: "x",
                         type_: (),
-                        origin: Variable(
-                            "x",
-                        ),
+                        origin: VariableOrigin {
+                            syntax: Variable(
+                                "x",
+                            ),
+                            declaration: LetPattern,
+                        },
                     },
                 ],
                 tail: None,
@@ -49,10 +52,15 @@ expression: "let assert [x]: List(Int) = [2]"
             },
             kind: Assert {
                 location: SrcSpan {
-                    start: 4,
+                    start: 0,
                     end: 10,
                 },
+                assert_keyword_start: 4,
                 message: None,
+            },
+            compiled_case: CompiledCase {
+                tree: Fail,
+                subject_variables: [],
             },
             annotation: Some(
                 Constructor(
@@ -60,6 +68,10 @@ expression: "let assert [x]: List(Int) = [2]"
                         location: SrcSpan {
                             start: 16,
                             end: 25,
+                        },
+                        name_location: SrcSpan {
+                            start: 16,
+                            end: 20,
                         },
                         module: None,
                         name: "List",
@@ -70,12 +82,20 @@ expression: "let assert [x]: List(Int) = [2]"
                                         start: 21,
                                         end: 24,
                                     },
+                                    name_location: SrcSpan {
+                                        start: 21,
+                                        end: 24,
+                                    },
                                     module: None,
                                     name: "Int",
                                     arguments: [],
+                                    start_parentheses: None,
                                 },
                             ),
                         ],
+                        start_parentheses: Some(
+                            20,
+                        ),
                     },
                 ),
             ),

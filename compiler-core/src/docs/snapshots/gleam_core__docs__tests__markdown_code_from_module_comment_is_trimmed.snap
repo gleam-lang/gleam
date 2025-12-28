@@ -228,8 +228,6 @@ expression: "compile(config, modules)"
 
 
 
-
-
       </nav>
 
       <main class="content">
@@ -242,8 +240,6 @@ expression: "compile(config, modules)"
 <pre><code>wibble
   |&gt; wobble
 </code></pre>
-
-
 
 
 
@@ -321,13 +317,16 @@ expression: "compile(config, modules)"
           elem.classList.add("gleam");
         }
       });
+      hljs.configure({
+        cssSelector: 'pre code:not(.hljs-ignore)'
+      })
       hljs.highlightAll();
     </script>
 
     <script src="./js/lunr.min.js?v=GLEAM_VERSION_HERE"></script>
     <script src="./js/index.js?v=0"></script>
     <script>
-      fetch("./search_data.json?v=0")
+      fetch("./search-data.json?v=0")
         .then(response => response.json())
         .then(data => window.Gleam.initSearch(data));
     </script>

@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "pub type Animal { Animal(species: String) }\n\n        pub const alice = Animal(\"Cat\")\n        pub const dog = Animal(..alice)"
+---
+----- SOURCE CODE
+pub type Animal { Animal(species: String) }
+
+        pub const alice = Animal("Cat")
+        pub const dog = Animal(..alice)
+
+----- WARNING
+warning: Fieldless record update
+  ┌─ /src/warning/wrn.gleam:4:25
+  │
+4 │         pub const dog = Animal(..alice)
+  │                         ^^^^^^^^^^^^^^^ This record update doesn't change any fields
+
+Hint: Add some fields to change or replace it with the record itself.

@@ -1,0 +1,34 @@
+---
+source: compiler-core/src/erlang/tests/bit_arrays.rs
+expression: "\npub fn main() -> Nil {\n  let wibble = <<\"\\u{00A9}wibble\":utf8>>\n  let _bits = case wibble {\n    <<\"\\u{00A9}\":utf8, rest: bits>> -> rest\n    _ -> wibble\n  }\n  Nil\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() -> Nil {
+  let wibble = <<"\u{00A9}wibble":utf8>>
+  let _bits = case wibble {
+    <<"\u{00A9}":utf8, rest: bits>> -> rest
+    _ -> wibble
+  }
+  Nil
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec main() -> nil.
+main() ->
+    Wibble = <<"\x{00A9}wibble"/utf8>>,
+    _ = case Wibble of
+        <<"\x{00A9}"/utf8, Rest/bitstring>> ->
+            Rest;
+
+        _ ->
+            Wibble
+    end,
+    nil.

@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/javascript/tests/todo.rs
+assertion_line: 78
+expression: "\npub fn main() {\n  fn() { todo }\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub fn main() {
+  fn() { todo }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+export function main() {
+  return () => {
+    throw makeError(
+      "todo",
+      FILEPATH,
+      "my/mod",
+      3,
+      "main",
+      "`todo` expression evaluated. This code has not yet been implemented.",
+      {}
+    )
+  };
+}

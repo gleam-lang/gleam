@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+assertion_line: 20
+expression: "\npub fn go(x) {\n  case #(1, 2) {\n    #(1, a) if a == 2 -> 1\n    #(_, _) -> 2\n  }\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  case #(1, 2) {
+    #(1, a) if a == 2 -> 1
+    #(_, _) -> 2
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function go(x) {
+  let $ = [1, 2];
+  let $1 = $[0];
+  if ($1 === 1) {
+    let a = $[1];
+    if (a === 2) {
+      return 1;
+    } else {
+      return 2;
+    }
+  } else {
+    return 2;
+  }
+}

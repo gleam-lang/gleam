@@ -330,3 +330,25 @@ fn comment_middle_of_inline_function_body() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5004
+#[test]
+fn comment_in_tuple_return_type() {
+    assert_format_rewrite!(
+        r#"pub fn main() -> #(
+  // This is a string
+  String, // This is an awesome string
+) {
+  todo
+}
+"#,
+        r#"pub fn main() -> #(
+  String,
+  // This is a string
+  // This is an awesome string
+) {
+  todo
+}
+"#
+    );
+}

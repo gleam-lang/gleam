@@ -1,6 +1,6 @@
 # Compiler WASM
 
-```shell
+```sh
 # Install the build tool with cargo or brew etc
 cargo install wasm-pack
 

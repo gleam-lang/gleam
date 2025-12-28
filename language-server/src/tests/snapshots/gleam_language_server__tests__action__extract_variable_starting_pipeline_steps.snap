@@ -1,0 +1,29 @@
+---
+source: language-server/src/tests/action.rs
+assertion_line: 9619
+expression: "fn map(value, fn_over_value) { todo }\n\npub fn main() {\n  1\n  |> Ok\n  |> map(fn(value) { value + 2 })\n}"
+snapshot_kind: text
+---
+----- BEFORE ACTION
+fn map(value, fn_over_value) { todo }
+
+pub fn main() {
+  1
+  ▔
+  |> Ok
+▔▔▔▔▔↑ 
+  |> map(fn(value) { value + 2 })
+}
+
+
+----- AFTER ACTION
+fn map(value, fn_over_value) { todo }
+
+pub fn main() {
+  let result =
+    1
+  |> Ok
+
+  result
+  |> map(fn(value) { value + 2 })
+}

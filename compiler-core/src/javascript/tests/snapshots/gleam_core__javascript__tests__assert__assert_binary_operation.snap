@@ -1,0 +1,43 @@
+---
+source: compiler-core/src/javascript/tests/assert.rs
+assertion_line: 28
+expression: "\npub fn main() {\n  let x = True\n  assert x || False\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let x = True
+  assert x || False
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+export function main() {
+  let x = true;
+  
+  if (!(x || false)) {
+    throw makeError(
+      "assert",
+      FILEPATH,
+      "my/mod",
+      4,
+      "main",
+      "Assertion failed.",
+      {
+        kind: "binary_operator",
+        operator: "||",
+        left: { kind: "expression", value: false, start: 41, end: 42 },
+        right: { kind: "literal", value: false, start: 46, end: 51 },
+        start: 34,
+        end: 51,
+        expression_start: 41
+      }
+    )
+  }
+  return undefined;
+}

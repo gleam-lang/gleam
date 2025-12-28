@@ -12,23 +12,27 @@ pub fn main() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 
 -file("project/test/my/mod.gleam", 1).
 -spec main() -> integer().
 main() ->
     A = 1,
-    _assert_subject = <<1, A>>,
-    <<B, 1>> = case _assert_subject of
-        <<_, 1>> -> _assert_subject;
+    B@1 = case <<1, A>> of
+        <<B, 1>> -> B;
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
-                        value => _assert_fail,
+                        file => <<?FILEPATH/utf8>>,
                         module => <<"my/mod"/utf8>>,
                         function => <<"main"/utf8>>,
-                        line => 3})
+                        line => 3,
+                        value => _assert_fail,
+                        start => 30,
+                        'end' => 60,
+                        pattern_start => 41,
+                        pattern_end => 49})
     end,
-    B.
+    B@1.

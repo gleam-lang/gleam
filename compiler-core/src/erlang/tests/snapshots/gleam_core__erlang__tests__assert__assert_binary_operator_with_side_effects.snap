@@ -1,0 +1,77 @@
+---
+source: compiler-core/src/erlang/tests/assert.rs
+expression: "\nfn wibble(a, b) {\n  let result = a + b\n  result == 10\n}\n\npub fn go(x) {\n  assert True && wibble(1, 4)\n}\n"
+---
+----- SOURCE CODE
+
+fn wibble(a, b) {
+  let result = a + b
+  result == 10
+}
+
+pub fn go(x) {
+  assert True && wibble(1, 4)
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([go/1]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec wibble(integer(), integer()) -> boolean().
+wibble(A, B) ->
+    Result = A + B,
+    Result =:= 10.
+
+-file("project/test/my/mod.gleam", 7).
+-spec go(any()) -> nil.
+go(X) ->
+    case true of
+        true -> case wibble(1, 4) of
+                true -> nil;
+                false -> erlang:error(#{gleam_error => assert,
+                        message => <<"Assertion failed."/utf8>>,
+                        file => <<?FILEPATH/utf8>>,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"go"/utf8>>,
+                        line => 8,
+                        kind => binary_operator,
+                        operator => '&&',
+                        left => #{kind => literal,
+                            value => true,
+                            start => 82,
+                            'end' => 86
+                            },
+                        right => #{kind => expression,
+                            value => false,
+                            start => 90,
+                            'end' => 102
+                            },
+                        start => 75,
+                        'end' => 102,
+                        expression_start => 82})
+            end;
+        false -> erlang:error(#{gleam_error => assert,
+                message => <<"Assertion failed."/utf8>>,
+                file => <<?FILEPATH/utf8>>,
+                module => <<"my/mod"/utf8>>,
+                function => <<"go"/utf8>>,
+                line => 8,
+                kind => binary_operator,
+                operator => '&&',
+                left => #{kind => literal,
+                    value => false,
+                    start => 82,
+                    'end' => 86
+                    },
+                right => #{kind => unevaluated,
+                    start => 90,
+                    'end' => 102
+                    },
+                start => 75,
+                'end' => 102,
+                expression_start => 82})
+    end.

@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 1860
+expression: "\npub fn go(x) {\n  case x {\n    <<_, _, _:bytes>> -> 1\n    _ -> 2\n  }\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  case x {
+    <<_, _, _:bytes>> -> 1
+    _ -> 2
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function go(x) {
+  if (x.bitSize >= 8 && x.bitSize >= 16 && (x.bitSize - 16) % 8 === 0) {
+    return 1;
+  } else {
+    return 2;
+  }
+}

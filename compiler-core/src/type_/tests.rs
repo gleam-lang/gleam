@@ -3,7 +3,7 @@ use crate::{
     analyse::TargetSupport,
     ast::{TypedModule, TypedStatement, UntypedExpr, UntypedModule},
     build::{Origin, Outcome, Target},
-    config::PackageConfig,
+    config::{GleamVersion, PackageConfig},
     error::Error,
     type_::{build_prelude, expression::FunctionDefinition, pretty::Printer},
     uid::UniqueIdGenerator,
@@ -11,7 +11,7 @@ use crate::{
 };
 use ecow::EcoString;
 use itertools::Itertools;
-use pubgrub::range::Range;
+use pubgrub::Range;
 use std::rc::Rc;
 use vec1::Vec1;
 
@@ -22,6 +22,7 @@ mod assert;
 mod assignments;
 mod conditional_compilation;
 mod custom_types;
+mod dead_code_detection;
 mod echo;
 mod errors;
 mod exhaustiveness;
@@ -29,6 +30,7 @@ mod externals;
 mod functions;
 mod guards;
 mod imports;
+mod let_assert;
 mod pipes;
 mod pretty;
 mod target_implementations;
@@ -46,34 +48,15 @@ macro_rules! assert_infer {
 }
 
 #[macro_export]
-macro_rules! assert_infer_with_module {
-    (
-        ($name1:expr, $module_src1:literal),
-        ($name2:expr, $module_src2:literal),
-        $src:expr, $module:expr $(,)?
-    ) => {
-        let constructors = $crate::type_::tests::infer_module(
-            $src,
-            vec![
-                ("thepackage", $name1, $module_src1),
-                ("thepackage", $name2, $module_src2),
-            ],
-        );
-        let expected = $crate::type_::tests::stringify_tuple_strs($module);
-
-        assert_eq!(($src, constructors), ($src, expected));
-    };
-    (($name:expr, $module_src:literal), $src:expr, $module:expr $(,)?) => {
-        let constructors =
-            $crate::type_::tests::infer_module($src, vec![("thepackage", $name, $module_src)]);
-        let expected = $crate::type_::tests::stringify_tuple_strs($module);
-
-        assert_eq!(($src, constructors), ($src, expected));
-    };
-}
-
-#[macro_export]
 macro_rules! assert_module_infer {
+    ($(($name:expr, $module_src:literal)),+, $src:literal, $module:expr $(,)?) => {
+        let constructors =
+            $crate::type_::tests::infer_module($src, vec![$(("thepackage", $name, $module_src)),*]);
+        let expected = $crate::type_::tests::stringify_tuple_strs($module);
+
+        assert_eq!(($src, constructors), ($src, expected));
+    };
+
     ($src:expr, $module:expr $(,)?) => {{
         let constructors = $crate::type_::tests::infer_module($src, vec![]);
         let expected = $crate::type_::tests::stringify_tuple_strs($module);
@@ -100,6 +83,38 @@ macro_rules! assert_module_error {
     ($src:expr) => {
         let error = $crate::type_::tests::module_error($src, vec![]);
         let output = format!("----- SOURCE CODE\n{}\n\n----- ERROR\n{}", $src, error);
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
+
+    ($(($name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
+        let error = $crate::type_::tests::module_error(
+            $src,
+            vec![
+                $(("thepackage", $name, $module_src)),*
+            ],
+        );
+
+        let mut output = String::from("----- SOURCE CODE\n");
+        for (name, src) in [$(($name, $module_src)),*] {
+            output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
+        }
+        output.push_str(&format!("-- main.gleam\n{}\n\n----- ERROR\n{error}", $src));
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
+
+    ($(($package:literal, $name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
+        let error = $crate::type_::tests::module_error(
+            $src,
+            vec![
+                $(($package, $name, $module_src)),*
+            ],
+        );
+
+        let mut output = String::from("----- SOURCE CODE\n");
+        for (name, src) in [$(($name, $module_src)),*] {
+            output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
+        }
+        output.push_str(&format!("-- main.gleam\n{}\n\n----- ERROR\n{error}", $src));
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
@@ -147,7 +162,7 @@ macro_rules! assert_error {
         let (error, names) = $crate::type_::tests::compile_statement_sequence($src)
             .expect_err("should infer an error");
         let error = $crate::error::Error::Type {
-            names,
+            names: Box::new(names),
             src: $src.into(),
             path: camino::Utf8PathBuf::from("/src/one/two.gleam"),
             errors: error,
@@ -156,57 +171,6 @@ macro_rules! assert_error {
         let output = format!(
             "----- SOURCE CODE\n{}\n\n----- ERROR\n{}",
             $src, error_string
-        );
-        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
-    };
-}
-
-#[macro_export]
-macro_rules! assert_with_module_error {
-    (($name:expr, $module_src:literal), $src:expr $(,)?) => {
-        let error =
-            $crate::type_::tests::module_error($src, vec![("thepackage", $name, $module_src)]);
-        let output = format!(
-            "----- SOURCE CODE
--- {}.gleam
-{}
-
--- main.gleam
-{}
-
------ ERROR
-{}",
-            $name, $module_src, $src, error
-        );
-        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
-    };
-
-    (
-        ($name:expr, $module_src:literal),
-        ($name2:expr, $module_src2:literal),
-        $src:expr $(,)?
-    ) => {
-        let error = $crate::type_::tests::module_error(
-            $src,
-            vec![
-                ("thepackage", $name, $module_src),
-                ("thepackage", $name2, $module_src2),
-            ],
-        );
-        let output = format!(
-            "----- SOURCE CODE
--- {}.gleam
-{}
-
--- {}.gleam
-{}
-
--- main.gleam
-{}
-
------ ERROR
-{}",
-            $name, $module_src, $name2, $module_src2, $src, error
         );
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
@@ -227,8 +191,7 @@ fn get_warnings(
         target,
         TargetSupport::NotEnforced,
         gleam_version,
-    )
-    .expect("Compilation should succeed");
+    );
     warnings.take().into_iter().collect_vec()
 }
 
@@ -250,27 +213,6 @@ fn print_warnings(warnings: Vec<crate::warning::Warning>) -> String {
 }
 
 #[macro_export]
-macro_rules! assert_warnings_with_imports {
-    ($(($name:literal, $module_src:literal)),+; $src:literal,) => {
-        let warning = $crate::type_::tests::get_printed_warnings(
-            $src,
-            vec![
-                $(("thepackage", $name, $module_src)),*
-            ],
-            crate::build::Target::Erlang,
-            None
-        );
-
-        let mut output = String::from("----- SOURCE CODE\n");
-        for (name, src) in [$(($name, $module_src)),*] {
-            output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
-        }
-        output.push_str(&format!("-- main.gleam\n{}\n\n----- WARNING\n{warning}", $src));
-        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
-    };
-}
-
-#[macro_export]
 macro_rules! assert_warning {
     ($src:expr) => {
         let warning = $crate::type_::tests::get_printed_warnings($src, vec![], crate::build::Target::Erlang, None);
@@ -279,15 +221,22 @@ macro_rules! assert_warning {
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 
-    ($(($name:expr, $module_src:literal)),+, $src:expr) => {
+    ($(($name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
         let warning = $crate::type_::tests::get_printed_warnings(
             $src,
-            vec![$(("thepackage", $name, $module_src)),*],
+            vec![
+                $(("thepackage", $name, $module_src)),*
+            ],
             crate::build::Target::Erlang,
             None
         );
         assert!(!warning.is_empty());
-        let output = format!("----- SOURCE CODE\n{}\n\n----- WARNING\n{}", $src, warning);
+
+        let mut output = String::from("----- SOURCE CODE\n");
+        for (name, src) in [$(($name, $module_src)),*] {
+            output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
+        }
+        output.push_str(&format!("-- main.gleam\n{}\n\n----- WARNING\n{warning}", $src));
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 
@@ -299,7 +248,12 @@ macro_rules! assert_warning {
             None
         );
         assert!(!warning.is_empty());
-        let output = format!("----- SOURCE CODE\n{}\n\n----- WARNING\n{}", $src, warning);
+
+        let mut output = String::from("----- SOURCE CODE\n");
+        for (name, src) in [$(($name, $module_src)),*] {
+            output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
+        }
+        output.push_str(&format!("-- main.gleam\n{}\n\n----- WARNING\n{warning}", $src));
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
@@ -381,6 +335,15 @@ macro_rules! assert_no_warnings {
         let warnings = $crate::type_::tests::get_warnings($src, vec![], crate::build::Target::Erlang, None);
         assert_eq!(warnings, vec![]);
     };
+    ($(($name:expr, $module_src:literal)),+, $src:expr $(,)?) => {
+        let warnings = $crate::type_::tests::get_warnings(
+            $src,
+            vec![$(("thepackage", $name, $module_src)),*],
+            crate::build::Target::Erlang,
+            None,
+        );
+        assert_eq!(warnings, vec![]);
+    };
     ($(($package:expr, $name:expr, $module_src:literal)),+, $src:expr $(,)?) => {
         let warnings = $crate::type_::tests::get_warnings(
             $src,
@@ -404,15 +367,19 @@ fn compile_statement_sequence(
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
     let mut problems = Problems::new();
-    let mut environment = Environment::new(
+    let dev_dependencies = HashSet::new();
+    let mut environment = EnvironmentArguments {
         ids,
-        "thepackage".into(),
-        None,
-        "themodule".into(),
-        Target::Erlang,
-        &modules,
-        TargetSupport::Enforced,
-    );
+        current_package: "thepackage".into(),
+        gleam_version: None,
+        current_module: "themodule".into(),
+        target: Target::Erlang,
+        importable_modules: &modules,
+        target_support: TargetSupport::Enforced,
+        current_origin: Origin::Src,
+        dev_dependencies: &dev_dependencies,
+    }
+    .build();
     let res = ExprTyper::new(
         &mut environment,
         FunctionDefinition {
@@ -487,7 +454,7 @@ pub fn compile_module(
     src: &str,
     warnings: Option<Rc<dyn WarningEmitterIO>>,
     dep: Vec<DependencyModule<'_>>,
-) -> Result<TypedModule, (Vec<crate::type_::Error>, Names)> {
+) -> Outcome<TypedModule, Vec1<super::Error>> {
     compile_module_with_opts(
         module_name,
         src,
@@ -507,7 +474,7 @@ pub fn compile_module_with_opts(
     target: Target,
     target_support: TargetSupport,
     gleam_version: Option<Range<Version>>,
-) -> Result<TypedModule, (Vec<crate::type_::Error>, Names)> {
+) -> Outcome<TypedModule, Vec1<super::Error>> {
     let ids = UniqueIdGenerator::new();
     let mut modules = im::HashMap::new();
 
@@ -537,6 +504,7 @@ pub fn compile_module_with_opts(
             importable_modules: &modules,
             warnings: &TypeWarningEmitter::null(),
             direct_dependencies: &HashMap::new(),
+            dev_dependencies: &HashSet::new(),
             target_support,
             package_config: &config,
         }
@@ -555,26 +523,21 @@ pub fn compile_module_with_opts(
     ast.name = module_name.into();
     let mut config = PackageConfig::default();
     config.name = "thepackage".into();
-    config.gleam_version = gleam_version;
+    config.gleam_version = gleam_version.map(|v| GleamVersion::from_pubgrub(v));
 
     let warnings = TypeWarningEmitter::new("/src/warning/wrn.gleam".into(), src.into(), emitter);
-    let inference_result = crate::analyse::ModuleAnalyzerConstructor::<()> {
+    crate::analyse::ModuleAnalyzerConstructor::<()> {
         target,
         ids: &ids,
         origin: Origin::Src,
         importable_modules: &modules,
         warnings: &warnings,
         direct_dependencies: &direct_dependencies,
+        dev_dependencies: &HashSet::from_iter(["dev_dependency".into()]),
         target_support: TargetSupport::Enforced,
         package_config: &config,
     }
-    .infer_module(ast, LineNumbers::new(src), "".into());
-
-    match inference_result {
-        Outcome::Ok(ast) => Ok(ast),
-        Outcome::PartialFailure(ast, errors) => Err((errors.into(), ast.names)),
-        Outcome::TotalFailure(error) => Err((error.into(), Default::default())),
-    }
+    .infer_module(ast, LineNumbers::new(src), "".into())
 }
 
 pub fn module_error(src: &str, deps: Vec<DependencyModule<'_>>) -> String {
@@ -586,7 +549,7 @@ pub fn module_error_with_target(
     deps: Vec<DependencyModule<'_>>,
     target: Target,
 ) -> String {
-    let (error, names) = compile_module_with_opts(
+    let outcome = compile_module_with_opts(
         "themodule",
         src,
         None,
@@ -594,10 +557,16 @@ pub fn module_error_with_target(
         target,
         TargetSupport::NotEnforced,
         None,
-    )
-    .expect_err("should infer an error");
+    );
+
+    let (error, names) = match outcome {
+        Outcome::Ok(_) => panic!("should infer an error"),
+        Outcome::PartialFailure(ast, errors) => (errors.into(), ast.names),
+        Outcome::TotalFailure(errors) => (errors.into(), Default::default()),
+    };
+
     let error = Error::Type {
-        names,
+        names: Box::new(names),
         src: src.into(),
         path: Utf8PathBuf::from("/src/one/two.gleam"),
         errors: Vec1::try_from_vec(error).expect("should have at least one error"),
@@ -614,7 +583,7 @@ pub fn internal_module_error_with_target(
     deps: Vec<DependencyModule<'_>>,
     target: Target,
 ) -> String {
-    let (error, names) = compile_module_with_opts(
+    let outcome = compile_module_with_opts(
         "thepackage/internal/themodule",
         src,
         None,
@@ -622,10 +591,16 @@ pub fn internal_module_error_with_target(
         target,
         TargetSupport::NotEnforced,
         None,
-    )
-    .expect_err("should infer an error");
+    );
+
+    let (error, names) = match outcome {
+        Outcome::Ok(_) => panic!("should infer an error"),
+        Outcome::PartialFailure(ast, errors) => (errors.into(), ast.names),
+        Outcome::TotalFailure(errors) => (errors.into(), Default::default()),
+    };
+
     let error = Error::Type {
-        names,
+        names: Box::new(names),
         src: src.into(),
         path: Utf8PathBuf::from("/src/one/two.gleam"),
         errors: Vec1::try_from_vec(error).expect("should have at least one error"),
@@ -640,7 +615,7 @@ pub fn syntax_error(src: &str) -> String {
     let error = Error::Parse {
         src: src.into(),
         path: Utf8PathBuf::from("/src/one/two.gleam"),
-        error,
+        error: Box::new(error),
     };
     error.pretty_string()
 }
@@ -656,37 +631,40 @@ fn field_map_reorder_test() {
     struct Case {
         arity: u32,
         fields: HashMap<EcoString, u32>,
-        args: Vec<CallArg<UntypedExpr>>,
+        arguments: Vec<CallArg<UntypedExpr>>,
         expected_result: Result<(), crate::type_::Error>,
-        expected_args: Vec<CallArg<UntypedExpr>>,
+        expected_arguments: Vec<CallArg<UntypedExpr>>,
     }
 
     impl Case {
         fn test(self) {
-            let mut args = self.args;
+            let mut arguments = self.arguments;
             let fm = FieldMap {
                 arity: self.arity,
                 fields: self.fields,
             };
             let location = SrcSpan { start: 0, end: 0 };
-            assert_eq!(self.expected_result, fm.reorder(&mut args, location));
-            assert_eq!(self.expected_args, args);
+            assert_eq!(
+                self.expected_result,
+                fm.reorder(&mut arguments, location, IncorrectArityContext::Function)
+            );
+            assert_eq!(self.expected_arguments, arguments);
         }
     }
 
     Case {
         arity: 0,
         fields: HashMap::new(),
-        args: vec![],
+        arguments: vec![],
         expected_result: Ok(()),
-        expected_args: vec![],
+        expected_arguments: vec![],
     }
     .test();
 
     Case {
         arity: 3,
         fields: HashMap::new(),
-        args: vec![
+        arguments: vec![
             CallArg {
                 implicit: None,
                 location: Default::default(),
@@ -707,7 +685,7 @@ fn field_map_reorder_test() {
             },
         ],
         expected_result: Ok(()),
-        expected_args: vec![
+        expected_arguments: vec![
             CallArg {
                 implicit: None,
                 location: Default::default(),
@@ -733,7 +711,7 @@ fn field_map_reorder_test() {
     Case {
         arity: 3,
         fields: [("last".into(), 2)].into(),
-        args: vec![
+        arguments: vec![
             CallArg {
                 implicit: None,
                 location: Default::default(),
@@ -754,7 +732,7 @@ fn field_map_reorder_test() {
             },
         ],
         expected_result: Ok(()),
-        expected_args: vec![
+        expected_arguments: vec![
             CallArg {
                 implicit: None,
                 location: Default::default(),
@@ -786,6 +764,7 @@ fn infer_module_type_retention_test() {
         definitions: vec![],
         type_info: (),
         names: Default::default(),
+        unused_definition_positions: Default::default(),
     };
     let direct_dependencies = HashMap::from_iter(vec![]);
     let ids = UniqueIdGenerator::new();
@@ -805,6 +784,7 @@ fn infer_module_type_retention_test() {
         importable_modules: &modules,
         warnings: &TypeWarningEmitter::null(),
         direct_dependencies: &direct_dependencies,
+        dev_dependencies: &HashSet::new(),
         target_support: TargetSupport::Enforced,
         package_config: &config,
     }
@@ -850,6 +830,7 @@ fn infer_module_type_retention_test() {
                                 parameters: vec![TypeValueConstructorField {
                                     type_: generic_var(1),
                                     label: None,
+                                    documentation: None,
                                 }],
                                 documentation: None,
                             },
@@ -858,6 +839,7 @@ fn infer_module_type_retention_test() {
                                 parameters: vec![TypeValueConstructorField {
                                     type_: generic_var(2),
                                     label: None,
+                                    documentation: None,
                                 }],
                                 documentation: None,
                             }
@@ -886,7 +868,8 @@ fn infer_module_type_retention_test() {
             type_aliases: HashMap::new(),
             documentation: Vec::new(),
             contains_echo: false,
-            references: References::default()
+            references: References::default(),
+            inline_functions: HashMap::new(),
         }
     );
 }
@@ -2022,7 +2005,7 @@ pub fn get(wibble) {
 
 #[test]
 fn variant_inference_for_imported_type() {
-    assert_infer_with_module!(
+    assert_module_infer!(
         (
             "wibble",
             "
@@ -2048,7 +2031,7 @@ pub fn main(wibble) {
 
 #[test]
 fn local_variable_variant_inference_for_imported_type() {
-    assert_infer_with_module!(
+    assert_module_infer!(
         (
             "wibble",
             "
@@ -2146,6 +2129,21 @@ pub fn main() {
   }
 
   a.b
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/1358
+#[test]
+fn type_unification_does_not_allow_lowercase_bools_in_match_clause() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  case 42 > 42 {
+    true -> 1
+    false -> 2
+  }
 }
 "#
     );
@@ -2304,6 +2302,193 @@ fn custom_type_module_constants() {
         "pub type Test { A }
         pub const some_test = A",
         vec![("A", "Test"), ("some_test", "Test")],
+    );
+}
+
+#[test]
+fn const_record_update() {
+    assert_module_infer!(
+        "pub type Person { Person(name: String, age: Int) }
+
+        pub const alice = Person(\"Alice\", 30)
+        pub const bob = Person(..alice, name: \"Bob\")",
+        vec![
+            ("Person", "fn(String, Int) -> Person"),
+            ("alice", "Person"),
+            ("bob", "Person")
+        ],
+    );
+}
+
+#[test]
+fn const_record_update_all_fields() {
+    assert_warning!(
+        "pub type Person { Person(name: String, age: Int, city: String) }
+
+        pub const base = Person(\"Alice\", 30, \"London\")
+        pub const updated = Person(..base, name: \"Bob\", age: 25, city: \"Paris\")"
+    );
+}
+
+#[test]
+fn const_record_update_chain() {
+    assert_module_infer!(
+        "pub type Person { Person(name: String, age: Int, city: String) }
+
+        pub const alice = Person(\"Alice\", 30, \"London\")
+        pub const bob = Person(..alice, name: \"Bob\")
+        pub const charlie = Person(..bob, age: 25)",
+        vec![
+            ("Person", "fn(String, Int, String) -> Person"),
+            ("alice", "Person"),
+            ("bob", "Person"),
+            ("charlie", "Person")
+        ],
+    );
+}
+
+#[test]
+fn const_record_update_with_labeled_args() {
+    assert_module_infer!(
+        "pub type Person { Person(name: String, age: Int, city: String) }
+        pub const alice = Person(name: \"Alice\", age: 30, city: \"London\")
+        pub const bob = Person(..alice, name: \"Bob\")",
+        vec![
+            ("Person", "fn(String, Int, String) -> Person"),
+            ("alice", "Person"),
+            ("bob", "Person")
+        ],
+    );
+}
+
+#[test]
+fn const_record_update_type_mismatch_error() {
+    assert_module_error!(
+        "pub type Person { Person(name: String, age: Int) }
+        pub type Animal { Animal(species: String) }
+
+        pub const alice = Person(\"Alice\", 30)
+        pub const dog = Animal(..alice)"
+    );
+}
+
+#[test]
+fn const_record_update_variant_mismatch_error() {
+    assert_module_error!(
+        "pub type Subject {
+            Person(name: String, age: Int)
+            Animal(species: String)
+        }
+
+        pub const alice = Person(\"Alice\", 30)
+        pub const dog = Animal(..alice)"
+    );
+}
+
+#[test]
+fn const_record_update_field_type_mismatch_error() {
+    assert_module_error!(
+        "pub type Person { Person(name: String, age: Int) }
+
+        pub const alice = Person(\"Alice\", 30)
+        pub const bob = Person(..alice, age: \"not a number\")"
+    );
+}
+
+#[test]
+fn const_record_update_nonexistent_field() {
+    assert_module_error!(
+        "pub type Person { Person(name: String, age: Int) }
+
+        pub const alice = Person(\"Alice\", 30)
+        pub const bob = Person(..alice, nonexistent: \"value\")"
+    );
+}
+
+#[test]
+fn const_record_update_non_record() {
+    assert_module_error!(
+        "pub type Person { Person(name: String, age: Int) }
+
+        pub const number = 42
+        pub const bob = Person(..number, name: \"Bob\")"
+    );
+}
+
+#[test]
+fn const_record_update_fieldless_warning() {
+    assert_warning!(
+        "pub type Animal { Animal(species: String) }
+
+        pub const alice = Animal(\"Cat\")
+        pub const dog = Animal(..alice)"
+    );
+}
+
+#[test]
+fn const_record_update_multi_variant() {
+    assert_module_infer!(
+        "pub type Pet {
+          Dog(name: String, age: Int)
+          Cat(name: String, breed: String)
+        }
+
+        pub const my_dog = Dog(\"Rex\", 5)
+        pub const another_dog = Dog(..my_dog, name: \"Max\")",
+        vec![
+            ("Cat", "fn(String, String) -> Pet"),
+            ("Dog", "fn(String, Int) -> Pet"),
+            ("another_dog", "Pet"),
+            ("my_dog", "Pet"),
+        ]
+    );
+}
+
+#[test]
+fn const_record_update_variant_without_args() {
+    assert_module_error!(
+        "pub type Status { Active Inactive }
+        pub const status1 = Active
+        pub const status2 = Active(..status1)"
+    );
+}
+
+#[test]
+fn const_record_update_unlabelled_fields() {
+    assert_module_error!(
+        "pub type Point { Point(Int, Int) }
+
+        pub const origin = Point(0, 0)
+        pub const point = Point(..origin)"
+    );
+}
+
+#[test]
+fn const_record_update_generic_respecialization() {
+    assert_module_infer!(
+        "pub type Box(a) {
+            Box(name: String, value: a)
+        }
+
+        pub const base = Box(\"score\", 50)
+        pub const updated = Box(..base, value: \"Hello\")",
+        vec![
+            ("Box", "fn(String, a) -> Box(a)"),
+            ("base", "Box(Int)"),
+            ("updated", "Box(String)")
+        ],
+    );
+}
+
+#[test]
+fn generic_unlabelled_field_in_updated_const_record_wrong_type() {
+    assert_module_error!(
+        "pub type Wibble(a) {
+            Wibble(a, b: Int, c: a)
+        }
+
+        const w = Wibble(1, 2, 3)
+        const w2 = Wibble(..w, c: False)"
     );
 }
 
@@ -2745,7 +2930,10 @@ fn assert_suitable_main_function_not_module_function() {
             name: "main".into(),
         },
     };
-    assert!(assert_suitable_main_function(&value, &"module".into(), Target::Erlang).is_err(),);
+    assert!(
+        assert_suitable_main_function(&value, &"module".into(), Origin::Src, Target::Erlang)
+            .is_err(),
+    );
 }
 
 #[test]
@@ -2770,9 +2958,13 @@ fn assert_suitable_main_function_wrong_arity() {
                 can_run_on_erlang: true,
                 can_run_on_javascript: true,
             },
+            purity: Purity::Pure,
         },
     };
-    assert!(assert_suitable_main_function(&value, &"module".into(), Target::Erlang).is_err(),);
+    assert!(
+        assert_suitable_main_function(&value, &"module".into(), Origin::Src, Target::Erlang)
+            .is_err(),
+    );
 }
 
 #[test]
@@ -2797,9 +2989,13 @@ fn assert_suitable_main_function_ok() {
                 can_run_on_erlang: true,
                 can_run_on_javascript: true,
             },
+            purity: Purity::Pure,
         },
     };
-    assert!(assert_suitable_main_function(&value, &"module".into(), Target::Erlang).is_ok(),);
+    assert!(
+        assert_suitable_main_function(&value, &"module".into(), Origin::Src, Target::Erlang)
+            .is_ok(),
+    );
 }
 
 #[test]
@@ -2824,9 +3020,13 @@ fn assert_suitable_main_function_erlang_not_supported() {
                 can_run_on_erlang: false,
                 can_run_on_javascript: true,
             },
+            purity: Purity::Impure,
         },
     };
-    assert!(assert_suitable_main_function(&value, &"module".into(), Target::Erlang).is_err(),);
+    assert!(
+        assert_suitable_main_function(&value, &"module".into(), Origin::Src, Target::Erlang)
+            .is_err(),
+    );
 }
 
 #[test]
@@ -2851,9 +3051,13 @@ fn assert_suitable_main_function_javascript_not_supported() {
                 can_run_on_erlang: true,
                 can_run_on_javascript: false,
             },
+            purity: Purity::Impure,
         },
     };
-    assert!(assert_suitable_main_function(&value, &"module".into(), Target::JavaScript).is_err(),);
+    assert!(
+        assert_suitable_main_function(&value, &"module".into(), Origin::Src, Target::JavaScript)
+            .is_err(),
+    );
 }
 
 #[test]
@@ -3070,8 +3274,53 @@ pub fn main() {
 }
 
 #[test]
+fn variant_inference_with_let_assert() {
+    assert_module_infer!(
+        "
+type Wibble {
+  Wibble(n: Int, b: Bool)
+  Wobble
+}
+
+pub fn main() {
+  let wibble = wibble()
+  let assert Wibble(..) = wibble
+  wibble.n
+}
+
+fn wibble() {
+  Wibble(1, True)
+}
+",
+        vec![("main", "fn() -> Int")]
+    );
+}
+
+#[test]
+fn variant_inference_with_let_assert_and_alias() {
+    assert_module_infer!(
+        "
+type Wibble {
+  Wibble(n: Int, b: Bool)
+  Wobble
+}
+
+pub fn main() {
+  let assert Wibble(..) as wibble = wibble()
+  wibble.n
+}
+
+fn wibble() {
+  Wibble(1, True)
+}
+",
+        vec![("main", "fn() -> Int")]
+    );
+}
+
+#[test]
 fn private_types_not_available_in_other_modules() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "type Wibble"),
         "
 import wibble
@@ -3091,5 +3340,158 @@ pub type Bad {
   Bad(labelled: Int, Float)
 }
 "
+    );
+}
+
+#[test]
+fn function_parameter_errors_do_not_stop_inference() {
+    assert_module_error!(
+        "
+pub fn wibble(x: NonExistent) {
+  1 + False
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4287
+#[test]
+fn no_stack_overflow_for_nested_use() {
+    assert_module_infer!(
+        (
+            "gleam/dynamic/decode",
+            "
+pub fn string() {
+  Nil
+}
+
+pub fn field(name, decoder, callback) {
+  callback(Nil)
+}
+"
+        ),
+        r#"
+import gleam/dynamic/decode
+
+pub fn main() {
+  use _n1 <- decode.field("n1", decode.string)
+  use _n2 <- decode.field("n2", decode.string)
+  use _n3 <- decode.field("n3", decode.string)
+  use _n4 <- decode.field("n4", decode.string)
+  use _n5 <- decode.field("n5", decode.string)
+  use _n6 <- decode.field("n6", decode.string)
+  use _n7 <- decode.field("n7", decode.string)
+  use _n8 <- decode.field("n8", decode.string)
+  use _n9 <- decode.field("n9", decode.string)
+  use _n10 <- decode.field("n10", decode.string)
+  use _n11 <- decode.field("n11", decode.string)
+  use _n12 <- decode.field("n12", decode.string)
+  use _n13 <- decode.field("n13", decode.string)
+  use _n14 <- decode.field("n14", decode.string)
+  use _n15 <- decode.field("n15", decode.string)
+  use _n16 <- decode.field("n16", decode.string)
+  use _n17 <- decode.field("n17", decode.string)
+  use _n18 <- decode.field("n18", decode.string)
+  use _n19 <- decode.field("n19", decode.string)
+  use _n20 <- decode.field("n20", decode.string)
+  use _n21 <- decode.field("n21", decode.string)
+  use _n22 <- decode.field("n22", decode.string)
+  use _n23 <- decode.field("n23", decode.string)
+  use _n24 <- decode.field("n24", decode.string)
+  use _n25 <- decode.field("n25", decode.string)
+  use _n26 <- decode.field("n26", decode.string)
+  use _n27 <- decode.field("n27", decode.string)
+  use _n28 <- decode.field("n28", decode.string)
+  use _n29 <- decode.field("n29", decode.string)
+  use _n30 <- decode.field("n30", decode.string)
+  use _n31 <- decode.field("n31", decode.string)
+  use _n32 <- decode.field("n32", decode.string)
+  use _n33 <- decode.field("n33", decode.string)
+  use _n34 <- decode.field("n34", decode.string)
+  use _n35 <- decode.field("n35", decode.string)
+  use _n36 <- decode.field("n36", decode.string)
+  use _n37 <- decode.field("n37", decode.string)
+  use _n38 <- decode.field("n38", decode.string)
+  use _n39 <- decode.field("n39", decode.string)
+  use _n40 <- decode.field("n40", decode.string)
+  use _n41 <- decode.field("n41", decode.string)
+  use _n42 <- decode.field("n42", decode.string)
+  use _n43 <- decode.field("n43", decode.string)
+  use _n44 <- decode.field("n44", decode.string)
+  use _n45 <- decode.field("n45", decode.string)
+  use _n46 <- decode.field("n46", decode.string)
+  use _n47 <- decode.field("n47", decode.string)
+  use _n48 <- decode.field("n48", decode.string)
+  use _n49 <- decode.field("n49", decode.string)
+  use _n50 <- decode.field("n50", decode.string)
+  use _n51 <- decode.field("n51", decode.string)
+  use _n52 <- decode.field("n52", decode.string)
+  use _n53 <- decode.field("n53", decode.string)
+  use _n54 <- decode.field("n54", decode.string)
+  use _n55 <- decode.field("n55", decode.string)
+  Nil
+}
+"#,
+        vec![("main", "fn() -> Nil")]
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4883
+#[test]
+fn variant_inference_ignores_echo() {
+    assert_module_infer!(
+        "
+pub type Wibble {
+  Wibble(wibble: Int, wobble: String)
+  Wobble(a: String, b: Int)
+}
+
+pub fn get_int(w: Wibble) {
+  case echo w {
+    Wibble(..) -> w.wibble
+    Wobble(..) -> w.b
+  }
+}
+",
+        vec![
+            ("Wibble", "fn(Int, String) -> Wibble"),
+            ("Wobble", "fn(String, Int) -> Wibble"),
+            ("get_int", "fn(Wibble) -> Int"),
+        ]
+    );
+}
+
+#[test]
+fn correct_type_check_for_multiple_mutually_recursive_functions() {
+    assert_module_error!(
+        r#"
+pub fn wibble(id) {
+  wobble(id, True)
+}
+
+pub fn wobble(id, bool) {
+  case bool {
+    True -> wibble(id)
+    False -> wubble(id, bool)
+  }
+}
+
+pub fn wubble(id, bool) {
+  case bool {
+    True -> final(id)
+    False -> wobble(id, bool)
+  }
+}
+
+pub fn final(id) {
+  let #(a, b) = id
+  echo #(a, b)
+}
+
+pub fn main() {
+  wibble(#("a", "b"))
+  wibble(2)
+}
+"#
     );
 }

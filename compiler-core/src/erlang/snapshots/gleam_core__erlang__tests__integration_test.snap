@@ -10,8 +10,8 @@ let x = #(100000000000000000, #(2000000000, 3000000000000, 40000000000), 50000, 
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
 -export([go/0]).
 
 -file("project/test/my/mod.gleam", 1).

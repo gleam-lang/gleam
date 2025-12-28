@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
+assertion_line: 567
 expression: "pub opaque type Animal {\n  Cat(goes_outside: Bool)\n  Dog(plays_fetch: Bool)\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub opaque type Animal {
@@ -13,14 +15,16 @@ pub opaque type Animal {
 import type * as _ from "../gleam.d.mts";
 
 declare class Cat extends _.CustomType {
+  /** @deprecated */
   constructor(goes_outside: boolean);
-  
+  /** @deprecated */
   goes_outside: boolean;
 }
 
 declare class Dog extends _.CustomType {
+  /** @deprecated */
   constructor(plays_fetch: boolean);
-  
+  /** @deprecated */
   plays_fetch: boolean;
 }
 

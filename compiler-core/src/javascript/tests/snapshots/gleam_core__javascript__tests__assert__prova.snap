@@ -1,0 +1,51 @@
+---
+source: compiler-core/src/javascript/tests/assert.rs
+expression: "\npub fn main() {\n  assert Ok([]) == Ok([] |> id)\n}\n\nfn id(x) { x }\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  assert Ok([]) == Ok([] |> id)
+}
+
+fn id(x) { x }
+
+
+----- COMPILED JAVASCRIPT
+import { Ok, toList, makeError, isEqual } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+function id(x) {
+  return x;
+}
+
+export function main() {
+  let $ = new Ok(toList([]));
+  let $1 = new Ok(
+    (() => {
+      let _pipe = toList([]);
+      return id(_pipe);
+    })(),
+  );
+  if (!(isEqual($, $1))) {
+    throw makeError(
+      "assert",
+      FILEPATH,
+      "my/mod",
+      3,
+      "main",
+      "Assertion failed.",
+      {
+        kind: "binary_operator",
+        operator: "==",
+        left: { kind: "literal", value: $, start: 26, end: 32 },
+        right: { kind: "expression", value: $1, start: 36, end: 48 },
+        start: 19,
+        end: 48,
+        expression_start: 26
+      }
+    )
+  }
+  return undefined;
+}

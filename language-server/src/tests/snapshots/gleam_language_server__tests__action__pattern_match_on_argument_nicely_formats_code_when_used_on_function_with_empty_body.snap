@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main(arg: #(Int, String)) {}"
+---
+----- BEFORE ACTION
+pub fn main(arg: #(Int, String)) {}
+            ↑                      
+
+
+----- AFTER ACTION
+pub fn main(arg: #(Int, String)) {
+  let #(int, string) = arg
+}

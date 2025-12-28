@@ -1,21 +1,21 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-expression: "\nfn go() {\n    1.5\n    2.0\n    -0.1\n    1.\n}\n"
+expression: "\npub fn go() {\n  1.5\n  2.0\n  -0.1\n  1.\n}\n"
 ---
 ----- SOURCE CODE
 
-fn go() {
-    1.5
-    2.0
-    -0.1
-    1.
+pub fn go() {
+  1.5
+  2.0
+  -0.1
+  1.
 }
 
 
 ----- COMPILED JAVASCRIPT
-function go() {
+export function go() {
   1.5;
   2.0;
   -0.1;
-  return 1.;
+  return 1.0;
 }

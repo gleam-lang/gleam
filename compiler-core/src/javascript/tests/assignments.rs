@@ -4,7 +4,7 @@ use crate::{assert_js, assert_ts_def};
 fn tuple_matching() {
     assert_js!(
         r#"
-fn go(x) {
+pub fn go(x) {
   let assert #(1, 2) = x
 }
 "#,
@@ -13,19 +13,19 @@ fn go(x) {
 
 #[test]
 fn assert() {
-    assert_js!(r#"fn go(x) { let assert 1 = x }"#,);
+    assert_js!(r#"pub fn go(x) { let assert 1 = x }"#,);
 }
 
 #[test]
 fn assert1() {
-    assert_js!(r#"fn go(x) { let assert #(1, 2) = x }"#,);
+    assert_js!(r#"pub fn go(x) { let assert #(1, 2) = x }"#,);
 }
 
 #[test]
 fn nested_binding() {
     assert_js!(
         r#"
-fn go(x) {
+pub fn go(x) {
   let assert #(a, #(b, c, 2) as t, _, 1) = x
 }
 "#,
@@ -37,7 +37,7 @@ fn variable_renaming() {
     assert_js!(
         r#"
 
-fn go(x, wibble) {
+pub fn go(x, wibble) {
   let a = 1
   wibble(a)
   let a = 2
@@ -64,7 +64,7 @@ fn constant_assignments() {
         r#"
 const a = True
 
-fn go() {
+pub fn go() {
   a
   let a = 10
   a + 20
@@ -80,7 +80,7 @@ fn second() {
 
 #[test]
 fn returning_literal_subject() {
-    assert_js!(r#"fn go(x) { let assert 1 = x + 1 }"#,);
+    assert_js!(r#"pub fn go(x) { let assert 1 = x + 1 }"#,);
 }
 
 #[test]
@@ -247,5 +247,123 @@ pub fn expect(value, message) {
   inner
 }
 "#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4471
+#[test]
+fn case_message() {
+    assert_js!(
+        r#"
+pub fn expect(value, message) {
+  let assert Ok(inner) = value as case message {
+    Ok(message) -> message
+    Error(_) -> "No message provided"
+  }
+  inner
+}
+"#
+    );
+}
+
+#[test]
+fn assert_that_always_succeeds() {
+    assert_js!(
+        r#"
+type Wibble {
+    Wibble(Int)
+}
+
+pub fn go() {
+  let assert Wibble(n) = Wibble(1)
+  n
+}
+"#,
+    );
+}
+
+#[test]
+fn assert_that_always_fails() {
+    assert_js!(
+        r#"
+type Wibble {
+    Wibble(Int)
+    Wobble(Int)
+}
+
+pub fn go() {
+  let assert Wobble(n) = Wibble(1)
+  n
+}
+"#,
+    );
+}
+
+#[test]
+fn catch_all_assert() {
+    assert_js!(
+        r#"
+type Wibble {
+    Wibble(Int)
+    Wobble(Int)
+}
+
+pub fn go() {
+  let assert _ = Wibble(1)
+  1
+}
+"#,
+    );
+}
+
+#[test]
+fn assert_with_multiple_variants() {
+    assert_js!(
+        r#"
+type Wibble {
+    Wibble(Int)
+    Wobble(Int)
+    Woo(Int)
+}
+
+pub fn go() {
+  let assert Wobble(n) = todo
+  n
+}
+"#,
+    );
+}
+
+#[test]
+fn use_discard_assignment() {
+    assert_js!(
+        r#"
+type Wibble {
+    Wibble(Int)
+    Wobble(Int)
+    Woo(Int)
+}
+
+fn fun(f) { f(Wibble(1)) }
+
+pub fn go() {
+  use _ <- fun
+  1
+}
+"#,
+    );
+}
+
+#[test]
+fn use_matching_assignment() {
+    assert_js!(
+        r#"
+fn fun(f) { f(#(2, 4)) }
+
+pub fn go() {
+  use #(_, n) <- fun
+  n
+}
+"#,
     );
 }

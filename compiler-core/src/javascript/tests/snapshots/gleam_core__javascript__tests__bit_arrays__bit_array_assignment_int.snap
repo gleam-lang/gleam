@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn main() {\n let assert <<1 as a>> = <<1>>\n a\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+ let assert <<1 as a>> = <<1>>
+ a
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError, toBitArray } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+export function main() {
+  let $ = toBitArray([1]);
+  let a;
+  if ($.bitSize === 8 && $.byteAt(0) === 1) {
+    a = 1;
+  } else {
+    throw makeError(
+      "let_assert",
+      FILEPATH,
+      "my/mod",
+      3,
+      "main",
+      "Pattern match failed, no pattern matched the value.",
+      { value: $, start: 18, end: 47, pattern_start: 29, pattern_end: 39 }
+    )
+  }
+  return a;
+}

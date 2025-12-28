@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 1548
+expression: "\npub fn go(x) {\n  case x {\n    <<_, b:bits>> -> b\n    _ -> x\n  }\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  case x {
+    <<_, b:bits>> -> b
+    _ -> x
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { bitArraySlice } from "../gleam.mjs";
+
+export function go(x) {
+  if (x.bitSize >= 8) {
+    let b = bitArraySlice(x, 8);
+    return b;
+  } else {
+    return x;
+  }
+}

@@ -1,0 +1,56 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: "\npub fn main() -> Bool {\n  let wibble = 123\n  let wubble = True\n  let Wobble = 1.5\n  w\n}\n"
+---
+pub fn main() -> Bool {
+  let wibble = 123
+  let wubble = True
+  let Wobble = 1.5
+  w|
+}
+
+
+----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   04_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   04_True
+main
+  kind:   Function
+  detail: fn() -> Bool
+  sort:   02_main
+  desc:   app
+  edits:
+    [5:2-5:2]: "main"
+wibble
+  kind:   Variable
+  detail: Int
+  sort:   2_wibble
+  desc:   app
+  docs:   "A locally defined variable."
+  edits:
+    [5:2-5:2]: "wibble"
+wubble
+  kind:   Variable
+  detail: Bool
+  sort:   02_wubble
+  desc:   app
+  docs:   "A locally defined variable."
+  edits:
+    [5:2-5:2]: "wubble"

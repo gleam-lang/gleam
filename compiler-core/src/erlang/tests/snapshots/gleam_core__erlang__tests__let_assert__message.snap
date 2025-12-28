@@ -12,21 +12,26 @@ pub fn unwrap_or_panic(value) {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
 -export([unwrap_or_panic/1]).
 
 -file("project/test/my/mod.gleam", 2).
 -spec unwrap_or_panic({ok, K} | {error, any()}) -> K.
 unwrap_or_panic(Value) ->
-    {ok, Inner} = case Value of
-        {ok, _} -> Value;
+    Inner@1 = case Value of
+        {ok, Inner} -> Inner;
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Oops, there was an error"/utf8>>,
-                        value => _assert_fail,
+                        file => <<?FILEPATH/utf8>>,
                         module => <<"my/mod"/utf8>>,
                         function => <<"unwrap_or_panic"/utf8>>,
-                        line => 3})
+                        line => 3,
+                        value => _assert_fail,
+                        start => 35,
+                        'end' => 63,
+                        pattern_start => 46,
+                        pattern_end => 55})
     end,
-    Inner.
+    Inner@1.

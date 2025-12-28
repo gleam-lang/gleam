@@ -4,11 +4,13 @@ use flate2::{Compression, write::GzEncoder};
 use gleam_core::{
     Error, Result,
     analyse::TargetSupport,
+    ast::{CallArg, Statement, TypedExpr, TypedFunction},
     build::{Codegen, Compile, Mode, Options, Package, Target},
-    config::{PackageConfig, SpdxLicense},
-    docs::DocContext,
+    config::{GleamVersion, PackageConfig, SpdxLicense},
+    docs::{Dependency, DependencyKind, DocContext},
     error::{SmallVersion, wrap},
     hex,
+    manifest::ManifestPackageSource,
     paths::{self, ProjectPaths},
     requirement::Requirement,
     type_,
@@ -16,9 +18,11 @@ use gleam_core::{
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
 use sha2::Digest;
-use std::{io::Write, path::PathBuf, time::Instant};
+use std::{collections::HashMap, io::Write, path::PathBuf, time::Instant};
 
 use crate::{build, cli, docs, fs, http::HttpClient};
+
+const CORE_TEAM_PUBLISH_PASSWORD: &str = "Trans rights are human rights";
 
 pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<()> {
     let mut config = crate::config::root_config(paths)?;
@@ -38,15 +42,18 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
         data: package_tarball,
         src_files_added,
         generated_files_added,
+        dependencies,
     } = do_build_hex_tarball(paths, &mut config)?;
 
     check_for_name_squatting(&compile_result)?;
     check_for_multiple_top_level_modules(&compile_result, i_am_sure)?;
+    check_for_default_main(&compile_result)?;
 
     // Build HTML documentation
     let docs_tarball = fs::create_tar_archive(docs::build_documentation(
         paths,
         &config,
+        dependencies,
         &mut compile_result,
         DocContext::HexPublish,
         &cached_modules,
@@ -104,18 +111,18 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
     );
 
     // Prompt the user to make a git tag if they have not.
-    let has_repo = config.repository.url().is_some();
+    let has_repo = config.repository.is_some();
     let git = PathBuf::from(".git");
-    let version = format!("v{}", &config.version);
-    let git_tag = git.join("refs").join("tags").join(&version);
+    let tag_name = config.tag_for_version(&config.version);
+    let git_tag = git.join("refs").join("tags").join(&tag_name);
     if has_repo && git.exists() && !git_tag.exists() {
         println!(
             "
 Please push a git tag for this release so source code links in the
 HTML documentation will work:
 
-    git tag {version}
-    git push origin {version}
+    git tag {tag_name}
+    git push origin {tag_name}
 "
         )
     }
@@ -135,21 +142,82 @@ fn check_for_name_squatting(package: &Package) -> Result<(), Error> {
         return Ok(());
     }
 
-    let definitions = &module.ast.definitions;
-
-    if definitions.len() > 2 {
+    if module.ast.definitions_len() > 2 {
         return Ok(());
     }
 
-    let Some(main) = definitions.iter().find_map(|d| d.main_function()) else {
+    let Some(main) = module
+        .ast
+        .definitions
+        .functions
+        .iter()
+        .find_map(|function| function.main_function())
+    else {
         return Ok(());
     };
 
-    if main.body.first().is_println() {
+    if let Some(first) = &main.body.first()
+        && first.is_println()
+    {
         return Err(Error::HexPackageSquatting);
     }
 
     Ok(())
+}
+
+/// Checks if publishing packages contain default main functions.
+/// Main functions with documentation are considered intentional and allowed.
+fn check_for_default_main(package: &Package) -> Result<(), Error> {
+    let package_name = &package.config.name;
+
+    let has_default_main = package
+        .modules
+        .iter()
+        .flat_map(|module| module.ast.definitions.functions.iter())
+        .filter_map(|function| function.main_function())
+        .any(|main| main.documentation.is_none() && is_default_main(main, package_name));
+
+    if has_default_main {
+        return Err(Error::CannotPublishWithDefaultMain {
+            package_name: package_name.clone(),
+        });
+    }
+
+    Ok(())
+}
+
+fn is_default_main(main: &TypedFunction, package_name: &EcoString) -> bool {
+    if main.body.len() != 1 {
+        return false;
+    }
+
+    let Some(Statement::Expression(expression)) = main.body.first() else {
+        return false;
+    };
+
+    if !expression.is_println() {
+        return false;
+    }
+
+    match expression {
+        TypedExpr::Call { arguments, .. } => {
+            if arguments.len() != 1 {
+                return false;
+            }
+
+            match arguments.first() {
+                Some(CallArg {
+                    value: TypedExpr::String { value, .. },
+                    ..
+                }) => {
+                    let default_argument = format!("Hello from {}!", &package_name);
+                    value == &default_argument
+                }
+                _ => false,
+            }
+        }
+        _ => false,
+    }
 }
 
 fn check_for_multiple_top_level_modules(package: &Package, i_am_sure: bool) -> Result<(), Error> {
@@ -157,7 +225,14 @@ fn check_for_multiple_top_level_modules(package: &Package, i_am_sure: bool) -> R
     let mut top_level_module_names = package
         .modules
         .iter()
-        .filter_map(|module| module.name.split('/').next())
+        .filter_map(|module| {
+            // Top-level modules are those that don't contain any path separators
+            if module.name.contains('/') {
+                None
+            } else {
+                Some(module.name.clone())
+            }
+        })
         .collect::<Vec<_>>();
 
     // Remove duplicates
@@ -197,9 +272,10 @@ For example:
 }
 
 fn check_repo_url(config: &PackageConfig, i_am_sure: bool) -> Result<bool, Error> {
-    let Some(url) = config.repository.url() else {
+    let Some(repo) = config.repository.as_ref() else {
         return Ok(true);
     };
+    let url = repo.url();
 
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let response = runtime.block_on(reqwest::get(&url)).map_err(Error::http)?;
@@ -253,9 +329,9 @@ fn check_for_gleam_prefix(config: &PackageConfig) -> Result<bool, Error> {
 the prefix `gleam_`, which is for packages maintained by the Gleam
 core team.\n",
     );
-    let should_publish = cli::confirm_with_text("I am part of the Gleam core team")?;
+    let password = cli::ask_password("Please enter the core team password to continue")?;
     println!();
-    Ok(should_publish)
+    Ok(password == CORE_TEAM_PUBLISH_PASSWORD)
 }
 
 struct Tarball {
@@ -264,6 +340,7 @@ struct Tarball {
     data: Vec<u8>,
     src_files_added: Vec<Utf8PathBuf>,
     generated_files_added: Vec<(Utf8PathBuf, String)>,
+    dependencies: HashMap<EcoString, Dependency>,
 }
 
 pub fn build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Result<Vec<u8>> {
@@ -278,6 +355,25 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
     // Reset the build directory so we know the state of the project
     fs::delete_directory(&paths.build_directory_for_target(Mode::Prod, target))?;
 
+    let manifest = build::download_dependencies(paths, cli::Reporter::new())?;
+    let dependencies = manifest
+        .packages
+        .iter()
+        .map(|package| {
+            (
+                package.name.clone(),
+                Dependency {
+                    version: package.version.clone(),
+                    kind: match &package.source {
+                        ManifestPackageSource::Hex { .. } => DependencyKind::Hex,
+                        ManifestPackageSource::Git { .. } => DependencyKind::Git,
+                        ManifestPackageSource::Local { .. } => DependencyKind::Path,
+                    },
+                },
+            )
+        })
+        .collect();
+
     // Build the project to check that it is valid
     let built = build::main(
         paths,
@@ -290,7 +386,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
             compile: Compile::All,
             no_print_progress: false,
         },
-        build::download_dependencies(paths, cli::Reporter::new())?,
+        manifest,
     )?;
 
     let minimum_required_version = built.minimum_required_version();
@@ -305,24 +401,19 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
             // inferred lower bound could be lower.
             let minimum_required_version =
                 std::cmp::max(minimum_required_version, Version::new(1, 0, 0));
-            let inferred_version_range =
-                pubgrub::range::Range::higher_than(minimum_required_version);
-            config.gleam_version = Some(inferred_version_range);
+            let inferred_version_range = pubgrub::Range::higher_than(minimum_required_version);
+            config.gleam_version = Some(GleamVersion::from_pubgrub(inferred_version_range));
         }
         // Otherwise we need to check that the annotated version range is
         // correct and includes the minimum required version.
         Some(gleam_version) => {
-            if let Some(lowest_allowed_version) = gleam_version.lowest_version() {
-                if lowest_allowed_version < minimum_required_version {
-                    return Err(Error::CannotPublishWrongVersion {
-                        minimum_required_version: SmallVersion::from_hexpm(
-                            minimum_required_version,
-                        ),
-                        wrongfully_allowed_version: SmallVersion::from_hexpm(
-                            lowest_allowed_version,
-                        ),
-                    });
-                }
+            if let Some(lowest_allowed_version) = gleam_version.lowest_version()
+                && lowest_allowed_version < minimum_required_version
+            {
+                return Err(Error::CannotPublishWrongVersion {
+                    minimum_required_version: SmallVersion::from_hexpm(minimum_required_version),
+                    wrongfully_allowed_version: SmallVersion::from_hexpm(lowest_allowed_version),
+                });
             }
         }
     }
@@ -349,6 +440,31 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
     if !modules_containing_echo.is_empty() {
         return Err(Error::CannotPublishEcho {
             unfinished: modules_containing_echo,
+        });
+    }
+
+    // empty_modules is a list of modules that do not export any values or types.
+    // We do not allow publishing packages that contain empty modules.
+    let empty_modules: Vec<_> = built
+        .root_package
+        .modules
+        .iter()
+        .filter(|module| {
+            built
+                .module_interfaces
+                .get(&module.name)
+                .map(|interface| {
+                    // Check if the module exports any values or types
+                    interface.values.is_empty() && interface.types.is_empty()
+                })
+                .unwrap_or(false)
+        })
+        .map(|module| module.name.clone())
+        .collect();
+
+    if !empty_modules.is_empty() {
+        return Err(Error::CannotPublishEmptyModules {
+            unfinished: empty_modules,
         });
     }
 
@@ -392,6 +508,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
         data: tarball,
         src_files_added: src_files,
         generated_files_added: generated_files,
+        dependencies,
     })
 }
 
@@ -413,7 +530,14 @@ fn metadata_config<'a>(
     source_files: &[Utf8PathBuf],
     generated_files: &[(Utf8PathBuf, String)],
 ) -> Result<String> {
-    let repo_url = http::Uri::try_from(config.repository.url().unwrap_or_default()).ok();
+    let repo_url = http::Uri::try_from(
+        config
+            .repository
+            .as_ref()
+            .map(|r| r.url())
+            .unwrap_or_default(),
+    )
+    .ok();
     let requirements: Result<Vec<ReleaseRequirement<'a>>> = config
         .dependencies
         .iter()
@@ -515,9 +639,11 @@ fn generated_erlang_files(
 
     // Erlang modules
     for module in &package.modules {
-        if module.is_test() {
+        // Do not publish test/ and dev/ code
+        if !module.origin.is_src() {
             continue;
         }
+
         let name = module.compiled_erlang_path();
         files.push((tar_src.join(&name), fs::read(build.join(name))?));
     }
@@ -666,8 +792,8 @@ fn release_metadata_as_erlang() {
     let version = "1.2.3".try_into().unwrap();
     let homepage = "https://gleam.run".parse().unwrap();
     let github = "https://github.com/lpil/myapp".parse().unwrap();
-    let req1 = Range::new("~> 1.2.3 or >= 5.0.0".into());
-    let req2 = Range::new("~> 1.2".into());
+    let req1 = Range::new("~> 1.2.3 or >= 5.0.0".into()).unwrap();
+    let req2 = Range::new("~> 1.2".into()).unwrap();
     let meta = ReleaseMetadata {
         name: "myapp",
         version: &version,
@@ -846,6 +972,25 @@ fn exported_project_files_test() {
         "test/nested/ignored.gleam",
         "test/nested/ignored_test_ffi.erl",
         "test/nested/ignored_test_ffi.mjs",
+        "dev/exported_test_ffi.erl",
+        "dev/exported_test_ffi.ex",
+        "dev/exported_test_ffi.hrl",
+        "dev/exported_test_ffi.js",
+        "dev/exported_test_ffi.mjs",
+        "dev/exported_test_ffi.ts",
+        "dev/ignored_test.gleam",
+        "dev/ignored_test_ffi.erl",
+        "dev/ignored_test_ffi.mjs",
+        "dev/nested/exported_test.gleam",
+        "dev/nested/exported_test_ffi.erl",
+        "dev/nested/exported_test_ffi.ex",
+        "dev/nested/exported_test_ffi.hrl",
+        "dev/nested/exported_test_ffi.js",
+        "dev/nested/exported_test_ffi.mjs",
+        "dev/nested/exported_test_ffi.ts",
+        "dev/nested/ignored.gleam",
+        "dev/nested/ignored_test_ffi.erl",
+        "dev/nested/ignored_test_ffi.mjs",
         "unrelated-file.txt",
     ];
 

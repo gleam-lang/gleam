@@ -10,15 +10,13 @@ use crate::{
     build::Target,
     docvec,
     io::Utf8Writer,
-    parse::SpannedString,
     parse::extra::{Comment, ModuleExtra},
     pretty::{self, *},
-    type_::{self, Type},
     warning::WarningEmitter,
 };
 use ecow::{EcoString, eco_format};
 use itertools::Itertools;
-use std::{cmp::Ordering, sync::Arc};
+use std::cmp::Ordering;
 use vec1::Vec1;
 
 use crate::type_::Deprecation;
@@ -31,7 +29,7 @@ pub fn pretty(writer: &mut impl Utf8Writer, src: &EcoString, path: &Utf8Path) ->
         .map_err(|error| Error::Parse {
             path: path.to_path_buf(),
             src: src.clone(),
-            error,
+            error: Box::new(error),
         })?;
     let intermediate = Intermediate::from_extra(&parsed.extra, src);
     Formatter::with_comments(&intermediate)
@@ -45,6 +43,7 @@ pub(crate) struct Intermediate<'a> {
     module_comments: Vec<Comment<'a>>,
     empty_lines: &'a [u32],
     new_lines: &'a [u32],
+    trailing_commas: &'a [u32],
 }
 
 impl<'a> Intermediate<'a> {
@@ -67,6 +66,7 @@ impl<'a> Intermediate<'a> {
                 .map(|span| Comment::from((span, src)))
                 .collect(),
             new_lines: &extra.new_lines,
+            trailing_commas: &extra.trailing_commas,
         }
     }
 }
@@ -81,12 +81,12 @@ enum FnCapturePosition {
 /// One of the pieces making a record update arg list: it could be the starting
 /// record being updated, or one of the subsequent arguments.
 ///
-enum RecordUpdatePiece<'a> {
-    Record(&'a RecordBeingUpdated),
-    Argument(&'a UntypedRecordUpdateArg),
+enum RecordUpdatePiece<'a, A> {
+    Record(&'a RecordBeingUpdated<A>),
+    Argument(&'a RecordUpdateArg<A>),
 }
 
-impl HasLocation for RecordUpdatePiece<'_> {
+impl<A> HasLocation for RecordUpdatePiece<'_, A> {
     fn location(&self) -> SrcSpan {
         match self {
             RecordUpdatePiece::Record(record) => record.location,
@@ -94,6 +94,8 @@ impl HasLocation for RecordUpdatePiece<'_> {
         }
     }
 }
+
+type UntypedRecordUpdatePiece<'a> = RecordUpdatePiece<'a, UntypedExpr>;
 
 /// Hayleigh's bane
 #[derive(Debug, Clone, Default)]
@@ -103,6 +105,7 @@ pub struct Formatter<'a> {
     module_comments: &'a [Comment<'a>],
     empty_lines: &'a [u32],
     new_lines: &'a [u32],
+    trailing_commas: &'a [u32],
 }
 
 impl<'comments> Formatter<'comments> {
@@ -117,6 +120,7 @@ impl<'comments> Formatter<'comments> {
             module_comments: &extra.module_comments,
             empty_lines: extra.empty_lines,
             new_lines: extra.new_lines,
+            trailing_commas: extra.trailing_commas,
         }
     }
 
@@ -362,22 +366,7 @@ impl<'comments> Formatter<'comments> {
         match statement {
             Definition::Function(function) => self.statement_fn(function),
 
-            Definition::TypeAlias(TypeAlias {
-                alias,
-                parameters: args,
-                type_ast: resolved_type,
-                publicity,
-                deprecation,
-                location,
-                ..
-            }) => self.type_alias(
-                *publicity,
-                alias,
-                args,
-                resolved_type,
-                deprecation,
-                location,
-            ),
+            Definition::TypeAlias(alias) => self.type_alias(alias),
 
             Definition::CustomType(ct) => self.custom_type(ct),
 
@@ -386,7 +375,9 @@ impl<'comments> Formatter<'comments> {
                 as_name,
                 unqualified_values,
                 unqualified_types,
-                ..
+                documentation: _,
+                location: _,
+                package: _,
             }) => {
                 let second = if unqualified_values.is_empty() && unqualified_types.is_empty() {
                     nil()
@@ -394,11 +385,11 @@ impl<'comments> Formatter<'comments> {
                     let unqualified_types = unqualified_types
                         .iter()
                         .sorted_by(|a, b| a.name.cmp(&b.name))
-                        .map(|e| docvec!["type ", e]);
+                        .map(|type_| docvec!["type ", type_]);
                     let unqualified_values = unqualified_values
                         .iter()
                         .sorted_by(|a, b| a.name.cmp(&b.name))
-                        .map(|e| e.to_doc());
+                        .map(|value| value.to_doc());
                     let unqualified = join(
                         unqualified_types.chain(unqualified_values),
                         flex_break(",", ", "),
@@ -412,7 +403,7 @@ impl<'comments> Formatter<'comments> {
                 };
 
                 let doc = docvec!["import ", module.as_str(), second];
-                let default_module_access_name = module.split('/').last().map(EcoString::from);
+                let default_module_access_name = module.split('/').next_back().map(EcoString::from);
                 match (default_module_access_name, as_name) {
                     // If the `as name` is the same as the module name that would be
                     // used anyways we won't render it. For example:
@@ -437,9 +428,17 @@ impl<'comments> Formatter<'comments> {
                 name,
                 annotation,
                 value,
-                ..
+                deprecation,
+                documentation: _,
+                location: _,
+                name_location: _,
+                type_: _,
+                implementations: _,
             }) => {
-                let attributes = AttributesPrinter::new().set_internal(*publicity).to_doc();
+                let attributes = AttributesPrinter::new()
+                    .set_internal(*publicity)
+                    .set_deprecation(deprecation)
+                    .to_doc();
                 let head = attributes
                     .append(pub_(*publicity))
                     .append("const ")
@@ -475,55 +474,64 @@ impl<'comments> Formatter<'comments> {
             } => {
                 let segment_docs = segments
                     .iter()
-                    .map(|s| bit_array_segment(s, |e| self.const_expr(e)))
+                    .map(|segment| bit_array_segment(segment, |e| self.const_expr(e)))
                     .collect_vec();
 
-                self.bit_array(
-                    segment_docs,
-                    segments.iter().all(|s| s.value.is_simple()),
-                    location,
-                )
+                let packing = self.items_sequence_packing(
+                    segments,
+                    None,
+                    |segment| segment.value.can_have_multiple_per_line(),
+                    *location,
+                );
+
+                self.bit_array(segment_docs, packing, location)
             }
 
             Constant::Record {
                 name,
-                args,
+                arguments,
                 module: None,
                 ..
-            } if args.is_empty() => name.to_doc(),
+            } if arguments.is_empty() => name.to_doc(),
 
             Constant::Record {
                 name,
-                args,
+                arguments,
                 module: Some((m, _)),
                 ..
-            } if args.is_empty() => m.to_doc().append(".").append(name.as_str()),
+            } if arguments.is_empty() => m.to_doc().append(".").append(name.as_str()),
 
             Constant::Record {
                 name,
-                args,
+                arguments,
                 module: None,
                 location,
                 ..
             } => {
-                let args = args.iter().map(|a| self.constant_call_arg(a)).collect_vec();
+                let arguments = arguments
+                    .iter()
+                    .map(|argument| self.constant_call_arg(argument))
+                    .collect_vec();
                 name.to_doc()
-                    .append(self.wrap_args(args, location.end))
+                    .append(self.wrap_arguments(arguments, location.end))
                     .group()
             }
 
             Constant::Record {
                 name,
-                args,
+                arguments,
                 module: Some((m, _)),
                 location,
                 ..
             } => {
-                let args = args.iter().map(|a| self.constant_call_arg(a)).collect_vec();
+                let arguments = arguments
+                    .iter()
+                    .map(|argument| self.constant_call_arg(argument))
+                    .collect_vec();
                 m.to_doc()
                     .append(".")
                     .append(name.as_str())
-                    .append(self.wrap_args(args, location.end))
+                    .append(self.wrap_arguments(arguments, location.end))
                     .group()
             }
 
@@ -544,9 +552,16 @@ impl<'comments> Formatter<'comments> {
                 .append(" ")
                 .append(self.const_expr(right)),
 
-            Constant::Invalid { .. } => {
-                panic!("invalid constants can not be in an untyped ast")
-            }
+            Constant::RecordUpdate {
+                module,
+                name,
+                record,
+                arguments,
+                location,
+                ..
+            } => self.const_record_update(module, name, record, arguments, location),
+
+            Constant::Invalid { .. } => panic!("invalid constants can not be in an untyped ast"),
         };
         commented(document, comments)
     }
@@ -575,33 +590,42 @@ impl<'comments> Formatter<'comments> {
             };
         }
 
-        let comma = match elements.first() {
-            // If the list is made of non-simple constants and it gets too long we want to
-            // have each record on its own line instead of trying to fit as much
-            // as possible in each line. For example:
-            //
-            //    [
-            //       Some("wibble wobble"),
-            //       None,
-            //       Some("wobble wibble"),
-            //    ]
-            //
-            Some(el) if !el.is_simple() => break_(",", ", "),
-            // For simple constants(String, Int, Float), if we have to break the list we still try to
-            // fit as much as possible into a single line instead of putting
-            // each item on its own separate line. For example:
-            //
-            //   [
-            //     1, 2, 3, 4,
-            //     5, 6, 7,
-            //   ]
-            //
-            Some(_) | None => flex_break(",", ", "),
+        let list_packing = self.items_sequence_packing(
+            elements,
+            None,
+            |element| element.can_have_multiple_per_line(),
+            *location,
+        );
+        let comma = match list_packing {
+            ItemsPacking::FitMultiplePerLine => flex_break(",", ", "),
+            ItemsPacking::FitOnePerLine | ItemsPacking::BreakOnePerLine => break_(",", ", "),
         };
 
-        let elements = join(elements.iter().map(|e| self.const_expr(e)), comma);
+        let mut elements_doc = nil();
+        for element in elements.iter() {
+            let empty_lines = self.pop_empty_lines(element.location().start);
+            let element_doc = self.const_expr(element);
 
-        let doc = break_("[", "[").append(elements).nest(INDENT);
+            elements_doc = if elements_doc.is_empty() {
+                element_doc
+            } else if empty_lines {
+                // If there's empty lines before the list item we want to add an
+                // empty line here. Notice how we're making sure no nesting is
+                // added after the comma, otherwise we would be adding needless
+                // whitespace in the empty line!
+                docvec![
+                    elements_doc,
+                    comma.clone().set_nesting(0),
+                    line(),
+                    element_doc
+                ]
+            } else {
+                docvec![elements_doc, comma.clone(), element_doc]
+            };
+        }
+        elements_doc = elements_doc.next_break_fits(NextBreakFitsMode::Disabled);
+
+        let doc = break_("[", "[").append(elements_doc).nest(INDENT);
 
         // We get all remaining comments that come before the list's closing
         // square bracket.
@@ -609,8 +633,8 @@ impl<'comments> Formatter<'comments> {
         // of moving those out of the list.
         // Otherwise those would be moved out of the list.
         let comments = self.pop_comments(location.end);
-        match printed_comments(comments, false) {
-            None => doc.append(break_(",", "")).append("]").group(),
+        let doc = match printed_comments(comments, false) {
+            None => doc.append(break_(",", "")).append("]"),
             Some(comment) => doc
                 .append(break_(",", "").nest(INDENT))
                 // ^ See how here we're adding the missing indentation to the
@@ -620,6 +644,11 @@ impl<'comments> Formatter<'comments> {
                 .append(line())
                 .append("]")
                 .force_break(),
+        };
+
+        match list_packing {
+            ItemsPacking::FitOnePerLine | ItemsPacking::FitMultiplePerLine => doc.group(),
+            ItemsPacking::BreakOnePerLine => doc.force_break(),
         }
     }
 
@@ -647,9 +676,12 @@ impl<'comments> Formatter<'comments> {
             };
         }
 
-        let args_docs = elements.iter().map(|e| self.const_expr(e));
+        let arguments_docs = elements.iter().map(|element| self.const_expr(element));
         let tuple_doc = break_("#(", "#(")
-            .append(join(args_docs, break_(",", ", ")).next_break_fits(NextBreakFitsMode::Disabled))
+            .append(
+                join(arguments_docs, break_(",", ", "))
+                    .next_break_fits(NextBreakFitsMode::Disabled),
+            )
             .nest(INDENT);
 
         let comments = self.pop_comments(location.end);
@@ -662,17 +694,6 @@ impl<'comments> Formatter<'comments> {
                 .append(")")
                 .force_break(),
         }
-    }
-
-    pub fn docs_const_expr<'a>(
-        &mut self,
-        publicity: Publicity,
-        name: &'a str,
-        value: &'a TypedConstant,
-    ) -> Document<'a> {
-        let type_ = type_::pretty::Printer::new().print(&value.type_());
-        let attributes = AttributesPrinter::new().set_internal(publicity);
-        docvec![attributes, pub_(publicity), "const ", name, ": ", type_]
     }
 
     fn documented_definition<'a>(&mut self, s: &'a UntypedDefinition) -> Document<'a> {
@@ -700,18 +721,19 @@ impl<'comments> Formatter<'comments> {
         &mut self,
         module: &'a Option<(EcoString, SrcSpan)>,
         name: &'a str,
-        args: &'a [TypeAst],
+        arguments: &'a [TypeAst],
         location: &SrcSpan,
+        _name_location: &SrcSpan,
     ) -> Document<'a> {
         let head = module
             .as_ref()
             .map(|(qualifier, _)| qualifier.to_doc().append(".").append(name))
             .unwrap_or_else(|| name.to_doc());
 
-        if args.is_empty() {
+        if arguments.is_empty() {
             head
         } else {
-            head.append(self.type_arguments(args, location))
+            head.append(self.type_arguments(arguments, location))
         }
     }
 
@@ -721,56 +743,65 @@ impl<'comments> Formatter<'comments> {
 
             TypeAst::Constructor(TypeAstConstructor {
                 name,
-                arguments: args,
+                arguments,
                 module,
                 location,
-            }) => self.type_ast_constructor(module, name, args, location),
+                name_location,
+                start_parentheses: _,
+            }) => self.type_ast_constructor(module, name, arguments, location, name_location),
 
             TypeAst::Fn(TypeAstFn {
-                arguments: args,
-                return_: retrn,
+                arguments,
+                return_,
                 location,
             }) => "fn"
                 .to_doc()
-                .append(self.type_arguments(args, location))
+                .append(self.type_arguments(arguments, location))
                 .group()
                 .append(" ->")
-                .append(break_("", " ").append(self.type_ast(retrn)).nest(INDENT)),
+                .append(break_("", " ").append(self.type_ast(return_)).nest(INDENT)),
 
             TypeAst::Var(TypeAstVar { name, .. }) => name.to_doc(),
 
-            TypeAst::Tuple(TypeAstTuple { elems, location }) => {
-                "#".to_doc().append(self.type_arguments(elems, location))
+            TypeAst::Tuple(TypeAstTuple { elements, location }) => {
+                "#".to_doc().append(self.type_arguments(elements, location))
             }
         }
         .group()
     }
 
-    fn type_arguments<'a>(&mut self, args: &'a [TypeAst], location: &SrcSpan) -> Document<'a> {
-        let args = args.iter().map(|t| self.type_ast(t)).collect_vec();
-        self.wrap_args(args, location.end)
+    fn type_arguments<'a>(&mut self, arguments: &'a [TypeAst], location: &SrcSpan) -> Document<'a> {
+        let arguments = arguments
+            .iter()
+            .map(|type_| self.type_ast(type_))
+            .collect_vec();
+        self.wrap_arguments(arguments, location.end)
     }
 
-    pub fn type_alias<'a>(
-        &mut self,
-        publicity: Publicity,
-        name: &'a str,
-        args: &'a [SpannedString],
-        type_: &'a TypeAst,
-        deprecation: &'a Deprecation,
-        location: &SrcSpan,
-    ) -> Document<'a> {
+    pub fn type_alias<'a, A>(&mut self, alias: &'a TypeAlias<A>) -> Document<'a> {
+        let TypeAlias {
+            alias: name,
+            parameters: arguments,
+            type_ast: type_,
+            publicity,
+            deprecation,
+            location,
+            name_location: _,
+            type_: _,
+            documentation: _,
+        } = alias;
+
         let attributes = AttributesPrinter::new()
             .set_deprecation(deprecation)
-            .set_internal(publicity)
+            .set_internal(*publicity)
             .to_doc();
 
-        let head = docvec![attributes, pub_(publicity), "type ", name];
-        let head = if args.is_empty() {
+        let head = docvec![attributes, pub_(*publicity), "type ", name];
+        let head = if arguments.is_empty() {
             head
         } else {
-            let args = args.iter().map(|(_, e)| e.to_doc()).collect_vec();
-            head.append(self.wrap_args(args, location.end).group())
+            let arguments = arguments.iter().map(|(_, e)| e.to_doc()).collect_vec();
+            head.append(self.wrap_arguments(arguments, location.end).group())
         };
 
         head.append(" =")
@@ -788,49 +819,74 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn statement_fn<'a>(&mut self, function: &'a UntypedFunction) -> Document<'a> {
+        let Function {
+            location,
+            body_start: _,
+            end_position,
+            name,
+            arguments,
+            body,
+            publicity,
+            deprecation,
+            return_annotation,
+            return_type: _,
+            documentation: _,
+            external_erlang,
+            external_javascript,
+            implementations: _,
+            purity: _,
+        } = function;
+
         let attributes = AttributesPrinter::new()
-            .set_deprecation(&function.deprecation)
-            .set_internal(function.publicity)
-            .set_external_erlang(&function.external_erlang)
-            .set_external_javascript(&function.external_javascript)
+            .set_deprecation(deprecation)
+            .set_internal(*publicity)
+            .set_external_erlang(external_erlang)
+            .set_external_javascript(external_javascript)
             .to_doc();
 
         // Fn name and args
-        let args = function
-            .arguments
+        let arguments = arguments
             .iter()
-            .map(|e| self.fn_arg(e))
+            .map(|argument| self.fn_arg(argument))
             .collect_vec();
-        let signature = pub_(function.publicity)
+        let signature = pub_(*publicity)
             .append("fn ")
             .append(
-                &function
-                    .name
+                &name
                     .as_ref()
                     .expect("Function in a statement must be named")
                     .1,
             )
-            .append(self.wrap_args(args, function.location.end));
+            .append(
+                self.wrap_arguments(
+                    arguments,
+                    // Calculate end location of arguments to not consume comments in
+                    // return annotation
+                    return_annotation
+                        .as_ref()
+                        .map_or(location.end, |ann| ann.location().start),
+                ),
+            );
 
         // Add return annotation
-        let signature = match &function.return_annotation {
+        let signature = match &return_annotation {
             Some(anno) => signature.append(" -> ").append(self.type_ast(anno)),
             None => signature,
         }
         .group();
 
-        let body = &function.body;
-        if body.len() == 1 && body.first().is_placeholder() {
+        if body.is_empty() {
             return attributes.append(signature);
         }
 
         let head = attributes.append(signature);
 
         // Format body
+
         let body = self.statements(body);
 
         // Add any trailing comments
-        let body = match printed_comments(self.pop_comments(function.end_position), false) {
+        let body = match printed_comments(self.pop_comments(*end_position), false) {
             Some(comments) => body.append(line()).append(comments),
             None => body,
         };
@@ -844,15 +900,18 @@ impl<'comments> Formatter<'comments> {
 
     fn expr_fn<'a>(
         &mut self,
-        args: &'a [UntypedArg],
+        arguments: &'a [UntypedArg],
         return_annotation: Option<&'a TypeAst>,
         body: &'a Vec1<UntypedStatement>,
         location: &SrcSpan,
         end_of_head_byte_index: &u32,
     ) -> Document<'a> {
-        let args_docs = args.iter().map(|e| self.fn_arg(e)).collect_vec();
-        let args = self
-            .wrap_args(args_docs, *end_of_head_byte_index)
+        let arguments_docs = arguments
+            .iter()
+            .map(|argument| self.fn_arg(argument))
+            .collect_vec();
+        let arguments = self
+            .wrap_arguments(arguments_docs, *end_of_head_byte_index)
             .group()
             .next_break_fits(NextBreakFitsMode::Disabled);
         //   ^^^ We add this so that when an expression function is passed as
@@ -871,14 +930,14 @@ impl<'comments> Formatter<'comments> {
         // These are some of the ways we could tweak the look of expression
         // functions in the future if people are not satisfied with it.
 
-        let header = "fn".to_doc().append(args);
+        let header = "fn".to_doc().append(arguments);
 
         let header = match return_annotation {
             None => header,
             Some(t) => header.append(" -> ").append(self.type_ast(t)),
         };
 
-        let statements = self.statements(body);
+        let statements = self.statements(body.as_vec());
         let body = match printed_comments(self.pop_comments(location.end), false) {
             None => statements,
             Some(comments) => statements.append(line()).append(comments).force_break(),
@@ -887,7 +946,7 @@ impl<'comments> Formatter<'comments> {
         header.append(" ").append(wrap_block(body)).group()
     }
 
-    fn statements<'a>(&mut self, statements: &'a Vec1<UntypedStatement>) -> Document<'a> {
+    fn statements<'a>(&mut self, statements: &'a [UntypedStatement]) -> Document<'a> {
         let mut previous_position = 0;
         let count = statements.len();
         let mut documents = Vec::with_capacity(count * 2);
@@ -908,7 +967,12 @@ impl<'comments> Formatter<'comments> {
                 documents.push("todo".to_doc());
             }
         }
-        if count == 1 && statements.first().is_expression() {
+
+        if count == 1
+            && statements
+                .first()
+                .is_some_and(|statement| statement.is_expression())
+        {
             documents.to_doc()
         } else {
             documents.to_doc().force_break()
@@ -929,14 +993,7 @@ impl<'comments> Formatter<'comments> {
 
         let (keyword, message) = match kind {
             AssignmentKind::Let | AssignmentKind::Generated => ("let ", None),
-            AssignmentKind::Assert { message, .. } => (
-                "let assert ",
-                message.as_ref().map(|message| {
-                    break_("", " ")
-                        .nest(INDENT)
-                        .append("as ".to_doc().append(self.expr(message).group()))
-                }),
-            ),
+            AssignmentKind::Assert { message, .. } => ("let assert ", message.as_ref()),
         };
 
         let pattern = self.pattern(pattern);
@@ -949,33 +1006,32 @@ impl<'comments> Formatter<'comments> {
             .to_doc()
             .append(pattern.append(annotation).group())
             .append(" =")
-            .append(self.assigned_value(value))
-            .append(message);
-        commented(doc, comments)
+            .append(self.assigned_value(value));
+
+        commented(
+            self.append_as_message(doc, PrecedingAs::Expression, message),
+            comments,
+        )
     }
 
     fn expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         let comments = self.pop_comments(expr.start_byte_index());
 
         let document = match expr {
-            UntypedExpr::Placeholder { .. } => panic!("Placeholders should not be formatted"),
+            UntypedExpr::Panic { message, .. } => {
+                self.append_as_message("panic".to_doc(), PrecedingAs::Keyword, message.as_deref())
+            }
 
-            UntypedExpr::Panic {
-                message: Some(m), ..
-            } => docvec!["panic as ", self.expr(m)],
-
-            UntypedExpr::Panic { .. } => "panic".to_doc(),
-
-            UntypedExpr::Todo { message: None, .. } => "todo".to_doc(),
-
-            UntypedExpr::Todo {
-                message: Some(l), ..
-            } => docvec!["todo as ", self.expr(l)],
+            UntypedExpr::Todo { message, .. } => {
+                self.append_as_message("todo".to_doc(), PrecedingAs::Keyword, message.as_deref())
+            }
 
             UntypedExpr::Echo {
                 expression,
                 location: _,
-            } => self.echo(expression),
+                keyword_end: _,
+                message,
+            } => self.echo(expression, message),
 
             UntypedExpr::PipeLine { expressions, .. } => self.pipeline(expressions, false),
 
@@ -1007,13 +1063,13 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::Fn {
                 return_annotation,
-                arguments: args,
+                arguments,
                 body,
                 location,
                 end_of_head_byte_index,
                 ..
             } => self.expr_fn(
-                args,
+                arguments,
                 return_annotation.as_ref(),
                 body,
                 location,
@@ -1028,10 +1084,10 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::Call {
                 fun,
-                arguments: args,
+                arguments,
                 location,
                 ..
-            } => self.call(fun, args, location),
+            } => self.call(fun, arguments, location),
 
             UntypedExpr::BinOp {
                 name, left, right, ..
@@ -1053,29 +1109,32 @@ impl<'comments> Formatter<'comments> {
             .append(".")
             .append(label.as_str()),
 
-            UntypedExpr::Tuple { elems, location } => self.tuple(elems, location),
+            UntypedExpr::Tuple { elements, location } => self.tuple(elements, location),
 
             UntypedExpr::BitArray {
                 segments, location, ..
             } => {
                 let segment_docs = segments
                     .iter()
-                    .map(|s| bit_array_segment(s, |e| self.bit_array_segment_expr(e)))
+                    .map(|segment| bit_array_segment(segment, |e| self.bit_array_segment_expr(e)))
                     .collect_vec();
 
-                self.bit_array(
-                    segment_docs,
-                    segments.iter().all(|s| s.value.is_simple_constant()),
-                    location,
-                )
+                let packing = self.items_sequence_packing(
+                    segments,
+                    None,
+                    |segment| segment.value.can_have_multiple_per_line(),
+                    *location,
+                );
+
+                self.bit_array(segment_docs, packing, location)
             }
             UntypedExpr::RecordUpdate {
                 constructor,
                 record,
-                arguments: args,
+                arguments,
                 location,
                 ..
-            } => self.record_update(constructor, record, args, location),
+            } => self.record_update(constructor, record, arguments, location),
         };
         commented(document, comments)
     }
@@ -1174,7 +1233,7 @@ impl<'comments> Formatter<'comments> {
     fn pattern_constructor<'a>(
         &mut self,
         name: &'a str,
-        args: &'a [CallArg<UntypedPattern>],
+        arguments: &'a [CallArg<UntypedPattern>],
         module: &'a Option<(EcoString, SrcSpan)>,
         spread: Option<SrcSpan>,
         location: &SrcSpan,
@@ -1182,10 +1241,16 @@ impl<'comments> Formatter<'comments> {
         fn is_breakable(expr: &UntypedPattern) -> bool {
             match expr {
                 Pattern::Tuple { .. } | Pattern::List { .. } | Pattern::BitArray { .. } => true,
-                Pattern::Constructor {
-                    arguments: args, ..
-                } => !args.is_empty(),
-                _ => false,
+                Pattern::Constructor { arguments, .. } => !arguments.is_empty(),
+                Pattern::Int { .. }
+                | Pattern::Float { .. }
+                | Pattern::String { .. }
+                | Pattern::Variable { .. }
+                | Pattern::BitArraySize(_)
+                | Pattern::Assign { .. }
+                | Pattern::Discard { .. }
+                | Pattern::StringPrefix { .. }
+                | Pattern::Invalid { .. } => false,
             }
         }
 
@@ -1194,24 +1259,32 @@ impl<'comments> Formatter<'comments> {
             None => name.to_doc(),
         };
 
-        if args.is_empty() && spread.is_some() {
+        if arguments.is_empty() && spread.is_some() {
             name.append("(..)")
-        } else if args.is_empty() {
+        } else if arguments.is_empty() {
             name
         } else if spread.is_some() {
-            let args = args.iter().map(|a| self.pattern_call_arg(a)).collect_vec();
-            name.append(self.wrap_args_with_spread(args, location.end))
+            let arguments = arguments
+                .iter()
+                .map(|argument| self.pattern_call_arg(argument))
+                .collect_vec();
+            name.append(self.wrap_arguments_with_spread(arguments, location.end))
+                .group()
         } else {
-            match args {
-                [arg] if is_breakable(&arg.value) => name
+            match arguments {
+                [argument] if is_breakable(&argument.value) => name
                     .append("(")
-                    .append(self.pattern_call_arg(arg))
+                    .append(self.pattern_call_arg(argument))
                     .append(")")
                     .group(),
 
                 _ => {
-                    let args = args.iter().map(|a| self.pattern_call_arg(a)).collect_vec();
-                    name.append(self.wrap_args(args, location.end)).group()
+                    let arguments = arguments
+                        .iter()
+                        .map(|argument| self.pattern_call_arg(argument))
+                        .collect_vec();
+                    name.append(self.wrap_arguments(arguments, location.end))
+                        .group()
                 }
             }
         }
@@ -1220,12 +1293,10 @@ impl<'comments> Formatter<'comments> {
     fn call<'a>(
         &mut self,
         fun: &'a UntypedExpr,
-        args: &'a [CallArg<UntypedExpr>],
+        arguments: &'a [CallArg<UntypedExpr>],
         location: &SrcSpan,
     ) -> Document<'a> {
         let expr = match fun {
-            UntypedExpr::Placeholder { .. } => panic!("Placeholders should not be formatted"),
-
             UntypedExpr::PipeLine { .. } => break_block(self.expr(fun)),
 
             UntypedExpr::BinOp { .. }
@@ -1250,12 +1321,12 @@ impl<'comments> Formatter<'comments> {
             | UntypedExpr::NegateInt { .. } => self.expr(fun),
         };
 
-        let arity = args.len();
-        self.append_inlinable_wrapped_args(
+        let arity = arguments.len();
+        self.append_inlinable_wrapped_arguments(
             expr,
-            args,
+            arguments,
             location,
-            |arg| &arg.value,
+            |argument| &argument.value,
             |self_, arg| self_.call_arg(arg, arity),
         )
     }
@@ -1280,7 +1351,7 @@ impl<'comments> Formatter<'comments> {
             };
         }
 
-        self.append_inlinable_wrapped_args(
+        self.append_inlinable_wrapped_arguments(
             "#".to_doc(),
             elements,
             location,
@@ -1294,7 +1365,7 @@ impl<'comments> Formatter<'comments> {
     // resulting document will try to first split that before splitting all the
     // other arguments.
     // This is used for function calls and tuples.
-    fn append_inlinable_wrapped_args<'a, 'b, T, ToExpr, ToDoc>(
+    fn append_inlinable_wrapped_arguments<'a, 'b, T, ToExpr, ToDoc>(
         &mut self,
         doc: Document<'a>,
         values: &'b [T],
@@ -1323,14 +1394,14 @@ impl<'comments> Formatter<'comments> {
 
                 docs.append(&mut vec![last_value_doc]);
 
-                doc.append(self.wrap_function_call_args(docs, location))
+                doc.append(self.wrap_function_call_arguments(docs, location))
                     .next_break_fits(NextBreakFitsMode::Disabled)
                     .group()
             }
 
             Some(_) | None => {
                 let docs = values.iter().map(|value| to_doc(self, value)).collect_vec();
-                doc.append(self.wrap_function_call_args(docs, location))
+                doc.append(self.wrap_function_call_arguments(docs, location))
                     .group()
             }
         }
@@ -1382,31 +1453,80 @@ impl<'comments> Formatter<'comments> {
     pub fn record_update<'a>(
         &mut self,
         constructor: &'a UntypedExpr,
-        record: &'a RecordBeingUpdated,
-        args: &'a [UntypedRecordUpdateArg],
+        record: &'a RecordBeingUpdated<UntypedExpr>,
+        arguments: &'a [UntypedRecordUpdateArg],
         location: &SrcSpan,
     ) -> Document<'a> {
         let constructor_doc: Document<'a> = self.expr(constructor);
-        let pieces = std::iter::once(RecordUpdatePiece::Record(record))
-            .chain(args.iter().map(RecordUpdatePiece::Argument))
+        let pieces = std::iter::once(UntypedRecordUpdatePiece::Record(record))
+            .chain(arguments.iter().map(UntypedRecordUpdatePiece::Argument))
             .collect_vec();
 
-        self.append_inlinable_wrapped_args(
+        self.append_inlinable_wrapped_arguments(
             constructor_doc,
             &pieces,
             location,
             |arg| match arg {
-                RecordUpdatePiece::Argument(arg) => &arg.value,
-                RecordUpdatePiece::Record(record) => record.base.as_ref(),
+                UntypedRecordUpdatePiece::Argument(arg) => &arg.value,
+                UntypedRecordUpdatePiece::Record(record) => record.base.as_ref(),
             },
             |this, arg| match arg {
-                RecordUpdatePiece::Argument(arg) => this.record_update_arg(arg),
-                RecordUpdatePiece::Record(record) => {
-                    let comments = this.pop_comments(record.base.location().start);
+                UntypedRecordUpdatePiece::Argument(arg) => this.record_update_arg(arg),
+                UntypedRecordUpdatePiece::Record(record) => {
+                    let comments = this.pop_comments(record.location.start);
                     commented("..".to_doc().append(this.expr(&record.base)), comments)
                 }
             },
         )
+    }
+
+    pub fn const_record_update<'a, A, B>(
+        &mut self,
+        module: &Option<(EcoString, SrcSpan)>,
+        name: &'a EcoString,
+        record: &'a RecordBeingUpdated<Constant<A, B>>,
+        arguments: &'a [RecordUpdateArg<Constant<A, B>>],
+        location: &SrcSpan,
+    ) -> Document<'a> {
+        let constructor_doc = match module {
+            Some((m, _)) => m.to_doc().append(".").append(name.as_str()),
+            None => name.to_doc(),
+        };
+
+        let pieces = std::iter::once(RecordUpdatePiece::Record(record))
+            .chain(arguments.iter().map(RecordUpdatePiece::Argument))
+            .collect_vec();
+
+        let docs = pieces
+            .iter()
+            .map(|piece| match piece {
+                RecordUpdatePiece::Argument(arg) => {
+                    let comments = self.pop_comments(arg.location.start);
+                    let doc = match arg {
+                        _ if arg.uses_label_shorthand() => arg.label.as_str().to_doc().append(":"),
+                        _ => arg
+                            .label
+                            .as_str()
+                            .to_doc()
+                            .append(": ")
+                            .append(self.const_expr(&arg.value))
+                            .group(),
+                    };
+                    commented(doc, comments)
+                }
+                RecordUpdatePiece::Record(record) => {
+                    let comments = self.pop_comments(record.location.start);
+                    commented(
+                        "..".to_doc().append(self.const_expr(&record.base)),
+                        comments,
+                    )
+                }
+            })
+            .collect_vec();
+
+        constructor_doc
+            .append(self.wrap_arguments(docs, location.end))
+            .group()
     }
 
     pub fn bin_op<'a>(
@@ -1444,7 +1564,25 @@ impl<'comments> Formatter<'comments> {
             UntypedExpr::BinOp {
                 name, left, right, ..
             } => self.bin_op(name, left, right, nest_steps),
-            _ => self.expr(side),
+            UntypedExpr::Int { .. }
+            | UntypedExpr::Float { .. }
+            | UntypedExpr::Block { .. }
+            | UntypedExpr::Var { .. }
+            | UntypedExpr::Fn { .. }
+            | UntypedExpr::List { .. }
+            | UntypedExpr::Call { .. }
+            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::Case { .. }
+            | UntypedExpr::FieldAccess { .. }
+            | UntypedExpr::Tuple { .. }
+            | UntypedExpr::TupleIndex { .. }
+            | UntypedExpr::Todo { .. }
+            | UntypedExpr::Panic { .. }
+            | UntypedExpr::Echo { .. }
+            | UntypedExpr::BitArray { .. }
+            | UntypedExpr::RecordUpdate { .. }
+            | UntypedExpr::NegateBool { .. }
+            | UntypedExpr::NegateInt { .. } => self.expr(side),
         };
         match side.bin_op_name() {
             // In case the other side is a binary operation as well and it can
@@ -1491,6 +1629,22 @@ impl<'comments> Formatter<'comments> {
             .is_ok()
     }
 
+    /// Returns true if there's a trailing comma between `start` and `end`.
+    ///
+    fn has_trailing_comma(&self, start: u32, end: u32) -> bool {
+        self.trailing_commas
+            .binary_search_by(|comma| {
+                if *comma < start {
+                    Ordering::Less
+                } else if *comma > end {
+                    Ordering::Greater
+                } else {
+                    Ordering::Equal
+                }
+            })
+            .is_ok()
+    }
+
     fn pipeline<'a>(
         &mut self,
         expressions: &'a Vec1<UntypedExpr>,
@@ -1508,11 +1662,12 @@ impl<'comments> Formatter<'comments> {
 
         for expr in expressions.iter().skip(1) {
             let comments = self.pop_comments(expr.location().start);
-            let doc = match expr {
-                UntypedExpr::Fn { kind, body, .. } if kind.is_capture() => {
-                    self.fn_capture(body, FnCapturePosition::RightHandSideOfPipe)
-                }
-                _ => self.expr(expr),
+            let doc = if let UntypedExpr::Fn { kind, body, .. } = expr
+                && kind.is_capture()
+            {
+                self.fn_capture(body, FnCapturePosition::RightHandSideOfPipe)
+            } else {
+                self.expr(expr)
             };
             let doc = if nest_pipe { doc.nest(INDENT) } else { doc };
             let space = if try_to_keep_on_one_line {
@@ -1584,7 +1739,7 @@ impl<'comments> Formatter<'comments> {
             {
                 let expr = self.expr(fun);
                 let arity = rest.len();
-                self.append_inlinable_wrapped_args(
+                self.append_inlinable_wrapped_arguments(
                     expr,
                     rest,
                     location,
@@ -1602,7 +1757,7 @@ impl<'comments> Formatter<'comments> {
             ) => {
                 let expr = self.expr(fun);
                 let arity = arguments.len();
-                self.append_inlinable_wrapped_args(
+                self.append_inlinable_wrapped_arguments(
                     expr,
                     arguments,
                     location,
@@ -1627,13 +1782,13 @@ impl<'comments> Formatter<'comments> {
             if self.any_comments(constructor.location.end) {
                 attributes
                     .append(constructor.name.as_str().to_doc())
-                    .append(self.wrap_args(vec![], constructor.location.end))
+                    .append(self.wrap_arguments(vec![], constructor.location.end))
                     .group()
             } else {
                 attributes.append(constructor.name.as_str().to_doc())
             }
         } else {
-            let args = constructor
+            let arguments = constructor
                 .arguments
                 .iter()
                 .map(
@@ -1659,40 +1814,66 @@ impl<'comments> Formatter<'comments> {
 
             attributes
                 .append(constructor.name.as_str().to_doc())
-                .append(self.wrap_args(args, constructor.location.end).group())
+                .append(
+                    self.wrap_arguments(arguments, constructor.location.end)
+                        .group(),
+                )
         };
 
         commented(doc_comments.append(doc).group(), comments)
     }
 
-    pub fn custom_type<'a, A>(&mut self, ct: &'a CustomType<A>) -> Document<'a> {
-        let _ = self.pop_empty_lines(ct.location.end);
+    pub fn custom_type<'a, A>(&mut self, type_: &'a CustomType<A>) -> Document<'a> {
+        let CustomType {
+            location,
+            end_position,
+            name,
+            name_location: _,
+            publicity,
+            constructors,
+            documentation: _,
+            deprecation,
+            opaque,
+            parameters,
+            typed_parameters: _,
+            external_erlang,
+            external_javascript,
+        } = type_;
+
+        let _ = self.pop_empty_lines(location.end);
 
         let attributes = AttributesPrinter::new()
-            .set_deprecation(&ct.deprecation)
-            .set_internal(ct.publicity)
+            .set_deprecation(deprecation)
+            .set_internal(*publicity)
+            .set_external_erlang(external_erlang)
+            .set_external_javascript(external_javascript)
             .to_doc();
 
         let doc = attributes
-            .append(pub_(ct.publicity))
-            .append(if ct.opaque { "opaque type " } else { "type " })
-            .append(if ct.parameters.is_empty() {
-                ct.name.clone().to_doc()
+            .append(pub_(*publicity))
+            .append(if *opaque { "opaque type " } else { "type " })
+            .append(if parameters.is_empty() {
+                name.clone().to_doc()
             } else {
-                let args = ct.parameters.iter().map(|(_, e)| e.to_doc()).collect_vec();
-                ct.name
+                let arguments = type_
+                    .parameters
+                    .iter()
+                    .map(|(_, e)| e.to_doc())
+                    .collect_vec();
+                type_
+                    .name
                     .clone()
                     .to_doc()
-                    .append(self.wrap_args(args, ct.location.end))
+                    .append(self.wrap_arguments(arguments, location.end))
                     .group()
             });
 
-        if ct.constructors.is_empty() {
+        if constructors.is_empty() {
             return doc;
         }
         let doc = doc.append(" {");
 
-        let inner = concat(ct.constructors.iter().map(|c| {
+        let inner = concat(constructors.iter().map(|c| {
             if self.pop_empty_lines(c.location.start) {
                 lines(2)
             } else {
@@ -1702,7 +1883,7 @@ impl<'comments> Formatter<'comments> {
         }));
 
         // Add any trailing comments
-        let inner = match printed_comments(self.pop_comments(ct.end_position), false) {
+        let inner = match printed_comments(self.pop_comments(*end_position), false) {
             Some(comments) => inner.append(line()).append(comments),
             None => inner,
         }
@@ -1710,85 +1891,6 @@ impl<'comments> Formatter<'comments> {
         .group();
 
         doc.append(inner).append(line()).append("}")
-    }
-
-    pub fn docs_opaque_custom_type<'a>(
-        &mut self,
-        publicity: Publicity,
-        name: &'a str,
-        args: &'a [SpannedString],
-        location: &'a SrcSpan,
-    ) -> Document<'a> {
-        let _ = self.pop_empty_lines(location.start);
-        let attributes = AttributesPrinter::new().set_internal(publicity).to_doc();
-
-        attributes
-            .append(pub_(publicity))
-            .append("opaque type ")
-            .append(if args.is_empty() {
-                name.to_doc()
-            } else {
-                let args = args.iter().map(|(_, e)| e.to_doc()).collect_vec();
-                name.to_doc().append(self.wrap_args(args, location.end))
-            })
-    }
-
-    pub fn docs_fn_signature<'a>(
-        &mut self,
-        publicity: Publicity,
-        name: &'a str,
-        args: &'a [TypedArg],
-        return_type: Arc<Type>,
-        location: &SrcSpan,
-    ) -> Document<'a> {
-        let mut printer = type_::pretty::Printer::new();
-        let fn_args = self.docs_fn_args(args, &mut printer, location);
-        let return_type = printer.print(&return_type);
-
-        let attributes = AttributesPrinter::new().set_internal(publicity);
-        docvec![
-            attributes,
-            pub_(publicity),
-            "fn ",
-            name,
-            fn_args,
-            " -> ",
-            return_type
-        ]
-    }
-
-    // Will always print the types, even if they were implicit in the original source
-    fn docs_fn_args<'a>(
-        &mut self,
-        args: &'a [TypedArg],
-        printer: &mut type_::pretty::Printer,
-        location: &SrcSpan,
-    ) -> Document<'a> {
-        let args = args
-            .iter()
-            .map(|arg| {
-                self.docs_fn_arg_name(arg)
-                    .append(": ".to_doc().append(printer.print(&arg.type_)))
-                    .group()
-            })
-            .collect_vec();
-        self.wrap_args(args, location.end)
-    }
-
-    fn docs_fn_arg_name<'a>(&mut self, arg: &'a TypedArg) -> Document<'a> {
-        match &arg.names {
-            ArgNames::Named { name, .. } => name.to_doc(),
-            ArgNames::NamedLabelled { label, name, .. } => docvec![label, " ", name],
-            // We remove the underscore from discarded function arguments since we don't want to
-            // expose this kind of detail: https://github.com/gleam-lang/gleam/issues/2561
-            ArgNames::Discard { name, .. } => match name.strip_prefix('_').unwrap_or(name) {
-                "" => "arg".to_doc(),
-                name => name.to_doc(),
-            },
-            ArgNames::LabelledDiscard { label, name, .. } => {
-                docvec![label, " ", name.strip_prefix('_').unwrap_or(name).to_doc()]
-            }
-        }
     }
 
     fn call_arg<'a>(&mut self, arg: &'a CallArg<UntypedExpr>, arity: usize) -> Document<'a> {
@@ -1850,14 +1952,14 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn tuple_index<'a>(&mut self, tuple: &'a UntypedExpr, index: u64) -> Document<'a> {
-        match tuple {
-            // In case we have a block with a single variable tuple access we
-            // remove that redundat wrapper:
-            //
-            //     {tuple.1}.0 becomes
-            //     tuple.1.0
-            //
-            UntypedExpr::Block { statements, .. } => match statements.as_slice() {
+        // In case we have a block with a single variable tuple access we
+        // remove that redundant wrapper:
+        //
+        //     {tuple.1}.0 becomes
+        //     tuple.1.0
+        //
+        if let UntypedExpr::Block { statements, .. } = tuple {
+            match statements.as_slice() {
                 [Statement::Expression(tuple @ UntypedExpr::TupleIndex { tuple: inner, .. })]
                     // We can't apply this change if the inner thing is a
                     // literal tuple because the compiler cannot currently parse
@@ -1867,8 +1969,9 @@ impl<'comments> Formatter<'comments> {
                     self.expr(tuple)
                 }
                 _ => self.expr(tuple),
-            },
-            _ => self.expr(tuple),
+            }
+        } else {
+            self.expr(tuple)
         }
         .append(".")
         .append(index)
@@ -1896,7 +1999,23 @@ impl<'comments> Formatter<'comments> {
                 ..
             } => " ".to_doc().append(self.block(location, statements, true)),
 
-            _ => break_("", " ").append(self.expr(expr).group()).nest(INDENT),
+            UntypedExpr::Int { .. }
+            | UntypedExpr::Float { .. }
+            | UntypedExpr::String { .. }
+            | UntypedExpr::Var { .. }
+            | UntypedExpr::Call { .. }
+            | UntypedExpr::BinOp { .. }
+            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::FieldAccess { .. }
+            | UntypedExpr::TupleIndex { .. }
+            | UntypedExpr::Todo { .. }
+            | UntypedExpr::Panic { .. }
+            | UntypedExpr::Echo { .. }
+            | UntypedExpr::RecordUpdate { .. }
+            | UntypedExpr::NegateBool { .. }
+            | UntypedExpr::NegateInt { .. } => {
+                break_("", " ").append(self.expr(expr).group()).nest(INDENT)
+            }
         }
         .next_break_fits(NextBreakFitsMode::Disabled)
         .group()
@@ -1905,7 +2024,26 @@ impl<'comments> Formatter<'comments> {
     fn assigned_value<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
             UntypedExpr::Case { .. } => " ".to_doc().append(self.expr(expr)).group(),
-            _ => self.case_clause_value(expr),
+            UntypedExpr::Int { .. }
+            | UntypedExpr::Float { .. }
+            | UntypedExpr::String { .. }
+            | UntypedExpr::Block { .. }
+            | UntypedExpr::Var { .. }
+            | UntypedExpr::Fn { .. }
+            | UntypedExpr::List { .. }
+            | UntypedExpr::Call { .. }
+            | UntypedExpr::BinOp { .. }
+            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::FieldAccess { .. }
+            | UntypedExpr::Tuple { .. }
+            | UntypedExpr::TupleIndex { .. }
+            | UntypedExpr::Todo { .. }
+            | UntypedExpr::Panic { .. }
+            | UntypedExpr::Echo { .. }
+            | UntypedExpr::BitArray { .. }
+            | UntypedExpr::RecordUpdate { .. }
+            | UntypedExpr::NegateBool { .. }
+            | UntypedExpr::NegateInt { .. } => self.case_clause_value(expr),
         }
     }
 
@@ -2059,10 +2197,16 @@ impl<'comments> Formatter<'comments> {
             };
         }
 
-        let comma = if tail.is_none() && elements.iter().all(UntypedExpr::is_simple_constant) {
-            flex_break(",", ", ")
-        } else {
-            break_(",", ", ")
+        let list_packing = self.items_sequence_packing(
+            elements,
+            tail,
+            UntypedExpr::can_have_multiple_per_line,
+            *location,
+        );
+
+        let comma = match list_packing {
+            ItemsPacking::FitMultiplePerLine => flex_break(",", ", "),
+            ItemsPacking::FitOnePerLine | ItemsPacking::BreakOnePerLine => break_(",", ", "),
         };
 
         let list_size = elements.len()
@@ -2071,15 +2215,31 @@ impl<'comments> Formatter<'comments> {
                 None => 0,
             };
 
-        let elements = join(
-            elements
-                .iter()
-                .map(|e| self.comma_separated_item(e, list_size)),
-            comma,
-        )
-        .next_break_fits(NextBreakFitsMode::Disabled);
+        let mut elements_doc = nil();
+        for element in elements.iter() {
+            let empty_lines = self.pop_empty_lines(element.location().start);
+            let element_doc = self.comma_separated_item(element, list_size);
 
-        let doc = break_("[", "[").append(elements);
+            elements_doc = if elements_doc.is_empty() {
+                element_doc
+            } else if empty_lines {
+                // If there's empty lines before the list item we want to add an
+                // empty line here. Notice how we're making sure no nesting is
+                // added after the comma, otherwise we would be adding needless
+                // whitespace in the empty line!
+                docvec![
+                    elements_doc,
+                    comma.clone().set_nesting(0),
+                    line(),
+                    element_doc
+                ]
+            } else {
+                docvec![elements_doc, comma.clone(), element_doc]
+            };
+        }
+        elements_doc = elements_doc.next_break_fits(NextBreakFitsMode::Disabled);
+
+        let doc = break_("[", "[").append(elements_doc);
         // We need to keep the last break aside and do not add it immediately
         // because in case there's a final comment before the closing square
         // bracket we want to add indentation (to just that break). Otherwise,
@@ -2103,8 +2263,8 @@ impl<'comments> Formatter<'comments> {
         // of moving those out of the list.
         // Otherwise those would be moved out of the list.
         let comments = self.pop_comments(location.end);
-        match printed_comments(comments, false) {
-            None => doc.append(last_break).append("]").group(),
+        let doc = match printed_comments(comments, false) {
+            None => doc.append(last_break).append("]"),
             Some(comment) => doc
                 .append(last_break.nest(INDENT))
                 // ^ See how here we're adding the missing indentation to the
@@ -2114,7 +2274,107 @@ impl<'comments> Formatter<'comments> {
                 .append(line())
                 .append("]")
                 .force_break(),
+        };
+
+        match list_packing {
+            ItemsPacking::FitOnePerLine | ItemsPacking::FitMultiplePerLine => doc.group(),
+            ItemsPacking::BreakOnePerLine => doc.force_break(),
         }
+    }
+
+    fn items_sequence_packing<'a, T: HasLocation>(
+        &self,
+        items: &'a [T],
+        tail: Option<&'a T>,
+        can_have_multiple_per_line: impl Fn(&'a T) -> bool,
+        list_location: SrcSpan,
+    ) -> ItemsPacking {
+        let ends_with_trailing_comma = tail
+            .map(|tail| tail.location().end)
+            .or_else(|| items.last().map(|last| last.location().end))
+            .is_some_and(|last_element_end| {
+                self.has_trailing_comma(last_element_end, list_location.end)
+            });
+
+        let has_multiple_elements_per_line =
+            self.has_items_on_the_same_line(items.iter().chain(tail));
+
+        let has_empty_lines_between_elements = match (items.first(), items.last().or(tail)) {
+            (Some(first), Some(last)) => self.empty_lines.first().is_some_and(|empty_line| {
+                *empty_line >= first.location().end && *empty_line < last.location().start
+            }),
+            _ => false,
+        };
+
+        if has_empty_lines_between_elements {
+            // If there's any empty line between elements we want to force each
+            // item onto its own line to preserve the empty lines that were
+            // intentionally added.
+            ItemsPacking::BreakOnePerLine
+        } else if !ends_with_trailing_comma {
+            // If the list doesn't end with a trailing comma we try and pack it in
+            // a single line; if we can't we'll put one item per line, no matter
+            // the content of the list.
+            ItemsPacking::FitOnePerLine
+        } else if tail.is_none()
+            && items.iter().all(can_have_multiple_per_line)
+            && has_multiple_elements_per_line
+            && self.spans_multiple_lines(list_location.start, list_location.end)
+        {
+            // If there's a trailing comma, we can have multiple items per line,
+            // and there's already multiple items per line, we try and pack as
+            // many items as possible on each line.
+            //
+            // Note how we only ever try and pack lists where all items are
+            // unbreakable primitives. To pack a list we need to use put
+            // `flex_break`s between each item.
+            // If the items themselves had breaks we could end up in a situation
+            // where an item gets broken making it span multiple lines and the
+            // spaces are not, for example:
+            //
+            // ```gleam
+            // [Constructor("wibble", "lorem ipsum dolor sit amet something something"), Other(1)]
+            // ```
+            //
+            // If we used flex breaks here the list would be formatted as:
+            //
+            // ```gleam
+            // [
+            //   Constructor(
+            //     "wibble",
+            //     "lorem ipsum dolor sit amet something something",
+            //   ), Other(1)
+            // ]
+            // ```
+            //
+            // The first item is broken, meaning that once we get to the flex
+            // space separating it from the following one the formatter is not
+            // going to break it since there's enough space in the current line!
+            ItemsPacking::FitMultiplePerLine
+        } else {
+            // If it ends with a trailing comma we will force the list on
+            // multiple lines, with one item per line.
+            ItemsPacking::BreakOnePerLine
+        }
+    }
+
+    fn has_items_on_the_same_line<'a, L: HasLocation + 'a, T: Iterator<Item = &'a L>>(
+        &self,
+        items: T,
+    ) -> bool {
+        let mut previous: Option<SrcSpan> = None;
+        for item in items {
+            let item_location = item.location();
+            // A list has multiple items on the same line if two consecutive
+            // ones do not span multiple lines.
+            if let Some(previous) = previous
+                && !self.spans_multiple_lines(previous.end, item_location.start)
+            {
+                return true;
+            }
+            previous = Some(item_location);
+        }
+        false
     }
 
     /// Pretty prints an expression to be used in a comma separated list; for
@@ -2141,7 +2401,27 @@ impl<'comments> Formatter<'comments> {
                 let doc = self.pipeline(expressions, true).group();
                 commented(doc, comments)
             }
-            _ => self.expr(expression).group(),
+            UntypedExpr::Int { .. }
+            | UntypedExpr::Float { .. }
+            | UntypedExpr::String { .. }
+            | UntypedExpr::Block { .. }
+            | UntypedExpr::Var { .. }
+            | UntypedExpr::Fn { .. }
+            | UntypedExpr::List { .. }
+            | UntypedExpr::Call { .. }
+            | UntypedExpr::BinOp { .. }
+            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::Case { .. }
+            | UntypedExpr::FieldAccess { .. }
+            | UntypedExpr::Tuple { .. }
+            | UntypedExpr::TupleIndex { .. }
+            | UntypedExpr::Todo { .. }
+            | UntypedExpr::Panic { .. }
+            | UntypedExpr::Echo { .. }
+            | UntypedExpr::BitArray { .. }
+            | UntypedExpr::RecordUpdate { .. }
+            | UntypedExpr::NegateBool { .. }
+            | UntypedExpr::NegateInt { .. } => self.expr(expression).group(),
         }
     }
 
@@ -2156,10 +2436,14 @@ impl<'comments> Formatter<'comments> {
 
             Pattern::Variable { name, .. } => name.to_doc(),
 
-            Pattern::VarUsage { name, .. } => name.to_doc(),
+            Pattern::BitArraySize(size) => self.bit_array_size(size),
 
             Pattern::Assign { name, pattern, .. } => {
-                self.pattern(pattern).append(" as ").append(name.as_str())
+                if pattern.is_discard() {
+                    name.to_doc()
+                } else {
+                    self.pattern(pattern).append(" as ").append(name.as_str())
+                }
             }
 
             Pattern::Discard { name, .. } => name.to_doc(),
@@ -2168,19 +2452,22 @@ impl<'comments> Formatter<'comments> {
 
             Pattern::Constructor {
                 name,
-                arguments: args,
+                arguments,
                 module,
                 spread,
                 location,
                 ..
-            } => self.pattern_constructor(name, args, module, *spread, location),
+            } => self.pattern_constructor(name, arguments, module, *spread, location),
 
             Pattern::Tuple {
-                elems, location, ..
+                elements, location, ..
             } => {
-                let args = elems.iter().map(|e| self.pattern(e)).collect_vec();
+                let arguments = elements
+                    .iter()
+                    .map(|element| self.pattern(element))
+                    .collect_vec();
                 "#".to_doc()
-                    .append(self.wrap_args(args, location.end))
+                    .append(self.wrap_arguments(arguments, location.end))
                     .group()
             }
 
@@ -2189,10 +2476,10 @@ impl<'comments> Formatter<'comments> {
             } => {
                 let segment_docs = segments
                     .iter()
-                    .map(|s| bit_array_segment(s, |e| self.pattern(e)))
+                    .map(|segment| bit_array_segment(segment, |pattern| self.pattern(pattern)))
                     .collect_vec();
 
-                self.bit_array(segment_docs, false, location)
+                self.bit_array(segment_docs, ItemsPacking::FitOnePerLine, location)
             }
 
             Pattern::StringPrefix {
@@ -2217,23 +2504,55 @@ impl<'comments> Formatter<'comments> {
         commented(doc, comments)
     }
 
+    fn bit_array_size<'a>(&mut self, size: &'a BitArraySize<()>) -> Document<'a> {
+        match size {
+            BitArraySize::Int { value, .. } => self.int(value),
+            BitArraySize::Variable { name, .. } => name.to_doc(),
+            BitArraySize::BinaryOperator {
+                left,
+                right,
+                operator,
+                ..
+            } => {
+                let operator = match operator {
+                    IntOperator::Add => " + ",
+                    IntOperator::Subtract => " - ",
+                    IntOperator::Multiply => " * ",
+                    IntOperator::Divide => " / ",
+                    IntOperator::Remainder => " % ",
+                };
+
+                docvec![
+                    self.bit_array_size(left),
+                    operator,
+                    self.bit_array_size(right)
+                ]
+            }
+            BitArraySize::Block { inner, .. } => self.bit_array_size(inner).surround("{ ", " }"),
+        }
+    }
+
     fn list_pattern<'a>(
         &mut self,
         elements: &'a [UntypedPattern],
-        tail: &'a Option<Box<UntypedPattern>>,
+        tail: &'a Option<Box<UntypedTailPattern>>,
     ) -> Document<'a> {
         if elements.is_empty() {
             return match tail {
-                Some(tail) => self.pattern(tail),
+                Some(tail) => self.pattern(&tail.pattern),
                 None => "[]".to_doc(),
             };
         }
-        let elements = join(elements.iter().map(|e| self.pattern(e)), break_(",", ", "));
+        let elements = join(
+            elements.iter().map(|element| self.pattern(element)),
+            break_(",", ", "),
+        );
         let doc = break_("[", "[").append(elements);
         match tail {
             None => doc.nest(INDENT).append(break_(",", "")),
 
             Some(tail) => {
+                let tail = &tail.pattern;
                 let comments = self.pop_comments(tail.location().start);
                 let tail = if tail.is_discard() {
                     "..".to_doc()
@@ -2385,6 +2704,8 @@ impl<'comments> Formatter<'comments> {
             ClauseGuard::Constant(constant) => self.const_expr(constant),
 
             ClauseGuard::Not { expression, .. } => docvec!["!", self.clause_guard(expression)],
+
+            ClauseGuard::Block { value, .. } => wrap_block(self.clause_guard(value)).group(),
         }
     }
 
@@ -2396,18 +2717,55 @@ impl<'comments> Formatter<'comments> {
 
     fn negate_bool<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
+            UntypedExpr::NegateBool { value, .. } => self.expr(value),
             UntypedExpr::BinOp { .. } => "!".to_doc().append(wrap_block(self.expr(expr))),
-            _ => docvec!["!", self.expr(expr)],
+            UntypedExpr::Int { .. }
+            | UntypedExpr::Float { .. }
+            | UntypedExpr::String { .. }
+            | UntypedExpr::Block { .. }
+            | UntypedExpr::Var { .. }
+            | UntypedExpr::Fn { .. }
+            | UntypedExpr::List { .. }
+            | UntypedExpr::Call { .. }
+            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::Case { .. }
+            | UntypedExpr::FieldAccess { .. }
+            | UntypedExpr::Tuple { .. }
+            | UntypedExpr::TupleIndex { .. }
+            | UntypedExpr::Todo { .. }
+            | UntypedExpr::Panic { .. }
+            | UntypedExpr::Echo { .. }
+            | UntypedExpr::BitArray { .. }
+            | UntypedExpr::RecordUpdate { .. }
+            | UntypedExpr::NegateInt { .. } => docvec!["!", self.expr(expr)],
         }
     }
 
     fn negate_int<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
-            UntypedExpr::BinOp { .. } | UntypedExpr::NegateInt { .. } => {
-                "- ".to_doc().append(self.expr(expr))
-            }
+            UntypedExpr::NegateInt { value, .. } => self.expr(value),
+            UntypedExpr::Int { value, .. } if value.starts_with('-') => self.int(&value[1..]),
+            UntypedExpr::BinOp { .. } => "- ".to_doc().append(self.expr(expr)),
 
-            _ => docvec!["-", self.expr(expr)],
+            UntypedExpr::Int { .. }
+            | UntypedExpr::Float { .. }
+            | UntypedExpr::String { .. }
+            | UntypedExpr::Block { .. }
+            | UntypedExpr::Var { .. }
+            | UntypedExpr::Fn { .. }
+            | UntypedExpr::List { .. }
+            | UntypedExpr::Call { .. }
+            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::Case { .. }
+            | UntypedExpr::FieldAccess { .. }
+            | UntypedExpr::Tuple { .. }
+            | UntypedExpr::TupleIndex { .. }
+            | UntypedExpr::Todo { .. }
+            | UntypedExpr::Panic { .. }
+            | UntypedExpr::Echo { .. }
+            | UntypedExpr::BitArray { .. }
+            | UntypedExpr::RecordUpdate { .. }
+            | UntypedExpr::NegateBool { .. } => docvec!["-", self.expr(expr)],
         }
     }
 
@@ -2444,10 +2802,24 @@ impl<'comments> Formatter<'comments> {
         commented(doc, comments)
     }
 
+    fn assert<'a>(&mut self, assert: &'a UntypedAssert) -> Document<'a> {
+        let comments = self.pop_comments(assert.location.start);
+
+        let expression = if assert.value.is_binop() || assert.value.is_pipeline() {
+            self.expr(&assert.value).nest(INDENT)
+        } else {
+            self.expr(&assert.value)
+        };
+
+        let doc =
+            self.append_as_message(expression, PrecedingAs::Expression, assert.message.as_ref());
+        commented(docvec!["assert ", doc], comments)
+    }
+
     fn bit_array<'a>(
         &mut self,
         segments: Vec<Document<'a>>,
-        is_simple: bool,
+        packing: ItemsPacking,
         location: &SrcSpan,
     ) -> Document<'a> {
         let comments = self.pop_comments(location.end);
@@ -2473,10 +2845,10 @@ impl<'comments> Formatter<'comments> {
                     .force_break(),
             };
         }
-        let comma = if is_simple {
-            flex_break(",", ", ")
-        } else {
-            break_(",", ", ")
+
+        let comma = match packing {
+            ItemsPacking::FitMultiplePerLine => flex_break(",", ", "),
+            ItemsPacking::FitOnePerLine | ItemsPacking::BreakOnePerLine => break_(",", ", "),
         };
 
         let last_break = break_(",", "");
@@ -2484,8 +2856,8 @@ impl<'comments> Formatter<'comments> {
             .append(join(segments, comma))
             .nest(INDENT);
 
-        match comments_doc {
-            None => doc.append(last_break).append(">>").group(),
+        let doc = match comments_doc {
+            None => doc.append(last_break).append(">>"),
             Some(comments) => doc
                 .append(last_break.nest(INDENT))
                 // ^ Notice how in this case we nest the final break before
@@ -2494,15 +2866,17 @@ impl<'comments> Formatter<'comments> {
                 .append(comments.nest(INDENT))
                 .append(line())
                 .append(">>")
-                .force_break()
-                .group(),
+                .force_break(),
+        };
+
+        match packing {
+            ItemsPacking::FitOnePerLine | ItemsPacking::FitMultiplePerLine => doc.group(),
+            ItemsPacking::BreakOnePerLine => doc.force_break(),
         }
     }
 
     fn bit_array_segment_expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
-            UntypedExpr::Placeholder { .. } => panic!("Placeholders should not be formatted"),
-
             UntypedExpr::BinOp { .. } => wrap_block(self.expr(expr)),
 
             UntypedExpr::Int { .. }
@@ -2533,6 +2907,7 @@ impl<'comments> Formatter<'comments> {
             Statement::Expression(expression) => self.expr(expression),
             Statement::Assignment(assignment) => self.assignment(assignment),
             Statement::Use(use_) => self.use_(use_),
+            Statement::Assert(assert) => self.assert(assert),
         }
     }
 
@@ -2542,7 +2917,8 @@ impl<'comments> Formatter<'comments> {
         statements: &'a Vec1<UntypedStatement>,
         force_breaks: bool,
     ) -> Document<'a> {
-        let statements_doc = docvec![break_("", " "), self.statements(statements)].nest(INDENT);
+        let statements_doc =
+            docvec![break_("", " "), self.statements(statements.as_vec())].nest(INDENT);
         let trailing_comments = self.pop_comments(location.end);
         let trailing_comments = printed_comments(trailing_comments, false);
         let block_doc = match trailing_comments {
@@ -2565,17 +2941,21 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    pub fn wrap_function_call_args<'a, I>(&mut self, args: I, location: &SrcSpan) -> Document<'a>
+    pub fn wrap_function_call_arguments<'a, I>(
+        &mut self,
+        arguments: I,
+        location: &SrcSpan,
+    ) -> Document<'a>
     where
         I: IntoIterator<Item = Document<'a>>,
     {
-        let mut args = args.into_iter().peekable();
-        if args.peek().is_none() {
+        let mut arguments = arguments.into_iter().peekable();
+        if arguments.peek().is_none() {
             return "()".to_doc();
         }
 
-        let args_doc = break_("", "")
-            .append(join(args, break_(",", ", ")))
+        let arguments_doc = break_("", "")
+            .append(join(arguments, break_(",", ", ")))
             .nest_if_broken(INDENT);
 
         // We get all remaining comments that come before the call's closing
@@ -2591,15 +2971,18 @@ impl<'comments> Formatter<'comments> {
             }
         };
 
-        "(".to_doc().append(args_doc).append(closing_parens).group()
+        "(".to_doc()
+            .append(arguments_doc)
+            .append(closing_parens)
+            .group()
     }
 
-    pub fn wrap_args<'a, I>(&mut self, args: I, comments_limit: u32) -> Document<'a>
+    pub fn wrap_arguments<'a, I>(&mut self, arguments: I, comments_limit: u32) -> Document<'a>
     where
         I: IntoIterator<Item = Document<'a>>,
     {
-        let mut args = args.into_iter().peekable();
-        if args.peek().is_none() {
+        let mut arguments = arguments.into_iter().peekable();
+        if arguments.peek().is_none() {
             let comments = self.pop_comments(comments_limit);
             return match printed_comments(comments, false) {
                 Some(comments) => "("
@@ -2613,7 +2996,7 @@ impl<'comments> Formatter<'comments> {
                 None => "()".to_doc(),
             };
         }
-        let doc = break_("(", "(").append(join(args, break_(",", ", ")));
+        let doc = break_("(", "(").append(join(arguments, break_(",", ", ")));
 
         // Include trailing comments if there are any
         let comments = self.pop_comments(comments_limit);
@@ -2632,16 +3015,20 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    pub fn wrap_args_with_spread<'a, I>(&mut self, args: I, comments_limit: u32) -> Document<'a>
+    pub fn wrap_arguments_with_spread<'a, I>(
+        &mut self,
+        arguments: I,
+        comments_limit: u32,
+    ) -> Document<'a>
     where
         I: IntoIterator<Item = Document<'a>>,
     {
-        let mut args = args.into_iter().peekable();
-        if args.peek().is_none() {
-            return self.wrap_args(args, comments_limit);
+        let mut arguments = arguments.into_iter().peekable();
+        if arguments.peek().is_none() {
+            return self.wrap_arguments(arguments, comments_limit);
         }
         let doc = break_("(", "(")
-            .append(join(args, break_(",", ", ")))
+            .append(join(arguments, break_(",", ", ")))
             .append(break_(",", ", "))
             .append("..");
 
@@ -2719,35 +3106,137 @@ impl<'comments> Formatter<'comments> {
         Some(doc.force_break())
     }
 
-    fn echo<'a>(&mut self, expression: &'a Option<Box<UntypedExpr>>) -> Document<'a> {
-        let Some(expression) = expression else {
-            return "echo".to_doc();
+    fn append_as_message<'a>(
+        &mut self,
+        doc: Document<'a>,
+        preceding_as: PrecedingAs,
+        message: Option<&'a UntypedExpr>,
+    ) -> Document<'a> {
+        let Some(message) = message else { return doc };
+
+        let comments = self.pop_comments(message.location().start);
+        let comments = printed_comments(comments, false);
+
+        let as_ = match preceding_as {
+            PrecedingAs::Keyword => " as".to_doc(),
+            PrecedingAs::Expression => docvec![break_("", " "), "as"].nest(INDENT),
         };
 
-        match expression.as_ref() {
-            // When a pipeline gets broken on multiple lines we don't want it to
-            // be on the same line as echo, or it would look confusing; instead
-            // it's nested onto a new line:
-            //
+        let doc = match comments {
+            // If there's comments between the document and the message we want
+            // the `as` bit to be on the same line as the original document and
+            // go on a new indented line with the message and comments:
             // ```gleam
-            // echo first
-            //   |> wobble
-            //   |> wibble
+            // todo as
+            //   // comment!
+            //   "wibble"
             // ```
-            //
-            // So it's easier to see echo is printing the whole thing. Otherwise,
-            // it would look like echo is printing just the first item:
-            //
-            // ```gleam
-            // echo first
-            // |> wobble
-            // |> wibble
-            // ```
-            //
-            UntypedExpr::PipeLine { .. } => docvec!["echo ", self.expr(expression).nest(INDENT)],
-            _ => docvec!["echo ", self.expr(expression)],
+            Some(comments) => docvec![
+                doc.group(),
+                as_,
+                docvec![line(), comments, line(), self.expr(message).group()].nest(INDENT)
+            ],
+
+            None => {
+                let message = match (preceding_as, message) {
+                    // If we have `as` preceded by a keyword (like with `panic` and `todo`)
+                    // and the message is a block, we don't want to nest it any further. That is,
+                    // we want it to look like this:
+                    // ```gleam
+                    // panic as {
+                    //   wibble wobble
+                    // }
+                    // ```
+                    // instead of this:
+                    // ```gleam
+                    // panic as {
+                    //     wibble wobble
+                    //   }
+                    // ```
+                    (PrecedingAs::Keyword, UntypedExpr::Block { .. }) => self.expr(message).group(),
+                    _ => self.expr(message).group().nest(INDENT),
+                };
+                docvec![doc.group(), as_, " ", message]
+            }
+        };
+
+        doc.group()
+    }
+
+    fn echo<'a>(
+        &mut self,
+        expression: &'a Option<Box<UntypedExpr>>,
+        message: &'a Option<Box<UntypedExpr>>,
+    ) -> Document<'a> {
+        let Some(expression) = expression else {
+            return self.append_as_message(
+                "echo".to_doc(),
+                PrecedingAs::Keyword,
+                message.as_deref(),
+            );
+        };
+
+        // When a binary expression gets broken on multiple lines we don't want
+        // it to be on the same line as echo, or it would look confusing;
+        // instead it's nested onto a new line:
+        //
+        // ```gleam
+        // echo first
+        //   |> wobble
+        //   |> wibble
+        // ```
+        //
+        // So it's easier to see echo is printing the whole thing. Otherwise,
+        // it would look like echo is printing just the first item:
+        //
+        // ```gleam
+        // echo first
+        // |> wobble
+        // |> wibble
+        // ```
+        //
+        let doc = self.expr(expression);
+        if expression.is_binop() || expression.is_pipeline() {
+            let doc = self.append_as_message(
+                doc.nest(INDENT),
+                PrecedingAs::Expression,
+                message.as_deref(),
+            );
+            docvec!["echo ", doc]
+        } else {
+            docvec![
+                "echo ",
+                self.append_as_message(doc, PrecedingAs::Expression, message.as_deref())
+            ]
         }
     }
+}
+
+/// This is used to describe the kind of things that might preceding an `as`
+/// message that can be added to various places: `panic`, `echo`, `let assert`,
+/// `assert`, `todo`.
+///
+/// It might be preceded by a keyword, like with `echo` and `panic`, or by
+/// an expression, like in `assert` or `let assert`.
+///
+enum PrecedingAs {
+    /// An expression is preceding the `as` message:
+    /// ```gleam
+    /// echo 1 as "message"
+    /// assert 1 == 2 as "message"
+    /// let assert Ok(_) = result as "message"
+    /// ```
+    ///
+    Expression,
+
+    /// A keyword is preceding the `as` message:
+    /// ```gleam
+    /// 1 |> echo as "message"
+    /// panic as "message"
+    /// todo as "message"
+    /// ```
+    ///
+    Keyword,
 }
 
 fn init_and_last<T>(vec: &[T]) -> Option<(&[T], &T)> {
@@ -2816,6 +3305,57 @@ impl<'a> Documentable<'a> for &'a BinOp {
         }
         .to_doc()
     }
+}
+
+#[allow(clippy::enum_variant_names)]
+/// This is used to determine how to fit the items of a list, or the segments of
+/// a bit array in a line.
+///
+enum ItemsPacking {
+    /// Try and fit everything on a single line; if the items don't fit, break
+    /// the list putting each item into its own line.
+    ///
+    /// ```gleam
+    /// // unbroken
+    /// [1, 2, 3]
+    ///
+    /// // broken
+    /// [
+    ///   1,
+    ///   2,
+    ///   3,
+    /// ]
+    /// ```
+    ///
+    FitOnePerLine,
+
+    /// Try and fit everything on a single line; if the items don't fit, break
+    /// the list putting as many items as possible in a single line.
+    ///
+    /// ```gleam
+    /// // unbroken
+    /// [1, 2, 3]
+    ///
+    /// // broken
+    /// [
+    ///   1, 2, 3, ...
+    ///   4, 100,
+    /// ]
+    /// ```
+    ///
+    FitMultiplePerLine,
+
+    /// Always break the list, putting each item into its own line:
+    ///
+    /// ```gleam
+    /// [
+    ///   1,
+    ///   2,
+    ///   3,
+    /// ]
+    /// ```
+    ///
+    BreakOnePerLine,
 }
 
 pub fn break_block(doc: Document<'_>) -> Document<'_> {
@@ -2900,7 +3440,9 @@ where
         BitArraySegment { value, options, .. } if options.is_empty() => to_doc(value),
 
         BitArraySegment { value, options, .. } => to_doc(value).append(":").append(join(
-            options.iter().map(|o| segment_option(o, |e| to_doc(e))),
+            options
+                .iter()
+                .map(|option| segment_option(option, |value| to_doc(value))),
             "-".to_doc(),
         )),
     }
@@ -3009,7 +3551,21 @@ fn is_breakable_argument(expr: &UntypedExpr, arity: usize) -> bool {
         | UntypedExpr::List { .. }
         | UntypedExpr::Tuple { .. }
         | UntypedExpr::BitArray { .. } => true,
-        _ => false,
+
+        UntypedExpr::Int { .. }
+        | UntypedExpr::Float { .. }
+        | UntypedExpr::String { .. }
+        | UntypedExpr::Var { .. }
+        | UntypedExpr::BinOp { .. }
+        | UntypedExpr::PipeLine { .. }
+        | UntypedExpr::FieldAccess { .. }
+        | UntypedExpr::TupleIndex { .. }
+        | UntypedExpr::Todo { .. }
+        | UntypedExpr::Panic { .. }
+        | UntypedExpr::Echo { .. }
+        | UntypedExpr::RecordUpdate { .. }
+        | UntypedExpr::NegateBool { .. }
+        | UntypedExpr::NegateInt { .. } => false,
     }
 }
 

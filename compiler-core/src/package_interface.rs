@@ -370,7 +370,7 @@ impl PackageInterface {
                 .config
                 .gleam_version
                 .clone()
-                .map(|version| EcoString::from(version.to_string())),
+                .map(|version| EcoString::from(version.hex().to_string())),
             modules: package
                 .modules
                 .iter()
@@ -472,8 +472,8 @@ impl ModuleInterface {
             match (value.type_.as_ref(), value.variant.clone()) {
                 (
                     Type::Fn {
-                        args: arguments,
-                        retrn: return_type,
+                        arguments,
+                        return_: return_type,
                     },
                     ValueConstructorVariant::ModuleFn {
                         documentation,
@@ -559,18 +559,18 @@ impl TypeInterface {
 /// have the same id will also have the same incremental number in the end).
 fn from_type_helper(type_: &Type, id_map: &mut IdMap) -> TypeInterface {
     match type_ {
-        Type::Fn { args, retrn } => TypeInterface::Fn {
-            parameters: args
+        Type::Fn { arguments, return_ } => TypeInterface::Fn {
+            parameters: arguments
                 .iter()
-                .map(|arg| from_type_helper(arg.as_ref(), id_map))
+                .map(|argument| from_type_helper(argument.as_ref(), id_map))
                 .collect(),
-            return_: Box::new(from_type_helper(retrn, id_map)),
+            return_: Box::new(from_type_helper(return_, id_map)),
         },
 
-        Type::Tuple { elems } => TypeInterface::Tuple {
-            elements: elems
+        Type::Tuple { elements } => TypeInterface::Tuple {
+            elements: elements
                 .iter()
-                .map(|elem| from_type_helper(elem.as_ref(), id_map))
+                .map(|element| from_type_helper(element.as_ref(), id_map))
                 .collect(),
         },
 
@@ -601,16 +601,16 @@ fn from_type_helper(type_: &Type, id_map: &mut IdMap) -> TypeInterface {
         Type::Named {
             name,
             module,
-            args,
+            arguments,
             package,
             ..
         } => TypeInterface::Named {
             name: name.clone(),
             package: package.clone(),
             module: module.clone(),
-            parameters: args
+            parameters: arguments
                 .iter()
-                .map(|arg| from_type_helper(arg.as_ref(), id_map))
+                .map(|argument| from_type_helper(argument.as_ref(), id_map))
                 .collect(),
         },
     }

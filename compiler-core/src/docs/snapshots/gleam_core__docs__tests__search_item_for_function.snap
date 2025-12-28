@@ -1,0 +1,34 @@
+---
+source: compiler-core/src/docs/tests.rs
+expression: output
+---
+------ SOURCE CODE
+
+/// Pi is the ration between a circle's **radius** and its
+/// *circumference*. Pretty cool!
+pub const pi = 3.14
+
+------------------------------------
+
+TITLE:         main
+PARENT TITLE:  main
+TYPE:          Module
+REFERENCE:     main.html
+CONTENT:
+
+------------------------------------
+TITLE:         pi
+PARENT TITLE:  module
+TYPE:          Value
+REFERENCE:     module.html#pi
+CONTENT:
+```
+pub const pi: Float
+```
+ Pi is the ration between a circle's **radius** and its
+ *circumference*. Pretty cool!
+
+Synonyms:
+module.pi
+module pi
+------------------------------------

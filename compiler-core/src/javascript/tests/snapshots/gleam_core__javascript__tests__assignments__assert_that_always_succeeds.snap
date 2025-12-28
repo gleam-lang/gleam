@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/javascript/tests/assignments.rs
+expression: "\ntype Wibble {\n    Wibble(Int)\n}\n\npub fn go() {\n  let assert Wibble(n) = Wibble(1)\n  n\n}\n"
+---
+----- SOURCE CODE
+
+type Wibble {
+    Wibble(Int)
+}
+
+pub fn go() {
+  let assert Wibble(n) = Wibble(1)
+  n
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+class Wibble extends $CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+}
+
+export function go() {
+  let $ = new Wibble(1);
+  let n;
+  n = $[0];
+  return n;
+}

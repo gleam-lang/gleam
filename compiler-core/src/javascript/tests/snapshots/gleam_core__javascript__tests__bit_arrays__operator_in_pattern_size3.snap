@@ -1,0 +1,51 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn main() {\n  let additional = 10\n  let assert <<len, payload:size(len + additional * 8)>> = <<>>\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let additional = 10
+  let assert <<len, payload:size(len + additional * 8)>> = <<>>
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError, toBitArray, bitArraySliceToInt } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+export function main() {
+  let additional = 10;
+  let $ = toBitArray([]);
+  let len$1;
+  let payload;
+  if ($.bitSize >= 8) {
+    let len = $.byteAt(0);
+    if (len + (additional * 8) >= 0 && $.bitSize === 8 + len + additional * 8) {
+      len$1 = len;
+      payload = bitArraySliceToInt($, 8, 8 + len$1 + (additional * 8), true, false);
+    } else {
+      throw makeError(
+        "let_assert",
+        FILEPATH,
+        "my/mod",
+        4,
+        "main",
+        "Pattern match failed, no pattern matched the value.",
+        { value: $, start: 41, end: 102, pattern_start: 52, pattern_end: 95 }
+      )
+    }
+  } else {
+    throw makeError(
+      "let_assert",
+      FILEPATH,
+      "my/mod",
+      4,
+      "main",
+      "Pattern match failed, no pattern matched the value.",
+      { value: $, start: 41, end: 102, pattern_start: 52, pattern_end: 95 }
+    )
+  }
+  return $;
+}

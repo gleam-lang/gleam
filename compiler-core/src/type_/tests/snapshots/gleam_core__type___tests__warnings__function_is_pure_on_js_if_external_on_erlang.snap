@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\n@external(erlang, \"maths\", \"add\")\nfn add(a: Int, b: Int) -> Int { a + b }\n\npub fn main() {\n  add(1, 2)\n  Nil\n}\n"
+---
+----- SOURCE CODE
+
+@external(erlang, "maths", "add")
+fn add(a: Int, b: Int) -> Int { a + b }
+
+pub fn main() {
+  add(1, 2)
+  Nil
+}
+
+
+----- WARNING
+warning: Unused value
+  ┌─ /src/warning/wrn.gleam:6:3
+  │
+6 │   add(1, 2)
+  │   ^^^^^^^^^ This value is never used
+
+This expression computes a value without any side effects, but then the
+value isn't used at all. You might want to assign it to a variable, or
+delete the expression entirely if it's not needed.

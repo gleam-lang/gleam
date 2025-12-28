@@ -3,9 +3,11 @@ use super::{
     expression::{ArgumentKind, CallKind},
 };
 use crate::{
-    ast::{BinOp, Layer, SrcSpan, TodoKind},
+    ast::{BinOp, BitArraySegmentTruncation, Layer, SrcSpan, TodoKind},
     build::Target,
-    type_::Type,
+    exhaustiveness::ImpossibleBitArraySegmentPattern,
+    parse::LiteralFloatValue,
+    type_::{Type, expression::ComparisonOutcome},
 };
 
 use camino::Utf8PathBuf;
@@ -59,12 +61,6 @@ impl Problems {
     pub fn take_warnings(&mut self) -> Vec<Warning> {
         std::mem::take(&mut self.warnings)
     }
-}
-
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub struct UnknownType {
-    pub location: SrcSpan,
-    pub name: EcoString,
 }
 
 /// This is used by the unknown record field error to tell if an unknown field
@@ -134,16 +130,10 @@ impl ModuleSuggestion {
         }
     }
 
-    pub fn name(&self) -> &EcoString {
-        match self {
-            ModuleSuggestion::Imported(name) | ModuleSuggestion::Importable(name) => name,
-        }
-    }
-
     pub fn last_name_component(&self) -> &str {
         match self {
             ModuleSuggestion::Imported(name) | ModuleSuggestion::Importable(name) => {
-                name.split('/').last().unwrap_or(name)
+                name.split('/').next_back().unwrap_or(name)
             }
         }
     }
@@ -151,10 +141,11 @@ impl ModuleSuggestion {
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Error {
-    SrcImportingTest {
+    InvalidImport {
         location: SrcSpan,
-        src_module: crate::error::Name,
-        test_module: crate::error::Name,
+        importing_module: EcoString,
+        imported_module: EcoString,
+        kind: InvalidImportKind,
     },
 
     BitArraySegmentError {
@@ -172,6 +163,9 @@ pub enum Error {
         location: SrcSpan,
         name: EcoString,
         variables: Vec<EcoString>,
+        /// If there's a discarded variable with the same name in the same scope
+        /// this will contain its location.
+        discarded_location: Option<SrcSpan>,
         type_with_name_in_scope: bool,
     },
 
@@ -226,6 +220,7 @@ pub enum Error {
     IncorrectArity {
         location: SrcSpan,
         expected: usize,
+        context: IncorrectArityContext,
         given: usize,
         labels: Vec<EcoString>,
     },
@@ -582,13 +577,16 @@ pub enum Error {
         location: SrcSpan,
     },
 
-    /// Occers when any varient of a custom type is deprecated while
+    /// Occurs when any varient of a custom type is deprecated while
     /// the custom type itself is deprecated
     DeprecatedVariantOnDeprecatedType {
         location: SrcSpan,
     },
 
-    ErlangFloatUnsafe {
+    /// Occurs when a literal floating point has a value that is outside of the
+    /// range representable by floats: -1.7976931348623157e308 to
+    /// 1.7976931348623157e308.
+    LiteralFloatOutOfRange {
         location: SrcSpan,
     },
 
@@ -603,6 +601,82 @@ pub enum Error {
     /// ```
     ///
     EchoWithNoFollowingExpression {
+        location: SrcSpan,
+    },
+    /// When someone tries concatenating two string values using the `+` operator.
+    ///
+    /// ```gleam
+    /// "aaa" + "bbb"
+    /// //    ^ We wont to suggest using `<>` instead!
+    /// ```
+    StringConcatenationWithAddInt {
+        location: SrcSpan,
+    },
+    /// When someone tries using an int operator on two floats.
+    ///
+    /// ```gleam
+    /// 1 +. 3
+    /// //^ We wont to suggest using `+` instead!
+    /// ```
+    FloatOperatorOnInts {
+        operator: BinOp,
+        location: SrcSpan,
+    },
+    /// When someone tries using an int operator on two floats.
+    ///
+    /// ```gleam
+    /// 1.2 + 1.0
+    /// //  ^ We wont to suggest using `+.` instead!
+    /// ```
+    IntOperatorOnFloats {
+        operator: BinOp,
+        location: SrcSpan,
+    },
+
+    DoubleVariableAssignmentInBitArray {
+        location: SrcSpan,
+    },
+
+    NonUtf8StringAssignmentInBitArray {
+        location: SrcSpan,
+    },
+
+    /// This happens when a private type is marked as opaque. Only public types
+    /// can be opaque.
+    ///
+    /// ```gleam
+    /// opaque type Wibble {
+    ///   Wobble
+    /// }
+    /// ```
+    ///
+    PrivateOpaqueType {
+        location: SrcSpan,
+    },
+
+    SrcImportingDevDependency {
+        importing_module: EcoString,
+        imported_module: EcoString,
+        package: EcoString,
+        location: SrcSpan,
+    },
+
+    /// This happens when a type has no type parameters (for example `Int`) but
+    /// it is being used as a constructor: `Int()`, `Bool(a, b)`.
+    ///
+    TypeUsedAsAConstructor {
+        location: SrcSpan,
+        name: EcoString,
+    },
+
+    /// The `@external` annotation on custom types can only be used for external
+    /// types, types with no constructors.
+    ///
+    ExternalTypeWithConstructors {
+        location: SrcSpan,
+    },
+
+    LowercaseBoolPattern {
         location: SrcSpan,
     },
 }
@@ -639,6 +713,19 @@ pub enum LiteralCollectionKind {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IncorrectArityContext {
+    Pattern,
+    Function,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InvalidImportKind {
+    SrcImportingTest,
+    SrcImportingDev,
+    DevImportingTest,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Named {
     Type,
     TypeAlias,
@@ -655,23 +742,30 @@ pub enum Named {
 impl Named {
     pub fn as_str(self) -> &'static str {
         match self {
-            Named::Type => "type",
-            Named::TypeAlias => "type alias",
-            Named::TypeVariable => "type variable",
-            Named::CustomTypeVariant => "type variant",
-            Named::Variable => "variable",
-            Named::Argument => "argument",
-            Named::Label => "label",
-            Named::Constant => "constant",
-            Named::Function => "function",
-            Named::Discard => "discard",
+            Named::Type => "Type",
+            Named::TypeAlias => "Type alias",
+            Named::TypeVariable => "Type variable",
+            Named::CustomTypeVariant => "Type variant",
+            Named::Variable => "Variable",
+            Named::Argument => "Argument",
+            Named::Label => "Label",
+            Named::Constant => "Constant",
+            Named::Function => "Function",
+            Named::Discard => "Discard",
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-/// The origin of a variable. Used to determine how it can be ignored when unused.
-pub enum VariableOrigin {
+pub struct VariableOrigin {
+    pub syntax: VariableSyntax,
+    pub declaration: VariableDeclaration,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+/// The syntax used to define a variable. Used to determine how it can be ignored
+/// when unused.
+pub enum VariableSyntax {
     /// A variable that can be ignored by prefixing with an underscore, `_name`
     Variable(EcoString),
     /// A variable from label shorthand syntax, which can be ignored with an underscore: `label: _`
@@ -682,17 +776,53 @@ pub enum VariableOrigin {
     Generated,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+/// The source of a variable, such as a `let` assignment, or function parameter.
+pub enum VariableDeclaration {
+    LetPattern,
+    UsePattern,
+    ClausePattern,
+    FunctionParameter {
+        /// The name of the function defining the parameter. This will be None
+        /// for parameters introduced by anoynmous functions: `fn(a) { a }`
+        ///
+        function_name: Option<EcoString>,
+        /// The index of the parameter in the function's parameter list.
+        ///
+        index: usize,
+    },
+    Generated,
+}
+
 impl VariableOrigin {
     pub fn how_to_ignore(&self) -> Option<String> {
-        match self {
-            VariableOrigin::Variable(name) => {
+        match &self.syntax {
+            VariableSyntax::Variable(name) => {
                 Some(format!("You can ignore it with an underscore: `_{name}`."))
             }
-            VariableOrigin::LabelShorthand(label) => Some(format!(
+            VariableSyntax::LabelShorthand(label) => Some(format!(
                 "You can ignore it with an underscore: `{label}: _`."
             )),
-            VariableOrigin::AssignmentPattern => Some("You can safely remove it.".to_string()),
-            VariableOrigin::Generated => None,
+            VariableSyntax::AssignmentPattern => Some("You can safely remove it.".to_string()),
+            VariableSyntax::Generated => None,
+        }
+    }
+
+    pub fn generated() -> Self {
+        Self {
+            syntax: VariableSyntax::Generated,
+            declaration: VariableDeclaration::Generated,
+        }
+    }
+
+    pub fn is_function_parameter(&self) -> bool {
+        match self.declaration {
+            VariableDeclaration::FunctionParameter { .. } => true,
+
+            VariableDeclaration::LetPattern
+            | VariableDeclaration::UsePattern
+            | VariableDeclaration::ClausePattern
+            | VariableDeclaration::Generated => false,
         }
     }
 }
@@ -716,7 +846,6 @@ pub enum Warning {
     UnusedValue {
         location: SrcSpan,
     },
-
     NoFieldsRecordUpdate {
         location: SrcSpan,
     },
@@ -793,9 +922,14 @@ pub enum Warning {
         layer: Layer,
     },
 
-    UnreachableCaseClause {
+    UnreachableCasePattern {
         location: SrcSpan,
-        reason: UnreachableCaseClauseReason,
+        reason: UnreachablePatternReason,
+    },
+
+    UnusedDiscardPattern {
+        location: SrcSpan,
+        name: EcoString,
     },
 
     /// This happens when someone tries to write a case expression where one of
@@ -870,6 +1004,11 @@ pub enum Warning {
         location: SrcSpan,
     },
 
+    AssertAssignmentOnImpossiblePattern {
+        location: SrcSpan,
+        reason: AssertImpossiblePattern,
+    },
+
     /// When a `todo` or `panic` is used as a function instead of providing the
     /// error message with the `as` syntax.
     ///
@@ -880,8 +1019,8 @@ pub enum Warning {
     TodoOrPanicUsedAsFunction {
         kind: TodoOrPanic,
         location: SrcSpan,
-        args_location: Option<SrcSpan>,
-        args: usize,
+        arguments_location: Option<SrcSpan>,
+        arguments: usize,
     },
 
     UnreachableCodeAfterPanic {
@@ -924,6 +1063,92 @@ pub enum Warning {
     JavaScriptIntUnsafe {
         location: SrcSpan,
     },
+
+    /// When we are trying to use bool assert on a literal boolean. For example:
+    /// ```gleam
+    /// assert True
+    ///        ^ The programmer knows this will never panic, so it's useless
+    /// ```
+    AssertLiteralBool {
+        location: SrcSpan,
+    },
+
+    /// When a segment has a constant value that is bigger than its size and we
+    /// know for certain is going to be truncated.
+    ///
+    BitArraySegmentTruncatedValue {
+        truncation: BitArraySegmentTruncation,
+        location: SrcSpan,
+    },
+
+    /// In Gleam v1 it is possible to import one module twice using different aliases.
+    /// This is deprecated, and likely would be removed in a Gleam v2.
+    ModuleImportedTwice {
+        name: EcoString,
+        first: SrcSpan,
+        second: SrcSpan,
+    },
+
+    /// Top-level definition should not shadow an imported one.
+    /// This includes constant or function imports.
+    TopLevelDefinitionShadowsImport {
+        location: SrcSpan,
+        name: EcoString,
+    },
+
+    /// This warning is raised when we perform a comparison that the compiler
+    /// can tell is always going to succeed or fail. For example:
+    ///
+    /// ```gleam
+    /// 1 == 1 // This always succeeds
+    /// 2 != 2 // This always fails
+    /// 1 > 10 // This always fails
+    /// a == a // This always succeeds
+    /// ```
+    RedundantComparison {
+        location: SrcSpan,
+        outcome: ComparisonOutcome,
+    },
+    /// When a function's argument is only ever used unchanged in recursive
+    /// calls. For example:
+    ///
+    /// ```gleam
+    /// pub fn wibble(x, n) {
+    /// //            ^ This argument is not needed,
+    ///   case n {
+    ///     0 -> Nil
+    ///     _ -> wibble(x, n - 1)
+    /// //              ^ It's only used in recursive calls!
+    ///   }
+    /// }
+    /// ```
+    ///
+    UnusedRecursiveArgument {
+        location: SrcSpan,
+    },
+}
+
+#[derive(Debug, Eq, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
+pub enum AssertImpossiblePattern {
+    /// When `let assert`-ing on a variant that's different from the inferred
+    /// one.
+    ///
+    /// ```gleam
+    /// let assert Error(_) = Ok(_)
+    /// ```
+    ///
+    InferredVariant,
+
+    /// When `let assert`-ing on a pattern that will never match because it's
+    /// matching on impossible segment(s).
+    ///
+    /// ```gleam
+    /// let assert <<-2:unsigned>> = bit_array
+    /// ```
+    ///
+    ImpossibleSegments {
+        segments: Vec<ImpossibleBitArraySegmentPattern>,
+    },
 }
 
 #[derive(Debug, Eq, Copy, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
@@ -932,6 +1157,7 @@ pub enum FeatureKind {
     ConstantStringConcatenation,
     ArithmeticInGuards,
     UnannotatedUtf8StringSegment,
+    UnannotatedFloatSegment,
     NestedTupleAccess,
     InternalAnnotation,
     AtInJavascriptModules,
@@ -940,6 +1166,10 @@ pub enum FeatureKind {
     LetAssertWithMessage,
     VariantWithDeprecatedAnnotation,
     JavaScriptUnalignedBitArray,
+    BoolAssert,
+    ExternalCustomType,
+    ConstantRecordUpdate,
+    ExpressionInSegmentSize,
 }
 
 impl FeatureKind {
@@ -967,6 +1197,15 @@ impl FeatureKind {
             }
 
             FeatureKind::JavaScriptUnalignedBitArray => Version::new(1, 9, 0),
+            FeatureKind::UnannotatedFloatSegment => Version::new(1, 10, 0),
+
+            FeatureKind::BoolAssert => Version::new(1, 11, 0),
+
+            FeatureKind::ExpressionInSegmentSize => Version::new(1, 12, 0),
+
+            FeatureKind::ExternalCustomType | FeatureKind::ConstantRecordUpdate => {
+                Version::new(1, 14, 0)
+            }
         }
     }
 }
@@ -993,8 +1232,8 @@ pub enum TodoOrPanic {
     Panic,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub enum UnreachableCaseClauseReason {
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum UnreachablePatternReason {
     /// The clause is unreachable because a previous pattern
     /// matches the same case.
     DuplicatePattern,
@@ -1002,13 +1241,16 @@ pub enum UnreachableCaseClauseReason {
     /// of the custom type that we are matching on, and this matches
     /// against one of the variants we know it isn't.
     ImpossibleVariant,
+    /// The clause is unreachable because it is matching on a pattern segment
+    /// that we could tell is never going to match
+    ImpossibleSegments(Vec<ImpossibleBitArraySegmentPattern>),
 }
 
 impl Error {
     // Location where the error started
     pub fn start_location(&self) -> u32 {
         match self {
-            Error::SrcImportingTest { location, .. }
+            Error::InvalidImport { location, .. }
             | Error::BitArraySegmentError { location, .. }
             | Error::UnknownVariable { location, .. }
             | Error::UnknownType { location, .. }
@@ -1022,6 +1264,7 @@ impl Error {
             | Error::UnsafeRecordUpdate { location, .. }
             | Error::UnnecessarySpreadOperator { location, .. }
             | Error::IncorrectTypeArity { location, .. }
+            | Error::TypeUsedAsAConstructor { location, .. }
             | Error::CouldNotUnify { location, .. }
             | Error::RecursiveType { location, .. }
             | Error::DuplicateName {
@@ -1072,8 +1315,16 @@ impl Error {
             | Error::AllVariantsDeprecated { location }
             | Error::EchoWithNoFollowingExpression { location }
             | Error::DeprecatedVariantOnDeprecatedType { location }
-            | Error::ErlangFloatUnsafe { location } => location.start,
-
+            | Error::LiteralFloatOutOfRange { location }
+            | Error::FloatOperatorOnInts { location, .. }
+            | Error::IntOperatorOnFloats { location, .. }
+            | Error::StringConcatenationWithAddInt { location }
+            | Error::DoubleVariableAssignmentInBitArray { location }
+            | Error::NonUtf8StringAssignmentInBitArray { location }
+            | Error::PrivateOpaqueType { location }
+            | Error::SrcImportingDevDependency { location, .. }
+            | Error::ExternalTypeWithConstructors { location, .. }
+            | Error::LowercaseBoolPattern { location } => location.start,
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
             }
@@ -1083,14 +1334,14 @@ impl Error {
     }
 
     pub fn with_unify_error_situation(mut self, new_situation: UnifyErrorSituation) -> Self {
-        match self {
-            Error::CouldNotUnify {
-                ref mut situation, ..
-            } => {
-                *situation = Some(new_situation);
-                self
-            }
-            _ => self,
+        if let Error::CouldNotUnify {
+            ref mut situation, ..
+        } = self
+        {
+            *situation = Some(new_situation);
+            self
+        } else {
+            self
         }
     }
 }
@@ -1104,7 +1355,7 @@ impl Warning {
         }
     }
 
-    fn location(&self) -> SrcSpan {
+    pub(crate) fn location(&self) -> SrcSpan {
         match self {
             Warning::Todo { location, .. }
             | Warning::ImplicitlyDiscardedResult { location, .. }
@@ -1125,25 +1376,32 @@ impl Warning {
             | Warning::InefficientEmptyListCheck { location, .. }
             | Warning::TransitiveDependencyImported { location, .. }
             | Warning::DeprecatedItem { location, .. }
-            | Warning::UnreachableCaseClause { location, .. }
+            | Warning::UnreachableCasePattern { location, .. }
             | Warning::CaseMatchOnLiteralCollection { location, .. }
             | Warning::CaseMatchOnLiteralValue { location, .. }
             | Warning::OpaqueExternalType { location, .. }
             | Warning::InternalTypeLeak { location, .. }
             | Warning::RedundantAssertAssignment { location, .. }
+            | Warning::AssertAssignmentOnImpossiblePattern { location, .. }
             | Warning::TodoOrPanicUsedAsFunction { location, .. }
             | Warning::UnreachableCodeAfterPanic { location, .. }
             | Warning::RedundantPipeFunctionCapture { location, .. }
             | Warning::FeatureRequiresHigherGleamVersion { location, .. }
-            | Warning::JavaScriptIntUnsafe { location, .. } => *location,
+            | Warning::JavaScriptIntUnsafe { location, .. }
+            | Warning::AssertLiteralBool { location, .. }
+            | Warning::BitArraySegmentTruncatedValue { location, .. }
+            | Warning::TopLevelDefinitionShadowsImport { location, .. }
+            | Warning::UnusedDiscardPattern { location, .. }
+            | Warning::ModuleImportedTwice {
+                second: location, ..
+            }
+            | Warning::RedundantComparison { location, .. }
+            | Warning::UnusedRecursiveArgument { location, .. } => *location,
         }
     }
 
     pub(crate) fn is_todo(&self) -> bool {
-        match self {
-            Self::Todo { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Todo { .. })
     }
 }
 
@@ -1182,6 +1440,7 @@ pub fn convert_get_value_constructor_error(
             location,
             name,
             variables,
+            discarded_location: None,
             type_with_name_in_scope,
         },
 
@@ -1221,8 +1480,14 @@ pub enum UnsafeRecordUpdateReason {
         record_variant: Arc<Type>,
         expected_field_type: Arc<Type>,
         record_field_type: Arc<Type>,
-        field_name: EcoString,
+        field: RecordField,
     },
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub enum RecordField {
+    Labelled(EcoString),
+    Unlabelled(u32),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -1289,7 +1554,7 @@ pub enum MatchFunTypeError {
     IncorrectArity {
         expected: usize,
         given: usize,
-        args: Vec<Arc<Type>>,
+        arguments: Vec<Arc<Type>>,
         return_type: Arc<Type>,
     },
     NotFn {
@@ -1312,6 +1577,7 @@ pub fn convert_not_fun_error(
         ) => Error::IncorrectArity {
             labels: vec![],
             location: call_location,
+            context: IncorrectArityContext::Function,
             expected,
             given,
         },
@@ -1352,7 +1618,10 @@ pub fn flip_unify_error(e: UnifyError) -> UnifyError {
             given: expected,
             situation: note,
         },
-        other => other,
+        UnifyError::ExtraVarInAlternativePattern { .. }
+        | UnifyError::MissingVarInAlternativePattern { .. }
+        | UnifyError::DuplicateVarInPattern { .. }
+        | UnifyError::RecursiveType => e,
     }
 }
 
@@ -1410,7 +1679,7 @@ fn unify_enclosed_type_test() {
             crate::type_::float(),
             Err(UnifyError::CouldNotUnify {
                 expected: crate::type_::string(),
-                given: crate::type_::bits(),
+                given: crate::type_::bit_array(),
                 situation: Some(UnifyErrorSituation::CaseClauseMismatch {
                     clause_location: SrcSpan::default()
                 })
@@ -1584,7 +1853,10 @@ impl UnifyError {
                 given,
                 situation: Some(situation),
             },
-            other => other,
+            Self::ExtraVarInAlternativePattern { .. }
+            | Self::MissingVarInAlternativePattern { .. }
+            | Self::DuplicateVarInPattern { .. }
+            | Self::RecursiveType => self,
         }
     }
 
@@ -1688,7 +1960,11 @@ impl UnifyError {
             },
 
             // In all other cases we fallback to the generic cannot unify error.
-            _ => self.into_error(body_location),
+            Self::CouldNotUnify { .. }
+            | Self::ExtraVarInAlternativePattern { .. }
+            | Self::MissingVarInAlternativePattern { .. }
+            | Self::DuplicateVarInPattern { .. }
+            | Self::RecursiveType => self.into_error(body_location),
         }
     }
 }
@@ -1729,20 +2005,12 @@ pub fn check_javascript_int_safety(int_value: &BigInt, location: SrcSpan, proble
 /// -1.7976931348623157e308 to 1.7976931348623157e308 which is the allowed range for
 /// Erlang's floating point numbers
 ///
-pub fn check_erlang_float_safety(
-    string_value: &EcoString,
-    location: SrcSpan,
-    problems: &mut Problems,
-) {
-    let erl_min_float = -1.7976931348623157e308f64;
-    let erl_max_float = 1.7976931348623157e308f64;
+pub fn check_float_safety(value: LiteralFloatValue, location: SrcSpan, problems: &mut Problems) {
+    let min_float = -1.7976931348623157e308f64;
+    let max_float = 1.7976931348623157e308f64;
 
-    let float_value: f64 = string_value
-        .replace("_", "")
-        .parse()
-        .expect("Unable to parse string to floating point value");
-
-    if float_value < erl_min_float || float_value > erl_max_float {
-        problems.error(Error::ErlangFloatUnsafe { location });
+    let float_value = value.value();
+    if float_value < min_float || float_value > max_float {
+        problems.error(Error::LiteralFloatOutOfRange { location });
     }
 }

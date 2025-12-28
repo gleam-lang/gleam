@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\npub fn main() {\n  const x = 10\n  x\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  const x = 10
+  x
+}
+
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:3
+  │
+3 │   const x = 10
+  │   ^^^^^ Constants are not allowed inside functions
+
+All variables are immutable in Gleam, so constants inside functions are not
+necessary.
+Hint: Either move this into the global scope or use `let` binding instead.

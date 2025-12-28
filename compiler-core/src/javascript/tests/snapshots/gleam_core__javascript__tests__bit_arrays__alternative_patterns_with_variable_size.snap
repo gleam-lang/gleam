@@ -1,0 +1,41 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 1918
+expression: "\npub fn go(x) {\n  case x {\n    <<_, n, rest:size(n)>> |\n    <<n, _, rest:size(n)>> -> True\n    _ -> False\n  }\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  case x {
+    <<_, n, rest:size(n)>> |
+    <<n, _, rest:size(n)>> -> True
+    _ -> False
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { bitArraySliceToInt } from "../gleam.mjs";
+
+export function go(x) {
+  if (x.bitSize >= 8 && x.bitSize >= 16) {
+    let n = x.byteAt(1);
+    if (x.bitSize === 16 + n) {
+      let n$1 = n;
+      let rest = bitArraySliceToInt(x, 16, 16 + n$1, true, false);
+      return true;
+    } else {
+      let n = x.byteAt(0);
+      if (x.bitSize === 16 + n) {
+        let n$1 = n;
+        let rest = bitArraySliceToInt(x, 16, 16 + n$1, true, false);
+        return true;
+      } else {
+        return false;
+      }
+    }
+  } else {
+    return false;
+  }
+}

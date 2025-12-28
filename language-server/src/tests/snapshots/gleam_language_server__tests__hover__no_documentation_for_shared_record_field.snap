@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: "\npub type Wibble {\n  Wibble(\n    /// This is some documentation about the wibble field.\n    wibble: Int\n  )\n  Wobble(\n    /// Here's some documentation explaining a field of Wobble\n    wibble: Int\n  )\n}\n\npub fn wibble(w: Wibble) {\n  w.wibble\n}\n"
+---
+pub type Wibble {
+  Wibble(
+    /// This is some documentation about the wibble field.
+    wibble: Int
+  )
+  Wobble(
+    /// Here's some documentation explaining a field of Wobble
+    wibble: Int
+  )
+}
+
+pub fn wibble(w: Wibble) {
+  w.wibble
+  ▔▔▔▔▔▔↑▔
+}
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nInt\n```\n## Wibble\n\n This is some documentation about the wibble field.\n\n## Wobble\n\n Here's some documentation explaining a field of Wobble\n",
+    ),
+)

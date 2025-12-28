@@ -9,18 +9,21 @@ expression: echo echo echo 1
                 start: 0,
                 end: 16,
             },
+            keyword_end: 4,
             expression: Some(
                 Echo {
                     location: SrcSpan {
                         start: 5,
                         end: 16,
                     },
+                    keyword_end: 9,
                     expression: Some(
                         Echo {
                             location: SrcSpan {
                                 start: 10,
                                 end: 16,
                             },
+                            keyword_end: 14,
                             expression: Some(
                                 Int {
                                     location: SrcSpan {
@@ -31,10 +34,13 @@ expression: echo echo echo 1
                                     int_value: 1,
                                 },
                             ),
+                            message: None,
                         },
                     ),
+                    message: None,
                 },
             ),
+            message: None,
         },
     ),
 ]

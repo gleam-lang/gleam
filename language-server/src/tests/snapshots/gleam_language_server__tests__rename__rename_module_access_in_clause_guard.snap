@@ -1,0 +1,39 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\npub const something = 10\n"
+---
+----- BEFORE RENAME
+-- wibble.gleam
+
+import app
+
+pub fn main() {
+  case app.something {
+    thing if thing == app.something -> True
+    _ -> False
+  }
+}
+
+
+-- app.gleam
+
+pub const something = 10
+          ↑▔▔▔▔▔▔▔▔     
+
+
+----- AFTER RENAME
+-- wibble.gleam
+
+import app
+
+pub fn main() {
+  case app.new_name {
+    thing if thing == app.new_name -> True
+    _ -> False
+  }
+}
+
+
+-- app.gleam
+
+pub const new_name = 10

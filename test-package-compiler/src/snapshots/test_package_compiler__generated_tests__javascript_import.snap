@@ -1,18 +1,26 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
+assertion_line: 272
 expression: "./cases/javascript_import"
+snapshot_kind: text
 ---
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache
 <.cache binary>
 
+//// /out/lib/the_package/_gleam_artefacts/one@two.cache_inline
+<8 byte binary>
+
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache_meta
-<57 byte binary>
+<65 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache
 <.cache binary>
 
+//// /out/lib/the_package/_gleam_artefacts/two.cache_inline
+<8 byte binary>
+
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<80 byte binary>
+<88 byte binary>
 
 //// /out/lib/the_package/gleam.d.mts
 export * from "../prelude.mjs";
@@ -27,6 +35,8 @@ export * from "../prelude.mjs";
 import type * as _ from "../gleam.d.mts";
 
 export class A extends _.CustomType {}
+export function A$A(): A$;
+export function A$isA(value: A$): boolean;
 
 export type A$ = A;
 
@@ -36,6 +46,8 @@ export type A$ = A;
 import { CustomType as $CustomType } from "../gleam.mjs";
 
 export class A extends $CustomType {}
+export const A$A = () => new A();
+export const A$isA = (value) => value instanceof A;
 
 
 //// /out/lib/the_package/two.d.mts

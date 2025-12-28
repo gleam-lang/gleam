@@ -23,9 +23,14 @@ warning: Unused value
 6 │ │   }
   │ ╰───^ This value is never used
 
+This expression computes a value without any side effects, but then the
+value isn't used at all. You might want to assign it to a variable, or
+delete the expression entirely if it's not needed.
 
-warning: Unused value
+warning: Unused literal
   ┌─ /src/warning/wrn.gleam:4:5
   │
 4 │     True
   │     ^^^^ This value is never used
+
+Hint: You can safely remove it.

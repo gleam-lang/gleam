@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/type_/tests/dead_code_detection.rs
+expression: "\nimport wibble.{wibble}\n\npub const wibble = 2\n"
+---
+----- SOURCE CODE
+-- wibble.gleam
+
+pub const wibble = 1
+
+
+-- main.gleam
+
+import wibble.{wibble}
+
+pub const wibble = 2
+
+
+----- WARNING
+warning: Unused imported module
+  ┌─ /src/warning/wrn.gleam:2:1
+  │
+2 │ import wibble.{wibble}
+  │ ^^^^^^^^^^^^^^^^^^^^^^ This imported module is never used
+
+Hint: You can safely remove it.
+
+warning: Shadowed Import
+  ┌─ /src/warning/wrn.gleam:4:1
+  │
+4 │ pub const wibble = 2
+  │ ^^^^^^^^^^^^^^^^ `wibble` is defined here
+
+Definition of wibble shadows an imported value.
+The imported value could not be used in this module anyway.
+Hint: Either rename the definition or remove the import.

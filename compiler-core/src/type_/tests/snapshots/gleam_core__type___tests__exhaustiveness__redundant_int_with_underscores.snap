@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/type_/tests/exhaustiveness.rs
+expression: "\npub fn main(x) {\n  case x {\n    10 -> \"ten\"\n    1_0 -> \"also ten\"\n    _ -> \"other\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main(x) {
+  case x {
+    10 -> "ten"
+    1_0 -> "also ten"
+    _ -> "other"
+  }
+}
+
+
+----- WARNING
+warning: Unreachable pattern
+  ┌─ /src/warning/wrn.gleam:5:5
+  │
+5 │     1_0 -> "also ten"
+  │     ^^^
+
+This pattern cannot be reached as a previous pattern matches the same
+values.
+
+Hint: It can be safely removed.

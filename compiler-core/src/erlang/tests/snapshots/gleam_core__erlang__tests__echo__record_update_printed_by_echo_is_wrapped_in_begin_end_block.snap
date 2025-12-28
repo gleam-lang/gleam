@@ -14,8 +14,8 @@ pub fn main() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 -export_type([wobble/0]).
 
@@ -25,13 +25,6 @@ pub fn main() {
 -spec main() -> wobble().
 main() ->
     Wobble = {wobble, 1, <<"wobble"/utf8>>},
-    echo(
-        begin
-            _record = Wobble,
-            {wobble, 1, erlang:element(3, _record)}
-        end,
-        "project/test/my/mod.gleam",
-        6
-    ).
+    echo({wobble, 1, erlang:element(3, Wobble)}, nil, 6).
 
 % ...omitted code from `templates/echo.erl`...

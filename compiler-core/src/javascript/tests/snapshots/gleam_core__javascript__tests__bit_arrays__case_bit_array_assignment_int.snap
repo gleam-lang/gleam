@@ -1,0 +1,34 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn go(x) {\n case x {\n    <<1 as n>>\n    | <<2 as n, _:bytes>> -> n\n    _ -> 1\n }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+ case x {
+    <<1 as n>>
+    | <<2 as n, _:bytes>> -> n
+    _ -> 1
+ }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function go(x) {
+  if (x.bitSize === 8) {
+    if (x.byteAt(0) === 1) {
+      let n = 1;
+      return n;
+    } else if (x.byteAt(0) === 2 && (x.bitSize - 8) % 8 === 0) {
+      let n = 2;
+      return n;
+    } else {
+      return 1;
+    }
+  } else if (x.bitSize >= 8 && x.byteAt(0) === 2 && (x.bitSize - 8) % 8 === 0) {
+    let n = 2;
+    return n;
+  } else {
+    return 1;
+  }
+}

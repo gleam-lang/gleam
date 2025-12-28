@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  let c = {\n    let a = 10\n    let b = 20\n    a + b\n  }\n\n  echo c\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  let c = {
+    let a = 10
+    ▔▔▔▔▔▔▔▔▔▔
+    let b = 20
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    a + b
+▔▔▔▔▔▔↑  
+  }
+
+  echo c
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  let c = {
+    function()
+  }
+
+  echo c
+}
+
+fn function() -> Int {
+  let a = 10
+    let b = 20
+    a + b
+}

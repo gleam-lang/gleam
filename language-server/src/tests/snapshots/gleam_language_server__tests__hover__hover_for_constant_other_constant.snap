@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: "\nconst constant1 = 10\nconst constant2 = constant1\n"
+---
+const constant1 = 10
+const constant2 = constant1
+                  ▔▔▔↑▔▔▔▔▔
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nInt\n```",
+    ),
+)

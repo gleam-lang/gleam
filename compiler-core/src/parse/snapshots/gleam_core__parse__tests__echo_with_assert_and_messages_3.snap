@@ -1,0 +1,68 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: assert echo 1 == 2 as this_belongs_to_echo as this_belongs_to_assert
+---
+[
+    Assert(
+        Assert {
+            location: SrcSpan {
+                start: 0,
+                end: 68,
+            },
+            value: Echo {
+                location: SrcSpan {
+                    start: 7,
+                    end: 42,
+                },
+                keyword_end: 11,
+                expression: Some(
+                    BinOp {
+                        location: SrcSpan {
+                            start: 12,
+                            end: 18,
+                        },
+                        name: Eq,
+                        name_location: SrcSpan {
+                            start: 14,
+                            end: 16,
+                        },
+                        left: Int {
+                            location: SrcSpan {
+                                start: 12,
+                                end: 13,
+                            },
+                            value: "1",
+                            int_value: 1,
+                        },
+                        right: Int {
+                            location: SrcSpan {
+                                start: 17,
+                                end: 18,
+                            },
+                            value: "2",
+                            int_value: 2,
+                        },
+                    },
+                ),
+                message: Some(
+                    Var {
+                        location: SrcSpan {
+                            start: 22,
+                            end: 42,
+                        },
+                        name: "this_belongs_to_echo",
+                    },
+                ),
+            },
+            message: Some(
+                Var {
+                    location: SrcSpan {
+                        start: 46,
+                        end: 68,
+                    },
+                    name: "this_belongs_to_assert",
+                },
+            ),
+        },
+    ),
+]

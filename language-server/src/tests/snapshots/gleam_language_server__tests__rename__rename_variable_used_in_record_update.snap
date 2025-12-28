@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\ntype Wibble {\n  Wibble(a: Int, b: Int, c: Int)\n}\n\nfn wibble(wibble: Wibble) {\n  Wibble(..wibble, c: 1)\n}\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+type Wibble {
+  Wibble(a: Int, b: Int, c: Int)
+}
+
+fn wibble(wibble: Wibble) {
+          ↑▔▔▔▔▔           
+  Wibble(..wibble, c: 1)
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+
+type Wibble {
+  Wibble(a: Int, b: Int, c: Int)
+}
+
+fn wibble(value: Wibble) {
+  Wibble(..value, c: 1)
+}

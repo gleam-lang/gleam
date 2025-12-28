@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 925
+expression: "\npub fn go(x) {\n  case x {\n    <<1234:16-little-signed>> -> 1\n    _ -> 2\n  }\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  case x {
+    <<1234:16-little-signed>> -> 1
+    _ -> 2
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function go(x) {
+  if (x.bitSize === 16 && x.byteAt(0) === 210 && x.byteAt(1) === 4) {
+    return 1;
+  } else {
+    return 2;
+  }
+}

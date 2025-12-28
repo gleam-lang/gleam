@@ -24,7 +24,7 @@ use crate::{
 use ecow::EcoString;
 use hexpm::version::Version;
 use itertools::Itertools;
-use pubgrub::range::Range;
+use pubgrub::Range;
 use std::{
     cmp,
     collections::{HashMap, HashSet},
@@ -38,7 +38,7 @@ use std::{
 use super::{
     Codegen, Compile, ErlangAppCodegenConfiguration, Outcome,
     elixir_libraries::ElixirLibraries,
-    package_compiler::{CachedWarnings, Compiled},
+    package_compiler::{CachedWarnings, CheckModuleConflicts, Compiled},
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -101,10 +101,10 @@ impl Built {
 #[derive(Debug)]
 pub struct ProjectCompiler<IO> {
     // The gleam.toml config for the root package of the project
-    pub(crate) config: PackageConfig,
-    pub(crate) packages: HashMap<String, ManifestPackage>,
+    pub config: PackageConfig,
+    pub packages: HashMap<String, ManifestPackage>,
     importable_modules: im::HashMap<EcoString, type_::ModuleInterface>,
-    defined_modules: im::HashMap<EcoString, Utf8PathBuf>,
+    pub(crate) defined_modules: im::HashMap<EcoString, Utf8PathBuf>,
     stale_modules: StaleTracker,
     /// The set of modules that have had partial compilation done since the last
     /// successful compilation.
@@ -114,7 +114,7 @@ pub struct ProjectCompiler<IO> {
     options: Options,
     paths: ProjectPaths,
     ids: UniqueIdGenerator,
-    pub(crate) io: IO,
+    pub io: IO,
     /// We may want to silence subprocess stdout if we are running in LSP mode.
     /// The language server talks over stdio so printing would break that.
     pub subprocess_stdio: Stdio,
@@ -158,10 +158,6 @@ where
         }
     }
 
-    pub fn get_importable_modules(&self) -> &im::HashMap<EcoString, type_::ModuleInterface> {
-        &self.importable_modules
-    }
-
     pub fn mode(&self) -> Mode {
         self.options.mode
     }
@@ -170,14 +166,19 @@ where
         self.options.target.unwrap_or(self.config.target)
     }
 
-    /// Compiles all packages in the project and returns the compiled
-    /// information from the root package
-    pub fn compile(mut self) -> Result<Built> {
+    pub fn reset_state_for_new_compile_run(&mut self) {
         // We make sure the stale module tracker is empty before we start, to
         // avoid mistakenly thinking a module is stale due to outdated state
         // from a previous build. A ProjectCompiler instance is re-used by the
         // LSP engine so state could be reused if we don't reset it.
+
         self.stale_modules.empty();
+    }
+
+    /// Compiles all packages in the project and returns the compiled
+    /// information from the root package
+    pub fn compile(mut self) -> Result<Built> {
+        self.reset_state_for_new_compile_run();
 
         // Each package may specify a Gleam version that it supports, so we
         // verify that this version is appropriate.
@@ -257,6 +258,11 @@ where
     }
 
     pub fn compile_dependencies(&mut self) -> Result<Vec<Module>, Error> {
+        assert!(
+            self.stale_modules.is_empty(),
+            "The project compiler stale tracker was not emptied from the previous compilation"
+        );
+
         let sequence = order_packages(&self.packages)?;
         let mut modules = vec![];
 
@@ -603,10 +609,15 @@ where
             // unaccessible so long as they are not used by the root package.
             TargetSupport::NotEnforced
         };
-        compiler.cached_warnings = if is_root {
-            CachedWarnings::Use
+        if is_root {
+            compiler.cached_warnings = CachedWarnings::Use;
+            // We only check for conflicting Gleam files if this is the root
+            // package, since Hex packages are bundled with the Gleam source files
+            // and compiled Erlang files next to each other.
+            compiler.check_module_conflicts = CheckModuleConflicts::Check;
         } else {
-            CachedWarnings::Ignore
+            compiler.cached_warnings = CachedWarnings::Ignore;
+            compiler.check_module_conflicts = CheckModuleConflicts::DoNotCheck;
         };
 
         // Compile project to Erlang or JavaScript source code
@@ -618,6 +629,12 @@ where
             &mut self.incomplete_modules,
             self.telemetry,
         )
+    }
+}
+
+impl<IO> ProjectCompiler<IO> {
+    pub fn get_importable_modules(&self) -> &im::HashMap<EcoString, type_::ModuleInterface> {
+        &self.importable_modules
     }
 }
 

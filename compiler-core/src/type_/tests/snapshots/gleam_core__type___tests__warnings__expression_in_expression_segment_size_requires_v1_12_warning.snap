@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn main() {\n  <<1:size(3 * 8)>>\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  <<1:size(3 * 8)>>
+}
+
+
+----- WARNING
+warning: Incompatible gleam version range
+  ┌─ /src/warning/wrn.gleam:3:12
+  │
+3 │   <<1:size(3 * 8)>>
+  │            ^^^^^ This requires a Gleam version >= 1.12.0
+
+Expressions in segment sizes were introduced in version v1.12.0. But the
+Gleam version range specified in your `gleam.toml` would allow this code to
+run on an earlier version like v1.0.0, resulting in compilation errors!
+Hint: Remove the version constraint from your `gleam.toml` or update it to be:
+
+    gleam = ">= 1.12.0"

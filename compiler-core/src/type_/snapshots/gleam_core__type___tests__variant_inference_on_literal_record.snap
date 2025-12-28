@@ -30,4 +30,4 @@ is run on one of the values without a pattern then it will crash.
 
 The missing patterns are:
 
-    _, Wobble
+    Wibble, Wobble

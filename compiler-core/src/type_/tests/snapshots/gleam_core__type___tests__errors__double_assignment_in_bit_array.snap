@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: let assert <<a as b>> = <<>>
+---
+----- SOURCE CODE
+let assert <<a as b>> = <<>>
+
+----- ERROR
+error: Double variable assignment
+  ┌─ /src/one/two.gleam:1:19
+  │
+1 │ let assert <<a as b>> = <<>>
+  │                   ^
+
+This pattern assigns to two different variables at once, which is not
+possible in bit arrays.
+Hint: Remove the `as` assignment.

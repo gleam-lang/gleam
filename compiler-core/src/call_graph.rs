@@ -7,9 +7,9 @@ mod into_dependency_order_tests;
 use crate::{
     Result,
     ast::{
-        AssignName, BitArrayOption, ClauseGuard, Constant, Pattern, SrcSpan, Statement,
-        UntypedClauseGuard, UntypedExpr, UntypedFunction, UntypedModuleConstant, UntypedPattern,
-        UntypedStatement,
+        AssignName, AssignmentKind, BitArrayOption, BitArraySize, ClauseGuard, Constant, Pattern,
+        SrcSpan, Statement, UntypedClauseGuard, UntypedExpr, UntypedFunction,
+        UntypedModuleConstant, UntypedPattern, UntypedStatement,
     },
     type_::Error,
 };
@@ -115,7 +115,9 @@ impl<'a> CallGraphBuilder<'a> {
         {
             self.define(name);
         }
+
         self.statements(&function.body);
+
         self.names = names;
     }
 
@@ -150,6 +152,15 @@ impl<'a> CallGraphBuilder<'a> {
             Statement::Assignment(assignment) => {
                 self.expression(&assignment.value);
                 self.pattern(&assignment.pattern);
+                match &assignment.kind {
+                    AssignmentKind::Assert {
+                        message: Some(message),
+                        ..
+                    } => self.expression(message),
+                    AssignmentKind::Let
+                    | AssignmentKind::Generated
+                    | AssignmentKind::Assert { message: None, .. } => {}
+                }
             }
             Statement::Use(use_) => {
                 self.expression(&use_.call);
@@ -157,15 +168,18 @@ impl<'a> CallGraphBuilder<'a> {
                     self.pattern(&assignment.pattern);
                 }
             }
+            Statement::Assert(assert) => {
+                self.expression(&assert.value);
+                if let Some(message) = &assert.message {
+                    self.expression(message)
+                }
+            }
         };
     }
 
     fn expression(&mut self, expression: &'a UntypedExpr) {
         match expression {
-            UntypedExpr::Int { .. }
-            | UntypedExpr::Float { .. }
-            | UntypedExpr::String { .. }
-            | UntypedExpr::Placeholder { .. } => (),
+            UntypedExpr::Int { .. } | UntypedExpr::Float { .. } | UntypedExpr::String { .. } => (),
 
             UntypedExpr::Todo { message, .. } => {
                 if let Some(msg_expr) = message {
@@ -182,9 +196,14 @@ impl<'a> CallGraphBuilder<'a> {
             UntypedExpr::Echo {
                 expression,
                 location: _,
+                keyword_end: _,
+                message,
             } => {
                 if let Some(expression) = expression {
                     self.expression(expression);
+                }
+                if let Some(message) = message {
+                    self.expression(message);
                 }
             }
 
@@ -206,8 +225,8 @@ impl<'a> CallGraphBuilder<'a> {
                 }
             }
 
-            UntypedExpr::Tuple { elems, .. } => {
-                for expression in elems {
+            UntypedExpr::Tuple { elements, .. } => {
+                for expression in elements {
                     self.expression(expression);
                 }
             }
@@ -323,7 +342,7 @@ impl<'a> CallGraphBuilder<'a> {
             }
 
             Pattern::Tuple {
-                elems: patterns, ..
+                elements: patterns, ..
             } => {
                 for pattern in patterns {
                     self.pattern(pattern);
@@ -335,12 +354,12 @@ impl<'a> CallGraphBuilder<'a> {
                     self.pattern(element);
                 }
                 if let Some(tail) = tail {
-                    self.pattern(tail);
+                    self.pattern(&tail.pattern);
                 }
             }
 
-            Pattern::VarUsage { name, .. } => {
-                self.referenced(name);
+            Pattern::BitArraySize(size) => {
+                self.bit_array_size(size);
             }
 
             Pattern::Assign { name, pattern, .. } => {
@@ -362,6 +381,18 @@ impl<'a> CallGraphBuilder<'a> {
                     self.pattern(&segment.value);
                 }
             }
+        }
+    }
+
+    fn bit_array_size(&mut self, size: &'a BitArraySize<()>) {
+        match size {
+            BitArraySize::Int { .. } => {}
+            BitArraySize::Variable { name, .. } => self.referenced(name),
+            BitArraySize::BinaryOperator { left, right, .. } => {
+                self.bit_array_size(left);
+                self.bit_array_size(right);
+            }
+            BitArraySize::Block { inner, .. } => self.bit_array_size(inner),
         }
     }
 
@@ -425,6 +456,8 @@ impl<'a> CallGraphBuilder<'a> {
                 self.guard(right);
             }
 
+            ClauseGuard::Block { value, .. } => self.guard(value),
+
             ClauseGuard::Not { expression, .. } => self.guard(expression),
 
             ClauseGuard::Var { name, .. } => self.referenced(name),
@@ -455,9 +488,19 @@ impl<'a> CallGraphBuilder<'a> {
                 }
             }
 
-            Constant::Record { args, .. } => {
-                for arg in args {
-                    self.constant(&arg.value);
+            Constant::Record { arguments, .. } => {
+                for argument in arguments {
+                    self.constant(&argument.value);
+                }
+            }
+
+            Constant::RecordUpdate {
+                record, arguments, ..
+            } => {
+                self.constant(&record.base);
+
+                for argument in arguments {
+                    self.constant(&argument.value);
                 }
             }
 

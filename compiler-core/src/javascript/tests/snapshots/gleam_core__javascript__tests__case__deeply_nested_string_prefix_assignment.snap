@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-expression: "\ntype Wibble {\n  Wibble(Wobble)\n}            \ntype Wobble {\n  Wobble(wabble: Wabble)\n}\ntype Wabble {\n  Wabble(tuple: #(Int, String))\n}\n\npub fn main() {\n  let tmp = Wibble(Wobble(Wabble(#(42, \"wibble\"))))\n  case tmp {\n    Wibble(Wobble(Wabble(#(_int, \"w\" as wibble <> rest)))) -> wibble <> rest\n    _ -> panic\n  }\n}\n"
+expression: "\ntype Wibble {\n  Wibble(Wobble)\n}\ntype Wobble {\n  Wobble(wabble: Wabble)\n}\ntype Wabble {\n  Wabble(tuple: #(Int, String))\n}\n\npub fn main() {\n  let tmp = Wibble(Wobble(Wabble(#(42, \"wibble\"))))\n  case tmp {\n    Wibble(Wobble(Wabble(#(_int, \"w\" as wibble <> rest)))) -> wibble <> rest\n    _ -> panic\n  }\n}\n"
 ---
 ----- SOURCE CODE
 
 type Wibble {
   Wibble(Wobble)
-}            
+}
 type Wobble {
   Wobble(wabble: Wabble)
 }
@@ -26,10 +26,12 @@ pub fn main() {
 ----- COMPILED JAVASCRIPT
 import { CustomType as $CustomType, makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 class Wibble extends $CustomType {
-  constructor(x0) {
+  constructor($0) {
     super();
-    this[0] = x0;
+    this[0] = $0;
   }
 }
 
@@ -49,16 +51,15 @@ class Wabble extends $CustomType {
 
 export function main() {
   let tmp = new Wibble(new Wobble(new Wabble([42, "wibble"])));
-  if (tmp instanceof Wibble &&
-  tmp[0] instanceof Wobble &&
-  tmp[0].wabble instanceof Wabble &&
-  tmp[0].wabble.tuple[1].startsWith("w")) {
-    let rest = tmp[0].wabble.tuple[1].slice(1);
+  let $ = tmp[0].wabble.tuple[1];
+  if ($.startsWith("w")) {
     let wibble = "w";
+    let rest = $.slice(1);
     return wibble + rest;
   } else {
     throw makeError(
       "panic",
+      FILEPATH,
       "my/mod",
       16,
       "main",

@@ -1,0 +1,34 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  let result =\n    [1, 2, 3]\n    |> map(add(_, 1))\n    |> map(subtract(_, 9))\n\n  result\n}\npub fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }\npub fn add(a: Int, b: Int) -> Int { todo }\npub fn subtract(a: Int, b: Int) -> Int { todo }\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  let result =
+    [1, 2, 3]
+    |> map(add(_, 1))
+    |> map(subtract(_, 9))
+                       ↑  
+
+  result
+}
+pub fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
+pub fn add(a: Int, b: Int) -> Int { todo }
+pub fn subtract(a: Int, b: Int) -> Int { todo }
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  let int = 9
+  let result =
+    [1, 2, 3]
+    |> map(add(_, 1))
+    |> map(subtract(_, int))
+
+  result
+}
+pub fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
+pub fn add(a: Int, b: Int) -> Int { todo }
+pub fn subtract(a: Int, b: Int) -> Int { todo }

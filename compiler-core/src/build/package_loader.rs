@@ -17,14 +17,14 @@ use vec1::Vec1;
 use crate::{
     Error, Result,
     ast::SrcSpan,
-    build::{Module, Origin, module_loader::ModuleLoader, package_compiler::module_name},
+    build::{Module, Origin, module_loader::ModuleLoader},
     config::PackageConfig,
     dep_tree,
     error::{FileIoAction, FileKind, ImportCycleLocationDetails},
-    io::{
-        CommandExecutor, FileSystemReader, FileSystemWriter, gleam_cache_files, gleam_source_files,
-    },
-    metadata, type_,
+    io::{self, CommandExecutor, FileSystemReader, FileSystemWriter, files_with_extension},
+    metadata,
+    paths::ProjectPaths,
+    type_,
     uid::UniqueIdGenerator,
     warning::WarningEmitter,
 };
@@ -58,7 +58,7 @@ pub struct PackageLoader<'a, IO> {
     io: IO,
     ids: UniqueIdGenerator,
     mode: Mode,
-    root: &'a Utf8Path,
+    paths: ProjectPaths,
     warnings: &'a WarningEmitter,
     codegen: CodegenRequired,
     artefact_directory: &'a Utf8Path,
@@ -93,7 +93,7 @@ where
             io,
             ids,
             mode,
-            root,
+            paths: ProjectPaths::new(root.into()),
             warnings,
             codegen,
             target,
@@ -112,10 +112,13 @@ where
         // which should be loaded.
         let mut inputs = self.read_sources_and_caches()?;
 
-        // Check for any removed modules, by looking at cache files that don't exist in inputs
-        for cache_file in gleam_cache_files(&self.io, &self.artefact_directory) {
-            let module = module_name(&self.artefact_directory, &cache_file);
+        // Check for any removed modules, by looking at cache files that don't exist in inputs.
+        // Delete the cache files for removed modules and mark them as stale
+        // to trigger refreshing dependent modules.
+        for module in CacheFiles::modules_with_meta_files(&self.io, &self.artefact_directory) {
             if (!inputs.contains_key(&module)) {
+                tracing::debug!(%module, "module_removed");
+                CacheFiles::new(&self.artefact_directory, &module).delete(&self.io)?;
                 self.stale_modules.add(module);
             }
         }
@@ -179,47 +182,47 @@ where
     }
 
     fn load_cached_module(&self, info: CachedModule) -> Result<type_::ModuleInterface, Error> {
-        let dir = self.artefact_directory;
-        let name = info.name.replace("/", "@");
-        let path = dir.join(name.as_ref()).with_extension("cache");
-        let bytes = self.io.read_bytes(&path)?;
+        let cache_files = CacheFiles::new(&self.artefact_directory, &info.name);
+        let bytes = self.io.read_bytes(&cache_files.cache_path)?;
         let mut module = metadata::ModuleDecoder::new(self.ids.clone()).read(bytes.as_slice())?;
+
+        if self.io.exists(&cache_files.inline_path) {
+            let bytes = self.io.read_bytes(&cache_files.inline_path)?;
+            module.inline_functions =
+                match bincode::serde::decode_from_slice(&bytes, bincode::config::legacy()) {
+                    Ok((data, _)) => data,
+                    Err(e) => {
+                        return Err(Error::FileIo {
+                            kind: FileKind::File,
+                            action: FileIoAction::Parse,
+                            path: cache_files.inline_path,
+                            err: Some(e.to_string()),
+                        });
+                    }
+                };
+        }
 
         // Load warnings
         if self.cached_warnings.should_use() {
-            let path = dir.join(name.as_ref()).with_extension("cache_warnings");
+            let path = cache_files.warnings_path;
             if self.io.exists(&path) {
                 let bytes = self.io.read_bytes(&path)?;
-                module.warnings = bincode::deserialize(&bytes).map_err(|e| Error::FileIo {
-                    kind: FileKind::File,
-                    action: FileIoAction::Parse,
-                    path,
-                    err: Some(e.to_string()),
-                })?;
+                module.warnings =
+                    match bincode::serde::decode_from_slice(&bytes, bincode::config::legacy()) {
+                        Ok((data, _)) => data,
+                        Err(e) => {
+                            return Err(Error::FileIo {
+                                kind: FileKind::File,
+                                action: FileIoAction::Parse,
+                                path,
+                                err: Some(e.to_string()),
+                            });
+                        }
+                    };
             }
         }
 
         Ok(module)
-    }
-
-    pub fn is_gleam_path(&self, path: &Utf8Path, dir: &Utf8Path) -> bool {
-        use regex::Regex;
-        use std::cell::OnceCell;
-        const RE: OnceCell<Regex> = OnceCell::new();
-
-        RE.get_or_init(|| {
-            Regex::new(&format!(
-                "^({module}{slash})*{module}\\.gleam$",
-                module = "[a-z][_a-z0-9]*",
-                slash = "(/|\\\\)",
-            ))
-            .expect("is_gleam_path() RE regex")
-        })
-        .is_match(
-            path.strip_prefix(dir)
-                .expect("is_gleam_path(): strip_prefix")
-                .as_str(),
-        )
     }
 
     fn read_sources_and_caches(&self) -> Result<HashMap<EcoString, Input>> {
@@ -228,7 +231,7 @@ where
 
         let mut inputs = Inputs::new(self.already_defined_modules);
 
-        let src = self.root.join("src");
+        let src = self.paths.src_directory();
         let mut loader = ModuleLoader {
             io: self.io.clone(),
             warnings: self.warnings,
@@ -237,40 +240,47 @@ where
             codegen: self.codegen,
             package_name: self.package_name,
             artefact_directory: self.artefact_directory,
-            source_directory: &src,
             origin: Origin::Src,
             incomplete_modules: self.incomplete_modules,
         };
 
         // Src
-        for path in gleam_source_files(&self.io, &src) {
-            // If the there is a .gleam file with a path that would be an
-            // invalid module name it does not get loaded. For example, if it
-            // has a uppercase letter in it.
-            // Emit a warning so that the programmer understands why it has been
-            // skipped.
-            if !self.is_gleam_path(&path, &src) {
-                self.warnings.emit(crate::Warning::InvalidSource { path });
-                continue;
+        for file in GleamFile::iterate_files_in_directory(&self.io, &src) {
+            match file {
+                Ok(file) => {
+                    let input = loader.load(file)?;
+                    inputs.insert(input)?;
+                }
+                Err(warning) => self.warnings.emit(warning),
             }
-
-            let input = loader.load(path)?;
-            inputs.insert(input)?;
         }
 
-        // Test
-        if self.mode.includes_tests() {
-            let test = self.root.join("test");
+        // Test and dev
+        if self.mode.includes_dev_code() {
+            let test = self.paths.test_directory();
             loader.origin = Origin::Test;
-            loader.source_directory = &test;
 
-            for path in gleam_source_files(&self.io, &test) {
-                if !self.is_gleam_path(&path, &test) {
-                    self.warnings.emit(crate::Warning::InvalidSource { path });
-                    continue;
+            for file in GleamFile::iterate_files_in_directory(&self.io, &test) {
+                match file {
+                    Ok(file) => {
+                        let input = loader.load(file)?;
+                        inputs.insert(input)?;
+                    }
+                    Err(warning) => self.warnings.emit(warning),
                 }
-                let input = loader.load(path)?;
-                inputs.insert(input)?;
+            }
+
+            let dev = self.paths.dev_directory();
+            loader.origin = Origin::Dev;
+
+            for file in GleamFile::iterate_files_in_directory(&self.io, &dev) {
+                match file {
+                    Ok(file) => {
+                        let input = loader.load(file)?;
+                        inputs.insert(input)?;
+                    }
+                    Err(warning) => self.warnings.emit(warning),
+                }
             }
         }
 
@@ -293,18 +303,12 @@ where
     fn load_stale_module(&self, cached: CachedModule) -> Result<UncompiledModule> {
         let mtime = self.io.modification_time(&cached.source_path)?;
 
-        // We need to delete any existing cache_meta files for this module.
+        // We need to delete any existing cache files for this module.
         // While we figured it out this time because the module has stale dependencies,
         // next time the dependencies might no longer be stale, but we still need to be able to tell
-        // that this module needs to be recompiled until it sucessfully compiles at least once.
+        // that this module needs to be recompiled until it successfully compiles at least once.
         // This can happen if the stale dependency includes breaking changes.
-        let artefact = cached.name.replace("/", "@");
-        let meta_path = self
-            .artefact_directory
-            .join(artefact.as_str())
-            .with_extension("cache_meta");
-
-        let _ = self.io.delete_file(&meta_path);
+        CacheFiles::new(&self.artefact_directory, &cached.name).delete(&self.io)?;
 
         read_source(
             self.io.clone(),
@@ -1674,6 +1678,10 @@ impl StaleTracker {
     pub fn empty(&mut self) {
         let _ = self.0.drain(); // Clears the set but retains allocated memory
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 #[derive(Debug)]
@@ -1713,5 +1721,150 @@ impl<'a> Inputs<'a> {
         }
 
         Ok(())
+    }
+}
+
+/// A Gleam source file (`.gleam`) and the module name deduced from it
+pub struct GleamFile {
+    pub path: Utf8PathBuf,
+    pub module_name: EcoString,
+}
+
+impl GleamFile {
+    pub fn new(dir: &Utf8Path, path: Utf8PathBuf) -> Self {
+        Self {
+            module_name: Self::module_name(&path, &dir),
+            path,
+        }
+    }
+
+    /// Iterates over Gleam source files (`.gleam`) in a certain directory.
+    /// Symlinks are followed.
+    /// If the there is a .gleam file with a path that would be an
+    /// invalid module name it should not be loaded. For example, if it
+    /// has a uppercase letter in it.
+    pub fn iterate_files_in_directory<'b>(
+        io: &'b impl FileSystemReader,
+        dir: &'b Utf8Path,
+    ) -> impl Iterator<Item = Result<Self, crate::Warning>> + 'b {
+        tracing::trace!("gleam_source_files {:?}", dir);
+        files_with_extension(io, dir, "gleam").map(move |path| {
+            if (Self::is_gleam_path(&path, &dir)) {
+                Ok(Self::new(dir, path))
+            } else {
+                Err(crate::Warning::InvalidSource { path })
+            }
+        })
+    }
+
+    pub fn cache_files(&self, artefact_directory: &Utf8Path) -> CacheFiles {
+        CacheFiles::new(artefact_directory, &self.module_name)
+    }
+
+    fn module_name(path: &Utf8Path, dir: &Utf8Path) -> EcoString {
+        // /path/to/project/_build/default/lib/the_package/src/my/module.gleam
+
+        // my/module.gleam
+        let mut module_path = path
+            .strip_prefix(dir)
+            .expect("Stripping package prefix from module path")
+            .to_path_buf();
+
+        // my/module
+        let _ = module_path.set_extension("");
+
+        // Stringify
+        let name = module_path.to_string();
+
+        // normalise windows paths
+        name.replace("\\", "/").into()
+    }
+
+    fn is_gleam_path(path: &Utf8Path, dir: &Utf8Path) -> bool {
+        use regex::Regex;
+        use std::cell::OnceCell;
+        const RE: OnceCell<Regex> = OnceCell::new();
+
+        RE.get_or_init(|| {
+            Regex::new(&format!(
+                "^({module}{slash})*{module}\\.gleam$",
+                module = "[a-z][_a-z0-9]*",
+                slash = "(/|\\\\)",
+            ))
+            .expect("is_gleam_path() RE regex")
+        })
+        .is_match(
+            path.strip_prefix(dir)
+                .expect("is_gleam_path(): strip_prefix")
+                .as_str(),
+        )
+    }
+}
+
+/// The collection of cache files paths related to a module.
+/// These files are not guaranteed to exist.
+pub struct CacheFiles {
+    pub cache_path: Utf8PathBuf,
+    pub meta_path: Utf8PathBuf,
+    pub warnings_path: Utf8PathBuf,
+    pub inline_path: Utf8PathBuf,
+}
+
+impl CacheFiles {
+    pub fn new(artefact_directory: &Utf8Path, module_name: &EcoString) -> Self {
+        let file_name = module_name.replace("/", "@");
+        let cache_path = artefact_directory
+            .join(file_name.as_str())
+            .with_extension("cache");
+        let meta_path = artefact_directory
+            .join(file_name.as_str())
+            .with_extension("cache_meta");
+        let warnings_path = artefact_directory
+            .join(file_name.as_str())
+            .with_extension("cache_warnings");
+        let inline_path = artefact_directory
+            .join(file_name.as_str())
+            .with_extension("cache_inline");
+
+        Self {
+            cache_path,
+            meta_path,
+            warnings_path,
+            inline_path,
+        }
+    }
+
+    pub fn delete(&self, io: &dyn io::FileSystemWriter) -> Result<()> {
+        io.delete_file(&self.cache_path)?;
+        io.delete_file(&self.meta_path)?;
+        io.delete_file(&self.warnings_path)?;
+        io.delete_file(&self.inline_path)
+    }
+
+    /// Iterates over `.cache_meta` files in the given directory,
+    /// and returns the respective module names.
+    /// Symlinks are followed.
+    pub fn modules_with_meta_files<'a>(
+        io: &'a impl FileSystemReader,
+        dir: &'a Utf8Path,
+    ) -> impl Iterator<Item = EcoString> + 'a {
+        tracing::trace!("CacheFiles::modules_with_meta_files {:?}", dir);
+        files_with_extension(io, dir, "cache_meta").map(move |path| Self::module_name(&dir, &path))
+    }
+
+    fn module_name(dir: &Utf8Path, path: &Utf8Path) -> EcoString {
+        // /path/to/artefact/dir/my@module.cache_meta
+
+        // my@module.cache_meta
+        let mut module_path = path
+            .strip_prefix(dir)
+            .expect("Stripping package prefix from module path")
+            .to_path_buf();
+
+        // my@module
+        let _ = module_path.set_extension("");
+
+        // my/module
+        module_path.to_string().replace("@", "/").into()
     }
 }

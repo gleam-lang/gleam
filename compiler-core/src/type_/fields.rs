@@ -1,12 +1,17 @@
 use super::Error;
-use crate::ast::{CallArg, SrcSpan};
+use crate::{
+    ast::{CallArg, SrcSpan},
+    type_::error::IncorrectArityContext,
+};
 use ecow::EcoString;
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FieldMap {
+    /// Number of accepted arguments, including unlabelled fields.
     pub arity: u32,
+    /// Map of labels to argument indices
     pub fields: HashMap<EcoString, u32>,
 }
 
@@ -39,31 +44,37 @@ impl FieldMap {
     /// Reorder an argument list so that labelled fields supplied out-of-order are
     /// in the correct order.
     ///
-    pub fn reorder<A>(&self, args: &mut Vec<CallArg<A>>, location: SrcSpan) -> Result<(), Error> {
+    pub fn reorder<A>(
+        &self,
+        arguments: &mut Vec<CallArg<A>>,
+        location: SrcSpan,
+        context: IncorrectArityContext,
+    ) -> Result<(), Error> {
         let mut labelled_arguments_given = false;
         let mut seen_labels = HashSet::new();
         let mut unknown_labels = Vec::new();
-        let number_of_arguments = args.len();
+        let number_of_arguments = arguments.len();
 
-        if self.arity as usize != args.len() {
+        if self.arity as usize != arguments.len() {
             return Err(Error::IncorrectArity {
-                labels: self.incorrect_arity_labels(args),
+                labels: self.missing_labels(arguments),
                 location,
+                context,
                 expected: self.arity as usize,
-                given: args.len(),
+                given: arguments.len(),
             });
         }
 
-        for arg in args.iter() {
-            match &arg.label {
+        for argument in arguments.iter() {
+            match &argument.label {
                 Some(_) => {
                     labelled_arguments_given = true;
                 }
 
                 None => {
-                    if labelled_arguments_given && !arg.is_implicit() {
+                    if labelled_arguments_given && !argument.is_implicit() {
                         return Err(Error::PositionalArgumentAfterLabelled {
-                            location: arg.location,
+                            location: argument.location,
                         });
                     }
                 }
@@ -76,25 +87,25 @@ impl FieldMap {
         // We iterate the argument in reverse order, because we have to remove elements
         // from the `args` list quite a lot, and removing from the end of a list is more
         // efficient than removing from the beginning or the middle.
-        let mut i = args.len();
+        let mut i = arguments.len();
         while i > 0 {
             i -= 1;
-            let (label, &location) = match &args.get(i).expect("Field indexing to get label").label
-            {
-                // A labelled argument, we may need to reposition it
-                Some(l) => (
-                    l,
-                    &args
-                        .get(i)
-                        .expect("Indexing in labelled field reordering")
-                        .location,
-                ),
+            let (label, &location) =
+                match &arguments.get(i).expect("Field indexing to get label").label {
+                    // A labelled argument, we may need to reposition it
+                    Some(l) => (
+                        l,
+                        &arguments
+                            .get(i)
+                            .expect("Indexing in labelled field reordering")
+                            .location,
+                    ),
 
-                // Not a labelled argument
-                None => {
-                    continue;
-                }
-            };
+                    // Not a labelled argument
+                    None => {
+                        continue;
+                    }
+                };
 
             let position = match self.fields.get(label) {
                 None => {
@@ -115,13 +126,13 @@ impl FieldMap {
 
             // Add this argument to the `labelled_arguments` map, and remove if from the
             // existing arguments list. It will be reinserted later in the correct index
-            let _ = labelled_arguments.insert(position as usize, args.remove(i));
+            let _ = labelled_arguments.insert(position as usize, arguments.remove(i));
         }
 
         // The labelled arguments must be reinserted in order
         for i in 0..number_of_arguments {
-            if let Some(arg) = labelled_arguments.remove(&i) {
-                args.insert(i, arg);
+            if let Some(argument) = labelled_arguments.remove(&i) {
+                arguments.insert(i, argument);
             }
         }
 
@@ -134,17 +145,6 @@ impl FieldMap {
                 supplied: seen_labels.into_iter().collect(),
             })
         }
-    }
-
-    pub fn incorrect_arity_labels<A>(&self, args: &[CallArg<A>]) -> Vec<EcoString> {
-        let given: HashSet<_> = args.iter().filter_map(|arg| arg.label.as_ref()).collect();
-
-        self.fields
-            .keys()
-            .filter(|f| !given.contains(f))
-            .cloned()
-            .sorted()
-            .collect()
     }
 
     /// This returns an array of the labels that are unused given an argument
@@ -160,45 +160,40 @@ impl FieldMap {
     /// wibble(1, label3: 2) // -> unused labels: [label2]
     /// ```
     ///
-    pub fn missing_labels<A: std::fmt::Debug>(&self, args: &[CallArg<A>]) -> Vec<EcoString> {
-        let mut arg_position_to_label = self
-            .fields
+    pub fn missing_labels<A>(&self, arguments: &[CallArg<A>]) -> Vec<EcoString> {
+        // We need to know how many positional arguments are in the function
+        // arguments. That's given by the position of the first labelled
+        // argument; if the first label argument is third, then we know the
+        // function also needs two unlabelled arguments first.
+        let Some(positional_arguments) = self.fields.values().min().cloned() else {
+            return vec![];
+        };
+
+        // We need to count how many positional arguments were actually supplied
+        // in the call, to remove the corresponding labelled arguments that have
+        // been taken by any positional argument.
+        let given_positional_arguments = arguments
             .iter()
-            .map(|(label, position)| (position, label.clone()))
-            .collect::<HashMap<_, _>>();
+            .filter(|argument| argument.label.is_none() && !argument.is_use_implicit_callback())
+            .count();
 
-        // We first get rid of all the labels taken by the positional arguments
-        // that have been supplied.
-        let mut position = 0;
-        for arg in args {
-            if arg.label.is_none() && !arg.is_use_implicit_callback() {
-                let _ = arg_position_to_label.remove(&position);
-                position += 1;
-            } else {
-                // As soon as we find an unlabelled argument we break out of the
-                // loop, we know that now there's only going to be labelled
-                // arguments
-                break;
-            }
-        }
-
-        let mut arg_label_to_position = arg_position_to_label
+        let explicit_labels = arguments
             .iter()
-            .map(|(position, label)| (label.clone(), position))
-            .collect::<HashMap<_, _>>();
+            .filter_map(|argument| argument.label.as_ref())
+            .collect::<HashSet<&EcoString>>();
 
-        // Now we're just left with labelled args, we remove those from the
-        // remaining labels.
-        for arg in args.iter().skip(position as usize) {
-            if let Some(label) = &arg.label {
-                let _ = arg_label_to_position.remove(label);
-            }
-        }
-
-        arg_label_to_position
+        self.fields
             .iter()
+            // As a start we remove all the labels that are already used explicitly,
+            // for sure those are not going to be unused!
+            .filter(|(label, _)| !explicit_labels.contains(label))
+            // ...then we sort all the labels in order by their original position in
+            // the function definition
             .sorted_by_key(|(_, position)| *position)
-            .map(|(label, _position)| label.clone())
+            // ... finally we remove all the ones that are taken by a positional
+            // argument
+            .dropping(given_positional_arguments.saturating_sub(positional_arguments as usize))
+            .map(|(label, _)| label.clone())
             .collect_vec()
     }
 

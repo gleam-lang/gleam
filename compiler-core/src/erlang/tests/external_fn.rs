@@ -41,7 +41,7 @@ fn public_local_function_calls() {
         r#"
 @external(erlang, "m", "f")
 pub fn go(x x: Int, y y: Int) -> Int
-fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }
+pub fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }
 "#
     );
 }
@@ -68,7 +68,7 @@ fn inlining_external_functions_from_another_module() {
 pub type Atom
 
 @external(erlang, "erlang", "binary_to_atom")
-pub fn make(x: String) -> String
+pub fn make(x: String) -> Atom
 "#
         ),
         r#"import atom
@@ -89,7 +89,7 @@ fn unqualified_inlining_external_functions_from_another_module() {
 pub type Atom
 
 @external(erlang, "erlang", "binary_to_atom")
-pub fn make(x: String) -> String
+pub fn make(x: String) -> Atom
 "#
         ),
         "import atom.{make}
@@ -97,6 +97,48 @@ pub fn main() {
   make(\"ok\")
 }
 "
+    );
+}
+
+#[test]
+fn reference_to_imported_elixir_external_fn() {
+    assert_erl!(
+        (
+            "lib",
+            "my_app",
+            r#"
+@external(erlang, "Elixir.MyApp", "run")
+pub fn run() -> Int
+"#
+        ),
+        r#"import my_app
+pub fn main() {
+  let x = my_app.run
+  id(my_app.run)
+}
+fn id(x) { x }
+"#
+    );
+}
+
+#[test]
+fn unqualified_reference_to_imported_elixir_external_fn() {
+    assert_erl!(
+        (
+            "lib",
+            "my_app",
+            r#"
+@external(erlang, "Elixir.MyApp", "run")
+pub fn run() -> Int
+"#
+        ),
+        r#"import my_app.{run}
+pub fn main() {
+  let x = run
+  id(run)
+}
+fn id(x) { x }
+"#
     );
 }
 

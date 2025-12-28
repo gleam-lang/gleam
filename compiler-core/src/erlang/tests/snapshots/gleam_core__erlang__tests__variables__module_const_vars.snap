@@ -17,8 +17,8 @@ pub fn use_compound() { compound.1(compound.0) }
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
 -export([use_int_alias/0, use_int_identity_alias/0, use_compound/0]).
 
 -file("project/test/my/mod.gleam", 5).

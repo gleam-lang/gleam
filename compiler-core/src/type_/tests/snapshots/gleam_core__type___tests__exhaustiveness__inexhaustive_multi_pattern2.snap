@@ -25,6 +25,6 @@ is run on one of the values without a pattern then it will crash.
 
 The missing patterns are:
 
-    Error(_), True
     Ok(_), True
-    _, False
+    Ok(_), False
+    Error(_), _

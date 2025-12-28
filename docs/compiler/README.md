@@ -23,8 +23,10 @@ The project is made up of several Rust crates (projects):
 - `compiler-core`: This project parses, analyses, and compiles Gleam projects.
   It is entirely pure and has no IO so that is provided by the other Rust crates
   that wrap this one.
+- `language-server`: This project contains code for the Gleam language server,
+  including autocomplete, code actions, hover and other features.
 - `compiler-cli`: A command line interface that wraps the core compiler and
-  provides IO to files and to the console.
+  language server, providing IO to files and to the console.
 - `compiler-wasm`: A JavaScript interface to the core compiler via web assembly.
   Suitable for running in a web browser.
 
@@ -47,7 +49,7 @@ In addition to the Rust code there are these components:
 The process for compiling Gleam modules within the compiler looks roughly like
 this:
 
-```text
+```txt
   Gleam source code       .cache binaries
           ▼                         ▼
 ┌────────────────────┐ ┌───────────────────────┐
@@ -83,11 +85,11 @@ this:
 └────────────────────┘
           │
           ▼
- Erlang or JavaScript 
+ Erlang or JavaScript
      source code
 ```
 
-## <a name='Testing'></a>Testing 
+## <a name='Testing'></a>Testing
 
 We like automated tests! They're a great way to verify that the compiler is
 doing what we expect it do as we make changes.
@@ -127,7 +129,7 @@ expected output when we make changes to the output format of the compiler or
 error messaging is time-consuming and very dull. With snapshot testing it takes
 seconds.
 
-```shell
+```sh
 # Run the tests
 make test
 

@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n    {\n        let x = 1\n        Ok(x)\n        Nil\n    }\n    Nil\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+    {
+        let x = 1
+        Ok(x)
+        ▔▔↑  
+        Nil
+    }
+    Nil
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+    {
+        let x = 1
+        let _ = Ok(x)
+        Nil
+    }
+    Nil
+}

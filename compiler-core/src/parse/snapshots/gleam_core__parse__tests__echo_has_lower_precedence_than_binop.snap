@@ -9,6 +9,7 @@ expression: echo 1 + 1
                 start: 0,
                 end: 10,
             },
+            keyword_end: 4,
             expression: Some(
                 BinOp {
                     location: SrcSpan {
@@ -16,6 +17,10 @@ expression: echo 1 + 1
                         end: 10,
                     },
                     name: AddInt,
+                    name_location: SrcSpan {
+                        start: 7,
+                        end: 8,
+                    },
                     left: Int {
                         location: SrcSpan {
                             start: 5,
@@ -34,6 +39,7 @@ expression: echo 1 + 1
                     },
                 },
             ),
+            message: None,
         },
     ),
 ]

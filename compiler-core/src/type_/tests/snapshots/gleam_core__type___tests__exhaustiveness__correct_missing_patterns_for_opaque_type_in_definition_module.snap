@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/type_/tests/exhaustiveness.rs
+expression: "\npub opaque type Wibble { Wibble(Int) Wobble(String) }\n\npub fn main(w: Wibble) {\n  case w {}\n}\n"
+---
+----- SOURCE CODE
+
+pub opaque type Wibble { Wibble(Int) Wobble(String) }
+
+pub fn main(w: Wibble) {
+  case w {}
+}
+
+
+----- ERROR
+error: Inexhaustive patterns
+  ┌─ /src/one/two.gleam:5:3
+  │
+5 │   case w {}
+  │   ^^^^^^^^^
+
+This case expression does not have a pattern for all possible values. If it
+is run on one of the values without a pattern then it will crash.
+
+The missing patterns are:
+
+    Wibble(_)
+    Wobble(_)

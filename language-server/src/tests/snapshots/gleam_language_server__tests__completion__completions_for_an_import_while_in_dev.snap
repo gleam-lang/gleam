@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: "import gleam\n\npub fn main() {\n  0\n}"
+---
+import gleam|
+
+pub fn main() {
+  0
+}
+
+
+----- Completion content -----
+app
+  kind:   Module
+  edits:
+    [0:7-0:7]: "app"
+dev_helper
+  kind:   Module
+  edits:
+    [0:7-0:7]: "dev_helper"

@@ -1,16 +1,20 @@
-use crate::{build_lock::BuildLock, fs::ProjectIO};
+use crate::{
+    build_lock::{BuildLock, Guard},
+    fs::ProjectIO,
+};
 use gleam_core::{
     Result,
     build::{Mode, NullTelemetry, Target},
-    language_server::{LanguageServer, LockGuard, Locker},
     paths::ProjectPaths,
 };
+use gleam_language_server::{LanguageServer, LockGuard, Locker};
 
 pub fn main() -> Result<()> {
     tracing::info!("language_server_starting");
 
-    eprintln!(
-        "Hello human!
+    if std::io::IsTerminal::is_terminal(&std::io::stdin()) {
+        eprintln!(
+            "Hello human!
 
 This command is intended to be run by language server clients such
 as a text editor rather than being run directly in the console.
@@ -25,7 +29,8 @@ ignore this message.
 If you have run `gleam lsp` yourself in your terminal then exit
 this program by pressing ctrl+c.
 "
-    );
+        );
+    }
 
     // Create the transport. Includes the stdio (stdin and stdout) versions but this could
     // also be implemented to use sockets or HTTP.
@@ -54,7 +59,8 @@ impl LspLocker {
 }
 
 impl Locker for LspLocker {
-    fn lock_for_build(&self) -> LockGuard {
-        LockGuard(Box::new(self.0.lock(&NullTelemetry)))
+    fn lock_for_build(&self) -> Result<LockGuard> {
+        let guard: Guard = self.0.lock(&NullTelemetry)?;
+        Ok(LockGuard(Box::new(guard)))
     }
 }

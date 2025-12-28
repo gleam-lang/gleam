@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\n@external(erlang, \"gleam_stdlib\", \"dict\")\npub type Dict(key, value) {\n  Dict(pairs: List(#(key, value)))\n}\n"
+---
+----- SOURCE CODE
+
+@external(erlang, "gleam_stdlib", "dict")
+pub type Dict(key, value) {
+  Dict(pairs: List(#(key, value)))
+}
+
+
+----- ERROR
+error: External type with constructors
+  ┌─ /src/one/two.gleam:3:1
+  │
+3 │ pub type Dict(key, value) {
+  │ ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This type is annotated with the `@external` annotation, but it has
+constructors. The `@external` annotation is only for external types with no
+constructors.
+Hint: Remove the `@external` annotation

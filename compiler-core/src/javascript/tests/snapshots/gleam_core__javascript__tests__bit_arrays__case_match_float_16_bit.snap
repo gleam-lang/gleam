@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 1423
+expression: "\npub fn go(x) {\n  case x {\n    <<a:float-size(16)>> -> a\n    _ -> 1.1\n  }\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  case x {
+    <<a:float-size(16)>> -> a
+    _ -> 1.1
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { bitArraySliceToFloat } from "../gleam.mjs";
+
+export function go(x) {
+  if (x.bitSize === 16 && Number.isFinite(bitArraySliceToFloat(x, 0, 16, true))) {
+    let a = bitArraySliceToFloat(x, 0, 16, true);
+    return a;
+  } else {
+    return 1.1;
+  }
+}

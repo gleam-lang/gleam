@@ -48,7 +48,7 @@ pub type X {
 }
 
 pub const x = X(1, ["1"])
-const y = X(1, [])
+pub const y = X(1, [])
         "#
     );
 }
@@ -62,7 +62,7 @@ pub type X {
 }
 
 pub const x = [X(1, ["1"])]
-const y = [X(1, ["1"])]
+pub const y = [X(1, ["1"])]
         "#
     );
 }
@@ -76,7 +76,7 @@ pub type X {
 }
 
 pub const x = #(X(1, ["1"]))
-const y = #(X(1, ["1"]))
+pub const y = #(X(1, ["1"]))
         "#
     );
 }
@@ -125,4 +125,14 @@ fn literal_nil_does_not_get_constant_annotation() {
 #[test]
 fn constructor_function_in_constant() {
     assert_js!("pub const a = Ok");
+}
+
+#[test]
+fn constants_get_their_own_jsdoc_comment() {
+    assert_js!(
+        "
+/// 11 is clearly the best number!
+pub const jaks_favourite_number = 11
+"
+    );
 }

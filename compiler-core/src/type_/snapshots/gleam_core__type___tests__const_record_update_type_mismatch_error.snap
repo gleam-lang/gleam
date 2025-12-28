@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "pub type Person { Person(name: String, age: Int) }\n        pub type Animal { Animal(species: String) }\n\n        pub const alice = Person(\"Alice\", 30)\n        pub const dog = Animal(..alice)"
+---
+----- SOURCE CODE
+pub type Person { Person(name: String, age: Int) }
+        pub type Animal { Animal(species: String) }
+
+        pub const alice = Person("Alice", 30)
+        pub const dog = Animal(..alice)
+
+----- ERROR
+error: Incorrect record update
+  ┌─ /src/one/two.gleam:5:34
+  │
+5 │         pub const dog = Animal(..alice)
+  │                                  ^^^^^ This is a `Person`
+
+This value is a `Person` so it cannot be used to build a `Animal`, even if
+they share some fields.
+
+Note: If you want to change one variant of a type into another, you should
+specify all fields explicitly instead of using the record update syntax.

@@ -1,0 +1,40 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: assert echo True as this_belongs_to_echo
+---
+[
+    Assert(
+        Assert {
+            location: SrcSpan {
+                start: 0,
+                end: 40,
+            },
+            value: Echo {
+                location: SrcSpan {
+                    start: 7,
+                    end: 40,
+                },
+                keyword_end: 11,
+                expression: Some(
+                    Var {
+                        location: SrcSpan {
+                            start: 12,
+                            end: 16,
+                        },
+                        name: "True",
+                    },
+                ),
+                message: Some(
+                    Var {
+                        location: SrcSpan {
+                            start: 20,
+                            end: 40,
+                        },
+                        name: "this_belongs_to_echo",
+                    },
+                ),
+            },
+            message: None,
+        },
+    ),
+]

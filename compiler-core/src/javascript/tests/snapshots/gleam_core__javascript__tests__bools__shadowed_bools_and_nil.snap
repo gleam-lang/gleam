@@ -1,11 +1,11 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
-expression: "\npub type True { True False Nil }\nfn go(x, y) {\n  let assert True = x\n  let assert False = x\n  let assert Nil = y\n}\n"
+expression: "\npub type True { True False Nil }\npub fn go(x, y) {\n  let assert True = x\n  let assert False = x\n  let assert Nil = y\n}\n"
 ---
 ----- SOURCE CODE
 
 pub type True { True False Nil }
-fn go(x, y) {
+pub fn go(x, y) {
   let assert True = x
   let assert False = x
   let assert Nil = y
@@ -15,41 +15,50 @@ fn go(x, y) {
 ----- COMPILED JAVASCRIPT
 import { CustomType as $CustomType, makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 export class True extends $CustomType {}
+export const True$True = () => new True();
+export const True$isTrue = (value) => value instanceof True;
 
 export class False extends $CustomType {}
+export const True$False = () => new False();
+export const True$isFalse = (value) => value instanceof False;
 
 export class Nil extends $CustomType {}
+export const True$Nil = () => new Nil();
+export const True$isNil = (value) => value instanceof Nil;
 
-function go(x, y) {
+export function go(x, y) {
   if (!(x instanceof True)) {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       4,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x }
+      { value: x, start: 54, end: 73, pattern_start: 65, pattern_end: 69 }
     )
   }
-  if (!(x instanceof False)) {
-    throw makeError(
-      "let_assert",
-      "my/mod",
-      5,
-      "go",
-      "Pattern match failed, no pattern matched the value.",
-      { value: x }
-    )
-  }
+  throw makeError(
+    "let_assert",
+    FILEPATH,
+    "my/mod",
+    5,
+    "go",
+    "Pattern match failed, no pattern matched the value.",
+    { value: x, start: 76, end: 96, pattern_start: 87, pattern_end: 92 }
+  )
   if (!(y instanceof Nil)) {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       6,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: y }
+      { value: y, start: 99, end: 117, pattern_start: 110, pattern_end: 113 }
     )
   }
   return y;

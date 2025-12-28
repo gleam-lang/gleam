@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "\n/// Hello! This is the documentation of the `main`\n/// function.\n///\npub fn main() { 1 }\n"
+---
+----- SOURCE CODE
+
+/// Hello! This is the documentation of the `main`
+/// function.
+///
+pub fn main() { 1 }
+
+
+----- COMPILED JAVASCRIPT
+/**
+ * Hello! This is the documentation of the `main`
+ * function.
+ */
+export function main() {
+  return 1;
+}

@@ -1,0 +1,34 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 1889
+expression: "\npub fn go(x) {\n  let n = 1\n  case x {\n    <<m:size(n), _:size(m), _:bytes>> -> 1\n    _ -> 2\n  }\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  let n = 1
+  case x {
+    <<m:size(n), _:size(m), _:bytes>> -> 1
+    _ -> 2
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { bitArraySliceToInt } from "../gleam.mjs";
+
+export function go(x) {
+  let n = 1;
+  if (n >= 0 && x.bitSize >= n) {
+    let m = bitArraySliceToInt(x, 0, n, true, false);
+    if (x.bitSize >= m + n && (x.bitSize - (m + n)) % 8 === 0) {
+      let m$1 = m;
+      return 1;
+    } else {
+      return 2;
+    }
+  } else {
+    return 2;
+  }
+}

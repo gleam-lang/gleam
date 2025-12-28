@@ -311,13 +311,16 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
           elem.classList.add("gleam");
         }
       });
+      hljs.configure({
+        cssSelector: 'pre code:not(.hljs-ignore)'
+      })
       hljs.highlightAll();
     </script>
 
     <script src="./js/lunr.min.js?v=GLEAM_VERSION_HERE"></script>
     <script src="./js/index.js?v=0"></script>
     <script>
-      fetch("./search_data.json?v=0")
+      fetch("./search-data.json?v=0")
         .then(response => response.json())
         .then(data => window.Gleam.initSearch(data));
     </script>
@@ -558,9 +561,7 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
 
 
 
-
-
-<h2>Functions</h2>
+<h2>Values</h2>
 <ul>
   
   <li><a href="#one">one</a></li>
@@ -581,11 +582,9 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
 
 
 
-
-
 <section class="module-members">
-  <h1 id="module-functions" class="module-member-kind">
-    <a href="#module-functions">Functions</a>
+  <h1 id="module-values" class="module-member-kind">
+    <a href="#module-values">Values</a>
     <svg class="icon icon-gleam-chasse"><use xlink:href="#icon-gleam-chasse"></use></svg>
   </h1>
   
@@ -599,7 +598,7 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
       
     </div>
 
-    <pre><code class="hljs gleam">pub fn one() -&gt; Int</code></pre>
+    <pre><code class="hljs hljs-ignore"><span class="hljs-keyword">pub fn </span><span class="hljs-title">one</span>() -> <span class="hljs-title">Int</span></code></pre>
     
     <div class="rendered-markdown"><p>Here is some documentation</p>
 </div>
@@ -679,13 +678,16 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
           elem.classList.add("gleam");
         }
       });
+      hljs.configure({
+        cssSelector: 'pre code:not(.hljs-ignore)'
+      })
       hljs.highlightAll();
     </script>
 
     <script src="./js/lunr.min.js?v=GLEAM_VERSION_HERE"></script>
     <script src="./js/index.js?v=0"></script>
     <script>
-      fetch("./search_data.json?v=0")
+      fetch("./search-data.json?v=0")
         .then(response => response.json())
         .then(data => window.Gleam.initSearch(data));
     </script>
@@ -926,9 +928,7 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
 
 
 
-
-
-<h2>Functions</h2>
+<h2>Values</h2>
 <ul>
   
   <li><a href="#one">one</a></li>
@@ -949,11 +949,9 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
 
 
 
-
-
 <section class="module-members">
-  <h1 id="module-functions" class="module-member-kind">
-    <a href="#module-functions">Functions</a>
+  <h1 id="module-values" class="module-member-kind">
+    <a href="#module-values">Values</a>
     <svg class="icon icon-gleam-chasse"><use xlink:href="#icon-gleam-chasse"></use></svg>
   </h1>
   
@@ -967,7 +965,7 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
       
     </div>
 
-    <pre><code class="hljs gleam">pub fn one() -&gt; Int</code></pre>
+    <pre><code class="hljs hljs-ignore"><span class="hljs-keyword">pub fn </span><span class="hljs-title">one</span>() -> <span class="hljs-title">Int</span></code></pre>
     
     <div class="rendered-markdown"><p>Here is some documentation</p>
 </div>
@@ -1047,13 +1045,16 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
           elem.classList.add("gleam");
         }
       });
+      hljs.configure({
+        cssSelector: 'pre code:not(.hljs-ignore)'
+      })
       hljs.highlightAll();
     </script>
 
     <script src="../../js/lunr.min.js?v=GLEAM_VERSION_HERE"></script>
     <script src="../../js/index.js?v=0"></script>
     <script>
-      fetch("../../search_data.json?v=0")
+      fetch("../../search-data.json?v=0")
         .then(response => response.json())
         .then(data => window.Gleam.initSearch(data));
     </script>

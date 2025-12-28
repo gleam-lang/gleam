@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/panic.rs
-expression: "\nfn go(f) {\n  f |> panic\n}\n"
+assertion_line: 51
+expression: "\npub fn go(f) {\n  f |> panic\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(f) {
+pub fn go(f) {
   f |> panic
 }
 
@@ -12,16 +14,19 @@ fn go(f) {
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
-function go(f) {
+const FILEPATH = "src/module.gleam";
+
+export function go(f) {
+  let _pipe = f;
   let _block;
   throw makeError(
     "panic",
+    FILEPATH,
     "my/mod",
     3,
     "go",
     "`panic` expression evaluated.",
     {}
   )
-  let _pipe = f;
   return _block(_pipe);
 }

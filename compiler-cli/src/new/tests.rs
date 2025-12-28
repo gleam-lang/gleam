@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use camino::Utf8PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
 use gleam_core::Error;
 
 #[test]
@@ -338,6 +338,38 @@ fn skip_existing_git_files_when_skip_git_is_true() {
 }
 
 #[test]
+fn suggested_project_name_updates_directory() {
+    let tmp = tempfile::tempdir().unwrap();
+    let base = Utf8PathBuf::from_path_buf(tmp.path().to_path_buf()).expect("Non Utf8 Path");
+    let original_root = base.join("gleam_testproject");
+
+    let creator = super::Creator::new_with_confirmation(
+        super::NewOptions {
+            project_root: original_root.to_string(),
+            template: super::Template::Erlang,
+            name: None,
+            skip_git: true,
+            skip_github: true,
+        },
+        "1.0.0-gleam",
+        |_| Ok::<bool, Error>(true),
+    )
+    .unwrap();
+
+    let expected_root = base.join("testproject");
+    assert_eq!(creator.project_name, "testproject");
+    assert_eq!(
+        Utf8Path::new(&creator.options.project_root),
+        expected_root.as_path()
+    );
+
+    creator.run().unwrap();
+
+    assert!(expected_root.exists());
+    assert!(!original_root.exists());
+}
+
+#[test]
 fn validate_name_format() {
     assert!(crate::new::validate_name("project").is_ok());
     assert!(crate::new::validate_name("project_name").is_ok());
@@ -412,7 +444,7 @@ fn suggest_valid_names() {
             "gleam",
             &crate::new::InvalidProjectNameReason::GleamReservedModule
         ),
-        Some("gleam_app".to_string())
+        Some("app_gleam".to_string())
     );
 
     assert_eq!(

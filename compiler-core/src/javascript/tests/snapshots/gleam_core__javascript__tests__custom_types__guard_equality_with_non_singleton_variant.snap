@@ -1,0 +1,44 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\npub type Thing {\n  Variant\n  Other(String)\n}\n\npub fn process(e: Thing) -> String {\n  case e {\n    value if value == Other(\"hello\") -> \"match\"\n    _ -> \"no match\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub type Thing {
+  Variant
+  Other(String)
+}
+
+pub fn process(e: Thing) -> String {
+  case e {
+    value if value == Other("hello") -> "match"
+    _ -> "no match"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType, isEqual } from "../gleam.mjs";
+
+export class Variant extends $CustomType {}
+export const Thing$Variant = () => new Variant();
+export const Thing$isVariant = (value) => value instanceof Variant;
+
+export class Other extends $CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+}
+export const Thing$Other = ($0) => new Other($0);
+export const Thing$isOther = (value) => value instanceof Other;
+export const Thing$Other$0 = (value) => value[0];
+
+export function process(e) {
+  let value = e;
+  if (isEqual(value, new Other("hello"))) {
+    return "match";
+  } else {
+    return "no match";
+  }
+}

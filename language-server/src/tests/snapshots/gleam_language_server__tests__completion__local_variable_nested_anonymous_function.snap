@@ -1,0 +1,66 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: "\npub fn main() {\n  let add_one = fn(wibble: Int) {\n    let wabble = 1\n    let add_two = fn(wobble: Int) { wobble + 2 }\n    wibble + add_two(1)\n  }\n  add_one(1)\n}\n"
+---
+pub fn main() {
+  let add_one = fn(wibble: Int) {
+    let wabble = 1
+    let add_two = fn(wobble: Int) { wobble| + 2 }
+    wibble + add_two(1)
+  }
+  add_one(1)
+}
+
+
+----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True
+main
+  kind:   Function
+  detail: fn() -> Int
+  sort:   02_main
+  desc:   app
+  edits:
+    [4:36-4:36]: "main"
+wabble
+  kind:   Variable
+  detail: Int
+  sort:   02_wabble
+  desc:   app
+  docs:   "A locally defined variable."
+  edits:
+    [4:36-4:36]: "wabble"
+wibble
+  kind:   Variable
+  detail: Int
+  sort:   02_wibble
+  desc:   app
+  docs:   "A locally defined variable."
+  edits:
+    [4:36-4:36]: "wibble"
+wobble
+  kind:   Variable
+  detail: Int
+  sort:   02_wobble
+  desc:   app
+  docs:   "A locally defined variable."
+  edits:
+    [4:36-4:36]: "wobble"

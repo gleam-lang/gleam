@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  map([[#(1, 2)]], fn(list) {\n    map(list, fn(tuple) {\n      todo\n    })\n  })\n}\n\nfn map(list: List(a), fun: fn(a) -> b) { todo }\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  map([[#(1, 2)]], fn(list) {
+    map(list, fn(tuple) {
+                 ↑       
+      todo
+    })
+  })
+}
+
+fn map(list: List(a), fun: fn(a) -> b) { todo }
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  map([[#(1, 2)]], fn(list) {
+    map(list, fn(tuple) {
+      let #(int, int_2) = tuple
+      todo
+    })
+  })
+}
+
+fn map(list: List(a), fun: fn(a) -> b) { todo }

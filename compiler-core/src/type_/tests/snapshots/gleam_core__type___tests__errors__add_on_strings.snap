@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\"Hello, \" + \"Jak\""
+---
+----- SOURCE CODE
+"Hello, " + "Jak"
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:11
+  │
+1 │ "Hello, " + "Jak"
+  │           ^ Use <> instead
+
+The + operator can only be used on Ints.
+To join two strings together you can use the <> operator.

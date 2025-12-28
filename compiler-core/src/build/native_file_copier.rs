@@ -9,7 +9,10 @@ use ecow::{EcoString, eco_format};
 use crate::{
     Error, Result,
     io::{DirWalker, FileSystemReader, FileSystemWriter},
+    paths::ProjectPaths,
 };
+
+use super::package_compiler::CheckModuleConflicts;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct CopiedNativeFiles {
@@ -19,27 +22,34 @@ pub(crate) struct CopiedNativeFiles {
 
 pub(crate) struct NativeFileCopier<'a, IO> {
     io: IO,
-    root: &'a Utf8Path,
+    paths: ProjectPaths,
     destination_dir: &'a Utf8Path,
     seen_native_files: HashSet<Utf8PathBuf>,
     seen_modules: HashMap<EcoString, Utf8PathBuf>,
     to_compile: Vec<Utf8PathBuf>,
     elixir_files_copied: bool,
+    check_module_conflicts: CheckModuleConflicts,
 }
 
 impl<'a, IO> NativeFileCopier<'a, IO>
 where
     IO: FileSystemReader + FileSystemWriter + Clone,
 {
-    pub(crate) fn new(io: IO, root: &'a Utf8Path, out: &'a Utf8Path) -> Self {
+    pub(crate) fn new(
+        io: IO,
+        root: &'a Utf8Path,
+        out: &'a Utf8Path,
+        check_module_conflicts: CheckModuleConflicts,
+    ) -> Self {
         Self {
             io,
-            root,
+            paths: ProjectPaths::new(root.into()),
             destination_dir: out,
             to_compile: Vec::new(),
             seen_native_files: HashSet::new(),
             seen_modules: HashMap::new(),
             elixir_files_copied: false,
+            check_module_conflicts,
         }
     }
 
@@ -52,12 +62,17 @@ where
     pub fn run(mut self) -> Result<CopiedNativeFiles> {
         self.io.mkdir(&self.destination_dir)?;
 
-        let src = self.root.join("src");
+        let src = self.paths.src_directory();
         self.copy_files(&src)?;
 
-        let test = self.root.join("test");
+        let test = self.paths.test_directory();
         if self.io.is_directory(&test) {
             self.copy_files(&test)?;
+        }
+
+        let dev = self.paths.dev_directory();
+        if self.io.is_directory(&dev) {
+            self.copy_files(&dev)?;
         }
 
         // Sort for deterministic output
@@ -90,6 +105,7 @@ where
         // add a special case for `.gleam`.
         if extension == "gleam" {
             self.check_for_conflicting_javascript_modules(&relative_path)?;
+            self.check_for_conflicting_erlang_modules(&relative_path)?;
 
             return Ok(());
         }
@@ -206,24 +222,42 @@ where
         &mut self,
         relative_path: &Utf8PathBuf,
     ) -> Result<(), Error> {
-        // Ideally we'd check for `.gleam` files here as well. However, it is
-        // actually entirely legitimate to receive precompiled `.erl` files for
-        // each `.gleam` file from Hex, so this would prompt an error for every
-        // package downloaded from Hex, which we do not want.
-        if !matches!(relative_path.extension(), Some("erl")) {
-            return Ok(());
-        }
+        let erlang_module_name = match relative_path.extension() {
+            Some("erl") => {
+                eco_format!("{}", relative_path.file_name().expect("path has file name"))
+            }
+            Some("gleam") if self.check_module_conflicts.should_check() => relative_path
+                .with_extension("erl")
+                .as_str()
+                .replace("/", "@")
+                .into(),
+            _ => return Ok(()),
+        };
 
         // Insert just the `.erl` module filename in `seen_modules` instead of
         // its full relative path, because `.erl` files with the same name
         // cause a conflict when targetting Erlang regardless of subpath.
-        let erl_file = relative_path.file_name().expect("path has file name");
-        let erl_string = eco_format!("{}", erl_file);
+        if let Some(existing) = self
+            .seen_modules
+            .insert(erlang_module_name, relative_path.clone())
+        {
+            let existing_is_gleam = existing.extension() == Some("gleam");
+            if existing_is_gleam || relative_path.extension() == Some("gleam") {
+                let (gleam_file, native_file) = if existing_is_gleam {
+                    (&existing, relative_path)
+                } else {
+                    (relative_path, &existing)
+                };
+                return Err(Error::ClashingGleamModuleAndNativeFileName {
+                    module: eco_format!("{}", gleam_file.with_extension("")),
+                    gleam_file: gleam_file.clone(),
+                    native_file: native_file.clone(),
+                });
+            }
 
-        if let Some(first) = self.seen_modules.insert(erl_string, relative_path.clone()) {
             return Err(Error::DuplicateNativeErlangModule {
                 module: eco_format!("{}", relative_path.file_stem().expect("path has file stem")),
-                first,
+                first: existing,
                 second: relative_path.clone(),
             });
         }

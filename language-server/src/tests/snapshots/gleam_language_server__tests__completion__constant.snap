@@ -1,0 +1,43 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: "\nconst hello = 10\nconst world = he\n"
+---
+const hello = 10
+const world = he|
+
+
+----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True
+hello
+  kind:   Constant
+  detail: Int
+  sort:   2_hello
+  desc:   app
+  edits:
+    [2:14-2:14]: "hello"
+world
+  kind:   Constant
+  detail: a
+  sort:   2_world
+  desc:   app
+  edits:
+    [2:14-2:14]: "world"

@@ -1,6 +1,6 @@
 [package]
 name = "gleam-cli"
-version = "1.9.1"
+version = "1.14.0"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2024"
 license-file = "LICENCE"
@@ -8,6 +8,8 @@ license-file = "LICENCE"
 [dependencies]
 # The pure compiler
 gleam-core = { path = "../compiler-core" }
+# The language server
+gleam-language-server = { path = "../language-server" }
 # OS SIGINT and SIGTERM signal handling
 ctrlc = { version = "3", features = ["termination"] }
 # Command line interface
@@ -20,7 +22,7 @@ rpassword = "7"
 tokio = { version = "1", features = ["rt", "rt-multi-thread"] }
 # Further file system functions (i.e. copy directory)
 fs_extra = "1"
-tracing-subscriber = { version = "0", features = ["fmt", "env-filter"] }
+tracing-subscriber = { version = "0.3.20", features = ["fmt", "env-filter"] }
 # HTTP client
 reqwest = { version = "0", default-features = false, features = ["rustls-tls"] }
 # Checksums
@@ -36,12 +38,11 @@ same-file = "1"
 # Open generated docs in browser
 opener = "0"
 # Pubgrub dependency resolution algorithm
-pubgrub = "0"
+pubgrub = "0.3"
 
 camino = { workspace = true, features = ["serde1"] }
 async-trait.workspace = true
 base16.workspace = true
-bytes.workspace = true
 debug-ignore.workspace = true
 ecow.workspace = true
 flate2.workspace = true
@@ -60,7 +61,6 @@ tar.workspace = true
 termcolor.workspace = true
 toml.workspace = true
 tracing.workspace = true
-walkdir.workspace = true
 
 [dev-dependencies]
 # Creation of temporary directories

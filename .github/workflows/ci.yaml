@@ -1,6 +1,9 @@
 name: ci
 on:
   pull_request:
+    paths-ignore:
+      - "CHANGELOG.md"
+      - "docs/**"
   push:
     branches:
       - main
@@ -58,8 +61,7 @@ jobs:
             binary: aarch64
             cargo-tool: cross
             run-integration-tests: false # Cannot run aarch64 binaries on x86_64
-          # macos>=14 runs exclusively on aarch64 and will thus fail to execute properly for x64
-          - os: macos-13 # intel
+          - os: macos-15-intel # intel
             target: x86_64-apple-darwin
             binary: x86_64
             cargo-tool: cargo
@@ -70,17 +72,17 @@ jobs:
             binary: arm64
             cargo-tool: cargo
             run-integration-tests: true
-          - os: windows-latest
+          - os: windows-2022
             target: x86_64-pc-windows-msvc
             binary: x86-64
             cargo-tool: cargo
             run-integration-tests: true
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install musl-tools incl. musl-gcc
-        uses: awalsh128/cache-apt-pkgs-action@v1.4.3
+        uses: awalsh128/cache-apt-pkgs-action@v1
         with:
           # musl-tools provide `musl-gcc` which is required for `ring` which is required for `rustls` et al.
           packages: musl-tools
@@ -93,24 +95,17 @@ jobs:
           toolchain: ${{ matrix.toolchain }}
           target: ${{ matrix.target }}
 
-      - name: Install Erlang (non-macos)
+      - name: Install Erlang
         uses: erlef/setup-beam@v1
         with:
-          otp-version: "26.1"
-          elixir-version: "1.16.1"
+          otp-version: "28.0.1"
+          elixir-version: "1.18"
           rebar3-version: "3"
-        if: ${{ runner.os != 'macOS' }} # setup-beam does not support macOS
-
-      - name: Install Erlang (macos)
-        run: |
-          brew install erlang rebar3 elixir
-          mix local.hex --force
-        if: ${{ runner.os == 'macOS' }} # setup-beam does not support macOS
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: "22"
+          node-version: "20"
 
       - name: Setup Deno
         uses: denoland/setup-deno@v2
@@ -128,7 +123,7 @@ jobs:
           key: v1-${{ matrix.target }}
 
       - name: Install Gleam
-        uses: clechasseur/rs-cargo@v3
+        uses: clechasseur/rs-cargo@v4
         with:
           command: install
           args: "--path gleam-bin --target ${{ matrix.target }} --debug --locked --force"
@@ -153,7 +148,7 @@ jobs:
         if: ${{ matrix.run-integration-tests }}
 
       - name: Run tests
-        uses: clechasseur/rs-cargo@v3
+        uses: clechasseur/rs-cargo@v4
         with:
           command: test
           # We only want to run the `test-output` when running integration tests.
@@ -215,6 +210,13 @@ jobs:
         working-directory: ./test/project_erlang_windows
         if: ${{ runner.os == 'Windows' && matrix.run-integration-tests }}
 
+      - name: test/project_erlang export package-information
+        run: |
+          gleam export package-information --out="gleam.json"
+          cat gleam.json
+        working-directory: ./test/project_erlang
+        if: ${{ matrix.run-integration-tests }}
+
       - name: test/external_only_javascript
         run: ./test.sh
         working-directory: ./test/external_only_javascript
@@ -268,7 +270,7 @@ jobs:
 
           # Test adding of deps
           gleam add exception    # No specifier
-          gleam add gleam_http@3 # Version specifier
+          gleam add gleam_http@4 # Version specifier
           gleam test
 
           # Test documentation generation
@@ -308,7 +310,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -316,9 +318,9 @@ jobs:
           toolchain: stable
           target: wasm32-unknown-unknown
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: "22"
+          node-version: "20"
 
       - name: Install wasm-pack
         run: |
@@ -333,7 +335,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -349,7 +351,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Ensure no merge commits
         uses: NexusPHP/no-merge-commits@v2.2.1
@@ -365,7 +367,7 @@ jobs:
       - name: Install cargo-deny
         run: |
           set -e
-          curl -L https://github.com/EmbarkStudios/cargo-deny/releases/download/0.14.18/cargo-deny-0.14.18-x86_64-unknown-linux-musl.tar.gz | tar xzf -
+          curl -L https://github.com/EmbarkStudios/cargo-deny/releases/download/0.18.6/cargo-deny-0.18.6-x86_64-unknown-linux-musl.tar.gz | tar xzf -
           mv cargo-deny-*-x86_64-unknown-linux-musl/cargo-deny cargo-deny
           echo `pwd` >> $GITHUB_PATH
 
@@ -378,7 +380,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -397,7 +399,7 @@ jobs:
       - run: cargo build
 
       - name: Upload artifact (Ubuntu)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: gleam
           path: target/debug/gleam
@@ -409,7 +411,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Deno
         uses: denoland/setup-deno@v2
@@ -427,7 +429,7 @@ jobs:
           rebar3-version: "3"
 
       - name: Download Gleam binary from previous job
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: gleam
           path: ./test
@@ -473,12 +475,16 @@ jobs:
         working-directory: ./test/hextarball
 
       - name: Test running modules
-        run: make test
+        run: make test-all
         working-directory: ./test/running_modules
 
       - name: test/multi_namespace
         run: ./test.sh
         working-directory: ./test/multi_namespace
+
+      - name: Test multi namespace bug
+        run: ./test.sh
+        working-directory: ./test/multi_namespace_not_top_level
 
       - name: Test FFI in subdirectories
         run: make
@@ -487,3 +493,11 @@ jobs:
       - name: test/unicode_path
         run: make
         working-directory: ./test/unicode_path ⭐
+
+      - name: test/assert
+        run: make test-all
+        working-directory: ./test/assert
+
+      - name: Test publishing with default main
+        run: ./test.sh
+        working-directory: ./test/publishing_default_main

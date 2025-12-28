@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main(bool: Bool) {\n  case bool {}\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main(bool: Bool) {
+  case bool {}
+  ▔▔▔▔▔↑      
+}
+
+
+----- AFTER ACTION
+
+pub fn main(bool: Bool) {
+  case bool {
+    True -> todo
+    False -> todo
+  }
+}

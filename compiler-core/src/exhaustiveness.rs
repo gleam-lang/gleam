@@ -1,8 +1,19 @@
-//! An implementation of the algorithm described at
-//! <https://julesjacobs.com/notes/patternmatching/patternmatching.pdf>.
+//! An implementation of the algorithm described in:
 //!
-//! Adapted from Yorick Peterse's implementation at
-//! <https://github.com/yorickpeterse/pattern-matching-in-rust>. Thank you Yorick!
+//! - How to compile pattern matching, Jules Jacobs.
+//!   <https://julesjacobs.com/notes/patternmatching/patternmatching.pdf>
+//!
+//! - Efficient manipulation of binary data using pattern matching,
+//!   Per Gustafsson and Konstantinos Sagonas.
+//!   <https://user.it.uu.se/~kostis/Papers/JFP_06.pdf>
+//!
+//! - Compiling Pattern Matching to good Decision Trees, Luc Maranget.
+//!   <https://www.cs.tufts.edu/~nr/cs257/archive/luc-maranget/jun08.pdf>
+//!
+//! The first implementation of the decision tree was adapted from Yorick
+//! Peterse's implementation at
+//! <https://github.com/yorickpeterse/pattern-matching-in-rust>.
+//! Thank you Yorick!
 //!
 //! > This module comment (and all the following doc comments) are a rough
 //! > explanation. It's great to set some expectations on what to expect from
@@ -16,9 +27,9 @@
 //! contain multiple pattern checks. With a psedo-Gleam syntax, this is what it
 //! would look like:
 //!
-//! ```text
+//! ```txt
 //! case {
-//!   a is Some, b is 1, c is _  -> todo
+//!   a is Some, b is 1, c is _ -> todo
 //!   a is wibble -> todo
 //! }
 //! ```
@@ -36,7 +47,7 @@
 //! >
 //! > In out representation that would turn into:
 //! >
-//! > ```text
+//! > ```txt
 //! > case {
 //! >   a is Some(_) -> todo
 //! >   a is None -> todo
@@ -51,45 +62,36 @@
 //! a decision tree that can be used to perform exhaustiveness checking and code
 //! generation.
 //!
-//! At the moment this tree is not suitable for use in code generation yet as it
-//! is incomplete. The tree is not correctly formed for:
-//! - Bit strings
-//! - String prefixes
-//!
-//! These were not implemented as they are more complex and I've not worked out
-//! a good way to do them yet. The tricky bit is that unlike the others they are
-//! not an exact match and they can overlap with other patterns. Take this
-//! example:
-//!
-//! ```text
-//! case x {
-//!    "1" <> _ -> ...
-//!    "12" <> _ -> ...
-//!    "123" -> ...
-//!    _ -> ...
-//! }
-//! ```
-//!
-//! The decision tree needs to take into account that the first pattern is a
-//! super-pattern of the second, and the second is a super-pattern of the third.
-//!
 
 mod missing_patterns;
 pub mod printer;
 
 use crate::{
-    ast::{AssignName, TypedClause, TypedPattern},
+    ast::{
+        self, AssignName, BitArraySize, Endianness, IntOperator, SrcSpan, TypedBitArraySize,
+        TypedClause, TypedPattern, TypedPatternBitArraySegment,
+    },
+    parse::LiteralFloatValue,
+    strings::{
+        convert_string_escape_chars, length_utf16, length_utf32, string_to_utf16_bytes,
+        string_to_utf32_bytes,
+    },
     type_::{
-        Environment, Type, TypeValueConstructor, TypeValueConstructorField, TypeVar,
-        TypeVariantConstructors, collapse_links, error::UnreachableCaseClauseReason,
+        Environment, Opaque, Type, TypeValueConstructor, TypeValueConstructorField, TypeVar,
+        TypeVariantConstructors, collapse_links, error::UnreachablePatternReason,
         is_prelude_module, string,
     },
 };
+use bitvec::{order::Msb0, slice::BitSlice, vec::BitVec, view::BitView};
 use ecow::EcoString;
 use id_arena::{Arena, Id};
 use itertools::Itertools;
+use num_bigint::{BigInt, Sign};
+use num_traits::ToPrimitive;
+use radix_trie::{Trie, TrieCommon};
 use std::{
     cell::RefCell,
+    cmp::Ordering,
     collections::{HashMap, HashSet, VecDeque},
     hash::Hash,
     sync::Arc,
@@ -103,7 +105,7 @@ use std::{
 /// multiple checks (each on a different variable, which appears in the check
 /// itself!):
 ///
-/// ```text
+/// ```txt
 /// a is Some, b is 1 if condition -> todo
 /// ─┬───────  ─┬──── ─┬──────────    ─┬──
 ///  │          │      │               ╰── body: an arbitrary expression
@@ -178,7 +180,7 @@ impl Branch {
     ///
     /// In our internal representation this would become:
     ///
-    /// ```text
+    /// ```txt
     /// case {
     ///   a is Some(1) -> Some(2)
     ///   a is otherwise -> otherwise
@@ -191,7 +193,7 @@ impl Branch {
     /// by keeping track in its body of the correspondence. So it would end up
     /// looking like this:
     ///
-    /// ```text
+    /// ```txt
     /// case {
     ///   a is Some(1) -> Some(2)
     ///   ∅ -> {
@@ -213,7 +215,7 @@ impl Branch {
     /// }
     /// ```
     ///
-    fn move_unconditional_patterns(&mut self, compiler: &Compiler<'_>) {
+    fn move_unconditional_patterns(&mut self, compiler: &mut Compiler<'_>) {
         self.checks.retain_mut(|check| {
             loop {
                 match compiler.pattern(check.pattern) {
@@ -234,10 +236,104 @@ impl Branch {
                     Pattern::Assign { name, pattern } => {
                         self.body.assign(name.clone(), check.var.clone());
                         check.pattern = *pattern;
-                        continue;
                     }
+                    // There's a special case of assignments when it comes to string
+                    // prefix patterns. We can give a name to a literal prefix like this:
+                    // `"0" as digit <> rest`.
+                    // We also want to move this special case of an assignment to the
+                    // branch body!
+                    Pattern::StringPrefix {
+                        prefix,
+                        prefix_name,
+                        rest: _,
+                    } => {
+                        if let Some(variable) = std::mem::take(prefix_name) {
+                            self.body
+                                .assign_literal_string(variable.clone(), prefix.clone());
+                        }
+                        return true;
+                    }
+                    // There's a special case of assignments when it comes to bit
+                    // array patterns. We can give a name to one slice of the array and
+                    // bind it to a variable to be used by later steps of the pattern
+                    // like this: `<<len, payload:size(len)>>` (here we're binding
+                    // two variables! `len` and `payload`).
+                    //
+                    // This kind of slicing will always match if it's not guarded by
+                    // any size test, so if we find a `ReadAction` that is the first
+                    // test to perform in a bit array pattern we know it's always
+                    // going to match and can be safely moved into the branch's body.
+                    Pattern::BitArray { tests } => match tests.front_mut() {
+                        Some(BitArrayTest::Match(MatchTest {
+                            value: BitArrayMatchedValue::Variable(name),
+                            read_action,
+                        })) => {
+                            let bit_array = check.var.clone();
+                            self.body.assign_bit_array_slice(
+                                name.clone(),
+                                bit_array,
+                                read_action.clone(),
+                            );
+                            let _ = tests.pop_front();
+                        }
+
+                        Some(test) => match test {
+                            // If we have `_ as a` we treat that as a regular variable
+                            // assignment.
+                            BitArrayTest::Match(MatchTest {
+                                value: BitArrayMatchedValue::Assign { name, value },
+                                read_action,
+                            }) if value.is_discard() => {
+                                *test = BitArrayTest::Match(MatchTest {
+                                    value: BitArrayMatchedValue::Variable(name.clone()),
+                                    read_action: read_action.clone(),
+                                });
+                            }
+
+                            // Just like regular assigns, those patterns are unrefutable
+                            // and will become assignments in the branch's body.
+                            BitArrayTest::Match(MatchTest {
+                                value: BitArrayMatchedValue::Assign { name, value },
+                                read_action,
+                            }) => {
+                                self.body
+                                    .assign_segment_constant_value(name.clone(), value.as_ref());
+
+                                // We will still need to check the aliased value!
+                                *test = BitArrayTest::Match(MatchTest {
+                                    value: value.as_ref().clone(),
+                                    read_action: read_action.clone(),
+                                });
+                            }
+
+                            // Discards are removed directly without even binding them
+                            // in the branch's body.
+                            _ if test.is_discard() => {
+                                let _ = tests.pop_front();
+                            }
+
+                            // Otherwise there's no unconditional test to pop, we
+                            // keep the pattern without changing it.
+                            BitArrayTest::Size(_)
+                            | BitArrayTest::Match(_)
+                            | BitArrayTest::CatchAllIsBytes { .. }
+                            | BitArrayTest::ReadSizeIsNotNegative { .. }
+                            | BitArrayTest::SegmentIsFiniteFloat { .. } => return true,
+                        },
+
+                        // If a bit array pattern has no tests then it's always
+                        // going to match, no matter what. We just remove it.
+                        None => return false,
+                    },
+
                     // All other patterns are not unconditional, so we just keep them.
-                    _ => return true,
+                    Pattern::Int { .. }
+                    | Pattern::Float { .. }
+                    | Pattern::String { .. }
+                    | Pattern::Tuple { .. }
+                    | Pattern::Variant { .. }
+                    | Pattern::NonEmptyList { .. }
+                    | Pattern::EmptyList => return true,
                 }
             }
         });
@@ -249,18 +345,47 @@ impl Branch {
 /// each body starts with a series of assignments we keep track of as we're
 /// compiling each branch.
 ///
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Body {
     /// Any variables to bind before running the code.
     ///
     /// The tuples are in the form `(name, value)`, so `(wibble, var)`
     /// corresponds to `let wibble = var`.
     ///
-    bindings: Vec<(EcoString, Variable)>,
+    pub bindings: Vec<(EcoString, BoundValue)>,
 
     /// The index of the clause in the case expression that should be run.
     ///
-    clause_index: usize,
+    pub clause_index: usize,
+}
+
+/// A value that can appear on the right hand side of one of the assignments we
+/// find at the top of a body.
+///
+#[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
+pub enum BoundValue {
+    /// `let a = variable`
+    ///
+    Variable(Variable),
+
+    /// `let a = "a literal string"`
+    ///
+    LiteralString(EcoString),
+
+    /// `let a = 123`
+    ///
+    LiteralInt(BigInt),
+
+    /// `let a = 12.2`
+    ///
+    LiteralFloat(EcoString),
+
+    /// `let a = sliceAsInt(bit_array, 0, 16, ...)`
+    ///
+    BitArraySlice {
+        bit_array: Variable,
+        read_action: ReadAction,
+    },
 }
 
 impl Body {
@@ -271,10 +396,47 @@ impl Body {
         }
     }
 
-    /// Adds a new assignment to the body, binding `let var = value`
+    /// Adds a new assignment to the body, binding `let variable = value`
     ///
-    pub fn assign(&mut self, var: EcoString, value: Variable) {
-        self.bindings.push((var, value));
+    pub fn assign(&mut self, variable: EcoString, value: Variable) {
+        self.bindings.push((variable, BoundValue::Variable(value)));
+    }
+
+    fn assign_literal_string(&mut self, variable: EcoString, value: EcoString) {
+        self.bindings
+            .push((variable, BoundValue::LiteralString(value)));
+    }
+
+    fn assign_bit_array_slice(
+        &mut self,
+        segment_name: EcoString,
+        bit_array: Variable,
+        value: ReadAction,
+    ) {
+        self.bindings.push((
+            segment_name,
+            BoundValue::BitArraySlice {
+                bit_array,
+                read_action: value,
+            },
+        ))
+    }
+
+    fn assign_segment_constant_value(&mut self, name: EcoString, value: &BitArrayMatchedValue) {
+        let value = match value {
+            BitArrayMatchedValue::LiteralFloat(value) => BoundValue::LiteralFloat(value.clone()),
+            BitArrayMatchedValue::LiteralInt { value, .. } => BoundValue::LiteralInt(value.clone()),
+            BitArrayMatchedValue::LiteralString { value, .. } => {
+                BoundValue::LiteralString(value.clone())
+            }
+            BitArrayMatchedValue::Variable(_)
+            | BitArrayMatchedValue::Discard(_)
+            | BitArrayMatchedValue::Assign { .. } => {
+                panic!("aliased non constant value: {value:#?}")
+            }
+        };
+
+        self.bindings.push((name, value))
     }
 }
 
@@ -292,16 +454,17 @@ impl Body {
 pub enum Pattern {
     Discard,
     Int {
-        value: EcoString,
+        int_value: BigInt,
     },
     Float {
-        value: EcoString,
+        float_value: LiteralFloatValue,
     },
     String {
         value: EcoString,
     },
     StringPrefix {
         prefix: EcoString,
+        prefix_name: Option<EcoString>,
         rest: Id<Pattern>,
     },
     Assign {
@@ -314,25 +477,114 @@ pub enum Pattern {
     Tuple {
         elements: Vec<Id<Pattern>>,
     },
-    Constructor {
-        variant_index: usize,
-        arguments: Vec<Id<Pattern>>,
+    Variant {
+        index: usize,
+        name: EcoString,
+        module: Option<EcoString>,
+        fields: Vec<Id<Pattern>>,
     },
-    List {
+    NonEmptyList {
         first: Id<Pattern>,
         rest: Id<Pattern>,
     },
     EmptyList,
-    // TODO: Compile the matching within the bit strings
     BitArray {
-        value: EcoString,
+        tests: VecDeque<BitArrayTest>,
     },
+}
+
+impl Pattern {
+    /// Each pattern (with a couple exceptions) can be turned into a
+    /// simpler `RuntimeCheck`: that is a check that can be performed at runtime
+    /// to make sure a `PatternCheck` can succeed on a specific value.
+    ///
+    fn to_runtime_check_kind(&self) -> Option<RuntimeCheckKind> {
+        let kind = match self {
+            // These patterns are unconditional: they will always match and be moved
+            // out of a branch's checks. So there's no corresponding runtime check
+            // we can perform for them.
+            Pattern::Discard | Pattern::Variable { .. } | Pattern::Assign { .. } => return None,
+            Pattern::Int { int_value, .. } => RuntimeCheckKind::Int {
+                int_value: int_value.clone(),
+            },
+            Pattern::Float { float_value, .. } => RuntimeCheckKind::Float {
+                float_value: *float_value,
+            },
+            Pattern::String { value } => RuntimeCheckKind::String {
+                value: value.clone(),
+            },
+            Pattern::StringPrefix { prefix, .. } => RuntimeCheckKind::StringPrefix {
+                prefix: prefix.clone(),
+            },
+            Pattern::Tuple { elements } => RuntimeCheckKind::Tuple {
+                size: elements.len(),
+            },
+            Pattern::Variant { index, .. } => RuntimeCheckKind::Variant { index: *index },
+            Pattern::NonEmptyList { .. } => RuntimeCheckKind::NonEmptyList,
+            Pattern::EmptyList => RuntimeCheckKind::EmptyList,
+            // Bit arrays have no corresponding kind as they're dealt with in a
+            // completely different way.
+            Pattern::BitArray { .. } => return None,
+        };
+
+        Some(kind)
+    }
+
+    fn is_matching_on_unreachable_variant(&self, branch_mode: &BranchMode) -> bool {
+        match (self, branch_mode) {
+            (
+                Self::Variant { index, .. },
+                BranchMode::NamedType {
+                    inferred_variant: Some(variant),
+                    ..
+                },
+            ) if index != variant => true,
+            _ => false,
+        }
+    }
+
+    fn is_matching_on_impossible_segment(&self) -> Option<Vec<ImpossibleBitArraySegmentPattern>> {
+        match self {
+            Self::BitArray { tests } => {
+                let impossible_segments = tests
+                    .iter()
+                    .filter_map(|test| match test {
+                        BitArrayTest::Size(_)
+                        | BitArrayTest::CatchAllIsBytes { .. }
+                        | BitArrayTest::ReadSizeIsNotNegative { .. }
+                        | BitArrayTest::SegmentIsFiniteFloat { .. } => None,
+
+                        BitArrayTest::Match(MatchTest { value, read_action }) => {
+                            value.is_impossible_segment(read_action)
+                        }
+                    })
+                    .collect_vec();
+
+                if impossible_segments.is_empty() {
+                    None
+                } else {
+                    Some(impossible_segments)
+                }
+            }
+            Self::Discard
+            | Self::Int { .. }
+            | Self::Float { .. }
+            | Self::String { .. }
+            | Self::StringPrefix { .. }
+            | Self::Assign { .. }
+            | Self::Variable { .. }
+            | Self::Tuple { .. }
+            | Self::Variant { .. }
+            | Self::NonEmptyList { .. }
+            | Self::EmptyList => None,
+        }
+    }
 }
 
 /// A single check making up a branch, checking that a variable matches with a
 /// given pattern. For example, the following branch has 2 checks:
 ///
-/// ```text
+/// ```txt
 /// a is Some, b is 1 -> todo
 /// ┬    ─┬──
 /// │     ╰── This is the pattern being checked
@@ -345,57 +597,6 @@ pub enum Pattern {
 struct PatternCheck {
     var: Variable,
     pattern: Id<Pattern>,
-}
-
-impl PatternCheck {
-    fn new(var: Variable, pattern: Id<Pattern>) -> Self {
-        Self { var, pattern }
-    }
-
-    /// Each pattern check (with a couple exceptions) can be turned into a
-    /// simpler `RuntimeCheck`: that is a check that can be performed at runtime
-    /// to make sure the `PatternCheck` can succeed on a specific value.
-    ///
-    fn to_runtime_check_kind(&self, compiler: &Compiler<'_>) -> Option<RuntimeCheckKind> {
-        let kind = match compiler.pattern(self.pattern) {
-            // These patterns are unconditional: they will always match and be moved
-            // out of a branch's checks. So there's no corresponding runtime check
-            // we can perform for them.
-            Pattern::Discard | Pattern::Variable { .. } | Pattern::Assign { .. } => return None,
-            Pattern::Int { value } => {
-                let value = value.clone();
-                RuntimeCheckKind::Int { value }
-            }
-            Pattern::Float { value } => {
-                let value = value.clone();
-                RuntimeCheckKind::Float { value }
-            }
-            Pattern::String { value } => {
-                let value = value.clone();
-                RuntimeCheckKind::String { value }
-            }
-            Pattern::StringPrefix { prefix, .. } => {
-                let prefix = prefix.clone();
-                RuntimeCheckKind::StringPrefix { prefix }
-            }
-            Pattern::Tuple { elements } => {
-                let size = elements.len();
-                RuntimeCheckKind::Tuple { size }
-            }
-            Pattern::Constructor { variant_index, .. } => {
-                let index = *variant_index;
-                RuntimeCheckKind::Variant { index }
-            }
-            Pattern::BitArray { value } => {
-                let value = value.clone();
-                RuntimeCheckKind::BitArray { value }
-            }
-            Pattern::List { .. } => RuntimeCheckKind::NonEmptyList,
-            Pattern::EmptyList => RuntimeCheckKind::EmptyList,
-        };
-
-        Some(kind)
-    }
 }
 
 /// This is one of the checks we can take at runtime to decide how to move
@@ -414,110 +615,179 @@ impl PatternCheck {
 /// arguments: that pattern will be replaced by three new ones `a0 is 1`,
 /// `a1 is _` and `a2 is []`. Those new variables are the `args`.
 ///
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum RuntimeCheck {
     Int {
-        value: EcoString,
+        int_value: BigInt,
     },
     Float {
-        value: EcoString,
+        float_value: LiteralFloatValue,
     },
     String {
         value: EcoString,
     },
     StringPrefix {
         prefix: EcoString,
-        rest_arg: Variable,
+        rest: Variable,
     },
     Tuple {
         size: usize,
-        args: Vec<Variable>,
+        elements: Vec<Variable>,
     },
     BitArray {
-        value: EcoString,
+        test: BitArrayTest,
     },
     Variant {
+        match_: VariantMatch,
         index: usize,
-        args: Vec<Variable>,
+        labels: HashMap<usize, EcoString>,
+        fields: Vec<Variable>,
+    },
+    NonEmptyList {
+        first: Variable,
+        rest: Variable,
     },
     EmptyList,
-    NonEmptyList {
-        first_arg: Variable,
-        rest_arg: Variable,
-    },
 }
 
 impl RuntimeCheck {
-    fn kind(&self) -> RuntimeCheckKind {
-        match self {
-            RuntimeCheck::Int { value } => RuntimeCheckKind::Int {
-                value: value.clone(),
+    fn kind(&self) -> Option<RuntimeCheckKind> {
+        let kind = match self {
+            RuntimeCheck::Int { int_value, .. } => RuntimeCheckKind::Int {
+                int_value: int_value.clone(),
             },
-            RuntimeCheck::Float { value } => RuntimeCheckKind::Float {
-                value: value.clone(),
+            RuntimeCheck::Float { float_value, .. } => RuntimeCheckKind::Float {
+                float_value: *float_value,
             },
             RuntimeCheck::String { value } => RuntimeCheckKind::String {
                 value: value.clone(),
             },
-            RuntimeCheck::StringPrefix {
-                prefix,
-                rest_arg: _,
-            } => RuntimeCheckKind::StringPrefix {
+            RuntimeCheck::StringPrefix { prefix, rest: _ } => RuntimeCheckKind::StringPrefix {
                 prefix: prefix.clone(),
             },
-            RuntimeCheck::Tuple { size, args: _ } => RuntimeCheckKind::Tuple { size: *size },
-            RuntimeCheck::BitArray { value } => RuntimeCheckKind::BitArray {
-                value: value.clone(),
-            },
-            RuntimeCheck::Variant { index, args: _ } => RuntimeCheckKind::Variant { index: *index },
+            RuntimeCheck::Tuple { size, elements: _ } => RuntimeCheckKind::Tuple { size: *size },
+            RuntimeCheck::Variant { index, .. } => RuntimeCheckKind::Variant { index: *index },
             RuntimeCheck::EmptyList => RuntimeCheckKind::EmptyList,
-            RuntimeCheck::NonEmptyList {
-                first_arg: _,
-                rest_arg: _,
-            } => RuntimeCheckKind::NonEmptyList,
+            RuntimeCheck::NonEmptyList { first: _, rest: _ } => RuntimeCheckKind::NonEmptyList,
+            RuntimeCheck::BitArray { .. } => return None,
+        };
+        Some(kind)
+    }
+
+    pub(crate) fn is_ignored(&self) -> bool {
+        match self {
+            RuntimeCheck::Variant {
+                match_: VariantMatch::NeverExplicitlyMatchedOn { .. },
+                ..
+            } => true,
+            RuntimeCheck::Int { .. }
+            | RuntimeCheck::Float { .. }
+            | RuntimeCheck::String { .. }
+            | RuntimeCheck::StringPrefix { .. }
+            | RuntimeCheck::Tuple { .. }
+            | RuntimeCheck::BitArray { .. }
+            | RuntimeCheck::NonEmptyList { .. }
+            | RuntimeCheck::Variant { .. }
+            | RuntimeCheck::EmptyList => false,
+        }
+    }
+
+    /// Returns all the bit array segments referenced in this check.
+    /// For each segment it returns its name and the read action used to access
+    /// such segment.
+    ///
+    pub(crate) fn referenced_segment_patterns(&self) -> Vec<(&EcoString, &ReadAction)> {
+        match self {
+            RuntimeCheck::BitArray { test } => test.referenced_segment_patterns(),
+            RuntimeCheck::Int { .. }
+            | RuntimeCheck::Float { .. }
+            | RuntimeCheck::String { .. }
+            | RuntimeCheck::StringPrefix { .. }
+            | RuntimeCheck::Tuple { .. }
+            | RuntimeCheck::Variant { .. }
+            | RuntimeCheck::NonEmptyList { .. }
+            | RuntimeCheck::EmptyList => vec![],
         }
     }
 }
 
 #[derive(Eq, PartialEq, Clone, Hash, Debug)]
 pub enum RuntimeCheckKind {
-    Int { value: EcoString },
-    Float { value: EcoString },
+    Int { int_value: BigInt },
+    Float { float_value: LiteralFloatValue },
     String { value: EcoString },
     StringPrefix { prefix: EcoString },
     Tuple { size: usize },
-    BitArray { value: EcoString },
     Variant { index: usize },
     EmptyList,
     NonEmptyList,
 }
 
-impl RuntimeCheckKind {
-    fn is_matching_on_unreachable_variant(&self, branch_mode: &BranchMode) -> bool {
-        match (self, branch_mode) {
-            (
-                Self::Variant { index },
-                BranchMode::NamedType {
-                    inferred_variant: Some(variant),
-                    ..
-                },
-            ) if index != variant => true,
-            _ => false,
+/// All possible variant checks are automatically generated beforehand once we
+/// know we are matching on a value with a custom type.
+/// Then if the compiled case is explicitly matching on one of those, we update
+/// it to store additional information: for example how the variant is used
+/// (if qualified or unqualified and if it is aliased).
+///
+/// This way when we get to code generation we can clump all variants that were
+/// never explicitly matched on in a single `else` block without blowing up code
+/// size!
+///
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum VariantMatch {
+    ExplicitlyMatchedOn {
+        name: EcoString,
+        module: Option<EcoString>,
+    },
+    NeverExplicitlyMatchedOn {
+        name: EcoString,
+    },
+}
+
+impl VariantMatch {
+    pub(crate) fn name(&self) -> EcoString {
+        match self {
+            VariantMatch::ExplicitlyMatchedOn { name, module: _ } => name.clone(),
+            VariantMatch::NeverExplicitlyMatchedOn { name } => name.clone(),
+        }
+    }
+
+    pub(crate) fn module(&self) -> Option<EcoString> {
+        match self {
+            VariantMatch::ExplicitlyMatchedOn { name: _, module } => module.clone(),
+            VariantMatch::NeverExplicitlyMatchedOn { name: _ } => None,
         }
     }
 }
 
 /// A variable that can be matched on in a branch.
 ///
-#[derive(Eq, PartialEq, Clone, Debug)]
+#[derive(Eq, PartialEq, Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Variable {
-    id: usize,
-    type_: Arc<Type>,
+    pub id: usize,
+    pub type_: Arc<Type>,
 }
 
 impl Variable {
     fn new(id: usize, type_: Arc<Type>) -> Self {
         Self { id, type_ }
+    }
+
+    /// Builds a `PatternCheck` that checks this variable matches the given pattern.
+    /// So we can build pattern checks the same way we informally describe them:
+    /// ```txt
+    /// var is pattern
+    /// ```
+    /// With this builder method would become:
+    /// ```rs
+    /// var.is(pattern)
+    /// ```
+    ///
+    fn is(&self, pattern: Id<Pattern>) -> PatternCheck {
+        PatternCheck {
+            var: self.clone(),
+            pattern,
+        }
     }
 }
 
@@ -535,15 +805,10 @@ impl Variable {
 /// performing a `PatternCheck` on a variable with a specific type.
 ///
 enum BranchMode {
-    /// This covers numbers, functions, variables, bitarrays and strings.
-    ///
-    /// TODO)) In the future it won't be the case: strings and bitarrays will be
-    /// special cased to improve on exhaustiveness checking and to be used for
-    /// code generation.
-    ///
+    /// This covers numbers, functions, variables, strings, and bitarrays.
     Infinite,
     Tuple {
-        elems: Vec<Arc<Type>>,
+        elements: Vec<Arc<Type>>,
     },
     List {
         inner_type: Arc<Type>,
@@ -555,7 +820,21 @@ enum BranchMode {
 }
 
 impl BranchMode {
-    fn needs_fallback(&self) -> bool {
+    /// Returns a heuristic estimate of the branching factor.
+    ///
+    /// This value is used by the pivot-selection to prefer splits
+    /// with fewer branches, which tends to produce smaller and shallower
+    /// decision trees.
+    fn branching_factor(&self) -> usize {
+        match self {
+            BranchMode::Infinite => usize::MAX,
+            BranchMode::Tuple { elements } => elements.len(),
+            BranchMode::List { .. } => 2,
+            BranchMode::NamedType { constructors, .. } => constructors.len(),
+        }
+    }
+
+    fn is_infinite(&self) -> bool {
         match self {
             BranchMode::Infinite => true,
             BranchMode::Tuple { .. } | BranchMode::List { .. } | BranchMode::NamedType { .. } => {
@@ -580,26 +859,31 @@ impl Variable {
             }
 
             Type::Named {
-                module, name, args, ..
+                module,
+                name,
+                arguments,
+                ..
             } if is_prelude_module(module) && name == "List" => BranchMode::List {
-                inner_type: args.first().expect("list has a type argument").clone(),
+                inner_type: arguments.first().expect("list has a type argument").clone(),
             },
 
-            Type::Tuple { elems } => BranchMode::Tuple {
-                elems: elems.clone(),
+            Type::Tuple { elements } => BranchMode::Tuple {
+                elements: elements.clone(),
             },
 
             Type::Named {
                 module,
                 name,
-                args,
+                arguments,
                 inferred_variant,
                 ..
             } => {
                 let constructors = ConstructorSpecialiser::specialise_constructors(
                     env.get_constructors_for_type(module, name)
                         .expect("Custom type variants must exist"),
-                    args.as_slice(),
+                    arguments.as_slice(),
+                    &env.current_module,
+                    module,
                 );
 
                 let inferred_variant = inferred_variant.map(|i| i as usize);
@@ -612,22 +896,1085 @@ impl Variable {
     }
 }
 
+/// When compiling a bit array pattern each segment is turned into a series of
+/// tests that all need to match in order for the pattern to succeed.
+/// Each segment might add some requirements on the total size of a bit array
+/// and/or on the value of some of its specific parts.
+///
+/// Let's look at a simple example to get started:
+///
+/// ```txt
+/// <<0:size(12), 1, rest:bits>>
+///   ─┬────────
+///    ╰── This first segment requires that the bit array must have at least
+///        12 bits and their value must be the Int `0`. So this first
+///        segment would be turned into the following series of tests:
+///        `Size(>=, 12)` and `Match(0, ReadAction(0, 12, int))`
+/// ```
+///
+/// However, the various sizes and offsets of the different segments might not
+/// always be known at compile time and depend on previous sections of the
+/// pattern. This is no big deal: as you'll discover in more detail in the
+/// `SizeExpression`'s doc we can also represent those variable sizes:
+///
+/// ```txt
+/// <<len, payload:size(len), rest:bits>>
+///   ─┬─  ─┬───────────────
+///    │    ╰── For this segment to match the bit array must have enough bits
+///    │        for the previous segment (8 bits) and for this one (`len` bits),
+///    │        so it will turn into the following series of tests:
+///    │        `Size(>=, 8 + len)` and `Match(len, ReadAction(8, len, int))`
+///    │
+///    ╰── This first segment is 8 bits and an int (it's the default Gleam picks
+///        if no options are supplied)
+/// ```
+///
+#[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
+pub enum BitArrayTest {
+    Size(SizeTest),
+    Match(MatchTest),
+
+    /// This is a special test to check that the remaining part of a bit array
+    /// has a whole number of bytes when using the `:bytes` option.
+    ///
+    CatchAllIsBytes {
+        size_so_far: Offset,
+    },
+
+    /// This test is made to ensure a given variable is positive: a segment
+    /// pattern where the size is a variable with a negative value will never
+    /// match. So we check this to make sure the test will fail.
+    ///
+    ReadSizeIsNotNegative {
+        size: ReadSize,
+    },
+
+    /// This test checks that the segment read by the given read action is a
+    /// finite Float and not a `NaN` or `Infinity`.
+    ///
+    /// We need this check as `NaN` and `Infinity` will not match with float
+    /// segments (like `<<_:32-float>>`) on the Erlang target and we must
+    /// replicate the same behaviours on the JavaScript target as well.
+    ///
+    SegmentIsFiniteFloat {
+        read_action: ReadAction,
+    },
+}
+
+impl BitArrayTest {
+    fn is_discard(&self) -> bool {
+        match self {
+            BitArrayTest::Match(MatchTest {
+                value: BitArrayMatchedValue::Discard(_),
+                ..
+            }) => true,
+            BitArrayTest::Match(_)
+            | BitArrayTest::Size(_)
+            | BitArrayTest::CatchAllIsBytes { .. }
+            | BitArrayTest::ReadSizeIsNotNegative { .. }
+            | BitArrayTest::SegmentIsFiniteFloat { .. } => false,
+        }
+    }
+
+    pub(crate) fn referenced_segment_patterns(&self) -> Vec<(&EcoString, &ReadAction)> {
+        match self {
+            BitArrayTest::ReadSizeIsNotNegative { size } => {
+                let mut references = Vec::new();
+                size.referenced_segment_patterns(&mut references);
+                references
+            }
+
+            BitArrayTest::Size(SizeTest { operator: _, size })
+            | BitArrayTest::CatchAllIsBytes { size_so_far: size } => {
+                size.referenced_segment_patterns()
+            }
+
+            BitArrayTest::SegmentIsFiniteFloat {
+                read_action: ReadAction { from, size, .. },
+            }
+            | BitArrayTest::Match(MatchTest {
+                read_action: ReadAction { from, size, .. },
+                ..
+            }) => {
+                let mut references = vec![];
+                references.append(&mut from.referenced_segment_patterns());
+                size.referenced_segment_patterns(&mut references);
+
+                references
+            }
+        }
+    }
+}
+
+/// Test to make sure the bit array has a specific number of bits.
+///
+#[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
+pub struct SizeTest {
+    pub operator: SizeOperator,
+    pub size: Offset,
+}
+
+impl SizeTest {
+    /// Tells us if this test is guaranteed to succeed given another test that
+    /// we know has already succeeded.
+    ///
+    /// For example, ">= 5" is certainly going to succeed if ">= 6" has already
+    /// succeeded.
+    ///
+    fn succeeds_if_succeeding(&self, succeeding: &SizeTest) -> Confidence {
+        match (succeeding.operator, self.operator) {
+            (SizeOperator::Equal, SizeOperator::Equal) if succeeding.size == self.size => {
+                Confidence::Certain
+            }
+            (_, SizeOperator::GreaterEqual) => succeeding.size.greater_equal(&self.size),
+            _ => Confidence::Uncertain,
+        }
+    }
+
+    /// Tells us if this test is guaranteed to fail given another test that
+    /// we know has already failed.
+    ///
+    /// For example, ">= 5" is certainly going to fail if ">= 4" has already
+    /// failed.
+    ///
+    fn fails_if_failing(&self, failing: &SizeTest) -> Confidence {
+        match (failing.operator, self.operator) {
+            (SizeOperator::GreaterEqual, _) => self.size.greater_equal(&failing.size),
+            (_, _) if self == failing => Confidence::Certain,
+            _ => Confidence::Uncertain,
+        }
+    }
+
+    /// Tells us if this test is guaranteed to fail given another test that
+    /// we know has already succeeded.
+    ///
+    /// For example, "= 1" is certainly going to fail if "= 2" has already
+    /// succeeded.
+    ///
+    fn fails_if_succeeding(&self, succeeding: &SizeTest) -> Confidence {
+        match (succeeding.operator, self.operator) {
+            (SizeOperator::GreaterEqual, SizeOperator::Equal) => {
+                succeeding.size.greater(&self.size)
+            }
+            (SizeOperator::Equal, SizeOperator::GreaterEqual) => {
+                self.size.greater(&succeeding.size)
+            }
+            (SizeOperator::Equal, SizeOperator::Equal) => succeeding.size.different(&self.size),
+            _ => Confidence::Uncertain,
+        }
+    }
+}
+
+/// Test to make sure the segment read by the specified `read_action` matches
+/// a given value.
+///
+#[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
+pub struct MatchTest {
+    pub value: BitArrayMatchedValue,
+    pub read_action: ReadAction,
+}
+
+struct Interference {
+    interfering_bits_are_equal: bool,
+    first_encloses_second: bool,
+    second_encloses_first: bool,
+}
+
+impl MatchTest {
+    /// If this match test interferes with the other one, this will return
+    /// information about how they interfere.
+    ///
+    ///
+    /// # What is interference used for?
+    ///
+    /// Interference analysis is an optimization that we can apply to segments
+    /// matching on a literal value with a known offset and size.
+    /// It allows discarding many overlapping checks that we can for sure tell
+    /// will never (or will always) match.
+    ///
+    /// This optimization is particularly important for network protocol
+    /// applications where it is typical to match on some fixed patterns at the
+    /// start of the bitarray:
+    ///
+    /// ```gleam
+    /// case packet {
+    ///   <<"CONTENT_LENGTH", 0, rest:bytes>> -> todo
+    ///   <<"QUERY_STRING", 0, rest:bytes>> -> todo
+    ///   // ...
+    ///   _ -> todo
+    /// }
+    /// ```
+    ///
+    ///
+    /// # What is interference?
+    ///
+    /// We say two read actions interfere with each other if:
+    /// - They're both matching against a statically known value, we will call
+    ///   them `v1` and `v2`
+    /// - They both start at a statically known offset, `o1` and `o2`
+    /// - They both have a statically known size, `s1` and `s2`
+    /// - `o1 <= o2 && o1 + s1 > o2`
+    ///
+    /// This is a lot of letters to say something actually quite simple, having
+    /// a look at a graphical example will make this easier to grasp. Let's
+    /// visualize each match action as a segment; each read action will match
+    /// against a portion of the bit array, starting at the given offset and
+    /// with the given number of bits (in the example I'm also showing the bits
+    /// that the read action matches against):
+    ///
+    /// ```txt
+    ///          o1         (o1+s1)
+    ///         ┄├0001010110┤┄
+    ///               ┄├1101000000111011┤┄
+    ///                o2               (o2+s2)
+    /// ```
+    ///
+    /// They interfere if the first one comes first (`o1 <= o2`) and the start
+    /// of the second one falls inside the range covered by the first one
+    /// (`o1 + s1 > p2`).
+    /// So the example above showcases two interfering read actions, here's an
+    /// example of two read actions that are not interfering with each other:
+    ///
+    /// ```txt
+    ///          o1      (o1+s1)
+    ///         ┄├0110101┤┄
+    ///                      ┄├0101110101┤┄
+    ///                       o2         (o2+s2)
+    /// ```
+    ///
+    ///
+    /// # How is interference useful
+    ///
+    /// Knowing that two read actions interfere is very useful because, knowing
+    /// if the first one matches or not can allow us to tell for certain if an
+    /// interfering match has no change of succeeding as well.
+    /// Let's look at the three cases:
+    ///
+    /// 1. We know the first action succeeded, so the binary has the expected
+    ///    bits in the matched segment
+    ///    ```txt
+    ///             o1         (o1+s1)
+    ///            ┄├0110101111┤┄  ← This check succeded!
+    ///                   ┄├0001110101┤┄
+    ///                    o2         (o2+s2)
+    ///    ```
+    ///    Can the second check ever succeed? No! Since the first check
+    ///    succeeded we know for certain that the first three bits the second
+    ///    check would match against are going to be `111`, so they surely won't
+    ///    match with `000`.
+    ///
+    /// 2. We know the first action succeeded, and the second action is fully
+    ///    contained inside it:
+    ///    ```txt
+    ///             o1              (o1+s1)
+    ///            ┄├011010000001111┤┄  ← This check succeded!
+    ///               ┄├0100000┤┄
+    ///                o2      (o2+s2)
+    ///    ```
+    ///    In that case we know for certain that the second check will succeed
+    ///    as well (and so can be skipped) if the overlapping bits being checked
+    ///    are exactly the same.
+    ///
+    /// 3. We know that the first action failed, and the second one is
+    ///    fully enclosing it:
+    ///    ```txt
+    ///             o1  (o1+s1)
+    ///            ┄├010┤┄  ← This check failed!
+    ///            ┄├01000001010000001111┤┄
+    ///             o2                   (o2+s2)
+    ///    ```
+    ///   Can the second check ever succeed? No! Since the first check failed we
+    ///   know for certain that the first bits are not `010`, so there's no
+    ///   chance for the second match to succeed as it requires those three bits
+    ///   to be `010` as well.
+    ///
+    ///
+    /// ## What information is returned by this function
+    ///
+    /// If the two actions are not interfering with each other this will return
+    /// `None`. Otherwise, it will return all the information needed by the
+    /// three examples above (check usages of this function to see how this is
+    /// used, hopefully it should be pretty straightforward!):
+    /// - whether the bits in the overlapping section are the same
+    /// - whether the first action fully encloses the second one
+    /// - whether the second action fully encloses the first one
+    ///
+    fn interfering_bits(&self, other: &Self) -> Option<Interference> {
+        // After reading the doc comment this should be pretty easy to follow:
+        // The first requirement for interference is: `o1 <= o2`
+        let offset_one = self.read_action.from.constant_bits()?.to_usize()?;
+        let offset_other = other.read_action.from.constant_bits()?.to_usize()?;
+        if offset_one > offset_other {
+            return None;
+        };
+
+        // The second requirement is that: `o1 + s1 > o2`
+        let size_one = self.read_action.size.constant_bits()?.to_usize()?;
+        let size_other = other.read_action.size.constant_bits()?.to_usize()?;
+        if offset_one + size_one <= offset_other {
+            return None;
+        };
+
+        // At this point we know that both are interfering, so we compare the
+        // overlapping slice of bits they're matching against.
+        // A little implementation note: we're storing the matched _bytes_, not
+        // bits, so we will be using the `view_bits` function to perform a
+        // comparison of slices of bits.
+        let bits_one = self.value.constant_bits()?;
+        let bits_other = other.value.constant_bits()?;
+        let end = (offset_other + size_other).min(offset_one + size_one);
+        Some(Interference {
+            interfering_bits_are_equal: bits_one[offset_other - offset_one..end - offset_one]
+                == bits_other[0..end - offset_other],
+            first_encloses_second: size_one + offset_one >= size_other + offset_other,
+            second_encloses_first: size_other + offset_other >= size_one + offset_one,
+        })
+    }
+}
+
+/// A value that can be matched in a bit array pattern's segment. We do not use
+/// a `Pattern` directly since the allowed values are actually a subset of all
+/// the possible patterns: it can only contain literal floats, ints, strings,
+/// a variable name, and a discard.
+///
+#[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
+pub enum BitArrayMatchedValue {
+    LiteralFloat(EcoString),
+    LiteralInt {
+        value: BigInt,
+        /// This is carried around for better error reporting in case a segment
+        /// is deemed unreachable: it is the location this literal value comes
+        /// from in the whole pattern.
+        location: SrcSpan,
+        /// The bits representing the given literal int, with the correct
+        /// signed- and endianness as specified in the bit array segment.
+        bits: Result<BitVec<u8, Msb0>, IntToBitsError>,
+    },
+    LiteralString {
+        value: EcoString,
+        encoding: StringEncoding,
+        /// The bytes representing the given literal string, with the correct
+        /// encoding and endianness specified in the bit array segment.
+        bytes: Vec<u8>,
+    },
+    Variable(EcoString),
+    Discard(EcoString),
+    Assign {
+        name: EcoString,
+        value: Box<BitArrayMatchedValue>,
+    },
+}
+
+impl BitArrayMatchedValue {
+    /// This is an arbitrary limit beyond which interference _may_ no longer be done.
+    /// This is necessary because people may write very silly segments like
+    /// `<<0:9_007_199_254_740_992>>`, which would allocate around a wee petabyte of memory.
+    /// Literal strings are already in memory, and thus ignore this limit.
+    const MAX_BITS_INTERFERENCE: u32 = u16::MAX as u32;
+
+    pub(crate) fn is_literal(&self) -> bool {
+        match self {
+            BitArrayMatchedValue::LiteralFloat(_)
+            | BitArrayMatchedValue::LiteralInt { .. }
+            | BitArrayMatchedValue::LiteralString { .. } => true,
+            BitArrayMatchedValue::Variable(..) | BitArrayMatchedValue::Discard(..) => false,
+            BitArrayMatchedValue::Assign { value, .. } => value.is_literal(),
+        }
+    }
+
+    /// If the matched value is a literal value for which we implement
+    /// interference pruning, this returns the bits representing it to be used
+    /// for interference.
+    ///
+    fn constant_bits(&self) -> Option<&BitSlice<u8, Msb0>> {
+        match self {
+            BitArrayMatchedValue::LiteralString { bytes, .. } => Some(bytes.view_bits::<Msb0>()),
+            BitArrayMatchedValue::Assign { value, .. } => value.constant_bits(),
+            BitArrayMatchedValue::LiteralInt { bits, .. } => bits.as_deref().ok(),
+
+            // TODO: We could also implement the interfering optimisation for
+            // literal floats as well, but the usefulness is questionable
+            BitArrayMatchedValue::LiteralFloat(_)
+            | BitArrayMatchedValue::Variable(_)
+            | BitArrayMatchedValue::Discard(_) => None,
+        }
+    }
+
+    /// If we can statically tell the segment will never match, this will return
+    /// the reason why it can't match. Otherwise it returns `None`.
+    ///
+    fn is_impossible_segment(
+        &self,
+        read_action: &ReadAction,
+    ) -> Option<ImpossibleBitArraySegmentPattern> {
+        match self {
+            BitArrayMatchedValue::Assign { value, .. } => value.is_impossible_segment(read_action),
+            BitArrayMatchedValue::LiteralInt {
+                value,
+                location,
+                bits,
+            } => match bits {
+                Err(IntToBitsError::Unrepresentable { size }) => {
+                    Some(ImpossibleBitArraySegmentPattern::UnrepresentableInteger {
+                        value: value.clone(),
+                        size: *size,
+                        location: *location,
+                        signed: read_action.signed,
+                    })
+                }
+                _ => None,
+            },
+
+            BitArrayMatchedValue::LiteralFloat(_)
+            | BitArrayMatchedValue::LiteralString { .. }
+            | BitArrayMatchedValue::Variable(_)
+            | BitArrayMatchedValue::Discard(_) => None,
+        }
+    }
+
+    /// Returns true if the two `MatchedValue`s are matching for the exact same
+    /// thing. Note how this doesn't automatically mean they will be matching
+    /// for the exact same thing in a whole bit array pattern as they could be
+    /// matching at different positions!
+    ///
+    /// ```gleam
+    /// <<1, _>>
+    /// <<_, 1>>
+    /// // Both are matching on the same value but at different positions!
+    /// ```
+    ///
+    fn checking_same_value(&self, other: &Self) -> bool {
+        match (self, other) {
+            // Ints need special care: they're carrying around information about
+            // where they come from. But as for equality is concerned for the
+            // pattern match compilation, they are considered equal as long as
+            // the two values are equal, no matter where the values come from.
+            (Self::LiteralInt { value: one, .. }, Self::LiteralInt { value: other, .. }) => {
+                one == other
+            }
+            (Self::LiteralInt { .. }, _) => false,
+
+            // All the other cases follow the standard equality implementation.
+            (Self::LiteralFloat(one), Self::LiteralFloat(other)) => one == other,
+            (Self::LiteralFloat(_), _) => false,
+
+            // Two literal string matches are the same if they match for the
+            // same bytes. No matter the original starting string and encoding.
+            (Self::LiteralString { bytes: one, .. }, Self::LiteralString { bytes: other, .. }) => {
+                one == other
+            }
+            (Self::LiteralString { .. }, _) => false,
+
+            (Self::Variable(one), Self::Variable(other)) => one == other,
+            (Self::Variable(_), _) => false,
+
+            (Self::Discard(_), Self::Discard(_)) => true,
+            (Self::Discard(_), _) => false,
+
+            (
+                Self::Assign {
+                    name: _,
+                    value: one,
+                },
+                Self::Assign {
+                    name: _,
+                    value: other,
+                },
+            ) => one.checking_same_value(other),
+            (Self::Assign { .. }, _) => false,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
+pub enum StringEncoding {
+    Utf8,
+    Utf16,
+    Utf32,
+}
+
+impl BitArrayMatchedValue {
+    pub fn is_discard(&self) -> bool {
+        match self {
+            BitArrayMatchedValue::Discard(_) => true,
+            BitArrayMatchedValue::LiteralFloat(_)
+            | BitArrayMatchedValue::LiteralInt { .. }
+            | BitArrayMatchedValue::LiteralString { .. }
+            | BitArrayMatchedValue::Variable(_)
+            | BitArrayMatchedValue::Assign { .. } => false,
+        }
+    }
+}
+
+impl BitArrayTest {
+    /// Wether two bit array tests are equivalent, that is they are checking
+    /// for the same thing.
+    ///
+    fn equivalent_to(&self, other: &Self) -> bool {
+        match (self, other) {
+            (BitArrayTest::Size(one), BitArrayTest::Size(other)) => one == other,
+            (BitArrayTest::Size(_), _) => false,
+
+            (
+                BitArrayTest::Match(MatchTest { value, read_action }),
+                BitArrayTest::Match(MatchTest {
+                    value: other_value,
+                    read_action: other_read_action,
+                }),
+            ) => value.checking_same_value(other_value) && read_action == other_read_action,
+            (BitArrayTest::Match(_), _) => false,
+
+            (
+                BitArrayTest::CatchAllIsBytes { size_so_far: one },
+                BitArrayTest::CatchAllIsBytes { size_so_far: other },
+            ) => one == other,
+            (BitArrayTest::CatchAllIsBytes { .. }, ..) => false,
+
+            (
+                BitArrayTest::ReadSizeIsNotNegative { size: one },
+                BitArrayTest::ReadSizeIsNotNegative { size: other },
+            ) => one == other,
+            (BitArrayTest::ReadSizeIsNotNegative { .. }, _) => false,
+
+            (
+                BitArrayTest::SegmentIsFiniteFloat { read_action: one },
+                BitArrayTest::SegmentIsFiniteFloat { read_action: other },
+            ) => one == other,
+            (BitArrayTest::SegmentIsFiniteFloat { .. }, _) => false,
+        }
+    }
+
+    /// Tells us if this test is guaranteed to succeed given another test that
+    /// we know has already succeeded.
+    ///
+    /// For example, "size >= 5" is certainly going to succeed if "size >= 6"
+    /// has already succeeded.
+    ///
+    #[must_use]
+    fn succeeds_if_succeeding(&self, succeeding: &BitArrayTest) -> Confidence {
+        match (succeeding, self) {
+            (one, other) if one.equivalent_to(other) => Confidence::Certain,
+            (BitArrayTest::Size(succeeding), BitArrayTest::Size(test)) => {
+                test.succeeds_if_succeeding(succeeding)
+            }
+            (BitArrayTest::Match(succeeding), BitArrayTest::Match(test)) => {
+                // This is example 2. in the doc comment of `interfering_bits`:
+                // if the bits are the same and the second one is fully enclosed
+                // in the first one, then the second one will succeed as well!
+                if let Some(Interference {
+                    interfering_bits_are_equal: true,
+                    first_encloses_second: true,
+                    ..
+                }) = succeeding.interfering_bits(test)
+                {
+                    Confidence::Certain
+                } else {
+                    Confidence::Uncertain
+                }
+            }
+            // The tests are not comparable, we can't deduce any new information.
+            _ => Confidence::Uncertain,
+        }
+    }
+
+    /// Tells us if this test is guaranteed to fail given another test that
+    /// we know has already failed.
+    ///
+    /// For example, "size >= 5" is certainly going to fail if "size >= 4"
+    /// has already failed.
+    ///
+    #[must_use]
+    fn fails_if_failing(&self, failing: &BitArrayTest) -> Confidence {
+        match (failing, self) {
+            (one, other) if one.equivalent_to(other) => Confidence::Certain,
+            (BitArrayTest::Size(failing), BitArrayTest::Size(test)) => {
+                test.fails_if_failing(failing)
+            }
+            (BitArrayTest::Match(succeeding), BitArrayTest::Match(test)) => {
+                // This is example 3. in the doc comment of `interfering_bits`:
+                // if the bits are the same and the second one is fully
+                // enclosing the first one, then the second one will fail as
+                // well!
+                if let Some(Interference {
+                    interfering_bits_are_equal: true,
+                    second_encloses_first: true,
+                    ..
+                }) = succeeding.interfering_bits(test)
+                {
+                    Confidence::Certain
+                } else {
+                    Confidence::Uncertain
+                }
+            }
+            // The tests are not comparable, we can't deduce any new information.
+            _ => Confidence::Uncertain,
+        }
+    }
+
+    /// Tells us if this test is guaranteed to fail given another test that
+    /// we know has already succeeded.
+    ///
+    /// For example, "size = 1" is certainly going to fail if "size = 2" has already
+    /// succeeded.
+    ///
+    #[must_use]
+    fn fails_if_succeeding(&self, succeeding: &BitArrayTest) -> Confidence {
+        match (succeeding, self) {
+            // This is an implementation of Table 6 (a) of the bit array pattern
+            // matching paper linked at the top of this module's documentation!
+            (BitArrayTest::Size(succeeding), BitArrayTest::Size(test)) => {
+                test.fails_if_succeeding(succeeding)
+            }
+            (BitArrayTest::Match(succeeding), BitArrayTest::Match(test)) => {
+                // This is example 1. in the doc comment of `interfering_bits`:
+                // if the bits are the different and the first one is succeeding
+                // then we know the second one will fail.
+                if let Some(Interference {
+                    interfering_bits_are_equal: false,
+                    ..
+                }) = succeeding.interfering_bits(test)
+                {
+                    Confidence::Certain
+                } else {
+                    Confidence::Uncertain
+                }
+            }
+            // The tests are not comparable, we can't deduce any new information.
+            _ => Confidence::Uncertain,
+        }
+    }
+}
+
+/// When performing a size test it could require that a size is exactly some
+/// specific number of bits (for example if we're matching the last segment
+/// of a bit array) or that it has at least some number of bits. For example:
+///
+/// ```txt
+/// <<0:size(12), 1:size(8)>>
+///   ─┬────────  ─┬───────
+///    │           ╰── For this segment to successfully match the bit array must
+///    │               have exactly 20 bits: because it will need to read 8 bits
+///    │               from bit 13 where the previous one ends: `Size(=, 20)`
+///    │
+///    ╰── For this segment to successfully match, the bit array must have at
+///        least 12 bits: `Size(>, 12)`
+/// ```
+///
+#[derive(Clone, Eq, PartialEq, Debug, Copy, serde::Serialize, serde::Deserialize)]
+pub enum SizeOperator {
+    GreaterEqual,
+    Equal,
+}
+
+/// Represents the action of reading a certain number of bits from a bit array
+/// at a given position, returning a value with the given type.
+///
+/// Notice how the starting position and number of bits to read might not be
+/// known at compile time but also include variables! For example here:
+///
+/// ```txt
+// <<len, payload:size(len), rest:bits>>
+///  ─┬─  ─┬───────────────
+///   │    ╰── Here payload has a variable size, given by the `len` variable
+///   │
+///   ╰── While this segment has a constant size of 8 bits
+/// ```
+///
+#[derive(Clone, Eq, PartialEq, Debug, Hash, serde::Serialize, serde::Deserialize)]
+pub struct ReadAction {
+    /// The offset to start reading the bits from.
+    ///
+    pub from: Offset,
+    /// Number of _bits_ to read.
+    ///
+    pub size: ReadSize,
+    /// The type of the read value.
+    ///
+    pub type_: ReadType,
+    /// Endianness of the read value.
+    ///
+    pub endianness: Endianness,
+    /// Signedness of the read value.
+    ///
+    pub signed: bool,
+}
+
+/// Only a subset of all the possible Gleam types can be used for a pattern
+/// segment. We enumerate those out explicitly here.
+///
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum ReadType {
+    Float,
+    Int,
+    String,
+    BitArray,
+    UtfCodepoint,
+}
+
+impl ReadType {
+    pub(crate) fn is_int(&self) -> bool {
+        match self {
+            ReadType::Int => true,
+            ReadType::Float | ReadType::String | ReadType::BitArray | ReadType::UtfCodepoint => {
+                false
+            }
+        }
+    }
+
+    pub(crate) fn is_float(&self) -> bool {
+        match self {
+            ReadType::Float => true,
+            ReadType::Int | ReadType::String | ReadType::BitArray | ReadType::UtfCodepoint => false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Confidence {
+    Certain,
+    Uncertain,
+}
+
+impl Confidence {
+    fn is_certain(&self) -> bool {
+        match self {
+            Confidence::Certain => true,
+            Confidence::Uncertain => false,
+        }
+    }
+
+    fn or_else(&self, fun: impl Fn() -> Confidence) -> Confidence {
+        match self {
+            Confidence::Certain => Confidence::Certain,
+            Confidence::Uncertain => fun(),
+        }
+    }
+}
+
+/// An offset, in bits, into a bit array. An offset contains three parts. For
+/// example, in the following pattern:
+/// ```txt
+/// <<a, b:size(a), c:size(b - 1), payload:size(c)>>
+/// ```
+///
+/// The start of the `payload` segment is the sum of the length of `a` (which we
+/// know is 1 byte), plus the size of `b`, which is the value of `a`, plus the
+/// size of `c`, which is 1 less than the value of `b`.
+///
+/// Here, `constant` would be `8`; `variables` would map `a` to `1`, because it
+/// is referenced once, in a segment with unit `1`; `calculations` would contain
+/// `b - 1`.
+///
+#[derive(Clone, Eq, PartialEq, Debug, Hash, serde::Serialize, serde::Deserialize)]
+pub struct Offset {
+    pub constant: BigInt,
+    pub variables: im::HashMap<VariableUsage, usize>,
+    pub calculations: im::Vector<OffsetCalculation>,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug, Hash, serde::Serialize, serde::Deserialize)]
+pub struct OffsetCalculation {
+    pub left: Offset,
+    pub right: Offset,
+    pub operator: IntOperator,
+}
+
+impl Offset {
+    pub fn constant(value: impl Into<BigInt>) -> Self {
+        Self {
+            constant: value.into(),
+            variables: im::HashMap::new(),
+            calculations: im::Vector::new(),
+        }
+    }
+
+    fn from_size(size: &ReadSize) -> Self {
+        Self::constant(0).add_size(size)
+    }
+
+    fn add_size(mut self, size: &ReadSize) -> Offset {
+        match size {
+            ReadSize::ConstantBits(value) => Self {
+                constant: self.constant + value,
+                variables: self.variables,
+                calculations: self.calculations,
+            },
+            ReadSize::VariableBits { variable, unit } => Self {
+                constant: self.constant,
+                variables: self.variables.alter(
+                    |value| match value {
+                        Some(value) => Some(value + (*unit as usize)),
+                        None => Some(*unit as usize),
+                    },
+                    variable.as_ref().clone(),
+                ),
+                calculations: self.calculations,
+            },
+            ReadSize::RemainingBits | ReadSize::RemainingBytes => self,
+
+            ReadSize::BinaryOperator {
+                left,
+                right,
+                operator,
+            } => match operator {
+                IntOperator::Add => self.add_size(left).add_size(right),
+                IntOperator::Subtract
+                | IntOperator::Multiply
+                | IntOperator::Divide
+                | IntOperator::Remainder => {
+                    self.calculations.push_back(OffsetCalculation {
+                        left: Self::from_size(left),
+                        right: Self::from_size(right),
+                        operator: *operator,
+                    });
+                    self
+                }
+            },
+        }
+    }
+
+    pub fn add_constant(&self, constant: impl Into<BigInt>) -> Offset {
+        Offset {
+            constant: self.constant.clone() + constant.into(),
+            variables: self.variables.clone(),
+            calculations: self.calculations.clone(),
+        }
+    }
+
+    /// Returns `true` if we can tell for certain this offset is greater than
+    /// another one.
+    ///
+    fn greater(&self, other: &Offset) -> Confidence {
+        // We can't easily tell if one calculation is greater than another, so
+        // we can only be certain about one being greater if there are no calculations
+        if self.constant > other.constant
+            && self.calculations.is_empty()
+            && other.calculations.is_empty()
+            && superset(&self.variables, &other.variables)
+        {
+            Confidence::Certain
+        } else {
+            Confidence::Uncertain
+        }
+    }
+
+    /// Returns `true` if we can tell for certain this offset is greater or equal
+    /// to another one.
+    ///
+    fn greater_equal(&self, other: &Offset) -> Confidence {
+        // Like `greater`, we can only be certain if there are no calculations
+        if self == other
+            || (self.constant >= other.constant
+                && self.calculations.is_empty()
+                && other.calculations.is_empty()
+                && superset(&self.variables, &other.variables))
+        {
+            Confidence::Certain
+        } else {
+            Confidence::Uncertain
+        }
+    }
+
+    /// Returns `true` if we can tell for certain this offset is different from
+    /// another one.
+    ///
+    fn different(&self, other: &Offset) -> Confidence {
+        self.greater(other).or_else(|| other.greater(self))
+    }
+
+    pub(crate) fn is_zero(&self) -> bool {
+        self.constant == BigInt::ZERO && self.variables.is_empty() && self.calculations.is_empty()
+    }
+
+    /// If this offset has a constant size, returns its size in bits.
+    ///
+    pub(crate) fn constant_bits(&self) -> Option<BigInt> {
+        if self.variables.is_empty() && self.calculations.is_empty() {
+            Some(self.constant.clone())
+        } else {
+            None
+        }
+    }
+
+    /// If this offset has a constant size that's a whole number of bytes,
+    /// returns its size in bytes.
+    ///
+    pub(crate) fn constant_bytes(&self) -> Option<BigInt> {
+        let bits = self.constant_bits()?;
+        if bits.clone() % 8 == BigInt::ZERO {
+            Some(bits / 8)
+        } else {
+            None
+        }
+    }
+
+    fn referenced_segment_patterns(&self) -> Vec<(&EcoString, &ReadAction)> {
+        let mut references = Vec::new();
+
+        for variable_usage in self.variables.keys() {
+            match variable_usage {
+                VariableUsage::PatternSegment(segment_name, read_action) => {
+                    references.push((segment_name, read_action));
+                }
+                VariableUsage::OutsideVariable(..) => {}
+            }
+        }
+
+        for calculation in self.calculations.iter() {
+            references.extend(calculation.left.referenced_segment_patterns());
+            references.extend(calculation.right.referenced_segment_patterns());
+        }
+
+        references
+    }
+}
+
+/// The number of bits to read in a read action when reading a segment.
+///
+#[derive(Clone, Eq, PartialEq, Debug, Hash, serde::Serialize, serde::Deserialize)]
+pub enum ReadSize {
+    /// Read a constant, compile-time-known number of bits.
+    ///
+    /// ```txt
+    /// <<tag:size(8)>>
+    ///   ─┬─────────
+    ///    ╰─ Here we know that we have to read exactly 8 bits
+    /// ```
+    ///
+    ConstantBits(BigInt),
+    /// Read a variable number of bits.
+    ///
+    /// ```txt
+    /// <<len, payload:size(len)>>
+    ///        ─┬───────────────
+    ///         ╰─ Here we will know how many bits to read only at runtime since
+    ///            the length is a variable
+    /// ```
+    ///
+    VariableBits {
+        variable: Box<VariableUsage>,
+        unit: u8,
+    },
+
+    /// A maths expression calculating the read size from one or more variables.
+    ///
+    /// ```txt
+    /// <<len, payload:size(len * 8)>>
+    ///        ─┬───────────────────
+    ///         ╰─ Here we have to calculate the length by performing the
+    ///            multiplication at runtime
+    /// ```
+    BinaryOperator {
+        left: Box<ReadSize>,
+        right: Box<ReadSize>,
+        operator: IntOperator,
+    },
+
+    /// Read all the remaining bits in the bit array when using a catch all
+    /// pattern.
+    ///
+    /// ```txt
+    /// <<_, rest:bits>>
+    ///      ─┬───────
+    ///       ╰─ We take all the remaining bits from the bit array
+    /// ```
+    ///
+    RemainingBits,
+    RemainingBytes,
+}
+
+impl ReadSize {
+    /// If this is a constant number of bits returns it wrapped in `Some`.
+    pub(crate) fn constant_bits(&self) -> Option<BigInt> {
+        match self {
+            ReadSize::ConstantBits(value) => Some(value.clone()),
+            ReadSize::VariableBits { .. }
+            | ReadSize::BinaryOperator { .. }
+            | ReadSize::RemainingBits
+            | ReadSize::RemainingBytes => None,
+        }
+    }
+
+    /// If this is a constant number of bytes returns it wrapped in `Some`.
+    pub(crate) fn constant_bytes(&self) -> Option<BigInt> {
+        let bits = self.constant_bits()?;
+        if bits.clone() % 8 == BigInt::ZERO {
+            Some(bits / 8)
+        } else {
+            None
+        }
+    }
+
+    fn referenced_segment_patterns<'a>(
+        &'a self,
+        references: &mut Vec<(&'a EcoString, &'a ReadAction)>,
+    ) {
+        match self {
+            ReadSize::VariableBits { variable, unit: _ } => match variable.as_ref() {
+                VariableUsage::PatternSegment(segment_value, read_action) => {
+                    references.push((segment_value, read_action));
+                }
+                VariableUsage::OutsideVariable(..) => (),
+            },
+
+            ReadSize::BinaryOperator { left, right, .. } => {
+                left.referenced_segment_patterns(references);
+                right.referenced_segment_patterns(references);
+            }
+
+            ReadSize::ConstantBits(..) | ReadSize::RemainingBits | ReadSize::RemainingBytes => (),
+        };
+    }
+
+    fn can_be_negative(&self) -> bool {
+        match self {
+            ReadSize::ConstantBits(value) => *value < BigInt::ZERO,
+            ReadSize::VariableBits { variable, .. } => match variable.as_ref() {
+                VariableUsage::PatternSegment(_, read_action) => read_action.signed,
+                VariableUsage::OutsideVariable(_) => true,
+            },
+            ReadSize::BinaryOperator {
+                left,
+                right,
+                operator,
+            } => {
+                *operator == IntOperator::Subtract
+                    || left.can_be_negative()
+                    || right.can_be_negative()
+            }
+            ReadSize::RemainingBits | ReadSize::RemainingBytes => false,
+        }
+    }
+}
+
+#[derive(Clone, Eq, PartialEq, Debug, Hash, serde::Serialize, serde::Deserialize)]
+pub enum VariableUsage {
+    /// A bit array named segment that was brought into scope in the bit array
+    /// pattern itself and might be referenced by later segments.
+    PatternSegment(EcoString, ReadAction),
+    /// A variable defined somewhere else
+    OutsideVariable(EcoString),
+}
+
+impl VariableUsage {
+    pub fn name(&self) -> &EcoString {
+        match self {
+            VariableUsage::PatternSegment(name, _) | VariableUsage::OutsideVariable(name) => name,
+        }
+    }
+}
+
 /// This is the decision tree that a pattern matching expression gets turned
 /// into: it's a tree-like structure where each path to a root node contains a
 /// series of checks to perform at runtime to understand if a value matches with
 /// a given pattern.
 ///
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Decision {
     /// This is the final node of the tree, once we get to this one we know we
     /// have a body to run because a given pattern matched.
     ///
-    Run {
-        // todo)) since the tree is not used for code generation, this field is unused.
-        // But it will be useful once we also use this for code gen purposes and not
-        // just for exhaustiveness checking
-        #[allow(dead_code)]
-        body: Body,
-    },
+    Run { body: Body },
 
     /// We have to make this decision when we run into a branch that also has a
     /// guard: if it is true we can finally run the body of the branch, stored in
@@ -636,13 +1983,7 @@ pub enum Decision {
     /// have another `DecisionTree` to traverse, stored in `if_false`.
     ///
     Guard {
-        // todo)) since the tree is not used for code generation, the `guard` and
-        // `if_true` fields are unused.
-        // But they will be useful once we also use this for code gen purposes and not
-        // just for exhaustiveness checking
-        #[allow(dead_code)]
         guard: usize,
-        #[allow(dead_code)]
         if_true: Body,
         if_false: Box<Decision>,
     },
@@ -652,24 +1993,23 @@ pub enum Decision {
     /// we have to go down to. If none of the checks matches, then we'll have to
     /// go down the `fallback` branch.
     ///
+    /// The type system guarantees that all switches will always have at least
+    /// one last choice that acts as a fallback to pick if none of the others
+    /// matches; no matter the value we're matching on.
+    ///
+    /// In case we're dealing with exhaustive cases (for example on lists/custom
+    /// types) we also keep track of the final check associated with the final
+    /// branch: keep in mind, we don't actually have to run that check because
+    /// we know that the type system guarantees it will always match; but it
+    /// can hold useful informations for type generation so we keep it around.
+    /// You can read the doc for `FallbackCheck` to find out a more in depth
+    /// explanation and some examples!
+    ///
     Switch {
         var: Variable,
-        choices: Vec<(RuntimeCheck, Box<Decision>)>,
+        choices: Vec<(RuntimeCheck, Decision)>,
         fallback: Box<Decision>,
-    },
-
-    /// This is similar to a `Switch` node: we're still picking a possible path
-    /// to follow based on a runtime check. The key difference is that we know
-    /// that one of those is always going to match and so there's no use for a
-    /// fallback branch.
-    ///
-    /// This is used when matching on custom types (and lists!) when we know
-    /// that there's a limited number of choices and exhaustiveness checking
-    /// ensures we'll always deal with all the possible cases.
-    ///
-    ExhaustiveSwitch {
-        var: Variable,
-        choices: Vec<(RuntimeCheck, Box<Decision>)>,
+        fallback_check: Box<FallbackCheck>,
     },
 
     /// This is a special node: it represents a missing pattern. If a tree
@@ -678,6 +2018,64 @@ pub enum Decision {
     /// what kind of pattern doesn't match!
     ///
     Fail,
+}
+
+/// When we have a swith in the decision tree we know there's always going to be
+/// at least one choice that comes last and we know is going to match no matter
+/// what. This might fall under three different categories.
+///
+#[derive(Debug, Eq, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
+pub enum FallbackCheck {
+    /// This corresponds to the catch all added at the end of a case expression
+    /// matching on an infinite type.
+    ///
+    /// ```txt
+    /// case todo {
+    ///   1 -> todo
+    ///   _ -> todo
+    ///   ─┬───────
+    //     ╰── when matching on an infinite type there's going to be a catch all
+    /// }
+    ///
+    InfiniteCatchAll,
+
+    /// This happens when we're matching on a variant whose checks are all
+    /// explicitly written down:
+    ///
+    /// ```txt
+    /// case todo {
+    ///   Ok(_) -> todo
+    ///   Error(Nil) -> todo
+    ///   ─┬────────────────
+    //     ╰── when matching on a custom type (or list!) we'll have to write all
+    //         variants down, so there's always going to be a last one.
+    /// }
+    /// ```
+    ///
+    /// The type system will make sure that this last check will always match,
+    /// no matter what, if none of the other checks matches. We still keep the
+    /// corresponding runtime check around because it's useful for code generation!
+    ///
+    RuntimeCheck { check: RuntimeCheck },
+
+    /// This is a special case for a catch all! It happens when we're matching
+    /// on a variant and use a catch all pattern:
+    ///
+    /// ```txt
+    /// case todo {
+    ///   Ok(_) -> todo
+    ///   _ -> todo
+    ///   ─┬───────
+    ///    ╰── here we know we're just skipping over the `Error` variant with
+    ///       this catch all.
+    /// }
+    /// ```
+    ///
+    /// We know exactly which variants we're skipping, so we keep track of
+    /// those skipped checks (they will end up being useful for reporting
+    /// missing patterns!)
+    ///
+    CatchAll { ignored_checks: Vec<RuntimeCheck> },
 }
 
 impl Decision {
@@ -691,22 +2089,6 @@ impl Decision {
             if_true,
             if_false: Box::new(if_false),
         }
-    }
-
-    pub fn switch(
-        var: Variable,
-        choices: Vec<(RuntimeCheck, Box<Decision>)>,
-        fallback: Decision,
-    ) -> Self {
-        Self::Switch {
-            var,
-            choices,
-            fallback: Box::new(fallback),
-        }
-    }
-
-    fn exhaustive_switch(var: Variable, choices: Vec<(RuntimeCheck, Box<Decision>)>) -> Decision {
-        Self::ExhaustiveSwitch { var, choices }
     }
 }
 
@@ -722,34 +2104,80 @@ struct Compiler<'a> {
 
 /// The result of compiling a pattern match expression.
 ///
-pub struct Match {
-    pub tree: Decision,
+#[derive(Debug)]
+pub struct CompileCaseResult {
+    pub compiled_case: CompiledCase,
     pub diagnostics: Diagnostics,
-    pub subject_variables: Vec<Variable>,
 }
 
-/// Whether a clause is reachable, or why it is unreachable.
-///
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Reachability {
-    Reachable,
-    Unreachable(UnreachableCaseClauseReason),
-}
-
-impl Match {
-    pub fn is_reachable(&self, clause: usize) -> Reachability {
-        if self.diagnostics.reachable.contains(&clause) {
+impl CompileCaseResult {
+    pub fn is_reachable(&self, clause: usize, pattern_index: usize) -> Reachability {
+        if self
+            .diagnostics
+            .reachable
+            .contains(&(clause, pattern_index))
+        {
             Reachability::Reachable
-        } else if self.diagnostics.match_impossible_variants.contains(&clause) {
-            Reachability::Unreachable(UnreachableCaseClauseReason::ImpossibleVariant)
+        } else if self
+            .diagnostics
+            .match_impossible_variants
+            .contains(&(clause, pattern_index))
+        {
+            Reachability::Unreachable(UnreachablePatternReason::ImpossibleVariant)
+        } else if let Some(segments) = self
+            .diagnostics
+            .match_impossible_segments
+            .get(&(clause, pattern_index))
+        {
+            Reachability::Unreachable(UnreachablePatternReason::ImpossibleSegments(
+                segments.clone(),
+            ))
         } else {
-            Reachability::Unreachable(UnreachableCaseClauseReason::DuplicatePattern)
+            Reachability::Unreachable(UnreachablePatternReason::DuplicatePattern)
         }
     }
 
     pub fn missing_patterns(&self, environment: &Environment<'_>) -> Vec<EcoString> {
         missing_patterns::missing_patterns(self, environment)
     }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, serde::Serialize, serde::Deserialize)]
+pub struct CompiledCase {
+    pub tree: Decision,
+    pub subject_variables: Vec<Variable>,
+}
+
+impl CompiledCase {
+    pub fn failure() -> Self {
+        Self {
+            tree: Decision::Fail,
+            subject_variables: vec![],
+        }
+    }
+
+    /// The decision tree for simple variable assignment, such as in the following
+    /// assignment:
+    /// ```gleam
+    /// let x = 10
+    /// ```
+    pub fn simple_variable_assignment(name: EcoString, type_: Arc<Type>) -> Self {
+        let variable = Variable::new(0, type_);
+        let mut body = Body::new(0);
+        body.assign(name, variable.clone());
+        Self {
+            tree: Decision::Run { body },
+            subject_variables: vec![variable],
+        }
+    }
+}
+
+/// Whether a pattern is reachable, or why it is unreachable.
+///
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Reachability {
+    Reachable,
+    Unreachable(UnreachablePatternReason),
 }
 
 /// A type for storing diagnostics produced by the decision tree compiler.
@@ -759,14 +2187,53 @@ pub struct Diagnostics {
     /// A flag indicating the match is missing one or more pattern.
     pub missing: bool,
 
-    /// The right-hand sides that are reachable.
-    /// If a right-hand side isn't in this list it means its pattern is
-    /// redundant.
-    pub reachable: HashSet<usize>,
+    /// The patterns that are reachable. If a pattern isn't in this list it
+    /// means it is redundant.
+    /// Each entry is a pair of indices: The index of the clause the pattern
+    /// belongs to, followed by the index of the pattern itself within the
+    /// clause. For example, in this case expression:
+    /// ```gleam
+    /// case x {
+    ///   1 -> todo
+    ///   2 | 3 -> todo
+    ///   _ -> todo
+    /// }
+    /// ```
+    ///
+    /// The `3` pattern would be `(1, 1)`, because it is the second pattern of
+    /// the second clause, and both are zero-indexed.
+    ///
+    pub reachable: HashSet<(usize, usize)>,
 
-    /// Clauses which match on variants of a type which the compiler
+    /// Patterns which match on variants of a type which the compiler
     /// can tell will never be present, due to variant inference.
-    pub match_impossible_variants: HashSet<usize>,
+    ///
+    /// See `reachable` for an explanation of its structure.
+    ///
+    pub match_impossible_variants: HashSet<(usize, usize)>,
+
+    /// Patterns that are matching on bit array segments the compiler can tell
+    /// for sure will never match.
+    ///
+    pub match_impossible_segments: HashMap<(usize, usize), Vec<ImpossibleBitArraySegmentPattern>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum ImpossibleBitArraySegmentPattern {
+    UnrepresentableInteger {
+        value: BigInt,
+        size: u32,
+        location: SrcSpan,
+        signed: bool,
+    },
+}
+
+impl ImpossibleBitArraySegmentPattern {
+    pub fn location(&self) -> SrcSpan {
+        match self {
+            ImpossibleBitArraySegmentPattern::UnrepresentableInteger { location, .. } => *location,
+        }
+    }
 }
 
 impl<'a> Compiler<'a> {
@@ -779,12 +2246,15 @@ impl<'a> Compiler<'a> {
                 missing: false,
                 reachable: HashSet::new(),
                 match_impossible_variants: HashSet::new(),
+                match_impossible_segments: HashMap::new(),
             },
         }
     }
 
-    fn pattern(&self, pattern_id: Id<Pattern>) -> &Pattern {
-        self.patterns.get(pattern_id).expect("unknown pattern id")
+    fn pattern(&mut self, pattern_id: Id<Pattern>) -> &mut Pattern {
+        self.patterns
+            .get_mut(pattern_id)
+            .expect("unknown pattern id")
     }
 
     /// Returns a new fresh variable (i.e. guaranteed to have a unique `variable_id`)
@@ -797,15 +2267,36 @@ impl<'a> Compiler<'a> {
     }
 
     fn mark_as_reached(&mut self, branch: &Branch) {
-        let _ = self.diagnostics.reachable.insert(branch.clause_index);
+        let _ = self
+            .diagnostics
+            .reachable
+            .insert((branch.clause_index, branch.alternative_index));
     }
 
     fn mark_as_matching_impossible_variant(&mut self, branch: &Branch) {
-        let _ = self.diagnostics.reachable.remove(&branch.clause_index);
+        let _ = self
+            .diagnostics
+            .reachable
+            .remove(&(branch.clause_index, branch.alternative_index));
         let _ = self
             .diagnostics
             .match_impossible_variants
-            .insert(branch.clause_index);
+            .insert((branch.clause_index, branch.alternative_index));
+    }
+
+    fn mark_as_matching_impossible_segment(
+        &mut self,
+        branch: &Branch,
+        segments: Vec<ImpossibleBitArraySegmentPattern>,
+    ) {
+        let _ = self
+            .diagnostics
+            .reachable
+            .remove(&(branch.clause_index, branch.alternative_index));
+        let _ = self
+            .diagnostics
+            .match_impossible_segments
+            .insert((branch.clause_index, branch.alternative_index), segments);
     }
 
     fn compile(&mut self, mut branches: VecDeque<Branch>) -> Decision {
@@ -826,7 +2317,7 @@ impl<'a> Compiler<'a> {
         // the first branch, and use the variable it's pattern matching on to create
         // a new node in the tree. All the branches will be split into different
         // possible paths of this tree.
-        match find_pivot_check(first_branch, &branches) {
+        match find_pivot_check(first_branch, &branches, self.environment) {
             Some(PatternCheck { var, .. }) => self.split_and_compile_with_pivot_var(var, branches),
 
             // If the branch has no remaining checks, it means that we've moved all
@@ -875,7 +2366,7 @@ impl<'a> Compiler<'a> {
 
             // If the type is a tuple there's only one runtime check we could
             // perform that actually makes sense.
-            BranchMode::Tuple { elems } => vec![self.is_tuple_check(elems)],
+            BranchMode::Tuple { elements } => vec![self.is_tuple_check(elements)],
 
             // If the type being matched on is a list we know the resulting
             // decision tree node is only ever going to have two different paths:
@@ -912,19 +2403,12 @@ impl<'a> Compiler<'a> {
         // choices they've been split up into.
         let mut splitter = BranchSplitter::from_checks(known_checks);
         self.split_branches(&mut splitter, branches, pivot_var.clone(), &branch_mode);
-        let choices = splitter
-            .choices
-            .into_iter()
-            .map(|(check, branches)| (check, Box::new(self.compile(branches))))
-            .collect_vec();
-
-        if branch_mode.needs_fallback() {
+        if branch_mode.is_infinite() {
             // If the branching is infinite, that means we always need to also have
             // a fallback (imagine you're pattern matching on an `Int` and put no
             // `_` at the end of the case expression).
-            let fallback = self.compile(splitter.fallback);
-            Decision::switch(pivot_var, choices, fallback)
-        } else if choices.is_empty() {
+            self.splitter_to_switch(pivot_var, splitter)
+        } else if splitter.choices.is_empty() {
             // If the branching doesn't need any fallback but we ended up with no
             // checks it means we're trying to pattern match on an external type
             // but haven't provided a catch-all case.
@@ -934,7 +2418,7 @@ impl<'a> Compiler<'a> {
         } else {
             // Otherwise we know that one of the possible runtime checks is always
             // going to succeed and there's no need to also have a fallback branch.
-            Decision::exhaustive_switch(pivot_var, choices)
+            self.splitter_to_exhaustive_switch(pivot_var, splitter)
         }
     }
 
@@ -955,131 +2439,116 @@ impl<'a> Compiler<'a> {
                 continue;
             };
 
-            // If it does check the same variable, we know that this branch is only relevant
-            // for some specific shape of `pivot_var`, determined by the runtime check that
-            // it is performing.
-            let kind = pattern_check
-                .to_runtime_check_kind(self)
-                .expect("no var patterns left");
+            let checked_pattern = self.pattern(pattern_check.pattern);
 
-            if kind.is_matching_on_unreachable_variant(branch_mode) {
+            if checked_pattern.is_matching_on_unreachable_variant(branch_mode) {
                 self.mark_as_matching_impossible_variant(&branch);
+                continue;
+            } else if let Some(unreachable_segments) =
+                checked_pattern.is_matching_on_impossible_segment()
+            {
+                self.mark_as_matching_impossible_segment(&branch, unreachable_segments);
                 continue;
             }
 
-            // We now replace the pattern check we've just removed with the new
-            // ones we might have discovered.
-            //
-            // If a check is already there we don't generate a new one with
-            // fresh variables, but reuse the existing one!
-            //
-            // TODO)) this might have to be slightly updated once we perform
-            // code generation for string patterns that are a bit trickier to split
-            // as they might be overlapping even when they're different!
-            let runtime_check = match splitter.get_overlapping_runtime_check(&kind) {
-                Some(runtime_check) => runtime_check,
-                None => self.kind_to_runtime_check(kind, branch_mode),
+            splitter.add_checked_branch(pattern_check, branch, branch_mode, self);
+        }
+    }
+
+    /// Compiles the branches in a splitter down to a switch matching on a type
+    /// with infinite variants (like ints, floats and strings). With a fallaback
+    /// branch.
+    ///
+    fn splitter_to_switch(&mut self, var: Variable, splitter: BranchSplitter) -> Decision {
+        let choices = self.compile_all_choices(splitter.choices);
+        let last_choice = self.compile(splitter.fallback);
+        Decision::Switch {
+            var,
+            choices,
+            fallback: Box::new(last_choice),
+            fallback_check: Box::new(FallbackCheck::InfiniteCatchAll),
+        }
+    }
+
+    /// Compiles the branches in a splitter down to a switch matching on a type
+    /// with a finite known number of variants.
+    ///
+    fn splitter_to_exhaustive_switch(
+        &mut self,
+        var: Variable,
+        splitter: BranchSplitter,
+    ) -> Decision {
+        let mut choices = splitter.choices;
+        let (choices, fallback, fallback_check) =
+            if choices.iter().any(|(check, _)| check.is_ignored()) {
+                // If there's any check that is ignored and not explicitly being
+                // matched on then we want to ignore all of those and clump them
+                // into a single "fallback" branch to avoid bloating the generated
+                // tree.
+                let mut ignored_checks = vec![];
+                let mut remaining_choices = vec![];
+                for choice in choices.into_iter() {
+                    if choice.0.is_ignored() {
+                        ignored_checks.push(choice.0)
+                    } else {
+                        remaining_choices.push(choice)
+                    }
+                }
+
+                let fallback_check = FallbackCheck::CatchAll { ignored_checks };
+                (remaining_choices, splitter.fallback, fallback_check)
+            } else {
+                // Otherwise we just use the last check as the final one that
+                // can be outright skipped.
+                let (last_check, last_choice) = choices.pop().expect("at least one choice");
+                let fallback_check = FallbackCheck::RuntimeCheck { check: last_check };
+                (choices, last_choice, fallback_check)
             };
 
-            self.new_pattern_checks(&runtime_check, pattern_check.pattern)
-                .into_iter()
-                .for_each(|check| branch.add_check(check));
-
-            splitter.add_checked_branch(runtime_check, branch);
+        let choices = self.compile_all_choices(choices);
+        let fallback = Box::new(self.compile(fallback));
+        Decision::Switch {
+            var,
+            choices,
+            fallback,
+            fallback_check: Box::new(fallback_check),
         }
     }
 
-    /// Comes up with new checks to perform after the given runtime check succeeds for
-    /// the given pattern being matched.
-    ///
-    /// This is a tricky part, so let's have a look at an example: let's say this is
-    /// the pattern check `a is Wibble(1, _, [])`.
-    /// After making the runtime check that `a` is indeed a `Wibble` we're still
-    /// left with many things to consider! We'll need to also make sure that `a`'s
-    /// fields match with the respective patterns `1`, `_` and `[]`.
-    /// So we would have to add new pattern checks to this branch:
-    /// `a_0 is 1`, `a_1 is _` and `a_2 is []` (where `a_n` are fresh names we use
-    /// to refer to `a`'s fields).
-    ///
-    fn new_pattern_checks(
+    fn compile_all_choices(
         &mut self,
-        runtime_check: &RuntimeCheck,
-        pattern: Id<Pattern>,
-    ) -> Vec<PatternCheck> {
-        match (runtime_check, self.pattern(pattern)) {
-            // None of these patterns introduces new arguments we need to be matching on!
-            (
-                RuntimeCheck::Int { .. }
-                | RuntimeCheck::Float { .. }
-                | RuntimeCheck::String { .. }
-                | RuntimeCheck::BitArray { .. }
-                | RuntimeCheck::EmptyList,
-                _,
-            ) => vec![],
-
-            // A check on a string prefix introduces just a single new pattern: that is
-            // the one on the remaining bit.
-            (RuntimeCheck::StringPrefix { rest_arg, .. }, Pattern::StringPrefix { rest, .. }) => {
-                vec![PatternCheck::new(rest_arg.clone(), *rest)]
-            }
-            (RuntimeCheck::StringPrefix { .. }, _) => vec![],
-
-            // A check on a tuple introduces a new pattern for each of the elements making
-            // up the tuple. The same goes for variants, we have to introduce a new check
-            // for each of its fields, as shown in the doc comment above.
-            (RuntimeCheck::Tuple { args, .. }, Pattern::Tuple { elements: ps })
-            | (RuntimeCheck::Variant { args, .. }, Pattern::Constructor { arguments: ps, .. }) => {
-                (args.iter().zip(ps))
-                    .map(|(arg, pattern)| PatternCheck::new(arg.clone(), *pattern))
-                    .collect_vec()
-            }
-            (RuntimeCheck::Tuple { .. } | RuntimeCheck::Variant { .. }, _) => vec![],
-
-            // A check on a non empty list introduces two new patterns: one for the head of
-            // the list and one for the tail!
-            (
-                RuntimeCheck::NonEmptyList {
-                    first_arg,
-                    rest_arg,
-                },
-                Pattern::List { first, rest },
-            ) => vec![
-                PatternCheck::new(first_arg.clone(), *first),
-                PatternCheck::new(rest_arg.clone(), *rest),
-            ],
-            (RuntimeCheck::NonEmptyList { .. }, _) => vec![],
-        }
+        choices: Vec<(RuntimeCheck, VecDeque<Branch>)>,
+    ) -> Vec<(RuntimeCheck, Decision)> {
+        choices
+            .into_iter()
+            .map(|(check, branches)| (check, self.compile(branches)))
+            .collect_vec()
     }
 
-    /// Turns a `RuntimeCheckKind` into a proper `RuntimeCheck` by coming up with
+    /// Turns a `RuntimeCheckKind` into a new `RuntimeCheck` by coming up with
     /// the needed new fresh variables.
     /// All the type information needed to create these variables is in the
     /// `branch_mode` arg.
     ///
-    fn kind_to_runtime_check(
+    fn fresh_runtime_check(
         &mut self,
         kind: RuntimeCheckKind,
         branch_mode: &BranchMode,
     ) -> RuntimeCheck {
         match (kind, branch_mode) {
-            (RuntimeCheckKind::Int { value }, _) => RuntimeCheck::Int {
-                value: value.clone(),
+            (RuntimeCheckKind::Int { int_value }, _) => RuntimeCheck::Int {
+                int_value: int_value.clone(),
             },
-            (RuntimeCheckKind::Float { value }, _) => RuntimeCheck::Float {
-                value: value.clone(),
-            },
+            (RuntimeCheckKind::Float { float_value }, _) => RuntimeCheck::Float { float_value },
             (RuntimeCheckKind::String { value }, _) => RuntimeCheck::String {
-                value: value.clone(),
-            },
-            (RuntimeCheckKind::BitArray { value }, _) => RuntimeCheck::BitArray {
                 value: value.clone(),
             },
             (RuntimeCheckKind::StringPrefix { prefix }, _) => RuntimeCheck::StringPrefix {
                 prefix: prefix.clone(),
-                rest_arg: self.fresh_variable(string()),
+                rest: self.fresh_variable(string()),
             },
-            (RuntimeCheckKind::Tuple { .. }, BranchMode::Tuple { elems }) => {
-                self.is_tuple_check(elems)
+            (RuntimeCheckKind::Tuple { .. }, BranchMode::Tuple { elements }) => {
+                self.is_tuple_check(elements)
             }
             (RuntimeCheckKind::Variant { index }, BranchMode::NamedType { constructors, .. }) => {
                 self.is_variant_check(
@@ -1095,6 +2564,142 @@ impl<'a> Compiler<'a> {
         }
     }
 
+    /// Comes up with new pattern cecks that have to match in case a given
+    /// runtime check succeeds for the given pattern.
+    ///
+    /// Let's make an example: when we have a pattern - say `a is Wibble(1, [])` -
+    /// we come up with a runtime check to perform on it. For our example the
+    /// runtime check is to make sure that `a` is indeed a `Wibble` variant.
+    /// However, after successfully performing that check we're left with much to
+    /// do! We know that `a` is `Wibble` but now we'll have to make sure that its
+    /// inner arguments also match the given patterns. So the new additional checks
+    /// we have to add are `a0 is 1, a1 is []` (where `a0` and `a1` are the fresh
+    /// variable names we use to refer to the constructor's arguments).
+    ///
+    fn new_checks(
+        &mut self,
+        for_pattern: &Pattern,
+        after_succeding_check: &RuntimeCheck,
+    ) -> Vec<PatternCheck> {
+        match (for_pattern, after_succeding_check) {
+            // These patterns never result in adding new checks. After a runtime
+            // check matches on them there's nothing else to discover.
+            (
+                Pattern::Discard
+                | Pattern::Assign { .. }
+                | Pattern::Variable { .. }
+                | Pattern::Int { .. }
+                | Pattern::Float { .. }
+                | Pattern::BitArray { .. }
+                | Pattern::EmptyList,
+                _,
+            )
+            | (Pattern::String { .. }, RuntimeCheck::String { .. }) => vec![],
+
+            // After making sure a value is not an empty list we'll have to perform
+            // additional checks on its first item and on the tail.
+            (
+                Pattern::NonEmptyList {
+                    first: first_pattern,
+                    rest: rest_pattern,
+                },
+                RuntimeCheck::NonEmptyList {
+                    first: first_variable,
+                    rest: rest_variable,
+                },
+            ) => vec![
+                first_variable.is(*first_pattern),
+                rest_variable.is(*rest_pattern),
+            ],
+
+            // After making sure a value is a specific variant we'll have to check each
+            // of its arguments respects the given patterns (as shown in the doc example for
+            // this function!)
+            (
+                Pattern::Variant {
+                    fields: patterns, ..
+                },
+                RuntimeCheck::Variant {
+                    fields: variables, ..
+                },
+            ) => (variables.iter().zip(patterns))
+                .map(|(field, pattern)| field.is(*pattern))
+                .collect_vec(),
+
+            // Tuples are exactly the same as variants: after making sure we're dealing with
+            // a tuple, we will have to check that each of its elements matches the given
+            // pattern: `a is #(1, _)` will result in the following checks
+            // `a0 is 1, a1 is _` (where `a0` and `a1` are fresh variable names we use to
+            // refer to each of the tuple's elements).
+            (
+                Pattern::Tuple { elements: patterns },
+                RuntimeCheck::Tuple {
+                    elements: variables,
+                    ..
+                },
+            ) => (variables.iter().zip(patterns))
+                .map(|(element, pattern)| element.is(*pattern))
+                .collect_vec(),
+
+            // Strings are quite fun: if we've checked at runtime a string starts with a given
+            // prefix and we want to check that it's some overlapping literal value we'll still
+            // have some amount of work to perform.
+            //
+            // Let's have a look at an example: the pattern we care about is `a is "wibble"`
+            // and we've just successfully ran the runtime check for `a is "wib" <> rest`.
+            // So we know the string already starts with `"wib"` what we have to check now
+            // is that the remaining part `rest` is `"ble"`.
+            (Pattern::String { value }, RuntimeCheck::StringPrefix { prefix, rest, .. }) => {
+                let remaining = value.strip_prefix(prefix.as_str()).unwrap_or(value);
+                vec![rest.is(self.string_pattern(remaining))]
+            }
+
+            // String prefixes are similar to strings, but a bit more involved. Let's say we're
+            // checking the pattern:
+            //
+            // ```txt
+            // "wibblest" <> rest1
+            // ─┬────────
+            //  ╰── We will refer to this as `prefix1`
+            // ```
+            //
+            // And we know that the following overlapping runtime check has already succeeded:
+            //
+            // ```txt
+            // "wibble" <> rest0
+            // ─┬──────
+            //  ╰── We will refer to this as `prefix0`
+            // ```
+            //
+            // We're lucky because we now know quite a bit about the shape of the string. Since
+            // we know it already starts with `"wibble"` we can just check that the remaining
+            // part after that starts with the missing part of the prefix:
+            // `prefix0 is "st" <> rest1`.
+            (
+                Pattern::StringPrefix {
+                    prefix: prefix1,
+                    prefix_name: _,
+                    rest: rest1,
+                },
+                RuntimeCheck::StringPrefix {
+                    prefix: prefix0,
+                    rest: rest0,
+                },
+            ) => {
+                let remaining = prefix1.strip_prefix(prefix0.as_str()).unwrap_or(prefix1);
+                // If the prefixes are exactly the same then the only remaining check
+                // is for the two remaining bits to be the same.
+                if remaining.is_empty() {
+                    vec![rest0.is(*rest1)]
+                } else {
+                    vec![rest0.is(self.string_prefix_pattern(remaining, *rest1))]
+                }
+            }
+
+            (_, _) => unreachable!("invalid pattern overlapping"),
+        }
+    }
+
     /// Builds an `IsVariant` runtime check, coming up with new fresh variable names
     /// for its arguments.
     ///
@@ -1105,10 +2710,19 @@ impl<'a> Compiler<'a> {
     ) -> RuntimeCheck {
         RuntimeCheck::Variant {
             index,
-            args: constructor
+            match_: VariantMatch::NeverExplicitlyMatchedOn {
+                name: constructor.name.clone(),
+            },
+            labels: constructor
                 .parameters
                 .iter()
-                .map(|p| p.type_.clone())
+                .enumerate()
+                .filter_map(|(i, parameter)| Some((i, parameter.label.clone()?)))
+                .collect(),
+            fields: constructor
+                .parameters
+                .iter()
+                .map(|parameter| parameter.type_.clone())
                 .map(|type_| self.fresh_variable(type_))
                 .collect_vec(),
         }
@@ -1119,29 +2733,56 @@ impl<'a> Compiler<'a> {
     ///
     fn is_list_check(&mut self, inner_type: Arc<Type>) -> RuntimeCheck {
         RuntimeCheck::NonEmptyList {
-            first_arg: self.fresh_variable(inner_type.clone()),
-            rest_arg: self.fresh_variable(Arc::new(Type::list(inner_type))),
+            first: self.fresh_variable(inner_type.clone()),
+            rest: self.fresh_variable(Arc::new(Type::list(inner_type))),
         }
     }
 
     /// Builds an `IsTuple` runtime check, coming up with fresh variable
     /// names for its arguments.
     ///
-    fn is_tuple_check(&mut self, elems: &[Arc<Type>]) -> RuntimeCheck {
+    fn is_tuple_check(&mut self, elements: &[Arc<Type>]) -> RuntimeCheck {
         RuntimeCheck::Tuple {
-            size: elems.len(),
-            args: elems
+            size: elements.len(),
+            elements: elements
                 .iter()
                 .map(|type_| self.fresh_variable(type_.clone()))
                 .collect_vec(),
         }
+    }
+
+    /// Allocates a new `StringPattern` with the given value.
+    ///
+    fn string_pattern(&mut self, value: &str) -> Id<Pattern> {
+        self.patterns.alloc(Pattern::String {
+            value: EcoString::from(value),
+        })
+    }
+
+    fn bit_array_pattern(&mut self, tests: VecDeque<BitArrayTest>) -> Id<Pattern> {
+        self.patterns.alloc(Pattern::BitArray { tests })
+    }
+
+    /// Allocates a new `StringPrefix` pattern with the given prefix and pattern
+    /// for the rest of the string.
+    ///
+    fn string_prefix_pattern(&mut self, prefix: &str, rest: Id<Pattern>) -> Id<Pattern> {
+        self.patterns.alloc(Pattern::StringPrefix {
+            prefix: EcoString::from(prefix),
+            prefix_name: None,
+            rest,
+        })
     }
 }
 
 /// Returns a pattern check from `first_branch` to be used as a pivot to split all
 /// the `branches`.
 ///
-fn find_pivot_check(first_branch: &Branch, branches: &VecDeque<Branch>) -> Option<PatternCheck> {
+fn find_pivot_check(
+    first_branch: &Branch,
+    branches: &VecDeque<Branch>,
+    env: &Environment<'_>,
+) -> Option<PatternCheck> {
     // To try and minimise code duplication, we use the following heuristic: we
     // choose the check matching on the variable that is referenced the most
     // across all checks in all branches.
@@ -1155,10 +2796,30 @@ fn find_pivot_check(first_branch: &Branch, branches: &VecDeque<Branch>) -> Optio
         }
     }
 
+    // We want to picke the variable that has the smallest branching factor
+    // possible, this tends to yield smaller, shallower decision trees.
+    // So, for example, we will pick a list (branching factor of 2 `[]` and
+    // `[_, ..]`) over an integer (infinitely many choices).
+    //
+    // In case two variables are tied we break the tie by choosing the subject
+    // that appears in the most clauses (i.e. a test that will pay off for more
+    // rows).
+    //
+    // Both parts mirror standard guidance for good match trees (small branching
+    // factor; prioritize columns that are widely useful):
+    // https://www.cs.tufts.edu/~nr/cs257/archive/luc-maranget/jun08.pdf
     first_branch
         .checks
         .iter()
-        .max_by_key(|check| var_references.get(&check.var.id).cloned().unwrap_or(0))
+        .min_by_key(|check| {
+            let branching_factor = check.var.branch_mode(env).branching_factor();
+            let references = var_references.get(&check.var.id).cloned().unwrap_or(0);
+
+            // Notice how we're using `-references`: we want to favour the one
+            // that has the most references, so the one were `-references` is
+            // the smallest.
+            (branching_factor, -references)
+        })
         .cloned()
 }
 
@@ -1168,9 +2829,18 @@ fn find_pivot_check(first_branch: &Branch, branches: &VecDeque<Branch>) -> Optio
 struct BranchSplitter {
     pub choices: Vec<(RuntimeCheck, VecDeque<Branch>)>,
     pub fallback: VecDeque<Branch>,
+
     /// This is used to allow quickly looking up a choice in the `choices`
     /// vector, without loosing track of the checks' order.
     indices: HashMap<RuntimeCheckKind, usize>,
+
+    /// This is used to store the indices of just the prefix checks as they have
+    /// different rules from all the other `RuntimeCheckKinds` whose indices are
+    /// instead stored in the `indices` field.
+    ///
+    /// We discuss this in more detail in the `index_of_overlapping_runtime_check`
+    /// function!
+    prefix_indices: Trie<String, usize>,
 }
 
 impl BranchSplitter {
@@ -1181,7 +2851,10 @@ impl BranchSplitter {
         let mut indices = HashMap::new();
 
         for (index, runtime_check) in checks.into_iter().enumerate() {
-            let _ = indices.insert(runtime_check.kind(), index);
+            let Some(kind) = runtime_check.kind() else {
+                continue;
+            };
+            let _ = indices.insert(kind, index);
             choices.push((runtime_check, VecDeque::new()));
         }
 
@@ -1189,6 +2862,7 @@ impl BranchSplitter {
             fallback: VecDeque::new(),
             choices,
             indices,
+            prefix_indices: Trie::new(),
         }
     }
 
@@ -1203,34 +2877,242 @@ impl BranchSplitter {
         self.fallback.push_back(branch);
     }
 
-    /// Add a branch that we know will only ever run if the `check` is true.
+    /// Given a branch and the pattern its using to check on the pivot variable,
+    /// adds it to the paths where it's relevant, that is where we know from
+    /// previous checks that this pattern has a chance of matching.
     ///
-    fn add_checked_branch(&mut self, check: RuntimeCheck, branch: Branch) {
-        match self.indices.get(&check.kind()) {
-            Some(index) => {
-                let (_, branches) = self
+    fn add_checked_branch(
+        &mut self,
+        pattern_check: PatternCheck,
+        mut branch: Branch,
+        branch_mode: &BranchMode,
+        compiler: &mut Compiler<'_>,
+    ) {
+        let pattern = compiler.pattern(pattern_check.pattern).clone();
+
+        // Bit array patterns are split in a different way that requires special
+        // handling. Instead of reasoning on overlapping checks what we do it we
+        // always split the decision tree in two distinct paths based on one of
+        // the bit array pattern's tests.
+        if let Pattern::BitArray { tests } = pattern {
+            self.add_checked_bit_array_branch(pattern_check, tests, branch, compiler);
+            return;
+        };
+
+        let kind = pattern
+            .to_runtime_check_kind()
+            .expect("no unconditional patterns left");
+
+        let indices_of_overlapping_checks = self.indices_of_overlapping_checks(&kind);
+        if indices_of_overlapping_checks.is_empty() {
+            // This is a new choice we haven't yet discovered as it is not overlapping
+            // with any of the existing ones. So we add it as a possible new path
+            // we might have to go down to in the decision tree.
+            self.save_index_of_new_choice(kind.clone());
+
+            let check = compiler.fresh_runtime_check(kind, branch_mode);
+            for new_check in compiler.new_checks(&pattern, &check) {
+                branch.add_check(new_check);
+            }
+            let mut branches = self.fallback.clone();
+            branches.push_back(branch);
+
+            self.choices.push((check, branches));
+        } else {
+            // Otherwise, we know that the check for this branch overlaps with
+            // (possibly more than one) existing checks and so is relevant only
+            // as part of those existing paths.
+            // We'll add the branch with its newly discovered checks only to those
+            // paths.
+            for index in indices_of_overlapping_checks.iter() {
+                let (overlapping_check, branches) = self
                     .choices
                     .get_mut(*index)
                     .expect("check to already be a choice");
+
+                let mut branch = branch.clone();
+                for new_check in compiler.new_checks(&pattern, overlapping_check) {
+                    branch.add_check(new_check);
+                }
                 branches.push_back(branch);
             }
+        }
 
-            None => {
-                let _ = self.indices.insert(check.kind(), self.choices.len());
-                let mut branches = self.fallback.clone();
-                branches.push_back(branch);
-                self.choices.push((check, branches));
+        // Then we have to update all variant checks with any new name/module
+        // we might have discovered from the pattern to make sure we're using
+        // the correct qualification to refer to each constructor.
+        if let Pattern::Variant { name, module, .. } = pattern {
+            for index in indices_of_overlapping_checks {
+                let (check, _) = self
+                    .choices
+                    .get_mut(index)
+                    .expect("check to already be a choice");
+                if let RuntimeCheck::Variant { match_, .. } = check {
+                    *match_ = VariantMatch::ExplicitlyMatchedOn {
+                        module: module.clone(),
+                        name: name.clone(),
+                    }
+                }
             }
         }
     }
 
-    fn get_overlapping_runtime_check(&self, kind: &RuntimeCheckKind) -> Option<RuntimeCheck> {
-        let index = self.indices.get(kind)?;
-        let (runtime_check, _) = self.choices.get(*index)?;
-        Some(runtime_check.clone())
+    /// When we work with bit array patterns the splitter follows a different
+    /// strategy to split branches: instead of trying to create a multiway
+    /// decision tree with possibly many branches, we create only two branches
+    /// based on the first segment test we run into.
+    /// One path is going to be for the branches that can match if the test is
+    /// successful, and the other one is going to be the usual fallback to go
+    /// down to if it's not successful.
+    ///
+    /// > "And now for the tricky bit..."
+    /// > <https://youtu.be/lKXe3HUG2l4?si=i1thYB-kjfMU8NSe&t=645>
+    ///
+    fn add_checked_bit_array_branch(
+        &mut self,
+        pattern_check: PatternCheck,
+        tests: VecDeque<BitArrayTest>,
+        mut branch: Branch,
+        compiler: &mut Compiler<'_>,
+    ) {
+        // If we haven't found a test yet we just use the first one we find
+        // as the pivot to split all the branches.
+        let pivot_test = match self.choices.as_slice() {
+            [] => {
+                let test = tests.front().expect("empty bit array test").clone();
+                self.choices.push((
+                    RuntimeCheck::BitArray { test: test.clone() },
+                    VecDeque::new(),
+                ));
+                test
+            }
+            [(RuntimeCheck::BitArray { test }, _)] => test.clone(),
+            _ => unreachable!("non bit array check when splitting bit array patterns"),
+        };
+
+        let pattern_fails_if_test_succeeds = tests
+            .iter()
+            .any(|test| test.fails_if_succeeding(&pivot_test).is_certain());
+
+        let pattern_fails_if_test_fails = tests
+            .iter()
+            .any(|test| test.fails_if_failing(&pivot_test).is_certain());
+
+        // The branch is still relevant for the if_true path if it still has a
+        // chance of matching knowing that the pivot test has matched.
+        // So if we know for certain that the pattern would fail, we don't even
+        // bother adding it to the if_true path.
+        if !pattern_fails_if_test_succeeds {
+            // If the branch is relevant we can further simplify it by removing
+            // all those tests that are guaranteed to succeed. For example,
+            // if the succeeding pivot test is `size >= 20` there's no point
+            // in checking that `size >= 10`, we know that's always true in this
+            // path of the decision tree!
+            let tests = tests
+                .into_iter()
+                .filter(|test| test.succeeds_if_succeeding(&pivot_test) == Confidence::Uncertain)
+                .collect::<VecDeque<_>>();
+
+            let mut branch = branch.clone();
+            let variable = &pattern_check.var;
+            branch.add_check(variable.is(compiler.bit_array_pattern(tests)));
+
+            // We know that there's always going to be a single choice for the
+            // successful check, so we get that and add the branch to it.
+            let (_, if_true_branches) = self
+                .choices
+                .get_mut(0)
+                .expect("bit array compilation with no choice");
+            if_true_branches.push_back(branch);
+        }
+
+        // Same goes for the if_false branch: knowing the pivot test has failed
+        // we only want to keep those branches with a pattern that still have a
+        // chance to match.
+        if !pattern_fails_if_test_fails {
+            // The main difference with the if true case is that we have no way
+            // of pruning the number of needed tests, so we add this check back
+            // exactly as it is.
+            branch.add_check(pattern_check);
+            self.fallback.push_back(branch);
+        }
+    }
+
+    fn save_index_of_new_choice(&mut self, kind: RuntimeCheckKind) {
+        let _ = match kind {
+            RuntimeCheckKind::Int { .. }
+            | RuntimeCheckKind::Float { .. }
+            | RuntimeCheckKind::String { .. }
+            | RuntimeCheckKind::Tuple { .. }
+            | RuntimeCheckKind::Variant { .. }
+            | RuntimeCheckKind::EmptyList
+            | RuntimeCheckKind::NonEmptyList => self.indices.insert(kind, self.choices.len()),
+
+            RuntimeCheckKind::StringPrefix { prefix } => self
+                .prefix_indices
+                .insert(prefix.to_string(), self.choices.len()),
+        };
+    }
+
+    fn indices_of_overlapping_checks(&self, kind: &RuntimeCheckKind) -> Vec<usize> {
+        match kind {
+            // All these checks will only overlap with a check that is exactly the
+            // same, so we just look up their index in the `indices` map using the
+            // kind as the lookup.
+            RuntimeCheckKind::Int { .. }
+            | RuntimeCheckKind::Float { .. }
+            | RuntimeCheckKind::Tuple { .. }
+            | RuntimeCheckKind::Variant { .. }
+            | RuntimeCheckKind::EmptyList
+            | RuntimeCheckKind::NonEmptyList => {
+                self.indices.get(kind).cloned().into_iter().collect_vec()
+            }
+
+            // String patterns are a bit more tricky as they might end up overlapping
+            // even if they're not exactly the same kind of check! Let's have a look
+            // at an example. Say we're compiling these branches:
+            //
+            // ```
+            // a is "wibble" <> rest -> todo
+            // a is "wibbler" <> rest -> todo
+            // ```
+            //
+            // We use the first (and only) check in the first branch as the pivot and
+            // now we have to decide where to put the next branch. Is it matching with
+            // the first one or completely unrelated?
+            // Since `"wibbler"` starts with `"wibble"` we know it's overlapping and
+            // it cannot possibly match if the previous one doesn't!
+            //
+            // So when we find a `String`/`StringPrefix` pattern we look for a prefix
+            // among the ones we have discovered so far that could match with it.
+            // That is, we look for a prefix of the pattern we're checking in the prefix
+            // trie.
+            RuntimeCheckKind::StringPrefix { prefix: value } => {
+                ancestors_values(&self.prefix_indices, value).collect_vec()
+            }
+
+            // Strings are almost exactly the same, except they could also have an exact
+            // match with other string patterns. So a string pattern could overlap with
+            // another string pattern (if they're matching on the same value), or with
+            // one or more string prefix patterns with a matching prefix.
+            RuntimeCheckKind::String { value } => {
+                let first_index = self.indices.get(kind).cloned();
+                first_index
+                    .into_iter()
+                    .chain(ancestors_values(&self.prefix_indices, value))
+                    .collect_vec()
+            }
+        }
     }
 }
 
+fn ancestors_values(trie: &Trie<String, usize>, key: &str) -> impl Iterator<Item = usize> {
+    trie.get_ancestor(key)
+        .into_iter()
+        .flat_map(|ancestor| ancestor.values().copied())
+}
+
+#[derive(Debug)]
 pub struct ConstructorSpecialiser {
     specialised_types: HashMap<u64, Arc<Type>>,
 }
@@ -1239,7 +3121,17 @@ impl ConstructorSpecialiser {
     fn specialise_constructors(
         constructors: &TypeVariantConstructors,
         type_arguments: &[Arc<Type>],
+        current_module: &EcoString,
+        type_module: &EcoString,
     ) -> Vec<TypeValueConstructor> {
+        match constructors.opaque {
+            // If the type is opaque and we are not in the definition module of
+            // that type, we don't have access to any constructors so we treat
+            // it the same as an external type.
+            Opaque::Opaque if current_module != type_module => return Vec::new(),
+            Opaque::Opaque | Opaque::NotOpaque => {}
+        };
+
         let specialiser = Self::new(constructors.type_parameters_ids.as_slice(), type_arguments);
         constructors
             .variants
@@ -1268,6 +3160,7 @@ impl ConstructorSpecialiser {
             .map(|p| TypeValueConstructorField {
                 type_: self.specialise_type(p.type_.as_ref()),
                 label: p.label.clone(),
+                documentation: p.documentation.clone(),
             })
             .collect_vec();
         TypeValueConstructor {
@@ -1284,28 +3177,37 @@ impl ConstructorSpecialiser {
                 package,
                 module,
                 name,
-                args,
+                arguments,
                 inferred_variant,
             } => Type::Named {
                 publicity: *publicity,
                 package: package.clone(),
                 module: module.clone(),
                 name: name.clone(),
-                args: args.iter().map(|a| self.specialise_type(a)).collect(),
+                arguments: arguments
+                    .iter()
+                    .map(|argument| self.specialise_type(argument))
+                    .collect(),
                 inferred_variant: *inferred_variant,
             },
 
-            Type::Fn { args, retrn } => Type::Fn {
-                args: args.iter().map(|a| self.specialise_type(a)).collect(),
-                retrn: retrn.clone(),
+            Type::Fn { arguments, return_ } => Type::Fn {
+                arguments: arguments
+                    .iter()
+                    .map(|argument| self.specialise_type(argument))
+                    .collect(),
+                return_: return_.clone(),
             },
 
             Type::Var { type_ } => Type::Var {
                 type_: Arc::new(RefCell::new(self.specialise_var(type_))),
             },
 
-            Type::Tuple { elems } => Type::Tuple {
-                elems: elems.iter().map(|e| self.specialise_type(e)).collect(),
+            Type::Tuple { elements } => Type::Tuple {
+                elements: elements
+                    .iter()
+                    .map(|element| self.specialise_type(element))
+                    .collect(),
             },
         })
     }
@@ -1332,6 +3234,7 @@ impl ConstructorSpecialiser {
 /// the pattern matching compiler and get a case expression ready to be compiled,
 /// while hiding the intricacies of handling an arena to record different patterns.
 ///
+#[derive(Debug)]
 pub struct CaseToCompile {
     patterns: Arena<Pattern>,
     branches: Vec<Branch>,
@@ -1382,10 +3285,8 @@ impl CaseToCompile {
                 let var = self
                     .subject_variables
                     .get(i)
-                    .expect("wrong number of subjects")
-                    .clone();
-
-                checks.push(PatternCheck::new(var, pattern))
+                    .expect("wrong number of subjects");
+                checks.push(var.is(pattern))
             }
 
             let has_guard = branch.guard.is_some();
@@ -1407,15 +3308,13 @@ impl CaseToCompile {
         let var = self
             .subject_variables
             .first()
-            .expect("wrong number of subject variables for pattern")
-            .clone();
-        let checks = vec![PatternCheck::new(var, pattern)];
-        let branch = Branch::new(self.number_of_clauses, 0, checks, false);
+            .expect("wrong number of subject variables for pattern");
+        let branch = Branch::new(self.number_of_clauses, 0, vec![var.is(pattern)], false);
         self.number_of_clauses += 1;
         self.branches.push(branch);
     }
 
-    pub fn compile(self, env: &Environment<'_>) -> Match {
+    pub fn compile(self, env: &Environment<'_>) -> CompileCaseResult {
         let mut compiler = Compiler::new(env, self.variable_id, self.patterns);
 
         let decision = if self.branches.is_empty() {
@@ -1430,10 +3329,12 @@ impl CaseToCompile {
             compiler.compile(self.branches.into())
         };
 
-        Match {
-            tree: decision,
+        CompileCaseResult {
             diagnostics: compiler.diagnostics,
-            subject_variables: self.subject_variables,
+            compiled_case: CompiledCase {
+                tree: decision,
+                subject_variables: self.subject_variables,
+            },
         }
     }
 
@@ -1445,14 +3346,14 @@ impl CaseToCompile {
             TypedPattern::Invalid { .. } => self.insert(Pattern::Discard),
             TypedPattern::Discard { .. } => self.insert(Pattern::Discard),
 
-            TypedPattern::Int { value, .. } => {
-                let value = value.clone();
-                self.insert(Pattern::Int { value })
+            TypedPattern::Int { int_value, .. } => {
+                let int_value = int_value.clone();
+                self.insert(Pattern::Int { int_value })
             }
 
-            TypedPattern::Float { value, .. } => {
-                let value = value.clone();
-                self.insert(Pattern::Float { value })
+            TypedPattern::Float { float_value, .. } => {
+                let float_value = *float_value;
+                self.insert(Pattern::Float { float_value })
             }
 
             TypedPattern::String { value, .. } => {
@@ -1471,19 +3372,22 @@ impl CaseToCompile {
                 self.insert(Pattern::Assign { name, pattern })
             }
 
-            TypedPattern::Tuple { elems, .. } => {
-                let elements = elems.iter().map(|elem| self.register(elem)).collect_vec();
+            TypedPattern::Tuple { elements, .. } => {
+                let elements = elements
+                    .iter()
+                    .map(|element| self.register(element))
+                    .collect_vec();
                 self.insert(Pattern::Tuple { elements })
             }
 
             TypedPattern::List { elements, tail, .. } => {
                 let mut list = match tail {
-                    Some(tail) => self.register(tail),
+                    Some(tail) => self.register(&tail.pattern),
                     None => self.insert(Pattern::EmptyList),
                 };
                 for element in elements.iter().rev() {
                     let first = self.register(element);
-                    list = self.insert(Pattern::List { first, rest: list });
+                    list = self.insert(Pattern::NonEmptyList { first, rest: list });
                 }
                 list
             }
@@ -1491,51 +3395,673 @@ impl CaseToCompile {
             TypedPattern::Constructor {
                 arguments,
                 constructor,
+                name,
+                module,
                 ..
             } => {
-                let variant_index =
-                    constructor.expect_ref("must be inferred").constructor_index as usize;
-                let arguments = arguments
+                let index = constructor.expect_ref("must be inferred").constructor_index as usize;
+                let module = module.as_ref().map(|(module, _)| module.clone());
+                let fields = arguments
                     .iter()
                     .map(|argument| self.register(&argument.value))
                     .collect_vec();
-                self.insert(Pattern::Constructor {
-                    variant_index,
-                    arguments,
+                self.insert(Pattern::Variant {
+                    name: name.clone(),
+                    module,
+                    index,
+                    fields,
                 })
             }
 
-            TypedPattern::BitArray { location, .. } => {
-                // TODO: in future support bit strings fully and check the
-                // exhaustiveness of their segment patterns.
-                // For now we use the location to give each bit string a pattern
-                // a unique value.
-                self.insert(Pattern::BitArray {
-                    value: format!("{}:{}", location.start, location.end).into(),
-                })
+            TypedPattern::BitArray { segments, .. } => {
+                let tests = self.bit_array_to_tests(segments);
+                self.insert(Pattern::BitArray { tests })
             }
 
             TypedPattern::StringPrefix {
                 left_side_string,
+                left_side_assignment,
                 right_side_assignment,
                 ..
             } => {
                 let prefix = left_side_string.clone();
+                let prefix_name = left_side_assignment
+                    .as_ref()
+                    .map(|(label, _)| label.clone());
                 let rest_pattern = match right_side_assignment {
                     AssignName::Variable(name) => Pattern::Variable { name: name.clone() },
                     AssignName::Discard(_) => Pattern::Discard,
                 };
                 let rest = self.insert(rest_pattern);
-                self.insert(Pattern::StringPrefix { prefix, rest })
+                self.insert(Pattern::StringPrefix {
+                    prefix,
+                    prefix_name,
+                    rest,
+                })
             }
 
-            TypedPattern::VarUsage { .. } => {
-                unreachable!("Cannot convert VarUsage to exhaustiveness pattern")
+            TypedPattern::BitArraySize { .. } => {
+                unreachable!("Cannot convert BitArraySize to exhaustiveness pattern")
             }
         }
     }
 
     fn insert(&mut self, pattern: Pattern) -> Id<Pattern> {
         self.patterns.alloc(pattern)
+    }
+
+    fn bit_array_to_tests(
+        &mut self,
+        segments: &[TypedPatternBitArraySegment],
+    ) -> VecDeque<BitArrayTest> {
+        // If there's no segments then we just add a single check to make sure
+        // the bit array is empty.
+        if segments.is_empty() {
+            let mut test = VecDeque::new();
+            test.push_front(BitArrayTest::Size(SizeTest {
+                operator: SizeOperator::Equal,
+                size: Offset::constant(0),
+            }));
+            return test;
+        }
+
+        let mut previous_end = Offset::constant(0);
+        let mut tests = VecDeque::with_capacity(segments.len() * 2);
+        let mut pattern_variables = HashMap::new();
+
+        let segments_count = segments.len();
+        for (i, segment) in segments.iter().enumerate() {
+            let segment_size = segment_size(segment, &pattern_variables, None);
+
+            // If we're reading a variable number of bits we need to make sure
+            // that that variable is not negative!
+            if segment_size.can_be_negative() {
+                tests.push_back(BitArrayTest::ReadSizeIsNotNegative {
+                    size: segment_size.clone(),
+                });
+            }
+
+            // All segments but the last will require the original bit array to
+            // have a minimum number of bits for the pattern to succeed. The
+            // final segment is special as it could require a specific size, or
+            // be a catch all that matches with any number of remaining bits.
+            let is_last_segment = i + 1 == segments_count;
+            match &segment_size {
+                ReadSize::RemainingBits => (),
+                ReadSize::RemainingBytes => tests.push_back(BitArrayTest::CatchAllIsBytes {
+                    size_so_far: previous_end.clone(),
+                }),
+                ReadSize::ConstantBits(_)
+                | ReadSize::VariableBits { .. }
+                | ReadSize::BinaryOperator { .. } => {
+                    let size = previous_end.clone().add_size(&segment_size);
+                    let operator = if is_last_segment {
+                        SizeOperator::Equal
+                    } else {
+                        SizeOperator::GreaterEqual
+                    };
+                    tests.push_back(BitArrayTest::Size(SizeTest { operator, size }));
+                }
+            };
+
+            let type_ = match &segment.type_ {
+                type_ if type_.is_int() => ReadType::Int,
+                type_ if type_.is_float() => ReadType::Float,
+                type_ if type_.is_string() => ReadType::String,
+                type_ if type_.is_bit_array() => ReadType::BitArray,
+                type_ if type_.is_utf_codepoint() => ReadType::UtfCodepoint,
+                x => panic!("invalid segment type in exhaustiveness {x:?}"),
+            };
+
+            let read_action = ReadAction {
+                size: segment_size.clone(),
+                from: previous_end.clone(),
+                type_,
+                endianness: segment.endianness(),
+                signed: segment.signed(),
+            };
+
+            // Each segment is also turned into a match test, checking the
+            // selected bits match with the pattern's value.
+            let value = segment_matched_value(segment, None, &read_action);
+
+            // Then if the matched value is a variable that is in scope for the
+            // rest of the pattern we keep track of it, so it can be used in the
+            // following read actions as a valid size.
+            match &value {
+                BitArrayMatchedValue::LiteralFloat(_)
+                | BitArrayMatchedValue::LiteralInt { .. }
+                | BitArrayMatchedValue::LiteralString { .. }
+                | BitArrayMatchedValue::Discard(_) => {}
+                BitArrayMatchedValue::Variable(name)
+                | BitArrayMatchedValue::Assign { name, .. } => {
+                    let _ = pattern_variables.insert(name.clone(), read_action.clone());
+                }
+            }
+
+            // If we are matching on a float segment that is not a literal we want
+            // to add an additional check to make sure that we won't match with
+            // `NaN` and `Infinity`!
+            if type_.is_float() && !value.is_literal() {
+                tests.push_back(BitArrayTest::SegmentIsFiniteFloat {
+                    read_action: read_action.clone(),
+                });
+            }
+            tests.push_back(BitArrayTest::Match(MatchTest { value, read_action }));
+
+            previous_end = previous_end.add_size(&segment_size);
+        }
+        tests
+    }
+}
+
+fn segment_matched_value(
+    segment: &TypedPatternBitArraySegment,
+    // If we are compiling an assignment pattern, we still need access to the
+    // `type_` and `options` fields of the `segment`, so we must still pass that
+    // in above. However, we need to check the correct sub-pattern of the original
+    // pattern, so if they are different we set this argument to `Some`.
+    pattern: Option<&TypedPattern>,
+    read_action: &ReadAction,
+) -> BitArrayMatchedValue {
+    let pattern = pattern.unwrap_or(&segment.value);
+    match pattern {
+        ast::Pattern::Int {
+            int_value,
+            location,
+            ..
+        } => BitArrayMatchedValue::LiteralInt {
+            value: int_value.clone(),
+            location: *location,
+            bits: int_to_bits(
+                int_value,
+                &read_action.size,
+                read_action.endianness,
+                read_action.signed,
+            ),
+        },
+        ast::Pattern::Float { value, .. } => BitArrayMatchedValue::LiteralFloat(value.clone()),
+        ast::Pattern::String { value, .. } if segment.has_utf16_option() => {
+            BitArrayMatchedValue::LiteralString {
+                value: value.clone(),
+                encoding: StringEncoding::Utf16,
+                bytes: string_to_utf16_bytes(
+                    &convert_string_escape_chars(value),
+                    read_action.endianness,
+                ),
+            }
+        }
+        ast::Pattern::String { value, .. } if segment.has_utf32_option() => {
+            BitArrayMatchedValue::LiteralString {
+                value: value.clone(),
+                encoding: StringEncoding::Utf32,
+                bytes: string_to_utf32_bytes(
+                    &convert_string_escape_chars(value),
+                    read_action.endianness,
+                ),
+            }
+        }
+        ast::Pattern::String { value, .. } => BitArrayMatchedValue::LiteralString {
+            value: value.clone(),
+            encoding: StringEncoding::Utf8,
+            bytes: convert_string_escape_chars(value).as_bytes().into(),
+        },
+        ast::Pattern::Variable { name, .. } => BitArrayMatchedValue::Variable(name.clone()),
+        ast::Pattern::Discard { name, .. } => BitArrayMatchedValue::Discard(name.clone()),
+        ast::Pattern::Assign { name, pattern, .. } => BitArrayMatchedValue::Assign {
+            name: name.clone(),
+            value: Box::new(segment_matched_value(segment, Some(pattern), read_action)),
+        },
+        ast::Pattern::BitArraySize(_)
+        | ast::Pattern::List { .. }
+        | ast::Pattern::Constructor { .. }
+        | ast::Pattern::Tuple { .. }
+        | ast::Pattern::BitArray { .. }
+        | ast::Pattern::StringPrefix { .. }
+        | ast::Pattern::Invalid { .. } => panic!("unexpected segment value pattern {pattern:?}"),
+    }
+}
+
+fn int_to_bits(
+    value: &BigInt,
+    read_size: &ReadSize,
+    endianness: Endianness,
+    signed: bool,
+) -> Result<BitVec<u8, Msb0>, IntToBitsError> {
+    let size = read_size
+        .constant_bits()
+        .ok_or(IntToBitsError::NonConstantSize)?
+        .to_u32()
+        .ok_or(IntToBitsError::ExceedsMaximumSize)?;
+
+    if !representable_with_bits(value, size, signed) {
+        return Err(IntToBitsError::Unrepresentable { size });
+    } else if size > BitArrayMatchedValue::MAX_BITS_INTERFERENCE {
+        return Err(IntToBitsError::ExceedsMaximumSize);
+    }
+
+    // Pad negative numbers with 1s (true) and non-negative numbers with 0s (false)
+    let pad_digit = value.sign() == Sign::Minus;
+    let size = size as usize;
+    let mut bytes = int_to_bytes(value, endianness, signed);
+    let bytes_size = bytes.len() * 8;
+
+    let bits = match (endianness, bytes_size.cmp(&size)) {
+        (_, Ordering::Equal) => BitVec::from_vec(bytes),
+
+        // Even though we return an error if `value` cannot be represented in `size` bits,
+        // we may need to slice off up a couple bits if the read size is not a multiple of 8.
+        // <3:4> yields the bytes [0b0000_0011]. We slice off 4 bits and get 0011
+        (Endianness::Big, Ordering::Greater) => {
+            BitVec::from_bitslice(&bytes.view_bits()[bytes_size - size..])
+        }
+        // If the number needs fewer bits than the read size, we pad it.
+        // <3:9> yields the bytes [0b0000_0011]. We add one digit and get 0_0000_0011
+        (Endianness::Big, Ordering::Less) => {
+            let mut bits = BitVec::repeat(pad_digit, size - bytes_size);
+            bits.extend_from_raw_slice(&bytes);
+            bits
+        }
+
+        (Endianness::Little, Ordering::Greater) => {
+            // If the difference is greater than a byte, we returned an Error earlier
+            let remainder = size % 8;
+            if remainder == 0 {
+                BitVec::from_vec(bytes)
+            } else {
+                // If the size is not a multiple of 8, we need to truncate the most significant bits.
+                // As they are in the last byte, we leftshift by the appropriate amount and
+                // truncate the final bits after conversion
+                let last_byte = bytes.last_mut().expect("bytes must not be empty");
+                *last_byte <<= 8 - remainder;
+
+                let mut bits = BitVec::from_vec(bytes);
+                bits.truncate(size);
+                bits
+            }
+        }
+        (Endianness::Little, Ordering::Less) => {
+            let mut bits = BitVec::from_vec(bytes);
+            let padding: BitVec<u8, Msb0> = BitVec::repeat(pad_digit, size - bytes_size);
+            bits.extend_from_bitslice(padding.as_bitslice());
+            bits
+        }
+    };
+    Ok(bits)
+}
+
+fn int_to_bytes(value: &BigInt, endianness: Endianness, signed: bool) -> Vec<u8> {
+    match (endianness, signed) {
+        (Endianness::Big, false) => value.to_bytes_be().1,
+        (Endianness::Big, true) => value.to_signed_bytes_be(),
+        (Endianness::Little, false) => value.to_bytes_le().1,
+        (Endianness::Little, true) => value.to_signed_bytes_le(),
+    }
+}
+
+#[derive(Clone, Copy, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
+pub enum IntToBitsError {
+    Unrepresentable { size: u32 },
+    ExceedsMaximumSize,
+    NonConstantSize,
+}
+
+fn segment_size(
+    segment: &TypedPatternBitArraySegment,
+    pattern_variables: &HashMap<EcoString, ReadAction>,
+    // If we are compiling an assignment pattern, we still need access to the
+    // `type_` and `options` fields of the `segment`, so we must still pass that
+    // in above. However, we need to check the correct sub-pattern of the original
+    // pattern, so if they are different we set this argument to `Some`.
+    pattern: Option<&TypedPattern>,
+) -> ReadSize {
+    let pattern = pattern.unwrap_or(&segment.value);
+
+    match segment.size() {
+        // The size of a segment must be a `BitArraySize` pattern.
+        Some(ast::Pattern::BitArraySize(size)) => {
+            bit_array_size(segment.unit(), pattern_variables, size)
+        }
+        Some(x) => panic!("invalid pattern size made it to code generation {x:?}"),
+
+        // If a segment has the `bits`/`bytes` option and has no size, that
+        // means it's the final catch all segment: we'll have to read any number
+        // of bits.
+        _ if segment.has_bits_option() => ReadSize::RemainingBits,
+        _ if segment.has_bytes_option() => ReadSize::RemainingBytes,
+
+        // If there's no size option we go for a default: 8 bits for int
+        // segments, and 64 for anything else.
+        None if segment.type_.is_int() => ReadSize::ConstantBits(8.into()),
+        None => match pattern {
+            ast::Pattern::Assign { pattern, .. } => {
+                segment_size(segment, pattern_variables, Some(pattern))
+            }
+
+            ast::Pattern::String { value, .. } if segment.has_utf16_option() => {
+                ReadSize::ConstantBits(
+                    // Each utf16 code unit is 16 bits
+                    length_utf16(&convert_string_escape_chars(value)) * BigInt::from(16),
+                )
+            }
+            ast::Pattern::String { value, .. } if segment.has_utf32_option() => {
+                // Each utf32 code unit is 32 bits
+                ReadSize::ConstantBits(
+                    length_utf32(&convert_string_escape_chars(value)) * BigInt::from(32),
+                )
+            }
+            // If the segment is a literal string then it has an automatic size
+            // given by its number of bytes.
+            ast::Pattern::String { value, .. } => {
+                ReadSize::ConstantBits(convert_string_escape_chars(value).len() * BigInt::from(8))
+            }
+            // In all other cases the segment is considered to be 64 bits
+            ast::Pattern::Int { .. }
+            | ast::Pattern::Float { .. }
+            | ast::Pattern::Variable { .. }
+            | ast::Pattern::BitArraySize(_)
+            | ast::Pattern::Discard { .. }
+            | ast::Pattern::List { .. }
+            | ast::Pattern::Constructor { .. }
+            | ast::Pattern::Tuple { .. }
+            | ast::Pattern::BitArray { .. }
+            | ast::Pattern::StringPrefix { .. }
+            | ast::Pattern::Invalid { .. } => ReadSize::ConstantBits(64.into()),
+        },
+    }
+}
+
+fn bit_array_size(
+    unit: u8,
+    pattern_variables: &HashMap<EcoString, ReadAction>,
+    size: &TypedBitArraySize,
+) -> ReadSize {
+    match size {
+        BitArraySize::Int { int_value, .. } => ReadSize::ConstantBits(int_value * unit),
+        BitArraySize::Variable { name, .. } => {
+            let variable = match pattern_variables.get(name) {
+                Some(read_action) => {
+                    VariableUsage::PatternSegment(name.clone(), read_action.clone())
+                }
+                None => VariableUsage::OutsideVariable(name.clone()),
+            };
+            ReadSize::VariableBits {
+                variable: Box::new(variable),
+                unit,
+            }
+        }
+        BitArraySize::BinaryOperator {
+            operator,
+            left,
+            right,
+            ..
+        } => {
+            let size = ReadSize::BinaryOperator {
+                left: Box::new(bit_array_size(1, pattern_variables, left)),
+                right: Box::new(bit_array_size(1, pattern_variables, right)),
+                operator: *operator,
+            };
+
+            if unit == 1 {
+                size
+            } else {
+                ReadSize::BinaryOperator {
+                    left: Box::new(size),
+                    right: Box::new(ReadSize::ConstantBits(unit.into())),
+                    operator: IntOperator::Multiply,
+                }
+            }
+        }
+        BitArraySize::Block { inner, .. } => bit_array_size(unit, pattern_variables, inner),
+    }
+}
+
+/// Returns `true` if one bag is a superset of the other: that is it contains
+/// all the keys of `other` in a quantity that's greater or equal.
+///
+#[must_use]
+fn superset(
+    one: &im::HashMap<VariableUsage, usize>,
+    other: &im::HashMap<VariableUsage, usize>,
+) -> bool {
+    other
+        .iter()
+        .all(|(key, other_occurrences)| match one.get(key) {
+            Some(occurrences) => occurrences >= other_occurrences,
+            None => false,
+        })
+}
+
+#[must_use]
+fn representable_with_bits(value: &BigInt, bits: u32, signed: bool) -> bool {
+    // No number is representable in 0 bits.
+    if bits == 0 {
+        return false;
+    };
+
+    let required_bits = match (value.sign(), signed) {
+        // Zero always needs one bit.
+        (Sign::NoSign, _) => 1,
+
+        // `BigInt::bits` does not consider the sign!
+        (Sign::Plus, false) => value.bits(),
+        // Therefore we need to add the sign bit here: `10` -> `010`
+        (Sign::Plus, true) => value.bits() + 1,
+
+        // A negative number must be signed
+        (Sign::Minus, false) => return false,
+        (Sign::Minus, true) => {
+            let bits_unsigned = value.bits();
+            let trailing_zeros = value
+                .trailing_zeros()
+                .expect("trailing_zeros to return a value for non-zero numbers");
+            let is_power_of_2 = trailing_zeros == bits_unsigned - 1;
+
+            // Negative powers of two don't need an extra sign bit. E.g. `-2 == 0b10`
+            if is_power_of_2 {
+                bits_unsigned
+            } else {
+                bits_unsigned + 1
+            }
+        }
+    };
+
+    match required_bits.to_u32() {
+        Some(required_bits) => bits >= required_bits,
+        None => false,
+    }
+}
+
+#[cfg(test)]
+mod representable_with_bits_test {
+    use crate::exhaustiveness::representable_with_bits;
+    use num_bigint::BigInt;
+
+    #[test]
+    fn positive_number_representable_with_bits_test() {
+        // 9 can be represented as a >=4 bits unsigned number.
+        assert!(representable_with_bits(&9.into(), 4, false));
+        assert!(representable_with_bits(&9.into(), 5, false));
+        // But not in <=3 bits as an unsigned number.
+        assert!(!representable_with_bits(&9.into(), 3, false));
+        assert!(!representable_with_bits(&9.into(), 2, false));
+
+        // It can be represented as a >=5 bit signed number.
+        assert!(representable_with_bits(&9.into(), 5, true));
+        assert!(representable_with_bits(&9.into(), 6, true));
+        // But not in <= 4 bits as a signed number.
+        assert!(!representable_with_bits(&9.into(), 4, true));
+        assert!(!representable_with_bits(&9.into(), 3, true));
+    }
+
+    #[test]
+    fn negative_number_representable_with_bits_test() {
+        // A negative number will never be representable as an unsigned number,
+        // no matter the number of bits!
+        assert!(!representable_with_bits(&BigInt::from(-9), 1, false));
+        assert!(!representable_with_bits(&BigInt::from(-9), 500, false));
+
+        // -9 can be represented in >=5 bits as a signed number.
+        assert!(representable_with_bits(&BigInt::from(-9), 5, true));
+        assert!(representable_with_bits(&BigInt::from(-9), 6, true));
+        // But not in <= 4 bits as a signed number.
+        assert!(!representable_with_bits(&BigInt::from(-9), 4, true));
+        assert!(!representable_with_bits(&BigInt::from(-9), 3, true));
+    }
+
+    #[test]
+    fn zero_representable_with_bits_test() {
+        for i in 0..12 {
+            println!("{i}: {}", BigInt::from(i).bits());
+        }
+        assert!(!representable_with_bits(&BigInt::ZERO, 0, false));
+        assert!(!representable_with_bits(&BigInt::ZERO, 0, true));
+
+        assert!(representable_with_bits(&BigInt::ZERO, 1, false));
+        assert!(representable_with_bits(&BigInt::ZERO, 1, true));
+    }
+
+    #[test]
+    fn number_representable_with_sign_test() {
+        // Sign needs one additional bit
+        assert!(representable_with_bits(&8.into(), 4, false));
+        assert!(!representable_with_bits(&8.into(), 4, true));
+        assert!(representable_with_bits(&8.into(), 5, true));
+
+        // Negative number must be signed
+        assert!(!representable_with_bits(&BigInt::from(-8), 100, false));
+
+        // Negative powers of two don't need an extra sign bit
+        assert!(!representable_with_bits(&BigInt::from(-8), 3, true));
+        assert!(representable_with_bits(&BigInt::from(-8), 4, true));
+
+        assert!(!representable_with_bits(&BigInt::from(-9), 4, true));
+        assert!(representable_with_bits(&BigInt::from(-9), 5, true));
+    }
+}
+
+#[cfg(test)]
+mod int_to_bits_test {
+    use std::assert_eq;
+
+    use crate::{
+        ast::Endianness,
+        exhaustiveness::{BitArrayMatchedValue, IntToBitsError, ReadSize, int_to_bits},
+    };
+    use bitvec::{bitvec, order::Msb0, vec::BitVec};
+    use num_bigint::BigInt;
+
+    fn read_size(size: u32) -> ReadSize {
+        ReadSize::ConstantBits(BigInt::from(size))
+    }
+
+    #[test]
+    fn int_to_bits_size_too_big() {
+        assert_eq!(
+            int_to_bits(
+                &BigInt::ZERO,
+                &read_size(BitArrayMatchedValue::MAX_BITS_INTERFERENCE + 1),
+                Endianness::Big,
+                true,
+            ),
+            Err(IntToBitsError::ExceedsMaximumSize),
+        );
+    }
+
+    #[test]
+    fn int_to_bits_zero() {
+        let expect = Ok(bitvec![u8, Msb0; 0; 3]);
+        assert_eq!(
+            int_to_bits(&BigInt::ZERO, &read_size(3), Endianness::Big, false),
+            expect
+        );
+        assert_eq!(
+            int_to_bits(&BigInt::ZERO, &read_size(3), Endianness::Little, false),
+            expect
+        );
+
+        let expect = Ok(bitvec![u8, Msb0; 0; 10]);
+        assert_eq!(
+            int_to_bits(&BigInt::ZERO, &read_size(10), Endianness::Big, false),
+            expect
+        );
+        assert_eq!(
+            int_to_bits(&BigInt::ZERO, &read_size(10), Endianness::Little, false),
+            expect
+        );
+    }
+
+    #[test]
+    fn int_to_bits_positive() {
+        // Exact match
+        assert_eq!(
+            int_to_bits(
+                &BigInt::from(0xff00),
+                &read_size(16),
+                Endianness::Big,
+                false
+            ),
+            Ok(BitVec::<u8, Msb0>::from_vec(vec![0xff, 0x00])),
+        );
+        assert_eq!(
+            int_to_bits(
+                &BigInt::from(0xff00),
+                &read_size(16),
+                Endianness::Little,
+                false
+            ),
+            Ok(BitVec::<u8, Msb0>::from_vec(vec![0x00, 0xff])),
+        );
+
+        assert_eq!(
+            int_to_bits(
+                &BigInt::from(0b11_1111_0000),
+                &read_size(10),
+                Endianness::Big,
+                false
+            ),
+            Ok(bitvec![u8, Msb0; 1, 1, 1, 1, 1, 1, 0, 0, 0, 0]),
+        );
+        assert_eq!(
+            int_to_bits(
+                &BigInt::from(0b11_1111_0000),
+                &read_size(10),
+                Endianness::Little,
+                false
+            ),
+            Ok(bitvec![u8, Msb0; 1, 1, 1, 1, 0, 0, 0, 0, 1, 1]),
+        );
+
+        // Too few bits in int
+        assert_eq!(
+            int_to_bits(&BigInt::from(0xff), &read_size(12), Endianness::Big, false),
+            Ok(bitvec![u8, Msb0; 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1]),
+        );
+        assert_eq!(
+            int_to_bits(
+                &BigInt::from(0xff),
+                &read_size(12),
+                Endianness::Little,
+                false
+            ),
+            Ok(bitvec![u8, Msb0; 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0]),
+        );
+    }
+
+    #[test]
+    fn int_to_bits_signed() {
+        assert_eq!(
+            int_to_bits(&BigInt::from(-128), &read_size(12), Endianness::Big, true),
+            Ok(bitvec![u8, Msb0; 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0]),
+        );
+        assert_eq!(
+            int_to_bits(
+                &BigInt::from(-128),
+                &read_size(12),
+                Endianness::Little,
+                true
+            ),
+            Ok(bitvec![u8, Msb0; 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1]),
+        );
     }
 }

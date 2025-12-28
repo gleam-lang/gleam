@@ -1,20 +1,21 @@
 [workspace]
 resolver = "2"
 members = [
-    "gleam-bin",
-    "compiler-cli",
-    "compiler-core",
-    "compiler-wasm",
-    "test-helpers-rs",
-    "test-output",
-    "test-package-compiler",
-    "test-project-compiler",
+  "gleam-bin",
+  "compiler-cli",
+  "compiler-core",
+  "compiler-wasm",
+  "test-helpers-rs",
+  "test-output",
+  "test-package-compiler",
+  "test-project-compiler",
+  "language-server",
 ]
 
 # common dependencies
 [workspace.dependencies]
 # Immutable data structures
-im = "15"
+im = { version = "15", features = ["serde"] }
 # Extra iter methods
 itertools = "0"
 # Parsing
@@ -25,18 +26,15 @@ termcolor = "1"
 serde = { version = "1", features = ["derive", "rc"] }
 serde_json = "1"
 # toml config file parsing
-toml = "0"
-walkdir = "2"
+toml = "0.9"
 # Enum trait impl macros
 strum = { version = "0", features = ["derive"] }
 # Hex package manager client
-hexpm = "3.3"
+hexpm = "5"
 # Creation of tar file archives
 tar = "0"
 # gzip compression
 flate2 = "1"
-# Byte array data type
-bytes = "1"
 # Logging
 tracing = "0"
 # Macro to work around Rust's traits not working with async. Sigh.
@@ -51,17 +49,19 @@ debug-ignore = "1"
 base16 = "0"
 # Language server protocol server plumbing
 lsp-server = "0"
-lsp-types = "0"
+lsp-types = "=0.95.1"
 # Compact clone-on-write vector & string type
 ecow = "0"
 # Drop in replacement for std::path but with only utf-8
 camino = "1"
 # std::error::Error definition macro
-thiserror = "1"
+thiserror = "2"
 # Test assertion errors with diffs
 pretty_assertions = "1"
 # Snapshot testing to make test maintenance easier
 insta = { version = "1", features = ["glob"] }
 # A transitive dependency needed to compile into wasm32-unknown-unknown
 # See https://docs.rs/getrandom/latest/getrandom/index.html#webassembly-support
-getrandom = { version = "0", features = ["js"] }
+getrandom = { version = "0.2", features = ["js"] }
+# Non-empty vectors
+vec1 = "1"

@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn main(x, times) {\n  case times {\n    0 -> main(x, 0)\n    _ -> main(x, times - 1)\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main(x, times) {
+  case times {
+    0 -> main(x, 0)
+    _ -> main(x, times - 1)
+  }
+}
+
+
+----- WARNING
+warning: Unused function argument
+  ┌─ /src/warning/wrn.gleam:2:13
+  │
+2 │ pub fn main(x, times) {
+  │             ^ This argument is never used
+
+This argument is passed to the function when recursing, but it's never used
+for anything.

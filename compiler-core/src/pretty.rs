@@ -11,6 +11,20 @@
 //!
 //! - `ForcedBreak` from Elixir.
 //! - `FlexBreak` from Elixir.
+//!
+//! The way this module works is fairly simple conceptually, however the actual
+//! behaviour in practice can be hard to wrap one's head around.
+//!
+//! The basic premise is the `Document` type, which is a tree structure,
+//! containing some text as well as information on how it can be formatted.
+//! Once the document is constructed, it can be printed using the
+//! `to_pretty_string` function.
+//!
+//! It will then traverse the tree, and construct
+//! a string, attempting to wrap lines to that they do not exceed the line length
+//! limit specified. Where and when it wraps lines is determined by the structure
+//! of the `Document` itself.
+//!
 #![allow(clippy::wrong_self_convention)]
 
 #[cfg(test)]
@@ -18,10 +32,24 @@ mod tests;
 
 use ecow::{EcoString, eco_format};
 use itertools::Itertools;
+use num_bigint::BigInt;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{Result, io::Utf8Writer};
 
+/// Join multiple documents together in a vector. This macro calls the `to_doc`
+/// method on each element, providing a concise way to write a document sequence.
+/// For example:
+///
+/// ```rust:norun
+/// docvec!["Hello", line(), "world!"]
+/// ```
+///
+/// Note: each document in a docvec is not separated in any way: the formatter
+/// will never break a line unless a `Document::Break` or `Document::Line`
+/// is used. Therefore, `docvec!["a", "b", "c"]` is equivalent to
+/// `"abc".to_doc()`.
+///
 #[macro_export]
 macro_rules! docvec {
     () => {
@@ -112,6 +140,12 @@ impl<'a> Documentable<'a> for u8 {
     }
 }
 
+impl<'a> Documentable<'a> for BigInt {
+    fn to_doc(self) -> Document<'a> {
+        Document::eco_string(eco_format!("{self}"))
+    }
+}
+
 impl<'a> Documentable<'a> for Document<'a> {
     fn to_doc(self) -> Document<'a> {
         self
@@ -130,10 +164,14 @@ impl<'a, D: Documentable<'a>> Documentable<'a> for Option<D> {
     }
 }
 
+/// Joins an iterator into a single document, in the same way as `docvec!`.
 pub fn concat<'a>(docs: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
     Document::Vec(docs.into_iter().collect())
 }
 
+/// Joins an iterator into a single document, interspersing each element with
+/// another document. This is useful for example in argument lists, where a
+/// list of arguments must all be separated with a comma.
 pub fn join<'a>(
     docs: impl IntoIterator<Item = Document<'a>>,
     separator: Document<'a>,
@@ -141,9 +179,17 @@ pub fn join<'a>(
     concat(Itertools::intersperse(docs.into_iter(), separator))
 }
 
+/// A pretty printable document. A tree structure, made up of text and other
+/// elements which determine how it can be formatted.
+///
+/// The variants of this enum should probably not be constructed directly,
+/// rather use the helper functions of the same names to construct them.
+/// For example, use `line()` instead of `Document::Line(1)`.
+///
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Document<'a> {
-    /// A mandatory linebreak
+    /// A mandatory linebreak. This is always printed as a string of newlines,
+    /// equal in length to the number specified.
     Line(usize),
 
     /// Forces the breaks of the wrapped document to be considered as not
@@ -151,42 +197,71 @@ pub enum Document<'a> {
     /// used to force its `Break`s to always break.
     ForceBroken(Box<Self>),
 
-    /// Ignore the next break
+    /// Ignore the next break, forcing it to render as unbroken.
     NextBreakFits(Box<Self>, NextBreakFitsMode),
 
-    /// Renders `broken` if group is broken, `unbroken` otherwise
+    /// A document after which the formatter can insert a newline. This determines
+    /// where line breaks can occur, outside of hardcoded `Line`s.
+    /// See `break_` and `flex_break` for usage.
     Break {
         broken: &'a str,
         unbroken: &'a str,
         kind: BreakKind,
     },
 
-    /// Join multiple documents together
+    /// Join multiple documents together. The documents are not separated in any
+    /// way: the formatter will only print newlines if `Document::Break` or
+    /// `Document::Line` is used.
     Vec(Vec<Self>),
 
     /// Nests the given document by the given indent, depending on the specified
-    /// condition
+    /// condition. See `Document::nest`, `Document::set_nesting` and
+    /// `Document::nest_if_broken` for usages.
     Nest(isize, NestMode, NestCondition, Box<Self>),
 
-    /// Nests the given document to the current cursor position
+    /// Groups a document. When pretty printing a group, the formatter will
+    /// first attempt to fit the entire group on one line. If it fails, all
+    /// `break_` documents in the group will render broken.
+    ///
+    /// Nested groups are handled separately to their parents, so if the
+    /// outermost group is broken, any sub-groups might be rendered broken
+    /// or unbroken, depending on whether they fit on a single line.
     Group(Box<Self>),
 
-    /// A str to render
+    /// Renders a string slice. This will always render the string verbatim,
+    /// without any line breaks or other modifications to it.
     Str {
         string: &'a str,
-        // The number of extended grapheme clusters in the string.
-        // This is what the pretty printer uses as the width of the string as it
-        // is closes to what a human would consider the "length" of a string.
-        //
-        // Since computing the number of grapheme clusters requires walking over
-        // the string we precompute it to avoid iterating through a string over
-        // and over again in the pretty printing algorithm.
-        //
+        /// The number of extended grapheme clusters in the string.
+        /// This is what the pretty printer uses as the width of the string as it
+        /// is closes to what a human would consider the "length" of a string.
+        ///
+        /// Since computing the number of grapheme clusters requires walking over
+        /// the string we precompute it to avoid iterating through a string over
+        /// and over again in the pretty printing algorithm.
+        ///
         graphemes: isize,
     },
 
-    /// A string that is cheap to copy
-    EcoString { string: EcoString, graphemes: isize },
+    /// Renders an `EcoString`. This will always render the string verbatim,
+    /// without any line breaks or other modifications to it.
+    EcoString {
+        string: EcoString,
+        /// The number of extended grapheme clusters in the string.
+        /// This is what the pretty printer uses as the width of the string as it
+        /// is closes to what a human would consider the "length" of a string.
+        ///
+        /// Since computing the number of grapheme clusters requires walking over
+        /// the string we precompute it to avoid iterating through a string over
+        /// and over again in the pretty printing algorithm.
+        ///
+        graphemes: isize,
+    },
+
+    /// A string that is not taken into account when determining line length.
+    /// This is useful for additional formatting text which won't be rendered
+    /// in the final output, such as ANSI codes or HTML elements.
+    ZeroWidthString { string: EcoString },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -288,7 +363,7 @@ fn fits(
                 // this break [ref:forced-broken], so we go check the inner
                 // document ignoring the effects of this one.
                 Mode::ForcedBroken => docs.push_front((indent, mode, doc)),
-                _ => return false,
+                Mode::Broken | Mode::Unbroken | Mode::ForcedUnbroken => return false,
             },
 
             // [tag:newline-fit] When we run into a line we know that the
@@ -321,7 +396,9 @@ fn fits(
                 // Any other mode is preserved as-is: if the mode is forced it
                 // has to be left unchanged, and if the mode is already unbroken
                 // there's no need to change it.
-                _ => docs.push_front((indent, mode, doc)),
+                Mode::Unbroken | Mode::ForcedBroken | Mode::ForcedUnbroken => {
+                    docs.push_front((indent, mode, doc))
+                }
             },
 
             // When we run into a string we increase the current_width; looping
@@ -329,6 +406,9 @@ fn fits(
             Document::Str { graphemes, .. } | Document::EcoString { graphemes, .. } => {
                 current_width += graphemes
             }
+
+            // Zero width strings do nothing: they do not contribute to line length
+            Document::ZeroWidthString { .. } => {}
 
             // If we get to a break we need to first see if it has to be
             // rendered as its unbroken or broken string, depending on the mode.
@@ -364,7 +444,9 @@ fn fits(
                     // response to the question "Does the document fit?" will be
                     // yes [ref:break-fit].
                     // This is why this is called `NextBreakFit` I think.
-                    _ => docs.push_front((indent, Mode::ForcedBroken, doc)),
+                    Mode::Broken | Mode::Unbroken | Mode::ForcedBroken => {
+                        docs.push_front((indent, Mode::ForcedBroken, doc))
+                    }
                 },
             },
 
@@ -383,9 +465,12 @@ fn fits(
     }
 }
 
+/// The kind of line break this `Document::Break` is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BreakKind {
+    /// A `flex_break`.
     Flex,
+    /// A `break_`.
     Strict,
 }
 
@@ -492,6 +577,11 @@ fn format(
                 writer.str_write(string)?;
             }
 
+            Document::ZeroWidthString { string } => {
+                // We write the string, but do not increment the length
+                writer.str_write(string)?;
+            }
+
             // If multiple documents need to be printed, then they are all
             // pushed to the front of the queue and will be printed one by one.
             Document::Vec(vec) => {
@@ -555,18 +645,38 @@ fn format(
     Ok(())
 }
 
+/// Renders an empty document.
 pub fn nil<'a>() -> Document<'a> {
     Document::Vec(vec![])
 }
 
+/// Renders a single newline.
 pub fn line<'a>() -> Document<'a> {
     Document::Line(1)
 }
 
+/// Renders a string of newlines, equal in length to the number provided.
 pub fn lines<'a>(i: usize) -> Document<'a> {
     Document::Line(i)
 }
 
+/// A document after which the formatter can insert a newline. This determines
+/// where line breaks can occur, outside of hardcoded `Line`s.
+///
+/// If the formatter determines that a group cannot fit on a single line,
+/// all breaks in the group will be rendered as broken. Otherwise, they
+/// will be rendered as unbroken.
+///
+/// A broken `Break` renders the `broken` string, followed by a newline.
+/// An unbroken `Break` renders the `unbroken` string by itself.
+///
+/// For example:
+/// ```rust:norun
+/// let document = docvec!["Hello", break_("", ", "), "world!"];
+/// assert_eq!(document.to_pretty_string(20), "Hello, world!");
+/// assert_eq!(document.to_pretty_string(10), "Hello\nworld!");
+/// ```
+///
 pub fn break_<'a>(broken: &'a str, unbroken: &'a str) -> Document<'a> {
     Document::Break {
         broken,
@@ -575,6 +685,20 @@ pub fn break_<'a>(broken: &'a str, unbroken: &'a str) -> Document<'a> {
     }
 }
 
+/// A document after which the formatter can insert a newline, similar to
+/// `break_()`. The difference is that when a group is rendered broken, all
+/// breaks are rendered broken. However, `flex_break` decides whether to
+/// break or not for every individual `flex_break`.
+///
+/// For example:
+/// ```rust:norun
+/// let with_breaks = docvec!["Hello", break_("", ", "), "pretty", break_("", ", "), "printed!"];
+/// assert_eq!(with_breaks.to_pretty_string(20), "Hello\npretty\nprinted!");
+///
+/// let with_flex_breaks = docvec!["Hello", flex_break("", ", "), "pretty", flex_break("", ", "), "printed!"];
+/// assert_eq!(with_flex_breaks.to_pretty_string(20), "Hello, pretty\nprinted!");
+/// ```
+///
 pub fn flex_break<'a>(broken: &'a str, unbroken: &'a str) -> Document<'a> {
     Document::Break {
         broken,
@@ -583,7 +707,22 @@ pub fn flex_break<'a>(broken: &'a str, unbroken: &'a str) -> Document<'a> {
     }
 }
 
+/// A string that is not taken into account when determining line length.
+/// This is useful for additional formatting text which won't be rendered
+/// in the final output, such as ANSI codes or HTML elements.
+///
+/// For example:
+/// ```rust:norun
+/// let document = docvec!["Hello", zero_width_string("This is a very long string"), break_("", ""), "world"];
+/// assert_eq!(document.to_pretty_string(20), "HelloThis is a very long stringworld");
+/// ```
+///
+pub fn zero_width_string<'a>(string: EcoString) -> Document<'a> {
+    Document::ZeroWidthString { string }
+}
+
 impl<'a> Document<'a> {
+    /// Creates a document from a string slice.
     pub fn str(string: &'a str) -> Self {
         Document::Str {
             graphemes: string.graphemes(true).count() as isize,
@@ -591,6 +730,7 @@ impl<'a> Document<'a> {
         }
     }
 
+    /// Creates a document from an owned `EcoString`.
     pub fn eco_string(string: EcoString) -> Self {
         Document::EcoString {
             graphemes: string.graphemes(true).count() as isize,
@@ -598,14 +738,24 @@ impl<'a> Document<'a> {
         }
     }
 
+    /// Groups a document. When pretty printing a group, the formatter will
+    /// first attempt to fit the entire group on one line. If it fails, all
+    /// `break_` documents in the group will render broken.
+    ///
+    /// Nested groups are handled separately to their parents, so if the
+    /// outermost group is broken, any sub-groups might be rendered broken
+    /// or unbroken, depending on whether they fit on a single line.
     pub fn group(self) -> Self {
         Self::Group(Box::new(self))
     }
 
+    /// Sets the indentation level of a document.
     pub fn set_nesting(self, indent: isize) -> Self {
         Self::Nest(indent, NestMode::Set, NestCondition::Always, Box::new(self))
     }
 
+    /// Nests a document by a certain indentation. When rending linebreaks, the
+    /// formatter will print a new line followed by the current indentation.
     pub fn nest(self, indent: isize) -> Self {
         Self::Nest(
             indent,
@@ -615,6 +765,8 @@ impl<'a> Document<'a> {
         )
     }
 
+    /// Nests a document by a certain indentation, but only if the current
+    /// group is broken.
     pub fn nest_if_broken(self, indent: isize) -> Self {
         Self::Nest(
             indent,
@@ -624,24 +776,44 @@ impl<'a> Document<'a> {
         )
     }
 
+    /// Forces all `break_` and `flex_break` documents in the current group
+    /// to render broken.
     pub fn force_break(self) -> Self {
         Self::ForceBroken(Box::new(self))
     }
 
+    /// Force the next `Break` to render unbroken, regardless of whether it
+    /// fits on the line or not.
     pub fn next_break_fits(self, mode: NextBreakFitsMode) -> Self {
         Self::NextBreakFits(Box::new(self), mode)
     }
 
+    /// Appends one document to another. Equivalent to `docvec![self, second]`,
+    /// except that it `self` is already a `Document::Vec`, it will append
+    /// directly to it instead of allocating a new vector.
+    ///
+    /// Useful when chaining multiple documents together in a fashion where
+    /// they cannot be put all into one `docvec!` macro.
     pub fn append(self, second: impl Documentable<'a>) -> Self {
         match self {
             Self::Vec(mut vec) => {
                 vec.push(second.to_doc());
                 Self::Vec(vec)
             }
-            first => Self::Vec(vec![first, second.to_doc()]),
+            Self::Line(..)
+            | Self::ForceBroken(..)
+            | Self::NextBreakFits(..)
+            | Self::Break { .. }
+            | Self::Nest(..)
+            | Self::Group(..)
+            | Self::Str { .. }
+            | Self::EcoString { .. }
+            | Self::ZeroWidthString { .. } => Self::Vec(vec![self, second.to_doc()]),
         }
     }
 
+    /// Prints a document into a `String`, attempting to limit lines to `limit`
+    /// characters in length.
     pub fn to_pretty_string(self, limit: isize) -> String {
         let mut buffer = String::new();
         self.pretty_print(limit, &mut buffer)
@@ -649,10 +821,14 @@ impl<'a> Document<'a> {
         buffer
     }
 
+    /// Surrounds a document in two delimiters. Equivalent to
+    /// `docvec![option, self, closed]`.
     pub fn surround(self, open: impl Documentable<'a>, closed: impl Documentable<'a>) -> Self {
         open.to_doc().append(self).append(closed)
     }
 
+    /// Prints a document into `writer`, attempting to limit lines to `limit`
+    /// characters in length.
     pub fn pretty_print(&self, limit: isize, writer: &mut impl Utf8Writer) -> Result<()> {
         let docs = im::vector![(0, Mode::Unbroken, self)];
         format(writer, limit, 0, docs)?;
@@ -671,6 +847,10 @@ impl<'a> Document<'a> {
             Break { broken, .. } => broken.is_empty(),
             ForceBroken(d) | Nest(_, _, _, d) | Group(d) | NextBreakFits(d, _) => d.is_empty(),
             Vec(docs) => docs.iter().all(|d| d.is_empty()),
+            // Zero-width strings don't count towards line length, but they are
+            // still printed and so are not empty. (Unless their string contents
+            // is also empty)
+            ZeroWidthString { string } => string.is_empty(),
         }
     }
 }

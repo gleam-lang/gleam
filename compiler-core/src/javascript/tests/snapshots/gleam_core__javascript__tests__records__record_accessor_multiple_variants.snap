@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/records.rs
+assertion_line: 18
 expression: "\npub type Person {\n    Teacher(name: String, title: String)\n    Student(name: String, age: Int)\n}\npub fn get_name(person: Person) { person.name }"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -20,6 +22,12 @@ export class Teacher extends $CustomType {
     this.title = title;
   }
 }
+export const Person$Teacher = (name, title) => new Teacher(name, title);
+export const Person$isTeacher = (value) => value instanceof Teacher;
+export const Person$Teacher$name = (value) => value.name;
+export const Person$Teacher$0 = (value) => value.name;
+export const Person$Teacher$title = (value) => value.title;
+export const Person$Teacher$1 = (value) => value.title;
 
 export class Student extends $CustomType {
   constructor(name, age) {
@@ -28,6 +36,14 @@ export class Student extends $CustomType {
     this.age = age;
   }
 }
+export const Person$Student = (name, age) => new Student(name, age);
+export const Person$isStudent = (value) => value instanceof Student;
+export const Person$Student$name = (value) => value.name;
+export const Person$Student$0 = (value) => value.name;
+export const Person$Student$age = (value) => value.age;
+export const Person$Student$1 = (value) => value.age;
+
+export const Person$name = (value) => value.name;
 
 export function get_name(person) {
   return person.name;

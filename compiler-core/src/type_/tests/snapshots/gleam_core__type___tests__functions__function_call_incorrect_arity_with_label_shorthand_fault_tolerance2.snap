@@ -24,7 +24,6 @@ error: Incorrect arity
 This call accepts these additional labelled arguments:
 
   - wabble
-  - wibble
 
 error: Type mismatch
   ┌─ /src/one/two.gleam:8:10

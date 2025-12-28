@@ -1,17 +1,19 @@
 ---
 source: compiler-core/src/javascript/tests/tuples.rs
-expression: "\nconst e = #(\n  \"loooooooooooooong\", \"loooooooooooong\", \"loooooooooooooong\",\n  \"loooooooooooooong\", \"loooooooooooong\", \"loooooooooooooong\",\n)\n"
+assertion_line: 97
+expression: "\npub const e = #(\n  \"loooooooooooooong\", \"loooooooooooong\", \"loooooooooooooong\",\n  \"loooooooooooooong\", \"loooooooooooong\", \"loooooooooooooong\",\n)\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-const e = #(
+pub const e = #(
   "loooooooooooooong", "loooooooooooong", "loooooooooooooong",
   "loooooooooooooong", "loooooooooooong", "loooooooooooooong",
 )
 
 
 ----- COMPILED JAVASCRIPT
-const e = [
+export const e = [
   "loooooooooooooong",
   "loooooooooooong",
   "loooooooooooooong",

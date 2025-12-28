@@ -114,11 +114,9 @@ compile_elixir(Modules, Out) ->
     case Modules of
         [] -> {true, []};
         _ ->
-            log({starting, "compiler.app"}),
-            ok = application:start(compiler),
-            log({starting, "elixir.app"}),
-            case application:start(elixir) of
-                ok -> do_compile_elixir(Modules, Out);
+            log({starting, "compiler.app,elixir.app"}),
+            case application:ensure_all_started([compiler, elixir]) of
+                {ok, _} -> do_compile_elixir(Modules, Out);
                 _ ->
                     io:put_chars(standard_error, [Error, $\n]),
                     {false, []}
@@ -131,7 +129,7 @@ do_compile_elixir(Modules, Out) ->
         list_to_binary(Module)
     end, Modules),
     OutBin = list_to_binary(Out),
-    Options = [{dest, OutBin}],
+    Options = [{dest, OutBin}, {return_diagnostics, true}],
     % Silence "redefining module" warnings.
     % Compiled modules in the build directory are added to the code path.
     % These warnings result from recompiling loaded modules.

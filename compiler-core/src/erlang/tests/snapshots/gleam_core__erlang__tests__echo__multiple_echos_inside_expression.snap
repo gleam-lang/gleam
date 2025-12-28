@@ -12,14 +12,14 @@ pub fn main() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 
 -file("project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
-    echo(1, "project/test/my/mod.gleam", 3),
-    echo(2, "project/test/my/mod.gleam", 4).
+    echo(1, nil, 3),
+    echo(2, nil, 4).
 
 % ...omitted code from `templates/echo.erl`...

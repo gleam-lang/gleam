@@ -101,3 +101,33 @@ pub fn main() {
 "#,
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5055
+#[test]
+fn alternative_patter_with_string_alias() {
+    assert_erl!(
+        r#"
+pub fn main(x) {
+  case x {
+    "a" as letter <> _ | "b" as letter <> _ -> letter
+    _ -> "wibble"
+  }
+}
+"#,
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5115
+#[test]
+fn aliased_string_prefix_pattern_referenced_in_guard() {
+    assert_erl!(
+        r#"
+pub fn main(x) {
+  case x {
+    "a" as letter <> _ if letter == x -> letter
+    _ -> "wibble"
+  }
+}
+"#,
+    );
+}

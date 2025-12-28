@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/use_.rs
+assertion_line: 56
 expression: "\npub fn main() {\n  let thingy = fn(f) { f() }\n  use <- thingy()\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -13,15 +15,18 @@ pub fn main() {
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 export function main() {
   let thingy = (f) => { return f(); };
   return thingy(
     () => {
       throw makeError(
         "todo",
+        FILEPATH,
         "my/mod",
         4,
-        "",
+        "main",
         "`todo` expression evaluated. This code has not yet been implemented.",
         {}
       )

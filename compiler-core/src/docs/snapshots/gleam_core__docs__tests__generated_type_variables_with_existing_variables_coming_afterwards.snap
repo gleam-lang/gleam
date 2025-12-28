@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/docs/tests.rs
+expression: output
+---
+---- SOURCE CODE
+-- main.gleam
+
+pub fn wibble(_a, _b, _c: b, _d: a) {
+  todo
+}
+
+
+---- VALUES
+
+--- wibble
+<pre><code>pub fn wibble(a: c, b: d, c: b, d: a) -> e</code></pre>

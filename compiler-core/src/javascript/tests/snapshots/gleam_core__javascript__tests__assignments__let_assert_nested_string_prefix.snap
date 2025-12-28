@@ -17,6 +17,8 @@ pub fn main() {
 ----- COMPILED JAVASCRIPT
 import { CustomType as $CustomType, makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 class Wibble extends $CustomType {
   constructor(wibble) {
     super();
@@ -26,17 +28,22 @@ class Wibble extends $CustomType {
 
 export function main() {
   let $ = new Wibble("wibble");
-  if (!($ instanceof Wibble) || !$.wibble.startsWith("w")) {
+  let prefix;
+  let rest;
+  let $1 = $.wibble;
+  if ($1.startsWith("w")) {
+    prefix = "w";
+    rest = $1.slice(1);
+  } else {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       7,
       "main",
       "Pattern match failed, no pattern matched the value.",
-      { value: $ }
+      { value: $, start: 61, end: 128, pattern_start: 72, pattern_end: 109 }
     )
   }
-  let rest = $.wibble.slice(1);
-  let prefix = "w";
   return prefix + rest;
 }

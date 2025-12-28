@@ -2,6 +2,7 @@ use super::*;
 use crate::{
     analyse::name::check_name_case,
     ast::{Layer, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar},
+    reference::ReferenceKind,
 };
 use std::sync::Arc;
 
@@ -113,15 +114,17 @@ impl Hydrator {
         match ast {
             TypeAst::Constructor(TypeAstConstructor {
                 location,
+                name_location,
                 module,
                 name,
-                arguments: args,
+                arguments,
+                start_parentheses,
             }) => {
                 // Hydrate the type argument AST into types
-                let mut argument_types = Vec::with_capacity(args.len());
-                for t in args {
-                    let type_ = self.type_from_ast(t, environment, problems)?;
-                    argument_types.push((t.location(), type_));
+                let mut argument_types = Vec::with_capacity(arguments.len());
+                for argument in arguments {
+                    let type_ = self.type_from_ast(argument, environment, problems)?;
+                    argument_types.push((argument.location(), type_));
                 }
 
                 // Look up the constructor
@@ -141,6 +144,27 @@ impl Hydrator {
                     })?
                     .clone();
 
+                if let Some((type_module, type_name)) = return_type.named_type_name() {
+                    let reference_kind = if module.is_some() {
+                        ReferenceKind::Qualified
+                    } else if name != &type_name {
+                        ReferenceKind::Alias
+                    } else {
+                        ReferenceKind::Unqualified
+                    };
+                    environment.references.register_type_reference(
+                        type_module,
+                        type_name,
+                        name,
+                        *name_location,
+                        reference_kind,
+                    );
+                } else {
+                    environment
+                        .references
+                        .register_type_reference_in_call_graph(name.clone());
+                }
+
                 match deprecation {
                     Deprecation::NotDeprecated => {}
                     Deprecation::Deprecated { message } => {
@@ -159,13 +183,24 @@ impl Hydrator {
                     environment.increment_usage(name);
                 }
 
-                // Ensure that the correct number of arguments have been given to the constructor
-                if args.len() != parameters.len() {
+                // Ensure that the correct number of arguments have been given
+                // to the constructor.
+                //
+                // This is a special case for when a type is being called as a
+                // type constructor. For example: `Int()` or `Bool(a, b)`
+                if let Some(start_parentheses) = start_parentheses
+                    && parameters.is_empty()
+                {
+                    return Err(Error::TypeUsedAsAConstructor {
+                        location: SrcSpan::new(*start_parentheses, location.end),
+                        name: name.clone(),
+                    });
+                } else if arguments.len() != parameters.len() {
                     return Err(Error::IncorrectTypeArity {
                         location: *location,
                         name: name.clone(),
                         expected: parameters.len(),
-                        given: args.len(),
+                        given: arguments.len(),
                     });
                 }
 
@@ -190,24 +225,22 @@ impl Hydrator {
                 Ok(return_type)
             }
 
-            TypeAst::Tuple(TypeAstTuple { elems, .. }) => Ok(tuple(
-                elems
+            TypeAst::Tuple(TypeAstTuple { elements, .. }) => Ok(tuple(
+                elements
                     .iter()
-                    .map(|t| self.type_from_ast(t, environment, problems))
+                    .map(|type_| self.type_from_ast(type_, environment, problems))
                     .try_collect()?,
             )),
 
             TypeAst::Fn(TypeAstFn {
-                arguments: args,
-                return_: retrn,
-                ..
+                arguments, return_, ..
             }) => {
-                let args = args
+                let arguments = arguments
                     .iter()
-                    .map(|t| self.type_from_ast(t, environment, problems))
+                    .map(|type_| self.type_from_ast(type_, environment, problems))
                     .try_collect()?;
-                let retrn = self.type_from_ast(retrn, environment, problems)?;
-                Ok(fn_(args, retrn))
+                let return_ = self.type_from_ast(return_, environment, problems)?;
+                Ok(fn_(arguments, return_))
             }
 
             TypeAst::Var(TypeAstVar { name, location }) => {

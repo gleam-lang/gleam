@@ -474,7 +474,7 @@ fn custom_type_constructor_imported_and_aliased() {
     assert_js!(
         ("package", "other_module", "pub type T { A }"),
         r#"import other_module.{A as B}
-fn func() {
+pub fn func() {
   case B {
     x if x == B -> True
     _ -> False
@@ -491,7 +491,7 @@ fn imported_aliased_ok() {
 pub type X {
   Ok
 }
-fn func() {
+pub fn func() {
   case Y {
     y if y == Y -> True
     _ -> False
@@ -508,7 +508,7 @@ fn imported_ok() {
 pub type X {
   Ok
 }
-fn func(x) {
+pub fn func(x) {
   case gleam.Ok {
     _ if [] == [ gleam.Ok ] -> True
     _ -> False
@@ -522,7 +522,7 @@ fn func(x) {
 #[test]
 fn constructor_function_in_guard() {
     assert_js!(
-        r#"fn func(x) {
+        r#"pub fn func(x) {
     case [] {
         _ if [] == [ Ok ] -> True
         _ -> False
@@ -574,5 +574,51 @@ pub fn main() {
   }
 }
 "#,
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5094
+#[test]
+fn guard_pattern_does_not_shadow_outer_scope() {
+    assert_js!(
+        r#"
+pub type Option(a) {
+  Some(a)
+  None
+}
+
+pub type Container {
+  Container(x: Option(Int))
+}
+
+pub fn main() {
+  let x: Option(Int) = Some(42)
+  case Some(1) {
+    Some(x) if x < 0 -> Container(None)
+    _ -> {
+      Container(x:)
+    }
+  }
+}
+"#,
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5214
+#[test]
+fn bit_array_referencing_shadowed_variable() {
+    assert_js!(
+        "
+pub fn main() {
+  let a = 1
+  let a = 2
+
+  case Nil {
+    _ if <<a>> == <<1>> -> False
+    _ if <<a>> == <<2>> -> True
+    _ -> False
+  }
+}
+"
     );
 }

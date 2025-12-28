@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/generics.rs
+assertion_line: 15
 expression: "pub type Animal(t) {\n  Cat(type_: t)\n  Dog(type_: t)\n}\n\npub fn main() {\n  Cat(type_: 6)\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub type Animal(t) {
@@ -17,17 +19,29 @@ pub fn main() {
 import type * as _ from "../gleam.d.mts";
 
 export class Cat<I> extends _.CustomType {
+  /** @deprecated */
   constructor(type_: I);
-  
+  /** @deprecated */
   type_: I;
 }
+export function Animal$Cat<I>(type_: I): Animal$<I>;
+export function Animal$isCat<I>(value: Animal$<I>): boolean;
+export function Animal$Cat$0<I>(value: Animal$<I>): I;
+export function Animal$Cat$type_<I>(value: Animal$<I>): I;
 
 export class Dog<I> extends _.CustomType {
+  /** @deprecated */
   constructor(type_: I);
-  
+  /** @deprecated */
   type_: I;
 }
+export function Animal$Dog<I>(type_: I): Animal$<I>;
+export function Animal$isDog<I>(value: Animal$<I>): boolean;
+export function Animal$Dog$0<I>(value: Animal$<I>): I;
+export function Animal$Dog$type_<I>(value: Animal$<I>): I;
 
 export type Animal$<I> = Cat<I> | Dog<I>;
+
+export function Animal$type_<I>(value: Animal$<I>): I;
 
 export function main(): Animal$<number>;

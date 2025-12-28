@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn go(x) {\n  let assert #(<<>>) = x\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  let assert #(<<>>) = x
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+export function go(x) {
+  let $ = x[0];
+  if (!($.bitSize === 0)) {
+    throw makeError(
+      "let_assert",
+      FILEPATH,
+      "my/mod",
+      3,
+      "go",
+      "Pattern match failed, no pattern matched the value.",
+      { value: x, start: 18, end: 40, pattern_start: 29, pattern_end: 36 }
+    )
+  }
+  return x;
+}

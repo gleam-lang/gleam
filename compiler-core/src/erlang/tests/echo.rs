@@ -12,6 +12,33 @@ pub fn main() {
 }
 
 #[test]
+pub fn echo_with_a_simple_expression_and_a_message() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  echo 1 as "hello!"
+}
+"#
+    );
+}
+
+#[test]
+pub fn echo_with_complex_expression_as_a_message() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  echo 1 as case name() {
+    "Giacomo" -> "hello Jak!"
+    _ -> "hello!"
+  }
+}
+
+fn name() { "Giacomo" }
+"#
+    );
+}
+
+#[test]
 pub fn multiple_echos_inside_expression() {
     assert_erl!(
         r#"
@@ -61,6 +88,20 @@ fn wibble(n: Int, m: Int) { n + m }
 }
 
 #[test]
+pub fn echo_with_a_function_call_and_a_message() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  echo wibble(1, 2) as message()
+}
+
+fn wibble(n: Int, m: Int) { n + m }
+fn message() { "Hello!" }
+"#
+    );
+}
+
+#[test]
 pub fn echo_with_a_block() {
     assert_erl!(
         r#"
@@ -81,6 +122,21 @@ pub fn echo_in_a_pipeline() {
 pub fn main() {
   [1, 2, 3]
   |> echo
+  |> wibble
+}
+
+pub fn wibble(n) { n }
+"#
+    )
+}
+
+#[test]
+pub fn echo_in_a_pipeline_with_message() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  [1, 2, 3]
+  |> echo as "message!!"
   |> wibble
 }
 

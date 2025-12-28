@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\nfn sub(a, b) { add(a, -b) }\n\nfn add(a, b) { a + b }\n\npub fn main() {\n  sub(1, 2)\n  Nil\n}\n"
+---
+----- SOURCE CODE
+
+fn sub(a, b) { add(a, -b) }
+
+fn add(a, b) { a + b }
+
+pub fn main() {
+  sub(1, 2)
+  Nil
+}
+
+
+----- WARNING
+warning: Unused value
+  ┌─ /src/warning/wrn.gleam:7:3
+  │
+7 │   sub(1, 2)
+  │   ^^^^^^^^^ This value is never used
+
+This expression computes a value without any side effects, but then the
+value isn't used at all. You might want to assign it to a variable, or
+delete the expression entirely if it's not needed.

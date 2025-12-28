@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 500
+expression: "\npub fn go(x) {\n  case x {\n    <<a:17, b:7>> -> b * 2\n    _ -> 1\n  }\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  case x {
+    <<a:17, b:7>> -> b * 2
+    _ -> 1
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { bitArraySliceToInt } from "../gleam.mjs";
+
+export function go(x) {
+  if (x.bitSize >= 17 && x.bitSize === 24) {
+    let a = bitArraySliceToInt(x, 0, 17, true, false);
+    let b = bitArraySliceToInt(x, 17, 24, true, false);
+    return b * 2;
+  } else {
+    return 1;
+  }
+}

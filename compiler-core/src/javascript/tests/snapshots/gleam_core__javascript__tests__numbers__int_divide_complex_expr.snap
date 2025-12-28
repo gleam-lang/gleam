@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-expression: "\nfn go() {\n  case 1 >= 0 {\n    True -> 2\n    False -> 4\n  } / 2\n}\n"
+expression: "\npub fn go() {\n  case 1 >= 0 {\n    True -> 2\n    False -> 4\n  } / 2\n}\n"
 ---
 ----- SOURCE CODE
 
-fn go() {
+pub fn go() {
   case 1 >= 0 {
     True -> 2
     False -> 4
@@ -13,10 +13,8 @@ fn go() {
 
 
 ----- COMPILED JAVASCRIPT
-import { divideInt } from "../gleam.mjs";
-
-function go() {
-  return divideInt(
+export function go() {
+  return globalThis.Math.trunc(
     (() => {
       let $ = 1 >= 0;
       if ($) {
@@ -24,7 +22,6 @@ function go() {
       } else {
         return 4;
       }
-    })(),
-    2
+    })() / 2
   );
 }

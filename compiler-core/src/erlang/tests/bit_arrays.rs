@@ -31,7 +31,7 @@ fn bit_array_float() {
 fn bit_array1() {
     assert_erl!(
         r#"pub fn x() { 2 }
-fn main() {
+pub fn main() {
   let a = -1
   let b = <<a:unit(2)-size(a * 2), a:size(3 + x())-unit(1)>>
 
@@ -129,17 +129,6 @@ fn bit_array_declare_and_use_var() {
     );
 }
 
-#[test]
-fn negative_size() {
-    assert_erl!(
-        r#"
-pub fn main() {
-  <<1:size(-1)>>
-}
-"#,
-    );
-}
-
 // https://github.com/gleam-lang/gleam/issues/3050
 #[test]
 fn unicode_bit_array_1() {
@@ -202,5 +191,142 @@ fn discard_utf8_pattern() {
 pub fn main() {
     let assert <<_:utf8, rest:bits>> = <<>>
 }"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3944
+#[test]
+fn pipe_size_segment() {
+    assert_erl!(
+        "
+pub fn main() {
+  <<0xAE:size(5 |> identity)>>
+}
+
+fn identity(x) {
+  x
+}
+"
+    );
+}
+
+#[test]
+fn utf16_codepoint_little_endian() {
+    assert_erl!(
+        "
+pub fn go(codepoint) {
+  <<codepoint:utf16_codepoint-little>>
+}
+"
+    );
+}
+
+#[test]
+fn utf32_codepoint_little_endian() {
+    assert_erl!(
+        "
+pub fn go(codepoint) {
+  <<codepoint:utf32_codepoint-little>>
+}
+"
+    );
+}
+
+#[test]
+fn pattern_match_utf16_codepoint_little_endian() {
+    assert_erl!(
+        "
+pub fn go(x) {
+  let assert <<codepoint:utf16_codepoint-little>> = x
+  codepoint
+}
+"
+    );
+}
+
+#[test]
+fn pattern_match_utf32_codepoint_little_endian() {
+    assert_erl!(
+        "
+pub fn go(x) {
+  let assert <<codepoint:utf32_codepoint-little>> = x
+  codepoint
+}
+"
+    );
+}
+
+#[test]
+fn operator_in_pattern_size() {
+    assert_erl!(
+        "
+pub fn main() {
+  let assert <<len, payload:size(len * 8 - 8)>> = <<>>
+}
+"
+    );
+}
+
+#[test]
+fn operator_in_pattern_size2() {
+    assert_erl!(
+        "
+pub fn main() {
+  let assert <<len, payload:size(len / 8 - 1)>> = <<>>
+}
+"
+    );
+}
+
+#[test]
+fn operator_in_pattern_size3() {
+    assert_erl!(
+        "
+pub fn main() {
+  let additional = 10
+  let assert <<len, payload:size(len + additional * 8)>> = <<>>
+}
+"
+    );
+}
+
+#[test]
+fn block_in_pattern_size() {
+    assert_erl!(
+        "
+pub fn main() {
+  let assert <<len, payload:size({ len - 1 } * 8)>> = <<>>
+}
+"
+    );
+}
+
+#[test]
+fn non_byte_aligned_size_calculation() {
+    assert_erl!(
+        "
+pub fn main() {
+  case <<>> {
+    <<a:1, b:3, c:size(b - 2)>> -> c + b
+    _ -> 1
+  }
+}
+"
+    );
+}
+
+#[test]
+fn unicode_character_encoding_in_bit_array_pattern_segment() {
+    assert_erl!(
+        r#"
+pub fn main() -> Nil {
+  let wibble = <<"\u{00A9}wibble":utf8>>
+  let _bits = case wibble {
+    <<"\u{00A9}":utf8, rest: bits>> -> rest
+    _ -> wibble
+  }
+  Nil
+}
+"#
     );
 }

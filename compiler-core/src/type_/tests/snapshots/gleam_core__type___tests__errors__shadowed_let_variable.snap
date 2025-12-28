@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn go() {\n  let _x = 1\n  x + 1\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go() {
+  let _x = 1
+  x + 1
+}
+
+
+----- ERROR
+error: Unknown variable
+  ┌─ /src/one/two.gleam:4:3
+  │
+3 │   let _x = 1
+  │       -- This value is discarded
+4 │   x + 1
+  │   ^ So this is not in scope
+
+Hint: Change `_x` to `x` or reference another variable

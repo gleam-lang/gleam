@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 1904
+expression: "\npub fn is_byte_aligned(x) {\n  case x {\n    <<_:bytes>> -> True\n    _ -> False\n  }\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub fn is_byte_aligned(x) {
+  case x {
+    <<_:bytes>> -> True
+    _ -> False
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function is_byte_aligned(x) {
+  if (x.bitSize % 8 === 0) {
+    return true;
+  } else {
+    return false;
+  }
+}

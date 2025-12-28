@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nfn first() {\n    1\n}\n\nfn second() {\n    2\n}\n\nfn third() {\n    3\n}\n"
+---
+----- BEFORE ACTION
+
+fn first() {
+    1
+    ↑
+}
+
+fn second() {
+    2
+}
+
+fn third() {
+    3
+}
+
+
+----- AFTER ACTION
+
+const int = 1
+
+fn first() {
+    int
+}
+
+fn second() {
+    2
+}
+
+fn third() {
+    3
+}

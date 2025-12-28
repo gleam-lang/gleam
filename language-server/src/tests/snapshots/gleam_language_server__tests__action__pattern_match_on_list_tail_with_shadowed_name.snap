@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main(a_list: List(a)) {\n  case a_list {\n    [] -> todo\n    [rest, ..else_] -> todo\n  }\n}"
+---
+----- BEFORE ACTION
+pub fn main(a_list: List(a)) {
+  case a_list {
+    [] -> todo
+    [rest, ..else_] -> todo
+             ↑             
+  }
+}
+
+
+----- AFTER ACTION
+pub fn main(a_list: List(a)) {
+  case a_list {
+    [] -> todo
+    [rest, ] -> todo
+    [rest, first, ..rest_2] -> todo
+  }
+}

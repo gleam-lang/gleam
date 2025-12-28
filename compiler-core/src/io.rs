@@ -274,27 +274,9 @@ pub trait FileSystemReader {
     fn canonicalise(&self, path: &Utf8Path) -> Result<Utf8PathBuf, Error>;
 }
 
-/// Iterates over Gleam source files (`.gleam`) in a certain directory.
+/// Iterates over files with the given extension in a certain directory.
 /// Symlinks are followed.
-pub fn gleam_source_files<'a>(
-    io: &'a impl FileSystemReader,
-    dir: &'a Utf8Path,
-) -> impl Iterator<Item = Utf8PathBuf> + 'a {
-    tracing::trace!("gleam_source_files {:?}", dir);
-    files_with_extension(io, dir, "gleam")
-}
-
-/// Iterates over Gleam cache files (`.cache`) in a certain directory.
-/// Symlinks are followed.
-pub fn gleam_cache_files<'a>(
-    io: &'a impl FileSystemReader,
-    dir: &'a Utf8Path,
-) -> impl Iterator<Item = Utf8PathBuf> + 'a {
-    tracing::trace!("gleam_cache_files {:?}", dir);
-    files_with_extension(io, dir, "cache")
-}
-
-fn files_with_extension<'a>(
+pub fn files_with_extension<'a>(
     io: &'a impl FileSystemReader,
     dir: &'a Utf8Path,
     extension: &'a str,
@@ -448,7 +430,10 @@ pub trait TarUnpacker {
 
 #[inline]
 pub fn is_native_file_extension(extension: &str) -> bool {
-    matches!(extension, "erl" | "hrl" | "ex" | "js" | "mjs" | "ts")
+    matches!(
+        extension,
+        "erl" | "hrl" | "ex" | "js" | "mjs" | "cjs" | "ts"
+    )
 }
 
 pub fn ordered_map<S, K, V>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>

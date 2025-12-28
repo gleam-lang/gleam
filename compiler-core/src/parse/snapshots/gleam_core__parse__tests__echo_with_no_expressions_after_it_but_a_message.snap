@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: echo as message
+---
+[
+    Expression(
+        Echo {
+            location: SrcSpan {
+                start: 0,
+                end: 15,
+            },
+            keyword_end: 4,
+            expression: None,
+            message: Some(
+                Var {
+                    location: SrcSpan {
+                        start: 8,
+                        end: 15,
+                    },
+                    name: "message",
+                },
+            ),
+        },
+    ),
+]

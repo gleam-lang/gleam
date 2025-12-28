@@ -23,3 +23,7 @@ warning: Unused value
 6 │ │         _ -> 12
 7 │ │     }
   │ ╰─────^ This value is never used
+
+This expression computes a value without any side effects, but then the
+value isn't used at all. You might want to assign it to a variable, or
+delete the expression entirely if it's not needed.

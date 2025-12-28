@@ -18,8 +18,8 @@ pub fn main() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 -export_type([wibble/0, wobble/0]).
 
@@ -31,11 +31,10 @@ pub fn main() {
 -spec main() -> wibble().
 main() ->
     Base = {wibble, 1, {wobble, 2, 3}, 4},
-    _record = Base,
     {wibble,
-        erlang:element(2, _record),
+        erlang:element(2, Base),
         begin
-            _record@1 = erlang:element(3, Base),
-            {wobble, erlang:element(2, _record@1), 5}
+            _record = erlang:element(3, Base),
+            {wobble, erlang:element(2, _record), 5}
         end,
-        erlang:element(4, _record)}.
+        erlang:element(4, Base)}.

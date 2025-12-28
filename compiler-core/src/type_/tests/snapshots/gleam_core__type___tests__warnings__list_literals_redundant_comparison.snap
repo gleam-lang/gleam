@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "pub fn main(a, b) { [1] == [a, b(1)] }"
+---
+----- SOURCE CODE
+pub fn main(a, b) { [1] == [a, b(1)] }
+
+----- WARNING
+warning: Redundant comparison
+  ┌─ /src/warning/wrn.gleam:1:21
+  │
+1 │ pub fn main(a, b) { [1] == [a, b(1)] }
+  │                     ^^^^^^^^^^^^^^^^ This is always `False`
+
+This comparison is redundant since it always fails.

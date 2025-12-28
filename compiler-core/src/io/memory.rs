@@ -291,8 +291,8 @@ impl FileSystemReader for InMemoryFileSystem {
             self.files
                 .deref()
                 .borrow()
-                .iter()
-                .map(|(file_path, _)| file_path.to_path_buf())
+                .keys()
+                .map(|file_path| file_path.to_path_buf())
                 .filter(|file_path| file_path.parent().is_some_and(|parent| path == parent))
                 .map(DirEntry::from_pathbuf)
                 .map(Ok),
@@ -385,6 +385,13 @@ impl InMemoryFile {
         let contents = Rc::try_unwrap(buffer)
             .expect("InMemoryFile::into_content called with multiple references")
             .into_inner();
+
+        // All null bytes are usually from when a binary file is empty, and
+        // aren't particularly useful as text, so we treat them as binary.
+        if contents.iter().all(|byte| *byte == 0) {
+            return Some(Content::Binary(contents));
+        }
+
         match String::from_utf8(contents) {
             Ok(s) => Some(Content::Text(s)),
             Err(e) => Some(Content::Binary(e.into_bytes())),

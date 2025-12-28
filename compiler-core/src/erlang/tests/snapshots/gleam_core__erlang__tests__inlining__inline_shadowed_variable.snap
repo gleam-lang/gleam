@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/erlang/tests/inlining.rs
+expression: "\npub fn main() {\n  let a = 10\n  let b = 20\n\n  fn(x) {\n    let a = 7\n    x + a\n  }(a + b)\n\n  a\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let a = 10
+  let b = 20
+
+  fn(x) {
+    let a = 7
+    x + a
+  }(a + b)
+
+  a
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec main() -> integer().
+main() ->
+    A = 10,
+    B = 20,
+    begin
+        _inline_a_0 = 7,
+        (A + B) + _inline_a_0
+    end,
+    A.

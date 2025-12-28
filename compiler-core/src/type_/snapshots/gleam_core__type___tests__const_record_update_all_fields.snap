@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "pub type Person { Person(name: String, age: Int, city: String) }\n\n        pub const base = Person(\"Alice\", 30, \"London\")\n        pub const updated = Person(..base, name: \"Bob\", age: 25, city: \"Paris\")"
+---
+----- SOURCE CODE
+pub type Person { Person(name: String, age: Int, city: String) }
+
+        pub const base = Person("Alice", 30, "London")
+        pub const updated = Person(..base, name: "Bob", age: 25, city: "Paris")
+
+----- WARNING
+warning: Redundant record update
+  ┌─ /src/warning/wrn.gleam:4:29
+  │
+4 │         pub const updated = Person(..base, name: "Bob", age: 25, city: "Paris")
+  │                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ This record update specifies all fields
+
+Hint: It is better style to use the record creation syntax.

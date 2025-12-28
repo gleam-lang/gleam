@@ -3,6 +3,10 @@ source: compiler-core/src/type_/tests/warnings.rs
 expression: "\nimport wibble\n\npub fn main() {\n  wibble.println\n  1\n}\n"
 ---
 ----- SOURCE CODE
+-- wibble.gleam
+pub fn println(a) { Nil }
+
+-- main.gleam
 
 import wibble
 
@@ -18,3 +22,7 @@ warning: Unused value
   │
 5 │   wibble.println
   │   ^^^^^^^^^^^^^^ This value is never used
+
+This expression computes a value without any side effects, but then the
+value isn't used at all. You might want to assign it to a variable, or
+delete the expression entirely if it's not needed.

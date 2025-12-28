@@ -1,0 +1,65 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn main() {\n  let assert <<a, b:size(a), c:size(b)>> = <<1, 2, 3, 4>>\n  a + b + c\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let assert <<a, b:size(a), c:size(b)>> = <<1, 2, 3, 4>>
+  a + b + c
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError, toBitArray, bitArraySliceToInt } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+export function main() {
+  let $ = toBitArray([1, 2, 3, 4]);
+  let a$1;
+  let b$1;
+  let c;
+  if ($.bitSize >= 8) {
+    let a = $.byteAt(0);
+    if ($.bitSize >= 8 + a) {
+      let b = bitArraySliceToInt($, 8, 8 + a, true, false);
+      if ($.bitSize === 8 + a + b) {
+        a$1 = a;
+        b$1 = b;
+        c = bitArraySliceToInt($, 8 + a, 8 + a + b$1, true, false);
+      } else {
+        throw makeError(
+          "let_assert",
+          FILEPATH,
+          "my/mod",
+          3,
+          "main",
+          "Pattern match failed, no pattern matched the value.",
+          { value: $, start: 19, end: 74, pattern_start: 30, pattern_end: 57 }
+        )
+      }
+    } else {
+      throw makeError(
+        "let_assert",
+        FILEPATH,
+        "my/mod",
+        3,
+        "main",
+        "Pattern match failed, no pattern matched the value.",
+        { value: $, start: 19, end: 74, pattern_start: 30, pattern_end: 57 }
+      )
+    }
+  } else {
+    throw makeError(
+      "let_assert",
+      FILEPATH,
+      "my/mod",
+      3,
+      "main",
+      "Pattern match failed, no pattern matched the value.",
+      { value: $, start: 19, end: 74, pattern_start: 30, pattern_end: 57 }
+    )
+  }
+  return (a$1 + b$1) + c;
+}

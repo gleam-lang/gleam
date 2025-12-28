@@ -1,0 +1,112 @@
+---
+source: test-package-compiler/src/generated_tests.rs
+assertion_line: 63
+expression: "./cases/empty_module_warning"
+snapshot_kind: text
+---
+//// /out/lib/the_package/_gleam_artefacts/empty.cache
+<.cache binary>
+
+//// /out/lib/the_package/_gleam_artefacts/empty.cache_inline
+<8 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/empty.cache_meta
+<53 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/empty.erl
+-module(empty).
+
+
+//// /out/lib/the_package/_gleam_artefacts/internal.cache
+<.cache binary>
+
+//// /out/lib/the_package/_gleam_artefacts/internal.cache_inline
+<8 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/internal.cache_meta
+<69 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/internal.erl
+-module(internal).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "src/internal.gleam").
+-export([private_function/0]).
+
+-if(?OTP_RELEASE >= 27).
+-define(MODULEDOC(Str), -moduledoc(Str)).
+-define(DOC(Str), -doc(Str)).
+-else.
+-define(MODULEDOC(Str), -compile([])).
+-define(DOC(Str), -compile([])).
+-endif.
+
+-file("src/internal.gleam", 2).
+?DOC(false).
+-spec private_function() -> nil.
+private_function() ->
+    nil.
+
+
+//// /out/lib/the_package/_gleam_artefacts/private.cache
+<.cache binary>
+
+//// /out/lib/the_package/_gleam_artefacts/private.cache_inline
+<8 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/private.cache_meta
+<65 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/private.erl
+-module(private).
+
+
+//// /out/lib/the_package/_gleam_artefacts/public.cache
+<.cache binary>
+
+//// /out/lib/the_package/_gleam_artefacts/public.cache_inline
+<8 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/public.cache_meta
+<65 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/public.erl
+-module(public).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "src/public.gleam").
+-export([main/0]).
+
+-file("src/public.gleam", 1).
+-spec main() -> binary().
+main() ->
+    <<"This module has public definitions"/utf8>>.
+
+
+//// /out/lib/the_package/ebin/empty_module_warning.app
+{application, empty_module_warning, [
+    {vsn, "1.0.0"},
+    {applications, [gleam_stdlib]},
+    {description, "Test package with empty modules"},
+    {modules, [empty,
+               internal,
+               private,
+               public]},
+    {registered, []}
+]}.
+
+
+//// Warning
+warning: Empty module
+
+Module 'empty' contains no public definitions.
+Hint: You can safely remove this module.
+
+
+
+//// Warning
+warning: Unused private function
+  ┌─ src/private.gleam:1:1
+  │
+1 │ fn private_function() -> Nil {
+  │ ^ This private function is never used
+
+Hint: You can safely remove it.

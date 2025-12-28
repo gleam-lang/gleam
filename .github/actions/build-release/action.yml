@@ -1,0 +1,261 @@
+name: "Build Gleam"
+description: "Build Gleam Release"
+inputs:
+  version:
+    description: "Build Version"
+    required: true
+  toolchain:
+    description: "Cargo Toolchain"
+    required: true
+  target:
+    description: "Cargo Installation Target"
+    required: true
+  cargo-tool:
+    description: "Cargo Tool used for Build (for example, `cross`)"
+    required: true
+  expected-binary-architecture:
+    description: "Expected Binary Architecture"
+    required: false
+    default: ""
+  azure-tenant-id:
+    description: "Azure Tenant ID for Windows Code Signing"
+    required: false
+  azure-subscription-id:
+    description: "Azure Subscription ID for Windows Code Signing"
+    required: false
+  azure-client-id:
+    description: "Azure Client ID for Windows Code Signing"
+    required: false
+  azure-trusted-signing-account-name:
+    description: "Azure Trusted Signing Account Name for Windows Code Signing"
+    required: false
+  azure-certificate-profile-name:
+    description: "Azure Certificate Profile Name for Windows Code Signing"
+    required: false
+
+outputs:
+  archive:
+    description: "Path to build asset"
+    value: "${{ steps.build.outputs.archive }}"
+  files:
+    description: "Path to all files"
+    value: |
+      ${{ steps.build.outputs.archive }}
+      ${{ steps.build.outputs.archive }}.sha256
+      ${{ steps.build.outputs.archive }}.sha512
+      ${{ steps.build.outputs.archive }}.sigstore
+      ${{ steps.build.outputs.archive }}.sbom.spdx.json
+      ${{ steps.build.outputs.archive }}.sbom.cyclonedx.json
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install Rust toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        toolchain: ${{ inputs.toolchain }}
+        target: ${{ inputs.target }}
+        cache-key: v1-${{ inputs.target }}
+
+    - name: Install Cargo SBoM
+      shell: bash
+      # The `cargo-sbom` version is specified in the next line. Change it to
+      # keep it up-to-date.
+      run: cargo install cargo-sbom@~0.9.1
+
+    - name: Build WASM release binary
+      if: ${{ inputs.target != 'wasm32-unknown-unknown' }}
+      uses: clechasseur/rs-cargo@v3
+      with:
+        command: build
+        args: --release --target ${{ inputs.target }}
+        tool: ${{ inputs.cargo-tool }}
+
+    - name: Install wasm-pack
+      if: ${{ inputs.target == 'wasm32-unknown-unknown' }}
+      shell: bash
+      run: curl -sSL https://rustwasm.github.io/wasm-pack/installer/init.sh | sh
+
+    - name: Build WASM release binary
+      if: ${{ inputs.target == 'wasm32-unknown-unknown' }}
+      shell: bash
+      run: wasm-pack build --release --target web compiler-wasm
+
+    - name: Verify binary architecture
+      if: ${{ inputs.expected-binary-architecture }}
+      shell: bash
+      run: |
+        BINARY_PATH="target/${{ inputs.target }}/release/gleam"
+        if [[ "${{ inputs.target }}" == *"windows"* ]]; then
+          BINARY_PATH="${BINARY_PATH}.exe"
+        fi
+
+        if ! file -b "$BINARY_PATH" | grep -iq "${{ inputs.expected-binary-architecture }}"; then
+          echo "error: Architecture mismatch"
+          echo "Expected architecture: '${{ inputs.expected-binary-architecture }}'"
+          echo "Found binary type: '$(file -b "$BINARY_PATH")'"
+          exit 1
+        fi
+        echo "ok: Architecture match"
+
+    # We use Azure Trusted Signing to sign the Windows binaries.
+    # This is done to ensure that the binaries are trusted and can be
+    # verified by users and systems that require signed code.
+    #
+    # Why is this helpful?
+    # * It provides a way to verify the authenticity and integrity of the
+    #   binaries distributed by Gleam.
+    # * It helps prevent tampering with the binaries, ensuring that users
+    #   can trust the code they are running.
+    #
+    # For more information, see:
+    # * https://github.com/Azure/trusted-signing-action
+    # * https://azure.microsoft.com/en-us/products/trusted-signing
+    - name: Log in to Azure
+      if: ${{ contains(inputs.target, '-windows-') && inputs.azure-tenant-id && inputs.azure-subscription-id && inputs.azure-client-id && inputs.azure-trusted-signing-account-name && inputs.azure-certificate-profile-name }}
+      uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2.3.0
+      with:
+        client-id: ${{ inputs.azure-client-id }}
+        tenant-id: ${{ inputs.azure-tenant-id }}
+        subscription-id: ${{ inputs.azure-subscription-id }}
+    - name: Windows Code Signing
+      if: ${{ contains(inputs.target, '-windows-') && inputs.azure-tenant-id && inputs.azure-subscription-id && inputs.azure-client-id && inputs.azure-trusted-signing-account-name && inputs.azure-certificate-profile-name }}
+      uses: azure/trusted-signing-action@0d74250c661747df006298d0fb49944c10f16e03 # v0.5.1
+      with:
+        endpoint: https://eus.codesigning.azure.net/
+        trusted-signing-account-name: ${{ inputs.azure-trusted-signing-account-name }}
+        certificate-profile-name: ${{ inputs.azure-certificate-profile-name }}
+        files: ${{ github.workspace }}\target\${{ inputs.target }}\release\gleam.exe
+        file-digest: SHA256
+        timestamp-rfc3161: http://timestamp.acs.microsoft.com
+        timestamp-digest: SHA256
+
+    - name: Build archive
+      id: build
+      shell: bash
+      run: |
+        case "$TARGET" in
+          *windows*)
+            ARCHIVE="gleam-$VERSION-$TARGET.zip"
+            cp "target/$TARGET/release/gleam.exe" "gleam.exe"
+            7z a "$ARCHIVE" "gleam.exe"
+            rm gleam.exe
+            ;;
+          wasm*)
+            ARCHIVE="gleam-$VERSION-browser.tar.gz"
+            tar -C compiler-wasm/pkg/ -czvf $ARCHIVE .
+            rm -rf compiler-wasm/pkg/
+            ;;
+          *)
+            ARCHIVE="gleam-$VERSION-$TARGET.tar.gz"
+            cp "target/$TARGET/release/gleam" "gleam"
+            tar -czvf "$ARCHIVE" "gleam"
+            rm gleam
+            ;;
+        esac
+
+        echo "archive=$ARCHIVE" >> $GITHUB_OUTPUT
+      env:
+        TARGET: "${{ inputs.target }}"
+        VERSION: "${{ inputs.version }}"
+
+    - name: Ensure binary successfully boots
+      if: ${{ inputs.expected-binary-architecture }}
+      shell: bash
+      run: |
+        case "$TARGET" in
+          *windows*)
+            7z x "$ARCHIVE"
+            ./gleam.exe --version
+            ;;
+          aarch64*)
+            echo "We cannot test an ARM binary on a AMD64 runner"
+            ;;
+          *)
+            tar -xvzf "$ARCHIVE"
+            ./gleam --version
+            ;;
+        esac
+      env:
+        TARGET: "${{ inputs.target }}"
+        ARCHIVE: "${{ steps.build.outputs.archive }}"
+
+    # By using `cargo-sbom``, we create two formats of Build SBoMs
+    # (SPDX and CycloneDX) for the gleam build.
+    # We store those files alongside the build artifacts on the GitHub Release
+    # page and also use them to create Container SBoMs for Docker images.
+    # 
+    # Why is this helpful?
+    # * It gives us and our users complete visibility into which dependencies
+    #   and which versions are present in the build / container image.
+    # * The SBoM can be fed into vulnerability scanners so that anyone can check
+    #   if any dependencies have known security issues.
+    - name: Generate Build SBoM
+      shell: bash
+      run: |
+        cargo-sbom \
+          --output-format spdx_json_2_3 \
+          > "$ARCHIVE.sbom.spdx.json"
+
+        cargo-sbom \
+          --output-format cyclone_dx_json_1_4 \
+          > "$ARCHIVE.sbom.cyclonedx.json"
+      env:
+        ARCHIVE: "${{ steps.build.outputs.archive }}"
+
+    - name: Hash Build Archive
+      shell: bash
+      run: |
+        openssl dgst -r -sha256 -out "$ARCHIVE".sha256 "$ARCHIVE"
+        openssl dgst -r -sha512 -out "$ARCHIVE".sha512 "$ARCHIVE"
+      env:
+        ARCHIVE: "${{ steps.build.outputs.archive }}"
+
+    # We provide SLSA Provenance for the distribution build. This attests to
+    # where, when, and how the asset or image was built.
+    #
+    # Why is this helpful?
+    # * It provides a record of the exact Git commit (git sha) and GitHub
+    #   Actions workflow used to produce a release.
+    # * Users or automated systems can verify that the artifact you’re
+    #   downloading was indeed built from the official Gleam repo, on a
+    #   particular date, using the correct pipeline and not tampered with later.
+    # * The attestation is published to a transparency log for extra
+    #   verification: https://github.com/gleam-lang/gleam/attestations/
+    #
+    # For more information, see:
+    # * https://github.com/actions/attest
+    # * https://github.com/actions/attest-sbom
+    - name: Attest Distribution Assets with SBoM
+      id: attest-sbom
+      uses: actions/attest-sbom@v2
+      with:
+        subject-path: |
+          ${{ steps.build.outputs.archive }}
+          ${{ steps.build.outputs.archive }}.sbom.spdx.json
+          ${{ steps.build.outputs.archive }}.sbom.cyclonedx.json
+        sbom-path: "${{ steps.build.outputs.archive }}.sbom.spdx.json"
+
+    # The provenanve information is stored alongside the built artifact with
+    # the `.sigstore` file extension.
+    - name: "Copy SBoM provenance"
+      id: sbom-provenance
+      shell: bash
+      run: |
+        cp "$ATTESTATION" "$ARCHIVE.sigstore"
+      env:
+        ARCHIVE: "${{ steps.build.outputs.archive }}"
+        ATTESTATION: "${{ steps.attest-sbom.outputs.bundle-path }}"
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-${{ matrix.target }}
+        path: |
+          ${{ steps.build.outputs.archive }}
+          ${{ steps.build.outputs.archive }}.sha256
+          ${{ steps.build.outputs.archive }}.sha512
+          ${{ steps.build.outputs.archive }}.sigstore
+          ${{ steps.build.outputs.archive }}.sbom.spdx.json
+          ${{ steps.build.outputs.archive }}.sbom.cyclonedx.json
+        overwrite: true

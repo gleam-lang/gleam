@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "import gleam/io\n\npub fn main() {\n  let c = #(\"one\", \"two\", \"three\")\n  io.debug(c)\n}"
+---
+----- BEFORE ACTION
+import gleam/io
+
+pub fn main() {
+  let c = #("one", "two", "three")
+  ▔▔▔▔↑                           
+  io.debug(c)
+}
+
+
+----- AFTER ACTION
+import gleam/io
+
+const c = #("one", "two", "three")
+
+pub fn main() {
+  io.debug(c)
+}

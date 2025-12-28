@@ -1,0 +1,34 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 1372
+expression: "\npub fn go(x) {\n  let n = 1\n  case x {\n    <<_:size(n), 1.1, _:int>> -> 1\n    _ -> 2\n  }\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  let n = 1
+  case x {
+    <<_:size(n), 1.1, _:int>> -> 1
+    _ -> 2
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { bitArraySliceToFloat } from "../gleam.mjs";
+
+export function go(x) {
+  let n = 1;
+  if (
+    n >= 0 &&
+    x.bitSize >= n &&
+    x.bitSize >= 64 + n &&
+    bitArraySliceToFloat(x, n, n + 64, true) === 1.1 &&
+    x.bitSize === 72 + n
+  ) {
+    return 1;
+  } else {
+    return 2;
+  }
+}

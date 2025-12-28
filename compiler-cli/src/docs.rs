@@ -1,4 +1,7 @@
-use std::time::{Instant, SystemTime};
+use std::{
+    collections::HashMap,
+    time::{Instant, SystemTime},
+};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use ecow::EcoString;
@@ -9,10 +12,11 @@ use gleam_core::{
     analyse::TargetSupport,
     build::{Codegen, Compile, Mode, Options, Package, Target},
     config::{DocsPage, PackageConfig},
-    docs::DocContext,
+    docs::{Dependency, DependencyKind, DocContext},
     error::Error,
     hex,
     io::HttpClient as _,
+    manifest::ManifestPackageSource,
     paths::ProjectPaths,
     type_,
 };
@@ -25,10 +29,10 @@ pub fn remove(package: String, version: String) -> Result<()> {
     let http = HttpClient::new();
 
     // Remove docs from API
-    let request = hexpm::remove_docs_request(&package, &version, &api_key, &hex_config)
+    let request = hexpm::api_remove_docs_request(&package, &version, &api_key, &hex_config)
         .map_err(Error::hex)?;
     let response = runtime.block_on(http.send(request))?;
-    hexpm::remove_docs_response(response).map_err(Error::hex)?;
+    hexpm::api_remove_docs_response(response).map_err(Error::hex)?;
 
     // Done!
     println!("The docs for {package} {version} have been removed from HexDocs");
@@ -49,6 +53,26 @@ pub fn build(paths: &ProjectPaths, options: BuildOptions) -> Result<()> {
     crate::fs::delete_directory(&paths.build_directory_for_target(Mode::Prod, config.target))?;
 
     let out = paths.build_documentation_directory(&config.name);
+
+    let manifest = crate::build::download_dependencies(paths, cli::Reporter::new())?;
+    let dependencies = manifest
+        .packages
+        .iter()
+        .map(|package| {
+            (
+                package.name.clone(),
+                Dependency {
+                    version: package.version.clone(),
+                    kind: match &package.source {
+                        ManifestPackageSource::Hex { .. } => DependencyKind::Hex,
+                        ManifestPackageSource::Git { .. } => DependencyKind::Git,
+                        ManifestPackageSource::Local { .. } => DependencyKind::Path,
+                    },
+                },
+            )
+        })
+        .collect();
+
     let mut built = crate::build::main(
         paths,
         Options {
@@ -60,11 +84,12 @@ pub fn build(paths: &ProjectPaths, options: BuildOptions) -> Result<()> {
             root_target_support: TargetSupport::Enforced,
             no_print_progress: false,
         },
-        crate::build::download_dependencies(paths, cli::Reporter::new())?,
+        manifest,
     )?;
     let outputs = build_documentation(
         paths,
         &config,
+        dependencies,
         &mut built.root_package,
         DocContext::Build,
         &built.module_interfaces,
@@ -106,6 +131,7 @@ fn open_docs(path: &Utf8Path) -> Result<()> {
 pub(crate) fn build_documentation(
     paths: &ProjectPaths,
     config: &PackageConfig,
+    dependencies: HashMap<EcoString, Dependency>,
     compiled: &mut Package,
     is_hex_publish: DocContext,
     cached_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
@@ -120,12 +146,15 @@ pub(crate) fn build_documentation(
     pages.extend(config.documentation.pages.iter().cloned());
     let mut outputs = gleam_core::docs::generate_html(
         paths,
-        config,
-        compiled.modules.as_slice(),
-        &pages,
+        gleam_core::docs::DocumentationConfig {
+            package_config: config,
+            dependencies,
+            analysed: compiled.modules.as_slice(),
+            docs_pages: &pages,
+            rendering_timestamp: SystemTime::now(),
+            context: is_hex_publish,
+        },
         ProjectIO::new(),
-        SystemTime::now(),
-        is_hex_publish,
     );
 
     outputs.push(gleam_core::docs::generate_json_package_interface(
@@ -147,6 +176,25 @@ pub fn publish(paths: &ProjectPaths) -> Result<()> {
     // Reset the build directory so we know the state of the project
     crate::fs::delete_directory(&paths.build_directory_for_target(Mode::Prod, config.target))?;
 
+    let manifest = crate::build::download_dependencies(paths, cli::Reporter::new())?;
+    let dependencies = manifest
+        .packages
+        .iter()
+        .map(|package| {
+            (
+                package.name.clone(),
+                Dependency {
+                    version: package.version.clone(),
+                    kind: match &package.source {
+                        ManifestPackageSource::Hex { .. } => DependencyKind::Hex,
+                        ManifestPackageSource::Git { .. } => DependencyKind::Git,
+                        ManifestPackageSource::Local { .. } => DependencyKind::Path,
+                    },
+                },
+            )
+        })
+        .collect();
+
     let mut built = crate::build::main(
         paths,
         Options {
@@ -158,11 +206,12 @@ pub fn publish(paths: &ProjectPaths) -> Result<()> {
             target: None,
             no_print_progress: false,
         },
-        crate::build::download_dependencies(paths, cli::Reporter::new())?,
+        manifest,
     )?;
     let outputs = build_documentation(
         paths,
         &config,
+        dependencies,
         &mut built.root_package,
         DocContext::HexPublish,
         &built.module_interfaces,

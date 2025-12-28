@@ -1,0 +1,46 @@
+---
+source: compiler-core/src/javascript/tests/assert.rs
+assertion_line: 62
+expression: "\nfn bool() {\n  True\n}\n\npub fn main() {\n  assert bool()\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+fn bool() {
+  True
+}
+
+pub fn main() {
+  assert bool()
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+function bool() {
+  return true;
+}
+
+export function main() {
+  if (!bool()) {
+    throw makeError(
+      "assert",
+      FILEPATH,
+      "my/mod",
+      7,
+      "main",
+      "Assertion failed.",
+      {
+        kind: "function_call",
+        arguments: [],
+        start: 41,
+        end: 54,
+        expression_start: 48
+      }
+    )
+  }
+  return undefined;
+}

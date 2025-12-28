@@ -17,10 +17,11 @@ pub use self::project_compiler::{Built, Options, ProjectCompiler};
 pub use self::telemetry::{NullTelemetry, Telemetry};
 
 use crate::ast::{
-    self, CallArg, CustomType, DefinitionLocation, TypedArg, TypedDefinition, TypedExpr,
-    TypedFunction, TypedPattern, TypedRecordConstructor, TypedStatement,
+    self, CallArg, CustomType, DefinitionLocation, TypeAst, TypedArg, TypedConstant,
+    TypedCustomType, TypedDefinitions, TypedExpr, TypedFunction, TypedImport, TypedModuleConstant,
+    TypedPattern, TypedRecordConstructor, TypedStatement, TypedTypeAlias,
 };
-use crate::type_::Type;
+use crate::type_::{Type, TypedCallArg};
 use crate::{
     ast::{Definition, SrcSpan, TypedModule},
     config::{self, PackageConfig},
@@ -34,7 +35,7 @@ use camino::Utf8PathBuf;
 use ecow::EcoString;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::sync::Arc;
 use std::time::SystemTime;
 use std::{collections::HashMap, ffi::OsString, fs::DirEntry, iter::Peekable, process};
@@ -187,9 +188,9 @@ pub enum Mode {
 }
 
 impl Mode {
-    /// Returns `true` if the mode includes test code.
+    /// Returns `true` if the mode includes development code.
     ///
-    pub fn includes_tests(&self) -> bool {
+    pub fn includes_dev_code(&self) -> bool {
         match self {
             Self::Dev | Self::Lsp => true,
             Self::Prod => false,
@@ -205,10 +206,10 @@ impl Mode {
 }
 
 #[test]
-fn mode_includes_tests() {
-    assert!(Mode::Dev.includes_tests());
-    assert!(Mode::Lsp.includes_tests());
-    assert!(!Mode::Prod.includes_tests());
+fn mode_includes_dev_code() {
+    assert!(Mode::Dev.includes_dev_code());
+    assert!(Mode::Lsp.includes_dev_code());
+    assert!(!Mode::Prod.includes_dev_code());
 }
 
 #[derive(Debug)]
@@ -245,15 +246,58 @@ pub struct Module {
     pub dependencies: Vec<(EcoString, SrcSpan)>,
 }
 
-impl Module {
-    pub fn compiled_erlang_path(&self) -> Utf8PathBuf {
-        let mut path = self.name.replace("/", "@");
-        path.push_str(".erl");
-        Utf8PathBuf::from(path.as_ref())
+#[derive(Debug)]
+/// A data structure used to store all definitions in a single homogeneous
+/// vector and sort them by their position in order to attach to each the right
+/// documentation.
+///
+enum DocumentableDefinition<'a> {
+    Constant(&'a mut TypedModuleConstant),
+    TypeAlias(&'a mut TypedTypeAlias),
+    CustomType(&'a mut TypedCustomType),
+    Function(&'a mut TypedFunction),
+    Import(&'a mut TypedImport),
+}
+
+impl<'a> DocumentableDefinition<'a> {
+    pub fn location(&self) -> SrcSpan {
+        match self {
+            Self::Constant(module_constant) => module_constant.location,
+            Self::TypeAlias(type_alias) => type_alias.location,
+            Self::CustomType(custom_type) => custom_type.location,
+            Self::Function(function) => function.location,
+            Self::Import(import) => import.location,
+        }
     }
 
-    pub fn is_test(&self) -> bool {
-        self.origin == Origin::Test
+    pub fn put_doc(&mut self, new_documentation: (u32, EcoString)) {
+        match self {
+            Self::Import(_import) => (),
+            Self::Function(function) => {
+                let _ = function.documentation.replace(new_documentation);
+            }
+            Self::TypeAlias(type_alias) => {
+                let _ = type_alias.documentation.replace(new_documentation);
+            }
+            Self::CustomType(custom_type) => {
+                let _ = custom_type.documentation.replace(new_documentation);
+            }
+            Self::Constant(constant) => {
+                let _ = constant.documentation.replace(new_documentation);
+            }
+        }
+    }
+}
+
+impl Module {
+    pub fn erlang_name(&self) -> EcoString {
+        module_erlang_name(&self.name)
+    }
+
+    pub fn compiled_erlang_path(&self) -> Utf8PathBuf {
+        let mut path = Utf8PathBuf::from(&module_erlang_name(&self.name));
+        assert!(path.set_extension("erl"), "Couldn't set file extension");
+        path
     }
 
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
@@ -271,26 +315,40 @@ impl Module {
 
         self.ast.type_info.documentation = self.ast.documentation.clone();
 
-        // Order statements to avoid misassociating doc comments after the
+        // Order definitions to avoid misassociating doc comments after the
         // order has changed during compilation.
-        let mut statements: Vec<_> = self.ast.definitions.iter_mut().collect();
-        statements.sort_by(|a, b| a.location().start.cmp(&b.location().start));
+        let TypedDefinitions {
+            imports,
+            constants,
+            custom_types,
+            type_aliases,
+            functions,
+        } = &mut self.ast.definitions;
+
+        let mut definitions = ((imports.iter_mut()).map(DocumentableDefinition::Import))
+            .chain((constants.iter_mut()).map(DocumentableDefinition::Constant))
+            .chain((custom_types.iter_mut()).map(DocumentableDefinition::CustomType))
+            .chain((type_aliases.iter_mut()).map(DocumentableDefinition::TypeAlias))
+            .chain((functions.iter_mut()).map(DocumentableDefinition::Function))
+            .sorted_by_key(|definition| definition.location())
+            .collect_vec();
 
         // Doc Comments
         let mut doc_comments = self.extra.doc_comments.iter().peekable();
-        for statement in &mut statements {
+        for definition in &mut definitions {
             let (docs_start, docs): (u32, Vec<&str>) = doc_comments_before(
                 &mut doc_comments,
                 &self.extra,
-                statement.location().start,
+                definition.location().start,
                 &self.code,
             );
             if !docs.is_empty() {
                 let doc = docs.join("\n").into();
-                statement.put_doc((docs_start, doc));
+                definition.put_doc((docs_start, doc));
             }
 
-            if let Definition::CustomType(CustomType { constructors, .. }) = statement {
+            if let DocumentableDefinition::CustomType(CustomType { constructors, .. }) = definition
+            {
                 for constructor in constructors {
                     let (docs_start, docs): (u32, Vec<&str>) = doc_comments_before(
                         &mut doc_comments,
@@ -321,6 +379,10 @@ impl Module {
     }
 }
 
+pub fn module_erlang_name(gleam_name: &EcoString) -> EcoString {
+    gleam_name.replace("/", "@")
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnqualifiedImport<'a> {
     pub name: &'a EcoString,
@@ -329,20 +391,37 @@ pub struct UnqualifiedImport<'a> {
     pub location: &'a SrcSpan,
 }
 
+/// The position of a located expression. Used to determine extra context,
+/// such as whether to provide label completions if the expression is in
+/// argument position.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ExpressionPosition<'a> {
+    Expression,
+    ArgumentOrLabel {
+        called_function: &'a TypedExpr,
+        function_arguments: &'a [TypedCallArg],
+    },
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Located<'a> {
     Pattern(&'a TypedPattern),
     PatternSpread {
         spread_location: SrcSpan,
-        arguments: &'a Vec<CallArg<TypedPattern>>,
+        pattern: &'a TypedPattern,
     },
     Statement(&'a TypedStatement),
-    Expression(&'a TypedExpr),
-    ModuleStatement(&'a TypedDefinition),
+    Expression {
+        expression: &'a TypedExpr,
+        position: ExpressionPosition<'a>,
+    },
     VariantConstructorDefinition(&'a TypedRecordConstructor),
     FunctionBody(&'a TypedFunction),
     Arg(&'a TypedArg),
-    Annotation(SrcSpan, std::sync::Arc<Type>),
+    Annotation {
+        ast: &'a TypeAst,
+        type_: std::sync::Arc<Type>,
+    },
     UnqualifiedImport(UnqualifiedImport<'a>),
     Label(SrcSpan, std::sync::Arc<Type>),
     ModuleName {
@@ -350,6 +429,14 @@ pub enum Located<'a> {
         name: &'a EcoString,
         layer: ast::Layer,
     },
+    Constant(&'a TypedConstant),
+
+    // A module's top level definitions
+    ModuleFunction(&'a TypedFunction),
+    ModuleConstant(&'a TypedModuleConstant),
+    ModuleImport(&'a TypedImport),
+    ModuleCustomType(&'a TypedCustomType),
+    ModuleTypeAlias(&'a TypedTypeAlias),
 }
 
 impl<'a> Located<'a> {
@@ -374,15 +461,29 @@ impl<'a> Located<'a> {
             Self::Pattern(pattern) => pattern.definition_location(),
             Self::Statement(statement) => statement.definition_location(),
             Self::FunctionBody(statement) => None,
-            Self::Expression(expression) => expression.definition_location(),
-            Self::ModuleStatement(Definition::Import(import)) => Some(DefinitionLocation {
+            Self::Expression { expression, .. } => expression.definition_location(),
+
+            Self::ModuleImport(import) => Some(DefinitionLocation {
                 module: Some(import.module.clone()),
                 span: SrcSpan { start: 0, end: 0 },
             }),
-            Self::ModuleStatement(statement) => Some(DefinitionLocation {
+            Self::ModuleConstant(constant) => Some(DefinitionLocation {
                 module: None,
-                span: statement.location(),
+                span: constant.location,
             }),
+            Self::ModuleCustomType(custom_type) => Some(DefinitionLocation {
+                module: None,
+                span: custom_type.location,
+            }),
+            Self::ModuleFunction(function) => Some(DefinitionLocation {
+                module: None,
+                span: function.location,
+            }),
+            Self::ModuleTypeAlias(type_alias) => Some(DefinitionLocation {
+                module: None,
+                span: type_alias.location,
+            }),
+
             Self::VariantConstructorDefinition(record) => Some(DefinitionLocation {
                 module: None,
                 span: record.location,
@@ -406,12 +507,13 @@ impl<'a> Located<'a> {
                 }
             }),
             Self::Arg(_) => None,
-            Self::Annotation(_, type_) => self.type_location(importable_modules, type_.clone()),
+            Self::Annotation { type_, .. } => self.type_location(importable_modules, type_.clone()),
             Self::Label(_, _) => None,
             Self::ModuleName { name, .. } => Some(DefinitionLocation {
                 module: Some((*name).clone()),
                 span: SrcSpan::new(0, 0),
             }),
+            Self::Constant(constant) => constant.definition_location(),
         }
     }
 
@@ -419,20 +521,25 @@ impl<'a> Located<'a> {
         match self {
             Located::Pattern(pattern) => Some(pattern.type_()),
             Located::Statement(statement) => Some(statement.type_()),
-            Located::Expression(typed_expr) => Some(typed_expr.type_()),
+            Located::Expression { expression, .. } => Some(expression.type_()),
             Located::Arg(arg) => Some(arg.type_.clone()),
-            Located::Label(_, type_) | Located::Annotation(_, type_) => Some(type_.clone()),
+            Located::Label(_, type_) | Located::Annotation { type_, .. } => Some(type_.clone()),
+            Located::Constant(constant) => Some(constant.type_()),
 
-            Located::PatternSpread { .. } => None,
-            Located::ModuleStatement(definition) => None,
-            Located::VariantConstructorDefinition(_) => None,
-            Located::FunctionBody(function) => None,
-            Located::UnqualifiedImport(unqualified_import) => None,
-            Located::ModuleName { .. } => None,
+            Located::PatternSpread { .. }
+            | Located::ModuleConstant(_)
+            | Located::ModuleCustomType(_)
+            | Located::ModuleFunction(_)
+            | Located::ModuleImport(_)
+            | Located::ModuleTypeAlias(_)
+            | Located::VariantConstructorDefinition(_)
+            | Located::FunctionBody(_)
+            | Located::UnqualifiedImport(_)
+            | Located::ModuleName { .. } => None,
         }
     }
 
-    pub(crate) fn type_definition_locations(
+    pub fn type_definition_locations(
         &self,
         importable_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
     ) -> Option<Vec<DefinitionLocation>> {
@@ -464,7 +571,10 @@ fn type_to_definition_locations<'a>(
         // `Wobble`.
         //
         Type::Named {
-            module, name, args, ..
+            module,
+            name,
+            arguments,
+            ..
         } => {
             let Some(module) = importable_modules.get(module) else {
                 return vec![];
@@ -478,9 +588,9 @@ fn type_to_definition_locations<'a>(
                 module: Some(module.name.clone()),
                 span: type_.origin,
             }];
-            for arg in args {
+            for argument in arguments {
                 locations.extend(type_to_definition_locations(
-                    arg.clone(),
+                    argument.clone(),
                     importable_modules,
                 ));
             }
@@ -490,11 +600,11 @@ fn type_to_definition_locations<'a>(
         // For fn types we just get the locations of their arguments and return
         // type.
         //
-        Type::Fn { args, retrn } => args
+        Type::Fn { arguments, return_ } => arguments
             .iter()
-            .flat_map(|arg| type_to_definition_locations(arg.clone(), importable_modules))
+            .flat_map(|argument| type_to_definition_locations(argument.clone(), importable_modules))
             .chain(type_to_definition_locations(
-                retrn.clone(),
+                return_.clone(),
                 importable_modules,
             ))
             .collect_vec(),
@@ -511,9 +621,9 @@ fn type_to_definition_locations<'a>(
 
         // In case of tuples we get the locations of the wrapped types.
         //
-        Type::Tuple { elems } => elems
+        Type::Tuple { elements } => elements
             .iter()
-            .flat_map(|elem| type_to_definition_locations(elem.clone(), importable_modules))
+            .flat_map(|element| type_to_definition_locations(element.clone(), importable_modules))
             .collect_vec(),
     }
 }
@@ -536,6 +646,7 @@ pub fn type_constructor_from_modules(
 pub enum Origin {
     Src,
     Test,
+    Dev,
 }
 
 impl Origin {
@@ -545,6 +656,32 @@ impl Origin {
     #[must_use]
     pub fn is_src(&self) -> bool {
         matches!(self, Self::Src)
+    }
+
+    /// Returns `true` if the origin is [`Test`].
+    ///
+    /// [`Test`]: Origin::Test
+    #[must_use]
+    pub fn is_test(&self) -> bool {
+        matches!(self, Self::Test)
+    }
+
+    /// Returns `true` if the origin is [`Dev`].
+    ///
+    /// [`Dev`]: Origin::Dev
+    #[must_use]
+    pub fn is_dev(&self) -> bool {
+        matches!(self, Self::Dev)
+    }
+
+    /// Name of the folder containing the origin.
+    #[must_use]
+    pub fn folder_name(&self) -> &str {
+        match self {
+            Origin::Src => "src",
+            Origin::Test => "test",
+            Origin::Dev => "dev",
+        }
     }
 }
 
@@ -579,10 +716,10 @@ fn doc_comments_before<'a>(
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub(crate) struct SourceFingerprint(u64);
+pub struct SourceFingerprint(u64);
 
 impl SourceFingerprint {
-    pub(crate) fn new(source: &str) -> Self {
+    pub fn new(source: &str) -> Self {
         SourceFingerprint(xxhash_rust::xxh3::xxh3_64(source.as_bytes()))
     }
 }

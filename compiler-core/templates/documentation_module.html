@@ -10,20 +10,11 @@
 </ul>
 {% endif %}
 
-{% if !constants.is_empty() %}
-<h2>Constants</h2>
+{% if !values.is_empty() %}
+<h2>Values</h2>
 <ul>
-  {% for constant in constants %}
-  <li><a href="#{{ constant.name }}">{{ constant.name }}</a></li>
-  {% endfor %}
-</ul>
-{% endif %}
-
-{% if !functions.is_empty() %}
-<h2>Functions</h2>
-<ul>
-  {% for function in functions %}
-  <li><a href="#{{ function.name }}">{{ function.name }}</a></li>
+  {% for value in values %}
+  <li><a href="#{{ value.name }}">{{ value.name }}</a></li>
   {% endfor %}
 </ul>
 {% endif %}
@@ -64,7 +55,7 @@
     {% endif %}
     <div class="custom-type-constructors">
       <div class="rendered-markdown">{{ typ.documentation|safe }}</div>
-      <pre><code class="hljs gleam">{{ typ.definition }}</code></pre>
+      <pre><code class="hljs hljs-ignore">{{ typ.definition|safe }}</code></pre>
       {% if !typ.constructors.is_empty() %}
       <h3>
         Constructors
@@ -74,7 +65,7 @@
         <li class="constructor-item">
           <div class="constructor-row">
             <svg class="icon icon-star"><use xlink:href="#icon-star"></use></svg>
-            <pre class="constructor-name"><code class="hljs gleam">{{ constructor.definition }}</code></pre>
+            <pre class="constructor-name"><code class="hljs hljs-ignore">{{ constructor.definition|safe }}</code></pre>
           </div>
 
           <div class="constructor-item-docs">
@@ -107,62 +98,34 @@
 </section>
 {% endif %}
 
-{% if !constants.is_empty() %}
+{% if !values.is_empty() %}
 <section class="module-members">
-  <h1 id="module-constants" class="module-member-kind">
-    <a href="#module-constants">Constants</a>
+  <h1 id="module-values" class="module-member-kind">
+    <a href="#module-values">Values</a>
     <svg class="icon icon-gleam-chasse"><use xlink:href="#icon-gleam-chasse"></use></svg>
   </h1>
-
-  {% for constant in constants %}
+  {% for value in values %}
   <div class="member">
     <div class="member-name">
-      <h2 id="{{ constant.name }}">
-        <a href="#{{ constant.name }}">
-          {{ constant.name }}
+      <h2 id="{{ value.name }}">
+        <a href="#{{ value.name }}">
+          {{ value.name }}
         </a>
       </h2>
-      {% if !constant.source_url.is_empty() %}
-      <a class="member-source" alt="View Source" title="View Source" href="{{ constant.source_url|safe }}">
-        &lt;/&gt;
-      </a>
-      {% endif %}
-    </div>
-    <pre><code class="hljs gleam">{{ constant.definition }}</code></pre>
-    <div class="rendered-markdown">{{ constant.documentation|safe }}</div>
-  </div>
-  {% endfor %}
-</section>
-{% endif %}
-
-{% if !functions.is_empty() %}
-<section class="module-members">
-  <h1 id="module-functions" class="module-member-kind">
-    <a href="#module-functions">Functions</a>
-    <svg class="icon icon-gleam-chasse"><use xlink:href="#icon-gleam-chasse"></use></svg>
-  </h1>
-  {% for function in functions %}
-  <div class="member">
-    <div class="member-name">
-      <h2 id="{{ function.name }}">
-        <a href="#{{ function.name }}">
-          {{ function.name }}
-        </a>
-      </h2>
-      {% if !function.source_url.is_empty() %}
-      <a class="member-source" alt="View Source" title="View Source" href="{{ function.source_url|safe }}">
+      {% if !value.source_url.is_empty() %}
+      <a class="member-source" alt="View Source" title="View Source" href="{{ value.source_url|safe }}">
         &lt;/&gt;
       </a>
       {% endif %}
     </div>
 
-    <pre><code class="hljs gleam">{{ function.signature }}</code></pre>
-    {% if !function.deprecation_message.is_empty() %}
+    <pre><code class="hljs hljs-ignore">{{ value.definition|safe }}</code></pre>
+    {% if !value.deprecation_message.is_empty() %}
     <p>
-      <b>Deprecated:</b> {{ function.deprecation_message }}
+      <b>Deprecated:</b> {{ value.deprecation_message }}
     </p>
     {% endif %}
-    <div class="rendered-markdown">{{ function.documentation|safe }}</div>
+    <div class="rendered-markdown">{{ value.documentation|safe }}</div>
   </div>
   {% endfor %}
 </section>

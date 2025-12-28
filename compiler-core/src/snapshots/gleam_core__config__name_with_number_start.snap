@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/config.rs
+expression: "toml::from_str::<PackageConfig>(input).unwrap_err().to_string()"
+---
+TOML parse error at line 2, column 8
+  |
+2 | name = "1"
+  |        ^^^
+Package names may only contain lowercase letters, numbers, and underscores

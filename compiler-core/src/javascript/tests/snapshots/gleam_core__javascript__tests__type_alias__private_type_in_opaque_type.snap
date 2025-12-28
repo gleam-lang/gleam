@@ -18,11 +18,12 @@ import type * as _ from "../gleam.d.mts";
 
 declare class PrivateType extends _.CustomType {}
 
-declare type PrivateType$ = PrivateType;
+type PrivateType$ = PrivateType;
 
 declare class OpaqueType extends _.CustomType {
+  /** @deprecated */
   constructor(argument$0: PrivateType$);
-  
+  /** @deprecated */
   0: PrivateType$;
 }
 

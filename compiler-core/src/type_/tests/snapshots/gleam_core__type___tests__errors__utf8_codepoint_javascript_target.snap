@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn main() {\n  let assert <<a:utf8_codepoint>> = <<10>>\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let assert <<a:utf8_codepoint>> = <<10>>
+}
+
+
+----- ERROR
+error: Invalid bit array segment
+  ┌─ /src/one/two.gleam:3:18
+  │
+3 │   let assert <<a:utf8_codepoint>> = <<10>>
+  │                  ^^^^^^^^^^^^^^ UTF-codepoint pattern matching is not supported
+
+The javascript target does not support UTF-codepoint pattern matching.
+See: https://tour.gleam.run/data-types/bit-arrays/

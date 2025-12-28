@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/lists.rs
-expression: "\nfn go(x) {\n    [{True 1}]\n}\n"
+assertion_line: 31
+expression: "\npub fn go(x) {\n    [{True 1}]\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go(x) {
+pub fn go(x) {
     [{True 1}]
 }
 
@@ -12,7 +14,7 @@ fn go(x) {
 ----- COMPILED JAVASCRIPT
 import { toList } from "../gleam.mjs";
 
-function go(x) {
+export function go(x) {
   return toList([
     (() => {
       true;

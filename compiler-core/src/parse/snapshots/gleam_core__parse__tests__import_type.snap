@@ -69,7 +69,9 @@ Parsed {
             imported_modules: {},
             type_variables: {},
             local_value_constructors: {},
+            reexport_aliases: {},
         },
+        unused_definition_positions: {},
     },
     extra: ModuleExtra {
         module_comments: [],
@@ -77,5 +79,6 @@ Parsed {
         comments: [],
         empty_lines: [],
         new_lines: [],
+        trailing_commas: [],
     },
 }

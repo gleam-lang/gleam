@@ -1,33 +1,29 @@
+mod printer;
 mod source_links;
 #[cfg(test)]
 mod tests;
 
-use std::time::SystemTime;
+use std::{collections::HashMap, time::SystemTime};
 
 use camino::Utf8PathBuf;
+use hexpm::version::Version;
+use printer::Printer;
 
 use crate::{
-    ast::{
-        CustomType, Definition, Function, ModuleConstant, Publicity, TypeAlias, TypedDefinition,
-    },
     build::{Module, Package},
     config::{DocsPage, PackageConfig},
     docs::source_links::SourceLinker,
-    format,
     io::{Content, FileSystemReader, OutputFile},
     package_interface::PackageInterface,
     paths::ProjectPaths,
-    pretty,
-    type_::{self, Deprecation},
+    type_::{self},
     version::COMPILER_VERSION,
 };
 use askama::Template;
 use ecow::EcoString;
 use itertools::Itertools;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::to_string as serde_to_string;
-
-const MAX_COLUMNS: isize = 65;
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum DocContext {
@@ -35,18 +31,54 @@ pub enum DocContext {
     Build,
 }
 
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
+pub struct PackageInformation {
+    #[serde(rename = "gleam.toml")]
+    package_config: PackageConfig,
+}
+
+/// Like `ManifestPackage`, but lighter and cheaper to clone as it is all that
+/// we need for printing documentation.
+#[derive(Debug, Clone)]
+pub struct Dependency {
+    pub version: Version,
+    pub kind: DependencyKind,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum DependencyKind {
+    Hex,
+    Path,
+    Git,
+}
+
+#[derive(Debug)]
+pub struct DocumentationConfig<'a> {
+    pub package_config: &'a PackageConfig,
+    pub dependencies: HashMap<EcoString, Dependency>,
+    pub analysed: &'a [Module],
+    pub docs_pages: &'a [DocsPage],
+    pub rendering_timestamp: SystemTime,
+    pub context: DocContext,
+}
+
 pub fn generate_html<IO: FileSystemReader>(
     paths: &ProjectPaths,
-    config: &PackageConfig,
-    analysed: &[Module],
-    docs_pages: &[DocsPage],
+    config: DocumentationConfig<'_>,
     fs: IO,
-    rendering_timestamp: SystemTime,
-    is_hex_publish: DocContext,
 ) -> Vec<OutputFile> {
+    let DocumentationConfig {
+        package_config: config,
+        dependencies,
+        analysed,
+        docs_pages,
+        rendering_timestamp,
+        context: is_hex_publish,
+    } = config;
+
     let modules = analysed
         .iter()
-        .filter(|module| !module.is_test())
+        .filter(|module| module.origin.is_src())
         .filter(|module| !config.is_internal_module(&module.name));
 
     let rendering_timestamp = rendering_timestamp
@@ -69,10 +101,14 @@ pub fn generate_html<IO: FileSystemReader>(
         path: doc_link.href.to_string(),
     });
 
-    let repo_link = config.repository.url().map(|path| Link {
-        name: "Repository".into(),
-        path,
-    });
+    let repo_link = config
+        .repository
+        .as_ref()
+        .map(|r| r.url())
+        .map(|path| Link {
+            name: "Repository".into(),
+            path,
+        });
 
     let host = if is_hex_publish == DocContext::HexPublish {
         "https://hexdocs.pm"
@@ -148,13 +184,7 @@ pub fn generate_html<IO: FileSystemReader>(
             content: Content::Text(temp.render().expect("Page template rendering")),
         });
 
-        search_items.push(SearchItem {
-            type_: SearchItemType::Page,
-            parent_title: config.name.to_string(),
-            title: config.name.to_string(),
-            content,
-            reference: page.path.to_string(),
-        })
+        search_items.push(search_item_for_page(&config.name, &page.path, content))
     }
 
     // Generate module documentation pages
@@ -167,102 +197,26 @@ pub fn generate_html<IO: FileSystemReader>(
 
         let documentation_content = module.ast.documentation.iter().join("\n");
         let rendered_documentation =
-            render_markdown(&documentation_content.clone(), MarkdownSource::Comment);
+            render_markdown(&documentation_content, MarkdownSource::Comment);
 
-        let functions: Vec<DocsFunction<'_>> = module
-            .ast
-            .definitions
+        let mut printer = Printer::new(
+            module.ast.type_info.package.clone(),
+            module.name.clone(),
+            &module.ast.names,
+            &dependencies,
+        );
+
+        let types = printer.type_definitions(&source_links, &module.ast.definitions);
+        let values = printer.value_definitions(&source_links, &module.ast.definitions);
+
+        types
             .iter()
-            .filter(|statement| !statement.is_internal())
-            .flat_map(|statement| function(&source_links, statement))
-            .sorted()
-            .collect();
-
-        let types: Vec<Type<'_>> = module
-            .ast
-            .definitions
+            .for_each(|type_| search_items.push(search_item_for_type(&module.name, type_)));
+        values
             .iter()
-            .filter(|statement| !statement.is_internal())
-            .flat_map(|statement| type_(&source_links, statement))
-            .sorted()
-            .collect();
+            .for_each(|value| search_items.push(search_item_for_value(&module.name, value)));
 
-        let constants: Vec<Constant<'_>> = module
-            .ast
-            .definitions
-            .iter()
-            .filter(|statement| !statement.is_internal())
-            .flat_map(|statement| constant(&source_links, statement))
-            .sorted()
-            .collect();
-
-        types.iter().for_each(|type_| {
-            let constructors = type_
-                .constructors
-                .iter()
-                .map(|constructor| {
-                    let arguments = constructor
-                        .arguments
-                        .iter()
-                        .map(|argument| format!("{}\n{}", argument.name, argument.doc))
-                        .join("\n");
-
-                    format!(
-                        "{}\n{}\n{}",
-                        constructor.definition, constructor.text_documentation, arguments
-                    )
-                })
-                .join("\n");
-
-            search_items.push(SearchItem {
-                type_: SearchItemType::Type,
-                parent_title: module.name.to_string(),
-                title: type_.name.to_string(),
-                content: format!(
-                    "{}\n{}\n{}\n{}",
-                    type_.definition,
-                    type_.text_documentation,
-                    constructors,
-                    import_synonyms(&module.name, type_.name)
-                ),
-                reference: format!("{}.html#{}", module.name, type_.name),
-            })
-        });
-        constants.iter().for_each(|constant| {
-            search_items.push(SearchItem {
-                type_: SearchItemType::Constant,
-                parent_title: module.name.to_string(),
-                title: constant.name.to_string(),
-                content: format!(
-                    "{}\n{}\n{}",
-                    constant.definition,
-                    constant.text_documentation,
-                    import_synonyms(&module.name, constant.name)
-                ),
-                reference: format!("{}.html#{}", module.name, constant.name),
-            })
-        });
-        functions.iter().for_each(|function| {
-            search_items.push(SearchItem {
-                type_: SearchItemType::Function,
-                parent_title: module.name.to_string(),
-                title: function.name.to_string(),
-                content: format!(
-                    "{}\n{}\n{}",
-                    function.signature,
-                    function.text_documentation,
-                    import_synonyms(&module.name, function.name)
-                ),
-                reference: format!("{}.html#{}", module.name, function.name),
-            })
-        });
-        search_items.push(SearchItem {
-            type_: SearchItemType::Module,
-            parent_title: module.name.to_string(),
-            title: module.name.to_string(),
-            content: documentation_content,
-            reference: format!("{}.html", module.name),
-        });
+        search_items.push(search_item_for_module(module));
 
         let page_title = format!("{} · {} · v{}", name, config.name, config.version);
         let page_meta_description = "";
@@ -282,9 +236,8 @@ pub fn generate_html<IO: FileSystemReader>(
             module_name: EcoString::from(&name),
             file_path: &path.clone(),
             project_version: &config.version.to_string(),
-            functions,
             types,
-            constants,
+            values,
             rendering_timestamp: &rendering_timestamp,
         };
 
@@ -363,7 +316,7 @@ pub fn generate_html<IO: FileSystemReader>(
         ),
     });
 
-    // lunr.min.js, search_data.json and index.js
+    // lunr.min.js, search-data.json and index.js
 
     files.push(OutputFile {
         path: Utf8PathBuf::from("js/lunr.min.js"),
@@ -371,13 +324,13 @@ pub fn generate_html<IO: FileSystemReader>(
     });
 
     let search_data_json = serde_to_string(&SearchData {
-        items: escape_html_contents(search_items),
+        items: search_items,
         programming_language: SearchProgrammingLanguage::Gleam,
     })
     .expect("search index serialization");
 
     files.push(OutputFile {
-        path: Utf8PathBuf::from("search_data.json"),
+        path: Utf8PathBuf::from("search-data.json"),
         content: Content::Text(search_data_json.to_string()),
     });
 
@@ -465,6 +418,74 @@ pub fn generate_html<IO: FileSystemReader>(
     files
 }
 
+fn search_item_for_page(package: &str, path: &str, content: String) -> SearchItem {
+    SearchItem {
+        type_: SearchItemType::Page,
+        parent_title: package.to_string(),
+        title: package.to_string(),
+        content,
+        reference: path.to_string(),
+    }
+}
+
+fn search_item_for_type(module: &str, type_: &TypeDefinition<'_>) -> SearchItem {
+    let constructors = type_
+        .constructors
+        .iter()
+        .map(|constructor| {
+            let arguments = constructor
+                .arguments
+                .iter()
+                .map(|argument| format!("{}\n{}", argument.name, argument.text_documentation))
+                .join("\n");
+
+            format!(
+                "{}\n{}\n{}",
+                constructor.raw_definition, constructor.text_documentation, arguments
+            )
+        })
+        .join("\n");
+
+    SearchItem {
+        type_: SearchItemType::Type,
+        parent_title: module.to_string(),
+        title: type_.name.to_string(),
+        content: format!(
+            "{}\n{}\n{}\n{}",
+            type_.raw_definition,
+            type_.text_documentation,
+            constructors,
+            import_synonyms(module, type_.name)
+        ),
+        reference: format!("{}.html#{}", module, type_.name),
+    }
+}
+
+fn search_item_for_value(module: &str, value: &DocsValues<'_>) -> SearchItem {
+    SearchItem {
+        type_: SearchItemType::Value,
+        parent_title: module.to_string(),
+        title: value.name.to_string(),
+        content: format!(
+            "{}\n{}\n{}",
+            value.raw_definition,
+            value.text_documentation,
+            import_synonyms(module, value.name)
+        ),
+        reference: format!("{}.html#{}", module, value.name),
+    }
+}
+
+fn search_item_for_module(module: &Module) -> SearchItem {
+    SearchItem {
+        type_: SearchItemType::Module,
+        parent_title: module.name.to_string(),
+        title: module.name.to_string(),
+        content: module.ast.documentation.iter().join("\n"),
+        reference: format!("{}.html", module.name),
+    }
+}
+
 pub fn generate_json_package_interface(
     path: Utf8PathBuf,
     package: &Package,
@@ -477,6 +498,20 @@ pub fn generate_json_package_interface(
                 .expect("JSON module interface serialisation"),
         ),
     }
+}
+
+pub fn generate_json_package_information(path: Utf8PathBuf, config: PackageConfig) -> OutputFile {
+    OutputFile {
+        path,
+        content: Content::Text(package_information_as_json(config)),
+    }
+}
+
+fn package_information_as_json(config: PackageConfig) -> String {
+    let info = PackageInformation {
+        package_config: config,
+    };
+    serde_json::to_string_pretty(&info).expect("JSON module information serialisation")
 }
 
 fn page_unnest(path: &str) -> String {
@@ -508,79 +543,8 @@ fn page_unnest_test() {
     assert_eq!(page_unnest("gleam/string/inspect"), "../..");
 }
 
-fn escape_html_content(it: String) -> String {
-    it.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('\"', "&quot;")
-        .replace('\'', "&#39;")
-}
-
-#[test]
-fn escape_html_content_test() {
-    assert_eq!(
-        escape_html_content("&<>\"'".to_string()),
-        "&amp;&lt;&gt;&quot;&#39;"
-    );
-}
-
-fn escape_html_contents(indexes: Vec<SearchItem>) -> Vec<SearchItem> {
-    indexes
-        .into_iter()
-        .map(|idx| SearchItem {
-            type_: idx.type_,
-            parent_title: idx.parent_title,
-            title: idx.title,
-            content: escape_html_content(idx.content),
-            reference: idx.reference,
-        })
-        .collect::<Vec<SearchItem>>()
-}
-
 fn import_synonyms(parent: &str, child: &str) -> String {
     format!("Synonyms:\n{parent}.{child}\n{parent} {child}")
-}
-
-fn function<'a>(
-    source_links: &SourceLinker,
-    statement: &'a TypedDefinition,
-) -> Option<DocsFunction<'a>> {
-    let mut formatter = format::Formatter::new();
-
-    match statement {
-        Definition::Function(Function {
-            publicity: Publicity::Public,
-            name,
-            documentation: doc,
-            arguments: args,
-            return_type: ret,
-            location,
-            deprecation,
-            ..
-        }) => {
-            let (_, name) = name
-                .as_ref()
-                .expect("Function in a definition must be named");
-
-            Some(DocsFunction {
-                name,
-                documentation: markdown_documentation(doc),
-                text_documentation: text_documentation(doc),
-                signature: print(
-                    formatter
-                        .docs_fn_signature(Publicity::Public, name, args, ret.clone(), location)
-                        .group(),
-                ),
-                source_url: source_links.url(*location),
-                deprecation_message: match deprecation {
-                    Deprecation::NotDeprecated => "".to_string(),
-                    Deprecation::Deprecated { message } => message.to_string(),
-                },
-            })
-        }
-
-        _ => None,
-    }
 }
 
 fn text_documentation(doc: &Option<(u32, EcoString)>) -> String {
@@ -626,151 +590,16 @@ fn render_markdown(text: &str, source: MarkdownSource) -> String {
     s
 }
 
-fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Option<Type<'a>> {
-    let mut formatter = format::Formatter::new();
-
-    match statement {
-        Definition::CustomType(ct) if ct.publicity.is_importable() && !ct.opaque => Some(Type {
-            name: &ct.name,
-            // TODO: Don't use the same printer for docs as for the formatter.
-            // We are not interested in showing the exact implementation in the
-            // documentation and we could add things like colours, etc.
-            definition: print(formatter.custom_type(ct)),
-            documentation: markdown_documentation(&ct.documentation),
-            text_documentation: text_documentation(&ct.documentation),
-            deprecation_message: match &ct.deprecation {
-                Deprecation::NotDeprecated => "".to_string(),
-                Deprecation::Deprecated { message } => message.to_string(),
-            },
-            constructors: ct
-                .constructors
-                .iter()
-                .map(|constructor| TypeConstructor {
-                    definition: print(formatter.record_constructor(constructor)),
-                    documentation: markdown_documentation(&constructor.documentation),
-                    text_documentation: text_documentation(&constructor.documentation),
-                    arguments: constructor
-                        .arguments
-                        .iter()
-                        .filter_map(|arg| arg.label.as_ref().map(|(_, label)| (arg, label)))
-                        .map(|(argument, label)| TypeConstructorArg {
-                            name: label.trim_end().to_string(),
-                            doc: markdown_documentation(&argument.doc),
-                        })
-                        .filter(|arg| !arg.doc.is_empty())
-                        .collect(),
-                })
-                .collect(),
-            source_url: source_links.url(ct.location),
-            opaque: ct.opaque,
-        }),
-
-        Definition::CustomType(CustomType {
-            publicity: Publicity::Public,
-            opaque: true,
-            name,
-            parameters,
-            documentation: doc,
-            location,
-            deprecation,
-            ..
-        }) => Some(Type {
-            name,
-            definition: print(
-                formatter
-                    .docs_opaque_custom_type(Publicity::Public, name, parameters, location)
-                    .group(),
-            ),
-            documentation: markdown_documentation(doc),
-            text_documentation: text_documentation(doc),
-            constructors: vec![],
-            source_url: source_links.url(*location),
-            deprecation_message: match deprecation {
-                Deprecation::NotDeprecated => "".to_string(),
-                Deprecation::Deprecated { message } => message.to_string(),
-            },
-            opaque: true,
-        }),
-
-        Definition::TypeAlias(TypeAlias {
-            publicity: Publicity::Public,
-            alias: name,
-            type_ast: type_,
-            documentation: doc,
-            parameters: args,
-            location,
-            deprecation,
-            ..
-        }) => Some(Type {
-            name,
-            definition: print(
-                formatter
-                    .type_alias(Publicity::Public, name, args, type_, deprecation, location)
-                    .group(),
-            ),
-            documentation: markdown_documentation(doc),
-            text_documentation: text_documentation(doc),
-            constructors: vec![],
-            source_url: source_links.url(*location),
-            deprecation_message: match deprecation {
-                Deprecation::NotDeprecated => "".to_string(),
-                Deprecation::Deprecated { message } => message.to_string(),
-            },
-            opaque: false,
-        }),
-
-        _ => None,
-    }
-}
-
-fn constant<'a>(
-    source_links: &SourceLinker,
-    statement: &'a TypedDefinition,
-) -> Option<Constant<'a>> {
-    let mut formatter = format::Formatter::new();
-    match statement {
-        Definition::ModuleConstant(ModuleConstant {
-            publicity: Publicity::Public,
-            documentation: doc,
-            name,
-            value,
-            location,
-            ..
-        }) => Some(Constant {
-            name,
-            definition: print(formatter.docs_const_expr(Publicity::Public, name, value)),
-            documentation: markdown_documentation(doc),
-            text_documentation: text_documentation(doc),
-            source_url: source_links.url(*location),
-        }),
-
-        _ => None,
-    }
-}
-
-fn print(doc: pretty::Document<'_>) -> String {
-    doc.to_pretty_string(MAX_COLUMNS)
-}
-
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
 struct Link {
     name: String,
     path: String,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
-struct DocsFunction<'a> {
-    name: &'a str,
-    signature: String,
-    documentation: String,
-    text_documentation: String,
-    source_url: String,
-    deprecation_message: String,
-}
-
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
 struct TypeConstructor {
     definition: String,
+    raw_definition: String,
     documentation: String,
     text_documentation: String,
     arguments: Vec<TypeConstructorArg>,
@@ -780,12 +609,14 @@ struct TypeConstructor {
 struct TypeConstructorArg {
     name: String,
     doc: String,
+    text_documentation: String,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
-struct Type<'a> {
+struct TypeDefinition<'a> {
     name: &'a str,
     definition: String,
+    raw_definition: String,
     documentation: String,
     constructors: Vec<TypeConstructor>,
     text_documentation: String,
@@ -795,12 +626,14 @@ struct Type<'a> {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
-struct Constant<'a> {
+struct DocsValues<'a> {
     name: &'a str,
     definition: String,
+    raw_definition: String,
     documentation: String,
     text_documentation: String,
     source_url: String,
+    deprecation_message: String,
 }
 
 #[derive(Template)]
@@ -836,13 +669,14 @@ struct ModuleTemplate<'a> {
     pages: &'a [Link],
     links: &'a [Link],
     modules: &'a [Link],
-    functions: Vec<DocsFunction<'a>>,
-    types: Vec<Type<'a>>,
-    constants: Vec<Constant<'a>>,
+    types: Vec<TypeDefinition<'a>>,
+    values: Vec<DocsValues<'a>>,
     documentation: String,
     rendering_timestamp: &'a str,
 }
 
+/// Search data for use by Hexdocs search, as well as the search built-in to
+/// generated documentation
 #[derive(Serialize, PartialEq, Eq, PartialOrd, Ord, Clone)]
 struct SearchData {
     items: Vec<SearchItem>,
@@ -850,15 +684,23 @@ struct SearchData {
     programming_language: SearchProgrammingLanguage,
 }
 
+/// A single item that can appear as a search result
 #[derive(Serialize, PartialEq, Eq, PartialOrd, Ord, Clone)]
 struct SearchItem {
+    /// The type of item this is: Value, Type, Module, or other Page
     #[serde(rename = "type")]
     type_: SearchItemType,
+    /// The title of the module or package containing this search item
     #[serde(rename = "parentTitle")]
     parent_title: String,
+    /// The title of this item
     title: String,
+    /// Markdown text which describes this item, containing documentation from
+    /// doc comments, as well as rendered definitions of types and values.
     #[serde(rename = "doc")]
     content: String,
+    /// The relative URL to the documentation for this search item, for example
+    /// `gleam/option.html#Option`
     #[serde(rename = "ref")]
     reference: String,
 }
@@ -866,8 +708,7 @@ struct SearchItem {
 #[derive(Serialize, PartialEq, Eq, PartialOrd, Ord, Clone)]
 #[serde(rename_all = "lowercase")]
 enum SearchItemType {
-    Constant,
-    Function,
+    Value,
     Module,
     Page,
     Type,
@@ -879,4 +720,68 @@ enum SearchProgrammingLanguage {
     // Elixir,
     // Erlang,
     Gleam,
+}
+
+#[test]
+fn package_config_to_json() {
+    let input = r#"
+name = "my_project"
+version = "1.0.0"
+licences = ["Apache-2.0", "MIT"]
+description = "Pretty complex config"
+target = "erlang"
+repository = { type = "github", user = "example", repo = "my_dep" }
+links = [{ title = "Home page", href = "https://example.com" }]
+internal_modules = ["my_app/internal"]
+gleam = ">= 0.30.0"
+
+[dependencies]
+gleam_stdlib = ">= 0.18.0 and < 2.0.0"
+my_other_project = { path = "../my_other_project" }
+
+[dev-dependencies]
+gleeunit = ">= 1.0.0 and < 2.0.0"
+
+[documentation]
+pages = [{ title = "My Page", path = "my-page.html", source = "./path/to/my-page.md" }]
+
+[erlang]
+application_start_module = "my_app/application"
+extra_applications = ["inets", "ssl"]
+
+[javascript]
+typescript_declarations = true
+runtime = "node"
+
+[javascript.deno]
+allow_all = false
+allow_ffi = true
+allow_env = ["DATABASE_URL"]
+allow_net = ["example.com:443"]
+allow_read = ["./database.sqlite"]
+"#;
+
+    let config = toml::from_str::<PackageConfig>(&input).unwrap();
+    let info = PackageInformation {
+        package_config: config.clone(),
+    };
+    let json = package_information_as_json(config);
+    let output = format!("--- GLEAM.TOML\n{input}\n\n--- EXPORTED JSON\n\n{json}");
+    insta::assert_snapshot!(output);
+
+    let roundtrip: PackageInformation = serde_json::from_str(&json).unwrap();
+    assert_eq!(info, roundtrip);
+}
+
+#[test]
+fn barebones_package_config_to_json() {
+    let input = r#"
+name = "my_project"
+version = "1.0.0"
+"#;
+
+    let config = toml::from_str::<PackageConfig>(&input).unwrap();
+    let json = package_information_as_json(config);
+    let output = format!("--- GLEAM.TOML\n{input}\n\n--- EXPORTED JSON\n\n{json}");
+    insta::assert_snapshot!(output);
 }

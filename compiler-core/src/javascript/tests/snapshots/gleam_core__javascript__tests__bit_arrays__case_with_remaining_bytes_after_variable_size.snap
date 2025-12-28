@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 1874
+expression: "\npub fn go(x) {\n  let n = 1\n  case x {\n    <<_:size(n), _, _:bytes>> -> 1\n    _ -> 2\n  }\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  let n = 1
+  case x {
+    <<_:size(n), _, _:bytes>> -> 1
+    _ -> 2
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function go(x) {
+  let n = 1;
+  if (
+    n >= 0 &&
+    x.bitSize >= n &&
+    x.bitSize >= 8 + n &&
+    (x.bitSize - (8 + n)) % 8 === 0
+  ) {
+    return 1;
+  } else {
+    return 2;
+  }
+}

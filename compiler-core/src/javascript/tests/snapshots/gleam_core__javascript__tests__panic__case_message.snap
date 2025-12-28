@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/javascript/tests/panic.rs
+assertion_line: 88
+expression: "\npub fn crash(message) {\n  panic as case message {\n    Ok(message) -> message\n    Error(_) -> \"No message provided\"\n  }\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub fn crash(message) {
+  panic as case message {
+    Ok(message) -> message
+    Error(_) -> "No message provided"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { Ok, makeError } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+export function crash(message) {
+  let _block;
+  if (message instanceof Ok) {
+    let message$1 = message[0];
+    _block = message$1;
+  } else {
+    _block = "No message provided";
+  }
+  throw makeError("panic", FILEPATH, "my/mod", 3, "crash", _block, {})
+}

@@ -1,0 +1,295 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\ntype Person {\n  Person(name: String, age: Int)\n}\n\nconst alice = Person(\"Alice\", 30)\nconst bob = Person(..alice, name: \"Bob\")\n"
+---
+Parsed {
+    module: Module {
+        name: "",
+        documentation: [],
+        type_info: (),
+        definitions: [
+            TargetedDefinition {
+                definition: CustomType(
+                    CustomType {
+                        location: SrcSpan {
+                            start: 1,
+                            end: 12,
+                        },
+                        end_position: 49,
+                        name: "Person",
+                        name_location: SrcSpan {
+                            start: 6,
+                            end: 12,
+                        },
+                        publicity: Private,
+                        constructors: [
+                            RecordConstructor {
+                                location: SrcSpan {
+                                    start: 17,
+                                    end: 47,
+                                },
+                                name_location: SrcSpan {
+                                    start: 17,
+                                    end: 23,
+                                },
+                                name: "Person",
+                                arguments: [
+                                    RecordConstructorArg {
+                                        label: Some(
+                                            (
+                                                SrcSpan {
+                                                    start: 24,
+                                                    end: 28,
+                                                },
+                                                "name",
+                                            ),
+                                        ),
+                                        ast: Constructor(
+                                            TypeAstConstructor {
+                                                location: SrcSpan {
+                                                    start: 30,
+                                                    end: 36,
+                                                },
+                                                name_location: SrcSpan {
+                                                    start: 30,
+                                                    end: 36,
+                                                },
+                                                module: None,
+                                                name: "String",
+                                                arguments: [],
+                                                start_parentheses: None,
+                                            },
+                                        ),
+                                        location: SrcSpan {
+                                            start: 24,
+                                            end: 36,
+                                        },
+                                        type_: (),
+                                        doc: None,
+                                    },
+                                    RecordConstructorArg {
+                                        label: Some(
+                                            (
+                                                SrcSpan {
+                                                    start: 38,
+                                                    end: 41,
+                                                },
+                                                "age",
+                                            ),
+                                        ),
+                                        ast: Constructor(
+                                            TypeAstConstructor {
+                                                location: SrcSpan {
+                                                    start: 43,
+                                                    end: 46,
+                                                },
+                                                name_location: SrcSpan {
+                                                    start: 43,
+                                                    end: 46,
+                                                },
+                                                module: None,
+                                                name: "Int",
+                                                arguments: [],
+                                                start_parentheses: None,
+                                            },
+                                        ),
+                                        location: SrcSpan {
+                                            start: 38,
+                                            end: 46,
+                                        },
+                                        type_: (),
+                                        doc: None,
+                                    },
+                                ],
+                                documentation: None,
+                                deprecation: NotDeprecated,
+                            },
+                        ],
+                        documentation: None,
+                        deprecation: NotDeprecated,
+                        opaque: false,
+                        parameters: [],
+                        typed_parameters: [],
+                        external_erlang: None,
+                        external_javascript: None,
+                    },
+                ),
+                target: None,
+            },
+            TargetedDefinition {
+                definition: ModuleConstant(
+                    ModuleConstant {
+                        documentation: None,
+                        location: SrcSpan {
+                            start: 51,
+                            end: 62,
+                        },
+                        publicity: Private,
+                        name: "alice",
+                        name_location: SrcSpan {
+                            start: 57,
+                            end: 62,
+                        },
+                        annotation: None,
+                        value: Record {
+                            location: SrcSpan {
+                                start: 65,
+                                end: 84,
+                            },
+                            module: None,
+                            name: "Person",
+                            arguments: [
+                                CallArg {
+                                    label: None,
+                                    location: SrcSpan {
+                                        start: 72,
+                                        end: 79,
+                                    },
+                                    value: String {
+                                        location: SrcSpan {
+                                            start: 72,
+                                            end: 79,
+                                        },
+                                        value: "Alice",
+                                    },
+                                    implicit: None,
+                                },
+                                CallArg {
+                                    label: None,
+                                    location: SrcSpan {
+                                        start: 81,
+                                        end: 83,
+                                    },
+                                    value: Int {
+                                        location: SrcSpan {
+                                            start: 81,
+                                            end: 83,
+                                        },
+                                        value: "30",
+                                        int_value: 30,
+                                    },
+                                    implicit: None,
+                                },
+                            ],
+                            tag: (),
+                            type_: (),
+                            field_map: Unknown,
+                            record_constructor: None,
+                        },
+                        type_: (),
+                        deprecation: NotDeprecated,
+                        implementations: Implementations {
+                            gleam: true,
+                            can_run_on_erlang: true,
+                            can_run_on_javascript: true,
+                            uses_erlang_externals: false,
+                            uses_javascript_externals: false,
+                        },
+                    },
+                ),
+                target: None,
+            },
+            TargetedDefinition {
+                definition: ModuleConstant(
+                    ModuleConstant {
+                        documentation: None,
+                        location: SrcSpan {
+                            start: 85,
+                            end: 94,
+                        },
+                        publicity: Private,
+                        name: "bob",
+                        name_location: SrcSpan {
+                            start: 91,
+                            end: 94,
+                        },
+                        annotation: None,
+                        value: RecordUpdate {
+                            location: SrcSpan {
+                                start: 97,
+                                end: 125,
+                            },
+                            constructor_location: SrcSpan {
+                                start: 97,
+                                end: 103,
+                            },
+                            module: None,
+                            name: "Person",
+                            record: RecordBeingUpdated {
+                                base: Var {
+                                    location: SrcSpan {
+                                        start: 106,
+                                        end: 111,
+                                    },
+                                    module: None,
+                                    name: "alice",
+                                    constructor: None,
+                                    type_: (),
+                                },
+                                location: SrcSpan {
+                                    start: 106,
+                                    end: 111,
+                                },
+                            },
+                            arguments: [
+                                RecordUpdateArg {
+                                    label: "name",
+                                    location: SrcSpan {
+                                        start: 113,
+                                        end: 124,
+                                    },
+                                    value: String {
+                                        location: SrcSpan {
+                                            start: 119,
+                                            end: 124,
+                                        },
+                                        value: "Bob",
+                                    },
+                                },
+                            ],
+                            tag: (),
+                            type_: (),
+                            field_map: Unknown,
+                        },
+                        type_: (),
+                        deprecation: NotDeprecated,
+                        implementations: Implementations {
+                            gleam: true,
+                            can_run_on_erlang: true,
+                            can_run_on_javascript: true,
+                            uses_erlang_externals: false,
+                            uses_javascript_externals: false,
+                        },
+                    },
+                ),
+                target: None,
+            },
+        ],
+        names: Names {
+            local_types: {},
+            imported_modules: {},
+            type_variables: {},
+            local_value_constructors: {},
+            reexport_aliases: {},
+        },
+        unused_definition_positions: {},
+    },
+    extra: ModuleExtra {
+        module_comments: [],
+        doc_comments: [],
+        comments: [],
+        empty_lines: [
+            50,
+        ],
+        new_lines: [
+            0,
+            14,
+            47,
+            49,
+            50,
+            84,
+            125,
+        ],
+        trailing_commas: [],
+    },
+}

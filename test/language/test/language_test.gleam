@@ -33,6 +33,7 @@ pub fn main() {
         "dynamic sized bit array patterns",
         dynamic_size_bit_array_pattern_tests(),
       ),
+      suite("non UTF-8 string bit arrays", non_utf8_string_bit_array_tests()),
       suite("list spread", list_spread_tests()),
       suite("clause guards", clause_guard_tests()),
       suite("imported custom types", imported_custom_types_test()),
@@ -1052,6 +1053,17 @@ fn bit_array_tests() -> List(Test) {
           rest
         })
       }),
+    "matching zero length segment"
+      |> example(fn() {
+        let size = 0
+        let data = <<>>
+        assert_equal("ok", {
+          case data {
+            <<_:bytes-size(size), _:bytes>> -> "ok"
+            _ -> "this cause should not be reached"
+          }
+        })
+      }),
   ]
 }
 
@@ -1059,7 +1071,43 @@ fn bit_array_tests() -> List(Test) {
 fn bit_array_target_tests() -> List(Test) {
   [
     "<<60, 0>> == <<1.0:float-16>>"
-    |> example(fn() { assert_equal(True, <<60, 0>> == <<1.0:float-16>>) }),
+      |> example(fn() { assert_equal(True, <<60, 0>> == <<1.0:float-16>>) }),
+    // https://github.com/gleam-lang/gleam/issues/3375
+    "assignment int pattern in a bit array"
+      |> example(fn() {
+        assert_equal(10, {
+          let assert <<10 as a, _>> = <<10, 20>>
+          a
+        })
+      }),
+    "assignment float pattern in a bit array"
+      |> example(fn() {
+        assert_equal(3.14, {
+          let assert <<3.14 as pi:float>> = <<3.14>>
+          pi
+        })
+      }),
+    "assignment string pattern in a bit array"
+      |> example(fn() {
+        assert_equal("Hello", {
+          let assert <<"Hello" as h:utf8, ", world!">> = <<"Hello, world!">>
+          h
+        })
+      }),
+    "pattern-match UTF-16 codepoint little-endian"
+      |> example(fn() {
+        assert_equal(ffi.utf_codepoint(127_757), {
+          let assert <<codepoint:utf16_codepoint-little>> = <<"🌍":utf16-little>>
+          codepoint
+        })
+      }),
+    "pattern-match UTF-32 codepoint little-endian"
+      |> example(fn() {
+        assert_equal(ffi.utf_codepoint(127_757), {
+          let assert <<codepoint:utf32_codepoint-little>> = <<"🌍":utf32-little>>
+          codepoint
+        })
+      }),
   ]
 }
 
@@ -1163,6 +1211,52 @@ fn sized_bit_array_tests() -> List(Test) {
       |> example(fn() {
         let size = 5
         assert_equal(True, <<405:size(size)-unit(2)>> == <<101, 1:2>>)
+      }),
+    "let assert <<len, payload:bits-size(len * 8 - 4)>>"
+      |> example(fn() {
+        assert_equal(<<1, 2, 3, 4:4>>, {
+          let assert <<len, payload:bits-size(len * 8 - 4)>> = <<
+            4, 1, 2, 3, 4:4,
+          >>
+          payload
+        })
+      }),
+    "let assert <<len, payload:bytes-size(len / 8 + 2)>>"
+      |> example(fn() {
+        assert_equal(<<1, 2, 3, 4, 5, 6>>, {
+          let assert <<len, payload:bytes-size(len / 8 + 2)>> = <<
+            32, 1, 2, 3, 4, 5, 6,
+          >>
+          payload
+        })
+      }),
+    "let additional = 5\nlet assert <<len, payload:bits-size(len + additional * 8)>>"
+      |> example(fn() {
+        assert_equal(<<1, 2, 3, 4, 5, 6>>, {
+          let additional = 5
+          let assert <<len, payload:bits-size(len + additional * 8)>> = <<
+            8, 1, 2, 3, 4, 5, 6,
+          >>
+          payload
+        })
+      }),
+    "let assert <<len, payload:bits-size({ len + 1 } * 8)>>"
+      |> example(fn() {
+        assert_equal(<<1, 2, 3, 4>>, {
+          let assert <<len, payload:bits-size({ len + 1 } * 8)>> = <<
+            3, 1, 2, 3, 4,
+          >>
+          payload
+        })
+      }),
+    "Pattern match on negative size"
+      |> example(fn() {
+        assert_equal(2, {
+          case <<1, 2, 3, 4>> {
+            <<a, b:size(a - 100_000), _c:size(b)>> -> 1
+            _ -> 2
+          }
+        })
       }),
   ]
 }
@@ -1587,6 +1681,119 @@ let assert <<value:size(size)>> = <<61:6>>"
   ]
 }
 
+fn non_utf8_string_bit_array_tests() -> List(Test) {
+  [
+    "let assert <<\"Hello, world\":utf16>> = <<\"Hello, world\":utf16>>"
+      |> example(fn() {
+        assert_equal(<<"Hello, world":utf16>>, {
+          let assert <<"Hello, world":utf16>> = <<"Hello, world":utf16>>
+        })
+      }),
+    "let assert <<\"Hello, world\":utf32>> = <<\"Hello, world\":utf32>>"
+      |> example(fn() {
+        assert_equal(<<"Hello, world":utf32>>, {
+          let assert <<"Hello, world":utf32>> = <<"Hello, world":utf32>>
+        })
+      }),
+    "UTF-16 bytes"
+      |> example(fn() {
+        assert_equal(<<"Hello, 🌍!":utf16>>, <<
+          0, 72, 0, 101, 0, 108, 0, 108, 0, 111, 0, 44, 0, 32, 216, 60, 223, 13,
+          0, 33,
+        >>)
+      }),
+    "UTF-32 bytes"
+      |> example(fn() {
+        assert_equal(<<"Hello, 🌍!":utf32>>, <<
+          0, 0, 0, 72, 0, 0, 0, 101, 0, 0, 0, 108, 0, 0, 0, 108, 0, 0, 0, 111, 0,
+          0, 0, 44, 0, 0, 0, 32, 0, 1, 243, 13, 0, 0, 0, 33,
+        >>)
+      }),
+    "UTF-16 pattern matching"
+      |> example(fn() {
+        assert_equal(<<"Hello, 🌍!":utf16>>, {
+          let assert <<"Hello, 🌍!":utf16>> = <<
+            0, 72, 0, 101, 0, 108, 0, 108, 0, 111, 0, 44, 0, 32, 216, 60, 223,
+            13, 0, 33,
+          >>
+        })
+      }),
+    "UTF-32 pattern matching"
+      |> example(fn() {
+        assert_equal(<<"Hello, 🌍!":utf32>>, {
+          let assert <<"Hello, 🌍!":utf32>> = <<
+            0, 0, 0, 72, 0, 0, 0, 101, 0, 0, 0, 108, 0, 0, 0, 108, 0, 0, 0, 111,
+            0, 0, 0, 44, 0, 0, 0, 32, 0, 1, 243, 13, 0, 0, 0, 33,
+          >>
+        })
+      }),
+    "UTF-16 bytes little endian"
+      |> example(fn() {
+        assert_equal(<<"Hello, 🌍!":utf16-little>>, <<
+          72, 0, 101, 0, 108, 0, 108, 0, 111, 0, 44, 0, 32, 0, 60, 216, 13, 223,
+          33, 0,
+        >>)
+      }),
+    "UTF-32 bytes little endian"
+      |> example(fn() {
+        assert_equal(<<"Hello, 🌍!":utf32-little>>, <<
+          72, 0, 0, 0, 101, 0, 0, 0, 108, 0, 0, 0, 108, 0, 0, 0, 111, 0, 0, 0,
+          44, 0, 0, 0, 32, 0, 0, 0, 13, 243, 1, 0, 33, 0, 0, 0,
+        >>)
+      }),
+    "UTF-16 pattern matching little endian"
+      |> example(fn() {
+        assert_equal(<<"Hello, 🌍!":utf16-little>>, {
+          let assert <<"Hello, 🌍!":utf16-little>> = <<
+            72, 0, 101, 0, 108, 0, 108, 0, 111, 0, 44, 0, 32, 0, 60, 216, 13,
+            223, 33, 0,
+          >>
+        })
+      }),
+    "UTF-32 pattern matching little endian"
+      |> example(fn() {
+        assert_equal(<<"Hello, 🌍!":utf32-little>>, {
+          let assert <<"Hello, 🌍!":utf32-little>> = <<
+            72, 0, 0, 0, 101, 0, 0, 0, 108, 0, 0, 0, 108, 0, 0, 0, 111, 0, 0, 0,
+            44, 0, 0, 0, 32, 0, 0, 0, 13, 243, 1, 0, 33, 0, 0, 0,
+          >>
+        })
+      }),
+    "UTF-16 codepoint"
+      |> example(fn() {
+        assert_equal(<<216, 60, 223, 13>>, {
+          // 🌍
+          let codepoint = ffi.utf_codepoint(127_757)
+          <<codepoint:utf16_codepoint>>
+        })
+      }),
+    "UTF-16 codepoint little-endian"
+      |> example(fn() {
+        assert_equal(<<60, 216, 13, 223>>, {
+          // 🌍
+          let codepoint = ffi.utf_codepoint(127_757)
+          <<codepoint:utf16_codepoint-little>>
+        })
+      }),
+    "UTF-32 codepoint"
+      |> example(fn() {
+        assert_equal(<<0, 1, 243, 13>>, {
+          // 🌍
+          let codepoint = ffi.utf_codepoint(127_757)
+          <<codepoint:utf32_codepoint>>
+        })
+      }),
+    "UTF-32 codepoint little-endian"
+      |> example(fn() {
+        assert_equal(<<13, 243, 1, 0>>, {
+          // 🌍
+          let codepoint = ffi.utf_codepoint(127_757)
+          <<codepoint:utf32_codepoint-little>>
+        })
+      }),
+  ]
+}
+
 fn list_spread_tests() -> List(Test) {
   [
     "[1, ..[]]"
@@ -1735,6 +1942,10 @@ type Person {
   Person(name: String, age: Int, country: String)
 }
 
+type MixedRecord {
+  MixedRecord(Int, Float, labelled_1: Int, labelled_2: String)
+}
+
 fn record_update_tests() {
   [
     "unqualified record update"
@@ -1760,6 +1971,13 @@ fn record_update_tests() {
               |> id,
           )
         assert_equal(record_update.Box("a", 6), updated)
+      }),
+    "unlabelled field in record update"
+      |> example(fn() {
+        let record =
+          MixedRecord(1, 3.14, labelled_1: 3982, labelled_2: "Something")
+        let updated = MixedRecord(..record, labelled_1: 12)
+        assert_equal(MixedRecord(1, 3.14, 12, "Something"), updated)
       }),
   ]
 }
@@ -2073,6 +2291,14 @@ fn bit_array_match_tests() {
             142, 231, 255, 255, 253, 123, 17,
           >>
           i
+        })
+      }),
+    // https://github.com/gleam-lang/gleam/issues/4712
+    "Multiple variable segments"
+      |> example(fn() {
+        assert_equal(12, {
+          let assert <<a, b:size(a), c:size(b)>> = <<2, 3:2, 7:3>>
+          a + b + c
         })
       }),
   ]

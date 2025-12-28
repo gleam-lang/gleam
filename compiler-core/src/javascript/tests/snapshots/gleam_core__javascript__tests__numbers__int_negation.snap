@@ -1,17 +1,19 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-expression: "\nfn go() {\n  let a = 3\n  let b = -a\n}\n"
+assertion_line: 227
+expression: "\npub fn go() {\n  let a = 3\n  let b = -a\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go() {
+pub fn go() {
   let a = 3
   let b = -a
 }
 
 
 ----- COMPILED JAVASCRIPT
-function go() {
+export function go() {
   let a = 3;
   let b = - a;
   return b;

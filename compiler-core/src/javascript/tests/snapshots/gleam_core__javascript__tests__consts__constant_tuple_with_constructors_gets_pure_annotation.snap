@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/consts.rs
-expression: "\npub type X {\n  X(Int, List(String))\n}\n\npub const x = #(X(1, [\"1\"]))\nconst y = #(X(1, [\"1\"]))\n        "
+expression: "\npub type X {\n  X(Int, List(String))\n}\n\npub const x = #(X(1, [\"1\"]))\npub const y = #(X(1, [\"1\"]))\n        "
 ---
 ----- SOURCE CODE
 
@@ -9,20 +9,24 @@ pub type X {
 }
 
 pub const x = #(X(1, ["1"]))
-const y = #(X(1, ["1"]))
+pub const y = #(X(1, ["1"]))
         
 
 ----- COMPILED JAVASCRIPT
 import { toList, CustomType as $CustomType } from "../gleam.mjs";
 
 export class X extends $CustomType {
-  constructor(x0, x1) {
+  constructor($0, $1) {
     super();
-    this[0] = x0;
-    this[1] = x1;
+    this[0] = $0;
+    this[1] = $1;
   }
 }
+export const X$X = ($0, $1) => new X($0, $1);
+export const X$isX = (value) => value instanceof X;
+export const X$X$0 = (value) => value[0];
+export const X$X$1 = (value) => value[1];
 
 export const x = [/* @__PURE__ */ new X(1, /* @__PURE__ */ toList(["1"]))];
 
-const y = [/* @__PURE__ */ new X(1, /* @__PURE__ */ toList(["1"]))];
+export const y = [/* @__PURE__ */ new X(1, /* @__PURE__ */ toList(["1"]))];

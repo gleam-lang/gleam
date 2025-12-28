@@ -13,33 +13,41 @@ pub fn main() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 
 -file("project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
-    _assert_subject = 1,
-    100000 = case _assert_subject of
-        100000 -> _assert_subject;
+    case 1 of
+        100000 -> nil;
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
-                        value => _assert_fail,
+                        file => <<?FILEPATH/utf8>>,
                         module => <<"my/mod"/utf8>>,
                         function => <<"main"/utf8>>,
-                        line => 3})
+                        line => 3,
+                        value => _assert_fail,
+                        start => 19,
+                        'end' => 41,
+                        pattern_start => 30,
+                        pattern_end => 37})
     end,
-    _assert_subject@1 = 1.0,
-    100000.00101 = case _assert_subject@1 of
-        100000.00101 -> _assert_subject@1;
+    case 1.0 of
+        100000.00101 -> nil;
         _assert_fail@1 ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
-                        value => _assert_fail@1,
+                        file => <<?FILEPATH/utf8>>,
                         module => <<"my/mod"/utf8>>,
                         function => <<"main"/utf8>>,
-                        line => 4})
+                        line => 4,
+                        value => _assert_fail@1,
+                        start => 44,
+                        'end' => 73,
+                        pattern_start => 55,
+                        pattern_end => 68})
     end,
     1.

@@ -1,0 +1,125 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "case 1 {\n  _ if { 1 || { 1 || 1 } } || 1  -> 1\n}"
+---
+[
+    Expression(
+        Case {
+            location: SrcSpan {
+                start: 0,
+                end: 48,
+            },
+            subjects: [
+                Int {
+                    location: SrcSpan {
+                        start: 5,
+                        end: 6,
+                    },
+                    value: "1",
+                    int_value: 1,
+                },
+            ],
+            clauses: Some(
+                [
+                    Clause {
+                        location: SrcSpan {
+                            start: 11,
+                            end: 46,
+                        },
+                        pattern: [
+                            Discard {
+                                name: "_",
+                                location: SrcSpan {
+                                    start: 11,
+                                    end: 12,
+                                },
+                                type_: (),
+                            },
+                        ],
+                        alternative_patterns: [],
+                        guard: Some(
+                            Or {
+                                location: SrcSpan {
+                                    start: 16,
+                                    end: 40,
+                                },
+                                left: Block {
+                                    location: SrcSpan {
+                                        start: 16,
+                                        end: 35,
+                                    },
+                                    value: Or {
+                                        location: SrcSpan {
+                                            start: 18,
+                                            end: 33,
+                                        },
+                                        left: Constant(
+                                            Int {
+                                                location: SrcSpan {
+                                                    start: 18,
+                                                    end: 19,
+                                                },
+                                                value: "1",
+                                                int_value: 1,
+                                            },
+                                        ),
+                                        right: Block {
+                                            location: SrcSpan {
+                                                start: 23,
+                                                end: 33,
+                                            },
+                                            value: Or {
+                                                location: SrcSpan {
+                                                    start: 25,
+                                                    end: 31,
+                                                },
+                                                left: Constant(
+                                                    Int {
+                                                        location: SrcSpan {
+                                                            start: 25,
+                                                            end: 26,
+                                                        },
+                                                        value: "1",
+                                                        int_value: 1,
+                                                    },
+                                                ),
+                                                right: Constant(
+                                                    Int {
+                                                        location: SrcSpan {
+                                                            start: 30,
+                                                            end: 31,
+                                                        },
+                                                        value: "1",
+                                                        int_value: 1,
+                                                    },
+                                                ),
+                                            },
+                                        },
+                                    },
+                                },
+                                right: Constant(
+                                    Int {
+                                        location: SrcSpan {
+                                            start: 39,
+                                            end: 40,
+                                        },
+                                        value: "1",
+                                        int_value: 1,
+                                    },
+                                ),
+                            },
+                        ),
+                        then: Int {
+                            location: SrcSpan {
+                                start: 45,
+                                end: 46,
+                            },
+                            value: "1",
+                            int_value: 1,
+                        },
+                    },
+                ],
+            ),
+        },
+    ),
+]

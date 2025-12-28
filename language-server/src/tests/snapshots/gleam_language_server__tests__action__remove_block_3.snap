@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n    case 1 {\n      _ -> { main() <> 2 }\n    }\n}\n"
+---
+----- BEFORE ACTION
+pub fn main() {
+    case 1 {
+      _ -> { main() <> 2 }
+           ↑              
+    }
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+    case 1 {
+      _ ->  main() <> 2 
+    }
+}

@@ -6,24 +6,32 @@ mod untyped;
 mod tests;
 pub mod visit;
 
-pub use self::typed::TypedExpr;
+pub use self::typed::{InvalidExpression, TypedExpr};
 pub use self::untyped::{FunctionLiteralKind, UntypedExpr};
 
 pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
 use crate::analyse::Inferred;
-use crate::build::{Located, Target};
-use crate::parse::SpannedString;
+use crate::ast::typed::pairwise_all;
+use crate::bit_array;
+use crate::build::{ExpressionPosition, Located, Target, module_erlang_name};
+use crate::exhaustiveness::CompiledCase;
+use crate::parse::{LiteralFloatValue, SpannedString};
 use crate::type_::error::VariableOrigin;
-use crate::type_::expression::Implementations;
+use crate::type_::expression::{Implementations, Purity};
 use crate::type_::printer::Names;
 use crate::type_::{
-    self, Deprecation, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor,
+    self, Deprecation, HasType, ModuleValueConstructor, PatternConstructor, Type, TypedCallArg,
+    ValueConstructor, ValueConstructorVariant, nil,
 };
+use itertools::Itertools;
+use num_traits::Zero;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use ecow::EcoString;
-use num_bigint::BigInt;
+use num_bigint::{BigInt, Sign};
+use num_traits::{One, ToPrimitive};
 #[cfg(test)]
 use pretty_assertions::assert_eq;
 use vec1::Vec1;
@@ -40,31 +48,75 @@ pub trait HasLocation {
     fn location(&self) -> SrcSpan;
 }
 
-pub type TypedModule = Module<type_::ModuleInterface, TypedDefinition>;
-
-pub type UntypedModule = Module<(), TargetedDefinition>;
+pub type UntypedModule = Module<(), Vec<TargetedDefinition>>;
+pub type TypedModule = Module<type_::ModuleInterface, TypedDefinitions>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Module<Info, Statements> {
+pub struct Module<Info, Definitions> {
     pub name: EcoString,
     pub documentation: Vec<EcoString>,
     pub type_info: Info,
-    pub definitions: Vec<Statements>,
+    pub definitions: Definitions,
     pub names: Names,
+    /// The source byte locations of definition that are unused.
+    /// This is used in code generation to know when definitions can be safely omitted.
+    pub unused_definition_positions: HashSet<u32>,
+}
+
+impl<Info, Definitions> Module<Info, Definitions> {
+    pub fn erlang_name(&self) -> EcoString {
+        module_erlang_name(&self.name)
+    }
 }
 
 impl TypedModule {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
-        self.definitions
+        let TypedDefinitions {
+            imports,
+            constants,
+            custom_types,
+            type_aliases,
+            functions,
+        } = &self.definitions;
+
+        imports
             .iter()
-            .find_map(|statement| statement.find_node(byte_index))
+            .find_map(|import| import.find_node(byte_index))
+            .or_else(|| (constants.iter()).find_map(|constant| constant.find_node(byte_index)))
+            .or_else(|| (custom_types.iter()).find_map(|type_| type_.find_node(byte_index)))
+            .or_else(|| (type_aliases.iter()).find_map(|alias| alias.find_node(byte_index)))
+            .or_else(|| (functions.iter()).find_map(|function| function.find_node(byte_index)))
     }
 
     pub fn find_statement(&self, byte_index: u32) -> Option<&TypedStatement> {
+        // Statements can only be found inside a module function, there's no
+        // need to go over all the other module definitions.
         self.definitions
+            .functions
             .iter()
-            .find_map(|definition| definition.find_statement(byte_index))
+            .find_map(|function| function.find_statement(byte_index))
     }
+
+    pub fn definitions_len(&self) -> usize {
+        let TypedDefinitions {
+            imports,
+            constants,
+            custom_types,
+            type_aliases,
+            functions,
+        } = &self.definitions;
+
+        imports.len() + constants.len() + custom_types.len() + type_aliases.len() + functions.len()
+    }
+}
+
+#[derive(Debug)]
+pub struct TypedDefinitions {
+    pub imports: Vec<TypedImport>,
+    pub constants: Vec<TypedModuleConstant>,
+    pub custom_types: Vec<TypedCustomType>,
+    pub type_aliases: Vec<TypedTypeAlias>,
+    pub functions: Vec<TypedFunction>,
 }
 
 /// The `@target(erlang)` and `@target(javascript)` attributes can be used to
@@ -91,28 +143,31 @@ impl TargetedDefinition {
 
 impl UntypedModule {
     pub fn dependencies(&self, target: Target) -> Vec<(EcoString, SrcSpan)> {
-        self.iter_statements(target)
-            .flat_map(|s| match s {
+        self.iter_definitions(target)
+            .flat_map(|definition| match definition {
                 Definition::Import(Import {
                     module, location, ..
                 }) => Some((module.clone(), *location)),
-                _ => None,
+                Definition::Function(_)
+                | Definition::TypeAlias(_)
+                | Definition::CustomType(_)
+                | Definition::ModuleConstant(_) => None,
             })
             .collect()
     }
 
-    pub fn iter_statements(&self, target: Target) -> impl Iterator<Item = &UntypedDefinition> {
+    pub fn iter_definitions(&self, target: Target) -> impl Iterator<Item = &UntypedDefinition> {
         self.definitions
             .iter()
-            .filter(move |def| def.is_for(target))
-            .map(|def| &def.definition)
+            .filter(move |definition| definition.is_for(target))
+            .map(|definition| &definition.definition)
     }
 
-    pub fn into_iter_statements(self, target: Target) -> impl Iterator<Item = UntypedDefinition> {
+    pub fn into_iter_definitions(self, target: Target) -> impl Iterator<Item = UntypedDefinition> {
         self.definitions
             .into_iter()
-            .filter(move |def| def.is_for(target))
-            .map(|def| def.definition)
+            .filter(move |definition| definition.is_for(target))
+            .map(|definition| definition.definition)
     }
 }
 
@@ -171,7 +226,10 @@ impl<A> Arg<A> {
     pub fn is_capture_hole(&self) -> bool {
         match &self.names {
             ArgNames::Named { name, .. } if name == CAPTURE_VARIABLE => true,
-            _ => false,
+            ArgNames::Discard { .. }
+            | ArgNames::LabelledDiscard { .. }
+            | ArgNames::Named { .. }
+            | ArgNames::NamedLabelled { .. } => false,
         }
     }
 }
@@ -270,9 +328,11 @@ impl<T: PartialEq> RecordConstructorArg<T> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeAstConstructor {
     pub location: SrcSpan,
+    pub name_location: SrcSpan,
     pub module: Option<(EcoString, SrcSpan)>,
     pub name: EcoString,
     pub arguments: Vec<TypeAst>,
+    pub start_parentheses: Option<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -291,7 +351,7 @@ pub struct TypeAstVar {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeAstTuple {
     pub location: SrcSpan,
-    pub elems: Vec<TypeAst>,
+    pub elements: Vec<TypeAst>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -327,12 +387,16 @@ impl TypeAst {
                 name,
                 arguments,
                 location: _,
+                name_location: _,
+                start_parentheses: _,
             }) => match other {
                 TypeAst::Constructor(TypeAstConstructor {
                     module: o_module,
                     name: o_name,
                     arguments: o_arguments,
                     location: _,
+                    name_location: _,
+                    start_parentheses: _,
                 }) => {
                     let module_name =
                         |m: &Option<(EcoString, _)>| m.as_ref().map(|(m, _)| m.clone());
@@ -344,7 +408,7 @@ impl TypeAst {
                             .zip(o_arguments)
                             .all(|a| a.0.is_logically_equal(a.1))
                 }
-                _ => false,
+                TypeAst::Fn(_) | TypeAst::Var(_) | TypeAst::Tuple(_) | TypeAst::Hole(_) => false,
             },
             TypeAst::Fn(TypeAstFn {
                 arguments,
@@ -363,34 +427,46 @@ impl TypeAst {
                             .all(|a| a.0.is_logically_equal(a.1))
                         && return_.is_logically_equal(o_return_)
                 }
-                _ => false,
+                TypeAst::Constructor(_)
+                | TypeAst::Var(_)
+                | TypeAst::Tuple(_)
+                | TypeAst::Hole(_) => false,
             },
             TypeAst::Var(TypeAstVar { name, location: _ }) => match other {
                 TypeAst::Var(TypeAstVar {
                     name: o_name,
                     location: _,
                 }) => name == o_name,
-                _ => false,
+                TypeAst::Constructor(_) | TypeAst::Fn(_) | TypeAst::Tuple(_) | TypeAst::Hole(_) => {
+                    false
+                }
             },
-            TypeAst::Tuple(TypeAstTuple { elems, location: _ }) => match other {
+            TypeAst::Tuple(TypeAstTuple {
+                elements,
+                location: _,
+            }) => match other {
                 TypeAst::Tuple(TypeAstTuple {
-                    elems: o_elems,
+                    elements: other_elements,
                     location: _,
                 }) => {
-                    elems.len() == o_elems.len()
-                        && elems
+                    elements.len() == other_elements.len()
+                        && elements
                             .iter()
-                            .zip(o_elems)
+                            .zip(other_elements)
                             .all(|a| a.0.is_logically_equal(a.1))
                 }
-                _ => false,
+                TypeAst::Constructor(_) | TypeAst::Fn(_) | TypeAst::Var(_) | TypeAst::Hole(_) => {
+                    false
+                }
             },
             TypeAst::Hole(TypeAstHole { name, location: _ }) => match other {
                 TypeAst::Hole(TypeAstHole {
                     name: o_name,
                     location: _,
                 }) => name == o_name,
-                _ => false,
+                TypeAst::Constructor(_) | TypeAst::Fn(_) | TypeAst::Var(_) | TypeAst::Tuple(_) => {
+                    false
+                }
             },
         }
     }
@@ -419,7 +495,7 @@ impl TypeAst {
 
                     None
                 })
-                .or(Some(Located::Annotation(self.location(), type_))),
+                .or(Some(Located::Annotation { ast: self, type_ })),
             TypeAst::Constructor(TypeAstConstructor {
                 arguments, module, ..
             }) => type_
@@ -446,11 +522,11 @@ impl TypeAst {
                         None
                     }
                 }))
-                .or(Some(Located::Annotation(self.location(), type_))),
-            TypeAst::Tuple(TypeAstTuple { elems, .. }) => type_
+                .or(Some(Located::Annotation { ast: self, type_ })),
+            TypeAst::Tuple(TypeAstTuple { elements, .. }) => type_
                 .tuple_types()
                 .and_then(|elem_types| {
-                    if let Some(e) = elems
+                    if let Some(e) = elements
                         .iter()
                         .zip(elem_types)
                         .find_map(|(e, e_type)| e.find_node(byte_index, e_type.clone()))
@@ -460,8 +536,8 @@ impl TypeAst {
 
                     None
                 })
-                .or(Some(Located::Annotation(self.location(), type_))),
-            TypeAst::Var(_) | TypeAst::Hole(_) => Some(Located::Annotation(self.location(), type_)),
+                .or(Some(Located::Annotation { ast: self, type_ })),
+            TypeAst::Var(_) | TypeAst::Hole(_) => Some(Located::Annotation { ast: self, type_ }),
         }
     }
 
@@ -472,9 +548,9 @@ impl TypeAst {
             TypeAst::Hole(hole) => buffer.push_str(&hole.name),
             TypeAst::Tuple(tuple) => {
                 buffer.push_str("#(");
-                for (i, elem) in tuple.elems.iter().enumerate() {
-                    elem.print(buffer);
-                    if i < tuple.elems.len() - 1 {
+                for (i, element) in tuple.elements.iter().enumerate() {
+                    element.print(buffer);
+                    if i < tuple.elements.len() - 1 {
                         buffer.push_str(", ");
                     }
                 }
@@ -544,6 +620,7 @@ fn type_ast_print_constructor() {
         name: "SomeType".into(),
         module: Some(("some_module".into(), SrcSpan { start: 1, end: 1 })),
         location: SrcSpan { start: 1, end: 1 },
+        name_location: SrcSpan { start: 1, end: 1 },
         arguments: vec![
             TypeAst::Var(TypeAstVar {
                 location: SrcSpan { start: 1, end: 1 },
@@ -554,6 +631,7 @@ fn type_ast_print_constructor() {
                 name: "Bool".into(),
             }),
         ],
+        start_parentheses: Some(1),
     });
     ast.print(&mut buffer);
     assert_eq!(&buffer, "some_module.SomeType(String, Bool)")
@@ -564,11 +642,12 @@ fn type_ast_print_tuple() {
     let mut buffer = EcoString::new();
     let ast = TypeAst::Tuple(TypeAstTuple {
         location: SrcSpan { start: 1, end: 1 },
-        elems: vec![
+        elements: vec![
             TypeAst::Constructor(TypeAstConstructor {
                 name: "SomeType".into(),
                 module: Some(("some_module".into(), SrcSpan { start: 1, end: 1 })),
                 location: SrcSpan { start: 1, end: 1 },
+                name_location: SrcSpan { start: 1, end: 1 },
                 arguments: vec![
                     TypeAst::Var(TypeAstVar {
                         location: SrcSpan { start: 1, end: 1 },
@@ -579,6 +658,7 @@ fn type_ast_print_tuple() {
                         name: "Bool".into(),
                     }),
                 ],
+                start_parentheses: Some(1),
             }),
             TypeAst::Fn(TypeAstFn {
                 location: SrcSpan { start: 1, end: 1 },
@@ -661,10 +741,11 @@ impl Publicity {
 /// ```
 pub struct Function<T, Expr> {
     pub location: SrcSpan,
+    pub body_start: Option<u32>,
     pub end_position: u32,
     pub name: Option<SpannedString>,
     pub arguments: Vec<Arg<T>>,
-    pub body: Vec1<Statement<T, Expr>>,
+    pub body: Vec<Statement<T, Expr>>,
     pub publicity: Publicity,
     pub deprecation: Deprecation,
     pub return_annotation: Option<TypeAst>,
@@ -673,6 +754,7 @@ pub struct Function<T, Expr> {
     pub external_erlang: Option<(EcoString, EcoString, SrcSpan)>,
     pub external_javascript: Option<(EcoString, EcoString, SrcSpan)>,
     pub implementations: Implementations,
+    pub purity: Purity,
 }
 
 pub type TypedFunction = Function<Arc<Type>, TypedExpr>;
@@ -684,7 +766,81 @@ impl<T, E> Function<T, E> {
     }
 }
 
+impl TypedFunction {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        // Search for the corresponding node inside the function
+        // only if the index falls within the function's full location.
+        if !self.full_location().contains(byte_index) {
+            return None;
+        }
+
+        if let Some(found) = self
+            .body
+            .iter()
+            .find_map(|statement| statement.find_node(byte_index))
+        {
+            return Some(found);
+        }
+
+        if let Some(found_arg) = self
+            .arguments
+            .iter()
+            .find_map(|arg| arg.find_node(byte_index))
+        {
+            return Some(found_arg);
+        };
+
+        if let Some(found_statement) = self
+            .body
+            .iter()
+            .find(|statement| statement.location().contains(byte_index))
+        {
+            return Some(Located::Statement(found_statement));
+        };
+
+        // Check if location is within the return annotation.
+        if let Some(located) = self
+            .return_annotation
+            .iter()
+            .find_map(|annotation| annotation.find_node(byte_index, self.return_type.clone()))
+        {
+            return Some(located);
+        };
+
+        // Note that the fn `.location` covers the function head, not
+        // the entire statement.
+        if self.location.contains(byte_index) {
+            Some(Located::ModuleFunction(self))
+        } else if self.full_location().contains(byte_index) {
+            Some(Located::FunctionBody(self))
+        } else {
+            None
+        }
+    }
+
+    pub fn find_statement(&self, byte_index: u32) -> Option<&TypedStatement> {
+        if !self.full_location().contains(byte_index) {
+            return None;
+        }
+
+        self.body
+            .iter()
+            .find_map(|statement| statement.find_statement(byte_index))
+    }
+
+    pub fn main_function(&self) -> Option<&TypedFunction> {
+        if let Some((_, name)) = &self.name
+            && name == "main"
+        {
+            Some(self)
+        } else {
+            None
+        }
+    }
+}
+
 pub type UntypedImport = Import<()>;
+pub type TypedImport = Import<EcoString>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// Import another Gleam module so the current module can use the types and
@@ -708,16 +864,56 @@ pub struct Import<PackageName> {
 }
 
 impl<T> Import<T> {
-    pub(crate) fn used_name(&self) -> Option<EcoString> {
+    pub fn used_name(&self) -> Option<EcoString> {
         match self.as_name.as_ref() {
             Some((AssignName::Variable(name), _)) => Some(name.clone()),
             Some((AssignName::Discard(_), _)) => None,
-            None => self.module.split('/').last().map(EcoString::from),
+            None => self.module.split('/').next_back().map(EcoString::from),
         }
     }
 
     pub(crate) fn alias_location(&self) -> Option<SrcSpan> {
         self.as_name.as_ref().map(|(_, location)| *location)
+    }
+}
+
+impl TypedImport {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        if !self.location.contains(byte_index) {
+            return None;
+        }
+
+        if let Some(unqualified) = self
+            .unqualified_values
+            .iter()
+            .find(|unqualified_value| unqualified_value.location.contains(byte_index))
+        {
+            return Some(Located::UnqualifiedImport(
+                crate::build::UnqualifiedImport {
+                    name: &unqualified.name,
+                    module: &self.module,
+                    is_type: false,
+                    location: &unqualified.location,
+                },
+            ));
+        }
+
+        if let Some(unqualified) = self
+            .unqualified_types
+            .iter()
+            .find(|unqualified_value| unqualified_value.location.contains(byte_index))
+        {
+            return Some(Located::UnqualifiedImport(
+                crate::build::UnqualifiedImport {
+                    name: &unqualified.name,
+                    module: &self.module,
+                    is_type: true,
+                    location: &unqualified.location,
+                },
+            ));
+        }
+
+        Some(Located::ModuleImport(self))
     }
 }
 
@@ -746,6 +942,27 @@ pub struct ModuleConstant<T, ConstantRecordTag> {
     pub type_: T,
     pub deprecation: Deprecation,
     pub implementations: Implementations,
+}
+
+impl TypedModuleConstant {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        // Check if location is within the annotation.
+        if let Some(annotation) = &self.annotation
+            && let Some(located) = annotation.find_node(byte_index, self.type_.clone())
+        {
+            return Some(located);
+        }
+
+        if let Some(located) = self.value.find_node(byte_index) {
+            return Some(located);
+        }
+
+        if self.location.contains(byte_index) {
+            Some(Located::ModuleConstant(self))
+        } else {
+            None
+        }
+    }
 }
 
 pub type UntypedCustomType = CustomType<()>;
@@ -782,6 +999,8 @@ pub struct CustomType<T> {
     /// Once type checked this field will contain the type information for the
     /// type parameters.
     pub typed_parameters: Vec<T>,
+    pub external_erlang: Option<(EcoString, EcoString, SrcSpan)>,
+    pub external_javascript: Option<(EcoString, EcoString, SrcSpan)>,
 }
 
 impl<T> CustomType<T> {
@@ -793,7 +1012,38 @@ impl<T> CustomType<T> {
     }
 }
 
+impl TypedCustomType {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        // Check if location is within the type of one of the arguments of a constructor.
+        if let Some(constructor) = self
+            .constructors
+            .iter()
+            .find(|constructor| constructor.location.contains(byte_index))
+        {
+            if let Some(annotation) = constructor
+                .arguments
+                .iter()
+                .find(|arg| arg.location.contains(byte_index))
+                .and_then(|arg| arg.ast.find_node(byte_index, arg.type_.clone()))
+            {
+                return Some(annotation);
+            }
+
+            return Some(Located::VariantConstructorDefinition(constructor));
+        }
+
+        // Note that the custom type `.location` covers the function
+        // head, not the entire statement.
+        if self.full_location().contains(byte_index) {
+            Some(Located::ModuleCustomType(self))
+        } else {
+            None
+        }
+    }
+}
+
 pub type UntypedTypeAlias = TypeAlias<()>;
+pub type TypedTypeAlias = TypeAlias<Arc<Type>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A new name for an existing type
@@ -816,193 +1066,30 @@ pub struct TypeAlias<T> {
     pub deprecation: Deprecation,
 }
 
-pub type TypedDefinition = Definition<Arc<Type>, TypedExpr, EcoString, EcoString>;
+impl TypedTypeAlias {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        // Check if location is within the type being aliased.
+        if let Some(located) = self.type_ast.find_node(byte_index, self.type_.clone()) {
+            return Some(located);
+        }
+
+        if self.location.contains(byte_index) {
+            Some(Located::ModuleTypeAlias(self))
+        } else {
+            None
+        }
+    }
+}
+
 pub type UntypedDefinition = Definition<(), UntypedExpr, (), ()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Definition<T, Expr, ConstantRecordTag, PackageName> {
     Function(Function<T, Expr>),
-
     TypeAlias(TypeAlias<T>),
-
     CustomType(CustomType<T>),
-
     Import(Import<PackageName>),
-
     ModuleConstant(ModuleConstant<T, ConstantRecordTag>),
-}
-
-impl TypedDefinition {
-    pub fn main_function(&self) -> Option<&TypedFunction> {
-        match self {
-            Definition::Function(f) if f.name.as_ref().is_some_and(|(_, name)| name == "main") => {
-                Some(f)
-            }
-            _ => None,
-        }
-    }
-
-    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
-        match self {
-            Definition::Function(function) => {
-                // Search for the corresponding node inside the function
-                // only if the index falls within the function's full location.
-                if !function.full_location().contains(byte_index) {
-                    return None;
-                }
-
-                if let Some(found) = function.body.iter().find_map(|s| s.find_node(byte_index)) {
-                    return Some(found);
-                }
-
-                if let Some(found_arg) = function
-                    .arguments
-                    .iter()
-                    .find_map(|arg| arg.find_node(byte_index))
-                {
-                    return Some(found_arg);
-                };
-
-                if let Some(found_statement) = function
-                    .body
-                    .iter()
-                    .find(|statement| statement.location().contains(byte_index))
-                {
-                    return Some(Located::Statement(found_statement));
-                };
-
-                // Check if location is within the return annotation.
-                if let Some(l) = function
-                    .return_annotation
-                    .iter()
-                    .find_map(|a| a.find_node(byte_index, function.return_type.clone()))
-                {
-                    return Some(l);
-                };
-
-                // Note that the fn `.location` covers the function head, not
-                // the entire statement.
-                if function.location.contains(byte_index) {
-                    Some(Located::ModuleStatement(self))
-                } else if function.full_location().contains(byte_index) {
-                    Some(Located::FunctionBody(function))
-                } else {
-                    None
-                }
-            }
-
-            Definition::CustomType(custom) => {
-                // Check if location is within the type of one of the arguments of a constructor.
-                if let Some(constructor) = custom
-                    .constructors
-                    .iter()
-                    .find(|constructor| constructor.location.contains(byte_index))
-                {
-                    if let Some(annotation) = constructor
-                        .arguments
-                        .iter()
-                        .find(|arg| arg.location.contains(byte_index))
-                        .and_then(|arg| arg.ast.find_node(byte_index, arg.type_.clone()))
-                    {
-                        return Some(annotation);
-                    }
-
-                    return Some(Located::VariantConstructorDefinition(constructor));
-                }
-
-                // Note that the custom type `.location` covers the function
-                // head, not the entire statement.
-                if custom.full_location().contains(byte_index) {
-                    Some(Located::ModuleStatement(self))
-                } else {
-                    None
-                }
-            }
-
-            Definition::TypeAlias(alias) => {
-                // Check if location is within the type being aliased.
-                if let Some(l) = alias.type_ast.find_node(byte_index, alias.type_.clone()) {
-                    return Some(l);
-                }
-
-                if alias.location.contains(byte_index) {
-                    Some(Located::ModuleStatement(self))
-                } else {
-                    None
-                }
-            }
-
-            Definition::ModuleConstant(constant) => {
-                // Check if location is within the annotation.
-                if let Some(annotation) = &constant.annotation {
-                    if let Some(l) = annotation.find_node(byte_index, constant.type_.clone()) {
-                        return Some(l);
-                    }
-                }
-
-                if constant.location.contains(byte_index) {
-                    Some(Located::ModuleStatement(self))
-                } else {
-                    None
-                }
-            }
-
-            Definition::Import(import) => {
-                if self.location().contains(byte_index) {
-                    if let Some(unqualified) = import
-                        .unqualified_values
-                        .iter()
-                        .find(|i| i.location.contains(byte_index))
-                    {
-                        return Some(Located::UnqualifiedImport(
-                            crate::build::UnqualifiedImport {
-                                name: &unqualified.name,
-                                module: &import.module,
-                                is_type: false,
-                                location: &unqualified.location,
-                            },
-                        ));
-                    }
-
-                    if let Some(unqualified) = import
-                        .unqualified_types
-                        .iter()
-                        .find(|i| i.location.contains(byte_index))
-                    {
-                        return Some(Located::UnqualifiedImport(
-                            crate::build::UnqualifiedImport {
-                                name: &unqualified.name,
-                                module: &import.module,
-                                is_type: true,
-                                location: &unqualified.location,
-                            },
-                        ));
-                    }
-
-                    Some(Located::ModuleStatement(self))
-                } else {
-                    None
-                }
-            }
-        }
-    }
-
-    pub fn find_statement(&self, byte_index: u32) -> Option<&TypedStatement> {
-        match self {
-            Definition::Function(function) => {
-                if !function.full_location().contains(byte_index) {
-                    return None;
-                }
-
-                function
-                    .body
-                    .iter()
-                    .find_map(|statement| statement.find_statement(byte_index))
-            }
-
-            _ => None,
-        }
-    }
 }
 
 impl<A, B, C, E> Definition<A, B, C, E> {
@@ -1032,17 +1119,12 @@ impl<A, B, C, E> Definition<A, B, C, E> {
         matches!(self, Self::Function(..))
     }
 
-    pub fn put_doc(&mut self, new_doc: (u32, EcoString)) {
-        match self {
-            Definition::Import(Import { .. }) => (),
-
-            Definition::Function(Function { documentation, .. })
-            | Definition::TypeAlias(TypeAlias { documentation, .. })
-            | Definition::CustomType(CustomType { documentation, .. })
-            | Definition::ModuleConstant(ModuleConstant { documentation, .. }) => {
-                let _ = std::mem::replace(documentation, Some(new_doc));
-            }
-        }
+    /// Returns `true` if the module statement is [`CustomType`].
+    ///
+    /// [`CustomType`]: ModuleStatement::CustomType
+    #[must_use]
+    pub fn is_custom_type(&self) -> bool {
+        matches!(self, Self::CustomType(..))
     }
 
     pub fn get_doc(&self) -> Option<EcoString> {
@@ -1151,6 +1233,8 @@ pub enum OperatorKind {
     StringConcatenation,
 }
 
+pub const PIPE_PRECEDENCE: u8 = 6;
+
 impl BinOp {
     pub fn precedence(&self) -> u8 {
         // Ensure that this matches the other precedence function for guards
@@ -1233,6 +1317,142 @@ impl BinOp {
     pub fn can_be_grouped_with(&self, other: &BinOp) -> bool {
         self.operator_kind() == other.operator_kind()
     }
+
+    pub fn is_float_operator(&self) -> bool {
+        match self {
+            BinOp::LtFloat
+            | BinOp::LtEqFloat
+            | BinOp::GtEqFloat
+            | BinOp::GtFloat
+            | BinOp::AddFloat
+            | BinOp::SubFloat
+            | BinOp::MultFloat
+            | BinOp::DivFloat => true,
+
+            BinOp::And
+            | BinOp::Or
+            | BinOp::Eq
+            | BinOp::NotEq
+            | BinOp::LtInt
+            | BinOp::LtEqInt
+            | BinOp::GtEqInt
+            | BinOp::GtInt
+            | BinOp::AddInt
+            | BinOp::SubInt
+            | BinOp::MultInt
+            | BinOp::DivInt
+            | BinOp::RemainderInt
+            | BinOp::Concatenate => false,
+        }
+    }
+
+    fn is_bool_operator(&self) -> bool {
+        match self {
+            BinOp::And | BinOp::Or => true,
+            BinOp::Eq
+            | BinOp::NotEq
+            | BinOp::LtInt
+            | BinOp::LtEqInt
+            | BinOp::LtFloat
+            | BinOp::LtEqFloat
+            | BinOp::GtEqInt
+            | BinOp::GtInt
+            | BinOp::GtEqFloat
+            | BinOp::GtFloat
+            | BinOp::AddInt
+            | BinOp::AddFloat
+            | BinOp::SubInt
+            | BinOp::SubFloat
+            | BinOp::MultInt
+            | BinOp::MultFloat
+            | BinOp::DivInt
+            | BinOp::DivFloat
+            | BinOp::RemainderInt
+            | BinOp::Concatenate => false,
+        }
+    }
+
+    pub fn is_int_operator(&self) -> bool {
+        match self {
+            BinOp::LtInt
+            | BinOp::LtEqInt
+            | BinOp::GtEqInt
+            | BinOp::GtInt
+            | BinOp::AddInt
+            | BinOp::SubInt
+            | BinOp::MultInt
+            | BinOp::DivInt
+            | BinOp::RemainderInt => true,
+
+            BinOp::And
+            | BinOp::Or
+            | BinOp::Eq
+            | BinOp::NotEq
+            | BinOp::LtFloat
+            | BinOp::LtEqFloat
+            | BinOp::GtEqFloat
+            | BinOp::GtFloat
+            | BinOp::AddFloat
+            | BinOp::SubFloat
+            | BinOp::MultFloat
+            | BinOp::DivFloat
+            | BinOp::Concatenate => false,
+        }
+    }
+
+    pub fn float_equivalent(&self) -> Option<BinOp> {
+        match self {
+            BinOp::LtInt => Some(BinOp::LtFloat),
+            BinOp::LtEqInt => Some(BinOp::LtEqFloat),
+            BinOp::GtEqInt => Some(BinOp::GtEqFloat),
+            BinOp::GtInt => Some(BinOp::GtFloat),
+            BinOp::AddInt => Some(BinOp::AddFloat),
+            BinOp::SubInt => Some(BinOp::SubFloat),
+            BinOp::MultInt => Some(BinOp::MultFloat),
+            BinOp::DivInt => Some(BinOp::DivFloat),
+            BinOp::And
+            | BinOp::Or
+            | BinOp::Eq
+            | BinOp::NotEq
+            | BinOp::LtFloat
+            | BinOp::LtEqFloat
+            | BinOp::GtEqFloat
+            | BinOp::GtFloat
+            | BinOp::AddFloat
+            | BinOp::SubFloat
+            | BinOp::MultFloat
+            | BinOp::DivFloat
+            | BinOp::RemainderInt
+            | BinOp::Concatenate => None,
+        }
+    }
+
+    pub fn int_equivalent(&self) -> Option<BinOp> {
+        match self {
+            BinOp::LtFloat => Some(BinOp::LtInt),
+            BinOp::LtEqFloat => Some(BinOp::LtEqInt),
+            BinOp::GtEqFloat => Some(BinOp::GtEqInt),
+            BinOp::GtFloat => Some(BinOp::GtInt),
+            BinOp::AddFloat => Some(BinOp::AddInt),
+            BinOp::SubFloat => Some(BinOp::SubInt),
+            BinOp::MultFloat => Some(BinOp::MultInt),
+            BinOp::DivFloat => Some(BinOp::DivInt),
+            BinOp::And
+            | BinOp::Or
+            | BinOp::Eq
+            | BinOp::NotEq
+            | BinOp::LtInt
+            | BinOp::LtEqInt
+            | BinOp::GtEqInt
+            | BinOp::GtInt
+            | BinOp::AddInt
+            | BinOp::SubInt
+            | BinOp::MultInt
+            | BinOp::DivInt
+            | BinOp::RemainderInt
+            | BinOp::Concatenate => None,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -1260,7 +1480,7 @@ pub enum ImplicitCallArgOrigin {
     /// right hand side of `use` is being called with the wrong arity.
     ///
     IncorrectArityUse,
-    /// An argument adde by the compiler to fill in the missing args when using
+    /// An argument added by the compiler to fill in the missing args when using
     /// the record update synax.
     ///
     RecordUpdate,
@@ -1282,7 +1502,12 @@ impl<A> CallArg<A> {
 }
 
 impl CallArg<TypedExpr> {
-    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+    pub fn find_node<'a>(
+        &'a self,
+        byte_index: u32,
+        called_function: &'a TypedExpr,
+        function_arguments: &'a [TypedCallArg],
+    ) -> Option<Located<'a>> {
         match (self.implicit, &self.value) {
             // If a call argument is the implicit use callback then we don't
             // want to look at its arguments and body but we don't want to
@@ -1298,15 +1523,34 @@ impl CallArg<TypedExpr> {
             // `TypedExpr::Fn{}.find_node()` except we do not return self as a
             // fallback.
             //
-            (Some(ImplicitCallArgOrigin::Use), TypedExpr::Fn { args, body, .. }) => args
+            (
+                Some(ImplicitCallArgOrigin::Use),
+                TypedExpr::Fn {
+                    arguments, body, ..
+                },
+            ) => arguments
                 .iter()
-                .find_map(|arg| arg.find_node(byte_index))
+                .find_map(|argument| argument.find_node(byte_index))
                 .or_else(|| body.iter().find_map(|s| s.find_node(byte_index))),
             // In all other cases we're happy with the default behaviour.
             //
             _ => match self.value.find_node(byte_index) {
+                Some(Located::Expression { expression, .. })
+                // This is only possibly a label if we are at the end of the expression
+                // (so not in the middle like `[abc|]`) and if this argument doesn't
+                // already have a label.
+                    if byte_index == self.value.location().end && self.label.is_none() =>
+                {
+                    Some(Located::Expression {
+                        expression,
+                        position: ExpressionPosition::ArgumentOrLabel {
+                            called_function,
+                            function_arguments,
+                        },
+                    })
+                }
                 Some(located) => Some(located),
-                _ => {
+                None => {
                     if self.location.contains(byte_index) && self.label.is_some() {
                         Some(Located::Label(self.location, self.value.type_()))
                     } else {
@@ -1331,7 +1575,29 @@ impl CallArg<TypedExpr> {
     pub fn is_capture_hole(&self) -> bool {
         match &self.value {
             TypedExpr::Var { name, .. } => name == CAPTURE_VARIABLE,
-            _ => false,
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => false,
         }
     }
 }
@@ -1351,11 +1617,45 @@ impl CallArg<TypedPattern> {
     }
 }
 
+impl CallArg<TypedConstant> {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        match self.value.find_node(byte_index) {
+            Some(located) => Some(located),
+            _ => {
+                if self.location.contains(byte_index) && self.label.is_some() {
+                    Some(Located::Label(self.location, self.value.type_()))
+                } else {
+                    None
+                }
+            }
+        }
+    }
+}
+
 impl CallArg<UntypedExpr> {
     pub fn is_capture_hole(&self) -> bool {
         match &self.value {
             UntypedExpr::Var { name, .. } => name == CAPTURE_VARIABLE,
-            _ => false,
+            UntypedExpr::Int { .. }
+            | UntypedExpr::Float { .. }
+            | UntypedExpr::String { .. }
+            | UntypedExpr::Block { .. }
+            | UntypedExpr::Fn { .. }
+            | UntypedExpr::List { .. }
+            | UntypedExpr::Call { .. }
+            | UntypedExpr::BinOp { .. }
+            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::Case { .. }
+            | UntypedExpr::FieldAccess { .. }
+            | UntypedExpr::Tuple { .. }
+            | UntypedExpr::TupleIndex { .. }
+            | UntypedExpr::Todo { .. }
+            | UntypedExpr::Panic { .. }
+            | UntypedExpr::Echo { .. }
+            | UntypedExpr::BitArray { .. }
+            | UntypedExpr::RecordUpdate { .. }
+            | UntypedExpr::NegateBool { .. }
+            | UntypedExpr::NegateInt { .. } => false,
         }
     }
 }
@@ -1366,7 +1666,18 @@ where
 {
     #[must_use]
     pub fn uses_label_shorthand(&self) -> bool {
-        self.label.is_some() && self.location == self.value.location()
+        self.label_shorthand_name().is_some()
+    }
+
+    /// If the call arg is defined using a label shorthand, this will return the
+    /// label name.
+    ///
+    pub fn label_shorthand_name(&self) -> Option<&EcoString> {
+        if !self.is_implicit() && self.location == self.value.location() {
+            self.label.as_ref()
+        } else {
+            None
+        }
     }
 }
 
@@ -1377,28 +1688,30 @@ impl<T> HasLocation for CallArg<T> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RecordBeingUpdated {
-    pub base: Box<UntypedExpr>,
+pub struct RecordBeingUpdated<A> {
+    pub base: Box<A>,
     pub location: SrcSpan,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct UntypedRecordUpdateArg {
+pub struct RecordUpdateArg<A> {
     pub label: EcoString,
     pub location: SrcSpan,
-    pub value: UntypedExpr,
+    pub value: A,
 }
 
-impl UntypedRecordUpdateArg {
-    #[must_use]
-    pub fn uses_label_shorthand(&self) -> bool {
-        self.value.location() == self.location
+pub type UntypedRecordUpdateArg = RecordUpdateArg<UntypedExpr>;
+
+impl<A> HasLocation for RecordUpdateArg<A> {
+    fn location(&self) -> SrcSpan {
+        self.location
     }
 }
 
-impl HasLocation for UntypedRecordUpdateArg {
-    fn location(&self) -> SrcSpan {
-        self.location
+impl<A: HasLocation> RecordUpdateArg<A> {
+    #[must_use]
+    pub fn uses_label_shorthand(&self) -> bool {
+        self.value.location() == self.location
     }
 }
 
@@ -1442,7 +1755,376 @@ impl TypedClause {
         self.pattern
             .iter()
             .find_map(|p| p.find_node(byte_index))
+            .or_else(|| {
+                self.alternative_patterns
+                    .iter()
+                    .flat_map(|p| p.iter())
+                    .find_map(|p| p.find_node(byte_index))
+            })
             .or_else(|| self.then.find_node(byte_index))
+    }
+
+    pub fn pattern_location(&self) -> SrcSpan {
+        let start = self.pattern.first().map(|pattern| pattern.location().start);
+
+        let end = if let Some(last_pattern) = self
+            .alternative_patterns
+            .last()
+            .and_then(|patterns| patterns.last())
+        {
+            Some(last_pattern.location().end)
+        } else {
+            self.pattern.last().map(|pattern| pattern.location().end)
+        };
+
+        SrcSpan::new(start.unwrap_or_default(), end.unwrap_or_default())
+    }
+
+    /// If the branch is rebuilding exactly one of the matched subjects and
+    /// returning it, this will return the index of that subject.
+    ///
+    /// For example:
+    /// - `n -> n`, `1 -> 1`, `Ok(1) -> Ok(1)` all return `Some(0)`
+    /// - `"a", n -> n`, `n, m if n == m -> a` all return `Some(1)`
+    /// - `_ -> 1`, `Ok(1), _ -> Ok(2)` all return `None`
+    /// ```
+    ///
+    pub fn returned_subject(&self) -> Option<usize> {
+        // The pattern must not have any alternative patterns.
+        if !self.alternative_patterns.is_empty() {
+            return None;
+        }
+
+        self.pattern
+            .iter()
+            .find_position(|pattern| pattern_and_expression_are_the_same(pattern, &self.then))
+            .map(|(position, _)| position)
+    }
+
+    /// This returns the names of all the variables bound in this case clause.
+    /// For example if we had `#(a, b) | c` this will return "a", "b", and "c".
+    pub fn bound_variables(&self) -> impl Iterator<Item = BoundVariable> {
+        std::iter::once(&self.pattern)
+            .chain(&self.alternative_patterns)
+            .flatten()
+            .flat_map(|pattern| pattern.bound_variables())
+    }
+
+    fn syntactically_eq(&self, other: &Self) -> bool {
+        let patterns_are_equal = pairwise_all(&self.pattern, &other.pattern, |(one, other)| {
+            one.syntactically_eq(other)
+        });
+
+        let alternatives_are_equal = pairwise_all(
+            &self.alternative_patterns,
+            &other.alternative_patterns,
+            |(patterns_one, patterns_other)| {
+                pairwise_all(patterns_one, patterns_other, |(one, other)| -> bool {
+                    one.syntactically_eq(other)
+                })
+            },
+        );
+
+        let guards_are_equal = match (&self.guard, &other.guard) {
+            (None, None) => true,
+            (None, Some(_)) | (Some(_), None) => false,
+            (Some(one), Some(other)) => one.syntactically_eq(other),
+        };
+
+        patterns_are_equal
+            && alternatives_are_equal
+            && guards_are_equal
+            && self.then.syntactically_eq(&other.then)
+    }
+}
+
+/// Returns true if a pattern and an expression are the same: that is the expression
+/// would be building the exact matched value back.
+/// For example, if I had a branch like this:
+///
+/// ```gleam
+/// [a, b, c] -> [a, b, c]
+/// ```
+///
+/// The pattern and the expression would indeed be the same. However, if I had
+/// something like this:
+///
+/// ```gleam
+/// [first, ..rest] -> [first]
+/// ```
+///
+/// They wouldn't be the same! I'm not building back exactly the value the
+/// pattern can match on.
+///
+fn pattern_and_expression_are_the_same(pattern: &TypedPattern, expression: &TypedExpr) -> bool {
+    match (pattern, expression) {
+        // A pattern could be the same as a block if the block is wrapping just
+        // a single expression that is the same as the pattern itself!
+        (pattern, TypedExpr::Block { statements, .. }) if statements.len() == 1 => {
+            match statements.first() {
+                Statement::Assignment(_) | Statement::Use(_) | Statement::Assert(_) => false,
+                Statement::Expression(expression) => {
+                    pattern_and_expression_are_the_same(pattern, expression)
+                }
+            }
+        }
+        // If the block has many statements then it can never be the same as a
+        // pattern.
+        (_, TypedExpr::Block { .. }) => false,
+
+        // A pattern and an expression are the same if they're a simple variable
+        // with exactly the same name: `x -> x`, `a -> a`
+        (
+            TypedPattern::Variable {
+                name: pattern_var, ..
+            },
+            TypedExpr::Var { name: body_var, .. },
+        ) => pattern_var == body_var,
+        (TypedPattern::Variable { .. }, _) => false,
+
+        // Floats, Ints, and Strings are the same if they are exactly the same
+        // literal.
+        // `1 -> 1`
+        // `1.1 -> 1.1`
+        // `"wibble" -> "wibble"`
+        (
+            TypedPattern::Float {
+                float_value: pattern_value,
+                ..
+            },
+            TypedExpr::Float { float_value, .. },
+        ) => pattern_value == float_value,
+        (TypedPattern::Float { .. }, _) => false,
+
+        (
+            TypedPattern::Int {
+                int_value: pattern_value,
+                ..
+            },
+            TypedExpr::Int { int_value, .. },
+        ) => pattern_value == int_value,
+        (TypedPattern::Int { .. }, _) => false,
+
+        (
+            TypedPattern::String {
+                value: pattern_value,
+                ..
+            },
+            TypedExpr::String { value, .. },
+        ) => pattern_value == value,
+        (TypedPattern::String { .. }, _) => false,
+
+        // A string prefix is equivalent to building the string back:
+        // `"wibble" <> wobble -> "wibble" <> wobble`
+        // `"wibble" as a <> wobble -> a <> wobble`
+        (
+            TypedPattern::StringPrefix {
+                left_side_assignment,
+                left_side_string,
+                right_side_assignment,
+                ..
+            },
+            TypedExpr::BinOp {
+                name: BinOp::Concatenate,
+                left,
+                right,
+                ..
+            },
+        ) => {
+            let left_side_matches = match (left_side_assignment, left_side_string, left.as_ref()) {
+                (_, left_side_string, TypedExpr::String { value, .. }) => value == left_side_string,
+                (Some((left_side_name, _)), _, TypedExpr::Var { name, .. }) => {
+                    left_side_name == name
+                }
+                (_, _, _) => false,
+            };
+            let right_side_matches = match (right_side_assignment, right.as_ref()) {
+                (AssignName::Variable(right_side_name), TypedExpr::Var { name, .. }) => {
+                    name == right_side_name
+                }
+                (AssignName::Variable(_) | AssignName::Discard(_), _) => false,
+            };
+            left_side_matches && right_side_matches
+        }
+        (TypedPattern::StringPrefix { .. }, _) => false,
+
+        // Two tuples where each element is equivalent to the other:
+        // `#(a, 1, "wibble") -> #(a, 1, "wibble")`
+        // `#(a, b) -> #(a, b)`
+        (
+            TypedPattern::Tuple {
+                elements: pattern_elements,
+                ..
+            },
+            TypedExpr::Tuple { elements, .. },
+        ) => {
+            pattern_elements.len() == elements.len()
+                && pattern_elements
+                    .iter()
+                    .zip(elements)
+                    .all(|(pattern, expression)| {
+                        pattern_and_expression_are_the_same(pattern, expression)
+                    })
+        }
+        (TypedPattern::Tuple { .. }, _) => false,
+
+        // Two lists are the same if each element is equivalent to the other:
+        // `[] -> []`
+        // `[a, b] -> [a, b]`
+        // `[1, ..rest] -> [1, ..rest]`
+        (
+            TypedPattern::List {
+                elements: pattern_elements,
+                tail: pattern_tail,
+                ..
+            },
+            TypedExpr::List { elements, tail, .. },
+        ) => {
+            let tails_are_the_same = match (pattern_tail, tail) {
+                (None, None) => true,
+                (None, Some(_)) | (Some(_), None) => false,
+                (Some(tail_pattern), Some(tail_expression)) => {
+                    pattern_and_expression_are_the_same(&tail_pattern.pattern, tail_expression)
+                }
+            };
+
+            tails_are_the_same
+                && pattern_elements.len() == elements.len()
+                && pattern_elements
+                    .iter()
+                    .zip(elements)
+                    .all(|(pattern, expression)| {
+                        pattern_and_expression_are_the_same(pattern, expression)
+                    })
+        }
+        (TypedPattern::List { .. }, _) => false,
+
+        // Two constructors are the same if the expression is building exactly
+        // the same value being matched on (regardless of qualification).
+        // `Ok(a) -> Ok(a)`
+        // `Ok(1) -> Ok(1)`
+        // `Wibble(a, b, c) -> Wibble(a, b, c)`
+        // `Ok(a) -> gleam.Ok(a)`
+        // `gleam.Ok(1) -> Ok(1)`
+        (
+            TypedPattern::Constructor {
+                constructor:
+                    Inferred::Known(PatternConstructor {
+                        module: pattern_module,
+                        name: pattern_name,
+                        ..
+                    }),
+                arguments: pattern_arguments,
+                spread: None,
+                ..
+            },
+            TypedExpr::Call { fun, arguments, .. },
+        ) => match fun.as_ref() {
+            TypedExpr::Var {
+                constructor:
+                    ValueConstructor {
+                        variant: ValueConstructorVariant::Record { name, module, .. },
+                        ..
+                    },
+                ..
+            }
+            | TypedExpr::ModuleSelect {
+                constructor: ModuleValueConstructor::Record { name, .. },
+                module_name: module,
+                ..
+            } => {
+                pattern_module == module
+                    && pattern_name == name
+                    && pattern_arguments.len() == arguments.len()
+                    && pattern_arguments
+                        .iter()
+                        .zip(arguments)
+                        .all(|(pattern, expression)| {
+                            pattern_and_expression_are_the_same(&pattern.value, &expression.value)
+                        })
+            }
+
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => false,
+        },
+
+        // A pattern for a constructor with no arguments:
+        // `Nil -> Nil`
+        // `gleam.Nil -> Nil`
+        // `Nil -> gleam.Nil`
+        // `Wibble -> Wibble`
+        (
+            TypedPattern::Constructor {
+                constructor:
+                    Inferred::Known(PatternConstructor {
+                        module: pattern_module,
+                        name: pattern_name,
+                        ..
+                    }),
+                arguments: pattern_arguments,
+                spread: None,
+                ..
+            },
+            TypedExpr::Var {
+                constructor:
+                    ValueConstructor {
+                        variant: ValueConstructorVariant::Record { name, module, .. },
+                        ..
+                    },
+                ..
+            }
+            | TypedExpr::ModuleSelect {
+                constructor: ModuleValueConstructor::Record { name, .. },
+                module_name: module,
+                ..
+            },
+        ) => pattern_module == module && pattern_name == name && pattern_arguments.is_empty(),
+        (TypedPattern::Constructor { .. }, _) => false,
+
+        // An assignment is the same if the corresponding expression is a
+        // variable with the same name, or if the inner pattern is the same:
+        // `Ok(1) as a -> a`
+        // `Ok(1) as a -> Ok(1)`
+        (
+            TypedPattern::Assign {
+                name: pattern_name, ..
+            },
+            TypedExpr::Var { name, .. },
+        ) => pattern_name == name,
+        (TypedPattern::Assign { pattern, .. }, expression) => {
+            pattern_and_expression_are_the_same(pattern, expression)
+        }
+
+        // Bit arrays are trickier as they can use existing variables in their
+        // pattern and shadow existing variables so for now we just ignore
+        // those.
+        (TypedPattern::BitArray { .. } | TypedPattern::BitArraySize { .. }, _) => false,
+
+        // A discard is never the same as an expression, same goes for an
+        // invalid pattern: there's no way to check if it matches an expression!
+        (TypedPattern::Discard { .. } | TypedPattern::Invalid { .. }, _) => false,
     }
 }
 
@@ -1451,6 +2133,11 @@ pub type TypedClauseGuard = ClauseGuard<Arc<Type>, EcoString>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ClauseGuard<Type, RecordTag> {
+    Block {
+        location: SrcSpan,
+        value: Box<ClauseGuard<Type, RecordTag>>,
+    },
+
     Equals {
         location: SrcSpan,
         left: Box<Self>,
@@ -1597,7 +2284,7 @@ pub enum ClauseGuard<Type, RecordTag> {
     },
 
     FieldAccess {
-        location: SrcSpan,
+        label_location: SrcSpan,
         index: Option<u64>,
         label: EcoString,
         type_: Type,
@@ -1643,9 +2330,14 @@ impl<A, B> ClauseGuard<A, B> {
             | ClauseGuard::DivInt { location, .. }
             | ClauseGuard::DivFloat { location, .. }
             | ClauseGuard::RemainderInt { location, .. }
-            | ClauseGuard::FieldAccess { location, .. }
             | ClauseGuard::LtEqFloat { location, .. }
-            | ClauseGuard::ModuleSelect { location, .. } => *location,
+            | ClauseGuard::ModuleSelect { location, .. }
+            | ClauseGuard::Block { location, .. } => *location,
+            ClauseGuard::FieldAccess {
+                label_location,
+                container,
+                ..
+            } => container.location().merge(label_location),
         }
     }
 
@@ -1686,7 +2378,8 @@ impl<A, B> ClauseGuard<A, B> {
             | ClauseGuard::Not { .. }
             | ClauseGuard::TupleIndex { .. }
             | ClauseGuard::FieldAccess { .. }
-            | ClauseGuard::ModuleSelect { .. } => None,
+            | ClauseGuard::ModuleSelect { .. }
+            | ClauseGuard::Block { .. } => None,
         }
     }
 }
@@ -1699,6 +2392,7 @@ impl TypedClauseGuard {
             ClauseGuard::FieldAccess { type_, .. } => type_.clone(),
             ClauseGuard::ModuleSelect { type_, .. } => type_.clone(),
             ClauseGuard::Constant(constant) => constant.type_(),
+            ClauseGuard::Block { value, .. } => value.type_(),
 
             ClauseGuard::AddInt { .. }
             | ClauseGuard::SubInt { .. }
@@ -1726,9 +2420,338 @@ impl TypedClauseGuard {
             | ClauseGuard::LtEqFloat { .. } => type_::bool(),
         }
     }
+
+    pub(crate) fn referenced_variables(&self) -> im::HashSet<&EcoString> {
+        match self {
+            ClauseGuard::Var { name, .. } => im::hashset![name],
+
+            ClauseGuard::Block { value, .. } => value.referenced_variables(),
+            ClauseGuard::Not { expression, .. } => expression.referenced_variables(),
+            ClauseGuard::TupleIndex { tuple, .. } => tuple.referenced_variables(),
+            ClauseGuard::FieldAccess { container, .. } => container.referenced_variables(),
+            ClauseGuard::Constant(constant) => constant.referenced_variables(),
+            ClauseGuard::ModuleSelect { .. } => im::HashSet::new(),
+
+            ClauseGuard::Equals { left, right, .. }
+            | ClauseGuard::NotEquals { left, right, .. }
+            | ClauseGuard::GtInt { left, right, .. }
+            | ClauseGuard::GtEqInt { left, right, .. }
+            | ClauseGuard::LtInt { left, right, .. }
+            | ClauseGuard::LtEqInt { left, right, .. }
+            | ClauseGuard::GtFloat { left, right, .. }
+            | ClauseGuard::GtEqFloat { left, right, .. }
+            | ClauseGuard::LtFloat { left, right, .. }
+            | ClauseGuard::LtEqFloat { left, right, .. }
+            | ClauseGuard::AddInt { left, right, .. }
+            | ClauseGuard::AddFloat { left, right, .. }
+            | ClauseGuard::SubInt { left, right, .. }
+            | ClauseGuard::SubFloat { left, right, .. }
+            | ClauseGuard::MultInt { left, right, .. }
+            | ClauseGuard::MultFloat { left, right, .. }
+            | ClauseGuard::DivInt { left, right, .. }
+            | ClauseGuard::DivFloat { left, right, .. }
+            | ClauseGuard::RemainderInt { left, right, .. }
+            | ClauseGuard::And { left, right, .. }
+            | ClauseGuard::Or { left, right, .. } => left
+                .referenced_variables()
+                .union(right.referenced_variables()),
+        }
+    }
+
+    fn syntactically_eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (
+                ClauseGuard::Block { value, .. },
+                ClauseGuard::Block {
+                    value: other_value, ..
+                },
+            ) => value.syntactically_eq(other_value),
+            (ClauseGuard::Block { .. }, _) => false,
+
+            (
+                ClauseGuard::Equals { left, right, .. },
+                ClauseGuard::Equals {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::Equals { .. }, _) => false,
+
+            (
+                ClauseGuard::NotEquals { left, right, .. },
+                ClauseGuard::NotEquals {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::NotEquals { .. }, _) => false,
+
+            (
+                ClauseGuard::GtInt { left, right, .. },
+                ClauseGuard::GtInt {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::GtInt { .. }, _) => false,
+
+            (
+                ClauseGuard::GtEqInt { left, right, .. },
+                ClauseGuard::GtEqInt {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::GtEqInt { .. }, _) => false,
+
+            (
+                ClauseGuard::LtInt { left, right, .. },
+                ClauseGuard::LtInt {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::LtInt { .. }, _) => false,
+
+            (
+                ClauseGuard::LtEqInt { left, right, .. },
+                ClauseGuard::LtEqInt {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::LtEqInt { .. }, _) => false,
+
+            (
+                ClauseGuard::GtFloat { left, right, .. },
+                ClauseGuard::GtFloat {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::GtFloat { .. }, _) => false,
+
+            (
+                ClauseGuard::GtEqFloat { left, right, .. },
+                ClauseGuard::GtEqFloat {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::GtEqFloat { .. }, _) => false,
+
+            (
+                ClauseGuard::LtFloat { left, right, .. },
+                ClauseGuard::LtFloat {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::LtFloat { .. }, _) => false,
+
+            (
+                ClauseGuard::LtEqFloat { left, right, .. },
+                ClauseGuard::LtEqFloat {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::LtEqFloat { .. }, _) => false,
+
+            (
+                ClauseGuard::AddInt { left, right, .. },
+                ClauseGuard::AddInt {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::AddInt { .. }, _) => false,
+
+            (
+                ClauseGuard::AddFloat { left, right, .. },
+                ClauseGuard::AddFloat {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::AddFloat { .. }, _) => false,
+
+            (
+                ClauseGuard::SubInt { left, right, .. },
+                ClauseGuard::SubInt {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::SubInt { .. }, _) => false,
+
+            (
+                ClauseGuard::SubFloat { left, right, .. },
+                ClauseGuard::SubFloat {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::SubFloat { .. }, _) => false,
+
+            (
+                ClauseGuard::MultInt { left, right, .. },
+                ClauseGuard::MultInt {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::MultInt { .. }, _) => false,
+
+            (
+                ClauseGuard::MultFloat { left, right, .. },
+                ClauseGuard::MultFloat {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::MultFloat { .. }, _) => false,
+
+            (
+                ClauseGuard::DivInt { left, right, .. },
+                ClauseGuard::DivInt {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::DivInt { .. }, _) => false,
+
+            (
+                ClauseGuard::DivFloat { left, right, .. },
+                ClauseGuard::DivFloat {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::DivFloat { .. }, _) => false,
+
+            (
+                ClauseGuard::RemainderInt { left, right, .. },
+                ClauseGuard::RemainderInt {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::RemainderInt { .. }, _) => false,
+
+            (
+                ClauseGuard::Or { left, right, .. },
+                ClauseGuard::Or {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::Or { .. }, _) => false,
+
+            (
+                ClauseGuard::And { left, right, .. },
+                ClauseGuard::And {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
+            (ClauseGuard::And { .. }, _) => false,
+
+            (
+                ClauseGuard::Not { expression, .. },
+                ClauseGuard::Not {
+                    expression: other_expression,
+                    ..
+                },
+            ) => expression.syntactically_eq(other_expression),
+            (ClauseGuard::Not { .. }, _) => false,
+
+            (
+                ClauseGuard::Var { name, .. },
+                ClauseGuard::Var {
+                    name: other_name, ..
+                },
+            ) => name == other_name,
+            (ClauseGuard::Var { .. }, _) => false,
+
+            (
+                ClauseGuard::TupleIndex { index, tuple, .. },
+                ClauseGuard::TupleIndex {
+                    index: other_index,
+                    tuple: other_tuple,
+                    ..
+                },
+            ) => index == other_index && tuple.syntactically_eq(other_tuple),
+            (ClauseGuard::TupleIndex { .. }, _) => false,
+
+            (
+                ClauseGuard::FieldAccess {
+                    label, container, ..
+                },
+                ClauseGuard::FieldAccess {
+                    label: other_label,
+                    container: other_container,
+                    ..
+                },
+            ) => label == other_label && container.syntactically_eq(other_container),
+            (ClauseGuard::FieldAccess { .. }, _) => false,
+
+            (
+                ClauseGuard::ModuleSelect {
+                    label,
+                    module_alias,
+                    ..
+                },
+                ClauseGuard::ModuleSelect {
+                    label: other_label,
+                    module_alias: other_module_alias,
+                    ..
+                },
+            ) => label == other_label && module_alias == other_module_alias,
+            (ClauseGuard::ModuleSelect { .. }, _) => false,
+
+            (ClauseGuard::Constant(one), ClauseGuard::Constant(other)) => {
+                one.syntactically_eq(other)
+            }
+            (ClauseGuard::Constant(_), _) => false,
+        }
+    }
 }
 
-#[derive(Debug, PartialEq, Eq, Default, Clone, Copy, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Default,
+    Clone,
+    Copy,
+    serde::Serialize,
+    serde::Deserialize,
+    Hash,
+)]
 pub struct SrcSpan {
     pub start: u32,
     pub end: u32,
@@ -1741,6 +2764,10 @@ impl SrcSpan {
 
     pub fn contains(&self, byte_index: u32) -> bool {
         byte_index >= self.start && byte_index <= self.end
+    }
+
+    pub fn contains_span(&self, span: SrcSpan) -> bool {
+        self.contains(span.start) && self.contains(span.end)
     }
 
     /// Merges two spans into a new one that starts at the start of the smaller
@@ -1759,6 +2786,14 @@ impl SrcSpan {
             start: self.start.min(with.start),
             end: self.end.max(with.end),
         }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn len(&self) -> usize {
+        (self.end - self.start) as usize
     }
 }
 
@@ -1782,6 +2817,7 @@ pub enum Pattern<Type> {
     Float {
         location: SrcSpan,
         value: EcoString,
+        float_value: LiteralFloatValue,
     },
 
     String {
@@ -1798,15 +2834,10 @@ pub enum Pattern<Type> {
         origin: VariableOrigin,
     },
 
-    /// A reference to a variable in a bit array. This is always a variable
-    /// being used rather than a new variable being assigned.
-    /// e.g. `assert <<y:size(somevar)>> = x`
-    VarUsage {
-        location: SrcSpan,
-        name: EcoString,
-        constructor: Option<ValueConstructor>,
-        type_: Type,
-    },
+    /// The specified size of a bit array. This can either be a literal integer,
+    /// a reference to a variable, or a maths expression.
+    /// e.g. `let assert <<y:size(somevar)>> = x`
+    BitArraySize(BitArraySize<Type>),
 
     /// A name given to a sub-pattern using the `as` keyword.
     /// e.g. `assert #(1, [_, _] as the_list) = x`
@@ -1827,7 +2858,9 @@ pub enum Pattern<Type> {
     List {
         location: SrcSpan,
         elements: Vec<Self>,
-        tail: Option<Box<Self>>,
+        tail: Option<Box<TailPattern<Type>>>,
+        /// The type of the list, so this is going to be `List(something)`.
+        ///
         type_: Type,
     },
 
@@ -1845,7 +2878,7 @@ pub enum Pattern<Type> {
 
     Tuple {
         location: SrcSpan,
-        elems: Vec<Self>,
+        elements: Vec<Self>,
     },
 
     BitArray {
@@ -1872,10 +2905,155 @@ pub enum Pattern<Type> {
     },
 }
 
-impl Default for Inferred<()> {
-    fn default() -> Self {
-        Self::Unknown
+pub type TypedBitArraySize = BitArraySize<Arc<Type>>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BitArraySize<Type> {
+    Int {
+        location: SrcSpan,
+        value: EcoString,
+        int_value: BigInt,
+    },
+
+    Variable {
+        location: SrcSpan,
+        name: EcoString,
+        constructor: Option<Box<ValueConstructor>>,
+        type_: Type,
+    },
+
+    BinaryOperator {
+        location: SrcSpan,
+        operator: IntOperator,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    Block {
+        location: SrcSpan,
+        inner: Box<Self>,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum IntOperator {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Remainder,
+}
+
+impl IntOperator {
+    pub fn precedence(&self) -> u8 {
+        match self {
+            Self::Add | Self::Subtract => 7,
+
+            Self::Multiply | Self::Divide | Self::Remainder => 8,
+        }
     }
+
+    pub fn to_bin_op(&self) -> BinOp {
+        match self {
+            IntOperator::Add => BinOp::AddInt,
+            IntOperator::Subtract => BinOp::SubInt,
+            IntOperator::Multiply => BinOp::MultInt,
+            IntOperator::Divide => BinOp::DivInt,
+            IntOperator::Remainder => BinOp::RemainderInt,
+        }
+    }
+}
+
+impl<T> BitArraySize<T> {
+    pub fn location(&self) -> SrcSpan {
+        match self {
+            BitArraySize::Int { location, .. }
+            | BitArraySize::Variable { location, .. }
+            | BitArraySize::BinaryOperator { location, .. }
+            | BitArraySize::Block { location, .. } => *location,
+        }
+    }
+
+    pub fn non_zero_compile_time_number(&self) -> bool {
+        match self {
+            BitArraySize::Int { int_value, .. } => !int_value.is_zero(),
+            BitArraySize::Block { inner, .. } => inner.non_zero_compile_time_number(),
+            BitArraySize::Variable { .. } | BitArraySize::BinaryOperator { .. } => false,
+        }
+    }
+
+    fn syntactically_eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (BitArraySize::Int { int_value: n, .. }, BitArraySize::Int { int_value: m, .. }) => {
+                n == m
+            }
+            (BitArraySize::Int { .. }, _) => false,
+
+            (
+                BitArraySize::Variable { name, .. },
+                BitArraySize::Variable {
+                    name: other_name, ..
+                },
+            ) => name == other_name,
+            (BitArraySize::Variable { .. }, _) => false,
+
+            (
+                BitArraySize::BinaryOperator {
+                    operator,
+                    left,
+                    right,
+                    ..
+                },
+                BitArraySize::BinaryOperator {
+                    operator: other_operator,
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => {
+                operator == other_operator
+                    && left.syntactically_eq(other_left)
+                    && right.syntactically_eq(other_right)
+            }
+            (BitArraySize::BinaryOperator { .. }, _) => false,
+
+            (
+                BitArraySize::Block { inner, .. },
+                BitArraySize::Block {
+                    inner: other_inner, ..
+                },
+            ) => inner.syntactically_eq(other_inner),
+            (BitArraySize::Block { .. }, _) => false,
+        }
+    }
+}
+
+pub type TypedTailPattern = TailPattern<Arc<Type>>;
+
+pub type UntypedTailPattern = TailPattern<()>;
+
+/// The pattern one can use to match on the rest of a list:
+///
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TailPattern<Type> {
+    /// The entire location of the pattern, covering the `..` as well.
+    ///
+    pub location: SrcSpan,
+
+    /// The name assigned to the rest of the list being matched:
+    ///
+    /// ```gleam
+    /// [wibble, ..]
+    /// //       ^^ no name
+    ///
+    /// [wibble, ..rest]
+    /// //       ^^^^^^ a variable name
+    ///
+    /// [wibble, .._rest]
+    /// //       ^^^^^^^ a discarded name
+    /// ```
+    ///
+    pub pattern: Pattern<Type>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1914,7 +3092,6 @@ impl<A> Pattern<A> {
             } => SrcSpan::new(pattern.location().start, location.end),
             Pattern::Int { location, .. }
             | Pattern::Variable { location, .. }
-            | Pattern::VarUsage { location, .. }
             | Pattern::List { location, .. }
             | Pattern::Float { location, .. }
             | Pattern::Discard { location, .. }
@@ -1924,6 +3101,7 @@ impl<A> Pattern<A> {
             | Pattern::StringPrefix { location, .. }
             | Pattern::BitArray { location, .. }
             | Pattern::Invalid { location, .. } => *location,
+            Pattern::BitArraySize(size) => size.location(),
         }
     }
 
@@ -1937,9 +3115,199 @@ impl<A> Pattern<A> {
 
     #[must_use]
     pub fn is_variable(&self) -> bool {
-        match self {
-            Pattern::Variable { .. } => true,
-            _ => false,
+        matches!(self, Pattern::Variable { .. })
+    }
+
+    #[must_use]
+    pub fn is_string(&self) -> bool {
+        matches!(self, Self::String { .. })
+    }
+}
+
+impl TypedPattern {
+    fn syntactically_eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Pattern::Int { int_value: n, .. }, Pattern::Int { int_value: m, .. }) => n == m,
+            (Pattern::Int { .. }, _) => false,
+
+            (Pattern::Float { float_value: n, .. }, Pattern::Float { float_value: m, .. }) => {
+                n == m
+            }
+            (Pattern::Float { .. }, _) => false,
+
+            (
+                Pattern::String { value, .. },
+                Pattern::String {
+                    value: other_value, ..
+                },
+            ) => value == other_value,
+            (Pattern::String { .. }, _) => false,
+
+            (
+                Pattern::Variable { name, .. },
+                Pattern::Variable {
+                    name: other_name, ..
+                },
+            ) => name == other_name,
+            (Pattern::Variable { .. }, _) => false,
+
+            (Pattern::BitArraySize(one), Pattern::BitArraySize(other)) => {
+                one.syntactically_eq(other)
+            }
+            (Pattern::BitArraySize(..), _) => false,
+
+            (
+                Pattern::Assign { name, pattern, .. },
+                Pattern::Assign {
+                    name: other_name,
+                    pattern: other_pattern,
+                    ..
+                },
+            ) => name == other_name && pattern.syntactically_eq(other_pattern),
+            (Pattern::Assign { .. }, _) => false,
+
+            (
+                Pattern::Discard { name, .. },
+                Pattern::Discard {
+                    name: other_name, ..
+                },
+            ) => name == other_name,
+            (Pattern::Discard { .. }, _) => false,
+
+            (
+                Pattern::List { elements, tail, .. },
+                Pattern::List {
+                    elements: other_elements,
+                    tail: other_tail,
+                    ..
+                },
+            ) => {
+                let tails_are_equal = match (tail, other_tail) {
+                    (None, None) => true,
+                    (None, Some(_)) | (Some(_), None) => false,
+                    (Some(one), Some(other)) => one.pattern.syntactically_eq(&other.pattern),
+                };
+                tails_are_equal
+                    && pairwise_all(elements, other_elements, |(one, other)| {
+                        one.syntactically_eq(other)
+                    })
+            }
+            (Pattern::List { .. }, _) => false,
+
+            (
+                Pattern::Constructor {
+                    name,
+                    arguments,
+                    module,
+                    ..
+                },
+                Pattern::Constructor {
+                    name: other_name,
+                    arguments: other_arguments,
+                    module: other_module,
+                    ..
+                },
+            ) => {
+                let modules_are_equal = match (module, other_module) {
+                    (None, None) => true,
+                    (None, Some(_)) | (Some(_), None) => false,
+                    (Some((one, _)), Some((other, _))) => one == other,
+                };
+                modules_are_equal
+                    && name == other_name
+                    && pairwise_all(arguments, other_arguments, |(one, other)| {
+                        one.label == other.label && one.value.syntactically_eq(&other.value)
+                    })
+            }
+            (Pattern::Constructor { .. }, _) => false,
+
+            (
+                Pattern::Tuple { elements, .. },
+                Pattern::Tuple {
+                    elements: other_elements,
+                    ..
+                },
+            ) => pairwise_all(elements, other_elements, |(one, other)| {
+                one.syntactically_eq(other)
+            }),
+            (Pattern::Tuple { .. }, _) => false,
+
+            (
+                Pattern::BitArray { segments, .. },
+                Pattern::BitArray {
+                    segments: other_segments,
+                    ..
+                },
+            ) => pairwise_all(segments, other_segments, |(one, other)| {
+                one.syntactically_eq(other)
+            }),
+            (Pattern::BitArray { .. }, _) => false,
+
+            (
+                Pattern::StringPrefix {
+                    left_side_assignment,
+                    left_side_string,
+                    right_side_assignment,
+                    ..
+                },
+                Pattern::StringPrefix {
+                    left_side_assignment: other_left_side_assignment,
+                    left_side_string: other_left_side_string,
+                    right_side_assignment: other_right_side_assignment,
+                    ..
+                },
+            ) => {
+                let left_side_assignments_are_equal =
+                    match (left_side_assignment, other_left_side_assignment) {
+                        (None, None) => true,
+                        (None, Some(_)) | (Some(_), None) => false,
+                        (Some((one, _)), Some((other, _))) => one == other,
+                    };
+                let right_side_assignments_are_equal =
+                    match (right_side_assignment, other_right_side_assignment) {
+                        (AssignName::Variable(one), AssignName::Variable(other)) => one == other,
+                        (AssignName::Variable(_), AssignName::Discard(_)) => false,
+                        (AssignName::Discard(one), AssignName::Discard(other)) => one == other,
+                        (AssignName::Discard(_), AssignName::Variable(_)) => false,
+                    };
+                left_side_string == other_left_side_string
+                    && left_side_assignments_are_equal
+                    && right_side_assignments_are_equal
+            }
+            (Pattern::StringPrefix { .. }, _) => false,
+
+            (Pattern::Invalid { .. }, _) => false,
+        }
+    }
+}
+
+/// A variable bound inside a pattern.
+#[derive(Debug, Clone)]
+pub struct BoundVariable {
+    pub name: BoundVariableName,
+    pub location: SrcSpan,
+    pub type_: Arc<Type>,
+}
+
+#[derive(Debug, Clone)]
+pub enum BoundVariableName {
+    /// A record's labelled field introduced with the shorthand syntax.
+    ShorthandLabel { name: EcoString },
+    ListTail {
+        name: EcoString,
+        /// The location of the whole tail, from the `..` prefix until the end of the variable.
+        tail_location: SrcSpan,
+    },
+    /// Any other variable name.
+    Regular { name: EcoString },
+}
+
+impl BoundVariable {
+    pub fn name(&self) -> EcoString {
+        match &self.name {
+            BoundVariableName::ShorthandLabel { name }
+            | BoundVariableName::ListTail { name, .. }
+            | BoundVariableName::Regular { name } => name.clone(),
         }
     }
 }
@@ -1951,7 +3319,7 @@ impl TypedPattern {
             | Pattern::Float { .. }
             | Pattern::String { .. }
             | Pattern::Variable { .. }
-            | Pattern::VarUsage { .. }
+            | Pattern::BitArraySize { .. }
             | Pattern::Assign { .. }
             | Pattern::Discard { .. }
             | Pattern::List { .. }
@@ -1970,7 +3338,7 @@ impl TypedPattern {
             | Pattern::Float { .. }
             | Pattern::String { .. }
             | Pattern::Variable { .. }
-            | Pattern::VarUsage { .. }
+            | Pattern::BitArraySize { .. }
             | Pattern::Assign { .. }
             | Pattern::Discard { .. }
             | Pattern::List { .. }
@@ -1988,20 +3356,24 @@ impl TypedPattern {
             Pattern::Int { .. } => type_::int(),
             Pattern::Float { .. } => type_::float(),
             Pattern::String { .. } => type_::string(),
-            Pattern::BitArray { .. } => type_::bits(),
+            Pattern::BitArray { .. } => type_::bit_array(),
             Pattern::StringPrefix { .. } => type_::string(),
 
             Pattern::Variable { type_, .. }
             | Pattern::List { type_, .. }
-            | Pattern::VarUsage { type_, .. }
             | Pattern::Constructor { type_, .. }
             | Pattern::Invalid { type_, .. } => type_.clone(),
 
             Pattern::Assign { pattern, .. } => pattern.type_(),
 
+            // Bit array sizes should always be integers
+            Pattern::BitArraySize(_) => type_::int(),
+
             Pattern::Discard { type_, .. } => type_.clone(),
 
-            Pattern::Tuple { elems, .. } => type_::tuple(elems.iter().map(|p| p.type_()).collect()),
+            Pattern::Tuple { elements, .. } => {
+                type_::tuple(elements.iter().map(|p| p.type_()).collect())
+            }
         }
     }
 
@@ -2022,7 +3394,7 @@ impl TypedPattern {
             | Pattern::Float { .. }
             | Pattern::String { .. }
             | Pattern::Variable { .. }
-            | Pattern::VarUsage { .. }
+            | Pattern::BitArraySize { .. }
             | Pattern::Assign { .. }
             | Pattern::Discard { .. }
             | Pattern::StringPrefix { .. }
@@ -2034,18 +3406,25 @@ impl TypedPattern {
                 Some(spread_location) if spread_location.contains(byte_index) => {
                     Some(Located::PatternSpread {
                         spread_location: *spread_location,
-                        arguments,
+                        pattern: self,
                     })
                 }
 
-                Some(_) | None => arguments.iter().find_map(|arg| arg.find_node(byte_index)),
+                Some(_) | None => arguments
+                    .iter()
+                    .find_map(|argument| argument.find_node(byte_index)),
             },
             Pattern::List { elements, tail, .. } => elements
                 .iter()
-                .find_map(|p| p.find_node(byte_index))
-                .or_else(|| tail.as_ref().and_then(|p| p.find_node(byte_index))),
+                .find_map(|element| element.find_node(byte_index))
+                .or_else(|| {
+                    tail.as_ref()
+                        .and_then(|tail| tail.pattern.find_node(byte_index))
+                }),
 
-            Pattern::Tuple { elems, .. } => elems.iter().find_map(|p| p.find_node(byte_index)),
+            Pattern::Tuple { elements, .. } => elements
+                .iter()
+                .find_map(|element| element.find_node(byte_index)),
 
             Pattern::BitArray { segments, .. } => segments
                 .iter()
@@ -2054,7 +3433,178 @@ impl TypedPattern {
         }
         .or(Some(Located::Pattern(self)))
     }
+
+    /// If the pattern is a `Constructor` with a spread, it returns a tuple with
+    /// all the ignored fields. Split in unlabelled and labelled ones.
+    ///
+    pub fn unused_arguments(&self) -> Option<PatternUnusedArguments> {
+        let TypedPattern::Constructor {
+            arguments,
+            spread: Some(_),
+            ..
+        } = self
+        else {
+            return None;
+        };
+
+        let mut positional = vec![];
+        let mut labelled = vec![];
+        for argument in arguments {
+            // We only want to display the arguments that were ignored using `..`.
+            // Any argument ignored that way is marked as implicit, so if it is
+            // not implicit we just ignore it.
+            if !argument.is_implicit() {
+                continue;
+            }
+            let type_ = argument.value.type_();
+            match &argument.label {
+                Some(label) => labelled.push((label.clone(), type_)),
+                None => positional.push(type_),
+            }
+        }
+
+        Some(PatternUnusedArguments {
+            positional,
+            labelled,
+        })
+    }
+
+    /// Whether the pattern always matches. For example, a tuple or simple
+    /// variable assignment always match and can never fail.
+    #[must_use]
+    pub fn always_matches(&self) -> bool {
+        match self {
+            Pattern::Variable { .. } | Pattern::Discard { .. } => true,
+            Pattern::Assign { pattern, .. } => pattern.always_matches(),
+            Pattern::Tuple { elements, .. } => {
+                elements.iter().all(|element| element.always_matches())
+            }
+            Pattern::Int { .. }
+            | Pattern::Float { .. }
+            | Pattern::String { .. }
+            | Pattern::BitArraySize { .. }
+            | Pattern::List { .. }
+            | Pattern::Constructor { .. }
+            | Pattern::BitArray { .. }
+            | Pattern::StringPrefix { .. }
+            | Pattern::Invalid { .. } => false,
+        }
+    }
+
+    pub fn bound_variables(&self) -> Vec<BoundVariable> {
+        let mut variables = Vec::new();
+        self.collect_bound_variables(&mut variables);
+        variables
+    }
+
+    fn collect_bound_variables(&self, variables: &mut Vec<BoundVariable>) {
+        match self {
+            Pattern::Int { .. }
+            | Pattern::Float { .. }
+            | Pattern::String { .. }
+            | Pattern::Discard { .. }
+            | Pattern::Invalid { .. } => {}
+
+            Pattern::Variable {
+                name,
+                location,
+                type_,
+                ..
+            } => variables.push(BoundVariable {
+                name: BoundVariableName::Regular { name: name.clone() },
+                location: *location,
+                type_: type_.clone(),
+            }),
+            Pattern::BitArraySize { .. } => {}
+            Pattern::Assign {
+                name,
+                pattern,
+                location,
+            } => {
+                variables.push(BoundVariable {
+                    name: BoundVariableName::Regular { name: name.clone() },
+                    location: *location,
+                    type_: pattern.type_(),
+                });
+                pattern.collect_bound_variables(variables);
+            }
+            Pattern::List {
+                elements,
+                tail,
+                type_,
+                ..
+            } => {
+                for element in elements {
+                    element.collect_bound_variables(variables);
+                }
+                if let Some(tail) = tail
+                    && let Pattern::Variable { name, location, .. } = tail.pattern.to_owned()
+                {
+                    variables.push(BoundVariable {
+                        name: BoundVariableName::ListTail {
+                            name,
+                            tail_location: tail.location,
+                        },
+                        location,
+                        type_: type_.clone(),
+                    })
+                };
+            }
+            Pattern::Constructor { arguments, .. } => {
+                for argument in arguments {
+                    if let Some(name) = argument.label_shorthand_name() {
+                        variables.push(BoundVariable {
+                            name: BoundVariableName::ShorthandLabel { name: name.clone() },
+                            location: argument.location,
+                            type_: argument.value.type_(),
+                        })
+                    } else {
+                        argument.value.collect_bound_variables(variables);
+                    }
+                }
+            }
+            Pattern::Tuple { elements, .. } => {
+                for element in elements {
+                    element.collect_bound_variables(variables);
+                }
+            }
+            Pattern::BitArray { segments, .. } => {
+                for segment in segments {
+                    segment.value.collect_bound_variables(variables);
+                }
+            }
+            Pattern::StringPrefix {
+                left_side_assignment,
+                right_side_assignment,
+                right_location,
+                ..
+            } => {
+                if let Some((name, location)) = left_side_assignment {
+                    variables.push(BoundVariable {
+                        name: BoundVariableName::Regular { name: name.clone() },
+                        location: *location,
+                        type_: type_::string(),
+                    });
+                }
+                match right_side_assignment {
+                    AssignName::Variable(name) => variables.push(BoundVariable {
+                        name: BoundVariableName::Regular { name: name.clone() },
+                        location: *right_location,
+                        type_: type_::string(),
+                    }),
+                    AssignName::Discard(_) => {}
+                }
+            }
+        }
+    }
 }
+
+#[derive(Debug, Default)]
+pub struct PatternUnusedArguments {
+    pub positional: Vec<Arc<Type>>,
+    pub labelled: Vec<(EcoString, Arc<Type>)>,
+}
+
 impl<A> HasLocation for Pattern<A> {
     fn location(&self) -> SrcSpan {
         self.location()
@@ -2063,20 +3613,39 @@ impl<A> HasLocation for Pattern<A> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AssignmentKind<Expression> {
-    // let x = ...
+    /// let x = ...
     Let,
-    // let assert x = ...
+    /// This is a let assignment generated by the compiler for intermediate variables
+    /// needed by record updates and `use`.
+    /// Like a regular `Let` assignment this can never fail.
+    ///
+    Generated,
+    /// let assert x = ...
     Assert {
+        /// The src byte span of the `let assert`
+        ///
+        /// ```gleam
+        /// let assert Wibble = todo
+        /// ^^^^^^^^^^
+        /// ```
         location: SrcSpan,
+
+        /// The byte index of the start of `assert`
+        ///
+        /// ```gleam
+        /// let assert Wibble = todo
+        ///     ^
+        /// ```
+        assert_keyword_start: u32,
+
         /// The message given to the assertion:
+        ///
         /// ```gleam
         /// let asset Ok(a) = something() as "This will never fail"
-        /// //                                ^ Message
+        ///                                  ^^^^^^^^^^^^^^^^^^^^^^
         /// ```
-        message: Option<Box<Expression>>,
+        message: Option<Expression>,
     },
-    // For assignments generated by the compiler
-    Generated,
 }
 
 impl<Expression> AssignmentKind<Expression> {
@@ -2088,16 +3657,6 @@ impl<Expression> AssignmentKind<Expression> {
         match self {
             Self::Assert { .. } => true,
             Self::Let | Self::Generated => false,
-        }
-    }
-    /// Returns `true` if the assignment kind is [`Generated`].
-    ///
-    /// [`Generated`]: AssignmentKind::Generated
-    #[must_use]
-    pub fn is_generated(&self) -> bool {
-        match self {
-            Self::Generated => true,
-            Self::Let | Self::Assert { .. } => false,
         }
     }
 }
@@ -2121,10 +3680,255 @@ pub struct BitArraySegment<Value, Type> {
     pub type_: Type,
 }
 
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Hash, serde::Serialize, serde::Deserialize)]
+pub enum Endianness {
+    Big,
+    Little,
+}
+
+impl Endianness {
+    pub fn is_big(&self) -> bool {
+        *self == Endianness::Big
+    }
+}
+
+impl<Value, Type> HasLocation for BitArraySegment<Value, Type> {
+    fn location(&self) -> SrcSpan {
+        self.location
+    }
+}
+
+impl<Type> BitArraySegment<Pattern<Type>, Type> {
+    /// Returns the value of the pattern unwrapping any assign pattern.
+    ///
+    pub fn value_unwrapping_assign(&self) -> &Pattern<Type> {
+        match self.value.as_ref() {
+            Pattern::Assign { pattern, .. } => pattern,
+            Pattern::Int { .. }
+            | Pattern::Float { .. }
+            | Pattern::String { .. }
+            | Pattern::Variable { .. }
+            | Pattern::BitArraySize { .. }
+            | Pattern::Discard { .. }
+            | Pattern::List { .. }
+            | Pattern::Constructor { .. }
+            | Pattern::Tuple { .. }
+            | Pattern::BitArray { .. }
+            | Pattern::StringPrefix { .. }
+            | Pattern::Invalid { .. } => self.value.as_ref(),
+        }
+    }
+}
+
+impl<Value, Type> BitArraySegment<Value, Type> {
+    #[must_use]
+    pub fn has_native_option(&self) -> bool {
+        self.options
+            .iter()
+            .any(|x| matches!(x, BitArrayOption::Native { .. }))
+    }
+
+    #[must_use]
+    pub fn has_utf16_codepoint_option(&self) -> bool {
+        self.options
+            .iter()
+            .any(|x| matches!(x, BitArrayOption::Utf16Codepoint { .. }))
+    }
+
+    #[must_use]
+    pub fn has_utf32_codepoint_option(&self) -> bool {
+        self.options
+            .iter()
+            .any(|x| matches!(x, BitArrayOption::Utf32Codepoint { .. }))
+    }
+
+    #[must_use]
+    pub fn has_utf16_option(&self) -> bool {
+        self.options
+            .iter()
+            .any(|x| matches!(x, BitArrayOption::Utf16 { .. }))
+    }
+
+    #[must_use]
+    pub fn has_utf32_option(&self) -> bool {
+        self.options
+            .iter()
+            .any(|x| matches!(x, BitArrayOption::Utf32 { .. }))
+    }
+
+    pub fn endianness(&self) -> Endianness {
+        if self
+            .options
+            .iter()
+            .any(|x| matches!(x, BitArrayOption::Little { .. }))
+        {
+            Endianness::Little
+        } else {
+            Endianness::Big
+        }
+    }
+
+    pub(crate) fn signed(&self) -> bool {
+        self.options
+            .iter()
+            .any(|x| matches!(x, BitArrayOption::Signed { .. }))
+    }
+
+    pub fn size(&self) -> Option<&Value> {
+        self.options.iter().find_map(|x| match x {
+            BitArrayOption::Size { value, .. } => Some(value.as_ref()),
+            BitArrayOption::Bytes { .. }
+            | BitArrayOption::Int { .. }
+            | BitArrayOption::Float { .. }
+            | BitArrayOption::Bits { .. }
+            | BitArrayOption::Utf8 { .. }
+            | BitArrayOption::Utf16 { .. }
+            | BitArrayOption::Utf32 { .. }
+            | BitArrayOption::Utf8Codepoint { .. }
+            | BitArrayOption::Utf16Codepoint { .. }
+            | BitArrayOption::Utf32Codepoint { .. }
+            | BitArrayOption::Signed { .. }
+            | BitArrayOption::Unsigned { .. }
+            | BitArrayOption::Big { .. }
+            | BitArrayOption::Little { .. }
+            | BitArrayOption::Native { .. }
+            | BitArrayOption::Unit { .. } => None,
+        })
+    }
+
+    pub fn unit(&self) -> u8 {
+        self.options
+            .iter()
+            .find_map(|option| match option {
+                BitArrayOption::Unit { value, .. } => Some(*value),
+                BitArrayOption::Bytes { .. } => Some(8),
+                BitArrayOption::Int { .. }
+                | BitArrayOption::Float { .. }
+                | BitArrayOption::Bits { .. }
+                | BitArrayOption::Utf8 { .. }
+                | BitArrayOption::Utf16 { .. }
+                | BitArrayOption::Utf32 { .. }
+                | BitArrayOption::Utf8Codepoint { .. }
+                | BitArrayOption::Utf16Codepoint { .. }
+                | BitArrayOption::Utf32Codepoint { .. }
+                | BitArrayOption::Signed { .. }
+                | BitArrayOption::Unsigned { .. }
+                | BitArrayOption::Big { .. }
+                | BitArrayOption::Little { .. }
+                | BitArrayOption::Native { .. }
+                | BitArrayOption::Size { .. } => None,
+            })
+            .unwrap_or(1)
+    }
+
+    pub(crate) fn has_bits_option(&self) -> bool {
+        self.options
+            .iter()
+            .any(|option| matches!(option, BitArrayOption::Bits { .. }))
+    }
+
+    pub(crate) fn has_bytes_option(&self) -> bool {
+        self.options
+            .iter()
+            .any(|option| matches!(option, BitArrayOption::Bytes { .. }))
+    }
+}
+
+impl<Value, Type> BitArraySegment<Value, Type> {
+    #[must_use]
+    pub(crate) fn has_type_option(&self) -> bool {
+        self.options.iter().any(|option| option.is_type_option())
+    }
+}
+
 impl TypedExprBitArraySegment {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         self.value.find_node(byte_index)
     }
+
+    fn syntactically_eq(&self, other: &Self) -> bool {
+        self.value.syntactically_eq(&other.value)
+            && pairwise_all(&self.options, &other.options, |(option, other_option)| {
+                option.syntactically_eq(other_option, |size, other_size| {
+                    size.syntactically_eq(other_size)
+                })
+            })
+    }
+}
+
+impl<TypedValue> BitArraySegment<TypedValue, Arc<Type>>
+where
+    TypedValue: HasType + HasLocation + Clone + bit_array::GetLiteralValue,
+{
+    pub fn check_for_truncated_value(&self) -> Option<BitArraySegmentTruncation> {
+        // Both the size and the value must be two compile-time known constants.
+        let segment_bits = self.bits_size()?.to_i64()?;
+        let literal_value = self.value.as_int_literal()?;
+        if segment_bits <= 0 {
+            return None;
+        }
+
+        let safe_range = match literal_value.sign() {
+            Sign::NoSign => return None,
+            Sign::Minus => {
+                (-(BigInt::one() << (segment_bits - 1)))
+                    ..((BigInt::one() << (segment_bits - 1)) - 1)
+            }
+            Sign::Plus => BigInt::ZERO..(BigInt::one() << segment_bits),
+        };
+
+        if !safe_range.contains(&literal_value) {
+            Some(BitArraySegmentTruncation {
+                truncated_value: literal_value.clone(),
+                truncated_into: truncate(&literal_value, segment_bits),
+                value_location: self.value.location(),
+                segment_bits,
+            })
+        } else {
+            None
+        }
+    }
+
+    /// If the segment size is a compile-time known constant this returns the
+    /// segment size in bits, taking the segment's unit into consideration!
+    ///
+    fn bits_size(&self) -> Option<BigInt> {
+        let size = match self.size() {
+            None if self.type_.is_int() => 8.into(),
+            None => 64.into(),
+            Some(value) => value.as_int_literal()?,
+        };
+
+        let unit = self.unit();
+        Some(size * unit)
+    }
+}
+
+/// As Björn said, when a value is smaller than the segment's size it will be
+/// truncated, only taking the first `n` bits:
+///
+/// > It will be silently truncated. In general, when storing value an integer
+/// > `I` into a segment of size `N`, the actual value stored will be
+/// > `I band ((1 bsl N) - 1)`.
+///
+/// <https://erlangforums.com/t/what-happens-when-a-bit-array-segment-size-is-smaller-than-its-value/4650/2?u=giacomocavalieri>
+///
+/// Thank you Björn!
+///
+fn truncate(literal_value: &BigInt, segment_bits: i64) -> BigInt {
+    literal_value & ((BigInt::one() << segment_bits) - BigInt::one())
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Eq, PartialEq, Clone, Debug)]
+pub struct BitArraySegmentTruncation {
+    /// The value that would end up being truncated.
+    pub truncated_value: BigInt,
+    /// What the value would be truncated into.
+    pub truncated_into: BigInt,
+    /// The span of the segment's value being truncated.
+    pub value_location: SrcSpan,
+    /// The size of the segment.
+    pub segment_bits: i64,
 }
 
 impl TypedPatternBitArraySegment {
@@ -2134,6 +3938,34 @@ impl TypedPatternBitArraySegment {
                 .iter()
                 .find_map(|option| option.find_node(byte_index))
         })
+    }
+
+    fn syntactically_eq(&self, other: &Self) -> bool {
+        self.value.syntactically_eq(&other.value)
+            && pairwise_all(&self.options, &other.options, |(option, other_option)| {
+                option.syntactically_eq(other_option, |size, other_size| {
+                    size.syntactically_eq(other_size)
+                })
+            })
+    }
+}
+
+impl TypedConstantBitArraySegment {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        self.value.find_node(byte_index).or_else(|| {
+            self.options
+                .iter()
+                .find_map(|option| option.find_node(byte_index))
+        })
+    }
+
+    fn syntactically_eq(&self, other: &Self) -> bool {
+        self.value.syntactically_eq(&other.value)
+            && pairwise_all(&self.options, &other.options, |(option, other_option)| {
+                option.syntactically_eq(other_option, |size, other_size| {
+                    size.syntactically_eq(other_size)
+                })
+            })
     }
 }
 
@@ -2217,7 +4049,22 @@ impl<A> BitArrayOption<A> {
     pub fn value(&self) -> Option<&A> {
         match self {
             BitArrayOption::Size { value, .. } => Some(value),
-            _ => None,
+            BitArrayOption::Bytes { .. }
+            | BitArrayOption::Int { .. }
+            | BitArrayOption::Float { .. }
+            | BitArrayOption::Bits { .. }
+            | BitArrayOption::Utf8 { .. }
+            | BitArrayOption::Utf16 { .. }
+            | BitArrayOption::Utf32 { .. }
+            | BitArrayOption::Utf8Codepoint { .. }
+            | BitArrayOption::Utf16Codepoint { .. }
+            | BitArrayOption::Utf32Codepoint { .. }
+            | BitArrayOption::Signed { .. }
+            | BitArrayOption::Unsigned { .. }
+            | BitArrayOption::Big { .. }
+            | BitArrayOption::Little { .. }
+            | BitArrayOption::Native { .. }
+            | BitArrayOption::Unit { .. } => None,
         }
     }
 
@@ -2264,9 +4111,150 @@ impl<A> BitArrayOption<A> {
             BitArrayOption::Unit { .. } => "unit".into(),
         }
     }
+
+    fn is_type_option(&self) -> bool {
+        match self {
+            BitArrayOption::Bytes { .. }
+            | BitArrayOption::Int { .. }
+            | BitArrayOption::Float { .. }
+            | BitArrayOption::Bits { .. }
+            | BitArrayOption::Utf8 { .. }
+            | BitArrayOption::Utf16 { .. }
+            | BitArrayOption::Utf32 { .. }
+            | BitArrayOption::Utf8Codepoint { .. }
+            | BitArrayOption::Utf16Codepoint { .. }
+            | BitArrayOption::Utf32Codepoint { .. } => true,
+
+            BitArrayOption::Signed { .. }
+            | BitArrayOption::Unsigned { .. }
+            | BitArrayOption::Big { .. }
+            | BitArrayOption::Little { .. }
+            | BitArrayOption::Native { .. }
+            | BitArrayOption::Size { .. }
+            | BitArrayOption::Unit { .. } => false,
+        }
+    }
+
+    fn syntactically_eq(&self, other: &Self, compare_sizes: impl Fn(&A, &A) -> bool) -> bool {
+        match (self, other) {
+            (BitArrayOption::Bytes { .. }, BitArrayOption::Bytes { .. }) => true,
+            (BitArrayOption::Bytes { .. }, _) => false,
+
+            (BitArrayOption::Int { .. }, BitArrayOption::Int { .. }) => true,
+            (BitArrayOption::Int { .. }, _) => false,
+
+            (BitArrayOption::Float { .. }, BitArrayOption::Float { .. }) => true,
+            (BitArrayOption::Float { .. }, _) => false,
+
+            (BitArrayOption::Bits { .. }, BitArrayOption::Bits { .. }) => true,
+            (BitArrayOption::Bits { .. }, _) => false,
+
+            (BitArrayOption::Utf8 { .. }, BitArrayOption::Utf8 { .. }) => true,
+            (BitArrayOption::Utf8 { .. }, _) => false,
+
+            (BitArrayOption::Utf16 { .. }, BitArrayOption::Utf16 { .. }) => true,
+            (BitArrayOption::Utf16 { .. }, _) => false,
+
+            (BitArrayOption::Utf32 { .. }, BitArrayOption::Utf32 { .. }) => true,
+            (BitArrayOption::Utf32 { .. }, _) => false,
+
+            (BitArrayOption::Utf8Codepoint { .. }, BitArrayOption::Utf8Codepoint { .. }) => true,
+            (BitArrayOption::Utf8Codepoint { .. }, _) => false,
+
+            (BitArrayOption::Utf16Codepoint { .. }, BitArrayOption::Utf16Codepoint { .. }) => true,
+            (BitArrayOption::Utf16Codepoint { .. }, _) => false,
+
+            (BitArrayOption::Utf32Codepoint { .. }, BitArrayOption::Utf32Codepoint { .. }) => true,
+            (BitArrayOption::Utf32Codepoint { .. }, _) => false,
+
+            (BitArrayOption::Signed { .. }, BitArrayOption::Signed { .. }) => true,
+            (BitArrayOption::Signed { .. }, _) => false,
+
+            (BitArrayOption::Unsigned { .. }, BitArrayOption::Unsigned { .. }) => true,
+            (BitArrayOption::Unsigned { .. }, _) => false,
+
+            (BitArrayOption::Big { .. }, BitArrayOption::Big { .. }) => true,
+            (BitArrayOption::Big { .. }, _) => false,
+
+            (BitArrayOption::Little { .. }, BitArrayOption::Little { .. }) => true,
+            (BitArrayOption::Little { .. }, _) => false,
+
+            (BitArrayOption::Native { .. }, BitArrayOption::Native { .. }) => true,
+            (BitArrayOption::Native { .. }, _) => false,
+
+            (
+                BitArrayOption::Unit { value, .. },
+                BitArrayOption::Unit {
+                    value: other_value, ..
+                },
+            ) => value == other_value,
+            (BitArrayOption::Unit { .. }, _) => false,
+
+            (
+                BitArrayOption::Size {
+                    value, short_form, ..
+                },
+                BitArrayOption::Size {
+                    value: other_value,
+                    short_form: other_short_form,
+                    ..
+                },
+            ) => short_form == other_short_form && compare_sizes(value, other_value),
+            (BitArrayOption::Size { .. }, _) => false,
+        }
+    }
+}
+
+impl BitArrayOption<TypedConstant> {
+    fn referenced_variables(&self) -> im::HashSet<&EcoString> {
+        match self {
+            BitArrayOption::Bytes { .. }
+            | BitArrayOption::Int { .. }
+            | BitArrayOption::Float { .. }
+            | BitArrayOption::Bits { .. }
+            | BitArrayOption::Utf8 { .. }
+            | BitArrayOption::Utf16 { .. }
+            | BitArrayOption::Utf32 { .. }
+            | BitArrayOption::Utf8Codepoint { .. }
+            | BitArrayOption::Utf16Codepoint { .. }
+            | BitArrayOption::Utf32Codepoint { .. }
+            | BitArrayOption::Signed { .. }
+            | BitArrayOption::Unsigned { .. }
+            | BitArrayOption::Big { .. }
+            | BitArrayOption::Little { .. }
+            | BitArrayOption::Unit { .. }
+            | BitArrayOption::Native { .. } => im::hashset![],
+
+            BitArrayOption::Size { value, .. } => value.referenced_variables(),
+        }
+    }
 }
 
 impl BitArrayOption<TypedPattern> {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        match self {
+            BitArrayOption::Bytes { .. }
+            | BitArrayOption::Int { .. }
+            | BitArrayOption::Float { .. }
+            | BitArrayOption::Bits { .. }
+            | BitArrayOption::Utf8 { .. }
+            | BitArrayOption::Utf16 { .. }
+            | BitArrayOption::Utf32 { .. }
+            | BitArrayOption::Utf8Codepoint { .. }
+            | BitArrayOption::Utf16Codepoint { .. }
+            | BitArrayOption::Utf32Codepoint { .. }
+            | BitArrayOption::Signed { .. }
+            | BitArrayOption::Unsigned { .. }
+            | BitArrayOption::Big { .. }
+            | BitArrayOption::Little { .. }
+            | BitArrayOption::Native { .. }
+            | BitArrayOption::Unit { .. } => None,
+            BitArrayOption::Size { value, .. } => value.find_node(byte_index),
+        }
+    }
+}
+
+impl BitArrayOption<TypedConstant> {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         match self {
             BitArrayOption::Bytes { .. }
@@ -2299,7 +4287,7 @@ pub enum TodoKind {
 }
 
 #[derive(Debug, Default)]
-pub struct GroupedStatements {
+pub struct GroupedDefinitions {
     pub functions: Vec<UntypedFunction>,
     pub constants: Vec<UntypedModuleConstant>,
     pub custom_types: Vec<UntypedCustomType>,
@@ -2307,19 +4295,15 @@ pub struct GroupedStatements {
     pub type_aliases: Vec<UntypedTypeAlias>,
 }
 
-impl GroupedStatements {
-    pub fn new(statements: impl IntoIterator<Item = UntypedDefinition>) -> Self {
+impl GroupedDefinitions {
+    pub fn new(definitions: impl IntoIterator<Item = UntypedDefinition>) -> Self {
         let mut this = Self::default();
 
-        for statement in statements {
-            this.add(statement)
+        for definition in definitions {
+            this.add(definition)
         }
 
         this
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
     }
 
     pub fn len(&self) -> usize {
@@ -2335,11 +4319,11 @@ impl GroupedStatements {
 
     fn add(&mut self, statement: UntypedDefinition) {
         match statement {
-            Definition::Import(i) => self.imports.push(i),
-            Definition::Function(f) => self.functions.push(f),
-            Definition::TypeAlias(t) => self.type_aliases.push(t),
-            Definition::CustomType(c) => self.custom_types.push(c),
-            Definition::ModuleConstant(c) => self.constants.push(c),
+            Definition::Import(import) => self.imports.push(import),
+            Definition::Function(function) => self.functions.push(function),
+            Definition::TypeAlias(type_alias) => self.type_aliases.push(type_alias),
+            Definition::CustomType(custom_type) => self.custom_types.push(custom_type),
+            Definition::ModuleConstant(constant) => self.constants.push(constant),
         }
     }
 }
@@ -2350,9 +4334,11 @@ pub enum Statement<TypeT, ExpressionT> {
     /// A bare expression that is not assigned to any variable.
     Expression(ExpressionT),
     /// Assigning an expression to variables using a pattern.
-    Assignment(Assignment<TypeT, ExpressionT>),
+    Assignment(Box<Assignment<TypeT, ExpressionT>>),
     /// A `use` expression.
     Use(Use<TypeT, ExpressionT>),
+    /// A bool assertion.
+    Assert(Assert<ExpressionT>),
 }
 
 pub type UntypedUse = Use<(), UntypedExpr>;
@@ -2433,6 +4419,18 @@ impl TypedUse {
         }
         self.call.find_node(byte_index)
     }
+
+    pub fn callback_arguments(&self) -> Option<&Vec<TypedArg>> {
+        let TypedExpr::Call { arguments, .. } = self.call.as_ref() else {
+            return None;
+        };
+        let callback = arguments.iter().last()?;
+        let TypedExpr::Fn { arguments, .. } = &callback.value else {
+            // The expression might be invalid so we have to return a None here
+            return None;
+        };
+        Some(arguments)
+    }
 }
 
 pub type TypedStatement = Statement<Arc<Type>, TypedExpr>;
@@ -2448,11 +4446,8 @@ impl<T, E> Statement<T, E> {
     }
 
     #[must_use]
-    pub(crate) fn is_use(&self) -> bool {
-        match self {
-            Self::Use(_) => true,
-            _ => false,
-        }
+    pub fn is_use(&self) -> bool {
+        matches!(self, Self::Use(_))
     }
 }
 
@@ -2461,7 +4456,8 @@ impl UntypedStatement {
         match self {
             Statement::Expression(expression) => expression.location(),
             Statement::Assignment(assignment) => assignment.location,
-            Statement::Use(use_) => use_.location,
+            Statement::Use(use_) => use_.location.merge(&use_.call.location()),
+            Statement::Assert(assert) => assert.location,
         }
     }
 
@@ -2470,13 +4466,7 @@ impl UntypedStatement {
             Statement::Expression(expression) => expression.start_byte_index(),
             Statement::Assignment(assignment) => assignment.location.start,
             Statement::Use(use_) => use_.location.start,
-        }
-    }
-
-    pub fn is_placeholder(&self) -> bool {
-        match self {
-            Statement::Expression(expression) => expression.is_placeholder(),
-            Statement::Assignment(_) | Statement::Use(_) => false,
+            Statement::Assert(assert) => assert.location.start,
         }
     }
 }
@@ -2487,6 +4477,7 @@ impl TypedStatement {
             Statement::Expression(e) => e.is_println(),
             Statement::Assignment(_) => false,
             Statement::Use(_) => false,
+            Statement::Assert(_) => false,
         }
     }
 
@@ -2494,7 +4485,10 @@ impl TypedStatement {
         match self {
             Statement::Expression(expression) => expression.location(),
             Statement::Assignment(assignment) => assignment.location,
-            Statement::Use(use_) => use_.location,
+            // A use statement covers the entire block: `use_.location` covers
+            // just the use's first line and not what comes after it.
+            Statement::Use(use_) => use_.location.merge(&use_.call.location()),
+            Statement::Assert(assert) => assert.location,
         }
     }
 
@@ -2506,6 +4500,7 @@ impl TypedStatement {
             Statement::Expression(expression) => expression.last_location(),
             Statement::Assignment(assignment) => assignment.value.last_location(),
             Statement::Use(use_) => use_.call.last_location(),
+            Statement::Assert(assert) => assert.value.last_location(),
         }
     }
 
@@ -2513,7 +4508,8 @@ impl TypedStatement {
         match self {
             Statement::Expression(expression) => expression.type_(),
             Statement::Assignment(assignment) => assignment.type_(),
-            Statement::Use(_use) => _use.call.type_(),
+            Statement::Use(use_) => use_.call.type_(),
+            Statement::Assert(_) => nil(),
         }
     }
 
@@ -2522,6 +4518,7 @@ impl TypedStatement {
             Statement::Expression(expression) => expression.definition_location(),
             Statement::Assignment(_) => None,
             Statement::Use(use_) => use_.call.definition_location(),
+            Statement::Assert(_) => None,
         }
     }
 
@@ -2531,6 +4528,13 @@ impl TypedStatement {
             Statement::Expression(expression) => expression.find_node(byte_index),
             Statement::Assignment(assignment) => assignment.find_node(byte_index).or_else(|| {
                 if assignment.location.contains(byte_index) {
+                    Some(Located::Statement(self))
+                } else {
+                    None
+                }
+            }),
+            Statement::Assert(assert) => assert.find_node(byte_index).or_else(|| {
+                if assert.location.contains(byte_index) {
                     Some(Located::Statement(self))
                 } else {
                     None
@@ -2552,6 +4556,13 @@ impl TypedStatement {
                     }
                 })
             }
+            Statement::Assert(assert) => assert.value.find_statement(byte_index).or_else(|| {
+                if assert.location.contains(byte_index) {
+                    Some(self)
+                } else {
+                    None
+                }
+            }),
         }
     }
 
@@ -2560,6 +4571,7 @@ impl TypedStatement {
             Statement::Expression(expression) => expression.type_defining_location(),
             Statement::Assignment(assignment) => assignment.location,
             Statement::Use(use_) => use_.location,
+            Statement::Assert(assert) => assert.location,
         }
     }
 
@@ -2572,6 +4584,36 @@ impl TypedStatement {
                 !assignment.kind.is_assert() && assignment.value.is_pure_value_constructor()
             }
             Statement::Use(Use { call, .. }) => call.is_pure_value_constructor(),
+            // Assert statements by definition are not pure
+            Statement::Assert(_) => false,
+        }
+    }
+
+    fn syntactically_eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Statement::Expression(one), Statement::Expression(other)) => {
+                one.syntactically_eq(other)
+            }
+            (Statement::Expression(_), _) => false,
+
+            (Statement::Assignment(one), Statement::Assignment(other)) => {
+                one.pattern.syntactically_eq(&other.pattern)
+                    && one.value.syntactically_eq(&other.value)
+            }
+            (Statement::Assignment(_), _) => false,
+
+            (Statement::Use(one), Statement::Use(other)) => one.call.syntactically_eq(&other.call),
+            (Statement::Use(_), _) => false,
+
+            (Statement::Assert(one), Statement::Assert(other)) => {
+                let messages_are_equal = match (&one.message, &other.message) {
+                    (None, None) => true,
+                    (None, Some(_)) | (Some(_), None) => false,
+                    (Some(one), Some(other)) => one.syntactically_eq(other),
+                };
+                messages_are_equal && one.value.syntactically_eq(&other.value)
+            }
+            (Statement::Assert(_), _) => false,
         }
     }
 }
@@ -2579,9 +4621,12 @@ impl TypedStatement {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Assignment<TypeT, ExpressionT> {
     pub location: SrcSpan,
-    pub value: Box<ExpressionT>,
+    pub value: ExpressionT,
     pub pattern: Pattern<TypeT>,
     pub kind: AssignmentKind<ExpressionT>,
+    pub compiled_case: CompiledCase,
+    /// This will be true for assignments that are automatically generated by
+    /// the compiler.
     pub annotation: Option<TypeAst>,
 }
 
@@ -2590,10 +4635,10 @@ pub type UntypedAssignment = Assignment<(), UntypedExpr>;
 
 impl TypedAssignment {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
-        if let Some(annotation) = &self.annotation {
-            if let Some(l) = annotation.find_node(byte_index, self.pattern.type_()) {
-                return Some(l);
-            }
+        if let Some(annotation) = &self.annotation
+            && let Some(l) = annotation.find_node(byte_index, self.pattern.type_())
+        {
+            return Some(l);
         }
         self.pattern
             .find_node(byte_index)
@@ -2602,6 +4647,30 @@ impl TypedAssignment {
 
     pub fn type_(&self) -> Arc<Type> {
         self.value.type_()
+    }
+}
+
+pub type TypedAssert = Assert<TypedExpr>;
+pub type UntypedAssert = Assert<UntypedExpr>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Assert<Expression> {
+    pub location: SrcSpan,
+    pub value: Expression,
+    pub message: Option<Expression>,
+}
+
+impl TypedAssert {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        if let Some(found) = self.value.find_node(byte_index) {
+            return Some(found);
+        }
+        if let Some(message) = &self.message
+            && let Some(found) = message.find_node(byte_index)
+        {
+            return Some(found);
+        }
+        None
     }
 }
 

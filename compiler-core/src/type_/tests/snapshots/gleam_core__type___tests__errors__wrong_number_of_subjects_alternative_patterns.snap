@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "case 1 { _, _ | _ | _, _, _ -> 1 }"
+---
+----- SOURCE CODE
+case 1 { _, _ | _ | _, _, _ -> 1 }
+
+----- ERROR
+error: Incorrect number of patterns
+  ┌─ /src/one/two.gleam:1:10
+  │
+1 │ case 1 { _, _ | _ | _, _, _ -> 1 }
+  │          ^^^^ Expected 1 pattern, got 2
+
+This case expression has 1 subject, but this pattern matches 2.
+Each clause must have a pattern for every subject value.
+
+error: Incorrect number of patterns
+  ┌─ /src/one/two.gleam:1:21
+  │
+1 │ case 1 { _, _ | _ | _, _, _ -> 1 }
+  │                     ^^^^^^^ Expected 1 pattern, got 3
+
+This case expression has 1 subject, but this pattern matches 3.
+Each clause must have a pattern for every subject value.

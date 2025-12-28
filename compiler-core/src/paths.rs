@@ -48,6 +48,10 @@ impl ProjectPaths {
         self.root.join("test")
     }
 
+    pub fn dev_directory(&self) -> Utf8PathBuf {
+        self.root.join("dev")
+    }
+
     pub fn build_directory(&self) -> Utf8PathBuf {
         self.root.join("build")
     }

@@ -6,6 +6,14 @@ expression: "type X { X }"
 type X { X }
 
 ----- WARNING
+warning: Unused private type
+  ┌─ /src/warning/wrn.gleam:1:1
+  │
+1 │ type X { X }
+  │ ^^^^^^ This private type is never used
+
+Hint: You can safely remove it.
+
 warning: Unused private constructor
   ┌─ /src/warning/wrn.gleam:1:10
   │

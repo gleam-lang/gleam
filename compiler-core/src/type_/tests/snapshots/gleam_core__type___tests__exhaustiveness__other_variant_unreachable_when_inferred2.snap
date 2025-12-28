@@ -20,13 +20,24 @@ pub fn main() {
 
 
 ----- WARNING
-warning: Unreachable case clause
+warning: Unreachable pattern
    ┌─ /src/warning/wrn.gleam:11:5
    │
 11 │     Wibble | Wubble -> panic
-   │     ^^^^^^^^^^^^^^^^^^^^^^^^
+   │     ^^^^^^
 
-This case clause cannot be reached as it matches on a variant of a type
-which is never present.
+This pattern cannot be reached as it matches on a variant of a type which
+is never present.
+
+Hint: It can be safely removed.
+
+warning: Unreachable pattern
+   ┌─ /src/warning/wrn.gleam:11:14
+   │
+11 │     Wibble | Wubble -> panic
+   │              ^^^^^^
+
+This pattern cannot be reached as it matches on a variant of a type which
+is never present.
 
 Hint: It can be safely removed.

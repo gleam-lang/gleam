@@ -20,6 +20,8 @@ pub fn main() {
 ----- COMPILED JAVASCRIPT
 import { CustomType as $CustomType, makeError } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 class Wibble extends $CustomType {
   constructor(wobble) {
     super();
@@ -29,13 +31,15 @@ class Wibble extends $CustomType {
 
 export function main() {
   let tmp = new Wibble("wibble");
-  if (tmp instanceof Wibble && tmp.wobble.startsWith("w")) {
-    let rest = tmp.wobble.slice(1);
+  let $ = tmp.wobble;
+  if ($.startsWith("w")) {
     let wibble = "w";
+    let rest = $.slice(1);
     return wibble + rest;
   } else {
     throw makeError(
       "panic",
+      FILEPATH,
       "my/mod",
       10,
       "main",

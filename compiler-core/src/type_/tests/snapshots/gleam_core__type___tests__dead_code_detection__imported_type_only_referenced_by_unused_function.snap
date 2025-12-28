@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/type_/tests/dead_code_detection.rs
+expression: "\nimport wibble.{type Wibble}\n\nfn unused() -> Wibble {\n  panic\n}\n"
+---
+----- SOURCE CODE
+-- wibble.gleam
+
+pub type Wibble
+
+
+-- main.gleam
+
+import wibble.{type Wibble}
+
+fn unused() -> Wibble {
+  panic
+}
+
+
+----- WARNING
+warning: Unused imported module
+  ┌─ /src/warning/wrn.gleam:2:1
+  │
+2 │ import wibble.{type Wibble}
+  │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^ This imported module is never used
+
+Hint: You can safely remove it.
+
+warning: Unused private function
+  ┌─ /src/warning/wrn.gleam:4:1
+  │
+4 │ fn unused() -> Wibble {
+  │ ^^^^^^^^^^^^^^^^^^^^^ This private function is never used
+
+Hint: You can safely remove it.

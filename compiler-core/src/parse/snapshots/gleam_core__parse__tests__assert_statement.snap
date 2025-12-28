@@ -1,0 +1,42 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: assert 10 != 11
+---
+[
+    Assert(
+        Assert {
+            location: SrcSpan {
+                start: 0,
+                end: 15,
+            },
+            value: BinOp {
+                location: SrcSpan {
+                    start: 7,
+                    end: 15,
+                },
+                name: NotEq,
+                name_location: SrcSpan {
+                    start: 10,
+                    end: 12,
+                },
+                left: Int {
+                    location: SrcSpan {
+                        start: 7,
+                        end: 9,
+                    },
+                    value: "10",
+                    int_value: 10,
+                },
+                right: Int {
+                    location: SrcSpan {
+                        start: 13,
+                        end: 15,
+                    },
+                    value: "11",
+                    int_value: 11,
+                },
+            },
+            message: None,
+        },
+    ),
+]

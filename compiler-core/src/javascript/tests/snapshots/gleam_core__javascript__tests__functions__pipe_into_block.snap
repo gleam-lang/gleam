@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "\nfn side_effects(x) { x }\n\npub fn main() {\n  1\n  |> side_effects\n  |> {\n    side_effects(2)\n    side_effects\n  }\n}\n"
+---
+----- SOURCE CODE
+
+fn side_effects(x) { x }
+
+pub fn main() {
+  1
+  |> side_effects
+  |> {
+    side_effects(2)
+    side_effects
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+function side_effects(x) {
+  return x;
+}
+
+export function main() {
+  let _pipe = 1;
+  let _pipe$1 = side_effects(_pipe);
+  let _block;
+  {
+    side_effects(2);
+    _block = side_effects;
+  }
+  return _block(_pipe$1);
+}

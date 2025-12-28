@@ -100,7 +100,9 @@ Parsed {
             imported_modules: {},
             type_variables: {},
             local_value_constructors: {},
+            reexport_aliases: {},
         },
+        unused_definition_positions: {},
     },
     extra: ModuleExtra {
         module_comments: [],
@@ -112,5 +114,6 @@ Parsed {
             20,
             51,
         ],
+        trailing_commas: [],
     },
 }

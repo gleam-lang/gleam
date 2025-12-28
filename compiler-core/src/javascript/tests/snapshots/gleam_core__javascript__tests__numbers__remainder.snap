@@ -1,17 +1,15 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-expression: "\nfn go() {\n  5 % 0 // => 0\n}\n"
+expression: "\npub fn go() {\n  5 % 0 // => 0\n}\n"
 ---
 ----- SOURCE CODE
 
-fn go() {
+pub fn go() {
   5 % 0 // => 0
 }
 
 
 ----- COMPILED JAVASCRIPT
-import { remainderInt } from "../gleam.mjs";
-
-function go() {
-  return remainderInt(5, 0);
+export function go() {
+  return 0;
 }

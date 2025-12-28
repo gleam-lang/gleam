@@ -11,6 +11,7 @@ pub struct ModuleExtra {
     pub comments: Vec<SrcSpan>,
     pub empty_lines: Vec<u32>,
     pub new_lines: Vec<u32>,
+    pub trailing_commas: Vec<u32>,
 }
 
 impl ModuleExtra {
@@ -36,6 +37,10 @@ impl ModuleExtra {
     }
 
     pub(crate) fn has_comment_between(&self, start: u32, end: u32) -> bool {
+        self.first_comment_between(start, end).is_some()
+    }
+
+    pub fn first_comment_between(&self, start: u32, end: u32) -> Option<SrcSpan> {
         self.comments
             .binary_search_by(|comment| {
                 if comment.end < start {
@@ -46,7 +51,8 @@ impl ModuleExtra {
                     Ordering::Equal
                 }
             })
-            .is_ok()
+            .ok()
+            .and_then(|index| self.comments.get(index).copied())
     }
 }
 

@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn go(x) {\n  assert x == 2\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  assert x == 2
+}
+
+
+----- WARNING
+warning: Incompatible gleam version range
+  ┌─ /src/warning/wrn.gleam:3:3
+  │
+3 │   assert x == 2
+  │   ^^^^^^^^^^^^^ This requires a Gleam version >= 1.11.0
+
+The bool `assert` statement was introduced in version v1.11.0. But the
+Gleam version range specified in your `gleam.toml` would allow this code to
+run on an earlier version like v1.0.0, resulting in compilation errors!
+Hint: Remove the version constraint from your `gleam.toml` or update it to be:
+
+    gleam = ">= 1.11.0"

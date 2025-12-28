@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/erlang/tests/inlining.rs
+expression: "\npub fn sum(a, b) {\n  fn(x) {\n    let a = 7\n    x + a\n  }(a + b)\n\n  a\n}\n"
+---
+----- SOURCE CODE
+
+pub fn sum(a, b) {
+  fn(x) {
+    let a = 7
+    x + a
+  }(a + b)
+
+  a
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([sum/2]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec sum(integer(), integer()) -> integer().
+sum(A, B) ->
+    begin
+        _inline_a_0 = 7,
+        (A + B) + _inline_a_0
+    end,
+    A.

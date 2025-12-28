@@ -1,22 +1,26 @@
+mod dependency_manager;
+
 use std::{
+    cell::RefCell,
     collections::{HashMap, HashSet},
+    io::ErrorKind,
     process::Command,
+    rc::Rc,
     time::Instant,
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
 use ecow::{EcoString, eco_format};
 use flate2::read::GzDecoder;
-use futures::future;
 use gleam_core::{
     Error, Result,
     build::{Mode, Target, Telemetry},
     config::PackageConfig,
-    dependency,
+    dependency::{self, PackageFetchError},
     error::{FileIoAction, FileKind, ShellCommandFailureReason, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
     io::{HttpClient as _, TarUnpacker, WrappedReader},
-    manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
+    manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource, PackageChanges},
     paths::ProjectPaths,
     requirement::Requirement,
 };
@@ -25,15 +29,18 @@ use itertools::Itertools;
 use same_file::is_same_file;
 use strum::IntoEnumIterator;
 
+pub use dependency_manager::DependencyManagerConfig;
+
 #[cfg(test)]
 mod tests;
 
 use crate::{
     TreeOptions,
-    build_lock::BuildLock,
+    build_lock::{BuildLock, Guard},
     cli,
     fs::{self, ProjectIO},
     http::HttpClient,
+    text_layout::space_table,
 };
 
 struct Symbols {
@@ -49,6 +56,14 @@ static UTF8_SYMBOLS: Symbols = Symbols {
     ell: "└",
     right: "─",
 };
+
+/// When set to `Yes`, the cli will check for major version updates of direct dependencies and
+/// print them to the console if the major versions are not upgradeable due to constraints.
+#[derive(Debug, Clone, Copy)]
+pub enum CheckMajorVersions {
+    Yes,
+    No,
+}
 
 pub fn list(paths: &ProjectPaths) -> Result<()> {
     let (_, manifest) = get_manifest_details(paths)?;
@@ -80,27 +95,35 @@ pub fn tree(paths: &ProjectPaths, options: TreeOptions) -> Result<()> {
 fn get_manifest_details(paths: &ProjectPaths) -> Result<(PackageConfig, Manifest)> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let config = crate::config::root_config(paths)?;
-    let (_, manifest) = get_manifest(
-        paths,
+    let package_fetcher = PackageFetcher::new(runtime.handle().clone());
+    let dependency_manager = DependencyManagerConfig {
+        use_manifest: UseManifest::Yes,
+        check_major_versions: CheckMajorVersions::No,
+    }
+    .into_dependency_manager(
         runtime.handle().clone(),
+        package_fetcher,
+        cli::Reporter::new(),
         Mode::Dev,
-        &config,
-        &cli::Reporter::new(),
-        UseManifest::Yes,
-        Vec::new(),
-    )?;
+    );
+    let manifest = dependency_manager
+        .resolve_versions(paths, &config, Vec::new())?
+        .manifest;
     Ok((config, manifest))
 }
 
 fn list_manifest_packages<W: std::io::Write>(mut buffer: W, manifest: Manifest) -> Result<()> {
-    manifest
+    let packages = manifest
         .packages
         .into_iter()
-        .try_for_each(|package| writeln!(buffer, "{} {}", package.name, package.version))
-        .map_err(|e| Error::StandardIo {
-            action: StandardIoAction::Write,
-            err: Some(e.kind()),
-        })
+        .map(|package| vec![package.name.to_string(), package.version.to_string()])
+        .collect_vec();
+    let out = space_table(&["Package", "Version"], packages);
+
+    write!(buffer, "{out}").map_err(|e| Error::StandardIo {
+        action: StandardIoAction::Write,
+        err: Some(e.kind()),
+    })
 }
 
 fn list_package_and_dependencies_tree<W: std::io::Write>(
@@ -131,7 +154,7 @@ fn list_package_and_dependencies_tree<W: std::io::Write>(
         );
 
         tree.iter()
-            .try_for_each(|line| writeln!(buffer, "{}", line))
+            .try_for_each(|line| writeln!(buffer, "{line}"))
             .map_err(|e| Error::StandardIo {
                 action: StandardIoAction::Write,
                 err: Some(e.kind()),
@@ -196,6 +219,21 @@ fn list_dependencies_tree(
     tree
 }
 
+pub fn outdated(paths: &ProjectPaths) -> Result<()> {
+    let (_, manifest) = get_manifest_details(paths)?;
+
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let package_fetcher = PackageFetcher::new(runtime.handle().clone());
+
+    let version_updates = dependency::check_for_version_updates(&manifest, &package_fetcher);
+
+    if !version_updates.is_empty() {
+        print!("{}", pretty_print_version_updates(version_updates));
+    }
+
+    Ok(())
+}
+
 #[derive(Debug, Clone, Copy)]
 pub enum UseManifest {
     Yes,
@@ -210,12 +248,15 @@ pub fn update(paths: &ProjectPaths, packages: Vec<String>) -> Result<()> {
     };
 
     // Update specific packages
-    _ = download(
+    _ = resolve_and_download(
         paths,
         cli::Reporter::new(),
         None,
         packages.into_iter().map(EcoString::from).collect(),
-        use_manifest,
+        DependencyManagerConfig {
+            use_manifest,
+            check_major_versions: CheckMajorVersions::Yes,
+        },
     )?;
 
     Ok(())
@@ -232,11 +273,12 @@ pub fn cleanup<Telem: Telemetry>(paths: &ProjectPaths, telemetry: Telem) -> Resu
     crate::config::ensure_config_exists(paths)?;
 
     let lock = BuildLock::new_packages(paths)?;
-    let _guard = lock.lock(&telemetry);
+    let _guard: Guard = lock.lock(&telemetry)?;
 
     // Read the project config
     let config = crate::root_config(paths)?;
-    let mut manifest = read_manifest_from_disc(paths)?;
+    let old_manifest = read_manifest_from_disc(paths)?;
+    let mut manifest = old_manifest.clone();
 
     remove_extra_requirements(&config, &mut manifest)?;
 
@@ -248,6 +290,9 @@ pub fn cleanup<Telem: Telemetry>(paths: &ProjectPaths, telemetry: Telem) -> Resu
     tracing::debug!("writing_manifest_toml");
     write_manifest_to_disc(paths, &manifest)?;
     LocalPackages::from_manifest(&manifest).write_to_disc(paths)?;
+
+    let changes = PackageChanges::between_manifests(&old_manifest, &manifest);
+    telemetry.resolved_package_versions(&changes);
 
     Ok(manifest)
 }
@@ -295,7 +340,10 @@ fn remove_extra_requirements(config: &PackageConfig, manifest: &mut Manifest) ->
 pub fn parse_gleam_add_specifier(package: &str) -> Result<(EcoString, Requirement)> {
     let Some((package, version)) = package.split_once('@') else {
         // Default to the latest version available.
-        return Ok((package.into(), Requirement::hex(">= 0.0.0")));
+        return Ok((
+            package.into(),
+            Requirement::hex(">= 0.0.0").expect("'>= 0.0.0' should be a valid pubgrub range"),
+        ));
     };
 
     // Parse the major and minor from the provided semantic version.
@@ -338,87 +386,54 @@ pub fn parse_gleam_add_specifier(package: &str) -> Result<(EcoString, Requiremen
                 ),
             });
         }
-    };
+    }?;
 
     Ok((package.into(), requirement))
 }
 
-pub fn download<Telem: Telemetry>(
+pub fn resolve_and_download<Telem: Telemetry>(
     paths: &ProjectPaths,
     telemetry: Telem,
     new_package: Option<(Vec<(EcoString, Requirement)>, bool)>,
     packages_to_update: Vec<EcoString>,
-    // If true we read the manifest from disc. If not set then we ignore any
-    // manifest which will result in the latest versions of the dependency
-    // packages being resolved (not the locked ones).
-    use_manifest: UseManifest,
+    config: DependencyManagerConfig,
 ) -> Result<Manifest> {
-    let span = tracing::info_span!("download_deps");
-    let _enter = span.enter();
-
-    let mode = Mode::Dev;
-
-    // We do this before acquiring the build lock so that we don't create the
-    // build directory if there is no gleam.toml
-    crate::config::ensure_config_exists(paths)?;
-
-    let lock = BuildLock::new_packages(paths)?;
-    let _guard = lock.lock(&telemetry);
-
-    let fs = ProjectIO::boxed();
-
-    // Read the project config
-    let mut config = crate::root_config(paths)?;
-    let project_name = config.name.clone();
-
-    // Insert the new packages to add, if it exists
-    if let Some((packages, dev)) = new_package {
-        for (package, requirement) in packages {
-            if dev {
-                _ = config.dev_dependencies.insert(package, requirement);
-            } else {
-                _ = config.dependencies.insert(package, requirement);
-            };
-        }
-    }
-
     // Start event loop so we can run async functions to call the Hex API
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let package_fetcher = PackageFetcher::new(runtime.handle().clone());
 
-    // Determine what versions we need
-    let (manifest_updated, manifest) = get_manifest(
-        paths,
+    let dependency_manager = config.into_dependency_manager(
         runtime.handle().clone(),
-        mode,
-        &config,
-        &telemetry,
-        use_manifest,
-        packages_to_update,
-    )?;
-    let local = LocalPackages::read_from_disc(paths)?;
+        package_fetcher,
+        telemetry,
+        Mode::Dev,
+    );
 
-    // Remove any packages that are no longer required due to gleam.toml changes
-    remove_extra_packages(paths, &local, &manifest, &telemetry)?;
+    dependency_manager.resolve_and_download_versions(paths, new_package, packages_to_update)
+}
 
-    // Download them from Hex to the local cache
-    runtime.block_on(add_missing_packages(
-        paths,
-        fs,
-        &manifest,
-        &local,
-        project_name,
-        &telemetry,
-    ))?;
+fn format_versions_and_extract_longest_parts(
+    versions: dependency::PackageVersionDiffs,
+) -> Vec<Vec<String>> {
+    versions
+        .iter()
+        .map(|(name, (v1, v2))| vec![name.to_string(), v1.to_string(), v2.to_string()])
+        .sorted()
+        .collect_vec()
+}
 
-    if manifest_updated {
-        // Record new state of the packages directory
-        // TODO: test
-        tracing::debug!("writing_manifest_toml");
-        write_manifest_to_disc(paths, &manifest)?;
-    }
-    LocalPackages::from_manifest(&manifest).write_to_disc(paths)?;
+fn pretty_print_major_versions_available(versions: dependency::PackageVersionDiffs) -> String {
+    let versions = format_versions_and_extract_longest_parts(versions);
 
-    Ok(manifest)
+    format!(
+        "\nThe following dependencies have new major versions available:\n\n{}",
+        space_table(&["Package", "Current", "Latest"], &versions)
+    )
+}
+
+fn pretty_print_version_updates(versions: dependency::PackageVersionDiffs) -> EcoString {
+    let versions = format_versions_and_extract_longest_parts(versions);
+    space_table(&["Package", "Current", "Latest"], &versions)
 }
 
 async fn add_missing_packages<Telem: Telemetry>(
@@ -601,62 +616,6 @@ impl LocalPackages {
     }
 }
 
-fn get_manifest<Telem: Telemetry>(
-    paths: &ProjectPaths,
-    runtime: tokio::runtime::Handle,
-    mode: Mode,
-    config: &PackageConfig,
-    telemetry: &Telem,
-    use_manifest: UseManifest,
-    packages_to_update: Vec<EcoString>,
-) -> Result<(bool, Manifest)> {
-    // If there's no manifest (or we have been asked not to use it) then resolve
-    // the versions anew
-    let should_resolve = match use_manifest {
-        _ if !paths.manifest().exists() => {
-            tracing::debug!("manifest_not_present");
-            true
-        }
-        UseManifest::No => {
-            tracing::debug!("ignoring_manifest");
-            true
-        }
-        UseManifest::Yes => false,
-    };
-
-    if should_resolve {
-        let manifest = resolve_versions(runtime, mode, paths, config, None, telemetry, Vec::new())?;
-        return Ok((true, manifest));
-    }
-
-    let manifest = read_manifest_from_disc(paths)?;
-
-    // If there are no requested updates, and the config is unchanged
-    // since the manifest was written then it is up to date so we can return it unmodified.
-    if packages_to_update.is_empty()
-        && is_same_requirements(
-            &manifest.requirements,
-            &config.all_direct_dependencies()?,
-            paths.root(),
-        )?
-    {
-        tracing::debug!("manifest_up_to_date");
-        Ok((false, manifest))
-    } else {
-        tracing::debug!("manifest_outdated");
-        let manifest = resolve_versions(
-            runtime,
-            mode,
-            paths,
-            config,
-            Some(&manifest),
-            telemetry,
-            packages_to_update,
-        )?;
-        Ok((true, manifest))
-    }
-}
-
 fn is_same_requirements(
     requirements1: &HashMap<EcoString, Requirement>,
     requirements2: &HashMap<EcoString, Requirement>,
@@ -799,81 +758,6 @@ impl PartialEq for ProvidedPackageSource {
     }
 }
 
-fn resolve_versions<Telem: Telemetry>(
-    runtime: tokio::runtime::Handle,
-    mode: Mode,
-    project_paths: &ProjectPaths,
-    config: &PackageConfig,
-    manifest: Option<&Manifest>,
-    telemetry: &Telem,
-    packages_to_update: Vec<EcoString>,
-) -> Result<Manifest, Error> {
-    telemetry.resolving_package_versions();
-    let dependencies = config.dependencies_for(mode)?;
-    let mut locked = config.locked(manifest)?;
-
-    if !packages_to_update.is_empty() {
-        unlock_packages(&mut locked, &packages_to_update, manifest)?;
-    }
-
-    // Packages which are provided directly instead of downloaded from hex
-    let mut provided_packages = HashMap::new();
-    // The version requires of the current project
-    let mut root_requirements = HashMap::new();
-
-    // Populate the provided_packages and root_requirements maps
-    for (name, requirement) in dependencies.into_iter() {
-        let version = match requirement {
-            Requirement::Hex { version } => version,
-            Requirement::Path { path } => provide_local_package(
-                name.clone(),
-                &path,
-                project_paths.root(),
-                project_paths,
-                &mut provided_packages,
-                &mut vec![],
-            )?,
-            Requirement::Git { git, ref_ } => provide_git_package(
-                name.clone(),
-                &git,
-                &ref_,
-                project_paths,
-                &mut provided_packages,
-                &mut Vec::new(),
-            )?,
-        };
-        let _ = root_requirements.insert(name, version);
-    }
-
-    // Convert provided packages into hex packages for pub-grub resolve
-    let provided_hex_packages = provided_packages
-        .iter()
-        .map(|(name, package)| (name.clone(), package.to_hex_package(name)))
-        .collect();
-
-    let resolved = dependency::resolve_versions(
-        PackageFetcher::boxed(runtime.clone()),
-        provided_hex_packages,
-        config.name.clone(),
-        root_requirements.into_iter(),
-        &locked,
-    )?;
-
-    // Convert the hex packages and local packages into manifest packages
-    let manifest_packages = runtime.block_on(future::try_join_all(
-        resolved
-            .into_iter()
-            .map(|(name, version)| lookup_package(name, version, &provided_packages)),
-    ))?;
-
-    let manifest = Manifest {
-        packages: manifest_packages,
-        requirements: config.all_direct_dependencies()?,
-    };
-
-    Ok(manifest)
-}
-
 /// Provide a package from a local project
 fn provide_local_package(
     package_name: EcoString,
@@ -902,24 +786,63 @@ fn provide_local_package(
 }
 
 fn execute_command(command: &mut Command) -> Result<std::process::Output> {
-    let output = command.output().map_err(|error| Error::ShellCommand {
-        program: "git".into(),
-        reason: ShellCommandFailureReason::IoError(error.kind()),
-    })?;
-    if output.status.success() {
-        Ok(output)
-    } else {
-        let reason = match String::from_utf8(output.stderr) {
-            Ok(stderr) => ShellCommandFailureReason::ShellCommandError(stderr),
-            Err(_) => ShellCommandFailureReason::Unknown,
-        };
-        Err(Error::ShellCommand {
-            program: "git".into(),
-            reason,
-        })
+    let result = command.output();
+    match result {
+        Ok(output) if output.status.success() => Ok(output),
+        Ok(output) => {
+            let reason = match String::from_utf8(output.stderr) {
+                Ok(stderr) => ShellCommandFailureReason::ShellCommandError(stderr),
+                Err(_) => ShellCommandFailureReason::Unknown,
+            };
+            Err(Error::ShellCommand {
+                program: "git".into(),
+                reason,
+            })
+        }
+        Err(error) => Err(match error.kind() {
+            ErrorKind::NotFound => Error::ShellProgramNotFound {
+                program: "git".into(),
+                os: fs::get_os(),
+            },
+
+            other => Error::ShellCommand {
+                program: "git".into(),
+                reason: ShellCommandFailureReason::IoError(other),
+            },
+        }),
     }
 }
 
+/// Downloads a git package from a remote repository. The commands that are run
+/// looks like this:
+///
+/// ```sh
+/// git init
+/// git remote remove origin
+/// git remote add origin <repo>
+/// git fetch origin
+/// git checkout <ref>
+/// git rev-parse HEAD
+/// ```
+///
+/// This is somewhat inefficient as we have to fetch the entire git history before
+/// switching to the exact commit we want. There a few alternatives to this:
+///
+/// - `git clone --depth 1 --branch="<ref>"` This works, but only allows us to use
+///   branch names as refs, however we want to allow commit hashes as well.
+/// - `git fetch --depth 1 origin <ref>` Similarly, this imposes an unwanted
+///   restriction. `git fetch` only allows branch names or full commit hashes,
+///   but we want to allow partial hashes as well.
+///
+/// Since Git dependencies will be used quite rarely, this option was settled upon
+/// because it allows branch names, full and partial commit hashes as refs.
+///
+/// In the future we can optimise this more, for example first checking if we
+/// are already checked out to the commit stored in the manifest, or by only
+/// fetching the history without the objects to resolve partial commit hashes.
+/// For now though this is good enough until it become an actual performance
+/// problem.
+///
 fn download_git_package(
     package_name: &str,
     repo: &str,
@@ -927,21 +850,40 @@ fn download_git_package(
     project_paths: &ProjectPaths,
 ) -> Result<EcoString> {
     let package_path = project_paths.build_packages_package(package_name);
+
+    // If the package path exists but is not inside a git work tree, we need to
+    // remove the directory because running `git init` in a non-empty directory
+    // followed by `git checkout ...` is an error. See
+    // https://github.com/gleam-lang/gleam/issues/4488 for details.
+    if !fs::is_git_work_tree_root(&package_path) {
+        fs::delete_directory(&package_path)?;
+    }
+
     fs::mkdir(&package_path)?;
 
     let _ = execute_command(Command::new("git").arg("init").current_dir(&package_path))?;
 
-    // This command can fail if the directory already exists,
-    // for example if we resolve versions, then download dependencies.
-    // If that happens, we don't really care: We already have the origin,
-    // so we can safely ignore any errors here
+    // If this directory already exists, but the remote URL has been edited in
+    // `gleam.toml` without a `gleam clean`, `git remote add` will fail, causing
+    // the remote to be stuck as the original value. Here we remove the remote
+    // first, which ensures that `git remote add` properly add the remote each
+    // time. If this fails, that means we haven't set the remote in the first
+    // place, so we can safely ignore the error.
     let _ = Command::new("git")
         .arg("remote")
-        .arg("add")
+        .arg("remove")
         .arg("origin")
-        .arg(repo)
         .current_dir(&package_path)
         .output();
+
+    let _ = execute_command(
+        Command::new("git")
+            .arg("remote")
+            .arg("add")
+            .arg("origin")
+            .arg(repo)
+            .current_dir(&package_path),
+    )?;
 
     let _ = execute_command(
         Command::new("git")
@@ -1014,7 +956,7 @@ fn provide_package(
     if parents.contains(&package_name) {
         let mut last_cycle = parents
             .split(|p| p == &package_name)
-            .last()
+            .next_back()
             .unwrap_or_default()
             .to_vec();
         last_cycle.push(package_name);
@@ -1026,7 +968,8 @@ fn provide_package(
     match provided.get(&package_name) {
         Some(package) if package.source == package_source => {
             // This package has already been provided from this source, return the version
-            let version = hexpm::version::Range::new(format!("== {}", &package.version));
+            let version = hexpm::version::Range::new(format!("== {}", &package.version))
+                .expect("== {version} should be a valid range");
             return Ok(version);
         }
         Some(package) => {
@@ -1074,7 +1017,8 @@ fn provide_package(
     }
     let _ = parents.pop();
     // Add the package to the provided packages dictionary
-    let version = hexpm::version::Range::new(format!("== {}", &config.version));
+    let version = hexpm::version::Range::new(format!("== {}", &config.version))
+        .expect("== {version} should be a valid range");
     let _ = provided.insert(
         config.name,
         ProvidedPackage {
@@ -1100,11 +1044,11 @@ pub fn unlock_packages(
         let mut packages_to_unlock: Vec<EcoString> = packages_to_unlock.to_vec();
 
         while let Some(package_name) = packages_to_unlock.pop() {
-            if locked.remove(&package_name).is_some() {
-                if let Some(package) = manifest.packages.iter().find(|p| p.name == package_name) {
-                    let deps_to_unlock = find_deps_to_unlock(package, locked, manifest);
-                    packages_to_unlock.extend(deps_to_unlock);
-                }
+            if locked.remove(&package_name).is_some()
+                && let Some(package) = manifest.packages.iter().find(|p| p.name == package_name)
+            {
+                let deps_to_unlock = find_deps_to_unlock(package, locked, manifest);
+                packages_to_unlock.extend(deps_to_unlock);
             }
         }
     } else {
@@ -1178,16 +1122,26 @@ async fn lookup_package(
 }
 
 struct PackageFetcher {
+    runtime_cache: RefCell<HashMap<String, Rc<hexpm::Package>>>,
     runtime: tokio::runtime::Handle,
     http: HttpClient,
 }
 
 impl PackageFetcher {
-    pub fn boxed(runtime: tokio::runtime::Handle) -> Box<Self> {
-        Box::new(Self {
+    pub fn new(runtime: tokio::runtime::Handle) -> Self {
+        Self {
+            runtime_cache: RefCell::new(HashMap::new()),
             runtime,
             http: HttpClient::new(),
-        })
+        }
+    }
+
+    /// Caches the result of `get_dependencies` so that we don't need to make a network request.
+    /// Currently dependencies are fetched during initial version resolution, and then during check
+    /// for major version availability.
+    fn cache_package(&self, package: &str, result: Rc<hexpm::Package>) {
+        let mut runtime_cache = self.runtime_cache.borrow_mut();
+        let _ = runtime_cache.insert(package.to_string(), result);
     }
 }
 
@@ -1218,26 +1172,29 @@ impl TarUnpacker for Untar {
 }
 
 impl dependency::PackageFetcher for PackageFetcher {
-    fn get_dependencies(
-        &self,
-        package: &str,
-    ) -> Result<hexpm::Package, Box<dyn std::error::Error>> {
+    fn get_dependencies(&self, package: &str) -> Result<Rc<hexpm::Package>, PackageFetchError> {
+        {
+            let runtime_cache = self.runtime_cache.borrow();
+            let result = runtime_cache.get(package);
+
+            if let Some(result) = result {
+                return Ok(result.clone());
+            }
+        }
+
         tracing::debug!(package = package, "looking_up_hex_package");
         let config = hexpm::Config::new();
-        let request = hexpm::get_package_request(package, None, &config);
+        let request = hexpm::repository_v2_get_package_request(package, None, &config);
         let response = self
             .runtime
             .block_on(self.http.send(request))
-            .map_err(Box::new)?;
+            .map_err(PackageFetchError::fetch_error)?;
 
-        match hexpm::get_package_response(response, HEXPM_PUBLIC_KEY) {
-            Ok(a) => Ok(a),
-            Err(e) => match e {
-                hexpm::ApiError::NotFound => {
-                    Err(format!("I couldn't find a package called `{}`", package).into())
-                }
-                _ => Err(e.into()),
-            },
-        }
+        let pkg = hexpm::repository_v2_get_package_response(response, HEXPM_PUBLIC_KEY)
+            .map_err(PackageFetchError::from)?;
+        let pkg = Rc::new(pkg);
+        let pkg_ref = Rc::clone(&pkg);
+        self.cache_package(package, pkg);
+        Ok(pkg_ref)
     }
 }

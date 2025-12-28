@@ -59,6 +59,8 @@ Parsed {
                         opaque: false,
                         parameters: [],
                         typed_parameters: [],
+                        external_erlang: None,
+                        external_javascript: None,
                     },
                 ),
                 target: None,
@@ -69,7 +71,9 @@ Parsed {
             imported_modules: {},
             type_variables: {},
             local_value_constructors: {},
+            reexport_aliases: {},
         },
+        unused_definition_positions: {},
     },
     extra: ModuleExtra {
         module_comments: [],
@@ -84,5 +88,6 @@ Parsed {
             59,
             61,
         ],
+        trailing_commas: [],
     },
 }

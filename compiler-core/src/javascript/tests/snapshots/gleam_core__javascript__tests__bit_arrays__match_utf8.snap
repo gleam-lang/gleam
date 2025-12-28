@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-expression: "\nfn go(x) {\n  let assert <<\"Gleam 👍\":utf8>> = x\n}\n"
+expression: "\npub fn go(x) {\n  let assert <<\"Gleam 👍\":utf8>> = x\n}\n"
 ---
 ----- SOURCE CODE
 
-fn go(x) {
+pub fn go(x) {
   let assert <<"Gleam 👍":utf8>> = x
 }
 
@@ -12,27 +12,30 @@ fn go(x) {
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
-function go(x) {
-  if (
-    x.byteAt(0) !== 71 ||
-    x.byteAt(1) !== 108 ||
-    x.byteAt(2) !== 101 ||
-    x.byteAt(3) !== 97 ||
-    x.byteAt(4) !== 109 ||
-    x.byteAt(5) !== 32 ||
-    x.byteAt(6) !== 240 ||
-    x.byteAt(7) !== 159 ||
-    x.byteAt(8) !== 145 ||
-    x.byteAt(9) !== 141 ||
-    !(x.bitSize == 80)
-  ) {
+const FILEPATH = "src/module.gleam";
+
+export function go(x) {
+  if (!(
+    x.bitSize === 80 &&
+    x.byteAt(0) === 71 &&
+      x.byteAt(1) === 108 &&
+      x.byteAt(2) === 101 &&
+      x.byteAt(3) === 97 &&
+      x.byteAt(4) === 109 &&
+      x.byteAt(5) === 32 &&
+      x.byteAt(6) === 240 &&
+      x.byteAt(7) === 159 &&
+      x.byteAt(8) === 145 &&
+      x.byteAt(9) === 141
+  )) {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       3,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x }
+      { value: x, start: 18, end: 54, pattern_start: 29, pattern_end: 50 }
     )
   }
   return x;

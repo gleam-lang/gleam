@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-expression: "\n            import gleam/wibble.{one} as wobble\n            const one = one\n        "
+expression: "\n            import gleam/wibble.{one} as wobble\n            pub const one = one\n        "
 ---
 ----- SOURCE CODE
 -- gleam/wibble.gleam
@@ -9,7 +9,7 @@ pub const one = 1
 -- main.gleam
 
             import gleam/wibble.{one} as wobble
-            const one = one
+            pub const one = one
         
 
 ----- WARNING
@@ -24,10 +24,12 @@ Hint: You can safely remove it.
     import gleam/wibble as _
 
 
-warning: Unused private constant
+warning: Shadowed Import
   ┌─ /src/warning/wrn.gleam:3:13
   │
-3 │             const one = one
-  │             ^^^^^^^^^ This private constant is never used
+3 │             pub const one = one
+  │             ^^^^^^^^^^^^^ `one` is defined here
 
-Hint: You can safely remove it.
+Definition of one shadows an imported value.
+The imported value could not be used in this module anyway.
+Hint: Either rename the definition or remove the import.

@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nopaque type Wibble {\n  Wobble\n}\n"
+---
+----- SOURCE CODE
+
+opaque type Wibble {
+  Wobble
+}
+
+
+----- ERROR
+error: Private opaque type
+  ┌─ /src/one/two.gleam:2:1
+  │
+2 │ opaque type Wibble {
+  │ ^^^^^^ You can safely remove this.
+
+Only a public type can be opaque.

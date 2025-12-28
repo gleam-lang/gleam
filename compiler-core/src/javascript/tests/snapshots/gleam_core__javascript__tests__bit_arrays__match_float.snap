@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-expression: "\nfn go(x) {\n  let assert <<a:float, b:int>> = x\n}\n"
+expression: "\npub fn go(x) {\n  let assert <<a:float, b:int>> = x\n}\n"
 ---
 ----- SOURCE CODE
 
-fn go(x) {
+pub fn go(x) {
   let assert <<a:float, b:int>> = x
 }
 
@@ -12,18 +12,28 @@ fn go(x) {
 ----- COMPILED JAVASCRIPT
 import { makeError, bitArraySliceToFloat } from "../gleam.mjs";
 
-function go(x) {
-  if (!(x.bitSize == 72)) {
+const FILEPATH = "src/module.gleam";
+
+export function go(x) {
+  let a;
+  let b;
+  if (
+    x.bitSize >= 64 &&
+    Number.isFinite(bitArraySliceToFloat(x, 0, 64, true)) &&
+    x.bitSize === 72
+  ) {
+    a = bitArraySliceToFloat(x, 0, 64, true);
+    b = x.byteAt(8);
+  } else {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       3,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x }
+      { value: x, start: 18, end: 51, pattern_start: 29, pattern_end: 47 }
     )
   }
-  let a = bitArraySliceToFloat(x, 0, 64, true);
-  let b = x.byteAt(8);
   return x;
 }

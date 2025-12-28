@@ -1,0 +1,51 @@
+---
+source: compiler-core/src/javascript/tests/inlining.rs
+expression: "\nimport gleam/result\n\npub fn main() {\n  result.map(Ok(10), do_side_effects())\n}\n\nfn do_side_effects() {\n  let function = fn(x) { x + 1 }\n  panic as \"Side effects\"\n  function\n}\n"
+---
+----- SOURCE CODE
+
+import gleam/result
+
+pub fn main() {
+  result.map(Ok(10), do_side_effects())
+}
+
+fn do_side_effects() {
+  let function = fn(x) { x + 1 }
+  panic as "Side effects"
+  function
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $result from "../../gleam_stdlib/gleam/result.mjs";
+import { Ok, makeError } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+function do_side_effects() {
+  let function$ = (x) => { return x + 1; };
+  throw makeError(
+    "panic",
+    FILEPATH,
+    "my/mod",
+    10,
+    "do_side_effects",
+    "Side effects",
+    {}
+  )
+  return function$;
+}
+
+export function main() {
+  {
+    let f = do_side_effects();
+    let $ = new Ok(10);
+    if ($ instanceof Ok) {
+      let value = $[0];
+      return new Ok(f(value));
+    } else {
+      return $;
+    }
+  }
+}

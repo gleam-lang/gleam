@@ -10,22 +10,27 @@ pub fn a(x) {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
 -export([a/1]).
 
 -file("project/test/my/mod.gleam", 1).
 -spec a(any()) -> binary().
 a(X) ->
-    _assert_subject = <<"wibble"/utf8>>,
-    <<A@1:1/binary, Rest/binary>> = case _assert_subject of
-        <<A:1/binary, _/binary>> when A =:= <<"a"/utf8>> -> _assert_subject;
+    {Rest@1, A@1} = case <<"wibble"/utf8>> of
+        <<"a"/utf8, Rest/binary>> -> {Rest, A};
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
-                        value => _assert_fail,
+                        file => <<?FILEPATH/utf8>>,
                         module => <<"my/mod"/utf8>>,
                         function => <<"a"/utf8>>,
-                        line => 2})
+                        line => 2,
+                        value => _assert_fail,
+                        start => 16,
+                        'end' => 54,
+                        pattern_start => 27,
+                        pattern_end => 43})
     end,
+    A = <<"a"/utf8>>,
     A@1.

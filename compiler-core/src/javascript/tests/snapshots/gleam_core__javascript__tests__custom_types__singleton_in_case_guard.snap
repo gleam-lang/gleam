@@ -1,0 +1,38 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\npub type State {\n  Active\n  Inactive\n}\n\npub fn process(s: State) -> String {\n  case s {\n    state if state == Active -> \"active\"\n    _ -> \"inactive\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub type State {
+  Active
+  Inactive
+}
+
+pub fn process(s: State) -> String {
+  case s {
+    state if state == Active -> "active"
+    _ -> "inactive"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class Active extends $CustomType {}
+export const State$Active = () => new Active();
+export const State$isActive = (value) => value instanceof Active;
+
+export class Inactive extends $CustomType {}
+export const State$Inactive = () => new Inactive();
+export const State$isInactive = (value) => value instanceof Inactive;
+
+export function process(s) {
+  let state = s;
+  if (state instanceof Active) {
+    return "active";
+  } else {
+    return "inactive";
+  }
+}

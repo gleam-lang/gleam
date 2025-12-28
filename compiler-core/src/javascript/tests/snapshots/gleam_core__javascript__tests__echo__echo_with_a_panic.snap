@@ -10,8 +10,10 @@ pub fn main() {
 
 
 ----- COMPILED JAVASCRIPT
-import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
+import * as $stdlib$dict from "../../gleam_stdlib/gleam/dict.mjs";
 import {
+  Empty as $Empty,
+  NonEmpty as $NonEmpty,
   CustomType as $CustomType,
   makeError,
   bitArraySlice,
@@ -21,17 +23,20 @@ import {
   UtfCodepoint as $UtfCodepoint,
 } from "../gleam.mjs";
 
+const FILEPATH = "src/module.gleam";
+
 export function main() {
   let _block;
   throw makeError(
     "panic",
+    FILEPATH,
     "my/mod",
     3,
     "main",
     "`panic` expression evaluated.",
     {}
   )
-  return echo(_block, "src/module.gleam", 3);
+  return echo(_block, undefined, "src/module.gleam", 3);
 }
 
 // ...omitted code from `templates/echo.mjs`...

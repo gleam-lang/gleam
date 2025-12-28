@@ -1,0 +1,55 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: "\npub fn main() -> Result(Int, Nil) {\n  let result = Ok(12)\n  let result2 = Error(True)\n  r\n}\n"
+---
+pub fn main() -> Result(Int, Nil) {
+  let result = Ok(12)
+  let result2 = Error(True)
+  r|
+}
+
+
+----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   04_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   04_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True
+main
+  kind:   Function
+  detail: fn() -> Result(Int, Nil)
+  sort:   02_main
+  desc:   app
+  edits:
+    [4:2-4:2]: "main"
+result
+  kind:   Variable
+  detail: Result(Int, a)
+  sort:   02_result
+  desc:   app
+  docs:   "A locally defined variable."
+  edits:
+    [4:2-4:2]: "result"
+result2
+  kind:   Variable
+  detail: Result(a, Bool)
+  sort:   2_result2
+  desc:   app
+  docs:   "A locally defined variable."
+  edits:
+    [4:2-4:2]: "result2"

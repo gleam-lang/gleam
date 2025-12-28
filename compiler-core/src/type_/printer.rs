@@ -3,7 +3,10 @@ use ecow::{EcoString, eco_format};
 use im::HashMap;
 use std::{collections::HashSet, sync::Arc};
 
-use crate::type_::{Type, TypeVar};
+use crate::{
+    ast::SrcSpan,
+    type_::{Type, TypeAliasConstructor, TypeVar},
+};
 
 /// This class keeps track of what names are used for modules in the current
 /// scope, so they can be printed in errors, etc.
@@ -68,7 +71,7 @@ pub struct Names {
     /// - key:   "mod1"
     /// - value: "mod1"
     ///
-    imported_modules: HashMap<EcoString, EcoString>,
+    imported_modules: HashMap<EcoString, (EcoString, SrcSpan)>,
 
     /// Generic type parameters that have been annotated in the current
     /// function.
@@ -114,6 +117,32 @@ pub struct Names {
     /// - value: `"Woo"`
     ///
     local_value_constructors: BiMap<(EcoString, EcoString), EcoString>,
+
+    /// A map containing information about public alias of internal types in
+    /// other packages. This is a common pattern in Gleam, in order to reexport
+    /// an internal type, without exposing its implementation details. Because
+    /// of this, we want to be able to properly handle this case, and use the
+    /// public alias rather than the internal underlying type. Since Gleam type
+    /// aliases are not part of the type system, we have to track them manually
+    /// here.
+    ///
+    /// This is a mapping of internal types to their public aliases that we want
+    /// to favour over the internal types.
+    ///
+    /// For example, if we had the following code:
+    ///
+    /// ```gleam
+    /// // lustre/element.gleam
+    /// import lustre/internal
+    ///
+    /// pub type Element(a) = internal.Element(a)
+    /// ```
+    ///
+    /// This map would contain a key of `("lustre/internal", "Element")` with a
+    /// value of `("lustre/element", "Element")`. This can then be used to look
+    /// up the alias we want to print based on the type we are printing.
+    ///
+    reexport_aliases: HashMap<(EcoString, EcoString), (EcoString, EcoString)>,
 }
 
 /// The `PartialEq` implementation for `Type` doesn't account for `TypeVar::Link`,
@@ -136,6 +165,7 @@ impl Names {
             imported_modules: Default::default(),
             type_variables: Default::default(),
             local_value_constructors: Default::default(),
+            reexport_aliases: Default::default(),
         }
     }
 
@@ -160,8 +190,11 @@ impl Names {
     ) {
         match type_ {
             Type::Named {
-                module, name, args, ..
-            } if compare_arguments(args, parameters) => {
+                module,
+                name,
+                arguments,
+                ..
+            } if compare_arguments(arguments, parameters) => {
                 self.named_type_in_scope(module.clone(), name.clone(), local_alias);
             }
             Type::Named { .. } | Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => {
@@ -176,23 +209,67 @@ impl Names {
     }
 
     /// Record an imported module in this module.
-    pub fn imported_module(&mut self, module_name: EcoString, module_alias: EcoString) {
-        _ = self.imported_modules.insert(module_name, module_alias)
+    ///
+    /// Returns the location of the previous time this module was imported, if there was one.
+    pub fn imported_module(
+        &mut self,
+        module_name: EcoString,
+        module_alias: EcoString,
+        location: SrcSpan,
+    ) -> Option<SrcSpan> {
+        self.imported_modules
+            .insert(module_name, (module_alias, location))
+            .map(|(_, location)| location)
+    }
+
+    /// Check whether a particular type alias is reexporting an internal type,
+    /// and if so register it so we can print it correctly.
+    pub fn maybe_register_reexport_alias(
+        &mut self,
+        package: &EcoString,
+        alias_name: &EcoString,
+        alias: &TypeAliasConstructor,
+    ) {
+        match alias.type_.as_ref() {
+            Type::Named {
+                publicity,
+                package: type_package,
+                module,
+                name,
+                arguments,
+                ..
+            } => {
+                // We only count this alias as a reexport if it is:
+                // - aliasing a type in the same package
+                // - the type is internal
+                // - the alias exposes the same type parameters as the internal type
+                if type_package == package
+                    && publicity.is_internal()
+                    && compare_arguments(arguments, &alias.parameters)
+                {
+                    _ = self.reexport_aliases.insert(
+                        (module.clone(), name.clone()),
+                        (alias.module.clone(), alias_name.clone()),
+                    );
+                }
+            }
+            Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => {}
+        }
     }
 
     /// Get the name and optional module qualifier for a named type.
-    pub fn named_type<'a>(
+    fn named_type<'a>(
         &'a self,
         module: &'a EcoString,
         name: &'a EcoString,
         print_mode: PrintMode,
     ) -> NameContextInformation<'a> {
         if print_mode == PrintMode::ExpandAliases {
-            if let Some(module) = self.imported_modules.get(module) {
+            if let Some((module, _)) = self.imported_modules.get(module) {
                 return NameContextInformation::Qualified(module, name.as_str());
             };
 
-            return NameContextInformation::Unimported(name.as_str());
+            return NameContextInformation::Unimported(module, name);
         }
 
         let key = (module.clone(), name.clone());
@@ -203,12 +280,20 @@ impl Names {
             return NameContextInformation::Unqualified(name.as_str());
         }
 
+        if let Some((module, alias)) = self.reexport_aliases.get(&key) {
+            if let Some((module, _)) = self.imported_modules.get(module) {
+                return NameContextInformation::Qualified(module, alias);
+            } else {
+                return NameContextInformation::Unimported(module, alias);
+            }
+        }
+
         // This type is from a module that has been imported
-        if let Some(module) = self.imported_modules.get(module) {
+        if let Some((module, _)) = self.imported_modules.get(module) {
             return NameContextInformation::Qualified(module, name.as_str());
         };
 
-        NameContextInformation::Unimported(name.as_str())
+        NameContextInformation::Unimported(module, name)
     }
 
     /// Record a named value in this module.
@@ -230,7 +315,7 @@ impl Names {
         module: &'a EcoString,
         name: &'a EcoString,
     ) -> NameContextInformation<'a> {
-        let key: (EcoString, EcoString) = (module.clone(), name.clone());
+        let key = (module.clone(), name.clone());
 
         // There is a local name for this value, use that.
         if let Some(name) = self.local_value_constructors.get_by_left(&key) {
@@ -238,22 +323,34 @@ impl Names {
         }
 
         // This value is from a module that has been imported
-        if let Some(module) = self.imported_modules.get(module) {
+        if let Some((module, _)) = self.imported_modules.get(module) {
             return NameContextInformation::Qualified(module, name.as_str());
         };
 
-        NameContextInformation::Unimported(name.as_str())
+        NameContextInformation::Unimported(module, name)
     }
 
     pub fn is_imported(&self, module: &str) -> bool {
         self.imported_modules.contains_key(module)
+    }
+
+    pub fn get_type_variable(&self, id: u64) -> Option<&EcoString> {
+        self.type_variables.get(&id)
+    }
+
+    pub fn reexport_alias(
+        &self,
+        module: EcoString,
+        name: EcoString,
+    ) -> Option<&(EcoString, EcoString)> {
+        self.reexport_aliases.get(&(module, name))
     }
 }
 
 #[derive(Debug)]
 pub enum NameContextInformation<'a> {
     /// This type is from a module that has not been imported in this module.
-    Unimported(&'a str),
+    Unimported(&'a str, &'a str),
     /// This type has been imported in an unqualifid fashion in this module.
     Unqualified(&'a str),
     /// This type is from a module that has been imported.
@@ -314,6 +411,49 @@ impl<'a> Printer<'a> {
         }
     }
 
+    /// In the AST, type variables are represented by their IDs, not their names.
+    /// This means that when we are printing a type variable, we either need to
+    /// find its name that was given by the programmer, or generate a new one.
+    /// Type variable names are local to functions, meaning there can be one
+    /// named `a` in one function, and a different one named `a` in another
+    /// function. However, there can't be two named `a` in the same function.
+    ///
+    /// By default, the printer avoids duplicating type variable names entirely.
+    /// This is because we don't have easy access to information about which type
+    /// variables belong to this function. In order to ensure no accidental,
+    /// collisions, we treat all type variables from the module as in scope, even
+    /// though this isn't the case.
+    ///
+    /// When sufficient information is present to ensure type variables are not
+    /// duplicated, `new_without_type_variables` can be used, in combination with
+    /// `register_type_variables` in order to precisely control which variables
+    /// are in scope.
+    ///
+    pub fn new_without_type_variables(names: &'a Names) -> Self {
+        Printer {
+            names,
+            uid: Default::default(),
+            printed_type_variables: Default::default(),
+            printed_type_variable_names: Default::default(),
+        }
+    }
+
+    /// Clear the registered type variable names. This allows the same `Printer`
+    /// to be used in multiple different scopes, which have different sets of
+    /// type variables. After clearing, the correct variables from the desired
+    /// scope can be registered using `register_type_variable`.
+    pub fn clear_type_variables(&mut self) {
+        self.printed_type_variable_names.clear();
+    }
+
+    /// As explained in the documentation for `new_without_type_variables`, it
+    /// it not always possible to determine which type variables are in scope.
+    /// However, when it is possible, this function can be used to manually
+    /// register which type variable names are in scope and cannot be used.
+    pub fn register_type_variable(&mut self, name: EcoString) {
+        _ = self.printed_type_variable_names.insert(name);
+    }
+
     pub fn print_type(&mut self, type_: &Type) -> EcoString {
         let mut buffer = EcoString::new();
         self.print(type_, &mut buffer, PrintMode::Normal);
@@ -322,7 +462,7 @@ impl<'a> Printer<'a> {
 
     pub fn print_module(&self, module: &str) -> EcoString {
         match self.names.imported_modules.get(module) {
-            Some(module) => module.clone(),
+            Some((module, _)) => module.clone(),
             _ => module.split("/").last().unwrap_or(module).into(),
         }
     }
@@ -336,15 +476,18 @@ impl<'a> Printer<'a> {
     fn print(&mut self, type_: &Type, buffer: &mut EcoString, print_mode: PrintMode) {
         match type_ {
             Type::Named {
-                name, args, module, ..
+                name,
+                arguments,
+                module,
+                ..
             } => {
                 let (module, name) = match self.names.named_type(module, name, print_mode) {
-                    NameContextInformation::Qualified(m, n) => (Some(m), n),
-                    NameContextInformation::Unqualified(n) => (None, n),
+                    NameContextInformation::Qualified(module, name) => (Some(module), name),
+                    NameContextInformation::Unqualified(name) => (None, name),
                     // TODO: indicate that the module is not import and as such
                     // needs to be, as well as how.
-                    NameContextInformation::Unimported(n) => {
-                        (Some(module.split('/').last().unwrap_or(module)), n)
+                    NameContextInformation::Unimported(module, name) => {
+                        (module.split('/').next_back(), name)
                     }
                 };
 
@@ -354,18 +497,18 @@ impl<'a> Printer<'a> {
                 }
                 buffer.push_str(name);
 
-                if !args.is_empty() {
+                if !arguments.is_empty() {
                     buffer.push('(');
-                    self.print_arguments(args, buffer, print_mode);
+                    self.print_arguments(arguments, buffer, print_mode);
                     buffer.push(')');
                 }
             }
 
-            Type::Fn { args, retrn } => {
+            Type::Fn { arguments, return_ } => {
                 buffer.push_str("fn(");
-                self.print_arguments(args, buffer, print_mode);
+                self.print_arguments(arguments, buffer, print_mode);
                 buffer.push_str(") -> ");
-                self.print(retrn, buffer, print_mode);
+                self.print(return_, buffer, print_mode);
             }
 
             Type::Var { type_, .. } => match *type_.borrow() {
@@ -375,9 +518,9 @@ impl<'a> Printer<'a> {
                 }
             },
 
-            Type::Tuple { elems, .. } => {
+            Type::Tuple { elements, .. } => {
                 buffer.push_str("#(");
-                self.print_arguments(elems, buffer, print_mode);
+                self.print_arguments(elements, buffer, print_mode);
                 buffer.push(')');
             }
         }
@@ -387,8 +530,8 @@ impl<'a> Printer<'a> {
         let (module, name) = match self.names.named_constructor(module, name) {
             NameContextInformation::Qualified(module, name) => (Some(module), name),
             NameContextInformation::Unqualified(name) => (None, name),
-            NameContextInformation::Unimported(name) => {
-                (Some(module.split('/').last().unwrap_or(module)), name)
+            NameContextInformation::Unimported(module, name) => {
+                (module.split('/').next_back(), name)
             }
         };
 
@@ -400,14 +543,14 @@ impl<'a> Printer<'a> {
 
     fn print_arguments(
         &mut self,
-        args: &[Arc<Type>],
-        typ_str: &mut EcoString,
+        arguments: &[Arc<Type>],
+        type_str: &mut EcoString,
         print_mode: PrintMode,
     ) {
-        for (i, arg) in args.iter().enumerate() {
-            self.print(arg, typ_str, print_mode);
-            if i < args.len() - 1 {
-                typ_str.push_str(", ");
+        for (i, argument) in arguments.iter().enumerate() {
+            self.print(argument, type_str, print_mode);
+            if i < arguments.len() - 1 {
+                type_str.push_str(", ");
             }
         }
     }
@@ -463,7 +606,7 @@ fn test_local_type() {
 
     let type_ = Type::Named {
         name: "Tiger".into(),
-        args: vec![],
+        arguments: vec![],
         module: "mod".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
@@ -481,7 +624,7 @@ fn test_prelude_type() {
 
     let type_ = Type::Named {
         name: "Int".into(),
-        args: vec![],
+        arguments: vec![],
         module: "gleam".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
@@ -502,7 +645,7 @@ fn test_shadowed_prelude_type() {
 
     let type_ = Type::Named {
         name: "Int".into(),
-        args: vec![],
+        arguments: vec![],
         module: "gleam".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
@@ -548,10 +691,10 @@ fn test_tuple_type() {
     let mut printer = Printer::new(&names);
 
     let type_ = Type::Tuple {
-        elems: vec![
+        elements: vec![
             Arc::new(Type::Named {
                 name: "Int".into(),
-                args: vec![],
+                arguments: vec![],
                 module: "gleam".into(),
                 publicity: crate::ast::Publicity::Public,
                 package: "".into(),
@@ -559,7 +702,7 @@ fn test_tuple_type() {
             }),
             Arc::new(Type::Named {
                 name: "String".into(),
-                args: vec![],
+                arguments: vec![],
                 module: "gleam".into(),
                 publicity: crate::ast::Publicity::Public,
                 package: "".into(),
@@ -579,10 +722,10 @@ fn test_fn_type() {
     let mut printer = Printer::new(&names);
 
     let type_ = Type::Fn {
-        args: vec![
+        arguments: vec![
             Arc::new(Type::Named {
                 name: "Int".into(),
-                args: vec![],
+                arguments: vec![],
                 module: "gleam".into(),
                 publicity: crate::ast::Publicity::Public,
                 package: "".into(),
@@ -590,16 +733,16 @@ fn test_fn_type() {
             }),
             Arc::new(Type::Named {
                 name: "String".into(),
-                args: vec![],
+                arguments: vec![],
                 module: "gleam".into(),
                 publicity: crate::ast::Publicity::Public,
                 package: "".into(),
                 inferred_variant: None,
             }),
         ],
-        retrn: Arc::new(Type::Named {
+        return_: Arc::new(Type::Named {
             name: "Bool".into(),
-            args: vec![],
+            arguments: vec![],
             module: "gleam".into(),
             publicity: crate::ast::Publicity::Public,
             package: "".into(),
@@ -613,12 +756,18 @@ fn test_fn_type() {
 #[test]
 fn test_module_alias() {
     let mut names = Names::new();
-    names.imported_module("mod1".into(), "animals".into());
+
+    assert!(
+        names
+            .imported_module("mod1".into(), "animals".into(), SrcSpan::new(50, 63))
+            .is_none()
+    );
+
     let mut printer = Printer::new(&names);
 
     let type_ = Type::Named {
         name: "Cat".into(),
-        args: vec![],
+        arguments: vec![],
         module: "mod1".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
@@ -640,7 +789,7 @@ fn test_type_alias_and_generics() {
 
     let type_ = Type::Named {
         name: "Tiger".into(),
-        args: vec![Arc::new(Type::Var {
+        arguments: vec![Arc::new(Type::Var {
             type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: 0 })),
         })],
         module: "mod".into(),
@@ -664,7 +813,7 @@ fn test_unqualified_import_and_generic() {
 
     let type_ = Type::Named {
         name: "Cat".into(),
-        args: vec![Arc::new(Type::Var {
+        arguments: vec![Arc::new(Type::Var {
             type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: 0 })),
         })],
         module: "mod".into(),
@@ -682,7 +831,7 @@ fn nested_module() {
     let mut printer = Printer::new(&names);
     let type_ = Type::Named {
         name: "Cat".into(),
-        args: vec![],
+        arguments: vec![],
         module: "one/two/three".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
@@ -696,7 +845,11 @@ fn nested_module() {
 fn test_unqualified_import_and_module_alias() {
     let mut names = Names::new();
 
-    names.imported_module("mod1".into(), "animals".into());
+    assert!(
+        names
+            .imported_module("mod1".into(), "animals".into(), SrcSpan::new(76, 93))
+            .is_none()
+    );
 
     let _ = names
         .local_types
@@ -706,7 +859,7 @@ fn test_unqualified_import_and_module_alias() {
 
     let type_ = Type::Named {
         name: "Cat".into(),
-        args: vec![],
+        arguments: vec![],
         module: "mod1".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
@@ -719,7 +872,13 @@ fn test_unqualified_import_and_module_alias() {
 #[test]
 fn test_module_imports() {
     let mut names = Names::new();
-    names.imported_module("mod".into(), "animals".into());
+
+    assert!(
+        names
+            .imported_module("mod".into(), "animals".into(), SrcSpan::new(76, 93))
+            .is_none()
+    );
+
     let _ = names
         .local_types
         .insert(("mod2".into(), "Cat".into()), "Cat".into());
@@ -728,7 +887,7 @@ fn test_module_imports() {
 
     let type_ = Type::Named {
         name: "Cat".into(),
-        args: vec![],
+        arguments: vec![],
         module: "mod".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
@@ -737,7 +896,7 @@ fn test_module_imports() {
 
     let typ1 = Type::Named {
         name: "Cat".into(),
-        args: vec![],
+        arguments: vec![],
         module: "mod2".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
@@ -759,7 +918,7 @@ fn test_multiple_generic_annotations() {
 
     let type_ = Type::Named {
         name: "Tiger".into(),
-        args: vec![
+        arguments: vec![
             Arc::new(Type::Var {
                 type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: 0 })),
             }),

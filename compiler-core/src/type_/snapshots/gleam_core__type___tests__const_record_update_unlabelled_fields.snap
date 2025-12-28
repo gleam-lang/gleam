@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "pub type Point { Point(Int, Int) }\n\n        pub const origin = Point(0, 0)\n        pub const point = Point(..origin)"
+---
+----- SOURCE CODE
+pub type Point { Point(Int, Int) }
+
+        pub const origin = Point(0, 0)
+        pub const point = Point(..origin)
+
+----- ERROR
+error: Invalid record constructor
+  ┌─ /src/one/two.gleam:4:27
+  │
+4 │         pub const point = Point(..origin)
+  │                           ^^^^^ This is not a record constructor
+
+Only record constructors can be used with the update syntax.

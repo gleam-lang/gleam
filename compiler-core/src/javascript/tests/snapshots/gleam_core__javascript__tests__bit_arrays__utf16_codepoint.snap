@@ -1,0 +1,37 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 2114
+expression: "\nfn codepoint() -> UtfCodepoint { todo }\n\npub fn main() {\n  let my_codepoint = codepoint()\n  <<my_codepoint:utf16_codepoint>>\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+fn codepoint() -> UtfCodepoint { todo }
+
+pub fn main() {
+  let my_codepoint = codepoint()
+  <<my_codepoint:utf16_codepoint>>
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError, toBitArray, codepointToUtf16 } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+function codepoint() {
+  throw makeError(
+    "todo",
+    FILEPATH,
+    "my/mod",
+    2,
+    "codepoint",
+    "`todo` expression evaluated. This code has not yet been implemented.",
+    {}
+  )
+}
+
+export function main() {
+  let my_codepoint = codepoint();
+  return toBitArray([codepointToUtf16(my_codepoint, true)]);
+}

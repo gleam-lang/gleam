@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/erlang/tests/inlining.rs
+expression: "\nimport testing\n\npub fn main() {\n  testing.always_inline(Ok(10), Error)\n}\n"
+---
+----- SOURCE CODE
+
+import testing
+
+pub fn main() {
+  testing.always_inline(Ok(10), Error)
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 4).
+-spec main() -> {ok, any()} | {error, integer()}.
+main() ->
+    case {ok, 10} of
+        {ok, Value} ->
+            {error, Value};
+
+        {error, Error} ->
+            {error, Error}
+    end.

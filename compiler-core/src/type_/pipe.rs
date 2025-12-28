@@ -55,17 +55,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         let end = expressions.last().location().end;
         let mut expressions = expressions.into_iter();
         let first = expressions.next().expect("Empty pipeline in typer");
-        let first_location = first.location();
-        let first = match expr_typer.infer(first) {
-            Ok(inferred) => inferred,
-            Err(e) => {
-                expr_typer.problems.error(e);
-                TypedExpr::Invalid {
-                    location: first_location,
-                    type_: expr_typer.new_unbound_var(),
-                }
-            }
-        };
+        let first = expr_typer.infer(first);
 
         Self::new(expr_typer, size, first, end).infer_expressions(expressions)
     }
@@ -101,12 +91,15 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
 
             let (kind, call) = match call {
                 func @ UntypedExpr::Fn { location, kind, .. } => {
-                    let (func, args, return_type) = self.expr_typer.do_infer_call(
-                        func.clone(),
+                    let (func, arguments, return_type) = self.expr_typer.do_infer_call(
+                        func,
                         vec![self.untyped_left_hand_value_variable_call_argument()],
                         location,
                         CallKind::Function,
                     );
+
+                    self.expr_typer.purity =
+                        self.expr_typer.purity.merge(func.called_function_purity());
 
                     let kind = match kind {
                         FunctionLiteralKind::Capture { hole } => {
@@ -121,7 +114,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                         kind,
                         TypedExpr::Call {
                             location,
-                            args,
+                            arguments,
                             type_: return_type,
                             fun: Box::new(func),
                         },
@@ -136,42 +129,43 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                     location,
                     ..
                 } => {
-                    let fun = match self.expr_typer.infer(*fun) {
-                        Ok(fun) => fun,
-                        Err(e) => {
-                            // In case we cannot infer the function we'll
-                            // replace it with an invalid expression with an
-                            // unbound type to keep going!
-                            self.expr_typer.problems.error(e);
-                            TypedExpr::Invalid {
-                                location,
-                                type_: self.expr_typer.new_unbound_var(),
-                            }
-                        }
-                    };
+                    let fun = self.expr_typer.infer(*fun);
 
                     match fun.type_().fn_types() {
                         // Rewrite as right(..args)(left)
-                        Some((args, _)) if args.len() == arguments.len() => (
-                            PipelineAssignmentKind::FunctionCall,
-                            self.infer_apply_to_call_pipe(fun, arguments, location),
-                        ),
+                        Some((fn_arguments, _)) if fn_arguments.len() == arguments.len() => {
+                            // We are calling the return value of another function.
+                            // Without lifting purity tracking into the type system,
+                            // we have no idea whether it's pure or not!
+                            self.expr_typer.purity = self.expr_typer.purity.merge(Purity::Unknown);
+                            (
+                                PipelineAssignmentKind::FunctionCall,
+                                self.infer_apply_to_call_pipe(fun, arguments, location),
+                            )
+                        }
 
                         // Rewrite as right(left, ..args)
-                        _ => (
-                            PipelineAssignmentKind::FirstArgument {
-                                second_argument: arguments.first().map(|arg| arg.location),
-                            },
-                            self.infer_insert_pipe(fun, arguments, location),
-                        ),
+                        _ => {
+                            self.expr_typer.purity =
+                                self.expr_typer.purity.merge(fun.called_function_purity());
+                            (
+                                PipelineAssignmentKind::FirstArgument {
+                                    second_argument: arguments.first().map(|arg| arg.location),
+                                },
+                                self.infer_insert_pipe(fun, arguments, location),
+                            )
+                        }
                     }
                 }
 
                 UntypedExpr::Echo {
                     location,
+                    keyword_end: _,
                     expression: None,
+                    message,
                 } => {
                     self.expr_typer.environment.echo_found = true;
+                    self.expr_typer.purity = Purity::Impure;
                     // An echo that is not followed by an expression that is
                     // used as a pipeline's step is just like the identity
                     // function.
@@ -183,12 +177,33 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                             location,
                             expression: None,
                             type_: self.argument_type.clone(),
+                            message: message.map(|message| {
+                                Box::new(self.expr_typer.infer_and_unify(*message, string()))
+                            }),
                         },
                     )
                 }
 
                 // right(left)
-                call => (
+                UntypedExpr::Int { .. }
+                | UntypedExpr::Float { .. }
+                | UntypedExpr::String { .. }
+                | UntypedExpr::Block { .. }
+                | UntypedExpr::Var { .. }
+                | UntypedExpr::List { .. }
+                | UntypedExpr::BinOp { .. }
+                | UntypedExpr::PipeLine { .. }
+                | UntypedExpr::Case { .. }
+                | UntypedExpr::FieldAccess { .. }
+                | UntypedExpr::Tuple { .. }
+                | UntypedExpr::TupleIndex { .. }
+                | UntypedExpr::Todo { .. }
+                | UntypedExpr::Panic { .. }
+                | UntypedExpr::Echo { .. }
+                | UntypedExpr::BitArray { .. }
+                | UntypedExpr::RecordUpdate { .. }
+                | UntypedExpr::NegateBool { .. }
+                | UntypedExpr::NegateInt { .. } => (
                     PipelineAssignmentKind::FunctionCall,
                     self.infer_apply_pipe(call),
                 ),
@@ -236,15 +251,11 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         TypedExpr::Var {
             location: self.argument_location,
             name: PIPE_VARIABLE.into(),
-            constructor: ValueConstructor {
-                publicity: Publicity::Public,
-                deprecation: Deprecation::NotDeprecated,
-                type_: self.argument_type.clone(),
-                variant: ValueConstructorVariant::LocalVariable {
-                    location: self.argument_location,
-                    origin: VariableOrigin::Generated,
-                },
-            },
+            constructor: ValueConstructor::local_variable(
+                self.argument_location,
+                VariableOrigin::generated(),
+                self.argument_type.clone(),
+            ),
         }
     }
 
@@ -269,37 +280,37 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
     fn infer_apply_to_call_pipe(
         &mut self,
         function: TypedExpr,
-        args: Vec<CallArg<UntypedExpr>>,
+        arguments: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
     ) -> TypedExpr {
-        let (function, args, type_) = self.expr_typer.do_infer_call_with_known_fun(
+        let (function, arguments, type_) = self.expr_typer.do_infer_call_with_known_fun(
             function,
-            args,
+            arguments,
             location,
             CallKind::Function,
         );
         let function = TypedExpr::Call {
             location,
             type_,
-            args,
+            arguments,
             fun: Box::new(function),
         };
-        let args = vec![self.untyped_left_hand_value_variable_call_argument()];
+        let arguments = vec![self.untyped_left_hand_value_variable_call_argument()];
         // TODO: use `.with_unify_error_situation(UnifyErrorSituation::PipeTypeMismatch)`
         // This will require the typing of the arguments to be lifted up out of
         // the function below. If it is not we don't know if the error comes
         // from incorrect usage of the pipe or if it originates from the
         // argument expressions.
-        let (function, args, type_) = self.expr_typer.do_infer_call_with_known_fun(
+        let (function, arguments, type_) = self.expr_typer.do_infer_call_with_known_fun(
             function,
-            args,
+            arguments,
             location,
             CallKind::Function,
         );
         TypedExpr::Call {
             location,
             type_,
-            args,
+            arguments,
             fun: Box::new(function),
         }
     }
@@ -317,7 +328,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         // the function below. If it is not we don't know if the error comes
         // from incorrect usage of the pipe or if it originates from the
         // argument expressions.
-        let (fun, args, type_) = self.expr_typer.do_infer_call_with_known_fun(
+        let (fun, arguments, type_) = self.expr_typer.do_infer_call_with_known_fun(
             function,
             arguments,
             location,
@@ -326,7 +337,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         TypedExpr::Call {
             location,
             type_,
-            args,
+            arguments,
             fun: Box::new(fun),
         }
     }
@@ -335,18 +346,12 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
     /// b is the `function` argument.
     fn infer_apply_pipe(&mut self, function: UntypedExpr) -> TypedExpr {
         let function_location = function.location();
-        let function = Box::new(match self.expr_typer.infer(function) {
-            Ok(function) => function,
-            Err(error) => {
-                // If we cannot infer the function we put an invalid expression
-                // in its place so we can still keep going with the other steps.
-                self.expr_typer.problems.error(error);
-                TypedExpr::Invalid {
-                    location: function_location,
-                    type_: self.expr_typer.new_unbound_var(),
-                }
-            }
-        });
+        let function = Box::new(self.expr_typer.infer(function));
+
+        self.expr_typer.purity = self
+            .expr_typer
+            .purity
+            .merge(function.called_function_purity());
 
         let return_type = self.expr_typer.new_unbound_var();
         // Ensure that the function accepts one argument of the correct type
@@ -371,7 +376,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             location: function_location,
             type_: return_type,
             fun: function,
-            args: vec![self.typed_left_hand_value_variable_call_argument()],
+            arguments: vec![self.typed_left_hand_value_variable_call_argument()],
         }
     }
 
@@ -380,11 +385,16 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             UnifyError::CouldNotUnify {
                 expected, given, ..
             } => (expected.as_ref(), given.as_ref()),
-            _ => return false,
+            UnifyError::ExtraVarInAlternativePattern { .. }
+            | UnifyError::MissingVarInAlternativePattern { .. }
+            | UnifyError::DuplicateVarInPattern { .. }
+            | UnifyError::RecursiveType => return false,
         };
 
         match types {
-            (Type::Fn { args: a, .. }, Type::Fn { args: b, .. }) if a.len() == b.len() => {
+            (Type::Fn { arguments: a, .. }, Type::Fn { arguments: b, .. })
+                if a.len() == b.len() =>
+            {
                 match (a.first(), b.first()) {
                     (Some(a), Some(b)) => unify(a.clone(), b.clone()).is_err(),
                     _ => false,
@@ -395,25 +405,21 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
     }
 
     fn warn_if_call_first_argument_is_hole(&mut self, call: &UntypedExpr) {
-        if let UntypedExpr::Fn { kind, body, .. } = &call {
-            if kind.is_capture() {
-                if let Statement::Expression(UntypedExpr::Call { arguments, .. }) = body.first() {
-                    match arguments.as_slice() {
-                        // If the first argument is labelled, we don't warn the user
-                        // as they might be intentionally adding it to provide more
-                        // information about exactly which argument is being piped into.
-                        [first] | [first, ..]
-                            if first.is_capture_hole() && first.label.is_none() =>
-                        {
-                            self.expr_typer.problems.warning(
-                                Warning::RedundantPipeFunctionCapture {
-                                    location: first.location,
-                                },
-                            )
-                        }
-                        _ => (),
-                    }
-                }
+        if let UntypedExpr::Fn { kind, body, .. } = &call
+            && kind.is_capture()
+            && let Statement::Expression(UntypedExpr::Call { arguments, .. }) = body.first()
+        {
+            match arguments.as_slice() {
+                // If the first argument is labelled, we don't warn the user
+                // as they might be intentionally adding it to provide more
+                // information about exactly which argument is being piped into.
+                [first] | [first, ..] if first.is_capture_hole() && first.label.is_none() => self
+                    .expr_typer
+                    .problems
+                    .warning(Warning::RedundantPipeFunctionCapture {
+                        location: first.location,
+                    }),
+                _ => (),
             }
         }
     }
@@ -428,7 +434,7 @@ fn new_pipeline_assignment(
     expr_typer.environment.insert_local_variable(
         PIPE_VARIABLE.into(),
         location,
-        VariableOrigin::Generated,
+        VariableOrigin::generated(),
         expression.type_(),
     );
     TypedPipelineAssignment {

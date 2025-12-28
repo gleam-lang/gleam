@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn main() {\n  case <<>> {\n    <<a:1, b:3, c:size(b - 2)>> -> c + b\n    _ -> 1\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  case <<>> {
+    <<a:1, b:3, c:size(b - 2)>> -> c + b
+    _ -> 1
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { toBitArray, bitArraySliceToInt } from "../gleam.mjs";
+
+export function main() {
+  let $ = toBitArray([]);
+  if ($.bitSize >= 1 && $.bitSize >= 4) {
+    let b = bitArraySliceToInt($, 1, 4, true, false);
+    if (b - 2 >= 0 && $.bitSize === 4 + b - 2) {
+      let a = bitArraySliceToInt($, 0, 1, true, false);
+      let b$1 = b;
+      let c = bitArraySliceToInt($, 4, 4 + b$1 - 2, true, false);
+      return c + b$1;
+    } else {
+      return 1;
+    }
+  } else {
+    return 1;
+  }
+}

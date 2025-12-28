@@ -9,6 +9,7 @@ expression: echo wibble
                 start: 0,
                 end: 11,
             },
+            keyword_end: 4,
             expression: Some(
                 Var {
                     location: SrcSpan {
@@ -18,6 +19,7 @@ expression: echo wibble
                     name: "wibble",
                 },
             ),
+            message: None,
         },
     ),
 ]

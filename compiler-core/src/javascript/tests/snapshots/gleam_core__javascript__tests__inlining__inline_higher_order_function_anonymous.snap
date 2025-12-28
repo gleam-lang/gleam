@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/javascript/tests/inlining.rs
+expression: "\nimport gleam/result\n\npub fn main() {\n  result.try(Ok(10), fn(value) {\n    Ok({ value + 2 } * 4)\n  })\n}\n"
+---
+----- SOURCE CODE
+
+import gleam/result
+
+pub fn main() {
+  result.try(Ok(10), fn(value) {
+    Ok({ value + 2 } * 4)
+  })
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $result from "../../gleam_stdlib/gleam/result.mjs";
+import { Ok } from "../gleam.mjs";
+
+export function main() {
+  let $ = new Ok(10);
+  if ($ instanceof Ok) {
+    let value = $[0];
+    return new Ok((value + 2) * 4);
+  } else {
+    return $;
+  }
+}

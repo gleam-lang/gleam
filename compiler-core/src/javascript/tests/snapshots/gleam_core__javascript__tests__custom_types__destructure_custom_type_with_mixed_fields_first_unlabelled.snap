@@ -1,14 +1,14 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-expression: "\ntype Cat {\n  Cat(String, cuteness: Int)\n}\n\nfn go(cat) {\n  let Cat(x, y) = cat\n  let Cat(cuteness: y, ..) = cat\n  let Cat(x, cuteness: y) = cat\n  x\n}\n\n"
+expression: "\npub type Cat {\n  Cat(String, cuteness: Int)\n}\n\npub fn go(cat) {\n  let Cat(x, y) = cat\n  let Cat(cuteness: y, ..) = cat\n  let Cat(x, cuteness: y) = cat\n  x\n}\n\n"
 ---
 ----- SOURCE CODE
 
-type Cat {
+pub type Cat {
   Cat(String, cuteness: Int)
 }
 
-fn go(cat) {
+pub fn go(cat) {
   let Cat(x, y) = cat
   let Cat(cuteness: y, ..) = cat
   let Cat(x, cuteness: y) = cat
@@ -20,19 +20,29 @@ fn go(cat) {
 ----- COMPILED JAVASCRIPT
 import { CustomType as $CustomType } from "../gleam.mjs";
 
-class Cat extends $CustomType {
-  constructor(x0, cuteness) {
+export class Cat extends $CustomType {
+  constructor($0, cuteness) {
     super();
-    this[0] = x0;
+    this[0] = $0;
     this.cuteness = cuteness;
   }
 }
+export const Cat$Cat = ($0, cuteness) => new Cat($0, cuteness);
+export const Cat$isCat = (value) => value instanceof Cat;
+export const Cat$Cat$0 = (value) => value[0];
+export const Cat$Cat$cuteness = (value) => value.cuteness;
+export const Cat$Cat$1 = (value) => value.cuteness;
 
-function go(cat) {
-  let x = cat[0];
-  let y = cat.cuteness;
-  let y$1 = cat.cuteness;
-  let x$1 = cat[0];
-  let y$2 = cat.cuteness;
+export function go(cat) {
+  let x;
+  let y;
+  x = cat[0];
+  y = cat.cuteness;
+  let y$1;
+  y$1 = cat.cuteness;
+  let x$1;
+  let y$2;
+  x$1 = cat[0];
+  y$2 = cat.cuteness;
   return x$1;
 }

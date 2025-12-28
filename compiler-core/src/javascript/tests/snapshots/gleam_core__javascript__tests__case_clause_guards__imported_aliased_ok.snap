@@ -1,13 +1,13 @@
 ---
 source: compiler-core/src/javascript/tests/case_clause_guards.rs
-expression: "import gleam.{Ok as Y}\npub type X {\n  Ok\n}\nfn func() {\n  case Y {\n    y if y == Y -> True\n    _ -> False\n  }\n}\n"
+expression: "import gleam.{Ok as Y}\npub type X {\n  Ok\n}\npub fn func() {\n  case Y {\n    y if y == Y -> True\n    _ -> False\n  }\n}\n"
 ---
 ----- SOURCE CODE
 import gleam.{Ok as Y}
 pub type X {
   Ok
 }
-fn func() {
+pub fn func() {
   case Y {
     y if y == Y -> True
     _ -> False
@@ -20,11 +20,13 @@ import * as $gleam from "../gleam.mjs";
 import { Ok as Y, CustomType as $CustomType, isEqual } from "../gleam.mjs";
 
 export class Ok extends $CustomType {}
+export const X$Ok = () => new Ok();
+export const X$isOk = (value) => value instanceof Ok;
 
-function func() {
+export function func() {
   let $ = (var0) => { return new Y(var0); };
-  if (isEqual($, (var0) => { return new Y(var0); })) {
-    let y = $;
+  let y = $;
+  if (isEqual(y, (var0) => { return new Y(var0); })) {
     return true;
   } else {
     return false;

@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "case 1 {\n  _ if a || {}  -> 1\n}"
+---
+----- SOURCE CODE
+case 1 {
+  _ if a || {}  -> 1
+}
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:13
+  │
+2 │   _ if a || {}  -> 1
+  │             ^^ A clause guard block cannot be empty

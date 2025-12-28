@@ -1,4 +1,4 @@
-use crate::{assert_module_error, assert_module_infer, assert_warning, assert_with_module_error};
+use crate::{assert_module_error, assert_module_infer, assert_warning};
 
 // https://github.com/gleam-lang/gleam/issues/2215
 #[test]
@@ -115,7 +115,7 @@ type Three(a, a) {
 #[test]
 fn conflict_with_import() {
     // We cannot declare a type with the same name as an imported type
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "pub type A { B }"),
         "import wibble.{type A} type A { C }",
     );
@@ -180,5 +180,43 @@ pub fn main() {
             ("Unlocked", "fn(String, a) -> Box(a)"),
             ("main", "fn() -> Box(Bool)")
         ]
+    );
+}
+
+#[test]
+fn pattern_match_correct_labeled_field() {
+    assert_module_error!(
+        r#"
+type Fish {
+  Starfish()
+  Jellyfish(name: String, jiggly: Bool)
+}
+
+fn handle_fish(fish: Fish) {
+  case fish {
+    Starfish() -> False
+    Jellyfish(jiggly:) -> jiggly  // <- error is here
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn pattern_match_correct_pos_field() {
+    assert_module_error!(
+        r#"
+type Fish {
+  Starfish()
+  Jellyfish(String, Bool)
+}
+
+fn handle_fish(fish: Fish) {
+  case fish {
+    Starfish() -> False
+    Jellyfish(jiggly) -> jiggly
+  }
+}
+"#
     );
 }

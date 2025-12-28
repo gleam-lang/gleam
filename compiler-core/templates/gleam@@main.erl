@@ -22,7 +22,7 @@ run_module(Module) ->
         {ok, _} = application:ensure_all_started('{{ application }}'),
         erlang:process_flag(trap_exit, false),
         Module:main(),
-        erlang:halt(0)
+        init:stop(0)
     catch
         Class:Reason:StackTrace ->
             print_error(Class, Reason, StackTrace),
@@ -49,6 +49,7 @@ refine_first(_, S) ->
 error_class(_, #{gleam_error := panic}) -> "panic";
 error_class(_, #{gleam_error := todo}) -> "todo";
 error_class(_, #{gleam_error := let_assert}) -> "let assert";
+error_class(_, #{gleam_error := assert}) -> "assert";
 error_class(Class, _) -> ["Erlang ", atom_to_binary(Class)].
 
 error_message(#{gleam_error := _, message := M}) ->

@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/javascript/tests/numbers.rs
+expression: "pub fn main() {\n  1.1 /. 2.3\n}"
+---
+----- SOURCE CODE
+pub fn main() {
+  1.1 /. 2.3
+}
+
+----- COMPILED JAVASCRIPT
+export function main() {
+  return 1.1 / 2.3;
+}

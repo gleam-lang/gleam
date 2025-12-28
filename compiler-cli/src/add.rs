@@ -8,11 +8,18 @@ use gleam_core::{
 
 use crate::{
     cli,
-    dependencies::{UseManifest, parse_gleam_add_specifier},
+    dependencies::{self, parse_gleam_add_specifier},
     fs,
 };
 
 pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) -> Result<()> {
+    let config = crate::config::root_config(paths)?;
+    if packages_to_add.iter().any(|name| name == &config.name) {
+        return Err(Error::CannotAddSelfAsDependency {
+            name: config.name.clone(),
+        });
+    }
+
     let mut new_package_requirements = Vec::with_capacity(packages_to_add.len());
     for specifier in packages_to_add {
         new_package_requirements.push(parse_gleam_add_specifier(&specifier)?);
@@ -20,12 +27,15 @@ pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) ->
 
     // Insert the new packages into the manifest and perform dependency
     // resolution to determine suitable versions
-    let manifest = crate::dependencies::download(
+    let manifest = dependencies::resolve_and_download(
         paths,
         cli::Reporter::new(),
         Some((new_package_requirements.clone(), dev)),
         Vec::new(),
-        UseManifest::Yes,
+        dependencies::DependencyManagerConfig {
+            use_manifest: dependencies::UseManifest::Yes,
+            check_major_versions: dependencies::CheckMajorVersions::No,
+        },
     )?;
 
     // Read gleam.toml and manifest.toml so we can insert new deps into it
@@ -60,16 +70,18 @@ pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) ->
         #[allow(clippy::indexing_slicing)]
         {
             if dev {
+                if !gleam_toml.as_table().contains_key("dev-dependencies") {
+                    gleam_toml["dev-dependencies"] = toml_edit::table();
+                }
                 gleam_toml["dev-dependencies"][&added_package] = toml_edit::value(range.clone());
             } else {
+                if !gleam_toml.as_table().contains_key("dependencies") {
+                    gleam_toml["dependencies"] = toml_edit::table();
+                }
                 gleam_toml["dependencies"][&added_package] = toml_edit::value(range.clone());
             };
-            manifest_toml["requirements"][&added_package]
-                .as_inline_table_mut()
-                .expect("Invalid manifest format")["version"] = range.into();
+            manifest_toml["requirements"][&added_package]["version"] = range.into();
         }
-
-        cli::print_added(&format!("{added_package} v{version}"));
     }
 
     // Write the updated config

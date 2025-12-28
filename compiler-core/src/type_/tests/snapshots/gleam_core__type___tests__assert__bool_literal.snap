@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/type_/tests/assert.rs
+expression: "\npub fn main() {\n  assert True\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  assert True
+}
+
+
+----- WARNING
+warning: Assertion of a literal value
+  ┌─ /src/warning/wrn.gleam:3:10
+  │
+3 │   assert True
+  │          ^^^^
+
+Asserting on a literal bool is redundant since you can already tell whether
+it will be `True` or `False`.

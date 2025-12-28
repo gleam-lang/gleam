@@ -57,7 +57,7 @@ pub fn expect_module_error(src: &str) -> String {
     let error = crate::error::Error::Parse {
         src: src.into(),
         path: Utf8PathBuf::from("/src/parse/error.gleam"),
-        error: result,
+        error: Box::new(result),
     };
     error.pretty_string()
 }
@@ -67,7 +67,7 @@ pub fn expect_error(src: &str) -> String {
     let error = crate::error::Error::Parse {
         src: src.into(),
         path: Utf8PathBuf::from("/src/parse/error.gleam"),
-        error: result,
+        error: Box::new(result),
     };
     error.pretty_string()
 }
@@ -363,18 +363,6 @@ fn pointless_spread() {
     );
 }
 
-// https://github.com/gleam-lang/gleam/issues/1358
-#[test]
-fn lowcase_bool_in_pattern() {
-    assert_error!(
-        "case 42 > 42 { true -> 1; false -> 2; }",
-        ParseError {
-            error: ParseErrorType::LowcaseBooleanPattern,
-            location: SrcSpan { start: 15, end: 19 },
-        }
-    );
-}
-
 // https://github.com/gleam-lang/gleam/issues/1613
 #[test]
 fn anonymous_function_labeled_arguments() {
@@ -474,8 +462,28 @@ fn echo_followed_by_expression_ends_where_expression_ends() {
 }
 
 #[test]
+fn echo_with_simple_expression_1() {
+    assert_parse!("echo wibble as message");
+}
+
+#[test]
+fn echo_with_simple_expression_2() {
+    assert_parse!("echo wibble as \"message\"");
+}
+
+#[test]
+fn echo_with_complex_expression() {
+    assert_parse!("echo wibble as { this <> complex }");
+}
+
+#[test]
 fn echo_with_no_expressions_after_it() {
     assert_parse!("echo");
+}
+
+#[test]
+fn echo_with_no_expressions_after_it_but_a_message() {
+    assert_parse!("echo as message");
 }
 
 #[test]
@@ -510,8 +518,58 @@ fn panic_with_echo() {
 }
 
 #[test]
+fn panic_with_echo_and_message() {
+    assert_parse!("panic as echo wibble as message");
+}
+
+#[test]
 fn echo_with_panic() {
     assert_parse!("echo panic as \"a\"");
+}
+
+#[test]
+fn echo_with_panic_and_message() {
+    assert_parse!("echo panic as \"a\"");
+}
+
+#[test]
+fn echo_with_panic_and_messages() {
+    assert_parse!("echo panic as \"a\" as \"b\"");
+}
+
+#[test]
+fn echo_with_assert_and_message_1() {
+    assert_parse!("assert 1 == echo 2 as this_belongs_to_echo");
+}
+
+#[test]
+fn echo_with_assert_and_message_2() {
+    assert_parse!("assert echo True as this_belongs_to_echo");
+}
+
+#[test]
+fn echo_with_assert_and_messages_1() {
+    assert_parse!("assert 1 == echo 2 as this_belongs_to_echo as this_belongs_to_assert");
+}
+
+#[test]
+fn echo_with_assert_and_messages_2() {
+    assert_parse!("assert echo True as this_belongs_to_echo as this_belongs_to_assert");
+}
+
+#[test]
+fn echo_with_assert_and_messages_3() {
+    assert_parse!("assert echo 1 == 2 as this_belongs_to_echo as this_belongs_to_assert");
+}
+
+#[test]
+fn echo_with_let_assert_and_message() {
+    assert_parse!("let assert 1 = echo 2 as this_belongs_to_echo");
+}
+
+#[test]
+fn echo_with_let_assert_and_messages() {
+    assert_parse!("let assert 1 = echo 1 as this_belongs_to_echo as this_belongs_to_assert");
 }
 
 #[test]
@@ -660,6 +718,33 @@ pub fn one(x: Int) -> Int {
 }
 
 #[test]
+fn unknown_target() {
+    assert_module_error!(
+        r#"
+@target(abc)
+pub fn one() {}"#
+    );
+}
+
+#[test]
+fn missing_target() {
+    assert_module_error!(
+        r#"
+@target()
+pub fn one() {}"#
+    );
+}
+
+#[test]
+fn missing_target_and_bracket() {
+    assert_module_error!(
+        r#"
+@target(
+pub fn one() {}"#
+    );
+}
+
+#[test]
 fn unknown_attribute() {
     assert_module_error!(
         r#"@go_faster()
@@ -721,11 +806,22 @@ fn attributes_with_no_definition() {
 }
 
 #[test]
+fn external_attribute_with_custom_type() {
+    assert_parse_module!(
+        r#"
+@external(erlang, "gleam_stdlib", "dict")
+@external(javascript, "./gleam_stdlib.d.ts", "Dict")
+pub type Dict(key, value)
+"#
+    );
+}
+
+#[test]
 fn external_attribute_with_non_fn_definition() {
     assert_module_error!(
         r#"
 @external(erlang, "module", "fun")
-pub type Fun
+pub type Fun = Fun
 "#
     );
 }
@@ -839,6 +935,32 @@ fn list_spread_followed_by_extra_items() {
 pub fn main() -> Nil {
   let xs = [1, 2, 3]
   [1, 2, ..xs, 3 + 3, 4]
+}
+"#
+    );
+}
+
+#[test]
+fn list_spread_followed_by_extra_item_and_another_spread() {
+    assert_module_error!(
+        r#"
+pub fn main() -> Nil {
+  let xs = [1, 2, 3]
+  let ys = [5, 6, 7]
+  [..xs, 4, ..ys]
+}
+"#
+    );
+}
+
+#[test]
+fn list_spread_followed_by_other_spread() {
+    assert_module_error!(
+        r#"
+pub fn main() -> Nil {
+  let xs = [1, 2, 3]
+  let ys = [5, 6, 7]
+  [1, ..xs, ..ys]
 }
 "#
     );
@@ -1016,6 +1138,34 @@ fn case_invalid_case_pattern() {
 fn main() {
     case 1 {
         -> -> 0
+    }
+}
+"
+    );
+}
+
+#[test]
+fn case_clause_no_subject() {
+    assert_module_error!(
+        "
+fn main() {
+    case 1 {
+      -> 1
+      _ -> 2
+    }
+}
+"
+    );
+}
+
+#[test]
+fn case_alternative_clause_no_subject() {
+    assert_module_error!(
+        "
+fn main() {
+    case 1 {
+      1 | -> 1
+      _ -> 1
     }
 }
 "
@@ -1618,20 +1768,6 @@ pub type A() {
 }
 
 #[test]
-fn missing_type_constructor_arguments_in_type_annotation_1() {
-    assert_module_error!("pub fn main() -> Int() {}");
-}
-
-#[test]
-fn missing_type_constructor_arguments_in_type_annotation_2() {
-    assert_module_error!(
-        "pub fn main() {
-  let a: Int() = todo
-}"
-    );
-}
-
-#[test]
 fn tuple_without_hash() {
     assert_module_error!(
         r#"
@@ -1738,4 +1874,208 @@ fn nested_tuple_access_after_function() {
 #[test]
 fn case_expression_without_body() {
     assert_parse!("case a");
+}
+
+#[test]
+fn assert_statement() {
+    assert_parse!("assert 10 != 11");
+}
+
+#[test]
+fn assert_statement_with_message() {
+    assert_parse!(r#"assert False as "Uh oh""#);
+}
+
+#[test]
+fn assert_statement_without_expression() {
+    assert_error!("assert");
+}
+
+#[test]
+fn assert_statement_followed_by_statement() {
+    assert_error!("assert let a = 10");
+}
+
+#[test]
+fn special_error_for_pythonic_import() {
+    assert_module_error!("import gleam.io");
+}
+
+#[test]
+fn special_error_for_pythonic_neste_import() {
+    assert_module_error!("import one.two.three");
+}
+
+#[test]
+fn doesnt_issue_special_error_for_pythonic_import_if_slash() {
+    assert_module_error!("import one/two.three");
+}
+
+#[test]
+fn operator_in_pattern_size() {
+    assert_parse!("let assert <<size, payload:size(size - 1)>> = <<>>");
+}
+
+#[test]
+fn correct_precedence_in_pattern_size() {
+    assert_parse!("let assert <<size, payload:size(size + 2 * 8)>> = <<>>");
+}
+
+#[test]
+fn private_opaque_type_is_parsed() {
+    assert_parse_module!("opaque type Wibble { Wobble }");
+}
+
+#[test]
+fn case_guard_with_nested_blocks() {
+    assert_parse!(
+        "case 1 {
+  _ if { 1 || { 1 || 1 } } || 1  -> 1
+}"
+    );
+}
+
+#[test]
+fn case_guard_with_empty_block() {
+    assert_error!(
+        "case 1 {
+  _ if a || {}  -> 1
+}"
+    );
+}
+
+#[test]
+fn constant_inside_function() {
+    assert_module_error!(
+        "
+pub fn main() {
+  const x = 10
+  x
+}
+"
+    );
+}
+
+#[test]
+fn function_definition_angle_generics_error() {
+    assert_module_error!("fn id<T>(x: T) { x }");
+}
+
+#[test]
+fn type_angle_generics_usage_without_module_error() {
+    assert_error!("let list: List<Int, String> = []");
+}
+
+#[test]
+fn type_angle_generics_usage_with_module_error() {
+    assert_error!("let set: set.Set<Int> = set.new()");
+}
+
+#[test]
+fn type_angle_generics_definition_error() {
+    assert_module_error!(
+        r#"
+type Either<a, b> {
+    This(a)
+    That(b)
+}
+"#
+    );
+}
+
+#[test]
+fn type_angle_generics_definition_with_upname_error() {
+    assert_module_error!(
+        r#"
+type Either<A, B> {
+    This(A)
+    That(B)
+}
+"#
+    );
+}
+
+#[test]
+fn type_angle_generics_definition_error_fallback() {
+    // Example of a more incorrect syntax, where Gleam doesn't make a suggestion.
+    // In this case, an example type argument is used instead.
+    assert_module_error!(
+        r#"
+type Either<type A, type B> {
+    This(A)
+    That(B)
+}
+"#
+    );
+}
+
+#[test]
+fn wrong_type_of_comments_with_hash() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  # a python-style comment
+}
+"#
+    );
+}
+
+#[test]
+fn wrong_function_return_type_declaration_using_colon_instead_of_right_arrow() {
+    assert_module_error!(
+        r#"
+pub fn main(): Nil {}
+        "#
+    );
+}
+
+#[test]
+fn const_record_update_basic() {
+    assert_parse_module!(
+        r#"
+type Person {
+  Person(name: String, age: Int)
+}
+
+const alice = Person("Alice", 30)
+const bob = Person(..alice, name: "Bob")
+"#
+    );
+}
+
+#[test]
+fn const_record_update_all_fields() {
+    assert_parse_module!(
+        r#"
+type Person {
+  Person(name: String, age: Int, city: String)
+}
+
+const base = Person("Alice", 30, "London")
+const updated = Person(..base, name: "Bob", age: 25, city: "Paris")
+"#
+    );
+}
+
+#[test]
+fn const_record_update_only() {
+    assert_parse_module!(
+        r#"
+type Person {
+  Person(name: String, age: Int)
+}
+
+const alice = Person("Alice", 30)
+const bob = Person(..alice)
+"#
+    );
+}
+
+#[test]
+fn const_record_update_with_module() {
+    assert_parse_module!(
+        r#"
+const local_const = other.Record(..other.base, field: value)
+"#
+    );
 }

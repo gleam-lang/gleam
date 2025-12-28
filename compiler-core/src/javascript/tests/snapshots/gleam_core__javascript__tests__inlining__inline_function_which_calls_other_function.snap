@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/javascript/tests/inlining.rs
+expression: "\nimport testing\n\npub fn main() {\n  testing.always_inline(Ok(10), Error)\n}\n"
+---
+----- SOURCE CODE
+
+import testing
+
+pub fn main() {
+  testing.always_inline(Ok(10), Error)
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $testing from "../../gleam_stdlib/testing.mjs";
+import { Ok, Error } from "../gleam.mjs";
+
+export function main() {
+  let $ = new Ok(10);
+  if ($ instanceof Ok) {
+    let value = $[0];
+    return new Error(value);
+  } else {
+    return $;
+  }
+}

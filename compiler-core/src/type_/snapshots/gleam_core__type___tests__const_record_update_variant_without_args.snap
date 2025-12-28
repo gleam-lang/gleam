@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "pub type Status { Active Inactive }\n        pub const status1 = Active\n        pub const status2 = Active(..status1)"
+---
+----- SOURCE CODE
+pub type Status { Active Inactive }
+        pub const status1 = Active
+        pub const status2 = Active(..status1)
+
+----- ERROR
+error: Invalid record constructor
+  ┌─ /src/one/two.gleam:3:29
+  │
+3 │         pub const status2 = Active(..status1)
+  │                             ^^^^^^ This is not a record constructor
+
+Only record constructors can be used with the update syntax.

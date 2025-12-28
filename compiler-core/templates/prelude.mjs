@@ -1,6 +1,3 @@
-// Values marked with @internal are not part of the public API and may change
-// without notice.
-
 export class CustomType {
   withFields(fields) {
     let properties = Object.keys(this).map((label) =>
@@ -27,21 +24,18 @@ export class List {
     return [...this];
   }
 
-  // @internal
   atLeastLength(desired) {
     let current = this;
     while (desired-- > 0 && current) current = current.tail;
     return current !== undefined;
   }
 
-  // @internal
   hasLength(desired) {
     let current = this;
     while (desired-- > 0 && current) current = current.tail;
     return desired === -1 && current instanceof Empty;
   }
 
-  // @internal
   countLength() {
     let current = this;
     let length = 0;
@@ -53,7 +47,6 @@ export class List {
   }
 }
 
-// @internal
 export function prepend(element, tail) {
   return new NonEmpty(element, tail);
 }
@@ -62,7 +55,6 @@ export function toList(elements, tail) {
   return List.fromArray(elements, tail);
 }
 
-// @internal
 class ListIterator {
   #current;
 
@@ -82,6 +74,8 @@ class ListIterator {
 }
 
 export class Empty extends List {}
+export const List$Empty = () => new Empty();
+export const List$isEmpty = (value) => value instanceof Empty;
 
 export class NonEmpty extends List {
   constructor(head, tail) {
@@ -90,6 +84,11 @@ export class NonEmpty extends List {
     this.tail = tail;
   }
 }
+export const List$NonEmpty = (head, tail) => new NonEmpty(head, tail);
+export const List$isNonEmpty = (value) => value instanceof NonEmpty;
+
+export const List$NonEmpty$first = (value) => value.head;
+export const List$NonEmpty$rest = (value) => value.tail;
 
 /**
  * A bit array is a contiguous sequence of bits similar to Erlang's Binary type.
@@ -197,7 +196,6 @@ export class BitArray {
     return bitArrayByteAt(this.rawBuffer, this.bitOffset, index);
   }
 
-  /** @internal */
   equals(other) {
     if (this.bitSize !== other.bitSize) {
       return false;
@@ -306,6 +304,9 @@ export class BitArray {
   }
 }
 
+export const BitArray$BitArray = (buffer, bitSize, bitOffset) =>
+  new BitArray(buffer, bitSize, bitOffset);
+
 /**
  * Returns the nth byte in the given buffer, after applying the specified bit
  * offset. If the index is out of bounds then zero is returned.
@@ -346,8 +347,6 @@ function bitArrayPrintDeprecationWarning(name, message) {
 }
 
 /**
- * @internal
- *
  * Slices a bit array to produce a new bit array. If `end` is not supplied then
  * all bits from `start` onward are returned.
  *
@@ -477,7 +476,13 @@ export function bitArraySliceToFloat(bitArray, start, end, isBigEndian) {
  * @param {boolean} isSigned
  * @returns {number}
  */
-export function bitArraySliceToInt(bitArray, start, end, isBigEndian, isSigned) {
+export function bitArraySliceToInt(
+  bitArray,
+  start,
+  end,
+  isBigEndian,
+  isSigned,
+) {
   bitArrayValidateRange(bitArray, start, end);
 
   if (start === end) {
@@ -550,8 +555,6 @@ export function bitArraySliceToInt(bitArray, start, end, isBigEndian, isSigned) 
 }
 
 /**
- * @internal
- *
  * Joins the given segments into a new bit array, tightly packing them together.
  * Each segment must be one of the following types:
  *
@@ -706,8 +709,6 @@ export function toBitArray(segments) {
 }
 
 /**
- * @internal
- *
  * Encodes a floating point value into a `Uint8Array`. This is used to create
  * float segments that are part of bit array expressions.
  *
@@ -718,8 +719,7 @@ export function toBitArray(segments) {
  */
 export function sizedFloat(value, size, isBigEndian) {
   if (size !== 16 && size !== 32 && size !== 64) {
-    const msg =
-      `Sized floats must be 16-bit, 32-bit or 64-bit, got size of ${size} bits`;
+    const msg = `Sized floats must be 16-bit, 32-bit or 64-bit, got size of ${size} bits`;
     throw new globalThis.Error(msg);
   }
 
@@ -741,8 +741,6 @@ export function sizedFloat(value, size, isBigEndian) {
 }
 
 /**
- * @internal
- *
  * Encodes an integer value into a `Uint8Array`, or a `BitArray` if the size in
  * bits is not a multiple of 8. This is used to create integer segments used in
  * bit array expressions.
@@ -1107,8 +1105,6 @@ function intFromUnalignedSliceUsingNumber(
 }
 
 /**
- * @internal
- *
  * Reads an unaligned slice of any size as an integer. Uses the JavaScript
  * `BigInt` type internally.
  *
@@ -1234,7 +1230,7 @@ function intFromUnalignedSliceUsingBigInt(
 
 /**
  * Interprets a 16-bit unsigned integer value as a 16-bit floating point value.
- * 
+ *
  * @param {number} intValue
  * @returns {number}
  */
@@ -1332,8 +1328,6 @@ function bitArrayValidateRange(bitArray, start, end) {
 let utf8Encoder;
 
 /**
- * @internal
- *
  * Returns the UTF-8 bytes for a string.
  *
  * @param {string} string
@@ -1345,8 +1339,6 @@ export function stringBits(string) {
 }
 
 /**
- * @internal
- *
  * Returns the UTF-8 bytes for a single UTF codepoint.
  *
  * @param {UtfCodepoint} codepoint
@@ -1356,8 +1348,73 @@ export function codepointBits(codepoint) {
   return stringBits(String.fromCodePoint(codepoint.value));
 }
 
+/**
+ * Returns the UTF-16 bytes for a string.
+ *
+ * @param {string} string
+ * @param {boolean} isBigEndian
+ * @returns {Uint8Array}
+ */
+export function stringToUtf16(string, isBigEndian) {
+  const buffer = new ArrayBuffer(string.length * 2);
+  const bufferView = new DataView(buffer);
+
+  for (let i = 0; i < string.length; i++) {
+    bufferView.setUint16(i * 2, string.charCodeAt(i), !isBigEndian);
+  }
+
+  return new Uint8Array(buffer);
+}
+
+/**
+ * Returns the UTF-16 bytes for a single UTF codepoint.
+ *
+ * @param {UtfCodepoint} codepoint
+ * @param {boolean} isBigEndian
+ * @returns {Uint8Array}
+ */
+export function codepointToUtf16(codepoint, isBigEndian) {
+  return stringToUtf16(String.fromCodePoint(codepoint.value), isBigEndian);
+}
+
+/**
+ * Returns the UTF-32 bytes for a string.
+ *
+ * @param {string} string
+ * @param {boolean} isBigEndian
+ * @returns {Uint8Array}
+ */
+export function stringToUtf32(string, isBigEndian) {
+  const buffer = new ArrayBuffer(string.length * 4);
+  const bufferView = new DataView(buffer);
+  let length = 0;
+
+  for (let i = 0; i < string.length; i++) {
+    const codepoint = string.codePointAt(i);
+
+    bufferView.setUint32(length * 4, codepoint, !isBigEndian);
+    length++;
+
+    if (codepoint > 0xffff) {
+      i++;
+    }
+  }
+
+  return new Uint8Array(buffer.slice(0, length * 4));
+}
+
+/**
+ * Returns the UTF-32 bytes for a single UTF codepoint.
+ *
+ * @param {UtfCodepoint} codepoint
+ * @param {boolean} isBigEndian
+ * @returns {Uint8Array}
+ */
+export function codepointToUtf32(codepoint, isBigEndian) {
+  return stringToUtf32(String.fromCodePoint(codepoint.value), isBigEndian);
+}
+
 export class Result extends CustomType {
-  // @internal
   static isResult(data) {
     return data instanceof Result;
   }
@@ -1369,11 +1426,13 @@ export class Ok extends Result {
     this[0] = value;
   }
 
-  // @internal
   isOk() {
     return true;
   }
 }
+export const Result$Ok = (value) => new Ok(value);
+export const Result$isOk = (value) => value instanceof Ok;
+export const Result$Ok$0 = (value) => value[0];
 
 export class Error extends Result {
   constructor(detail) {
@@ -1381,11 +1440,13 @@ export class Error extends Result {
     this[0] = detail;
   }
 
-  // @internal
   isOk() {
     return false;
   }
 }
+export const Result$Error = (detail) => new Error(detail);
+export const Result$isError = (value) => value instanceof Error;
+export const Result$Error$0 = (value) => value[0];
 
 export function isEqual(x, y) {
   let values = [x, y];
@@ -1415,7 +1476,10 @@ export function isEqual(x, y) {
     }
 
     let [keys, get] = getters(a);
-    for (let k of keys(a)) {
+    const ka = keys(a);
+    const kb = keys(b);
+    if (ka.length !== kb.length) return false;
+    for (let k of ka) {
       values.push(get(a, k), get(b, k));
     }
   }
@@ -1477,7 +1541,6 @@ function structurallyCompatibleObjects(a, b) {
   return a.constructor === b.constructor;
 }
 
-// @internal
 export function remainderInt(a, b) {
   if (b === 0) {
     return 0;
@@ -1486,12 +1549,10 @@ export function remainderInt(a, b) {
   }
 }
 
-// @internal
 export function divideInt(a, b) {
   return Math.trunc(divideFloat(a, b));
 }
 
-// @internal
 export function divideFloat(a, b) {
   if (b === 0) {
     return 0;
@@ -1500,10 +1561,10 @@ export function divideFloat(a, b) {
   }
 }
 
-// @internal
-export function makeError(variant, module, line, fn, message, extra) {
+export function makeError(variant, file, module, line, fn, message, extra) {
   let error = new globalThis.Error(message);
   error.gleam_error = variant;
+  error.file = file;
   error.module = module;
   error.line = line;
   error.function = fn;

@@ -1,0 +1,61 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "echo wibble as { this <> complex }"
+---
+[
+    Expression(
+        Echo {
+            location: SrcSpan {
+                start: 0,
+                end: 34,
+            },
+            keyword_end: 4,
+            expression: Some(
+                Var {
+                    location: SrcSpan {
+                        start: 5,
+                        end: 11,
+                    },
+                    name: "wibble",
+                },
+            ),
+            message: Some(
+                Block {
+                    location: SrcSpan {
+                        start: 15,
+                        end: 34,
+                    },
+                    statements: [
+                        Expression(
+                            BinOp {
+                                location: SrcSpan {
+                                    start: 17,
+                                    end: 32,
+                                },
+                                name: Concatenate,
+                                name_location: SrcSpan {
+                                    start: 22,
+                                    end: 24,
+                                },
+                                left: Var {
+                                    location: SrcSpan {
+                                        start: 17,
+                                        end: 21,
+                                    },
+                                    name: "this",
+                                },
+                                right: Var {
+                                    location: SrcSpan {
+                                        start: 25,
+                                        end: 32,
+                                    },
+                                    name: "complex",
+                                },
+                            },
+                        ),
+                    ],
+                },
+            ),
+        },
+    ),
+]

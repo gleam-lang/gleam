@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 1498
+expression: "\npub fn go(x) {\n  case <<0x77:7>> {\n    <<_:4, f:bits-2, _:1>> -> f\n    _ -> x\n  }\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  case <<0x77:7>> {
+    <<_:4, f:bits-2, _:1>> -> f
+    _ -> x
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { toBitArray, bitArraySlice, sizedInt } from "../gleam.mjs";
+
+export function go(x) {
+  let $ = toBitArray([sizedInt(0x77, 7, true)]);
+  if ($.bitSize >= 4 && $.bitSize >= 6 && $.bitSize === 7) {
+    let f = bitArraySlice($, 4, 6);
+    return f;
+  } else {
+    return x;
+  }
+}

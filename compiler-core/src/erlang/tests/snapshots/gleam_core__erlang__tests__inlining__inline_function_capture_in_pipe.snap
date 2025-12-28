@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/erlang/tests/inlining.rs
+expression: "\npub fn main() {\n  1 |> add(4, _)\n}\n\nfn add(a, b) { a + b }\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  1 |> add(4, _)
+}
+
+fn add(a, b) { a + b }
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 6).
+-spec add(integer(), integer()) -> integer().
+add(A, B) ->
+    A + B.
+
+-file("project/test/my/mod.gleam", 2).
+-spec main() -> integer().
+main() ->
+    _pipe = 1,
+    add(4, _pipe).

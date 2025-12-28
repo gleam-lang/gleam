@@ -12,21 +12,26 @@ pub fn main(x) {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/1]).
 
 -file("project/test/my/mod.gleam", 2).
 -spec main(binary()) -> binary().
 main(X) ->
-    <<"m-"/utf8, Rest/binary>> = case X of
-        <<"m-"/utf8, _/binary>> -> X;
+    Rest@1 = case X of
+        <<"m-"/utf8, Rest/binary>> -> Rest;
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
                         message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
-                        value => _assert_fail,
+                        file => <<?FILEPATH/utf8>>,
                         module => <<"my/mod"/utf8>>,
                         function => <<"main"/utf8>>,
-                        line => 3})
+                        line => 3,
+                        value => _assert_fail,
+                        start => 20,
+                        'end' => 47,
+                        pattern_start => 31,
+                        pattern_end => 43})
     end,
-    Rest.
+    Rest@1.

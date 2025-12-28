@@ -24,12 +24,13 @@ export class Thing extends $CustomType {
     this.constructor$ = constructor;
   }
 }
+export const Thing$Thing = (constructor) => new Thing(constructor);
+export const Thing$isThing = (value) => value instanceof Thing;
+export const Thing$Thing$constructor = (value) => value.constructor$;
+export const Thing$Thing$0 = (value) => value.constructor$;
 
 export function main() {
   let a = new Thing(undefined);
-  let _block;
-  let _record = a;
-  _block = new Thing(undefined);
-  let b = _block;
+  let b = new Thing(undefined);
   return b.constructor$;
 }

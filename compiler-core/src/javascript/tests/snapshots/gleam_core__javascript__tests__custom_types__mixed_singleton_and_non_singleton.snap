@@ -1,0 +1,37 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\npub type Result {\n  Ok(value: Int)\n  Error\n}\n\npub fn is_error(r: Result) -> Bool {\n  r == Error\n}\n"
+---
+----- SOURCE CODE
+
+pub type Result {
+  Ok(value: Int)
+  Error
+}
+
+pub fn is_error(r: Result) -> Bool {
+  r == Error
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class Ok extends $CustomType {
+  constructor(value) {
+    super();
+    this.value = value;
+  }
+}
+export const Result$Ok = (value) => new Ok(value);
+export const Result$isOk = (value) => value instanceof Ok;
+export const Result$Ok$value = (value) => value.value;
+export const Result$Ok$0 = (value) => value.value;
+
+export class Error extends $CustomType {}
+export const Result$Error = () => new Error();
+export const Result$isError = (value) => value instanceof Error;
+
+export function is_error(r) {
+  return r instanceof Error;
+}

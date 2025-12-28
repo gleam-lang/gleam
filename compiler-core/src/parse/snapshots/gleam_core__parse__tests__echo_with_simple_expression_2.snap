@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "echo wibble as \"message\""
+---
+[
+    Expression(
+        Echo {
+            location: SrcSpan {
+                start: 0,
+                end: 24,
+            },
+            keyword_end: 4,
+            expression: Some(
+                Var {
+                    location: SrcSpan {
+                        start: 5,
+                        end: 11,
+                    },
+                    name: "wibble",
+                },
+            ),
+            message: Some(
+                String {
+                    location: SrcSpan {
+                        start: 15,
+                        end: 24,
+                    },
+                    value: "message",
+                },
+            ),
+        },
+    ),
+]

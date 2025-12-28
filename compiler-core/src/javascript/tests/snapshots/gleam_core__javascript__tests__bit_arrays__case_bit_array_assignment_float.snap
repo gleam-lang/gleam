@@ -1,0 +1,43 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn go(x) {\n case x {\n    <<3.14 as pi:float>>\n    | <<1.1 as pi:float, _:bytes>> -> pi\n    _ -> 1.1\n }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+ case x {
+    <<3.14 as pi:float>>
+    | <<1.1 as pi:float, _:bytes>> -> pi
+    _ -> 1.1
+ }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { bitArraySliceToFloat } from "../gleam.mjs";
+
+export function go(x) {
+  if (x.bitSize === 64) {
+    if (bitArraySliceToFloat(x, 0, 64, true) === 3.14) {
+      let pi = 3.14;
+      return pi;
+    } else if (
+      bitArraySliceToFloat(x, 0, 64, true) === 1.1 &&
+      (x.bitSize - 64) % 8 === 0
+    ) {
+      let pi = 1.1;
+      return pi;
+    } else {
+      return 1.1;
+    }
+  } else if (
+    x.bitSize >= 64 &&
+    bitArraySliceToFloat(x, 0, 64, true) === 1.1 &&
+    (x.bitSize - 64) % 8 === 0
+  ) {
+    let pi = 1.1;
+    return pi;
+  } else {
+    return 1.1;
+  }
+}

@@ -4,7 +4,7 @@ use crate::{assert_js, assert_ts_def};
 fn without_message() {
     assert_js!(
         r#"
-fn go() {
+pub fn go() {
     todo
 }
 "#,
@@ -26,7 +26,7 @@ pub fn go() {
 fn with_message() {
     assert_js!(
         r#"
-fn go() {
+pub fn go() {
   todo as "I should do this"
 }
 "#,
@@ -37,7 +37,7 @@ fn go() {
 fn with_message_expr() {
     assert_js!(
         r#"
-fn go() {
+pub fn go() {
   let x = "I should " <> "do this"
   todo as x
 }
@@ -50,10 +50,36 @@ fn go() {
 fn as_expression() {
     assert_js!(
         r#"
-fn go(f) {
+pub fn go(f) {
   let boop = todo as "I should do this"
   f(todo as "Boom")
 }
 "#,
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4471
+#[test]
+fn case_message() {
+    assert_js!(
+        r#"
+pub fn unimplemented(message) {
+  panic as case message {
+    Ok(message) -> message
+    Error(_) -> "No message provided"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn inside_fn() {
+    assert_js!(
+        r#"
+pub fn main() {
+  fn() { todo }
+}
+"#
     );
 }

@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\ntype Wibble {\n  Wibble(wibble: Int)\n}\n\npub fn main() {\n  let wibble = todo\n  Wibble(wibble:)\n}\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+type Wibble {
+  Wibble(wibble: Int)
+}
+
+pub fn main() {
+  let wibble = todo
+  Wibble(wibble:)
+         ↑▔▔▔▔▔  
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+
+type Wibble {
+  Wibble(wibble: Int)
+}
+
+pub fn main() {
+  let wobble = todo
+  Wibble(wibble: wobble)
+}

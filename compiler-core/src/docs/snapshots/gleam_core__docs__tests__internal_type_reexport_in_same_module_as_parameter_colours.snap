@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/docs/tests.rs
+assertion_line: 1070
+expression: output
+snapshot_kind: text
+---
+---- SOURCE CODE
+-- main.gleam
+
+@internal
+pub type Internal
+
+pub type External =
+  List(Internal)
+
+
+---- TYPES
+
+--- External
+<pre><code><span class="hljs-keyword">pub type </span><span class="hljs-title">External</span> =
+  <span class="hljs-title">List</span>(<span class="hljs-comment">@internal </span><span class="hljs-title">Internal</span>)</code></pre>

@@ -1,0 +1,53 @@
+---
+source: compiler-core/src/erlang/tests/inlining.rs
+expression: "\nimport gleam/result\n\npub fn main() {\n  result.try(Ok(10), divide(_, 2))\n}\n\nfn divide(a: Int, b: Int) -> Result(Int, Nil) {\n  case a % b {\n    0 -> Ok(a / b)\n    _ -> Error(Nil)\n  }\n}\n"
+---
+----- SOURCE CODE
+
+import gleam/result
+
+pub fn main() {
+  result.try(Ok(10), divide(_, 2))
+}
+
+fn divide(a: Int, b: Int) -> Result(Int, Nil) {
+  case a % b {
+    0 -> Ok(a / b)
+    _ -> Error(Nil)
+  }
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 8).
+-spec divide(integer(), integer()) -> {ok, integer()} | {error, nil}.
+divide(A, B) ->
+    case case B of
+        0 -> 0;
+        Gleam@denominator -> A rem Gleam@denominator
+    end of
+        0 ->
+            {ok, case B of
+                    0 -> 0;
+                    Gleam@denominator@1 -> A div Gleam@denominator@1
+                end};
+
+        _ ->
+            {error, nil}
+    end.
+
+-file("project/test/my/mod.gleam", 4).
+-spec main() -> {ok, integer()} | {error, nil}.
+main() ->
+    case {ok, 10} of
+        {ok, Value} ->
+            divide(Value, 2);
+
+        {error, Error} ->
+            {error, Error}
+    end.

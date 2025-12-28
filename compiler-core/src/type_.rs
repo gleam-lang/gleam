@@ -1,5 +1,5 @@
 pub(crate) mod environment;
-pub(crate) mod error;
+pub mod error;
 pub(crate) mod expression;
 pub(crate) mod fields;
 pub(crate) mod hydrator;
@@ -7,7 +7,7 @@ pub(crate) mod pattern;
 pub(crate) mod pipe;
 pub(crate) mod prelude;
 pub mod pretty;
-pub(crate) mod printer;
+pub mod printer;
 #[cfg(test)]
 pub mod tests;
 
@@ -16,6 +16,7 @@ use ecow::EcoString;
 pub use environment::*;
 pub use error::{Error, Problems, UnifyErrorSituation, Warning};
 pub(crate) use expression::ExprTyper;
+use expression::Purity;
 pub use fields::FieldMap;
 use hexpm::version::Version;
 pub use prelude::*;
@@ -30,6 +31,7 @@ use crate::{
     },
     bit_array,
     build::{Origin, Target},
+    inline::InlinableFunction,
     line_numbers::LineNumbers,
     reference::ReferenceMap,
     type_::expression::Implementations,
@@ -63,7 +65,7 @@ pub enum Type {
         package: EcoString,
         module: EcoString,
         name: EcoString,
-        args: Vec<Arc<Type>>,
+        arguments: Vec<Arc<Type>>,
 
         /// Which variant of the types this value is, if it is known from variant inference.
         /// This allows us to permit certain operations when we know this,
@@ -97,8 +99,8 @@ pub enum Type {
     /// The type of a function. It takes arguments and returns a value.
     ///
     Fn {
-        args: Vec<Arc<Type>>,
-        retrn: Arc<Type>,
+        arguments: Vec<Arc<Type>>,
+        return_: Arc<Type>,
     },
 
     /// A type variable. See the contained `TypeVar` enum for more information.
@@ -109,15 +111,15 @@ pub enum Type {
     /// can have a different type, so the `tuple` type is the sum of all the
     /// contained types.
     ///
-    Tuple { elems: Vec<Arc<Type>> },
+    Tuple { elements: Vec<Arc<Type>> },
 }
 
 impl Type {
     pub fn is_result_constructor(&self) -> bool {
         match self {
-            Type::Fn { retrn, .. } => retrn.is_result(),
-            Type::Var { type_ } => type_.borrow().is_result(),
-            _ => false,
+            Type::Fn { return_, .. } => return_.is_result(),
+            Type::Var { type_ } => type_.borrow().is_result_constructor(),
+            Type::Named { .. } | Type::Tuple { .. } => false,
         }
     }
 
@@ -125,15 +127,25 @@ impl Type {
         match self {
             Self::Named { name, module, .. } => "Result" == name && is_prelude_module(module),
             Self::Var { type_ } => type_.borrow().is_result(),
-            _ => false,
+            Self::Fn { .. } | Self::Tuple { .. } => false,
+        }
+    }
+
+    pub fn is_named(&self) -> bool {
+        match self {
+            Self::Named { .. } => true,
+            Self::Var { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
         }
     }
 
     pub fn result_ok_type(&self) -> Option<Arc<Type>> {
         match self {
             Self::Named {
-                module, name, args, ..
-            } if "Result" == name && is_prelude_module(module) => args.first().cloned(),
+                module,
+                name,
+                arguments,
+                ..
+            } if "Result" == name && is_prelude_module(module) => arguments.first().cloned(),
             Self::Var { type_ } => type_.borrow().result_ok_type(),
             Self::Named { .. } | Self::Tuple { .. } | Type::Fn { .. } => None,
         }
@@ -142,9 +154,12 @@ impl Type {
     pub fn result_types(&self) -> Option<(Arc<Type>, Arc<Type>)> {
         match self {
             Self::Named {
-                module, name, args, ..
+                module,
+                name,
+                arguments,
+                ..
             } if "Result" == name && is_prelude_module(module) => {
-                Some((args.first().cloned()?, args.get(1).cloned()?))
+                Some((arguments.first().cloned()?, arguments.get(1).cloned()?))
             }
             Self::Var { type_ } => type_.borrow().result_types(),
             Self::Named { .. } | Self::Tuple { .. } | Type::Fn { .. } => None,
@@ -154,46 +169,41 @@ impl Type {
     pub fn is_unbound(&self) -> bool {
         match self {
             Self::Var { type_ } => type_.borrow().is_unbound(),
-            _ => false,
+            Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
         }
     }
 
     pub fn is_variable(&self) -> bool {
         match self {
             Self::Var { type_ } => type_.borrow().is_variable(),
-            _ => false,
-        }
-    }
-
-    pub fn is_type_variable(&self) -> bool {
-        match self {
-            Self::Var { type_ } => type_.borrow().is_variable(),
-            _ => false,
+            Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
         }
     }
 
     pub fn return_type(&self) -> Option<Arc<Self>> {
         match self {
-            Self::Fn { retrn, .. } => Some(retrn.clone()),
+            Self::Fn { return_, .. } => Some(return_.clone()),
             Self::Var { type_ } => type_.borrow().return_type(),
-            _ => None,
+            Self::Named { .. } | Self::Tuple { .. } => None,
         }
     }
 
     pub fn fn_types(&self) -> Option<(Vec<Arc<Self>>, Arc<Self>)> {
         match self {
-            Self::Fn { args, retrn, .. } => Some((args.clone(), retrn.clone())),
+            Self::Fn {
+                arguments, return_, ..
+            } => Some((arguments.clone(), return_.clone())),
             Self::Var { type_ } => type_.borrow().fn_types(),
-            _ => None,
+            Self::Named { .. } | Self::Tuple { .. } => None,
         }
     }
 
     /// Gets the types inside of a tuple. Returns `None` if the type is not a tuple.
     pub fn tuple_types(&self) -> Option<Vec<Arc<Self>>> {
         match self {
-            Self::Tuple { elems } => Some(elems.clone()),
+            Self::Tuple { elements } => Some(elements.clone()),
             Self::Var { type_, .. } => type_.borrow().tuple_types(),
-            _ => None,
+            Self::Named { .. } | Self::Fn { .. } => None,
         }
     }
 
@@ -201,9 +211,9 @@ impl Type {
     /// does not lead to a type constructor.
     pub fn constructor_types(&self) -> Option<Vec<Arc<Self>>> {
         match self {
-            Self::Named { args, .. } => Some(args.clone()),
+            Self::Named { arguments, .. } => Some(arguments.clone()),
             Self::Var { type_, .. } => type_.borrow().constructor_types(),
-            _ => None,
+            Self::Fn { .. } | Self::Tuple { .. } => None,
         }
     }
 
@@ -216,18 +226,18 @@ impl Type {
                 name,
                 module,
                 package,
-                args,
+                arguments,
                 inferred_variant: _,
             } if package == PRELUDE_PACKAGE_NAME
                 && module == PRELUDE_MODULE_NAME
                 && name == LIST =>
             {
-                match args.as_slice() {
+                match arguments.as_slice() {
                     [inner_type] => Some(inner_type.clone()),
                     [] | [_, _, ..] => None,
                 }
             }
-            _ => None,
+            Type::Named { .. } | Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => None,
         }
     }
 
@@ -237,7 +247,7 @@ impl Type {
             package: PRELUDE_PACKAGE_NAME.into(),
             module: PRELUDE_MODULE_NAME.into(),
             name: LIST.into(),
-            args: vec![inner_type],
+            arguments: vec![inner_type],
             inferred_variant: None,
         }
     }
@@ -246,8 +256,8 @@ impl Type {
     fn is_fun(&self) -> bool {
         match self {
             Self::Fn { .. } => true,
-            Type::Var { type_ } => type_.borrow().is_fun(),
-            _ => false,
+            Self::Var { type_ } => type_.borrow().is_fun(),
+            Self::Named { .. } | Self::Tuple { .. } => false,
         }
     }
 
@@ -255,7 +265,7 @@ impl Type {
         match self {
             Self::Named { module, name, .. } if "Nil" == name && is_prelude_module(module) => true,
             Self::Var { type_ } => type_.borrow().is_nil(),
-            _ => false,
+            Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
         }
     }
 
@@ -265,7 +275,19 @@ impl Type {
                 true
             }
             Self::Var { type_ } => type_.borrow().is_nil(),
-            _ => false,
+            Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
+        }
+    }
+
+    pub fn is_utf_codepoint(&self) -> bool {
+        match self {
+            Self::Named { module, name, .. }
+                if "UtfCodepoint" == name && is_prelude_module(module) =>
+            {
+                true
+            }
+            Self::Var { type_ } => type_.borrow().is_nil(),
+            Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
         }
     }
 
@@ -273,7 +295,7 @@ impl Type {
         match self {
             Self::Named { module, name, .. } if "Bool" == name && is_prelude_module(module) => true,
             Self::Var { type_ } => type_.borrow().is_bool(),
-            _ => false,
+            Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
         }
     }
 
@@ -281,7 +303,7 @@ impl Type {
         match self {
             Self::Named { module, name, .. } if "Int" == name && is_prelude_module(module) => true,
             Self::Var { type_ } => type_.borrow().is_int(),
-            _ => false,
+            Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
         }
     }
 
@@ -291,7 +313,7 @@ impl Type {
                 true
             }
             Self::Var { type_ } => type_.borrow().is_float(),
-            _ => false,
+            Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
         }
     }
 
@@ -301,7 +323,15 @@ impl Type {
                 true
             }
             Self::Var { type_ } => type_.borrow().is_string(),
-            _ => false,
+            Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
+        }
+    }
+
+    pub fn is_list(&self) -> bool {
+        match self {
+            Self::Named { module, name, .. } if "List" == name && is_prelude_module(module) => true,
+            Self::Var { type_ } => type_.borrow().is_list(),
+            Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
         }
     }
 
@@ -309,17 +339,20 @@ impl Type {
         match self {
             Self::Named { module, name, .. } => Some((module.clone(), name.clone())),
             Self::Var { type_ } => type_.borrow().named_type_name(),
-            _ => None,
+            Self::Fn { .. } | Self::Tuple { .. } => None,
         }
     }
 
     pub fn named_type_information(&self) -> Option<(EcoString, EcoString, Vec<Arc<Self>>)> {
         match self {
             Self::Named {
-                module, name, args, ..
-            } => Some((module.clone(), name.clone(), args.clone())),
+                module,
+                name,
+                arguments,
+                ..
+            } => Some((module.clone(), name.clone(), arguments.clone())),
             Self::Var { type_ } => type_.borrow().named_type_information(),
-            _ => None,
+            Self::Fn { .. } | Self::Tuple { .. } => None,
         }
     }
 
@@ -339,16 +372,16 @@ impl Type {
                 inferred_variant, ..
             } => *inferred_variant = None,
             Type::Var { type_ } => type_.borrow_mut().generalise_custom_type_variant(),
-            Type::Tuple { elems } => {
-                for element in elems {
+            Type::Tuple { elements } => {
+                for element in elements {
                     Arc::make_mut(element).generalise_custom_type_variant();
                 }
             }
-            Type::Fn { args, retrn } => {
-                for argument in args {
+            Type::Fn { arguments, return_ } => {
+                for argument in arguments {
                     Arc::make_mut(argument).generalise_custom_type_variant();
                 }
-                Arc::make_mut(retrn).generalise_custom_type_variant();
+                Arc::make_mut(return_).generalise_custom_type_variant();
             }
         }
     }
@@ -363,13 +396,13 @@ impl Type {
         }
     }
 
-    /// Get the args for the type if the type is a specific `Type::App`.
-    /// Returns None if the type is not a `Type::App` or is an incorrect `Type:App`
+    /// Get the args for the type if the type is a specific `Type::Named`.
+    /// Returns None if the type is not a `Type::Named` or is an incorrect `Type:Named`
     ///
     /// This function is currently only used for finding the `List` type.
     ///
     // TODO: specialise this to just List.
-    pub fn get_app_args(
+    pub fn named_type_arguments(
         &self,
         publicity: Publicity,
         package: &str,
@@ -382,20 +415,20 @@ impl Type {
             Self::Named {
                 module: m,
                 name: n,
-                args,
+                arguments,
                 ..
             } => {
-                if module == m && name == n && args.len() == arity {
-                    Some(args.clone())
+                if module == m && name == n && arguments.len() == arity {
+                    Some(arguments.clone())
                 } else {
                     None
                 }
             }
 
             Self::Var { type_ } => {
-                let args: Vec<_> = match type_.borrow().deref() {
+                let arguments: Vec<_> = match type_.borrow().deref() {
                     TypeVar::Link { type_ } => {
-                        return type_.get_app_args(
+                        return type_.named_type_arguments(
                             publicity,
                             package,
                             module,
@@ -419,15 +452,15 @@ impl Type {
                         name: name.into(),
                         package: package.into(),
                         module: module.into(),
-                        args: args.clone(),
+                        arguments: arguments.clone(),
                         publicity,
                         inferred_variant: None,
                     }),
                 };
-                Some(args)
+                Some(arguments)
             }
 
-            _ => None,
+            Self::Fn { .. } | Self::Tuple { .. } => None,
         }
     }
 
@@ -438,13 +471,19 @@ impl Type {
                 ..
             } => Some(self.clone()),
 
-            Self::Named { args, .. } => args.iter().find_map(|t| t.find_private_type()),
+            Self::Named { arguments, .. } => {
+                arguments.iter().find_map(|type_| type_.find_private_type())
+            }
 
-            Self::Tuple { elems, .. } => elems.iter().find_map(|t| t.find_private_type()),
+            Self::Tuple { elements, .. } => {
+                elements.iter().find_map(|type_| type_.find_private_type())
+            }
 
-            Self::Fn { retrn, args, .. } => retrn
+            Self::Fn {
+                return_, arguments, ..
+            } => return_
                 .find_private_type()
-                .or_else(|| args.iter().find_map(|t| t.find_private_type())),
+                .or_else(|| arguments.iter().find_map(|type_| type_.find_private_type())),
 
             Self::Var { type_, .. } => match type_.borrow().deref() {
                 TypeVar::Unbound { .. } => None,
@@ -460,13 +499,21 @@ impl Type {
         match self {
             Self::Named { publicity, .. } if publicity.is_internal() => Some(self.clone()),
 
-            Self::Named { args, .. } => args.iter().find_map(|t| t.find_internal_type()),
+            Self::Named { arguments, .. } => arguments
+                .iter()
+                .find_map(|type_| type_.find_internal_type()),
 
-            Self::Tuple { elems, .. } => elems.iter().find_map(|t| t.find_internal_type()),
+            Self::Tuple { elements, .. } => {
+                elements.iter().find_map(|type_| type_.find_internal_type())
+            }
 
-            Self::Fn { retrn, args, .. } => retrn
-                .find_internal_type()
-                .or_else(|| args.iter().find_map(|t| t.find_internal_type())),
+            Self::Fn {
+                return_, arguments, ..
+            } => return_.find_internal_type().or_else(|| {
+                arguments
+                    .iter()
+                    .find_map(|type_| type_.find_internal_type())
+            }),
 
             Self::Var { type_, .. } => match type_.borrow().deref() {
                 TypeVar::Unbound { .. } | TypeVar::Generic { .. } => None,
@@ -477,8 +524,8 @@ impl Type {
 
     pub fn fn_arity(&self) -> Option<usize> {
         match self {
-            Self::Fn { args, .. } => Some(args.len()),
-            _ => None,
+            Self::Fn { arguments, .. } => Some(arguments.len()),
+            Self::Named { .. } | Self::Var { .. } | Self::Tuple { .. } => None,
         }
     }
 
@@ -502,7 +549,7 @@ impl Type {
                     package,
                     module,
                     name,
-                    args,
+                    arguments,
                     inferred_variant: _,
                 },
                 Type::Named {
@@ -510,7 +557,7 @@ impl Type {
                     package: other_package,
                     module: other_module,
                     name: other_name,
-                    args: other_args,
+                    arguments: other_arguments,
                     inferred_variant: _,
                 },
             ) => {
@@ -518,7 +565,11 @@ impl Type {
                     && package == other_package
                     && module == other_module
                     && name == other_name
-                    && args == other_args
+                    && arguments.len() == other_arguments.len()
+                    && arguments
+                        .iter()
+                        .zip(other_arguments)
+                        .all(|(one, other)| one.same_as(other))
             }
 
             (Type::Fn { .. }, Type::Named { .. } | Type::Tuple { .. }) => false,
@@ -526,18 +577,18 @@ impl Type {
                 type_.as_ref().borrow().same_as_other_type(one)
             }
             (
-                Type::Fn { args, retrn },
+                Type::Fn { arguments, return_ },
                 Type::Fn {
-                    args: other_args,
-                    retrn: other_retrn,
+                    arguments: other_arguments,
+                    return_: other_return,
                 },
             ) => {
-                args.len() == other_args.len()
-                    && args
+                arguments.len() == other_arguments.len()
+                    && arguments
                         .iter()
-                        .zip(other_args)
+                        .zip(other_arguments)
                         .all(|(one, other)| one.same_as(other))
-                    && retrn.same_as(other_retrn)
+                    && return_.same_as(other_return)
             }
 
             (Type::Var { type_ }, other) => type_.as_ref().borrow().same_as_other_type(other),
@@ -546,11 +597,16 @@ impl Type {
             (one @ Type::Tuple { .. }, Type::Var { type_ }) => {
                 type_.as_ref().borrow().same_as_other_type(one)
             }
-            (Type::Tuple { elems }, Type::Tuple { elems: other_elems }) => {
-                elems.len() == other_elems.len()
-                    && elems
+            (
+                Type::Tuple { elements },
+                Type::Tuple {
+                    elements: other_elements,
+                },
+            ) => {
+                elements.len() == other_elements.len()
+                    && elements
                         .iter()
-                        .zip(other_elems)
+                        .zip(other_elements)
                         .all(|(one, other)| one.same_as(other))
             }
         }
@@ -594,10 +650,10 @@ impl TypeVar {
 }
 
 pub fn collapse_links(t: Arc<Type>) -> Arc<Type> {
-    if let Type::Var { type_ } = t.deref() {
-        if let TypeVar::Link { type_ } = type_.borrow().deref() {
-            return collapse_links(type_.clone());
-        }
+    if let Type::Var { type_ } = t.deref()
+        && let TypeVar::Link { type_ } = type_.borrow().deref()
+    {
+        return collapse_links(type_.clone());
     }
     t
 }
@@ -608,6 +664,7 @@ pub struct AccessorsMap {
     pub type_: Arc<Type>,
     pub shared_accessors: HashMap<EcoString, RecordAccessor>,
     pub variant_specific_accessors: Vec<HashMap<EcoString, RecordAccessor>>,
+    pub variant_positional_accessors: Vec<Vec<Arc<Type>>>,
 }
 
 impl AccessorsMap {
@@ -619,6 +676,11 @@ impl AccessorsMap {
             .and_then(|index| self.variant_specific_accessors.get(index as usize))
             .unwrap_or(&self.shared_accessors)
     }
+
+    pub fn positional_accessors(&self, inferred_variant: u16) -> Option<&Vec<Arc<Type>>> {
+        self.variant_positional_accessors
+            .get(inferred_variant as usize)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -627,6 +689,7 @@ pub struct RecordAccessor {
     pub index: u64,
     pub label: EcoString,
     pub type_: Arc<Type>,
+    pub documentation: Option<EcoString>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -647,11 +710,6 @@ pub enum ValueConstructorVariant {
         implementations: Implementations,
     },
 
-    /// A constant defined locally, for example when pattern matching on string literals
-    LocalConstant {
-        literal: Constant<Arc<Type>, EcoString>,
-    },
-
     /// A function belonging to the module
     ModuleFn {
         name: EcoString,
@@ -663,6 +721,7 @@ pub enum ValueConstructorVariant {
         implementations: Implementations,
         external_erlang: Option<(EcoString, EcoString)>,
         external_javascript: Option<(EcoString, EcoString)>,
+        purity: Purity,
     },
 
     /// A constructor for a custom type
@@ -692,9 +751,11 @@ impl ValueConstructorVariant {
                 field_map,
                 location,
                 documentation,
+                variant_index,
                 ..
             } => ModuleValueConstructor::Record {
                 name: name.clone(),
+                variant_index: *variant_index,
                 field_map: field_map.clone(),
                 arity: *arity,
                 type_,
@@ -714,12 +775,6 @@ impl ValueConstructorVariant {
                 documentation: documentation.clone(),
             },
 
-            Self::LocalConstant { literal } => ModuleValueConstructor::Constant {
-                literal: literal.clone(),
-                location: literal.location(),
-                documentation: None,
-            },
-
             Self::LocalVariable { location, .. } => ModuleValueConstructor::Fn {
                 name: function_name.clone(),
                 module: module_name.clone(),
@@ -728,6 +783,7 @@ impl ValueConstructorVariant {
                 documentation: None,
                 location: *location,
                 field_map: None,
+                purity: Purity::Impure,
             },
 
             Self::ModuleFn {
@@ -738,6 +794,7 @@ impl ValueConstructorVariant {
                 field_map,
                 external_erlang,
                 external_javascript,
+                purity,
                 ..
             } => ModuleValueConstructor::Fn {
                 name: name.clone(),
@@ -747,6 +804,7 @@ impl ValueConstructorVariant {
                 external_javascript: external_javascript.clone(),
                 location: *location,
                 field_map: field_map.clone(),
+                purity: *purity,
             },
         }
     }
@@ -757,13 +815,25 @@ impl ValueConstructorVariant {
             | ValueConstructorVariant::ModuleConstant { location, .. }
             | ValueConstructorVariant::ModuleFn { location, .. }
             | ValueConstructorVariant::Record { location, .. } => *location,
-            ValueConstructorVariant::LocalConstant { literal } => literal.location(),
         }
     }
 
     /// Returns `true` if the variant is [`LocalVariable`].
     pub fn is_local_variable(&self) -> bool {
         matches!(self, Self::LocalVariable { .. })
+    }
+
+    /// Returns `true` if the variant is a local variable generated by the compiler.
+    #[must_use]
+    pub fn is_generated_variable(&self) -> bool {
+        match self {
+            ValueConstructorVariant::LocalVariable { origin, .. } => {
+                matches!(origin.syntax, VariableSyntax::Generated)
+            }
+            ValueConstructorVariant::ModuleConstant { .. }
+            | ValueConstructorVariant::ModuleFn { .. }
+            | ValueConstructorVariant::Record { .. } => false,
+        }
     }
 
     /// Returns `true` if the value constructor variant is [`ModuleFn`].
@@ -775,16 +845,12 @@ impl ValueConstructorVariant {
     }
 
     pub fn is_record(&self) -> bool {
-        match self {
-            Self::Record { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Record { .. })
     }
 
     pub fn implementations(&self) -> Implementations {
         match self {
             ValueConstructorVariant::Record { .. }
-            | ValueConstructorVariant::LocalConstant { .. }
             | ValueConstructorVariant::LocalVariable { .. } => Implementations {
                 gleam: true,
                 can_run_on_erlang: true,
@@ -806,7 +872,6 @@ impl ValueConstructorVariant {
         match self {
             ValueConstructorVariant::LocalVariable { .. }
             | ValueConstructorVariant::ModuleConstant { .. }
-            | ValueConstructorVariant::LocalConstant { .. }
             | ValueConstructorVariant::ModuleFn { .. } => None,
             ValueConstructorVariant::Record { field_map, .. } => field_map.as_ref(),
         }
@@ -817,6 +882,7 @@ impl ValueConstructorVariant {
 pub enum ModuleValueConstructor {
     Record {
         name: EcoString,
+        variant_index: u16,
         arity: u16,
         type_: Arc<Type>,
         field_map: Option<FieldMap>,
@@ -846,6 +912,7 @@ pub enum ModuleValueConstructor {
         external_javascript: Option<(EcoString, EcoString)>,
         field_map: Option<FieldMap>,
         documentation: Option<EcoString>,
+        purity: Purity,
     },
 
     Constant {
@@ -869,6 +936,38 @@ impl ModuleValueConstructor {
             ModuleValueConstructor::Record { documentation, .. }
             | ModuleValueConstructor::Fn { documentation, .. }
             | ModuleValueConstructor::Constant { documentation, .. } => documentation.as_deref(),
+        }
+    }
+
+    /// Returns the purity of this value constructor if it is called as a function.
+    /// Referencing a module value by itself is always pure, but calling is as a
+    /// function might not be.
+    pub fn called_function_purity(&self) -> Purity {
+        match self {
+            // If we call a module constant or local variable as a function, we
+            // no longer have enough information to determine its purity. For
+            // example:
+            //
+            // ```gleam
+            // const function1 = io.println
+            // const function2 = function.identity
+            //
+            // pub fn main() {
+            //   function1("Hello")
+            //   function2("Hello")
+            // }
+            // ```
+            //
+            // At this point, we don't have any information about the purity of
+            // the `function1` and `function2` functions, and must return
+            // `Purity::Unknown`. See the documentation for the `Purity` type
+            // for more information on why this is the case.
+            ModuleValueConstructor::Constant { .. } => Purity::Unknown,
+
+            // Constructing records is always pure
+            ModuleValueConstructor::Record { .. } => Purity::Pure,
+
+            ModuleValueConstructor::Fn { purity, .. } => *purity,
         }
     }
 }
@@ -904,6 +1003,8 @@ pub struct ModuleInterface {
     /// Wether there's any echo in the module.
     pub contains_echo: bool,
     pub references: References,
+    /// Functions which can be inlined
+    pub inline_functions: HashMap<EcoString, InlinableFunction>,
 }
 
 impl ModuleInterface {
@@ -916,6 +1017,7 @@ impl ModuleInterface {
 pub struct References {
     pub imported_modules: HashSet<EcoString>,
     pub value_references: ReferenceMap,
+    pub type_references: ReferenceMap,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -963,9 +1065,11 @@ impl TypeVariantConstructors {
                 match t.type_.as_ref() {
                     Type::Var { type_ } => match type_.borrow().deref() {
                         TypeVar::Generic { id } => *id,
-                        _ => panic!("{}", error),
+                        TypeVar::Unbound { .. } | TypeVar::Link { .. } => panic!("{}", error),
                     },
-                    _ => panic!("{}", error),
+                    Type::Named { .. } | Type::Fn { .. } | Type::Tuple { .. } => {
+                        panic!("{}", error)
+                    }
                 }
             })
             .collect_vec();
@@ -989,6 +1093,7 @@ pub struct TypeValueConstructorField {
     /// This type of this parameter
     pub type_: Arc<Type>,
     pub label: Option<EcoString>,
+    pub documentation: Option<EcoString>,
 }
 
 impl ModuleInterface {
@@ -1011,17 +1116,15 @@ impl ModuleInterface {
     }
 
     pub fn get_main_function(&self, target: Target) -> Result<ModuleFunction, crate::Error> {
-        let not_found = || crate::Error::ModuleDoesNotHaveMainFunction {
-            module: self.name.clone(),
+        // Module must have a value with the name "main"
+        let Some(value) = self.values.get(&EcoString::from("main")) else {
+            return Err(crate::Error::ModuleDoesNotHaveMainFunction {
+                module: self.name.clone(),
+                origin: self.origin,
+            });
         };
 
-        // Module must have a value with the name "main"
-        let value = self
-            .values
-            .get(&EcoString::from("main"))
-            .ok_or_else(not_found)?;
-
-        assert_suitable_main_function(value, &self.name, target)?;
+        assert_suitable_main_function(value, &self.name, self.origin, target)?;
 
         Ok(ModuleFunction {
             package: self.package.clone(),
@@ -1101,14 +1204,15 @@ impl TypeVar {
     pub fn is_unbound(&self) -> bool {
         match self {
             Self::Unbound { .. } => true,
-            Self::Link { .. } | Self::Generic { .. } => false,
+            Self::Link { type_ } => type_.is_unbound(),
+            Self::Generic { .. } => false,
         }
     }
 
     pub fn is_variable(&self) -> bool {
         match self {
             Self::Unbound { .. } | Self::Generic { .. } => true,
-            Self::Link { type_ } => type_.is_type_variable(),
+            Self::Link { type_ } => type_.is_variable(),
         }
     }
 
@@ -1144,6 +1248,20 @@ impl TypeVar {
         match self {
             Self::Link { type_ } => type_.is_result(),
             Self::Unbound { .. } | Self::Generic { .. } => false,
+        }
+    }
+
+    pub fn is_result_constructor(&self) -> bool {
+        match self {
+            Self::Link { type_ } => type_.is_result_constructor(),
+            Self::Unbound { .. } | Self::Generic { .. } => false,
+        }
+    }
+
+    pub fn is_list(&self) -> bool {
+        match self {
+            TypeVar::Link { type_ } => type_.is_list(),
+            TypeVar::Unbound { .. } | TypeVar::Generic { .. } => false,
         }
     }
 
@@ -1250,6 +1368,7 @@ pub struct TypeConstructor {
     pub deprecation: Deprecation,
     pub documentation: Option<EcoString>,
 }
+
 impl TypeConstructor {
     pub(crate) fn with_location(mut self, location: SrcSpan) -> Self {
         self.origin = location;
@@ -1265,10 +1384,13 @@ pub struct ValueConstructor {
     pub type_: Arc<Type>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Default)]
 pub enum Deprecation {
+    #[default]
     NotDeprecated,
-    Deprecated { message: EcoString },
+    Deprecated {
+        message: EcoString,
+    },
 }
 
 impl Deprecation {
@@ -1281,13 +1403,16 @@ impl Deprecation {
     }
 }
 
-impl Default for Deprecation {
-    fn default() -> Self {
-        Self::NotDeprecated
-    }
-}
-
 impl ValueConstructor {
+    pub fn local_variable(location: SrcSpan, origin: VariableOrigin, type_: Arc<Type>) -> Self {
+        Self {
+            publicity: Publicity::Private,
+            deprecation: Deprecation::NotDeprecated,
+            variant: ValueConstructorVariant::LocalVariable { location, origin },
+            type_,
+        }
+    }
+
     pub fn is_local_variable(&self) -> bool {
         self.variant.is_local_variable()
     }
@@ -1307,11 +1432,6 @@ impl ValueConstructor {
                 span: *location,
             },
 
-            ValueConstructorVariant::LocalConstant { literal } => DefinitionLocation {
-                module: None,
-                span: literal.location(),
-            },
-
             ValueConstructorVariant::LocalVariable { location, .. } => DefinitionLocation {
                 module: None,
                 span: *location,
@@ -1319,16 +1439,48 @@ impl ValueConstructor {
         }
     }
 
-    pub(crate) fn get_documentation(&self) -> Option<&str> {
+    pub fn get_documentation(&self) -> Option<&str> {
         match &self.variant {
-            ValueConstructorVariant::LocalConstant { .. }
-            | ValueConstructorVariant::LocalVariable { .. } => Some("A locally defined variable."),
+            ValueConstructorVariant::LocalVariable { .. } => Some("A locally defined variable."),
 
             ValueConstructorVariant::ModuleFn { documentation, .. }
             | ValueConstructorVariant::Record { documentation, .. }
             | ValueConstructorVariant::ModuleConstant { documentation, .. } => {
                 Some(documentation.as_ref()?.as_str())
             }
+        }
+    }
+
+    /// Returns the purity of this value constructor if it is called as a function.
+    /// Referencing a value constructor by itself is always pure, but calling is as a
+    /// function might not be.
+    pub fn called_function_purity(&self) -> Purity {
+        match &self.variant {
+            // If we call a module constant or local variable as a function, we
+            // no longer have enough information to determine its purity. For
+            // example:
+            //
+            // ```gleam
+            // const function1 = io.println
+            // const function2 = function.identity
+            //
+            // pub fn main() {
+            //   function1("Hello")
+            //   function2("Hello")
+            // }
+            // ```
+            //
+            // At this point, we don't have any information about the purity of
+            // the `function1` and `function2` functions, and must return
+            // `Purity::Unknown`. See the documentation for the `Purity` type
+            // for more information on why this is the case.
+            ValueConstructorVariant::LocalVariable { .. }
+            | ValueConstructorVariant::ModuleConstant { .. } => Purity::Unknown,
+
+            // Constructing records is always pure
+            ValueConstructorVariant::Record { .. } => Purity::Pure,
+
+            ValueConstructorVariant::ModuleFn { purity, .. } => *purity,
         }
     }
 }
@@ -1342,6 +1494,7 @@ pub struct TypeAliasConstructor {
     pub deprecation: Deprecation,
     pub documentation: Option<EcoString>,
     pub origin: SrcSpan,
+    pub parameters: Vec<Arc<Type>>,
 }
 
 impl ValueConstructor {
@@ -1349,18 +1502,19 @@ impl ValueConstructor {
         match &self.variant {
             ValueConstructorVariant::ModuleFn { field_map, .. }
             | ValueConstructorVariant::Record { field_map, .. } => field_map.as_ref(),
-            _ => None,
+            ValueConstructorVariant::LocalVariable { .. }
+            | ValueConstructorVariant::ModuleConstant { .. } => None,
         }
     }
 }
 
 pub type TypedCallArg = CallArg<TypedExpr>;
 
-fn assert_no_labelled_arguments<A>(args: &[CallArg<A>]) -> Result<(), Error> {
-    for arg in args {
-        if let Some(label) = &arg.label {
+fn assert_no_labelled_arguments<A>(arguments: &[CallArg<A>]) -> Result<(), Error> {
+    for argument in arguments {
+        if let Some(label) = &argument.label {
             return Err(Error::UnexpectedLabelledArg {
-                location: arg.location,
+                location: argument.location,
                 label: label.clone(),
             });
         }
@@ -1374,46 +1528,41 @@ fn assert_no_labelled_arguments<A>(args: &[CallArg<A>]) -> Result<(), Error> {
 /// could cause naively-implemented type checking to diverge.
 /// While traversing the type tree.
 ///
-fn unify_unbound_type(type_: Arc<Type>, own_id: u64) -> Result<(), UnifyError> {
-    if let Type::Var { type_ } = type_.deref() {
-        let new_value = match type_.borrow().deref() {
-            TypeVar::Link { type_, .. } => return unify_unbound_type(type_.clone(), own_id),
+fn unify_unbound_type(type_: &Type, own_id: u64) -> Result<(), UnifyError> {
+    if let Type::Var { type_ } = type_ {
+        return match type_.borrow().deref() {
+            TypeVar::Link { type_, .. } => unify_unbound_type(type_, own_id),
 
             TypeVar::Unbound { id } => {
                 if id == &own_id {
-                    return Err(UnifyError::RecursiveType);
+                    Err(UnifyError::RecursiveType)
                 } else {
-                    Some(TypeVar::Unbound { id: *id })
+                    Ok(())
                 }
             }
 
-            TypeVar::Generic { .. } => return Ok(()),
+            TypeVar::Generic { .. } => Ok(()),
         };
-
-        if let Some(t) = new_value {
-            *type_.borrow_mut() = t;
-        }
-        return Ok(());
     }
 
-    match type_.deref() {
-        Type::Named { args, .. } => {
-            for arg in args {
-                unify_unbound_type(arg.clone(), own_id)?
+    match type_ {
+        Type::Named { arguments, .. } => {
+            for argument in arguments {
+                unify_unbound_type(argument, own_id)?
             }
             Ok(())
         }
 
-        Type::Fn { args, retrn } => {
-            for arg in args {
-                unify_unbound_type(arg.clone(), own_id)?;
+        Type::Fn { arguments, return_ } => {
+            for argument in arguments {
+                unify_unbound_type(argument, own_id)?;
             }
-            unify_unbound_type(retrn.clone(), own_id)
+            unify_unbound_type(return_, own_id)
         }
 
-        Type::Tuple { elems, .. } => {
-            for elem in elems {
-                unify_unbound_type(elem.clone(), own_id)?
+        Type::Tuple { elements, .. } => {
+            for element in elements {
+                unify_unbound_type(element, own_id)?
             }
             Ok(())
         }
@@ -1434,32 +1583,32 @@ fn match_fun_type(
             }
 
             TypeVar::Unbound { .. } => {
-                let args: Vec<_> = (0..arity).map(|_| environment.new_unbound_var()).collect();
-                let retrn = environment.new_unbound_var();
-                Some((args, retrn))
+                let arguments: Vec<_> = (0..arity).map(|_| environment.new_unbound_var()).collect();
+                let return_ = environment.new_unbound_var();
+                Some((arguments, return_))
             }
 
             TypeVar::Generic { .. } => None,
         };
 
-        if let Some((args, retrn)) = new_value {
+        if let Some((arguments, return_)) = new_value {
             *type_.borrow_mut() = TypeVar::Link {
-                type_: fn_(args.clone(), retrn.clone()),
+                type_: fn_(arguments.clone(), return_.clone()),
             };
-            return Ok((args, retrn));
+            return Ok((arguments, return_));
         }
     }
 
-    if let Type::Fn { args, retrn } = type_.deref() {
-        return if args.len() != arity {
+    if let Type::Fn { arguments, return_ } = type_.deref() {
+        return if arguments.len() != arity {
             Err(MatchFunTypeError::IncorrectArity {
-                expected: args.len(),
+                expected: arguments.len(),
                 given: arity,
-                args: args.clone(),
-                return_type: retrn.clone(),
+                arguments: arguments.clone(),
+                return_type: return_.clone(),
             })
         } else {
-            Ok((args.clone(), retrn.clone()))
+            Ok((arguments.clone(), return_.clone()))
         };
     }
 
@@ -1481,26 +1630,37 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
             module,
             package,
             name,
-            args,
+            arguments,
             inferred_variant: _,
         } => {
-            let args = args.iter().map(|t| generalise(t.clone())).collect();
+            let arguments = arguments
+                .iter()
+                .map(|type_| generalise(type_.clone()))
+                .collect();
             Arc::new(Type::Named {
                 publicity: *publicity,
                 module: module.clone(),
                 package: package.clone(),
                 name: name.clone(),
-                args,
+                arguments,
                 inferred_variant: None,
             })
         }
 
-        Type::Fn { args, retrn } => fn_(
-            args.iter().map(|t| generalise(t.clone())).collect(),
-            generalise(retrn.clone()),
+        Type::Fn { arguments, return_ } => fn_(
+            arguments
+                .iter()
+                .map(|type_| generalise(type_.clone()))
+                .collect(),
+            generalise(return_.clone()),
         ),
 
-        Type::Tuple { elems } => tuple(elems.iter().map(|t| generalise(t.clone())).collect()),
+        Type::Tuple { elements } => tuple(
+            elements
+                .iter()
+                .map(|type_| generalise(type_.clone()))
+                .collect(),
+        ),
     }
 }
 
@@ -1522,12 +1682,9 @@ pub enum FieldAccessUsage {
 fn assert_suitable_main_function(
     value: &ValueConstructor,
     module_name: &EcoString,
+    origin: Origin,
     target: Target,
 ) -> Result<(), crate::Error> {
-    let not_found = || crate::Error::ModuleDoesNotHaveMainFunction {
-        module: module_name.clone(),
-    };
-
     // The value must be a module function
     let ValueConstructorVariant::ModuleFn {
         arity,
@@ -1535,7 +1692,10 @@ fn assert_suitable_main_function(
         ..
     } = &value.variant
     else {
-        return Err(not_found());
+        return Err(crate::Error::ModuleDoesNotHaveMainFunction {
+            module: module_name.clone(),
+            origin,
+        });
     };
 
     // The target must be supported
@@ -1551,6 +1711,14 @@ fn assert_suitable_main_function(
         return Err(crate::Error::MainFunctionHasWrongArity {
             module: module_name.clone(),
             arity: *arity,
+        });
+    }
+
+    // The function must be public, or trying to run it would result in a
+    // runtime crash
+    if !value.publicity.is_importable() {
+        return Err(crate::Error::MainFunctionIsPrivate {
+            module: module_name.clone(),
         });
     }
 

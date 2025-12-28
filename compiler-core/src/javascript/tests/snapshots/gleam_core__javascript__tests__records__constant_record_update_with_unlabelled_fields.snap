@@ -1,0 +1,46 @@
+---
+source: compiler-core/src/javascript/tests/records.rs
+expression: "\npub type Wibble {\n  Wibble(Int, Float, b: Bool, s: String)\n}\n\npub const record = Wibble(1, 3.14, True, \"Hello\")\npub const updated = Wibble(..record, b: False)\n\npub fn main() {\n  updated\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(Int, Float, b: Bool, s: String)
+}
+
+pub const record = Wibble(1, 3.14, True, "Hello")
+pub const updated = Wibble(..record, b: False)
+
+pub fn main() {
+  updated
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class Wibble extends $CustomType {
+  constructor($0, $1, b, s) {
+    super();
+    this[0] = $0;
+    this[1] = $1;
+    this.b = b;
+    this.s = s;
+  }
+}
+export const Wibble$Wibble = ($0, $1, b, s) => new Wibble($0, $1, b, s);
+export const Wibble$isWibble = (value) => value instanceof Wibble;
+export const Wibble$Wibble$0 = (value) => value[0];
+export const Wibble$Wibble$1 = (value) => value[1];
+export const Wibble$Wibble$b = (value) => value.b;
+export const Wibble$Wibble$2 = (value) => value.b;
+export const Wibble$Wibble$s = (value) => value.s;
+export const Wibble$Wibble$3 = (value) => value.s;
+
+export const record = /* @__PURE__ */ new Wibble(1, 3.14, true, "Hello");
+
+export const updated = /* @__PURE__ */ new Wibble(1, 3.14, false, "Hello");
+
+export function main() {
+  return updated;
+}

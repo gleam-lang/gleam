@@ -1,10 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/panic.rs
-expression: "\nfn go() {\n  let x = \"wibble\"\n  panic as x\n}\n"
+assertion_line: 16
+expression: "\npub fn go() {\n  let x = \"wibble\"\n  panic as x\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-fn go() {
+pub fn go() {
   let x = "wibble"
   panic as x
 }
@@ -13,7 +15,9 @@ fn go() {
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
-function go() {
+const FILEPATH = "src/module.gleam";
+
+export function go() {
   let x = "wibble";
-  throw makeError("panic", "my/mod", 4, "go", x, {})
+  throw makeError("panic", FILEPATH, "my/mod", 4, "go", x, {})
 }

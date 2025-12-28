@@ -15,6 +15,4 @@ warning: Unnecessary double negation (--) on integer
   ┌─ /src/warning/wrn.gleam:4:21
   │
 4 │             let _ = --x
-  │                     ^^^
-
-Hint: You can safely remove this.
+  │                     ^^ You can safely remove this.

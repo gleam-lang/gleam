@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/erlang/tests/records.rs
+assertion_line: 421
+expression: "\npub type Box(a) {\n  Box(name: String, value: a)\n}\n\npub const base = Box(\"score\", 50)\npub const updated = Box(..base, value: \"Hello\")\n\npub fn main() {\n  #(base, updated)\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub type Box(a) {
+  Box(name: String, value: a)
+}
+
+pub const base = Box("score", 50)
+pub const updated = Box(..base, value: "Hello")
+
+pub fn main() {
+  #(base, updated)
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
+-export_type([box/1]).
+
+-type box(I) :: {box, binary(), I}.
+
+-file("project/test/my/mod.gleam", 9).
+-spec main() -> {box(integer()), box(binary())}.
+main() ->
+    {{box, <<"score"/utf8>>, 50}, {box, <<"score"/utf8>>, <<"Hello"/utf8>>}}.

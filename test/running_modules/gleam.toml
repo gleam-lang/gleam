@@ -3,11 +3,8 @@ version = "0.1.0"
 description = "A Gleam project"
 
 [dependencies]
-gleam_stdlib = "~> 0.27"
-gleeunit = "~> 0.10"
-# Project used to test if javascript target is detected.
-# https://hex.pm/packages/gleam_module_javascript_test
-gleam_module_javascript_test = "~> 0.2.0"
+gleam_stdlib = ">= 0.58.0 and < 2.0.0"
+gleeunit = ">= 1.0.0 and < 2.0.0"
 
 [javascript.deno]
 allow_read = true

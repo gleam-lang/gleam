@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/erlang/tests/let_assert.rs
+expression: "pub fn go() {\n  let assert Ok(x) = Error(Nil)\n  x\n}"
+---
+----- SOURCE CODE
+pub fn go() {
+  let assert Ok(x) = Error(Nil)
+  x
+}
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([go/0]).
+
+-file("project/test/my/mod.gleam", 1).
+-spec go() -> any().
+go() ->
+    X@1 = case {error, nil} of
+        {ok, X} -> X;
+        _assert_fail ->
+            erlang:error(#{gleam_error => let_assert,
+                        message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
+                        file => <<?FILEPATH/utf8>>,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"go"/utf8>>,
+                        line => 2,
+                        value => _assert_fail,
+                        start => 16,
+                        'end' => 45,
+                        pattern_start => 27,
+                        pattern_end => 32})
+    end,
+    X@1.

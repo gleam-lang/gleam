@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "echo 11 as { True || False }"
+---
+----- SOURCE CODE
+echo 11 as { True || False }
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:12
+  │
+1 │ echo 11 as { True || False }
+  │            ^^^^^^^^^^^^^^^^^
+
+Expected type:
+
+    String
+
+Found type:
+
+    Bool

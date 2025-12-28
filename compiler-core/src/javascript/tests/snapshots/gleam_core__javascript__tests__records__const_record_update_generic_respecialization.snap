@@ -1,0 +1,44 @@
+---
+source: compiler-core/src/javascript/tests/records.rs
+assertion_line: 119
+expression: "\npub type Box(a) {\n  Box(name: String, value: a)\n}\n\npub const base = Box(\"score\", 50)\npub const updated = Box(..base, value: \"Hello\")\n\npub fn main() {\n  #(base, updated)\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub type Box(a) {
+  Box(name: String, value: a)
+}
+
+pub const base = Box("score", 50)
+pub const updated = Box(..base, value: "Hello")
+
+pub fn main() {
+  #(base, updated)
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class Box extends $CustomType {
+  constructor(name, value) {
+    super();
+    this.name = name;
+    this.value = value;
+  }
+}
+export const Box$Box = (name, value) => new Box(name, value);
+export const Box$isBox = (value) => value instanceof Box;
+export const Box$Box$name = (value) => value.name;
+export const Box$Box$0 = (value) => value.name;
+export const Box$Box$value = (value) => value.value;
+export const Box$Box$1 = (value) => value.value;
+
+export const base = /* @__PURE__ */ new Box("score", 50);
+
+export const updated = /* @__PURE__ */ new Box("score", "Hello");
+
+export function main() {
+  return [base, updated];
+}

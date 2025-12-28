@@ -39,9 +39,12 @@ expression: "let assert [x] = [2]"
                         },
                         name: "x",
                         type_: (),
-                        origin: Variable(
-                            "x",
-                        ),
+                        origin: VariableOrigin {
+                            syntax: Variable(
+                                "x",
+                            ),
+                            declaration: LetPattern,
+                        },
                     },
                 ],
                 tail: None,
@@ -49,10 +52,15 @@ expression: "let assert [x] = [2]"
             },
             kind: Assert {
                 location: SrcSpan {
-                    start: 4,
+                    start: 0,
                     end: 10,
                 },
+                assert_keyword_start: 4,
                 message: None,
+            },
+            compiled_case: CompiledCase {
+                tree: Fail,
+                subject_variables: [],
             },
             annotation: None,
         },

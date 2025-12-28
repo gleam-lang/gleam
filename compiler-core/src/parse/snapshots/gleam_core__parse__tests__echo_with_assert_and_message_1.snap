@@ -1,0 +1,60 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: assert 1 == echo 2 as this_belongs_to_echo
+---
+[
+    Assert(
+        Assert {
+            location: SrcSpan {
+                start: 0,
+                end: 42,
+            },
+            value: BinOp {
+                location: SrcSpan {
+                    start: 7,
+                    end: 42,
+                },
+                name: Eq,
+                name_location: SrcSpan {
+                    start: 9,
+                    end: 11,
+                },
+                left: Int {
+                    location: SrcSpan {
+                        start: 7,
+                        end: 8,
+                    },
+                    value: "1",
+                    int_value: 1,
+                },
+                right: Echo {
+                    location: SrcSpan {
+                        start: 12,
+                        end: 42,
+                    },
+                    keyword_end: 16,
+                    expression: Some(
+                        Int {
+                            location: SrcSpan {
+                                start: 17,
+                                end: 18,
+                            },
+                            value: "2",
+                            int_value: 2,
+                        },
+                    ),
+                    message: Some(
+                        Var {
+                            location: SrcSpan {
+                                start: 22,
+                                end: 42,
+                            },
+                            name: "this_belongs_to_echo",
+                        },
+                    ),
+                },
+            },
+            message: None,
+        },
+    ),
+]

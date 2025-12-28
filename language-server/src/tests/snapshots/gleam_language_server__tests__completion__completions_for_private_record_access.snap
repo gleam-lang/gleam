@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: "\ntype Wibble {\n  Wibble(wibble: Int, wobble: Int)\n  Wobble(wabble: Int, wobble: Int)\n}\n\nfn fun() {\n  let wibble = Wibble(1, 2)\n  wibble.wobble\n}\n"
+---
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+  Wobble(wabble: Int, wobble: Int)
+}
+
+fn fun() {
+  let wibble = Wibble(1, 2)
+  wibble.wobble|
+}
+
+
+----- Completion content -----
+wibble
+  kind:   Field
+  detail: Int
+  sort:   01_wibble
+wobble
+  kind:   Field
+  detail: Int
+  sort:   01_wobble

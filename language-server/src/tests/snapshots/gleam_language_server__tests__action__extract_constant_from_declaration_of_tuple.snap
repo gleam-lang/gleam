@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  let #(one, two, three) = #(\"one\", \"two\", \"three\")\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  let #(one, two, three) = #("one", "two", "three")
+                           ▔↑                      
+}
+
+
+----- AFTER ACTION
+const value = #("one", "two", "three")
+
+pub fn main() {
+  let #(one, two, three) = value
+}

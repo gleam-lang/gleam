@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/javascript/tests/inlining.rs
+expression: "\npub fn sum(a, b) {\n  fn(x) {\n    let a = 7\n    x + a\n  }(a + b)\n\n  a\n}\n"
+---
+----- SOURCE CODE
+
+pub fn sum(a, b) {
+  fn(x) {
+    let a = 7
+    x + a
+  }(a + b)
+
+  a
+}
+
+
+----- COMPILED JAVASCRIPT
+export function sum(a, b) {
+  {
+    let _inline_a_0 = 7;
+    (a + b) + _inline_a_0
+  };
+  return a;
+}

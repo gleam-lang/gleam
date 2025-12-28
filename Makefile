@@ -51,5 +51,9 @@ test-watch: ## Run compiler tests when files change
 export-hex-tarball-test: ## Run `gleam export hex-tarball` and verify it is created
 	cd test/hextarball && make test
 
+.PHONY: benchmark
+benchmark: ## Run the benchmarks
+	cd benchmark/list && make
+
 # Debug print vars with `make print-VAR_NAME`
 print-%: ; @echo $*=$($*)

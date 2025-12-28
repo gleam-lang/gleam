@@ -1,6 +1,6 @@
 [package]
 name = "gleam-wasm"
-version = "1.9.1"
+version = "1.14.0"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2024"
 license-file = "LICENCE"
@@ -13,7 +13,7 @@ crate-type = ["cdylib", "rlib"]
 gleam-core = { path = "../compiler-core" }
 console_error_panic_hook = "0"
 serde-wasm-bindgen = "0"
-wasm-bindgen = { version = "=0.2.99", features = ["serde-serialize"] }
+wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
 tracing-wasm = "*"
 camino.workspace = true
 hexpm.workspace = true

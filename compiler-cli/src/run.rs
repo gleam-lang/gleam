@@ -18,6 +18,7 @@ use crate::{config::PackageKind, fs::ProjectIO};
 pub enum Which {
     Src,
     Test,
+    Dev,
 }
 
 // TODO: test
@@ -55,12 +56,12 @@ pub fn setup(
     no_print_progress: bool,
 ) -> Result<Command, Error> {
     // Validate the module path
-    if let Some(mod_path) = &module {
-        if !is_gleam_module(mod_path) {
-            return Err(Error::InvalidModuleName {
-                module: mod_path.to_owned(),
-            });
-        }
+    if let Some(mod_path) = &module
+        && !is_gleam_module(mod_path)
+    {
+        return Err(Error::InvalidModuleName {
+            module: mod_path.to_owned(),
+        });
     };
 
     let telemetry: &'static dyn Telemetry = if no_print_progress {
@@ -93,6 +94,7 @@ pub fn setup(
     let module = module.unwrap_or(match which {
         Which::Src => root_config.name.to_string(),
         Which::Test => format!("{}_test", &root_config.name),
+        Which::Dev => format!("{}_dev", &root_config.name),
     });
 
     let target = target.unwrap_or(mod_config.target);
@@ -381,8 +383,8 @@ fn get_or_suggest_main_function(
         Err(error) => error,
     };
 
-    // Otherwise see if the module has been prefixed with "src/" or "test/".
-    for prefix in ["src/", "test/"] {
+    // Otherwise see if the module has been prefixed with "src/", "test/" or "dev/".
+    for prefix in ["src/", "test/", "dev/"] {
         let other = match module.strip_prefix(prefix) {
             Some(other) => other.into(),
             None => continue,

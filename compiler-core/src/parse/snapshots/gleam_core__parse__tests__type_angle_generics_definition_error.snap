@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\ntype Either<a, b> {\n    This(a)\n    That(b)\n}\n"
+---
+----- SOURCE CODE
+
+type Either<a, b> {
+    This(a)
+    That(b)
+}
+
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:12
+  │
+2 │ type Either<a, b> {
+  │            ^ I was expecting `(` here.
+
+Type parameters use lowercase names and are surrounded by parentheses.
+
+    type Either(a, b) {
+
+See: https://tour.gleam.run/data-types/generic-custom-types/

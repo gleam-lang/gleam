@@ -300,6 +300,51 @@ pub fn main() {
 }
 
 #[test]
+fn missing_float_option_in_bit_array_segment_requires_v1_10() {
+    let version = infer_version(
+        "
+pub fn main() {
+  <<1.2>>
+}
+",
+    );
+    assert_eq!(version, Version::new(1, 10, 0));
+}
+
+#[test]
+fn missing_float_option_in_bit_array_constant_segment_requires_v1_10() {
+    let version = infer_version("const bits = <<1.2>>");
+    assert_eq!(version, Version::new(1, 10, 0));
+}
+
+#[test]
+fn missing_float_option_in_bit_array_pattern_segment_requires_v1_10() {
+    let version = infer_version(
+        "
+pub fn main() {
+  case todo {
+    <<1.11>> -> todo
+    _ -> todo
+  }
+}
+",
+    );
+    assert_eq!(version, Version::new(1, 10, 0));
+}
+
+#[test]
+fn const_record_update_requires_v1_14() {
+    let version = infer_version(
+        "
+pub type Wibble { Wibble(a: Int, b: Int) }
+const base = Wibble(1, 2)
+const wobble = Wibble(..base, a: 3)
+",
+    );
+    assert_eq!(version, Version::new(1, 14, 0));
+}
+
+#[test]
 fn inference_picks_the_bigger_of_two_versions() {
     let version = infer_version(
         "
@@ -327,4 +372,42 @@ pub fn main() {
 ",
     );
     assert_eq!(version, Version::new(1, 2, 0));
+}
+
+#[test]
+fn bool_assert_requires_v1_11() {
+    let version = infer_version(
+        "
+pub fn main() {
+  assert 1 != 2
+}
+",
+    );
+    assert_eq!(version, Version::new(1, 11, 0));
+}
+
+#[test]
+fn expression_in_expression_segment_size_requires_v1_12() {
+    let version = infer_version(
+        "
+pub fn main() {
+  <<1:size(3 * 8)>>
+}
+",
+    );
+    assert_eq!(version, Version::new(1, 12, 0));
+}
+
+#[test]
+fn expression_in_pattern_segment_size_requires_v1_12() {
+    let version = infer_version(
+        "
+pub fn main(x) {
+  case x {
+    <<_:size(3*8)>> -> 1
+    _ -> 2
+  }
+}",
+    );
+    assert_eq!(version, Version::new(1, 12, 0));
 }

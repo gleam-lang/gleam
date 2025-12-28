@@ -1,0 +1,36 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\nimport gleam/dict\n\npub fn main() {\n  dict.insert(dict.new(), 1, 2)\n  Nil\n}\n"
+---
+----- SOURCE CODE
+-- gleam/dict.gleam
+
+pub type Dict(key, value)
+
+@external(erlang, "map", "new")
+pub fn new() -> Dict(a, b)
+
+@external(erlang, "map", "insert")
+pub fn insert(dict: Dict(key, value), key: key, value: value) -> Dict(key, value)
+
+
+-- main.gleam
+
+import gleam/dict
+
+pub fn main() {
+  dict.insert(dict.new(), 1, 2)
+  Nil
+}
+
+
+----- WARNING
+warning: Unused value
+  ┌─ /src/warning/wrn.gleam:5:3
+  │
+5 │   dict.insert(dict.new(), 1, 2)
+  │   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ This value is never used
+
+This expression computes a value without any side effects, but then the
+value isn't used at all. You might want to assign it to a variable, or
+delete the expression entirely if it's not needed.

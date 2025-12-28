@@ -24,12 +24,13 @@ export class Thing extends $CustomType {
     this.then$ = then$;
   }
 }
+export const Thing$Thing = (then$) => new Thing(then$);
+export const Thing$isThing = (value) => value instanceof Thing;
+export const Thing$Thing$then = (value) => value.then$;
+export const Thing$Thing$0 = (value) => value.then$;
 
 export function main() {
   let a = new Thing(undefined);
-  let _block;
-  let _record = a;
-  _block = new Thing(undefined);
-  let b = _block;
+  let b = new Thing(undefined);
   return b.then$;
 }

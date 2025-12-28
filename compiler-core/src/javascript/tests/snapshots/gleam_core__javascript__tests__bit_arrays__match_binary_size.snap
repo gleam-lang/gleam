@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-expression: "\nfn go(x) {\n  let assert <<_, a:2-bytes>> = x\n  let assert <<_, b:bytes-size(2)>> = x\n}\n"
+expression: "\npub fn go(x) {\n  let assert <<_, a:2-bytes>> = x\n  let assert <<_, b:bytes-size(2)>> = x\n}\n"
 ---
 ----- SOURCE CODE
 
-fn go(x) {
+pub fn go(x) {
   let assert <<_, a:2-bytes>> = x
   let assert <<_, b:bytes-size(2)>> = x
 }
@@ -13,28 +13,36 @@ fn go(x) {
 ----- COMPILED JAVASCRIPT
 import { makeError, bitArraySlice } from "../gleam.mjs";
 
-function go(x) {
-  if (!(x.bitSize == 24)) {
+const FILEPATH = "src/module.gleam";
+
+export function go(x) {
+  let a;
+  if (x.bitSize >= 8 && x.bitSize === 24) {
+    a = bitArraySlice(x, 8, 24);
+  } else {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       3,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x }
+      { value: x, start: 18, end: 49, pattern_start: 29, pattern_end: 45 }
     )
   }
-  let a = bitArraySlice(x, 8, 24);
-  if (!(x.bitSize == 24)) {
+  let b;
+  if (x.bitSize >= 8 && x.bitSize === 24) {
+    b = bitArraySlice(x, 8, 24);
+  } else {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       4,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x }
+      { value: x, start: 52, end: 89, pattern_start: 63, pattern_end: 85 }
     )
   }
-  let b = bitArraySlice(x, 8, 24);
   return x;
 }

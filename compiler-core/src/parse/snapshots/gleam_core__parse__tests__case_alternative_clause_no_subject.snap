@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\nfn main() {\n    case 1 {\n      1 | -> 1\n      _ -> 1\n    }\n}\n"
+---
+----- SOURCE CODE
+
+fn main() {
+    case 1 {
+      1 | -> 1
+      _ -> 1
+    }
+}
+
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:4:9
+  │
+4 │       1 | -> 1
+  │         ^ I was expecting a pattern after this

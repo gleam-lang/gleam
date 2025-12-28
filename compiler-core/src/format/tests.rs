@@ -6,12 +6,15 @@ mod bit_array;
 mod blocks;
 mod cases;
 mod conditional_compilation;
+mod constant;
 mod custom_type;
+mod echo;
 mod external_fn;
 mod external_types;
 mod function;
 mod guards;
 mod imports;
+mod lists;
 mod pipeline;
 mod record_update;
 mod tuple;
@@ -4651,26 +4654,15 @@ fn do_not_remove_required_braces_case_guard() {
 }
 
 #[test]
-fn remove_braces_case_guard() {
-    assert_format_rewrite!(
-        "fn main() {
-  let is_enabled = False
-  let is_confirmed = False
-  let is_admin = True
-  case is_enabled, is_confirmed, is_admin {
-    is_enabled, is_confirmed, is_admin if { is_enabled && is_confirmed } || is_admin ->
-      Nil
-    _, _, _ -> Nil
-  }
-}
-",
+fn do_not_remove_braces_from_case_guard() {
+    assert_format!(
         "fn main() {
   let is_enabled = False
   let is_confirmed = False
   let is_admin = True
   case is_enabled, is_confirmed, is_admin {
     is_enabled, is_confirmed, is_admin
-      if is_enabled && is_confirmed || is_admin
+      if { is_enabled && is_confirmed } || is_admin
     -> Nil
     _, _, _ -> Nil
   }
@@ -4680,20 +4672,12 @@ fn remove_braces_case_guard() {
 }
 
 #[test]
-fn remove_braces_case_guard_2() {
-    assert_format_rewrite!(
+fn do_not_remove_braces_from_case_guard_2() {
+    assert_format!(
         "fn main() {
   let wibble = #(10, [0])
   case wibble {
     wibble if True && { wibble.0 == 10 } -> Nil
-    _ -> Nil
-  }
-}
-",
-        "fn main() {
-  let wibble = #(10, [0])
-  case wibble {
-    wibble if True && wibble.0 == 10 -> Nil
     _ -> Nil
   }
 }
@@ -4900,7 +4884,7 @@ fn double_negate() {
 "#,
         r#"pub fn main() {
   let a = 3
-  let b = - -a
+  let b = a
 }
 "#
     );
@@ -4916,7 +4900,7 @@ fn triple_negate() {
 "#,
         r#"pub fn main() {
   let a = 3
-  let b = - - -a
+  let b = -a
 }
 "#
     );
@@ -4948,14 +4932,32 @@ fn binary_double_negate() {
 "#,
         r#"pub fn main() {
   let a = 3
-  let b = - -{ a + 3 }
+  let b = { a + 3 }
 }
 "#
     );
 }
 
 #[test]
-fn repeated_negate_after_subtract() {
+fn even_repeated_negate_after_subtract() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  let a = 3
+  let b = 4
+  let c = a-------b
+}
+"#,
+        r#"pub fn main() {
+  let a = 3
+  let b = 4
+  let c = a - b
+}
+"#
+    );
+}
+
+#[test]
+fn odd_repeated_negate_after_subtract() {
     assert_format_rewrite!(
         r#"pub fn main() {
   let a = 3
@@ -4966,9 +4968,23 @@ fn repeated_negate_after_subtract() {
         r#"pub fn main() {
   let a = 3
   let b = 4
-  let c = a - - - - - - - -b
+  let c = a - -b
 }
 "#
+    );
+}
+
+#[test]
+fn double_negation_on_bools_is_removed() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  !!True
+}
+"#,
+        "pub fn main() {
+  True
+}
+"
     );
 }
 
@@ -5992,9 +6008,11 @@ fn const_concat_long_including_list() {
         r#"const x = "some long string 1"
   <> "some long string 2"
   <> [
-    "here is a list", "with several elements",
+    "here is a list",
+    "with several elements",
     "in order to make it be too long to fit on one line",
-    "so we can see how it breaks", "onto multiple lines",
+    "so we can see how it breaks",
+    "onto multiple lines",
   ]
   <> "and a last string"
 "#,
@@ -6402,141 +6420,360 @@ fn function_capture_formatted_like_regular_calls_in_a_pipe() {
 }
 
 #[test]
-fn echo() {
+fn assert() {
     assert_format!(
-        "fn main() {
-  echo
+        "pub fn main() {
+  assert True
 }
 "
     );
 }
 
 #[test]
-fn echo_with_value() {
+fn assert_with_long_expression() {
     assert_format!(
-        r#"fn main() {
-  echo value
+        "pub fn main() {
+  assert some_function_with_a_very_long_name_that_exceeds_the_eighty_character_limit()
+}
+"
+    );
+}
+
+#[test]
+fn assert_with_message() {
+    assert_format!(
+        r#"pub fn main() {
+  assert True as "This is always true"
 }
 "#
     );
 }
 
 #[test]
-fn echo_with_big_value_that_needs_to_be_split() {
+fn assert_with_long_message() {
     assert_format!(
-        r#"fn main() {
-  echo [
-    this_is_a_long_list_and_requires_splitting,
-    wibble_wobble_woo,
-    multiple_lines,
-  ]
+        r#"pub fn main() {
+  assert True
+    as "This should never panic, because it is a literal True value, and so will always be true."
 }
 "#
     );
 }
 
 #[test]
-fn echo_inside_a_pipeline() {
+fn assert_with_long_expression_and_long_message() {
     assert_format!(
-        r#"fn main() {
-  wibble
-  |> echo
-  |> wobble
+        r#"pub fn main() {
+  assert some_long_function_name_which_if_everything_is_right_should_always_be_true
+    as "This should never panic, because the function only ever returns true."
 }
 "#
     );
 }
 
 #[test]
-fn echo_inside_a_single_line_pipeline() {
+fn echo_with_long_binary_expression() {
     assert_format!(
-        r#"fn main() {
-  wibble |> echo |> wobble
+        r#"pub fn main() {
+  echo wibble_wobble_wibble_wobble_wibble_wobble_wibble
+    >= wibble_wobble_wibble_wobble_wibble_wobble_wibble
+
+  echo wibble_wobble_wibble_wobble_wibble_wobble_wibble
+    + wibble_wobble_wibble_wobble_wibble_wobble_wibble
+
+  echo wibble_wobble_wibble_wobble_wibble_wobble_wibble
+    == wibble_wobble_wibble_wobble_wibble_wobble_wibble
 }
 "#
     );
 }
 
 #[test]
-fn echo_as_last_item_of_pipeline() {
+fn assert_with_long_binary_expression() {
     assert_format!(
-        r#"fn main() {
-  wibble |> wobble |> echo
+        r#"pub fn main() {
+  assert wibble_wobble_wibble_wobble_wibble_wobble_wibble
+    >= wibble_wobble_wibble_wobble_wibble_wobble_wibble
+
+  assert wibble_wobble_wibble_wobble_wibble_wobble_wibble
+    + wibble_wobble_wibble_wobble_wibble_wobble_wibble
+
+  assert wibble_wobble_wibble_wobble_wibble_wobble_wibble
+    == wibble_wobble_wibble_wobble_wibble_wobble_wibble
 }
 "#
     );
 }
 
 #[test]
-fn echo_as_last_item_of_multiline_pipeline() {
+fn comment_is_not_moved_after_assert() {
     assert_format!(
-        r#"fn main() {
-  wibble
-  |> wobble
-  |> echo
+        "pub fn main() {
+  // Wibble!
+  assert True
+}
+"
+    );
+}
+
+#[test]
+fn todo_as_with_comment() {
+    assert_format!(
+        r#"pub fn main() {
+  todo as
+    // A little comment explaining something
+    "wibble"
 }
 "#
     );
 }
 
 #[test]
-fn echo_with_related_expression_on_following_line() {
+fn todo_as_with_comment_on_the_same_line() {
     assert_format_rewrite!(
-        r#"fn main() {
-  panic as echo
-  "wibble"
+        r#"pub fn main() {
+  todo as // A little comment explaining something
+    "wibble"
 }
 "#,
-        r#"fn main() {
-  panic as echo "wibble"
+        r#"pub fn main() {
+  todo as
+    // A little comment explaining something
+    "wibble"
 }
 "#
     );
 }
 
 #[test]
-fn echo_with_following_value_in_a_pipeline() {
+fn todo_as_with_comment_before_the_as() {
     assert_format_rewrite!(
-        r#"fn main() {
-  []
-  |> echo wibble
-  |> wobble
+        r#"pub fn main() {
+  todo // A little comment explaining something
+    as "wibble"
 }
 "#,
-        r#"fn main() {
-  []
-  |> echo
-  wibble
-  |> wobble
+        r#"pub fn main() {
+  todo as
+    // A little comment explaining something
+    "wibble"
 }
 "#
     );
 }
 
 #[test]
-fn echo_printing_multiline_pipeline() {
-    assert_format_rewrite!(
-        r#"fn main() {
-  echo first
-  |> wibble
-  |> wobble
-}
-"#,
-        r#"fn main() {
-  echo first
-    |> wibble
-    |> wobble
-}
-"#
-    );
-}
-
-#[test]
-fn echo_printing_one_line_pipeline() {
+fn panic_as_with_comment() {
     assert_format!(
-        r#"fn main() {
-  echo first |> wibble |> wobble
+        r#"pub fn main() {
+  panic as
+    // A little comment explaining something
+    "wibble"
 }
 "#
+    );
+}
+
+#[test]
+fn panic_as_with_comment_on_the_same_line() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  panic as // A little comment explaining something
+    "wibble"
+}
+"#,
+        r#"pub fn main() {
+  panic as
+    // A little comment explaining something
+    "wibble"
+}
+"#
+    );
+}
+
+#[test]
+fn panic_as_with_comment_before_the_as() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  panic // A little comment explaining something
+    as "wibble"
+}
+"#,
+        r#"pub fn main() {
+  panic as
+    // A little comment explaining something
+    "wibble"
+}
+"#
+    );
+}
+
+#[test]
+fn echo_as_with_comment() {
+    assert_format!(
+        r#"pub fn main() {
+  echo 1 as
+    // A little comment explaining something
+    "wibble"
+}
+"#
+    );
+}
+
+#[test]
+fn echo_as_with_comment_on_the_same_line() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  echo 1 as // A little comment explaining something
+    "wibble"
+}
+"#,
+        r#"pub fn main() {
+  echo 1 as
+    // A little comment explaining something
+    "wibble"
+}
+"#
+    );
+}
+
+#[test]
+fn echo_as_with_comment_before_the_as() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  echo 1 // A little comment explaining something
+    as "wibble"
+}
+"#,
+        r#"pub fn main() {
+  echo 1 as
+    // A little comment explaining something
+    "wibble"
+}
+"#
+    );
+}
+
+#[test]
+fn assert_as_with_comment() {
+    assert_format!(
+        r#"pub fn main() {
+  assert True as
+    // A little comment explaining something
+    "wibble"
+}
+"#
+    );
+}
+
+#[test]
+fn assert_as_with_comment_on_the_same_line() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  assert True as // A little comment explaining something
+    "wibble"
+}
+"#,
+        r#"pub fn main() {
+  assert True as
+    // A little comment explaining something
+    "wibble"
+}
+"#
+    );
+}
+
+#[test]
+fn assert_as_with_comment_before_the_as() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  assert True // A little comment explaining something
+    as "wibble"
+}
+"#,
+        r#"pub fn main() {
+  assert True as
+    // A little comment explaining something
+    "wibble"
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4664
+#[test]
+fn pattern_unused_discard() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  let a = 10
+  let _ = case a {
+    _ as b -> b
+  }
+}
+"#,
+        r#"pub fn main() {
+  let a = 10
+  let _ = case a {
+    b -> b
+  }
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4929
+#[test]
+fn format_panic_as_with_block_message() {
+    assert_format!(
+        r#"pub fn main() {
+  panic as {
+    // b
+    a
+  }
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5056
+#[test]
+fn remove_redundant_negation_from_literal_int_1() {
+    assert_format_rewrite!(
+        "pub fn main() {
+  --1
+}
+",
+        "pub fn main() {
+  1
+}
+"
+    );
+}
+
+#[test]
+fn remove_redundant_negation_from_literal_int_2() {
+    assert_format_rewrite!(
+        "pub fn main() {
+  ---1
+}
+",
+        "pub fn main() {
+  -1
+}
+"
+    );
+}
+
+#[test]
+fn remove_redundant_negation_from_literal_int_3() {
+    assert_format_rewrite!(
+        "pub fn main() {
+  ----1
+}
+",
+        "pub fn main() {
+  1
+}
+"
     );
 }

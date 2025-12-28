@@ -1,24 +1,25 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
-use crate::build::{Outcome, Runtime, Target};
+use crate::bit_array::UnsupportedOption;
+use crate::build::{Origin, Outcome, Runtime, Target};
+use crate::dependency::{PackageFetcher, ResolutionError};
 use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
+
+use crate::derivation_tree::DerivationTreePrinter;
+use crate::parse::error::ParseErrorDetails;
+use crate::strings::{to_snake_case, to_upper_camel_case};
 use crate::type_::collapse_links;
 use crate::type_::error::{
-    MissingAnnotation, ModuleValueUsageContext, Named, UnknownField, UnknownTypeHint,
-    UnsafeRecordUpdateReason,
+    IncorrectArityContext, InvalidImportKind, MissingAnnotation, ModuleValueUsageContext, Named,
+    RecordField, UnknownField, UnknownTypeHint, UnsafeRecordUpdateReason,
 };
 use crate::type_::printer::{Names, Printer};
 use crate::type_::{FieldAccessUsage, error::PatternMatchKind};
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
-use crate::{bit_array, diagnostic::Level, javascript, type_::UnifyErrorSituation};
+use crate::{bit_array, diagnostic::Level, type_::UnifyErrorSituation};
 use ecow::EcoString;
-use heck::{ToSnakeCase, ToTitleCase, ToUpperCamelCase};
-use hexpm::version::ResolutionError;
+use hexpm::version::Version;
 use itertools::Itertools;
-use pubgrub::package::Package;
-use pubgrub::report::DerivationTree;
-use pubgrub::version::Version;
 use std::borrow::Cow;
-use std::collections::HashSet;
 use std::fmt::{Debug, Display};
 use std::io::Write;
 use std::path::PathBuf;
@@ -64,7 +65,7 @@ pub enum Error {
     Parse {
         path: Utf8PathBuf,
         src: EcoString,
-        error: crate::parse::error::ParseError,
+        error: Box<crate::parse::error::ParseError>,
     },
 
     #[error("type checking failed")]
@@ -72,7 +73,7 @@ pub enum Error {
         path: Utf8PathBuf,
         src: EcoString,
         errors: Vec1<crate::type_::Error>,
-        names: Names,
+        names: Box<Names>,
     },
 
     #[error("unknown import {import}")]
@@ -114,7 +115,7 @@ pub enum Error {
     #[error("cyclical package dependencies")]
     PackageCycle { packages: Vec<EcoString> },
 
-    #[error("file operation failed")]
+    #[error("{action:?} {path:?} failed: {err:?}")]
     FileIo {
         kind: FileKind,
         action: FileIoAction,
@@ -177,7 +178,10 @@ pub enum Error {
     },
 
     #[error("{module} does not have a main function")]
-    ModuleDoesNotHaveMainFunction { module: EcoString },
+    ModuleDoesNotHaveMainFunction { module: EcoString, origin: Origin },
+
+    #[error("{module} does not have a public main function")]
+    MainFunctionIsPrivate { module: EcoString },
 
     #[error("{module}'s main function has the wrong arity so it can not be run")]
     MainFunctionHasWrongArity { module: EcoString, arity: usize },
@@ -187,6 +191,9 @@ pub enum Error {
 
     #[error("{input} is not a valid version. {error}")]
     InvalidVersionFormat { input: String, error: String },
+
+    #[error("incompatible locked version. {error}")]
+    IncompatibleLockedVersion { error: String },
 
     #[error("project root already exists")]
     ProjectRootAlreadyExist { path: String },
@@ -210,13 +217,6 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("warnings are not permitted")]
     ForbiddenWarnings { count: usize },
 
-    #[error("javascript codegen failed")]
-    JavaScript {
-        path: Utf8PathBuf,
-        src: EcoString,
-        error: javascript::Error,
-    },
-
     #[error("Invalid runtime for {target} target: {invalid_runtime}")]
     InvalidRuntime {
         target: Target,
@@ -236,8 +236,15 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("Failed to create canonical path for package {0}")]
     DependencyCanonicalizationFailed(String),
 
-    #[error("Dependency tree resolution failed: {0}")]
-    DependencyResolutionFailed(String),
+    #[error("Could not find versions that satisfy dependency requirements")]
+    DependencyResolutionNoSolution {
+        root_package_name: EcoString,
+        derivation_tree:
+            Box<NeverEqual<pubgrub::DerivationTree<String, pubgrub::Ranges<Version>, String>>>,
+    },
+
+    #[error("Dependency resolution failed: {0}")]
+    DependencyResolutionError(String),
 
     #[error("The package {0} is listed in dependencies and dev-dependencies")]
     DuplicateDependency(EcoString),
@@ -298,8 +305,14 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     )]
     CannotPublishLeakedInternalType { unfinished: Vec<EcoString> },
 
+    #[error("The modules {unfinished:?} are empty and so cannot be published")]
+    CannotPublishEmptyModules { unfinished: Vec<EcoString> },
+
     #[error("Publishing packages to reserve names is not permitted")]
     HexPackageSquatting,
+
+    #[error("The package includes the default main function so cannot be published")]
+    CannotPublishWithDefaultMain { package_name: EcoString },
 
     #[error("Corrupt manifest.toml")]
     CorruptManifest,
@@ -316,12 +329,26 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
         wrongfully_allowed_version: SmallVersion,
     },
 
-    #[error("Failed to encrypt data")]
-    FailedToEncrypt { detail: String },
+    #[error("Failed to encrypt local Hex API key")]
+    FailedToEncryptLocalHexApiKey { detail: String },
 
-    #[error("Failed to decrypt data")]
-    FailedToDecrypt { detail: String },
+    #[error("Failed to decrypt local Hex API key")]
+    FailedToDecryptLocalHexApiKey { detail: String },
+
+    #[error("Cannot add a package with the same name as a dependency")]
+    CannotAddSelfAsDependency { name: EcoString },
 }
+
+// A wrapper that ignores the inner value for equality:
+#[derive(Debug, Clone)]
+pub struct NeverEqual<T>(pub T);
+
+impl<T> PartialEq for NeverEqual<T> {
+    fn eq(&self, _other: &Self) -> bool {
+        false
+    }
+}
+impl<T> Eq for NeverEqual<T> {}
 
 /// This is to make clippy happy and not make the error variant too big by
 /// storing an entire `hexpm::version::Version` in the error.
@@ -342,7 +369,7 @@ impl Display for SmallVersion {
 }
 
 impl SmallVersion {
-    pub fn from_hexpm(version: hexpm::version::Version) -> Self {
+    pub fn from_hexpm(version: Version) -> Self {
         Self {
             major: version.major as u8,
             minor: version.minor as u8,
@@ -425,85 +452,34 @@ impl Error {
         Self::TarFinish(error.to_string())
     }
 
-    pub fn dependency_resolution_failed(error: ResolutionError) -> Error {
-        fn collect_conflicting_packages<'dt, P: Package, V: Version>(
-            derivation_tree: &'dt DerivationTree<P, V>,
-            conflicting_packages: &mut HashSet<&'dt P>,
-        ) {
-            match derivation_tree {
-                DerivationTree::External(external) => match external {
-                    pubgrub::report::External::NotRoot(package, _) => {
-                        let _ = conflicting_packages.insert(package);
-                    }
-                    pubgrub::report::External::NoVersions(package, _) => {
-                        let _ = conflicting_packages.insert(package);
-                    }
-                    pubgrub::report::External::UnavailableDependencies(package, _) => {
-                        let _ = conflicting_packages.insert(package);
-                    }
-                    pubgrub::report::External::FromDependencyOf(package, _, dep_package, _) => {
-                        let _ = conflicting_packages.insert(package);
-                        let _ = conflicting_packages.insert(dep_package);
-                    }
-                },
-                DerivationTree::Derived(derived) => {
-                    collect_conflicting_packages(&derived.cause1, conflicting_packages);
-                    collect_conflicting_packages(&derived.cause2, conflicting_packages);
-                }
-            }
-        }
-
-        Self::DependencyResolutionFailed(match error {
-            ResolutionError::NoSolution(mut derivation_tree) => {
-                derivation_tree.collapse_no_versions();
-
-                let mut conflicting_packages = HashSet::new();
-                collect_conflicting_packages(&derivation_tree, &mut conflicting_packages);
-
-                wrap_format!(
-                    "Unable to find compatible versions for \
-the version constraints in your gleam.toml. \
-The conflicting packages are:
-
-{}
-",
-                    conflicting_packages
-                        .into_iter()
-                        .map(|s| format!("- {s}"))
-                        .join("\n")
-                )
-            }
+    pub fn dependency_resolution_failed<T: PackageFetcher>(
+        error: ResolutionError<'_, T>,
+        root_package_name: EcoString,
+    ) -> Error {
+        match error {
+            ResolutionError::NoSolution(derivation_tree) => Self::DependencyResolutionNoSolution {
+                root_package_name,
+                derivation_tree: Box::new(NeverEqual(derivation_tree)),
+            },
 
             ResolutionError::ErrorRetrievingDependencies {
                 package,
                 version,
                 source,
-            } => format!(
+            } => Self::DependencyResolutionError(format!(
                 "An error occurred while trying to retrieve dependencies of {package}@{version}: {source}",
-            ),
+            )),
 
-            ResolutionError::DependencyOnTheEmptySet {
-                package,
-                version,
-                dependent,
-            } => format!("{package}@{version} has an impossible dependency on {dependent}",),
-
-            ResolutionError::SelfDependency { package, version } => {
-                format!("{package}@{version} somehow depends on itself.")
+            ResolutionError::ErrorChoosingVersion { package, source } => {
+                Self::DependencyResolutionError(format!(
+                    "An error occurred while choosing the version of {package}: {source}",
+                ))
             }
 
-            ResolutionError::ErrorChoosingPackageVersion(err) => {
-                format!("Unable to determine package versions: {err}")
-            }
-
-            ResolutionError::ErrorInShouldCancel(err) => {
-                format!("Dependency resolution was cancelled. {err}")
-            }
-
-            ResolutionError::Failure(err) => {
-                format!("An unrecoverable error happened while solving dependencies: {err}")
-            }
-        })
+            ResolutionError::ErrorInShouldCancel(err) => Self::DependencyResolutionError(format!(
+                "Dependency resolution was cancelled. {err}"
+            )),
+        }
     }
 
     pub fn expand_tar<E>(error: E) -> Error
@@ -702,8 +678,8 @@ pub fn edit_distance(a: &str, b: &str, limit: usize) -> Option<usize> {
 
     // row by row
     for i in 1..=a.len() {
-        if let Some(elem) = current.get_mut(0) {
-            *elem = i;
+        if let Some(element) = current.get_mut(0) {
+            *element = i;
         }
         let a_idx = i - 1;
 
@@ -739,21 +715,22 @@ pub fn edit_distance(a: &str, b: &str, limit: usize) -> Option<usize> {
                 );
             }
 
-            if (i > 1) && (j > 1) {
-                if let (Some(&a_val), Some(&b_val_prev), Some(&a_val_prev), Some(&b_val)) = (
+            if (i > 1)
+                && (j > 1)
+                && let (Some(&a_val), Some(&b_val_prev), Some(&a_val_prev), Some(&b_val)) = (
                     a.get(a_idx),
                     b.get(b_idx - 1),
                     a.get(a_idx - 1),
                     b.get(b_idx),
-                ) {
-                    if (a_val == b_val_prev) && (a_val_prev == b_val) {
-                        // transposition
-                        if let Some(curr) = current.get_mut(j) {
-                            if let Some(&prev_prev_val) = prev_prev.get(j - 2) {
-                                *curr = std::cmp::min(*curr, prev_prev_val + 1);
-                            }
-                        }
-                    }
+                )
+                && (a_val == b_val_prev)
+                && (a_val_prev == b_val)
+            {
+                // transposition
+                if let Some(curr) = current.get_mut(j)
+                    && let Some(&prev_prev_val) = prev_prev.get(j - 2)
+                {
+                    *curr = std::cmp::min(*curr, prev_prev_val + 1);
                 }
             }
         }
@@ -777,7 +754,7 @@ fn edit_distance_with_substrings(a: &str, b: &str, limit: usize) -> Option<usize
     // Check one isn't less than half the length of the other. If this is true then there is a
     // big difference in length.
     let big_len_diff = (n * 2) < m || (m * 2) < n;
-    let len_diff = if n < m { m - n } else { n - m };
+    let len_diff = m.abs_diff(n);
     let distance = edit_distance(a, b, limit + len_diff)?;
 
     // This is the crux, subtracting length difference means exact substring matches will now be 0
@@ -789,7 +766,7 @@ fn edit_distance_with_substrings(a: &str, b: &str, limit: usize) -> Option<usize
         1 // Exact substring match, but not a total word match so return non-zero
     } else if !big_len_diff {
         // Not a big difference in length, discount cost of length difference
-        score + (len_diff + 1) / 2
+        score + len_diff.div_ceil(2)
     } else {
         // A big difference in length, add back the difference in length to the score
         score + len_diff
@@ -833,6 +810,17 @@ fn did_you_mean(name: &str, options: &[EcoString]) -> Option<String> {
         .map(|(option, _)| format!("Did you mean `{option}`?"))
 }
 
+fn to_ordinal(value: u32) -> String {
+    match value % 10 {
+        // All numbers starting with 1 end in `th` (11th, 12th, 13th, etc.)
+        _ if value / 10 == 1 => format!("{value}th"),
+        1 => format!("{value}st"),
+        2 => format!("{value}nd"),
+        3 => format!("{value}rd"),
+        _ => format!("{value}th"),
+    }
+}
+
 impl Error {
     pub fn pretty_string(&self) -> String {
         let mut nocolor = Buffer::no_color();
@@ -860,6 +848,23 @@ package deletion or account suspension.
 
                 vec![Diagnostic {
                     title: "Invalid Hex package".into(),
+                    text,
+                    level: Level::Error,
+                    location: None,
+                    hint: None,
+                }]
+            }
+
+            Error::CannotPublishWithDefaultMain { package_name } => {
+                let text = wrap_format!(
+                    "Packages with the default main function cannot be published
+
+Remove or modify the main function that contains only:
+    `io.println(\"Hello from {package_name}!\")`"
+                );
+
+                vec![Diagnostic {
+                    title: "Cannot publish with default main function".into(),
                     text,
                     level: Level::Error,
                     location: None,
@@ -923,7 +928,7 @@ forward slash and must not end with a slash."
                 }]
             }
 
-            Error::ModuleDoesNotHaveMainFunction { module } => vec![Diagnostic {
+            Error::ModuleDoesNotHaveMainFunction { module, origin } => vec![Diagnostic {
                 title: "Module does not have a main function".into(),
                 text: format!(
                     "`{module}` does not have a main function so the module can not be run."
@@ -931,8 +936,20 @@ forward slash and must not end with a slash."
                 level: Level::Error,
                 location: None,
                 hint: Some(format!(
-                    "Add a public `main` function to \
-to `src/{module}.gleam`."
+                    "Add a public `main` function to `{}/{module}.gleam`.",
+                    origin.folder_name()
+                )),
+            }],
+
+            Error::MainFunctionIsPrivate { module } => vec![Diagnostic {
+                title: "Module does not have a public main function".into(),
+                text: wrap_format!(
+                    "`{module}` has a main function, but it is private, so it cannot be run."
+                ),
+                level: Level::Error,
+                location: None,
+                hint: Some(wrap_format!(
+                    "Make the `main` function in the `{module}` module public."
                 )),
             }],
 
@@ -949,7 +966,7 @@ target, so it cannot be run."
 
             Error::MainFunctionHasWrongArity { module, arity } => vec![Diagnostic {
                 title: "Main function has wrong arity".into(),
-                text: format!(
+                text: wrap_format!(
                     "`{module}:main` should have an arity of 0 to be run but its arity is {arity}."
                 ),
                 level: Level::Error,
@@ -989,11 +1006,10 @@ If you want to overwrite these files, delete them and run the command again.
                 location: None,
             }],
 
-            Error::RemovedPackagesNotExist { packages } => vec![
-                Diagnostic {
-                    title: "Package not found".into(),
-                    text: format!(
-"These packages are not dependencies of your package so they could not
+            Error::RemovedPackagesNotExist { packages } => vec![Diagnostic {
+                title: "Package not found".into(),
+                text: format!(
+                    "These packages are not dependencies of your package so they could not
 be removed.
 
 {}
@@ -1002,12 +1018,11 @@ be removed.
                         .iter()
                         .map(|p| format!("  - {}", p.as_str()))
                         .join("\n")
-                    ),
-                    level: Level::Error,
-                    hint: None,
-                    location: None,
-                }
-            ],
+                ),
+                level: Level::Error,
+                hint: None,
+                location: None,
+            }],
 
             Error::CannotPublishTodo { unfinished } => vec![Diagnostic {
                 title: "Cannot publish unfinished code".into(),
@@ -1047,7 +1062,10 @@ Please remove them and try again.
                 location: None,
             }],
 
-            Error::CannotPublishWrongVersion { minimum_required_version, wrongfully_allowed_version } => vec![Diagnostic {
+            Error::CannotPublishWrongVersion {
+                minimum_required_version,
+                wrongfully_allowed_version,
+            } => vec![Diagnostic {
                 title: "Cannot publish package with wrong Gleam version range".into(),
                 text: wrap(&format!(
                     "Your package uses features that require at least v{minimum_required_version}.
@@ -1073,6 +1091,24 @@ resulting in compilation errors!"
 
 Please make sure internal types do not appear in public functions and try again.
 ",
+                    unfinished
+                        .iter()
+                        .map(|name| format!("  - {}", name.as_str()))
+                        .join("\n")
+                ),
+                level: Level::Error,
+                hint: None,
+                location: None,
+            }],
+
+            Error::CannotPublishEmptyModules { unfinished } => vec![Diagnostic {
+                title: "Cannot publish empty modules".into(),
+                text: wrap_format!(
+                    "These modules contain no public definitions and cannot be published:
+
+{}
+
+Please add public functions, types, or constants to these modules, or remove them and try again.",
                     unfinished
                         .iter()
                         .map(|name| format!("  - {}", name.as_str()))
@@ -1112,16 +1148,18 @@ your app.src file \"{app_ver}\"."
                 }]
             }
 
-            Error::ShellProgramNotFound { program , os } => {
+            Error::ShellProgramNotFound { program, os } => {
                 let mut text = format!("The program `{program}` was not found. Is it installed?");
 
                 match os {
                     OS::MacOS => {
                         fn brew_install(name: &str, pkg: &str) -> String {
-                            format!("\n\nYou can install {} via homebrew: brew install {}", name, pkg)
+                            format!("\n\nYou can install {name} via homebrew: brew install {pkg}",)
                         }
                         match program.as_str() {
-                            "erl" | "erlc" | "escript" => text.push_str(&brew_install("Erlang", "erlang")),
+                            "erl" | "erlc" | "escript" => {
+                                text.push_str(&brew_install("Erlang", "erlang"))
+                            }
                             "rebar3" => text.push_str(&brew_install("Rebar3", "rebar3")),
                             "deno" => text.push_str(&brew_install("Deno", "deno")),
                             "elixir" => text.push_str(&brew_install("Elixir", "elixir")),
@@ -1133,20 +1171,18 @@ your app.src file \"{app_ver}\"."
                     }
                     OS::Linux(distro) => {
                         fn apt_install(name: &str, pkg: &str) -> String {
-                            format!("\n\nYou can install {} via apt: sudo apt install {}", name, pkg)
+                            format!("\n\nYou can install {name} via apt: sudo apt install {pkg}")
                         }
                         match distro {
-                            Distro::Ubuntu | Distro::Debian => {
-                                match program.as_str() {
-                                    "elixir" => text.push_str(&apt_install("Elixir", "elixir")),
-                                    "git" => text.push_str(&apt_install("Git", "git")),
-                                    _ => (),
-                                }
-                            }
+                            Distro::Ubuntu | Distro::Debian => match program.as_str() {
+                                "elixir" => text.push_str(&apt_install("Elixir", "elixir")),
+                                "git" => text.push_str(&apt_install("Git", "git")),
+                                _ => (),
+                            },
                             Distro::Other => (),
                         }
                     }
-                    _ => (),
+                    OS::Windows | OS::Other => (),
                 }
 
                 text.push('\n');
@@ -1202,7 +1238,7 @@ https://git-scm.com/book/en/v2/Getting-Started-Installing-Git",
             Error::ShellCommand {
                 program: command,
                 reason: ShellCommandFailureReason::Unknown,
-            }  => {
+            } => {
                 let text =
                     format!("There was a problem when running the shell command `{command}`.");
                 vec![Diagnostic {
@@ -1241,13 +1277,11 @@ The error from the shell command library was:
                 reason: ShellCommandFailureReason::ShellCommandError(err),
             } => {
                 let text = format!(
-                    "There was a problem when running the shell command `{}`.
+                    "There was a problem when running the shell command `{command}`.
 
 The error from the shell command was:
 
-    {}",
-                    command,
-                    err
+    {err}"
                 );
                 vec![Diagnostic {
                     title: "Shell command failure".into(),
@@ -1365,25 +1399,34 @@ Second: {second}"
                 }]
             }
 
-            Error::ClashingGleamModuleAndNativeFileName { module, gleam_file, native_file } => {
+            Error::ClashingGleamModuleAndNativeFileName {
+                module,
+                gleam_file,
+                native_file,
+            } => {
                 let text = format!(
-                        "The Gleam module `{module}` is clashing with a native file
+                    "The Gleam module `{module}` is clashing with a native file
 with the same name:
 
     Gleam module: {gleam_file}
     Native file:  {native_file}
 
 This is a problem because the Gleam module would be compiled to a file with the
-same name and extension, unintentionally overwriting the native file.");
+same name and extension, unintentionally overwriting the native file."
+                );
 
                 vec![Diagnostic {
                     title: "Gleam module clashes with native file".into(),
                     text,
-                    hint: Some("Consider renaming one of the files, such as by adding an `_ffi` suffix to the native file's name, and trying again.".into()),
+                    hint: Some(
+                        "Consider renaming one of the files, such as by \
+adding an `_ffi` suffix to the native file's name, and trying again."
+                            .into(),
+                    ),
                     level: Level::Error,
                     location: None,
                 }]
-            },
+            }
 
             Error::DuplicateSourceFile { file } => vec![Diagnostic {
                 title: "Duplicate Source file".into(),
@@ -1415,7 +1458,7 @@ Erlang modules must have unique names regardless of the subfolders where their
                     level: Level::Error,
                     location: None,
                 }]
-            },
+            }
 
             Error::FileIo {
                 kind,
@@ -1456,13 +1499,14 @@ https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-fo
                 }]
             }
 
-
-            Error::FailedToEncrypt { detail } => {
-                let text = wrap_format!("A problem was encountered encrypting data.
+            Error::FailedToEncryptLocalHexApiKey { detail } => {
+                let text = wrap_format!(
+                    "A problem was encountered \
+encrypting the local Hex API key with the given password.
 The error from the encryption library was:
 
     {detail}"
-);
+                );
                 vec![Diagnostic {
                     title: "Failed to encrypt data".into(),
                     text,
@@ -1472,14 +1516,15 @@ The error from the encryption library was:
                 }]
             }
 
-            Error::FailedToDecrypt { detail } => {
-                let text = wrap_format!("A problem was encountered decrypting data.
+            Error::FailedToDecryptLocalHexApiKey { detail } => {
+                let text = wrap_format!(
+                    "Unable to decrypt the local Hex API key with the given password.
 The error from the encryption library was:
 
     {detail}"
-);
+                );
                 vec![Diagnostic {
-                    title: "Failed to decrypt data".into(),
+                    title: "Failed to decrypt local Hex API key".into(),
                     text,
                     hint: None,
                     level: Level::Error,
@@ -1516,686 +1561,808 @@ The error from the encryption library was:
                 }]
             }
 
-            Error::Type { path, src, errors: error, names } => error
+            Error::Type {
+                path,
+                src,
+                errors: error,
+                names,
+            } => error
                 .iter()
-                .map(|error| {
-                    match error {
-                TypeError::ErlangFloatUnsafe {
-                     location,  ..
-                } => Diagnostic {
-                        title: "Float is outside Erlang's floating point range".into(),
-                        text: wrap("This float value is too large to be represented by \
-Erlang's floating point type. To avoid this error float values must be in the range \
--1.7976931348623157e308 - 1.7976931348623157e308."),
-                    hint: None,
-                    level: Level::Error,
-                    location: Some(Location {
-                        label: Label {
-                            text: None,
+                .map(|error| match error {
+                    TypeError::LiteralFloatOutOfRange { location, .. } => Diagnostic {
+                        title: "Float outside of valid range".into(),
+                        text: wrap(
+                            "This float value is too large to be represented by \
+a floating point type: float values must be in the range -1.7976931348623157e308 \
+- 1.7976931348623157e308.",
+                        ),
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
                                 span: *location,
                             },
-                        path: path.clone(),
-                        src: src.clone(),
-                        extra_labels: vec![],
-                    }),
-                },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    },
 
-
-                TypeError::SrcImportingTest {
-                    location,
-                    src_module,
-                    test_module,
-                } => {
-                    let text = wrap_format!(
-                        "The application module `{src_module}` \
-is importing the test module `{test_module}`.
+                    TypeError::InvalidImport {
+                        location,
+                        importing_module,
+                        imported_module,
+                        kind: InvalidImportKind::SrcImportingTest,
+                    } => {
+                        let text = wrap_format!(
+                            "The application module `{importing_module}` \
+is importing the test module `{imported_module}`.
 
 Test modules are not included in production builds so application \
-modules cannot import them. Perhaps move the `{test_module}` \
+modules cannot import them. Perhaps move the `{imported_module}` \
 module to the src directory.",
                         );
 
-                    Diagnostic {
-                        title: "App importing test module".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: Some("Imported here".into()),
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
-                    }
-                }
-
-                TypeError::UnknownLabels {
-                    unknown,
-                    valid,
-                    supplied,
-                } => {
-                    let other_labels: Vec<_> = valid
-                        .iter()
-                        .filter(|label| !supplied.contains(label))
-                        .cloned()
-                        .collect();
-
-                    let title = if unknown.len() > 1 {
-                        "Unknown labels"
-                    } else {
-                        "Unknown label"
-                    }
-                    .into();
-
-                    let mut labels = unknown.iter().map(|(label, location)| {
-                        let text = did_you_mean(label, &other_labels)
-                            .unwrap_or_else(|| "Unexpected label".into());
-                        Label {
-                            text: Some(text),
-                            span: *location,
+                        Diagnostic {
+                            title: "App importing test module".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: Some("Imported here".into()),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
                         }
-                    });
-                    let label = labels.next().expect("Unknown labels first label");
-                    let extra_labels = labels.map(|label| ExtraLabel {
-                        src_info: None,
-                        label,
-                    }).collect();
-                    let text = if valid.is_empty() {
-                        "This constructor does not accept any labelled arguments.".into()
-                    } else if other_labels.is_empty() {
-                        "You have already supplied all the labelled arguments that this
+                    }
+
+                    TypeError::InvalidImport {
+                        location,
+                        importing_module,
+                        imported_module,
+                        kind: InvalidImportKind::SrcImportingDev,
+                    } => {
+                        let text = wrap_format!(
+                            "The application module `{importing_module}` \
+is importing the development module `{imported_module}`.
+
+Development modules are not included in production builds so application \
+modules cannot import them. Perhaps move the `{imported_module}` \
+module to the src directory.",
+                        );
+
+                        Diagnostic {
+                            title: "App importing dev module".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: Some("Imported here".into()),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
+                    }
+
+                    TypeError::InvalidImport {
+                        location,
+                        importing_module,
+                        imported_module,
+                        kind: InvalidImportKind::DevImportingTest,
+                    } => {
+                        let text = wrap_format!(
+                            "The development module `{importing_module}` \
+is importing the test module `{imported_module}`.
+
+Test modules should only contain test-related code, and not general development \
+code. Perhaps move the `{imported_module}` module to the dev directory.",
+                        );
+
+                        Diagnostic {
+                            title: "Dev importing test module".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: Some("Imported here".into()),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
+                    }
+
+                    TypeError::UnknownLabels {
+                        unknown,
+                        valid,
+                        supplied,
+                    } => {
+                        let other_labels: Vec<_> = valid
+                            .iter()
+                            .filter(|label| !supplied.contains(label))
+                            .cloned()
+                            .collect();
+
+                        let title = if unknown.len() > 1 {
+                            "Unknown labels"
+                        } else {
+                            "Unknown label"
+                        }
+                        .into();
+
+                        let mut labels = unknown.iter().map(|(label, location)| {
+                            let text = did_you_mean(label, &other_labels)
+                                .unwrap_or_else(|| "Unexpected label".into());
+                            Label {
+                                text: Some(text),
+                                span: *location,
+                            }
+                        });
+                        let label = labels.next().expect("Unknown labels first label");
+                        let extra_labels = labels
+                            .map(|label| ExtraLabel {
+                                src_info: None,
+                                label,
+                            })
+                            .collect();
+                        let text = if valid.is_empty() {
+                            "This constructor does not accept any labelled arguments.".into()
+                        } else if other_labels.is_empty() {
+                            "You have already supplied all the labelled arguments that this
 constructor accepts."
-                            .into()
-                    } else {
-                        let mut label_text = String::from("It accepts these labels:\n");
-                        for label in other_labels.iter().sorted() {
-                            label_text.push_str("\n    ");
-                            label_text.push_str(label);
+                                .into()
+                        } else {
+                            let mut label_text = String::from("It accepts these labels:\n");
+                            for label in other_labels.iter().sorted() {
+                                label_text.push_str("\n    ");
+                                label_text.push_str(label);
+                            }
+                            label_text
+                        };
+                        Diagnostic {
+                            title,
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label,
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels,
+                            }),
                         }
-                        label_text
-                    };
-                    Diagnostic {
-                        title,
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label,
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels,
-                        }),
                     }
-                }
 
-                TypeError::UnexpectedLabelledArg { location, label } => {
-                    let text = format!(
-                        "This argument has been given a label but the constructor does
+                    TypeError::UnexpectedLabelledArg { location, label } => {
+                        let text = format!(
+                            "This argument has been given a label but the constructor does
 not expect any. Please remove the label `{label}`."
-                    );
-                    Diagnostic {
-                        title: "Unexpected labelled argument".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: None,
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
+                        );
+                        Diagnostic {
+                            title: "Unexpected labelled argument".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
-                }
 
-                TypeError::PositionalArgumentAfterLabelled { location } => {
-                    let text = wrap("This unlabeled argument has been \
+                    TypeError::PositionalArgumentAfterLabelled { location } => {
+                        let text = wrap(
+                            "This unlabeled argument has been \
 supplied after a labelled argument.
 Once a labelled argument has been supplied all following arguments must
-also be labelled.");
+also be labelled.",
+                        );
 
-                    Diagnostic {
-                        title: "Unexpected positional argument".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: None,
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
-                    }
-                }
-
-                TypeError::DuplicateImport {
-                    location,
-                    previous_location,
-                    name,
-                } => {
-                    let text = format!(
-                        "`{name}` has been imported multiple times.
-Names in a Gleam module must be unique so one will need to be renamed."
-                    );
-                    Diagnostic {
-                        title: "Duplicate import".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: Some("Reimported here".into()),
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![ExtraLabel {
-                              src_info: None,
-                              label: Label {
-                                  text: Some("First imported here".into()),
-                                  span: *previous_location,
-                              },
-                            }],
-                        }),
-                    }
-                }
-
-                TypeError::DuplicateName {
-                    location_a,
-                    location_b,
-                    name,
-                    ..
-                } => {
-                    let (first_location, second_location) = if location_a.start < location_b.start {
-                        (location_a, location_b)
-                    } else {
-                        (location_b, location_a)
-                    };
-                    let text = format!(
-                        "`{name}` has been defined multiple times.
-Names in a Gleam module must be unique so one will need to be renamed."
-                    );
-                    Diagnostic {
-                        title: "Duplicate definition".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: Some("Redefined here".into()),
-                                span: *second_location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![ExtraLabel {
-                              src_info: None,
-                              label: Label {
-                                text: Some("First defined here".into()),
-                                span: *first_location,
-                              },
-                            }],
-                        }),
-                    }
-                }
-
-                TypeError::DuplicateTypeName {
-                    name,
-                    location,
-                    previous_location,
-                    ..
-                } => {
-                    let text = format!(
-                        "The type `{name}` has been defined multiple times.
-Names in a Gleam module must be unique so one will need to be renamed."
-                    );
-                    Diagnostic {
-                        title: "Duplicate type definition".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: Some("Redefined here".into()),
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![ExtraLabel {
-                              src_info: None,
-                              label: Label {
-                                text: Some("First defined here".into()),
-                                span: *previous_location,
-                              }
-                            }],
-                        }),
-                    }
-                }
-
-                TypeError::DuplicateField { location, label } => {
-                    let text =
-                        format!("The label `{label}` has already been defined. Rename this label.");
-                    Diagnostic {
-                        title: "Duplicate label".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: None,
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
-                    }
-                }
-
-                TypeError::DuplicateArgument { location, label } => {
-                    let text = format!("The labelled argument `{label}` has already been supplied.");
-                    Diagnostic {
-                        title: "Duplicate argument".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: None,
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
-                    }
-                }
-
-                TypeError::RecursiveType { location } => {
-                    let text = wrap("I don't know how to work out what type this \
-value has. It seems to be defined in terms of itself.
-
-Hint: Add some type annotations and try again.")
-                        ;
-                    Diagnostic {
-                        title: "Recursive type".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: None,
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
-                    }
-                }
-
-                TypeError::NotFn { location, type_ } => {
-                    let mut printer = Printer::new(names);
-                    let text = format!(
-                        "This value is being called as a function but its type is:\n\n    {}",
-                        printer.print_type(type_)
-                    );
-                    Diagnostic {
-                        title: "Type mismatch".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: None,
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
-                    }
-                }
-
-                TypeError::UnknownRecordField {
-                    usage,
-                    location,
-                    type_,
-                    label,
-                    fields,
-                    unknown_field: variants,
-                } => {
-                    let mut printer = Printer::new(names);
-
-                    // Give a hint about what type this value has.
-                    let mut text = format!(
-                        "The value being accessed has this type:\n\n    {}\n",
-                        printer.print_type(type_)
-                    );
-
-                    // Give a hint about what record fields this value has, if any.
-                    if fields.is_empty() {
-                        if variants == &UnknownField::NoFields {
-                            text.push_str("\nIt does not have any fields.");
-                        } else {
-                            text.push_str("\nIt does not have fields that are common \
-across all variants.");
+                        Diagnostic {
+                            title: "Unexpected positional argument".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
                         }
-                    } else {
-                        text.push_str("\nIt has these accessible fields:\n");
-                    }
-                    for field in fields.iter().sorted() {
-                        text.push_str("\n    .");
-                        text.push_str(field);
                     }
 
-                    match variants {
-                        UnknownField::AppearsInAVariant => {
-                            let msg = wrap(
-                                "Note: The field you are trying to access is \
+                    TypeError::DuplicateImport {
+                        location,
+                        previous_location,
+                        name,
+                    } => {
+                        let text = format!(
+                            "`{name}` has been imported multiple times.
+Names in a Gleam module must be unique so one will need to be renamed."
+                        );
+                        Diagnostic {
+                            title: "Duplicate import".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: Some("Reimported here".into()),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![ExtraLabel {
+                                    src_info: None,
+                                    label: Label {
+                                        text: Some("First imported here".into()),
+                                        span: *previous_location,
+                                    },
+                                }],
+                            }),
+                        }
+                    }
+
+                    TypeError::DuplicateName {
+                        location_a,
+                        location_b,
+                        name,
+                        ..
+                    } => {
+                        let (first_location, second_location) =
+                            if location_a.start < location_b.start {
+                                (location_a, location_b)
+                            } else {
+                                (location_b, location_a)
+                            };
+                        let text = format!(
+                            "`{name}` has been defined multiple times.
+Names in a Gleam module must be unique so one will need to be renamed."
+                        );
+                        Diagnostic {
+                            title: "Duplicate definition".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: Some("Redefined here".into()),
+                                    span: *second_location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![ExtraLabel {
+                                    src_info: None,
+                                    label: Label {
+                                        text: Some("First defined here".into()),
+                                        span: *first_location,
+                                    },
+                                }],
+                            }),
+                        }
+                    }
+
+                    TypeError::DuplicateTypeName {
+                        name,
+                        location,
+                        previous_location,
+                        ..
+                    } => {
+                        let text = format!(
+                            "The type `{name}` has been defined multiple times.
+Names in a Gleam module must be unique so one will need to be renamed."
+                        );
+                        Diagnostic {
+                            title: "Duplicate type definition".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: Some("Redefined here".into()),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![ExtraLabel {
+                                    src_info: None,
+                                    label: Label {
+                                        text: Some("First defined here".into()),
+                                        span: *previous_location,
+                                    },
+                                }],
+                            }),
+                        }
+                    }
+
+                    TypeError::DuplicateField { location, label } => {
+                        let text = format!(
+                            "The label `{label}` has already been defined. Rename this label."
+                        );
+                        Diagnostic {
+                            title: "Duplicate label".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
+                    }
+
+                    TypeError::DuplicateArgument { location, label } => {
+                        let text =
+                            format!("The labelled argument `{label}` has already been supplied.");
+                        Diagnostic {
+                            title: "Duplicate argument".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
+                    }
+
+                    TypeError::RecursiveType { location } => {
+                        let text = wrap(
+                            "I don't know how to work out what type this \
+value has. It seems to be defined in terms of itself.",
+                        );
+                        Diagnostic {
+                            title: "Recursive type".into(),
+                            text,
+                            hint: Some("Add some type annotations and try again.".into()),
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
+                    }
+
+                    TypeError::NotFn { location, type_ } => {
+                        let mut printer = Printer::new(names);
+                        let text = format!(
+                            "This value is being called as a function but its type is:\n\n    {}",
+                            printer.print_type(type_)
+                        );
+                        Diagnostic {
+                            title: "Type mismatch".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
+                    }
+
+                    TypeError::UnknownRecordField {
+                        usage,
+                        location,
+                        type_,
+                        label,
+                        fields,
+                        unknown_field: variants,
+                    } => {
+                        let mut printer = Printer::new(names);
+
+                        // Give a hint about what type this value has.
+                        let mut text = format!(
+                            "The value being accessed has this type:\n\n    {}\n",
+                            printer.print_type(type_)
+                        );
+
+                        // Give a hint about what record fields this value has, if any.
+                        if fields.is_empty() {
+                            if variants == &UnknownField::NoFields {
+                                text.push_str("\nIt does not have any fields.");
+                            } else {
+                                text.push_str(
+                                    "\nIt does not have fields that are common \
+across all variants.",
+                                );
+                            }
+                        } else {
+                            text.push_str("\nIt has these accessible fields:\n");
+                        }
+                        for field in fields.iter().sorted() {
+                            text.push_str("\n    .");
+                            text.push_str(field);
+                        }
+
+                        match variants {
+                            UnknownField::AppearsInAVariant => {
+                                let msg = wrap(
+                                    "Note: The field you are trying to access is \
 not defined consistently across all variants of this custom type. To fix this, \
 ensure that all variants include the field with the same name, position, and \
 type.",
-                            );
-                            text.push_str("\n\n");
-                            text.push_str(&msg);
-                        }
-                        UnknownField::AppearsInAnImpossibleVariant => {
-                            let msg = wrap(
-                                "Note: The field exists in this custom type \
+                                );
+                                text.push_str("\n\n");
+                                text.push_str(&msg);
+                            }
+                            UnknownField::AppearsInAnImpossibleVariant => {
+                                let msg = wrap(
+                                    "Note: The field exists in this custom type \
 but is not defined for the current variant. Ensure that you are accessing the \
 field on a variant where it is valid.",
-                            );
-                            text.push_str("\n\n");
-                            text.push_str(&msg);
+                                );
+                                text.push_str("\n\n");
+                                text.push_str(&msg);
+                            }
+                            UnknownField::TrulyUnknown => (),
+                            UnknownField::NoFields => (),
                         }
-                        UnknownField::TrulyUnknown => (),
-                        UnknownField::NoFields => (),
-                    }
 
-                    // Give a hint about Gleam not having OOP methods if it
-                    // looks like they might be trying to call one.
-                    match usage {
-                        FieldAccessUsage::MethodCall => {
-                            let msg = wrap(
-                                "Gleam is not object oriented, so if you are trying \
+                        // Give a hint about Gleam not having OOP methods if it
+                        // looks like they might be trying to call one.
+                        match usage {
+                            FieldAccessUsage::MethodCall => {
+                                let msg = wrap(
+                                    "Gleam is not object oriented, so if you are trying \
 to call a method on this value you may want to use the function syntax instead.",
-                            );
-                            text.push_str("\n\n");
-                            text.push_str(&msg);
-                            text.push_str("\n\n    ");
-                            text.push_str(label);
-                            text.push_str("(value)");
+                                );
+                                text.push_str("\n\n");
+                                text.push_str(&msg);
+                                text.push_str("\n\n    ");
+                                text.push_str(label);
+                                text.push_str("(value)");
+                            }
+                            FieldAccessUsage::Other | FieldAccessUsage::RecordUpdate => (),
                         }
-                        FieldAccessUsage::Other | FieldAccessUsage::RecordUpdate => (),
+
+                        let label = did_you_mean(label, fields)
+                            .unwrap_or_else(|| "This field does not exist".into());
+                        Diagnostic {
+                            title: "Unknown record field".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: Some(label),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
 
-                    let label = did_you_mean(label, fields)
-                        .unwrap_or_else(|| "This field does not exist".into());
-                    Diagnostic {
-                        title: "Unknown record field".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: Some(label),
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
-                    }
-                }
-
-                TypeError::CouldNotUnify {
-                    location,
-                    expected,
-                    given,
-                    situation: Some(UnifyErrorSituation::Operator(op)),
-                } => {
-                    let mut printer = Printer::new(names);
-                    let mut text = format!(
-                        "The {op} operator expects arguments of this type:
+                    TypeError::CouldNotUnify {
+                        location,
+                        expected,
+                        given,
+                        situation: Some(UnifyErrorSituation::Operator(op)),
+                    } => {
+                        let mut printer = Printer::new(names);
+                        let mut text = format!(
+                            "The {op} operator expects arguments of this type:
 
     {expected}
 
 But this argument has this type:
 
     {given}\n",
-                        op = op.name(),
-                        expected = printer.print_type(expected),
-                        given = printer.print_type(given),
-                    );
-                    if let Some(hint) = hint_alternative_operator(op, given) {
-                        text.push('\n');
-                        text.push_str("Hint: ");
-                        text.push_str(&hint);
+                            op = op.name(),
+                            expected = printer.print_type(expected),
+                            given = printer.print_type(given),
+                        );
+                        if let Some(hint) = hint_alternative_operator(op, given) {
+                            text.push('\n');
+                            text.push_str("Hint: ");
+                            text.push_str(&hint);
+                        }
+                        Diagnostic {
+                            title: "Type mismatch".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
-                    Diagnostic {
-                        title: "Type mismatch".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: None,
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
-                    }
-                }
 
-                TypeError::CouldNotUnify {
-                    location,
-                    expected,
-                    given,
-                    situation: Some(UnifyErrorSituation::PipeTypeMismatch),
-                } => {
-                    // Remap the pipe function type into just the type expected by the pipe.
-                    let expected = expected
-                        .fn_types()
-                        .and_then(|(args, _)| args.first().cloned());
+                    TypeError::CouldNotUnify {
+                        location,
+                        expected,
+                        given,
+                        situation: Some(UnifyErrorSituation::PipeTypeMismatch),
+                    } => {
+                        // Remap the pipe function type into just the type expected by the pipe.
+                        let expected = expected
+                            .fn_types()
+                            .and_then(|(arguments, _)| arguments.first().cloned());
 
-                    // Remap the argument as well, if it's a function.
-                    let given = given
-                        .fn_types()
-                        .and_then(|(args, _)| args.first().cloned())
-                        .unwrap_or_else(|| given.clone());
+                        // Remap the argument as well, if it's a function.
+                        let given = given
+                            .fn_types()
+                            .and_then(|(arguments, _)| arguments.first().cloned())
+                            .unwrap_or_else(|| given.clone());
 
-                    let mut printer = Printer::new(names);
-                    let text = format!(
-                        "The argument is:
+                        let mut printer = Printer::new(names);
+                        let text = format!(
+                            "The argument is:
 
     {given}
 
 But function expects:
 
     {expected}",
-                        expected = expected
-                            .map(|v| printer.print_type(&v))
-                            .unwrap_or_else(|| "    No arguments".into()),
-                        given = printer.print_type(&given)
-                    );
+                            expected = expected
+                                .map(|v| printer.print_type(&v))
+                                .unwrap_or_else(|| "    No arguments".into()),
+                            given = printer.print_type(&given)
+                        );
 
-                    Diagnostic {
-                        title: "Type mismatch".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: Some("This function does not accept the piped type".into()),
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
+                        Diagnostic {
+                            title: "Type mismatch".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: Some(
+                                        "This function does not accept the piped type".into(),
+                                    ),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
-                }
 
-                TypeError::CouldNotUnify {
-                    location,
-                    expected,
-                    given,
-                    situation,
-                } => {
-                    let mut printer = Printer::new(names);
-                    let mut text = if let Some(description) = situation.as_ref().and_then(|s| s.description()) {
-                        let mut text = description.to_string();
-                        text.push('\n');
-                        text.push('\n');
-                        text
-                    } else {
-                        "".into()
-                    };
-                    text.push_str("Expected type:\n\n    ");
-                    text.push_str(&printer.print_type(expected));
-                    text.push_str("\n\nFound type:\n\n    ");
-                    text.push_str(&printer.print_type(given));
+                    TypeError::CouldNotUnify {
+                        location,
+                        expected,
+                        given,
+                        situation,
+                    } => {
+                        let mut printer = Printer::new(names);
+                        let mut text = if let Some(description) =
+                            situation.as_ref().and_then(|s| s.description())
+                        {
+                            let mut text = description.to_string();
+                            text.push('\n');
+                            text.push('\n');
+                            text
+                        } else {
+                            "".into()
+                        };
+                        text.push_str("Expected type:\n\n    ");
+                        text.push_str(&printer.print_type(expected));
+                        text.push_str("\n\nFound type:\n\n    ");
+                        text.push_str(&printer.print_type(given));
 
-                    let (main_message_location, main_message_text, extra_labels) = match situation {
-                        // When the mismatch error comes from a case clause we want to highlight the
-                        // entire branch (pattern included) when reporting the error; in addition,
-                        // if the error could be resolved just by wrapping the value in an `Ok`
-                        // or `Error` we want to add an additional label with this hint below the
-                        // offending value.
-                        Some(UnifyErrorSituation::CaseClauseMismatch{ clause_location }) => (clause_location, None, vec![]),
-                        // In all other cases we just highlight the offending expression, optionally
-                        // adding the wrapping hint if it makes sense.
-                        Some(_) | None =>
-                            (location, hint_wrap_value_in_result(expected, given), vec![])
-                    };
+                        let (main_message_location, main_message_text, extra_labels) =
+                            match situation {
+                                // When the mismatch error comes from a case clause we want to highlight the
+                                // entire branch (pattern included) when reporting the error; in addition,
+                                // if the error could be resolved just by wrapping the value in an `Ok`
+                                // or `Error` we want to add an additional label with this hint below the
+                                // offending value.
+                                Some(UnifyErrorSituation::CaseClauseMismatch {
+                                    clause_location,
+                                }) => (clause_location, None, vec![]),
+                                // In all other cases we just highlight the offending expression, optionally
+                                // adding the wrapping hint if it makes sense.
+                                Some(_) | None => {
+                                    (location, hint_wrap_value_in_result(expected, given), vec![])
+                                }
+                            };
 
-                    Diagnostic {
-                        title: "Type mismatch".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: main_message_text,
-                                span: *main_message_location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels,
-                        }),
+                        Diagnostic {
+                            title: "Type mismatch".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: main_message_text,
+                                    span: *main_message_location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels,
+                            }),
+                        }
                     }
-                }
 
-                TypeError::IncorrectTypeArity {
-                    location,
-                    expected,
-                    given,
-                    ..
-                } => {
-                    let text = wrap("Functions and constructors have to be \
-called with their expected number of arguments.");
-                    let expected = match expected {
-                        0 => "no arguments".into(),
-                        1 => "1 argument".into(),
-                        _ => format!("{expected} arguments"),
-                    };
-                    Diagnostic {
-                        title: "Incorrect arity".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: Some(format!("Expected {expected}, got {given}")),
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
+                    TypeError::IncorrectTypeArity {
+                        location,
+                        expected,
+                        given: given_number,
+                        name,
+                    } => {
+                        let expected = match expected {
+                            0 => "no type arguments".into(),
+                            1 => "1 type argument".into(),
+                            _ => format!("{expected} type arguments"),
+                        };
+                        let given = match given_number {
+                            0 => "none",
+                            _ => &format!("{given_number}"),
+                        };
+                        let text = wrap_format!(
+                            "`{name}` requires {expected} \
+but {given} where provided."
+                        );
+                        Diagnostic {
+                            title: "Incorrect arity".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: Some(format!("Expected {expected}, got {given_number}")),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
-                }
 
-                TypeError::IncorrectArity {
-                    labels,
-                    location,
-                    expected,
-                    given,
-                } => {
-                    let text = if labels.is_empty() {
-                        "".into()
-                    } else {
-                        let labels = labels
-                            .iter()
-                            .map(|p| format!("  - {p}"))
-                            .sorted()
-                            .join("\n");
-                        format!("This call accepts these additional labelled arguments:\n\n{labels}",)
-                    };
-                    let expected = match expected {
-                        0 => "no arguments".into(),
-                        1 => "1 argument".into(),
-                        _ => format!("{expected} arguments"),
-                    };
-                    let label = format!("Expected {expected}, got {given}");
-                    Diagnostic {
-                        title: "Incorrect arity".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: Some(label),
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
+                    TypeError::TypeUsedAsAConstructor { location, name } => {
+                        let text = wrap_format!(
+                            "`{name}` is a type with no parameters, but here it's \
+being used as a type constructor."
+                        );
+
+                        Diagnostic {
+                            title: "Type used as a type constructor".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: Some("You can remove this".into()),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
-                }
 
-                TypeError::UnnecessarySpreadOperator { location, arity } => {
-                    let text = wrap_format!(
-                        "This record has {arity} fields and you have already \
+                    TypeError::IncorrectArity {
+                        labels,
+                        location,
+                        context,
+                        expected,
+                        given,
+                    } => {
+                        let text = if labels.is_empty() {
+                            "".into()
+                        } else {
+                            let subject = match context {
+                                IncorrectArityContext::Pattern => "pattern",
+                                IncorrectArityContext::Function => "call",
+                            };
+                            let labels = labels
+                                .iter()
+                                .map(|p| format!("  - {p}"))
+                                .sorted()
+                                .join("\n");
+                            format!(
+                                "This {subject} accepts these additional labelled \
+                                arguments:\n\n{labels}",
+                            )
+                        };
+                        let expected = match expected {
+                            0 => "no arguments".into(),
+                            1 => "1 argument".into(),
+                            _ => format!("{expected} arguments"),
+                        };
+                        let label = format!("Expected {expected}, got {given}");
+                        Diagnostic {
+                            title: "Incorrect arity".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: Some(label),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
+                    }
+
+                    TypeError::UnnecessarySpreadOperator { location, arity } => {
+                        let text = wrap_format!(
+                            "This record has {arity} fields and you have already \
 assigned variables to all of them."
-                    );
-                    Diagnostic {
-                        title: "Unnecessary spread operator".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: None,
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
+                        );
+                        Diagnostic {
+                            title: "Unnecessary spread operator".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
-                }
 
-                TypeError::UnsafeRecordUpdate { location, reason } =>
-                    match reason {
-                        UnsafeRecordUpdateReason::UnknownVariant {constructed_variant} => {
-                            let text = wrap_format!("
-This value cannot be used to build an updated `{constructed_variant}` \
-as it could be some other variant.
+                    TypeError::UnsafeRecordUpdate { location, reason } => match reason {
+                        UnsafeRecordUpdateReason::UnknownVariant {
+                            constructed_variant,
+                        } => {
+                            let text = wrap_format!(
+                                "This value cannot be used to build an updated \
+`{constructed_variant}` as it could be some other variant.
 
 Consider pattern matching on it with a case expression and then \
-constructing a new record with its values.");
+constructing a new record with its values."
+                            );
 
                             Diagnostic {
                                 title: "Unsafe record update".into(),
@@ -2204,7 +2371,9 @@ constructing a new record with its values.");
                                 level: Level::Error,
                                 location: Some(Location {
                                     label: Label {
-                                        text: Some(format!("I'm not sure this is always a `{constructed_variant}`")),
+                                        text: Some(format!(
+                                            "I'm not sure this is always a `{constructed_variant}`"
+                                        )),
                                         span: *location,
                                     },
                                     path: path.clone(),
@@ -2212,13 +2381,18 @@ constructing a new record with its values.");
                                     extra_labels: vec![],
                                 }),
                             }
-                        },
-                        UnsafeRecordUpdateReason::WrongVariant {constructed_variant, spread_variant} => {
-                            let text = wrap_format!("This value is a `{spread_variant}` so \
+                        }
+                        UnsafeRecordUpdateReason::WrongVariant {
+                            constructed_variant,
+                            spread_variant,
+                        } => {
+                            let text = wrap_format!(
+                                "This value is a `{spread_variant}` so \
 it cannot be used to build a `{constructed_variant}`, even if they share some fields.
 
 Note: If you want to change one variant of a type into another, you should \
-specify all fields explicitly instead of using the record update syntax.");
+specify all fields explicitly instead of using the record update syntax."
+                            );
 
                             Diagnostic {
                                 title: "Incorrect record update".into(),
@@ -2235,15 +2409,37 @@ specify all fields explicitly instead of using the record update syntax.");
                                     extra_labels: vec![],
                                 }),
                             }
-                        },
-                        UnsafeRecordUpdateReason::IncompatibleFieldTypes {expected_field_type, record_field_type, record_variant, field_name, ..} => {
+                        }
+                        UnsafeRecordUpdateReason::IncompatibleFieldTypes {
+                            expected_field_type,
+                            record_field_type,
+                            record_variant,
+                            field,
+                            ..
+                        } => {
                             let mut printer = Printer::new(names);
                             let expected_field_type = printer.print_type(expected_field_type);
                             let record_field_type = printer.print_type(record_field_type);
                             let record_variant = printer.print_type(record_variant);
-                            let text = wrap_format!("The `{field_name}` field of this value is a `{record_field_type}`, but the arguments given to the record update indicate that it should be a `{expected_field_type}`.
+                            let text = match field {
+                                RecordField::Labelled(label) => wrap_format!(
+                                    "The `{label}` field \
+of this value is a `{record_field_type}`, but the arguments given to the record \
+update indicate that it should be a `{expected_field_type}`.
 
-Note: If the same type variable is used for multiple fields, all those fields need to be updated at the same time if their type changes.");
+Note: If the same type variable is used for multiple fields, all those fields \
+need to be updated at the same time if their type changes."
+                                ),
+                                RecordField::Unlabelled(index) => wrap_format!(
+                                    "The {} field \
+of this value is a `{record_field_type}`, but the arguments given to the record \
+update indicate that it should be a `{expected_field_type}`.
+
+Note: Unlabelled fields cannot be updated in a record update, so either add \
+a label or use a record constructor.",
+                                    to_ordinal(*index + 1),
+                                ),
+                            };
 
                             Diagnostic {
                                 title: "Incomplete record update".into(),
@@ -2261,223 +2457,164 @@ Note: If the same type variable is used for multiple fields, all those fields ne
                                 }),
                             }
                         }
-                    }
+                    },
 
+                    TypeError::UnknownType {
+                        location,
+                        name,
+                        hint,
+                    } => {
+                        let label_text = match hint {
+                            UnknownTypeHint::AlternativeTypes(types) => did_you_mean(name, types),
+                            UnknownTypeHint::ValueInScopeWithSameName => None,
+                        };
 
-                TypeError::UnknownType {
-                    location,
-                    name,
-                    hint,
-                } => {
-                    let label_text = match hint {
-                        UnknownTypeHint::AlternativeTypes(types) => did_you_mean(name, types),
-                        UnknownTypeHint::ValueInScopeWithSameName => None,
-                    };
-
-                    let mut text =
-                        wrap_format!("The type `{name}` is not defined or imported in this module.");
-
-                    match hint {
-                        UnknownTypeHint::ValueInScopeWithSameName => {
-                            let hint = wrap_format!(
-                                "There is a value in scope with the name `{name}`, \
-but no type in scope with that name."
+                        let mut text = wrap_format!(
+                            "The type `{name}` is not defined or imported in this module."
                         );
-                            text.push('\n');
-                            text.push_str(hint.as_str());
+
+                        match hint {
+                            UnknownTypeHint::ValueInScopeWithSameName => {
+                                let hint = wrap_format!(
+                                    "There is a value in scope with the name `{name}`, \
+but no type in scope with that name."
+                                );
+                                text.push('\n');
+                                text.push_str(hint.as_str());
+                            }
+                            UnknownTypeHint::AlternativeTypes(_) => {}
+                        };
+
+                        Diagnostic {
+                            title: "Unknown type".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: label_text,
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
                         }
-                        UnknownTypeHint::AlternativeTypes(_) => {}
-                    };
-
-                    Diagnostic {
-                        title: "Unknown type".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: label_text,
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
                     }
-                }
 
-                TypeError::UnknownVariable {
-                    location,
-                    variables,
-                    name,
-                    type_with_name_in_scope,
-                } => {
-                    let text = if *type_with_name_in_scope {
-                        wrap_format!("`{name}` is a type, it cannot be used as a value.")
-                    } else {
-                        let is_first_char_uppercase = name.chars().next().is_some_and(char::is_uppercase);
+                    TypeError::UnknownVariable {
+                        location,
+                        variables,
+                        discarded_location,
+                        name,
+                        type_with_name_in_scope,
+                    } => {
+                        let title = String::from("Unknown variable");
 
-                        if is_first_char_uppercase {
-                            wrap_format!("The custom type variant constructor `{name}` is not in scope here.")
+                        if let Some(ignored_location) = discarded_location {
+                            let location = Location {
+                                label: Label {
+                                    text: Some("So this is not in scope".into()),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![ExtraLabel {
+                                    src_info: None,
+                                    label: Label {
+                                        text: Some("This value is discarded".into()),
+                                        span: *ignored_location,
+                                    },
+                                }],
+                            };
+                            Diagnostic {
+                                title,
+                                text: "".into(),
+                                hint: Some(wrap_format!(
+                                    "Change `_{name}` to `{name}` or reference another variable",
+                                )),
+                                level: Level::Error,
+                                location: Some(location),
+                            }
                         } else {
-                            wrap_format!("The name `{name}` is not in scope here.")
+                            let text = if *type_with_name_in_scope {
+                                wrap_format!("`{name}` is a type, it cannot be used as a value.")
+                            } else {
+                                let is_first_char_uppercase =
+                                    name.chars().next().is_some_and(char::is_uppercase);
+
+                                if is_first_char_uppercase {
+                                    wrap_format!(
+                                        "The custom type variant constructor \
+`{name}` is not in scope here."
+                                    )
+                                } else {
+                                    wrap_format!("The name `{name}` is not in scope here.")
+                                }
+                            };
+
+                            Diagnostic {
+                                title,
+                                text,
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: did_you_mean(name, variables),
+                                        span: *location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                }),
+                            }
                         }
-                    };
-                    Diagnostic {
-                        title: "Unknown variable".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: did_you_mean(name, variables),
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
                     }
-                }
 
-                TypeError::PrivateTypeLeak { location, leaked } => {
-                    let mut printer = Printer::new(names);
+                    TypeError::PrivateTypeLeak { location, leaked } => {
+                        let mut printer = Printer::new(names);
 
-                    // TODO: be more precise.
-                    // - is being returned by this public function
-                    // - is taken as an argument by this public function
-                    // - is taken as an argument by this public enum constructor
-                    // etc
-                    let text = wrap_format!(
-                        "The following type is private, but is \
+                        // TODO: be more precise.
+                        // - is being returned by this public function
+                        // - is taken as an argument by this public function
+                        // - is taken as an argument by this public enum constructor
+                        // etc
+                        let text = wrap_format!(
+                            "The following type is private, but is \
 being used by this public export.
 
     {}
 
 Private types can only be used within the module that defines them.",
-                        printer.print_type(leaked),
-                    );
-                    Diagnostic {
-                        title: "Private type used in public interface".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: None,
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
-                    }
-                }
-
-                TypeError::UnknownModule {
-                    location,
-                    name,
-                    suggestions
-                } => Diagnostic {
-                    title: "Unknown module".into(),
-                    text: format!("No module has been found with the name `{name}`."),
-                    hint: suggestions.first().map(|suggestion| suggestion.suggestion(name)),
-                    level: Level::Error,
-                    location: Some(Location {
-                        label: Label {
-                            text: None,
-                            span: *location,
-                        },
-                        path: path.clone(),
-                        src: src.clone(),
-                        extra_labels: vec![],
-                    }),
-                },
-
-                TypeError::UnknownModuleType {
-                    location,
-                    name,
-                    module_name,
-                    type_constructors,
-                    value_with_same_name: imported_type_as_value
-                } => {
-                    let text = if *imported_type_as_value {
-                        format!("`{name}` is only a value, it cannot be imported as a type.")
-                    } else {
-                        format!("The module `{module_name}` does not have a `{name}` type.")
-                    };
-                    Diagnostic {
-                        title: "Unknown module type".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: if *imported_type_as_value {
-                                    Some(format!("Did you mean `{name}`?"))
-                                } else {
-                                    did_you_mean(name, type_constructors)
-                                },
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
-                    }
-                }
-
-                TypeError::UnknownModuleValue {
-                    location,
-                    name,
-                    module_name,
-                    value_constructors,
-                    type_with_same_name: imported_value_as_type,
-                    context,
-                } => {
-                    let text = if *imported_value_as_type {
-                        match context {
-                            ModuleValueUsageContext::UnqualifiedImport =>
-                                wrap_format!("`{name}` is only a type, it cannot be imported as a value."),
-                            ModuleValueUsageContext::ModuleAccess =>
-                                wrap_format!("{module_name}.{name} is a type constructor, it cannot be used as a value"),
-                        }
-                    } else {
-                        wrap_format!("The module `{module_name}` does not have a `{name}` value.")
-                    };
-                    Diagnostic {
-                        title: "Unknown module value".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: if *imported_value_as_type && matches!(context, ModuleValueUsageContext::UnqualifiedImport) {
-                                    Some(format!("Did you mean `type {name}`?"))
-                                } else {
-                                    did_you_mean(name, value_constructors)
-                                },
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
-                    }
-                }
-
-                TypeError::ModuleAliasUsedAsName {
-                    location,
-                    name
-                } => {
-                    let text = wrap(
-"Modules are not values, so you cannot assign them to variables, pass \
-them to functions, or anything else that you would do with a value."
+                            printer.print_type(leaked),
                         );
-                    Diagnostic {
-                        title: format!("Module `{name}` used as a value"),
-                        text,
-                        hint: None,
+                        Diagnostic {
+                            title: "Private type used in public interface".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
+                    }
+
+                    TypeError::UnknownModule {
+                        location,
+                        name,
+                        suggestions,
+                    } => Diagnostic {
+                        title: "Unknown module".into(),
+                        text: format!("No module has been found with the name `{name}`."),
+                        hint: suggestions
+                            .first()
+                            .map(|suggestion| suggestion.suggestion(name)),
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -2488,267 +2625,390 @@ them to functions, or anything else that you would do with a value."
                             src: src.clone(),
                             extra_labels: vec![],
                         }),
-                    }
-                }
+                    },
 
-                TypeError::IncorrectNumClausePatterns {
-                    location,
-                    expected,
-                    given,
-                } => {
-                    let text = wrap_format!(
-                            "This case expression has {expected} subjects, \
+                    TypeError::UnknownModuleType {
+                        location,
+                        name,
+                        module_name,
+                        type_constructors,
+                        value_with_same_name: imported_type_as_value,
+                    } => {
+                        let text = if *imported_type_as_value {
+                            format!("`{name}` is only a value, it cannot be imported as a type.")
+                        } else {
+                            format!("The module `{module_name}` does not have a `{name}` type.")
+                        };
+                        Diagnostic {
+                            title: "Unknown module type".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: if *imported_type_as_value {
+                                        Some(format!("Did you mean `{name}`?"))
+                                    } else {
+                                        did_you_mean(name, type_constructors)
+                                    },
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
+                    }
+
+                    TypeError::UnknownModuleValue {
+                        location,
+                        name,
+                        module_name,
+                        value_constructors,
+                        type_with_same_name: imported_value_as_type,
+                        context,
+                    } => {
+                        let text = if *imported_value_as_type {
+                            match context {
+                                ModuleValueUsageContext::UnqualifiedImport => wrap_format!(
+                                    "`{name}` is only a type, it cannot be imported as a value."
+                                ),
+                                ModuleValueUsageContext::ModuleAccess => wrap_format!(
+                                    "{module_name}.{name} is a type constructor, \
+it cannot be used as a value"
+                                ),
+                            }
+                        } else {
+                            wrap_format!(
+                                "The module `{module_name}` does not have a `{name}` value."
+                            )
+                        };
+                        Diagnostic {
+                            title: "Unknown module value".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: if *imported_value_as_type
+                                        && matches!(
+                                            context,
+                                            ModuleValueUsageContext::UnqualifiedImport
+                                        ) {
+                                        Some(format!("Did you mean `type {name}`?"))
+                                    } else {
+                                        did_you_mean(name, value_constructors)
+                                    },
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
+                    }
+
+                    TypeError::ModuleAliasUsedAsName { location, name } => {
+                        let text = wrap(
+                            "Modules are not values, so you cannot assign them \
+to variables, pass them to functions, or anything else that you would do with a value.",
+                        );
+                        Diagnostic {
+                            title: format!("Module `{name}` used as a value"),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
+                    }
+
+                    TypeError::IncorrectNumClausePatterns {
+                        location,
+                        expected,
+                        given,
+                    } => {
+                        let subject = if *expected == 1 {
+                            "subject"
+                        } else {
+                            "subjects"
+                        };
+                        let pattern = if *expected == 1 {
+                            "pattern"
+                        } else {
+                            "patterns"
+                        };
+                        let text = wrap_format!(
+                            "This case expression has {expected} {subject}, \
 but this pattern matches {given}.
 Each clause must have a pattern for every subject value.",
-                            );
-                    Diagnostic {
-                        title: "Incorrect number of patterns".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: Some(format!("Expected {expected} patterns, got {given}")),
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
+                        );
+                        Diagnostic {
+                            title: "Incorrect number of patterns".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: Some(format!(
+                                        "Expected {expected} {pattern}, got {given}"
+                                    )),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
-                }
 
-                TypeError::NonLocalClauseGuardVariable { location, name } => {
-                    let text = wrap_format!(
-                        "Variables used in guards must be either defined in the \
+                    TypeError::NonLocalClauseGuardVariable { location, name } => {
+                        let text = wrap_format!(
+                            "Variables used in guards must be either defined in the \
 function, or be an argument to the function. The variable \
 `{name}` is not defined locally.",
-                    );
-                    Diagnostic {
-                        title: "Invalid guard variable".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: Some("Is not locally defined".into()),
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
+                        );
+                        Diagnostic {
+                            title: "Invalid guard variable".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: Some("Is not locally defined".into()),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
-                }
 
-                TypeError::ExtraVarInAlternativePattern { location, name } => {
-                    let text = wrap_format!(
-"All alternative patterns must define the same variables as \
-the initial pattern. This variable `{name}` has not been \
-previously defined.",
-                    );
-                    Diagnostic {
-                        title: "Extra alternative pattern variable".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: Some("Has not been previously defined".into()),
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
+                    TypeError::ExtraVarInAlternativePattern { location, name } => {
+                        let text = wrap_format!(
+                            "All alternative patterns must define the same variables as \
+the initial pattern. This variable `{name}` has not been previously defined.",
+                        );
+                        Diagnostic {
+                            title: "Extra alternative pattern variable".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: Some("Has not been previously defined".into()),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
-                }
 
-                TypeError::MissingVarInAlternativePattern { location, name } => {
-                    let text = wrap_format!(
-                        "All alternative patterns must define the same variables \
+                    TypeError::MissingVarInAlternativePattern { location, name } => {
+                        let text = wrap_format!(
+                            "All alternative patterns must define the same variables \
 as the initial pattern, but the `{name}` variable is missing.",
-                    );
-                    Diagnostic {
-                        title: "Missing alternative pattern variable".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: Some("This does not define all required variables".into()),
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
+                        );
+                        Diagnostic {
+                            title: "Missing alternative pattern variable".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: Some(
+                                        "This does not define all required variables".into(),
+                                    ),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
-                }
 
-                TypeError::DuplicateVarInPattern { location, name } => {
-                    let text = wrap_format!(
-                        "Variables can only be used once per pattern. This \
+                    TypeError::DuplicateVarInPattern { location, name } => {
+                        let text = wrap_format!(
+                            "Variables can only be used once per pattern. This \
 variable `{name}` appears multiple times.
 If you used the same variable twice deliberately in order to check for equality \
 please use a guard clause instead.
 e.g. (x, y) if x == y -> ...",
-                    );
-                    Diagnostic {
-                        title: "Duplicate variable in pattern".into(),
-                        text,
+                        );
+                        Diagnostic {
+                            title: "Duplicate variable in pattern".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: Some("This has already been used".into()),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
+                    }
+
+                    TypeError::OutOfBoundsTupleIndex {
+                        location, size: 0, ..
+                    } => Diagnostic {
+                        title: "Out of bounds tuple index".into(),
+                        text: "This tuple has no elements so it cannot be indexed at all.".into(),
                         hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: Some("This has already been used".into()),
+                                text: None,
                                 span: *location,
                             },
                             path: path.clone(),
                             src: src.clone(),
                             extra_labels: vec![],
                         }),
-                    }
-                }
+                    },
 
-                TypeError::OutOfBoundsTupleIndex {
-                    location, size: 0, ..
-                } => Diagnostic {
-                    title: "Out of bounds tuple index".into(),
-                    text: "This tuple has no elements so it cannot be indexed at all.".into(),
-                    hint: None,
-                    level: Level::Error,
-                    location: Some(Location {
-                        label: Label {
-                            text: None,
-                            span: *location,
-                        },
-                        path: path.clone(),
-                        src: src.clone(),
-                        extra_labels: vec![],
-                    }),
-                },
-
-                TypeError::OutOfBoundsTupleIndex {
-                    location,
-                    index,
-                    size,
-                } => {
-                    let text = wrap_format!(
-                        "The index being accessed for this tuple is {}, but this \
-tuple has {} elements so the highest valid index is {}.",
+                    TypeError::OutOfBoundsTupleIndex {
+                        location,
                         index,
                         size,
-                        size - 1,
-                    );
-                    Diagnostic {
-                        title: "Out of bounds tuple index".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: Some("This index is too large".into()),
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
+                    } => {
+                        let text = wrap_format!(
+                            "The index being accessed for this tuple is {}, but this \
+tuple has {} elements so the highest valid index is {}.",
+                            index,
+                            size,
+                            size - 1,
+                        );
+                        Diagnostic {
+                            title: "Out of bounds tuple index".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: Some("This index is too large".into()),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
-                }
 
-                TypeError::NotATuple { location, given } => {
-                    let mut printer = Printer::new(names);
-                    let text = format!(
-                        "To index into this value it needs to be a tuple, however it has this type:
+                    TypeError::NotATuple { location, given } => {
+                        let mut printer = Printer::new(names);
+                        let text = format!(
+                            "To index into this value it needs to be a tuple, \
+however it has this type:
 
     {}",
-                        printer.print_type(given),
-                    );
-                    Diagnostic {
-                        title: "Type mismatch".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: Some("This is not a tuple".into()),
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
-                    }
-                }
-
-                TypeError::NotATupleUnbound { location } => {
-                    let text = wrap("To index into a tuple we need to \
-know its size, but we don't know anything about this type yet. \
-Please add some type annotations so we can continue."
+                            printer.print_type(given),
                         );
-                    Diagnostic {
-                        title: "Type mismatch".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: Some("What type is this?".into()),
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
+                        Diagnostic {
+                            title: "Type mismatch".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: Some("This is not a tuple".into()),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
-                }
 
-                TypeError::RecordAccessUnknownType { location } => {
-                    let text = wrap("In order to access a record field \
+                    TypeError::NotATupleUnbound { location } => {
+                        let text = wrap(
+                            "To index into a tuple we need to \
+know its size, but we don't know anything about this type yet. \
+Please add some type annotations so we can continue.",
+                        );
+                        Diagnostic {
+                            title: "Type mismatch".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: Some("What type is this?".into()),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
+                    }
+
+                    TypeError::RecordAccessUnknownType { location } => {
+                        let text = wrap(
+                            "In order to access a record field \
 we need to know what type it is, but I can't tell \
 the type here. Try adding type annotations to your \
-function and try again.");
-                    Diagnostic {
-                        title: "Unknown type for record access".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: Some("I don't know what type this is".into()),
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
+function and try again.",
+                        );
+                        Diagnostic {
+                            title: "Unknown type for record access".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: Some("I don't know what type this is".into()),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
-                }
 
-                TypeError::BitArraySegmentError { error, location } => {
-                    let (label, mut extra) = match error {
+                    TypeError::BitArraySegmentError { error, location } => {
+                        let (label, mut extra) = match error {
                             bit_array::ErrorType::ConflictingTypeOptions { existing_type } => (
                                 "This is an extra type specifier",
-                                vec![format!("Hint: This segment already has the type {existing_type}.")],
+                                vec![format!(
+                                    "Hint: This segment already has the type {existing_type}."
+                                )],
                             ),
 
                             bit_array::ErrorType::ConflictingSignednessOptions {
-                                existing_signed
+                                existing_signed,
                             } => (
                                 "This is an extra signedness specifier",
                                 vec![format!(
-                                    "Hint: This segment already has a signedness of {existing_signed}."
+                                    "Hint: This segment already has a \
+signedness of {existing_signed}."
                                 )],
                             ),
 
                             bit_array::ErrorType::ConflictingEndiannessOptions {
-                                existing_endianness
+                                existing_endianness,
                             } => (
                                 "This is an extra endianness specifier",
                                 vec![format!(
-                                    "Hint: This segment already has an endianness of {existing_endianness}."
+                                    "Hint: This segment already has an \
+endianness of {existing_endianness}."
                                 )],
                             ),
 
@@ -2769,8 +3029,10 @@ function and try again.");
 
                             bit_array::ErrorType::InvalidEndianness => (
                                 "This option is invalid here",
-                                    vec![wrap("Hint: signed and unsigned can only be used with \
-    int, float, utf16 and utf32 types.")],
+                                vec![wrap(
+                                    "Hint: signed and unsigned \
+can only be used with int, float, utf16 and utf32 types.",
+                                )],
                             ),
 
                             bit_array::ErrorType::OptionNotAllowedInValue => (
@@ -2788,131 +3050,183 @@ function and try again.");
                             ),
                             bit_array::ErrorType::TypeDoesNotAllowUnit { type_ } => (
                                 "Unit cannot be specified here",
-                                vec![wrap(&format!("Hint: {type_} segments are sized based on their value \
-    and cannot have a unit."))],
+                                vec![wrap(&format!(
+                                    "Hint: {type_} segments \
+are sized based on their value and cannot have a unit."
+                                ))],
                             ),
                             bit_array::ErrorType::VariableUtfSegmentInPattern => (
                                 "This cannot be a variable",
-                                vec![wrap("Hint: in patterns utf8, utf16, and utf32  must be an exact string.")],
+                                vec![wrap(
+                                    "Hint: in patterns utf8, utf16, and \
+utf32  must be an exact string.",
+                                )],
                             ),
                             bit_array::ErrorType::SegmentMustHaveSize => (
                                 "This segment has no size",
-                                vec![wrap("Hint: Bit array segments without a size are only \
-    allowed at the end of a bin pattern.")],
+                                vec![wrap(
+                                    "Hint: Bit array segments without \
+a size are only allowed at the end of a bin pattern.",
+                                )],
                             ),
                             bit_array::ErrorType::UnitMustHaveSize => (
                                 "This needs an explicit size",
-                                vec!["Hint: If you specify unit() you must also specify size().".into()],
+                                vec![
+                                    "Hint: If you specify unit() you must also specify size()."
+                                        .into(),
+                                ],
+                            ),
+                            bit_array::ErrorType::ConstantSizeNotPositive => {
+                                ("A constant size must be a positive number", vec![])
+                            }
+                            bit_array::ErrorType::OptionNotSupportedForTarget {
+                                target,
+                                option: UnsupportedOption::NativeEndianness,
+                            } => (
+                                "Unsupported endianness",
+                                vec![wrap_format!(
+                                    "The {target} target does not support the `native` \
+endianness option."
+                                )],
+                            ),
+                            bit_array::ErrorType::OptionNotSupportedForTarget {
+                                target,
+                                option: UnsupportedOption::UtfCodepointPattern,
+                            } => (
+                                "UTF-codepoint pattern matching is not supported",
+                                vec![wrap_format!(
+                                    "The {target} target does not support \
+UTF-codepoint pattern matching."
+                                )],
                             ),
                         };
-                    extra.push("See: https://tour.gleam.run/data-types/bit-arrays/".into());
-                    let text = extra.join("\n");
-                    Diagnostic {
-                        title: "Invalid bit array segment".into(),
-                        text,
+                        extra.push("See: https://tour.gleam.run/data-types/bit-arrays/".into());
+                        let text = extra.join("\n");
+                        Diagnostic {
+                            title: "Invalid bit array segment".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: Some(label.into()),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
+                    }
+                    TypeError::RecordUpdateInvalidConstructor { location } => Diagnostic {
+                        title: "Invalid record constructor".into(),
+                        text: "Only record constructors can be used with the update syntax.".into(),
                         hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: Some(label.into()),
+                                text: Some("This is not a record constructor".into()),
                                 span: *location,
                             },
                             path: path.clone(),
                             src: src.clone(),
                             extra_labels: vec![],
                         }),
-                    }
-                }
+                    },
 
-                TypeError::RecordUpdateInvalidConstructor { location } => Diagnostic {
-                    title: "Invalid record constructor".into(),
-                    text: "Only record constructors can be used with the update syntax.".into(),
-                    hint: None,
-                    level: Level::Error,
-                    location: Some(Location {
-                        label: Label {
-                            text: Some("This is not a record constructor".into()),
-                            span: *location,
-                        },
-                        path: path.clone(),
-                        src: src.clone(),
-                        extra_labels: vec![],
-                    }),
-                },
-
-                TypeError::UnexpectedTypeHole { location } => Diagnostic {
-                    title: "Unexpected type hole".into(),
-                    text: "We need to know the exact type here so type holes cannot be used.".into(),
-                    hint: None,
-                    level: Level::Error,
-                    location: Some(Location {
-                        label: Label {
-                            text: Some("I need to know what this is".into()),
-                            span: *location,
-                        },
-                        path: path.clone(),
-                        src: src.clone(),
-                        extra_labels: vec![],
-                    }),
-                },
-
-                TypeError::ReservedModuleName { name } => {
-                    let text = format!(
-                        "The module name `{name}` is reserved.
-Try a different name for this module."
-                    );
-                    Diagnostic {
-                        title: "Reserved module name".into(),
-                        text,
+                    TypeError::UnexpectedTypeHole { location } => Diagnostic {
+                        title: "Unexpected type hole".into(),
+                        text: "We need to know the exact type here so type holes cannot be used."
+                            .into(),
                         hint: None,
-                        location: None,
                         level: Level::Error,
-                    }
-                }
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("I need to know what this is".into()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    },
 
-                TypeError::KeywordInModuleName { name, keyword } => {
-                    let text = wrap_format!(
-                        "The module name `{name}` contains the keyword `{keyword}`, \
+                    TypeError::ReservedModuleName { name } => {
+                        let text = format!(
+                            "The module name `{name}` is reserved.
+Try a different name for this module."
+                        );
+                        Diagnostic {
+                            title: "Reserved module name".into(),
+                            text,
+                            hint: None,
+                            location: None,
+                            level: Level::Error,
+                        }
+                    }
+
+                    TypeError::KeywordInModuleName { name, keyword } => {
+                        let text = wrap_format!(
+                            "The module name `{name}` contains the keyword `{keyword}`, \
 so importing it would be a syntax error.
 Try a different name for this module."
-                    );
-                    Diagnostic {
-                        title: "Invalid module name".into(),
-                        text,
-                        hint: None,
-                        location: None,
-                        level: Level::Error,
+                        );
+                        Diagnostic {
+                            title: "Invalid module name".into(),
+                            text,
+                            hint: None,
+                            location: None,
+                            level: Level::Error,
+                        }
                     }
-                }
 
-                TypeError::NotExhaustivePatternMatch {
-                    location,
-                    unmatched,
-                    kind,
-                } => {
-                    let mut text = match kind {
-                        PatternMatchKind::Case => {
-                            "This case expression does not match all possibilities.
+                    TypeError::NotExhaustivePatternMatch {
+                        location,
+                        unmatched,
+                        kind,
+                    } => {
+                        let mut text = match kind {
+                            PatternMatchKind::Case => {
+                                "This case expression does not match all possibilities.
 Each constructor must have a pattern that matches it or
 else it could crash."
-                        }
-                        PatternMatchKind::Assignment => {
-                            "This assignment does not match all possibilities.
+                            }
+                            PatternMatchKind::Assignment => {
+                                "This assignment does not match all possibilities.
 Either use a case expression with patterns for each possible
 value, or use `let assert` rather than `let`."
+                            }
+                        }
+                        .to_string();
+
+                        text.push_str("\n\nThese values are not matched:\n\n");
+                        for unmatched in unmatched {
+                            text.push_str("  - ");
+                            text.push_str(unmatched);
+                            text.push('\n');
+                        }
+                        Diagnostic {
+                            title: "Not exhaustive pattern match".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
                         }
                     }
-                    .to_string();
 
-                    text.push_str("\n\nThese values are not matched:\n\n");
-                    for unmatched in unmatched {
-                        text.push_str("  - ");
-                        text.push_str(unmatched);
-                        text.push('\n');
-                    }
-                    Diagnostic {
-                        title: "Not exhaustive pattern match".into(),
-                        text,
+                    TypeError::ArgumentNameAlreadyUsed { location, name } => Diagnostic {
+                        title: "Argument name already used".into(),
+                        text: format!(
+                            "Two `{name}` arguments have been defined for this function."
+                        ),
                         hint: None,
                         level: Level::Error,
                         location: Some(Location {
@@ -2924,631 +3238,846 @@ value, or use `let assert` rather than `let`."
                             src: src.clone(),
                             extra_labels: vec![],
                         }),
-                    }
-                }
+                    },
 
-                TypeError::ArgumentNameAlreadyUsed { location, name } => Diagnostic {
-                    title: "Argument name already used".into(),
-                    text: format!("Two `{name}` arguments have been defined for this function."),
-                    hint: None,
-                    level: Level::Error,
-                    location: Some(Location {
-                        label: Label {
-                            text: None,
-                            span: *location,
-                        },
-                        path: path.clone(),
-                        src: src.clone(),
-                        extra_labels: vec![],
-                    }),
-                },
+                    TypeError::UnlabelledAfterlabelled { location } => Diagnostic {
+                        title: "Unlabelled argument after labelled argument".into(),
+                        text: wrap(
+                            "All unlabelled arguments must come before any labelled arguments.",
+                        ),
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    },
 
-                TypeError::UnlabelledAfterlabelled { location } => Diagnostic {
-                    title: "Unlabelled argument after labelled argument".into(),
-                    text: wrap("All unlabelled arguments must come before any labelled arguments."),
-                    hint: None,
-                    level: Level::Error,
-                    location: Some(Location {
-                        label: Label {
-                            text: None,
-                            span: *location,
-                        },
-                        path: path.clone(),
-                        src: src.clone(),
-                        extra_labels: vec![],
-                    }),
-                },
-
-                TypeError::RecursiveTypeAlias { location, cycle } => {
-                    let mut text = "This type alias is defined in terms of itself.\n".into();
-                    write_cycle(&mut text, cycle);
-                    text.push_str(
-                        "If we tried to compile this recursive type it would expand
+                    TypeError::RecursiveTypeAlias { location, cycle } => {
+                        let mut text = "This type alias is defined in terms of itself.\n".into();
+                        write_cycle(&mut text, cycle);
+                        text.push_str(
+                            "If we tried to compile this recursive type it would expand
 forever in a loop, and we'd never get the final type.",
-                    );
-                    Diagnostic {
-                        title: "Type cycle".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: None,
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
+                        );
+                        Diagnostic {
+                            title: "Type cycle".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
-                }
 
-                TypeError::ExternalMissingAnnotation { location, kind } => {
-                    let kind = match kind {
-                        MissingAnnotation::Parameter => "parameter",
-                        MissingAnnotation::Return => "return",
-                    };
-                    let text = format!(
-                        "A {kind} annotation is missing from this function.
+                    TypeError::ExternalMissingAnnotation { location, kind } => {
+                        let kind = match kind {
+                            MissingAnnotation::Parameter => "parameter",
+                            MissingAnnotation::Return => "return",
+                        };
+                        let text = format!(
+                            "A {kind} annotation is missing from this function.
 
 Functions with external implementations must have type annotations
 so we can tell what type of values they accept and return.",
-                    );
-                    Diagnostic {
-                        title: "Missing type annotation".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: None,
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
+                        );
+                        Diagnostic {
+                            title: "Missing type annotation".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
-                }
 
-                TypeError::NoImplementation { location } => {
-                    let text = "We can't compile this function as it doesn't have an
+                    TypeError::NoImplementation { location } => {
+                        let text = "We can't compile this function as it doesn't have an
 implementation. Add a body or an external implementation
 using the `@external` attribute."
-                        .into();
-                    Diagnostic {
-                        title: "Function without an implementation".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: None,
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
+                            .into();
+                        Diagnostic {
+                            title: "Function without an implementation".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
-                }
 
-                TypeError::InvalidExternalJavascriptModule {
-                    location,
-                    name,
-                    module,
-                } => {
-                    let text = wrap_format!(
-                        "The function `{name}` has an external JavaScript \
+                    TypeError::InvalidExternalJavascriptModule {
+                        location,
+                        name,
+                        module,
+                    } => {
+                        let text = wrap_format!(
+                            "The function `{name}` has an external JavaScript \
 implementation but the module path `{module}` is not valid."
-                    );
-                    Diagnostic {
-                        title: "Invalid JavaScript module".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: None,
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
+                        );
+                        Diagnostic {
+                            title: "Invalid JavaScript module".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
-                }
 
-                TypeError::InvalidExternalJavascriptFunction {
-                    location,
-                    name,
-                    function,
-                } => {
-                    let text = wrap_format!(
-                        "The function `{name}` has an external JavaScript \
+                    TypeError::InvalidExternalJavascriptFunction {
+                        location,
+                        name,
+                        function,
+                    } => {
+                        let text = wrap_format!(
+                            "The function `{name}` has an external JavaScript \
 implementation but the function name `{function}` is not valid."
-                    );
-                    Diagnostic {
-                        title: "Invalid JavaScript function".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: None,
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
+                        );
+                        Diagnostic {
+                            title: "Invalid JavaScript function".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
-                }
 
-                TypeError::InexhaustiveLetAssignment { location, missing } => {
-                    let mut text =wrap(
-                        "This assignment uses a pattern that does not \
+                    TypeError::InexhaustiveLetAssignment { location, missing } => {
+                        let mut text = wrap(
+                            "This assignment uses a pattern that does not \
 match all possible values. If one of the other values \
 is used then the assignment will crash.
 
-The missing patterns are:\n");
-                    for missing in missing {
-                        text.push_str("\n    ");
-                        text.push_str(missing);
-                    }
-                    text.push('\n');
+The missing patterns are:\n",
+                        );
+                        for missing in missing {
+                            text.push_str("\n    ");
+                            text.push_str(missing);
+                        }
+                        text.push('\n');
 
-                    Diagnostic {
-                        title: "Inexhaustive pattern".into(),
-                        text,
-                        hint: Some("Use a more general pattern or use `let assert` instead.".into()),
-                        level: Level::Error,
-                        location: Some(Location {
-                            src: src.clone(),
-                            path: path.to_path_buf(),
-                            label: Label {
-                                text: None,
-                                span: *location,
-                            },
-                            extra_labels: Vec::new(),
-                        }),
+                        Diagnostic {
+                            title: "Inexhaustive pattern".into(),
+                            text,
+                            hint: Some(
+                                "Use a more general pattern or use `let assert` instead.".into(),
+                            ),
+                            level: Level::Error,
+                            location: Some(Location {
+                                src: src.clone(),
+                                path: path.to_path_buf(),
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                extra_labels: Vec::new(),
+                            }),
+                        }
                     }
-                }
 
-                TypeError::InexhaustiveCaseExpression { location, missing } => {
-                    let mut text =wrap(
-                        "This case expression does not have a pattern \
+                    TypeError::InexhaustiveCaseExpression { location, missing } => {
+                        let mut text = wrap(
+                            "This case expression does not have a pattern \
 for all possible values. If it is run on one of the \
 values without a pattern then it will crash.
 
-The missing patterns are:\n"
+The missing patterns are:\n",
                         );
-                    for missing in missing {
-                        text.push_str("\n    ");
-                        text.push_str(missing);
+                        for missing in missing {
+                            text.push_str("\n    ");
+                            text.push_str(missing);
+                        }
+                        Diagnostic {
+                            title: "Inexhaustive patterns".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                src: src.clone(),
+                                path: path.to_path_buf(),
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                extra_labels: Vec::new(),
+                            }),
+                        }
                     }
-                    Diagnostic {
-                        title: "Inexhaustive patterns".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            src: src.clone(),
-                            path: path.to_path_buf(),
-                            label: Label {
-                                text: None,
-                                span: *location,
-                            },
-                            extra_labels: Vec::new(),
-                        }),
-                    }
-                }
 
-                TypeError::MissingCaseBody { location } => {
-                    let text = wrap(
-                        "This case expression is missing its body."
-                        );
-                    Diagnostic {
-                        title: "Missing case body".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            src: src.clone(),
-                            path: path.to_path_buf(),
-                            label: Label {
-                                text: None,
-                                span: *location,
-                            },
-                            extra_labels: Vec::new(),
-                        }),
+                    TypeError::MissingCaseBody { location } => {
+                        let text = wrap("This case expression is missing its body.");
+                        Diagnostic {
+                            title: "Missing case body".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                src: src.clone(),
+                                path: path.to_path_buf(),
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                extra_labels: Vec::new(),
+                            }),
+                        }
                     }
-                }
 
-                TypeError::UnsupportedExpressionTarget {
-                    location,
-                    target: current_target,
-                } => {
-                    let text = wrap_format!(
-                        "This value is not available as it is defined using externals, \
+                    TypeError::UnsupportedExpressionTarget {
+                        location,
+                        target: current_target,
+                    } => {
+                        let text = wrap_format!(
+                            "This value is not available as it is defined using externals, \
 and there is no implementation for the {} target.\n",
-                        match current_target {
+                            match current_target {
+                                Target::Erlang => "Erlang",
+                                Target::JavaScript => "JavaScript",
+                            }
+                        );
+                        let hint = wrap("Did you mean to build for a different target?");
+                        Diagnostic {
+                            title: "Unsupported target".into(),
+                            text,
+                            hint: Some(hint),
+                            level: Level::Error,
+                            location: Some(Location {
+                                path: path.clone(),
+                                src: src.clone(),
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                extra_labels: vec![],
+                            }),
+                        }
+                    }
+
+                    TypeError::UnsupportedPublicFunctionTarget {
+                        location,
+                        name,
+                        target,
+                    } => {
+                        let target = match target {
                             Target::Erlang => "Erlang",
                             Target::JavaScript => "JavaScript",
-                        }
-                    );
-                    let hint = wrap("Did you mean to build for a different target?");
-                    Diagnostic {
-                        title: "Unsupported target".into(),
-                        text,
-                        hint: Some(hint),
-                        level: Level::Error,
-                        location: Some(Location {
-                            path: path.clone(),
-                            src: src.clone(),
-                            label: Label {
-                                text: None,
-                                span: *location,
-                            },
-                            extra_labels: vec![],
-                        }),
-                    }
-                }
-
-                TypeError::UnsupportedPublicFunctionTarget {
-                    location,
-                    name,
-                    target,
-                } => {
-                    let target = match target {
-                        Target::Erlang => "Erlang",
-                        Target::JavaScript => "JavaScript",
-                    };
-                    let text = wrap_format!(
-                        "The `{name}` function is public but doesn't have an \
+                        };
+                        let text = wrap_format!(
+                            "The `{name}` function is public but doesn't have an \
 implementation for the {target} target. All public functions of a package \
 must be able to compile for a module to be valid."
-                    );
-                    Diagnostic {
-                        title: "Unsupported target".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            path: path.clone(),
-                            src: src.clone(),
-                            label: Label {
-                                text: None,
-                                span: *location,
-                            },
-                            extra_labels: vec![],
-                        }),
+                        );
+                        Diagnostic {
+                            title: "Unsupported target".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                path: path.clone(),
+                                src: src.clone(),
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
-                }
 
-                TypeError::UnusedTypeAliasParameter { location, name } => {
-                    let text = wrap_format!(
-                        "The type variable `{name}` is unused. It can be safely removed.",
-                    );
-                    Diagnostic {
-                        title: "Unused type parameter".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            path: path.clone(),
-                            src: src.clone(),
-                            label: Label {
-                                text: None,
-                                span: *location,
-                            },
-                            extra_labels: vec![],
-                        }),
+                    TypeError::UnusedTypeAliasParameter { location, name } => {
+                        let text = wrap_format!(
+                            "The type variable `{name}` is unused. It can be safely removed.",
+                        );
+                        Diagnostic {
+                            title: "Unused type parameter".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                path: path.clone(),
+                                src: src.clone(),
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
-                }
 
-                TypeError::DuplicateTypeParameter { location, name } => {
-                    let text = wrap_format!(
-                        "This definition has multiple type parameters named `{name}`.
+                    TypeError::DuplicateTypeParameter { location, name } => {
+                        let text = wrap_format!(
+                            "This definition has multiple type parameters named `{name}`.
 Rename or remove one of them.",
-                    );
-                    Diagnostic {
-                        title: "Duplicate type parameter".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            path: path.clone(),
-                            src: src.clone(),
-                            label: Label {
-                                text: None,
-                                span: *location,
-                            },
-                            extra_labels: vec![],
-                        }),
+                        );
+                        Diagnostic {
+                            title: "Duplicate type parameter".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                path: path.clone(),
+                                src: src.clone(),
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
-                },
 
-                TypeError::NotFnInUse { location, type_ } => {
-                    let mut printer = Printer::new(names);
-                    let text = wrap_format!(
-                        "In a use expression, there should be a function on \
+                    TypeError::NotFnInUse { location, type_ } => {
+                        let mut printer = Printer::new(names);
+                        let text = wrap_format!(
+                            "In a use expression, there should be a function on \
 the right hand side of `<-`, but this value has type:
 
     {}
 
 See: https://tour.gleam.run/advanced-features/use/",
-                        printer.print_type(type_)
-                    );
+                            printer.print_type(type_)
+                        );
 
-                    Diagnostic {
-                        title: "Type mismatch".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: None,
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
+                        Diagnostic {
+                            title: "Type mismatch".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
-                },
 
-                TypeError::UseFnDoesntTakeCallback { location, actual_type: None }
-                | TypeError::UseFnIncorrectArity { location, expected: 0, given: 1 } => {
-                    let text = wrap("The function on the right of `<-` here \
+                    TypeError::UseFnDoesntTakeCallback {
+                        location,
+                        actual_type: None,
+                    }
+                    | TypeError::UseFnIncorrectArity {
+                        location,
+                        expected: 0,
+                        given: 1,
+                    } => {
+                        let text = wrap(
+                            "The function on the right of `<-` here \
 takes no arguments, but it has to take at least \
 one argument, a callback function.
 
-See: https://tour.gleam.run/advanced-features/use/");
-                    Diagnostic {
-                        title: "Incorrect arity".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: Some("Expected no arguments, got 1".into()),
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
-                    }
-                },
-
-                TypeError::UseFnIncorrectArity { location, expected, given } => {
-                    let expected_string = match expected {
-                        0 => "no arguments".into(),
-                        1 => "1 argument".into(),
-                        _ => format!("{expected} arguments"),
-                    };
-                    let supplied_arguments = given - 1;
-                    let supplied_arguments_string = match supplied_arguments {
-                        0 => "no arguments".into(),
-                        1 => "1 argument".into(),
-                        _ => format!("{given} arguments"),
-                    };
-                    let label = format!("Expected {expected_string}, got {given}");
-                    let mut text: String = format!("The function on the right of `<-` \
-here takes {expected_string}.\n");
-
-                    if expected > given {
-                        if supplied_arguments == 0 {
-                            text.push_str("The only argument that was supplied is \
-the `use` callback function.\n")
-                        } else {
-                            text.push_str(&format!("You supplied {supplied_arguments_string} \
-and the final one is the `use` callback function.\n"));
+See: https://tour.gleam.run/advanced-features/use/",
+                        );
+                        Diagnostic {
+                            title: "Incorrect arity".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: Some("Expected no arguments, got 1".into()),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
                         }
-                    } else {
-                        text.push_str("All the arguments have already been supplied, \
-so it cannot take the `use` callback function as a final argument.\n")
-                    };
-
-                    text.push_str("\nSee: https://tour.gleam.run/advanced-features/use/");
-
-                    Diagnostic {
-                        title: "Incorrect arity".into(),
-                        text: wrap(&text),
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: Some(label),
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
                     }
-                },
 
-                TypeError::UseFnDoesntTakeCallback { location, actual_type: Some(actual) } => {
-                    let mut printer = Printer::new(names);
-                    let text = wrap_format!("The function on the right hand side of `<-` \
+                    TypeError::UseFnIncorrectArity {
+                        location,
+                        expected,
+                        given,
+                    } => {
+                        let expected_string = match expected {
+                            0 => "no arguments".into(),
+                            1 => "1 argument".into(),
+                            _ => format!("{expected} arguments"),
+                        };
+                        let supplied_arguments = given - 1;
+                        let supplied_arguments_string = match supplied_arguments {
+                            0 => "no arguments".into(),
+                            1 => "1 argument".into(),
+                            _ => format!("{given} arguments"),
+                        };
+                        let label = format!("Expected {expected_string}, got {given}");
+                        let mut text: String = format!(
+                            "The function on the right of `<-` \
+here takes {expected_string}.\n"
+                        );
+
+                        if expected > given {
+                            if supplied_arguments == 0 {
+                                text.push_str(
+                                    "The only argument that was supplied is \
+the `use` callback function.\n",
+                                )
+                            } else {
+                                text.push_str(&format!(
+                                    "You supplied {supplied_arguments_string} \
+and the final one is the `use` callback function.\n"
+                                ));
+                            }
+                        } else {
+                            text.push_str(
+                                "All the arguments have already been supplied, \
+so it cannot take the `use` callback function as a final argument.\n",
+                            )
+                        };
+
+                        text.push_str("\nSee: https://tour.gleam.run/advanced-features/use/");
+
+                        Diagnostic {
+                            title: "Incorrect arity".into(),
+                            text: wrap(&text),
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: Some(label),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
+                    }
+
+                    TypeError::UseFnDoesntTakeCallback {
+                        location,
+                        actual_type: Some(actual),
+                    } => {
+                        let mut printer = Printer::new(names);
+                        let text = wrap_format!(
+                            "The function on the right hand side of `<-` \
 has to take a callback function as its last argument. \
 But the last argument of this function has type:
 
     {}
 
 See: https://tour.gleam.run/advanced-features/use/",
-                        printer.print_type(actual)
-                    );
-                    Diagnostic {
-                        title: "Type mismatch".into(),
-                        text: wrap(&text),
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: None,
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
+                            printer.print_type(actual)
+                        );
+                        Diagnostic {
+                            title: "Type mismatch".into(),
+                            text: wrap(&text),
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
-                },
 
-                TypeError::UseCallbackIncorrectArity { pattern_location, call_location, expected, given } => {
-                    let expected = match expected {
-                        0 => "no arguments".into(),
-                        1 => "1 argument".into(),
-                        _ => format!("{expected} arguments"),
-                    };
+                    TypeError::UseCallbackIncorrectArity {
+                        pattern_location,
+                        call_location,
+                        expected,
+                        given,
+                    } => {
+                        let expected = match expected {
+                            0 => "no arguments".into(),
+                            1 => "1 argument".into(),
+                            _ => format!("{expected} arguments"),
+                        };
 
-                    let specified = match given {
-                        0 => "none were provided".into(),
-                        1 => "1 was provided".into(),
-                        _ => format!("{given} were provided"),
-                    };
+                        let specified = match given {
+                            0 => "none were provided".into(),
+                            1 => "1 was provided".into(),
+                            _ => format!("{given} were provided"),
+                        };
 
-                    let text = wrap_format!("This function takes a callback that expects {expected}. \
+                        let text = wrap_format!(
+                            "This function takes a callback that expects {expected}. \
 But {specified} on the left hand side of `<-`.
 
-See: https://tour.gleam.run/advanced-features/use/");
-                    Diagnostic {
-                        title: "Incorrect arity".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: None,
-                                span: *call_location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![ExtraLabel {
-                              src_info: None,
-                              label: Label {
-                                  text: Some(format!("Expected {expected}, got {given}")),
-                                  span: *pattern_location
-                              }
-                            }],
-                        }),
+See: https://tour.gleam.run/advanced-features/use/"
+                        );
+                        Diagnostic {
+                            title: "Incorrect arity".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: None,
+                                    span: *call_location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![ExtraLabel {
+                                    src_info: None,
+                                    label: Label {
+                                        text: Some(format!("Expected {expected}, got {given}")),
+                                        span: *pattern_location,
+                                    },
+                                }],
+                            }),
+                        }
                     }
-                },
 
-                TypeError::BadName { location, name, kind } => {
-                    let kind_str = kind.as_str();
-                    let label = format!("This is not a valid {kind_str} name");
-                    let text = match kind {
-                        Named::Type |
-                        Named::TypeAlias |
-                        Named::CustomTypeVariant => wrap_format!("Hint: {} names start with an uppercase \
+                    TypeError::BadName {
+                        location,
+                        name,
+                        kind,
+                    } => {
+                        let kind_str = kind.as_str();
+                        let label = format!("This is not a valid {} name", kind_str.to_lowercase());
+                        let text = match kind {
+                            Named::Type | Named::TypeAlias | Named::CustomTypeVariant => {
+                                wrap_format!(
+                                    "Hint: {} names start with an uppercase \
 letter and contain only lowercase letters, numbers, \
 and uppercase letters.
-Try: {}", kind_str.to_title_case(), name.to_upper_camel_case()),
-                        Named::Variable |
-                        Named::TypeVariable |
-                        Named::Argument |
-                        Named::Label |
-                        Named::Constant  |
-                        Named::Function => wrap_format!("Hint: {} names start with a lowercase letter \
+Try: {}",
+                                    kind_str,
+                                    to_upper_camel_case(name)
+                                )
+                            }
+                            Named::Variable
+                            | Named::TypeVariable
+                            | Named::Argument
+                            | Named::Label
+                            | Named::Constant
+                            | Named::Function => wrap_format!(
+                                "Hint: {} names start with a lowercase letter \
 and contain a-z, 0-9, or _.
-Try: {}", kind_str.to_title_case(), name.to_snake_case()),
-                        Named::Discard => wrap_format!("Hint: {} names start with _ and contain \
+Try: {}",
+                                kind_str,
+                                to_snake_case(name)
+                            ),
+                            Named::Discard => wrap_format!(
+                                "Hint: {} names start with _ and contain \
 a-z, 0-9, or _.
-Try: _{}", kind_str.to_title_case(), name.to_snake_case()),
-                    };
+Try: _{}",
+                                kind_str,
+                                to_snake_case(name)
+                            ),
+                        };
 
-                    Diagnostic {
-                        title: format!("Invalid {kind_str} name"),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: Some(label),
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
+                        Diagnostic {
+                            title: format!("Invalid {} name", kind_str.to_lowercase()),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: Some(label),
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
                     }
-                },
 
-                        TypeError::AllVariantsDeprecated { location } => {
-                            let text = String::from("Consider deprecating the type as a whole.
+                    TypeError::AllVariantsDeprecated { location } => {
+                        let text = String::from(
+                            "Consider deprecating the type as a whole.
 
   @deprecated(\"message\")
   type Wibble {
     Wobble1
     Wobble2
   }
-");
-                            Diagnostic {
-                                title: "All variants of custom type deprecated.".into(),
-                                text,
-                                hint: None,
-                                level: Level::Error,
-                                location: Some(Location {
-                                    label: Label {
-                                        text: None,
-                                        span: *location,
-                                    },
-                                    path: path.clone(),
-                                    src: src.clone(),
-                                    extra_labels: vec![],
-                                })
-                            }
-                        },
-                        TypeError::DeprecatedVariantOnDeprecatedType{ location } => {
-                            let text = wrap("This custom type has already been deprecated, so deprecating \
-one of its variants does nothing.
-Consider removing the deprecation attribute on the variant.");
-
-                            Diagnostic {
-                                title: "Custom type already deprecated".into(),
-                                text,
-                                hint: None,
-                                level: Level::Error,
-                                location: Some(Location {
-                                    label: Label {
-                                        text: None,
-                                        span: *location,
-                                    },
-                                    path: path.clone(),
-                                    src: src.clone(),
-                                    extra_labels: vec![],
-                                })
-                            }
+",
+                        );
+                        Diagnostic {
+                            title: "All variants of custom type deprecated.".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
                         }
+                    }
+                    TypeError::DeprecatedVariantOnDeprecatedType { location } => {
+                        let text = wrap(
+                            "This custom type has already been deprecated, so deprecating \
+one of its variants does nothing.
+Consider removing the deprecation attribute on the variant.",
+                        );
 
-                TypeError::EchoWithNoFollowingExpression { location } => Diagnostic {
-                    title: "Invalid echo use".to_string(),
-                    text: wrap("The `echo` keyword should be followed by a value to print."),
-                    hint: None,
-                    level: Level::Error,
-                    location: Some(Location {
-                        label: Label {
-                            text: Some("I was expecting a value after this".into()),
-                            span: *location,
-                        },
-                        path: path.clone(),
-                        src: src.clone(),
-                        extra_labels: vec![],
-                    }),
-                },
-            }
-        }).collect_vec(),
+                        Diagnostic {
+                            title: "Custom type already deprecated".into(),
+                            text,
+                            hint: None,
+                            level: Level::Error,
+                            location: Some(Location {
+                                label: Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                path: path.clone(),
+                                src: src.clone(),
+                                extra_labels: vec![],
+                            }),
+                        }
+                    }
 
+                    TypeError::EchoWithNoFollowingExpression { location } => Diagnostic {
+                        title: "Invalid echo use".to_string(),
+                        text: wrap("The `echo` keyword should be followed by a value to print."),
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("I was expecting a value after this".into()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    },
+
+                    TypeError::StringConcatenationWithAddInt { location } => Diagnostic {
+                        title: "Type mismatch".to_string(),
+                        text: wrap(
+                            "The + operator can only be used on Ints.
+To join two strings together you can use the <> operator.",
+                        ),
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("Use <> instead".into()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    },
+
+                    TypeError::IntOperatorOnFloats { location, operator } => Diagnostic {
+                        title: "Type mismatch".to_string(),
+                        text: wrap_format!(
+                            "The {} operator can only be used on Ints.",
+                            operator.name()
+                        ),
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: operator
+                                    .float_equivalent()
+                                    .map(|operator| format!("Use {} instead", operator.name())),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    },
+
+                    TypeError::FloatOperatorOnInts { location, operator } => Diagnostic {
+                        title: "Type mismatch".to_string(),
+                        text: wrap_format!(
+                            "The {} operator can only be used on Floats.",
+                            operator.name()
+                        ),
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: operator
+                                    .int_equivalent()
+                                    .map(|operator| format!("Use {} instead", operator.name())),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    },
+
+                    TypeError::DoubleVariableAssignmentInBitArray { location } => Diagnostic {
+                        title: "Double variable assignment".to_string(),
+                        text: wrap(
+                            "This pattern assigns to two different variables \
+at once, which is not possible in bit arrays.",
+                        ),
+                        hint: Some(wrap("Remove the `as` assignment.")),
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    },
+
+                    TypeError::NonUtf8StringAssignmentInBitArray { location } => Diagnostic {
+                        title: "Non UTF-8 string assignment".to_string(),
+                        text: wrap(
+                            "This pattern assigns a non UTF-8 string to a \
+variable in a bit array. This is planned to be supported in the future, but we are \
+unsure of the desired behaviour. Please go to https://github.com/gleam-lang/gleam/issues/4566 \
+and explain your usecase for this pattern, and how you would expect it to behave.",
+                        ),
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    },
+
+                    TypeError::PrivateOpaqueType { location } => Diagnostic {
+                        title: "Private opaque type".to_string(),
+                        text: wrap("Only a public type can be opaque."),
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("You can safely remove this.".to_string()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    },
+
+                    TypeError::SrcImportingDevDependency {
+                        location,
+                        importing_module,
+                        imported_module,
+                        package,
+                    } => Diagnostic {
+                        title: "App importing dev dependency".to_string(),
+                        text: wrap_format!(
+                            "The application module `{importing_module}` is \
+importing the module `{imported_module}`, but `{package}`, the package it \
+belongs to, is a dev dependency.
+
+Dev dependencies are not included in production builds so application \
+modules should not import them. Perhaps change `{package}` to a regular dependency."
+                        ),
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    },
+
+                    TypeError::ExternalTypeWithConstructors { location } => Diagnostic {
+                        title: "External type with constructors".to_string(),
+                        text: wrap_format!(
+                            "This type is annotated with the `@external` annotation, \
+but it has constructors. The `@external` annotation is only for external types \
+with no constructors."
+                        ),
+                        hint: Some("Remove the `@external` annotation".into()),
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    },
+
+                    TypeError::LowercaseBoolPattern { location } => Diagnostic {
+                        title: "Lowercase bool pattern".to_string(),
+                        text: "See: https://tour.gleam.run/basics/bools/".into(),
+                        hint: Some("In Gleam bool literals are `True` and `False`.".into()),
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("This is not a bool".into()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    },
+                })
+                .collect_vec(),
 
             Error::Parse { path, src, error } => {
-                let (label, extra) = error.details();
-                let text = extra.join("\n");
-
-                let adjusted_location = if error.error == ParseErrorType::UnexpectedEof {
+                let location = if error.error == ParseErrorType::UnexpectedEof {
                     crate::ast::SrcSpan {
                         start: (src.len() - 1) as u32,
                         end: (src.len() - 1) as u32,
@@ -3557,32 +4086,43 @@ Consider removing the deprecation attribute on the variant.");
                     error.location
                 };
 
-                vec![Diagnostic {
-                    title: "Syntax error".into(),
+                let title = String::from("Syntax error");
+                let ParseErrorDetails {
                     text,
-                    hint: None,
+                    label_text,
+                    extra_labels,
+                    hint,
+                } = error.error.details();
+                vec![Diagnostic {
+                    title,
+                    text,
                     level: Level::Error,
                     location: Some(Location {
-                        label: Label {
-                            text: Some(label.to_string()),
-                            span: adjusted_location,
-                        },
-                        path: path.clone(),
                         src: src.clone(),
-                        extra_labels: vec![],
+                        path: path.clone(),
+                        label: Label {
+                            text: Some(label_text.into()),
+                            span: location,
+                        },
+                        extra_labels,
                     }),
+                    hint,
                 }]
             }
 
             Error::ImportCycle { modules } => {
                 let first_location = &modules.first().1;
-                let rest_locations = modules.iter().skip(1).map(|(_, l)| ExtraLabel {
-                    label: Label {
-                        text: Some("Imported here".into()),
-                        span: l.location
-                    },
-                    src_info: Some((l.src.clone(), l.path.clone())),
-                }).collect_vec();
+                let rest_locations = modules
+                    .iter()
+                    .skip(1)
+                    .map(|(_, l)| ExtraLabel {
+                        label: Label {
+                            text: Some("Imported here".into()),
+                            span: l.location,
+                        },
+                        src_info: Some((l.src.clone(), l.path.clone())),
+                    })
+                    .collect_vec();
                 let mut text = "The import statements for these modules form a cycle:
 "
                 .into();
@@ -3714,24 +4254,6 @@ Fix the warnings and try again."
                 }]
             }
 
-            Error::JavaScript { src, path, error } => match error {
-                javascript::Error::Unsupported { feature, location } => vec![Diagnostic {
-                    title: "Unsupported feature for compilation target".into(),
-                    text: format!("{feature} is not supported for JavaScript compilation."),
-                    hint: None,
-                    level: Level::Error,
-                    location: Some(Location {
-                        label: Label {
-                            text: None,
-                            span: *location,
-                        },
-                        path: path.clone(),
-                        src: src.clone(),
-                        extra_labels: vec![],
-                    }),
-                }],
-            },
-
             Error::DownloadPackageError {
                 package_name,
                 package_version,
@@ -3784,6 +4306,22 @@ The error from the parser was:
                 }]
             }
 
+            Error::IncompatibleLockedVersion { error } => {
+                let text = format!(
+                    "There is an incompatiblity between a version specified in
+manifest.toml and a version range specified in gleam.toml:
+
+    {error}"
+                );
+                vec![Diagnostic {
+                    title: "Incompatible locked version".into(),
+                    text,
+                    hint: None,
+                    location: None,
+                    level: Level::Error,
+                }]
+            }
+
             Error::DependencyCanonicalizationFailed(package) => {
                 let text = format!("Local package `{package}` has no canonical path");
 
@@ -3796,14 +4334,24 @@ The error from the parser was:
                 }]
             }
 
-            Error::DependencyResolutionFailed(error) => {
-                let text = format!(
-                    "An error occurred while determining what dependency packages and
-versions should be downloaded.
-The error from the version resolver library was:
+            Error::DependencyResolutionError(error) => vec![Diagnostic {
+                title: "Dependency resolution failed".into(),
+                text: wrap(error),
+                hint: None,
+                location: None,
+                level: Level::Error,
+            }],
 
-{}",
-                    wrap(error)
+            Error::DependencyResolutionNoSolution {
+                root_package_name,
+                derivation_tree,
+            } => {
+                let text = wrap(
+                    &DerivationTreePrinter::new(
+                        root_package_name.clone(),
+                        derivation_tree.0.clone(),
+                    )
+                    .print(),
                 );
                 vec![Diagnostic {
                     title: "Dependency resolution failed".into(),
@@ -3894,7 +4442,6 @@ licences = ["Apache-2.0"]"#
                     level: Level::Error,
                 }]
             }
-
 
             Error::PublishNonHexDependencies { package } => vec![Diagnostic {
                 title: "Unpublished dependencies".into(),
@@ -4005,30 +4552,48 @@ satisfying {required_version} but you are using v{gleam_version}.",
                 hint: Some("Please run `gleam update` to fix it.".into()),
             }],
 
-            Error::GleamModuleWouldOverwriteStandardErlangModule { name, path } =>
-vec![Diagnostic {
-                title: "Erlang module name collision".into(),
-                text: wrap_format!("The module `{path}` compiles to an Erlang module \
+            Error::GleamModuleWouldOverwriteStandardErlangModule { name, path } => {
+                vec![Diagnostic {
+                    title: "Erlang module name collision".into(),
+                    text: wrap_format!(
+                        "The module `{path}` compiles to an Erlang module \
 named `{name}`.
 
 By default Erlang includes a module with the same name so if we were \
 to compile and load your module it would overwrite the Erlang one, potentially \
 causing confusing errors and crashes.
-"),
-                level: Level::Error,
-                location: None,
-                hint: Some("Rename this module and try again.".into()),
-            }],
+"
+                    ),
+                    level: Level::Error,
+                    location: None,
+                    hint: Some("Rename this module and try again.".into()),
+                }]
+            }
 
             Error::HexPublishReplaceRequired { version } => vec![Diagnostic {
                 title: "Version already published".into(),
-                text: wrap_format!("Version v{version} has already been published.
+                text: wrap_format!(
+                    "Version v{version} has already been published.
 This release has been recently published so you can replace it \
-or you can publish it using a different version number"),
+or you can publish it using a different version number"
+                ),
                 level: Level::Error,
                 location: None,
-                hint: Some("Please add the --replace flag if you want to replace the release.".into()),
-            }]
+                hint: Some(
+                    "Please add the --replace flag if you want to replace the release.".into(),
+                ),
+            }],
+
+            Error::CannotAddSelfAsDependency { name } => vec![Diagnostic {
+                title: "Dependency cycle".into(),
+                text: wrap_format!(
+                    "A package cannot depend on itself, so you cannot \
+add `gleam add {name}` in this project."
+                ),
+                level: Level::Error,
+                location: None,
+                hint: None,
+            }],
         }
     }
 }
@@ -4055,7 +4620,29 @@ fn std_io_error_kind_text(kind: &std::io::ErrorKind) -> String {
         }
         ErrorKind::Interrupted => "The operation was interrupted".into(),
         ErrorKind::UnexpectedEof => "The end of file was reached before it was expected".into(),
-        _ => "An unknown error occurred".into(),
+        ErrorKind::HostUnreachable
+        | ErrorKind::NetworkUnreachable
+        | ErrorKind::NetworkDown
+        | ErrorKind::NotADirectory
+        | ErrorKind::IsADirectory
+        | ErrorKind::DirectoryNotEmpty
+        | ErrorKind::ReadOnlyFilesystem
+        | ErrorKind::StaleNetworkFileHandle
+        | ErrorKind::StorageFull
+        | ErrorKind::NotSeekable
+        | ErrorKind::QuotaExceeded
+        | ErrorKind::FileTooLarge
+        | ErrorKind::ResourceBusy
+        | ErrorKind::ExecutableFileBusy
+        | ErrorKind::Deadlock
+        | ErrorKind::CrossesDevices
+        | ErrorKind::TooManyLinks
+        | ErrorKind::InvalidFilename
+        | ErrorKind::ArgumentListTooLong
+        | ErrorKind::Unsupported
+        | ErrorKind::OutOfMemory
+        | ErrorKind::Other
+        | _ => "An unknown error occurred".into(),
     }
 }
 
@@ -4098,7 +4685,28 @@ fn hint_alternative_operator(op: &BinOp, given: &Type) -> Option<String> {
         BinOp::AddInt if given.is_string() => Some(hint_string_message()),
         BinOp::AddFloat if given.is_string() => Some(hint_string_message()),
 
-        _ => None,
+        BinOp::And
+        | BinOp::Or
+        | BinOp::Eq
+        | BinOp::NotEq
+        | BinOp::LtInt
+        | BinOp::LtEqInt
+        | BinOp::LtFloat
+        | BinOp::LtEqFloat
+        | BinOp::GtEqInt
+        | BinOp::GtInt
+        | BinOp::GtEqFloat
+        | BinOp::GtFloat
+        | BinOp::AddInt
+        | BinOp::AddFloat
+        | BinOp::SubInt
+        | BinOp::SubFloat
+        | BinOp::MultInt
+        | BinOp::MultFloat
+        | BinOp::DivInt
+        | BinOp::DivFloat
+        | BinOp::RemainderInt
+        | BinOp::Concatenate => None,
     }
 }
 
@@ -4120,10 +4728,7 @@ fn hint_numeric_message(alt: &str, type_: &str) -> String {
 }
 
 fn hint_string_message() -> String {
-    wrap(
-        "Strings can be joined using the `append` or `concat` \
-functions from the `gleam/string` module.",
-    )
+    wrap("Strings can be joined using the `<>` operator.")
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

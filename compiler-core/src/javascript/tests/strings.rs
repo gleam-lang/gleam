@@ -48,7 +48,7 @@ pub fn unicode_escape_sequence_6_digits() -> String {
 fn string_literals() {
     assert_js!(
         r#"
-fn go() {
+pub fn go() {
   "Hello, Gleam!"
 }
 "#,
@@ -59,7 +59,7 @@ fn go() {
 fn string_patterns() {
     assert_js!(
         r#"
-fn go(x) {
+pub fn go(x) {
   let assert "Hello" = x
 }
 "#,
@@ -70,7 +70,7 @@ fn go(x) {
 fn equality() {
     assert_js!(
         r#"
-fn go(a) {
+pub fn go(a) {
   a == "ok"
   a != "ok"
   a == a
@@ -83,7 +83,7 @@ fn go(a) {
 fn case() {
     assert_js!(
         r#"
-fn go(a) {
+pub fn go(a) {
   case a {
     "" -> 0
     "one" -> 1
@@ -99,7 +99,7 @@ fn go(a) {
 fn string_concat() {
     assert_js!(
         r#"
-fn go() {
+pub fn go() {
   "Hello, " <> "Joe"
 }
 "#,
@@ -229,8 +229,8 @@ pub fn go(x) {
 fn const_concat() {
     assert_js!(
         r#"
-const cute = "cute"
-const cute_bee = cute <> "bee"
+pub const cute = "cute"
+pub const cute_bee = cute <> "bee"
 
 pub fn main() {
   cute_bee
@@ -243,9 +243,9 @@ pub fn main() {
 fn const_concat_multiple() {
     assert_js!(
         r#"
-const cute = "cute"
-const cute_bee = cute <> "bee"
-const cute_cute_bee_buzz = cute <> cute_bee <> "buzz"
+pub const cute = "cute"
+pub const cute_bee = cute <> "bee"
+pub const cute_cute_bee_buzz = cute <> cute_bee <> "buzz"
 
 pub fn main() {
   cute_cute_bee_buzz

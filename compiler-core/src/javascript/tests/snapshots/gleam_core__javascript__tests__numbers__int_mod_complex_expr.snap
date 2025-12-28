@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-expression: "\nfn go() {\n  case 1 >= 0 {\n    True -> 2\n    False -> 4\n  } % 2\n}\n"
+expression: "\npub fn go() {\n  case 1 >= 0 {\n    True -> 2\n    False -> 4\n  } % 2\n}\n"
 ---
 ----- SOURCE CODE
 
-fn go() {
+pub fn go() {
   case 1 >= 0 {
     True -> 2
     False -> 4
@@ -13,18 +13,13 @@ fn go() {
 
 
 ----- COMPILED JAVASCRIPT
-import { remainderInt } from "../gleam.mjs";
-
-function go() {
-  return remainderInt(
-    (() => {
-      let $ = 1 >= 0;
-      if ($) {
-        return 2;
-      } else {
-        return 4;
-      }
-    })(),
-    2
-  );
+export function go() {
+  return (() => {
+    let $ = 1 >= 0;
+    if ($) {
+      return 2;
+    } else {
+      return 4;
+    }
+  })() % 2;
 }

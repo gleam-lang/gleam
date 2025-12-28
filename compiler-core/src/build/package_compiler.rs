@@ -1,4 +1,7 @@
 use crate::analyse::{ModuleAnalyzerConstructor, TargetSupport};
+use crate::build::package_loader::CacheFiles;
+use crate::inline;
+use crate::io::files_with_extension;
 use crate::line_numbers::{self, LineNumbers};
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
@@ -62,6 +65,7 @@ pub struct PackageCompiler<'a, IO> {
     pub subprocess_stdio: Stdio,
     pub target_support: TargetSupport,
     pub cached_warnings: CachedWarnings,
+    pub check_module_conflicts: CheckModuleConflicts,
 }
 
 impl<'a, IO> PackageCompiler<'a, IO>
@@ -96,6 +100,7 @@ where
             subprocess_stdio: Stdio::Inherit,
             target_support: TargetSupport::NotEnforced,
             cached_warnings: CachedWarnings::Ignore,
+            check_module_conflicts: CheckModuleConflicts::DoNotCheck,
         }
     }
 
@@ -209,6 +214,21 @@ where
 
         tracing::debug!("performing_code_generation");
 
+        // Inlining is currently disabled. See
+        // https://github.com/gleam-lang/gleam/pull/5010 for information.
+
+        // let modules = if self.perform_codegen {
+        //     modules
+        //         .into_iter()
+        //         .map(|mut module| {
+        //             module.ast = inline::module(module.ast, &existing_modules);
+        //             module
+        //         })
+        //         .collect()
+        // } else {
+        //     modules
+        // };
+
         if let Err(error) = self.perform_codegen(&modules) {
             return error.into();
         }
@@ -254,7 +274,12 @@ where
             self.io.symlink_dir(&priv_source, &priv_build)?;
         }
 
-        let copier = NativeFileCopier::new(self.io.clone(), self.root.clone(), destination_dir);
+        let copier = NativeFileCopier::new(
+            self.io.clone(),
+            self.root.clone(),
+            destination_dir,
+            self.check_module_conflicts,
+        );
         let copied = copier.run()?;
 
         to_compile_modules.extend(copied.to_compile.into_iter());
@@ -285,17 +310,13 @@ where
 
         tracing::debug!("writing_module_caches");
         for module in modules {
-            let module_name = module.name.replace("/", "@");
+            let cache_files = CacheFiles::new(&artefact_dir, &module.name);
 
-            // Write metadata file
-            let name = format!("{}.cache", &module_name);
-            let path = artefact_dir.join(name);
+            // Write cache file
             let bytes = ModuleEncoder::new(&module.ast.type_info).encode()?;
-            self.io.write_bytes(&path, &bytes)?;
+            self.io.write_bytes(&cache_files.cache_path, &bytes)?;
 
-            // Write cache info
-            let name = format!("{}.cache_meta", &module_name);
-            let path = artefact_dir.join(name);
+            // Write cache metadata
             let info = CacheMetadata {
                 mtime: module.mtime,
                 codegen_performed: self.perform_codegen,
@@ -303,18 +324,25 @@ where
                 fingerprint: SourceFingerprint::new(&module.code),
                 line_numbers: module.ast.type_info.line_numbers.clone(),
             };
-            self.io.write_bytes(&path, &info.to_binary())?;
+            self.io
+                .write_bytes(&cache_files.meta_path, &info.to_binary())?;
+
+            let cache_inline = bincode::serde::encode_to_vec(
+                &module.ast.type_info.inline_functions,
+                bincode::config::legacy(),
+            )
+            .expect("Failed to serialise inline functions");
+            self.io.write_bytes(&cache_files.inline_path, &cache_inline);
 
             // Write warnings.
             // Dependency packages don't get warnings persisted as the
             // programmer doesn't want to be told every time about warnings they
             // cannot fix directly.
             if self.cached_warnings.should_use() {
-                let name = format!("{}.cache_warnings", &module_name);
-                let path = artefact_dir.join(name);
                 let warnings = &module.ast.type_info.warnings;
-                let data = bincode::serialize(warnings).expect("Serialise warnings");
-                self.io.write_bytes(&path, &data)?;
+                let data = bincode::serde::encode_to_vec(warnings, bincode::config::legacy())
+                    .expect("Serialise warnings");
+                self.io.write_bytes(&cache_files.warnings_path, &data)?;
             }
         }
         Ok(())
@@ -403,14 +431,11 @@ where
             TypeScriptDeclarations::None
         };
 
-        JavaScript::new(
-            &self.out,
-            typescript,
-            prelude_location,
-            &self.root,
-            self.target_support,
-        )
-        .render(&self.io, modules, self.stdlib_package())?;
+        JavaScript::new(&self.out, typescript, prelude_location, &self.root).render(
+            &self.io,
+            modules,
+            self.stdlib_package(),
+        )?;
 
         if self.copy_native_files {
             self.copy_project_native_files(&self.out, &mut written)?;
@@ -493,6 +518,7 @@ fn analyse(
 ) -> Outcome<Vec<Module>, Error> {
     let mut modules = Vec::with_capacity(parsed_modules.len() + 1);
     let direct_dependencies = package_config.dependencies_for(mode).expect("Package deps");
+    let dev_dependencies = package_config.dev_dependencies.keys().cloned().collect();
 
     // Insert the prelude
     // DUPE: preludeinsertion
@@ -524,6 +550,7 @@ fn analyse(
             importable_modules: module_types,
             warnings: &TypeWarningEmitter::new(path.clone(), code.clone(), warnings.clone()),
             direct_dependencies: &direct_dependencies,
+            dev_dependencies: &dev_dependencies,
             target_support,
             package_config,
         }
@@ -549,6 +576,21 @@ fn analyse(
                 // Register the types from this module so they can be imported into
                 // other modules.
                 let _ = module_types.insert(module.name.clone(), module.ast.type_info.clone());
+
+                // Check for empty modules and emit warning
+                // Only emit the empty module warning if the module has no definitions at all.
+                // Modules with only private definitions already emit their own warnings.
+                if module_types
+                    .get(&module.name)
+                    .map(|interface| interface.values.is_empty() && interface.types.is_empty())
+                    .unwrap_or(false)
+                {
+                    warnings.emit(crate::warning::Warning::EmptyModule {
+                        path: module.input_path.clone(),
+                        name: module.name.clone(),
+                    });
+                }
+
                 // Register the successfully type checked module data so that it can be
                 // used for code generation and in the language server.
                 modules.push(module);
@@ -556,7 +598,7 @@ fn analyse(
 
             Outcome::PartialFailure(ast, errors) => {
                 let error = Error::Type {
-                    names: ast.names.clone(),
+                    names: Box::new(ast.names.clone()),
                     path: path.clone(),
                     src: code.clone(),
                     errors,
@@ -591,25 +633,6 @@ fn analyse(
     }
 
     Outcome::Ok(modules)
-}
-
-pub(crate) fn module_name(package_path: &Utf8Path, full_module_path: &Utf8Path) -> EcoString {
-    // /path/to/project/_build/default/lib/the_package/src/my/module.gleam
-
-    // my/module.gleam
-    let mut module_path = full_module_path
-        .strip_prefix(package_path)
-        .expect("Stripping package prefix from module path")
-        .to_path_buf();
-
-    // my/module
-    let _ = module_path.set_extension("");
-
-    // Stringify
-    let name = module_path.to_string();
-
-    // normalise windows paths
-    name.replace("\\", "/").into()
 }
 
 #[derive(Debug)]
@@ -677,11 +700,15 @@ pub(crate) struct CacheMetadata {
 
 impl CacheMetadata {
     pub fn to_binary(&self) -> Vec<u8> {
-        bincode::serialize(self).expect("Serializing cache info")
+        bincode::serde::encode_to_vec(self, bincode::config::legacy())
+            .expect("Serializing cache info")
     }
 
     pub fn from_binary(bytes: &[u8]) -> Result<Self, String> {
-        bincode::deserialize(bytes).map_err(|e| e.to_string())
+        match bincode::serde::decode_from_slice(bytes, bincode::config::legacy()) {
+            Ok((data, _)) => Ok(data),
+            Err(e) => Err(e.to_string()),
+        }
     }
 }
 
@@ -729,6 +756,20 @@ impl CachedWarnings {
         match self {
             CachedWarnings::Use => true,
             CachedWarnings::Ignore => false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum CheckModuleConflicts {
+    Check,
+    DoNotCheck,
+}
+impl CheckModuleConflicts {
+    pub(crate) fn should_check(&self) -> bool {
+        match self {
+            CheckModuleConflicts::Check => true,
+            CheckModuleConflicts::DoNotCheck => false,
         }
     }
 }

@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\npub fn main() -> Result(Int, Nil) {\n  Ok(10)\n}\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+pub fn main() -> Result(Int, Nil) {
+                 ↑▔▔▔▔▔            
+  Ok(10)
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+import gleam.{type Result as SuccessOrFailure}
+
+pub fn main() -> SuccessOrFailure(Int, Nil) {
+  Ok(10)
+}

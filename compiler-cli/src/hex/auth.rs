@@ -1,6 +1,10 @@
-use crate::{cli, http::HttpClient};
-use gleam_core::{Error, Result, encryption, hex, paths::global_hexpm_credentials_path};
-use std::time::SystemTime;
+use crate::{cli, fs::ConsoleWarningEmitter, http::HttpClient};
+use gleam_core::{
+    Error, Result, Warning, encryption, hex,
+    paths::global_hexpm_credentials_path,
+    warning::{DeprecatedEnvironmentVariable, WarningEmitter},
+};
+use std::{rc::Rc, time::SystemTime};
 
 pub const USER_PROMPT: &str = "https://hex.pm username";
 pub const USER_ENV_NAME: &str = "HEXPM_USER";
@@ -25,6 +29,8 @@ pub struct HexAuthentication<'runtime> {
     http: HttpClient,
     local_password: Option<String>,
     hex_config: hexpm::Config,
+    warnings: Vec<Warning>,
+    warning_emitter: WarningEmitter,
 }
 
 impl<'runtime> HexAuthentication<'runtime> {
@@ -36,6 +42,8 @@ impl<'runtime> HexAuthentication<'runtime> {
             http: HttpClient::new(),
             local_password: None,
             hex_config,
+            warnings: vec![],
+            warning_emitter: WarningEmitter::new(Rc::new(ConsoleWarningEmitter)),
         }
     }
 
@@ -46,8 +54,8 @@ impl<'runtime> HexAuthentication<'runtime> {
         let path = global_hexpm_credentials_path();
 
         // Get login creds from user
-        let username = ask_username()?;
-        let password = ask_password()?;
+        let username = ask_username(&mut self.warnings)?;
+        let password = ask_password(&mut self.warnings)?;
 
         // Get API key
         let future = hex::create_api_key(&name, &username, &password, &self.hex_config, &self.http);
@@ -62,7 +70,10 @@ encrypt your Hex API key.
             );
         }
         let password = self.ask_local_password()?;
-        let encrypted = encryption::encrypt_with_passphrase(api_key.as_bytes(), &password)?;
+        let encrypted = encryption::encrypt_with_passphrase(api_key.as_bytes(), &password)
+            .map_err(|e| Error::FailedToEncryptLocalHexApiKey {
+                detail: e.to_string(),
+            })?;
 
         crate::fs::write(&path, &format!("{name}\n{encrypted}"))?;
         println!("Encrypted Hex API key written to {path}");
@@ -76,7 +87,7 @@ encrypt your Hex API key.
         if let Some(pw) = self.local_password.as_ref() {
             return Ok(pw.clone());
         }
-        let pw = ask_local_password()?;
+        let pw = ask_local_password(&mut self.warnings)?;
         self.local_password = Some(pw.clone());
         Ok(pw)
     }
@@ -110,8 +121,13 @@ encrypt your Hex API key.
         let Some(EncryptedApiKey { encrypted, .. }) = self.read_stored_api_key()? else {
             return Ok(None);
         };
+
         let password = self.ask_local_password()?;
-        let unencrypted = encryption::decrypt_with_passphrase(encrypted.as_bytes(), &password)?;
+        let unencrypted = encryption::decrypt_with_passphrase(encrypted.as_bytes(), &password)
+            .map_err(|e| Error::FailedToDecryptLocalHexApiKey {
+                detail: e.to_string(),
+            })?;
+
         Ok(Some(UnencryptedApiKey { unencrypted }))
     }
 
@@ -135,16 +151,42 @@ encrypt your Hex API key.
     }
 }
 
-fn ask_local_password() -> std::result::Result<String, Error> {
-    std::env::var(PASS_ENV_NAME).or_else(|_| cli::ask_password(LOCAL_PASS_PROMPT))
+impl Drop for HexAuthentication<'_> {
+    fn drop(&mut self) {
+        while let Some(warning) = self.warnings.pop() {
+            self.warning_emitter.emit(warning);
+        }
+    }
 }
 
-fn ask_password() -> std::result::Result<String, Error> {
-    std::env::var(PASS_ENV_NAME).or_else(|_| cli::ask_password(PASS_PROMPT))
+fn ask_local_password(warnings: &mut Vec<Warning>) -> std::result::Result<String, Error> {
+    std::env::var(PASS_ENV_NAME)
+        .inspect(|_| {
+            warnings.push(Warning::DeprecatedEnvironmentVariable {
+                variable: DeprecatedEnvironmentVariable::HexpmPass,
+            })
+        })
+        .or_else(|_| cli::ask_password(LOCAL_PASS_PROMPT))
 }
 
-fn ask_username() -> std::result::Result<String, Error> {
-    std::env::var(USER_ENV_NAME).or_else(|_| cli::ask(USER_PROMPT))
+fn ask_password(warnings: &mut Vec<Warning>) -> std::result::Result<String, Error> {
+    std::env::var(PASS_ENV_NAME)
+        .inspect(|_| {
+            warnings.push(Warning::DeprecatedEnvironmentVariable {
+                variable: DeprecatedEnvironmentVariable::HexpmPass,
+            })
+        })
+        .or_else(|_| cli::ask_password(PASS_PROMPT))
+}
+
+fn ask_username(warnings: &mut Vec<Warning>) -> std::result::Result<String, Error> {
+    std::env::var(USER_ENV_NAME)
+        .inspect(|_| {
+            warnings.push(Warning::DeprecatedEnvironmentVariable {
+                variable: DeprecatedEnvironmentVariable::HexpmUser,
+            })
+        })
+        .or_else(|_| cli::ask(USER_PROMPT))
 }
 
 pub fn generate_api_key_name() -> String {

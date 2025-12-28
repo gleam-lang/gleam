@@ -1,20 +1,20 @@
 ---
 source: compiler-core/src/erlang/tests/pipes.rs
-expression: "fn id(x) {\n  x\n}\n        \npub fn main() {\n    1 == 1 |> id\n}"
+expression: "fn id(x) {\n  x\n}\n\npub fn main() {\n    1 == 1 |> id\n}"
 ---
 ----- SOURCE CODE
 fn id(x) {
   x
 }
-        
+
 pub fn main() {
     1 == 1 |> id
 }
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 
 -file("project/test/my/mod.gleam", 1).

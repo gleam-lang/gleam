@@ -1,13 +1,10 @@
 use num_bigint::BigInt;
 use vec1::Vec1;
 
-use super::{
-    pattern::{Assignment, CompiledPattern},
-    *,
-};
+use super::{decision::ASSIGNMENT_VAR, *};
 use crate::{
     ast::*,
-    javascript::endianness::Endianness,
+    exhaustiveness::StringEncoding,
     line_numbers::LineNumbers,
     pretty::*,
     type_::{
@@ -18,8 +15,15 @@ use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub enum Position {
+    /// We are compiling the last expression in a function, meaning that it should
+    /// use `return` to return the value it produces from the function.
     Tail,
-    NotTail(Ordering),
+    /// We are inside a function, but the value of this expression isn't being
+    /// used, so we don't need to do anything with the returned value.
+    Statement,
+    /// The value of this expression needs to be used inside another expression,
+    /// so we need to use the value that is returned by this expression.
+    Expression(Ordering),
     /// We are compiling an expression inside a block, meaning we must assign
     /// to the `_block` variable at the end of the scope, because blocks are not
     /// expressions in JS.
@@ -41,8 +45,8 @@ impl Position {
     #[must_use]
     pub fn ordering(&self) -> Ordering {
         match self {
-            Self::NotTail(ordering) => *ordering,
-            Self::Tail | Self::Assign(_) => Ordering::Loose,
+            Self::Expression(ordering) => *ordering,
+            Self::Tail | Self::Assign(_) | Self::Statement => Ordering::Loose,
         }
     }
 }
@@ -80,15 +84,60 @@ pub enum Ordering {
     Loose,
 }
 
+/// Tracking where the current function is a module function or an anonymous function.
+#[derive(Debug)]
+enum CurrentFunction {
+    /// The current function is a module function
+    ///
+    /// ```gleam
+    /// pub fn main() -> Nil {
+    ///   // we are here
+    /// }
+    /// ```
+    Module,
+
+    /// The current function is a module function, but one of its arguments shadows
+    /// the reference to itself so it cannot recurse.
+    ///
+    /// ```gleam
+    /// pub fn main(main: fn() -> Nil) -> Nil {
+    ///   // we are here
+    /// }
+    /// ```
+    ModuleWithShadowingArgument,
+
+    /// The current function is an anonymous function
+    ///
+    /// ```gleam
+    /// pub fn main() -> Nil {
+    ///   fn() {
+    ///     // we are here
+    ///   }
+    /// }
+    /// ```
+    Anonymous,
+}
+
+impl CurrentFunction {
+    #[inline]
+    fn can_recurse(&self) -> bool {
+        match self {
+            CurrentFunction::Module => true,
+            CurrentFunction::ModuleWithShadowingArgument => false,
+            CurrentFunction::Anonymous => false,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub(crate) struct Generator<'module, 'ast> {
     module_name: EcoString,
-    src_path: &'module Utf8Path,
-    project_root: &'module Utf8Path,
+    src_path: EcoString,
     line_numbers: &'module LineNumbers,
-    function_name: Option<EcoString>,
+    function_name: EcoString,
     function_arguments: Vec<Option<&'module EcoString>>,
-    current_scope_vars: im::HashMap<EcoString, usize>,
+    current_function: CurrentFunction,
+    pub current_scope_vars: im::HashMap<EcoString, usize>,
     pub function_position: Position,
     pub scope_position: Position,
     // We register whether these features are used within an expression so that
@@ -121,44 +170,50 @@ pub(crate) struct Generator<'module, 'ast> {
     /// ```
     ///
     statement_level: Vec<Document<'ast>>,
+
+    /// This will be true if we've generated a `let assert` statement that we know
+    /// is guaranteed to throw.
+    /// This means we can stop code generation for all the following statements
+    /// in the same block!
+    pub let_assert_always_panics: bool,
 }
 
 impl<'module, 'a> Generator<'module, 'a> {
     #[allow(clippy::too_many_arguments)] // TODO: FIXME
     pub fn new(
         module_name: EcoString,
-        src_path: &'module Utf8Path,
-        project_root: &'module Utf8Path,
+        src_path: EcoString,
         line_numbers: &'module LineNumbers,
         function_name: EcoString,
         function_arguments: Vec<Option<&'module EcoString>>,
         tracker: &'module mut UsageTracker,
         mut current_scope_vars: im::HashMap<EcoString, usize>,
     ) -> Self {
-        let mut function_name = Some(function_name);
+        let mut current_function = CurrentFunction::Module;
         for &name in function_arguments.iter().flatten() {
             // Initialise the function arguments
             let _ = current_scope_vars.insert(name.clone(), 0);
 
             // If any of the function arguments shadow the current function then
             // recursion is no longer possible.
-            if function_name.as_ref() == Some(name) {
-                function_name = None;
+            if function_name.as_ref() == name {
+                current_function = CurrentFunction::ModuleWithShadowingArgument;
             }
         }
         Self {
             tracker,
             module_name,
             src_path,
-            project_root,
             line_numbers,
             function_name,
             function_arguments,
             tail_recursion_used: false,
             current_scope_vars,
+            current_function,
             function_position: Position::Tail,
             scope_position: Position::Tail,
             statement_level: Vec::new(),
+            let_assert_always_panics: false,
         }
     }
 
@@ -183,84 +238,102 @@ impl<'module, 'a> Generator<'module, 'a> {
     pub fn function_body(
         &mut self,
         body: &'a [TypedStatement],
-        args: &'a [TypedArg],
-    ) -> Output<'a> {
-        let body = self.statements(body)?;
+        arguments: &'a [TypedArg],
+    ) -> Document<'a> {
+        let body = self.statements(body);
         if self.tail_recursion_used {
-            self.tail_call_loop(body, args)
+            self.tail_call_loop(body, arguments)
         } else {
-            Ok(body)
+            body
         }
     }
 
-    fn tail_call_loop(&mut self, body: Document<'a>, args: &'a [TypedArg]) -> Output<'a> {
-        let loop_assignments = concat(args.iter().flat_map(Arg::get_variable_name).map(|name| {
-            let var = maybe_escape_identifier(name);
-            docvec!["let ", var, " = loop$", name, ";", line()]
-        }));
-        Ok(docvec![
+    fn tail_call_loop(&mut self, body: Document<'a>, arguments: &'a [TypedArg]) -> Document<'a> {
+        let loop_assignments = concat(arguments.iter().flat_map(Arg::get_variable_name).map(
+            |name| {
+                let var = maybe_escape_identifier(name);
+                docvec!["let ", var, " = loop$", name, ";", line()]
+            },
+        ));
+        docvec![
             "while (true) {",
             docvec![line(), loop_assignments, body].nest(INDENT),
             line(),
             "}"
-        ])
+        ]
     }
 
-    fn statement(&mut self, statement: &'a TypedStatement) -> Output<'a> {
+    fn statement(&mut self, statement: &'a TypedStatement) -> Document<'a> {
         let expression_doc = match statement {
             Statement::Expression(expression) => self.expression(expression),
             Statement::Assignment(assignment) => self.assignment(assignment),
-            Statement::Use(_use) => self.expression(&_use.call),
-        }?;
+            Statement::Use(use_) => self.expression(&use_.call),
+            Statement::Assert(assert) => self.assert(assert),
+        };
+        self.add_statement_level(expression_doc)
+    }
+
+    fn add_statement_level(&mut self, expression: Document<'a>) -> Document<'a> {
         if self.statement_level.is_empty() {
-            Ok(expression_doc)
+            expression
         } else {
             let mut statements = std::mem::take(&mut self.statement_level);
-            statements.push(expression_doc);
-            Ok(Itertools::intersperse(statements.into_iter(), line())
-                .collect_vec()
-                .to_doc())
+            statements.push(expression);
+            join(statements, line())
         }
     }
 
-    pub fn expression(&mut self, expression: &'a TypedExpr) -> Output<'a> {
+    pub fn expression(&mut self, expression: &'a TypedExpr) -> Document<'a> {
         let document = match expression {
-            TypedExpr::String { value, .. } => Ok(string(value)),
+            TypedExpr::String { value, .. } => string(value),
 
-            TypedExpr::Int { value, .. } => Ok(int(value)),
-            TypedExpr::Float { value, .. } => Ok(float(value)),
+            TypedExpr::Int { value, .. } => int(value),
+            TypedExpr::Float { float_value, .. } => float_from_value(float_value.value()),
 
             TypedExpr::List { elements, tail, .. } => {
-                self.not_in_tail_position(Some(Ordering::Strict), |r#gen| match tail {
+                self.not_in_tail_position(Some(Ordering::Strict), |this| match tail {
                     Some(tail) => {
-                        r#gen.tracker.prepend_used = true;
-                        let tail = r#gen.wrap_expression(tail)?;
-                        prepend(elements.iter().map(|e| r#gen.wrap_expression(e)), tail)
+                        this.tracker.prepend_used = true;
+                        let tail = this.wrap_expression(tail);
+                        prepend(
+                            elements.iter().map(|element| this.wrap_expression(element)),
+                            tail,
+                        )
                     }
                     None => {
-                        r#gen.tracker.list_used = true;
-                        list(elements.iter().map(|e| r#gen.wrap_expression(e)))
+                        this.tracker.list_used = true;
+                        list(elements.iter().map(|element| this.wrap_expression(element)))
                     }
                 })
             }
 
-            TypedExpr::Tuple { elems, .. } => self.tuple(elems),
+            TypedExpr::Tuple { elements, .. } => self.tuple(elements),
             TypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
 
             TypedExpr::Case {
-                subjects, clauses, ..
-            } => self.case(subjects, clauses),
+                subjects,
+                clauses,
+                compiled_case,
+                ..
+            } => decision::case(compiled_case, clauses, subjects, self),
 
-            TypedExpr::Call { fun, args, .. } => self.call(fun, args),
-            TypedExpr::Fn { args, body, .. } => self.fn_(args, body),
+            TypedExpr::Call { fun, arguments, .. } => self.call(fun, arguments),
+            TypedExpr::Fn {
+                arguments, body, ..
+            } => self.fn_(arguments, body),
 
             TypedExpr::RecordAccess { record, label, .. } => self.record_access(record, label),
+
+            TypedExpr::PositionalAccess { record, index, .. } => {
+                self.positional_access(record, *index)
+            }
+
             TypedExpr::RecordUpdate {
-                record,
+                record_assignment,
                 constructor,
-                args,
+                arguments,
                 ..
-            } => self.record_update(record, constructor, args),
+            } => self.record_update(record_assignment, constructor, arguments),
 
             TypedExpr::Var {
                 name, constructor, ..
@@ -294,7 +367,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                 label,
                 constructor,
                 ..
-            } => Ok(self.module_select(module_alias, label, constructor)),
+            } => self.module_select(module_alias, label, constructor),
 
             TypedExpr::NegateBool { value, .. } => self.negate_with("!", value),
 
@@ -302,6 +375,7 @@ impl<'module, 'a> Generator<'module, 'a> {
 
             TypedExpr::Echo {
                 expression,
+                message,
                 location,
                 ..
             } => {
@@ -309,239 +383,177 @@ impl<'module, 'a> Generator<'module, 'a> {
                     .as_ref()
                     .expect("echo with no expression outside of pipe");
                 let expresion_doc =
-                    self.not_in_tail_position(None, |this| this.wrap_expression(expression))?;
-                self.echo(expresion_doc, location)
+                    self.not_in_tail_position(None, |this| this.wrap_expression(expression));
+                self.echo(expresion_doc, message.as_deref(), location)
             }
 
             TypedExpr::Invalid { .. } => {
                 panic!("invalid expressions should not reach code generation")
             }
-        }?;
-        Ok(if expression.handles_own_return() {
+        };
+        if expression.handles_own_return() {
             document
         } else {
             self.wrap_return(document)
-        })
+        }
     }
 
-    fn negate_with(&mut self, with: &'static str, value: &'a TypedExpr) -> Output<'a> {
-        self.not_in_tail_position(None, |r#gen| {
-            Ok(docvec![with, r#gen.wrap_expression(value)?])
-        })
+    fn negate_with(&mut self, with: &'static str, value: &'a TypedExpr) -> Document<'a> {
+        self.not_in_tail_position(None, |this| docvec![with, this.wrap_expression(value)])
     }
 
-    fn bit_array(&mut self, segments: &'a [TypedExprBitArraySegment]) -> Output<'a> {
+    fn bit_array(&mut self, segments: &'a [TypedExprBitArraySegment]) -> Document<'a> {
         self.tracker.bit_array_literal_used = true;
-
-        use BitArrayOption as Opt;
 
         // Collect all the values used in segments.
         let segments_array = array(segments.iter().map(|segment| {
-            let value = self.not_in_tail_position(Some(Ordering::Strict), |r#gen| {
-                r#gen.wrap_expression(&segment.value)
-            })?;
+            let value = self.not_in_tail_position(Some(Ordering::Strict), |this| {
+                this.wrap_expression(&segment.value)
+            });
 
-            if segment.type_ == crate::type_::int() || segment.type_ == crate::type_::float() {
-                let details = self.sized_bit_array_segment_details(segment)?;
+            let details = self.bit_array_segment_details(segment);
 
-                if segment.type_ == crate::type_::int() {
-                    match (details.size_value, segment.value.as_ref()) {
-                        (Some(size_value), TypedExpr::Int { int_value, .. })
-                            if size_value <= SAFE_INT_SEGMENT_MAX_SIZE.into()
-                                && (&size_value % BigInt::from(8) == BigInt::ZERO) =>
-                        {
-                            let bytes = bit_array_segment_int_value_to_bytes(
-                                int_value.clone(),
-                                size_value,
-                                details.endianness,
-                            )?;
-
-                            Ok(u8_slice(&bytes))
-                        }
-
-                        (Some(size_value), _) if size_value == 8.into() => Ok(value),
-
-                        (Some(size_value), _) if size_value <= 0.into() => Ok(nil()),
-
-                        _ => {
-                            self.tracker.sized_integer_segment_used = true;
-                            Ok(docvec![
-                                "sizedInt(",
-                                value,
-                                ", ",
-                                details.size,
-                                ", ",
-                                bool(details.endianness.is_big()),
-                                ")"
-                            ])
-                        }
+            match details.type_ {
+                BitArraySegmentType::BitArray => {
+                    if segment.size().is_some() {
+                        self.tracker.bit_array_slice_used = true;
+                        docvec!["bitArraySlice(", value, ", 0, ", details.size, ")"]
+                    } else {
+                        value
                     }
-                } else {
-                    self.tracker.float_bit_array_segment_used = true;
-                    Ok(docvec![
-                        "sizedFloat(",
-                        value,
-                        ", ",
-                        details.size,
-                        ", ",
-                        bool(details.endianness.is_big()),
-                        ")"
-                    ])
                 }
-            } else {
-                match segment.options.as_slice() {
-                    // UTF8 strings
-                    [Opt::Utf8 { .. }] => {
-                        self.tracker.string_bit_array_segment_used = true;
-                        Ok(docvec!["stringBits(", value, ")"])
+                BitArraySegmentType::Int => match (details.size_value, segment.value.as_ref()) {
+                    (Some(size_value), TypedExpr::Int { int_value, .. })
+                        if size_value <= SAFE_INT_SEGMENT_MAX_SIZE.into()
+                            && (&size_value % BigInt::from(8) == BigInt::ZERO) =>
+                    {
+                        let bytes = bit_array_segment_int_value_to_bytes(
+                            int_value.clone(),
+                            size_value,
+                            segment.endianness(),
+                        );
+
+                        u8_slice(&bytes)
                     }
 
-                    // UTF8 codepoints
-                    [Opt::Utf8Codepoint { .. }] => {
-                        self.tracker.codepoint_bit_array_segment_used = true;
-                        Ok(docvec!["codepointBits(", value, ")"])
+                    (Some(size_value), _) if size_value == 8.into() => value,
+
+                    (Some(size_value), _) if size_value <= 0.into() => nil(),
+
+                    _ => {
+                        self.tracker.sized_integer_segment_used = true;
+                        let size = details.size;
+                        let is_big = bool(segment.endianness().is_big());
+                        docvec!["sizedInt(", value, ", ", size, ", ", is_big, ")"]
                     }
-
-                    // Bit arrays
-                    [Opt::Bits { .. }] => Ok(value),
-
-                    // Bit arrays with explicit size. The explicit size slices the bit array to the
-                    // specified size. A runtime exception is thrown if the size exceeds the number
-                    // of bits in the bit array.
-                    [Opt::Bits { .. }, Opt::Size { value: size, .. }]
-                    | [Opt::Size { value: size, .. }, Opt::Bits { .. }] => match &**size {
-                        TypedExpr::Int { value: size, .. } => {
-                            self.tracker.bit_array_slice_used = true;
-                            Ok(docvec!["bitArraySlice(", value, ", 0, ", size, ")"])
-                        }
-
-                        TypedExpr::Var { name, .. } => {
-                            self.tracker.bit_array_slice_used = true;
-                            Ok(docvec!["bitArraySlice(", value, ", 0, ", name, ")"])
-                        }
-
-                        _ => Err(Error::Unsupported {
-                            feature: "This bit array segment option".into(),
-                            location: segment.location,
-                        }),
-                    },
-
-                    // Anything else
-                    _ => Err(Error::Unsupported {
-                        feature: "This bit array segment option".into(),
-                        location: segment.location,
-                    }),
+                },
+                BitArraySegmentType::Float => {
+                    self.tracker.float_bit_array_segment_used = true;
+                    let size = details.size;
+                    let is_big = bool(details.endianness.is_big());
+                    docvec!["sizedFloat(", value, ", ", size, ", ", is_big, ")"]
+                }
+                BitArraySegmentType::String(StringEncoding::Utf8) => {
+                    self.tracker.string_bit_array_segment_used = true;
+                    docvec!["stringBits(", value, ")"]
+                }
+                BitArraySegmentType::String(StringEncoding::Utf16) => {
+                    self.tracker.string_utf16_bit_array_segment_used = true;
+                    let is_big = bool(details.endianness.is_big());
+                    docvec!["stringToUtf16(", value, ", ", is_big, ")"]
+                }
+                BitArraySegmentType::String(StringEncoding::Utf32) => {
+                    self.tracker.string_utf32_bit_array_segment_used = true;
+                    let is_big = bool(details.endianness.is_big());
+                    docvec!["stringToUtf32(", value, ", ", is_big, ")"]
+                }
+                BitArraySegmentType::UtfCodepoint(StringEncoding::Utf8) => {
+                    self.tracker.codepoint_bit_array_segment_used = true;
+                    docvec!["codepointBits(", value, ")"]
+                }
+                BitArraySegmentType::UtfCodepoint(StringEncoding::Utf16) => {
+                    self.tracker.codepoint_utf16_bit_array_segment_used = true;
+                    let is_big = bool(details.endianness.is_big());
+                    docvec!["codepointToUtf16(", value, ", ", is_big, ")"]
+                }
+                BitArraySegmentType::UtfCodepoint(StringEncoding::Utf32) => {
+                    self.tracker.codepoint_utf32_bit_array_segment_used = true;
+                    let is_big = bool(details.endianness.is_big());
+                    docvec!["codepointToUtf32(", value, ", ", is_big, ")"]
                 }
             }
-        }))?;
+        }));
 
-        Ok(docvec!["toBitArray(", segments_array, ")"])
+        docvec!["toBitArray(", segments_array, ")"]
     }
 
-    fn sized_bit_array_segment_details(
+    fn bit_array_segment_details(
         &mut self,
         segment: &'a TypedExprBitArraySegment,
-    ) -> Result<SizedBitArraySegmentDetails<'a>, Error> {
-        use BitArrayOption as Opt;
-
-        if segment
-            .options
-            .iter()
-            .any(|x| matches!(x, Opt::Native { .. }))
-        {
-            return Err(Error::Unsupported {
-                feature: "This bit array segment option".into(),
-                location: segment.location,
-            });
-        }
-
-        let endianness = if segment
-            .options
-            .iter()
-            .any(|x| matches!(x, Opt::Little { .. }))
-        {
-            Endianness::Little
-        } else {
-            Endianness::Big
-        };
-
-        let size = segment
-            .options
-            .iter()
-            .find(|x| matches!(x, Opt::Size { .. }));
-
-        let unit = segment
-            .options
-            .iter()
-            .find_map(|option| match option {
-                Opt::Unit { value, .. } => Some(*value),
-                _ => None,
-            })
-            .unwrap_or(1);
-
+    ) -> BitArraySegmentDetails<'a> {
+        let size = segment.size();
+        let unit = segment.unit();
         let (size_value, size) = match size {
-            Some(Opt::Size { value: size, .. }) => match *size.clone() {
-                TypedExpr::Int { int_value, .. } => {
-                    let size_value = int_value * unit as usize;
-                    let size = eco_format!("{}", size_value).to_doc();
+            Some(TypedExpr::Int { int_value, .. }) => {
+                let size_value = int_value * unit;
+                let size = eco_format!("{}", size_value).to_doc();
+                (Some(size_value), size)
+            }
+            Some(size) => {
+                let mut size = self.not_in_tail_position(Some(Ordering::Strict), |this| {
+                    this.wrap_expression(size)
+                });
 
-                    (Some(size_value), size)
+                if unit != 1 {
+                    size = size.group().append(" * ".to_doc().append(unit.to_doc()));
                 }
-                _ => {
-                    let mut size = self.not_in_tail_position(Some(Ordering::Strict), |r#gen| {
-                        r#gen.wrap_expression(size)
-                    })?;
 
-                    if unit != 1 {
-                        size = size.group().append(" * ".to_doc().append(unit.to_doc()));
-                    }
+                (None, size)
+            }
 
-                    (None, size)
-                }
-            },
-            _ => {
-                let size_value = if segment.type_ == crate::type_::int() {
-                    8usize
-                } else {
-                    64usize
-                };
-
+            None => {
+                let size_value: usize = if segment.type_.is_int() { 8 } else { 64 };
                 (Some(BigInt::from(size_value)), docvec![size_value])
             }
         };
 
-        Ok(SizedBitArraySegmentDetails {
+        let type_ = BitArraySegmentType::from_segment(segment);
+
+        BitArraySegmentDetails {
+            type_,
             size,
             size_value,
-            endianness,
-        })
+            endianness: segment.endianness(),
+        }
     }
 
     pub fn wrap_return(&mut self, document: Document<'a>) -> Document<'a> {
         match &self.scope_position {
             Position::Tail => docvec!["return ", document, ";"],
-            Position::NotTail(_) => document,
+            Position::Expression(_) | Position::Statement => document,
             Position::Assign(name) => docvec![name.clone(), " = ", document, ";"],
         }
     }
 
-    pub fn not_in_tail_position<CompileFn>(
+    pub fn not_in_tail_position<CompileFn, Output>(
         &mut self,
         // If ordering is None, it is inherited from the parent scope.
         // It will be None in cases like `!x`, where `x` can be lifted
         // only if the ordering is already loose.
         ordering: Option<Ordering>,
         compile: CompileFn,
-    ) -> Output<'a>
+    ) -> Output
     where
-        CompileFn: Fn(&mut Self) -> Output<'a>,
+        CompileFn: Fn(&mut Self) -> Output,
     {
         let new_ordering = ordering.unwrap_or(self.scope_position.ordering());
 
-        let function_position =
-            std::mem::replace(&mut self.function_position, Position::NotTail(new_ordering));
+        let function_position = std::mem::replace(
+            &mut self.function_position,
+            Position::Expression(new_ordering),
+        );
         let scope_position =
-            std::mem::replace(&mut self.scope_position, Position::NotTail(new_ordering));
+            std::mem::replace(&mut self.scope_position, Position::Expression(new_ordering));
 
         let result = compile(self);
 
@@ -551,7 +563,7 @@ impl<'module, 'a> Generator<'module, 'a> {
     }
 
     /// Use the `_block` variable if the expression is JS statement.
-    pub fn wrap_expression(&mut self, expression: &'a TypedExpr) -> Output<'a> {
+    pub fn wrap_expression(&mut self, expression: &'a TypedExpr) -> Document<'a> {
         match (expression, &self.scope_position) {
             (_, Position::Tail | Position::Assign(_)) => self.expression(expression),
             (
@@ -559,18 +571,26 @@ impl<'module, 'a> Generator<'module, 'a> {
                 | TypedExpr::Todo { .. }
                 | TypedExpr::Case { .. }
                 | TypedExpr::Pipeline { .. }
-                | TypedExpr::RecordUpdate { .. },
-                Position::NotTail(Ordering::Loose),
+                | TypedExpr::RecordUpdate {
+                    // Record updates that assign a variable generate multiple statements
+                    record_assignment: Some(_),
+                    ..
+                },
+                Position::Expression(Ordering::Loose),
             ) => self.wrap_block(|this| this.expression(expression)),
             (
                 TypedExpr::Panic { .. }
                 | TypedExpr::Todo { .. }
                 | TypedExpr::Case { .. }
                 | TypedExpr::Pipeline { .. }
-                | TypedExpr::RecordUpdate { .. },
-                Position::NotTail(Ordering::Strict),
-            ) => self.immediately_invoked_function_expression(expression, |r#gen, expr| {
-                r#gen.expression(expr)
+                | TypedExpr::RecordUpdate {
+                    // Record updates that assign a variable generate multiple statements
+                    record_assignment: Some(_),
+                    ..
+                },
+                Position::Expression(Ordering::Strict),
+            ) => self.immediately_invoked_function_expression(expression, |this, expr| {
+                this.expression(expr)
             }),
             _ => self.expression(expression),
         }
@@ -579,21 +599,43 @@ impl<'module, 'a> Generator<'module, 'a> {
     /// Wrap an expression using the `_block` variable if required due to being
     /// a JS statement, or in parens if required due to being an operator or
     /// a function literal.
-    pub fn child_expression(&mut self, expression: &'a TypedExpr) -> Output<'a> {
+    pub fn child_expression(&mut self, expression: &'a TypedExpr) -> Document<'a> {
         match expression {
             TypedExpr::BinOp { name, .. } if name.is_operator_to_wrap() => {}
             TypedExpr::Fn { .. } => {}
 
-            _ => return self.wrap_expression(expression),
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => return self.wrap_expression(expression),
         }
 
-        let document = self.expression(expression)?;
-        Ok(match &self.scope_position {
+        let document = self.expression(expression);
+        match &self.scope_position {
             // Here the document is a return statement: `return <expr>;`
             // or an assignment: `_block = <expr>;`
-            Position::Tail | Position::Assign(_) => document,
-            Position::NotTail(_) => docvec!["(", document, ")"],
-        })
+            Position::Tail | Position::Assign(_) | Position::Statement => document,
+            Position::Expression(_) => docvec!["(", document, ")"],
+        }
     }
 
     /// Wrap an expression in an immediately invoked function expression
@@ -601,31 +643,33 @@ impl<'module, 'a> Generator<'module, 'a> {
         &mut self,
         statements: &'a T,
         to_doc: ToDoc,
-    ) -> Output<'a>
+    ) -> Document<'a>
     where
-        ToDoc: FnOnce(&mut Self, &'a T) -> Output<'a>,
+        ToDoc: FnOnce(&mut Self, &'a T) -> Document<'a>,
     {
         // Save initial state
         let scope_position = std::mem::replace(&mut self.scope_position, Position::Tail);
+        let statement_level = std::mem::take(&mut self.statement_level);
 
         // Set state for in this iife
         let current_scope_vars = self.current_scope_vars.clone();
 
         // Generate the expression
         let result = to_doc(self, statements);
+        let doc = self.add_statement_level(result);
+        let doc = immediately_invoked_function_expression_document(doc);
 
         // Reset
         self.current_scope_vars = current_scope_vars;
         self.scope_position = scope_position;
+        self.statement_level = statement_level;
 
-        // Wrap in iife document
-        let doc = immediately_invoked_function_expression_document(result?);
-        Ok(self.wrap_return(doc))
+        self.wrap_return(doc)
     }
 
-    fn wrap_block<CompileFn>(&mut self, compile: CompileFn) -> Output<'a>
+    fn wrap_block<CompileFn>(&mut self, compile: CompileFn) -> Document<'a>
     where
-        CompileFn: Fn(&mut Self) -> Output<'a>,
+        CompileFn: Fn(&mut Self) -> Document<'a>,
     {
         let block_variable = self.next_local_var(&BLOCK_VARIABLE.into());
 
@@ -636,7 +680,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         );
         let function_position = std::mem::replace(
             &mut self.function_position,
-            Position::NotTail(Ordering::Strict),
+            Position::Expression(Ordering::Strict),
         );
 
         // Generate the expression
@@ -648,24 +692,21 @@ impl<'module, 'a> Generator<'module, 'a> {
 
         self.statement_level
             .push(docvec!["let ", block_variable.clone(), ";"]);
-        self.statement_level.push(statement_doc?);
+        self.statement_level.push(statement_doc);
 
-        Ok(self.wrap_return(block_variable.to_doc()))
+        self.wrap_return(block_variable.to_doc())
     }
 
-    fn variable(&mut self, name: &'a EcoString, constructor: &'a ValueConstructor) -> Output<'a> {
+    fn variable(&mut self, name: &'a EcoString, constructor: &'a ValueConstructor) -> Document<'a> {
         match &constructor.variant {
-            ValueConstructorVariant::LocalConstant { literal } => {
-                constant_expression(Context::Function, self.tracker, literal)
-            }
             ValueConstructorVariant::Record { arity, .. } => {
                 let type_ = constructor.type_.clone();
                 let tracker = &mut self.tracker;
-                Ok(record_constructor(type_, None, name, *arity, tracker))
+                record_constructor(type_, None, name, *arity, tracker)
             }
             ValueConstructorVariant::ModuleFn { .. }
             | ValueConstructorVariant::ModuleConstant { .. }
-            | ValueConstructorVariant::LocalVariable { .. } => Ok(self.local_var(name).to_doc()),
+            | ValueConstructorVariant::LocalVariable { .. } => self.local_var(name).to_doc(),
         }
     }
 
@@ -674,7 +715,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         first_value: &'a TypedPipelineAssignment,
         assignments: &'a [(TypedPipelineAssignment, PipelineAssignmentKind)],
         finally: &'a TypedExpr,
-    ) -> Output<'a> {
+    ) -> Document<'a> {
         let count = assignments.len();
         let mut documents = Vec::with_capacity((count + 2) * 2);
 
@@ -683,98 +724,112 @@ impl<'module, 'a> Generator<'module, 'a> {
 
         let mut latest_local_var: Option<EcoString> = None;
         for assignment in all_assignments {
-            match assignment.value.as_ref() {
-                // An echo in a pipeline won't result in an assignment, instead it
-                // just prints the previous variable assigned in the pipeline.
-                TypedExpr::Echo {
-                    expression: None,
-                    location,
-                    ..
-                } => documents.push(self.not_in_tail_position(Some(Ordering::Strict), |this| {
+            // An echo in a pipeline won't result in an assignment, instead it
+            // just prints the previous variable assigned in the pipeline.
+            if let TypedExpr::Echo {
+                expression: None,
+                message,
+                location,
+                ..
+            } = assignment.value.as_ref()
+            {
+                documents.push(self.not_in_tail_position(Some(Ordering::Strict), |this| {
                     let var = latest_local_var
                         .as_ref()
                         .expect("echo with no previous step in a pipe");
-                    this.echo(var.to_doc(), location)
-                })?),
-
+                    this.echo(var.to_doc(), message.as_deref(), location)
+                }))
+            } else {
                 // Otherwise we assign the intermediate pipe value to a variable.
-                _ => {
-                    documents.push(self.not_in_tail_position(Some(Ordering::Strict), |this| {
+                let assignment_document = self
+                    .not_in_tail_position(Some(Ordering::Strict), |this| {
                         this.simple_variable_assignment(&assignment.name, &assignment.value)
-                    })?);
-                    latest_local_var = Some(self.local_var(&assignment.name));
-                }
+                    });
+                documents.push(self.add_statement_level(assignment_document));
+                latest_local_var = Some(self.local_var(&assignment.name));
             }
 
             documents.push(line());
         }
 
-        match finally {
-            TypedExpr::Echo {
-                expression: None,
-                location,
-                ..
-            } => {
-                let var = latest_local_var.expect("echo with no previous step in a pipe");
-                documents.push(self.echo(var.to_doc(), location)?);
-            }
-            _ => documents.push(self.expression(finally)?),
+        if let TypedExpr::Echo {
+            expression: None,
+            message,
+            location,
+            ..
+        } = finally
+        {
+            let var = latest_local_var.expect("echo with no previous step in a pipe");
+            documents.push(self.echo(var.to_doc(), message.as_deref(), location));
+        } else {
+            let finally = self.expression(finally);
+            documents.push(self.add_statement_level(finally))
         }
 
-        Ok(documents.to_doc().force_break())
+        documents.to_doc().force_break()
     }
 
-    fn expression_flattening_blocks(&mut self, expression: &'a TypedExpr) -> Output<'a> {
-        match expression {
-            TypedExpr::Block { statements, .. } => self.statements(statements),
-            _ => self.expression(expression),
+    pub(crate) fn expression_flattening_blocks(
+        &mut self,
+        expression: &'a TypedExpr,
+    ) -> Document<'a> {
+        if let TypedExpr::Block { statements, .. } = expression {
+            self.statements(statements)
+        } else {
+            let expression_document = self.expression(expression);
+            self.add_statement_level(expression_document)
         }
     }
 
-    fn block(&mut self, statements: &'a Vec1<TypedStatement>) -> Output<'a> {
+    fn block(&mut self, statements: &'a Vec1<TypedStatement>) -> Document<'a> {
         if statements.len() == 1 {
             match statements.first() {
-                Statement::Expression(expression) => self.child_expression(expression),
+                Statement::Expression(expression) => return self.child_expression(expression),
 
-                Statement::Assignment(assignment) => {
-                    self.child_expression(assignment.value.as_ref())
-                }
+                Statement::Assignment(assignment) => match &assignment.kind {
+                    AssignmentKind::Let | AssignmentKind::Generated => {
+                        return self.child_expression(&assignment.value);
+                    }
+                    // We can't just return the right-hand side of a `let assert`
+                    // assignment; we still need to check that the pattern matches.
+                    AssignmentKind::Assert { .. } => {}
+                },
 
-                Statement::Use(use_) => self.child_expression(&use_.call),
+                Statement::Use(use_) => return self.child_expression(&use_.call),
+
+                // Similar to `let assert`, we can't immediately return the value
+                // that is asserted; we have to actually perform the assertion.
+                Statement::Assert(_) => {}
             }
-        } else {
-            match &self.scope_position {
-                Position::Tail | Position::Assign(_) => self.block_document(statements),
-                Position::NotTail(Ordering::Strict) => self
-                    .immediately_invoked_function_expression(statements, |r#gen, statements| {
-                        r#gen.statements(statements)
-                    }),
-                Position::NotTail(Ordering::Loose) => self.wrap_block(|this| {
-                    // Save previous scope
-                    let current_scope_vars = this.current_scope_vars.clone();
-
-                    let document = this.block_document(statements)?;
-
-                    // Restore previous state
-                    this.current_scope_vars = current_scope_vars;
-
-                    Ok(document)
+        }
+        match &self.scope_position {
+            Position::Tail | Position::Assign(_) | Position::Statement => {
+                self.block_document(statements)
+            }
+            Position::Expression(Ordering::Strict) => self
+                .immediately_invoked_function_expression(statements, |this, statements| {
+                    this.statements(statements)
                 }),
-            }
+            Position::Expression(Ordering::Loose) => self.wrap_block(|this| {
+                // Save previous scope
+                let current_scope_vars = this.current_scope_vars.clone();
+
+                let document = this.block_document(statements);
+
+                // Restore previous state
+                this.current_scope_vars = current_scope_vars;
+
+                document
+            }),
         }
     }
 
-    fn block_document(&mut self, statements: &'a Vec1<TypedStatement>) -> Output<'a> {
-        let statements = self.statements(statements)?;
-        Ok(docvec![
-            "{",
-            docvec![line(), statements].nest(INDENT),
-            line(),
-            "}"
-        ])
+    fn block_document(&mut self, statements: &'a Vec1<TypedStatement>) -> Document<'a> {
+        let statements = self.statements(statements);
+        docvec!["{", docvec![line(), statements].nest(INDENT), line(), "}"]
     }
 
-    fn statements(&mut self, statements: &'a [TypedStatement]) -> Output<'a> {
+    fn statements(&mut self, statements: &'a [TypedStatement]) -> Document<'a> {
         // If there are any statements that need to be printed at statement level, that's
         // for an outer scope so we don't want to print them inside this one.
         let statement_level = std::mem::take(&mut self.statement_level);
@@ -782,22 +837,36 @@ impl<'module, 'a> Generator<'module, 'a> {
         let mut documents = Vec::with_capacity(count * 3);
         for (i, statement) in statements.iter().enumerate() {
             if i + 1 < count {
-                documents.push(self.not_in_tail_position(Some(Ordering::Loose), |r#gen| {
-                    r#gen.statement(statement)
-                })?);
+                let function_position =
+                    std::mem::replace(&mut self.function_position, Position::Statement);
+                let scope_position =
+                    std::mem::replace(&mut self.scope_position, Position::Statement);
+
+                documents.push(self.statement(statement));
+
+                self.function_position = function_position;
+                self.scope_position = scope_position;
+
                 if requires_semicolon(statement) {
                     documents.push(";".to_doc());
                 }
                 documents.push(line());
             } else {
-                documents.push(self.statement(statement)?);
+                documents.push(self.statement(statement));
+            }
+
+            // If we've generated code for a statement that always throws, we
+            // can skip code generation for all the following ones.
+            if self.let_assert_always_panics {
+                self.let_assert_always_panics = false;
+                break;
             }
         }
         self.statement_level = statement_level;
         if count == 1 {
-            Ok(documents.to_doc())
+            documents.to_doc()
         } else {
-            Ok(documents.to_doc().force_break())
+            documents.to_doc().force_break()
         }
     }
 
@@ -805,225 +874,474 @@ impl<'module, 'a> Generator<'module, 'a> {
         &mut self,
         name: &'a EcoString,
         value: &'a TypedExpr,
-    ) -> Output<'a> {
+    ) -> Document<'a> {
         // Subject must be rendered before the variable for variable numbering
         let subject =
-            self.not_in_tail_position(Some(Ordering::Loose), |r#gen| r#gen.wrap_expression(value))?;
+            self.not_in_tail_position(Some(Ordering::Loose), |this| this.wrap_expression(value));
         let js_name = self.next_local_var(name);
         let assignment = docvec!["let ", js_name.clone(), " = ", subject, ";"];
-        let assignment = if self.scope_position.is_tail() {
-            docvec![assignment, line(), "return ", js_name, ";"]
-        } else {
-            assignment
+        let assignment = match &self.scope_position {
+            Position::Expression(_) | Position::Statement => assignment,
+            Position::Tail => docvec![assignment, line(), "return ", js_name, ";"],
+            Position::Assign(block_variable) => docvec![
+                assignment,
+                line(),
+                block_variable.clone(),
+                " = ",
+                js_name,
+                ";"
+            ],
         };
 
-        Ok(assignment.force_break())
+        assignment.force_break()
     }
 
-    fn assignment(&mut self, assignment: &'a TypedAssignment) -> Output<'a> {
+    fn assignment(&mut self, assignment: &'a TypedAssignment) -> Document<'a> {
         let TypedAssignment {
             pattern,
             kind,
             value,
+            compiled_case,
             annotation: _,
             location: _,
         } = assignment;
 
-        // If it is a simple assignment to a variable we can generate a normal
-        // JS assignment
+        // In case the pattern is just a variable, we special case it to
+        // generate just a simple assignment instead of using the decision tree
+        // for the code generation step.
         if let TypedPattern::Variable { name, .. } = pattern {
             return self.simple_variable_assignment(name, value);
         }
 
-        // Otherwise we need to compile the patterns
-        let (subject, subject_assignment) = pattern::assign_subject(self, value);
-        // Value needs to be rendered before traversing pattern to have correctly incremented variables.
-        let value =
-            self.not_in_tail_position(Some(Ordering::Loose), |r#gen| r#gen.wrap_expression(value))?;
-        let mut pattern_generator = pattern::Generator::new(self);
-        pattern_generator.traverse_pattern(&subject, pattern)?;
-        let compiled = pattern_generator.take_compiled();
-
-        // If we are in tail position we can return value being assigned
-        let afterwards = if self.scope_position.is_tail() {
-            docvec![
-                line(),
-                "return ",
-                subject_assignment.clone().unwrap_or_else(|| value.clone()),
-                ";"
-            ]
-        } else {
-            nil()
-        };
-
-        let compiled =
-            self.pattern_into_assignment_doc(compiled, subject, pattern.location(), kind)?;
-        // If there is a subject name given create a variable to hold it for
-        // use in patterns
-        let doc = match subject_assignment {
-            Some(name) => docvec!["let ", name, " = ", value, ";", line(), compiled],
-            None => compiled,
-        };
-
-        Ok(doc.append(afterwards).force_break())
+        decision::let_(compiled_case, value, kind, self, pattern)
     }
 
-    fn case(&mut self, subject_values: &'a [TypedExpr], clauses: &'a [TypedClause]) -> Output<'a> {
-        let (subjects, subject_assignments): (Vec<_>, Vec<_>) =
-            pattern::assign_subjects(self, subject_values)
-                .into_iter()
-                .unzip();
-        let mut r#gen = pattern::Generator::new(self);
+    fn assert(&mut self, assert: &'a TypedAssert) -> Document<'a> {
+        let TypedAssert {
+            location,
+            value,
+            message,
+        } = assert;
 
-        let mut doc = nil();
+        let message = match message {
+            Some(m) => self.not_in_tail_position(
+                Some(Ordering::Strict),
+                |this: &mut Generator<'module, 'a>| this.expression(m),
+            ),
+            None => string("Assertion failed."),
+        };
 
-        // We wish to be able to know whether this is the first or clause being
-        // processed, so record the index number. We use this instead of
-        // `Iterator.enumerate` because we are using a nested for loop.
-        let mut clause_number = 0;
-        let total_patterns: usize = clauses
-            .iter()
-            .map(|c| c.alternative_patterns.len())
-            .sum::<usize>()
-            + clauses.len();
+        let check = self.not_in_tail_position(Some(Ordering::Loose), |this| {
+            this.assert_check(value, &message, *location)
+        });
 
-        // A case has many clauses `pattern -> consequence`
-        for clause in clauses {
-            let multipattern = std::iter::once(&clause.pattern);
-            let multipatterns = multipattern.chain(&clause.alternative_patterns);
-
-            // A clause can have many patterns `pattern, pattern ->...`
-            for multipatterns in multipatterns {
-                let scope = r#gen.expression_generator.current_scope_vars.clone();
-                let mut compiled =
-                    r#gen.generate(&subjects, multipatterns, clause.guard.as_ref())?;
-                let consequence = r#gen
-                    .expression_generator
-                    .expression_flattening_blocks(&clause.then)?;
-
-                // We've seen one more clause
-                clause_number += 1;
-
-                // Reset the scope now that this clause has finished, causing the
-                // variables to go out of scope.
-                r#gen.expression_generator.current_scope_vars = scope;
-
-                // If the pattern assigns any variables we need to render assignments
-                let body = if compiled.has_assignments() {
-                    let assignments = r#gen
-                        .expression_generator
-                        .pattern_take_assignments_doc(&mut compiled);
-                    docvec![assignments, line(), consequence]
-                } else {
-                    consequence
-                };
-
-                let is_final_clause = clause_number == total_patterns;
-                let is_first_clause = clause_number == 1;
-                let is_only_clause = is_final_clause && is_first_clause;
-
-                doc = if is_only_clause {
-                    // If this is the only clause and there are no checks then we can
-                    // render just the body as the case does nothing
-                    // A block is used as it could declare variables still.
-                    doc.append("{")
-                        .append(docvec![line(), body].nest(INDENT))
-                        .append(line())
-                        .append("}")
-                } else if is_final_clause {
-                    // If this is the final clause and there are no checks then we can
-                    // render `else` instead of `else if (...)`
-                    doc.append(" else {")
-                        .append(docvec![line(), body].nest(INDENT))
-                        .append(line())
-                        .append("}")
-                } else {
-                    doc.append(if is_first_clause {
-                        "if ("
-                    } else {
-                        " else if ("
-                    })
-                    .append(
-                        r#gen
-                            .expression_generator
-                            .pattern_take_checks_doc(&mut compiled, true),
-                    )
-                    .append(") {")
-                    .append(docvec![line(), body].nest(INDENT))
-                    .append(line())
-                    .append("}")
-                };
+        match &self.scope_position {
+            Position::Expression(_) | Position::Statement => check,
+            Position::Tail | Position::Assign(_) => {
+                docvec![check, line(), self.wrap_return("undefined".to_doc())]
             }
         }
-
-        // If there is a subject name given create a variable to hold it for
-        // use in patterns
-        let subject_assignments: Vec<_> = subject_assignments
-            .into_iter()
-            .zip(subject_values)
-            .flat_map(|(assignment_name, value)| assignment_name.map(|name| (name, value)))
-            .map(|(name, value)| {
-                let value = self.not_in_tail_position(Some(Ordering::Strict), |r#gen| {
-                    r#gen.wrap_expression(value)
-                })?;
-                Ok(docvec!["let ", name, " = ", value, ";", line()])
-            })
-            .try_collect()?;
-
-        Ok(docvec![subject_assignments, doc].force_break())
     }
 
-    fn assignment_no_match(
+    fn assert_check(
         &mut self,
+        subject: &'a TypedExpr,
+        message: &Document<'a>,
         location: SrcSpan,
-        subject: Document<'a>,
-        message: Option<&'a TypedExpr>,
-    ) -> Output<'a> {
-        let message = match message {
-            Some(m) => {
-                self.not_in_tail_position(Some(Ordering::Loose), |r#gen| r#gen.expression(m))?
+    ) -> Document<'a> {
+        let (subject_document, mut fields) = match subject {
+            TypedExpr::Call { fun, arguments, .. } => {
+                let argument_variables = arguments
+                    .iter()
+                    .map(|element| {
+                        self.not_in_tail_position(Some(Ordering::Strict), |this| {
+                            this.assign_to_variable(&element.value)
+                        })
+                    })
+                    .collect_vec();
+                (
+                    self.call_with_doc_arguments(fun, argument_variables.clone()),
+                    vec![
+                        ("kind", string("function_call")),
+                        (
+                            "arguments",
+                            array(argument_variables.into_iter().zip(arguments).map(
+                                |(variable, argument)| {
+                                    self.asserted_expression(
+                                        AssertExpression::from_expression(&argument.value),
+                                        Some(variable),
+                                        argument.location(),
+                                    )
+                                },
+                            )),
+                        ),
+                    ],
+                )
             }
-            None => string("Pattern match failed, no pattern matched the value."),
+
+            TypedExpr::BinOp {
+                name, left, right, ..
+            } => {
+                match name {
+                    BinOp::And => return self.assert_and(left, right, message, location),
+                    BinOp::Or => return self.assert_or(left, right, message, location),
+                    BinOp::Eq
+                    | BinOp::NotEq
+                    | BinOp::LtInt
+                    | BinOp::LtEqInt
+                    | BinOp::LtFloat
+                    | BinOp::LtEqFloat
+                    | BinOp::GtEqInt
+                    | BinOp::GtInt
+                    | BinOp::GtEqFloat
+                    | BinOp::GtFloat
+                    | BinOp::AddInt
+                    | BinOp::AddFloat
+                    | BinOp::SubInt
+                    | BinOp::SubFloat
+                    | BinOp::MultInt
+                    | BinOp::MultFloat
+                    | BinOp::DivInt
+                    | BinOp::DivFloat
+                    | BinOp::RemainderInt
+                    | BinOp::Concatenate => {}
+                }
+
+                let left_document = self.not_in_tail_position(Some(Ordering::Loose), |this| {
+                    this.assign_to_variable(left)
+                });
+                let right_document = self.not_in_tail_position(Some(Ordering::Loose), |this| {
+                    this.assign_to_variable(right)
+                });
+
+                (
+                    self.bin_op_with_doc_operands(
+                        *name,
+                        left_document.clone(),
+                        right_document.clone(),
+                        &left.type_(),
+                    )
+                    .surround("(", ")"),
+                    vec![
+                        ("kind", string("binary_operator")),
+                        ("operator", string(name.name())),
+                        (
+                            "left",
+                            self.asserted_expression(
+                                AssertExpression::from_expression(left),
+                                Some(left_document),
+                                left.location(),
+                            ),
+                        ),
+                        (
+                            "right",
+                            self.asserted_expression(
+                                AssertExpression::from_expression(right),
+                                Some(right_document),
+                                right.location(),
+                            ),
+                        ),
+                    ],
+                )
+            }
+
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => (
+                self.wrap_expression(subject),
+                vec![
+                    ("kind", string("expression")),
+                    (
+                        "expression",
+                        self.asserted_expression(
+                            AssertExpression::from_expression(subject),
+                            Some("false".to_doc()),
+                            subject.location(),
+                        ),
+                    ),
+                ],
+            ),
         };
 
-        Ok(self.throw_error("let_assert", &message, location, [("value", subject)]))
+        fields.push(("start", location.start.to_doc()));
+        fields.push(("end", subject.location().end.to_doc()));
+        fields.push(("expression_start", subject.location().start.to_doc()));
+
+        docvec![
+            "if (",
+            docvec!["!", subject_document].nest(INDENT),
+            break_("", ""),
+            ") {",
+            docvec![
+                line(),
+                self.throw_error("assert", message, location, fields),
+            ]
+            .nest(INDENT),
+            line(),
+            "}",
+        ]
+        .group()
     }
 
-    fn tuple(&mut self, elements: &'a [TypedExpr]) -> Output<'a> {
-        self.not_in_tail_position(Some(Ordering::Strict), |r#gen| {
-            array(
-                elements
-                    .iter()
-                    .map(|element| r#gen.wrap_expression(element)),
-            )
+    /// In Gleam, the `&&` operator is short-circuiting, meaning that we can't
+    /// pre-evaluate both sides of it, and use them in the exception that is
+    /// thrown.
+    /// Instead, we need to implement this short-circuiting logic ourself.
+    ///
+    /// If we short-circuit, we must leave the second expression unevaluated,
+    /// and signal that using the `unevaluated` variant, as detailed in the
+    /// exception format. For the first expression, we know it must be `false`,
+    /// otherwise we would have continued by evaluating the second expression.
+    ///
+    /// Similarly, if we do evaluate the second expression and fail, we know
+    /// that the first expression must have evaluated to `true`, and the second
+    /// to `false`. This way, we avoid needing to evaluate either expression
+    /// twice.
+    ///
+    /// The generated code then looks something like this:
+    /// ```javascript
+    /// if (expr1) {
+    ///   if (!expr2) {
+    ///     <throw exception>
+    ///   }
+    /// } else {
+    ///   <throw exception>
+    /// }
+    /// ```
+    ///
+    fn assert_and(
+        &mut self,
+        left: &'a TypedExpr,
+        right: &'a TypedExpr,
+        message: &Document<'a>,
+        location: SrcSpan,
+    ) -> Document<'a> {
+        let left_kind = AssertExpression::from_expression(left);
+        let right_kind = AssertExpression::from_expression(right);
+
+        let fields_if_short_circuiting = vec![
+            ("kind", string("binary_operator")),
+            ("operator", string("&&")),
+            (
+                "left",
+                self.asserted_expression(left_kind, Some("false".to_doc()), left.location()),
+            ),
+            (
+                "right",
+                self.asserted_expression(AssertExpression::Unevaluated, None, right.location()),
+            ),
+            ("start", location.start.to_doc()),
+            ("end", right.location().end.to_doc()),
+            ("expression_start", left.location().start.to_doc()),
+        ];
+
+        let fields = vec![
+            ("kind", string("binary_operator")),
+            ("operator", string("&&")),
+            (
+                "left",
+                self.asserted_expression(left_kind, Some("true".to_doc()), left.location()),
+            ),
+            (
+                "right",
+                self.asserted_expression(right_kind, Some("false".to_doc()), right.location()),
+            ),
+            ("start", location.start.to_doc()),
+            ("end", right.location().end.to_doc()),
+            ("expression_start", left.location().start.to_doc()),
+        ];
+
+        let left_value =
+            self.not_in_tail_position(Some(Ordering::Loose), |this| this.wrap_expression(left));
+
+        let right_value =
+            self.not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(right));
+
+        let right_check = docvec![
+            line(),
+            "if (",
+            docvec!["!", right_value].nest(INDENT),
+            ") {",
+            docvec![
+                line(),
+                self.throw_error("assert", message, location, fields)
+            ]
+            .nest(INDENT),
+            line(),
+            "}",
+        ];
+
+        docvec![
+            "if (",
+            left_value.nest(INDENT),
+            ") {",
+            right_check.nest(INDENT),
+            line(),
+            "} else {",
+            docvec![
+                line(),
+                self.throw_error("assert", message, location, fields_if_short_circuiting)
+            ]
+            .nest(INDENT),
+            line(),
+            "}"
+        ]
+    }
+
+    /// Similar to `&&`, `||` is also short-circuiting in Gleam. However, if `||`
+    /// short-circuits, that's because the first expression evaluated to `true`,
+    /// meaning the whole assertion succeeds. This allows us to directly use the
+    /// `||` operator in JavaScript.
+    ///
+    /// The only difference is that due to the nature of `||`, if the assertion fails,
+    /// we know that both sides must have evaluated to `false`, so we don't
+    /// need to store the values of them in variables beforehand.
+    fn assert_or(
+        &mut self,
+        left: &'a TypedExpr,
+        right: &'a TypedExpr,
+        message: &Document<'a>,
+        location: SrcSpan,
+    ) -> Document<'a> {
+        let fields = vec![
+            ("kind", string("binary_operator")),
+            ("operator", string("||")),
+            (
+                "left",
+                self.asserted_expression(
+                    AssertExpression::from_expression(left),
+                    Some("false".to_doc()),
+                    left.location(),
+                ),
+            ),
+            (
+                "right",
+                self.asserted_expression(
+                    AssertExpression::from_expression(right),
+                    Some("false".to_doc()),
+                    right.location(),
+                ),
+            ),
+            ("start", location.start.to_doc()),
+            ("end", right.location().end.to_doc()),
+            ("expression_start", left.location().start.to_doc()),
+        ];
+
+        let left_value =
+            self.not_in_tail_position(Some(Ordering::Loose), |this| this.child_expression(left));
+
+        let right_value =
+            self.not_in_tail_position(Some(Ordering::Strict), |this| this.child_expression(right));
+
+        docvec![
+            line(),
+            "if (",
+            docvec!["!(", left_value, " || ", right_value, ")"].nest(INDENT),
+            ") {",
+            docvec![
+                line(),
+                self.throw_error("assert", message, location, fields)
+            ]
+            .nest(INDENT),
+            line(),
+            "}",
+        ]
+    }
+
+    fn assign_to_variable(&mut self, value: &'a TypedExpr) -> Document<'a> {
+        if let TypedExpr::Var { .. } = value {
+            self.expression(value)
+        } else {
+            let value = self.wrap_expression(value);
+            let variable = self.next_local_var(&ASSIGNMENT_VAR.into());
+            let assignment = docvec!["let ", variable.clone(), " = ", value, ";"];
+            self.statement_level.push(assignment);
+            variable.to_doc()
+        }
+    }
+
+    fn asserted_expression(
+        &mut self,
+        kind: AssertExpression,
+        value: Option<Document<'a>>,
+        location: SrcSpan,
+    ) -> Document<'a> {
+        let kind = match kind {
+            AssertExpression::Literal => string("literal"),
+            AssertExpression::Expression => string("expression"),
+            AssertExpression::Unevaluated => string("unevaluated"),
+        };
+
+        let start = location.start.to_doc();
+        let end = location.end.to_doc();
+        let items = if let Some(value) = value {
+            vec![
+                ("kind", kind),
+                ("value", value),
+                ("start", start),
+                ("end", end),
+            ]
+        } else {
+            vec![("kind", kind), ("start", start), ("end", end)]
+        };
+
+        wrap_object(
+            items
+                .into_iter()
+                .map(|(key, value)| (key.to_doc(), Some(value))),
+        )
+    }
+
+    fn tuple(&mut self, elements: &'a [TypedExpr]) -> Document<'a> {
+        self.not_in_tail_position(Some(Ordering::Strict), |this| {
+            array(elements.iter().map(|element| this.wrap_expression(element)))
         })
     }
 
-    fn call(&mut self, fun: &'a TypedExpr, arguments: &'a [TypedCallArg]) -> Output<'a> {
+    fn call(&mut self, fun: &'a TypedExpr, arguments: &'a [TypedCallArg]) -> Document<'a> {
         let arguments = arguments
             .iter()
             .map(|element| {
-                self.not_in_tail_position(Some(Ordering::Strict), |r#gen| {
-                    r#gen.wrap_expression(&element.value)
+                self.not_in_tail_position(Some(Ordering::Strict), |this| {
+                    this.wrap_expression(&element.value)
                 })
             })
-            .try_collect()?;
+            .collect_vec();
 
-        self.call_with_doc_args(fun, arguments)
+        self.call_with_doc_arguments(fun, arguments)
     }
 
-    fn call_with_doc_args(
+    fn call_with_doc_arguments(
         &mut self,
         fun: &'a TypedExpr,
         arguments: Vec<Document<'a>>,
-    ) -> Output<'a> {
+    ) -> Document<'a> {
         match fun {
             // Qualified record construction
             TypedExpr::ModuleSelect {
                 constructor: ModuleValueConstructor::Record { name, .. },
                 module_alias,
                 ..
-            } => Ok(self.wrap_return(construct_record(Some(module_alias), name, arguments))),
+            } => self.wrap_return(construct_record(Some(module_alias), name, arguments)),
 
             // Record construction
             TypedExpr::Var {
@@ -1043,14 +1361,15 @@ impl<'module, 'a> Generator<'module, 'a> {
                         self.tracker.error_used = true;
                     }
                 }
-                Ok(self.wrap_return(construct_record(None, name, arguments)))
+                self.wrap_return(construct_record(None, name, arguments))
             }
 
             // Tail call optimisation. If we are calling the current function
             // and we are in tail position we can avoid creating a new stack
             // frame, enabling recursion with constant memory usage.
             TypedExpr::Var { name, .. }
-                if self.function_name.as_ref() == Some(name)
+                if self.function_name == *name
+                    && self.current_function.can_recurse()
                     && self.function_position.is_tail()
                     && self.current_scope_vars.get(name) == Some(&0) =>
             {
@@ -1079,26 +1398,49 @@ impl<'module, 'a> Generator<'module, 'a> {
                     docs.push(element);
                     docs.push(";".to_doc());
                 }
-                Ok(docs.to_doc())
+                docs.to_doc()
             }
 
-            _ => {
-                let fun = self.not_in_tail_position(None, |r#gen| {
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => {
+                let fun = self.not_in_tail_position(None, |this| -> Document<'_> {
                     let is_fn_literal = matches!(fun, TypedExpr::Fn { .. });
-                    let fun = r#gen.wrap_expression(fun)?;
+                    let fun = this.wrap_expression(fun);
                     if is_fn_literal {
-                        Ok(docvec!["(", fun, ")"])
+                        docvec!["(", fun, ")"]
                     } else {
-                        Ok(fun)
+                        fun
                     }
-                })?;
-                let arguments = call_arguments(arguments.into_iter().map(Ok))?;
-                Ok(self.wrap_return(docvec![fun, arguments]))
+                });
+                let arguments = call_arguments(arguments);
+                self.wrap_return(docvec![fun, arguments])
             }
         }
     }
 
-    fn fn_(&mut self, arguments: &'a [TypedArg], body: &'a [TypedStatement]) -> Output<'a> {
+    fn fn_(&mut self, arguments: &'a [TypedArg], body: &'a [TypedStatement]) -> Document<'a> {
         // New function, this is now the tail position
         let function_position = std::mem::replace(&mut self.function_position, Position::Tail);
         let scope_position = std::mem::replace(&mut self.scope_position, Position::Tail);
@@ -1109,10 +1451,10 @@ impl<'module, 'a> Generator<'module, 'a> {
             let _ = self.current_scope_vars.insert(name.clone(), 0);
         }
 
-        // This is a new function so unset the recorded name so that we don't
+        // This is a new function so track that so that we don't
         // mistakenly trigger tail call optimisation
-        let mut name = None;
-        std::mem::swap(&mut self.function_name, &mut name);
+        let mut current_function = CurrentFunction::Anonymous;
+        std::mem::swap(&mut self.current_function, &mut current_function);
 
         // Generate the function body
         let result = self.statements(body);
@@ -1121,50 +1463,65 @@ impl<'module, 'a> Generator<'module, 'a> {
         self.function_position = function_position;
         self.scope_position = scope_position;
         self.current_scope_vars = scope;
-        std::mem::swap(&mut self.function_name, &mut name);
+        std::mem::swap(&mut self.current_function, &mut current_function);
 
-        Ok(docvec![
+        docvec![
             docvec![
-                fun_args(arguments, false),
+                fun_arguments(arguments, false),
                 " => {",
                 break_("", " "),
-                result?
+                result
             ]
             .nest(INDENT)
             .append(break_("", " "))
             .group(),
             "}",
-        ])
+        ]
     }
 
-    fn record_access(&mut self, record: &'a TypedExpr, label: &'a str) -> Output<'a> {
-        self.not_in_tail_position(None, |r#gen| {
-            let record = r#gen.wrap_expression(record)?;
-            Ok(docvec![record, ".", maybe_escape_property_doc(label)])
+    fn record_access(&mut self, record: &'a TypedExpr, label: &'a str) -> Document<'a> {
+        self.not_in_tail_position(None, |this| {
+            let record = this.wrap_expression(record);
+            docvec![record, ".", maybe_escape_property(label)]
+        })
+    }
+
+    fn positional_access(&mut self, record: &'a TypedExpr, index: u64) -> Document<'a> {
+        self.not_in_tail_position(None, |this| {
+            let record = this.wrap_expression(record);
+            docvec![record, "[", index, "]"]
         })
     }
 
     fn record_update(
         &mut self,
-        record: &'a TypedAssignment,
+        record: &'a Option<Box<TypedAssignment>>,
         constructor: &'a TypedExpr,
-        args: &'a [TypedCallArg],
-    ) -> Output<'a> {
-        Ok(docvec![
-            self.not_in_tail_position(None, |r#gen| r#gen.assignment(record))?,
-            line(),
-            self.call(constructor, args)?,
-        ])
+        arguments: &'a [TypedCallArg],
+    ) -> Document<'a> {
+        match record.as_ref() {
+            Some(record) => docvec![
+                self.not_in_tail_position(None, |this| this.assignment(record)),
+                line(),
+                self.call(constructor, arguments),
+            ],
+            None => self.call(constructor, arguments),
+        }
     }
 
-    fn tuple_index(&mut self, tuple: &'a TypedExpr, index: u64) -> Output<'a> {
-        self.not_in_tail_position(None, |r#gen| {
-            let tuple = r#gen.wrap_expression(tuple)?;
-            Ok(docvec![tuple, eco_format!("[{index}]")])
+    fn tuple_index(&mut self, tuple: &'a TypedExpr, index: u64) -> Document<'a> {
+        self.not_in_tail_position(None, |this| {
+            let tuple = this.wrap_expression(tuple);
+            docvec![tuple, eco_format!("[{index}]")]
         })
     }
 
-    fn bin_op(&mut self, name: &'a BinOp, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
+    fn bin_op(
+        &mut self,
+        name: &'a BinOp,
+        left: &'a TypedExpr,
+        right: &'a TypedExpr,
+    ) -> Document<'a> {
         match name {
             BinOp::And => self.print_bin_op(left, right, "&&"),
             BinOp::Or => self.print_bin_op(left, right, "||"),
@@ -1185,34 +1542,71 @@ impl<'module, 'a> Generator<'module, 'a> {
         }
     }
 
-    fn div_int(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
-        let left = self
-            .not_in_tail_position(Some(Ordering::Strict), |r#gen| r#gen.child_expression(left))?;
-        let right = self.not_in_tail_position(Some(Ordering::Strict), |r#gen| {
-            r#gen.child_expression(right)
-        })?;
-        self.tracker.int_division_used = true;
-        Ok(docvec!["divideInt", wrap_args([left, right])])
+    fn div_int(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Document<'a> {
+        let left_doc =
+            self.not_in_tail_position(Some(Ordering::Strict), |this| this.child_expression(left));
+        let right_doc =
+            self.not_in_tail_position(Some(Ordering::Strict), |this| this.child_expression(right));
+
+        // If we have a constant value divided by zero then it's safe to replace
+        // it directly with 0.
+        if left.is_literal() && right.is_zero_compile_time_number() {
+            "0".to_doc()
+        } else if right.is_non_zero_compile_time_number() {
+            let division = if let TypedExpr::BinOp { .. } = left {
+                docvec![left_doc.surround("(", ")"), " / ", right_doc]
+            } else {
+                docvec![left_doc, " / ", right_doc]
+            };
+            docvec!["globalThis.Math.trunc", wrap_arguments([division])]
+        } else {
+            self.tracker.int_division_used = true;
+            docvec!["divideInt", wrap_arguments([left_doc, right_doc])]
+        }
     }
 
-    fn remainder_int(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
-        let left = self
-            .not_in_tail_position(Some(Ordering::Strict), |r#gen| r#gen.child_expression(left))?;
-        let right = self.not_in_tail_position(Some(Ordering::Strict), |r#gen| {
-            r#gen.child_expression(right)
-        })?;
-        self.tracker.int_remainder_used = true;
-        Ok(docvec!["remainderInt", wrap_args([left, right])])
+    fn remainder_int(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Document<'a> {
+        let left_doc =
+            self.not_in_tail_position(Some(Ordering::Strict), |this| this.child_expression(left));
+        let right_doc =
+            self.not_in_tail_position(Some(Ordering::Strict), |this| this.child_expression(right));
+
+        // If we have a constant value divided by zero then it's safe to replace
+        // it directly with 0.
+        if left.is_literal() && right.is_zero_compile_time_number() {
+            "0".to_doc()
+        } else if right.is_non_zero_compile_time_number() {
+            if let TypedExpr::BinOp { .. } = left {
+                docvec![left_doc.surround("(", ")"), " % ", right_doc]
+            } else {
+                docvec![left_doc, " % ", right_doc]
+            }
+        } else {
+            self.tracker.int_remainder_used = true;
+            docvec!["remainderInt", wrap_arguments([left_doc, right_doc])]
+        }
     }
 
-    fn div_float(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
-        let left = self
-            .not_in_tail_position(Some(Ordering::Strict), |r#gen| r#gen.child_expression(left))?;
-        let right = self.not_in_tail_position(Some(Ordering::Strict), |r#gen| {
-            r#gen.child_expression(right)
-        })?;
-        self.tracker.float_division_used = true;
-        Ok(docvec!["divideFloat", wrap_args([left, right])])
+    fn div_float(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Document<'a> {
+        let left_doc =
+            self.not_in_tail_position(Some(Ordering::Strict), |this| this.child_expression(left));
+        let right_doc =
+            self.not_in_tail_position(Some(Ordering::Strict), |this| this.child_expression(right));
+
+        // If we have a constant value divided by zero then it's safe to replace
+        // it directly with 0.
+        if left.is_literal() && right.is_zero_compile_time_number() {
+            "0.0".to_doc()
+        } else if right.is_non_zero_compile_time_number() {
+            if let TypedExpr::BinOp { .. } = left {
+                docvec![left_doc.surround("(", ")"), " / ", right_doc]
+            } else {
+                docvec![left_doc, " / ", right_doc]
+            }
+        } else {
+            self.tracker.float_division_used = true;
+            docvec!["divideFloat", wrap_arguments([left_doc, right_doc])]
+        }
     }
 
     fn equal(
@@ -1220,25 +1614,142 @@ impl<'module, 'a> Generator<'module, 'a> {
         left: &'a TypedExpr,
         right: &'a TypedExpr,
         should_be_equal: bool,
-    ) -> Output<'a> {
+    ) -> Document<'a> {
         // If it is a simple scalar type then we can use JS' reference identity
         if is_js_scalar(left.type_()) {
-            let left_doc = self.not_in_tail_position(Some(Ordering::Strict), |r#gen| {
-                r#gen.child_expression(left)
-            })?;
-            let right_doc = self.not_in_tail_position(Some(Ordering::Strict), |r#gen| {
-                r#gen.child_expression(right)
-            })?;
+            let left_doc = self
+                .not_in_tail_position(Some(Ordering::Strict), |this| this.child_expression(left));
+            let right_doc = self
+                .not_in_tail_position(Some(Ordering::Strict), |this| this.child_expression(right));
             let operator = if should_be_equal { " === " } else { " !== " };
-            return Ok(docvec![left_doc, operator, right_doc]);
+            return docvec![left_doc, operator, right_doc];
+        }
+
+        // For comparison with singleton custom types, ie, one with no fields.
+        // If you have some code like this
+        // ```gleam
+        //  pub type Wibble {
+        //    Wibble
+        //    Wobble
+        //  }
+
+        //  pub fn is_wibble(w: Wibble) -> Bool {
+        //    w == Wibble
+        //  }
+        // ```
+        // Instead of `isEqual(w, new Wibble())`, generate `w instanceof Wibble`
+        // because the first approach needs to construct a new Wibble, and then call the isEqual function,
+        // which supports any shape of data, and so does a lot of extra logic which isn't necessary.
+
+        if let Some(doc) = self.singleton_variant_equality(left, right, should_be_equal) {
+            return doc;
+        }
+
+        if let Some(doc) = self.singleton_variant_equality(right, left, should_be_equal) {
+            return doc;
         }
 
         // Other types must be compared using structural equality
         let left =
-            self.not_in_tail_position(Some(Ordering::Strict), |r#gen| r#gen.wrap_expression(left))?;
-        let right = self
-            .not_in_tail_position(Some(Ordering::Strict), |r#gen| r#gen.wrap_expression(right))?;
-        Ok(self.prelude_equal_call(should_be_equal, left, right))
+            self.not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(left));
+        let right =
+            self.not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(right));
+
+        self.prelude_equal_call(should_be_equal, left, right)
+    }
+
+    fn singleton_variant_equality(
+        &mut self,
+        left: &'a TypedExpr,
+        right: &'a TypedExpr,
+        should_be_equal: bool,
+    ) -> Option<Document<'a>> {
+        match right {
+            TypedExpr::Var {
+                constructor:
+                    ValueConstructor {
+                        variant: ValueConstructorVariant::Record { arity: 0, name, .. },
+                        ..
+                    },
+                ..
+            } => {
+                let left_doc = self.not_in_tail_position(Some(Ordering::Strict), |this| {
+                    this.wrap_expression(left)
+                });
+                Some(self.singleton_equal(left_doc, None, name, should_be_equal))
+            }
+            TypedExpr::ModuleSelect {
+                module_alias,
+                constructor: ModuleValueConstructor::Record { arity: 0, name, .. },
+                ..
+            } => {
+                let left_doc = self.not_in_tail_position(Some(Ordering::Strict), |this| {
+                    this.wrap_expression(left)
+                });
+                Some(self.singleton_equal(left_doc, Some(module_alias), name, should_be_equal))
+            }
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => None,
+        }
+    }
+
+    fn singleton_equal(
+        &self,
+        value: Document<'a>,
+        module: Option<&'a str>,
+        name: &'a str,
+        should_be_equal: bool,
+    ) -> Document<'a> {
+        let record = if let Some(module) = module {
+            docvec!["$", module, ".", name]
+        } else {
+            name.to_doc()
+        };
+
+        if should_be_equal {
+            docvec![value, " instanceof ", record]
+        } else {
+            docvec!["!(", value, " instanceof ", record, ")"]
+        }
+    }
+
+    fn equal_with_doc_operands(
+        &mut self,
+        left: Document<'a>,
+        right: Document<'a>,
+        type_: Arc<Type>,
+        should_be_equal: bool,
+    ) -> Document<'a> {
+        // If it is a simple scalar type then we can use JS' reference identity
+        if is_js_scalar(type_) {
+            let operator = if should_be_equal { " === " } else { " !== " };
+            return docvec![left, operator, right];
+        }
+
+        // Other types must be compared using structural equality
+        self.prelude_equal_call(should_be_equal, left, right)
     }
 
     pub(super) fn prelude_equal_call(
@@ -1250,13 +1761,13 @@ impl<'module, 'a> Generator<'module, 'a> {
         // Record that we need to import the prelude's isEqual function into the module
         self.tracker.object_equality_used = true;
         // Construct the call
-        let args = wrap_args([left, right]);
+        let arguments = wrap_arguments([left, right]);
         let operator = if should_be_equal {
             "isEqual"
         } else {
             "!isEqual"
         };
-        docvec![operator, args]
+        docvec![operator, arguments]
     }
 
     fn print_bin_op(
@@ -1264,36 +1775,67 @@ impl<'module, 'a> Generator<'module, 'a> {
         left: &'a TypedExpr,
         right: &'a TypedExpr,
         op: &'a str,
-    ) -> Output<'a> {
-        let left = self
-            .not_in_tail_position(Some(Ordering::Strict), |r#gen| r#gen.child_expression(left))?;
-        let right = self.not_in_tail_position(Some(Ordering::Strict), |r#gen| {
-            r#gen.child_expression(right)
-        })?;
-        Ok(docvec![left, " ", op, " ", right])
+    ) -> Document<'a> {
+        let left =
+            self.not_in_tail_position(Some(Ordering::Strict), |this| this.child_expression(left));
+        let right =
+            self.not_in_tail_position(Some(Ordering::Strict), |this| this.child_expression(right));
+        docvec![left, " ", op, " ", right]
     }
 
-    fn todo(&mut self, message: Option<&'a TypedExpr>, location: &'a SrcSpan) -> Output<'a> {
+    pub(super) fn bin_op_with_doc_operands(
+        &mut self,
+        name: BinOp,
+        left: Document<'a>,
+        right: Document<'a>,
+        type_: &Arc<Type>,
+    ) -> Document<'a> {
+        match name {
+            BinOp::And => docvec![left, " && ", right],
+            BinOp::Or => docvec![left, " || ", right],
+            BinOp::LtInt | BinOp::LtFloat => docvec![left, " < ", right],
+            BinOp::LtEqInt | BinOp::LtEqFloat => docvec![left, " <= ", right],
+            BinOp::Eq => self.equal_with_doc_operands(left, right, type_.clone(), true),
+            BinOp::NotEq => self.equal_with_doc_operands(left, right, type_.clone(), false),
+            BinOp::GtInt | BinOp::GtFloat => docvec![left, " > ", right],
+            BinOp::GtEqInt | BinOp::GtEqFloat => docvec![left, " >= ", right],
+            BinOp::Concatenate | BinOp::AddInt | BinOp::AddFloat => {
+                docvec![left, " + ", right]
+            }
+            BinOp::SubInt | BinOp::SubFloat => docvec![left, " - ", right],
+            BinOp::MultInt | BinOp::MultFloat => docvec![left, " * ", right],
+            BinOp::RemainderInt => {
+                self.tracker.int_remainder_used = true;
+                docvec!["remainderInt", wrap_arguments([left, right])]
+            }
+            BinOp::DivInt => {
+                self.tracker.int_division_used = true;
+                docvec!["divideInt", wrap_arguments([left, right])]
+            }
+            BinOp::DivFloat => {
+                self.tracker.float_division_used = true;
+                docvec!["divideFloat", wrap_arguments([left, right])]
+            }
+        }
+    }
+
+    fn todo(&mut self, message: Option<&'a TypedExpr>, location: &'a SrcSpan) -> Document<'a> {
         let message = match message {
-            Some(m) => self.not_in_tail_position(None, |r#gen| r#gen.expression(m))?,
+            Some(m) => self.not_in_tail_position(None, |this| this.wrap_expression(m)),
             None => string("`todo` expression evaluated. This code has not yet been implemented."),
         };
-        let doc = self.throw_error("todo", &message, *location, vec![]);
-
-        Ok(doc)
+        self.throw_error("todo", &message, *location, vec![])
     }
 
-    fn panic(&mut self, location: &'a SrcSpan, message: Option<&'a TypedExpr>) -> Output<'a> {
+    fn panic(&mut self, location: &'a SrcSpan, message: Option<&'a TypedExpr>) -> Document<'a> {
         let message = match message {
-            Some(m) => self.not_in_tail_position(None, |r#gen| r#gen.expression(m))?,
+            Some(m) => self.not_in_tail_position(None, |this| this.wrap_expression(m)),
             None => string("`panic` expression evaluated."),
         };
-        let doc = self.throw_error("panic", &message, *location, vec![]);
-
-        Ok(doc)
+        self.throw_error("panic", &message, *location, vec![])
     }
 
-    fn throw_error<Fields>(
+    pub(crate) fn throw_error<Fields>(
         &mut self,
         error_name: &'a str,
         message: &Document<'a>,
@@ -1305,19 +1847,15 @@ impl<'module, 'a> Generator<'module, 'a> {
     {
         self.tracker.make_error_used = true;
         let module = self.module_name.clone().to_doc().surround('"', '"');
-        let function = self
-            .function_name
-            .clone()
-            .unwrap_or_default()
-            .to_doc()
-            .surround("\"", "\"");
+        let function = self.function_name.clone().to_doc().surround("\"", "\"");
         let line = self.line_numbers.line_number(location.start).to_doc();
         let fields = wrap_object(fields.into_iter().map(|(k, v)| (k.to_doc(), Some(v))));
 
         docvec![
             "throw makeError",
-            wrap_args([
+            wrap_arguments([
                 string(error_name),
+                "FILEPATH".to_doc(),
                 module,
                 line,
                 function,
@@ -1344,134 +1882,575 @@ impl<'module, 'a> Generator<'module, 'a> {
         }
     }
 
-    fn pattern_into_assignment_doc(
+    fn echo(
         &mut self,
-        compiled_pattern: CompiledPattern<'a>,
-        subject: Document<'a>,
-        location: SrcSpan,
-        kind: &'a AssignmentKind<TypedExpr>,
-    ) -> Output<'a> {
-        let any_assignments = !compiled_pattern.assignments.is_empty();
-        let assignments = Self::pattern_assignments_doc(compiled_pattern.assignments);
+        expression: Document<'a>,
+        message: Option<&'a TypedExpr>,
+        location: &'a SrcSpan,
+    ) -> Document<'a> {
+        self.tracker.echo_used = true;
 
-        // If it's an assert then it is likely that the pattern is inexhaustive. When a value is
-        // provided that does not get matched the code needs to throw an exception, which is done
-        // by the pattern_checks_or_throw_doc method.
-        match kind {
-            AssignmentKind::Assert { message, .. } if !compiled_pattern.checks.is_empty() => {
-                let checks = self.pattern_checks_or_throw_doc(
-                    compiled_pattern.checks,
-                    subject,
-                    location,
-                    message.as_deref(),
-                )?;
+        let message = match message {
+            Some(message) => self
+                .not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(message)),
+            None => "undefined".to_doc(),
+        };
 
-                if !any_assignments {
-                    Ok(checks)
-                } else {
-                    Ok(docvec![checks, line(), assignments])
+        let echo_arguments = call_arguments(vec![
+            expression,
+            message,
+            self.src_path.clone().to_doc(),
+            self.line_numbers.line_number(location.start).to_doc(),
+        ]);
+        self.wrap_return(docvec!["echo", echo_arguments])
+    }
+
+    pub(crate) fn constant_expression(
+        &mut self,
+        context: Context,
+        expression: &'a TypedConstant,
+    ) -> Document<'a> {
+        match expression {
+            Constant::Int { value, .. } => int(value),
+            Constant::Float { value, .. } => float(value),
+            Constant::String { value, .. } => string(value),
+            Constant::Tuple { elements, .. } => array(
+                elements
+                    .iter()
+                    .map(|element| self.constant_expression(context, element)),
+            ),
+
+            Constant::List { elements, .. } => {
+                self.tracker.list_used = true;
+                let list = list(
+                    elements
+                        .iter()
+                        .map(|element| self.constant_expression(context, element)),
+                );
+
+                match context {
+                    Context::Constant => docvec!["/* @__PURE__ */ ", list],
+                    Context::Guard => list,
                 }
             }
-            _ => Ok(assignments),
+
+            Constant::Record { type_, name, .. } if type_.is_bool() && name == "True" => {
+                "true".to_doc()
+            }
+            Constant::Record { type_, name, .. } if type_.is_bool() && name == "False" => {
+                "false".to_doc()
+            }
+            Constant::Record { type_, .. } if type_.is_nil() => "undefined".to_doc(),
+
+            Constant::Record {
+                arguments,
+                module,
+                name,
+                tag,
+                type_,
+                ..
+            } => {
+                if module.is_none() && type_.is_result() {
+                    if tag == "Ok" {
+                        self.tracker.ok_used = true;
+                    } else {
+                        self.tracker.error_used = true;
+                    }
+                }
+
+                // If there's no arguments and the type is a function that takes
+                // arguments then this is the constructor being referenced, not the
+                // function being called.
+                if let Some(arity) = type_.fn_arity()
+                    && arguments.is_empty()
+                    && arity != 0
+                {
+                    let arity = arity as u16;
+                    return record_constructor(type_.clone(), None, name, arity, self.tracker);
+                }
+
+                // Record updates are fully expanded during type checking, so we just handle arguments
+                let field_values = arguments
+                    .iter()
+                    .map(|argument| self.constant_expression(context, &argument.value))
+                    .collect_vec();
+
+                let constructor = construct_record(
+                    module.as_ref().map(|(module, _)| module.as_str()),
+                    name,
+                    field_values,
+                );
+                match context {
+                    Context::Constant => docvec!["/* @__PURE__ */ ", constructor],
+                    Context::Guard => constructor,
+                }
+            }
+            Constant::BitArray { segments, .. } => {
+                let bit_array = self.constant_bit_array(segments, context);
+                match context {
+                    Context::Constant => docvec!["/* @__PURE__ */ ", bit_array],
+                    Context::Guard => bit_array,
+                }
+            }
+
+            Constant::Var { name, module, .. } => {
+                match (module, context) {
+                    (None, Context::Guard) => self.local_var(name).to_doc(),
+                    (None, Context::Constant) => maybe_escape_identifier(name).to_doc(),
+                    (Some((module, _)), _) => {
+                        // JS keywords can be accessed here, but we must escape anyway
+                        // as we escape when exporting such names in the first place,
+                        // and the imported name has to match the exported name.
+                        docvec!["$", module, ".", maybe_escape_identifier(name)]
+                    }
+                }
+            }
+
+            Constant::StringConcatenation { left, right, .. } => {
+                let left = self.constant_expression(context, left);
+                let right = self.constant_expression(context, right);
+                docvec![left, " + ", right]
+            }
+
+            Constant::RecordUpdate { .. } => {
+                panic!("record updates should not reach code generation")
+            }
+
+            Constant::Invalid { .. } => {
+                panic!("invalid constants should not reach code generation")
+            }
         }
     }
 
-    fn pattern_checks_or_throw_doc(
+    fn constant_bit_array(
         &mut self,
-        checks: Vec<pattern::Check<'a>>,
-        subject: Document<'a>,
-        location: SrcSpan,
-        message: Option<&'a TypedExpr>,
-    ) -> Output<'a> {
-        let checks = self.pattern_checks_doc(checks, false);
-        Ok(docvec![
-            "if (",
-            docvec![break_("", ""), checks].nest(INDENT),
-            break_("", ""),
-            ") {",
-            docvec![
-                line(),
-                self.assignment_no_match(location, subject, message)?
-            ]
-            .nest(INDENT),
-            line(),
-            "}",
-        ]
-        .group())
-    }
-
-    fn pattern_assignments_doc(assignments: Vec<Assignment<'_>>) -> Document<'_> {
-        let assignments = assignments.into_iter().map(Assignment::into_doc);
-        join(assignments, line())
-    }
-
-    fn pattern_take_assignments_doc(
-        &self,
-        compiled_pattern: &mut CompiledPattern<'a>,
+        segments: &'a [TypedConstantBitArraySegment],
+        context: Context,
     ) -> Document<'a> {
-        let assignments = std::mem::take(&mut compiled_pattern.assignments);
-        Self::pattern_assignments_doc(assignments)
-    }
+        self.tracker.bit_array_literal_used = true;
+        let segments_array = array(segments.iter().map(|segment| {
+            let value = match context {
+                Context::Constant => self.constant_expression(context, &segment.value),
+                Context::Guard => self.guard_constant_expression(&segment.value),
+            };
 
-    fn pattern_take_checks_doc(
-        &self,
-        compiled_pattern: &mut CompiledPattern<'a>,
-        match_desired: bool,
-    ) -> Document<'a> {
-        let checks = std::mem::take(&mut compiled_pattern.checks);
-        self.pattern_checks_doc(checks, match_desired)
-    }
+            let details = self.constant_bit_array_segment_details(segment, context);
 
-    fn pattern_checks_doc(
-        &self,
-        checks: Vec<pattern::Check<'a>>,
-        match_desired: bool,
-    ) -> Document<'a> {
-        if checks.is_empty() {
-            return "true".to_doc();
-        };
-        let operator = if match_desired {
-            break_(" &&", " && ")
-        } else {
-            break_(" ||", " || ")
-        };
-
-        let checks_len = checks.len();
-        join(
-            checks.into_iter().map(|check| {
-                if checks_len > 1 && check.may_require_wrapping() {
-                    docvec!["(", check.into_doc(match_desired), ")"]
-                } else {
-                    check.into_doc(match_desired)
+            match details.type_ {
+                BitArraySegmentType::BitArray => {
+                    if segment.size().is_some() {
+                        self.tracker.bit_array_slice_used = true;
+                        docvec!["bitArraySlice(", value, ", 0, ", details.size, ")"]
+                    } else {
+                        value
+                    }
                 }
-            }),
-            operator,
-        )
-        .group()
+                BitArraySegmentType::Int => match (details.size_value, segment.value.as_ref()) {
+                    (Some(size_value), Constant::Int { int_value, .. })
+                        if size_value <= SAFE_INT_SEGMENT_MAX_SIZE.into()
+                            && (&size_value % BigInt::from(8) == BigInt::ZERO) =>
+                    {
+                        let bytes = bit_array_segment_int_value_to_bytes(
+                            int_value.clone(),
+                            size_value,
+                            segment.endianness(),
+                        );
+
+                        u8_slice(&bytes)
+                    }
+
+                    (Some(size_value), _) if size_value == 8.into() => value,
+
+                    (Some(size_value), _) if size_value <= 0.into() => nil(),
+
+                    _ => {
+                        self.tracker.sized_integer_segment_used = true;
+                        let size = details.size;
+                        let is_big = bool(segment.endianness().is_big());
+                        docvec!["sizedInt(", value, ", ", size, ", ", is_big, ")"]
+                    }
+                },
+                BitArraySegmentType::Float => {
+                    self.tracker.float_bit_array_segment_used = true;
+                    let size = details.size;
+                    let is_big = bool(details.endianness.is_big());
+                    docvec!["sizedFloat(", value, ", ", size, ", ", is_big, ")"]
+                }
+                BitArraySegmentType::String(StringEncoding::Utf8) => {
+                    self.tracker.string_bit_array_segment_used = true;
+                    docvec!["stringBits(", value, ")"]
+                }
+                BitArraySegmentType::String(StringEncoding::Utf16) => {
+                    self.tracker.string_utf16_bit_array_segment_used = true;
+                    let is_big = bool(details.endianness.is_big());
+                    docvec!["stringToUtf16(", value, ", ", is_big, ")"]
+                }
+                BitArraySegmentType::String(StringEncoding::Utf32) => {
+                    self.tracker.string_utf32_bit_array_segment_used = true;
+                    let is_big = bool(details.endianness.is_big());
+                    docvec!["stringToUtf32(", value, ", ", is_big, ")"]
+                }
+                BitArraySegmentType::UtfCodepoint(StringEncoding::Utf8) => {
+                    self.tracker.codepoint_bit_array_segment_used = true;
+                    docvec!["codepointBits(", value, ")"]
+                }
+                BitArraySegmentType::UtfCodepoint(StringEncoding::Utf16) => {
+                    self.tracker.codepoint_utf16_bit_array_segment_used = true;
+                    let is_big = bool(details.endianness.is_big());
+                    docvec!["codepointToUtf16(", value, ", ", is_big, ")"]
+                }
+                BitArraySegmentType::UtfCodepoint(StringEncoding::Utf32) => {
+                    self.tracker.codepoint_utf32_bit_array_segment_used = true;
+                    let is_big = bool(details.endianness.is_big());
+                    docvec!["codepointToUtf32(", value, ", ", is_big, ")"]
+                }
+            }
+        }));
+
+        docvec!["toBitArray(", segments_array, ")"]
     }
 
-    fn echo(&mut self, expression: Document<'a>, location: &'a SrcSpan) -> Output<'a> {
-        self.tracker.echo_used = true;
+    fn constant_bit_array_segment_details(
+        &mut self,
+        segment: &'a TypedConstantBitArraySegment,
+        context: Context,
+    ) -> BitArraySegmentDetails<'a> {
+        let size = segment.size();
+        let unit = segment.unit();
+        let (size_value, size) = match size {
+            Some(Constant::Int { int_value, .. }) => {
+                let size_value = int_value * unit;
+                let size = eco_format!("{}", size_value).to_doc();
+                (Some(size_value), size)
+            }
 
-        let relative_path = self
-            .src_path
-            .strip_prefix(self.project_root)
-            .unwrap_or(self.src_path)
-            .as_str()
-            .replace("\\", "\\\\");
+            Some(size) => {
+                let mut size = match context {
+                    Context::Constant => self.constant_expression(context, size),
+                    Context::Guard => self.guard_constant_expression(size),
+                };
+                if unit != 1 {
+                    size = size.group().append(" * ".to_doc().append(unit.to_doc()));
+                }
 
-        let relative_path_doc = EcoString::from(relative_path).to_doc();
+                (None, size)
+            }
 
-        let echo_argument = call_arguments(vec![
-            Ok(expression),
-            Ok(relative_path_doc.surround("\"", "\"")),
-            Ok(self.line_numbers.line_number(location.start).to_doc()),
-        ])?;
-        Ok(self.wrap_return(docvec!["echo", echo_argument]))
+            None => {
+                let size_value: usize = if segment.type_.is_int() { 8 } else { 64 };
+                (Some(BigInt::from(size_value)), docvec![size_value])
+            }
+        };
+
+        let type_ = BitArraySegmentType::from_segment(segment);
+
+        BitArraySegmentDetails {
+            type_,
+            size,
+            size_value,
+            endianness: segment.endianness(),
+        }
+    }
+
+    pub(crate) fn guard(&mut self, guard: &'a TypedClauseGuard) -> Document<'a> {
+        match guard {
+            ClauseGuard::Block { value, .. } => self.guard(value).surround("(", ")"),
+
+            ClauseGuard::Equals { left, right, .. } if is_js_scalar(left.type_()) => {
+                let left = self.wrapped_guard(left);
+                let right = self.wrapped_guard(right);
+                docvec![left, " === ", right]
+            }
+
+            ClauseGuard::NotEquals { left, right, .. } if is_js_scalar(left.type_()) => {
+                let left = self.wrapped_guard(left);
+                let right = self.wrapped_guard(right);
+                docvec![left, " !== ", right]
+            }
+
+            ClauseGuard::Equals { left, right, .. }
+            | ClauseGuard::NotEquals { left, right, .. } => {
+                let should_be_equal = matches!(guard, ClauseGuard::Equals { .. });
+
+                // Handle singleton equality optimization for guards
+                if let Some(doc) =
+                    self.singleton_variant_guard_equality(left, right, should_be_equal)
+                {
+                    return doc;
+                }
+
+                if let Some(doc) =
+                    self.singleton_variant_guard_equality(right, left, should_be_equal)
+                {
+                    return doc;
+                }
+
+                let left_doc = self.guard(left);
+                let right_doc = self.guard(right);
+                self.prelude_equal_call(should_be_equal, left_doc, right_doc)
+            }
+
+            ClauseGuard::GtFloat { left, right, .. } | ClauseGuard::GtInt { left, right, .. } => {
+                let left = self.wrapped_guard(left);
+                let right = self.wrapped_guard(right);
+                docvec![left, " > ", right]
+            }
+
+            ClauseGuard::GtEqFloat { left, right, .. }
+            | ClauseGuard::GtEqInt { left, right, .. } => {
+                let left = self.wrapped_guard(left);
+                let right = self.wrapped_guard(right);
+                docvec![left, " >= ", right]
+            }
+
+            ClauseGuard::LtFloat { left, right, .. } | ClauseGuard::LtInt { left, right, .. } => {
+                let left = self.wrapped_guard(left);
+                let right = self.wrapped_guard(right);
+                docvec![left, " < ", right]
+            }
+
+            ClauseGuard::LtEqFloat { left, right, .. }
+            | ClauseGuard::LtEqInt { left, right, .. } => {
+                let left = self.wrapped_guard(left);
+                let right = self.wrapped_guard(right);
+                docvec![left, " <= ", right]
+            }
+
+            ClauseGuard::AddFloat { left, right, .. } | ClauseGuard::AddInt { left, right, .. } => {
+                let left = self.wrapped_guard(left);
+                let right = self.wrapped_guard(right);
+                docvec![left, " + ", right]
+            }
+
+            ClauseGuard::SubFloat { left, right, .. } | ClauseGuard::SubInt { left, right, .. } => {
+                let left = self.wrapped_guard(left);
+                let right = self.wrapped_guard(right);
+                docvec![left, " - ", right]
+            }
+
+            ClauseGuard::MultFloat { left, right, .. }
+            | ClauseGuard::MultInt { left, right, .. } => {
+                let left = self.wrapped_guard(left);
+                let right = self.wrapped_guard(right);
+                docvec![left, " * ", right]
+            }
+
+            ClauseGuard::DivFloat { left, right, .. } => {
+                let left = self.wrapped_guard(left);
+                let right = self.wrapped_guard(right);
+                self.tracker.float_division_used = true;
+                docvec!["divideFloat", wrap_arguments([left, right])]
+            }
+
+            ClauseGuard::DivInt { left, right, .. } => {
+                let left = self.wrapped_guard(left);
+                let right = self.wrapped_guard(right);
+                self.tracker.int_division_used = true;
+                docvec!["divideInt", wrap_arguments([left, right])]
+            }
+
+            ClauseGuard::RemainderInt { left, right, .. } => {
+                let left = self.wrapped_guard(left);
+                let right = self.wrapped_guard(right);
+                self.tracker.int_remainder_used = true;
+                docvec!["remainderInt", wrap_arguments([left, right])]
+            }
+
+            ClauseGuard::Or { left, right, .. } => {
+                let left = self.wrapped_guard(left);
+                let right = self.wrapped_guard(right);
+                docvec![left, " || ", right]
+            }
+
+            ClauseGuard::And { left, right, .. } => {
+                let left = self.wrapped_guard(left);
+                let right = self.wrapped_guard(right);
+                docvec![left, " && ", right]
+            }
+
+            ClauseGuard::Var { name, .. } => self.local_var(name).to_doc(),
+
+            ClauseGuard::TupleIndex { tuple, index, .. } => {
+                docvec![self.guard(tuple,), "[", index, "]"]
+            }
+
+            ClauseGuard::FieldAccess {
+                label, container, ..
+            } => docvec![self.guard(container), ".", maybe_escape_property(label)],
+
+            ClauseGuard::ModuleSelect {
+                module_alias,
+                label,
+                ..
+            } => docvec!["$", module_alias, ".", label],
+
+            ClauseGuard::Not { expression, .. } => docvec!["!", self.guard(expression,)],
+
+            ClauseGuard::Constant(constant) => self.guard_constant_expression(constant),
+        }
+    }
+
+    fn singleton_variant_guard_equality(
+        &mut self,
+        left: &'a TypedClauseGuard,
+        right: &'a TypedClauseGuard,
+        should_be_equal: bool,
+    ) -> Option<Document<'a>> {
+        if let ClauseGuard::Constant(Constant::Record {
+            record_constructor: Some(constructor),
+            module,
+            name,
+            ..
+        }) = right
+            && let ValueConstructorVariant::Record { arity: 0, .. } = constructor.variant
+        {
+            let left_doc = self.guard(left);
+            return Some(self.singleton_equal(
+                left_doc,
+                module.as_ref().map(|(module, _)| module.as_str()),
+                name,
+                should_be_equal,
+            ));
+        }
+        None
+    }
+
+    fn wrapped_guard(&mut self, guard: &'a TypedClauseGuard) -> Document<'a> {
+        match guard {
+            ClauseGuard::Var { .. }
+            | ClauseGuard::TupleIndex { .. }
+            | ClauseGuard::Constant(_)
+            | ClauseGuard::Not { .. }
+            | ClauseGuard::FieldAccess { .. }
+            | ClauseGuard::Block { .. } => self.guard(guard),
+
+            ClauseGuard::Equals { .. }
+            | ClauseGuard::NotEquals { .. }
+            | ClauseGuard::GtInt { .. }
+            | ClauseGuard::GtEqInt { .. }
+            | ClauseGuard::LtInt { .. }
+            | ClauseGuard::LtEqInt { .. }
+            | ClauseGuard::GtFloat { .. }
+            | ClauseGuard::GtEqFloat { .. }
+            | ClauseGuard::LtFloat { .. }
+            | ClauseGuard::LtEqFloat { .. }
+            | ClauseGuard::AddInt { .. }
+            | ClauseGuard::AddFloat { .. }
+            | ClauseGuard::SubInt { .. }
+            | ClauseGuard::SubFloat { .. }
+            | ClauseGuard::MultInt { .. }
+            | ClauseGuard::MultFloat { .. }
+            | ClauseGuard::DivInt { .. }
+            | ClauseGuard::DivFloat { .. }
+            | ClauseGuard::RemainderInt { .. }
+            | ClauseGuard::Or { .. }
+            | ClauseGuard::And { .. }
+            | ClauseGuard::ModuleSelect { .. } => docvec!["(", self.guard(guard), ")"],
+        }
+    }
+
+    fn guard_constant_expression(&mut self, expression: &'a TypedConstant) -> Document<'a> {
+        match expression {
+            Constant::Tuple { elements, .. } => array(
+                elements
+                    .iter()
+                    .map(|element| self.guard_constant_expression(element)),
+            ),
+
+            Constant::List { elements, .. } => {
+                self.tracker.list_used = true;
+                list(
+                    elements
+                        .iter()
+                        .map(|element| self.guard_constant_expression(element)),
+                )
+            }
+            Constant::Record { type_, name, .. } if type_.is_bool() && name == "True" => {
+                "true".to_doc()
+            }
+            Constant::Record { type_, name, .. } if type_.is_bool() && name == "False" => {
+                "false".to_doc()
+            }
+            Constant::Record { type_, .. } if type_.is_nil() => "undefined".to_doc(),
+
+            Constant::Record {
+                arguments,
+                module,
+                name,
+                tag,
+                type_,
+                ..
+            } => {
+                if module.is_none() && type_.is_result() {
+                    if tag == "Ok" {
+                        self.tracker.ok_used = true;
+                    } else {
+                        self.tracker.error_used = true;
+                    }
+                }
+
+                // If there's no arguments and the type is a function that takes
+                // arguments then this is the constructor being referenced, not the
+                // function being called.
+                if let Some(arity) = type_.fn_arity()
+                    && arguments.is_empty()
+                    && arity != 0
+                {
+                    let arity = arity as u16;
+                    return record_constructor(type_.clone(), None, name, arity, self.tracker);
+                }
+
+                // Record updates are fully expanded during type checking, so we just
+                // handle arguments
+                let field_values = arguments
+                    .iter()
+                    .map(|argument| self.guard_constant_expression(&argument.value))
+                    .collect_vec();
+                construct_record(
+                    module.as_ref().map(|(module, _)| module.as_str()),
+                    name,
+                    field_values,
+                )
+            }
+
+            Constant::BitArray { segments, .. } => {
+                self.constant_bit_array(segments, Context::Guard)
+            }
+
+            Constant::Var { name, .. } => self.local_var(name).to_doc(),
+
+            Constant::Int { .. }
+            | Constant::Float { .. }
+            | Constant::String { .. }
+            | Constant::RecordUpdate { .. }
+            | Constant::StringConcatenation { .. }
+            | Constant::Invalid { .. } => self.constant_expression(Context::Guard, expression),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+enum AssertExpression {
+    Literal,
+    Expression,
+    Unevaluated,
+}
+
+impl AssertExpression {
+    fn from_expression(expression: &TypedExpr) -> Self {
+        if expression.is_literal() {
+            Self::Literal
+        } else {
+            Self::Expression
+        }
     }
 }
 
 pub fn int(value: &str) -> Document<'_> {
+    eco_string_int(value.into())
+}
+
+pub fn eco_string_int<'a>(value: EcoString) -> Document<'a> {
     let mut out = EcoString::with_capacity(value.len());
 
     if value.starts_with('-') {
@@ -1498,6 +2477,12 @@ pub fn int(value: &str) -> Document<'_> {
     if value.is_empty() {
         out.push('0');
     }
+
+    // If the number starts with a `0` then an underscore, the `0` will be stripped,
+    // leaving the number to look something like `_1_2_3`, which is not valid syntax.
+    // Therefore, we strip the `_` to avoid this case.
+    let value = value.trim_start_matches('_');
+
     out.push_str(value);
 
     out.to_doc()
@@ -1522,410 +2507,86 @@ pub fn float(value: &str) -> Document<'_> {
     out.to_doc()
 }
 
-pub(crate) fn guard_constant_expression<'a>(
-    assignments: &mut Vec<Assignment<'a>>,
-    tracker: &mut UsageTracker,
-    expression: &'a TypedConstant,
-) -> Output<'a> {
-    match expression {
-        Constant::Tuple { elements, .. } => array(
-            elements
-                .iter()
-                .map(|e| guard_constant_expression(assignments, tracker, e)),
-        ),
-
-        Constant::List { elements, .. } => {
-            tracker.list_used = true;
-            list(
-                elements
-                    .iter()
-                    .map(|e| guard_constant_expression(assignments, tracker, e)),
-            )
+pub fn float_from_value(value: f64) -> Document<'static> {
+    if value.is_infinite() {
+        if value.is_sign_positive() {
+            "Infinity".to_doc()
+        } else {
+            "-Infinity".to_doc()
         }
-        Constant::Record { type_, name, .. } if type_.is_bool() && name == "True" => {
-            Ok("true".to_doc())
-        }
-        Constant::Record { type_, name, .. } if type_.is_bool() && name == "False" => {
-            Ok("false".to_doc())
-        }
-        Constant::Record { type_, .. } if type_.is_nil() => Ok("undefined".to_doc()),
-
-        Constant::Record {
-            args,
-            module,
-            name,
-            tag,
-            type_,
-            ..
-        } => {
-            if type_.is_result() {
-                if tag == "Ok" {
-                    tracker.ok_used = true;
-                } else {
-                    tracker.error_used = true;
-                }
-            }
-
-            // If there's no arguments and the type is a function that takes
-            // arguments then this is the constructor being referenced, not the
-            // function being called.
-            if let Some(arity) = type_.fn_arity() {
-                if args.is_empty() && arity != 0 {
-                    let arity = arity as u16;
-                    return Ok(record_constructor(
-                        type_.clone(),
-                        None,
-                        name,
-                        arity,
-                        tracker,
-                    ));
-                }
-            }
-
-            let field_values: Vec<_> = args
-                .iter()
-                .map(|arg| guard_constant_expression(assignments, tracker, &arg.value))
-                .try_collect()?;
-            Ok(construct_record(
-                module.as_ref().map(|(module, _)| module.as_str()),
-                name,
-                field_values,
-            ))
-        }
-
-        Constant::BitArray { segments, .. } => bit_array(tracker, segments, |tracker, constant| {
-            guard_constant_expression(assignments, tracker, constant)
-        }),
-
-        Constant::Var { name, .. } => Ok(assignments
-            .iter()
-            .find(|assignment| assignment.name == name)
-            .map(|assignment| assignment.subject.clone())
-            .unwrap_or_else(|| maybe_escape_identifier(name).to_doc())),
-
-        expression => constant_expression(Context::Function, tracker, expression),
+    } else if value.is_nan() {
+        // NOTE: this case is probably unnecessary, as this function is only
+        // invoked with `LiteralFloatValue` values, which cannot be nan.
+        "NaN".to_doc()
+    } else {
+        value.to_doc()
     }
 }
 
-#[derive(Debug, Clone, Copy)]
 /// The context where the constant expression is used, it might be inside a
 /// function call, or in the definition of another constant.
 ///
 /// Based on the context we might want to annotate pure function calls as
 /// "@__PURE__".
 ///
+#[derive(Debug, Clone, Copy)]
 pub enum Context {
     Constant,
-    Function,
-}
-
-pub(crate) fn constant_expression<'a>(
-    context: Context,
-    tracker: &mut UsageTracker,
-    expression: &'a TypedConstant,
-) -> Output<'a> {
-    match expression {
-        Constant::Int { value, .. } => Ok(int(value)),
-        Constant::Float { value, .. } => Ok(float(value)),
-        Constant::String { value, .. } => Ok(string(value)),
-        Constant::Tuple { elements, .. } => array(
-            elements
-                .iter()
-                .map(|e| constant_expression(context, tracker, e)),
-        ),
-
-        Constant::List { elements, .. } => {
-            tracker.list_used = true;
-            let list = list(
-                elements
-                    .iter()
-                    .map(|e| constant_expression(context, tracker, e)),
-            )?;
-
-            match context {
-                Context::Constant => Ok(docvec!["/* @__PURE__ */ ", list]),
-                Context::Function => Ok(list),
-            }
-        }
-
-        Constant::Record { type_, name, .. } if type_.is_bool() && name == "True" => {
-            Ok("true".to_doc())
-        }
-        Constant::Record { type_, name, .. } if type_.is_bool() && name == "False" => {
-            Ok("false".to_doc())
-        }
-        Constant::Record { type_, .. } if type_.is_nil() => Ok("undefined".to_doc()),
-
-        Constant::Record {
-            args,
-            module,
-            name,
-            tag,
-            type_,
-            ..
-        } => {
-            if type_.is_result() {
-                if tag == "Ok" {
-                    tracker.ok_used = true;
-                } else {
-                    tracker.error_used = true;
-                }
-            }
-
-            // If there's no arguments and the type is a function that takes
-            // arguments then this is the constructor being referenced, not the
-            // function being called.
-            if let Some(arity) = type_.fn_arity() {
-                if args.is_empty() && arity != 0 {
-                    let arity = arity as u16;
-                    return Ok(record_constructor(
-                        type_.clone(),
-                        None,
-                        name,
-                        arity,
-                        tracker,
-                    ));
-                }
-            }
-
-            let field_values: Vec<_> = args
-                .iter()
-                .map(|arg| constant_expression(context, tracker, &arg.value))
-                .try_collect()?;
-
-            let constructor = construct_record(
-                module.as_ref().map(|(module, _)| module.as_str()),
-                name,
-                field_values,
-            );
-            match context {
-                Context::Constant => Ok(docvec!["/* @__PURE__ */ ", constructor]),
-                Context::Function => Ok(constructor),
-            }
-        }
-
-        Constant::BitArray { segments, .. } => {
-            let bit_array = bit_array(tracker, segments, |tracker, expr| {
-                constant_expression(context, tracker, expr)
-            })?;
-            match context {
-                Context::Constant => Ok(docvec!["/* @__PURE__ */ ", bit_array]),
-                Context::Function => Ok(bit_array),
-            }
-        }
-
-        Constant::Var { name, module, .. } => Ok({
-            match module {
-                None => maybe_escape_identifier(name).to_doc(),
-                Some((module, _)) => {
-                    // JS keywords can be accessed here, but we must escape anyway
-                    // as we escape when exporting such names in the first place,
-                    // and the imported name has to match the exported name.
-                    docvec!["$", module, ".", maybe_escape_identifier(name)]
-                }
-            }
-        }),
-
-        Constant::StringConcatenation { left, right, .. } => {
-            let left = constant_expression(context, tracker, left)?;
-            let right = constant_expression(context, tracker, right)?;
-            Ok(docvec![left, " + ", right])
-        }
-
-        Constant::Invalid { .. } => panic!("invalid constants should not reach code generation"),
-    }
-}
-
-fn bit_array<'a>(
-    tracker: &mut UsageTracker,
-    segments: &'a [TypedConstantBitArraySegment],
-    mut constant_expr_fun: impl FnMut(&mut UsageTracker, &'a TypedConstant) -> Output<'a>,
-) -> Output<'a> {
-    tracker.bit_array_literal_used = true;
-
-    use BitArrayOption as Opt;
-
-    let segments_array = array(segments.iter().map(|segment| {
-        let value = constant_expr_fun(tracker, &segment.value)?;
-
-        if segment.type_ == crate::type_::int() || segment.type_ == crate::type_::float() {
-            let details =
-                sized_bit_array_segment_details(segment, tracker, &mut constant_expr_fun)?;
-
-            if segment.type_ == crate::type_::int() {
-                match (details.size_value, segment.value.as_ref()) {
-                    (Some(size_value), Constant::Int { int_value, .. })
-                        if size_value <= SAFE_INT_SEGMENT_MAX_SIZE.into()
-                            && (&size_value % BigInt::from(8) == BigInt::ZERO) =>
-                    {
-                        let bytes = bit_array_segment_int_value_to_bytes(
-                            int_value.clone(),
-                            size_value,
-                            details.endianness,
-                        )?;
-
-                        Ok(u8_slice(&bytes))
-                    }
-
-                    (Some(size_value), _) if size_value == 8.into() => Ok(value),
-
-                    (Some(size_value), _) if size_value <= 0.into() => Ok(nil()),
-
-                    _ => {
-                        tracker.sized_integer_segment_used = true;
-                        Ok(docvec![
-                            "sizedInt(",
-                            value,
-                            ", ",
-                            details.size,
-                            ", ",
-                            bool(details.endianness.is_big()),
-                            ")"
-                        ])
-                    }
-                }
-            } else {
-                tracker.float_bit_array_segment_used = true;
-                Ok(docvec![
-                    "sizedFloat(",
-                    value,
-                    ", ",
-                    details.size,
-                    ", ",
-                    bool(details.endianness.is_big()),
-                    ")"
-                ])
-            }
-        } else {
-            match segment.options.as_slice() {
-                // UTF8 strings
-                [Opt::Utf8 { .. }] => {
-                    tracker.string_bit_array_segment_used = true;
-                    Ok(docvec!["stringBits(", value, ")"])
-                }
-
-                // UTF8 codepoints
-                [Opt::Utf8Codepoint { .. }] => {
-                    tracker.codepoint_bit_array_segment_used = true;
-                    Ok(docvec!["codepointBits(", value, ")"])
-                }
-
-                // Bit arrays
-                [Opt::Bits { .. }] => Ok(value),
-
-                // Bit arrays with explicit size. The explicit size slices the bit array to the
-                // specified size. A runtime exception is thrown if the size exceeds the number
-                // of bits in the bit array.
-                [Opt::Bits { .. }, Opt::Size { value: size, .. }]
-                | [Opt::Size { value: size, .. }, Opt::Bits { .. }] => match &**size {
-                    Constant::Int { value: size, .. } => {
-                        tracker.bit_array_slice_used = true;
-                        Ok(docvec!["bitArraySlice(", value, ", 0, ", size, ")"])
-                    }
-
-                    _ => Err(Error::Unsupported {
-                        feature: "This bit array segment option".into(),
-                        location: segment.location,
-                    }),
-                },
-
-                // Anything else
-                _ => Err(Error::Unsupported {
-                    feature: "This bit array segment option".into(),
-                    location: segment.location,
-                }),
-            }
-        }
-    }))?;
-
-    Ok(docvec!["toBitArray(", segments_array, ")"])
+    Guard,
 }
 
 #[derive(Debug)]
-struct SizedBitArraySegmentDetails<'a> {
+struct BitArraySegmentDetails<'a> {
+    type_: BitArraySegmentType,
     size: Document<'a>,
-    /// The size of the bit array segment stored as a BigInt. This has a value when the segment's
-    /// size is known at compile time.
+    /// The size of the bit array segment stored as a BigInt.
+    /// This has a value when the segment's size is known at compile time.
     size_value: Option<BigInt>,
     endianness: Endianness,
 }
 
-fn sized_bit_array_segment_details<'a>(
-    segment: &'a TypedConstantBitArraySegment,
-    tracker: &mut UsageTracker,
-    constant_expr_fun: &mut impl FnMut(&mut UsageTracker, &'a TypedConstant) -> Output<'a>,
-) -> Result<SizedBitArraySegmentDetails<'a>, Error> {
-    use BitArrayOption as Opt;
+#[derive(Debug, Clone, Copy)]
+enum BitArraySegmentType {
+    BitArray,
+    Int,
+    Float,
+    String(StringEncoding),
+    UtfCodepoint(StringEncoding),
+}
 
-    if segment
-        .options
-        .iter()
-        .any(|x| matches!(x, Opt::Native { .. }))
-    {
-        return Err(Error::Unsupported {
-            feature: "This bit array segment option".into(),
-            location: segment.location,
-        });
-    }
-
-    let endianness = if segment
-        .options
-        .iter()
-        .any(|x| matches!(x, Opt::Little { .. }))
-    {
-        Endianness::Little
-    } else {
-        Endianness::Big
-    };
-
-    let unit = segment
-        .options
-        .iter()
-        .find_map(|option| match option {
-            Opt::Unit { value, .. } => Some(*value),
-            _ => None,
-        })
-        .unwrap_or(1);
-
-    let size = segment
-        .options
-        .iter()
-        .find(|x| matches!(x, Opt::Size { .. }));
-
-    let (size_value, size) = match size {
-        Some(Opt::Size { value: size, .. }) => match *size.clone() {
-            Constant::Int { int_value, .. } => {
-                let size_value = int_value * unit as usize;
-                let size = eco_format!("{}", size_value).to_doc();
-
-                (Some(size_value), size)
-            }
-            _ => {
-                let mut size = constant_expr_fun(tracker, size)?;
-
-                if unit != 1 {
-                    size = size.group().append(" * ".to_doc().append(unit.to_doc()));
-                }
-
-                (None, size)
-            }
-        },
-        _ => {
-            let size_value = if segment.type_ == crate::type_::int() {
-                8usize
+impl BitArraySegmentType {
+    fn from_segment<Value>(segment: &BitArraySegment<Value, Arc<Type>>) -> Self {
+        if segment.type_.is_int() {
+            BitArraySegmentType::Int
+        } else if segment.type_.is_float() {
+            BitArraySegmentType::Float
+        } else if segment.type_.is_bit_array() {
+            BitArraySegmentType::BitArray
+        } else if segment.type_.is_string() {
+            let encoding = if segment.has_utf16_option() {
+                StringEncoding::Utf16
+            } else if segment.has_utf32_option() {
+                StringEncoding::Utf32
             } else {
-                64usize
+                StringEncoding::Utf8
             };
-
-            (Some(BigInt::from(size_value)), docvec![size_value])
+            BitArraySegmentType::String(encoding)
+        } else if segment.type_.is_utf_codepoint() {
+            let encoding = if segment.has_utf16_codepoint_option() {
+                StringEncoding::Utf16
+            } else if segment.has_utf32_codepoint_option() {
+                StringEncoding::Utf32
+            } else {
+                StringEncoding::Utf8
+            };
+            BitArraySegmentType::UtfCodepoint(encoding)
+        } else {
+            panic!(
+                "Invalid bit array segment type reached code generation: {:?}",
+                segment.type_
+            );
         }
-    };
-
-    Ok(SizedBitArraySegmentDetails {
-        size,
-        size_value,
-        endianness,
-    })
+    }
 }
 
 pub fn string(value: &str) -> Document<'_> {
@@ -1938,58 +2599,64 @@ pub fn string(value: &str) -> Document<'_> {
     }
 }
 
-pub fn array<'a, Elements: IntoIterator<Item = Output<'a>>>(elements: Elements) -> Output<'a> {
-    let elements = Itertools::intersperse(elements.into_iter(), Ok(break_(",", ", ")))
-        .collect::<Result<Vec<_>, _>>()?;
+pub(crate) fn array<'a, Elements: IntoIterator<Item = Document<'a>>>(
+    elements: Elements,
+) -> Document<'a> {
+    let elements = Itertools::intersperse(elements.into_iter(), break_(",", ", ")).collect_vec();
     if elements.is_empty() {
         // Do not add a trailing comma since that adds an 'undefined' element
-        Ok("[]".to_doc())
+        "[]".to_doc()
     } else {
-        Ok(docvec![
+        docvec![
             "[",
             docvec![break_("", ""), elements].nest(INDENT),
             break_(",", ""),
             "]"
         ]
-        .group())
+        .group()
     }
 }
 
-fn list<'a, I: IntoIterator<Item = Output<'a>>>(elements: I) -> Output<'a>
+pub(crate) fn list<'a, I: IntoIterator<Item = Document<'a>>>(elements: I) -> Document<'a>
 where
     I::IntoIter: DoubleEndedIterator + ExactSizeIterator,
 {
     let array = array(elements);
-    Ok(docvec!["toList(", array?, ")"])
+    docvec!["toList(", array, ")"]
 }
 
-fn prepend<'a, I: IntoIterator<Item = Output<'a>>>(elements: I, tail: Document<'a>) -> Output<'a>
+fn prepend<'a, I: IntoIterator<Item = Document<'a>>>(
+    elements: I,
+    tail: Document<'a>,
+) -> Document<'a>
 where
     I::IntoIter: DoubleEndedIterator + ExactSizeIterator,
 {
-    elements.into_iter().rev().try_fold(tail, |tail, element| {
-        let args = call_arguments([element, Ok(tail)])?;
-        Ok(docvec!["listPrepend", args])
+    elements.into_iter().rev().fold(tail, |tail, element| {
+        let arguments = call_arguments([element, tail]);
+        docvec!["listPrepend", arguments]
     })
 }
 
-fn call_arguments<'a, Elements: IntoIterator<Item = Output<'a>>>(elements: Elements) -> Output<'a> {
-    let elements = Itertools::intersperse(elements.into_iter(), Ok(break_(",", ", ")))
-        .collect::<Result<Vec<_>, _>>()?
+fn call_arguments<'a, Elements: IntoIterator<Item = Document<'a>>>(
+    elements: Elements,
+) -> Document<'a> {
+    let elements = Itertools::intersperse(elements.into_iter(), break_(",", ", "))
+        .collect_vec()
         .to_doc();
     if elements.is_empty() {
-        return Ok("()".to_doc());
+        return "()".to_doc();
     }
-    Ok(docvec![
+    docvec![
         "(",
         docvec![break_("", ""), elements].nest(INDENT),
         break_(",", ""),
         ")"
     ]
-    .group())
+    .group()
 }
 
-fn construct_record<'a>(
+pub(crate) fn construct_record<'a>(
     module: Option<&'a str>,
     name: &'a str,
     arguments: impl IntoIterator<Item = Document<'a>>,
@@ -2034,6 +2701,7 @@ impl TypedExpr {
             | TypedExpr::List { .. }
             | TypedExpr::BinOp { .. }
             | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
             | TypedExpr::ModuleSelect { .. }
             | TypedExpr::Tuple { .. }
             | TypedExpr::TupleIndex { .. }
@@ -2096,6 +2764,7 @@ fn requires_semicolon(statement: &TypedStatement) -> bool {
             | TypedExpr::TupleIndex { .. }
             | TypedExpr::NegateBool { .. }
             | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
             | TypedExpr::ModuleSelect { .. }
             | TypedExpr::Block { .. },
         ) => true,
@@ -2111,6 +2780,7 @@ fn requires_semicolon(statement: &TypedStatement) -> bool {
 
         Statement::Assignment(_) => false,
         Statement::Use(_) => false,
+        Statement::Assert(_) => false,
     }
 }
 
@@ -2124,7 +2794,7 @@ fn immediately_invoked_function_expression_document(document: Document<'_>) -> D
     .group()
 }
 
-fn record_constructor<'a>(
+pub(crate) fn record_constructor<'a>(
     type_: Arc<Type>,
     qualifier: Option<&'a str>,
     name: &'a str,
@@ -2157,7 +2827,7 @@ fn record_constructor<'a>(
             ";"
         ];
         docvec![
-            docvec![wrap_args(vars), " => {", break_("", " "), body]
+            docvec![wrap_arguments(vars), " => {", break_("", " "), body]
                 .nest(INDENT)
                 .append(break_("", " "))
                 .group(),

@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
-expression: "\nfn go(x, y) {\n  let assert True = x\n  let assert False = x\n  let assert Nil = y\n}\n"
+expression: "\npub fn go(x, y) {\n  let assert True = x\n  let assert False = x\n  let assert Nil = y\n}\n"
 ---
 ----- SOURCE CODE
 
-fn go(x, y) {
+pub fn go(x, y) {
   let assert True = x
   let assert False = x
   let assert Nil = y
@@ -14,36 +14,29 @@ fn go(x, y) {
 ----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
-function go(x, y) {
-  if (!x) {
+const FILEPATH = "src/module.gleam";
+
+export function go(x, y) {
+  if (!(x)) {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       3,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x }
+      { value: x, start: 21, end: 40, pattern_start: 32, pattern_end: 36 }
     )
   }
-  if (x) {
-    throw makeError(
-      "let_assert",
-      "my/mod",
-      4,
-      "go",
-      "Pattern match failed, no pattern matched the value.",
-      { value: x }
-    )
-  }
-  if (y) {
-    throw makeError(
-      "let_assert",
-      "my/mod",
-      5,
-      "go",
-      "Pattern match failed, no pattern matched the value.",
-      { value: y }
-    )
-  }
+  throw makeError(
+    "let_assert",
+    FILEPATH,
+    "my/mod",
+    4,
+    "go",
+    "Pattern match failed, no pattern matched the value.",
+    { value: x, start: 43, end: 63, pattern_start: 54, pattern_end: 59 }
+  )
+  
   return y;
 }

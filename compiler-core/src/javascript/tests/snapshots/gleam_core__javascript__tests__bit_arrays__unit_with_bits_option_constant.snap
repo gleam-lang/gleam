@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub const bits = <<1, 2, 3>>\npub const more_bits = <<bits:bits-size(3)-unit(8)>>\n"
+---
+----- SOURCE CODE
+
+pub const bits = <<1, 2, 3>>
+pub const more_bits = <<bits:bits-size(3)-unit(8)>>
+
+
+----- COMPILED JAVASCRIPT
+import { toBitArray, bitArraySlice } from "../gleam.mjs";
+
+export const bits = /* @__PURE__ */ toBitArray([1, 2, 3]);
+
+export const more_bits = /* @__PURE__ */ toBitArray([bitArraySlice(bits, 0, 24)]);

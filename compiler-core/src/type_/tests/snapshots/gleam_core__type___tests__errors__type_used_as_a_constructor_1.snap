@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "pub fn main() -> Int() {}"
+---
+----- SOURCE CODE
+pub fn main() -> Int() {}
+
+----- ERROR
+error: Type used as a type constructor
+  ┌─ /src/one/two.gleam:1:21
+  │
+1 │ pub fn main() -> Int() {}
+  │                     ^^ You can remove this
+
+`Int` is a type with no parameters, but here it's being used as a type
+constructor.

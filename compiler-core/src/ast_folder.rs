@@ -1,108 +1,117 @@
 use ecow::EcoString;
+use itertools::Itertools;
 use num_bigint::BigInt;
 use vec1::Vec1;
 
 use crate::{
     analyse::Inferred,
     ast::{
-        AssignName, Assignment, BinOp, CallArg, Constant, Definition, FunctionLiteralKind, Pattern,
-        RecordBeingUpdated, SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAst,
-        TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UntypedArg,
+        Assert, AssignName, Assignment, BinOp, BitArraySize, CallArg, Constant, Definition,
+        FunctionLiteralKind, InvalidExpression, Pattern, RecordBeingUpdated, RecordUpdateArg,
+        SrcSpan, Statement, TailPattern, TargetedDefinition, TodoKind, TypeAst, TypeAstConstructor,
+        TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UntypedArg, UntypedAssert,
         UntypedAssignment, UntypedClause, UntypedConstant, UntypedConstantBitArraySegment,
         UntypedCustomType, UntypedDefinition, UntypedExpr, UntypedExprBitArraySegment,
         UntypedFunction, UntypedImport, UntypedModule, UntypedModuleConstant, UntypedPattern,
-        UntypedPatternBitArraySegment, UntypedRecordUpdateArg, UntypedStatement, UntypedTypeAlias,
-        UntypedUse, UntypedUseAssignment, Use, UseAssignment,
+        UntypedPatternBitArraySegment, UntypedRecordUpdateArg, UntypedStatement,
+        UntypedTailPattern, UntypedTypeAlias, UntypedUse, UntypedUseAssignment, Use, UseAssignment,
     },
     build::Target,
+    parse::LiteralFloatValue,
     type_::error::VariableOrigin,
 };
 
 #[allow(dead_code)]
 pub trait UntypedModuleFolder: TypeAstFolder + UntypedExprFolder {
     /// You probably don't want to override this method.
-    fn fold_module(&mut self, mut m: UntypedModule) -> UntypedModule {
-        m.definitions = m
+    fn fold_module(&mut self, mut module: UntypedModule) -> UntypedModule {
+        module.definitions = module
             .definitions
             .into_iter()
-            .map(|d| {
-                let TargetedDefinition { definition, target } = d;
+            .map(|definition| {
+                let TargetedDefinition { definition, target } = definition;
                 match definition {
-                    Definition::Function(f) => {
-                        let f = self.fold_function_definition(f, target);
-                        let definition = self.walk_function_definition(f);
+                    Definition::Function(function) => {
+                        let function = self.fold_function_definition(function, target);
+                        let definition = self.walk_function_definition(function);
                         TargetedDefinition { definition, target }
                     }
 
-                    Definition::TypeAlias(a) => {
-                        let a = self.fold_type_alias(a, target);
-                        let definition = self.walk_type_alias(a);
+                    Definition::TypeAlias(type_alias) => {
+                        let type_alias = self.fold_type_alias(type_alias, target);
+                        let definition = self.walk_type_alias(type_alias);
                         TargetedDefinition { definition, target }
                     }
 
-                    Definition::CustomType(t) => {
-                        let t = self.fold_custom_type(t, target);
-                        let definition = self.walk_custom_type(t);
+                    Definition::CustomType(custom_type) => {
+                        let custom_type = self.fold_custom_type(custom_type, target);
+                        let definition = self.walk_custom_type(custom_type);
                         TargetedDefinition { definition, target }
                     }
 
-                    Definition::Import(i) => {
-                        let i = self.fold_import(i, target);
-                        let definition = self.walk_import(i);
+                    Definition::Import(import) => {
+                        let import = self.fold_import(import, target);
+                        let definition = self.walk_import(import);
                         TargetedDefinition { definition, target }
                     }
 
-                    Definition::ModuleConstant(c) => {
-                        let c = self.fold_module_constant(c, target);
-                        let definition = self.walk_module_constant(c);
+                    Definition::ModuleConstant(constant) => {
+                        let constant = self.fold_module_constant(constant, target);
+                        let definition = self.walk_module_constant(constant);
                         TargetedDefinition { definition, target }
                     }
                 }
             })
             .collect();
-        m
+        module
     }
 
     /// You probably don't want to override this method.
-    fn walk_function_definition(&mut self, mut f: UntypedFunction) -> UntypedDefinition {
-        f.body = f.body.mapped(|s| self.fold_statement(s));
-        f.return_annotation = f.return_annotation.map(|t| self.fold_type(t));
-        f.arguments = f
+    fn walk_function_definition(&mut self, mut function: UntypedFunction) -> UntypedDefinition {
+        function.body = function
+            .body
+            .into_iter()
+            .map(|statement| self.fold_statement(statement))
+            .collect_vec();
+        function.return_annotation = function
+            .return_annotation
+            .map(|type_| self.fold_type(type_));
+        function.arguments = function
             .arguments
             .into_iter()
-            .map(|mut a| {
-                a.annotation = a.annotation.map(|t| self.fold_type(t));
-                a
+            .map(|mut argument| {
+                argument.annotation = argument.annotation.map(|type_| self.fold_type(type_));
+                argument
             })
             .collect();
-        Definition::Function(f)
+        Definition::Function(function)
     }
 
     /// You probably don't want to override this method.
-    fn walk_type_alias(&mut self, mut f: UntypedTypeAlias) -> UntypedDefinition {
-        f.type_ast = self.fold_type(f.type_ast);
-        Definition::TypeAlias(f)
+    fn walk_type_alias(&mut self, mut type_alias: UntypedTypeAlias) -> UntypedDefinition {
+        type_alias.type_ast = self.fold_type(type_alias.type_ast);
+        Definition::TypeAlias(type_alias)
     }
 
     /// You probably don't want to override this method.
-    fn walk_custom_type(&mut self, mut c: UntypedCustomType) -> UntypedDefinition {
-        c.constructors = c
+    fn walk_custom_type(&mut self, mut custom_type: UntypedCustomType) -> UntypedDefinition {
+        custom_type.constructors = custom_type
             .constructors
             .into_iter()
-            .map(|mut c| {
-                c.arguments = c
+            .map(|mut constructor| {
+                constructor.arguments = constructor
                     .arguments
                     .into_iter()
-                    .map(|mut a| {
-                        a.ast = self.fold_type(a.ast);
-                        a
+                    .map(|mut argument| {
+                        argument.ast = self.fold_type(argument.ast);
+                        argument
                     })
                     .collect();
-                c
+                constructor
             })
             .collect();
 
-        Definition::CustomType(c)
+        Definition::CustomType(custom_type)
     }
 
     /// You probably don't want to override this method.
@@ -111,46 +120,46 @@ pub trait UntypedModuleFolder: TypeAstFolder + UntypedExprFolder {
     }
 
     /// You probably don't want to override this method.
-    fn walk_module_constant(&mut self, mut c: UntypedModuleConstant) -> UntypedDefinition {
-        c.annotation = c.annotation.map(|t| self.fold_type(t));
-        c.value = Box::new(self.fold_constant(*c.value));
-        Definition::ModuleConstant(c)
+    fn walk_module_constant(&mut self, mut constant: UntypedModuleConstant) -> UntypedDefinition {
+        constant.annotation = constant.annotation.map(|type_| self.fold_type(type_));
+        constant.value = Box::new(self.fold_constant(*constant.value));
+        Definition::ModuleConstant(constant)
     }
 
     fn fold_function_definition(
         &mut self,
-        f: UntypedFunction,
+        function: UntypedFunction,
         _target: Option<Target>,
     ) -> UntypedFunction {
-        f
+        function
     }
 
     fn fold_type_alias(
         &mut self,
-        f: UntypedTypeAlias,
+        function: UntypedTypeAlias,
         _target: Option<Target>,
     ) -> UntypedTypeAlias {
-        f
+        function
     }
 
     fn fold_custom_type(
         &mut self,
-        c: UntypedCustomType,
+        custom_type: UntypedCustomType,
         _target: Option<Target>,
     ) -> UntypedCustomType {
-        c
+        custom_type
     }
 
-    fn fold_import(&mut self, i: UntypedImport, _target: Option<Target>) -> UntypedImport {
-        i
+    fn fold_import(&mut self, import: UntypedImport, _target: Option<Target>) -> UntypedImport {
+        import
     }
 
     fn fold_module_constant(
         &mut self,
-        c: UntypedModuleConstant,
+        constant: UntypedModuleConstant,
         _target: Option<Target>,
     ) -> UntypedModuleConstant {
-        c
+        constant
     }
 }
 
@@ -161,48 +170,51 @@ pub trait TypeAstFolder {
     /// node to continue traversing.
     ///
     /// You probably don't want to override this method.
-    fn fold_type(&mut self, t: TypeAst) -> TypeAst {
-        let t = self.update_type(t);
-        self.walk_type(t)
+    fn fold_type(&mut self, type_: TypeAst) -> TypeAst {
+        let type_ = self.update_type(type_);
+        self.walk_type(type_)
     }
 
     /// You probably don't want to override this method.
-    fn update_type(&mut self, t: TypeAst) -> TypeAst {
-        match t {
-            TypeAst::Constructor(c) => self.fold_type_constructor(c),
-            TypeAst::Fn(f) => self.fold_type_fn(f),
-            TypeAst::Var(v) => self.fold_type_var(v),
-            TypeAst::Tuple(t) => self.fold_type_tuple(t),
-            TypeAst::Hole(h) => self.fold_type_hole(h),
+    fn update_type(&mut self, type_: TypeAst) -> TypeAst {
+        match type_ {
+            TypeAst::Constructor(constructor) => self.fold_type_constructor(constructor),
+            TypeAst::Fn(fn_) => self.fold_type_fn(fn_),
+            TypeAst::Var(var) => self.fold_type_var(var),
+            TypeAst::Tuple(tuple) => self.fold_type_tuple(tuple),
+            TypeAst::Hole(hole) => self.fold_type_hole(hole),
         }
     }
 
     /// You probably don't want to override this method.
-    fn walk_type(&mut self, t: TypeAst) -> TypeAst {
-        match t {
-            TypeAst::Constructor(mut c) => {
-                c.arguments = self.fold_all_types(c.arguments);
-                TypeAst::Constructor(c)
+    fn walk_type(&mut self, type_: TypeAst) -> TypeAst {
+        match type_ {
+            TypeAst::Constructor(mut constructor) => {
+                constructor.arguments = self.fold_all_types(constructor.arguments);
+                TypeAst::Constructor(constructor)
             }
 
-            TypeAst::Fn(mut f) => {
-                f.arguments = self.fold_all_types(f.arguments);
-                f.return_ = Box::new(self.fold_type(*f.return_));
-                TypeAst::Fn(f)
+            TypeAst::Fn(mut fn_) => {
+                fn_.arguments = self.fold_all_types(fn_.arguments);
+                fn_.return_ = Box::new(self.fold_type(*fn_.return_));
+                TypeAst::Fn(fn_)
             }
 
-            TypeAst::Tuple(mut t) => {
-                t.elems = self.fold_all_types(t.elems);
-                TypeAst::Tuple(t)
+            TypeAst::Tuple(mut tuple) => {
+                tuple.elements = self.fold_all_types(tuple.elements);
+                TypeAst::Tuple(tuple)
             }
 
-            TypeAst::Var(_) | TypeAst::Hole(_) => t,
+            TypeAst::Var(_) | TypeAst::Hole(_) => type_,
         }
     }
 
     /// You probably don't want to override this method.
-    fn fold_all_types(&mut self, ts: Vec<TypeAst>) -> Vec<TypeAst> {
-        ts.into_iter().map(|t| self.fold_type(t)).collect()
+    fn fold_all_types(&mut self, types: Vec<TypeAst>) -> Vec<TypeAst> {
+        types
+            .into_iter()
+            .map(|type_| self.fold_type(type_))
+            .collect()
     }
 
     fn fold_type_constructor(&mut self, constructor: TypeAstConstructor) -> TypeAst {
@@ -233,21 +245,25 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
     /// node to continue traversing.
     ///
     /// You probably don't want to override this method.
-    fn fold_expr(&mut self, t: UntypedExpr) -> UntypedExpr {
-        let t = self.update_expr(t);
-        self.walk_expr(t)
+    fn fold_expr(&mut self, expression: UntypedExpr) -> UntypedExpr {
+        let expression = self.update_expr(expression);
+        self.walk_expr(expression)
     }
 
     /// You probably don't want to override this method.
-    fn update_expr(&mut self, e: UntypedExpr) -> UntypedExpr {
-        match e {
+    fn update_expr(&mut self, expression: UntypedExpr) -> UntypedExpr {
+        match expression {
             UntypedExpr::Var { location, name } => self.fold_var(location, name),
             UntypedExpr::Int {
                 location,
                 value,
                 int_value,
             } => self.fold_int(location, value, int_value),
-            UntypedExpr::Float { location, value } => self.fold_float(location, value),
+            UntypedExpr::Float {
+                location,
+                value,
+                float_value,
+            } => self.fold_float(location, value, float_value),
             UntypedExpr::String { location, value } => self.fold_string(location, value),
 
             UntypedExpr::Block {
@@ -286,9 +302,10 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
             UntypedExpr::BinOp {
                 location,
                 name,
+                name_location,
                 left,
                 right,
-            } => self.fold_bin_op(location, name, left, right),
+            } => self.fold_bin_op(location, name, name_location, left, right),
 
             UntypedExpr::PipeLine { expressions } => self.fold_pipe_line(expressions),
 
@@ -305,7 +322,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 container,
             } => self.fold_field_access(location, label_location, label, container),
 
-            UntypedExpr::Tuple { location, elems } => self.fold_tuple(location, elems),
+            UntypedExpr::Tuple { location, elements } => self.fold_tuple(location, elements),
 
             UntypedExpr::TupleIndex {
                 location,
@@ -321,8 +338,10 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
 
             UntypedExpr::Echo {
                 location,
+                keyword_end,
                 expression,
-            } => self.fold_echo(location, expression),
+                message,
+            } => self.fold_echo(location, keyword_end, expression, message),
 
             UntypedExpr::Panic { location, message } => self.fold_panic(location, message),
 
@@ -338,21 +357,18 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
             UntypedExpr::NegateBool { location, value } => self.fold_negate_bool(location, value),
 
             UntypedExpr::NegateInt { location, value } => self.fold_negate_int(location, value),
-
-            UntypedExpr::Placeholder { location } => self.fold_placeholder(location),
         }
     }
 
     /// You probably don't want to override this method.
-    fn walk_expr(&mut self, e: UntypedExpr) -> UntypedExpr {
-        match e {
+    fn walk_expr(&mut self, expression: UntypedExpr) -> UntypedExpr {
+        match expression {
             UntypedExpr::Int { .. }
             | UntypedExpr::Var { .. }
             | UntypedExpr::Float { .. }
             | UntypedExpr::String { .. }
             | UntypedExpr::NegateInt { .. }
-            | UntypedExpr::NegateBool { .. }
-            | UntypedExpr::Placeholder { .. } => e,
+            | UntypedExpr::NegateBool { .. } => expression,
 
             UntypedExpr::Todo {
                 kind,
@@ -372,9 +388,13 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
             UntypedExpr::Echo {
                 location,
                 expression,
+                keyword_end,
+                message,
             } => UntypedExpr::Echo {
                 location,
+                keyword_end,
                 expression: expression.map(|expression| Box::new(self.fold_expr(*expression))),
+                message: message.map(|message| Box::new(self.fold_expr(*message))),
             },
 
             UntypedExpr::Block {
@@ -397,7 +417,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 return_annotation,
             } => {
                 let arguments = arguments.into_iter().map(|a| self.fold_arg(a)).collect();
-                let return_annotation = return_annotation.map(|t| self.fold_type(t));
+                let return_annotation = return_annotation.map(|type_| self.fold_type(type_));
                 let body = body.mapped(|s| self.fold_statement(s));
                 UntypedExpr::Fn {
                     location,
@@ -414,7 +434,10 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 elements,
                 tail,
             } => {
-                let elements = elements.into_iter().map(|e| self.fold_expr(e)).collect();
+                let elements = elements
+                    .into_iter()
+                    .map(|element| self.fold_expr(element))
+                    .collect();
                 let tail = tail.map(|e| Box::new(self.fold_expr(*e)));
                 UntypedExpr::List {
                     location,
@@ -446,6 +469,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
             UntypedExpr::BinOp {
                 location,
                 name,
+                name_location,
                 left,
                 right,
             } => {
@@ -454,6 +478,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 UntypedExpr::BinOp {
                     location,
                     name,
+                    name_location,
                     left,
                     right,
                 }
@@ -511,9 +536,12 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 }
             }
 
-            UntypedExpr::Tuple { location, elems } => {
-                let elems = elems.into_iter().map(|e| self.fold_expr(e)).collect();
-                UntypedExpr::Tuple { location, elems }
+            UntypedExpr::Tuple { location, elements } => {
+                let elements = elements
+                    .into_iter()
+                    .map(|element| self.fold_expr(element))
+                    .collect();
+                UntypedExpr::Tuple { location, elements }
             }
 
             UntypedExpr::TupleIndex {
@@ -572,7 +600,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
             annotation,
             type_,
         } = arg;
-        let annotation = annotation.map(|t| self.fold_type(t));
+        let annotation = annotation.map(|type_| self.fold_type(type_));
         UntypedArg {
             location,
             names,
@@ -582,42 +610,49 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
     }
 
     /// You probably don't want to override this method.
-    fn fold_statement(&mut self, s: UntypedStatement) -> UntypedStatement {
-        let s = self.update_statement(s);
-        self.walk_statement(s)
+    fn fold_statement(&mut self, statement: UntypedStatement) -> UntypedStatement {
+        let statement = self.update_statement(statement);
+        self.walk_statement(statement)
     }
 
     /// You probably don't want to override this method.
-    fn update_statement(&mut self, s: UntypedStatement) -> UntypedStatement {
-        match s {
-            Statement::Expression(e) => Statement::Expression(e),
-            Statement::Assignment(a) => Statement::Assignment(self.fold_assignment(a)),
-            Statement::Use(u) => Statement::Use(self.fold_use(u)),
+    fn update_statement(&mut self, statement: UntypedStatement) -> UntypedStatement {
+        match statement {
+            Statement::Expression(expression) => Statement::Expression(expression),
+            Statement::Assignment(assignment) => {
+                Statement::Assignment(Box::new(self.fold_assignment(*assignment)))
+            }
+            Statement::Use(use_) => Statement::Use(self.fold_use(use_)),
+            Statement::Assert(assert) => Statement::Assert(self.fold_assert(assert)),
         }
     }
 
     /// You probably don't want to override this method.
-    fn walk_statement(&mut self, s: UntypedStatement) -> UntypedStatement {
-        match s {
-            Statement::Expression(e) => Statement::Expression(self.fold_expr(e)),
+    fn walk_statement(&mut self, statement: UntypedStatement) -> UntypedStatement {
+        match statement {
+            Statement::Expression(expression) => Statement::Expression(self.fold_expr(expression)),
 
-            Statement::Assignment(Assignment {
-                location,
-                value,
-                pattern,
-                kind,
-                annotation,
-            }) => {
-                let pattern = self.fold_pattern(pattern);
-                let annotation = annotation.map(|t| self.fold_type(t));
-                let value = Box::new(self.fold_expr(*value));
-                Statement::Assignment(Assignment {
+            Statement::Assignment(assignment) => {
+                let Assignment {
                     location,
                     value,
                     pattern,
                     kind,
                     annotation,
-                })
+                    compiled_case,
+                } = *assignment;
+
+                let pattern = self.fold_pattern(pattern);
+                let annotation = annotation.map(|type_| self.fold_type(type_));
+                let value = self.fold_expr(value);
+                Statement::Assignment(Box::new(Assignment {
+                    location,
+                    value,
+                    pattern,
+                    kind,
+                    annotation,
+                    compiled_case,
+                }))
             }
 
             Statement::Use(Use {
@@ -629,8 +664,8 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
             }) => {
                 let assignments = assignments
                     .into_iter()
-                    .map(|a| {
-                        let mut use_ = self.fold_use_assignment(a);
+                    .map(|assignment| {
+                        let mut use_ = self.fold_use_assignment(assignment);
                         use_.pattern = self.fold_pattern(use_.pattern);
                         use_
                     })
@@ -644,6 +679,20 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                     assignments,
                 })
             }
+
+            Statement::Assert(Assert {
+                location,
+                value,
+                message,
+            }) => {
+                let value = self.fold_expr(value);
+                let message = message.map(|message| self.fold_expr(message));
+                Statement::Assert(Assert {
+                    location,
+                    value,
+                    message,
+                })
+            }
         }
     }
 
@@ -654,7 +703,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
             pattern,
             annotation,
         } = use_;
-        let annotation = annotation.map(|t| self.fold_type(t));
+        let annotation = annotation.map(|type_| self.fold_type(type_));
         UseAssignment {
             location,
             pattern,
@@ -670,8 +719,17 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         }
     }
 
-    fn fold_float(&mut self, location: SrcSpan, value: EcoString) -> UntypedExpr {
-        UntypedExpr::Float { location, value }
+    fn fold_float(
+        &mut self,
+        location: SrcSpan,
+        value: EcoString,
+        float_value: LiteralFloatValue,
+    ) -> UntypedExpr {
+        UntypedExpr::Float {
+            location,
+            value,
+            float_value,
+        }
     }
 
     fn fold_string(&mut self, location: SrcSpan, value: EcoString) -> UntypedExpr {
@@ -738,12 +796,14 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         &mut self,
         location: SrcSpan,
         name: BinOp,
+        name_location: SrcSpan,
         left: Box<UntypedExpr>,
         right: Box<UntypedExpr>,
     ) -> UntypedExpr {
         UntypedExpr::BinOp {
             location,
             name,
+            name_location,
             left,
             right,
         }
@@ -781,8 +841,8 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         }
     }
 
-    fn fold_tuple(&mut self, location: SrcSpan, elems: Vec<UntypedExpr>) -> UntypedExpr {
-        UntypedExpr::Tuple { location, elems }
+    fn fold_tuple(&mut self, location: SrcSpan, elements: Vec<UntypedExpr>) -> UntypedExpr {
+        UntypedExpr::Tuple { location, elements }
     }
 
     fn fold_tuple_index(
@@ -814,11 +874,15 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
     fn fold_echo(
         &mut self,
         location: SrcSpan,
+        keyword_end: u32,
         expression: Option<Box<UntypedExpr>>,
+        message: Option<Box<UntypedExpr>>,
     ) -> UntypedExpr {
         UntypedExpr::Echo {
             location,
+            keyword_end,
             expression,
+            message,
         }
     }
 
@@ -838,7 +902,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         &mut self,
         location: SrcSpan,
         constructor: Box<UntypedExpr>,
-        record: RecordBeingUpdated,
+        record: RecordBeingUpdated<UntypedExpr>,
         arguments: Vec<UntypedRecordUpdateArg>,
     ) -> UntypedExpr {
         UntypedExpr::RecordUpdate {
@@ -857,10 +921,6 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         UntypedExpr::NegateInt { location, value }
     }
 
-    fn fold_placeholder(&mut self, location: SrcSpan) -> UntypedExpr {
-        UntypedExpr::Placeholder { location }
-    }
-
     fn fold_assignment(&mut self, assignment: UntypedAssignment) -> UntypedAssignment {
         assignment
     }
@@ -868,30 +928,42 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
     fn fold_use(&mut self, use_: UntypedUse) -> UntypedUse {
         use_
     }
+
+    fn fold_assert(&mut self, assert: UntypedAssert) -> UntypedAssert {
+        assert
+    }
 }
 
 #[allow(dead_code)]
 pub trait UntypedConstantFolder {
     /// You probably don't want to override this method.
-    fn fold_constant(&mut self, m: UntypedConstant) -> UntypedConstant {
-        let m = self.update_constant(m);
-        self.walk_constant(m)
+    fn fold_constant(&mut self, constant: UntypedConstant) -> UntypedConstant {
+        let constant = self.update_constant(constant);
+        self.walk_constant(constant)
     }
 
     /// You probably don't want to override this method.
-    fn update_constant(&mut self, m: UntypedConstant) -> UntypedConstant {
-        match m {
+    fn update_constant(&mut self, constant: UntypedConstant) -> UntypedConstant {
+        match constant {
             Constant::Int {
                 location,
                 value,
                 int_value,
             } => self.fold_constant_int(location, value, int_value),
 
-            Constant::Float { location, value } => self.fold_constant_float(location, value),
+            Constant::Float {
+                location,
+                value,
+                float_value,
+            } => self.fold_constant_float(location, value, float_value),
 
             Constant::String { location, value } => self.fold_constant_string(location, value),
 
-            Constant::Tuple { location, elements } => self.fold_constant_tuple(location, elements),
+            Constant::Tuple {
+                location,
+                elements,
+                type_: (),
+            } => self.fold_constant_tuple(location, elements),
 
             Constant::List {
                 location,
@@ -903,11 +975,31 @@ pub trait UntypedConstantFolder {
                 location,
                 module,
                 name,
-                args,
+                arguments,
                 tag: (),
                 type_: (),
                 field_map: _,
-            } => self.fold_constant_record(location, module, name, args),
+                record_constructor: _,
+            } => self.fold_constant_record(location, module, name, arguments),
+
+            Constant::RecordUpdate {
+                location,
+                constructor_location,
+                module,
+                name,
+                record,
+                arguments,
+                tag: (),
+                type_: (),
+                field_map: _,
+            } => self.fold_constant_record_update(
+                location,
+                constructor_location,
+                module,
+                name,
+                record,
+                arguments,
+            ),
 
             Constant::BitArray { location, segments } => {
                 self.fold_constant_bit_array(location, segments)
@@ -930,7 +1022,8 @@ pub trait UntypedConstantFolder {
             Constant::Invalid {
                 location,
                 type_: (),
-            } => self.fold_constant_invalid(location),
+                extra_information,
+            } => self.fold_constant_invalid(location, extra_information),
         }
     }
 
@@ -947,8 +1040,17 @@ pub trait UntypedConstantFolder {
         }
     }
 
-    fn fold_constant_float(&mut self, location: SrcSpan, value: EcoString) -> UntypedConstant {
-        Constant::Float { location, value }
+    fn fold_constant_float(
+        &mut self,
+        location: SrcSpan,
+        value: EcoString,
+        float_value: LiteralFloatValue,
+    ) -> UntypedConstant {
+        Constant::Float {
+            location,
+            value,
+            float_value,
+        }
     }
 
     fn fold_constant_string(&mut self, location: SrcSpan, value: EcoString) -> UntypedConstant {
@@ -960,7 +1062,11 @@ pub trait UntypedConstantFolder {
         location: SrcSpan,
         elements: Vec<UntypedConstant>,
     ) -> UntypedConstant {
-        Constant::Tuple { location, elements }
+        Constant::Tuple {
+            location,
+            elements,
+            type_: (),
+        }
     }
 
     fn fold_constant_list(
@@ -980,16 +1086,39 @@ pub trait UntypedConstantFolder {
         location: SrcSpan,
         module: Option<(EcoString, SrcSpan)>,
         name: EcoString,
-        args: Vec<CallArg<UntypedConstant>>,
+        arguments: Vec<CallArg<UntypedConstant>>,
     ) -> UntypedConstant {
         Constant::Record {
             location,
             module,
             name,
-            args,
+            arguments,
             tag: (),
             type_: (),
-            field_map: None,
+            field_map: Inferred::Unknown,
+            record_constructor: None,
+        }
+    }
+
+    fn fold_constant_record_update(
+        &mut self,
+        location: SrcSpan,
+        constructor_location: SrcSpan,
+        module: Option<(EcoString, SrcSpan)>,
+        name: EcoString,
+        record: RecordBeingUpdated<UntypedConstant>,
+        arguments: Vec<RecordUpdateArg<UntypedConstant>>,
+    ) -> UntypedConstant {
+        Constant::RecordUpdate {
+            location,
+            constructor_location,
+            module,
+            name,
+            record,
+            arguments,
+            tag: (),
+            type_: (),
+            field_map: Inferred::Unknown,
         }
     }
 
@@ -1029,22 +1158,27 @@ pub trait UntypedConstantFolder {
         }
     }
 
-    fn fold_constant_invalid(&mut self, location: SrcSpan) -> UntypedConstant {
+    fn fold_constant_invalid(
+        &mut self,
+        location: SrcSpan,
+        extra_information: Option<InvalidExpression>,
+    ) -> UntypedConstant {
         Constant::Invalid {
             location,
             type_: (),
+            extra_information,
         }
     }
 
     /// You probably don't want to override this method.
-    fn walk_constant(&mut self, m: UntypedConstant) -> UntypedConstant {
-        match m {
+    fn walk_constant(&mut self, constant: UntypedConstant) -> UntypedConstant {
+        match constant {
             Constant::Var { .. }
             | Constant::Int { .. }
             | Constant::Float { .. }
             | Constant::String { .. }
             | Constant::Tuple { .. }
-            | Constant::Invalid { .. } => m,
+            | Constant::Invalid { .. } => constant,
 
             Constant::List {
                 location,
@@ -1053,7 +1187,7 @@ pub trait UntypedConstantFolder {
             } => {
                 let elements = elements
                     .into_iter()
-                    .map(|e| self.fold_constant(e))
+                    .map(|element| self.fold_constant(element))
                     .collect();
                 Constant::List {
                     location,
@@ -1066,23 +1200,61 @@ pub trait UntypedConstantFolder {
                 location,
                 module,
                 name,
-                args,
+                arguments,
                 tag,
                 type_,
                 field_map,
+                record_constructor,
             } => {
-                let args = args
+                let arguments = arguments
                     .into_iter()
-                    .map(|mut a| {
-                        a.value = self.fold_constant(a.value);
-                        a
+                    .map(|mut argument| {
+                        argument.value = self.fold_constant(argument.value);
+                        argument
                     })
                     .collect();
                 Constant::Record {
                     location,
                     module,
                     name,
-                    args,
+                    arguments,
+                    tag,
+                    type_,
+                    field_map,
+                    record_constructor,
+                }
+            }
+
+            Constant::RecordUpdate {
+                location,
+                constructor_location,
+                module,
+                name,
+                record,
+                arguments,
+                tag,
+                type_,
+                field_map,
+            } => {
+                let record = RecordBeingUpdated {
+                    base: Box::new(self.fold_constant(*record.base)),
+                    location: record.location,
+                };
+                let arguments = arguments
+                    .into_iter()
+                    .map(|argument| RecordUpdateArg {
+                        label: argument.label,
+                        location: argument.location,
+                        value: self.fold_constant(argument.value),
+                    })
+                    .collect();
+                Constant::RecordUpdate {
+                    location,
+                    constructor_location,
+                    module,
+                    name,
+                    record,
+                    arguments,
                     tag,
                     type_,
                     field_map,
@@ -1092,9 +1264,9 @@ pub trait UntypedConstantFolder {
             Constant::BitArray { location, segments } => {
                 let segments = segments
                     .into_iter()
-                    .map(|mut s| {
-                        s.value = Box::new(self.fold_constant(*s.value));
-                        s
+                    .map(|mut segment| {
+                        segment.value = Box::new(self.fold_constant(*segment.value));
+                        segment
                     })
                     .collect();
                 Constant::BitArray { location, segments }
@@ -1120,21 +1292,25 @@ pub trait UntypedConstantFolder {
 #[allow(dead_code)]
 pub trait PatternFolder {
     /// You probably don't want to override this method.
-    fn fold_pattern(&mut self, m: UntypedPattern) -> UntypedPattern {
-        let m = self.update_pattern(m);
-        self.walk_pattern(m)
+    fn fold_pattern(&mut self, pattern: UntypedPattern) -> UntypedPattern {
+        let pattern = self.update_pattern(pattern);
+        self.walk_pattern(pattern)
     }
 
     /// You probably don't want to override this method.
-    fn update_pattern(&mut self, m: UntypedPattern) -> UntypedPattern {
-        match m {
+    fn update_pattern(&mut self, pattern: UntypedPattern) -> UntypedPattern {
+        match pattern {
             Pattern::Int {
                 location,
                 value,
                 int_value,
             } => self.fold_pattern_int(location, value, int_value),
 
-            Pattern::Float { location, value } => self.fold_pattern_float(location, value),
+            Pattern::Float {
+                location,
+                value,
+                float_value,
+            } => self.fold_pattern_float(location, value, float_value),
 
             Pattern::String { location, value } => self.fold_pattern_string(location, value),
 
@@ -1145,12 +1321,7 @@ pub trait PatternFolder {
                 origin,
             } => self.fold_pattern_var(location, name, origin),
 
-            Pattern::VarUsage {
-                location,
-                name,
-                constructor: _,
-                type_: (),
-            } => self.fold_pattern_var_usage(location, name),
+            Pattern::BitArraySize(size) => self.fold_pattern_bit_array_size(size),
 
             Pattern::Assign {
                 name,
@@ -1189,7 +1360,7 @@ pub trait PatternFolder {
                 spread,
             ),
 
-            Pattern::Tuple { location, elems } => self.fold_pattern_tuple(location, elems),
+            Pattern::Tuple { location, elements } => self.fold_pattern_tuple(location, elements),
 
             Pattern::BitArray { location, segments } => {
                 self.fold_pattern_bit_array(location, segments)
@@ -1228,8 +1399,17 @@ pub trait PatternFolder {
         }
     }
 
-    fn fold_pattern_float(&mut self, location: SrcSpan, value: EcoString) -> UntypedPattern {
-        Pattern::Float { location, value }
+    fn fold_pattern_float(
+        &mut self,
+        location: SrcSpan,
+        value: EcoString,
+        float_value: LiteralFloatValue,
+    ) -> UntypedPattern {
+        Pattern::Float {
+            location,
+            value,
+            float_value,
+        }
     }
 
     fn fold_pattern_string(&mut self, location: SrcSpan, value: EcoString) -> UntypedPattern {
@@ -1250,8 +1430,57 @@ pub trait PatternFolder {
         }
     }
 
-    fn fold_pattern_var_usage(&mut self, location: SrcSpan, name: EcoString) -> UntypedPattern {
-        Pattern::VarUsage {
+    fn fold_pattern_bit_array_size(&mut self, size: BitArraySize<()>) -> UntypedPattern {
+        Pattern::BitArraySize(self.fold_bit_array_size(size))
+    }
+
+    fn fold_bit_array_size(&mut self, size: BitArraySize<()>) -> BitArraySize<()> {
+        match size {
+            BitArraySize::Int {
+                location,
+                value,
+                int_value,
+            } => self.fold_bit_array_size_int(location, value, int_value),
+            BitArraySize::Variable { location, name, .. } => {
+                self.fold_bit_array_size_variable(location, name)
+            }
+            BitArraySize::BinaryOperator {
+                location,
+                operator,
+                left,
+                right,
+            } => BitArraySize::BinaryOperator {
+                location,
+                operator,
+                left: Box::new(self.fold_bit_array_size(*left)),
+                right: Box::new(self.fold_bit_array_size(*right)),
+            },
+            BitArraySize::Block { location, inner } => BitArraySize::Block {
+                location,
+                inner: Box::new(self.fold_bit_array_size(*inner)),
+            },
+        }
+    }
+
+    fn fold_bit_array_size_int(
+        &mut self,
+        location: SrcSpan,
+        value: EcoString,
+        int_value: BigInt,
+    ) -> BitArraySize<()> {
+        BitArraySize::Int {
+            location,
+            value,
+            int_value,
+        }
+    }
+
+    fn fold_bit_array_size_variable(
+        &mut self,
+        location: SrcSpan,
+        name: EcoString,
+    ) -> BitArraySize<()> {
+        BitArraySize::Variable {
             location,
             name,
             constructor: None,
@@ -1284,7 +1513,7 @@ pub trait PatternFolder {
         &mut self,
         location: SrcSpan,
         elements: Vec<UntypedPattern>,
-        tail: Option<Box<UntypedPattern>>,
+        tail: Option<Box<UntypedTailPattern>>,
     ) -> UntypedPattern {
         Pattern::List {
             location,
@@ -1318,9 +1547,9 @@ pub trait PatternFolder {
     fn fold_pattern_tuple(
         &mut self,
         location: SrcSpan,
-        elems: Vec<UntypedPattern>,
+        elements: Vec<UntypedPattern>,
     ) -> UntypedPattern {
-        Pattern::Tuple { location, elems }
+        Pattern::Tuple { location, elements }
     }
 
     fn fold_pattern_bit_array(
@@ -1358,16 +1587,16 @@ pub trait PatternFolder {
     }
 
     /// You probably don't want to override this method.
-    fn walk_pattern(&mut self, m: UntypedPattern) -> UntypedPattern {
-        match m {
+    fn walk_pattern(&mut self, pattern: UntypedPattern) -> UntypedPattern {
+        match pattern {
             Pattern::Int { .. }
             | Pattern::Variable { .. }
             | Pattern::Float { .. }
             | Pattern::String { .. }
             | Pattern::Discard { .. }
-            | Pattern::VarUsage { .. }
+            | Pattern::BitArraySize { .. }
             | Pattern::StringPrefix { .. }
-            | Pattern::Invalid { .. } => m,
+            | Pattern::Invalid { .. } => pattern,
 
             Pattern::Assign {
                 name,
@@ -1388,8 +1617,16 @@ pub trait PatternFolder {
                 tail,
                 type_,
             } => {
-                let elements = elements.into_iter().map(|p| self.fold_pattern(p)).collect();
-                let tail = tail.map(|p| Box::new(self.fold_pattern(*p)));
+                let elements = elements
+                    .into_iter()
+                    .map(|pattern| self.fold_pattern(pattern))
+                    .collect();
+                let tail = tail.map(|tail_pattern| {
+                    Box::new(TailPattern {
+                        location: tail_pattern.location,
+                        pattern: self.fold_pattern(tail_pattern.pattern),
+                    })
+                });
                 Pattern::List {
                     location,
                     elements,
@@ -1410,9 +1647,9 @@ pub trait PatternFolder {
             } => {
                 let arguments = arguments
                     .into_iter()
-                    .map(|mut a| {
-                        a.value = self.fold_pattern(a.value);
-                        a
+                    .map(|mut argument| {
+                        argument.value = self.fold_pattern(argument.value);
+                        argument
                     })
                     .collect();
                 Pattern::Constructor {
@@ -1427,17 +1664,20 @@ pub trait PatternFolder {
                 }
             }
 
-            Pattern::Tuple { location, elems } => {
-                let elems = elems.into_iter().map(|p| self.fold_pattern(p)).collect();
-                Pattern::Tuple { location, elems }
+            Pattern::Tuple { location, elements } => {
+                let elements = elements
+                    .into_iter()
+                    .map(|pattern| self.fold_pattern(pattern))
+                    .collect();
+                Pattern::Tuple { location, elements }
             }
 
             Pattern::BitArray { location, segments } => {
                 let segments = segments
                     .into_iter()
-                    .map(|mut s| {
-                        s.value = Box::new(self.fold_pattern(*s.value));
-                        s
+                    .map(|mut segment| {
+                        segment.value = Box::new(self.fold_pattern(*segment.value));
+                        segment
                     })
                     .collect();
                 Pattern::BitArray { location, segments }

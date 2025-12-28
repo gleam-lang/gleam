@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\nimport something\n\npub fn main() {\n  Ok(10)\n}\n"
+---
+----- BEFORE RENAME
+-- something.gleam
+pub type Something
+
+-- app.gleam
+
+import something
+
+pub fn main() {
+  Ok(10)
+  ↑▔    
+}
+
+
+----- AFTER RENAME
+-- something.gleam
+pub type Something
+
+-- app.gleam
+
+import gleam.{Ok as Success}
+import something
+
+pub fn main() {
+  Success(10)
+}

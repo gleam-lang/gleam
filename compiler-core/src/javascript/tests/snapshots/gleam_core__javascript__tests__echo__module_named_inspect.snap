@@ -12,9 +12,11 @@ pub fn main() {
 
 
 ----- COMPILED JAVASCRIPT
-import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
+import * as $stdlib$dict from "../../gleam_stdlib/gleam/dict.mjs";
 import * as $inspect from "../../other/other/inspect.mjs";
 import {
+  Empty as $Empty,
+  NonEmpty as $NonEmpty,
   CustomType as $CustomType,
   bitArraySlice,
   bitArraySliceToInt,
@@ -24,7 +26,7 @@ import {
 } from "../gleam.mjs";
 
 export function main() {
-  return echo($inspect.x, "src/module.gleam", 5);
+  return echo($inspect.x, undefined, "src/module.gleam", 5);
 }
 
 // ...omitted code from `templates/echo.mjs`...

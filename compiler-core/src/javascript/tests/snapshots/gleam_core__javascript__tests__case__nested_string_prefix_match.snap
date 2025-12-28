@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-expression: "\nfn main() {\n  case Ok([\"a\", \"b c\", \"d\"]) {\n    Ok([\"a\", \"b \" <> _, \"d\"]) -> 1\n    _ -> 1\n  }\n}\n"
+expression: "\npub fn main() {\n  case Ok([\"a\", \"b c\", \"d\"]) {\n    Ok([\"a\", \"b \" <> _, \"d\"]) -> 1\n    _ -> 1\n  }\n}\n"
 ---
 ----- SOURCE CODE
 
-fn main() {
+pub fn main() {
   case Ok(["a", "b c", "d"]) {
     Ok(["a", "b " <> _, "d"]) -> 1
     _ -> 1
@@ -13,17 +13,44 @@ fn main() {
 
 
 ----- COMPILED JAVASCRIPT
-import { Ok, toList } from "../gleam.mjs";
+import { Ok, toList, Empty as $Empty } from "../gleam.mjs";
 
-function main() {
+export function main() {
   let $ = new Ok(toList(["a", "b c", "d"]));
-  if ($.isOk() &&
-  $[0].hasLength(3) &&
-  $[0].head === "a" &&
-  $[0].tail.head.startsWith("b ") &&
-  $[0].tail.tail.head === "d") {
+  let $1 = $[0];
+  if ($1 instanceof $Empty) {
     return 1;
   } else {
-    return 1;
+    let $2 = $1.tail;
+    if ($2 instanceof $Empty) {
+      return 1;
+    } else {
+      let $3 = $2.tail;
+      if ($3 instanceof $Empty) {
+        return 1;
+      } else {
+        let $4 = $3.tail;
+        if ($4 instanceof $Empty) {
+          let $5 = $1.head;
+          if ($5 === "a") {
+            let $6 = $2.head;
+            if ($6.startsWith("b ")) {
+              let $7 = $3.head;
+              if ($7 === "d") {
+                return 1;
+              } else {
+                return 1;
+              }
+            } else {
+              return 1;
+            }
+          } else {
+            return 1;
+          }
+        } else {
+          return 1;
+        }
+      }
+    }
   }
 }

@@ -9,7 +9,9 @@ expression: echo
                 start: 0,
                 end: 4,
             },
+            keyword_end: 4,
             expression: None,
+            message: None,
         },
     ),
 ]

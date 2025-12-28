@@ -17,9 +17,6 @@ export function go(x) {
   if (x.startsWith("1")) {
     let prefix = "1";
     return prefix;
-  } else if (x.startsWith("11")) {
-    let prefix = "11";
-    return prefix;
   } else {
     return "Unknown";
   }

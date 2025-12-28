@@ -10,8 +10,8 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     Mode, Origin, SourceFingerprint, Target,
-    package_compiler::{CacheMetadata, CachedModule, Input, UncompiledModule, module_name},
-    package_loader::CodegenRequired,
+    package_compiler::{CacheMetadata, CachedModule, Input, UncompiledModule},
+    package_loader::{CodegenRequired, GleamFile},
 };
 use crate::{
     Error, Result,
@@ -28,7 +28,6 @@ pub(crate) struct ModuleLoader<'a, IO> {
     pub target: Target,
     pub codegen: CodegenRequired,
     pub package_name: &'a EcoString,
-    pub source_directory: &'a Utf8Path,
     pub artefact_directory: &'a Utf8Path,
     pub origin: Origin,
     /// The set of modules that have had partial compilation done since the last
@@ -48,14 +47,13 @@ where
     /// Whether the module has changed or not is determined by comparing the
     /// modification time of the source file with the value recorded in the
     /// `.timestamp` file in the artefact directory.
-    pub fn load(&self, path: Utf8PathBuf) -> Result<Input> {
-        let name = module_name(self.source_directory, &path);
-        let artefact = name.replace("/", "@");
-        let source_mtime = self.io.modification_time(&path)?;
+    pub fn load(&self, file: GleamFile) -> Result<Input> {
+        let name = file.module_name.clone();
+        let source_mtime = self.io.modification_time(&file.path)?;
 
-        let read_source = |name| self.read_source(path, name, source_mtime);
+        let read_source = |name| self.read_source(file.path.clone(), name, source_mtime);
 
-        let meta = match self.read_cache_metadata(&artefact)? {
+        let meta = match self.read_cache_metadata(&file)? {
             Some(meta) => meta,
             None => return read_source(name).map(Input::New),
         };
@@ -84,16 +82,13 @@ where
             }
         }
 
-        Ok(Input::Cached(self.cached(name, meta)))
+        Ok(Input::Cached(self.cached(file, meta)))
     }
 
-    /// Read the timestamp file from the artefact directory for the given
-    /// artefact slug. If the file does not exist, return `None`.
-    fn read_cache_metadata(&self, artefact: &str) -> Result<Option<CacheMetadata>> {
-        let meta_path = self
-            .artefact_directory
-            .join(artefact)
-            .with_extension("cache_meta");
+    /// Read the cache metadata file from the artefact directory for the given
+    /// source file. If the file does not exist, return `None`.
+    fn read_cache_metadata(&self, source_file: &GleamFile) -> Result<Option<CacheMetadata>> {
+        let meta_path = source_file.cache_files(&self.artefact_directory).meta_path;
 
         if !self.io.is_file(&meta_path) {
             return Ok(None);
@@ -129,12 +124,12 @@ where
         )
     }
 
-    fn cached(&self, name: EcoString, meta: CacheMetadata) -> CachedModule {
+    fn cached(&self, file: GleamFile, meta: CacheMetadata) -> CachedModule {
         CachedModule {
             dependencies: meta.dependencies,
-            source_path: self.source_directory.join(format!("{}.gleam", name)),
+            source_path: file.path,
             origin: self.origin,
-            name,
+            name: file.module_name,
             line_numbers: meta.line_numbers,
         }
     }
@@ -159,7 +154,7 @@ where
         Error::Parse {
             path: path.clone(),
             src: code.clone(),
-            error,
+            error: Box::new(error),
         }
     })?;
     let mut ast = parsed.module;

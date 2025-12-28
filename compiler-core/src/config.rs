@@ -1,6 +1,7 @@
 mod stale_package_remover;
 use crate::error::{FileIoAction, FileKind};
 use crate::io::FileSystemReader;
+use crate::io::ordered_map;
 use crate::manifest::Manifest;
 use crate::requirement::Requirement;
 use crate::version::COMPILER_VERSION;
@@ -8,9 +9,10 @@ use crate::{Error, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use ecow::EcoString;
 use globset::{Glob, GlobSetBuilder};
-use hexpm::version::{self, Version};
+use hexpm::version::{self, LowestVersion, Version};
 use http::Uri;
-use serde::Deserialize;
+use serde::ser::SerializeSeq;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{self};
 use std::marker::PhantomData;
@@ -50,15 +52,40 @@ impl<'de> Deserialize<'de> for SpdxLicense {
     where
         D: serde::Deserializer<'de>,
     {
-        let s: &str = Deserialize::deserialize(deserializer)?;
-        match spdx::license_id(s) {
+        deserializer.deserialize_str(SpdxLicenseVisitor)
+    }
+}
+
+struct SpdxLicenseVisitor;
+
+impl<'de> serde::de::Visitor<'de> for SpdxLicenseVisitor {
+    type Value = SpdxLicense;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("a SPDX License ID")
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        match spdx::license_id(value) {
             None => Err(serde::de::Error::custom(format!(
-                "{s} is not a valid SPDX License ID"
+                "{value} is not a valid SPDX License ID"
             ))),
             Some(_) => Ok(SpdxLicense {
-                licence: String::from(s),
+                licence: value.to_string(),
             }),
         }
+    }
+}
+
+impl Serialize for SpdxLicense {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.licence)
     }
 }
 
@@ -68,31 +95,80 @@ impl AsRef<str> for SpdxLicense {
     }
 }
 
-#[derive(Deserialize, Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
+pub struct GleamVersion(version::Range);
+impl From<version::Range> for GleamVersion {
+    fn from(range: version::Range) -> Self {
+        Self(range)
+    }
+}
+
+impl From<GleamVersion> for version::Range {
+    fn from(gleam_version: GleamVersion) -> Self {
+        gleam_version.0
+    }
+}
+
+impl From<GleamVersion> for pubgrub::Range<Version> {
+    fn from(gleam_version: GleamVersion) -> Self {
+        gleam_version.0.into()
+    }
+}
+
+impl GleamVersion {
+    pub fn from_pubgrub(range: pubgrub::Range<Version>) -> Self {
+        let range: version::Range = range.into();
+        range.into()
+    }
+
+    pub fn as_pubgrub(&self) -> &pubgrub::Range<Version> {
+        self.0.to_pubgrub()
+    }
+
+    pub fn new(spec: String) -> Result<GleamVersion> {
+        let hex =
+            version::Range::new(spec.to_string()).map_err(|e| Error::InvalidVersionFormat {
+                input: spec,
+                error: e.to_string(),
+            })?;
+        Ok(hex.into())
+    }
+
+    pub fn lowest_version(&self) -> Option<Version> {
+        self.as_pubgrub().lowest_version()
+    }
+
+    pub fn hex(&self) -> &version::Range {
+        &self.0
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub struct PackageConfig {
-    #[serde(with = "package_name")]
+    #[serde(deserialize_with = "package_name::deserialize")]
     pub name: EcoString,
     #[serde(default = "default_version")]
     pub version: Version,
+
     #[serde(
         default,
         rename = "gleam",
-        serialize_with = "serialise_range",
-        deserialize_with = "deserialise_range"
+        deserialize_with = "deserialise_gleam_version",
+        serialize_with = "serialise_gleam_version"
     )]
-    pub gleam_version: Option<pubgrub::range::Range<Version>>,
+    pub gleam_version: Option<GleamVersion>,
     #[serde(default, alias = "licenses")]
     pub licences: Vec<SpdxLicense>,
     #[serde(default)]
     pub description: EcoString,
     #[serde(default, alias = "docs")]
     pub documentation: Docs,
-    #[serde(default)]
+    #[serde(default, serialize_with = "ordered_map")]
     pub dependencies: Dependencies,
-    #[serde(default, rename = "dev-dependencies")]
+    #[serde(default, rename = "dev-dependencies", serialize_with = "ordered_map")]
     pub dev_dependencies: Dependencies,
     #[serde(default)]
-    pub repository: Repository,
+    pub repository: Option<Repository>,
     #[serde(default)]
     pub links: Vec<Link>,
     #[serde(default)]
@@ -105,31 +181,28 @@ pub struct PackageConfig {
     pub internal_modules: Option<Vec<Glob>>,
 }
 
-pub fn serialise_range<S>(
-    range: Option<pubgrub::range::Range<Version>>,
-    serialiser: S,
+pub fn serialise_gleam_version<S>(
+    gleam_gersion: &Option<GleamVersion>,
+    serializer: S,
 ) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
 {
-    match range {
-        Some(range) => serialiser.serialize_some(&range.to_string()),
-        None => serialiser.serialize_none(),
+    match gleam_gersion {
+        Some(version) => serializer.serialize_str(&version.hex().to_string()),
+        None => serializer.serialize_none(),
     }
 }
 
-pub fn deserialise_range<'de, D>(
-    deserialiser: D,
-) -> Result<Option<pubgrub::range::Range<Version>>, D::Error>
+pub fn deserialise_gleam_version<'de, D>(deserialiser: D) -> Result<Option<GleamVersion>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
     match Deserialize::deserialize(deserialiser)? {
-        Some(range_string) => Ok(Some(
-            version::Range::new(range_string)
-                .to_pubgrub()
-                .map_err(serde::de::Error::custom)?,
-        )),
+        Some(range_string) => {
+            let hex = version::Range::new(range_string).map_err(serde::de::Error::custom)?;
+            Ok(Some(hex.into()))
+        }
         None => Ok(None),
     }
 }
@@ -161,13 +234,7 @@ impl PackageConfig {
         fs: &FS,
     ) -> Result<PackageConfig, Error> {
         let toml = fs.read(path.as_ref())?;
-        let config: PackageConfig = toml::from_str(&toml).map_err(|e| Error::FileIo {
-            action: FileIoAction::Parse,
-            kind: FileKind::File,
-            path: path.as_ref().to_path_buf(),
-            err: Some(e.to_string()),
-        })?;
-        Ok(config)
+        deserialise_config(path, toml)
     }
 
     /// Get the locked packages for the current config and a given (optional)
@@ -223,7 +290,8 @@ impl PackageConfig {
     // Checks to see if the gleam version specified in the config is compatible
     // with the current compiler version
     pub fn check_gleam_compatibility(&self) -> Result<(), Error> {
-        if let Some(range) = &self.gleam_version {
+        if let Some(version) = &self.gleam_version {
+            let range = version.as_pubgrub();
             let compiler_version =
                 Version::parse(COMPILER_VERSION).expect("Parse compiler semantic version");
 
@@ -241,19 +309,70 @@ impl PackageConfig {
         }
         Ok(())
     }
+
+    pub fn tag_for_version(&self, version: &Version) -> String {
+        let prefix = match self.repository.as_ref() {
+            Some(
+                Repository::GitHub { tag_prefix, .. }
+                | Repository::GitLab { tag_prefix, .. }
+                | Repository::BitBucket { tag_prefix, .. }
+                | Repository::Codeberg { tag_prefix, .. }
+                | Repository::SourceHut { tag_prefix, .. }
+                | Repository::Gitea { tag_prefix, .. }
+                | Repository::Forgejo { tag_prefix, .. }
+                | Repository::Tangled { tag_prefix, .. },
+            ) => tag_prefix.as_ref(),
+
+            Some(Repository::Custom { .. }) | None => None,
+        };
+
+        match prefix {
+            Some(prefix) => format!("{prefix}v{version}"),
+            None => format!("v{version}"),
+        }
+    }
+}
+
+fn deserialise_config<P: AsRef<Utf8Path>>(
+    path: P,
+    toml: String,
+) -> std::result::Result<PackageConfig, Error> {
+    let config: PackageConfig = toml::from_str(&toml).map_err(|e| Error::FileIo {
+        action: FileIoAction::Parse,
+        kind: FileKind::File,
+        path: path.as_ref().to_path_buf(),
+        err: Some(e.to_string()),
+    })?;
+    Ok(config)
+}
+
+// https://github.com/gleam-lang/gleam/issues/4867
+#[test]
+fn deny_extra_deps_properties() {
+    let toml = r#"
+name = "wibble"
+version = "1.0.0"
+
+[dependencies]
+aide_generator = { git = "git@github.com:crowdhailer/aide.git", ref = "f559c5bc", extra = "idk what this is" }
+"#;
+    let error = deserialise_config("gleam.toml", toml.into())
+        .expect_err("should fail to deserialise because of additional path");
+
+    insta::assert_snapshot!(insta::internals::AutoName, error.pretty_string());
 }
 
 #[test]
 fn locked_no_manifest() {
     let mut config = PackageConfig::default();
     config.dependencies = [
-        ("prod1".into(), Requirement::hex("~> 1.0")),
-        ("prod2".into(), Requirement::hex("~> 2.0")),
+        ("prod1".into(), Requirement::hex("~> 1.0").unwrap()),
+        ("prod2".into(), Requirement::hex("~> 2.0").unwrap()),
     ]
     .into();
     config.dev_dependencies = [
-        ("dev1".into(), Requirement::hex("~> 1.0")),
-        ("dev2".into(), Requirement::hex("~> 2.0")),
+        ("dev1".into(), Requirement::hex("~> 1.0").unwrap()),
+        ("dev2".into(), Requirement::hex("~> 2.0").unwrap()),
     ]
     .into();
     assert_eq!(config.locked(None).unwrap(), [].into());
@@ -263,13 +382,13 @@ fn locked_no_manifest() {
 fn locked_no_changes() {
     let mut config = PackageConfig::default();
     config.dependencies = [
-        ("prod1".into(), Requirement::hex("~> 1.0")),
-        ("prod2".into(), Requirement::hex("~> 2.0")),
+        ("prod1".into(), Requirement::hex("~> 1.0").unwrap()),
+        ("prod2".into(), Requirement::hex("~> 2.0").unwrap()),
     ]
     .into();
     config.dev_dependencies = [
-        ("dev1".into(), Requirement::hex("~> 1.0")),
-        ("dev2".into(), Requirement::hex("~> 2.0")),
+        ("dev1".into(), Requirement::hex("~> 1.0").unwrap()),
+        ("dev2".into(), Requirement::hex("~> 2.0").unwrap()),
     ]
     .into();
     let manifest = Manifest {
@@ -296,8 +415,8 @@ fn locked_no_changes() {
 #[test]
 fn locked_some_removed() {
     let mut config = PackageConfig::default();
-    config.dependencies = [("prod1".into(), Requirement::hex("~> 1.0"))].into();
-    config.dev_dependencies = [("dev2".into(), Requirement::hex("~> 2.0"))].into();
+    config.dependencies = [("prod1".into(), Requirement::hex("~> 1.0").unwrap())].into();
+    config.dev_dependencies = [("dev2".into(), Requirement::hex("~> 2.0").unwrap())].into();
     let manifest = Manifest {
         requirements: config.all_direct_dependencies().unwrap(),
         packages: vec![
@@ -323,21 +442,21 @@ fn locked_some_removed() {
 fn locked_some_changed() {
     let mut config = PackageConfig::default();
     config.dependencies = [
-        ("prod1".into(), Requirement::hex("~> 3.0")), // Does not match manifest
-        ("prod2".into(), Requirement::hex("~> 2.0")),
+        ("prod1".into(), Requirement::hex("~> 3.0").unwrap()), // Does not match manifest
+        ("prod2".into(), Requirement::hex("~> 2.0").unwrap()),
     ]
     .into();
     config.dev_dependencies = [
-        ("dev1".into(), Requirement::hex("~> 3.0")), // Does not match manifest
-        ("dev2".into(), Requirement::hex("~> 2.0")),
+        ("dev1".into(), Requirement::hex("~> 3.0").unwrap()), // Does not match manifest
+        ("dev2".into(), Requirement::hex("~> 2.0").unwrap()),
     ]
     .into();
     let manifest = Manifest {
         requirements: [
-            ("prod1".into(), Requirement::hex("~> 1.0")),
-            ("prod2".into(), Requirement::hex("~> 2.0")),
-            ("dev1".into(), Requirement::hex("~> 1.0")),
-            ("dev2".into(), Requirement::hex("~> 2.0")),
+            ("prod1".into(), Requirement::hex("~> 1.0").unwrap()),
+            ("prod2".into(), Requirement::hex("~> 2.0").unwrap()),
+            ("dev1".into(), Requirement::hex("~> 1.0").unwrap()),
+            ("dev2".into(), Requirement::hex("~> 2.0").unwrap()),
         ]
         .into(),
         packages: vec![
@@ -363,15 +482,15 @@ fn locked_some_changed() {
 fn locked_nested_are_removed_too() {
     let mut config = PackageConfig::default();
     config.dependencies = [
-        ("1".into(), Requirement::hex("~> 2.0")), // Does not match manifest
-        ("2".into(), Requirement::hex("~> 1.0")),
+        ("1".into(), Requirement::hex("~> 2.0").unwrap()), // Does not match manifest
+        ("2".into(), Requirement::hex("~> 1.0").unwrap()),
     ]
     .into();
     config.dev_dependencies = [].into();
     let manifest = Manifest {
         requirements: [
-            ("1".into(), Requirement::hex("~> 1.0")),
-            ("2".into(), Requirement::hex("~> 1.0")),
+            ("1".into(), Requirement::hex("~> 1.0").unwrap()),
+            ("2".into(), Requirement::hex("~> 1.0").unwrap()),
         ]
         .into(),
         packages: vec![
@@ -414,16 +533,16 @@ fn locked_nested_are_removed_too() {
 fn locked_unlock_new() {
     let mut config = PackageConfig::default();
     config.dependencies = [
-        ("1".into(), Requirement::hex("~> 1.0")),
-        ("2".into(), Requirement::hex("~> 1.0")),
-        ("3".into(), Requirement::hex("~> 3.0")), // Does not match manifest
+        ("1".into(), Requirement::hex("~> 1.0").unwrap()),
+        ("2".into(), Requirement::hex("~> 1.0").unwrap()),
+        ("3".into(), Requirement::hex("~> 3.0").unwrap()), // Does not match manifest
     ]
     .into();
     config.dev_dependencies = [].into();
     let manifest = Manifest {
         requirements: [
-            ("1".into(), Requirement::hex("~> 1.0")),
-            ("2".into(), Requirement::hex("~> 1.0")),
+            ("1".into(), Requirement::hex("~> 1.0").unwrap()),
+            ("2".into(), Requirement::hex("~> 1.0").unwrap()),
         ]
         .into(),
         packages: vec![
@@ -551,7 +670,10 @@ fn manifest_package(
         version: Version::parse(version).unwrap(),
         build_tools: vec![],
         otp_app: None,
-        requirements: requirements.iter().map(|e| (*e).into()).collect(),
+        requirements: requirements
+            .iter()
+            .map(|requirement| (*requirement).into())
+            .collect(),
         source: crate::manifest::ManifestPackageSource::Hex {
             outer_checksum: Base16Checksum(vec![]),
         },
@@ -584,15 +706,23 @@ impl Default for PackageConfig {
     }
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq, Default, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Default, Clone)]
 pub struct ErlangConfig {
+    /// An module that can be set in the `.app` file as the entrypoint for a stateful application
+    /// that defines a singleton supervision tree.
+    /// Erlang syntax.
     #[serde(default)]
     pub application_start_module: Option<EcoString>,
+    /// The argument for the start module start function. If not set then `[]` is used as the
+    /// default argument.
+    /// Erlang syntax.
+    #[serde(default)]
+    pub application_start_argument: Option<EcoString>,
     #[serde(default)]
     pub extra_applications: Vec<EcoString>,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Default, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
 pub struct JavaScriptConfig {
     #[serde(default)]
     pub typescript_declarations: bool,
@@ -611,6 +741,24 @@ pub enum DenoFlag {
 impl Default for DenoFlag {
     fn default() -> Self {
         Self::Allow(Vec::new())
+    }
+}
+
+impl Serialize for DenoFlag {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            DenoFlag::AllowAll => serializer.serialize_bool(true),
+            DenoFlag::Allow(items) => {
+                let mut seq = serializer.serialize_seq(Some(items.len()))?;
+                for e in items {
+                    seq.serialize_element(e)?;
+                }
+                seq.end()
+            }
+        }
     }
 }
 
@@ -653,7 +801,7 @@ where
     deserializer.deserialize_any(StringOrVec(PhantomData))
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq, Default, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Default, Clone)]
 pub struct DenoConfig {
     #[serde(default, deserialize_with = "bool_or_seq_string_to_deno_flag")]
     pub allow_env: DenoFlag,
@@ -675,75 +823,131 @@ pub struct DenoConfig {
     pub allow_all: bool,
     #[serde(default)]
     pub unstable: bool,
-    #[serde(default, deserialize_with = "uri_serde::deserialize_option")]
+    #[serde(
+        default,
+        serialize_with = "uri_serde::serialize_option",
+        deserialize_with = "uri_serde::deserialize_option"
+    )]
     pub location: Option<Uri>,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
-#[serde(tag = "type", rename_all = "lowercase")]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
+#[serde(tag = "type")]
 pub enum Repository {
+    #[serde(rename = "github")]
     GitHub {
         user: String,
         repo: String,
         path: Option<String>,
+        #[serde(rename = "tag-prefix")]
+        tag_prefix: Option<String>,
     },
+    #[serde(rename = "gitlab")]
     GitLab {
         user: String,
         repo: String,
         path: Option<String>,
+        #[serde(rename = "tag-prefix")]
+        tag_prefix: Option<String>,
     },
+    #[serde(rename = "bitbucket")]
     BitBucket {
         user: String,
         repo: String,
         path: Option<String>,
+        #[serde(rename = "tag-prefix")]
+        tag_prefix: Option<String>,
     },
+    #[serde(rename = "codeberg")]
     Codeberg {
         user: String,
         repo: String,
         path: Option<String>,
+        #[serde(rename = "tag-prefix")]
+        tag_prefix: Option<String>,
     },
-    #[serde(alias = "forgejo")]
+    #[serde(rename = "gitea")]
     Gitea {
         user: String,
         repo: String,
         path: Option<String>,
-        #[serde(with = "uri_serde_default_https")]
+        #[serde(rename = "tag-prefix")]
+        tag_prefix: Option<String>,
+        #[serde(
+            serialize_with = "uri_serde::serialize",
+            deserialize_with = "uri_serde_default_https::deserialize"
+        )]
         host: Uri,
     },
+    #[serde(rename = "forgejo")]
+    Forgejo {
+        user: String,
+        repo: String,
+        path: Option<String>,
+        #[serde(rename = "tag-prefix")]
+        tag_prefix: Option<String>,
+        #[serde(
+            serialize_with = "uri_serde::serialize",
+            deserialize_with = "uri_serde_default_https::deserialize"
+        )]
+        host: Uri,
+    },
+    #[serde(rename = "sourcehut")]
     SourceHut {
         user: String,
         repo: String,
         path: Option<String>,
+        #[serde(rename = "tag-prefix")]
+        tag_prefix: Option<String>,
     },
+    #[serde(rename = "tangled")]
+    Tangled {
+        user: String,
+        repo: String,
+        path: Option<String>,
+        #[serde(rename = "tag-prefix")]
+        tag_prefix: Option<String>,
+    },
+    #[serde(rename = "custom")]
     Custom {
         url: String,
+        #[serde(rename = "tag-prefix")]
+        tag_prefix: Option<String>,
     },
-    None,
 }
 
 impl Repository {
-    pub fn url(&self) -> Option<String> {
+    pub fn url(&self) -> String {
         match self {
             Repository::GitHub { repo, user, .. } => {
-                Some(format!("https://github.com/{user}/{repo}"))
+                format!("https://github.com/{user}/{repo}")
             }
             Repository::GitLab { repo, user, .. } => {
-                Some(format!("https://gitlab.com/{user}/{repo}"))
+                format!("https://gitlab.com/{user}/{repo}")
             }
             Repository::BitBucket { repo, user, .. } => {
-                Some(format!("https://bitbucket.com/{user}/{repo}"))
+                format!("https://bitbucket.com/{user}/{repo}")
             }
             Repository::Codeberg { repo, user, .. } => {
-                Some(format!("https://codeberg.org/{user}/{repo}"))
+                format!("https://codeberg.org/{user}/{repo}")
             }
             Repository::SourceHut { repo, user, .. } => {
-                Some(format!("https://git.sr.ht/~{user}/{repo}"))
+                format!("https://git.sr.ht/~{user}/{repo}")
+            }
+            Repository::Tangled { repo, user, .. } => {
+                format!("https://tangled.sh/{user}/{repo}")
             }
             Repository::Gitea {
                 repo, user, host, ..
-            } => Some(format!("{host}/{user}/{repo}")),
-            Repository::Custom { url } => Some(url.clone()),
-            Repository::None => None,
+            }
+            | Repository::Forgejo {
+                repo, user, host, ..
+            } => {
+                let string_host = host.to_string();
+                let cleaned_host = string_host.trim_end_matches('/');
+                format!("{cleaned_host}/{user}/{repo}")
+            }
+            Repository::Custom { url, .. } => url.clone(),
         }
     }
 
@@ -754,33 +958,29 @@ impl Repository {
             | Repository::BitBucket { path, .. }
             | Repository::Codeberg { path, .. }
             | Repository::SourceHut { path, .. }
-            | Repository::Gitea { path, .. } => path.as_ref(),
+            | Repository::Tangled { path, .. }
+            | Repository::Gitea { path, .. }
+            | Repository::Forgejo { path, .. } => path.as_ref(),
 
-            Repository::Custom { .. } | Repository::None => None,
+            Repository::Custom { .. } => None,
         }
     }
 }
 
-impl Default for Repository {
-    fn default() -> Self {
-        Self::None
-    }
-}
-
-#[derive(Deserialize, Default, Debug, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Serialize, Default, Debug, PartialEq, Eq, Clone)]
 pub struct Docs {
     #[serde(default)]
     pub pages: Vec<DocsPage>,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub struct DocsPage {
     pub title: String,
     pub path: String,
     pub source: Utf8PathBuf,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub struct Link {
     pub title: String,
     #[serde(with = "uri_serde")]
@@ -819,6 +1019,23 @@ mod uri_serde {
             None => Ok(None),
         }
     }
+
+    pub fn serialize_option<S>(uri: &Option<http::Uri>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match uri {
+            Some(uri) => serialize(uri, serializer),
+            None => serializer.serialize_unit(),
+        }
+    }
+
+    pub fn serialize<S>(uri: &http::Uri, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&uri.to_string())
+    }
 }
 
 // This prefixes https as a default in the event no scheme was provided
@@ -850,7 +1067,7 @@ mod package_name {
     use ecow::EcoString;
     use regex::Regex;
     use serde::Deserializer;
-    use std::sync::OnceLock;
+    use std::{fmt, sync::OnceLock};
 
     static PACKAGE_NAME_PATTERN: OnceLock<Regex> = OnceLock::new();
 
@@ -858,16 +1075,32 @@ mod package_name {
     where
         D: Deserializer<'de>,
     {
-        let name: &str = serde::de::Deserialize::deserialize(deserializer)?;
-        if PACKAGE_NAME_PATTERN
-            .get_or_init(|| Regex::new("^[a-z][a-z0-9_]*$").expect("Package name regex"))
-            .is_match(name)
+        deserializer.deserialize_str(NameVisitor)
+    }
+
+    struct NameVisitor;
+
+    impl<'de> serde::de::Visitor<'de> for NameVisitor {
+        type Value = EcoString;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("a package name")
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
         {
-            Ok(name.into())
-        } else {
-            let error =
-                "Package names may only contain lowercase letters, numbers, and underscores";
-            Err(serde::de::Error::custom(error))
+            if PACKAGE_NAME_PATTERN
+                .get_or_init(|| Regex::new("^[a-z][a-z0-9_]*$").expect("Package name regex"))
+                .is_match(value)
+            {
+                Ok(value.into())
+            } else {
+                let error =
+                    "Package names may only contain lowercase letters, numbers, and underscores";
+                Err(serde::de::Error::custom(error))
+            }
         }
     }
 }
@@ -877,12 +1110,13 @@ fn name_with_dash() {
     let input = r#"
 name = "one-two"
 "#;
-    assert_eq!(
+
+    insta::assert_snapshot!(
+        insta::internals::AutoName,
         toml::from_str::<PackageConfig>(input)
             .unwrap_err()
-            .to_string(),
-        "Package names may only contain lowercase letters, numbers, and underscores for key `name` at line 1 column 1"
-    )
+            .to_string()
+    );
 }
 
 #[test]
@@ -890,10 +1124,71 @@ fn name_with_number_start() {
     let input = r#"
 name = "1"
 "#;
-    assert_eq!(
+    insta::assert_snapshot!(
+        insta::internals::AutoName,
         toml::from_str::<PackageConfig>(input)
             .unwrap_err()
             .to_string(),
-        "Package names may only contain lowercase letters, numbers, and underscores for key `name` at line 1 column 1"
     )
+}
+
+#[test]
+fn package_config_to_json() {
+    let input = r#"
+name = "my_project"
+version = "1.0.0"
+licences = ["Apache-2.0", "MIT"]
+description = "Pretty complex config"
+target = "erlang"
+repository = { type = "github", user = "example", repo = "my_dep" }
+links = [{ title = "Home page", href = "https://example.com" }]
+internal_modules = ["my_app/internal"]
+gleam = ">= 0.30.0"
+
+[dependencies]
+gleam_stdlib = ">= 0.18.0 and < 2.0.0"
+my_other_project = { path = "../my_other_project" }
+
+[dev-dependencies]
+gleeunit = ">= 1.0.0 and < 2.0.0"
+
+[documentation]
+pages = [{ title = "My Page", path = "my-page.html", source = "./path/to/my-page.md" }]
+
+[erlang]
+application_start_module = "my_app/application"
+extra_applications = ["inets", "ssl"]
+
+[javascript]
+typescript_declarations = true
+runtime = "node"
+
+[javascript.deno]
+allow_all = false
+allow_ffi = true
+allow_env = ["DATABASE_URL"]
+allow_net = ["example.com:443"]
+allow_read = ["./database.sqlite"]
+"#;
+
+    let config = toml::from_str::<PackageConfig>(&input).unwrap();
+    let json = serde_json::to_string_pretty(&config).unwrap();
+    let output = format!("--- GLEAM.TOML\n{input}\n\n--- EXPORTED JSON\n\n{json}");
+    insta::assert_snapshot!(output);
+
+    let roundtrip = serde_json::from_str::<PackageConfig>(&json).unwrap();
+    assert_eq!(config, roundtrip);
+}
+
+#[test]
+fn barebones_package_config_to_json() {
+    let input = r#"
+name = "my_project"
+version = "1.0.0"
+"#;
+
+    let config = toml::from_str::<PackageConfig>(&input).unwrap();
+    let json = serde_json::to_string_pretty(&config).unwrap();
+    let output = format!("--- GLEAM.TOML\n{input}\n\n--- EXPORTED JSON\n\n{json}");
+    insta::assert_snapshot!(output);
 }

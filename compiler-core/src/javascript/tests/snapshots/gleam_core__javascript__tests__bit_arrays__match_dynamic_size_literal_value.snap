@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-expression: "\nfn go(x) {\n  let n = 8\n  let assert <<a:size(n), 0b010101:size(8)>> = x\n}\n"
+expression: "\npub fn go(x) {\n  let n = 8\n  let assert <<a:size(n), 0b010101:size(8)>> = x\n}\n"
 ---
 ----- SOURCE CODE
 
-fn go(x) {
+pub fn go(x) {
   let n = 8
   let assert <<a:size(n), 0b010101:size(8)>> = x
 }
@@ -13,21 +13,28 @@ fn go(x) {
 ----- COMPILED JAVASCRIPT
 import { makeError, bitArraySliceToInt } from "../gleam.mjs";
 
-function go(x) {
+const FILEPATH = "src/module.gleam";
+
+export function go(x) {
   let n = 8;
+  let a;
   if (
-    bitArraySliceToInt(x, n, n + 8, true, false) !== 0b10101 ||
-    !(x.bitSize == n + 8)
+    n >= 0 &&
+    x.bitSize >= n &&
+    x.bitSize === 8 + n &&
+    bitArraySliceToInt(x, n, n + 8, true, false) === 21
   ) {
+    a = bitArraySliceToInt(x, 0, n, true, false);
+  } else {
     throw makeError(
       "let_assert",
+      FILEPATH,
       "my/mod",
       4,
       "go",
       "Pattern match failed, no pattern matched the value.",
-      { value: x }
+      { value: x, start: 30, end: 76, pattern_start: 41, pattern_end: 72 }
     )
   }
-  let a = bitArraySliceToInt(x, 0, n, true, false);
   return x;
 }

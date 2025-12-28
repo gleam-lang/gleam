@@ -9,7 +9,6 @@
     clippy::needless_continue,
     clippy::needless_borrow,
     clippy::match_wildcard_for_single_variants,
-    clippy::match_on_vec_items,
     clippy::imprecise_flops,
     clippy::suboptimal_flops,
     clippy::lossy_float_literal,
@@ -30,6 +29,7 @@
     unexpected_cfgs,
     unused_import_braces,
     unused_qualifications,
+    clippy::wildcard_enum_match_arm
 )]
 #![deny(
     clippy::await_holding_lock,
@@ -50,6 +50,7 @@
     clippy::match_single_binding,
     clippy::match_like_matches_macro,
     clippy::inconsistent_struct_constructor,
+    clippy::len_without_is_empty,
     // TODO: fix
     clippy::arc_with_non_send_sync,
 )]
@@ -75,7 +76,6 @@ pub mod format;
 pub mod hex;
 pub mod io;
 pub mod javascript;
-pub mod language_server;
 pub mod line_numbers;
 pub mod manifest;
 pub mod metadata;
@@ -93,15 +93,17 @@ pub mod warning;
 pub(crate) mod ast_folder;
 mod call_graph;
 mod dep_tree;
-mod exhaustiveness;
+pub(crate) mod derivation_tree;
+pub mod exhaustiveness;
 pub(crate) mod graph;
-mod reference;
+pub(crate) mod inline;
+pub mod reference;
 
 pub use error::{Error, Result};
 pub use warning::Warning;
 
 const GLEAM_CORE_PACKAGE_NAME: &str = "";
-const STDLIB_PACKAGE_NAME: &str = "gleam_stdlib";
+pub const STDLIB_PACKAGE_NAME: &str = "gleam_stdlib";
 
 mod schema_capnp {
     #![allow(

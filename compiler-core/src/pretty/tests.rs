@@ -109,6 +109,18 @@ fn fits_test() {
     assert!(fits(2, 0, vector![(0, Unbroken, &doc)]));
     assert!(!fits(1, 0, vector![(0, Broken, &doc)]));
     assert!(!fits(1, 0, vector![(0, Unbroken, &doc)]));
+
+    let doc = ZeroWidthString {
+        string: "this is a very long string that doesn't count towards line width".into(),
+    };
+    assert!(fits(10, 0, vector![(0, Unbroken, &doc)]));
+    assert!(fits(10, 9, vector![(0, Unbroken, &doc)]));
+    let string_doc = "hello!".to_doc();
+    assert!(fits(
+        10,
+        0,
+        vector![(0, Unbroken, &string_doc), (0, Unbroken, &doc)]
+    ));
 }
 
 #[test]
@@ -156,6 +168,24 @@ fn format_test() {
         kind: BreakKind::Flex,
     }));
     assert_eq!("unbroken".to_string(), doc.to_pretty_string(100));
+
+    let doc = Vec(vec![
+        Break {
+            broken: "broken",
+            unbroken: "unbroken",
+            kind: BreakKind::Strict,
+        },
+        zero_width_string("<This will not cause a line break>".into()),
+        Break {
+            broken: "broken",
+            unbroken: "unbroken",
+            kind: BreakKind::Strict,
+        },
+    ]);
+    assert_eq!(
+        "unbroken<This will not cause a line break>unbroken",
+        doc.to_pretty_string(20)
+    );
 }
 
 #[test]
@@ -217,7 +247,7 @@ fn nest_if_broken_test() {
     ])
     .group();
 
-    let args_doc = concat([
+    let arguments_doc = concat([
         break_("", ""),
         "one".to_doc(),
         ",".to_doc(),
@@ -229,7 +259,7 @@ fn nest_if_broken_test() {
 
     let function_call_doc = concat([
         "some_function_call(".to_doc(),
-        args_doc,
+        arguments_doc,
         break_("", ""),
         ")".to_doc(),
     ])
@@ -255,8 +285,8 @@ fn nest_if_broken_test() {
 
 #[test]
 fn let_left_side_fits_test() {
-    let elems = break_("", "").append("1").nest(2).append(break_("", ""));
-    let list = "[".to_doc().append(elems).append("]").group();
+    let elements = break_("", "").append("1").nest(2).append(break_("", ""));
+    let list = "[".to_doc().append(elements).append("]").group();
     let doc = list.clone().append(" = ").append(list);
 
     assert_eq!(
@@ -308,6 +338,7 @@ fn empty_documents() {
     assert!("".to_doc().append("".to_doc()).is_empty());
     assert!(!"wibble".to_doc().append("".to_doc()).is_empty());
     assert!(!"".to_doc().append("wibble".to_doc()).is_empty());
+    assert!(!zero_width_string("wibble".into()).is_empty());
 }
 
 #[test]

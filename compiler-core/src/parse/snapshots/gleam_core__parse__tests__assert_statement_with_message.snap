@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "assert False as \"Uh oh\""
+---
+[
+    Assert(
+        Assert {
+            location: SrcSpan {
+                start: 0,
+                end: 23,
+            },
+            value: Var {
+                location: SrcSpan {
+                    start: 7,
+                    end: 12,
+                },
+                name: "False",
+            },
+            message: Some(
+                String {
+                    location: SrcSpan {
+                        start: 16,
+                        end: 23,
+                    },
+                    value: "Uh oh",
+                },
+            ),
+        },
+    ),
+]

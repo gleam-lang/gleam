@@ -28,17 +28,24 @@ export class Thing extends $CustomType {
     this.constructor$ = constructor;
   }
 }
+export const Thing$Thing = (constructor) => new Thing(constructor);
+export const Thing$isThing = (value) => value instanceof Thing;
+export const Thing$Thing$constructor = (value) => value.constructor$;
+export const Thing$Thing$0 = (value) => value.constructor$;
 
 export function main() {
   let a = new Thing(undefined);
-  let ctor = a.constructor$;
-  if (a.constructor$ === ctor) {
-    let a$1 = a;
-    return undefined;
-  } else if (a instanceof Thing && (ctor === a.constructor$)) {
-    let constructor = a.constructor$;
+  let ctor;
+  ctor = a.constructor$;
+  let a$1 = a;
+  if (a$1.constructor$ === ctor) {
     return undefined;
   } else {
-    return undefined;
+    let constructor = a.constructor$;
+    if (ctor === constructor) {
+      return undefined;
+    } else {
+      return undefined;
+    }
   }
 }

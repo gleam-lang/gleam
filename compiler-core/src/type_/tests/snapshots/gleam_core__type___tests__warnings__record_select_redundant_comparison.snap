@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub type Wibble {\n  Wibble(field: Int)\n}\n\npub fn main(wibble: Wibble) { wibble.field == wibble.field }\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(field: Int)
+}
+
+pub fn main(wibble: Wibble) { wibble.field == wibble.field }
+
+
+----- WARNING
+warning: Redundant comparison
+  ┌─ /src/warning/wrn.gleam:6:31
+  │
+6 │ pub fn main(wibble: Wibble) { wibble.field == wibble.field }
+  │                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ This is always `True`
+
+This comparison is redundant since it always succeeds.

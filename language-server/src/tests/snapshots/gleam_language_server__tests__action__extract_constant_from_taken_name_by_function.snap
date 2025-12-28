@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "fn floats() {\n    [1.0, 2.0]\n}\n\npub fn main() {\n  [0.25, 0.75]\n}"
+---
+----- BEFORE ACTION
+fn floats() {
+    [1.0, 2.0]
+}
+
+pub fn main() {
+  [0.25, 0.75]
+  ↑           
+}
+
+
+----- AFTER ACTION
+fn floats() {
+    [1.0, 2.0]
+}
+
+const floats_2 = [0.25, 0.75]
+
+pub fn main() {
+  floats_2
+}

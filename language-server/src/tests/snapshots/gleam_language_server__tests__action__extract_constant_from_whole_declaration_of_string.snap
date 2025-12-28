@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "import gleam/io\n\npub fn main() {\n  let c = \"constant\"\n  io.debug(c)\n}"
+---
+----- BEFORE ACTION
+import gleam/io
+
+pub fn main() {
+  let c = "constant"
+  ▔▔▔▔↑             
+  io.debug(c)
+}
+
+
+----- AFTER ACTION
+import gleam/io
+
+const c = "constant"
+
+pub fn main() {
+  io.debug(c)
+}

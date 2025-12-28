@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  1.12 - 2.0\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  1.12 - 2.0
+  ▔▔▔▔▔▔▔↑  
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  1.12 -. 2.0
+}

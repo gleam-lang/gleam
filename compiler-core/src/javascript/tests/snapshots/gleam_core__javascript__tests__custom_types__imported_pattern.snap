@@ -3,6 +3,10 @@ source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "import other.{Two}\n\npub fn main(x) {\n  case x {\n    Two(a: 1, ..) -> 1\n    other.Two(b: 2, c: c, ..) -> c\n    _ -> 3\n  }\n}\n"
 ---
 ----- SOURCE CODE
+-- other.gleam
+pub type One { Two(a: Int, b: Int, c: Int) }
+
+-- main.gleam
 import other.{Two}
 
 pub fn main(x) {
@@ -19,12 +23,16 @@ import * as $other from "../other.mjs";
 import { Two } from "../other.mjs";
 
 export function main(x) {
-  if (x instanceof Two && x.a === 1) {
+  let $ = x.a;
+  if ($ === 1) {
     return 1;
-  } else if (x instanceof $other.Two && x.b === 2) {
-    let c = x.c;
-    return c;
   } else {
-    return 3;
+    let $1 = x.b;
+    if ($1 === 2) {
+      let c = x.c;
+      return c;
+    } else {
+      return 3;
+    }
   }
 }

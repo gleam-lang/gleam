@@ -14,13 +14,13 @@ expression: "\nlet tup = #(#(5, 6))\n{tup.0}.1\n"
                     start: 11,
                     end: 21,
                 },
-                elems: [
+                elements: [
                     Tuple {
                         location: SrcSpan {
                             start: 13,
                             end: 20,
                         },
-                        elems: [
+                        elements: [
                             Int {
                                 location: SrcSpan {
                                     start: 15,
@@ -48,11 +48,18 @@ expression: "\nlet tup = #(#(5, 6))\n{tup.0}.1\n"
                 },
                 name: "tup",
                 type_: (),
-                origin: Variable(
-                    "tup",
-                ),
+                origin: VariableOrigin {
+                    syntax: Variable(
+                        "tup",
+                    ),
+                    declaration: LetPattern,
+                },
             },
             kind: Let,
+            compiled_case: CompiledCase {
+                tree: Fail,
+                subject_variables: [],
+            },
             annotation: None,
         },
     ),

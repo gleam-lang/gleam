@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  let var = #(1, 2)\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  let var = #(1, 2)
+      ↑            
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  let var = #(1, 2)
+  let #(int, int_2) = var
+}

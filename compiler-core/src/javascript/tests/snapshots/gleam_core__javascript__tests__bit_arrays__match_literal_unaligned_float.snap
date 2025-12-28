@@ -1,0 +1,37 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn go(x) {\n  let n = 1\n  let assert <<_:size(n), 1.1, _:bits>> = x\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  let n = 1
+  let assert <<_:size(n), 1.1, _:bits>> = x
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError, bitArraySliceToFloat } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+export function go(x) {
+  let n = 1;
+  if (!(
+    n >= 0 &&
+    x.bitSize >= n &&
+    x.bitSize >= 64 + n &&
+    bitArraySliceToFloat(x, n, n + 64, true) === 1.1
+  )) {
+    throw makeError(
+      "let_assert",
+      FILEPATH,
+      "my/mod",
+      4,
+      "go",
+      "Pattern match failed, no pattern matched the value.",
+      { value: x, start: 30, end: 71, pattern_start: 41, pattern_end: 67 }
+    )
+  }
+  return x;
+}

@@ -8,10 +8,17 @@ env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: "-D warnings"
 
+permissions:
+  contents: read
+
 jobs:
   build-release:
     name: build-release
     runs-on: ${{ matrix.os }}
+    environment: release
+    permissions:
+      id-token: write
+      attestations: write
     strategy:
       matrix:
         target:
@@ -20,154 +27,88 @@ jobs:
           - x86_64-apple-darwin
           - aarch64-apple-darwin
           - x86_64-pc-windows-msvc
-        toolchain: [stable]
+          - aarch64-pc-windows-msvc
+        toolchain: [ stable ]
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-            binary: x86-64
+            expected-binary-architecture: x86-64
             cargo-tool: cross
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
-            binary: aarch64
+            expected-binary-architecture: aarch64
             cargo-tool: cross
-          # macos>=14 runs exclusively on aarch64 and will thus fail to execute properly for x64
-          - os: macos-13
+          - os: macos-15-intel
             target: x86_64-apple-darwin
-            binary: x86_64
+            expected-binary-architecture: x86_64
             cargo-tool: cargo
           - os: macos-latest
             target: aarch64-apple-darwin
-            binary: arm64
+            expected-binary-architecture: arm64
             cargo-tool: cargo
-          - os: windows-latest
+          - os: windows-2022
             target: x86_64-pc-windows-msvc
-            binary: x86-64
+            expected-binary-architecture: x86-64
             cargo-tool: cargo
+          - os: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            expected-binary-architecture: arm64
+            cargo-tool: cargo
+          - os: ubuntu-latest
+            target: wasm32-unknown-unknown
+            cargo-tool: wasm-pack
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - name: "Build Archive"
+        id: build
+        uses: "./.github/actions/build-release"
         with:
+          version: ${{ github.ref_name }}
           toolchain: ${{ matrix.toolchain }}
           target: ${{ matrix.target }}
+          cargo-tool: ${{ matrix.cargo-tool }}
+          expected-binary-architecture: ${{ matrix.expected-binary-architecture }}
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-trusted-signing-account-name: ${{ vars.AZURE_TRUSTED_SIGNING_ACCOUNT_NAME }}
+          azure-certificate-profile-name: ${{ vars.AZURE_CERTIFICATE_PROFILE_NAME }}
 
-      - name: Handle Rust dependencies caching
-        uses: Swatinem/rust-cache@v2
-        with:
-          key: v1-${{ matrix.target }}
+  create-release:
+    name: create-release
 
-      - name: Build release binary
-        uses: clechasseur/rs-cargo@v3
-        with:
-          command: build
-          args: --release --target ${{ matrix.target }}
-          tool: ${{ matrix.cargo-tool }}
+    needs: ['build-release']
 
-      - name: Verify binary architecture
-        shell: bash
-        run: |
-          BINARY_PATH="target/${{ matrix.target }}/release/gleam"
-          if [[ "${{ matrix.target }}" == *"windows"* ]]; then
-            BINARY_PATH="${BINARY_PATH}.exe"
-          fi
-
-          if ! file -b "$BINARY_PATH" | grep -q "${{ matrix.binary }}"; then
-            echo "error: Architecture mismatch"
-            echo "Expected architecture: '${{ matrix.binary }}'"
-            echo "Found binary type: '$(file -b "$BINARY_PATH")'"
-            exit 1
-          fi
-          echo "ok: Architecture match"
-
-      - name: Build archive
-        shell: bash
-        run: |
-          VERSION="${GITHUB_REF#refs/tags/}"
-
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            ARCHIVE="gleam-$VERSION-${{ matrix.target }}.zip"
-            cp "target/${{ matrix.target }}/release/gleam.exe" "gleam.exe"
-            7z a "$ARCHIVE" "gleam.exe"
-            rm gleam.exe
-          else
-            ARCHIVE="gleam-$VERSION-${{ matrix.target }}.tar.gz"
-            cp "target/${{ matrix.target }}/release/gleam" "gleam"
-            tar -czvf "$ARCHIVE" "gleam"
-            rm gleam
-          fi
-
-          openssl dgst -r -sha256 -out "$ARCHIVE".sha256 "$ARCHIVE"
-          openssl dgst -r -sha512 -out "$ARCHIVE".sha512 "$ARCHIVE"
-          echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
-
-      - name: Ensure binary successfully boots
-        shell: bash
-        run: |
-          case "${{ matrix.target }}" in
-            x86_64-pc-windows-msvc)
-              7z x "$ASSET"
-              ./gleam.exe --version ;;
-            aarch64*)
-              echo "We cannot test an ARM binary on a AMD64 runner" ;;
-            *)
-              tar -xvzf "$ASSET"
-              ./gleam --version ;;
-          esac
-
-      - name: Upload release archive
-        # https://github.com/softprops/action-gh-release/issues/445
-        # uses: softprops/action-gh-release@v2
-        uses: softprops/action-gh-release@0bd7e8b279c9b5b36661d552472fbbfe671fe26e
-        with:
-          draft: true
-          prerelease: false
-          fail_on_unmatched_files: true
-          files: |
-            ${{ env.ASSET }}
-            ${{ env.ASSET }}.sha256
-            ${{ env.ASSET }}.sha512
-
-  build-release-wasm:
-    name: build-release-wasm
     runs-on: ubuntu-latest
+
+    environment: release
+
+    permissions:
+      contents: write
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Download Artifacts
+        uses: actions/download-artifact@v6
         with:
-          toolchain: stable
-          target: wasm32-unknown-unknown
-          profile: minimal
-          override: true
+          pattern: release-*
+          merge-multiple: true
 
-      - name: Install wasm-pack
-        run: curl -sSL https://rustwasm.github.io/wasm-pack/installer/init.sh | sh
-
-      - name: Build wasm
-        run: wasm-pack build --release --target web compiler-wasm
-
-      - name: Build wasm archive
+      - name: Create release
+        env:
+          GITHUB_TOKEN: '${{ github.token }}'
+          REPOSITORY: '${{ github.repository }}'
+          TITLE: '${{ github.ref_name }}'
+          TAG_NAME: '${{ github.ref_name }}'
+          NOTES: '${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/CHANGELOG.md'
         run: |
-          VERSION="${GITHUB_REF#refs/tags/}"
-          ARCHIVE="gleam-$VERSION-browser.tar.gz"
-
-          tar -C compiler-wasm/pkg/ -czvf $ARCHIVE .
-
-          openssl dgst -r -sha256 -out "$ARCHIVE".sha256 "$ARCHIVE"
-          openssl dgst -r -sha512 -out "$ARCHIVE".sha512 "$ARCHIVE"
-          echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
-
-      - name: Upload release archive
-        uses: softprops/action-gh-release@v2
-        with:
-          draft: true
-          prerelease: false
-          fail_on_unmatched_files: true
-          files: |
-            ${{ env.ASSET }}
-            ${{ env.ASSET }}.sha256
-            ${{ env.ASSET }}.sha512
+          gh release create \
+            --repo "$REPOSITORY" \
+            --title "$TITLE" \
+            --notes "$NOTES" \
+            --draft \
+            --verify-tag \
+            ${{ contains(github.ref_name, '-rc') && '--prerelease' || '' }} \
+            "$TAG_NAME" \
+            gleam-*

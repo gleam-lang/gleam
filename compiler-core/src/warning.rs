@@ -1,20 +1,23 @@
 use crate::{
-    ast::{SrcSpan, TodoKind},
+    ast::{BitArraySegmentTruncation, SrcSpan, TodoKind},
     build::Target,
-    diagnostic::{self, Diagnostic, Location},
+    diagnostic::{self, Diagnostic, ExtraLabel, Location},
     error::wrap,
+    exhaustiveness::ImpossibleBitArraySegmentPattern,
     type_::{
         self,
         error::{
-            FeatureKind, LiteralCollectionKind, PanicPosition, TodoOrPanic,
-            UnreachableCaseClauseReason,
+            AssertImpossiblePattern, FeatureKind, LiteralCollectionKind, PanicPosition,
+            TodoOrPanic, UnreachablePatternReason,
         },
+        expression::ComparisonOutcome,
         pretty::Printer,
     },
 };
 use camino::Utf8PathBuf;
 use debug_ignore::DebugIgnore;
 use ecow::EcoString;
+use itertools::Itertools;
 use std::{
     io::Write,
     sync::{Arc, atomic::Ordering},
@@ -162,6 +165,47 @@ pub enum Warning {
         src: EcoString,
         warning: DeprecatedSyntaxWarning,
     },
+
+    DeprecatedEnvironmentVariable {
+        variable: DeprecatedEnvironmentVariable,
+    },
+
+    EmptyModule {
+        path: Utf8PathBuf,
+        name: EcoString,
+    },
+
+    DetachedDocComment {
+        path: Utf8PathBuf,
+        src: EcoString,
+        location: SrcSpan,
+    },
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Copy)]
+pub enum DeprecatedEnvironmentVariable {
+    HexpmUser,
+    HexpmPass,
+}
+
+impl DeprecatedEnvironmentVariable {
+    fn name(&self) -> &'static str {
+        match self {
+            DeprecatedEnvironmentVariable::HexpmUser => "HEXPM_USER",
+            DeprecatedEnvironmentVariable::HexpmPass => "HEXPM_PASS",
+        }
+    }
+
+    fn message(&self) -> &'static str {
+        match self {
+            DeprecatedEnvironmentVariable::HexpmUser => {
+                "Use the `{API_ENV_NAME}` environment variable instead."
+            }
+            DeprecatedEnvironmentVariable::HexpmPass => {
+                "Use the `{API_ENV_NAME}` environment variable instead."
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
@@ -208,6 +252,17 @@ pub enum DeprecatedSyntaxWarning {
     /// ```
     ///
     DeprecatedRecordSpreadPattern {
+        location: SrcSpan,
+    },
+
+    /// If a guard has an empty clause :
+    /// ```gleam
+    /// case wibble {
+    ///     big if -> True
+    ///         ^^ This can be removed.
+    /// }
+    /// ```
+    DeprecatedEmptyClauseGuard {
         location: SrcSpan,
     },
 
@@ -324,7 +379,28 @@ To match on all possible lists, use the `_` catch-all pattern instead.",
                     extra_labels: vec![],
                 }),
             },
-
+            Warning::DeprecatedSyntax {
+                path,
+                src,
+                warning: DeprecatedSyntaxWarning::DeprecatedEmptyClauseGuard { location },
+            } => Diagnostic {
+                title: "Deprecated empty guard syntax".into(),
+                text: wrap(
+                    "This syntax for an empty guard is deprecated. \
+To have a clause without a guard, remove this.",
+                ),
+                hint: None,
+                level: diagnostic::Level::Warning,
+                location: Some(Location {
+                    label: diagnostic::Label {
+                        text: Some("This can be removed.".into()),
+                        span: *location,
+                    },
+                    path: path.clone(),
+                    src: src.clone(),
+                    extra_labels: vec![],
+                }),
+            },
             Warning::DeprecatedSyntax {
                 path,
                 src,
@@ -354,7 +430,30 @@ To match on all possible lists, use the `_` catch-all pattern instead.",
                 }
             }
 
-            Self::Type { path, warning, src } => match warning {
+            Warning::DetachedDocComment {
+                path,
+                src,
+                location,
+            } => Diagnostic {
+                title: "Detached doc comment".into(),
+                text: wrap(
+                    "This doc comment is followed by a regular \
+comment so it is not attached to any definition.",
+                ),
+                level: diagnostic::Level::Warning,
+                location: Some(Location {
+                    path: path.to_path_buf(),
+                    src: src.clone(),
+                    label: diagnostic::Label {
+                        text: Some("This is not attached to a definition".into()),
+                        span: *location,
+                    },
+                    extra_labels: Vec::new(),
+                }),
+                hint: Some("Move the comment above the doc comment".into()),
+            },
+
+            Warning::Type { path, warning, src } => match warning {
                 type_::Warning::Todo {
                     kind,
                     location,
@@ -631,7 +730,11 @@ Hint: You can safely remove it.
                 },
 
                 type_::Warning::UnusedVariable { location, origin } => Diagnostic {
-                    title: "Unused variable".into(),
+                    title: if origin.is_function_parameter() {
+                        "Unused function argument".into()
+                    } else {
+                        "Unused variable".into()
+                    },
                     text: "".into(),
                     hint: origin.how_to_ignore(),
                     level: diagnostic::Level::Warning,
@@ -639,22 +742,46 @@ Hint: You can safely remove it.
                         src: src.clone(),
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
-                            text: Some("This variable is never used".into()),
+                            text: if origin.is_function_parameter() {
+                                Some("This argument is never used".into())
+                            } else {
+                                Some("This variable is never used".into())
+                            },
                             span: *location,
                         },
                         extra_labels: Vec::new(),
                     }),
                 },
-                type_::Warning::UnnecessaryDoubleIntNegation { location } => Diagnostic {
-                    title: "Unnecessary double negation (--) on integer".into(),
-                    text: "".into(),
-                    hint: Some("You can safely remove this.".into()),
+
+                type_::Warning::UnusedRecursiveArgument { location } => Diagnostic {
+                    title: "Unused function argument".into(),
+                    text: wrap(
+                        "This argument is passed to the function when recursing, \
+but it's never used for anything.",
+                    ),
+                    hint: None,
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         src: src.clone(),
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
-                            text: None,
+                            text: Some("This argument is never used".into()),
+                            span: *location,
+                        },
+                        extra_labels: vec![],
+                    }),
+                },
+
+                type_::Warning::UnnecessaryDoubleIntNegation { location } => Diagnostic {
+                    title: "Unnecessary double negation (--) on integer".into(),
+                    text: "".into(),
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        src: src.clone(),
+                        path: path.to_path_buf(),
+                        label: diagnostic::Label {
+                            text: Some("You can safely remove this.".into()),
                             span: *location,
                         },
                         extra_labels: Vec::new(),
@@ -663,13 +790,13 @@ Hint: You can safely remove it.
                 type_::Warning::UnnecessaryDoubleBoolNegation { location } => Diagnostic {
                     title: "Unnecessary double negation (!!) on bool".into(),
                     text: "".into(),
-                    hint: Some("You can safely remove this.".into()),
+                    hint: None,
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         src: src.clone(),
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
-                            text: None,
+                            text: Some("You can safely remove this.".into()),
                             span: *location,
                         },
                         extra_labels: Vec::new(),
@@ -774,19 +901,39 @@ Run this command to add it to your dependencies:
                     }
                 }
 
-                type_::Warning::UnreachableCaseClause { location, reason } => {
-                    let text: String = match reason {
-                        UnreachableCaseClauseReason::DuplicatePattern => wrap(
-                            "This case clause cannot be reached as a previous clause matches \
-the same values.\n",
+                type_::Warning::UnreachableCasePattern { location, reason } => {
+                    let text = match reason {
+                        UnreachablePatternReason::DuplicatePattern => wrap(
+                            "This pattern cannot be reached as a previous \
+pattern matches the same values.\n",
                         ),
-                        UnreachableCaseClauseReason::ImpossibleVariant => wrap(
-                            "This case clause cannot be reached as it matches \
-on a variant of a type which is never present.\n",
+                        UnreachablePatternReason::ImpossibleVariant => wrap(
+                            "This pattern cannot be reached as it matches on \
+a variant of a type which is never present.\n",
+                        ),
+                        UnreachablePatternReason::ImpossibleSegments(_) => wrap(
+                            "This pattern cannot be reached as it contains \
+segments that will never match.\n",
                         ),
                     };
+
+                    let extra_labels = match reason {
+                        UnreachablePatternReason::DuplicatePattern
+                        | UnreachablePatternReason::ImpossibleVariant => vec![],
+                        UnreachablePatternReason::ImpossibleSegments(segments) => segments
+                            .iter()
+                            .map(|segment| ExtraLabel {
+                                src_info: None,
+                                label: diagnostic::Label {
+                                    text: Some(explain_impossible_segment(segment)),
+                                    span: segment.location(),
+                                },
+                            })
+                            .collect_vec(),
+                    };
+
                     Diagnostic {
-                        title: "Unreachable case clause".into(),
+                        title: "Unreachable pattern".into(),
                         text,
                         hint: Some("It can be safely removed.".into()),
                         level: diagnostic::Level::Warning,
@@ -797,7 +944,7 @@ on a variant of a type which is never present.\n",
                                 text: None,
                                 span: *location,
                             },
-                            extra_labels: Vec::new(),
+                            extra_labels,
                         }),
                     }
                 }
@@ -876,7 +1023,11 @@ can already tell which branch is going to match with this value.",
 
                 type_::Warning::UnusedValue { location } => Diagnostic {
                     title: "Unused value".into(),
-                    text: "".into(),
+                    text: wrap(
+                        "This expression computes a value without any side \
+effects, but then the value isn't used at all. You might want to assign it to a \
+variable, or delete the expression entirely if it's not needed.",
+                    ),
                     hint: None,
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
@@ -940,17 +1091,54 @@ hidden from the package's documentation.",
                     }),
                 },
 
+                type_::Warning::AssertAssignmentOnImpossiblePattern { location, reason } => {
+                    let extra_labels = match reason {
+                        AssertImpossiblePattern::InferredVariant => vec![],
+                        AssertImpossiblePattern::ImpossibleSegments { segments } => segments
+                            .iter()
+                            .map(|segment| ExtraLabel {
+                                src_info: None,
+                                label: diagnostic::Label {
+                                    text: Some(explain_impossible_segment(segment)),
+                                    span: segment.location(),
+                                },
+                            })
+                            .collect_vec(),
+                    };
+
+                    Diagnostic {
+                        title: "Assertion that will always fail".into(),
+                        text: wrap(
+                            "We can tell from the code above that the value will never match \
+this pattern and that this code will always crash.
+
+Either change the pattern or use `panic` to unconditionally fail.",
+                        ),
+                        hint: None,
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels,
+                        }),
+                    }
+                }
+
                 type_::Warning::TodoOrPanicUsedAsFunction {
                     kind,
                     location,
-                    args_location,
-                    args,
+                    arguments_location,
+                    arguments,
                 } => {
                     let title = match kind {
                         TodoOrPanic::Todo => "Todo used as a function".into(),
                         TodoOrPanic::Panic => "Panic used as a function".into(),
                     };
-                    let label_location = match args_location {
+                    let label_location = match arguments_location {
                         None => location,
                         Some(location) => location,
                     };
@@ -959,7 +1147,7 @@ hidden from the package's documentation.",
                         TodoOrPanic::Panic => "panic",
                     };
                     let mut text = format!("`{name}` is not a function");
-                    match args {
+                    match arguments {
                         0 => text.push_str(&format!(
                             ", you can just write `{name}` instead of `{name}()`."
                         )),
@@ -971,7 +1159,7 @@ hidden from the package's documentation.",
                         ),
                     };
 
-                    match args {
+                    match arguments {
                         0 => {}
                         _ => text.push_str(&format!(
                             "\n\nHint: if you want to display an error message you should write
@@ -1071,6 +1259,9 @@ See: https://tour.gleam.run/functions/pipelines/",
                         FeatureKind::UnannotatedUtf8StringSegment => {
                             "The ability to omit the `utf8` annotation for string segments was"
                         }
+                        FeatureKind::UnannotatedFloatSegment => {
+                            "The ability to omit the `float` annotation for float segments was"
+                        }
                         FeatureKind::NestedTupleAccess => {
                             "The ability to access nested tuple fields was"
                         }
@@ -1092,6 +1283,14 @@ See: https://tour.gleam.run/functions/pipelines/",
                         }
                         FeatureKind::JavaScriptUnalignedBitArray => {
                             "Use of unaligned bit arrays on the JavaScript target was"
+                        }
+                        FeatureKind::BoolAssert => "The bool `assert` statement was",
+                        FeatureKind::ExpressionInSegmentSize => "Expressions in segment sizes were",
+                        FeatureKind::ExternalCustomType => {
+                            "The `@external` annotation on custom types was"
+                        }
+                        FeatureKind::ConstantRecordUpdate => {
+                            "The record update syntax for constants was"
                         }
                     };
 
@@ -1144,6 +1343,199 @@ information.",
                         extra_labels: Vec::new(),
                     }),
                 },
+
+                type_::Warning::BitArraySegmentTruncatedValue {
+                    location: _,
+                    truncation:
+                        BitArraySegmentTruncation {
+                            truncated_value,
+                            truncated_into,
+                            segment_bits,
+                            value_location,
+                        },
+                } => {
+                    let (unit, segment_size, taken) = if segment_bits % 8 == 0 {
+                        let bytes = segment_bits / 8;
+                        let segment_size = pluralise(format!("{bytes} byte"), bytes);
+                        let taken = if bytes == 1 {
+                            "first byte".into()
+                        } else {
+                            format!("first {bytes} bytes")
+                        };
+
+                        ("bytes", segment_size, taken)
+                    } else {
+                        let segment_size = pluralise(format!("{segment_bits} bit"), *segment_bits);
+                        let taken = if *segment_bits == 1 {
+                            "first bit".into()
+                        } else {
+                            format!("first {segment_bits} bits")
+                        };
+                        ("bits", segment_size, taken)
+                    };
+
+                    let text = format!(
+                        "This segment is {segment_size} long, but {truncated_value} \
+doesn't fit in that many {unit}. It would be truncated by taking its {taken}, resulting in the value {truncated_into}."
+                    );
+
+                    Diagnostic {
+                        title: "Truncated bit array segment".into(),
+                        text: wrap(&text),
+                        hint: None,
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            path: path.to_path_buf(),
+                            src: src.clone(),
+                            label: diagnostic::Label {
+                                text: Some(format!(
+                                    "You can safely replace this with {truncated_into}"
+                                )),
+                                span: *value_location,
+                            },
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
+
+                type_::Warning::AssertLiteralBool { location } => Diagnostic {
+                    title: "Assertion of a literal value".into(),
+                    text: wrap(
+                        "Asserting on a literal bool is redundant since you \
+can already tell whether it will be `True` or `False`.",
+                    ),
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        src: src.clone(),
+                        path: path.to_path_buf(),
+                        label: diagnostic::Label {
+                            text: None,
+                            span: *location,
+                        },
+                        extra_labels: Vec::new(),
+                    }),
+                },
+
+                type_::Warning::ModuleImportedTwice {
+                    name,
+                    first,
+                    second,
+                } => Diagnostic {
+                    title: "Duplicate import".into(),
+                    text: format!("The {name} module has been imported twice."),
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        src: src.clone(),
+                        path: path.to_path_buf(),
+                        label: diagnostic::Label {
+                            text: Some("Reimported here".into()),
+                            span: *second,
+                        },
+                        extra_labels: vec![ExtraLabel {
+                            src_info: None,
+                            label: diagnostic::Label {
+                                text: Some("First imported here".into()),
+                                span: *first,
+                            },
+                        }],
+                    }),
+                },
+
+                type_::Warning::UnusedDiscardPattern { location, name } => Diagnostic {
+                    title: "Unused discard pattern".into(),
+                    text: format!("`_ as {name}` can be written more concisely as `{name}`"),
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        src: src.clone(),
+                        path: path.to_path_buf(),
+                        label: diagnostic::Label {
+                            text: None,
+                            span: SrcSpan {
+                                start: location.start - "_ as ".len() as u32,
+                                end: location.end,
+                            },
+                        },
+                        extra_labels: vec![],
+                    }),
+                    hint: None,
+                },
+
+                type_::Warning::TopLevelDefinitionShadowsImport { location, name } => {
+                    let text = format!(
+                        "Definition of {name} shadows an imported value.
+The imported value could not be used in this module anyway."
+                    );
+                    Diagnostic {
+                        title: "Shadowed Import".into(),
+                        text: wrap(&text),
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            path: path.clone(),
+                            src: src.clone(),
+                            label: diagnostic::Label {
+                                text: Some(wrap(&format!("`{name}` is defined here"))),
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                        hint: Some("Either rename the definition or remove the import.".into()),
+                    }
+                }
+
+                type_::Warning::RedundantComparison { location, outcome } => Diagnostic {
+                    title: "Redundant comparison".into(),
+                    text: format!(
+                        "This comparison is redundant since it always {}.",
+                        match outcome {
+                            ComparisonOutcome::AlwaysSucceeds => "succeeds",
+                            ComparisonOutcome::AlwaysFails => "fails",
+                        }
+                    ),
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        label: diagnostic::Label {
+                            text: Some(format!(
+                                "This is always `{}`",
+                                match outcome {
+                                    ComparisonOutcome::AlwaysSucceeds => "True",
+                                    ComparisonOutcome::AlwaysFails => "False",
+                                }
+                            )),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
+            },
+
+            Warning::DeprecatedEnvironmentVariable { variable } => {
+                let name = variable.name();
+                let message = variable.message();
+
+                let text = wrap(&format!(
+                    "The environment variable `{name}` is deprecated.\n\n{message}"
+                ));
+
+                Diagnostic {
+                    title: "Use of deprecated environment variable".into(),
+                    text,
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: None,
+                }
+            }
+
+            Warning::EmptyModule { path: _, name } => Diagnostic {
+                title: "Empty module".into(),
+                text: format!("Module '{name}' contains no public definitions."),
+                hint: Some("You can safely remove this module.".into()),
+                level: diagnostic::Level::Warning,
+                location: None,
             },
         }
     }
@@ -1159,5 +1551,33 @@ information.",
         let mut nocolor = Buffer::no_color();
         self.pretty(&mut nocolor);
         String::from_utf8(nocolor.into_inner()).expect("Warning printing produced invalid utf8")
+    }
+}
+
+fn explain_impossible_segment(segment: &ImpossibleBitArraySegmentPattern) -> String {
+    match segment {
+        ImpossibleBitArraySegmentPattern::UnrepresentableInteger {
+            size,
+            signed,
+            value: _,
+            location: _,
+        } => {
+            let human_readable_size = match size {
+                1 => "1 bit".into(),
+                8 => "1 byte".into(),
+                n if n % 8 == 0 => format!("{} bytes", n / 8),
+                n => format!("{n} bits"),
+            };
+            let sign = if *signed { "signed" } else { "unsigned" };
+            format!("A {human_readable_size} {sign} integer will never match this value")
+        }
+    }
+}
+
+fn pluralise(string: String, quantity: i64) -> String {
+    if quantity == 1 {
+        string
+    } else {
+        format!("{string}s")
     }
 }

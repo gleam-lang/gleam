@@ -13,8 +13,8 @@ pub fn main() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
-
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 
 -file("project/test/my/mod.gleam", 2).
@@ -23,6 +23,6 @@ main() ->
     echo(case 1 of
             _ ->
                 2
-        end, "project/test/my/mod.gleam", 3).
+        end, nil, 3).
 
 % ...omitted code from `templates/echo.erl`...

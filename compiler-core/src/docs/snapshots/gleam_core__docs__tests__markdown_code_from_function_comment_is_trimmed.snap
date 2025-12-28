@@ -227,9 +227,7 @@ expression: "compile(config, modules)"
 
 
 
-
-
-<h2>Functions</h2>
+<h2>Values</h2>
 <ul>
   
   <li><a href="#indentation_test">indentation_test</a></li>
@@ -250,11 +248,9 @@ expression: "compile(config, modules)"
 
 
 
-
-
 <section class="module-members">
-  <h1 id="module-functions" class="module-member-kind">
-    <a href="#module-functions">Functions</a>
+  <h1 id="module-values" class="module-member-kind">
+    <a href="#module-values">Values</a>
     <svg class="icon icon-gleam-chasse"><use xlink:href="#icon-gleam-chasse"></use></svg>
   </h1>
   
@@ -268,7 +264,7 @@ expression: "compile(config, modules)"
       
     </div>
 
-    <pre><code class="hljs gleam">pub fn indentation_test() -&gt; a</code></pre>
+    <pre><code class="hljs hljs-ignore"><span class="hljs-keyword">pub fn </span><span class="hljs-title">indentation_test</span>() -> <span class="hljs-variable">a</span></code></pre>
     
     <div class="rendered-markdown"><p>Here’s an example code snippet:</p>
 <pre><code>wibble
@@ -351,13 +347,16 @@ expression: "compile(config, modules)"
           elem.classList.add("gleam");
         }
       });
+      hljs.configure({
+        cssSelector: 'pre code:not(.hljs-ignore)'
+      })
       hljs.highlightAll();
     </script>
 
     <script src="./js/lunr.min.js?v=GLEAM_VERSION_HERE"></script>
     <script src="./js/index.js?v=0"></script>
     <script>
-      fetch("./search_data.json?v=0")
+      fetch("./search-data.json?v=0")
         .then(response => response.json())
         .then(data => window.Gleam.initSearch(data));
     </script>

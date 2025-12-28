@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/dependency.rs
+assertion_line: 1091
+expression: message
+snapshot_kind: text
+---
+There's no compatible version of `woo`:
+  - You require woo >= 2.0.0 and < 3.0.0
+  - You require wibble >= 1.0.0 and < 2.0.0
+    - wibble requires wobble >= 1.0.0 and < 3.0.0
+    - wobble requires woo >= 1.0.0 and < 2.0.0
+
+There's no compatible version of `waa`:
+  - You require wibble >= 1.0.0 and < 2.0.0
+    - wibble requires wobble >= 1.0.0 and < 3.0.0
+    - wobble requires waa >= 1.0.0 and < 2.0.0
+  - You require waa >= 2.0.0 and < 3.0.0

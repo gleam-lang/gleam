@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  let a = 1\n  echo a\n  Nil\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  let a = 1
+  echo a
+  ↑     
+  Nil
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  let a = 1
+  Nil
+}

@@ -10,6 +10,4 @@ warning: Unnecessary double negation (!!) on bool
   ┌─ /src/warning/wrn.gleam:1:25
   │
 1 │ pub fn main() { let _ = !!True }
-  │                         ^^^^^^
-
-Hint: You can safely remove this.
+  │                         ^^ You can safely remove this.

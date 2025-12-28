@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nfn wibble(a: a, b: b, c: c) -> d { todo }\n\npub fn main() {\n  let x = todo\n  let y = todo\n  let #(a, b) = something(x, y)\n  b\n}\n"
+---
+----- BEFORE ACTION
+
+fn wibble(a: a, b: b, c: c) -> d { todo }
+
+pub fn main() {
+  let x = todo
+  let y = todo
+  let #(a, b) = something(x, y)
+                ↑              
+  b
+}
+
+
+----- AFTER ACTION
+
+fn wibble(a: a, b: b, c: c) -> d { todo }
+
+pub fn main() {
+  let x = todo
+  let y = todo
+  let #(a, b) = something(x, y)
+  b
+}
+
+fn something(x: a, y: b) -> #(c, d) {
+  todo
+}

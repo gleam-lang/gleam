@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport option\n\nconst a = option.None\nconst b = option.Some(option.None)\n"
+---
+----- BEFORE ACTION
+
+import option
+
+const a = option.None
+                 ↑   
+const b = option.Some(option.None)
+
+
+----- AFTER ACTION
+
+import option.{None}
+
+const a = None
+const b = option.Some(None)

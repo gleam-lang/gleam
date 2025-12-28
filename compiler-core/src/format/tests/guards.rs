@@ -79,3 +79,29 @@ fn long_guard_with_alternative_patterns() {
 "#
     );
 }
+
+#[test]
+fn guard_block_is_not_removed_even_if_redundant() {
+    assert_format!(
+        r#"pub fn main() {
+  case todo {
+    _ if { True && True } && True -> 1
+    _ -> 2
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn nested_guard_block_is_not_removed_even_if_redundant() {
+    assert_format!(
+        r#"pub fn main() {
+  case todo {
+    _ if { True && { True && False } } && True -> 1
+    _ -> 2
+  }
+}
+"#
+    );
+}

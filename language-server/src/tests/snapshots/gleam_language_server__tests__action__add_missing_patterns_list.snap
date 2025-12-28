@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  let list = [1, 2, 3]\n  case list {\n    [a, b, c, 4 as d] -> d\n  }\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  let list = [1, 2, 3]
+  case list {
+  ▔▔▔▔▔↑     
+    [a, b, c, 4 as d] -> d
+  }
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  let list = [1, 2, 3]
+  case list {
+    [a, b, c, 4 as d] -> d
+    [] -> todo
+    [_] -> todo
+    [_, _] -> todo
+    [_, _, _] -> todo
+    [_, _, _, _] -> todo
+    [_, _, _, _, _, ..] -> todo
+  }
+}

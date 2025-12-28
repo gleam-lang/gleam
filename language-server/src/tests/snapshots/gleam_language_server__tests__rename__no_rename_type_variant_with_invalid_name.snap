@@ -1,0 +1,7 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\npub type Wibble {\n  Constructor(Int)\n}\n"
+---
+Error response message:
+
+name_in_snake_case is not a valid name

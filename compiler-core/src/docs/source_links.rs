@@ -26,71 +26,80 @@ impl SourceLinker {
             .expect("path is not in root")
             .with_extension("gleam");
 
-        let path_in_repo = match project_config.repository.path() {
+        let path_in_repo = match project_config
+            .repository
+            .as_ref()
+            .map(|r| r.path())
+            .unwrap_or_default()
+        {
             Some(repo_path) => to_url_path(&Utf8PathBuf::from(repo_path).join(path)),
             _ => to_url_path(&path),
         }
         .unwrap_or_default();
 
-        let url_pattern = match &project_config.repository {
-            Repository::GitHub { user, repo, .. } => Some((
-                format!(
-                    "https://github.com/{}/{}/blob/v{}/{}#L",
-                    user, repo, project_config.version, path_in_repo
-                ),
-                "-L".into(),
-            )),
-            Repository::GitLab { user, repo, .. } => Some((
-                format!(
-                    "https://gitlab.com/{}/{}/-/blob/v{}/{}#L",
-                    user, repo, project_config.version, path_in_repo
-                ),
-                "-".into(),
-            )),
-            Repository::BitBucket { user, repo, .. } => Some((
-                format!(
-                    "https://bitbucket.com/{}/{}/src/v{}/{}#lines-",
-                    user, repo, project_config.version, path_in_repo
-                ),
-                ":".into(),
-            )),
-            Repository::Codeberg { user, repo, .. } => Some((
-                format!(
-                    "https://codeberg.org/{}/{}/src/tag/v{}/{}#L",
-                    user, repo, project_config.version, path_in_repo
-                ),
-                "-".into(),
-            )),
-            Repository::SourceHut { user, repo, .. } => Some((
-                format!(
-                    "https://git.sr.ht/~{}/{}/tree/v{}/item/{}#L",
-                    user, repo, project_config.version, path_in_repo
-                ),
-                "-".into(),
-            )),
-            Repository::Gitea {
-                user, repo, host, ..
-            } => Some((
-                format!(
-                    "{host}/{user}/{repo}/src/tag/v{}/{}#L",
-                    project_config.version, path_in_repo
-                ),
-                "-".into(),
-            )),
-            Repository::Custom { .. } | Repository::None => None,
-        };
+        let tag = project_config.tag_for_version(&project_config.version);
+
+        let url_pattern = project_config
+            .repository
+            .as_ref()
+            .map(|r| match r {
+                Repository::GitHub { user, repo, .. } => Some((
+                    format!("https://github.com/{user}/{repo}/blob/{tag}/{path_in_repo}#L"),
+                    "-L".into(),
+                )),
+                Repository::GitLab { user, repo, .. } => Some((
+                    format!("https://gitlab.com/{user}/{repo}/-/blob/{tag}/{path_in_repo}#L"),
+                    "-".into(),
+                )),
+                Repository::BitBucket { user, repo, .. } => Some((
+                    format!("https://bitbucket.com/{user}/{repo}/src/{tag}/{path_in_repo}#lines-"),
+                    ":".into(),
+                )),
+                Repository::Codeberg { user, repo, .. } => Some((
+                    format!("https://codeberg.org/{user}/{repo}/src/tag/{tag}/{path_in_repo}#L"),
+                    "-".into(),
+                )),
+                Repository::SourceHut { user, repo, .. } => Some((
+                    format!("https://git.sr.ht/~{user}/{repo}/tree/{tag}/item/{path_in_repo}#L"),
+                    "-".into(),
+                )),
+                Repository::Tangled { user, repo, .. } => Some((
+                    format!("https://tangled.sh/{user}/{repo}/tree/{tag}/{path_in_repo}#L"),
+                    "-".into(),
+                )),
+                Repository::Gitea {
+                    user, repo, host, ..
+                }
+                | Repository::Forgejo {
+                    user, repo, host, ..
+                } => {
+                    let string_host = host.to_string();
+                    let cleaned_host = string_host.trim_end_matches('/');
+                    Some((
+                        format!("{cleaned_host}/{user}/{repo}/src/tag/{tag}/{path_in_repo}#L",),
+                        "-L".into(),
+                    ))
+                }
+                Repository::Custom { .. } => None,
+            })
+            .unwrap_or_default();
 
         SourceLinker {
             line_numbers: LineNumbers::new(&module.code),
             url_pattern,
         }
     }
+
     pub fn url(&self, span: SrcSpan) -> String {
         match &self.url_pattern {
             Some((base, line_sep)) => {
                 let start_line = self.line_numbers.line_number(span.start);
                 let end_line = self.line_numbers.line_number(span.end);
-                format!("{base}{start_line}{line_sep}{end_line}")
+                if start_line == end_line {
+                    format!("{base}{start_line}")
+                } else {
+                    format!("{base}{start_line}{line_sep}{end_line}")
+                }
             }
 
             None => "".into(),

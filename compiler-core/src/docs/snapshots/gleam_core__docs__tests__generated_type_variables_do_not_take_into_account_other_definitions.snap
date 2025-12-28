@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/docs/tests.rs
+expression: output
+---
+---- SOURCE CODE
+-- main.gleam
+
+pub fn wibble(_a: a, _b: b, _c: c) -> d {
+  todo
+}
+
+pub fn identity(x) { x }
+
+
+---- VALUES
+
+--- identity
+<pre><code>pub fn identity(x: a) -> a</code></pre>
+
+--- wibble
+<pre><code>pub fn wibble(a: a, b: b, c: c) -> d</code></pre>

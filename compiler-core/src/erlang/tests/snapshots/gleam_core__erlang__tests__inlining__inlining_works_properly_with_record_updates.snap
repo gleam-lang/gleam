@@ -1,0 +1,39 @@
+---
+source: compiler-core/src/erlang/tests/inlining.rs
+expression: "\nimport gleam/result\n\npub type Wibble {\n  Wibble(a: Int, b: Int)\n}\n\npub fn main() {\n  let w = Wibble(1, 2)\n  use b <- result.map(Ok(3))\n  Wibble(..w, b:)\n}\n"
+---
+----- SOURCE CODE
+
+import gleam/result
+
+pub type Wibble {
+  Wibble(a: Int, b: Int)
+}
+
+pub fn main() {
+  let w = Wibble(1, 2)
+  use b <- result.map(Ok(3))
+  Wibble(..w, b:)
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
+-export_type([wibble/0]).
+
+-type wibble() :: {wibble, integer(), integer()}.
+
+-file("project/test/my/mod.gleam", 8).
+-spec main() -> {ok, wibble()} | {error, any()}.
+main() ->
+    W = {wibble, 1, 2},
+    case {ok, 3} of
+        {ok, Value} ->
+            {ok, {wibble, erlang:element(2, W), Value}};
+
+        {error, Error} ->
+            {error, Error}
+    end.

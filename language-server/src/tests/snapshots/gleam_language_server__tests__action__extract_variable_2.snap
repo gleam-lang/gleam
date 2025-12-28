@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  map([1, 2, 3], add(1, _))\n}\npub fn add(n, m) { todo }\npub fn map(l, f) { todo }\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  map([1, 2, 3], add(1, _))
+                 ↑         
+}
+pub fn add(n, m) { todo }
+pub fn map(l, f) { todo }
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  let value = add(1, _)
+  map([1, 2, 3], value)
+}
+pub fn add(n, m) { todo }
+pub fn map(l, f) { todo }
