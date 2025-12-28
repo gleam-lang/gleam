@@ -226,7 +226,7 @@ pub trait PackageFetcher {
 
 #[derive(Debug, Error)]
 pub enum PackageFetchError {
-    #[error("The package {0} was not found on Hex")]
+    #[error("The package {0} was not found in the package repository")]
     NotFoundError(String),
     #[error("{0}")]
     ApiError(hexpm::ApiError),
@@ -239,10 +239,24 @@ impl PackageFetchError {
     }
 
     pub fn from_api_error(api_error: hexpm::ApiError, package: &str) -> Self {
-        if let hexpm::ApiError::NotFound = api_error {
-            return Self::NotFoundError(package.to_string());
+        match &api_error {
+            hexpm::ApiError::NotFound => return Self::NotFoundError(package.to_string()),
+            hexpm::ApiError::Json(_) => return Self::ApiError(api_error),
+            hexpm::ApiError::Io(_) => return Self::ApiError(api_error),
+            hexpm::ApiError::InvalidProtobuf(_) => return Self::ApiError(api_error),
+            hexpm::ApiError::UnexpectedResponse(_, _) => return Self::ApiError(api_error),
+            hexpm::ApiError::RateLimited => return Self::ApiError(api_error),
+            hexpm::ApiError::InvalidCredentials => return Self::ApiError(api_error),
+            hexpm::ApiError::InvalidPackageNameFormat(_) => return Self::ApiError(api_error),
+            hexpm::ApiError::IncorrectPayloadSignature => return Self::ApiError(api_error),
+            hexpm::ApiError::InvalidVersionFormat(_) => return Self::ApiError(api_error),
+            hexpm::ApiError::InvalidVersionRequirementFormat(_) => return Self::ApiError(api_error),
+            hexpm::ApiError::IncorrectChecksum => return Self::ApiError(api_error),
+            hexpm::ApiError::InvalidApiKey => return Self::ApiError(api_error),
+            hexpm::ApiError::Forbidden => return Self::ApiError(api_error),
+            hexpm::ApiError::NotReplacing => return Self::ApiError(api_error),
+            hexpm::ApiError::LateModification => return Self::ApiError(api_error),
         }
-        Self::ApiError(api_error)
     }
 }
 
@@ -845,7 +859,7 @@ mod tests {
         match err {
             Error::DependencyResolutionError(error) => assert_eq!(
                 error,
-                "An error occurred while choosing the version of unknown: The package unknown was not found on Hex"
+                "An error occurred while choosing the version of unknown: The package unknown was not found in the package repository"
             ),
             _ => panic!("wrong error: {err}"),
         }
