@@ -1191,7 +1191,7 @@ impl dependency::PackageFetcher for PackageFetcher {
             .map_err(PackageFetchError::fetch_error)?;
 
         let pkg = hexpm::repository_v2_get_package_response(response, HEXPM_PUBLIC_KEY)
-            .map_err(PackageFetchError::from)?;
+            .map_err(|e| PackageFetchError::from_api_error(e, package))?;
         let pkg = Rc::new(pkg);
         let pkg_ref = Rc::clone(&pkg);
         self.cache_package(package, pkg);
