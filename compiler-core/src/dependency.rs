@@ -250,9 +250,7 @@ impl PackageFetchError {
             hexpm::ApiError::InvalidPackageNameFormat(_) => Self::ApiError(api_error),
             hexpm::ApiError::IncorrectPayloadSignature => Self::ApiError(api_error),
             hexpm::ApiError::InvalidVersionFormat(_) => Self::ApiError(api_error),
-            hexpm::ApiError::InvalidVersionRequirementFormat(_) => {
-                Self::ApiError(api_error);
-            }
+            hexpm::ApiError::InvalidVersionRequirementFormat(_) => Self::ApiError(api_error),
             hexpm::ApiError::IncorrectChecksum => Self::ApiError(api_error),
             hexpm::ApiError::InvalidApiKey => Self::ApiError(api_error),
             hexpm::ApiError::Forbidden => Self::ApiError(api_error),
