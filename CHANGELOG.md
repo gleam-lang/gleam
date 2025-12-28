@@ -107,6 +107,10 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Compiler can now emit source maps when targeting javascript. This can be enabled
+  in the gleam.toml with the `source_maps` setting under the `javascript` section.
+  ([Ameen Radwan](https://github.com/Acepie))
+
 ### Build tool
 
 - The `gleam hex owner add` command has been added, which allows adding

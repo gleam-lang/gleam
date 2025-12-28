@@ -1,0 +1,113 @@
+---
+source: compiler-core/src/javascript/tests/sourcemaps.rs
+expression: "\npub fn go(one, other) {\n  case one, other {\n    Ok(1), Error(_) -> 1\n    Ok(_), _ -> 2\n    Error(_), Ok(2) -> 3\n    _, _ -> 4\n  }\n}\n"
+---
+----- SOURCE CODE
+0 |
+1 |pub fn go(one, other) {
+2 |  case one, other {
+3 |    Ok(1), Error(_) -> 1
+4 |    Ok(_), _ -> 2
+5 |    Error(_), Ok(2) -> 3
+6 |    _, _ -> 4
+7 |  }
+8 |}
+
+----- COMPILED JAVASCRIPT
+0 |//# sourceMappingURL=mod.mjs.map
+1 |import { Ok, Error } from "../gleam.mjs";
+2 |
+3 |export function go(one, other) {
+4 |  if (one instanceof Ok) {
+5 |    if (other instanceof Error) {
+6 |      let $ = one[0];
+7 |      if ($ === 1) {
+8 |        return 1;
+9 |      } else {
+10 |        return 2;
+11 |      }
+12 |    } else {
+13 |      return 2;
+14 |    }
+15 |  } else if (other instanceof Ok) {
+16 |    let $ = other[0];
+17 |    if ($ === 2) {
+18 |      return 3;
+19 |    } else {
+20 |      return 4;
+21 |    }
+22 |  } else {
+23 |    return 4;
+24 |  }
+25 |}
+
+----- SOURCE MAP
+Mappings:
+----- 
+
+
+⏷
+//# sourceMappingURL=mod.mjs.map
+import { Ok, Error } from "../gleam.mjs";
+
+
+----- 
+pub fn go(one, other) {
+  
+⏷
+export function go(one, other) {
+  
+----- 
+case 
+⏷
+
+----- 
+one, other {
+    Ok(1), Error(_) -> 
+⏷
+if (one instanceof Ok) {
+    if (other instanceof Error) {
+      let $ = one[0];
+      if ($ === 1) {
+        
+----- 
+1
+    Ok(_), _ -> 
+⏷
+return 1;
+      } else {
+        
+----- 
+2
+    Error(_), Ok(2) -> 
+⏷
+return 2;
+      }
+    } else {
+      return 2;
+    }
+  } else if (other instanceof Ok) {
+    let $ = other[0];
+    if ($ === 2) {
+      
+----- 
+3
+    _, _ -> 
+⏷
+return 3;
+    } else {
+      
+----- 
+4
+  }
+}
+
+⏷
+return 4;
+    }
+  } else {
+    return 4;
+  }
+}
+
+-----

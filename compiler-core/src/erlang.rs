@@ -317,11 +317,11 @@ fn register_function_exports(
     }
 }
 
-fn register_custom_type_exports(
+fn register_custom_type_exports<'a>(
     custom_type: &TypedCustomType,
-    type_exports: &mut Vec<Document<'_>>,
-    type_defs: &mut Vec<Document<'_>>,
-    module_name: &str,
+    type_exports: &mut Vec<Document<'a>>,
+    type_defs: &mut Vec<Document<'a>>,
+    module_name: &'a str,
 ) {
     let TypedCustomType {
         name,
