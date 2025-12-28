@@ -241,21 +241,21 @@ impl PackageFetchError {
     pub fn from_api_error(api_error: hexpm::ApiError, package: &str) -> Self {
         match &api_error {
             hexpm::ApiError::NotFound => Self::NotFoundError(package.to_string()),
-            hexpm::ApiError::Json(_) => Self::ApiError(api_error),
-            hexpm::ApiError::Io(_) => Self::ApiError(api_error),
-            hexpm::ApiError::InvalidProtobuf(_) => Self::ApiError(api_error),
-            hexpm::ApiError::UnexpectedResponse(_, _) => Self::ApiError(api_error),
-            hexpm::ApiError::RateLimited => Self::ApiError(api_error),
-            hexpm::ApiError::InvalidCredentials => Self::ApiError(api_error),
-            hexpm::ApiError::InvalidPackageNameFormat(_) => Self::ApiError(api_error),
-            hexpm::ApiError::IncorrectPayloadSignature => Self::ApiError(api_error),
-            hexpm::ApiError::InvalidVersionFormat(_) => Self::ApiError(api_error),
-            hexpm::ApiError::InvalidVersionRequirementFormat(_) => Self::ApiError(api_error),
-            hexpm::ApiError::IncorrectChecksum => Self::ApiError(api_error),
-            hexpm::ApiError::InvalidApiKey => Self::ApiError(api_error),
-            hexpm::ApiError::Forbidden => Self::ApiError(api_error),
-            hexpm::ApiError::NotReplacing => Self::ApiError(api_error),
-            hexpm::ApiError::LateModification => Self::ApiError(api_error),
+            hexpm::ApiError::Json(_)
+            | hexpm::ApiError::Io(_)
+            | hexpm::ApiError::InvalidProtobuf(_)
+            | hexpm::ApiError::UnexpectedResponse(_, _)
+            | hexpm::ApiError::RateLimited
+            | hexpm::ApiError::InvalidCredentials
+            | hexpm::ApiError::InvalidPackageNameFormat(_)
+            | hexpm::ApiError::IncorrectPayloadSignature
+            | hexpm::ApiError::InvalidVersionFormat(_)
+            | hexpm::ApiError::InvalidVersionRequirementFormat(_)
+            | hexpm::ApiError::IncorrectChecksum
+            | hexpm::ApiError::InvalidApiKey
+            | hexpm::ApiError::Forbidden
+            | hexpm::ApiError::NotReplacing
+            | hexpm::ApiError::LateModification => Self::ApiError(api_error),
         }
     }
 }
