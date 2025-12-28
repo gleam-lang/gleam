@@ -226,19 +226,23 @@ pub trait PackageFetcher {
 
 #[derive(Debug, Error)]
 pub enum PackageFetchError {
+    #[error("The package {0} was not found on Hex")]
+    NotFoundError(String),
     #[error("{0}")]
     ApiError(hexpm::ApiError),
     #[error("{0}")]
     FetchError(String),
 }
-impl From<hexpm::ApiError> for PackageFetchError {
-    fn from(api_error: hexpm::ApiError) -> Self {
-        Self::ApiError(api_error)
-    }
-}
 impl PackageFetchError {
     pub fn fetch_error<T: std::error::Error>(err: T) -> Self {
         Self::FetchError(err.to_string())
+    }
+
+    pub fn from_api_error(api_error: hexpm::ApiError, package: &str) -> Self {
+        if let hexpm::ApiError::NotFound = api_error {
+            return Self::NotFoundError(package.to_string());
+        }
+        Self::ApiError(api_error)
     }
 }
 
@@ -449,7 +453,7 @@ mod tests {
             self.deps
                 .get(package)
                 .map(Rc::clone)
-                .ok_or(hexpm::ApiError::NotFound.into())
+                .ok_or(PackageFetchError::NotFoundError(package.to_string()))
         }
     }
 
@@ -830,7 +834,7 @@ mod tests {
 
     #[test]
     fn resolution_not_found_dep() {
-        let _ = resolve_versions(
+        let err = resolve_versions(
             &make_remote(),
             HashMap::new(),
             "app".into(),
@@ -838,6 +842,13 @@ mod tests {
             &vec![].into_iter().collect(),
         )
         .unwrap_err();
+        match err {
+            Error::DependencyResolutionError(error) => assert_eq!(
+                error,
+                "An error occurred while choosing the version of unknown: The package unknown was not found on Hex"
+            ),
+            _ => panic!("wrong error: {err}"),
+        }
     }
 
     #[test]
