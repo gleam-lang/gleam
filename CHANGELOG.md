@@ -6,6 +6,8 @@
 
 ### Build tool
 
+- When adding a package that does not exist on Hex, the message is a bit friendlier. ([Ameen Radwan](https://github.com/Acepie))
+
 ### Language server
 
 - The language server now allows extracting the start of a pipeline into a
