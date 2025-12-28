@@ -3,8 +3,22 @@ use crate::assert_source_map;
 #[test]
 fn sourcemap_function_definition() {
     assert_source_map!(
-        "pub fn add_2(x) {
+        "
+// my add function
+pub fn add_2(x) {
   x + 2
+}"
+    )
+}
+
+#[test]
+fn sourcemap_function_definition_with_variable_assignment() {
+    assert_source_map!(
+        "
+// my function
+pub fn wibble() {
+  let wibble = 1;
+  wibble + 2
 }"
     )
 }
@@ -12,7 +26,9 @@ fn sourcemap_function_definition() {
 #[test]
 fn sourcemap_custom_type_definition() {
     assert_source_map!(
-        "pub type Wibble {
+        "
+// my custom type
+pub type Wibble {
   Wibble
   Wobble(field: Int)
   Wabble(Wibble)
@@ -21,12 +37,12 @@ fn sourcemap_custom_type_definition() {
 }
 
 #[test]
-fn sourcemap_import_module() {
+fn sourcemap_module_constant() {
     assert_source_map!(
-        ("rocket_ship", r#"pub fn launch() { 1 }"#),
-        r#"import rocket_ship.{launch}
-pub fn go() { launch() }
-"#,
+        "
+// my constant
+pub const wibble = 1
+const wobble = 2
+pub const wabble = 3"
     )
-
 }

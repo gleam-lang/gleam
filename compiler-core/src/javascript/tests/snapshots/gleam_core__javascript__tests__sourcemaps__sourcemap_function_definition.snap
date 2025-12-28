@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/javascript/tests/sourcemaps.rs
-assertion_line: 5
-expression: "pub fn add_2(x) {\n  x + 2\n}"
-snapshot_kind: text
+expression: "\n// my add function\npub fn add_2(x) {\n  x + 2\n}"
 ---
 ----- SOURCE CODE
+
+// my add function
 pub fn add_2(x) {
   x + 2
 }
@@ -15,4 +15,8 @@ export function add_2(x) {
   return x + 2;
 }
 ----- SOURCE MAP
-{"version":3,"sources":[],"names":[],"mappings":""}
+Mappings Raw:
+2:0 -> 1:0
+3:2 -> 2:2
+3:2 -> 2:9
+3:6 -> 2:13

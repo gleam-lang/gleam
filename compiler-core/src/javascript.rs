@@ -80,13 +80,13 @@ impl std::fmt::Debug for SourceMapCursorPositionObserver {
 
 impl CursorPositionObserver for SourceMapCursorPositionObserver {
     fn observe_cursor_position(&mut self, line: isize, column: isize) {
-        let _ = self.source_map_builder.borrow_mut().add(
+        let _ = self.source_map_builder.borrow_mut().add_raw(
             line as u32,
             column as u32,
             // SourceMapBuilder expects 0-based line and column numbers and we use 1-based ones
             self.source_start_location.line - 1,
             self.source_start_location.column - 1,
-            None,
+            Some(0),
             None,
             false,
         );
@@ -123,7 +123,7 @@ impl<'a> Generator<'a> {
         let current_module_name_segments_count = module.name.split('/').count();
 
         let src_path = &module.type_info.src_path;
-        let src_path = src_path
+        let src_path_str = src_path
             .strip_prefix(project_root)
             .unwrap_or(src_path)
             .as_str();
@@ -137,9 +137,11 @@ impl<'a> Generator<'a> {
             module_scope: Default::default(),
             typescript,
             source_map_builder: if source_map {
-                DebugIgnore(Some(Rc::new(RefCell::new(
-                    sourcemap::SourceMapBuilder::new(None),
-                ))))
+                let module_name = module.name.clone();
+                let output_path = format!("{module_name}.mjs");
+                let mut source_map_builder = sourcemap::SourceMapBuilder::new(Some(&output_path.clone()));
+                let _ = source_map_builder.add_source(src_path_str);
+                DebugIgnore(Some(Rc::new(RefCell::new(source_map_builder))))
             } else {
                 DebugIgnore(None)
             },
@@ -499,6 +501,7 @@ impl<'a> Generator<'a> {
         .group();
 
         docvec![
+            self.create_cursor_position_observer(constructor.location.start),
             "export const ",
             type_name,
             "$",
@@ -524,6 +527,7 @@ impl<'a> Generator<'a> {
         .group();
 
         docvec![
+            self.create_cursor_position_observer(constructor.location.start),
             "export const ",
             type_name,
             "$is",
@@ -567,6 +571,7 @@ impl<'a> Generator<'a> {
 
                 functions.push(docvec![
                     line(),
+                    self.create_cursor_position_observer(constructor.location.start),
                     "export const ",
                     function_name,
                     " = (value) =>",
@@ -578,6 +583,7 @@ impl<'a> Generator<'a> {
 
             functions.push(docvec![
                 line(),
+                self.create_cursor_position_observer(constructor.location.start),
                 "export const ",
                 function_name,
                 " = (value) =>",
@@ -771,7 +777,7 @@ impl<'a> Generator<'a> {
         let unqualified_imports = unqualified.iter().map(|i| {
             let alias = i.as_name.as_ref().map(|n| {
                 self.register_in_scope(n);
-                docvec![self.create_cursor_position_observer(i.location.start), maybe_escape_identifier(n).to_doc()]
+                maybe_escape_identifier(n).to_doc()
             });
             let name = maybe_escape_identifier(&i.name).to_doc();
             Member { name, alias }
@@ -839,6 +845,7 @@ impl<'a> Generator<'a> {
             vec![],
             &mut self.tracker,
             self.module_scope.clone(),
+            self.source_map_builder.clone(),
         );
 
         let document = generator.constant_expression(Context::Constant, value);
@@ -850,6 +857,7 @@ impl<'a> Generator<'a> {
         };
 
         Some(docvec![
+            self.create_cursor_position_observer(location.start),
             jsdoc,
             head,
             maybe_escape_identifier(name),
@@ -884,6 +892,7 @@ impl<'a> Generator<'a> {
         if !function.implementations.supports(Target::JavaScript) {
             return None;
         }
+        let function_source_mapping = self.create_cursor_position_observer(function.location.start);
 
         let (_, name) = function
             .name
@@ -902,6 +911,7 @@ impl<'a> Generator<'a> {
             argument_names,
             &mut self.tracker,
             self.module_scope.clone(),
+            self.source_map_builder.clone(),
         );
 
         let function_doc = match &function.documentation {
@@ -921,6 +931,7 @@ impl<'a> Generator<'a> {
 
         Some(docvec![
             function_doc,
+            function_source_mapping,
             head,
             maybe_escape_identifier(name.as_str()),
             fun_arguments(function.arguments.as_slice(), generator.tail_recursion_used),
@@ -998,17 +1009,19 @@ pub fn module(config: ModuleConfig<'_>) -> (String, Option<SourceMap>) {
     };
     let source_map = if let Some(builder) = sourcemap_builder {
         // We have completed the generation of the module, so we can now take ownership of the builder.
-        Some(Rc::try_unwrap(builder)
-            .unwrap_or_else(|_| panic!("Failed to take ownership of sourcemap builder"))
-            .into_inner()
-            .into_sourcemap())
+        Some(
+            Rc::try_unwrap(builder)
+                .unwrap_or_else(|_| panic!("Failed to take ownership of sourcemap builder"))
+                .into_inner()
+                .into_sourcemap(),
+        )
     } else {
         None
     };
     (output, source_map)
 }
 
-pub fn ts_declaration(module: &TypedModule) -> String {
+pub fn ts_declaration<'a>(module: &TypedModule) -> String {
     let document = typescript::TypeScriptGenerator::new(module).compile();
     document.to_pretty_string(80)
 }

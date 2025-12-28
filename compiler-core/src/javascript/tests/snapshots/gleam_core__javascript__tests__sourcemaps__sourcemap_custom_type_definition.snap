@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/javascript/tests/sourcemaps.rs
-assertion_line: 14
-expression: "pub type Wibble {\n  Wibble\n  Wobble(field: Int)\n  Wabble(Wibble)\n}"
-snapshot_kind: text
+expression: "\n// my custom type\npub type Wibble {\n  Wibble\n  Wobble(field: Int)\n  Wabble(Wibble)\n}"
 ---
 ----- SOURCE CODE
+
+// my custom type
 pub type Wibble {
   Wibble
   Wobble(field: Int)
@@ -41,6 +41,15 @@ export const Wibble$isWabble = (value) => value instanceof Wabble;
 export const Wibble$Wabble$0 = (value) => value[0];
 ----- SOURCE MAP
 Mappings Raw:
-1:2 -> 5:66
-2:2 -> 16:54
-3:2 -> 26:51
+3:2 -> 3:0
+3:2 -> 4:0
+3:2 -> 5:0
+4:2 -> 7:0
+4:2 -> 13:0
+4:2 -> 14:0
+4:2 -> 15:0
+4:2 -> 16:0
+5:2 -> 18:0
+5:2 -> 24:0
+5:2 -> 25:0
+5:2 -> 26:0
