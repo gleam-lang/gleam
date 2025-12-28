@@ -36,6 +36,7 @@ mod todo;
 mod tuples;
 mod type_alias;
 mod use_;
+mod sourcemaps;
 
 pub static CURRENT_PACKAGE: &str = "thepackage";
 
@@ -82,6 +83,20 @@ macro_rules! assert_js {
         let output =
             $crate::javascript::tests::compile_js($src, vec![]);
         assert_eq!(($src, output), ($src, $js.to_string()));
+    }};
+}
+
+
+#[macro_export]
+macro_rules! assert_source_map {
+    ($src:expr $(,)?) => {{
+        let (compiled, source_map) =
+            $crate::javascript::tests::compile_js_with_source_map($src, vec![]);
+        let output = format!(
+            "----- SOURCE CODE\n{}\n\n----- COMPILED JAVASCRIPT\n{}----- SOURCE MAP\n{}",
+            $src, compiled, source_map
+        );
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 }
 
@@ -195,11 +210,12 @@ pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
     let ast = compile(src, deps);
     let line_numbers = LineNumbers::new(src);
     let stdlib_package = StdlibPackage::Present;
-    let output = module(ModuleConfig {
+    let (output, _) = module(ModuleConfig {
         module: &ast,
         line_numbers: &line_numbers,
         src: &"".into(),
         typescript: TypeScriptDeclarations::None,
+        source_map: false,
         stdlib_package,
         path: Utf8Path::new("src/module.gleam"),
         project_root: "project/root".into(),
@@ -209,6 +225,29 @@ pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
         std::include_str!("../../templates/echo.mjs"),
         "// ...omitted code from `templates/echo.mjs`...",
     )
+}
+
+pub fn compile_js_with_source_map(src: &str, deps: Vec<(&str, &str, &str)>) -> (String, String) {
+    let ast = compile(src, deps);
+    let line_numbers = LineNumbers::new(src);
+    let stdlib_package = StdlibPackage::Present;
+    let (output, source_map) = module(ModuleConfig {
+        module: &ast,
+        line_numbers: &line_numbers,
+        src: &"".into(),
+        typescript: TypeScriptDeclarations::None,
+        source_map: true,
+        stdlib_package,
+        path: Utf8Path::new("src/module.gleam"),
+        project_root: "project/root".into(),
+    });
+    let source_map = source_map.expect("source map should always be present");
+
+    let output = output.replace(
+        std::include_str!("../../templates/echo.mjs"),
+        "// ...omitted code from `templates/echo.mjs`...",
+    );
+    (output, source_map)
 }
 
 pub fn compile_ts(src: &str, deps: Vec<(&str, &str, &str)>) -> String {

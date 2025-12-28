@@ -2507,7 +2507,7 @@ pub fn float(value: &str) -> Document<'_> {
     out.to_doc()
 }
 
-pub fn float_from_value(value: f64) -> Document<'static> {
+pub fn float_from_value<'a>(value: f64) -> Document<'a> {
     if value.is_infinite() {
         if value.is_sign_positive() {
             "Infinity".to_doc()
@@ -2589,7 +2589,7 @@ impl BitArraySegmentType {
     }
 }
 
-pub fn string(value: &str) -> Document<'_> {
+pub fn string<'a>(value: &'a str) -> Document<'a> {
     if value.contains('\n') {
         EcoString::from(value.replace('\n', r"\n"))
             .to_doc()

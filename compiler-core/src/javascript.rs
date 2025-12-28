@@ -7,12 +7,15 @@ mod typescript;
 
 use std::collections::HashMap;
 
+use debug_ignore::DebugIgnore;
 use num_bigint::BigInt;
 use num_traits::ToPrimitive;
 
 use crate::build::Target;
 use crate::build::package_compiler::StdlibPackage;
 use crate::codegen::TypeScriptDeclarations;
+use crate::line_numbers::LineColumn;
+use crate::pretty::CursorPositionObserver;
 use crate::type_::{PRELUDE_MODULE_NAME, RecordAccessor};
 use crate::{
     ast::{Import, *},
@@ -38,6 +41,54 @@ pub enum JavaScriptCodegenTarget {
     TypeScriptDeclarations,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct NullCursorPositionObserver;
+
+impl CursorPositionObserver for NullCursorPositionObserver {
+    fn observe_cursor_position(&mut self, _line: isize, _width: isize) {
+        // Do nothing
+    }
+}
+
+pub struct SourceMapCursorPositionObserver<'a> {
+    source_start_location: LineColumn,
+    source_map_builder: &'a mut sourcemap::SourceMapBuilder,
+}
+
+impl<'a> SourceMapCursorPositionObserver<'a> {
+    pub fn new(
+        source_start_location: LineColumn,
+        source_map_builder: &'a mut sourcemap::SourceMapBuilder,
+    ) -> Self {
+        Self {
+            source_start_location,
+            source_map_builder,
+        }
+    }
+}
+
+impl<'a> std::fmt::Debug for SourceMapCursorPositionObserver<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SourceMapCursorPositionObserver")
+            .field("source_start_location", &self.source_start_location)
+            .finish()
+    }
+}
+
+impl<'a> CursorPositionObserver for SourceMapCursorPositionObserver<'a> {
+    fn observe_cursor_position(&mut self, line: isize, column: isize) {
+        let _ = self.source_map_builder.add(
+            line as u32,
+            column as u32,
+            self.source_start_location.line,
+            self.source_start_location.column,
+            None,
+            None,
+            false,
+        );
+    }
+}
+
 #[derive(Debug)]
 pub struct Generator<'a> {
     line_numbers: &'a LineNumbers,
@@ -46,6 +97,7 @@ pub struct Generator<'a> {
     module_scope: im::HashMap<EcoString, usize>,
     current_module_name_segments_count: usize,
     typescript: TypeScriptDeclarations,
+    source_map_builder: DebugIgnore<Option<sourcemap::SourceMapBuilder>>,
     stdlib_package: StdlibPackage,
     /// Relative path to the module, surrounded in `"`s to make it a string, and with `\`s escaped
     /// to `\\`.
@@ -56,6 +108,7 @@ impl<'a> Generator<'a> {
     pub fn new(config: ModuleConfig<'a>) -> Self {
         let ModuleConfig {
             typescript,
+            source_map,
             stdlib_package,
             module,
             line_numbers,
@@ -71,7 +124,6 @@ impl<'a> Generator<'a> {
             .unwrap_or(src_path)
             .as_str();
         let src_path = eco_format!("\"{src_path}\"").replace("\\", "\\\\");
-
         Self {
             current_module_name_segments_count,
             line_numbers,
@@ -80,6 +132,11 @@ impl<'a> Generator<'a> {
             tracker: UsageTracker::default(),
             module_scope: Default::default(),
             typescript,
+            source_map_builder: if source_map {
+                DebugIgnore(Some(sourcemap::SourceMapBuilder::new(None)))
+            } else {
+                DebugIgnore(None)
+            },
             stdlib_package,
         }
     }
@@ -880,14 +937,34 @@ pub struct ModuleConfig<'a> {
     pub line_numbers: &'a LineNumbers,
     pub src: &'a EcoString,
     pub typescript: TypeScriptDeclarations,
+    pub source_map: bool,
     pub stdlib_package: StdlibPackage,
     pub path: &'a Utf8Path,
     pub project_root: &'a Utf8Path,
 }
 
-pub fn module(config: ModuleConfig<'_>) -> String {
-    let document = Generator::new(config).compile();
-    document.to_pretty_string(80)
+pub fn module(config: ModuleConfig<'_>) -> (String, Option<String>) {
+    let mut generator = Generator::new(config);
+    let document = generator.compile();
+    let source_map = if let DebugIgnore(Some(builder)) = generator.source_map_builder {
+        let sourcemap = builder.into_sourcemap();
+        let mut output = Vec::new();
+        // We first write to a vector then build a string, hoping that
+        // the `sourcemap` crate generated a valid sourcemap. If it
+        // did not, it is a bug that should be reported.
+        //
+        // SourceMap currently does not support being written directly
+        // to a string.
+        sourcemap
+            .to_writer(&mut output)
+            .expect("Failed to write sourcemap to memory.");
+        let content =
+            String::from_utf8(output).expect("Sourcemap did not generate valid UTF-8.");
+        Some(content)
+    } else {
+        None
+    };
+    (document.to_pretty_string(80), source_map)
 }
 
 pub fn ts_declaration(module: &TypedModule) -> String {
@@ -1089,7 +1166,7 @@ pub(crate) struct UsageTracker {
     pub echo_used: bool,
 }
 
-fn bool(bool: bool) -> Document<'static> {
+fn bool<'a>(bool: bool) -> Document<'a> {
     match bool {
         true => "true".to_doc(),
         false => "false".to_doc(),

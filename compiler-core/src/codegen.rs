@@ -175,12 +175,14 @@ pub struct JavaScript<'a> {
     prelude_location: &'a Utf8Path,
     project_root: &'a Utf8Path,
     typescript: TypeScriptDeclarations,
+    source_map: bool,
 }
 
 impl<'a> JavaScript<'a> {
     pub fn new(
         output_directory: &'a Utf8Path,
         typescript: TypeScriptDeclarations,
+        source_map: bool,
         prelude_location: &'a Utf8Path,
         project_root: &'a Utf8Path,
     ) -> Self {
@@ -189,6 +191,7 @@ impl<'a> JavaScript<'a> {
             output_directory,
             project_root,
             typescript,
+            source_map,
         }
     }
 
@@ -259,16 +262,24 @@ impl<'a> JavaScript<'a> {
         let name = format!("{js_name}.mjs");
         let path = self.output_directory.join(name);
         let line_numbers = LineNumbers::new(&module.code);
-        let output = javascript::module(ModuleConfig {
+        let (output , source_map) = javascript::module(ModuleConfig {
             module: &module.ast,
             line_numbers: &line_numbers,
             path: &module.input_path,
             project_root: self.project_root,
             src: &module.code,
             typescript: self.typescript,
+            source_map: self.source_map,
             stdlib_package,
         });
         tracing::debug!(name = ?js_name, "Generated js module");
-        writer.write(&path, &output)
+        writer.write(&path, &output)?;
+
+        if let Some(source_map) = source_map {
+            let source_map_path = self.output_directory.join(format!("{js_name}.mjs.map"));
+            tracing::debug!(path = ?source_map_path, name = ?js_name, "Emitting sourcemap for module");
+            writer.write(&source_map_path, &source_map)?;
+        }
+        Ok(())
     }
 }

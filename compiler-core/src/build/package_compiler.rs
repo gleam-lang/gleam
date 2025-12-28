@@ -1,6 +1,5 @@
 use crate::analyse::{ModuleAnalyzerConstructor, TargetSupport};
 use crate::build::package_loader::CacheFiles;
-use crate::codegen::SourceMaps;
 use crate::inline;
 use crate::io::files_with_extension;
 use crate::line_numbers::{self, LineNumbers};
@@ -433,13 +432,7 @@ where
             TypeScriptDeclarations::Emit
         } else {
             TypeScriptDeclarations::None
-        };
-        let sourcemap = if sourcemap {
-            SourceMaps::Emit
-        } else {
-            SourceMaps::None
-        };
-        JavaScript::new(&self.out, typescript, sourcemap, prelude_location, &self.root).render(
+        };        JavaScript::new(&self.out, typescript, sourcemap, prelude_location, &self.root).render(
             &self.io,
             modules,
             self.stdlib_package(),

@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/javascript/tests/sourcemaps.rs
+assertion_line: 5
+expression: "pub fn add_2(x) {\n  x + 2\n}"
+snapshot_kind: text
+---
+----- SOURCE CODE
+pub fn add_2(x) {
+  x + 2
+}
+
+----- COMPILED JAVASCRIPT
+export function add_2(x) {
+  return x + 2;
+}
+----- SOURCE MAP
+{"version":3,"sources":[],"names":[],"mappings":""}

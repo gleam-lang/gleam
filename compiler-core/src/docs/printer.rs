@@ -439,7 +439,7 @@ impl Printer<'_> {
             .surround("(", ")")
     }
 
-    fn type_(&mut self, type_: &Type, print_mode: PrintMode) -> Document<'static> {
+    fn type_<'a>(&mut self, type_: &Type, print_mode: PrintMode) -> Document<'a> {
         match type_ {
             Type::Named {
                 package,
@@ -556,13 +556,13 @@ impl Printer<'_> {
         chars.into_iter().rev().collect()
     }
 
-    fn named_type_name(
+    fn named_type_name<'a>(
         &self,
         publicity: &Publicity,
         package: &str,
         module: &str,
         name: &EcoString,
-    ) -> Document<'static> {
+    ) -> Document<'a> {
         // There's no documentation page for the prelude
         if package == PRELUDE_PACKAGE_NAME && module == PRELUDE_MODULE_NAME {
             return self.title(name);

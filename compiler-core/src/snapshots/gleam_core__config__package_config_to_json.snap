@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/config.rs
-assertion_line: 1171
 expression: output
-snapshot_kind: text
 ---
 --- GLEAM.TOML
 
@@ -32,6 +30,7 @@ extra_applications = ["inets", "ssl"]
 
 [javascript]
 typescript_declarations = true
+source_maps = true
 runtime = "node"
 
 [javascript.deno]
@@ -98,6 +97,7 @@ allow_read = ["./database.sqlite"]
   },
   "javascript": {
     "typescript_declarations": true,
+    "source_maps": true,
     "runtime": "nodejs",
     "deno": {
       "allow_env": [

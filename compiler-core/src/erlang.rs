@@ -33,7 +33,7 @@ use vec1::Vec1;
 const INDENT: isize = 4;
 const MAX_COLUMNS: isize = 80;
 
-fn module_name_atom(module: &str) -> Document<'static> {
+fn module_name_atom<'a>(module: &str) -> Document<'a> {
     atom_string(module.replace('/', "@").into())
 }
 
@@ -317,11 +317,11 @@ fn register_function_exports(
     }
 }
 
-fn register_custom_type_exports(
+fn register_custom_type_exports<'a>(
     custom_type: &TypedCustomType,
-    type_exports: &mut Vec<Document<'_>>,
-    type_defs: &mut Vec<Document<'_>>,
-    module_name: &str,
+    type_exports: &mut Vec<Document<'a>>,
+    type_defs: &mut Vec<Document<'a>>,
+    module_name: &'a str,
 ) {
     let TypedCustomType {
         name,
@@ -458,11 +458,10 @@ fn module_function<'a>(
     let file_attribute = file_attribute(src_path, function, line_numbers);
 
     let mut env = Env::new(module, function_name, line_numbers);
-    let var_usages = collect_type_var_usages(
+    let type_printer = TypePrinter::new_with_var_usages(module, collect_type_var_usages(
         HashMap::new(),
         std::iter::once(&function.return_type).chain(function.arguments.iter().map(|a| &a.type_)),
-    );
-    let type_printer = TypePrinter::new(module).with_var_usages(&var_usages);
+    ));
     let arguments_spec = function
         .arguments
         .iter()
@@ -641,7 +640,7 @@ fn fun_spec<'a>(
         .group()
 }
 
-fn atom_string(value: EcoString) -> Document<'static> {
+fn atom_string<'a>(value: EcoString) -> Document<'a> {
     escape_atom_string(value).to_doc()
 }
 
@@ -2883,7 +2882,7 @@ fn asserted_expression(
         .append("}")
 }
 
-fn negate_with<'a>(op: &'static str, value: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
+fn negate_with<'a>(op: &'a str, value: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
     docvec![op, maybe_block_expr(value, env)]
 }
 
@@ -2945,7 +2944,7 @@ fn variable_name(name: &str) -> EcoString {
 /// When rendering a type variable to an erlang type spec we need all type variables with the
 /// same id to end up with the same name in the generated erlang.
 /// This function converts a usize into base 26 A-Z for this purpose.
-fn id_to_type_var(id: u64) -> Document<'static> {
+fn id_to_type_var<'a>(id: u64) -> Document<'a> {
     if id < 26 {
         let mut name = EcoString::from("");
         name.push(char::from_u32((id % 26 + 65) as u32).expect("id_to_type_var 0"));
@@ -3215,7 +3214,7 @@ fn erl_safe_type_name(mut name: EcoString) -> EcoString {
 struct TypePrinter<'a> {
     var_as_any: bool,
     current_module: &'a str,
-    var_usages: Option<&'a HashMap<u64, u64>>,
+    var_usages: Option<HashMap<u64, u64>>,
 }
 
 impl<'a> TypePrinter<'a> {
@@ -3227,12 +3226,15 @@ impl<'a> TypePrinter<'a> {
         }
     }
 
-    pub fn with_var_usages(mut self, var_usages: &'a HashMap<u64, u64>) -> Self {
-        self.var_usages = Some(var_usages);
-        self
+    pub fn new_with_var_usages(current_module: &'a str, var_usages: HashMap<u64, u64>) -> Self {
+        Self {
+            current_module,
+            var_usages: Some(var_usages),
+            var_as_any: false,
+        }
     }
 
-    pub fn print(&self, type_: &Type) -> Document<'static> {
+    pub fn print(&self, type_: &Type) -> Document<'a> {
         match type_ {
             Type::Var { type_ } => self.print_var(&type_.borrow()),
 
@@ -3256,7 +3258,7 @@ impl<'a> TypePrinter<'a> {
         }
     }
 
-    fn print_var(&self, type_: &TypeVar) -> Document<'static> {
+    fn print_var(&self, type_: &TypeVar) -> Document<'a> {
         match type_ {
             TypeVar::Generic { .. } | TypeVar::Unbound { .. } if self.var_as_any => {
                 "any()".to_doc()
@@ -3273,7 +3275,7 @@ impl<'a> TypePrinter<'a> {
         }
     }
 
-    fn print_prelude_type(&self, name: &str, arguments: &[Arc<Type>]) -> Document<'static> {
+    fn print_prelude_type(&self, name: &str, arguments: &[Arc<Type>]) -> Document<'a> {
         match name {
             "Nil" => "nil".to_doc(),
             "Int" | "UtfCodepoint" => "integer()".to_doc(),
@@ -3304,7 +3306,7 @@ impl<'a> TypePrinter<'a> {
         module: &str,
         name: &str,
         arguments: &[Arc<Type>],
-    ) -> Document<'static> {
+    ) -> Document<'a> {
         let arguments = join(
             arguments.iter().map(|argument| self.print(argument)),
             ", ".to_doc(),
@@ -3317,7 +3319,7 @@ impl<'a> TypePrinter<'a> {
         }
     }
 
-    fn print_fn(&self, arguments: &[Arc<Type>], return_: &Type) -> Document<'static> {
+    fn print_fn(&self, arguments: &[Arc<Type>], return_: &Type) -> Document<'a> {
         let arguments = join(
             arguments.iter().map(|argument| self.print(argument)),
             ", ".to_doc(),
