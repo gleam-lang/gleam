@@ -240,24 +240,24 @@ impl PackageFetchError {
 
     pub fn from_api_error(api_error: hexpm::ApiError, package: &str) -> Self {
         match &api_error {
-            hexpm::ApiError::NotFound => return Self::NotFoundError(package.to_string()),
-            hexpm::ApiError::Json(_) => return Self::ApiError(api_error),
-            hexpm::ApiError::Io(_) => return Self::ApiError(api_error),
-            hexpm::ApiError::InvalidProtobuf(_) => return Self::ApiError(api_error),
-            hexpm::ApiError::UnexpectedResponse(_, _) => return Self::ApiError(api_error),
-            hexpm::ApiError::RateLimited => return Self::ApiError(api_error),
-            hexpm::ApiError::InvalidCredentials => return Self::ApiError(api_error),
-            hexpm::ApiError::InvalidPackageNameFormat(_) => return Self::ApiError(api_error),
-            hexpm::ApiError::IncorrectPayloadSignature => return Self::ApiError(api_error),
-            hexpm::ApiError::InvalidVersionFormat(_) => return Self::ApiError(api_error),
+            hexpm::ApiError::NotFound => Self::NotFoundError(package.to_string()),
+            hexpm::ApiError::Json(_) => Self::ApiError(api_error),
+            hexpm::ApiError::Io(_) => Self::ApiError(api_error),
+            hexpm::ApiError::InvalidProtobuf(_) => Self::ApiError(api_error),
+            hexpm::ApiError::UnexpectedResponse(_, _) => Self::ApiError(api_error),
+            hexpm::ApiError::RateLimited => Self::ApiError(api_error),
+            hexpm::ApiError::InvalidCredentials => Self::ApiError(api_error),
+            hexpm::ApiError::InvalidPackageNameFormat(_) => Self::ApiError(api_error),
+            hexpm::ApiError::IncorrectPayloadSignature => Self::ApiError(api_error),
+            hexpm::ApiError::InvalidVersionFormat(_) => Self::ApiError(api_error),
             hexpm::ApiError::InvalidVersionRequirementFormat(_) => {
-                return Self::ApiError(api_error);
+                Self::ApiError(api_error);
             }
-            hexpm::ApiError::IncorrectChecksum => return Self::ApiError(api_error),
-            hexpm::ApiError::InvalidApiKey => return Self::ApiError(api_error),
-            hexpm::ApiError::Forbidden => return Self::ApiError(api_error),
-            hexpm::ApiError::NotReplacing => return Self::ApiError(api_error),
-            hexpm::ApiError::LateModification => return Self::ApiError(api_error),
+            hexpm::ApiError::IncorrectChecksum => Self::ApiError(api_error),
+            hexpm::ApiError::InvalidApiKey => Self::ApiError(api_error),
+            hexpm::ApiError::Forbidden => Self::ApiError(api_error),
+            hexpm::ApiError::NotReplacing => Self::ApiError(api_error),
+            hexpm::ApiError::LateModification => Self::ApiError(api_error),
         }
     }
 }
