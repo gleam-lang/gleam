@@ -726,6 +726,8 @@ pub struct ErlangConfig {
 pub struct JavaScriptConfig {
     #[serde(default)]
     pub typescript_declarations: bool,
+    #[serde(default)]
+    pub source_maps: bool,
     #[serde(default = "default_javascript_runtime")]
     pub runtime: Runtime,
     #[serde(default, rename = "deno")]

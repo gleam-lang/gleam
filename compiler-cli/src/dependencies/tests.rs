@@ -1187,6 +1187,7 @@ fn package_config(
         },
         javascript: JavaScriptConfig {
             typescript_declarations: false,
+            source_maps: false,
             runtime: Runtime::NodeJs,
             deno: DenoConfig {
                 allow_env: DenoFlag::AllowAll,

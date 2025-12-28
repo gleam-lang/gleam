@@ -1,5 +1,6 @@
 use crate::analyse::{ModuleAnalyzerConstructor, TargetSupport};
 use crate::build::package_loader::CacheFiles;
+use crate::codegen::SourceMaps;
 use crate::inline;
 use crate::io::files_with_extension;
 use crate::line_numbers::{self, LineNumbers};
@@ -357,10 +358,12 @@ where
         match self.target {
             TargetCodegenConfiguration::JavaScript {
                 emit_typescript_definitions,
+                emit_source_maps,
                 prelude_location,
             } => self.perform_javascript_codegen(
                 modules,
                 *emit_typescript_definitions,
+                *emit_source_maps,
                 prelude_location,
             ),
             TargetCodegenConfiguration::Erlang { app_file } => {
@@ -422,6 +425,7 @@ where
         &mut self,
         modules: &[Module],
         typescript: bool,
+        sourcemap: bool,
         prelude_location: &Utf8Path,
     ) -> Result<(), Error> {
         let mut written = HashSet::new();
@@ -430,8 +434,12 @@ where
         } else {
             TypeScriptDeclarations::None
         };
-
-        JavaScript::new(&self.out, typescript, prelude_location, &self.root).render(
+        let sourcemap = if sourcemap {
+            SourceMaps::Emit
+        } else {
+            SourceMaps::None
+        };
+        JavaScript::new(&self.out, typescript, sourcemap, prelude_location, &self.root).render(
             &self.io,
             modules,
             self.stdlib_package(),
