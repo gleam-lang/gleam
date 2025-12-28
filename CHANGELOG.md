@@ -6,7 +6,8 @@
 
 ### Build tool
 
-- When adding a package that does not exist on Hex, the message is a bit friendlier. ([Ameen Radwan](https://github.com/Acepie))
+- When adding a package that does not exist on Hex, the message is a bit friendlier.
+  ([Ameen Radwan](https://github.com/Acepie))
 
 ### Language server
 
