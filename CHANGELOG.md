@@ -49,6 +49,10 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Compiler can now emit source maps when targeting javascript. This can be enabled
+  in the gleam.toml with the `source_maps` setting under the `javascript` section.
+  ([Ameen Radwan](https://github.com/Acepie))
+
 ### Build tool
 
 - When publishing, the package manager now uses the full term instead of the

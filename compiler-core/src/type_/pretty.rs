@@ -144,7 +144,7 @@ impl Printer {
         chars.into_iter().rev().collect()
     }
 
-    fn arguments_to_gleam_doc(&mut self, arguments: &[Arc<Type>]) -> Document<'static> {
+    fn arguments_to_gleam_doc<'a>(&mut self, arguments: &[Arc<Type>]) -> Document<'a> {
         if arguments.is_empty() {
             return nil();
         }
@@ -161,7 +161,7 @@ impl Printer {
     }
 }
 
-fn qualify_type_name(module: &str, type_name: &str) -> Document<'static> {
+fn qualify_type_name<'a>(module: &str, type_name: &str) -> Document<'a> {
     docvec![EcoString::from(module), ".", EcoString::from(type_name)]
 }
 

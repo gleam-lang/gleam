@@ -31,6 +31,7 @@ mod prelude;
 mod records;
 mod recursion;
 mod results;
+mod sourcemaps;
 mod strings;
 mod todo;
 mod tuples;
@@ -82,6 +83,31 @@ macro_rules! assert_js {
         let output =
             $crate::javascript::tests::compile_js($src, vec![]);
         assert_eq!(($src, output), ($src, $js.to_string()));
+    }};
+}
+
+#[macro_export]
+macro_rules! assert_source_map {
+    ($(($name:literal, $module_src:literal)),+, $src:literal $(,)?) => {{        let (compiled, source_map) =
+            $crate::javascript::tests::compile_js_with_source_map($src, vec![$(($crate::javascript::tests::CURRENT_PACKAGE, $name, $module_src)),*]);
+        let mut output = String::from("----- SOURCE CODE\n");
+        for (name, src) in [$(($name, $module_src)),*] {
+            output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
+        }
+        let source_map_string = $crate::javascript::tests::source_map_to_string(source_map);
+        output.push_str(&format!("-- main.gleam\n{}\n\n----- COMPILED JAVASCRIPT\n{compiled}----- SOURCE MAP\n{source_map_string}", $src));
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    }};
+
+    ($src:expr $(,)?) => {{
+        let (compiled, source_map) =
+            $crate::javascript::tests::compile_js_with_source_map($src, vec![]);
+
+        let output = format!(
+            "----- SOURCE CODE\n{}\n\n----- COMPILED JAVASCRIPT\n{}----- SOURCE MAP\n{}",
+            $src, compiled, crate::javascript::tests::source_map_to_string(source_map)
+        );
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 }
 
@@ -195,11 +221,12 @@ pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
     let ast = compile(src, deps);
     let line_numbers = LineNumbers::new(src);
     let stdlib_package = StdlibPackage::Present;
-    let output = module(ModuleConfig {
+    let (output, _) = module(ModuleConfig {
         module: &ast,
         line_numbers: &line_numbers,
         src: &"".into(),
         typescript: TypeScriptDeclarations::None,
+        source_map: false,
         stdlib_package,
         path: Utf8Path::new("src/module.gleam"),
         project_root: "project/root".into(),
@@ -211,7 +238,46 @@ pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
     )
 }
 
+pub fn compile_js_with_source_map(src: &str, deps: Vec<(&str, &str, &str)>) -> (String, SourceMap) {
+    let ast = compile(src, deps);
+    let line_numbers = LineNumbers::new(src);
+    let stdlib_package = StdlibPackage::Present;
+    let (output, source_map) = module(ModuleConfig {
+        module: &ast,
+        line_numbers: &line_numbers,
+        src: &"".into(),
+        typescript: TypeScriptDeclarations::None,
+        source_map: true,
+        stdlib_package,
+        path: Utf8Path::new("src/module.gleam"),
+        project_root: "project/root".into(),
+    });
+    let source_map = source_map.expect("source map should always be present");
+
+    let output = output.replace(
+        std::include_str!("../../templates/echo.mjs"),
+        "// ...omitted code from `templates/echo.mjs`...",
+    );
+    (output, source_map)
+}
+
 pub fn compile_ts(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
     let ast = compile(src, deps);
     ts_declaration(&ast)
+}
+
+// Pretty-print a sourcemap to a string that might be readable by humans.
+pub fn source_map_to_string(source_map: SourceMap) -> String {
+    let mut output = String::new();
+    output.push_str("Mappings Raw:\n");
+    source_map.tokens().for_each(|token| {
+        output.push_str(&format!(
+            "{}:{} -> {}:{}\n",
+            token.get_src_line(),
+            token.get_src_col(),
+            token.get_dst_line(),
+            token.get_dst_col()
+        ));
+    });
+    output
 }

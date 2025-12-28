@@ -181,6 +181,7 @@ fn do_compile_package(project: Project, target: Target) -> Result<(), Error> {
         Target::Erlang => TargetCodegenConfiguration::Erlang { app_file: None },
         Target::JavaScript => TargetCodegenConfiguration::JavaScript {
             emit_typescript_definitions: false,
+            emit_source_maps: false,
             prelude_location: Utf8PathBuf::from("./gleam_prelude.mjs"),
         },
     };
